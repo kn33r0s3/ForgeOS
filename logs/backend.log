@@ -1,0 +1,132 @@
+INFO:     Started server process [8026]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:58512 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58526 - "GET /forge/runtime HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58528 - "GET /stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58542 - "GET /forge/money/revenue-breakdown HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58548 - "GET /forge/execution/actions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58564 - "GET /forge/opportunities HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58568 - "GET /forge/knowledge HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:56596 - "GET /forge/runtime HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53018 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53020 - "GET /forge/runtime HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53026 - "GET /stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53032 - "GET /forge/money/revenue-breakdown HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53036 - "GET /forge/execution/actions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53046 - "GET /opportunities HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53058 - "GET /forge/knowledge/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53062 - "GET /forge/runtime HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57220 - "OPTIONS /stats HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:57236 - "OPTIONS /observer/stats HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:57238 - "OPTIONS /forge/money/dashboard HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:57248 - "OPTIONS /forge/execution/recommend HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:57256 - "OPTIONS /forge/beliefs HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:57220 - "OPTIONS /observer/signals?limit=8&min_importance=0 HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:57256 - "OPTIONS /forge/execution/actions HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:57248 - "OPTIONS /forge/goals HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:57238 - "OPTIONS /forge/autonomy/policy HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:57236 - "OPTIONS /forge/money/revenue-breakdown HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:57266 - "OPTIONS /forge/execution/actions/blocked HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:57220 - "OPTIONS /forge/runtime HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:37784 - "OPTIONS /stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37788 - "OPTIONS /observer/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37800 - "OPTIONS /forge/money/dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37808 - "OPTIONS /forge/execution/recommend HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37822 - "OPTIONS /forge/beliefs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37836 - "OPTIONS /observer/signals?limit=8&min_importance=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37784 - "OPTIONS /forge/execution/actions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37836 - "OPTIONS /forge/autonomy/policy HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37822 - "OPTIONS /forge/money/revenue-breakdown HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37808 - "OPTIONS /forge/execution/actions/blocked HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37800 - "OPTIONS /forge/runtime HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37788 - "OPTIONS /forge/goals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37836 - "GET /stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37822 - "GET /forge/beliefs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37822 - "GET /forge/autonomy/policy HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37784 - "GET /observer/signals?limit=8&min_importance=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37836 - "GET /forge/execution/actions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37808 - "GET /forge/execution/recommend HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37784 - "GET /forge/goals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37836 - "GET /forge/execution/actions/blocked HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37822 - "GET /forge/money/revenue-breakdown HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37800 - "GET /forge/money/dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37788 - "GET /observer/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37808 - "GET /forge/runtime HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42568 - "OPTIONS /stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42572 - "OPTIONS /observer/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42574 - "OPTIONS /forge/money/dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42590 - "OPTIONS /forge/execution/recommend HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42594 - "OPTIONS /forge/beliefs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42610 - "OPTIONS /forge/runtime HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42572 - "OPTIONS /observer/signals?limit=8&min_importance=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42568 - "OPTIONS /forge/execution/actions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42574 - "OPTIONS /forge/goals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42590 - "OPTIONS /forge/autonomy/policy HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42594 - "OPTIONS /forge/money/revenue-breakdown HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42610 - "OPTIONS /forge/execution/actions/blocked HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42568 - "GET /stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42572 - "GET /observer/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42610 - "GET /forge/beliefs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42594 - "GET /forge/execution/recommend HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42574 - "GET /forge/money/dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42572 - "GET /observer/signals?limit=8&min_importance=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42568 - "GET /forge/execution/actions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42590 - "GET /forge/runtime HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42594 - "GET /forge/goals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42610 - "GET /forge/money/revenue-breakdown HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42572 - "GET /forge/autonomy/policy HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42574 - "GET /forge/execution/actions/blocked HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55032 - "OPTIONS /stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55034 - "OPTIONS /observer/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55034 - "OPTIONS /forge/money/dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55032 - "OPTIONS /forge/execution/recommend HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55036 - "OPTIONS /forge/beliefs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55050 - "OPTIONS /forge/goals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55060 - "OPTIONS /observer/signals?limit=8&min_importance=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55074 - "OPTIONS /forge/execution/actions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55034 - "OPTIONS /forge/autonomy/policy HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55032 - "OPTIONS /forge/execution/actions/blocked HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55036 - "OPTIONS /forge/money/revenue-breakdown HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55074 - "OPTIONS /forge/runtime HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55060 - "GET /stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55060 - "GET /forge/goals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55032 - "GET /forge/beliefs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55034 - "GET /forge/execution/actions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55036 - "GET /forge/execution/recommend HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55060 - "GET /observer/signals?limit=8&min_importance=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55074 - "GET /forge/money/dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55034 - "GET /forge/execution/actions/blocked HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55032 - "GET /forge/autonomy/policy HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55050 - "GET /observer/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55036 - "GET /forge/money/revenue-breakdown HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55074 - "GET /forge/runtime HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47700 - "OPTIONS /stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47712 - "OPTIONS /observer/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47726 - "OPTIONS /forge/money/dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47738 - "OPTIONS /forge/execution/recommend HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47740 - "OPTIONS /forge/beliefs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47752 - "OPTIONS /observer/signals?limit=8&min_importance=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47700 - "OPTIONS /forge/execution/actions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47726 - "OPTIONS /forge/goals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47752 - "OPTIONS /forge/autonomy/policy HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47740 - "OPTIONS /forge/money/revenue-breakdown HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47712 - "OPTIONS /forge/execution/actions/blocked HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47738 - "OPTIONS /forge/runtime HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47700 - "GET /stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47740 - "GET /forge/beliefs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47740 - "GET /forge/goals HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47752 - "GET /observer/signals?limit=8&min_importance=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47740 - "GET /forge/autonomy/policy HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47700 - "GET /forge/execution/actions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47738 - "GET /forge/execution/recommend HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47740 - "GET /forge/execution/actions/blocked HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47752 - "GET /forge/money/revenue-breakdown HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47726 - "GET /forge/money/dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47712 - "GET /observer/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47738 - "GET /forge/runtime HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [8026]

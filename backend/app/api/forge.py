@@ -35,6 +35,9 @@ Source reliability tracking.
     POST /forge/execution/actions/{id}/approve                             -> explicit owner approval gate
     POST /forge/execution/actions/{id}/start                               -> mark in progress
     POST /forge/execution/actions/{id}/result                              -> record what actually happened
+    GET  /forge/execution/actions/{id}/package                             -> evidence cited for a require_approval action
+    POST /forge/execution/actions/{id}/human-result                        -> human outcome after approval, no revenue
+    POST /forge/execution/actions/{id}/verified-revenue                    -> revenue only from a verified payment
     GET  /forge/execution/rank                                             -> ranked pending actions
     GET  /forge/execution/recommend                                        -> "what should I do right now"
     GET  /forge/autonomy/policy                                             -> the owner's current operating boundary
@@ -74,6 +77,7 @@ from app.services import (
     opportunity_engine,
     economic_intelligence,
     scenario_engine,
+    approval_outcome_bridge,
 )
 
 router = APIRouter(prefix="/forge", tags=["forge"])
@@ -697,13 +701,74 @@ def record_execution_action_result(
     math to money_engine.py (not duplicated here). Immutable once
     completed — calling this again on an already-completed action
     returns it unchanged rather than overwriting its result.
+
+    A require_approval action cannot attach revenue here. Its result
+    is the human outcome, and money is a separate verified payment.
     """
+    existing = db.get(models.Experiment, action_id)
+    if existing is not None and existing.policy_decision == "require_approval":
+        if payload.revenue is not None or payload.conversions is not None or payload.costs is not None:
+            raise HTTPException(
+                status_code=409,
+                detail="Revenue is recorded only from verified payment evidence",
+            )
+        if payload.data_scope != existing.data_scope:
+            raise HTTPException(status_code=409, detail="Result scope must match the action")
+        try:
+            approval_outcome_bridge.record_human_result(db, action_id, payload.result)
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        return db.get(models.Experiment, action_id)
+
     action = execution_engine.record_action_result(
         db, action_id, payload.result, revenue=payload.revenue, conversions=payload.conversions, costs=payload.costs, data_scope=payload.data_scope
     )
     if not action:
         raise HTTPException(status_code=404, detail="Execution action not found")
     return action
+
+
+@router.get("/execution/actions/{action_id}/package", response_model=schemas.ActionPackageOut)
+def get_execution_action_package(action_id: int, db: Session = Depends(get_db)):
+    """Evidence already stored for a require_approval action. Writes nothing."""
+    package = approval_outcome_bridge.build_action_package(db, action_id)
+    if package is None:
+        raise HTTPException(status_code=404, detail="No require_approval action")
+    return package
+
+
+@router.post("/execution/actions/{action_id}/human-result", response_model=schemas.ActionPackageOut)
+def record_execution_human_result(
+    action_id: int, payload: schemas.HumanResultIn, db: Session = Depends(get_db)
+):
+    """Record the human outcome. Revenue stays empty."""
+    try:
+        return approval_outcome_bridge.record_human_result(db, action_id, payload.result)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post("/execution/actions/{action_id}/verified-revenue", response_model=schemas.ActionPackageOut)
+def record_execution_verified_revenue(
+    action_id: int, payload: schemas.VerifiedRevenueIn, db: Session = Depends(get_db)
+):
+    """Record revenue only after a human outcome and a verified payment reference."""
+    try:
+        approval_outcome_bridge.record_verified_revenue_evidence(
+            db,
+            action_id,
+            amount=payload.amount,
+            currency=payload.currency,
+            source=payload.source,
+            reference=payload.reference,
+            notes=payload.notes,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    package = approval_outcome_bridge.build_action_package(db, action_id)
+    if package is None:
+        raise HTTPException(status_code=404, detail="No require_approval action")
+    return package
 
 
 @router.get("/execution/rank", response_model=list[schemas.RankedAction])

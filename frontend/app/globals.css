@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+
+:root { --forge-bg:#08090b; --forge-panel:#101216; --forge-border:rgba(255,255,255,.09); --forge-accent:#a88bff; --forge-accent2:#66e2ff; --forge-revenue:#5ee6b0; --forge-danger:#ff6d83; --forge-warn:#ffc36a; }
+html, body { background:var(--forge-bg); color:#e8e9ed; font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif; -webkit-font-smoothing:antialiased; letter-spacing:-.012em; }
+body { background-image:radial-gradient(ellipse 80% 45% at 50% -10%,rgba(129,101,255,.16),transparent 70%),radial-gradient(ellipse 30% 30% at 100% 30%,rgba(68,211,242,.07),transparent 70%); background-attachment:fixed; }
+::selection { background:rgba(168,139,255,.8); color:#08090b; }
+
+@layer components {
+  .field { @apply rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-neutral-200 outline-none focus:border-forge-accent/50; }
+  .action { @apply rounded-full border border-white/[0.1] bg-white/[0.06] px-4 py-2 text-xs text-neutral-200 transition hover:border-white/[0.2] hover:bg-white/[0.1] disabled:opacity-50; }
+  .glass-panel { @apply relative overflow-hidden rounded-3xl border border-white/[0.09] bg-[#101216]/80 shadow-[0_18px_60px_-30px_rgba(0,0,0,.8)] backdrop-blur-xl; }
+  .glass-panel::before { content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(135deg,rgba(255,255,255,.035),transparent 35%,transparent 70%,rgba(255,255,255,.012)); }
+  .section-label, .eyebrow { @apply text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-500; }
+  .section-title { @apply mt-2 font-display text-2xl font-semibold tracking-[-0.035em] text-white; }
+  .section-intro { @apply flex flex-wrap items-end justify-between gap-3; }
+  .section-note { @apply max-w-xs text-right text-sm leading-6 text-neutral-500; }
+  .truth-chip { @apply inline-flex rounded-full border border-forge-revenue/20 bg-forge-revenue/[0.07] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-forge-revenue; }
+  .reality-card { @apply rounded-3xl border border-white/[0.08] bg-white/[0.025] p-5 transition hover:-translate-y-0.5 hover:border-white/[0.15] hover:bg-white/[0.04]; }
+  .empty-state { @apply rounded-2xl border border-dashed border-white/[0.1] bg-black/10 p-5; }
+}
+
+.font-display { font-family:'Manrope',ui-sans-serif,system-ui,sans-serif; }
+.text-gradient { background:linear-gradient(100deg,#fff 15%,#a88bff 55%,#66e2ff); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.hero-grid { background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px),radial-gradient(circle at 82% 30%,rgba(168,139,255,.16),transparent 28%); background-size:34px 34px,34px 34px,100% 100%; }
+.live-dot { @apply inline-block h-1.5 w-1.5 rounded-full bg-forge-revenue shadow-[0_0_0_5px_rgba(94,230,176,.1)]; }
+.loop-track { @apply mt-5 grid gap-2 overflow-x-auto rounded-3xl border border-white/[0.08] bg-white/[0.025] p-3 sm:grid-cols-7; }
+.loop-step { @apply relative flex min-w-[100px] flex-col gap-3 rounded-2xl px-4 py-4 text-neutral-500; }
+.loop-step span { @apply text-[10px] tracking-widest text-neutral-700; }
+.loop-step strong { @apply text-xs tracking-[0.12em]; }
+.loop-step i { @apply absolute right-1 top-1/2 hidden -translate-y-1/2 text-neutral-700 not-italic sm:block; }
+.loop-step.is-current { @apply bg-forge-accent/[0.12] text-forge-accent2; }
+.loop-step.is-current span { @apply text-forge-accent; }
+.tabular { font-variant-numeric:tabular-nums; }
+.card-interactive { transition:transform .2s ease,border-color .2s ease; }
+.card-interactive:hover { transform:translateY(-2px); border-color:rgba(255,255,255,.16); }
+@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.animate-fade-up { animation:fadeUp .4s ease-out; }
+@media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:.001ms!important; transition-duration:.001ms!important; } }
+:focus-visible { outline:2px solid var(--forge-accent2); outline-offset:3px; }
+::-webkit-scrollbar { width:8px; height:8px; } ::-webkit-scrollbar-thumb { background:rgba(255,255,255,.1); border-radius:8px; }

@@ -1,0 +1,48 @@
+{
+  "path": "/home/ubuntu/work/storage/forge.db",
+  "size": 32706560,
+  "sha256": "1bbe8dab2fbcac6a4cc703ac31904101414584e2b445c14e6979b1c18a86b57a",
+  "mtime_ns": 1789370147314769259,
+  "wal": {
+    "exists": true,
+    "size": 807552
+  },
+  "shm": {
+    "exists": true,
+    "size": 32768
+  },
+  "counts": {
+    "signals": 11847,
+    "evidence": 17817,
+    "patterns": 7,
+    "beliefs": 7,
+    "opportunities": 8,
+    "decisions": 8,
+    "cycle_runs": 302,
+    "actions": 5,
+    "experiments": 5,
+    "outcomes": 0,
+    "learning_events": 0,
+    "products": 0
+  },
+  "latest": {
+    "cycle_run": 302,
+    "action": 5,
+    "experiment": 5,
+    "evidence": 17817
+  },
+  "actual_revenue": 0,
+  "checks": {
+    "integrity_check": [
+      [
+        "ok"
+      ]
+    ],
+    "quick_check": [
+      [
+        "ok"
+      ]
+    ],
+    "foreign_key_check": []
+  }
+}

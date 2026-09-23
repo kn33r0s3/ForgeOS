@@ -46,6 +46,8 @@ def record_human_result(
     conversions: int | None = None,
 ) -> dict:
     """Persist a human-supplied result. Does not invent revenue."""
+    if revenue is not None or conversions is not None:
+        raise ValueError("Revenue is recorded only from verified payment evidence")
     package = build_action_package(db, action_id)
     if package is None:
         raise ValueError("No require_approval action")
@@ -59,9 +61,7 @@ def record_human_result(
     if marked is None or marked.started_at is None:
         raise ValueError("Human execution was not recorded")
 
-    updated = execution_engine.record_action_result(
-        db, action_id, text, revenue=revenue, conversions=conversions
-    )
+    updated = execution_engine.record_action_result(db, action_id, text)
     if updated is None:
         raise ValueError("Result was not recorded")
     if revenue is None and updated.revenue is not None:
@@ -97,9 +97,26 @@ def record_verified_revenue_evidence(
         raise ValueError("Verified revenue requires a source and a reference")
     if (currency or "").strip().upper() not in {"USD", "NPR"}:
         raise ValueError("Currency must be a supported tracked currency")
+    qualitative = (
+        db.query(models.Outcome)
+        .filter_by(experiment_id=action.id, outcome_type="QUALITATIVE", data_scope=action.data_scope)
+        .first()
+    )
+    if qualitative is None:
+        raise ValueError("A human outcome must be recorded before verified revenue")
+    existing = (
+        db.query(models.Outcome)
+        .filter_by(experiment_id=action.id, outcome_type="ACTUAL_REVENUE", data_scope=action.data_scope)
+        .first()
+    )
+    if existing is not None:
+        if existing.actual_value != float(amount):
+            raise ValueError("Verified revenue already recorded")
+        return existing
 
+    # experiment_id is the execution action. action_id belongs to the
+    # separate actions table and stays empty here.
     outcome = models.Outcome(
-        action_id=action.id,
         experiment_id=action.id,
         outcome_type="ACTUAL_REVENUE",
         actual_value=float(amount),
@@ -107,7 +124,7 @@ def record_verified_revenue_evidence(
         source=source.strip(),
         verification_state="VERIFIED",
         notes=(notes or f"Provider reference: {reference.strip()}"),
-        data_scope="REAL",
+        data_scope=action.data_scope,
     )
     db.add(outcome)
     action.revenue = float(amount)

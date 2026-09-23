@@ -821,6 +821,40 @@ class ExecutionActionResult(BaseModel):
     costs: Optional[float] = Field(default=None, description="Actual $ spent — never a guess")
 
 
+class ActionEvidenceCite(BaseModel):
+    signal_id: int
+    source: Optional[str] = None
+    text: Optional[str] = None
+
+
+class ActionPackageOut(BaseModel):
+    action_id: int
+    opportunity_id: int
+    action_type: Optional[str] = None
+    status: str
+    policy_decision: Optional[str] = None
+    requires_owner_approval: bool
+    approved: bool
+    execution_allowed: bool
+    problem: Optional[str] = None
+    proposed_action: str
+    evidence: List[ActionEvidenceCite]
+    result: Optional[str] = None
+    revenue: Optional[float] = None
+
+
+class HumanResultIn(BaseModel):
+    result: str = Field(..., min_length=1)
+
+
+class VerifiedRevenueIn(BaseModel):
+    amount: float = Field(..., ge=0)
+    currency: str = Field(..., min_length=3, max_length=3)
+    source: str = Field(..., min_length=1)
+    reference: str = Field(..., min_length=1)
+    notes: Optional[str] = None
+
+
 class ActionScoreFactors(BaseModel):
     economic_potential: float
     confidence: float

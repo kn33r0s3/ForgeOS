@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-Cltr0gcK.js";import{y as t}from"./index-oOI6rXYK.js";var n=e();function r({children:e,tone:r=`cyan`}){return(0,n.jsx)(`span`,{className:t(`mt-7 inline-flex items-center border px-3 py-2 font-mono text-micro uppercase tracking-[0.14em]`,r===`amber`?`border-amber/40 text-amber`:`border-cyan/40 text-cyan`),children:e})}export{r as t};

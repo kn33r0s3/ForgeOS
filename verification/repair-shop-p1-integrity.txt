@@ -1,0 +1,25 @@
+ForgeOS Repair-Shop P1 Integrity Verification
+Date: 2026-09-14
+
+A disposable copy of storage/forge.db was initialized with the new additive models.
+
+Historical and new table counts after initialization:
+  signals 11847
+  opportunities 8
+  experiments 5
+  outcomes 0
+  learning_events 0
+  products 0
+  customers 0
+  repair_work_items 0
+  work_item_events 0
+  customer_communications 0
+
+SQLite PRAGMA integrity_check: ok
+
+Protected source checks:
+  Primary archive SHA-256: fd8fe99fdbf8ce36fa72979a3461021ca11d11b12f45c2c7fb118cd5ef74c00c
+  Assignment-5 mirror: clean working tree
+  No legacy mirror was imported as runtime code.
+
+The disposable verification database and API smoke database are local validation artifacts; they do not alter the primary ForgeOS archive or the protected Assignment-5 mirror.

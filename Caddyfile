@@ -1,0 +1,10 @@
+:3000 {
+  @api path /api/*
+  handle @api {
+    uri strip_prefix /api
+    reverse_proxy forgeos-backend:8000
+  }
+  handle {
+    reverse_proxy forgeos-frontend:3000
+  }
+}
