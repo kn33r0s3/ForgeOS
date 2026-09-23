@@ -29,7 +29,7 @@ export default function AnalyzePage() {
       const res = await api.analyze(idea.trim());
       setResult(res);
     } catch {
-      setError("Could not reach the Forge backend. Is it running at http://localhost:8000?");
+      setError("Could not reach the Forge backend. Check the configured API URL and backend availability.");
     } finally {
       setLoading(false);
     }

@@ -90,15 +90,24 @@ def qa_handler(db: Session, task: WorkerTask) -> dict:
 
 def evolution_handler(db: Session, task: WorkerTask) -> dict:
     output = {"next": "discovery", "message": "Evolution evaluated the system and scheduled discovery"}
-    follow_up = WorkerTask(
-        worker_type="discovery",
-        task_name="next_discovery_cycle",
-        priority=task.priority,
-        inputs={},
-        # Give a small delay before next discovery to prevent infinite runaway loop immediately
-        next_run_at=utcnow() + timedelta(seconds=10)
+
+    existing_pending = (
+        db.query(WorkerTask)
+        .filter(WorkerTask.worker_type == "discovery")
+        .filter(WorkerTask.task_name == "next_discovery_cycle")
+        .filter(WorkerTask.status.in_(["queued", "running"]))
+        .first()
     )
-    db.add(follow_up)
+    if not existing_pending:
+        follow_up = WorkerTask(
+            worker_type="discovery",
+            task_name="next_discovery_cycle",
+            priority=task.priority,
+            inputs={},
+            # Give a small delay before next discovery to prevent infinite runaway loop immediately
+            next_run_at=utcnow() + timedelta(seconds=10)
+        )
+        db.add(follow_up)
     return output
 
 

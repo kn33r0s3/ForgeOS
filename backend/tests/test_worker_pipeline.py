@@ -66,3 +66,33 @@ def test_worker_pipeline(db: Session):
     process_worker_tasks(db)
     db.refresh(evolution_task)
     assert evolution_task.status == "completed"
+
+
+def test_worker_pipeline_deduplicates_pending_followups(db: Session):
+    task = models.WorkerTask(
+        worker_type="discovery",
+        task_name="initial_discovery",
+        priority=1,
+        inputs={}
+    )
+    db.add(task)
+    db.commit()
+
+    process_worker_tasks(db)
+    process_worker_tasks(db)
+    process_worker_tasks(db)
+    process_worker_tasks(db)
+    process_worker_tasks(db)
+    process_worker_tasks(db)
+
+    queued = (
+        db.query(models.WorkerTask)
+        .filter(models.WorkerTask.status == "queued")
+        .all()
+    )
+    pending_discovery = [
+        t for t in queued
+        if t.worker_type == "discovery" and t.task_name == "next_discovery_cycle"
+    ]
+
+    assert len(pending_discovery) <= 1

@@ -90,7 +90,13 @@ class Settings(BaseSettings):
     HASH_EMBEDDING_DIM: int = int(os.getenv("HASH_EMBEDDING_DIM", "128"))
 
     # --- CORS ---
-    ALLOWED_ORIGINS: list[str] = ["http://localhost:3000"]
+    # The frontend runs locally on 127.0.0.1:3002 in this environment, and
+    # the dev UI also commonly uses localhost:3000. Keep the default list in
+    # sync with the real browser origins and allow overriding via env.
+    ALLOWED_ORIGINS: list[str] = os.getenv(
+        "ALLOWED_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3002,http://127.0.0.1:3002,http://0.0.0.0:3002",
+    ).split(",")
 
     # --- Security (opt-in) ---
     # Leave empty (default) for local-first operation with no auth. To protect
