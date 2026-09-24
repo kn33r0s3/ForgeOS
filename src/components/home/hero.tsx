@@ -52,7 +52,7 @@ export function Hero() {
               Need help?
             </span>
             <strong className="font-display text-lg font-semibold tracking-tight">
-              Search → Verify → Book
+              Search → Read → Request
             </strong>
             <span className="text-xs opacity-60">services are one path</span>
           </div>
@@ -61,16 +61,16 @@ export function Hero() {
               01 / Search
             </span>
             <span className="rounded-sm border border-line bg-void/90 px-2.5 py-1.5 font-mono text-micro uppercase tracking-[0.12em] text-muted">
-              02 / Compare
+              02 / Read
             </span>
             <span className="rounded-sm border border-line bg-void/90 px-2.5 py-1.5 font-mono text-micro uppercase tracking-[0.12em] text-cyan">
-              03 / Book
+              03 / Request
             </span>
           </div>
           <div className="relative z-10 mt-8 flex items-center gap-3 font-mono text-micro uppercase tracking-[0.12em] text-dim">
             <span>Local</span>
             <span className="h-px flex-1 bg-line" />
-            <span className="text-fg">trusted network</span>
+            <span className="text-fg">recorded facts</span>
           </div>
         </div>
       </Container>

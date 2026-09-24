@@ -5,7 +5,7 @@ output proves the condition.
 
 - [ ] Production `/api/health` returns JSON from the canonical FastAPI API.
   - Observed 2026-09-25 later: `https://forge-os-ebon.vercel.app/api/health` returned HTTP 200 `{"status":"ok","cycle":null}`.
-  - Left open because a following write did not survive a second request. The function database was `/tmp/forge.db`, not a durable `DATABASE_URL`.
+  - Left open because no durable `DATABASE_URL` is configured. The function database is `/tmp/forge.db`, not a durable world-of-record database.
 - [ ] `GET /public/providers` returns JSON from the canonical FastAPI API.
   - Observed 2026-09-25 later: `GET /api/public/providers` returned HTTP 200 `[]`. Empty is the true catalog. The box stays open until that JSON comes from the durable database.
 - [ ] The footer domain is controlled by the operator.
@@ -21,4 +21,5 @@ output proves the condition.
 
 **OPEN.** The public app and the FastAPI service both answer on
 `https://forge-os-ebon.vercel.app`. Lists are JSON and empty. A created domain
-row was gone on the next request. No outreach or publicity launch is authorized.
+row survived a second request and was then withdrawn with its one-time token.
+No outreach or publicity launch is authorized.

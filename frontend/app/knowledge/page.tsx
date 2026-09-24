@@ -20,8 +20,8 @@ export default function KnowledgePage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">FORGE KNOWLEDGE</h1>
         <p className="text-sm text-neutral-500 mt-1">
-          Every belief Forge holds, and why — real evidence and confidence history, never a
-          generated-sounding explanation.
+          Canonical hypotheses formed from recorded signals, with their evidence and confidence
+          history. Merged keyword permutations stay out of this list.
         </p>
       </div>
 
@@ -45,9 +45,12 @@ export default function KnowledgePage() {
                   selected === b.id ? "glow-border" : "hover:border-forge-borderBright"
                 }`}
               >
+                <p className="text-[10px] uppercase tracking-widest text-neutral-500 mb-1">
+                  Hypothesis
+                </p>
                 <p className="text-sm text-neutral-200">{b.statement}</p>
                 <p className="mt-2 text-[10px] uppercase tracking-widest text-neutral-500">
-                  Signals {signalCount(b.supporting_signal_ids)}
+                  Evidence signals {signalCount(b.supporting_signal_ids)}
                 </p>
                 <div className="mt-2">
                   <ConfidenceBar label="Confidence" value={b.confidence_score} />

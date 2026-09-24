@@ -478,7 +478,7 @@ The impossible-looking part — one world that spans a neighborhood repair and a
 
 ## 14. The 200-day work order
 
-`TWO_HUNDRED_DAY_COPILOT.txt` is the task queue for this map. It is not a second plan. One task is one session. The phases follow section 12:
+`docs/SERIAL_PATH.md` is the only work order. One step at a time. `TWO_HUNDRED_DAY_COPILOT.txt` is the long session budget for that same order. If they disagree, `docs/SERIAL_PATH.md` wins. The steps follow section 12:
 
 1. The public API stays the existing FastAPI app, and a write survives a second request. On Vercel that requires `DATABASE_URL`. `/tmp/forge.db` is not the world of record.
 2. The verified service path, bookings, and honest empty lists.

@@ -140,7 +140,9 @@ export default function EarnPage() {
         next_actions: next.nextActions,
       }).then((remote) => {
         const synced = { ...next, id: `server-${remote.id}`, serverId: remote.id };
-        persist([synced, ...saved]);
+        const current = JSON.parse(localStorage.getItem("forgeos-nepal-offers") || "[]") as Offer[];
+        const merged = current.map((item) => item.id === next.id ? synced : item);
+        persist(merged);
         setMessage("Saved locally and synced to ForgeOS. This is still a draft—not a customer, payment, or profit claim.");
       }).catch(() => {
         queueSync({ kind: "create", localId: next.id, payload: {

@@ -34,6 +34,25 @@ def test_keyword_permutations_become_one_hypothesis(db):
     assert beliefs[0].confidence_score < 95
 
 
+def test_repeated_copies_of_one_source_do_not_count_as_independent_confirmation(db):
+    for index in range(20):
+        db.add(_signal(
+            "small business customer support data workflow is slow",
+            url="https://example.com/one-source",
+        ))
+    db.add(_signal(
+        "small business customer support data workflow is slow",
+        url="https://example.com/independent-source",
+    ))
+    db.commit()
+
+    patterns = run_pattern_detection(db)
+
+    assert len(patterns) == 1
+    assert patterns[0].frequency == 21
+    assert patterns[0].confidence_score < 20
+
+
 def test_historical_beliefs_merge_without_losing_provenance(db):
     first_signal = _signal("customer support data workflow")
     second_signal = _signal("data workflow customer support")

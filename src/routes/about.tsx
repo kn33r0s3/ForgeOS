@@ -7,7 +7,7 @@ import { CtaBand } from "@/components/layout/cta-band";
 
 export const Route = createFileRoute("/about")({
   component: AboutPage,
-  head: () => ({ meta: [{ title: "About — Sanip Ops" }] }),
+  head: () => ({ meta: [{ title: "About — Forge" }] }),
 });
 
 const items = [
@@ -32,7 +32,7 @@ function AboutPage() {
   return (
     <main>
       <PageHero
-        eyebrow="Sanip Ops / Sanip Operations"
+        eyebrow="Forge / About"
         title={
           <>
             A parent platform
@@ -40,7 +40,7 @@ function AboutPage() {
             <span className="text-muted">for useful work.</span>
           </>
         }
-        lede="Sanip Ops is the long-term parent business group being built from Nepal: a platform to build, own, operate, invest in, and scale useful businesses, technologies, products, infrastructure, and ventures over time."
+        lede="Forge stores recorded people, organizations, capabilities, needs, work, services, offers, trades, evidence, and outcomes. It helps people read what is known and what remains unknown; it does not decide a match."
       >
         <Button asChild className="mt-8">
           <Link to="/request">

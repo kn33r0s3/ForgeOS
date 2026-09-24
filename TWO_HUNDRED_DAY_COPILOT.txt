@@ -303,3 +303,17 @@ TEST: /Users/nirojpaudyal/Downloads/ForgeOS/.venv/bin/python -m pytest backend/t
 STOP:
 
 END OF COMMAND
+
+CLAIM: H5 — Final production, content, backend, and build checks passed without inventing providers, bookings, payments, or launch readiness.
+SOURCE: REPO plus docs/PUBLICITY_GATE.md, src/lib/content.test.ts, backend/tests, and https://forge-os-ebon.vercel.app
+FACT: Production serves the corrected Forge identity; the public API lists are empty, no DATABASE_URL is configured, and the publicity gate remains open for durable storage and operator-controlled launch prerequisites.
+CHANGE: Corrected public Forge metadata and About copy; no provider, booking, payment, domain, mailbox, or outreach data was added.
+TEST: .venv/bin/python -m pytest backend/tests -q — 246 passed, 15 warnings; node --experimental-strip-types --test src/lib/content.test.ts — 5 passed; npm run build — succeeded; production curl — / and /about HTTP 200, /api/health HTTP 200 JSON, providers [], services [], discoveries [], domain [], alerts [], trust/provider/1 HTTP 404; DATABASE_URL no; pending booking probe returned HTTP 405 because the endpoint does not allow GET.
+STOP:
+
+CLAIM: S0 — Durable production writes remain blocked because no operator-supplied DATABASE_URL is available.
+SOURCE: REPO plus docs/SERIAL_PATH.md, backend/app/database.py, backend/app/config.py, and https://forge-os-ebon.vercel.app
+FACT: The Vercel deployment reports no DATABASE_URL; without it, the configured fallback is sqlite:////tmp/forge.db rather than a durable world-of-record database.
+CHANGE: NONE — no secret was guessed, created, or configured; no provider, booking, payment, or publicity data was seeded.
+TEST: Production curl — /api/health HTTP 200 {"status":"ok","cycle":null}; /api/public/providers [], /api/public/services [], /api/public/discoveries [], /api/public/domain [], /api/public/alerts []; final evidence capture reported DATABASE_URL no.
+STOP:

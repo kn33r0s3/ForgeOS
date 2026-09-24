@@ -1,6 +1,6 @@
 # ForgeOS implementation backlog
 
-Living path from the current repository to `docs/FUTURE_BLUEPRINT.md`.
+Belief detail for step S5 in `docs/SERIAL_PATH.md`. That file is the only work order. Do not start these tasks while S0 through S4 are open.
 Copilot implements. This file is the spec. Do not treat a task as DONE until the code and tests exist.
 
 Rule: one Forge. Extend the named component. Do not add a second database, API, scheduler, research engine, matching engine, outcome system, or frontend.
