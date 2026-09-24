@@ -17,194 +17,74 @@ Alembic; nothing outside database.py needs to change.
 
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.schema import CreateTable
+from sqlalchemy.dialects import sqlite
 
 # table -> [(column_name, DDL type + default), ...]
-# Add future new columns here as Forge grows.
-EXPECTED_COLUMNS = {
-    "signals": [
-        ("signal_type", "VARCHAR DEFAULT 'problem'"),
-        ("importance_score", "FLOAT DEFAULT 0.0"),
-        ("processed", "BOOLEAN DEFAULT 0"),
-        ("tags", "TEXT"),
-        ("reliability_score", "FLOAT DEFAULT 50.0"),
-        ("freshness_score", "FLOAT DEFAULT 100.0"),
-        ("quality_score", "FLOAT"),
-        ("quality_flags", "TEXT"),
-        ("is_duplicate_of", "INTEGER"),
-        ("canonical_url", "VARCHAR"),
-        ("external_id", "VARCHAR"),
-        ("title", "TEXT"),
-        ("published_at", "DATETIME"),
-        ("retrieved_at", "DATETIME"),
-        ("content_fingerprint", "VARCHAR"),
-        ("source_type", "VARCHAR"),
-        ("provenance", "TEXT"),
-        ("collection_status", "VARCHAR DEFAULT 'observed'"),
-        ("supersedes_signal_id", "INTEGER"),
-    ],
-    "patterns": [
-        ("origin_signal_ids", "TEXT"),
-        ("last_seen", "DATETIME"),
-    ],
-    "sources": [
-        ("url", "VARCHAR"),
-    ],
-    "opportunities": [
-        ("goal_id", "INTEGER"),
-        ("customer_segment", "TEXT"),
-        ("economic_consequence", "TEXT"),
-        ("offer", "TEXT"),
-        ("acquisition_path", "TEXT"),
-        ("estimated_price", "FLOAT"),
-        ("estimated_revenue", "FLOAT"),
-        ("problem_evidence_signal_ids", "TEXT"),
-        ("willingness_evidence_ids", "TEXT"),
-        ("market_confidence", "FLOAT DEFAULT 0.0"),
-        ("revenue_confidence", "FLOAT DEFAULT 0.0"),
-        ("implementation_difficulty", "FLOAT"),
-        ("acquisition_difficulty", "FLOAT"),
-        ("uncertainty", "FLOAT DEFAULT 100.0"),
-        ("competition_evidence", "TEXT"),
-        ("expected_value", "FLOAT"),
-        ("status", "VARCHAR DEFAULT 'identified'"),
-        ("owner_priority", "FLOAT DEFAULT 50.0"),
-        ("updated_at", "DATETIME"),
-        ("monetization_model", "VARCHAR"),
-        ("time_to_first_revenue_days", "FLOAT"),
-        ("estimated_revenue_30d", "FLOAT"),
-        ("estimated_revenue_90d", "FLOAT"),
-        ("estimated_effort_hours", "FLOAT"),
-        ("estimated_startup_cost", "FLOAT"),
-        ("revenue_source_id", "INTEGER"),
-        ("economic_evidence_summary", "TEXT"),
-        ("identity_key", "VARCHAR"),
-    ],
-    "experiments": [
-        ("hypothesis", "TEXT"),
-        ("expected_result", "TEXT"),
-        ("revenue", "FLOAT"),
-        ("conversions", "INTEGER"),
-        ("confidence_change", "FLOAT"),
-        ("strategy_id", "INTEGER"),
-        ("option_id", "INTEGER"),
-        ("action_type", "VARCHAR"),
-        ("status", "VARCHAR DEFAULT 'planned'"),
-        ("execution_mode", "VARCHAR"),
-        ("requires_owner_approval", "BOOLEAN DEFAULT 0"),
-        ("approved_at", "DATETIME"),
-        ("started_at", "DATETIME"),
-        ("completed_at", "DATETIME"),
-        ("costs", "FLOAT"),
-        ("required_inputs", "TEXT"),
-        ("estimated_cost", "FLOAT"),
-        ("risk_score", "FLOAT"),
-        ("policy_decision", "VARCHAR"),
-        ("policy_reason", "TEXT"),
-        ("attempt_number", "INTEGER DEFAULT 1"),
-        # v2.0 domain isolation & fail-closed execution safety
-        ("domain", "VARCHAR DEFAULT 'revenue'"),
-        ("execution_allowed", "BOOLEAN DEFAULT 0"),
-        ("data_scope", "VARCHAR DEFAULT 'REAL'"),
-    ],
-    "decisions": [
-        ("chosen_option_id", "INTEGER"),
-        ("option_space_status", "VARCHAR"),
-        ("constraints", "JSON"),
-        ("title", "VARCHAR"),
-        ("rationale", "TEXT"),
-        ("alternatives_considered", "TEXT"),
-        ("expected_outcome", "TEXT"),
-        ("expected_cost", "FLOAT"),
-        ("expected_value", "FLOAT"),
-        ("risk_notes", "TEXT"),
-        ("confidence_at_decision", "FLOAT"),
-        ("status", "VARCHAR DEFAULT 'proposed'"),
-        ("decided_at", "DATETIME"),
-        ("goal_id", "INTEGER"),
-        ("opportunity_id", "INTEGER"),
-        ("strategy_id", "INTEGER"),
-        ("belief_id", "INTEGER"),
-    ],
-    "beliefs": [
-        ("pattern_id", "INTEGER"),
-    ],
-    "confidence_events": [
-        ("reason", "VARCHAR"),
-        ("evidence_signal_ids", "TEXT"),
-        ("experiment_id", "INTEGER"),
-        ("scenario_prediction_id", "INTEGER"),
-    ],
-    "evidence": [
-        ("scenario_prediction_id", "INTEGER"),
-        ("opportunity_id", "INTEGER"),
-        ("provenance_hash", "VARCHAR"),
-        ("confidence", "FLOAT"),
-        ("source", "VARCHAR"),
-        ("content", "TEXT"),
-        ("direction", "VARCHAR"),
-        ("canonical_url", "VARCHAR"),
-        ("external_id", "VARCHAR"),
-        ("title", "TEXT"),
-        ("published_at", "DATETIME"),
-        ("retrieved_at", "DATETIME"),
-        ("content_fingerprint", "VARCHAR"),
-        ("provenance", "TEXT"),
-        ("collection_status", "VARCHAR DEFAULT 'collected'"),
-    ],
-    "evidence_relationships": [
-        ("judgment_id", "INTEGER REFERENCES judgments(id)"),
-    ],
-    "worker_tasks": [
-        ("evidence", "JSON"),
-        ("dependencies", "JSON"),
-        ("worker_id", "VARCHAR"),
-        ("role", "VARCHAR"),
-    ],
-    "research_tasks": [
-        ("claim_id", "INTEGER"),
-        ("objective", "TEXT"),
-        ("plan", "JSON"),
-        ("tools_used", "JSON"),
-        ("evidence_ids", "TEXT"),
-        ("claims", "JSON"),
-        ("judgments", "JSON"),
-        ("contradictions", "JSON"),
-        ("remaining_questions", "JSON"),
-        ("results", "JSON"),
-        ("errors", "JSON"),
-        ("current_step", "VARCHAR"),
-        ("attempts", "INTEGER DEFAULT 0"),
-        ("max_attempts", "INTEGER DEFAULT 3"),
-        ("started_at", "DATETIME"),
-        ("updated_at", "DATETIME"),
-        ("completed_at", "DATETIME"),
-    ],
-    "research_questions": [
-        ("source_claim_id", "INTEGER"),
-        ("source_rare_signal_id", "INTEGER"),
-    ],
-    "rare_signal_assessments": [
-        ("geographic_spread", "FLOAT DEFAULT 0.0"),
-        ("language_spread", "FLOAT DEFAULT 0.0"),
-        ("research_question_id", "INTEGER"),
-    ],
-    "outcomes": [
-        ("product_id", "INTEGER"),
-        ("data_scope", "VARCHAR DEFAULT 'REAL'"),
-    ],
-    "learning_events": [
-        ("product_id", "INTEGER"),
-        ("data_scope", "VARCHAR DEFAULT 'REAL'"),
-    ],
-    "lessons": [("data_scope", "VARCHAR DEFAULT 'REAL'")],
-    "products": [("data_scope", "VARCHAR DEFAULT 'REAL'")],
-    "distribution_channels": [("data_scope", "VARCHAR DEFAULT 'REAL'")],
-    "customer_events": [("data_scope", "VARCHAR DEFAULT 'REAL'")],
-    "earning_offers": [
-        ("next_actions_json", "TEXT NOT NULL DEFAULT '[]'"),
-        ("outcome_note", "TEXT"),
-    ],
-}
+# Build the manifest from the live SQLAlchemy metadata so older SQLite files
+# get every column the current ORM expects. This keeps the migration path in
+# sync with models.py without having to maintain a stale hand-written list.
+def _sql_type_for(column) -> str:
+    """Map SQLAlchemy column types to SQLite-friendly DDL fragments."""
+    from sqlalchemy import Boolean, DateTime, Float, Integer, JSON, String, Text
+
+    if isinstance(column.type, JSON):
+        return "JSON"
+    if isinstance(column.type, Boolean):
+        return "BOOLEAN"
+    if isinstance(column.type, DateTime):
+        return "DATETIME"
+    if isinstance(column.type, Float):
+        return "FLOAT"
+    if isinstance(column.type, Integer):
+        return "INTEGER"
+    if isinstance(column.type, Text):
+        return "TEXT"
+    if isinstance(column.type, String):
+        return "VARCHAR"
+    return "TEXT"
+
+
+def _default_sql_for(column) -> str:
+    """Return SQLite DEFAULT syntax for a column, if a literal default exists."""
+    default = getattr(column, "default", None)
+    if default is not None:
+        default_value = getattr(default, "arg", None)
+        if default_value is not None and not callable(default_value):
+            if isinstance(default_value, bool):
+                return f"DEFAULT {int(default_value)}"
+            if isinstance(default_value, str):
+                escaped = default_value.replace("'", "''")
+                return f"DEFAULT '{escaped}'"
+            if isinstance(default_value, (int, float)):
+                return f"DEFAULT {default_value}"
+    server_default = getattr(column, "server_default", None)
+    if server_default is not None:
+        text = getattr(server_default, "text", None)
+        if text is not None:
+            return f"DEFAULT {text}"
+    return ""
+
+
+def _build_expected_columns() -> dict[str, list[tuple[str, str]]]:
+    from app.database import Base
+
+    expected: dict[str, list[tuple[str, str]]] = {}
+    for table in Base.metadata.sorted_tables:
+        column_entries: list[tuple[str, str]] = []
+        for column in table.columns:
+            if column.primary_key:
+                continue
+            column_type = _sql_type_for(column)
+            default_sql = _default_sql_for(column)
+            ddl = column_type if not default_sql else f"{column_type} {default_sql}"
+            column_entries.append((column.name, ddl))
+        if column_entries:
+            expected[table.name] = column_entries
+    return expected
+
+
+EXPECTED_COLUMNS = _build_expected_columns()
 
 # This is intentionally narrow: the current model defines one missing indexed
 # column on an existing table. The lightweight column migration above cannot
@@ -217,17 +97,40 @@ EXPECTED_INDEXES = {
 }
 
 
+def _repair_stale_experiment_references(engine: Engine) -> int:
+    """Point foreign keys back at experiments after a rename-based rebuild."""
+    with engine.begin() as conn:
+        rows = conn.execute(
+            text("SELECT type, name, sql FROM sqlite_master WHERE sql LIKE '%experiments__old%'")
+        ).fetchall()
+        if not rows:
+            return 0
+        conn.execute(text("PRAGMA writable_schema=ON"))
+        for _row_type, name, sql in rows:
+            fixed = sql.replace('"experiments__old"', "experiments").replace(
+                "experiments__old", "experiments"
+            )
+            conn.execute(
+                text("UPDATE sqlite_master SET sql = :sql WHERE name = :name"),
+                {"sql": fixed, "name": name},
+            )
+        conn.execute(text("PRAGMA writable_schema=RESET"))
+    return len(rows)
+
+
 def run_migrations(engine: Engine) -> list[str]:
     """
     Inspect the live database and add any missing columns listed in
     EXPECTED_COLUMNS. Returns the list of ALTER TABLE statements that
     were actually run (empty list if the schema was already current).
     """
+    from app import models  # noqa: F401 — register tables before reading metadata
+
     inspector = inspect(engine)
     existing_tables = set(inspector.get_table_names())
     applied: list[str] = []
 
-    for table, columns in EXPECTED_COLUMNS.items():
+    for table, columns in _build_expected_columns().items():
         if table not in existing_tables:
             # Table doesn't exist yet — Base.metadata.create_all() (run
             # right before this) will have created it fresh with every
@@ -244,6 +147,69 @@ def run_migrations(engine: Engine) -> list[str]:
             with engine.begin() as conn:
                 conn.execute(text(statement))
             applied.append(statement)
+
+    if "experiments" in existing_tables:
+        columns = inspector.get_columns("experiments")
+        opportunity_id_col = next((c for c in columns if c["name"] == "opportunity_id"), None)
+        if opportunity_id_col and opportunity_id_col.get("nullable") is False:
+            from app import models
+
+            stale_temp_tables = ["experiments__old", "experiments__new"]
+            with engine.begin() as conn:
+                for temp_table in stale_temp_tables:
+                    if temp_table in inspector.get_table_names():
+                        conn.execute(text(f"DROP TABLE {temp_table}"))
+
+            temp_name = "experiments__new"
+            create_sql = str(CreateTable(models.Experiment.__table__).compile(dialect=sqlite.dialect()))
+            create_new_sql = create_sql.replace("experiments", temp_name)
+            insert_columns = [column.name for column in models.Experiment.__table__.columns]
+            quoted_columns = ", ".join(f'"{name}"' for name in insert_columns)
+            # Copy into a new table, then drop the old one. Renaming
+            # `experiments` first rewrites every child foreign key to the
+            # temporary name, and those references survive the drop.
+            insert_sql = (
+                f"INSERT INTO {temp_name} ({quoted_columns}) "
+                f"SELECT {quoted_columns} FROM experiments"
+            )
+            with engine.begin() as conn:
+                conn.execute(text("PRAGMA foreign_keys=OFF"))
+                conn.execute(text(create_new_sql))
+                conn.execute(text(insert_sql))
+                conn.execute(text("DROP TABLE experiments"))
+                conn.execute(text(f"ALTER TABLE {temp_name} RENAME TO experiments"))
+            applied.append("rebuild experiments table to allow nullable opportunity_id")
+
+    if "opportunities" in existing_tables:
+        columns = inspect(engine).get_columns("opportunities")
+        nullable_fields = {"target_customer", "solution", "business_model"}
+        needs_rebuild = any(
+            column["name"] in nullable_fields and column.get("nullable") is False
+            for column in columns
+        )
+        if needs_rebuild:
+            from app import models
+
+            temp_name = "opportunities__new"
+            create_sql = str(CreateTable(models.Opportunity.__table__).compile(dialect=sqlite.dialect()))
+            create_new_sql = create_sql.replace("opportunities", temp_name)
+            insert_columns = [column.name for column in models.Opportunity.__table__.columns]
+            quoted_columns = ", ".join(f'"{name}"' for name in insert_columns)
+            insert_sql = (
+                f"INSERT INTO {temp_name} ({quoted_columns}) "
+                f"SELECT {quoted_columns} FROM opportunities"
+            )
+            with engine.begin() as conn:
+                conn.execute(text("PRAGMA foreign_keys=OFF"))
+                conn.execute(text(create_new_sql))
+                conn.execute(text(insert_sql))
+                conn.execute(text("DROP TABLE opportunities"))
+                conn.execute(text(f"ALTER TABLE {temp_name} RENAME TO opportunities"))
+            applied.append("rebuild opportunities table to allow unknown hypothesis fields")
+
+    repaired = _repair_stale_experiment_references(engine)
+    if repaired:
+        applied.append(f"rewrote {repaired} schema objects still referencing experiments__old")
 
     inspector = inspect(engine)
     for table, indexes in EXPECTED_INDEXES.items():

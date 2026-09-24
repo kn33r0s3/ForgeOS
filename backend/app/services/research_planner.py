@@ -25,7 +25,7 @@ from app.services import research_task_engine
 SOURCE_HINTS: dict[str, list[str]] = {
     "github": ["tool", "tools", "software", "code", "automate", "automation", "app", "platform"],
     "reddit": ["customer", "customers", "people", "pain", "complain", "struggle", "avoid", "want"],
-    "rss": ["trend", "trends", "market", "industry", "growth", "news"],
+    "rss": ["trend", "trends", "market", "industry", "growth", "news", "price", "prices", "currency", "bond", "equity", "commodity", "commodities"],
     "arxiv": ["research", "study", "studies", "paper", "papers", "academic", "science", "evidence"],
 }
 DEFAULT_SOURCES = ["reddit", "github", "rss"]
@@ -87,6 +87,8 @@ def plan_tasks_for_open_questions(db: Session, limit: int = 20) -> list[models.R
 
     all_tasks: list[models.ResearchTask] = []
     for question in questions:
+        if question.question.lstrip().startswith("Gap:"):
+            continue
         tasks = plan_tasks_for_question(db, question)
         all_tasks.extend(tasks)
         question.status = "planned"

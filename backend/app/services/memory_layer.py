@@ -135,6 +135,12 @@ def search_knowledge(
     if source_type:
         rows_query = rows_query.filter(models.Knowledge.source_type == source_type)
     rows = rows_query.all()
+    hidden_ids = _hidden_belief_ids(db)
+    rows = [
+        row
+        for row in rows
+        if row.source_type != "belief" or row.source_id not in hidden_ids
+    ]
 
     scored = []
     for row in rows:
@@ -167,4 +173,20 @@ def list_knowledge(db: Session, source_type: Optional[str] = None, limit: int = 
     query = db.query(models.Knowledge)
     if source_type:
         query = query.filter(models.Knowledge.source_type == source_type)
-    return query.order_by(models.Knowledge.updated_at.desc()).limit(limit).all()
+    rows = query.order_by(models.Knowledge.updated_at.desc()).all()
+    hidden_ids = _hidden_belief_ids(db)
+    rows = [
+        row
+        for row in rows
+        if row.source_type != "belief" or row.source_id not in hidden_ids
+    ]
+    return rows[:limit]
+
+
+def _hidden_belief_ids(db: Session) -> set[int]:
+    from app.services.belief_engine import is_presentable_belief
+    return {
+        belief.id
+        for belief in db.query(models.Belief).all()
+        if not is_presentable_belief(belief)
+    }

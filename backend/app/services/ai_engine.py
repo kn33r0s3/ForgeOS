@@ -376,6 +376,7 @@ def generate_marketing_strategy(idea: str, db=None) -> str:
 
 
 def generate_pricing_idea(idea: str, db=None) -> str:
+    """Generate legacy hypothesis prose; the return value is not a price."""
     prompt = textwrap.dedent(f"""
         Suggest one concrete pricing model (1-2 sentences, with a rough
         price point) for a business solving:

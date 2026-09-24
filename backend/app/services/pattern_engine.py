@@ -167,14 +167,17 @@ def run_pattern_detection(db: Session) -> list[models.Pattern]:
             parent[ra] = rb
 
     for kw_a, kw_b in combinations(theme_keys, 2):
-        overlap = themes[kw_a] & themes[kw_b]
-        smaller = min(len(themes[kw_a]), len(themes[kw_b]))
-        if smaller and len(overlap) / smaller >= 0.5:
+        # Jaccard, not "small set inside a hub." A rare word that appears
+        # beside a common word must not pull the whole vocabulary together.
+        left, right = themes[kw_a], themes[kw_b]
+        union_size = len(left | right)
+        if union_size and len(left & right) / union_size >= 0.5:
             union(kw_a, kw_b)
 
     clusters: dict[str, set[str]] = defaultdict(set)  # root -> keywords
     for kw in theme_keys:
         clusters[find(kw)].add(kw)
+    clusters = _merge_similar_keyword_sets(clusters)
 
     total_signals = len(signals)
     detected_patterns = []
@@ -187,12 +190,18 @@ def run_pattern_detection(db: Session) -> list[models.Pattern]:
         if len(supporting_signal_ids) < MIN_CLUSTER_SIZE:
             continue
 
-        top_keywords = sorted(keywords, key=lambda k: -len(themes[k]))[:4]
-        title = _build_title(top_keywords)
-        description = _build_description(top_keywords, supporting_signal_ids, signals)
+        # Identity is the whole sorted keyword set. A different order, or a
+        # different slice of the same words, is not a new pattern.
+        # A two-word fragment is not a separate concept. The shared set remains.
+        if len(keywords) < 4:
+            continue
+        canonical_keywords = sorted(keywords)
+        title = _build_title(canonical_keywords)
+        description = _build_description(canonical_keywords, supporting_signal_ids, signals)
         frequency = len(supporting_signal_ids)
+        independent = _independent_source_count(supporting_signal_ids, signals)
 
-        base_confidence = min(95.0, (frequency / total_signals) * 100 + frequency * 5)
+        base_confidence = min(95.0, (independent / max(total_signals, 1)) * 100 + independent * 5)
         # Small boost from how important the Observer Engine judged the
         # supporting signals to be — a pattern built from high-importance
         # signals is more likely to be worth acting on than one built from
@@ -270,8 +279,43 @@ def _bulk_dominance(signal_ids: set[int], signals: list[models.Signal]) -> float
     return bulk / len(by_source)
 
 
+def _merge_similar_keyword_sets(clusters: dict[str, set[str]]) -> dict[str, set[str]]:
+    """One extra or reordered token must not become a second concept."""
+    items = list(clusters.items())
+    parent = {key: key for key, _ in items}
+
+    def find(key: str) -> str:
+        while parent[key] != key:
+            parent[key] = parent[parent[key]]
+            key = parent[key]
+        return key
+
+    def jaccard(left: set[str], right: set[str]) -> float:
+        union = left | right
+        return len(left & right) / len(union) if union else 0.0
+
+    for index, (left_key, left_words) in enumerate(items):
+        for right_key, right_words in items[index + 1:]:
+            if jaccard(left_words, right_words) >= 0.8:
+                parent[find(left_key)] = find(right_key)
+    merged: dict[str, set[str]] = defaultdict(set)
+    for key, words in items:
+        merged[find(key)] |= words
+    return merged
+
+
+def _independent_source_count(signal_ids: set[int], signals: list[models.Signal]) -> int:
+    """Copies of one URL or one body are one source, not many confirmations."""
+    seen = set()
+    for signal in signals:
+        if signal.id not in signal_ids:
+            continue
+        seen.add((signal.source or "", signal.canonical_url or (signal.content or "").strip()))
+    return len(seen)
+
+
 def _build_title(keywords: list[str]) -> str:
-    words = ", ".join(keywords)
+    words = ", ".join(sorted(keywords))
     return f"Recurring theme: {words}"
 
 

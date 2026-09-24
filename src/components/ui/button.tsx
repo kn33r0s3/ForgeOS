@@ -8,7 +8,8 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-fg text-void hover:bg-cyan",
+        primary:
+          "border border-black/10 bg-white text-ink shadow-[0_10px_30px_rgba(15,23,42,0.08)] hover:border-cyan/50 hover:bg-cyan hover:text-ink",
         secondary:
           "border border-line bg-transparent text-fg hover:border-cyan/40 hover:text-cyan",
         ghost: "text-muted hover:text-cyan",

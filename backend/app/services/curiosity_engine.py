@@ -74,6 +74,25 @@ from app.services import goal_engine, belief_stability, causal_engine, money_eng
 from app.services.pattern_engine import tokenize
 from typing import Optional
 
+# Standing questions for the world Forge is responsible for. Each one asks
+# for current public evidence. None of them states a price, a valuation,
+# or a fact. The cycle stores a question once; collectors may later attach
+# observations. Those observations are not publication and not verification.
+WORLD_RESEARCH_AGENDA = (
+    "What current public evidence describes jobs and unmet demand for work in Nepal?",
+    "What current public evidence describes local service supply gaps in Nepal?",
+    "What current public evidence describes goods, trades, and stated prices people in Nepal actually post?",
+    "What current public evidence describes residential and commercial real estate conditions in Nepal?",
+    "What current public evidence describes supply and movement in gold, oil, and agricultural commodities?",
+    "What current public evidence describes government bond and cash-market conditions relevant to Nepal?",
+    "What current public evidence describes equity market conditions relevant to Nepal and the region?",
+    "What current public evidence describes currency moves of NPR against USD, INR, and EUR?",
+    "What current public evidence describes infrastructure, energy, and data-center investment affecting Nepal?",
+    "What current public evidence describes private credit, startup funding, and small-business capital in Nepal?",
+    "What current public evidence describes cryptocurrency use and risk relevant to Nepal?",
+    "What current public evidence describes insurance, remittances, and household financial protection in Nepal?",
+)
+
 LOW_CONFIDENCE_THRESHOLD = 50.0
 LOW_STRATEGY_CONFIDENCE_THRESHOLD = 50.0
 UNVALIDATED_OPPORTUNITY_MIN_SCORE = 40.0  # only worth a research question if it's at least plausible on paper
@@ -89,16 +108,18 @@ class CuriosityEngine:
     # --- finding weak spots -------------------------------------------------
 
     def find_low_confidence_beliefs(self, threshold: float = LOW_CONFIDENCE_THRESHOLD) -> list[models.Belief]:
-        return (
-            self.db.query(models.Belief)
-            .filter(models.Belief.confidence_score < threshold)
-            .all()
-        )
+        from app.services.belief_engine import is_presentable_belief
+        return [
+            belief
+            for belief in self.db.query(models.Belief).filter(models.Belief.confidence_score < threshold).all()
+            if is_presentable_belief(belief)
+        ]
 
     def find_unexplored_patterns(self) -> list[models.Pattern]:
         """Patterns Forge has detected but never turned into a belief."""
+        from app.services.belief_engine import is_presentable_belief
         patterns = self.db.query(models.Pattern).all()
-        beliefs = self.db.query(models.Belief).all()
+        beliefs = [belief for belief in self.db.query(models.Belief).all() if is_presentable_belief(belief)]
         belief_text = " ".join(b.statement.lower() for b in beliefs)
 
         unexplored = []
@@ -134,8 +155,11 @@ class CuriosityEngine:
         confident right now while still swinging around or picking up
         contradictions, which find_low_confidence_beliefs() alone would
         never surface (it only looks at the current number)."""
+        from app.services.belief_engine import is_presentable_belief
         unstable = []
         for belief in self.db.query(models.Belief).all():
+            if not is_presentable_belief(belief):
+                continue
             stability = belief_stability.get_belief_stability(self.db, belief.id)["stability_score"]
             if stability < belief_stability.UNSTABLE_THRESHOLD:
                 unstable.append(belief)
@@ -148,8 +172,11 @@ class CuriosityEngine:
         "high-impact unknown causes" and "untested actions" from the
         spec: a belief Forge cares about but has no track record of
         actually acting on."""
+        from app.services.belief_engine import is_presentable_belief
         untested = []
         for belief in self.db.query(models.Belief).all():
+            if not is_presentable_belief(belief):
+                continue
             importance = goal_engine.belief_goal_relevance(self.db, belief)
             if importance <= 0:
                 continue
@@ -312,6 +339,24 @@ class CuriosityEngine:
         self.db.refresh(question)
         return question
 
+    def open_world_research(self) -> list[models.ResearchQuestion]:
+        """Open any standing world question that is not already stored.
+
+        Idempotent. A second call in a later cycle adds nothing. This does
+        not create beliefs, opportunities, providers, or prices.
+        """
+        opened: list[models.ResearchQuestion] = []
+        for text in WORLD_RESEARCH_AGENDA:
+            exists = (
+                self.db.query(models.ResearchQuestion)
+                .filter(models.ResearchQuestion.question == text)
+                .first()
+            )
+            if exists:
+                continue
+            opened.append(self._store_question(text, priority=70.0))
+        return opened
+
     def run_curiosity_scan(self) -> list[models.ResearchQuestion]:
         """Full scan: find every weak spot, generate questions for
         each, store new ones (existing identical questions are
@@ -327,6 +372,7 @@ class CuriosityEngine:
         specifically so the same textual signal never gets counted
         twice."""
         created: list[models.ResearchQuestion] = []
+        created.extend(self.open_world_research())
 
         for belief in self.find_low_confidence_beliefs():
             structural_boost = goal_engine.structural_goal_relevance(self.db, belief.pattern_id)

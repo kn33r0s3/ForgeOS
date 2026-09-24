@@ -147,9 +147,9 @@ class Opportunity(Base):
     goal_id = Column(Integer, ForeignKey("goals.id"), nullable=True)  # which Goal (if any) this opportunity serves
 
     problem = Column(Text, nullable=False)
-    target_customer = Column(Text, nullable=False)
-    solution = Column(Text, nullable=False)
-    business_model = Column(Text, nullable=False)
+    target_customer = Column(Text, nullable=True)
+    solution = Column(Text, nullable=True)
+    business_model = Column(Text, nullable=True)
     pricing_idea = Column(Text, nullable=True)
     market_analysis = Column(Text, nullable=True)
     mvp_plan = Column(Text, nullable=True)
@@ -271,11 +271,44 @@ class Experiment(Base):
     __tablename__ = "experiments"
 
     id = Column(Integer, primary_key=True, index=True)
-    opportunity_id = Column(Integer, ForeignKey("opportunities.id"), nullable=False)
+    opportunity_id = Column(Integer, ForeignKey("opportunities.id"), nullable=True, index=True)
     action = Column(Text, nullable=False)
     result = Column(Text, nullable=True)
     lesson = Column(Text, nullable=True)
     created_at = Column(DateTime, default=utcnow)
+
+    # --- Research-first provenance ---
+    source_analyze_id = Column(Integer, nullable=True, index=True)
+    source_signal_id = Column(Integer, ForeignKey("signals.id"), nullable=True, index=True)
+    source_research_question_id = Column(
+        Integer, ForeignKey("research_questions.id"), nullable=True, index=True
+    )
+    source_research_task_ids = Column(JSON, nullable=True)  # list[int]
+
+    # --- Explicit authorization state ---
+    authorization_status = Column(String, nullable=False, default="require_approval", index=True)
+    authorization_reason = Column(Text, nullable=True)
+    authorized_by = Column(String, nullable=True)
+    authorized_at = Column(DateTime, nullable=True)
+
+    # --- Canonical execution state ---
+    execution_status = Column(String, nullable=False, default="proposed", index=True)
+    executed_at = Column(DateTime, nullable=True)
+    execution_notes = Column(Text, nullable=True)
+
+    # --- Actual external response ---
+    response_received = Column(String, nullable=False, default="none", index=True)
+    response_raw = Column(Text, nullable=True)
+    response_received_at = Column(DateTime, nullable=True)
+
+    # --- Actual revenue (truth-controlled) ---
+    revenue_amount = Column(Float, nullable=False, default=0.0)
+    revenue_currency = Column(String, nullable=False, default="USD")
+    revenue_recorded_at = Column(DateTime, nullable=True)
+
+    # --- Learning linkage ---
+    learning_event_id = Column(Integer, ForeignKey("learning_events.id"), nullable=True, index=True)
+    next_decision = Column(Text, nullable=True)
 
     # --- Revenue Experiment fields (v1.1) ---
     hypothesis = Column(Text, nullable=True)  # e.g. "Restaurants will pay $99/mo for an AI answering service"
@@ -351,6 +384,7 @@ class Belief(Base):
     id = Column(Integer, primary_key=True, index=True)
     statement = Column(Text, nullable=False, unique=True)
     pattern_id = Column(Integer, ForeignKey("patterns.id"), nullable=True)  # the Pattern this belief was originally formed from — its causal origin, never overwritten once set
+    merged_into_id = Column(Integer, ForeignKey("beliefs.id"), nullable=True, index=True)
     supporting_signal_ids = Column(Text, nullable=True)  # comma-separated Signal ids
     confidence_score = Column(Float, nullable=False, default=50.0, index=True)  # 0-100
     created_at = Column(DateTime, default=utcnow)
@@ -1335,6 +1369,105 @@ class Outcome(Base):
     data_scope = Column(String, nullable=False, default="REAL", index=True)  # REAL | SANDBOX; only REAL outcomes roll into business metrics
 
 
+class Provider(Base):
+    """Publicly visible service provider record.
+
+    This is the public-facing identity model for a real provider/service
+    network. It is intentionally distinct from ForgeOS Product, which remains
+    an internal offer/business lifecycle record.
+    """
+
+    __tablename__ = "public_providers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False, index=True)
+    business_name = Column(String, nullable=True)
+    category = Column(String, nullable=True, index=True)
+    summary = Column(Text, nullable=True)
+    region = Column(String, nullable=True, index=True)
+    city = Column(String, nullable=True, index=True)
+    country = Column(String, nullable=False, default="Nepal")
+    website = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True, index=True)
+    public_visible = Column(Boolean, nullable=False, default=False, index=True)
+    verification_status = Column(String, nullable=False, default="unverified", index=True)
+    verification_notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    listings = relationship("ServiceListing", back_populates="provider", cascade="all, delete-orphan")
+    verification_records = relationship("VerificationRecord", back_populates="provider", cascade="all, delete-orphan")
+    booking_requests = relationship("BookingRequest", back_populates="provider", cascade="all, delete-orphan")
+
+
+class ServiceListing(Base):
+    """A concrete public service listing under a verified provider."""
+
+    __tablename__ = "public_service_listings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    provider_id = Column(Integer, ForeignKey("public_providers.id"), nullable=False, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
+    category = Column(String, nullable=True, index=True)
+    location = Column(String, nullable=True)
+    price_from = Column(String, nullable=True)
+    currency = Column(String, nullable=False, default="NPR")
+    availability_status = Column(String, nullable=False, default="pending", index=True)
+    is_active = Column(Boolean, nullable=False, default=True, index=True)
+    public_visible = Column(Boolean, nullable=False, default=False, index=True)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    provider = relationship("Provider", back_populates="listings")
+    booking_requests = relationship("BookingRequest", back_populates="service_listing", cascade="all, delete-orphan")
+
+
+class VerificationRecord(Base):
+    """Public verification history for a provider."""
+
+    __tablename__ = "public_verification_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    provider_id = Column(Integer, ForeignKey("public_providers.id"), nullable=False, index=True)
+    verification_status = Column(String, nullable=False, default="pending", index=True)
+    evidence_type = Column(String, nullable=True)
+    evidence_reference = Column(String, nullable=True)
+    reviewed_by = Column(String, nullable=True)
+    notes = Column(Text, nullable=True)
+    verified_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+
+    provider = relationship("Provider", back_populates="verification_records")
+
+
+class BookingRequest(Base):
+    """Customer request against a public service listing."""
+
+    __tablename__ = "public_booking_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    provider_id = Column(Integer, ForeignKey("public_providers.id"), nullable=False, index=True)
+    service_listing_id = Column(Integer, ForeignKey("public_service_listings.id"), nullable=True, index=True)
+    requester_name = Column(String, nullable=False)
+    requester_phone = Column(String, nullable=True)
+    requester_email = Column(String, nullable=True)
+    requested_service = Column(String, nullable=False)
+    requested_date = Column(String, nullable=True)
+    requested_time = Column(String, nullable=True)
+    notes = Column(Text, nullable=True)
+    status = Column(String, nullable=False, default="pending", index=True)
+    provider_response = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+    accepted_at = Column(DateTime, nullable=True)
+
+    provider = relationship("Provider", back_populates="booking_requests")
+    service_listing = relationship("ServiceListing", back_populates="booking_requests")
+
+
 class Product(Base):
     """A concrete offer derived from an Opportunity.
 
@@ -1555,6 +1688,50 @@ class IntegrationDelivery(Base):
     last_error = Column(Text, nullable=True)
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow)
+
+
+class DomainRecord(Base):
+    """A job, offer, or trade created inside ForgeOS. Not scraped from anywhere else."""
+
+    __tablename__ = "domain_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    kind = Column(String, nullable=False, index=True)  # job | offer | trade
+    title = Column(String, nullable=False)
+    detail = Column(Text, nullable=False)
+    city = Column(String, nullable=True, index=True)
+    stated_price = Column(String, nullable=True)
+    terms = Column(Text, nullable=True)  # JSON economic contract; work is not accepted without it
+    status = Column(String, nullable=False, default="open", index=True)  # open | closed
+    close_result = Column(String, nullable=True)  # completed | withdrawn | paid
+    close_note = Column(Text, nullable=True)
+    close_token_hash = Column(String, nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+    closed_at = Column(DateTime, nullable=True)
+
+
+class NetworkConnection(Base):
+    """A possible link between two records. State is explicit and never skipped."""
+
+    __tablename__ = "network_connections"
+
+    id = Column(Integer, primary_key=True, index=True)
+    left_kind = Column(String, nullable=False)
+    left_id = Column(Integer, nullable=False, index=True)
+    right_kind = Column(String, nullable=False)
+    right_id = Column(Integer, nullable=False, index=True)
+    state = Column(String, nullable=False, default="candidate", index=True)
+    reason = Column(Text, nullable=False)
+    evidence_reference = Column(Text, nullable=True)
+    constraints = Column(Text, nullable=True)
+    known = Column(Text, nullable=True)
+    unknown = Column(Text, nullable=True)
+    agreement_gap = Column(Text, nullable=False)
+    observed_at = Column(DateTime, default=utcnow)
+    public_visible = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
 
 class EarningOffer(Base):

@@ -22,6 +22,8 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 
+PUBLIC_WRITE_PATHS = {"/analyze", "/public/booking-requests", "/public/domain"}
+
 
 def _enabled() -> bool:
     return bool(getattr(settings, "FORGE_API_KEY", ""))
@@ -39,10 +41,13 @@ def _authorized(request: Request) -> bool:
 
 async def api_key_middleware(request: Request, call_next):
     """FastAPI BaseHTTPMiddleware. Only enforced for state-changing methods
-    and ONLY when FORGE_API_KEY is set. Passes through otherwise."""
+    and ONLY when FORGE_API_KEY is set. The public analyze intake remains open
+    to support self-serve problem capture without a secret."""
     if _enabled():
         method = request.method.upper()
-        if method in {"POST", "PUT", "PATCH", "DELETE"} and not _authorized(request):
+        path = request.url.path
+        allowed_write = path in PUBLIC_WRITE_PATHS or path.startswith("/public/domain/")
+        if method in {"POST", "PUT", "PATCH", "DELETE"} and not allowed_write and not _authorized(request):
             # Allow the local dashboard to keep working read-only; protect writes.
             return JSONResponse(
                 status_code=401,

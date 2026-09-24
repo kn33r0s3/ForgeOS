@@ -5,17 +5,16 @@ import { Container } from "./container";
 import { Eyebrow } from "./eyebrow";
 
 const GROUP_LINKS = [
-  { label: "Group overview", to: "/group" },
-  { label: "Businesses", to: "/group/businesses" },
-  { label: "Technology", to: "/technology" },
-  { label: "Operations", to: "/operations" },
-  { label: "Ventures", to: "/ventures" },
+  { label: "Search services", to: "/providers" },
+  { label: "Popular categories", to: "/services" },
+  { label: "How it works", to: "/about" },
+  { label: "Contact", to: "/contact" },
 ] as const;
 
 const WORK_LINKS = [
-  { label: "Services", to: "/services" },
-  { label: "How we work", to: "/process" },
-  { label: "About", to: "/about" },
+  { label: "Home", to: "/" },
+  { label: "Service categories", to: "/services" },
+  { label: "Providers", to: "/providers" },
 ] as const;
 
 export function SiteFooter() {
@@ -26,13 +25,12 @@ export function SiteFooter() {
         <div className="sm:col-span-2 lg:col-span-1">
           <BrandMark />
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
-            A parent business group building, owning, and operating useful systems
-            and infrastructure from Nepal.
+            Forge is the network. Services are one path through it, and the one that can be used now. Nepal is where that path starts.
           </p>
         </div>
         <div className="flex flex-col gap-3">
           <Eyebrow className="mb-1" tone="muted">
-            The group
+            Explore
           </Eyebrow>
           {GROUP_LINKS.map((item) => (
             <Link
@@ -46,7 +44,7 @@ export function SiteFooter() {
         </div>
         <div className="flex flex-col gap-3">
           <Eyebrow className="mb-1" tone="muted">
-            Work
+            Quick links
           </Eyebrow>
           {WORK_LINKS.map((item) => (
             <Link
@@ -63,10 +61,10 @@ export function SiteFooter() {
             Connect
           </Eyebrow>
           <Link
-            to="/request"
+            to="/providers"
             className="text-sm text-muted transition-colors duration-150 hover:text-cyan"
           >
-            Start a project
+            Find a service
           </Link>
           <a
             href={`mailto:${SITE.email}`}

@@ -112,6 +112,104 @@ def create_or_get_claim(
     return claim, True
 
 
+def restore_source_addresses(db: Session, limit: int = 50) -> int:
+    """Copy a source address onto the original signal when only a duplicate stored it.
+
+    The address must already be on a duplicate of that signal, and every such
+    duplicate must carry the same address. Nothing is fetched or invented.
+    """
+    if limit <= 0:
+        return 0
+    duplicate_urls = (
+        db.query(models.Signal.is_duplicate_of)
+        .filter(models.Signal.is_duplicate_of.isnot(None))
+        .filter(models.Signal.canonical_url.isnot(None))
+        .filter(models.Signal.canonical_url != "")
+    )
+    originals = (
+        db.query(models.Signal)
+        .filter(models.Signal.id.in_(duplicate_urls))
+        .filter((models.Signal.canonical_url.is_(None)) | (models.Signal.canonical_url == ""))
+        .order_by(models.Signal.id.desc())
+        .limit(limit)
+        .all()
+    )
+    restored = 0
+    for original in originals:
+        urls = {
+            row.canonical_url.strip()
+            for row in db.query(models.Signal.canonical_url)
+            .filter(models.Signal.is_duplicate_of == original.id)
+            .filter(models.Signal.canonical_url.isnot(None))
+            .filter(models.Signal.canonical_url != "")
+            .all()
+            if row.canonical_url and row.canonical_url.strip()
+        }
+        if len(urls) != 1:
+            continue
+        original.canonical_url = urls.pop()
+        restored += 1
+    if restored:
+        db.commit()
+    return restored
+
+
+def link_unclaimed_observations(db: Session, limit: int = 20) -> list[int]:
+    """Open an observed claim for an external signal that already has evidence.
+
+    The statement is the stored source text. This does not verify it, price
+    it, or publish a provider. A signal that already has a claim is skipped.
+    """
+    if limit <= 0:
+        return []
+    claimed_signals = (
+        db.query(models.Evidence.signal_id)
+        .join(models.EvidenceRelationship, models.EvidenceRelationship.evidence_id == models.Evidence.id)
+        .filter(models.EvidenceRelationship.claim_id.isnot(None))
+        .filter(models.Evidence.signal_id.isnot(None))
+    )
+    evidence_id = (
+        db.query(models.Evidence.id)
+        .filter(models.Evidence.signal_id == models.Signal.id)
+        .order_by(models.Evidence.id.desc())
+        .limit(1)
+        .correlate(models.Signal)
+        .scalar_subquery()
+    )
+    rows = (
+        db.query(models.Signal, models.Evidence)
+        .join(models.Evidence, models.Evidence.id == evidence_id)
+        .filter(models.Signal.source_type == "external")
+        .filter(models.Signal.canonical_url.isnot(None))
+        .filter(models.Signal.canonical_url != "")
+        .filter(models.Signal.is_duplicate_of.is_(None))
+        .filter(~models.Signal.id.in_(claimed_signals))
+        .order_by(models.Signal.id.desc())
+        .limit(limit)
+        .all()
+    )
+    linked: list[int] = []
+    for signal, evidence in rows:
+        statement = (signal.content or "").strip().replace("\n", " ")
+        if len(statement) > 400:
+            statement = statement[:400].rstrip()
+        if not statement:
+            continue
+        claim, _ = create_or_get_claim(
+            db,
+            statement,
+            epistemic_state="observed",
+            provenance={
+                "signal_id": signal.id,
+                "source": signal.source,
+                "canonical_url": signal.canonical_url,
+            },
+        )
+        link_evidence(db, evidence, claim=claim, relation_type="derived_from")
+        linked.append(claim.id)
+    return linked
+
+
 def _target_key(
     *,
     claim_id: int | None,

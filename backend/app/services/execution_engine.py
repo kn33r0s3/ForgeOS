@@ -478,7 +478,8 @@ def recommend_next_money_action(db: Session) -> Optional[dict]:
     real data, just one step earlier in the loop) rather than
     returning nothing.
     """
-    ranked = rank_pending_actions(db, limit=1)
+    pending = rank_pending_actions(db, limit=50)
+    ranked = [item for item in pending if item["factors"]]
     if ranked:
         top = ranked[0]
         action = top["action"]
@@ -503,17 +504,31 @@ def recommend_next_money_action(db: Session) -> Optional[dict]:
             ),
         }
 
-    # No execution actions exist yet — fall back one step, still real data.
+    # Nothing scoreable yet — fall back one step, still real data.
     fallback = money_engine.recommend_next_action(db)
     if not fallback:
-        return None
+        if not pending:
+            return None
+        action = pending[0]["action"]
+        return {
+            "action": action,
+            "action_score": 0.0,
+            "factors": None,
+            "stage": pending[0]["stage"],
+            "reasoning": "Pending actions are not linked to an opportunity, so economic potential cannot be scored.",
+            "next_step": "Link an opportunity before this action can be ranked.",
+        }
     return {
         "action": None,
         "action_score": fallback["money_score"],
         "factors": None,
         "stage": "predicted",
         "reasoning": fallback["reasoning"],
-        "next_step": f"No execution action created yet. {fallback['next_step']}",
+        "next_step": (
+            f"Pending actions are not linked to an opportunity, so they cannot be ranked. {fallback['next_step']}"
+            if pending
+            else f"No execution action created yet. {fallback['next_step']}"
+        ),
     }
 
 

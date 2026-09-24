@@ -95,7 +95,7 @@ class Settings(BaseSettings):
     # sync with the real browser origins and allow overriding via env.
     ALLOWED_ORIGINS: list[str] = os.getenv(
         "ALLOWED_ORIGINS",
-        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3002,http://127.0.0.1:3002,http://0.0.0.0:3002",
+        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3002,http://127.0.0.1:3002,http://0.0.0.0:3002,http://localhost:8080,http://127.0.0.1:8080",
     ).split(",")
 
     # --- Security (opt-in) ---

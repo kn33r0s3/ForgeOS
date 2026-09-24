@@ -24,6 +24,7 @@ Cron example (once daily at 07:00):
 
 import argparse
 import json
+import os
 import sys
 import traceback
 from datetime import datetime, timezone
@@ -31,8 +32,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.database import SessionLocal
+from app import database as app_database
 from app.services import forge_loop, execution_engine
+
+# Backward-compatible hook for tests and any direct monkeypatches.
+_ORIGINAL_SESSION_LOCAL = app_database.SessionLocal
+SessionLocal = _ORIGINAL_SESSION_LOCAL
 
 LOG_PATH = Path(__file__).resolve().parent.parent.parent / "logs" / "daily_cycle_log.jsonl"
 
@@ -66,13 +71,33 @@ def _rollback_if_needed(db, label: str) -> None:
 
 
 def run_once() -> dict:
-    db = SessionLocal()
+    app_database._configure_engine()
+    factory = SessionLocal if SessionLocal is not _ORIGINAL_SESSION_LOCAL else app_database.SessionLocal
+    db = factory()
     record = {"timestamp": datetime.now(timezone.utc).isoformat()}
     try:
         # --- Stage 1: Forge cycle. A failure here must not poison Stage 2. ---
         try:
             cycle_summary = forge_loop.run_cycle(db)
             record["forge_cycle"] = cycle_summary
+            # Bounded collection of tasks the scan just planned. Default is
+            # small so one cycle cannot block on the network. Set
+            # FORGEOS_COLLECT_LIMIT=0 to plan questions without fetching.
+            # Returned items are observations, not public facts.
+            collect_limit = int(os.environ.get("FORGEOS_COLLECT_LIMIT", "2"))
+            from app.services import research_task_engine
+            resume_limit = int(os.environ.get("FORGEOS_RESUME_LIMIT", "10"))
+            record["resumed_tasks"] = research_task_engine.resume_running_tasks(db, limit=resume_limit)
+            if collect_limit > 0:
+                from app.services import collector_runner
+                record["collection"] = collector_runner.run_pending_tasks(db, limit=collect_limit)
+            from app.services import evidence_graph, network_connections
+            claim_limit = int(os.environ.get("FORGEOS_CLAIM_LINK_LIMIT", "20"))
+            record["restored_source_addresses"] = evidence_graph.restore_source_addresses(db, limit=claim_limit)
+            record["linked_claims"] = evidence_graph.link_unclaimed_observations(db, limit=claim_limit)
+            record["connections"] = [
+                row.id for row in network_connections.scan_candidates(db, limit=50)
+            ]
         except Exception as exc:
             record["forge_cycle_error"] = f"{type(exc).__name__}: {exc}"
             record["forge_cycle_traceback"] = traceback.format_exc()

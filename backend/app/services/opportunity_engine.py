@@ -140,13 +140,13 @@ def _is_generic_target(value: str | None) -> bool:
     return not low or "to be refined" in low or "not yet identified" in low or "matching the signals" in low
 
 
-def _derive_target_customer(problem: str, fallback: str | None = None) -> str:
+def _derive_target_customer(problem: str, fallback: str | None = None) -> str | None:
     extraction = economic_intelligence.extract_economic_signal(problem)
     return (
         extraction.get("customer_type")
         or extraction.get("affected_customer")
         or fallback
-        or "Customer segment not yet identified from evidence"
+        or fallback
     )
 
 
@@ -193,24 +193,18 @@ def opportunity_from_pattern(db: Session, pattern: models.Pattern) -> models.Opp
     problem_text = pattern.description
 
     difficulty = _estimate_difficulty(problem_text)
-    market_analysis = ai_engine.generate_market_analysis(problem_text, db=db)
-    solution = ai_engine.generate_solution(problem_text, db=db)
-    mvp_plan = ai_engine.generate_mvp_plan(problem_text, db=db)
-    validation_plan = ai_engine.generate_validation_plan(problem_text, db=db)
-    pricing_idea = ai_engine.generate_pricing_idea(problem_text, db=db)
-
     score = _score_opportunity(pattern.frequency, pattern.confidence_score, difficulty)
 
     opportunity = models.Opportunity(
         pattern_id=pattern.id,
         problem=pattern.title,
-        target_customer=_derive_target_customer(problem_text, "Customer segment not yet identified from evidence"),
-        solution=solution,
-        business_model="Subscription (SaaS) or usage-based pricing, validated during MVP testing",
-        pricing_idea=pricing_idea,
-        market_analysis=market_analysis,
-        mvp_plan=mvp_plan,
-        validation_plan=validation_plan,
+        target_customer=_derive_target_customer(problem_text),
+        solution=None,
+        business_model=None,
+        pricing_idea=None,
+        market_analysis=None,
+        mvp_plan=None,
+        validation_plan=None,
         difficulty=difficulty,
         score=score,
         identity_key=_identity_key(pattern.title, pattern.id),
@@ -233,12 +227,6 @@ def opportunity_from_idea(db: Session, idea_text: str) -> models.Opportunity:
         return existing
 
     difficulty = _estimate_difficulty(idea_text)
-    market_analysis = ai_engine.generate_market_analysis(idea_text, db=db)
-    solution = ai_engine.generate_solution(idea_text, db=db)
-    mvp_plan = ai_engine.generate_mvp_plan(idea_text, db=db)
-    validation_plan = ai_engine.generate_validation_plan(idea_text, db=db)
-    pricing_idea = ai_engine.generate_pricing_idea(idea_text, db=db)
-
     # No pattern confidence/frequency available for a one-off idea, so
     # score from a moderate baseline plus a small text-richness signal.
     richness_bonus = min(15.0, len(idea_text.split()) * 0.5)
@@ -249,13 +237,13 @@ def opportunity_from_idea(db: Session, idea_text: str) -> models.Opportunity:
     opportunity = models.Opportunity(
         pattern_id=None,
         problem=idea_text.strip(),
-        target_customer=_derive_target_customer(idea_text, "Customer segment not yet identified from evidence"),
-        solution=solution,
-        business_model="Subscription (SaaS) or usage-based pricing, validated during MVP testing",
-        pricing_idea=pricing_idea,
-        market_analysis=market_analysis,
-        mvp_plan=mvp_plan,
-        validation_plan=validation_plan,
+        target_customer=_derive_target_customer(idea_text),
+        solution=None,
+        business_model=None,
+        pricing_idea=None,
+        market_analysis=None,
+        mvp_plan=None,
+        validation_plan=None,
         difficulty=difficulty,
         score=score,
         identity_key=identity_key,
@@ -405,9 +393,9 @@ def generate_opportunity_from_pattern_if_economic(db: Session, pattern: models.P
     opportunity = models.Opportunity(
         pattern_id=pattern.id,
         problem=best_extraction["problem"],
-        target_customer=best_extraction["customer_type"] or best_extraction["affected_customer"] or "Not yet identified from available evidence",
-        solution=f"A solution addressing: {core_signal}",
-        business_model="Not yet determined — requires validation",
+        target_customer=best_extraction["customer_type"] or best_extraction["affected_customer"],
+        solution=None,
+        business_model=None,
         customer_segment=best_extraction["customer_type"],
         economic_consequence=best_extraction["consequence"] or best_extraction["monetary_impact"],
         problem_evidence_signal_ids=str(best_signal.id),
@@ -506,9 +494,9 @@ def generate_opportunity_from_signal_if_strong(db: Session, signal: models.Signa
 
     opportunity = models.Opportunity(
         problem=problem_text,
-        target_customer=extraction["customer_type"] or extraction["affected_customer"] or "Not yet identified from available evidence",
-        solution=f"A solution addressing: {core_signal}",
-        business_model="Not yet determined — requires validation",
+        target_customer=extraction["customer_type"] or extraction["affected_customer"],
+        solution=None,
+        business_model=None,
         customer_segment=extraction["customer_type"],
         economic_consequence=extraction["consequence"] or extraction["monetary_impact"],
         problem_evidence_signal_ids=str(signal.id),

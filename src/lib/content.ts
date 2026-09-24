@@ -1,25 +1,537 @@
 export const SITE = {
-  name: "Sanip Ops",
-  legalName: "Sanip Operations",
-  domain: "sanipoperations.com.np",
-  url: "https://sanipoperations.com.np",
-  email: "hello@sanipoperations.com.np",
-  location: "Nepal · Remote-ready",
-  tagline: "Build what lasts. Operate what matters.",
+  name: "Forge",
+  legalName: "Forge",
+  domain: "Domain pending verification",
+  url: "",
+  email: "hello@pending-domain.local",
+  location: "Starting in Nepal",
+  tagline: "A network of real work, evidence, and outcomes.",
   description:
-    "Sanip Ops is a parent operations and infrastructure group from Nepal. We design, build, and operate focused digital systems — and we are constructing the long-term platform those systems will live on.",
+    "Forge is a world of record. People, organizations, capabilities, needs, work, services, offers, trades, and outcomes stay in one network. Verified services are one path that is usable now. Nepal is the first geography, not the boundary of the system.",
 } as const;
 
 export const NAV = [
+  { label: "Home", to: "/" },
   { label: "Services", to: "/services" },
-  { label: "Group", to: "/group" },
-  { label: "Businesses", to: "/group/businesses" },
-  { label: "Technology", to: "/technology" },
-  { label: "Operations", to: "/operations" },
-  { label: "Ventures", to: "/ventures" },
-  { label: "About", to: "/about" },
+  { label: "Providers", to: "/providers" },
+  { label: "Work", to: "/domain" },
+  { label: "Discoveries", to: "/discoveries" },
+  { label: "How it works", to: "/about" },
   { label: "Contact", to: "/contact" },
 ] as const;
+
+export const providerCategories = ["All"] as const;
+
+export type PublicServiceListing = {
+  id: number;
+  provider_id: number;
+  title: string;
+  description: string;
+  category?: string | null;
+  location?: string | null;
+  price_from?: string | null;
+  currency?: string | null;
+  availability_status?: string | null;
+  is_active?: boolean;
+  public_visible?: boolean;
+};
+
+export type ProviderRecord = {
+  id: number;
+  slug: string;
+  name: string;
+  category: string;
+  location: string;
+  response: string;
+  price: string;
+  verified: boolean;
+  summary: string;
+  service: string;
+  listings: PublicServiceListing[];
+  status?: string;
+  launchState?: string | null;
+  actualCustomers: number;
+  actualRevenue: number;
+  actualCost: number;
+  leadCount: number;
+  paidCustomerCount: number;
+};
+
+export const providers: ProviderRecord[] = [];
+
+export type PublicDiscovery = {
+  id: number;
+  source: string;
+  title?: string | null;
+  excerpt: string;
+  canonical_url?: string | null;
+  retrieved_at?: string | null;
+  epistemic_state: string;
+  freshness?: string;
+};
+
+export type PublicDomainRecord = {
+  id: number;
+  kind: "job" | "offer" | "trade";
+  title: string;
+  detail: string;
+  city?: string | null;
+  stated_price?: string | null;
+  status: string;
+  terms_complete?: boolean;
+  created_at?: string;
+};
+
+export type PublicMatchCandidate = {
+  kind: string;
+  id: number;
+  name: string;
+  where?: string | null;
+  stated_price?: string | null;
+  stated_availability?: string | null;
+  reasons: string[];
+  unknowns: string[];
+  connection_id?: number | null;
+  latest_response?: string | null;
+};
+
+export type PublicMatch = {
+  need_id: number;
+  need_kind: string;
+  need_title: string;
+  need_city?: string | null;
+  candidates: PublicMatchCandidate[];
+  unknowns: string[];
+};
+
+export type PublicTrust = {
+  subject_kind: string;
+  subject_id: number;
+  recorded_requests: number;
+  reported_payments: Array<{ connection_id: number; amount: number; unit: string; verification: string }>;
+  verified_payments: Array<{ connection_id: number; amount: number; unit: string; verification: string }>;
+  disputed_payments: Array<{ connection_id: number; amount: number; unit: string; verification: string }>;
+  settled_payments: Array<{ connection_id: number; amount: number; unit: string; verification: string }>;
+  disputes: number;
+  unknowns: string[];
+};
+
+export type PublicConnection = {
+  id: number;
+  left_kind: string;
+  left_id: number;
+  right_kind: string;
+  right_id: number;
+  state: string;
+  reason: string;
+  known?: string | null;
+  unknown?: string | null;
+  agreement_gap: string;
+  forge_role: string;
+  owns_either_side: boolean;
+  latest_response?: string | null;
+  latest_fulfillment?: string | null;
+};
+
+export async function recordPublicConnectionResponse(input: {
+  recordId: number;
+  connectionId: number;
+  close_token: string;
+  note: string;
+}): Promise<PublicConnection | null> {
+  return postPublicJson<PublicConnection>(
+    `/domain/${input.recordId}/connections/${input.connectionId}/response`,
+    { close_token: input.close_token, note: input.note },
+  );
+}
+
+export type PublicAlert = {
+  id: number;
+  source: string;
+  text: string;
+  created_at?: string | null;
+};
+
+export type PublicDomainEvents = {
+  record_id: number;
+  payments: string[];
+  disputes: string[];
+  completions: number;
+  unknowns: string[];
+};
+
+export type EngineHealth = {
+  reachable: boolean;
+  status?: string;
+  cycle?: { id?: number; status?: string; ended_at?: string | null } | null;
+};
+
+export async function loadEngineHealth(): Promise<EngineHealth> {
+  const bases = getPublicApiBase() ? [getPublicApiBase()] : [];
+  const urls = [...bases.map((base) => `${base}/health`), "/api/health"];
+  if (typeof window !== "undefined") {
+    urls.push(`${window.location.origin}/api/health`);
+  }
+  for (const url of [...new Set(urls)]) {
+    try {
+      const response = await fetch(url, { headers: { Accept: "application/json" } });
+      if (!response.ok) continue;
+      const body = (await response.json()) as EngineHealth;
+      return { reachable: true, status: body.status, cycle: body.cycle ?? null };
+    } catch {
+      continue;
+    }
+  }
+  return { reachable: false };
+}
+
+function getPublicApiBase() {
+  return (import.meta.env.VITE_FORGE_API_BASE as string | undefined)?.replace(/\/$/, "") ?? "";
+}
+
+function getPublicApiCandidates(path: string): string[] {
+  const backendBase = getPublicApiBase();
+  const relativePath = `/api/public${path}`;
+  const candidates = [relativePath];
+  if (backendBase) {
+    candidates.unshift(`${backendBase}/public${path}`);
+  }
+
+  if (typeof window !== "undefined") {
+    const origin = window.location.origin;
+    const sameOrigin = `${origin}${relativePath}`;
+    if (!candidates.includes(sameOrigin)) {
+      candidates.push(sameOrigin);
+    }
+  }
+
+  return [...new Set(candidates)];
+}
+
+async function fetchJson<T>(url: string): Promise<T | null> {
+  try {
+    const response = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!response.ok) {
+      return null;
+    }
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchJsonFromCandidates<T>(path: string): Promise<T | null> {
+  for (const url of getPublicApiCandidates(path)) {
+    const payload = await fetchJson<T>(url);
+    if (payload !== null) {
+      return payload;
+    }
+  }
+  return null;
+}
+
+export async function loadDiscoveries(limit = 20): Promise<PublicDiscovery[]> {
+  const payload = await fetchJsonFromCandidates<PublicDiscovery[]>(
+    `/discoveries?limit=${encodeURIComponent(String(limit))}`,
+  );
+  return Array.isArray(payload) ? payload : [];
+}
+
+export async function loadPublicDomain(): Promise<PublicDomainRecord[]> {
+  const payload = await fetchJsonFromCandidates<PublicDomainRecord[]>("/domain");
+  return Array.isArray(payload) ? payload : [];
+}
+
+export async function loadPublicMatches(): Promise<PublicMatch[]> {
+  const payload = await fetchJsonFromCandidates<PublicMatch[]>("/matches");
+  return Array.isArray(payload) ? payload : [];
+}
+
+export async function loadPublicConnections(): Promise<PublicConnection[]> {
+  const payload = await fetchJsonFromCandidates<PublicConnection[]>("/connections");
+  return Array.isArray(payload) ? payload : [];
+}
+
+export async function loadPublicAlerts(limit = 20): Promise<PublicAlert[]> {
+  const payload = await fetchJsonFromCandidates<PublicAlert[]>(`/alerts?limit=${limit}`);
+  return Array.isArray(payload) ? payload : [];
+}
+
+export async function loadPublicTrust(subjectKind: "provider" | "domain_record", subjectId: number): Promise<PublicTrust | null> {
+  return fetchJsonFromCandidates<PublicTrust>(`/trust/${subjectKind}/${subjectId}`);
+}
+
+export async function loadPublicDomainEvents(recordId: number): Promise<PublicDomainEvents | null> {
+  return fetchJsonFromCandidates<PublicDomainEvents>(`/domain/${recordId}/events`);
+}
+
+async function postPublicJson<T>(path: string, body: unknown): Promise<T | null> {
+  for (const url of getPublicApiCandidates(path)) {
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (response.ok) {
+        return (await response.json()) as T;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+export async function closePublicDomainRecord(input: {
+  recordId: number;
+  close_token: string;
+  result: "completed" | "withdrawn" | "paid";
+  note: string;
+  amount_npr?: number | null;
+}): Promise<PublicDomainRecord | null> {
+  return postPublicJson<PublicDomainRecord>(`/domain/${input.recordId}/close`, {
+    close_token: input.close_token,
+    result: input.result,
+    note: input.note,
+    amount_npr: input.result === "paid" ? input.amount_npr : null,
+  });
+}
+
+export async function disputePublicDomainRecord(input: {
+  recordId: number;
+  close_token: string;
+  note: string;
+}): Promise<PublicDomainEvents | null> {
+  return postPublicJson<PublicDomainEvents>(`/domain/${input.recordId}/dispute`, {
+    close_token: input.close_token,
+    note: input.note,
+  });
+}
+
+export async function createPublicDomainRecord(input: {
+  kind: "job" | "offer" | "trade";
+  title: string;
+  detail: string;
+  city?: string | null;
+  stated_price?: string | null;
+}): Promise<(PublicDomainRecord & { close_token: string }) | null> {
+  for (const url of getPublicApiCandidates("/domain")) {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(input),
+    });
+    if (response.ok) {
+      return (await response.json()) as PublicDomainRecord & { close_token: string };
+    }
+  }
+  return null;
+}
+
+export async function loadProviders(filters?: { q?: string; category?: string; city?: string }): Promise<ProviderRecord[]> {
+  const params = new URLSearchParams();
+  if (filters?.q?.trim()) params.set("q", filters.q.trim());
+  if (filters?.category && filters.category !== "All") params.set("category", filters.category);
+  if (filters?.city?.trim()) params.set("city", filters.city.trim());
+  const query = params.toString();
+  const suffix = query ? `?${query}` : "";
+  const servicePayload = await fetchJsonFromCandidates<Array<{
+    id?: number;
+    provider_id?: number;
+    title?: string;
+    description?: string;
+    category?: string | null;
+    location?: string | null;
+    price_from?: string | null;
+    currency?: string | null;
+    availability_status?: string | null;
+    public_visible?: boolean;
+    is_active?: boolean;
+  }>>(`/services${suffix}`);
+
+  if (!Array.isArray(servicePayload)) {
+    return [];
+  }
+
+  const providerMap = new Map<number, ProviderRecord>();
+  const listingsMap = new Map<number, PublicServiceListing[]>();
+
+  for (const item of servicePayload) {
+    if (!item || typeof item.provider_id !== "number") {
+      continue;
+    }
+    const listing: PublicServiceListing = {
+      id: item.id ?? 0,
+      provider_id: item.provider_id,
+      title: item.title ?? "",
+      description: item.description ?? "",
+      category: item.category ?? "Service",
+      location: item.location ?? null,
+      price_from: item.price_from ?? null,
+      currency: item.currency ?? "NPR",
+      availability_status: item.availability_status ?? null,
+      is_active: item.is_active ?? true,
+      public_visible: item.public_visible ?? true,
+    };
+    const existing = listingsMap.get(item.provider_id) ?? [];
+    existing.push(listing);
+    listingsMap.set(item.provider_id, existing);
+  }
+
+  for (const url of getPublicApiCandidates(`/providers${suffix}`)) {
+    const payload = await fetchJson<Array<{
+      id?: number;
+      name?: string;
+      business_name?: string | null;
+      category?: string | null;
+      summary?: string | null;
+      region?: string | null;
+      city?: string | null;
+      country?: string | null;
+      website?: string | null;
+      verification_status?: string | null;
+      is_active?: boolean;
+      public_visible?: boolean;
+    }>>(url);
+
+    if (!Array.isArray(payload)) {
+      continue;
+    }
+
+    for (const item of payload) {
+      const providerId = item.id ?? 0;
+      const name = item.name ?? item.business_name ?? "";
+      const summary = item.summary ?? "";
+      const locationCandidate = [item.city, item.region].filter(Boolean).join(", ");
+      const location = locationCandidate || "Location not recorded";
+      const listings = listingsMap.get(providerId) ?? [];
+      const primaryListing = listings[0];
+
+      const record: ProviderRecord = {
+        id: providerId,
+        slug: `provider-${providerId}`,
+        name,
+        category: item.category || primaryListing?.category || "Service",
+        location,
+        response: primaryListing?.availability_status ? `Availability: ${primaryListing.availability_status}` : "Availability not recorded",
+        price: primaryListing?.price_from ? `${primaryListing.price_from} ${primaryListing.currency ?? "NPR"}` : "Price not recorded",
+        verified: (item.verification_status ?? "unverified") === "verified",
+        summary,
+        service: primaryListing?.title ?? summary,
+        listings,
+        status: primaryListing?.availability_status ?? undefined,
+        launchState: undefined,
+        actualCustomers: 0,
+        actualRevenue: 0,
+        actualCost: 0,
+        leadCount: 0,
+        paidCustomerCount: 0,
+      };
+      providerMap.set(providerId, record);
+    }
+
+    if (providerMap.size > 0) {
+      return Array.from(providerMap.values());
+    }
+  }
+
+  return [];
+}
+
+export async function createBookingRequest(input: {
+  provider_id: number;
+  service_listing_id?: number | null;
+  requester_name: string;
+  requester_phone?: string | null;
+  requester_email?: string | null;
+  requested_service: string;
+  requested_date?: string | null;
+  requested_time?: string | null;
+  notes?: string | null;
+}): Promise<{ id: number; status: string; provider_response?: string | null; requested_service: string } | null> {
+  const candidateUrls = getPublicApiCandidates("/booking-requests");
+
+  for (const url of candidateUrls) {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+
+    if (!response.ok) {
+      continue;
+    }
+
+    const payload = (await response.json()) as {
+      id?: number;
+      status?: string;
+      provider_response?: string | null;
+      requested_service?: string;
+    };
+
+    return {
+      id: payload.id ?? 0,
+      status: payload.status ?? "pending",
+      provider_response: payload.provider_response ?? null,
+      requested_service: payload.requested_service ?? input.requested_service,
+    };
+  }
+
+  return null;
+}
+
+export type BookingStatus = {
+  id: number;
+  status: string;
+  requested_service: string;
+  provider_id?: number;
+  provider_name?: string | null;
+  requested_date?: string | null;
+  requested_time?: string | null;
+  provider_response?: string | null;
+};
+
+export async function getBookingRequestStatus(id: number): Promise<BookingStatus | null> {
+  const candidateUrls = getPublicApiCandidates(`/booking-requests/${id}`);
+
+  for (const url of candidateUrls) {
+    const response = await fetch(url, {
+      headers: { Accept: "application/json" },
+    });
+
+    if (!response.ok) {
+      continue;
+    }
+
+    const payload = (await response.json()) as {
+      id?: number;
+      status?: string;
+      requested_service?: string;
+      provider_id?: number;
+      provider_name?: string | null;
+      requested_date?: string | null;
+      requested_time?: string | null;
+      provider_response?: string | null;
+    };
+
+    return {
+      id: payload.id ?? id,
+      status: payload.status ?? "pending",
+      requested_service: payload.requested_service ?? "Service request",
+      provider_id: payload.provider_id,
+      provider_name: payload.provider_name ?? null,
+      requested_date: payload.requested_date ?? null,
+      requested_time: payload.requested_time ?? null,
+      provider_response: payload.provider_response ?? null,
+    };
+  }
+
+  return null;
+}
 
 export type NavHref = (typeof NAV)[number]["to"];
 

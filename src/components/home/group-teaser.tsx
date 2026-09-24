@@ -11,7 +11,7 @@ const pillars = [
   {
     kicker: "Building",
     title: "An internal operating core.",
-    body: "ForgeOS is in development as Sanip Ops’ local-first engine for long-term execution. It is not sold as a product and is not connected to this website.",
+    body: "Forge is the network this site reads. Services are one path through it, and Nepal is the first geography.",
   },
   {
     kicker: "Long-term",

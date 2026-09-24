@@ -186,7 +186,7 @@ def ingest_bounties_to_opportunities(
             target_customer=f"{owner}/{repo}",
             solution=f"Solve GitHub issue #{number} and submit pull request. Claim via {b.get('claim_command', '/attempt')}.",
             business_model="bounty",
-            pricing_idea=f"${amount} USD reward on merge" if amount else "Variable maintainer bounty",
+            pricing_idea=f"${amount} USD reward on merge" if amount else None,
             estimated_price=amount,
             monetization_model="bounty",
             difficulty=40.0,

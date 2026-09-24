@@ -6,15 +6,15 @@ import { Container } from "./container";
 import { Eyebrow } from "./eyebrow";
 
 export function CtaBand({
-  eyebrow = "A sensible next step",
+  eyebrow = "One path that is usable now",
   title = (
     <>
-      Have a hard-to-explain
+      Verified services
       <br />
-      <span className="text-muted">problem?</span>
+      <span className="text-muted">inside the same network.</span>
     </>
   ),
-  body = "Start with the situation. We’ll help work out what the system should be.",
+  body = "A provider appears only after verification and publication. A request stays pending until that provider accepts it. Work, offers, and trades use the same records.",
 }: {
   eyebrow?: string;
   title?: ReactNode;
@@ -29,8 +29,8 @@ export function CtaBand({
           <p className="mt-4 max-w-md text-sm leading-relaxed text-muted">{body}</p>
         </div>
         <Button asChild size="lg">
-          <Link to="/request">
-            Start a Project
+          <Link to="/providers">
+            Find a service
             <ArrowUpRight />
           </Link>
         </Button>

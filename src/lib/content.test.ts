@@ -48,23 +48,23 @@ function collectCopy(): string[] {
   return blobs;
 }
 
-describe("Sanip Ops public content", () => {
-  it("identifies the legal entity without invented scale", () => {
-    assert.equal(SITE.name, "Sanip Ops");
-    assert.equal(SITE.legalName, "Sanip Operations");
-    assert.equal(SITE.domain, "sanipoperations.com.np");
-    assert.equal(SITE.email, "hello@sanipoperations.com.np");
+describe("Forge public content", () => {
+  it("names the network without locking it to one purpose", () => {
+    assert.equal(SITE.name, "Forge");
+    assert.equal(SITE.legalName, "Forge");
+    assert.equal(/service marketplace|trusted service network/i.test(SITE.description), false);
+    assert.match(SITE.description, /Nepal/);
+    assert.match(SITE.description, /services/i);
   });
 
-  it("exposes the required information architecture and never routes tools", () => {
+  it("exposes the public paths and never routes tools", () => {
     const hrefs = NAV.map((item) => item.to);
     assert.deepEqual(hrefs, [
+      "/",
       "/services",
-      "/group",
-      "/group/businesses",
-      "/technology",
-      "/operations",
-      "/ventures",
+      "/providers",
+      "/domain",
+      "/discoveries",
       "/about",
       "/contact",
     ]);

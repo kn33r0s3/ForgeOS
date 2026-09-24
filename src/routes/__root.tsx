@@ -11,7 +11,7 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { SITE } from "@/lib/content";
 import appCss from "../styles.css?url";
 
-const APP_NAME = "Sanip Ops";
+const APP_NAME = "Forge";
 
 const jsonLd = JSON.stringify({
   "@context": "https://schema.org",

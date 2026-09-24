@@ -134,7 +134,14 @@ def retry_research_task(task_id: int, db: Session = Depends(get_db)):
 @router.get("/beliefs", response_model=list[schemas.BeliefOut])
 def get_beliefs(db: Session = Depends(get_db)):
     """Current beliefs, highest confidence first."""
-    return db.query(models.Belief).order_by(models.Belief.confidence_score.desc()).all()
+    from app.services.belief_engine import is_presentable_belief
+    rows = (
+        db.query(models.Belief)
+        .filter(models.Belief.merged_into_id.is_(None))
+        .order_by(models.Belief.confidence_score.desc())
+        .all()
+    )
+    return [row for row in rows if is_presentable_belief(row)]
 
 
 @router.post("/beliefs/{belief_id}/check", response_model=schemas.BeliefCheckResponse)
@@ -1069,15 +1076,26 @@ def create_action(
     action_type: str = "manual_note",
     decision_id: Optional[int] = None,
     opportunity_id: Optional[int] = None,
+    parameters: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
+    import json
     from app.services import action_engine
+    parsed = None
+    if parameters:
+        try:
+            parsed = json.loads(parameters)
+        except json.JSONDecodeError:
+            raise HTTPException(422, "parameters must be a JSON object")
+        if not isinstance(parsed, dict):
+            raise HTTPException(422, "parameters must be a JSON object")
     a = action_engine.propose_action(
         db,
         objective=objective,
         action_type=action_type,
         decision_id=decision_id,
         opportunity_id=opportunity_id,
+        parameters=parsed,
     )
     return {
         "id": a.id,
@@ -1350,3 +1368,269 @@ def get_runtime(db: Session = Depends(get_db)):
         "active_stage": active_stage,
         "truth": truth,
     }
+
+
+def _connection_note(db: Session, row: models.NetworkConnection, kind: str) -> str | None:
+    query = db.query(models.Outcome)
+    if kind == "response":
+        query = query.filter(
+            models.Outcome.notes.like(f"idempotency:network-connection:{row.id}:response:%")
+        ).order_by(models.Outcome.id.desc())
+    else:
+        query = query.filter(models.Outcome.notes == f"idempotency:network-connection:{row.id}:{kind}")
+    outcome = query.first()
+    return outcome.qualitative_result if outcome else None
+
+
+def _latest_connection_response(db: Session, row: models.NetworkConnection) -> str | None:
+    return _connection_note(db, row, "response")
+
+
+def _seconds_to_recorded_payment(db: Session, row: models.NetworkConnection) -> int | None:
+    outcome = (
+        db.query(models.Outcome)
+        .filter(models.Outcome.notes == f"idempotency:network-connection:{row.id}:paid")
+        .first()
+    )
+    if outcome is None or outcome.observed_at is None or row.created_at is None:
+        return None
+    return int((outcome.observed_at - row.created_at).total_seconds())
+
+
+@router.get("/connections")
+def list_network_connections(db: Session = Depends(get_db)):
+    rows = db.query(models.NetworkConnection).order_by(models.NetworkConnection.id.desc()).limit(100).all()
+    return [
+        {
+            "id": row.id,
+            "left_kind": row.left_kind,
+            "left_id": row.left_id,
+            "right_kind": row.right_kind,
+            "right_id": row.right_id,
+            "state": row.state,
+            "reason": row.reason,
+            "evidence_reference": row.evidence_reference,
+            "constraints": row.constraints,
+            "unknown": row.unknown,
+            "agreement_gap": row.agreement_gap,
+            "public_visible": row.public_visible,
+            "seconds_to_recorded_payment": _seconds_to_recorded_payment(db, row),
+            "latest_response": _latest_connection_response(db, row),
+            "latest_fulfillment": _connection_note(db, row, "fulfilled"),
+        }
+        for row in rows
+    ]
+
+
+@router.post("/connections/scan")
+def scan_network_connections(limit: int = 50, db: Session = Depends(get_db)):
+    from app.services import network_connections
+    rows = network_connections.scan_candidates(db, limit=limit)
+    return [{"id": row.id, "state": row.state, "public_visible": row.public_visible} for row in rows]
+
+
+@router.post("/connections/{connection_id}/advance")
+def advance_network_connection(
+    connection_id: int,
+    next_state: str,
+    amount_npr: Optional[int] = None,
+    evidence_reference: Optional[str] = None,
+    constraints: Optional[str] = None,
+    note: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    from app.services import action_engine, network_connections
+    row = db.query(models.NetworkConnection).filter_by(id=connection_id).first()
+    if row is None:
+        raise HTTPException(404, "connection not found")
+    if not network_connections.can_advance(row.state, next_state):
+        raise HTTPException(409, f"cannot move from {row.state} to {next_state}")
+    if next_state == "evidenced":
+        ref = (evidence_reference or "").strip()
+        stored = (
+            db.query(models.Signal)
+            .filter(models.Signal.canonical_url == ref, models.Signal.source_type == "external")
+            .first()
+        )
+        if stored is None:
+            raise HTTPException(409, "a proposal requires evidence already stored from an external source")
+        from app.api.public import evidence_freshness
+        if evidence_freshness(stored.retrieved_at) == "stale":
+            raise HTTPException(409, "stored evidence is stale")
+        row.evidence_reference = ref
+    if next_state == "viable":
+        import json
+        keys = ("landed_cost", "margin", "buyer", "route")
+        supplied = {}
+        if constraints:
+            try:
+                supplied = json.loads(constraints)
+            except json.JSONDecodeError:
+                raise HTTPException(422, "constraints must be a JSON object")
+            if not isinstance(supplied, dict):
+                raise HTTPException(422, "constraints must be a JSON object")
+        evidence_text = ""
+        if row.evidence_reference:
+            stored = (
+                db.query(models.Signal)
+                .filter(models.Signal.canonical_url == row.evidence_reference, models.Signal.source_type == "external")
+                .first()
+            )
+            evidence_text = f"{stored.title or ''} {stored.content or ''}" if stored else ""
+        checked = {}
+        for key in keys:
+            value = supplied.get(key)
+            if value in (None, ""):
+                checked[key] = None
+                continue
+            quote = str(value).strip()
+            if quote.lower() not in evidence_text.lower():
+                raise HTTPException(409, f"{key} is not in the stored evidence")
+            checked[key] = quote
+        row.constraints = json.dumps(checked)
+    if next_state == "fulfilled" and not (note or "").strip():
+        raise HTTPException(422, "fulfillment requires a note of what was done")
+    if next_state == "paid" and (amount_npr is None or amount_npr < 0):
+        raise HTTPException(422, "moving to paid requires the amount that changed hands")
+    if next_state == "accepted" and row.left_kind == "domain_record":
+        from app.api.public import terms_complete
+        need = db.query(models.DomainRecord).filter_by(id=row.left_id).first()
+        if need is None or not terms_complete(need.terms):
+            raise HTTPException(409, "accepted work requires a complete economic contract")
+    row.state = next_state
+    db.commit()
+    paid = next_state == "paid"
+    action_engine.record_domain_event(
+        db,
+        idempotency_key=f"network-connection:{row.id}:{next_state}",
+        source="network_connection",
+        success=False if next_state == "failed" else (True if paid else None),
+        actual_value=float(amount_npr) if paid else None,
+        unit="NPR" if paid else None,
+        qualitative_result=(
+            f"Connection {row.id} from {row.left_kind}:{row.left_id} to {row.right_kind}:{row.right_id} "
+            f"is now {next_state}. "
+            + (
+                f"Amount recorded: {amount_npr} NPR. Not yet confirmed by the other side."
+                if paid
+                else (
+                    f"Work recorded: {(note or '').strip()}. This is not a payment."
+                    if next_state == "fulfilled"
+                    else "This state is not a later state."
+                )
+            )
+        ),
+    )
+    return {"id": row.id, "state": row.state, "public_visible": row.public_visible, "payment": "reported" if paid else None}
+
+
+@router.post("/connections/{connection_id}/confirm-payment")
+def confirm_network_payment(connection_id: int, db: Session = Depends(get_db)):
+    row = db.query(models.NetworkConnection).filter_by(id=connection_id).first()
+    if row is None or row.state != "paid":
+        raise HTTPException(409, "only a recorded paid connection can be confirmed")
+    outcome = (
+        db.query(models.Outcome)
+        .filter(models.Outcome.notes == f"idempotency:network-connection:{row.id}:paid")
+        .first()
+    )
+    if outcome is None or outcome.actual_value is None:
+        raise HTTPException(409, "no recorded amount to confirm")
+    if outcome.verification_state != "REPORTED":
+        raise HTTPException(409, "only a reported payment can be verified")
+    outcome.verification_state = "VERIFIED"
+    db.commit()
+    return {"id": row.id, "state": row.state, "amount_npr": outcome.actual_value, "payment": "verified"}
+
+
+def _paid_outcome(db: Session, connection_id: int) -> models.Outcome | None:
+    return (
+        db.query(models.Outcome)
+        .filter(models.Outcome.notes == f"idempotency:network-connection:{connection_id}:paid")
+        .first()
+    )
+
+
+def _payment_lesson(db: Session, connection_id: int, prediction: str, actual: str, lesson: str) -> None:
+    db.add(models.LearningEvent(
+        prediction=prediction,
+        actual=actual,
+        lesson=lesson,
+        error_type="qualitative_miss",
+        data_scope="REAL",
+        belief_update_applied=False,
+    ))
+    db.commit()
+
+
+@router.post("/connections/{connection_id}/dispute-payment")
+def dispute_network_payment(connection_id: int, note: str, db: Session = Depends(get_db)):
+    row = db.query(models.NetworkConnection).filter_by(id=connection_id).first()
+    outcome = _paid_outcome(db, connection_id)
+    if row is None or row.state != "paid" or outcome is None:
+        raise HTTPException(409, "only a recorded payment can be disputed")
+    if outcome.verification_state not in {"REPORTED", "VERIFIED"}:
+        raise HTTPException(409, "this payment is already disputed or settled")
+    if not note.strip():
+        raise HTTPException(422, "a dispute needs a note")
+    outcome.verification_state = "DISPUTED"
+    _payment_lesson(
+        db,
+        connection_id,
+        prediction="The recorded payment would stand.",
+        actual=f"Disputed. No winner is recorded. Note: {note.strip()}",
+        lesson="A recorded payment was disputed. The amount is not settled.",
+    )
+    return {"id": row.id, "payment": "disputed", "winner": None}
+
+
+@router.post("/connections/{connection_id}/settle-payment")
+def settle_network_payment(connection_id: int, note: str, amount_npr: int, db: Session = Depends(get_db)):
+    row = db.query(models.NetworkConnection).filter_by(id=connection_id).first()
+    outcome = _paid_outcome(db, connection_id)
+    if row is None or outcome is None or outcome.verification_state != "DISPUTED":
+        raise HTTPException(409, "only a disputed payment can be settled")
+    if amount_npr < 0 or not note.strip():
+        raise HTTPException(422, "settlement needs the stated amount and a note")
+    outcome.verification_state = "SETTLED"
+    outcome.actual_value = float(amount_npr)
+    outcome.qualitative_result = (
+        f"{outcome.qualitative_result} Settled amount recorded: {amount_npr} NPR. Note: {note.strip()}"
+    )
+    _payment_lesson(
+        db,
+        connection_id,
+        prediction="The dispute had no recorded resolution.",
+        actual=f"Settled at {amount_npr} NPR. Note: {note.strip()}",
+        lesson="The parties recorded a settlement. This is not a guess about who was right.",
+    )
+    return {"id": row.id, "payment": "settled", "amount_npr": amount_npr, "winner": None}
+
+
+@router.post("/connections/{connection_id}/response")
+def record_connection_response(connection_id: int, note: str, db: Session = Depends(get_db)):
+    """A reply is a recorded response. It does not accept, fulfill, or pay."""
+    from app.services import network_connections
+    row = db.query(models.NetworkConnection).filter_by(id=connection_id).first()
+    if row is None:
+        raise HTTPException(404, "connection not found")
+    if row.state not in {"proposed", "authorized", "contacted"}:
+        raise HTTPException(409, "a response is only recorded before acceptance")
+    try:
+        network_connections.record_response(db, row, note)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    return {"id": row.id, "state": row.state, "accepted": False}
+
+
+@router.post("/connections/{connection_id}/publish")
+def publish_network_connection(connection_id: int, db: Session = Depends(get_db)):
+    from app.services import network_connections
+    row = db.query(models.NetworkConnection).filter_by(id=connection_id).first()
+    if row is None:
+        raise HTTPException(404, "connection not found")
+    if row.state not in network_connections.PUBLISHABLE:
+        raise HTTPException(409, "a candidate or proposal is not publishable")
+    row.public_visible = True
+    db.commit()
+    return {"id": row.id, "state": row.state, "public_visible": True}

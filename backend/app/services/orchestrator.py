@@ -125,7 +125,7 @@ def derive_opportunity_hypothesis(opp: models.Opportunity) -> dict:
 def _interview_plan(opp: models.Opportunity, x: int, y: int, z: int) -> str:
     """Structured, human-executable interview instructions + questions."""
     derived = derive_opportunity_hypothesis(opp)
-    price = opp.estimated_price or opp.pricing_idea or "a price selected by the operator"
+    price = opp.estimated_price
     return "\n".join([
         f"DATA STATUS: HYPOTHESIS — not customer-validated",
         f"TARGET CUSTOMER TYPE: {derived['target_customer']}",
@@ -369,7 +369,7 @@ def create_product_for_validated(
         name=name or derived["product_name"],
         offer=derived["offer_hypothesis"],
         target_customer=derived["target_customer"],
-        pricing=f"{opp.pricing_idea or 'Price not yet specified'} (hypothesis, not confirmed)",
+        pricing=opp.pricing_idea,
         mvp_scope="Simplest version that solves the validated problem",
         hypothesis=(
             f"HYPOTHESIS: {derived['target_customer']} will pay for {derived['offer_hypothesis']}. "
@@ -448,7 +448,7 @@ def record_demand_outcome(
             actual_price = float(prices[-1]) if prices else None
         if expected_price is None:
             opp = db.get(models.Opportunity, exp.opportunity_id)
-            expected_price = opp.estimated_price or _first_money(opp.pricing_idea)
+            expected_price = opp.estimated_price
         prediction_error = None
         error_type = "confirmed" if success is True else "qualitative_miss" if success is False else None
         lesson = "Actual outcome recorded; causal explanation remains uncertain unless separately supported."

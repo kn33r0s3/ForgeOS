@@ -18,6 +18,7 @@ def record_experiment_outcome(
     db: Session,
     experiment_id: int,
     *,
+    action_id: int | None = None,
     actual: str,
     success: bool | None = None,
     source: str = "manual",
@@ -34,6 +35,12 @@ def record_experiment_outcome(
     experiment = db.query(models.Experiment).filter_by(id=experiment_id).first()
     if not experiment:
         raise ValueError(f"Experiment {experiment_id} not found")
+    if action_id is not None:
+        action = db.query(models.Action).filter_by(id=action_id, experiment_id=experiment_id).first()
+        if not action:
+            raise ValueError("Action not found for experiment")
+        if action.status != "SUCCEEDED":
+            raise ValueError("The external adapter must succeed before recording a business outcome")
     data_scope = data_scope.strip().upper()
     if data_scope not in {"REAL", "SANDBOX"} or experiment.data_scope != data_scope:
         raise ValueError("Outcome scope must match experiment scope")
@@ -50,6 +57,7 @@ def record_experiment_outcome(
         learning = db.query(models.LearningEvent).filter_by(experiment_id=experiment_id, data_scope=data_scope).first()
         return {"outcome": existing, "learning": learning, "reused": True}
     outcome = models.Outcome(
+        action_id=action_id,
         experiment_id=experiment_id,
         product_id=product_id,
         outcome_type=outcome_type or "QUALITATIVE",
@@ -62,9 +70,14 @@ def record_experiment_outcome(
         data_scope=data_scope,
     )
     db.add(outcome)
+    if action_id is not None:
+        action = db.get(models.Action, action_id)
+        action.status = "VERIFIED"
+        action.verification_state = "VERIFIED_SUCCESS" if success else "VERIFIED_FAILURE"
     experiment.result = actual
     experiment.completed_at = utcnow()
     experiment.status = "completed"
+    experiment.execution_status = "completed"
     db.flush()
     existing_learning = db.query(models.LearningEvent).filter_by(experiment_id=experiment_id).first()
     if existing_learning:

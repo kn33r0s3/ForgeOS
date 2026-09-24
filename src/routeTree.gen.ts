@@ -13,9 +13,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as DiscoveriesRouteImport } from './routes/discoveries'
+import { Route as DomainRouteImport } from './routes/domain'
 import { Route as GroupRouteImport } from './routes/group'
 import { Route as OperationsRouteImport } from './routes/operations'
 import { Route as ProcessRouteImport } from './routes/process'
+import { Route as ProvidersRouteImport } from './routes/providers'
 import { Route as RequestRouteImport } from './routes/request'
 import { Route as RequestAProjectRouteImport } from './routes/request-a-project'
 import { Route as ServicesRouteImport } from './routes/services'
@@ -23,6 +26,7 @@ import { Route as TechnologyRouteImport } from './routes/technology'
 import { Route as VenturesRouteImport } from './routes/ventures'
 import { Route as GroupIndexRouteImport } from './routes/group.index'
 import { Route as GroupBusinessesRouteImport } from './routes/group.businesses'
+import { Route as RequestsIdRouteImport } from './routes/requests.$id'
 import { Route as ServicesIndexRouteImport } from './routes/services.index'
 import { Route as ServicesSlugRouteImport } from './routes/services.$slug'
 
@@ -46,6 +50,16 @@ const ContactRoute = ContactRouteImport.update({
   path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DiscoveriesRoute = DiscoveriesRouteImport.update({
+  id: '/discoveries',
+  path: '/discoveries',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DomainRoute = DomainRouteImport.update({
+  id: '/domain',
+  path: '/domain',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GroupRoute = GroupRouteImport.update({
   id: '/group',
   path: '/group',
@@ -59,6 +73,11 @@ const OperationsRoute = OperationsRouteImport.update({
 const ProcessRoute = ProcessRouteImport.update({
   id: '/process',
   path: '/process',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProvidersRoute = ProvidersRouteImport.update({
+  id: '/providers',
+  path: '/providers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RequestRoute = RequestRouteImport.update({
@@ -96,6 +115,11 @@ const GroupBusinessesRoute = GroupBusinessesRouteImport.update({
   path: '/businesses',
   getParentRoute: () => GroupRoute,
 } as any)
+const RequestsIdRoute = RequestsIdRouteImport.update({
+  id: '/requests/$id',
+  path: '/requests/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ServicesIndexRoute = ServicesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -112,15 +136,19 @@ export interface FileRoutesByFullPath {
   '/$': typeof SplatRoute
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
+  '/discoveries': typeof DiscoveriesRoute
+  '/domain': typeof DomainRoute
   '/group': typeof GroupRouteWithChildren
   '/operations': typeof OperationsRoute
   '/process': typeof ProcessRoute
+  '/providers': typeof ProvidersRoute
   '/request': typeof RequestRoute
   '/request-a-project': typeof RequestAProjectRoute
   '/services': typeof ServicesRouteWithChildren
   '/technology': typeof TechnologyRoute
   '/ventures': typeof VenturesRoute
   '/group/businesses': typeof GroupBusinessesRoute
+  '/requests/$id': typeof RequestsIdRoute
   '/services/$slug': typeof ServicesSlugRoute
   '/group/': typeof GroupIndexRoute
   '/services/': typeof ServicesIndexRoute
@@ -130,13 +158,17 @@ export interface FileRoutesByTo {
   '/$': typeof SplatRoute
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
+  '/discoveries': typeof DiscoveriesRoute
+  '/domain': typeof DomainRoute
   '/operations': typeof OperationsRoute
   '/process': typeof ProcessRoute
+  '/providers': typeof ProvidersRoute
   '/request': typeof RequestRoute
   '/request-a-project': typeof RequestAProjectRoute
   '/technology': typeof TechnologyRoute
   '/ventures': typeof VenturesRoute
   '/group/businesses': typeof GroupBusinessesRoute
+  '/requests/$id': typeof RequestsIdRoute
   '/services/$slug': typeof ServicesSlugRoute
   '/group': typeof GroupIndexRoute
   '/services': typeof ServicesIndexRoute
@@ -147,15 +179,19 @@ export interface FileRoutesById {
   '/$': typeof SplatRoute
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
+  '/discoveries': typeof DiscoveriesRoute
+  '/domain': typeof DomainRoute
   '/group': typeof GroupRouteWithChildren
   '/operations': typeof OperationsRoute
   '/process': typeof ProcessRoute
+  '/providers': typeof ProvidersRoute
   '/request': typeof RequestRoute
   '/request-a-project': typeof RequestAProjectRoute
   '/services': typeof ServicesRouteWithChildren
   '/technology': typeof TechnologyRoute
   '/ventures': typeof VenturesRoute
   '/group/businesses': typeof GroupBusinessesRoute
+  '/requests/$id': typeof RequestsIdRoute
   '/services/$slug': typeof ServicesSlugRoute
   '/group/': typeof GroupIndexRoute
   '/services/': typeof ServicesIndexRoute
@@ -167,15 +203,19 @@ export interface FileRouteTypes {
     | '/$'
     | '/about'
     | '/contact'
+    | '/discoveries'
+    | '/domain'
     | '/group'
     | '/operations'
     | '/process'
+    | '/providers'
     | '/request'
     | '/request-a-project'
     | '/services'
     | '/technology'
     | '/ventures'
     | '/group/businesses'
+    | '/requests/$id'
     | '/services/$slug'
     | '/group/'
     | '/services/'
@@ -185,13 +225,17 @@ export interface FileRouteTypes {
     | '/$'
     | '/about'
     | '/contact'
+    | '/discoveries'
+    | '/domain'
     | '/operations'
     | '/process'
+    | '/providers'
     | '/request'
     | '/request-a-project'
     | '/technology'
     | '/ventures'
     | '/group/businesses'
+    | '/requests/$id'
     | '/services/$slug'
     | '/group'
     | '/services'
@@ -201,15 +245,19 @@ export interface FileRouteTypes {
     | '/$'
     | '/about'
     | '/contact'
+    | '/discoveries'
+    | '/domain'
     | '/group'
     | '/operations'
     | '/process'
+    | '/providers'
     | '/request'
     | '/request-a-project'
     | '/services'
     | '/technology'
     | '/ventures'
     | '/group/businesses'
+    | '/requests/$id'
     | '/services/$slug'
     | '/group/'
     | '/services/'
@@ -220,14 +268,18 @@ export interface RootRouteChildren {
   SplatRoute: typeof SplatRoute
   AboutRoute: typeof AboutRoute
   ContactRoute: typeof ContactRoute
+  DiscoveriesRoute: typeof DiscoveriesRoute
+  DomainRoute: typeof DomainRoute
   GroupRoute: typeof GroupRouteWithChildren
   OperationsRoute: typeof OperationsRoute
   ProcessRoute: typeof ProcessRoute
+  ProvidersRoute: typeof ProvidersRoute
   RequestRoute: typeof RequestRoute
   RequestAProjectRoute: typeof RequestAProjectRoute
   ServicesRoute: typeof ServicesRouteWithChildren
   TechnologyRoute: typeof TechnologyRoute
   VenturesRoute: typeof VenturesRoute
+  RequestsIdRoute: typeof RequestsIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -260,6 +312,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/discoveries': {
+      id: '/discoveries'
+      path: '/discoveries'
+      fullPath: '/discoveries'
+      preLoaderRoute: typeof DiscoveriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/domain': {
+      id: '/domain'
+      path: '/domain'
+      fullPath: '/domain'
+      preLoaderRoute: typeof DomainRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/group': {
       id: '/group'
       path: '/group'
@@ -279,6 +345,13 @@ declare module '@tanstack/react-router' {
       path: '/process'
       fullPath: '/process'
       preLoaderRoute: typeof ProcessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/providers': {
+      id: '/providers'
+      path: '/providers'
+      fullPath: '/providers'
+      preLoaderRoute: typeof ProvidersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/request': {
@@ -330,6 +403,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GroupBusinessesRouteImport
       parentRoute: typeof GroupRoute
     }
+    '/requests/$id': {
+      id: '/requests/$id'
+      path: '/requests/$id'
+      fullPath: '/requests/$id'
+      preLoaderRoute: typeof RequestsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/services/': {
       id: '/services/'
       path: '/'
@@ -378,14 +458,18 @@ const rootRouteChildren: RootRouteChildren = {
   SplatRoute: SplatRoute,
   AboutRoute: AboutRoute,
   ContactRoute: ContactRoute,
+  DiscoveriesRoute: DiscoveriesRoute,
+  DomainRoute: DomainRoute,
   GroupRoute: GroupRouteWithChildren,
   OperationsRoute: OperationsRoute,
   ProcessRoute: ProcessRoute,
+  ProvidersRoute: ProvidersRoute,
   RequestRoute: RequestRoute,
   RequestAProjectRoute: RequestAProjectRoute,
   ServicesRoute: ServicesRouteWithChildren,
   TechnologyRoute: TechnologyRoute,
   VenturesRoute: VenturesRoute,
+  RequestsIdRoute: RequestsIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

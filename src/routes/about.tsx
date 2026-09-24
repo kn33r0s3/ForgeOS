@@ -19,7 +19,7 @@ const items = [
   {
     number: "02",
     title: "The operating core",
-    body: "ForgeOS is Sanip Ops’ long-term local-first internal intelligence, operations, and business-software engine. It is not connected to this website today.",
+    body: "Forge is the network this site reads. Services, work, offers, and trades are domains inside it. Nepal is the first geography, not the boundary of the records.",
   },
   {
     number: "03",

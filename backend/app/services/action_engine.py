@@ -33,7 +33,7 @@ def utcnow():
 class ActionAdapter:
     name = "base"
 
-    def execute(self, action: models.Action, params: dict) -> dict:
+    def execute(self, action: models.Action, params: dict, db: Optional[Session] = None) -> dict:
         raise NotImplementedError
 
 
@@ -42,7 +42,7 @@ class ManualActionAdapter(ActionAdapter):
 
     name = "manual"
 
-    def execute(self, action: models.Action, params: dict) -> dict:
+    def execute(self, action: models.Action, params: dict, db: Optional[Session] = None) -> dict:
         return {
             "status": "SUCCEEDED",
             "execution_result": (
@@ -56,12 +56,87 @@ class ManualActionAdapter(ActionAdapter):
 class UnsupportedActionAdapter(ActionAdapter):
     name = "unsupported"
 
-    def execute(self, action: models.Action, params: dict) -> dict:
+    def execute(self, action: models.Action, params: dict, db: Optional[Session] = None) -> dict:
         return {
             "status": "FAILED",
             "execution_result": None,
             "execution_error": f"UNSUPPORTED action_type={action.action_type}. Requires configuration / future adapter.",
             "verification_state": "UNSUPPORTED",
+        }
+
+
+class SMTPEmailActionAdapter(ActionAdapter):
+    """Uses the existing durable outbox for a real SMTP email send.
+
+    The message is queued and dispatched through the same local outbox / dispatcher
+    path used by the production mail integration. Success here means the provider
+    accepted delivery; it does not mean the recipient converted or paid.
+    """
+
+    name = "smtp_email"
+
+    def execute(self, action: models.Action, params: dict, db: Optional[Session] = None) -> dict:
+        if db is None:
+            raise ValueError("db session is required for SMTP email delivery")
+
+        to_email = params.get("to") or params.get("recipient") or params.get("email")
+        if not to_email or "@" not in to_email:
+            return {
+                "status": "FAILED",
+                "execution_result": None,
+                "execution_error": "Missing valid recipient email for smtp_email action",
+                "verification_state": "FAILED",
+            }
+
+        subject = params.get("subject") or f"Forge action: {action.objective}"
+        body = params.get("body") or action.objective
+        idempotency_key = params.get("idempotency_key") or f"action:{action.id}:smtp_email:{to_email}"
+
+        from app.services import integration_dispatcher, integration_outbox
+
+        delivery = integration_outbox.enqueue(
+            db,
+            integration_name="smtp",
+            operation="send_email",
+            idempotency_key=idempotency_key,
+            request={
+                "to": to_email,
+                "subject": subject,
+                "body": body,
+            },
+        )
+
+        try:
+            dispatched = integration_dispatcher.dispatch_single_delivery(db, delivery.id)
+        except Exception as exc:
+            integration_outbox.mark_failed(db, delivery.id, f"dispatch failed: {exc}", permanent=False)
+            return {
+                "status": "FAILED",
+                "execution_result": None,
+                "execution_error": str(exc),
+                "verification_state": "FAILED",
+            }
+
+        if dispatched.status not in {"SUCCEEDED", "ACCEPTED_BY_SMTP"}:
+            return {
+                "status": "FAILED",
+                "execution_result": None,
+                "execution_error": dispatched.last_error or "SMTP delivery failed closed",
+                "verification_state": "FAILED",
+            }
+
+        payload = json.loads(dispatched.response_json or "{}") if dispatched.response_json else {}
+        message_id = payload.get("message_id") or payload.get("sid") or "unknown"
+        action.external_ref = str(dispatched.id)
+        db.flush()
+
+        return {
+            "status": "SUCCEEDED",
+            "execution_result": (
+                f"SMTP delivery accepted by provider; message_id={message_id}. "
+                "This confirms adapter execution only, not business outcome or payment."
+            ),
+            "verification_state": "VERIFIED_SUCCESS",
         }
 
 
@@ -73,7 +148,7 @@ class GitHubBountyActionAdapter(ActionAdapter):
     """
     name = "github_bounty"
 
-    def execute(self, action: models.Action, params: dict) -> dict:
+    def execute(self, action: models.Action, params: dict, db: Optional[Session] = None) -> dict:
         from app.services import github_bounty
 
         action_type = action.action_type
@@ -148,12 +223,151 @@ class GitHubBountyActionAdapter(ActionAdapter):
         }
 
 
+class ProviderNetworkAdapter(ActionAdapter):
+    """Writes the existing public provider records. Never publishes without a separate approved action."""
+
+    name = "provider_network"
+
+    def execute(self, action: models.Action, params: dict, db: Optional[Session] = None) -> dict:
+        if db is None:
+            return _failed("A database session is required")
+        kind = action.action_type
+        if kind == "provider_candidate":
+            return self._candidate(action, params, db)
+        if kind == "provider_verify":
+            return self._verify(action, params, db)
+        if kind == "provider_publish":
+            return self._publish(action, params, db)
+        return _failed(f"UNSUPPORTED action_type={kind}")
+
+    def _candidate(self, action: models.Action, params: dict, db: Session) -> dict:
+        name = _text(params.get("name"))
+        if not name:
+            return _failed("Candidate name is required")
+        provider = models.Provider(
+            name=name,
+            business_name=_text(params.get("business_name")),
+            category=_text(params.get("category")),
+            summary=_text(params.get("summary")),
+            city=_text(params.get("city")),
+            region=_text(params.get("region")),
+            country=_text(params.get("country")) or "Nepal",
+            phone=_text(params.get("phone")),
+            email=_text(params.get("email")),
+            is_active=True,
+            public_visible=False,
+            verification_status="unverified",
+        )
+        db.add(provider)
+        db.flush()
+        action.external_ref = str(provider.id)
+        return {
+            "status": "SUCCEEDED",
+            "execution_result": f"provider_id={provider.id} unverified non-public",
+            "verification_state": "UNVERIFIED",
+        }
+
+    def _verify(self, action: models.Action, params: dict, db: Session) -> dict:
+        provider = _provider(db, params.get("provider_id") or action.external_ref)
+        evidence_type = _text(params.get("evidence_type"))
+        evidence_reference = _text(params.get("evidence_reference"))
+        reviewed_by = _text(params.get("reviewed_by"))
+        if provider is None or not evidence_type or not evidence_reference or not reviewed_by:
+            return _failed("Verification requires a provider and evidence_type, evidence_reference, reviewed_by")
+        record = models.VerificationRecord(
+            provider_id=provider.id,
+            verification_status="verified",
+            evidence_type=evidence_type,
+            evidence_reference=evidence_reference,
+            reviewed_by=reviewed_by,
+            notes=_text(params.get("notes")),
+            verified_at=utcnow(),
+        )
+        provider.verification_status = "verified"
+        provider.verification_notes = _text(params.get("notes"))
+        provider.public_visible = False
+        db.add(record)
+        db.flush()
+        action.external_ref = str(provider.id)
+        return {
+            "status": "SUCCEEDED",
+            "execution_result": f"provider_id={provider.id} verified, not public",
+            "verification_state": "UNVERIFIED",
+        }
+
+    def _publish(self, action: models.Action, params: dict, db: Session) -> dict:
+        provider = _provider(db, params.get("provider_id") or action.external_ref)
+        if provider is None:
+            return _failed("Publication requires an existing provider")
+        if provider.verification_status != "verified":
+            return _failed("Provider is not verified")
+        title = _text(params.get("service_title"))
+        description = _text(params.get("service_description"))
+        availability = _text(params.get("availability_status"))
+        listing = None
+        if title or description or availability or params.get("price_from"):
+            if not title or not description or not availability:
+                return _failed("A listing needs a stated title, description, and availability")
+            listing = models.ServiceListing(
+                provider_id=provider.id,
+                title=title,
+                description=description,
+                category=_text(params.get("category")) or provider.category,
+                location=_text(params.get("location")) or provider.city,
+                price_from=_text(params.get("price_from")),
+                currency=_text(params.get("currency")) or "NPR",
+                availability_status=availability,
+                is_active=True,
+                public_visible=True,
+            )
+            db.add(listing)
+        provider.public_visible = True
+        db.flush()
+        action.external_ref = str(provider.id)
+        listing_note = f" listing_id={listing.id}" if listing is not None else ""
+        return {
+            "status": "SUCCEEDED",
+            "execution_result": f"provider_id={provider.id} public{listing_note}",
+            "verification_state": "UNVERIFIED",
+        }
+
+
+def _text(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    cleaned = str(value).strip()
+    return cleaned or None
+
+
+def _provider(db: Session, provider_id: Any) -> Optional[models.Provider]:
+    if provider_id is None or str(provider_id).strip() == "":
+        return None
+    try:
+        return db.get(models.Provider, int(provider_id))
+    except (TypeError, ValueError):
+        return None
+
+
+def _failed(message: str) -> dict:
+    return {
+        "status": "FAILED",
+        "execution_result": None,
+        "execution_error": message,
+        "verification_state": "FAILED",
+    }
+
+
 ADAPTERS: dict[str, ActionAdapter] = {
     "manual_note": ManualActionAdapter(),
     "manual": ManualActionAdapter(),
     "interview": ManualActionAdapter(),
-    "outreach": ManualActionAdapter(),  # outreach is manual unless email adapter configured
+    "outreach": ManualActionAdapter(),  # outreach is manual unless a real adapter is explicitly selected
     "research": ManualActionAdapter(),
+    "provider_candidate": ProviderNetworkAdapter(),
+    "provider_verify": ProviderNetworkAdapter(),
+    "provider_publish": ProviderNetworkAdapter(),
+    "email": SMTPEmailActionAdapter(),
+    "smtp_email": SMTPEmailActionAdapter(),
     "github_bounty_claim": GitHubBountyActionAdapter(),
     "github_bounty_verify": GitHubBountyActionAdapter(),
 }
@@ -185,9 +399,9 @@ def propose_action(
     policy_result = "ALLOW"
     policy_reason = "Low-risk manual/research action"
 
-    if action_type in ("outreach", "email", "http_request") or estimated_cost > 0:
+    if action_type in ("outreach", "email", "http_request", "provider_verify", "provider_publish") or estimated_cost > 0:
         policy_result = "REQUIRE_APPROVAL"
-        policy_reason = "External contact or cost requires owner approval"
+        policy_reason = "External contact, publication, or cost requires owner approval"
     if action_type in ("execute_trade", "broker_order", "wire_transfer"):
         policy_result = "BLOCK"
         policy_reason = "High-risk financial action blocked by default policy"
@@ -290,7 +504,7 @@ def start_and_execute_action(db: Session, action_id: int) -> Optional[models.Act
         if not isinstance(params, dict):
             raise ValueError("Action parameters must be a JSON object")
         adapter = get_adapter(action.action_type)
-        result = adapter.execute(action, params)
+        result = adapter.execute(action, params, db=db)
     except Exception as exc:
         result = {
             "status": "FAILED",
@@ -397,6 +611,30 @@ def record_outcome(
     except Exception:
         db.rollback()
         raise
+
+
+def record_domain_event(
+    db: Session,
+    *,
+    idempotency_key: str,
+    qualitative_result: str,
+    source: str,
+    success: Optional[bool] = None,
+    actual_value: Optional[float] = None,
+    unit: Optional[str] = None,
+) -> models.Outcome:
+    """Write one of our own events into the existing outcome record. No revenue is inferred."""
+    return record_outcome(
+        db,
+        outcome_type="QUALITATIVE",
+        qualitative_result=qualitative_result,
+        source=source,
+        success=success,
+        actual_value=actual_value,
+        unit=unit,
+        idempotency_key=idempotency_key,
+        data_scope="REAL",
+    )
 
 
 def list_actions(db: Session, limit: int = 50) -> list[models.Action]:

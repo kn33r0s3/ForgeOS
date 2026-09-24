@@ -104,6 +104,19 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
         )
         if evidence:
             evidence_ids.append(evidence.id)
+            statement = (normalized.get("content") or "").strip()[:400]
+            if statement and not task.claim_id:
+                claim, _ = evidence_graph.create_or_get_claim(
+                    db,
+                    statement,
+                    epistemic_state="observed",
+                    provenance={
+                        "signal_id": signal.id,
+                        "source": normalized.get("source"),
+                        "research_task_id": task.id,
+                    },
+                )
+                evidence_graph.link_evidence(db, evidence, claim=claim, relation_type="derived_from")
             if task.claim_id:
                 relation = (normalized.get("metadata") or {}).get("claim_relation", "derived_from")
                 if relation not in evidence_graph.RELATION_TYPES:

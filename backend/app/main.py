@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import init_db, SessionLocal
-from app.api import signals, analyze, opportunities, observer, forge, world, workers, intelligence, rare_signals, products, lessons, orchestrator, earn, payments, repair_shop, evidence_triage
+from app.api import signals, analyze, opportunities, observer, forge, world, workers, intelligence, rare_signals, products, lessons, orchestrator, earn, payments, repair_shop, evidence_triage, public
 from app.services import source_manager, money_engine, autonomy_engine, scenario_engine, truth_audit
 from app.security import api_key_middleware
 
@@ -68,7 +68,25 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    cycle = None
+    try:
+        from app.database import SessionLocal
+        from app import models
+        db = SessionLocal()
+        try:
+            row = db.query(models.CycleRun).order_by(models.CycleRun.id.desc()).first()
+            if row is not None:
+                cycle = {
+                    "id": row.id,
+                    "status": row.status,
+                    "started_at": row.started_at.isoformat() if row.started_at else None,
+                    "ended_at": row.ended_at.isoformat() if row.ended_at else None,
+                }
+        finally:
+            db.close()
+    except Exception:
+        cycle = None
+    return {"status": "ok", "cycle": cycle}
 
 
 @app.get("/ai/status")
@@ -107,6 +125,7 @@ app.include_router(earn.router)
 app.include_router(payments.router)
 app.include_router(repair_shop.router)
 app.include_router(evidence_triage.router)
+app.include_router(public.router)
 
 
 @app.exception_handler(ValueError)

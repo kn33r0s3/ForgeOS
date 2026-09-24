@@ -9,7 +9,7 @@ consumers) code against.
 
 from datetime import datetime
 from typing import Literal, Optional, List, Union
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 
 # ---------- Signal ----------
@@ -123,7 +123,7 @@ class ExperimentOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    opportunity_id: int
+    opportunity_id: Optional[int] = None
     action: str
     result: Optional[str]
     lesson: Optional[str]
@@ -161,9 +161,19 @@ class ExperimentOut(BaseModel):
 class AnalyzeRequest(BaseModel):
     idea: str = Field(..., min_length=3, description="Free-text business idea or problem description")
 
+    @field_validator("idea")
+    @classmethod
+    def validate_idea(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("idea must not be empty")
+        if len(cleaned) < 3:
+            raise ValueError("idea must be at least 3 characters long")
+        return cleaned
+
 
 class AnalyzeResponse(BaseModel):
-    opportunity_id: int
+    opportunity_id: Optional[int] = None
     problem: str
     target_customer: str
     market_analysis: str
@@ -182,6 +192,11 @@ class AnalyzeResponse(BaseModel):
     recommended_next_experiment: Optional[str] = None
     decision_id: Optional[int] = None
     knowledge_labels: dict = {}  # e.g. {"score": "HEURISTIC", "pricing": "ESTIMATED"}
+    research_question_id: Optional[int] = None
+    research_task_ids: List[int] = []
+    research_status: str = "research_started"
+    evidence_count: int = 0
+    findings_summary: Optional[str] = None
 
 
 # ---------- Pattern-run (pattern engine trigger) ----------
@@ -829,7 +844,7 @@ class ActionEvidenceCite(BaseModel):
 
 class ActionPackageOut(BaseModel):
     action_id: int
-    opportunity_id: int
+    opportunity_id: Optional[int] = None
     action_type: Optional[str] = None
     status: str
     policy_decision: Optional[str] = None
@@ -853,6 +868,33 @@ class VerifiedRevenueIn(BaseModel):
     source: str = Field(..., min_length=1)
     reference: str = Field(..., min_length=1)
     notes: Optional[str] = None
+
+
+class ExperimentActionRead(BaseModel):
+    id: int
+    experiment_id: int
+    action_type: str
+    objective: str
+    status: str
+    policy_result: Optional[str] = None
+    policy_reason: Optional[str] = None
+    proposed_at: Optional[datetime] = None
+    approved_at: Optional[datetime] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    execution_result: Optional[str] = None
+    execution_error: Optional[str] = None
+    verification_state: str
+    adapter_name: Optional[str] = None
+
+
+class ExperimentActionOutcomeCreate(BaseModel):
+    actual: str = Field(..., min_length=1)
+    success: Optional[bool] = None
+    source: str = "manual"
+    actual_value: Optional[float] = None
+    unit: Optional[str] = None
+    lesson: Optional[str] = None
 
 
 class ActionScoreFactors(BaseModel):
@@ -1047,6 +1089,224 @@ class WorkerTaskOut(WorkerTaskBase):
 # All metrics are evidence-gated: revenue & customer counts only ever come
 # from real Outcome rows (ACTUAL_*), never fabricated by the system.
 # ---------------------------------------------------------------------------
+
+class PublicProviderOut(BaseModel):
+    id: int
+    name: str
+    business_name: Optional[str] = None
+    category: Optional[str] = None
+    summary: Optional[str] = None
+    region: Optional[str] = None
+    city: Optional[str] = None
+    country: str = "Nepal"
+    website: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    verification_status: str = "unverified"
+    is_active: bool = True
+    public_visible: bool = False
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PublicServiceListingOut(BaseModel):
+    id: int
+    provider_id: int
+    title: str
+    description: str
+    category: Optional[str] = None
+    location: Optional[str] = None
+    price_from: Optional[str] = None
+    currency: str = "NPR"
+    availability_status: str = "pending"
+    is_active: bool = True
+    public_visible: bool = False
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PublicDiscoveryOut(BaseModel):
+    """A collected observation. Not a verified fact and not a price Forge set."""
+
+    id: int
+    source: str
+    title: Optional[str] = None
+    excerpt: str
+    canonical_url: Optional[str] = None
+    retrieved_at: Optional[datetime] = None
+    epistemic_state: str = "observation"
+    freshness: str = "unknown"
+
+
+class PublicMatchCandidate(BaseModel):
+    kind: str
+    id: int
+    name: str
+    where: Optional[str] = None
+    stated_price: Optional[str] = None
+    stated_availability: Optional[str] = None
+    reasons: list[str]
+    unknowns: list[str]
+    connection_id: Optional[int] = None
+    latest_response: Optional[str] = None
+
+
+class PublicMatchOut(BaseModel):
+    need_id: int
+    need_kind: str
+    need_title: str
+    need_city: Optional[str] = None
+    candidates: list[PublicMatchCandidate]
+    unknowns: list[str]
+
+
+class DomainRecordCreate(BaseModel):
+    kind: Literal["job", "offer", "trade"]
+    title: str = Field(..., min_length=1, max_length=160)
+    detail: str = Field(..., min_length=1)
+    city: Optional[str] = None
+    stated_price: Optional[str] = None
+    terms: Optional[dict] = None
+
+
+class DomainRecordOut(BaseModel):
+    id: int
+    kind: str
+    title: str
+    detail: str
+    city: Optional[str] = None
+    stated_price: Optional[str] = None
+    status: str
+    terms_complete: bool = False
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DomainRecordCreated(DomainRecordOut):
+    close_token: str
+
+
+class PublicConnectionOut(BaseModel):
+    id: int
+    left_kind: str
+    left_id: int
+    right_kind: str
+    right_id: int
+    state: str
+    reason: str
+    known: Optional[str] = None
+    unknown: Optional[str] = None
+    agreement_gap: str
+    forge_role: str = "introducer"
+    owns_either_side: bool = False
+    latest_response: Optional[str] = None
+    latest_fulfillment: Optional[str] = None
+
+
+class PublicConnectionResponseCreate(BaseModel):
+    close_token: str = Field(..., min_length=1)
+    note: str = Field(..., min_length=1)
+
+
+class RecordedPaymentOut(BaseModel):
+    connection_id: int
+    amount: float
+    unit: str
+    verification: str
+
+
+class PublicTrustOut(BaseModel):
+    subject_kind: str
+    subject_id: int
+    recorded_requests: int
+    reported_payments: list[RecordedPaymentOut]
+    verified_payments: list[RecordedPaymentOut]
+    disputed_payments: list[RecordedPaymentOut] = []
+    settled_payments: list[RecordedPaymentOut] = []
+    disputes: int
+    unknowns: list[str]
+
+
+class PublicAlertOut(BaseModel):
+    id: int
+    source: str
+    text: str
+    created_at: Optional[datetime] = None
+
+
+class DomainDisputeCreate(BaseModel):
+    close_token: str = Field(..., min_length=1)
+    note: str = Field(..., min_length=3)
+
+
+class DomainRecordEventsOut(BaseModel):
+    record_id: int
+    payments: list[str]
+    disputes: list[str]
+    completions: int
+    unknowns: list[str]
+
+
+class DomainRecordClose(BaseModel):
+    close_token: str = Field(..., min_length=1)
+    result: Literal["completed", "withdrawn", "paid"]
+    note: str = Field(..., min_length=3)
+    amount_npr: Optional[int] = None
+
+
+class BookingRequestCreate(BaseModel):
+    provider_id: int
+    service_listing_id: Optional[int] = None
+    requester_name: str = Field(..., min_length=1)
+    requester_phone: Optional[str] = None
+    requester_email: Optional[str] = None
+    requested_service: str = Field(..., min_length=1)
+    requested_date: Optional[str] = None
+    requested_time: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class BookingRequestOut(BaseModel):
+    id: int
+    provider_id: int
+    service_listing_id: Optional[int]
+    requester_name: str
+    requester_phone: Optional[str]
+    requester_email: Optional[str]
+    requested_service: str
+    requested_date: Optional[str]
+    requested_time: Optional[str]
+    notes: Optional[str]
+    status: str = "pending"
+    provider_response: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    accepted_at: Optional[datetime]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BookingRequestStatusOut(BaseModel):
+    id: int
+    provider_id: int
+    provider_name: Optional[str] = None
+    service_listing_id: Optional[int] = None
+    requested_service: str
+    requested_date: Optional[str] = None
+    requested_time: Optional[str] = None
+    status: str = "pending"
+    provider_response: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    accepted_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 class ProductCreate(BaseModel):
     data_scope: Literal["REAL", "SANDBOX"] = "REAL"
@@ -1353,3 +1613,5 @@ class RepairWorkItemDetail(BaseModel):
     experiment: Optional[dict] = None
     outcomes: List[dict] = []
     learning_events: List[dict] = []
+
+from .experiment import ExperimentProposalCreate, ExperimentAuthorize, ExperimentOutcomeCreate, ExperimentRead

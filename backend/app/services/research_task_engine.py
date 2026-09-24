@@ -250,6 +250,24 @@ def retry_task(db: Session, task: models.ResearchTask) -> models.ResearchTask:
     return task
 
 
+def resume_running_tasks(db: Session, limit: int = 10) -> list[int]:
+    """Return tasks abandoned in running to planned. Does not complete them."""
+    if limit <= 0:
+        return []
+    tasks = (
+        db.query(models.ResearchTask)
+        .filter(models.ResearchTask.status == "running")
+        .order_by(models.ResearchTask.id.asc())
+        .limit(limit)
+        .all()
+    )
+    resumed: list[int] = []
+    for task in tasks:
+        resume_task(db, task)
+        resumed.append(task.id)
+    return resumed
+
+
 def resume_task(db: Session, task: models.ResearchTask) -> models.ResearchTask:
     """Return a persisted task ready for the worker to execute again."""
     if task.status == "running":

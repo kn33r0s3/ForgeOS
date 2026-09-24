@@ -1,0 +1,12 @@
+node_modules
+backend/venv
+backend/**/__pycache__
+frontend/node_modules
+services/**/node_modules
+storage
+logs
+sanipops_clean
+.vercel
+**/*.db
+**/*.db-wal
+**/*.db-shm

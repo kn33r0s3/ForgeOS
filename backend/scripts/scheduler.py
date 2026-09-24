@@ -13,6 +13,13 @@ import argparse
 import sys
 from pathlib import Path
 
+if sys.version_info < (3, 10):
+    raise SystemExit(
+        "ForgeOS scheduler requires Python 3.10+; "
+        f"found {sys.version_info.major}.{sys.version_info.minor}. "
+        "Activate backend/venv or run with python3.11+."
+    )
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.services.cycle_scheduler import run  # noqa: E402

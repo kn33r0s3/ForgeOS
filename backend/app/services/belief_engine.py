@@ -55,6 +55,7 @@ from sqlalchemy.orm import Session
 from app import models
 from app.services import reality_memory, memory_layer
 from typing import Optional
+import re
 
 
 def utcnow():
@@ -230,19 +231,180 @@ class BeliefEngine:
         return belief
 
     def list_beliefs(self, limit: int = 100) -> list[models.Belief]:
-        return (
+        rows = (
             self.db.query(models.Belief)
+            .filter(models.Belief.merged_into_id.is_(None))
             .order_by(models.Belief.confidence_score.desc())
-            .limit(limit)
             .all()
         )
+        return [row for row in rows if is_presentable_belief(row)][:limit]
 
     def get_belief(self, belief_id: int) -> Optional[models.Belief]:
         return self.db.query(models.Belief).filter(models.Belief.id == belief_id).first()
 
 
+def repair_historical_beliefs(db: Session) -> int:
+    """Converge legacy belief rows onto the canonical hypothesis form.
+
+    Merged rows are retained as historical records and point at their
+    canonical row through ``merged_into_id``. Evidence and signal
+    provenance are unioned onto that canonical row, while confidence uses
+    the most conservative value already recorded. Running this repeatedly
+    makes no further changes.
+    """
+    beliefs = db.query(models.Belief).order_by(models.Belief.id.asc()).all()
+    active_beliefs = [belief for belief in beliefs if belief.merged_into_id is None]
+    canonical_by_statement: dict[str, models.Belief] = {}
+    merged_count = 0
+    changed = False
+
+    for belief in active_beliefs:
+        statement = _canonical_statement_for_belief(db, belief)
+        keywords = _keywords_from_canonical_statement(statement)
+        canonical = None
+        for existing_statement, existing in canonical_by_statement.items():
+            if _keyword_jaccard(keywords, _keywords_from_canonical_statement(existing_statement)) >= 0.6:
+                canonical = existing
+                statement = existing_statement
+                break
+        if canonical is None:
+            canonical = canonical_by_statement.get(statement)
+        if canonical is None:
+            existing = (
+                db.query(models.Belief)
+                .filter(
+                    models.Belief.statement == statement,
+                    models.Belief.merged_into_id.is_(None),
+                )
+                .order_by(models.Belief.id.asc())
+                .first()
+            )
+            canonical = existing or belief
+            canonical_by_statement[statement] = canonical
+
+        if canonical.id == belief.id:
+            if belief.statement != statement:
+                belief.statement = statement
+                changed = True
+            continue
+
+        _merge_belief_into(db, belief, canonical, statement)
+        merged_count += 1
+        changed = True
+
+    for belief in beliefs:
+        if belief.merged_into_id is None:
+            continue
+        root = belief
+        seen: set[int] = set()
+        while root.merged_into_id is not None and root.merged_into_id not in seen:
+            seen.add(root.id)
+            parent = db.get(models.Belief, root.merged_into_id)
+            if parent is None:
+                break
+            root = parent
+        if root.id == belief.id:
+            continue
+        _merge_belief_provenance(db, belief, root)
+        if belief.merged_into_id != root.id:
+            belief.merged_into_id = root.id
+            changed = True
+
+    if changed:
+        db.commit()
+        for canonical in canonical_by_statement.values():
+            memory_layer.sync_belief_to_knowledge(db, canonical)
+    return merged_count
+
+
+def _canonical_statement_for_belief(db: Session, belief: models.Belief) -> str:
+    keywords: set[str] = set()
+    if belief.pattern_id is not None:
+        pattern = db.get(models.Pattern, belief.pattern_id)
+        if pattern:
+            keywords = _keywords_from_pattern_title(pattern.title)
+    if not keywords:
+        keywords = _keywords_from_legacy_statement(belief.statement)
+    canonical = ", ".join(sorted(keywords))
+    return (
+        f'Uncorroborated keyword hypothesis: "{canonical}". '
+        "This is not a verified business problem, demand claim, or price."
+    )
+
+
+MAX_HYPOTHESIS_KEYWORDS = 12
+
+
+def is_presentable_belief(belief: models.Belief) -> bool:
+    """An oversized keyword list is not one claim. The row stays stored."""
+    if belief.merged_into_id is not None:
+        return False
+    return len(_keywords_from_canonical_statement(belief.statement)) <= MAX_HYPOTHESIS_KEYWORDS
+
+
+def _keywords_from_canonical_statement(statement: str) -> set[str]:
+    quoted = re.search(r'"([^"]+)"', statement)
+    source = quoted.group(1) if quoted else statement
+    return {part.strip().lower() for part in source.split(",") if part.strip()}
+
+
+def _keyword_jaccard(left: set[str], right: set[str]) -> float:
+    union = left | right
+    return len(left & right) / len(union) if union else 0.0
+
+
+def _keywords_from_pattern_title(title: str) -> set[str]:
+    raw = title.replace("Recurring theme:", "").strip()
+    return {part.strip().lower() for part in raw.split(",") if part.strip()}
+
+
+def _keywords_from_legacy_statement(statement: str) -> set[str]:
+    quoted = re.search(r'"([^"]+)"', statement)
+    source = quoted.group(1) if quoted else statement
+    return {
+        word.lower()
+        for word in re.findall(r"[a-zA-Z]+", source)
+        if len(word) > 2 and word.lower() not in {"real", "addressable", "business", "problem"}
+    }
+
+
+def _merge_belief_into(
+    db: Session,
+    duplicate: models.Belief,
+    canonical: models.Belief,
+    statement: str,
+) -> None:
+    _merge_belief_provenance(db, duplicate, canonical)
+    duplicate.merged_into_id = canonical.id
+    if canonical.statement != statement:
+        canonical.statement = statement
+
+
+def _merge_belief_provenance(
+    db: Session, duplicate: models.Belief, canonical: models.Belief
+) -> None:
+    existing_ids = {item for item in (canonical.supporting_signal_ids or "").split(",") if item}
+    duplicate_ids = {item for item in (duplicate.supporting_signal_ids or "").split(",") if item}
+    canonical.supporting_signal_ids = ",".join(
+        sorted(existing_ids | duplicate_ids, key=lambda value: int(value))
+    ) or None
+    canonical.confidence_score = min(canonical.confidence_score, duplicate.confidence_score)
+    if canonical.pattern_id is None:
+        canonical.pattern_id = duplicate.pattern_id
+    db.query(models.Evidence).filter(models.Evidence.belief_id == duplicate.id).update(
+        {"belief_id": canonical.id}, synchronize_session=False
+    )
+    db.query(models.ConfidenceEvent).filter(
+        models.ConfidenceEvent.belief_id == duplicate.id
+    ).update({"belief_id": canonical.id}, synchronize_session=False)
+
+
 def _pattern_to_belief_statement(pattern: models.Pattern) -> str:
-    """Template a Pattern into a hypothesis-style sentence. Simple and
-    deterministic on purpose — see module docstring."""
+    """A keyword cluster is an uncorroborated hypothesis, not a business fact."""
     keywords = pattern.title.replace("Recurring theme:", "").strip()
-    return f'Recurring signals about "{keywords}" indicate a real, addressable business problem.'
+    parts = sorted(part.strip() for part in keywords.split(",") if part.strip())
+    canonical = ", ".join(parts)
+    return (
+        f'Uncorroborated keyword hypothesis: "{canonical}". '
+        "This is not a verified business problem, demand claim, or price."
+    )

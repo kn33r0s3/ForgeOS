@@ -11,7 +11,9 @@ from app.services import opportunity_engine
 from app.services import evidence_graph
 from app.services import multi_judge
 from app.services import opportunity_monitor
-from app.services import option_space, outcome_learning
+from app.services import option_space, outcome_learning, experiment_service
+from app.services import experiment_action_service
+from app.schemas.experiment import ExperimentAuthorize, ExperimentOutcomeCreate, ExperimentProposalCreate
 
 router = APIRouter(tags=["opportunities"])
 
@@ -112,6 +114,82 @@ def judge_opportunity(
         claim_id=payload.claim_id,
     )
     return {"judgments": judgments, "comparison": comparison}
+
+
+@router.post("/experiments/proposed", response_model=schemas.ExperimentRead)
+def create_proposed_experiment(payload: ExperimentProposalCreate, db: Session = Depends(get_db)):
+    """Create a research-first Experiment without requiring an Opportunity row."""
+    try:
+        return experiment_service.create_proposed(db, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/experiments/{experiment_id}/authorize", response_model=schemas.ExperimentRead)
+def authorize_experiment(experiment_id: int, payload: ExperimentAuthorize, db: Session = Depends(get_db)):
+    """Approve or reject a research-first Experiment before execution can proceed."""
+    try:
+        return experiment_service.authorize_experiment(db, experiment_id, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/experiments/{experiment_id}/execute", response_model=schemas.ExperimentRead)
+def execute_experiment(experiment_id: int, db: Session = Depends(get_db)):
+    """Fail-closed: only an explicitly approved Experiment may be executed."""
+    try:
+        return experiment_service.execute_experiment(db, experiment_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/experiments/{experiment_id}/outcome", response_model=schemas.ExperimentRead)
+def record_experiment_outcome(experiment_id: int, payload: ExperimentOutcomeCreate, db: Session = Depends(get_db)):
+    """Record a real rejection, interest, or payment outcome. Revenue is only valid for payment outcomes."""
+    try:
+        return experiment_service.record_outcome(db, experiment_id, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/experiments/{experiment_id}/action", response_model=schemas.ExperimentActionRead)
+def propose_experiment_action(experiment_id: int, db: Session = Depends(get_db)):
+    try:
+        return experiment_action_service.propose_action(db, experiment_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/experiments/{experiment_id}/action/approve", response_model=schemas.ExperimentActionRead)
+def approve_experiment_action(experiment_id: int, db: Session = Depends(get_db)):
+    try:
+        return experiment_action_service.approve_action(db, experiment_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/experiments/{experiment_id}/action/execute", response_model=schemas.ExperimentActionRead)
+def execute_experiment_action(experiment_id: int, db: Session = Depends(get_db)):
+    try:
+        return experiment_action_service.execute_action(db, experiment_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/experiments/{experiment_id}/action/outcome")
+def record_experiment_action_outcome(
+    experiment_id: int,
+    payload: schemas.ExperimentActionOutcomeCreate,
+    db: Session = Depends(get_db),
+):
+    try:
+        return experiment_action_service.record_actual_response(
+            db,
+            experiment_id,
+            **payload.model_dump(),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post("/experiments", response_model=schemas.ExperimentOut)

@@ -59,7 +59,8 @@ class _ProcessRunLock:
 class CycleScheduler:
     def __init__(self, interval_seconds: int = 3600,
                  backup_interval_seconds: int | None = 6 * 3600,
-                 backup_keep: int = 10, max_run_seconds: int = 600):
+                 backup_keep: int = 10, max_run_seconds: int = 600,
+                 lock_path: Path | None = None):
         self.interval_seconds = max(10, int(interval_seconds))
         self.backup_interval_seconds = backup_interval_seconds
         self.backup_keep = int(backup_keep)
@@ -70,15 +71,34 @@ class CycleScheduler:
         self._running = Event()
         self._lock = Lock()
         self._last_backup_ts: float | None = None
-        self._process_lock = _ProcessRunLock(backup._DEFAULT_STORAGE / "scheduler.run.lock")
+        self._process_lock = _ProcessRunLock(lock_path or (backup._DEFAULT_STORAGE / "scheduler.run.lock"))
 
     def start(self) -> None:
         log.info("Scheduler started: cycle every %ss, backup every %s (keep %s)",
                  self.interval_seconds, self.backup_interval_seconds, self.backup_keep)
         self._stop.clear()
+        self._reconcile_stale_cycles()
         self._tick(force_backup_check=True)
         while not self._stop.wait(self.interval_seconds):
             self._tick()
+
+    @staticmethod
+    def _reconcile_stale_cycles() -> None:
+        """Recover observability records abandoned by a prior process."""
+        try:
+            from app import database
+            from app.services import truth_audit
+
+            database.init_db()
+            db = database.SessionLocal()
+            try:
+                reconciled = truth_audit.reconcile_stale_cycles(db)
+                if reconciled:
+                    log.warning("Reconciled %s stale cycle record(s) before starting.", reconciled)
+            finally:
+                db.close()
+        except Exception:
+            log.exception("Could not reconcile stale cycle records; scheduler will continue.")
 
     def stop(self) -> None:
         self._stop.set()
