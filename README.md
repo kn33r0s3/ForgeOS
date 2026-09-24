@@ -63,6 +63,16 @@ chmod +x start.sh stop.sh
 
 Stop: `./stop.sh`
 
+### Production frontend/API configuration
+
+The Vercel frontend must not point at `localhost` or `127.0.0.1`. In production, the browser runs off the public Vercel domain, so the required environment variable is:
+
+```bash
+NEXT_PUBLIC_API_URL=https://<actual-production-backend>
+```
+
+This value must be set in the Vercel project environment for Production. The backend must be a public HTTPS FastAPI deployment that serves the real ForgeOS API and persists the same ForgeOS database/worker stack.
+
 ---
 
 ## Architecture (backend)
