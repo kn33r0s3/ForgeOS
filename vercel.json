@@ -9,7 +9,7 @@
     },
     "api": {
       "root": "backend",
-      "entrypoint": "app.vercel_asgi:app",
+      "entrypoint": "app.main:app",
       "routes": [
         {
           "src": "/api/(.*)",

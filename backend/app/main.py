@@ -109,23 +109,50 @@ def ai_tools():
     ]
 
 
-app.include_router(signals.router)
-app.include_router(analyze.router)
-app.include_router(opportunities.router)
-app.include_router(observer.router)
-app.include_router(forge.router)
-app.include_router(world.router)
-app.include_router(workers.router)
-app.include_router(intelligence.router)
-app.include_router(rare_signals.router)
-app.include_router(products.router)
-app.include_router(lessons.router)
-app.include_router(orchestrator.router)
-app.include_router(earn.router)
-app.include_router(payments.router)
-app.include_router(repair_shop.router)
-app.include_router(evidence_triage.router)
-app.include_router(public.router)
+for _router in (
+    signals.router,
+    analyze.router,
+    opportunities.router,
+    observer.router,
+    forge.router,
+    world.router,
+    workers.router,
+    intelligence.router,
+    rare_signals.router,
+    products.router,
+    lessons.router,
+    orchestrator.router,
+    earn.router,
+    payments.router,
+    repair_shop.router,
+    evidence_triage.router,
+    public.router,
+):
+    app.include_router(_router)
+    # Vercel keeps the /api prefix. Same router, no second implementation.
+    app.include_router(_router, prefix="/api", include_in_schema=False)
+
+
+def _alias_app_routes_under_api() -> None:
+    for route in list(app.routes):
+        path = getattr(route, "path", None)
+        endpoint = getattr(route, "endpoint", None)
+        methods = getattr(route, "methods", None)
+        if not path or endpoint is None or not path.startswith("/") or path.startswith("/api"):
+            continue
+        if path in {"/openapi.json", "/docs", "/docs/oauth2-redirect", "/redoc"}:
+            continue
+        alias = "/api" if path == "/" else f"/api{path}"
+        app.add_api_route(
+            alias,
+            endpoint,
+            methods=sorted(methods) if methods else ["GET"],
+            include_in_schema=False,
+            name=f"vercel_{getattr(route, 'name', alias)}",
+        )
+
+
+_alias_app_routes_under_api()
 
 
 @app.exception_handler(ValueError)
