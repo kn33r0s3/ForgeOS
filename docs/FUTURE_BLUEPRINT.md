@@ -475,3 +475,18 @@ Forge is finished enough when a person in Nepal can find work, hire help, post a
 It is at the ceiling when that same machine also watches the wider asset surface, keeps every important claim traceable, learns from real completions and real payments, and still tells the truth when it does not know.
 
 The impossible-looking part — one world that spans a neighborhood repair and a global commodity gap, and gets more useful every time either one actually happens — is the point of the map. It is reached by growing this Forge, not by starting another one.
+
+## 14. The 200-day work order
+
+`TWO_HUNDRED_DAY_COPILOT.txt` is the task queue for this map. It is not a second plan. One task is one session. The phases follow section 12:
+
+1. The public API stays the existing FastAPI app, and a write survives a second request. On Vercel that requires `DATABASE_URL`. `/tmp/forge.db` is not the world of record.
+2. The verified service path, bookings, and honest empty lists.
+3. Needs, gaps, and lawful public sources. A headline is not an open job.
+4. Canonical beliefs, then the cockpit that reads them.
+5. The one scheduler and bounded collectors.
+6. Trust, alerts, disputes, and payments as records.
+7. One real pilot only after a person acts.
+8. Stop. No new product after the last task.
+
+Publicity stays shut until `docs/PUBLICITY_GATE.md` is checked from command output. A live health JSON is not a launch.

@@ -1,0 +1,305 @@
+Copy from "START OF COMMAND" through "END OF COMMAND" and hand that to Copilot.
+Work only in /Users/nirojpaudyal/Downloads/ForgeOS.
+One session completes one task, appends one RESULT card, and stops. The next session takes the next open task. Do not start a second task in the same session.
+
+START OF COMMAND
+
+You are continuing ForgeOS. You are not designing a replacement.
+
+READ FIRST
+
+docs/FUTURE_BLUEPRINT.md sections 12 and 14 are the order. This file is that queue.
+docs/IMPLEMENTATION_BACKLOG.md TASK-001 through TASK-005 sit inside phase D. Do not skip TASK-001.
+docs/PUBLICITY_GATE.md stays open until command output checks a box. Health JSON is not a launch.
+docs/NEPAL_FIRST_PRODUCT_PLAN.md is the first geography. It is not permission to add payment credentials.
+docs/PUBLIC_SOURCES.md is the only collector register.
+
+HOW A SESSION RUNS
+
+Find the first task whose id has no RESULT card yet.
+Do only that task.
+Append one card under RESULT, with the task id on the CLAIM line.
+Stop.
+
+CLAIM: <id> — one sentence.
+SOURCE: a URL you opened, or REPO plus a file path. No invented URL.
+FACT:
+CHANGE: or NONE.
+TEST: the command and what it printed.
+STOP:
+
+RULES ON EVERY TASK
+
+One database, one FastAPI app (backend/app/main.py), one public app (src/), one cockpit (frontend/), one scheduler (python -m scripts.scheduler).
+Public routes live under /public. On Vercel they also answer under /api because the host keeps that prefix. Do not add a third copy.
+Do not insert providers, prices, buyers, reviews, bookings, or outcomes to make a page look alive.
+Do not send email, SMS, or chat. A draft in docs/approach/ is as far as contact goes.
+Read robots.txt and the terms before a collector. If collection is forbidden, skip the source.
+A missing fact stays null, empty, or pending.
+Do not point /api at localhost.
+Do not commit storage/*.db, .env, or .vercel/output.
+Push to main only when the task says to push and the test passed. A push of main deploys production.
+New commits use 68586176+kn33r0s3@users.noreply.github.com. Do not rewrite older commits.
+Production origin: https://forge-os-ebon.vercel.app
+
+PHASE A — Production is the same API, and a write survives
+
+A1. Record the live contract.
+Curl /api/health, /api/public/providers, /api/public/services, /api/public/discoveries, /api/public/domain, and /api/public/alerts.
+Write each status and the first 200 characters of the body.
+JSON arrays, including empty ones, are the contract. HTML is a failure of this task. Do not change code unless a path returns HTML, and then fix only the route registration in backend/app/main.py or vercel.json so the existing function answers. Do not add a new router.
+
+A2. Trace the database the live process actually opens.
+Read backend/app/database.py and backend/app/config.py.
+State which branch runs when DATABASE_URL is set, and which branch runs when VERCEL is set and DATABASE_URL is absent.
+The second branch is sqlite:////tmp/forge.db. That file is not storage/forge.db. Do not change this until A3 has a URL.
+
+A3. Durable URL, only if the operator has already pasted one.
+If no Postgres URL is in the session, FACT is "no DATABASE_URL supplied" and CHANGE is NONE.
+If a URL is present, set it on the Vercel project forge-os for Production. Do not print the secret. Do not create a database account. Do not copy rows out of storage/forge.db into a second engine.
+
+A4. Redeploy after A3 only when A3 set the variable.
+Push one commit whose only purpose is to redeploy, or say the dashboard variable is already on the current deployment.
+Then curl /api/health again.
+
+A5. Prove a write survives a second request.
+POST /api/public/domain with kind job, title "Storage proof", detail "Close after the second read."
+From a new HTTP request, GET /api/public/domain.
+If the row is missing, FACT is "write did not survive". Do not retry with a fake success.
+If the row is open, close it as withdrawn with the returned token and a note of at least three characters.
+GET again and confirm it is not in the open list.
+
+A6. Keep pytest off the real database.
+Read the test guard in database.py. Run one public test file and confirm it did not open storage/forge.db.
+If a test reaches the real file, fix the guard. Do not point tests at production.
+
+A7. Confirm the Vercel project builds source.
+Read vercel.json. web is the repo root, framework vite, build npm run build. api is backend/, entrypoint app.main:app.
+/api/(.*) goes to api. Everything else goes to web.
+Confirm .vercel/output is not tracked. If it is tracked, stop tracking it and push, because a tracked output skips the source build.
+
+A8. Confirm the cockpit cannot steal production.
+Read frontend/next.config.js. A rewrite to http://localhost:8000 or 127.0.0.1 must not exist.
+The public HTML at / must be the Vite app in src/, not the Next cockpit.
+
+PHASE B — Verified services, same tables
+
+B1. Read the models you must not duplicate.
+In backend/app/models.py, name the fields on Provider, ServiceListing, and BookingRequest that the public API already returns.
+Do not add a parallel provider, listing, or booking table.
+
+B2. Trace publication.
+Follow provider_candidate, provider_verify, and provider_publish in the action engine.
+Verification requires evidence_type, evidence_reference, and reviewed_by, then approve_action.
+Publish only a verified provider. A listing needs title, description, and availability. A missing price stays null.
+Research success must not verify anyone. If a path does, close it.
+
+B3. Stop invented commercial prose.
+Read opportunity_from_idea and opportunity_from_pattern.
+Neither may call generate_pricing_idea. Neither may store a hardcoded SaaS model or a fallback target customer.
+Store null when the source did not state price, customer, or model.
+
+B4. Lock the public filters with tests.
+GET /public/providers and GET /public/services return only verified, public_visible, active rows.
+Add or extend a test in backend/tests/test_public_value_flow.py if that filter is untested.
+Use the pytest database. Create the rows inside the test. Do not insert them into storage/forge.db or production.
+
+B5. Lock booking privacy with tests.
+POST /public/booking-requests for an unknown or unverified provider returns 404.
+GET /public/booking-requests/{id} returns status only. Name, phone, email, and notes stay off that payload.
+Pending means stored, not accepted.
+
+B6. Keep the public pages honest.
+src/routes/providers.tsx still says a provider appears only after verification and publication.
+src/routes/requests.$id.tsx still has an unknown-id state.
+Search src/ for ratings, customer counts, predicted prices, and "trusted network".
+src/lib/content.test.ts must fail if those claims return. Run it with node --experimental-strip-types --test src/lib/content.test.ts.
+
+B7. Leave the footer pending.
+Do not change "Domain pending verification" or hello@pending-domain.local unless the operator pasted a domain they control and a mailbox they read.
+Do not check a box in docs/PUBLICITY_GATE.md without the command output under it.
+
+B8. Count production.
+Curl /api/public/providers and /api/public/services. Write the lengths. Zero is a pass. Do not seed a provider to change the number.
+
+PHASE C — Needs, gaps, and lawful sources
+
+C1. Read the domain contract.
+In public.py, read terms_complete, create, list, accept, close, and dispute.
+A missing contract blocks acceptance. It does not block stating the need.
+Accepted work returns 409 when terms are incomplete. Keep that test.
+
+C2. Gaps stay gaps.
+plan_tasks_for_open_questions must skip ResearchQuestion text that starts with "Gap:".
+An empty NetworkConnection list stays empty. Do not invent a counterparty.
+Public matches stay shared words plus unknowns. No match score. A knowledge match is not a counterparty.
+
+C3. Connection law.
+States advance one step: candidate, evidenced, viable, proposed, authorized, contacted, accepted, fulfilled, paid, completed.
+proposed requires evidence_reference. Candidates are not public.
+A public connection requires authorized and explicit publication.
+forge_role stays introducer. owns_either_side stays false.
+fulfilled to paid requires amount_npr. The outcome stays REPORTED until confirm-payment. This does not move money.
+Do not add eSewa, Khalti, or Fonepay credentials in this phase.
+
+C4. One allowed source.
+Open one public HTML page that can show a Nepal-relevant need. Read robots.txt and the terms.
+If collection is forbidden, record the skip and stop the task.
+If it is allowed, add one row to docs/PUBLIC_SOURCES.md: name, URL, what need it can show, the date you opened the terms.
+Do not add Facebook, WhatsApp, or Telegram.
+
+C5. One task, one run.
+Create at most one ResearchTask for the C4 row, through the existing planner.
+Run the collector once inside FORGEOS_COLLECT_LIMIT.
+A failure stays failed. A stored signal has the canonical URL you fetched.
+Do not call observe() without that URL.
+
+C6. Discovery stays an observation.
+GET /public/discoveries may show only external, non-duplicate signals that already have a canonical URL and a claim link.
+Epistemic state stays observed. Do not mark the row verified. Do not turn the headline into an open domain job.
+
+C7. Approach draft, or an explicit refusal.
+If the source page prints a contact for that notice, write docs/approach/<slug>.md with the URL, the contact, one question, and the sentence "This is not a customer, a booking, or an acceptance."
+Status starts as not sent.
+If the page has no contact, the file says "no lawful contact on the source" and you stop. Do not guess an inbox. Do not send the draft.
+
+PHASE D — Canonical beliefs, then the cockpit that reads them
+
+D1. Do TASK-001 from docs/IMPLEMENTATION_BACKLOG.md.
+Extend belief_engine.py and pattern_engine.py only as that task names.
+Stop a new belief title from a different top-4 keyword slice of the same pattern.
+One stored pattern keeps one belief identity across a second cycle, on the pytest database.
+Delete the template sentence that asserts a "real, addressable business problem" when the evidence does not say that.
+Confidence must not be a repeat count presented as a probability. Do not delete raw signals.
+
+D2. Do TASK-002.
+The existing knowledge page reads the canonical belief fields. Do not add a new belief UI.
+
+D3. Do TASK-003 and TASK-004 together only if D1 and D2 are already evidenced. Otherwise do the earlier one and stop.
+Independent-source confidence. An opportunity cannot be created from a belief with no corroborating source.
+
+D4. Do TASK-005.
+The cycle keeps that belief identity across a restart. Test it. Do not mark the backlog DONE unless the named tests passed in this change.
+
+D5. Cockpit stays a reader.
+frontend/ pages knowledge, research, network, actions, outcomes, and runtime call the existing /forge API.
+Network shows stored quotes or marks landed cost, margin, buyer, and route unknown. Do not infer those four from nearby words.
+Runtime shows stored counts only. No health score.
+Actions list proposals. They do not execute external contact.
+Outcomes list recorded outcomes. Empty stays empty.
+The cockpit must not become the production public site.
+
+D6. Run the belief, opportunity, and public tests named by the tasks you touched.
+Paste the pass or fail lines into the card. Fix only failures you caused.
+
+PHASE E — One cycle
+
+E1. Read scripts/scheduler.py and cycle_scheduler. Confirm one lock. Do not add a scheduler.
+resume_running_tasks returns abandoned running tasks to planned and does not mark them completed.
+run_pending_tasks selects only planned tasks, bounded by FORGEOS_COLLECT_LIMIT.
+
+E2. Bound what a cycle may do.
+It may restore source URLs, link claims, and scan candidates.
+It may not publish providers, send messages, or invent prices.
+Stale observations stay stored and cannot promote a candidate to a proposal.
+Autonomous actions propose only. They do not approve themselves.
+A failed CycleRun stays failed.
+
+E3. Run one dry cycle on the pytest database, not storage/forge.db.
+Record how many tasks it planned and completed. Zeros are allowed.
+After the test, stop extra uvicorn and Vite processes you started.
+Leave a scheduler running only if it was already the canonical process.
+Do not commit logs/.
+
+E4. Backups.
+Use the existing backup script and retention note. A backup is not a second live database.
+Confirm storage backups are gitignored.
+
+PHASE F — Trust, alerts, and payment records
+
+F1. GET /public/trust/{kind}/{id} lists recorded booking requests, reported payments, verified payments, and disputes.
+It is not a score. Hidden or unverified providers return 404.
+When nothing is recorded, the unknowns say so.
+
+F2. GET /public/alerts lists an alert only when an outcome already exists for a post, a booking, or a connection.
+A reply is an outcome and is not acceptance. No change, no alert.
+
+F3. Close and dispute.
+Closing requires the one-time token.
+A paid close records a whole-number amount and does not move money.
+A dispute stores the note and names no winner.
+GET /public/domain/{id}/events reloads stored events.
+confirm-payment runs only after the operator says the payment was verified. Do not call it yourself.
+
+F4. Add the one missing test among F1–F3, on the pytest database. Run it.
+Search src/ and frontend/ for a numeric trust score. Remove it if it is not computed from stored rows.
+The request page still says acceptance is not implied by sending the form.
+No review score appears unless completed jobs exist to measure.
+
+F5. Curl production /api/public/alerts and /api/public/trust/provider/1.
+[] and 404 are passes while no public provider and no outcome exist.
+
+PHASE G — Copy, build, and the live page
+
+G1. Public language.
+SITE name and legalName stay Forge. Nepal is the first geography, not the system name.
+/about states what Forge stores and that it does not decide a match.
+Do not call the whole site a service directory.
+The home page keeps the four steps: search, read the recorded offer, request, check status.
+A missing price stays missing on the card.
+The share card does not say "book now" or "trusted providers".
+
+G2. The domain form.
+It posts to the existing public endpoint. A failed post shows the API error. It does not show success.
+The providers empty state remains the verification sentence.
+
+G3. Build.
+Run node --experimental-strip-types --test src/lib/content.test.ts.
+Run npm run build.
+If both pass and this phase changed copy, push main.
+Curl production / and /about. If the domain and mailbox were not supplied, the pending strings are still correct.
+Do not announce a launch.
+
+PHASE H — One pilot, then stop
+
+H1. Read docs/approach/.
+If nothing is marked sent, FACT is "no sent approach" and you do not post a job.
+If something is sent and has no pasted reply, you do not invent a reply.
+If a reply states a need, post it through the production API in the reply's words. City and price only if the reply stated them.
+Do not close a row the operator did not ask to close.
+
+H2. A provider only if a real person asked.
+Follow provider_candidate with the evidence they supplied.
+Verify only when reviewed_by is a person the operator named.
+Publish only after that verification.
+If nobody asked, create nobody.
+Then curl /api/public/providers and record the count.
+
+H3. A booking only if the operator submits one.
+If they do, confirm status pending from the API.
+If they do not, do not submit one.
+Record declined, no reply, delivered, or paid only from what the operator states.
+Paid only with an amount they say changed hands.
+
+H4. Refresh the gate.
+Update docs/PUBLICITY_GATE.md only for boxes that now have command output. Leave the rest open.
+Do not buy a domain, open a mailbox, or add a payment gateway.
+
+H5. Final proof, then stop.
+Run the backend public tests, the content tests, and npm run build.
+Update docs/IMPLEMENTATION_BACKLOG.md only for items those tests proved.
+Under RESULT, after the H5 card, write five lines from curl, not from memory:
+production URL, whether DATABASE_URL is set (yes or no, never the secret), provider count, open domain count, pending booking count.
+Stop extra servers you started.
+Do not add another task, another market, or another app.
+
+RESULT
+
+CLAIM: TASK-001 — Canonical keyword-cluster patterns and beliefs are already implemented and verified without adding a second identity.
+SOURCE: REPO plus backend/app/services/pattern_engine.py, backend/app/services/belief_engine.py, backend/tests/test_belief_canonical.py
+FACT: Pattern identity uses the sorted full keyword set; belief text is an uncorroborated hypothesis; repeated detection merges one belief; raw signals remain stored.
+CHANGE: NONE — the TASK-001 implementation and regression tests were already present in the repository.
+TEST: /Users/nirojpaudyal/Downloads/ForgeOS/.venv/bin/python -m pytest backend/tests/test_belief_canonical.py -q — 5 passed; /Users/nirojpaudyal/Downloads/ForgeOS/.venv/bin/python -m pytest backend/tests -q — 245 passed, 15 warnings.
+STOP:
+
+END OF COMMAND

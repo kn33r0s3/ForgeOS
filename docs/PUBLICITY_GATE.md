@@ -4,9 +4,10 @@ Evidence is recorded below; boxes are not checked unless the external command
 output proves the condition.
 
 - [ ] Production `/api/health` returns JSON from the canonical FastAPI API.
-  - Observed 2026-09-25: `https://forge-os-ebon.vercel.app/api/health` returned HTTP 404 `DNS_HOSTNAME_RESOLVED_PRIVATE`.
+  - Observed 2026-09-25 later: `https://forge-os-ebon.vercel.app/api/health` returned HTTP 200 `{"status":"ok","cycle":null}`.
+  - Left open because a following write did not survive a second request. The function database was `/tmp/forge.db`, not a durable `DATABASE_URL`.
 - [ ] `GET /public/providers` returns JSON from the canonical FastAPI API.
-  - Observed 2026-09-25: the deployed same-origin path returned HTTP 404; no production FastAPI origin is configured.
+  - Observed 2026-09-25 later: `GET /api/public/providers` returned HTTP 200 `[]`. Empty is the true catalog. The box stays open until that JSON comes from the durable database.
 - [ ] The footer domain is controlled by the operator.
   - Current value: `Domain pending verification`.
 - [ ] The contact mailbox is controlled and monitored by the operator.
@@ -18,6 +19,6 @@ output proves the condition.
 
 ## Current gate state
 
-**OPEN.** Production frontend deployment is reachable, but the FastAPI backend
-and persisted public API path are not deployed. No outreach or publicity launch
-is authorized.
+**OPEN.** The public app and the FastAPI service both answer on
+`https://forge-os-ebon.vercel.app`. Lists are JSON and empty. A created domain
+row was gone on the next request. No outreach or publicity launch is authorized.
