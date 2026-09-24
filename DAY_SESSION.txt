@@ -1,0 +1,172 @@
+Copy from START OF COMMAND through END OF COMMAND.
+Work only in /Users/nirojpaudyal/Downloads/ForgeOS.
+This is one continuous session. Do not pause between blocks. Do not ask the user whether to continue. Do not end after a block whose change is NONE. A NONE block is one sentence in the log, then the next block starts in the same turn.
+
+The session is over only when BLOCK 8 tests have been run, the CONTINUATION section has been executed, and the RESULT cards are appended. If you finish that before the day is over, start CONTINUATION D and keep going. Stopping after a minute means you skipped the file.
+
+START OF COMMAND
+
+WHY THE NIGHT ENDED IN A MINUTE
+
+OVERNIGHT_COPILOT.txt asked the agent to re-check work that was already in the tree. Five blocks were NONE. That mistake is not allowed today.
+
+Before editing a block, open the file and line named below. If that line is already fixed, write NONE and immediately start the next block. Do not treat NONE as the end of the day.
+
+Identity holds for every block. Forge is the network. A service is one path. A job is work. Nepal is the first geography, not the product. Do not add a second backend, database, scheduler, or public app. Do not insert fake providers, prices, buyers, or revenue into storage/forge.db. Do not start the scheduler. Do not leave port 8000 or 8080 listening when you stop.
+
+PATTERN
+
+After each block, append one card under RESULT, then start the next block before doing anything else.
+
+CLAIM:
+SOURCE: REPO file and line, or a URL you opened. No invented URL.
+FACT:
+CHANGE:
+TEST:
+STOP:
+
+BLOCK 1. 20 minutes. The parent teaser must not hide Forge.
+
+Open src/components/home/group-teaser.tsx. It currently says ForgeOS "remains an internal, evidence-led system."
+Replace that sentence only. Say Forge is the network this site reads, services are one path, and Nepal is the first geography.
+Test: node --experimental-strip-types --test src/lib/content.test.ts
+Do not rewrite the rest of the Sanip pages.
+Then start block 2.
+
+BLOCK 2. 2 hours. Both opportunity writers stop inventing a deal.
+
+Open backend/app/services/opportunity_engine.py.
+These lines are still wrong unless a later edit removed them:
+- opportunity_from_pattern calls ai_engine.generate_pricing_idea and stores it.
+- It sets business_model to "Subscription (SaaS) or usage-based pricing, validated during MVP testing".
+- It passes the fallback "Customer segment not yet identified from evidence" into target_customer.
+- opportunity_from_idea still sets that same business_model string. Night work only set pricing_idea=None on the manual path.
+
+Also open backend/app/services/ai_engine.py generate_pricing_idea. The prompt asks for a rough price point. That string must not be stored as a price.
+
+Change:
+- Do not call generate_pricing_idea from either opportunity function.
+- pricing_idea, estimated_price, and estimated_revenue stay null unless the source text already contains an explicit amount. Do not infer one.
+- business_model stays null. Do not substitute "local services" or "jobs marketplace".
+- target_customer stays null when the only candidate is the fallback sentence.
+- Do not delete old opportunity rows.
+
+Tests in tests/test_opportunity_quality.py:
+- A pattern whose text has no amount persists null price fields, null business_model, and null target_customer.
+- The existing manual-idea test still passes.
+- A text that literally contains "NPR 500" may store that amount only if you already have a parser. If you do not, leave the amount null and say so in the card. Do not add a clever extractor that guesses.
+
+Then start block 3. Do not wait.
+
+BLOCK 3. 2 hours. The other generators must not be stored as facts.
+
+generate_market_analysis, generate_solution, generate_mvp_plan, and generate_validation_plan are still called from both opportunity functions. Their prompts tell the model to decide whether a problem is real, who has it, and what business to build. That is an invented deal.
+
+Change:
+- Stop calling those four functions from opportunity_from_pattern and opportunity_from_idea.
+- Store null in market_analysis, solution, mvp_plan, and validation_plan unless you are copying a sentence that already exists on the pattern or the idea text. Copying the problem text into the problem field is enough.
+- Search the backend for other callers of generate_pricing_idea, generate_market_analysis, generate_solution, generate_mvp_plan, generate_validation_plan, and generate_marketing_strategy. For each caller, either stop the call or prefix the stored text with "Hypothesis, not a recorded fact: ". List every caller in the card.
+- Do not delete ai_engine.py. Leave the functions in place so old imports do not break. Add a one-line docstring on generate_pricing_idea: the return value is not a price.
+
+Tests:
+- Creating an opportunity from a pattern does not require a network call and does not persist the SaaS sentence.
+- A test that monkeypatches generate_pricing_idea to raise if called, then creates an opportunity, must pass.
+
+Then start block 4.
+
+BLOCK 4. 90 minutes. The orchestrator must not read a guess as a price.
+
+Open backend/app/services/orchestrator.py. Find "a price selected by the operator" and expected_price = opp.estimated_price or _first_money(opp.pricing_idea). Confirm the lines.
+
+Change:
+- A null estimated_price means the sentence "price is not recorded."
+- Do not parse a number out of pricing_idea, market_analysis, or solution.
+- Old rows that still contain generated prose stay in the database. They are not displayed as the agreed price.
+
+Test: an opportunity with estimated_price null and pricing_idea "roughly $49 a month" does not yield 49 as a price.
+Then start block 5.
+
+BLOCK 5. 90 minutes. Bounties and products do not invent a commercial term.
+
+Open backend/app/services/github_bounty.py. It sets pricing_idea to a reward string.
+Open backend/app/services/product_engine.py create_product. See whether a missing pricing argument becomes a sentence.
+
+Change:
+- A GitHub bounty amount is stored only when the payload itself contains an amount. Otherwise pricing_idea is null. Do not write "Variable maintainer bounty" as if it were a price.
+- create_product stores pricing only when the caller passed pricing. Null stays null.
+- Do not create a product row from an opportunity automatically.
+
+Test each case on the pytest database.
+Then start block 6.
+
+BLOCK 6. 2 hours. A connection can record more than one response, and a response is still not acceptance.
+
+Open backend/app/api/forge.py record_connection_response. The idempotency key is network-connection:{id}:response. A second note can be swallowed. The public app never calls this route. src/routes/domain.tsx only prints latest_response.
+
+Change, on the existing connection and domain-event code, not a new table:
+- A new response gets its own idempotency key that includes a hash of the note and the time to the minute, or the count of existing response events. Two different notes on the same connection both persist. The same note twice does not duplicate.
+- State does not change. accepted stays false. No payment field is set.
+- Add POST /public/domain/{record_id}/connections/{connection_id}/response. Body: note, and the domain close_token. Reject a bad token. Reject a connection that is not for that domain record. Reject a state other than proposed, authorized, or contacted. Call the same recording function the forge route uses.
+- On src/routes/domain.tsx, under a visible candidate, a note box posts to that public route. The help text says a response is not acceptance. Reload the match list from the existing public read.
+
+Tests in tests/test_public_value_flow.py:
+- First note is stored and the state is unchanged.
+- Second different note is stored.
+- Identical note is not duplicated.
+- Wrong token is rejected.
+- A candidate is not published and not accepted by this call.
+
+Then start block 7.
+
+BLOCK 7. 90 minutes. The public match list must show those responses from the canonical read.
+
+After block 6, GET the public match for that domain record and assert latest_response is the newest stored note, and that an older note is still in the event list if the public events route already returns connection events. If events are not on that route, do not build a new feed. Show the newest note only, and say older notes remain stored.
+Do not show internal scores.
+Test the read path with the test client.
+Then start block 8.
+
+BLOCK 8. 60 minutes. Full proof, then the continuation. Do not stop after this block.
+
+Run:
+  cd backend && .venv/bin/python -m pytest -q tests/test_opportunity_quality.py tests/test_public_value_flow.py tests/test_research_planner.py tests/test_research_task_engine.py
+If those pass, run the full backend pytest.
+Run from the repo root:
+  node --experimental-strip-types --test src/lib/content.test.ts
+  npx tsc --noEmit --pretty false
+Fix failures you caused. Do not delete tests.
+Confirm you did not insert a provider into storage/forge.db.
+Then execute CONTINUATION A immediately.
+
+CONTINUATION A. 90 minutes. Inventory, then close every remaining inventor.
+
+Search the backend for these strings and fix each hit that writes them onto a row: "Subscription (SaaS)", "target_customer", "pricing_idea=", "estimated_revenue", "customers will pay", "market size".
+For each hit, the card lists file and line, and the change is null-unless-recorded, or you explain why that hit is a quote in a test.
+A search with no hits is a card, then start CONTINUATION B. Do not stop.
+
+CONTINUATION B. 2 hours. One bounded claim pass that is code, not a manual click.
+
+evidence_graph.link_unclaimed_observations and restore_source_addresses already exist and the daily cycle calls them.
+Add a test that two external signals with different URLs and different texts become two observed claims, and a third signal with no URL and no duplicate URL does not become a public discovery.
+Run the functions once against storage/forge.db with limit 20. Record how many new claim ids came back. Do not invent signal text.
+Then start CONTINUATION C.
+
+CONTINUATION C. 90 minutes. Failed tasks stay failed, and the reason is visible to the cockpit.
+
+Count research_tasks by status. Write the counts in the card.
+If frontend/app/research/page.tsx does not show failed and planned counts from the existing tasks endpoint, add those counts from data the endpoint already returns. If the endpoint does not return status, extend the existing tasks route with a status field. No new router file.
+Do not call retry_task. Do not start collectors.
+Test the status field with the FastAPI client.
+Then start CONTINUATION D.
+
+CONTINUATION D. 2 hours. A stored need survives a cycle with collection turned off.
+
+Confirm scripts/run_daily_cycle.py calls scan_candidates even when FORGEOS_COLLECT_LIMIT is 0. If it does not, move the scan outside that condition.
+Add a test that uses the cycle's scan function, not a live network: one open domain job, no provider, FORGEOS_COLLECT_LIMIT=0, result is one open Gap: question and zero opportunities and zero collector calls.
+Do not start scripts/scheduler.py.
+When this test passes, append the cards. If every block and continuation above is done, stop. Otherwise you skipped one. Go back and do it.
+
+RESULT
+
+Append cards here in order. Do not delete the blocks above.
+
+END OF COMMAND

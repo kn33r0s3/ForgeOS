@@ -1,15 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, AnalyzeResponse } from "@/lib/api";
+
+const samplePrompts = [
+  "I run a small repair shop and want to know whether customers are actively looking for mobile repair services.",
+  "Our customer support team is losing time on repetitive scheduling issues. Is there evidence this is a real pain point?",
+  "Local service businesses are struggling to get booked appointments. What is the strongest real problem to solve first?",
+];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-forge-border bg-forge-panel p-5">
-      <h3 className="text-sm font-medium text-forge-accent2 mb-2">{title}</h3>
-      <div className="text-sm text-neutral-300 whitespace-pre-line leading-relaxed">
-        {children}
-      </div>
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+      <h3 className="mb-2 text-sm font-medium uppercase tracking-[0.12em] text-forge-accent2">{title}</h3>
+      <div className="whitespace-pre-line text-sm leading-7 text-neutral-200">{children}</div>
     </div>
   );
 }
@@ -19,78 +23,155 @@ export default function AnalyzePage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [statusText, setStatusText] = useState("Researching");
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("forgeos-public-result");
+    if (saved) {
+      try {
+        setResult(JSON.parse(saved) as AnalyzeResponse);
+      } catch {
+        window.localStorage.removeItem("forgeos-public-result");
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!result) return;
+    window.localStorage.setItem("forgeos-public-result", JSON.stringify(result));
+  }, [result]);
 
   async function handleAnalyze(e: React.FormEvent) {
     e.preventDefault();
-    if (!idea.trim()) return;
+    const trimmed = idea.trim();
+    if (!trimmed) return;
     setLoading(true);
     setError(null);
+    setStatusText("Researching");
+
     try {
-      const res = await api.analyze(idea.trim());
+      setStatusText("Collecting evidence");
+      const res = await api.analyze(trimmed);
+      setStatusText("Evaluating findings");
       setResult(res);
-    } catch {
-      setError("Could not reach the Forge backend. Check the configured API URL and backend availability.");
+      setIdea("");
+      setStatusText("Result ready");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not reach the Forge backend.";
+      setError(message || "Could not reach the Forge backend.");
+      setStatusText("Blocked");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold">Analyze</h1>
-        <p className="text-neutral-400 text-sm mt-1">
-          Describe a business idea or a problem you've noticed. Forge will break it down.
-        </p>
+    <div className="mx-auto max-w-6xl space-y-8 py-10">
+      <div className="rounded-[28px] border border-white/10 bg-white/[0.03] p-6 md:p-10">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-forge-accent2">ForgeOS</p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white md:text-5xl">What problem are you trying to solve?</h1>
+          </div>
+          <a href="/" className="rounded-full border border-white/10 px-4 py-2 text-sm text-neutral-200 hover:border-white/25 hover:bg-white/[0.03]">
+            Public entry</a>
+        </div>
+
+        <form onSubmit={handleAnalyze} className="mt-8 space-y-4">
+          <textarea
+            value={idea}
+            onChange={(e) => setIdea(e.target.value)}
+            rows={5}
+            placeholder="I run a small repair shop and want to know whether customers are actively looking for mobile repair services."
+            className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-4 text-base text-white outline-none transition focus:border-forge-accent focus:ring-2 focus:ring-forge-accent/30"
+          />
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="submit"
+              disabled={loading}
+              className="rounded-full bg-forge-accent px-6 py-3 text-sm font-medium text-black transition hover:bg-forge-accent2 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? statusText + "…" : "Research this problem"}
+            </button>
+            <span className="text-sm text-neutral-400">ForgeOS researches the problem, gathers evidence, and turns it into an action brief.</span>
+          </div>
+        </form>
+
+        <div className="mt-5 flex flex-wrap gap-2">
+          {samplePrompts.map((sample) => (
+            <button
+              key={sample}
+              type="button"
+              onClick={() => setIdea(sample)}
+              className="rounded-full border border-white/10 bg-white/[0.02] px-3 py-2 text-xs text-neutral-300 transition hover:border-white/25 hover:text-white"
+            >
+              Try an example
+            </button>
+          ))}
+        </div>
       </div>
 
-      <form onSubmit={handleAnalyze} className="space-y-3">
-        <textarea
-          value={idea}
-          onChange={(e) => setIdea(e.target.value)}
-          rows={4}
-          placeholder="Describe a business idea or a problem you've observed…"
-          className="w-full rounded-md bg-forge-panel border border-forge-border px-4 py-3 text-sm outline-none focus:border-forge-accent resize-none"
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-md bg-forge-accent text-forge-bg font-medium px-5 py-2.5 text-sm disabled:opacity-50"
-        >
-          {loading ? "Analyzing…" : "Analyze with Forge"}
-        </button>
-      </form>
-
       {error && (
-        <div className="rounded-md border border-red-500/40 bg-red-500/10 text-red-300 text-sm px-4 py-3">
+        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
           {error}
         </div>
       )}
 
       {result && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between rounded-lg border border-forge-accent/40 bg-forge-accent/10 px-5 py-4">
-            <div>
-              <p className="text-xs text-neutral-400">Opportunity score</p>
-              <p className="text-3xl font-semibold text-forge-accent">
-                {result.score.toFixed(0)}
-                <span className="text-base text-neutral-500">/100</span>
-              </p>
-            </div>
-            <div className="text-right text-xs text-neutral-400">
-              <p>difficulty: {result.difficulty}</p>
-              <p>opportunity #{result.opportunity_id}</p>
+        <div className="space-y-5">
+          <div className="rounded-[28px] border border-forge-accent/30 bg-forge-accent/10 p-6 md:p-8">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] text-forge-accent2">Current result</p>
+                <p className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-white">{result.problem}</p>
+              </div>
+              <div className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-right text-sm text-neutral-200">
+                <div>{result.opportunity_id ? `Score: ${result.score.toFixed(0)}/100` : "Research in progress"}</div>
+                <div className="text-xs text-neutral-400">
+                  {result.opportunity_id ? result.evidence_quality || "Limited evidence" : `${result.research_status || "research_started"}`}
+                </div>
+              </div>
             </div>
           </div>
 
-          <Section title="Problem">{result.problem}</Section>
-          <Section title="Target customer">{result.target_customer}</Section>
-          <Section title="Market analysis">{result.market_analysis}</Section>
-          <Section title="Solution">{result.solution}</Section>
-          <Section title="Business model">{result.business_model}</Section>
-          <Section title="Pricing idea">{result.pricing_idea}</Section>
-          <Section title="MVP plan">{result.mvp_plan}</Section>
-          <Section title="Validation plan">{result.validation_plan}</Section>
+          <div className="grid gap-5 lg:grid-cols-2">
+            <Section title="What we found">
+              {result.target_customer}
+              {"\n\n"}
+              {result.solution}
+              {"\n\n"}
+              {result.market_analysis || "No market analysis was produced yet. The system is still validating whether the problem is real and worth solving."}
+            </Section>
+            <Section title="Research status">
+              {result.findings_summary || "The submitted problem has entered the research pipeline, but no opportunity claim has been justified yet."}
+              {"\n\n"}
+              {result.research_question_id ? `Research question: #${result.research_question_id}` : "No research question persisted yet."}
+              {result.research_task_ids && result.research_task_ids.length > 0 ? `\nResearch tasks: ${result.research_task_ids.join(", ")}` : "\nNo tasks have completed yet."}
+              {typeof result.evidence_count === "number" ? `\nEvidence collected: ${result.evidence_count}` : ""}
+            </Section>
+          </div>
+
+          <div className="grid gap-5 lg:grid-cols-2">
+            <Section title="Uncertainty">
+              {result.unknowns && result.unknowns.length > 0
+                ? result.unknowns.map((item) => `• ${item}`).join("\n")
+                : "The evidence is still too limited to confirm key assumptions such as willingness to pay, acquisition path, and competitive pressure."}
+            </Section>
+            <Section title="Next actions">
+              {result.recommended_next_experiment || "Interview a small representative sample in the target audience and validate whether they confirm the problem and would pay for a fix."}
+              {result.decision_id ? `\n\nDecision record: #${result.decision_id}` : ""}
+            </Section>
+          </div>
+
+          <Section title="Evidence status">
+            Observation status: {result.observation_status || "observed"}
+            {"\n"}
+            Evidence quality: {result.evidence_quality || "limited"}
+            {"\n"}
+            {result.opportunity_id ? `Opportunity saved: #${result.opportunity_id}` : "Opportunity not yet justified by evidence"}
+            {result.signal_id ? `\nSignal captured: #${result.signal_id}` : ""}
+          </Section>
         </div>
       )}
     </div>

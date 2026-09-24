@@ -1,5 +1,8 @@
 from app import models
 from app.services import collector_runner, research_task_engine
+from app.database import get_db
+from app.main import app
+from fastapi.testclient import TestClient
 
 
 class FakeCollector:
@@ -46,6 +49,16 @@ def make_task(db):
         query=question.question,
         objective=question.question,
     )
+
+
+def test_running_task_is_planned_again_before_collection(db):
+    task = make_task(db)
+    task.status = "running"
+    db.commit()
+    resumed = research_task_engine.resume_running_tasks(db, limit=10)
+    assert resumed == [task.id]
+    assert db.get(models.ResearchTask, task.id).status == "planned"
+    assert research_task_engine.resume_running_tasks(db, limit=10) == []
 
 
 def test_create_persist_and_resume_research_task(db):
@@ -144,3 +157,31 @@ def test_task_survives_sqlite_restart(tmp_path):
 
     assert restored is not None
     assert restored.objective == "What evidence exists for a durable research task?"
+
+
+def test_tasks_endpoint_exposes_failed_and_planned_status(db):
+    planned = make_task(db)
+    second_question = models.ResearchQuestion(question="Does a second task expose its failed status?")
+    db.add(second_question)
+    db.commit()
+    failed = research_task_engine.create_task(
+        db,
+        question_id=second_question.id,
+        source="fake",
+        query=second_question.question,
+    )
+    failed.status = "failed"
+    db.commit()
+
+    def override_get_db():
+        yield db
+
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        response = TestClient(app).get("/forge/tasks")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    statuses = {item["status"] for item in response.json() if item["id"] in {planned.id, failed.id}}
+    assert statuses == {"planned", "failed"}

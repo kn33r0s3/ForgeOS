@@ -10,7 +10,7 @@
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "";
+  "/api";
 
 const API_TIMEOUT_MS = 10_000;
 
@@ -171,6 +171,38 @@ export interface ResearchTask {
   created_at: string;
 }
 
+export interface ForgeOutcome {
+  id: number;
+  outcome_type: string;
+  actual_value: number | null;
+  unit: string | null;
+  qualitative_result: string;
+  success: boolean | null;
+  action_id: number | null;
+  data_scope: DataScope;
+  label: string;
+}
+
+export interface LearningEvent {
+  id: number;
+  prediction: string;
+  actual: string;
+  lesson: string;
+  error_type: string | null;
+  belief_update_applied: boolean;
+  confidence_delta: number | null;
+  created_at: string;
+}
+
+export interface CycleRun {
+  id: number;
+  started_at: string | null;
+  ended_at: string | null;
+  duration_ms: number | null;
+  status: string;
+  error: string | null;
+}
+
 export interface ForgeCycleSummary {
   signals_processed: number;
   patterns_found: number;
@@ -317,7 +349,7 @@ export interface EvidenceStatus {
 export interface ExecutionAction {
   data_scope?: DataScope;
   id: number;
-  opportunity_id: number;
+  opportunity_id: number | null;
   action: string;
   result: string | null;
   lesson: string | null;
@@ -358,7 +390,7 @@ export interface ActionEvidenceCite {
 
 export interface ActionPackage {
   action_id: number;
-  opportunity_id: number;
+  opportunity_id: number | null;
   action_type: string | null;
   status: string;
   policy_decision: string | null;
@@ -504,7 +536,7 @@ export interface Stats {
 }
 
 export interface AnalyzeResponse {
-  opportunity_id: number;
+  opportunity_id?: number | null;
   problem: string;
   target_customer: string;
   market_analysis: string;
@@ -515,6 +547,18 @@ export interface AnalyzeResponse {
   validation_plan: string;
   difficulty: string;
   score: number;
+  signal_id?: number | null;
+  observation_status?: string;
+  evidence_quality?: string;
+  unknowns?: string[];
+  recommended_next_experiment?: string | null;
+  decision_id?: number | null;
+  knowledge_labels?: Record<string, string>;
+  research_question_id?: number | null;
+  research_task_ids?: number[];
+  research_status?: string;
+  evidence_count?: number;
+  findings_summary?: string | null;
 }
 
 // ---------- request plumbing ----------
@@ -871,6 +915,8 @@ export const api = {
     }),
   getRuntime: () => request<ForgeRuntime>("/forge/runtime"),
   getSignals: () => request<Signal[]>("/signals"),
+  getEvidence: () => request<Evidence[]>("/forge/evidence"),
+  getClaims: (limit = 50) => request<Record<string, unknown>[]>(`/world/claims?limit=${limit}`),
   createSignal: (content: string, source = "manual", category?: string) =>
     request<Signal>("/signals", {
       method: "POST",
@@ -908,6 +954,9 @@ export const api = {
       `/forge/questions${status ? `?status=${status}` : ""}`
     ),
   getTasks: () => request<ResearchTask[]>("/forge/tasks"),
+  getOutcomes: (limit = 50) => request<ForgeOutcome[]>(`/forge/outcomes?limit=${limit}`),
+  getLearning: (limit = 50) => request<LearningEvent[]>(`/forge/learning?limit=${limit}`),
+  getCycles: (limit = 20) => request<CycleRun[]>(`/forge/cycles?limit=${limit}`),
   getBeliefs: () => request<Belief[]>("/forge/beliefs"),
   getBeliefGraph: (id: number) => request<BeliefGraph>(`/forge/world/beliefs/${id}`),
   askForge: (question: string) =>
@@ -971,6 +1020,7 @@ export const api = {
       `/forge/execution/actions${opportunityId ? `?opportunity_id=${opportunityId}` : ""}`
     ),
   getExecutionAction: (id: number) => request<ExecutionAction>(`/forge/execution/actions/${id}`),
+  getActionPackage: (id: number) => request<ActionPackage>(`/forge/execution/actions/${id}/package`),
   approveExecutionAction: (id: number) =>
     request<ExecutionAction>(`/forge/execution/actions/${id}/approve`, { method: "POST" }),
   startExecutionAction: (id: number) =>
@@ -983,8 +1033,6 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
-  getActionPackage: (id: number) =>
-    request<ActionPackage>(`/forge/execution/actions/${id}/package`),
   recordHumanResult: (id: number, result: string) =>
     request<ActionPackage>(`/forge/execution/actions/${id}/human-result`, {
       method: "POST",
@@ -1081,6 +1129,21 @@ export const api = {
   recordRepairResponse: (id: number, accepted: boolean, response: string) => request<RepairCommunication>(`/repair-shop/communications/${id}/response`, { method: "POST", body: JSON.stringify({ accepted, response }) }),
   recordRepairPayment: (id: number, payload: { amount: number; unit: string; provider: string; provider_reference: string; data_scope: DataScope; idempotency_key?: string }) => request<Record<string, unknown>>(`/repair-shop/work-items/${id}/payment`, { method: "POST", body: JSON.stringify(payload) }),
   recordRepairOutcome: (id: number, payload: { actual: string; success?: boolean; source?: string }) => request<Record<string, unknown>>(`/repair-shop/work-items/${id}/outcome`, { method: "POST", body: JSON.stringify(payload) }),
+  listNetworkConnections: () => request<NetworkConnectionRow[]>("/forge/connections"),
+  scanNetworkConnections: (limit = 50) =>
+    request<{ id: number; state: string; public_visible: boolean }[]>(`/forge/connections/scan?limit=${limit}`, { method: "POST" }),
+  advanceNetworkConnection: (id: number, nextState: string, options?: { amountNpr?: number; evidenceReference?: string }) => {
+    const params = new URLSearchParams({ next_state: nextState });
+    if (options?.amountNpr !== undefined) params.set("amount_npr", String(options.amountNpr));
+    if (options?.evidenceReference) params.set("evidence_reference", options.evidenceReference);
+    return request<{ id: number; state: string; public_visible: boolean; payment?: string }>(`/forge/connections/${id}/advance?${params.toString()}`, { method: "POST" });
+  },
+  recordNetworkResponse: (id: number, note: string) =>
+    request<{ id: number; state: string; accepted: boolean }>(`/forge/connections/${id}/response?note=${encodeURIComponent(note)}`, { method: "POST" }),
+  publishNetworkConnection: (id: number) =>
+    request<{ id: number; state: string; public_visible: boolean }>(`/forge/connections/${id}/publish`, { method: "POST" }),
+  confirmNetworkPayment: (id: number) =>
+    request<{ id: number; state: string; amount_npr: number; payment: string }>(`/forge/connections/${id}/confirm-payment`, { method: "POST" }),
 };
 
 /**
@@ -1090,6 +1153,23 @@ export const api = {
  * so this derives the same classification from the same real fields
  * rather than guessing.
  */
+export interface NetworkConnectionRow {
+  id: number;
+  left_kind: string;
+  left_id: number;
+  right_kind: string;
+  right_id: number;
+  state: string;
+  reason: string;
+  evidence_reference?: string | null;
+  constraints?: string | null;
+  unknown?: string | null;
+  agreement_gap: string;
+  public_visible: boolean;
+  seconds_to_recorded_payment?: number | null;
+  latest_response?: string | null;
+}
+
 export function actionStage(
   action: ExecutionAction
 ): "blocked" | "planned" | "attempted" | "completed" | "verified" {

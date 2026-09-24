@@ -99,20 +99,21 @@ def test_safe_backup_produces_valid_snapshot_and_prunes(tmp_path):
 # Scheduler (records a clean cycle; overlap guard)
 # ---------------------------------------------------------------------------
 
-def test_scheduler_run_once_records_clean_cycle(dbcopy):
+def test_scheduler_run_once_records_clean_cycle(dbcopy, monkeypatch, tmp_path):
     """CycleScheduler._run_cycle() runs the hardened two-stage cycle and
     returns a record with no errors."""
+    monkeypatch.setenv("FORGEOS_COLLECT_LIMIT", "0")
     from app.services import cycle_scheduler
-    s = cycle_scheduler.CycleScheduler(interval_seconds=60, backup_interval_seconds=None, max_run_seconds=300)
+    s = cycle_scheduler.CycleScheduler(interval_seconds=60, backup_interval_seconds=None, max_run_seconds=300, lock_path=tmp_path / "scheduler.run.lock")
     rec = s._run_cycle()
     assert rec.get("forge_cycle_error") is None
     assert rec.get("autonomy_cycle_error") is None
 
 
-def test_scheduler_skips_overlapping_run(dbcopy):
+def test_scheduler_skips_overlapping_run(dbcopy, tmp_path):
     """While a run is marked in-progress, a new tick must refuse to start."""
     from app.services import cycle_scheduler
-    s = cycle_scheduler.CycleScheduler(interval_seconds=60, backup_interval_seconds=None, max_run_seconds=300)
+    s = cycle_scheduler.CycleScheduler(interval_seconds=60, backup_interval_seconds=None, max_run_seconds=300, lock_path=tmp_path / "scheduler.run.lock")
     s._running.set()  # simulate in-progress
     s._tick()  # should short-circuit without calling _run_cycle
     assert s._running.is_set()  # still marked (unchanged by the skipped tick)

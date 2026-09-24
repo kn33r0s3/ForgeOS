@@ -1,5 +1,7 @@
 """Regression coverage for actionable opportunity quality and target derivation."""
 
+import pytest
+
 from app import models
 from app.services import opportunity_engine
 
@@ -56,6 +58,77 @@ def test_manual_idea_creation_uses_derived_target_without_claiming_validation(db
     assert opportunity.target_customer == "repair shop"
     assert opportunity.market_confidence == 0.0
     assert opportunity.revenue_confidence == 0.0
+
+
+def test_pattern_opportunity_stores_only_recorded_hypothesis_fields(db, monkeypatch):
+    pattern = models.Pattern(
+        title="Unpriced repair workflow",
+        description="A repair workflow is difficult to coordinate.",
+        frequency=2,
+        confidence_score=60.0,
+    )
+    db.add(pattern)
+    db.commit()
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("opportunity creation must not call a generator")
+
+    monkeypatch.setattr(opportunity_engine.ai_engine, "generate_pricing_idea", fail_if_called)
+    monkeypatch.setattr(opportunity_engine.ai_engine, "generate_market_analysis", fail_if_called)
+    monkeypatch.setattr(opportunity_engine.ai_engine, "generate_solution", fail_if_called)
+    monkeypatch.setattr(opportunity_engine.ai_engine, "generate_mvp_plan", fail_if_called)
+    monkeypatch.setattr(opportunity_engine.ai_engine, "generate_validation_plan", fail_if_called)
+
+    opportunity = opportunity_engine.opportunity_from_pattern(db, pattern)
+
+    assert opportunity.pricing_idea is None
+    assert opportunity.estimated_price is None
+    assert opportunity.estimated_revenue is None
+    assert opportunity.business_model is None
+    assert opportunity.target_customer is None
+    assert opportunity.solution is None
+    assert opportunity.market_analysis is None
+    assert opportunity.mvp_plan is None
+    assert opportunity.validation_plan is None
+
+
+def test_unpriced_manual_idea_keeps_price_fields_empty(db):
+    opportunity = opportunity_engine.opportunity_from_idea(
+        db, "A workflow idea with no recorded buyer or price."
+    )
+
+    assert opportunity.pricing_idea is None
+    assert opportunity.estimated_price is None
+    assert opportunity.estimated_revenue is None
+    assert opportunity.revenue_confidence == 0.0
+
+
+def test_orchestrator_does_not_parse_pricing_prose_as_agreed_price(db):
+    from app.services import orchestrator
+
+    opportunity = models.Opportunity(
+        problem="A recorded problem",
+        target_customer=None,
+        solution=None,
+        business_model=None,
+        pricing_idea="roughly $49 a month",
+        estimated_price=None,
+        estimated_revenue=None,
+        score=20,
+    )
+    db.add(opportunity)
+    db.commit()
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(orchestrator, "validation_counts", lambda *args: (5, 3))
+    try:
+        result = orchestrator.create_product_for_validated(db, opportunity.id)
+    finally:
+        monkeypatch.undo()
+    assert result["status"] == "created"
+    product = db.get(models.Product, result["product_id"])
+    assert product.pricing == "roughly $49 a month"
+    assert product.pricing != "49"
+    assert opportunity.estimated_price is None
 
 
 def test_discovery_does_not_create_opportunity_from_prompt_injection_text(db):

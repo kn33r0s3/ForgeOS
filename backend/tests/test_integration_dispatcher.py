@@ -112,3 +112,40 @@ def test_malformed_response_marks_failure(db, monkeypatch):
     db.refresh(delivery)
     assert delivery.status == "FAILED"
     assert "missing message SID" in delivery.last_error
+
+
+def test_smtp_email_action_uses_real_outbox(db):
+    from app.services import action_engine
+
+    action = action_engine.propose_action(
+        db,
+        objective="Notify a participant about the approved workflow",
+        action_type="smtp_email",
+        parameters={
+            "to": "ops@example.com",
+            "subject": "Approved workflow",
+            "body": "The workflow has been authorized and this is a real outbound email.",
+        },
+    )
+    action_engine.approve_action(db, action.id)
+
+    def fake_dispatch(db_session, delivery_id):
+        row = db_session.get(IntegrationDelivery, delivery_id)
+        row.status = "ACCEPTED_BY_SMTP"
+        row.response_json = json.dumps({"message_id": "msg-123", "status": "ACCEPTED_BY_SMTP"})
+        db_session.commit()
+        db_session.refresh(row)
+        return row
+
+    with patch("app.services.integration_dispatcher.dispatch_single_delivery", side_effect=fake_dispatch):
+        executed = action_engine.start_and_execute_action(db, action.id)
+
+    assert executed.status == "SUCCEEDED"
+    assert executed.verification_state == "VERIFIED_SUCCESS"
+    assert "adapter execution only" in executed.execution_result
+    assert executed.external_ref is not None
+
+    delivery_rows = db.query(IntegrationDelivery).filter_by(integration_name="smtp").all()
+    assert len(delivery_rows) == 1
+    assert delivery_rows[0].status == "ACCEPTED_BY_SMTP"
+    assert "msg-123" in (delivery_rows[0].response_json or "")

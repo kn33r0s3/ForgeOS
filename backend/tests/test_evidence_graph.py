@@ -55,6 +55,74 @@ def test_claim_evidence_graph_is_persistent_and_deduplicated(db):
     assert restored_edge.relation_type == "supports"
 
 
+def test_duplicate_source_address_is_restored_onto_the_original(db):
+    original = models.Signal(
+        source="rss",
+        content="A stored article about a local parts shortage.",
+        source_type="external",
+        canonical_url=None,
+    )
+    db.add(original)
+    db.commit()
+    duplicate = models.Signal(
+        source="rss",
+        content=original.content,
+        source_type="external",
+        canonical_url="https://example.test/parts-shortage",
+        is_duplicate_of=original.id,
+    )
+    db.add(duplicate)
+    db.commit()
+    assert evidence_graph.restore_source_addresses(db, limit=10) == 1
+    db.refresh(original)
+    assert original.canonical_url == "https://example.test/parts-shortage"
+    assert evidence_graph.restore_source_addresses(db, limit=10) == 0
+
+
+def test_unclaimed_external_signal_becomes_an_observation(db):
+    observer = ObserverEngine(db)
+    signal = observer.observe(
+        "A paper reports a measurement. Forge has not checked it.",
+        source="arxiv",
+        metadata={"url": "https://example.test/paper", "title": "A measurement"},
+    )
+    linked = evidence_graph.link_unclaimed_observations(db, limit=5)
+    assert len(linked) == 1
+    claim = db.query(models.Claim).one()
+    assert claim.epistemic_state == "observed"
+    assert "not checked" in claim.statement
+    again = evidence_graph.link_unclaimed_observations(db, limit=5)
+    assert again == []
+    assert db.query(models.Claim).count() == 1
+    assert signal.canonical_url == "https://example.test/paper"
+
+
+def test_distinct_external_signals_link_to_claims_but_unaddressed_signal_stays_private(db):
+    observer = ObserverEngine(db)
+    first = observer.observe(
+        "A Kathmandu repair shop reports missed appointments during monsoon season.",
+        source="rss",
+        metadata={"url": "https://example.test/one", "title": "One"},
+    )
+    second = observer.observe(
+        "A software maintainer reports that release notes are difficult to coordinate across repositories.",
+        source="github",
+        metadata={"url": "https://example.test/two", "title": "Two"},
+    )
+    private = observer.observe(
+        "An unaddressed report mentions an internal scheduling concern.",
+        source="manual",
+        metadata={"title": "No source address"},
+    )
+
+    linked = evidence_graph.link_unclaimed_observations(db, limit=20)
+
+    assert len(linked) == 2
+    assert len({claim_id for claim_id in linked}) == 2
+    assert first.canonical_url and second.canonical_url
+    assert private.canonical_url is None
+
+
 def test_contradiction_changes_claim_state_without_fabricating_confidence(db):
     observer = ObserverEngine(db)
     supporting_signal = observer.observe(

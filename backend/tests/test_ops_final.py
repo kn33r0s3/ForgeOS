@@ -32,7 +32,7 @@ def test_safe_backup_returns_existing_gzip_and_validates_keep(tmp_path):
         backup.safe_backup(src, keep=0)
 
 
-def test_scheduler_uses_canonical_run_once_and_next_tick_survives(monkeypatch):
+def test_scheduler_uses_canonical_run_once_and_next_tick_survives(monkeypatch, tmp_path):
     from app.services import cycle_scheduler
     calls = []
     def fake():
@@ -41,12 +41,12 @@ def test_scheduler_uses_canonical_run_once_and_next_tick_survives(monkeypatch):
             raise RuntimeError("first")
         return {"forge_cycle": {}, "autonomy_cycle": {}}
     monkeypatch.setattr(cycle_scheduler.run_daily_cycle, "run_once", fake)
-    s = cycle_scheduler.CycleScheduler(interval_seconds=10, backup_interval_seconds=None, max_run_seconds=2)
+    s = cycle_scheduler.CycleScheduler(interval_seconds=10, backup_interval_seconds=None, max_run_seconds=2, lock_path=tmp_path / "scheduler.run.lock")
     s._tick(); s._tick()
     assert len(calls) == 2
 
 
-def test_scheduler_timeout_is_truthful_and_blocks_overlap(monkeypatch):
+def test_scheduler_timeout_is_truthful_and_blocks_overlap(monkeypatch, tmp_path):
     from app.services import cycle_scheduler
     entered = threading.Event()
     release = threading.Event()
@@ -55,7 +55,7 @@ def test_scheduler_timeout_is_truthful_and_blocks_overlap(monkeypatch):
         calls.append(1); entered.set(); release.wait(2)
         return {"forge_cycle": {}, "autonomy_cycle": {}}
     monkeypatch.setattr(cycle_scheduler.run_daily_cycle, "run_once", slow)
-    s = cycle_scheduler.CycleScheduler(interval_seconds=10, backup_interval_seconds=None, max_run_seconds=1)
+    s = cycle_scheduler.CycleScheduler(interval_seconds=10, backup_interval_seconds=None, max_run_seconds=1, lock_path=tmp_path / "scheduler.run.lock")
     start = time.monotonic(); s._tick(); elapsed = time.monotonic() - start
     assert entered.is_set() and elapsed < 1.8
     assert calls == [1]

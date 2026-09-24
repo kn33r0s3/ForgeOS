@@ -1,6 +1,7 @@
 """Regression proof that a failed Forge stage cannot poison autonomy."""
 from types import SimpleNamespace
 
+from app import models
 from scripts import run_daily_cycle
 
 
@@ -49,3 +50,33 @@ def test_rollback_failure_is_best_effort_and_does_not_escape():
             raise RuntimeError("expunge failed")
 
     run_daily_cycle._rollback_if_needed(BrokenSession(), "test")
+
+
+def test_cycle_scans_open_needs_when_collection_is_disabled(db, monkeypatch):
+    row = models.DomainRecord(
+        kind="job",
+        title="Cycle scan need",
+        detail="No provider is recorded for this need.",
+        status="open",
+        close_token_hash="test",
+    )
+    db.add(row)
+    db.commit()
+
+    monkeypatch.setattr(run_daily_cycle, "SessionLocal", lambda: db)
+    monkeypatch.setattr(run_daily_cycle.forge_loop, "run_cycle", lambda session: {})
+    monkeypatch.setattr(
+        run_daily_cycle.execution_engine,
+        "run_autonomous_action_cycle",
+        lambda session: SimpleNamespace(proposed=0, allowed=0, blocked=0, require_approval=0),
+    )
+    monkeypatch.setenv("FORGEOS_COLLECT_LIMIT", "0")
+
+    record = run_daily_cycle.run_once()
+
+    assert record.get("collection") is None
+    gap = db.query(models.ResearchQuestion).filter(
+        models.ResearchQuestion.question.like("Gap: open job #%")
+    ).one()
+    assert gap.status == "open"
+    assert db.query(models.Opportunity).count() == 0

@@ -3,6 +3,7 @@
 **REAL revenue: $0. REAL customers: 0. External validation: 0.**
 The current startup and human workflow instructions are in [docs/OPERATOR_GUIDE.md](docs/OPERATOR_GUIDE.md).
 Architecture map: [docs/FINAL_ARCHITECTURE.md](docs/FINAL_ARCHITECTURE.md).
+End-state blueprint: [docs/FUTURE_BLUEPRINT.md](docs/FUTURE_BLUEPRINT.md).
 Verified release results: [STATUS.md](STATUS.md) and [COMPLETION_REPORT.md](COMPLETION_REPORT.md).
 Older roadmap/readiness statements below are historical, not verified sales claims.
 Use a separate database for synthetic source inputs, plus SANDBOX labels downstream.

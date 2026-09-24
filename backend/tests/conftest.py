@@ -5,9 +5,12 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-# Override environment BEFORE any app module imports settings or database engine
+# Override environment BEFORE any app module imports settings or database engine.
+# Keep the local-first default: tests must exercise the app without a shared
+# API secret unless they explicitly set one for a security-specific case.
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 os.environ["AI_PROVIDER"] = "mock"
+os.environ["FORGE_API_KEY"] = ""
 
 
 def pytest_configure(config):
@@ -18,17 +21,30 @@ def pytest_configure(config):
 
 @pytest.fixture
 def db():
-    """Fresh in-memory DB per test with all tables."""
+    """Fresh in-memory DB per test with all tables.
+
+    Use a shared connection pool so sqlite:// memory tables remain visible to
+    both the app dependency override and any startup hooks that touch the same
+    engine during the request lifecycle.
+    """
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
+    import app.database as database
     from app.database import Base
     from app import models  # noqa: F401 — register models
     from app.services import source_manager
 
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    database.engine = engine
+    database.SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+
     Base.metadata.create_all(bind=engine)
-    Session = sessionmaker(bind=engine)
-    session = Session()
+    session = database.SessionLocal()
     source_manager.seed_default_sources(session)
     yield session
     session.close()

@@ -46,6 +46,9 @@ export default function KnowledgePage() {
                 }`}
               >
                 <p className="text-sm text-neutral-200">{b.statement}</p>
+                <p className="mt-2 text-[10px] uppercase tracking-widest text-neutral-500">
+                  Signals {signalCount(b.supporting_signal_ids)}
+                </p>
                 <div className="mt-2">
                   <ConfidenceBar label="Confidence" value={b.confidence_score} />
                 </div>
@@ -135,6 +138,11 @@ function BeliefDetail({ beliefId }: { beliefId: number }) {
       )}
     </GlassPanel>
   );
+}
+
+function signalCount(ids: string | null): number {
+  if (!ids) return 0;
+  return ids.split(",").map((part) => part.trim()).filter(Boolean).length;
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
