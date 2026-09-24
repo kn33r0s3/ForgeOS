@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://sanipoperations.com.np/sitemap.xml

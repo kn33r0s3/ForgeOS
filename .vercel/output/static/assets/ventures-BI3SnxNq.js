@@ -1,1 +1,0 @@
-import{t as e}from"./jsx-runtime-Cltr0gcK.js";import{t}from"./area-view-BAmlvnCp.js";var n=e(),r=()=>(0,n.jsx)(`main`,{children:(0,n.jsx)(t,{name:`Ventures`})});export{r as component};

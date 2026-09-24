@@ -1,1 +1,0 @@
-import{t as e}from"./jsx-runtime-Cltr0gcK.js";var t=e();function n({label:e,index:n}){return(0,t.jsxs)(`div`,{className:`flex items-start justify-between gap-4 border-t border-line pt-3 font-mono text-kicker uppercase tracking-[0.14em] text-cyan lg:max-w-36`,children:[(0,t.jsx)(`span`,{children:e}),(0,t.jsx)(`span`,{children:n})]})}export{n as t};
