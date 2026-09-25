@@ -304,6 +304,20 @@ STOP:
 
 END OF COMMAND
 
+CLAIM: MONEY-MINER — A safe revenue miner now proposes repeatability reviews from recorded paid offers without executing external actions.
+SOURCE: REPO plus backend/app/services/revenue_miner.py, backend/app/services/action_engine.py, and backend/tests/test_revenue_miner.py
+FACT: The worker reads only EarningOffer rows with status paid, creates at most one manual_note proposal per offer, leaves it UNVERIFIED, and never sends contact, places trades, moves money, or infers a new sale.
+CHANGE: Added the revenue_miner service and regression tests; no new table, payment integration, provider, booking, or production record was added.
+TEST: .venv/bin/python -m pytest backend/tests/test_revenue_miner.py -q — 2 passed, 2 warnings; .venv/bin/python -m pytest backend/tests -q — 263 passed, 15 warnings.
+STOP:
+
+CLAIM: MONEY-ECONOMICS — Realized offer economics now calculate net and hourly results only from recorded inputs.
+SOURCE: REPO plus backend/app/services/offer_economics.py and backend/tests/test_offer_economics.py
+FACT: The calculation rejects negative or non-finite inputs, returns received minus direct cost, and leaves hourly result unknown when recorded hours are zero; it does not forecast income or infer payment.
+CHANGE: Added a pure accounting utility and regression tests; no database schema, payment integration, production record, or investment automation was added.
+TEST: .venv/bin/python -m pytest backend/tests/test_offer_economics.py backend/tests/test_earn_offers.py -q — 10 passed, 2 warnings; .venv/bin/python -m pytest backend/tests -q — 261 passed, 15 warnings.
+STOP:
+
 CLAIM: H5 — Final production, content, backend, and build checks passed without inventing providers, bookings, payments, or launch readiness.
 SOURCE: REPO plus docs/PUBLICITY_GATE.md, src/lib/content.test.ts, backend/tests, and https://forge-os-ebon.vercel.app
 FACT: Production serves the corrected Forge identity; the public API lists are empty, no DATABASE_URL is configured, and the publicity gate remains open for durable storage and operator-controlled launch prerequisites.
@@ -476,4 +490,18 @@ SOURCE: REPO plus backend/app/services/money_engine.py and backend/tests/test_re
 FACT: seed_default_revenue_sources inserts no Amazon, Upwork, YouTube, or Gumroad rows. A row whose citation contains "web search, this session" loses its percentages, minimum, frequency, and date. A row cited with an https page keeps its figure. The money-score grounding bonus is added only when the linked row has an https citation and a payout figure. A linked id is not labeled an observed payout.
 CHANGE: The unsourced default revenue-source list was removed. Startup withdraws those earlier figures. score_opportunity gates the grounding bonus.
 TEST: .venv/bin/python -m pytest backend/tests/test_revenue_source_seed.py -q — 3 passed.
+STOP:
+
+CLAIM: ROOT — Production / serves the Forge public app, and the deployed sitemap no longer names Sanip Ops.
+SOURCE: https://forge-os-ebon.vercel.app/ plus REPO src/routes/index.tsx, public/sitemap.xml, public/robots.txt, and src/routes/work.tsx
+FACT: The quoted Sanip homepage sentences are in sanipops_clean, a second Vite tree that Vercel does not build. The project root is the repo root, framework Vite, and vercel.json sends / to that app. src/routes/index.tsx has been the stored-world Forge home since 7e0a9ca. No static index.html shadows /. Before this change, public/sitemap.xml and public/robots.txt still named sanipoperations.com.np, and /work rendered the not-found page. After deployment dpl_6Z1Nuza7tTXuGRFQxtQqdCNV5VY9, live / is title Forge and heading What is stored right now, with no Sanip Ops text. /about, /providers, /services, and /discoveries are Forge pages. /work redirects to /domain and shows Work, offers, and trades posted here. /sitemap.xml and /robots.txt name forge-os-ebon.vercel.app. /api/health is status ok with cycle null. Providers, services, and domain are empty arrays. Discoveries is one observed web row. Alerts are the storage-proof domain events.
+CHANGE: public/sitemap.xml, public/robots.txt, and a /work redirect to /domain. Commit 679a96b.
+TEST: src/lib/content.test.ts — 6 passed. npm run build exited 0. The production responses above were read from the Ready alias.
+STOP:
+
+CLAIM: MINER-SIDE — The revenue miner runs as a side step of the existing cycle and the public page shows recorded counts only.
+SOURCE: REPO plus backend/app/services/revenue_miner.py, backend/app/services/forge_loop.py, backend/app/services/worker_manager.py, and backend/app/api/public.py
+FACT: A paid earning offer produces one unverified repeatability review. Two paid offers on the same pathway add one ownership review. A draft produces nothing. The worker handler does not schedule discovery, contact, or payment. The public read returns paid-offer and review counts and a note that the miner does not create income. Customer names and stated prices stay off that read. A cycle with no paid offer creates zero proposals.
+CHANGE: Wired mine_revenue_proposals into the cycle summary and the revenue_miner worker. Added GET /public/revenue-miner and the homepage sentence. No paid offer, payment, or production record was inserted.
+TEST: .venv/bin/python -m pytest backend/tests/test_revenue_miner.py backend/tests/test_offer_economics.py -q — 11 passed. Worker and earn-offer tests — 8 passed. src/lib/content.test.ts — 6 passed. tsc --noEmit exited 0.
 STOP:

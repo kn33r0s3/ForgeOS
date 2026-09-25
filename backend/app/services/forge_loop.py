@@ -321,6 +321,20 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         except Exception:
             pass
 
+    # Side step: review recorded paid offers. It does not contact anyone,
+    # move money, or treat a stated price as a new sale.
+    revenue_miner_summary = {"proposals_created": 0, "executed": False}
+    try:
+        from app.services.revenue_miner import mine_revenue_proposals
+
+        revenue_miner_summary["proposals_created"] = len(mine_revenue_proposals(db))
+    except Exception as exc:
+        stage_errors["revenue_miner"] = str(exc)
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
     summary = {
         "signals_processed": signals_processed,
         "patterns_found": len(patterns),
@@ -347,6 +361,7 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         "lessons_memory": lessons_summary,
         "orchestration": orchestration_summary,
         "actions_from_decisions": actions_proposed,
+        "revenue_miner": revenue_miner_summary,
         "stage_errors": stage_errors,
         "cycle_id": cycle.id,
     }

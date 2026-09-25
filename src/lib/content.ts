@@ -166,6 +166,13 @@ export type EngineHealth = {
   cycle?: { id?: number; status?: string; ended_at?: string | null } | null;
 };
 
+export type PublicRevenueMiner = {
+  paid_offers_recorded: number;
+  repeatability_reviews: number;
+  ownership_reviews: number;
+  note: string;
+};
+
 export async function loadEngineHealth(): Promise<EngineHealth> {
   const bases = getPublicApiBase() ? [getPublicApiBase()] : [];
   const urls = [...bases.map((base) => `${base}/health`), "/api/health"];
@@ -250,6 +257,12 @@ export async function loadPublicMatches(): Promise<PublicMatch[]> {
 export async function loadPublicConnections(): Promise<PublicConnection[]> {
   const payload = await fetchJsonFromCandidates<PublicConnection[]>("/connections");
   return Array.isArray(payload) ? payload : [];
+}
+
+export async function loadRevenueMiner(): Promise<PublicRevenueMiner | null> {
+  const payload = await fetchJsonFromCandidates<PublicRevenueMiner>("/revenue-miner");
+  if (!payload || typeof payload.paid_offers_recorded !== "number") return null;
+  return payload;
 }
 
 export async function loadPublicAlerts(limit = 20): Promise<PublicAlert[]> {

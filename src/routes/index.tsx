@@ -9,11 +9,13 @@ import {
   loadPublicAlerts,
   loadPublicDomain,
   loadProviders,
+  loadRevenueMiner,
   type EngineHealth,
   type ProviderRecord,
   type PublicAlert,
   type PublicDiscovery,
   type PublicDomainRecord,
+  type PublicRevenueMiner,
 } from "@/lib/content";
 import { Button } from "@/components/ui/button";
 
@@ -26,6 +28,7 @@ function Home() {
   const [discoveries, setDiscoveries] = useState<PublicDiscovery[]>([]);
   const [work, setWork] = useState<PublicDomainRecord[]>([]);
   const [alerts, setAlerts] = useState<PublicAlert[]>([]);
+  const [miner, setMiner] = useState<PublicRevenueMiner | null>(null);
   const [health, setHealth] = useState<EngineHealth | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -37,13 +40,15 @@ function Home() {
       loadPublicDomain(),
       loadPublicAlerts(8),
       loadProviders(),
-    ]).then(([engine, found, posts, changes, loaded]) => {
+      loadRevenueMiner(),
+    ]).then(([engine, found, posts, changes, loaded, mined]) => {
       if (!active) return;
       setHealth(engine);
       setDiscoveries(found);
       setWork(posts);
       setAlerts(changes);
       setProviders(loaded);
+      setMiner(mined);
       setIsLoading(false);
     });
     return () => {
@@ -83,6 +88,17 @@ function Home() {
               {health.cycle?.id ? ` · cycle ${health.cycle.id} ${health.cycle.status || ""}` : " · no cycle recorded"}
               {health.cycle?.ended_at ? ` · ended ${health.cycle.ended_at}` : ""}
             </p>
+          ) : null}
+          <p className="mt-3 max-w-2xl text-sm text-muted">
+            The revenue miner reviews offers already marked paid. It does not create income, send messages, or move money.
+          </p>
+          {!isLoading && health?.reachable && miner ? (
+            <p className="mt-3 max-w-2xl text-sm text-muted">
+              Revenue miner: {miner.paid_offers_recorded} paid {miner.paid_offers_recorded === 1 ? "offer" : "offers"} recorded, {miner.repeatability_reviews} repeatability {miner.repeatability_reviews === 1 ? "review" : "reviews"}, {miner.ownership_reviews} ownership {miner.ownership_reviews === 1 ? "review" : "reviews"}. {miner.note}
+            </p>
+          ) : null}
+          {!isLoading && health?.reachable && !miner ? (
+            <p className="mt-3 text-sm text-muted">The revenue miner status was not read.</p>
           ) : null}
           <div className="mt-8 grid gap-4 lg:grid-cols-3">
             <article className="rounded-2xl border border-line bg-void p-5 lg:col-span-2">

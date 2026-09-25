@@ -511,6 +511,14 @@ def public_trust(subject_kind: str, subject_id: int, db: Session = Depends(get_d
     raise HTTPException(404, "unknown subject")
 
 
+@router.get("/revenue-miner", response_model=schemas.PublicRevenueMinerOut)
+def public_revenue_miner(db: Session = Depends(get_db)):
+    """Recorded paid-offer counts. No customer, price, or income claim."""
+    from app.services.revenue_miner import revenue_miner_public_summary
+
+    return schemas.PublicRevenueMinerOut(**revenue_miner_public_summary(db))
+
+
 @router.get("/alerts", response_model=list[schemas.PublicAlertOut])
 def list_public_alerts(limit: int = Query(default=20, ge=1, le=50), db: Session = Depends(get_db)):
     """Recorded changes only. No alert is created unless an outcome already exists."""

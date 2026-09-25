@@ -1239,6 +1239,13 @@ class PublicAlertOut(BaseModel):
     created_at: Optional[datetime] = None
 
 
+class PublicRevenueMinerOut(BaseModel):
+    paid_offers_recorded: int
+    repeatability_reviews: int
+    ownership_reviews: int
+    note: str
+
+
 class DomainDisputeCreate(BaseModel):
     close_token: str = Field(..., min_length=1)
     note: str = Field(..., min_length=3)

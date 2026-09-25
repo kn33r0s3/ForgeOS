@@ -114,6 +114,7 @@ describe("Forge public root", () => {
     const robots = readFileSync(join(root, "public/robots.txt"), "utf8");
     const work = readFileSync(join(root, "src/routes/work.tsx"), "utf8");
     assert.match(home, /What is stored right now/);
+    assert.match(home, /does not create income/);
     assert.equal(home.includes("Sanip Ops"), false);
     assert.equal(home.includes("parent operations and infrastructure group"), false);
     assert.equal(sitemap.includes("sanipoperations.com.np"), false);
