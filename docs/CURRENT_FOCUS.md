@@ -4,11 +4,14 @@
 **Claim ledger:** [`CAPABILITY_QUEUE.md`](CAPABILITY_QUEUE.md)
 **Work order:** serial; claim → build → test → integrate → verify → record.
 
-The repository already contains physical tables for `type_registry`, `entities`,
-`relations`, `events`, `evidence`, and `capabilities`. Existing operational and
-vertical tables remain functional during additive migration. The mature first
-adapter is Signal → Pattern → Belief → Opportunity; its source tables remain
-authoritative in Wave 1.
+The ORM defines models for `type_registry`, `entities`, `relations`, `events`,
+`evidence`, and `capabilities`. A read-only inspection of the existing
+`storage/forge.db` found only `evidence` among those six physical tables;
+`type_registry`, `entities`, `relations`, `events`, and `capabilities` are not
+yet present there. Existing operational and vertical tables, including
+signals/patterns/beliefs/opportunities and actions/outcomes, are present and
+remain authoritative during additive migration. The mature first adapter is
+Signal → Pattern → Belief → Opportunity.
 
 The active claim hardens shared JSON Schema validation and type lifecycle,
 evidence-backed truth transitions, canonical identity/deduplication and merge

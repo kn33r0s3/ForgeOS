@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import json
 
 import pytest
 from sqlalchemy import create_engine, inspect
@@ -68,7 +69,7 @@ def test_type_registry_validates_open_domain_attributes(db):
             attributes={"capacity": 2},
             created_by="test",
         )
-    with pytest.raises(world_graph.SubstrateError, match="additional property"):
+    with pytest.raises(world_graph.SubstrateError, match="Additional properties"):
         world_graph.create_entity(
             db,
             entity_type="reusable_asset",
@@ -111,6 +112,99 @@ def test_type_registry_validates_open_domain_attributes(db):
             db, entity_type="reusable_asset", display_name="Deprecated",
             attributes={"name": "Storage"}, created_by="test",
         )
+    lifecycle = json.loads(registry.status_evidence)
+    assert [(item["from"], item["to"]) for item in lifecycle] == [
+        ("proposed", "active"), ("active", "deprecated")
+    ]
+    assert all(item["actor"] == "test_agent" and item["evidence_ref"] for item in lifecycle)
+    assert db.query(models.WorldEvent).filter_by(event_type="type_status_changed").count() == 2
+
+
+def test_direct_type_activation_assignment_is_rejected(db):
+    _seed(db)
+    registry = world_graph.register_type(
+        db, category="entity_type", type_name="unreviewed_type",
+        schema={"type": "object"}, owner_agent="test_agent",
+    )
+    db.commit()
+    registry.status = "active"
+    with pytest.raises(world_graph.SubstrateError, match="recorded lifecycle service"):
+        db.flush()
+    db.rollback()
+    registry = db.query(models.TypeRegistry).filter_by(type_name="unreviewed_type").one()
+    assert registry.status == "proposed"
+
+
+def test_shared_validator_covers_relation_event_capability_and_malformed_registry_schema(db):
+    _seed(db)
+    active_types = [
+        ("relation_type", "measured_edge", {"type": "object", "properties": {"weight": {"type": "number", "minimum": 0}}, "required": ["weight"], "additionalProperties": False}),
+        ("event_type", "measured_occurrence", {"type": "object", "properties": {"result": {"type": "string"}}, "required": ["result"], "additionalProperties": False}),
+        ("capability_type", "measured_workflow", {"type": "object", "properties": {"runtime": {"type": "string", "enum": ["python", "node"]}}, "required": ["runtime"], "additionalProperties": False}),
+    ]
+    registry_rows = {}
+    for category, name, schema in active_types:
+        record = world_graph.register_type(
+            db, category=category, type_name=name, schema=schema, owner_agent="test_agent",
+        )
+        world_graph.set_type_status(
+            db, record, "active", actor="test_agent", rationale="The schema has focused coverage.",
+            evidence_ref="backend/tests/test_world_graph.py::test_shared_validator_covers_relation_event_capability_and_malformed_registry_schema",
+        )
+        registry_rows[name] = record
+
+    left = world_graph.create_entity(
+        db, entity_type="resource", display_name="A", attributes={}, created_by="test",
+    )
+    right = world_graph.create_entity(
+        db, entity_type="resource", display_name="B", attributes={}, created_by="test",
+    )
+    with pytest.raises(world_graph.SubstrateError, match="weight"):
+        world_graph.create_relation(
+            db, from_entity_id=left.id, to_entity_id=right.id,
+            relation_type="measured_edge", attributes={"weight": "heavy"}, created_by="test",
+        )
+    relation = world_graph.create_relation(
+        db, from_entity_id=left.id, to_entity_id=right.id,
+        relation_type="measured_edge", attributes={"weight": 0.7}, created_by="test",
+    )
+    assert relation is not None
+
+    with pytest.raises(world_graph.SubstrateError, match="required"):
+        world_graph.create_event(
+            db, event_type="measured_occurrence", source="test", payload={},
+        )
+    occurrence = world_graph.create_event(
+        db, event_type="measured_occurrence", source="test", payload={"result": "recorded"},
+    )
+    assert occurrence.event_type == "measured_occurrence"
+
+    with pytest.raises(world_graph.SubstrateError, match="not one of"):
+        world_graph.create_capability(
+            db, capability_type="measured_workflow", name="bad runtime",
+            description="Invalid attributes must be rejected.", owner_agent="test",
+            attributes={"runtime": "unknown"},
+        )
+    capability = world_graph.create_capability(
+        db, capability_type="measured_workflow", name="valid runtime",
+        description="Valid attributes persist.", owner_agent="test",
+        attributes={"runtime": "python"},
+    )
+    assert capability.attributes == '{"runtime":"python"}'
+
+    db.commit()
+    db.execute(
+        models.TypeRegistry.__table__.update()
+        .where(models.TypeRegistry.id == registry_rows["measured_workflow"].id)
+        .values(schema_json='{"type":"not-a-schema-type"}')
+    )
+    db.commit()
+    with pytest.raises(world_graph.SubstrateError, match="malformed JSON Schema"):
+        world_graph.create_capability(
+            db, capability_type="measured_workflow", name="malformed schema",
+            description="A corrupt stored schema must fail closed.", owner_agent="test",
+            attributes={"runtime": "python"},
+        )
 
 
 def test_canonical_intelligence_path_adapts_without_copying_data_and_is_idempotent(db):
@@ -150,23 +244,44 @@ def test_canonical_intelligence_path_adapts_without_copying_data_and_is_idempote
 
     first = world_graph.sync_intelligence_path(db, limit=100)
     db.commit()
-    second = world_graph.sync_intelligence_path(db, limit=100)
+    source = db.get(models.Signal, signal.id)
+    source.title = "Updated canonical title"
+    source.provenance = '{"review":"updated source metadata"}'
+    db.commit()
+    refreshed = world_graph.sync_intelligence_path(db, limit=100)
     db.commit()
 
     assert first["entities_created"] == 4
     assert first["relations_created"] >= 4
-    assert second == {"entities_created": 0, "relations_created": 0}
+    assert refreshed == {"entities_created": 0, "relations_created": 0}
     signal_entity = world_graph.find_canonical_entity(db, "signal", signal.id)
     assert signal_entity is not None
     assert signal_entity.attributes == '{"canonical_ref":{"entity_id":%d,"entity_type":"signal"}}' % signal.id
     assert db.get(models.Signal, signal.id).content.startswith("Source content")
-    assert signal_entity.identity_key == f"source:signals:{signal.id}"
+    assert signal_entity.identity_key == f"source:signal:signals:{signal.id}"
     assert signal_entity.source_system == "signals"
     assert signal_entity.source_id == str(signal.id)
     assert signal_entity.identity_state == "candidate"
-    assert "research_fixture" in signal_entity.identity_provenance
+    assert signal_entity.display_name == "Updated canonical title"
+    assert "updated source metadata" in signal_entity.identity_provenance
     assert db.query(models.WorldRelation).filter_by(truth_state="hypothesized").count() >= 4
     assert db.query(models.WorldEvent).filter_by(event_type="signal_ingested", entity_id=signal_entity.id).count() == 1
+    ingested = db.query(models.WorldEvent).filter_by(
+        event_type="signal_ingested", entity_id=signal_entity.id
+    ).one()
+    assert json.loads(ingested.payload)["source_provenance"]["source_system"] == "signals"
+    pattern_entity = world_graph.find_canonical_entity(db, "pattern", pattern.id)
+    edge = db.query(models.WorldRelation).filter_by(
+        from_entity_id=pattern_entity.id, to_entity_id=signal_entity.id,
+        relation_type="derived_from",
+    ).one()
+    edge_provenance = json.loads(edge.attributes)
+    assert edge_provenance["source_ref"] == {"entity_type": "pattern", "entity_id": pattern.id}
+    assert edge_provenance["related_ref"] == {"entity_type": "signal", "entity_id": signal.id}
+    assert db.query(models.WorldEvent).filter_by(
+        event_type="entity_source_refreshed", entity_id=signal_entity.id
+    ).count() == 1
+    assert world_graph.sync_intelligence_path(db, limit=100) == {"entities_created": 0, "relations_created": 0}
 
 
 def test_relations_compose_and_cannot_skip_tested_evidence(db):
@@ -278,7 +393,7 @@ def test_registry_evidence_and_relation_validations_fail_closed(db):
         db, entity_type="resource", display_name="Temporary concept",
         attributes={}, created_by="test",
     )
-    with pytest.raises(world_graph.SubstrateError, match="not active in type_registry"):
+    with pytest.raises(world_graph.SubstrateError, match="unknown relation_type"):
         world_graph.create_relation(
             db,
             from_entity_id=entity.id,
@@ -376,6 +491,7 @@ def test_identity_candidates_do_not_silently_merge_and_merge_history_is_retained
     )
     assert {item.id for item in candidates} == {first.id, second.id}
     assert first.status == second.status == "active"
+    db.commit()
 
     with pytest.raises(world_graph.SubstrateError, match="evidence-backed identity service"):
         first.identity_state = "canonical"
@@ -420,6 +536,19 @@ def test_identity_candidates_do_not_silently_merge_and_merge_history_is_retained
     ).one()
     assert '"survivor_entity_id":%d' % first.id in history.payload
 
+    archived = world_graph.create_entity(
+        db, entity_type="resource", display_name="Archived candidate",
+        attributes={}, created_by="test",
+    )
+    archived_evidence = world_graph.create_evidence(
+        db, subject_kind="entity", subject_id=archived.id,
+        claim="This raw evidence stays attached after archival.", support_level="possible",
+        source="reviewed_source", provenance={"record": "archive-test"},
+    )
+    world_graph.archive_entity(db, archived, actor="reviewer", rationale="No longer current.")
+    assert archived.status == "archived"
+    assert db.get(models.Evidence, archived_evidence.id) is not None
+
 
 def test_restart_and_additive_migration_keep_adapter_idempotent(tmp_path):
     database_path = tmp_path / "substrate-restart.sqlite"
@@ -452,5 +581,35 @@ def test_restart_and_additive_migration_keep_adapter_idempotent(tmp_path):
         assert entity is not None and entity.source_id == str(signal.id)
         assert entity.identity_provenance and "persistent_registry" in entity.identity_provenance
     indexes = inspect(engine).get_indexes("entities")
-    assert any(index["unique"] and index["column_names"] == ["identity_key"] for index in indexes)
+    unique_constraints = inspect(engine).get_unique_constraints("entities")
+    assert any(constraint["column_names"] == ["identity_key"] for constraint in unique_constraints)
+    assert any(constraint["column_names"] == ["idempotency_key"] for constraint in inspect(engine).get_unique_constraints("relations"))
+    assert any(constraint["column_names"] == ["idempotency_key"] for constraint in inspect(engine).get_unique_constraints("events"))
+    engine.dispose()
+
+
+def test_additive_migration_adds_idempotency_uniqueness_without_losing_rows():
+    engine = create_engine("sqlite:///:memory:")
+    with engine.begin() as connection:
+        connection.exec_driver_sql(
+            "CREATE TABLE entities (id INTEGER PRIMARY KEY, entity_type TEXT NOT NULL, "
+            "display_name TEXT NOT NULL, attributes TEXT NOT NULL, status TEXT NOT NULL, "
+            "created_by TEXT NOT NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL)"
+        )
+        connection.exec_driver_sql(
+            "INSERT INTO entities VALUES (1, 'resource', 'legacy source', '{}', 'active', 'legacy', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+        )
+        connection.exec_driver_sql("CREATE TABLE relations (id INTEGER PRIMARY KEY)")
+        connection.exec_driver_sql("CREATE TABLE events (id INTEGER PRIMARY KEY)")
+
+    applied = run_migrations(engine)
+    assert any(statement.startswith("ALTER TABLE entities ADD COLUMN identity_key") for statement in applied)
+    assert any(statement.startswith("CREATE UNIQUE INDEX uq_entities_identity_key") for statement in applied)
+    with engine.connect() as connection:
+        row = connection.exec_driver_sql("SELECT id, display_name FROM entities WHERE id = 1").one()
+    assert tuple(row) == (1, "legacy source")
+    assert any(
+        index["unique"] and index["column_names"] == ["identity_key"]
+        for index in inspect(engine).get_indexes("entities")
+    )
     engine.dispose()

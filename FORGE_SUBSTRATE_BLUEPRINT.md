@@ -36,7 +36,8 @@ unknown, proposed, deprecated, or malformed types/schemas. The service is the
 single implementation point; callers must not duplicate schema rules.
 
 New registry rows start `proposed`. The only path to `active` is an explicit
-activation operation that records the approving actor, rationale, and
+`proposed → active` activation operation; `active → deprecated` is the only
+deprecation transition. Each records the actor, rationale, and
 verifiable activation evidence/process; the operation validates that record
 and is covered by tests. `active → deprecated` is likewise an explicit,
 recorded lifecycle operation. Creation of a registry row alone never activates

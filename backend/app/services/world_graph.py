@@ -8,6 +8,7 @@ entities from active registry types without introducing a domain table.
 from __future__ import annotations
 
 import json
+import hashlib
 import math
 import re
 import unicodedata
@@ -41,6 +42,8 @@ _TYPE_STATUS_AUTH_KEY = "forgeos.type_status_transition"
 _TRUTH_TRANSITION_AUTH_KEY = "forgeos.truth_state_transition"
 _IDENTITY_TRANSITION_AUTH_KEY = "forgeos.identity_state_transition"
 _ENTITY_MERGE_AUTH_KEY = "forgeos.entity_merge"
+_ENTITY_ARCHIVE_AUTH_KEY = "forgeos.entity_archive"
+_ENTITY_SOURCE_REFRESH_AUTH_KEY = "forgeos.entity_source_refresh"
 
 
 def _schema_for_canonical_ref() -> dict[str, Any]:
@@ -79,7 +82,8 @@ def seed_core_types(db: Session) -> int:
         "event_type": {
             "entity_created", "relation_created", "signal_ingested", "state_changed",
             "capability_test_passed", "capability_test_failed", "type_status_changed",
-            "entity_identity_changed", "entity_merged",
+            "entity_identity_changed", "entity_merged", "entity_archived",
+            "entity_source_refreshed",
         },
         "capability_type": {"tool", "workflow", "integration", "agent", "model"},
     }
@@ -182,7 +186,7 @@ def set_type_status(
     """Canonical, recorded type lifecycle transition path."""
     if status not in TYPE_STATES:
         raise SubstrateError("invalid type registry status")
-    allowed = {"proposed": {"active", "deprecated"}, "active": {"deprecated"}, "deprecated": set()}
+    allowed = {"proposed": {"active"}, "active": {"deprecated"}, "deprecated": set()}
     if status not in allowed[record.status]:
         raise SubstrateError(f"cannot change type status from {record.status} to {status}")
     owner = (actor or "").strip()
@@ -230,7 +234,7 @@ def create_entity(
     attributes: Mapping[str, Any],
     created_by: str,
     _adapter_record: bool = False,
-    _identity_metadata: Mapping[str, Any] | None = None,
+    identity: Mapping[str, Any] | None = None,
 ) -> models.SubstrateEntity:
     kind = _require_active_type(db, "entity_type", entity_type)
     _validate_attributes(db, "entity_type", kind, attributes)
@@ -242,14 +246,18 @@ def create_entity(
         raise SubstrateError("display_name must contain 1 to 240 characters")
     if not owner:
         raise SubstrateError("created_by is required")
-    identity = dict(_identity_metadata or {})
-    identity_key = identity.get("identity_key")
+    identity = dict(identity or {})
+    source_system = (identity.get("source_system") or "").strip().casefold() or None
+    source_id = str(identity["source_id"]).strip() if identity.get("source_id") is not None else None
+    if bool(source_system) != bool(source_id):
+        raise SubstrateError("source identity requires both source_system and source_id")
+    if source_system and not identity.get("provenance"):
+        raise SubstrateError("source identity requires recorded provenance")
+    identity_key = f"source:{kind}:{source_system}:{source_id}" if source_system and source_id else None
     if identity_key:
         existing = db.query(models.SubstrateEntity).filter_by(identity_key=identity_key).one_or_none()
         if existing is not None:
-            if (existing.entity_type, existing.source_system, existing.source_id) == (
-                kind, identity.get("source_system"), str(identity.get("source_id"))
-            ):
+            if (existing.entity_type, existing.source_system, existing.source_id) == (kind, source_system, source_id):
                 return existing
             raise SubstrateError("identity key collision; retain separate candidates and investigate")
     entity = models.SubstrateEntity(
@@ -257,9 +265,9 @@ def create_entity(
         display_name=name,
         attributes=_dump_json(dict(attributes), "attributes"),
         identity_key=identity_key,
-        source_system=identity.get("source_system"),
-        source_id=str(identity["source_id"]) if identity.get("source_id") is not None else None,
-        canonical_identifier=identity.get("canonical_identifier"),
+        source_system=source_system,
+        source_id=source_id,
+        canonical_identifier=_canonical_identifier(identity.get("canonical_identifier")),
         normalized_identity=identity.get("normalized_identity") or normalize_identity(name),
         identity_state="candidate",
         identity_uncertainty=identity.get("identity_uncertainty") or "Real-world identity is not independently corroborated.",
@@ -312,7 +320,6 @@ def ensure_canonical_entity(
     source_value = getattr(row, "source", None)
     provenance = getattr(row, "provenance", None)
     metadata = {
-        "identity_key": f"source:{source_system}:{entity_id}",
         "source_system": source_system,
         "source_id": entity_id,
         "canonical_identifier": canonical_identifier,
@@ -329,15 +336,58 @@ def ensure_canonical_entity(
         },
     }
     if existing is not None:
-        if existing.identity_key is None:
-            existing.identity_key = metadata["identity_key"]
-            existing.source_system = metadata["source_system"]
-            existing.source_id = str(metadata["source_id"])
-            existing.canonical_identifier = metadata["canonical_identifier"]
-            existing.normalized_identity = metadata["normalized_identity"]
-            existing.identity_uncertainty = metadata["identity_uncertainty"]
-            existing.identity_provenance = _dump_json(metadata["provenance"], "identity provenance")
-            db.flush()
+        expected_key = f"source:{kind}:{metadata['source_system']}:{metadata['source_id']}"
+        if existing.identity_key not in (None, expected_key):
+            raise SubstrateError("canonical source identity changed; retain the candidate and review the conflict")
+        old_values = {
+            "display_name": existing.display_name,
+            "identity_key": existing.identity_key,
+            "source_system": existing.source_system,
+            "source_id": existing.source_id,
+            "canonical_identifier": existing.canonical_identifier,
+            "normalized_identity": existing.normalized_identity,
+            "identity_uncertainty": existing.identity_uncertainty,
+            "identity_provenance": existing.identity_provenance,
+        }
+        next_values = {
+            "display_name": display_name,
+            "identity_key": expected_key,
+            "source_system": source_system,
+            "source_id": str(entity_id),
+            "canonical_identifier": canonical_identifier,
+            "normalized_identity": metadata["normalized_identity"],
+            "identity_uncertainty": metadata["identity_uncertainty"],
+            "identity_provenance": _dump_json(metadata["provenance"], "identity provenance"),
+        }
+        changed = [key for key, value in next_values.items() if old_values[key] != value]
+        if changed:
+            prior = db.info.get(_ENTITY_SOURCE_REFRESH_AUTH_KEY)
+            db.info[_ENTITY_SOURCE_REFRESH_AUTH_KEY] = existing
+            try:
+                for key, value in next_values.items():
+                    setattr(existing, key, value)
+                db.flush()
+            finally:
+                if prior is None:
+                    db.info.pop(_ENTITY_SOURCE_REFRESH_AUTH_KEY, None)
+                else:
+                    db.info[_ENTITY_SOURCE_REFRESH_AUTH_KEY] = prior
+            fingerprint = hashlib.sha256(_dump_json(next_values, "identity refresh").encode("utf-8")).hexdigest()
+            _record_event(
+                db,
+                event_type="entity_source_refreshed",
+                entity_id=existing.id,
+                source=created_by,
+                payload={
+                    "entity_type": kind,
+                    "source_system": source_system,
+                    "source_id": str(entity_id),
+                    "changed_fields": changed,
+                    "canonical_identifier": canonical_identifier,
+                    "source_provenance": metadata["provenance"],
+                },
+                idempotency_key=f"entity-source-refresh:{existing.id}:{fingerprint}",
+            )
         return existing
     return create_entity(
         db,
@@ -346,7 +396,7 @@ def ensure_canonical_entity(
         attributes={"canonical_ref": {"entity_type": kind, "entity_id": entity_id}},
         created_by=created_by,
         _adapter_record=True,
-        _identity_metadata=metadata,
+        identity=metadata,
     )
 
 
@@ -498,6 +548,40 @@ def merge_entities(
     return survivor
 
 
+def archive_entity(
+    db: Session,
+    entity: models.SubstrateEntity,
+    *,
+    actor: str,
+    rationale: str,
+) -> models.SubstrateEntity:
+    """Archive an entity without deleting its identity, relations, or evidence."""
+    if entity.status != "active":
+        raise SubstrateError(f"cannot archive entity from {entity.status}")
+    owner, reason = (actor or "").strip(), (rationale or "").strip()
+    if not owner or not reason:
+        raise SubstrateError("archiving an entity requires actor and rationale")
+    prior = db.info.get(_ENTITY_ARCHIVE_AUTH_KEY)
+    db.info[_ENTITY_ARCHIVE_AUTH_KEY] = entity
+    try:
+        entity.status = "archived"
+        db.flush()
+    finally:
+        if prior is None:
+            db.info.pop(_ENTITY_ARCHIVE_AUTH_KEY, None)
+        else:
+            db.info[_ENTITY_ARCHIVE_AUTH_KEY] = prior
+    _record_event(
+        db,
+        event_type="entity_archived",
+        entity_id=entity.id,
+        source=owner,
+        payload={"entity_id": entity.id, "rationale": reason},
+        idempotency_key=f"entity-archive:{entity.id}",
+    )
+    return entity
+
+
 def create_relation(
     db: Session,
     *,
@@ -550,10 +634,6 @@ def create_relation(
             ):
                 raise SubstrateError("relation idempotency key collision; investigate before retrying")
             return existing
-        system_attrs = attrs.get("_forge") or {}
-        if not isinstance(system_attrs, dict):
-            raise SubstrateError("_forge relation metadata must be an object")
-        attrs["_forge"] = {**system_attrs, "idempotency_key": key}
     relation = models.WorldRelation(
         from_entity_id=from_entity_id,
         to_entity_id=to_entity_id,
@@ -584,6 +664,7 @@ def transition_relation_truth_state(
 ) -> models.WorldRelation:
     if next_state not in TRUTH_STATES:
         raise SubstrateError("invalid relation truth state")
+    _validate_truth_transition(db, relation, relation.truth_state, next_state)
     prior = db.info.get(_TRUTH_TRANSITION_AUTH_KEY)
     db.info[_TRUTH_TRANSITION_AUTH_KEY] = relation
     try:
@@ -819,15 +900,22 @@ def sync_intelligence_path(db: Session, *, limit: int = 100) -> dict[str, int]:
 
     for row in signals:
         signal_entities[row.id] = ensure("signal", row)
-        create_event(
-            db,
-            event_type="signal_ingested",
-            entity_id=signal_entities[row.id].id,
-            source=(row.source or "unknown source"),
-            payload={"canonical_ref": {"entity_type": "signal", "entity_id": row.id}},
-            occurred_at=row.retrieved_at or row.timestamp,
-            idempotency_key=f"signal-ingested:{row.id}",
-        )
+        event_key = f"signal-ingested:{row.id}"
+        if not db.query(models.WorldEvent).filter_by(idempotency_key=event_key).first() and not db.query(
+            models.WorldEvent
+        ).filter_by(event_type="signal_ingested", entity_id=signal_entities[row.id].id).first():
+            create_event(
+                db,
+                event_type="signal_ingested",
+                entity_id=signal_entities[row.id].id,
+                source=(row.source or "unknown source"),
+                payload={
+                    "canonical_ref": {"entity_type": "signal", "entity_id": row.id},
+                    "source_provenance": _parse_json(signal_entities[row.id].identity_provenance),
+                },
+                occurred_at=row.retrieved_at or row.timestamp,
+                idempotency_key=event_key,
+            )
 
     for row in patterns:
         pattern_entities[row.id] = ensure("pattern", row)
@@ -916,7 +1004,19 @@ def _ensure_relation(
         from_entity_id=subject.id,
         to_entity_id=object_.id,
         relation_type=relation_type,
-        attributes={"adapter": "canonical_record_provenance"},
+        attributes={
+            "adapter": "signal_pattern_belief_opportunity",
+            "source_ref": _parse_json(subject.attributes).get("canonical_ref"),
+            "related_ref": _parse_json(object_.attributes).get("canonical_ref"),
+            "source_identity": {
+                "source_system": subject.source_system,
+                "source_id": subject.source_id,
+            },
+            "related_identity": {
+                "source_system": object_.source_system,
+                "source_id": object_.source_id,
+            },
+        },
         truth_state="hypothesized",
         created_by=created_by,
         idempotency_key=key,
@@ -1054,7 +1154,7 @@ def _has_test_or_source_provenance(evidence: models.Evidence) -> bool:
 
 def _is_simulated_source(source: str | None) -> bool:
     value = (source or "").strip().lower()
-    return value == "simulated" or value.startswith(("simulated_", "fixture", "mock", "seed", "test-data"))
+    return value.startswith(("simulated", "fixture", "mock", "seed", "test-data"))
 
 
 def _repo_file_exists(reference: str) -> bool:
@@ -1110,7 +1210,6 @@ CANONICAL_ADAPTERS: dict[str, tuple[type, Any]] = {
     "domain_record": (models.DomainRecord, lambda row: _canonical_display(row, "title")),
     "outcome": (models.Outcome, lambda row: _canonical_display(row, "qualitative_result")),
     "customer": (models.Customer, lambda row: _canonical_display(row, "name")),
-    "network_connection": (models.NetworkConnection, lambda row: f"Connection #{row.id}"),
     "relation": (models.WorldRelation, lambda row: f"{row.relation_type} relation #{row.id}"),
 }
 
@@ -1204,6 +1303,14 @@ def _enforce_substrate_write_contract(session: Session, flush_context: Any, inst
                     raise SubstrateError("identity state changes must use the evidence-backed identity service")
             elif state.attrs.attributes.history.has_changes():
                 _validate_attributes(session, "entity_type", obj.entity_type, _json_object(obj.attributes, "entity attributes"))
+            if not is_new and any(
+                state.attrs[field].history.has_changes()
+                for field in (
+                    "identity_key", "source_system", "source_id", "canonical_identifier",
+                    "normalized_identity", "identity_uncertainty", "identity_provenance",
+                )
+            ) and session.info.get(_ENTITY_SOURCE_REFRESH_AUTH_KEY) is not obj:
+                raise SubstrateError("identity metadata changes must use the canonical source adapter")
             if state.attrs.merged_into_id.history.has_changes() or (
                 not is_new and state.attrs.status.history.has_changes() and obj.status == "merged"
             ):
@@ -1219,6 +1326,9 @@ def _enforce_substrate_write_contract(session: Session, flush_context: Any, inst
                     or evidence.subject_id != obj.id
                 ):
                     raise SubstrateError("merged entities require the explicit evidence-backed merge service")
+            if not is_new and state.attrs.status.history.has_changes() and obj.status == "archived":
+                if session.info.get(_ENTITY_ARCHIVE_AUTH_KEY) is not obj:
+                    raise SubstrateError("entity archival must use the recorded archive service")
 
         if isinstance(obj, models.WorldRelation):
             if is_new:
