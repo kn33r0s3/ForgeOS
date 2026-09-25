@@ -15,6 +15,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DiscoveriesRouteImport } from './routes/discoveries'
 import { Route as DomainRouteImport } from './routes/domain'
+import { Route as FeedRouteImport } from './routes/feed'
 import { Route as GroupRouteImport } from './routes/group'
 import { Route as OperationsRouteImport } from './routes/operations'
 import { Route as ProcessRouteImport } from './routes/process'
@@ -59,6 +60,11 @@ const DiscoveriesRoute = DiscoveriesRouteImport.update({
 const DomainRoute = DomainRouteImport.update({
   id: '/domain',
   path: '/domain',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedRoute = FeedRouteImport.update({
+  id: '/feed',
+  path: '/feed',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GroupRoute = GroupRouteImport.update({
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/discoveries': typeof DiscoveriesRoute
   '/domain': typeof DomainRoute
+  '/feed': typeof FeedRoute
   '/group': typeof GroupRouteWithChildren
   '/operations': typeof OperationsRoute
   '/process': typeof ProcessRoute
@@ -167,6 +174,7 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/discoveries': typeof DiscoveriesRoute
   '/domain': typeof DomainRoute
+  '/feed': typeof FeedRoute
   '/operations': typeof OperationsRoute
   '/process': typeof ProcessRoute
   '/providers': typeof ProvidersRoute
@@ -189,6 +197,7 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/discoveries': typeof DiscoveriesRoute
   '/domain': typeof DomainRoute
+  '/feed': typeof FeedRoute
   '/group': typeof GroupRouteWithChildren
   '/operations': typeof OperationsRoute
   '/process': typeof ProcessRoute
@@ -214,6 +223,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/discoveries'
     | '/domain'
+    | '/feed'
     | '/group'
     | '/operations'
     | '/process'
@@ -237,6 +247,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/discoveries'
     | '/domain'
+    | '/feed'
     | '/operations'
     | '/process'
     | '/providers'
@@ -258,6 +269,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/discoveries'
     | '/domain'
+    | '/feed'
     | '/group'
     | '/operations'
     | '/process'
@@ -282,6 +294,7 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   DiscoveriesRoute: typeof DiscoveriesRoute
   DomainRoute: typeof DomainRoute
+  FeedRoute: typeof FeedRoute
   GroupRoute: typeof GroupRouteWithChildren
   OperationsRoute: typeof OperationsRoute
   ProcessRoute: typeof ProcessRoute
@@ -337,6 +350,13 @@ declare module '@tanstack/react-router' {
       path: '/domain'
       fullPath: '/domain'
       preLoaderRoute: typeof DomainRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed': {
+      id: '/feed'
+      path: '/feed'
+      fullPath: '/feed'
+      preLoaderRoute: typeof FeedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/group': {
@@ -480,6 +500,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   DiscoveriesRoute: DiscoveriesRoute,
   DomainRoute: DomainRoute,
+  FeedRoute: FeedRoute,
   GroupRoute: GroupRouteWithChildren,
   OperationsRoute: OperationsRoute,
   ProcessRoute: ProcessRoute,

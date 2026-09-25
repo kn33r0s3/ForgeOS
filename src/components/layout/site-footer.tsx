@@ -5,6 +5,7 @@ import { Container } from "./container";
 import { Eyebrow } from "./eyebrow";
 
 const GROUP_LINKS = [
+  { label: "Network feed", to: "/feed" },
   { label: "Search services", to: "/providers" },
   { label: "Popular categories", to: "/services" },
   { label: "How it works", to: "/about" },
@@ -12,7 +13,7 @@ const GROUP_LINKS = [
 ] as const;
 
 const WORK_LINKS = [
-  { label: "Home", to: "/" },
+  { label: "Open network", to: "/feed" },
   { label: "Service categories", to: "/services" },
   { label: "Providers", to: "/providers" },
 ] as const;
@@ -61,10 +62,10 @@ export function SiteFooter() {
             Connect
           </Eyebrow>
           <Link
-            to="/providers"
+            to="/feed"
             className="text-sm text-muted transition-colors duration-150 hover:text-cyan"
           >
-            Find a service
+            Explore the network
           </Link>
           <a
             href={`mailto:${SITE.email}`}

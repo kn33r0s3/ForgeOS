@@ -69,6 +69,9 @@ def run_scheduled_cycle(authorization: str | None = Header(default=None)):
         elif engine.dialect.name != "postgresql":
             _local_cycle_lock.release()
 
+    if record.get("status") == "timeout":
+        raise HTTPException(status_code=504, detail="The canonical cycle timed out")
+
     forge_error = record.get("forge_cycle_error")
     autonomy_error = record.get("autonomy_cycle_error")
     if forge_error or autonomy_error:

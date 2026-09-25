@@ -9,9 +9,11 @@ def test_scheduled_cycle_fails_closed_without_secret(monkeypatch):
     client = TestClient(app)
 
     response = client.get("/scheduled/cycle", headers={"Authorization": "Bearer anything"})
+    api_response = client.get("/api/scheduled/cycle", headers={"Authorization": "Bearer anything"})
 
     assert response.status_code == 503
     assert response.json() == {"detail": "Scheduled cycle is not configured"}
+    assert api_response.status_code == 503
 
 
 def test_scheduled_cycle_requires_bearer_secret(monkeypatch):
@@ -62,3 +64,21 @@ def test_scheduled_cycle_reports_runner_failure(monkeypatch):
 
     assert response.status_code == 500
     assert response.json() == {"detail": "The canonical cycle reported a failure"}
+
+
+def test_scheduled_cycle_reports_timeout_as_incomplete(monkeypatch):
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    monkeypatch.setattr(
+        scheduled._cycle_scheduler,
+        "run_single_cycle",
+        lambda: {"status": "timeout"},
+    )
+    client = TestClient(app)
+
+    response = client.get(
+        "/scheduled/cycle",
+        headers={"Authorization": "Bearer test-cron-secret"},
+    )
+
+    assert response.status_code == 504
+    assert response.json() == {"detail": "The canonical cycle timed out"}

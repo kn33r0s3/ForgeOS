@@ -58,8 +58,8 @@ export function SiteHeader() {
         </nav>
         <div className="flex items-center gap-2">
           <Button asChild size="sm" className="hidden sm:inline-flex">
-            <Link to="/providers">
-              Find a service
+            <Link to="/feed">
+              Explore network
               <ArrowUpRight />
             </Link>
           </Button>
@@ -111,8 +111,8 @@ export function SiteHeader() {
             </Link>
           ))}
           <Button asChild className="mt-3 w-full sm:hidden">
-            <Link to="/providers">
-              Find a service
+            <Link to="/feed">
+              Explore network
               <ArrowUpRight />
             </Link>
           </Button>

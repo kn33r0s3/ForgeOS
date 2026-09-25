@@ -15,6 +15,28 @@ from app.database import get_db
 router = APIRouter(prefix="/public", tags=["public"])
 
 
+@router.get("/feed", response_model=list[schemas.PublicFeedItem])
+def list_public_feed(
+    limit: int = Query(default=30, ge=1, le=100),
+    kind: str | None = Query(default=None, min_length=1, max_length=32),
+    entity_type: str | None = Query(default=None, min_length=1, max_length=64),
+    entity_id: int | None = Query(default=None, ge=1),
+    db: Session = Depends(get_db),
+):
+    """Chronological public projection of canonical Forge evidence and network records."""
+    from app.services.public_feed import build_public_feed
+
+    if (entity_type is None) != (entity_id is None):
+        raise HTTPException(status_code=422, detail="entity_type and entity_id must be provided together")
+    return build_public_feed(
+        db,
+        limit=limit,
+        kind=kind,
+        entity_type=entity_type,
+        entity_id=entity_id,
+    )
+
+
 def evidence_freshness(when: datetime | None) -> str:
     """fresh, stale, or unknown. Age never becomes a new fact."""
     if when is None:

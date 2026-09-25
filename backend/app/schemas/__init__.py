@@ -1142,6 +1142,32 @@ class PublicDiscoveryOut(BaseModel):
     freshness: str = "unknown"
 
 
+class PublicFeedRelation(BaseModel):
+    entity_type: str
+    entity_id: int
+    relation: str
+
+
+class PublicFeedItem(BaseModel):
+    """A public projection of one canonical Forge record, never a copied entity."""
+
+    id: str
+    kind: str
+    category: Optional[str] = None
+    entity_type: str
+    entity_id: int
+    title: str
+    summary: str
+    occurred_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    location: Optional[str] = None
+    status: Optional[str] = None
+    epistemic_state: str
+    source: Optional[str] = None
+    source_url: Optional[str] = None
+    relations: list[PublicFeedRelation] = Field(default_factory=list)
+
+
 class PublicMatchCandidate(BaseModel):
     kind: str
     id: int

@@ -10,10 +10,9 @@ Vercel, when `DATABASE_URL` is unset, uses `sqlite:////tmp/forge.db`. That file 
 
 ## Now
 
-S10 is the open step, and its software side is finished.
-Observed 2026-09-25: Production `/api/health` returned JSON, `/api/public/providers` returned `[]`, and a domain post stayed open on a second request and then closed as withdrawn. `DATABASE_URL` is set on Production.
-A provider exists only if a person supplies evidence. A booking exists only if the operator submits it. The footer domain and contact mailbox stay pending until the operator supplies them.
-Until that person or those details arrive, stop. Do not seed providers, prices, or bookings. Do not start a second app, market, or scraper.
+S11 is complete. S12 is open: turn typed feed relations into safe, scoped network-context navigation.
+S10 remains evidence-gated for real provider verification and operator-submitted bookings; that does not block network engineering. Never seed providers, prices, bookings, or outcomes. The footer domain and contact mailbox stay pending until the operator supplies real details.
+Production was last reported healthy on 2026-09-25; production state has not been rechecked in this turn. Local code and tests are not proof of a live deployment.
 
 ## Then, in this order
 
@@ -55,7 +54,27 @@ Forge stays the name. Nepal stays the first geography. Pending domain and pendin
 
 S10. One pilot, then stop.
 A provider exists only if a person supplied evidence. A booking exists only if the operator submitted it.
-Then stop. No second app, market, or scraper.
+No fabricated pilot data. This real-world pilot gate does not end Forge engineering.
+
+S11. Generalized public Network Feed. COMPLETE.
+Project existing public signals/claims, questions, patterns, beliefs, evidence-linked opportunity hypotheses, verified actors/capabilities, open work records, public connections, and real recorded outcomes into one chronological API. Keep canonical records in their current tables, preserve type/provenance/relations, and enforce each source's existing visibility gate. The root page is the feed. No popularity or trust score.
+Acceptance: `/api/public/feed` passes integration tests for heterogeneous records, provenance, relationships, empty state, and private/sandbox exclusion; the browser shows the feed on desktop and mobile; build/typecheck pass.
+
+S12. Feed context navigation.
+Feed relations open a scoped feed view around that typed entity reference, composed only from entries that already pass their original public visibility rules. Preserve privacy for provider contact fields, booking requests, internal actions, and unpublished outcomes.
+Acceptance: entity context includes its public record and related public items, rejects incomplete filters, cannot use a public edge to reveal a hidden endpoint, and can be cleared back to the whole feed.
+
+S13. Governed discovery expansion.
+Move the currently narrow source clearance into a source-registry workflow that can add lawful sources and categories without arbitrary fetching. Keep allowlists, robots/terms checks, rate limits, provenance, deduplication, and expiry per source. A source with uncertain terms stays disabled.
+
+S14. Autonomous structuring and learning.
+Connect collected external signals to evidence, research questions, patterns, beliefs, opportunities, public projections, authorized actions, observed responses, outcomes, and learning. Automate internal transitions when existing evidence is sufficient; retain approval for contact, transactions, or other external commitments unless an authorized channel and policy permit the action.
+
+S15. General entities and actor capabilities.
+Only introduce durable shared identity or resource records when cross-record identity cannot be represented safely by existing models and typed connections. Migrate by compatibility views/adapters; do not fork provider, signal, opportunity, action, or outcome records.
+
+S16. Geography and category expansion.
+Add categories and geographies as data and source-registry configuration, keeping Nepal as the bootstrap geography. Verify each new source and category against the same evidence/privacy/authorization gates.
 
 ## Plans that are not queues
 

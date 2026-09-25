@@ -12,6 +12,7 @@ export const SITE = {
 
 export const NAV = [
   { label: "Home", to: "/" },
+  { label: "Network", to: "/feed" },
   { label: "Services", to: "/services" },
   { label: "Providers", to: "/providers" },
   { label: "Work", to: "/domain" },
@@ -68,6 +69,30 @@ export type PublicDiscovery = {
   retrieved_at?: string | null;
   epistemic_state: string;
   freshness?: string;
+};
+
+export type PublicFeedRelation = {
+  entity_type: string;
+  entity_id: number;
+  relation: string;
+};
+
+export type PublicFeedItem = {
+  id: string;
+  kind: string;
+  category?: string | null;
+  entity_type: string;
+  entity_id: number;
+  title: string;
+  summary: string;
+  occurred_at?: string | null;
+  updated_at?: string | null;
+  location?: string | null;
+  status?: string | null;
+  epistemic_state: string;
+  source?: string | null;
+  source_url?: string | null;
+  relations: PublicFeedRelation[];
 };
 
 export type PublicDomainRecord = {
@@ -242,6 +267,18 @@ export async function loadDiscoveries(limit = 20): Promise<PublicDiscovery[]> {
     `/discoveries?limit=${encodeURIComponent(String(limit))}`,
   );
   return Array.isArray(payload) ? payload : [];
+}
+
+export async function loadPublicFeed(
+  limit = 50,
+  entityType?: string,
+  entityId?: number,
+): Promise<PublicFeedItem[] | null> {
+  const entityFilter = entityType && entityId ? `&entity_type=${encodeURIComponent(entityType)}&entity_id=${encodeURIComponent(String(entityId))}` : "";
+  const payload = await fetchJsonFromCandidates<PublicFeedItem[]>(
+    `/feed?limit=${encodeURIComponent(String(limit))}${entityFilter}`,
+  );
+  return Array.isArray(payload) ? payload : null;
 }
 
 export async function loadPublicDomain(): Promise<PublicDomainRecord[]> {
