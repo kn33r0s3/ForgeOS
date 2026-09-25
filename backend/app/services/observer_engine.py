@@ -287,6 +287,7 @@ def _ensure_evidence(db: Session, signal: models.Signal, metadata: dict) -> mode
         content=signal.content,
         direction="supports",
         provenance_hash=provenance_hash,
+        idempotency_key=f"evidence-provenance:{provenance_hash}",
         confidence=signal.quality_score or 0.0,
         canonical_url=signal.canonical_url,
         external_id=signal.external_id,

@@ -1,3 +1,5 @@
+import pytest
+
 from app import models
 from app.services import evidence_graph, opportunity_engine
 from app.services.observer_engine import ObserverEngine
@@ -36,6 +38,7 @@ def test_claim_evidence_graph_is_persistent_and_deduplicated(db):
     assert edge_created is True
     assert duplicate_created is False
     assert duplicate_edge.id == edge.id
+    assert edge.idempotency_key == edge.relation_key
     assert db.query(models.Claim).count() == 1
     assert db.query(models.EvidenceRelationship).count() == 1
     assert db.get(models.Claim, claim.id).epistemic_state == "supported"
@@ -53,6 +56,37 @@ def test_claim_evidence_graph_is_persistent_and_deduplicated(db):
     restored_edge = db.get(models.EvidenceRelationship, edge_id)
     assert restored_claim.statement.startswith("Small contractors")
     assert restored_edge.relation_type == "supports"
+
+
+def test_provenance_keyed_evidence_creation_is_idempotent(db):
+    first, first_created = evidence_graph.get_or_create_evidence(
+        db,
+        provenance_hash="feed:bulletin:42",
+        source="public bulletin",
+        content="A source observation with preserved provenance.",
+        provenance={"url": "https://example.gov/bulletin/42"},
+    )
+    repeated, repeated_created = evidence_graph.get_or_create_evidence(
+        db,
+        provenance_hash="feed:bulletin:42",
+        source="public bulletin",
+        content="A source observation with preserved provenance.",
+        provenance={"url": "https://example.gov/bulletin/42"},
+    )
+
+    assert first_created is True
+    assert repeated_created is False
+    assert repeated.id == first.id
+    assert first.idempotency_key == "evidence-provenance:feed:bulletin:42"
+    assert db.query(models.Evidence).filter_by(idempotency_key=first.idempotency_key).count() == 1
+    with pytest.raises(ValueError, match="provenance hash collision"):
+        evidence_graph.get_or_create_evidence(
+            db,
+            provenance_hash="feed:bulletin:42",
+            source="public bulletin",
+            content="Different content cannot reuse the same provenance identity.",
+            provenance={"url": "https://example.gov/bulletin/42"},
+        )
 
 
 def test_duplicate_source_address_is_restored_onto_the_original(db):

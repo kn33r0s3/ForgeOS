@@ -358,6 +358,9 @@ def generate_opportunity_from_pattern_if_economic(db: Session, pattern: models.P
                 content=extraction["evidence_text"],
                 direction="supports",
                 confidence=scores["evidence_strength"],
+                idempotency_key=_opportunity_evidence_idempotency_key(
+                    existing_opportunity.id, signal.id, extraction["evidence_text"]
+                ),
             ))
             existing_opportunity.problem_evidence_signal_ids = _append_signal_id(
                 existing_opportunity.problem_evidence_signal_ids, signal.id
@@ -413,7 +416,10 @@ def generate_opportunity_from_pattern_if_economic(db: Session, pattern: models.P
         provenance_hash=prov_hash,
         content=core_signal,
         direction="supports",
-        confidence=best_scores["evidence_strength"]
+        confidence=best_scores["evidence_strength"],
+        idempotency_key=_opportunity_evidence_idempotency_key(
+            opportunity.id, best_signal.id, core_signal
+        ),
     )
     db.add(evidence)
     db.commit()
@@ -472,6 +478,11 @@ def generate_opportunity_from_signal_if_strong(db: Session, signal: models.Signa
                 content=extraction["pain"] or extraction["consequence"] or signal.content,
                 direction="supports",
                 confidence=scores["evidence_strength"],
+                idempotency_key=_opportunity_evidence_idempotency_key(
+                    existing.id,
+                    signal.id,
+                    extraction["pain"] or extraction["consequence"] or signal.content,
+                ),
             ))
         existing.updated_at = datetime.now(timezone.utc)
         db.commit()
@@ -515,6 +526,9 @@ def generate_opportunity_from_signal_if_strong(db: Session, signal: models.Signa
         content=core_signal,
         direction="supports",
         confidence=scores["evidence_strength"],
+        idempotency_key=_opportunity_evidence_idempotency_key(
+            opportunity.id, signal.id, core_signal
+        ),
     ))
     db.commit()
     db.refresh(opportunity)
@@ -526,6 +540,14 @@ def generate_opportunity_from_signal_if_strong(db: Session, signal: models.Signa
 def _evidence_hash(signal: models.Signal) -> str:
     identity = signal.content_fingerprint or signal.external_id or signal.canonical_url or str(signal.id)
     return hashlib.sha256(f"{signal.source}:{identity}".encode("utf-8")).hexdigest()
+
+
+def _opportunity_evidence_idempotency_key(
+    opportunity_id: int, signal_id: int, content: str
+) -> str:
+    normalized_content = " ".join((content or "").split()).casefold()
+    content_hash = hashlib.sha256(normalized_content.encode("utf-8")).hexdigest()
+    return f"opportunity-evidence:{opportunity_id}:{signal_id}:{content_hash}"
 
 
 def link_opportunity_evidence_to_claim_questions(db: Session) -> int:

@@ -18,6 +18,7 @@ from typing import Any, Mapping
 from urllib.parse import urlsplit, urlunsplit
 
 from sqlalchemy import event, inspect as sqlalchemy_inspect
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import models
@@ -87,7 +88,7 @@ def seed_core_types(db: Session) -> int:
             "entity_identity_changed", "entity_merged", "entity_archived",
             "entity_source_refreshed", "action_attempt_started", "action_attempt_status_changed",
             "outcome_recorded", "learning_recorded", "network_relation_projected",
-            "network_relation_unresolved",
+            "network_relation_unresolved", "capability_source_refreshed",
         },
         "capability_type": {"tool", "workflow", "integration", "agent", "model"},
     }
@@ -366,9 +367,12 @@ def ensure_canonical_entity(
         )
     existing = find_canonical_entity(db, kind, entity_id, source_system=source_system)
     display_name = adapter[1](row)
-    canonical_identifier = _canonical_identifier(
-        getattr(row, "canonical_url", None) or getattr(row, "external_id", None)
+    source_identifier = (
+        getattr(row, "canonical_url", None)
+        or getattr(row, "website", None)
+        or getattr(row, "external_id", None)
     )
+    canonical_identifier = _canonical_identifier(source_identifier)
     source_value = getattr(row, "source", None)
     provenance = getattr(row, "provenance", None)
     metadata = {
@@ -382,7 +386,7 @@ def ensure_canonical_entity(
             "source_system": source_system,
             "source_id": entity_id,
             "source_label": source_value,
-            "canonical_url": getattr(row, "canonical_url", None),
+            "canonical_url": source_identifier,
             "external_id": getattr(row, "external_id", None),
             "source_provenance": provenance,
         },
@@ -681,9 +685,31 @@ def create_relation(
                     existing = candidate
                     break
         if existing is not None:
-            if (existing.from_entity_id, existing.to_entity_id, existing.relation_type) != (
-                from_entity_id, to_entity_id, relation_kind
-            ):
+            expected = (
+                from_entity_id,
+                to_entity_id,
+                relation_kind,
+                attrs,
+                direction,
+                float(strength) if strength is not None else None,
+                truth_state,
+                starts,
+                ends,
+                owner,
+            )
+            actual = (
+                existing.from_entity_id,
+                existing.to_entity_id,
+                existing.relation_type,
+                _parse_json(existing.attributes),
+                existing.direction,
+                existing.strength,
+                existing.truth_state,
+                existing.valid_from,
+                existing.valid_to,
+                existing.created_by,
+            )
+            if actual != expected:
                 raise SubstrateError("relation idempotency key collision; investigate before retrying")
             return existing
     relation = models.WorldRelation(
@@ -740,6 +766,7 @@ def create_evidence(
     source: str,
     provenance: Mapping[str, Any] | str,
     confidence: float | None = None,
+    idempotency_key: str | None = None,
 ) -> models.Evidence:
     kind = (subject_kind or "").strip().lower()
     if kind not in {"entity", "relation"}:
@@ -766,6 +793,21 @@ def create_evidence(
         test_ref = (test_meta.get("test_ref") or "").split("::", 1)[0]
         if test_meta.get("result") != "passed" or not _repo_file_exists(test_ref):
             raise SubstrateError("test evidence must cite an existing passing test reference")
+    key = None
+    if idempotency_key is not None:
+        key = idempotency_key.strip()
+        if not key:
+            raise SubstrateError("evidence idempotency key cannot be blank")
+        existing = db.query(models.Evidence).filter_by(idempotency_key=key).one_or_none()
+        if existing is not None:
+            expected = (kind, subject_id, clean_claim, state, clean_source, provenance_json,
+                        confidence if confidence is not None else 0.0)
+            actual = (existing.subject_kind, existing.subject_id, existing.claim,
+                      existing.support_level, existing.source, existing.provenance,
+                      existing.confidence)
+            if actual != expected:
+                raise SubstrateError("evidence idempotency key collision; investigate before retrying")
+            return existing
     evidence = models.Evidence(
         subject_kind=kind,
         subject_id=subject_id,
@@ -775,9 +817,33 @@ def create_evidence(
         source=clean_source,
         provenance=provenance_json,
         recorded_at=models.utcnow(),
+        idempotency_key=key,
     )
-    db.add(evidence)
-    db.flush()
+    if key is None:
+        db.add(evidence)
+        db.flush()
+    else:
+        try:
+            with db.begin_nested():
+                db.add(evidence)
+                db.flush()
+        except IntegrityError as exc:
+            # Another writer may have committed this key after our lookup.
+            # The savepoint keeps the caller's outer transaction recoverable.
+            db.expire_all()
+            existing = db.query(models.Evidence).filter_by(idempotency_key=key).one_or_none()
+            if existing is None:
+                raise SubstrateError(
+                    "evidence idempotency collision; retry after rolling back the outer transaction"
+                ) from exc
+            expected = (kind, subject_id, clean_claim, state, clean_source, provenance_json,
+                        confidence if confidence is not None else 0.0)
+            actual = (existing.subject_kind, existing.subject_id, existing.claim,
+                      existing.support_level, existing.source, existing.provenance,
+                      existing.confidence)
+            if actual != expected:
+                raise SubstrateError("evidence idempotency key collision; investigate before retrying") from exc
+            return existing
     return evidence
 
 

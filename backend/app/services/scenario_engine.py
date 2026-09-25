@@ -378,6 +378,7 @@ def run_scenario_engine_cycle(db: Session) -> dict:
                 content=signal.content,
                 direction="supports",
                 confidence=0.0,
+                idempotency_key=f"scenario-prediction-signal:{indicator.id}:{signal.id}",
             )
         )
         classified += 1

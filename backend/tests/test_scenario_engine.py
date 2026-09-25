@@ -101,6 +101,23 @@ def test_4_evidence_can_attach_to_scenario_prediction(db):
     assert linked[0].belief_id is None  # confirms the dual-use, never-both invariant
 
 
+def test_scenario_cycle_evidence_uses_stable_identity(db):
+    scenario_engine.seed_phase1_indicators(db)
+    indicator = db.query(models.ScenarioPrediction).filter_by(domain="robotics").one()
+    signal = models.Signal(source="manual", content="Humanoid robotics deployments are expanding.")
+    db.add(signal)
+    db.commit()
+    db.refresh(signal)
+
+    first = scenario_engine.run_scenario_engine_cycle(db)
+    repeated = scenario_engine.run_scenario_engine_cycle(db)
+
+    assert first["signals_classified"] == 1
+    assert repeated["signals_classified"] == 0
+    evidence = db.query(models.Evidence).filter_by(scenario_prediction_id=indicator.id).one()
+    assert evidence.idempotency_key == f"scenario-prediction-signal:{indicator.id}:{signal.id}"
+
+
 def test_5_confidence_event_can_attach_to_scenario_prediction(db):
     scenario_engine.seed_default_scenarios(db)
     scenario_engine.seed_musk_forecaster_and_predictions(db)

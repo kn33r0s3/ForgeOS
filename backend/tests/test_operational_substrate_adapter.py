@@ -308,6 +308,46 @@ def test_canonical_cycle_runs_the_registered_substrate_adapters(db):
         lesson="The response is recorded without inferring broader demand.",
         data_scope="REAL",
     ))
+    provider = models.Provider(
+        name="Cycle provider",
+        country="Nepal",
+        verification_status="verified",
+        public_visible=True,
+    )
+    db.add(provider)
+    db.flush()
+    listing = models.ServiceListing(
+        provider_id=provider.id,
+        title="Cycle service",
+        description="An existing service listing.",
+        public_visible=True,
+        is_active=True,
+    )
+    db.add(listing)
+    decision = models.Decision(
+        title="Research a repeated interruption",
+        rationale="The claim is not sufficient for an action yet.",
+    )
+    db.add(decision)
+    db.flush()
+    claim = models.Claim(
+        statement="Operators report repeated workflow interruptions.",
+        normalized_statement="operators report repeated workflow interruptions",
+        decision_id=decision.id,
+    )
+    db.add(claim)
+    db.flush()
+    research_question = models.ResearchQuestion(
+        question="What evidence would verify those interruptions?",
+        source_claim_id=claim.id,
+    )
+    domain_record = models.DomainRecord(
+        kind="job",
+        title="Cycle job record",
+        detail="An existing domain record.",
+        close_token_hash="test-token-hash",
+    )
+    db.add_all([research_question, domain_record])
     db.commit()
 
     summary = forge_loop.run_cycle(db)
@@ -316,6 +356,18 @@ def test_canonical_cycle_runs_the_registered_substrate_adapters(db):
     assert summary["substrate_entities_created"] >= 4
     assert summary["substrate_relations_created"] >= 1
     assert summary["substrate_events_created"] >= 3
+    assert summary["substrate_public_services_projected"] >= 1
+    assert summary["substrate_evidence_created"] == 1
+    assert summary["substrate_capabilities_created"] > 0
+    assert summary["substrate_capability_events_created"] > 0
+    assert summary["substrate_legacy_records_projected"] >= 4
     assert world_graph.find_canonical_entity(db, "signal", signal.id) is not None
     assert world_graph.find_canonical_entity(db, "action", action.id) is not None
     assert world_graph.find_canonical_entity(db, "outcome", outcome.id) is not None
+    assert world_graph.find_canonical_entity(db, "provider", provider.id) is not None
+    assert world_graph.find_canonical_entity(db, "service_listing", listing.id) is not None
+    assert world_graph.find_canonical_entity(db, "claim", claim.id) is not None
+    assert world_graph.find_canonical_entity(db, "research_question", research_question.id) is not None
+    assert world_graph.find_canonical_entity(db, "domain_record", domain_record.id) is not None
+    assert world_graph.find_canonical_entity(db, "decision", decision.id) is not None
+    assert db.query(models.ForgeCapability).filter_by(status="proposed").count() > 0

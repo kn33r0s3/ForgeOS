@@ -50,6 +50,124 @@ def _public_claim(db, *, opportunity=None):
     return signal, claim
 
 
+def test_network_reads_substrate_relation_after_projection_and_keeps_workflow_authority(db):
+    from app.services import network_substrate_adapter, world_graph
+
+    need = models.DomainRecord(
+        kind="job",
+        title="A public repair need",
+        detail="An open request from an operator.",
+        close_token_hash="test-hash",
+        status="open",
+    )
+    provider = models.Provider(
+        name="Verified repair provider",
+        country="Nepal",
+        public_visible=True,
+        is_active=True,
+        verification_status="verified",
+    )
+    db.add_all([need, provider])
+    db.flush()
+    connection = models.NetworkConnection(
+        left_kind="domain_record",
+        left_id=need.id,
+        right_kind="provider",
+        right_id=provider.id,
+        relation_type="offered_by",
+        epistemic_state="hypothesized",
+        state="candidate",
+        reason="A possible repair connection.",
+        agreement_gap="No agreement is implied.",
+        public_visible=True,
+    )
+    db.add(connection)
+    db.commit()
+
+    network_substrate_adapter.sync_network_connections(db)
+    db.commit()
+    relation = db.get(models.WorldRelation, connection.relation_id)
+    assert relation is not None
+    # A legacy source label cannot bypass the substrate truth transition.
+    connection.epistemic_state = "supported"
+    db.commit()
+
+    client, cleanup = _client(db)
+    try:
+        public_response = client.get("/public/connections")
+        assert public_response.status_code == 200, public_response.text
+        item = next(row for row in public_response.json() if row["id"] == connection.id)
+        operator_response = client.get("/forge/connections")
+        assert operator_response.status_code == 200, operator_response.text
+        operator_item = next(row for row in operator_response.json() if row["id"] == connection.id)
+        feed_response = client.get("/public/feed", params={"kind": "connection"})
+        assert feed_response.status_code == 200, feed_response.text
+        feed_item = next(row for row in feed_response.json() if row["entity_id"] == connection.id)
+    finally:
+        cleanup()
+
+    source_entity = world_graph.find_canonical_entity(db, "domain_record", need.id)
+    target_entity = world_graph.find_canonical_entity(db, "provider", provider.id)
+    assert item["graph_source"] == operator_item["graph_source"] == "substrate"
+    assert item["substrate_relation_id"] == relation.id
+    assert item["substrate_from_entity_id"] == source_entity.id
+    assert item["substrate_to_entity_id"] == target_entity.id
+    assert item["relation_type"] == "offered_by"
+    assert item["epistemic_state"] == "hypothesized"
+    assert operator_item["epistemic_state"] == "hypothesized"
+    assert feed_item["relation_type"] == "offered_by"
+    assert feed_item["direction"] == "directed"
+    assert feed_item["epistemic_state"] == "hypothesized"
+    assert item["state"] == "candidate"
+    assert relation.truth_state == "hypothesized"
+
+
+def test_unprojected_public_connection_uses_registered_legacy_adapter(db):
+    need = models.DomainRecord(
+        kind="job",
+        title="A public need awaiting projection",
+        detail="An open request.",
+        close_token_hash="test-hash",
+        status="open",
+    )
+    provider = models.Provider(
+        name="Verified provider awaiting projection",
+        country="Nepal",
+        public_visible=True,
+        is_active=True,
+        verification_status="verified",
+    )
+    db.add_all([need, provider])
+    db.flush()
+    connection = models.NetworkConnection(
+        left_kind="domain_record",
+        left_id=need.id,
+        right_kind="provider",
+        right_id=provider.id,
+        relation_type="possible_match",
+        epistemic_state="possible",
+        state="candidate",
+        reason="Awaiting adapter cycle.",
+        agreement_gap="No agreement is implied.",
+        public_visible=True,
+    )
+    db.add(connection)
+    db.commit()
+
+    client, cleanup = _client(db)
+    try:
+        response = client.get("/public/connections")
+        assert response.status_code == 200, response.text
+        item = next(row for row in response.json() if row["id"] == connection.id)
+    finally:
+        cleanup()
+
+    assert item["graph_source"] == "legacy_adapter"
+    assert item["substrate_relation_id"] is None
+    assert item["relation_type"] == "possible_match"
+    assert item["epistemic_state"] == "possible"
+
+
 def test_public_feed_projects_heterogeneous_records_with_evidence_and_relations(db):
     opportunity = models.Opportunity(problem="A hypothesis about a documented unmet infrastructure need")
     db.add(opportunity)
@@ -144,6 +262,39 @@ def test_public_feed_projects_heterogeneous_records_with_evidence_and_relations(
         ),
     ])
     db.commit()
+
+    from app.services import world_graph
+    world_graph.sync_intelligence_path(db, limit=100)
+    db.commit()
+    substrate_counts_before = (
+        db.query(models.SubstrateEntity).count(),
+        db.query(models.WorldRelation).count(),
+        db.query(models.WorldEvent).count(),
+    )
+    projected_items = public_feed.build_public_feed(db, limit=100)
+    substrate_counts_after = (
+        db.query(models.SubstrateEntity).count(),
+        db.query(models.WorldRelation).count(),
+        db.query(models.WorldEvent).count(),
+    )
+    assert substrate_counts_after == substrate_counts_before
+    assert all(item.entity_type and item.entity_id > 0 and item.source for item in projected_items)
+    by_identity = {(item.entity_type, item.entity_id): item for item in projected_items}
+    signal_evidence_ids = {
+        evidence_id for (evidence_id,) in db.query(models.Evidence.id).filter_by(signal_id=signal.id).all()
+    }
+    signal_item = next(item for item in projected_items if item.kind == "signal")
+    assert signal_item.entity_type == "claim" and signal_item.entity_id == claim.id
+    assert any(
+        ref.entity_type == "evidence" and ref.entity_id in signal_evidence_ids
+        for ref in signal_item.relations
+    )
+    substrate_signal = world_graph.find_canonical_entity(db, "signal", signal.id)
+    assert any(
+        ref.entity_type == "entity" and ref.entity_id == substrate_signal.id
+        for ref in signal_item.relations
+    )
+    assert any(ref.entity_type == "event" for ref in signal_item.relations)
 
     client, cleanup = _client(db)
     try:
@@ -283,9 +434,12 @@ def test_public_opportunity_requires_question_after_evidenced_claim(db):
     opportunity_item = next(
         item for item in build_public_feed(db) if item.entity_type == "opportunity"
     )
-    assert [relation.model_dump() for relation in opportunity_item.relations] == [
-        {"entity_type": "claim", "entity_id": claim.id, "relation": "informed_by"}
-    ]
+    assert any(
+        relation.entity_type == "claim" and relation.entity_id == claim.id
+        and relation.relation == "informed_by"
+        for relation in opportunity_item.relations
+    )
+    assert any(relation.entity_type == "evidence" for relation in opportunity_item.relations)
 
 
 def test_public_feed_composes_connections_but_keeps_endpoint_visibility_gates(db):
@@ -353,7 +507,18 @@ def test_public_feed_composes_connections_but_keeps_endpoint_visibility_gates(db
         agreement_gap="No agreement recorded.",
         public_visible=True,
     )
-    db.add_all([second, private_edge])
+    private_evidence = models.Evidence(
+        source="private operator note",
+        content="This evidence belongs to a hidden endpoint connection.",
+    )
+    db.add_all([second, private_edge, private_evidence])
+    db.flush()
+    db.add(models.EvidenceRelationship(
+        evidence_id=private_evidence.id,
+        network_connection_id=private_edge.id,
+        relation_type="derived_from",
+        relation_key=f"hidden-edge-evidence:{private_edge.id}",
+    ))
     db.commit()
 
     from app.services import network_substrate_adapter
@@ -383,6 +548,21 @@ def test_public_feed_composes_connections_but_keeps_endpoint_visibility_gates(db
     )
     assert {item.entity_id for item in context if item.kind == "connection"} == {first.id, second.id}
     assert private_edge.id not in visible_ids
+    client, cleanup = _client(db)
+    try:
+        public_connections = client.get("/public/connections")
+        assert public_connections.status_code == 200, public_connections.text
+        assert {item["id"] for item in public_connections.json()} == {first.id, second.id}
+    finally:
+        cleanup()
+    all_public_evidence_ids = {
+        relation.entity_id
+        for item in feed
+        for relation in item.relations
+        if relation.entity_type == "evidence"
+    }
+    assert private_evidence.id not in all_public_evidence_ids
+    assert "hidden endpoint connection" not in str(feed)
 
 
 def test_opportunity_claim_question_link_respects_regulated_publication_gate(db):

@@ -64,6 +64,7 @@ def record_evidence(db: Session, belief: models.Belief, evidence_items: list[dic
             content=item.get("content", ""),
             direction=item.get("direction", "supports"),
             confidence=0.0,
+            idempotency_key=f"belief-signal:{belief.id}:{signal_id}",
         )
         db.add(evidence)
         created.append(evidence)

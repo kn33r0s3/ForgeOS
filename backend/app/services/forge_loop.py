@@ -100,7 +100,15 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
     import os
     from datetime import datetime, timezone
     from app import models as _models
-    from app.services import evidence_graph, network_connections, network_substrate_adapter, world_graph
+    from app.services import (
+        evidence_graph,
+        capability_substrate_adapter,
+        legacy_record_substrate_adapter,
+        network_connections,
+        network_substrate_adapter,
+        public_services_substrate_adapter,
+        world_graph,
+    )
 
     cycle = _models.CycleRun(started_at=datetime.now(timezone.utc), status="RUNNING")
     db.add(cycle)
@@ -213,11 +221,22 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         "network_connections_projected": 0,
         "network_connections_unresolved": 0,
         "network_truth_waiting_for_evidence": 0,
+        "public_services_projected": 0,
+        "public_services_unresolved": 0,
+        "substrate_evidence_created": 0,
+        "capabilities_created": 0,
+        "capabilities_refreshed": 0,
+        "capability_events_created": 0,
+        "legacy_records_projected": 0,
+        "legacy_records_unresolved": 0,
     }
     try:
         intelligence_projection = world_graph.sync_intelligence_path(db, limit=100)
         operational_projection = world_graph.sync_action_outcome_learning_path(db, limit=100)
         network_projection = network_substrate_adapter.sync_network_connections(db, limit=100)
+        public_services_projection = public_services_substrate_adapter.sync_public_services(db, limit=100)
+        tool_capability_projection = capability_substrate_adapter.sync_runtime_tool_capabilities(db)
+        legacy_record_projection = legacy_record_substrate_adapter.sync_legacy_records(db, limit=250)
         substrate_summary["entities_created"] = (
             intelligence_projection["entities_created"]
             + operational_projection["entities_created"]
@@ -236,6 +255,28 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         ]
         substrate_summary["entities_created"] += network_projection["entities_created"]
         substrate_summary["relations_created"] += network_projection["relations_created"]
+        substrate_summary["entities_created"] += (
+            public_services_projection["provider_entities_created"]
+            + public_services_projection["listing_entities_created"]
+        )
+        substrate_summary["relations_created"] += public_services_projection["relations_created"]
+        substrate_summary["events_created"] += public_services_projection["events_created"]
+        substrate_summary["public_services_projected"] = (
+            public_services_projection["provider_entities_created"]
+            + public_services_projection["listing_entities_created"]
+        )
+        substrate_summary["public_services_unresolved"] = (
+            public_services_projection["unresolved_service_listings"]
+            + public_services_projection["unactivated_types"]
+        )
+        substrate_summary["substrate_evidence_created"] = public_services_projection["evidence_created"]
+        substrate_summary["capabilities_created"] = tool_capability_projection["created"]
+        substrate_summary["capabilities_refreshed"] = tool_capability_projection["refreshed"]
+        substrate_summary["capability_events_created"] = tool_capability_projection["events_created"]
+        substrate_summary["entities_created"] += legacy_record_projection["entities_created"]
+        substrate_summary["events_created"] += legacy_record_projection["events_created"]
+        substrate_summary["legacy_records_projected"] = legacy_record_projection["entities_created"]
+        substrate_summary["legacy_records_unresolved"] = legacy_record_projection["unresolved_records"]
         db.commit()
     except Exception as exc:
         stage_errors["substrate_adapters"] = str(exc)
@@ -419,6 +460,14 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         "substrate_network_connections_projected": substrate_summary["network_connections_projected"],
         "substrate_network_connections_unresolved": substrate_summary["network_connections_unresolved"],
         "substrate_network_truth_waiting_for_evidence": substrate_summary["network_truth_waiting_for_evidence"],
+        "substrate_public_services_projected": substrate_summary["public_services_projected"],
+        "substrate_public_services_unresolved": substrate_summary["public_services_unresolved"],
+        "substrate_evidence_created": substrate_summary["substrate_evidence_created"],
+        "substrate_capabilities_created": substrate_summary["capabilities_created"],
+        "substrate_capabilities_refreshed": substrate_summary["capabilities_refreshed"],
+        "substrate_capability_events_created": substrate_summary["capability_events_created"],
+        "substrate_legacy_records_projected": substrate_summary["legacy_records_projected"],
+        "substrate_legacy_records_unresolved": substrate_summary["legacy_records_unresolved"],
         "beliefs_updated": beliefs_updated,
         "predictions_created": predictions_created,
         "predictions_resolved": len(resolved_predictions),

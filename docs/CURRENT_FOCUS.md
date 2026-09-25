@@ -1,4 +1,4 @@
-# Current focus — public Feed provenance closure
+# Current focus — Remaining canonical legacy record adapters
 
 **Architecture authority:** [`FORGE_SUBSTRATE_BLUEPRINT.md`](../FORGE_SUBSTRATE_BLUEPRINT.md)
 **Claim ledger:** [`CAPABILITY_QUEUE.md`](CAPABILITY_QUEUE.md)
@@ -26,14 +26,28 @@ an authorized `Experiment` attempt is a fallback only when no corresponding
 `Action` row exists. Outcomes and learning remain linked through existing
 source identifiers and explicit provenance.
 
-The `NetworkConnection` adapter is complete: existing workflow rows project to
-typed substrate relations, and Feed items expose those relation references
-without bypassing public endpoint visibility.
+The public Feed provenance closure is complete: items keep source identity and
+now expose existing substrate entity/event and evidence references without
+creating Feed storage or bypassing public visibility.
 
-The active claim audits each public Feed item for an explicit trace path to its
-source identity and any available substrate relation/event and evidence. Feed
-remains a read-only projection; source tables stay authoritative during this
-migration slice, and private evidence content must not leak through traversal.
+The substrate-first `/connections` read path is complete: projected relation
+topology/type/direction/truth come from `WorldRelation`, workflow fields stay
+on `NetworkConnection`, and public traversal applies the Feed's endpoint gate.
+
+The general read-only `/public/network` traversal is complete for visible
+substrate relations and registered legacy adapters. It uses Feed visibility
+references, exposes evidence/event IDs, and creates no Network storage.
+
+Additive Evidence idempotency is complete: Evidence and EvidenceRelationship
+have nullable unique keys for new writes; migration tests preserved duplicated
+legacy provenance hashes/relationship keys unchanged.
+
+The deterministic Evidence producers, Provider/ServiceListing adapter,
+runtime ToolRegistry Capability adapter, and generic substrate API are
+complete. A read-only inspection found Claim, ResearchQuestion, DomainRecord,
+and Decision rows without canonical-cycle projections; the active claim adds
+source-linked wrappers and audit snapshots without changing those source
+tables or inferring unsupported relationships.
 
 Earlier S10–S14 and BP work remains recorded in `SERIAL_PATH.md` as history.
 Its prior `NetworkConnection`-first substrate direction is superseded by the

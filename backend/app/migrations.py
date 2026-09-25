@@ -106,11 +106,16 @@ EXPECTED_INDEXES = {
 
 # SQLite ALTER TABLE cannot add a UNIQUE constraint in place. These nullable
 # idempotency columns are added first, then guarded by unique indexes; existing
-# rows keep NULL and all history/data remains intact.
+# rows keep NULL and all history/data remains intact. Legacy provenance hashes
+# and relation keys are not made unique or rewritten.
 EXPECTED_UNIQUE_INDEXES = {
     "entities": [("uq_entities_identity_key", "identity_key")],
     "relations": [("uq_relations_idempotency_key", "idempotency_key")],
     "events": [("uq_events_idempotency_key", "idempotency_key")],
+    "evidence": [("uq_evidence_idempotency_key", "idempotency_key")],
+    "evidence_relationships": [
+        ("uq_evidence_relationships_idempotency_key", "idempotency_key")
+    ],
 }
 
 

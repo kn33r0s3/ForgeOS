@@ -13,6 +13,17 @@ from app.services import network_endpoints, public_epistemics
 
 
 _PUBLIC_OUTCOME_SOURCES = ("domain_record", "booking_request", "network_connection")
+_EVIDENCE_TARGET_COLUMNS = {
+    "claim": models.EvidenceRelationship.claim_id,
+    "opportunity": models.EvidenceRelationship.opportunity_id,
+    "decision": models.EvidenceRelationship.decision_id,
+    "experiment": models.EvidenceRelationship.experiment_id,
+    "outcome": models.EvidenceRelationship.outcome_id,
+    "network_connection": models.EvidenceRelationship.network_connection_id,
+}
+_DIRECT_EVIDENCE_TARGET_COLUMNS = {
+    "opportunity": models.Evidence.opportunity_id,
+}
 
 
 def _date_key(value: datetime | None) -> float:
@@ -35,6 +46,165 @@ def _ids(raw: str | None) -> set[int]:
     return found
 
 
+def _attach_public_trace_refs(db: Session, items: list[schemas.PublicFeedItem]) -> None:
+    """Attach read-only references to available substrate and evidence history.
+
+    The feed item itself names its migration-stage source row. This adds links
+    to any existing substrate wrapper, event, and evidence record without
+    creating rows or copying private evidence content into the public response.
+    """
+    from app.services import world_graph
+
+    entity_cache: dict[tuple[str, int], models.SubstrateEntity | None] = {}
+    event_cache: dict[tuple[str, int], list[models.WorldEvent]] = {}
+    evidence_source_cache: dict[tuple[str, int], list[tuple[int, str]]] = {}
+    evidence_subject_cache: dict[tuple[str, int], list[models.Evidence]] = {}
+    evidence_exists_cache: dict[int, bool] = {}
+
+    for item in items:
+        references = list(item.relations)
+        seen_refs = {(ref.entity_type, ref.entity_id, ref.relation) for ref in references}
+
+        def add_ref(entity_type: str, entity_id: int | None, relation: str) -> None:
+            if entity_id is None:
+                return
+            key = (entity_type, entity_id, relation)
+            if key not in seen_refs:
+                references.append(schemas.PublicFeedRelation(
+                    entity_type=entity_type,
+                    entity_id=entity_id,
+                    relation=relation,
+                ))
+                seen_refs.add(key)
+
+        source_refs = [(item.entity_type, item.entity_id)] + [
+            (ref.entity_type, ref.entity_id) for ref in references
+            if ref.entity_type not in {"entity", "event", "evidence", "relation"}
+        ]
+        substrate_entities: dict[int, models.SubstrateEntity] = {}
+        substrate_entities_by_source: dict[tuple[str, int], models.SubstrateEntity] = {}
+        for source_type, source_id in source_refs:
+            if source_type == "network_connection":
+                continue
+            identity_key = (source_type, source_id)
+            if identity_key not in entity_cache:
+                entity_cache[identity_key] = world_graph.find_canonical_entity(
+                    db, source_type, source_id
+                )
+            source_entity = entity_cache[identity_key]
+            if source_entity is not None:
+                substrate_entities[source_entity.id] = source_entity
+                substrate_entities_by_source[(source_type, source_id)] = source_entity
+                add_ref("entity", source_entity.id, "substrate_entity")
+
+        # When an item already declares a typed source relationship (for
+        # example a public ServiceListing's offered_by Provider), attach its
+        # matching substrate relation and trace its events/evidence below.
+        root_entity = substrate_entities_by_source.get((item.entity_type, item.entity_id))
+        if root_entity is not None:
+            for source_ref in list(item.relations):
+                target_entity = substrate_entities_by_source.get(
+                    (source_ref.entity_type, source_ref.entity_id)
+                )
+                if target_entity is None or not source_ref.relation:
+                    continue
+                matching_relations = db.query(models.WorldRelation).filter_by(
+                    from_entity_id=root_entity.id,
+                    to_entity_id=target_entity.id,
+                    relation_type=source_ref.relation,
+                ).all()
+                for relation in matching_relations:
+                    add_ref("relation", relation.id, "substrate_relation")
+
+        relation_ids = {
+            ref.entity_id for ref in references if ref.entity_type == "relation"
+        }
+        if item.entity_type == "network_connection":
+            source_connection = db.get(models.NetworkConnection, item.entity_id)
+            if source_connection is not None and source_connection.relation_id is not None:
+                relation_ids.add(source_connection.relation_id)
+
+        event_rows: dict[int, models.WorldEvent] = {}
+        for source_entity in substrate_entities.values():
+            cache_key = ("entity", source_entity.id)
+            if cache_key not in event_cache:
+                event_cache[cache_key] = db.query(models.WorldEvent).filter_by(
+                    entity_id=source_entity.id
+                ).all()
+            for event in event_cache[cache_key]:
+                event_rows[event.id] = event
+        for relation_id in relation_ids:
+            cache_key = ("relation", relation_id)
+            if cache_key not in event_cache:
+                event_cache[cache_key] = db.query(models.WorldEvent).filter_by(
+                    relation_id=relation_id
+                ).all()
+            for event in event_cache[cache_key]:
+                event_rows[event.id] = event
+        for event in event_rows.values():
+            add_ref("event", event.id, f"event:{event.event_type}")
+
+        evidence_refs: dict[tuple[int, str], None] = {}
+
+        def add_evidence(evidence_id: int, relation: str) -> None:
+            if evidence_id not in evidence_exists_cache:
+                evidence_exists_cache[evidence_id] = db.get(models.Evidence, evidence_id) is not None
+            if evidence_exists_cache[evidence_id]:
+                evidence_refs[(evidence_id, relation)] = None
+
+        public_source_refs = source_refs
+        visited_source_refs: set[tuple[str, int]] = set()
+        for source_type, source_id in public_source_refs:
+            if (source_type, source_id) in visited_source_refs:
+                continue
+            visited_source_refs.add((source_type, source_id))
+            cache_key = (source_type, source_id)
+            if cache_key not in evidence_source_cache:
+                source_evidence: list[tuple[int, str]] = []
+                if source_type == "signal":
+                    source_evidence.extend(
+                        (evidence.id, "source_evidence")
+                        for evidence in db.query(models.Evidence).filter_by(signal_id=source_id).all()
+                    )
+                direct_column = _DIRECT_EVIDENCE_TARGET_COLUMNS.get(source_type)
+                if direct_column is not None:
+                    source_evidence.extend(
+                        (evidence.id, "source_evidence")
+                        for evidence in db.query(models.Evidence).filter(direct_column == source_id).all()
+                    )
+                target_column = _EVIDENCE_TARGET_COLUMNS.get(source_type)
+                if target_column is not None:
+                    source_evidence.extend(
+                        (link.evidence_id, f"evidence:{link.relation_type}")
+                        for link in db.query(models.EvidenceRelationship)
+                        .filter(target_column == source_id).all()
+                    )
+                evidence_source_cache[cache_key] = source_evidence
+            for evidence_id, relation in evidence_source_cache[cache_key]:
+                add_evidence(evidence_id, relation)
+
+        for source_entity in substrate_entities.values():
+            cache_key = ("entity", source_entity.id)
+            if cache_key not in evidence_subject_cache:
+                evidence_subject_cache[cache_key] = db.query(models.Evidence).filter_by(
+                    subject_kind="entity", subject_id=source_entity.id
+                ).all()
+            for evidence in evidence_subject_cache[cache_key]:
+                add_evidence(evidence.id, f"evidence:{evidence.support_level or 'unknown'}")
+        for relation_id in relation_ids:
+            cache_key = ("relation", relation_id)
+            if cache_key not in evidence_subject_cache:
+                evidence_subject_cache[cache_key] = db.query(models.Evidence).filter_by(
+                    subject_kind="relation", subject_id=relation_id
+                ).all()
+            for evidence in evidence_subject_cache[cache_key]:
+                add_evidence(evidence.id, f"evidence:{evidence.support_level or 'unknown'}")
+        for evidence_id, relation in evidence_refs:
+            add_ref("evidence", evidence_id, relation)
+
+        item.relations = references
+
+
 def build_public_feed(
     db: Session,
     *,
@@ -48,6 +218,8 @@ def build_public_feed(
     Candidate rank is chronological only. No synthetic engagement or trust
     score is introduced; source-specific visibility gates remain authoritative.
     """
+    from app.services.network_substrate_adapter import relation_read_model
+
     requested_kind = (kind or "").strip().lower()
     requested_entity_type = (
         network_endpoints.canonical_endpoint_type(entity_type, strict=False)
@@ -391,8 +563,9 @@ def build_public_feed(
         right_type = network_endpoints.canonical_endpoint_type(connection.right_kind, strict=False)
         if left_type is None or right_type is None:
             continue
-        relation_type = connection.relation_type or "possible_match"
-        truth_state = connection.epistemic_state or "hypothesized"
+        graph = relation_read_model(db, connection)
+        relation_type = graph["relation_type"]
+        truth_state = graph["epistemic_state"]
         items.append(schemas.PublicFeedItem(
             id=f"connection:{connection.id}",
             kind="connection",
@@ -410,6 +583,7 @@ def build_public_feed(
             epistemic_state=truth_state,
             source="public Forge network",
             relation_type=relation_type,
+            direction=graph["direction"],
             relations=[
                 schemas.PublicFeedRelation(entity_type=left_type, entity_id=connection.left_id, relation="left_side"),
                 schemas.PublicFeedRelation(entity_type=right_type, entity_id=connection.right_id, relation="right_side"),
@@ -441,6 +615,8 @@ def build_public_feed(
 
     if requested_kind:
         items = [item for item in items if item.kind == requested_kind]
+    _attach_public_trace_refs(db, items)
+
     if entity_type is not None and entity_id is not None:
         items = [
             item for item in items

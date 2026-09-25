@@ -980,11 +980,21 @@ def test_authorization_rejects_a_cost_that_is_not_in_the_evidence(client_with_db
 
 
 def test_public_connection_shows_a_response_only_after_publication(client_with_db, db):
+    need = models.DomainRecord(
+        kind="job", title="Public response need", detail="An open need.",
+        close_token_hash="test-hash", status="open",
+    )
+    provider = models.Provider(
+        name="Verified response provider", country="Nepal", public_visible=True,
+        is_active=True, verification_status="verified",
+    )
+    db.add_all([need, provider])
+    db.flush()
     row = models.NetworkConnection(
         left_kind="domain_record",
-        left_id=3,
+        left_id=need.id,
         right_kind="provider",
-        right_id=4,
+        right_id=provider.id,
         state="contacted",
         reason="same city",
         agreement_gap="No response yet.",
@@ -1005,11 +1015,21 @@ def test_public_connection_shows_a_response_only_after_publication(client_with_d
 
 
 def test_fulfillment_records_the_work_and_not_a_payment(client_with_db, db):
+    need = models.DomainRecord(
+        kind="job", title="Public fulfillment need", detail="An open need.",
+        close_token_hash="test-hash", status="open",
+    )
+    provider = models.Provider(
+        name="Verified fulfillment provider", country="Nepal", public_visible=True,
+        is_active=True, verification_status="verified",
+    )
+    db.add_all([need, provider])
+    db.flush()
     row = models.NetworkConnection(
         left_kind="domain_record",
-        left_id=8,
+        left_id=need.id,
         right_kind="provider",
-        right_id=9,
+        right_id=provider.id,
         state="accepted",
         reason="same city",
         agreement_gap="Work is not recorded.",

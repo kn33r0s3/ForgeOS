@@ -148,13 +148,18 @@ def attach_evidence(
         content=content.strip(), source=source, direction="supports",
         provenance=json.dumps({"work_item_id": item.id, "actor": actor, "scope": scope}),
         collection_status="collected",
+        idempotency_key=(
+            f"repair-work-item-evidence:{item.id}:{idempotency_key}"
+            if idempotency_key else None
+        ),
     )
     db.add(evidence)
     db.flush()
     relationship = models.EvidenceRelationship(
         evidence_id=evidence.id,
         relation_type="supports",
-        relation_key=f"repair_work_item:{item.id}:evidence",
+        relation_key=f"repair_work_item:{item.id}:evidence:{evidence.id}",
+        idempotency_key=f"repair-work-item-evidence-link:{item.id}:{evidence.id}",
     )
     db.add(relationship)
     _transition(

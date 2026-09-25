@@ -346,23 +346,34 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
 
 @router.get("/connections", response_model=list[schemas.PublicConnectionOut])
 def list_public_connections(db: Session = Depends(get_db)):
+    from app.services.network_substrate_adapter import relation_read_model
+    from app.services.public_feed import build_public_feed
+
+    # The Feed owns the public endpoint gate. Reuse its traversal result so a
+    # visible connection row cannot make a private or dangling endpoint public.
+    visible_ids = {
+        item.entity_id for item in build_public_feed(db, kind="connection", limit=1000)
+    }
+    if not visible_ids:
+        return []
     rows = (
         db.query(models.NetworkConnection)
         .filter(models.NetworkConnection.public_visible.is_(True))
+        .filter(models.NetworkConnection.id.in_(visible_ids))
         .order_by(models.NetworkConnection.id.desc())
         .all()
     )
-    return [
-        schemas.PublicConnectionOut(
+    result = []
+    for row in rows:
+        graph = relation_read_model(db, row)
+        result.append(schemas.PublicConnectionOut(
             id=row.id,
-            substrate_relation_id=row.relation_id,
+            **graph,
             left_kind=row.left_kind,
             left_id=row.left_id,
-            relation_type=_connection_graph_state(db, row)[0],
             right_kind=row.right_kind,
             right_id=row.right_id,
             state=row.state,
-            epistemic_state=_connection_graph_state(db, row)[1],
             reason=row.reason,
             known=row.known,
             unknown=row.unknown,
@@ -371,9 +382,19 @@ def list_public_connections(db: Session = Depends(get_db)):
             owns_either_side=False,
             latest_response=_public_connection_response(db, row),
             latest_fulfillment=_public_connection_fulfillment(db, row),
-        )
-        for row in rows
-    ]
+        ))
+    return result
+
+
+@router.get("/network", response_model=schemas.PublicNetworkSnapshot)
+def get_public_network(
+    limit: int = Query(default=100, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """Read the public Network from substrate graph rows and registered adapters."""
+    from app.services.public_network import build_public_network
+
+    return build_public_network(db, limit=limit)
 
 
 def _public_connection_response(db: Session, row: models.NetworkConnection) -> str | None:
@@ -398,7 +419,10 @@ def _public_candidate_connection(
 
 
 def _connection_graph_state(db: Session, row: models.NetworkConnection) -> tuple[str, str]:
-    return row.relation_type or "possible_match", row.epistemic_state or "hypothesized"
+    from app.services.network_substrate_adapter import relation_read_model
+
+    graph = relation_read_model(db, row)
+    return graph["relation_type"], graph["epistemic_state"]
 
 
 @router.post("/domain/{record_id}/connections/{connection_id}/response", response_model=schemas.PublicConnectionOut)

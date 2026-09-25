@@ -140,6 +140,35 @@ def sync_network_connections(db: Session, *, limit: int = 100) -> dict[str, int]
     return result
 
 
+def relation_read_model(db: Session, connection: models.NetworkConnection) -> dict[str, Any]:
+    """Resolve graph fields from the substrate, with an explicit legacy fallback.
+
+    Workflow state, visibility, responses, and payments remain on the
+    NetworkConnection row. Once it has a relation pointer, graph topology and
+    epistemic state come from the substrate relation.
+    """
+    relation = db.get(models.WorldRelation, connection.relation_id) if connection.relation_id else None
+    if relation is not None:
+        return {
+            "substrate_relation_id": relation.id,
+            "substrate_from_entity_id": relation.from_entity_id,
+            "substrate_to_entity_id": relation.to_entity_id,
+            "relation_type": relation.relation_type,
+            "direction": relation.direction,
+            "epistemic_state": relation.truth_state,
+            "graph_source": "substrate",
+        }
+    return {
+        "substrate_relation_id": connection.relation_id,
+        "substrate_from_entity_id": None,
+        "substrate_to_entity_id": None,
+        "relation_type": connection.relation_type or "possible_match",
+        "direction": connection.direction or "directed",
+        "epistemic_state": connection.epistemic_state or "hypothesized",
+        "graph_source": "legacy_adapter",
+    }
+
+
 def _resolve_substrate_endpoint(
     db: Session,
     kind: str,

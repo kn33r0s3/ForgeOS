@@ -1395,17 +1395,16 @@ def _seconds_to_recorded_payment(db: Session, row: models.NetworkConnection) -> 
 @router.get("/connections")
 def list_network_connections(db: Session = Depends(get_db)):
     from app.services import network_connections
+    from app.services.network_substrate_adapter import relation_read_model
 
     rows = db.query(models.NetworkConnection).order_by(models.NetworkConnection.id.desc()).limit(100).all()
-    return [
-        {
+    result = []
+    for row in rows:
+        result.append({
             "id": row.id,
-            "substrate_relation_id": row.relation_id,
+            **relation_read_model(db, row),
             "left_kind": row.left_kind,
             "left_id": row.left_id,
-            "relation_type": row.relation_type or "possible_match",
-            "direction": row.direction or "directed",
-            "epistemic_state": row.epistemic_state or "hypothesized",
             "right_kind": row.right_kind,
             "right_id": row.right_id,
             "state": row.state,
@@ -1428,9 +1427,8 @@ def list_network_connections(db: Session = Depends(get_db)):
             "seconds_to_recorded_payment": _seconds_to_recorded_payment(db, row),
             "latest_response": _latest_connection_response(db, row),
             "latest_fulfillment": _connection_note(db, row, "fulfilled"),
-        }
-        for row in rows
-    ]
+        })
+    return result
 
 
 @router.post("/connections/scan")

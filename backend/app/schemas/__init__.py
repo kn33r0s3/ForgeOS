@@ -1171,7 +1171,37 @@ class PublicFeedItem(BaseModel):
     source: Optional[str] = None
     source_url: Optional[str] = None
     relation_type: Optional[str] = None
+    direction: Optional[str] = None
     relations: list[PublicFeedRelation] = Field(default_factory=list)
+
+
+class PublicNetworkNode(BaseModel):
+    id: int
+    entity_type: str
+    source_ref: Optional[PublicFeedRelation] = None
+    identity_state: str
+
+
+class PublicNetworkEdge(BaseModel):
+    id: str
+    relation_type: str
+    direction: str
+    epistemic_state: str
+    graph_source: str
+    from_entity_id: Optional[int] = None
+    to_entity_id: Optional[int] = None
+    from_ref: Optional[PublicFeedRelation] = None
+    to_ref: Optional[PublicFeedRelation] = None
+    source_ref: Optional[PublicFeedRelation] = None
+    evidence_refs: list[PublicFeedRelation] = Field(default_factory=list)
+    event_refs: list[PublicFeedRelation] = Field(default_factory=list)
+
+
+class PublicNetworkSnapshot(BaseModel):
+    nodes: list[PublicNetworkNode] = Field(default_factory=list)
+    edges: list[PublicNetworkEdge] = Field(default_factory=list)
+    evidence_refs: list[PublicFeedRelation] = Field(default_factory=list)
+    event_refs: list[PublicFeedRelation] = Field(default_factory=list)
 
 
 class PublicMatchCandidate(BaseModel):
@@ -1227,9 +1257,13 @@ class DomainRecordCreated(DomainRecordOut):
 class PublicConnectionOut(BaseModel):
     id: int
     substrate_relation_id: Optional[int] = None
+    substrate_from_entity_id: Optional[int] = None
+    substrate_to_entity_id: Optional[int] = None
+    graph_source: str = "legacy_adapter"
     left_kind: str
     left_id: int
     relation_type: str = "possible_match"
+    direction: str = "directed"
     right_kind: str
     right_id: int
     state: str

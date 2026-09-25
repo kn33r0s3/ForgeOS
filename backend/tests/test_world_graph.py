@@ -431,6 +431,52 @@ def test_registry_evidence_and_relation_validations_fail_closed(db):
         )
 
 
+def test_substrate_evidence_idempotency_returns_original_and_rejects_key_reuse(db):
+    _seed(db)
+    entity = world_graph.create_entity(
+        db,
+        entity_type="resource",
+        display_name="Evidence subject",
+        attributes={},
+        created_by="test",
+    )
+    first = world_graph.create_evidence(
+        db,
+        subject_kind="entity",
+        subject_id=entity.id,
+        claim="A source record supports the existence of this resource.",
+        support_level="possible",
+        source="reviewed_source",
+        provenance={"source_id": "catalogue-15"},
+        idempotency_key="catalogue-15-resource-evidence",
+    )
+    repeated = world_graph.create_evidence(
+        db,
+        subject_kind="entity",
+        subject_id=entity.id,
+        claim="A source record supports the existence of this resource.",
+        support_level="possible",
+        source="reviewed_source",
+        provenance={"source_id": "catalogue-15"},
+        idempotency_key="catalogue-15-resource-evidence",
+    )
+
+    assert repeated.id == first.id
+    assert repeated.idempotency_key == "catalogue-15-resource-evidence"
+    assert db.query(models.Evidence).filter_by(idempotency_key=first.idempotency_key).count() == 1
+    with pytest.raises(world_graph.SubstrateError, match="idempotency key collision"):
+        world_graph.create_evidence(
+            db,
+            subject_kind="entity",
+            subject_id=entity.id,
+            claim="A different claim cannot reuse the evidence key.",
+            support_level="possible",
+            source="reviewed_source",
+            provenance={"source_id": "catalogue-16"},
+            idempotency_key="catalogue-15-resource-evidence",
+        )
+
+
 def test_capability_lifecycle_requires_a_passing_test_reference(db):
     _seed(db)
     capability = world_graph.create_capability(
@@ -611,15 +657,62 @@ def test_additive_migration_adds_idempotency_uniqueness_without_losing_rows():
         )
         connection.exec_driver_sql("CREATE TABLE relations (id INTEGER PRIMARY KEY)")
         connection.exec_driver_sql("CREATE TABLE events (id INTEGER PRIMARY KEY)")
+        connection.exec_driver_sql(
+            "CREATE TABLE evidence (id INTEGER PRIMARY KEY, provenance_hash TEXT)"
+        )
+        connection.exec_driver_sql(
+            "INSERT INTO evidence (id, provenance_hash) VALUES "
+            "(1, 'legacy-duplicate'), (2, 'legacy-duplicate')"
+        )
+        connection.exec_driver_sql(
+            "CREATE TABLE evidence_relationships (id INTEGER PRIMARY KEY, relation_key TEXT)"
+        )
+        connection.exec_driver_sql(
+            "INSERT INTO evidence_relationships (id, relation_key) VALUES "
+            "(1, 'legacy-duplicate-edge'), (2, 'legacy-duplicate-edge')"
+        )
 
     applied = run_migrations(engine)
     assert any(statement.startswith("ALTER TABLE entities ADD COLUMN identity_key") for statement in applied)
     assert any(statement.startswith("CREATE UNIQUE INDEX uq_entities_identity_key") for statement in applied)
     with engine.connect() as connection:
         row = connection.exec_driver_sql("SELECT id, display_name FROM entities WHERE id = 1").one()
+        evidence_rows = connection.exec_driver_sql(
+            "SELECT id, provenance_hash, idempotency_key FROM evidence ORDER BY id"
+        ).all()
+        relationship_rows = connection.exec_driver_sql(
+            "SELECT id, relation_key, idempotency_key FROM evidence_relationships ORDER BY id"
+        ).all()
     assert tuple(row) == (1, "legacy source")
     assert any(
         index["unique"] and index["column_names"] == ["identity_key"]
         for index in inspect(engine).get_indexes("entities")
     )
+    assert [tuple(row) for row in evidence_rows] == [
+        (1, "legacy-duplicate", None), (2, "legacy-duplicate", None)
+    ]
+    assert [tuple(row) for row in relationship_rows] == [
+        (1, "legacy-duplicate-edge", None), (2, "legacy-duplicate-edge", None)
+    ]
+    for table, index_name in (
+        ("evidence", "uq_evidence_idempotency_key"),
+        ("evidence_relationships", "uq_evidence_relationships_idempotency_key"),
+    ):
+        assert any(
+            index["name"] == index_name and index["unique"]
+            and index["column_names"] == ["idempotency_key"]
+            for index in inspect(engine).get_indexes(table)
+        )
+    from sqlalchemy.exc import IntegrityError
+    with pytest.raises(IntegrityError):
+        with engine.begin() as connection:
+            connection.exec_driver_sql(
+                "INSERT INTO evidence (idempotency_key) VALUES ('same-key'), ('same-key')"
+            )
+    with pytest.raises(IntegrityError):
+        with engine.begin() as connection:
+            connection.exec_driver_sql(
+                "INSERT INTO evidence_relationships (idempotency_key) "
+                "VALUES ('same-link-key'), ('same-link-key')"
+            )
     engine.dispose()

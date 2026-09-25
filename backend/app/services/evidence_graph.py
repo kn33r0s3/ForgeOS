@@ -8,6 +8,7 @@ import json
 import re
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import models
@@ -23,6 +24,30 @@ RELATION_TYPES = {
     "supersedes",
 }
 CLAIM_STATES = {"observed", "supported", "contested", "weakened", "superseded", "verified", "rejected"}
+
+
+def _matches_evidence_intent(
+    evidence: models.Evidence,
+    *,
+    source: str | None,
+    content: str,
+    metadata: dict[str, Any],
+) -> bool:
+    provenance = metadata.get("provenance")
+    expected = {
+        "source": source,
+        "content": content,
+        "direction": metadata.get("direction", "supports"),
+        "confidence": metadata.get("confidence", 0.0),
+        "canonical_url": metadata.get("canonical_url"),
+        "external_id": metadata.get("external_id"),
+        "title": metadata.get("title"),
+        "published_at": metadata.get("published_at"),
+        "content_fingerprint": metadata.get("content_fingerprint"),
+        "provenance": json.dumps(provenance, sort_keys=True) if provenance else None,
+        "collection_status": metadata.get("collection_status", "collected"),
+    }
+    return all(getattr(evidence, field) == value for field, value in expected.items())
 
 
 def utcnow() -> datetime:
@@ -44,6 +69,18 @@ def get_or_create_evidence(
     """Reuse evidence with the same deterministic provenance identity."""
     existing = db.query(models.Evidence).filter_by(provenance_hash=provenance_hash).first()
     if existing:
+        if not _matches_evidence_intent(
+            existing, source=source, content=content, metadata=metadata
+        ):
+            raise ValueError("provenance hash collision: existing evidence has different source content")
+        return existing, False
+    idempotency_key = f"evidence-provenance:{provenance_hash}"
+    existing = db.query(models.Evidence).filter_by(idempotency_key=idempotency_key).first()
+    if existing:
+        if not _matches_evidence_intent(
+            existing, source=source, content=content, metadata=metadata
+        ):
+            raise ValueError("evidence idempotency key collision: payload does not match")
         return existing, False
     evidence = models.Evidence(
         provenance_hash=provenance_hash,
@@ -59,9 +96,23 @@ def get_or_create_evidence(
         content_fingerprint=metadata.get("content_fingerprint"),
         provenance=json.dumps(metadata.get("provenance"), sort_keys=True) if metadata.get("provenance") else None,
         collection_status=metadata.get("collection_status", "collected"),
+        idempotency_key=idempotency_key,
     )
     db.add(evidence)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # This helper already owns a commit boundary. On a unique-key race,
+        # roll back and resolve the winning row so the caller can continue.
+        db.rollback()
+        existing = db.query(models.Evidence).filter_by(idempotency_key=idempotency_key).first()
+        if existing is None:
+            raise
+        if not _matches_evidence_intent(
+            existing, source=source, content=content, metadata=metadata
+        ):
+            raise ValueError("evidence idempotency key collision: payload does not match")
+        return existing, False
     db.refresh(evidence)
     return evidence, True
 
@@ -263,7 +314,12 @@ def link_evidence(
     relation_key = hashlib.sha256(
         f"{evidence.id}:{target}:{relation_type}".encode("utf-8")
     ).hexdigest()
-    existing = db.query(models.EvidenceRelationship).filter_by(relation_key=relation_key).first()
+    existing = (
+        db.query(models.EvidenceRelationship)
+        .filter_by(idempotency_key=relation_key)
+        .first()
+        or db.query(models.EvidenceRelationship).filter_by(relation_key=relation_key).first()
+    )
     if existing:
         return existing, False
     edge = models.EvidenceRelationship(
@@ -277,8 +333,23 @@ def link_evidence(
         network_connection_id=network_connection.id if network_connection else None,
         relation_type=relation_type,
         relation_key=relation_key,
+        idempotency_key=relation_key,
     )
-    db.add(edge)
+    try:
+        with db.begin_nested():
+            db.add(edge)
+            db.flush()
+    except IntegrityError:
+        db.expire_all()
+        existing = (
+            db.query(models.EvidenceRelationship)
+            .filter_by(idempotency_key=relation_key)
+            .first()
+            or db.query(models.EvidenceRelationship).filter_by(relation_key=relation_key).first()
+        )
+        if existing is None:
+            raise
+        return existing, False
     if claim:
         if relation_type == "contradicts" and claim.epistemic_state in {"observed", "supported"}:
             claim.epistemic_state = "contested"

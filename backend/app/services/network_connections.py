@@ -148,22 +148,12 @@ def _link_evidence_row(
     evidence: models.Evidence,
     relation_type: str,
 ) -> tuple[models.EvidenceRelationship, bool]:
-    if relation_type not in evidence_graph.RELATION_TYPES:
-        raise ValueError(f"invalid evidence relationship: {relation_type}")
-    relation_key = hashlib.sha256(
-        f"{evidence.id}:network_connection:{connection.id}:{relation_type}".encode("utf-8")
-    ).hexdigest()
-    existing = db.query(models.EvidenceRelationship).filter_by(relation_key=relation_key).first()
-    if existing:
-        return existing, False
-    edge = models.EvidenceRelationship(
-        evidence_id=evidence.id,
-        network_connection_id=connection.id,
+    return evidence_graph.link_evidence(
+        db,
+        evidence,
         relation_type=relation_type,
-        relation_key=relation_key,
+        network_connection=connection,
     )
-    db.add(edge)
-    return edge, True
 
 
 def attach_evidence(

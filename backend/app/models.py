@@ -615,6 +615,9 @@ class Evidence(Base):
     content = Column(Text, nullable=True)
     direction = Column(String, nullable=True)
     provenance_hash = Column(String, nullable=True, index=True)
+    # Nullable while old evidence is preserved unchanged; new idempotent
+    # writers populate this unique key instead of relying on legacy hashes.
+    idempotency_key = Column(String, nullable=True, unique=True)
     confidence = Column(Float, nullable=False, default=0.0)
     created_at = Column(DateTime, default=utcnow)
     scenario_prediction_id = Column(Integer, ForeignKey("scenario_predictions.id"), nullable=True)
@@ -683,6 +686,9 @@ class EvidenceRelationship(Base):
     )
     relation_type = Column(String, nullable=False)
     relation_key = Column(String, nullable=False, index=True)
+    # New link writes use a unique key. Historical relation_key values remain
+    # untouched because old databases may contain duplicates.
+    idempotency_key = Column(String, nullable=True, unique=True)
     created_at = Column(DateTime, default=utcnow, nullable=False)
 
     evidence = relationship("Evidence", back_populates="claim_links")

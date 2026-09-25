@@ -1,6 +1,6 @@
 from app import models
 from app.services.observer_engine import ObserverEngine
-from app.services import opportunity_engine
+from app.services import opportunity_engine, reality_memory
 
 
 def test_collector_evidence_deduplicates_and_changed_content_is_historical(db):
@@ -23,6 +23,8 @@ def test_collector_evidence_deduplicates_and_changed_content_is_historical(db):
     assert same.id == first.id
     assert db.query(models.Signal).count() == 1
     assert db.query(models.Evidence).count() == 1
+    first_evidence = db.query(models.Evidence).one()
+    assert first_evidence.idempotency_key is not None
 
     changed = observer.observe(
         "Contractors manually lose hours every day now.",
@@ -34,6 +36,9 @@ def test_collector_evidence_deduplicates_and_changed_content_is_historical(db):
     assert changed.supersedes_signal_id == first.id
     assert db.query(models.Signal).count() == 2
     assert db.query(models.Evidence).count() == 2
+    evidence_keys = [row.idempotency_key for row in db.query(models.Evidence).all()]
+    assert all(evidence_keys)
+    assert len(set(evidence_keys)) == 2
 
 
 def test_pattern_opportunity_creation_is_idempotent_and_history_is_deduplicated(db):
@@ -86,5 +91,29 @@ def test_new_economic_evidence_updates_existing_opportunity(db):
     assert second_opportunity.id == first_opportunity.id
     assert db.query(models.Opportunity).filter_by(pattern_id=pattern.id).count() == 1
     assert db.query(models.Evidence).filter_by(opportunity_id=first_opportunity.id).count() == 2
+    opportunity_evidence_keys = [
+        row.idempotency_key
+        for row in db.query(models.Evidence).filter_by(opportunity_id=first_opportunity.id).all()
+    ]
+    assert all(opportunity_evidence_keys)
+    assert len(set(opportunity_evidence_keys)) == 2
     assert db.query(models.OpportunityEvent).filter_by(opportunity_id=first_opportunity.id, event_type="created").count() == 1
     assert db.query(models.OpportunityEvent).filter_by(opportunity_id=first_opportunity.id, event_type="evidence_added").count() == 1
+
+
+def test_reality_memory_evidence_has_stable_identity(db):
+    signal = models.Signal(source="manual", content="A specific observed claim.")
+    belief = models.Belief(statement="A testable belief supported by a signal.")
+    db.add_all([signal, belief])
+    db.commit()
+    db.refresh(signal)
+    db.refresh(belief)
+
+    item = {"signal_id": signal.id, "content": "A specific observed claim."}
+    first = reality_memory.record_evidence(db, belief, [item])
+    repeated = reality_memory.record_evidence(db, belief, [item])
+
+    assert len(first) == 1
+    assert repeated == []
+    assert first[0].idempotency_key == f"belief-signal:{belief.id}:{signal.id}"
+    assert db.query(models.Evidence).filter_by(belief_id=belief.id, signal_id=signal.id).count() == 1
