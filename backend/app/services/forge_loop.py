@@ -100,7 +100,7 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
     import os
     from datetime import datetime, timezone
     from app import models as _models
-    from app.services import evidence_graph, network_connections
+    from app.services import evidence_graph, network_connections, network_substrate_adapter, world_graph
 
     cycle = _models.CycleRun(started_at=datetime.now(timezone.utc), status="RUNNING")
     db.add(cycle)
@@ -202,11 +202,47 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         except Exception:
             pass
 
-    # 9.5. Legacy substrate tables are retained for existing installations,
-    #      but the canonical cycle no longer copies records into them. New
-    #      relationships live on NetworkConnection rows over their source
-    #      records.
-    substrate_summary = {"entities_created": 0, "relations_created": 0}
+    # 9.5. Refresh the additive substrate projections from their existing
+    #      source-of-truth tables. These adapters only write typed references,
+    #      relations, and provenance events; legacy payloads remain authoritative.
+    substrate_summary = {
+        "entities_created": 0,
+        "relations_created": 0,
+        "events_created": 0,
+        "ambiguous_links": 0,
+        "network_connections_projected": 0,
+        "network_connections_unresolved": 0,
+        "network_truth_waiting_for_evidence": 0,
+    }
+    try:
+        intelligence_projection = world_graph.sync_intelligence_path(db, limit=100)
+        operational_projection = world_graph.sync_action_outcome_learning_path(db, limit=100)
+        network_projection = network_substrate_adapter.sync_network_connections(db, limit=100)
+        substrate_summary["entities_created"] = (
+            intelligence_projection["entities_created"]
+            + operational_projection["entities_created"]
+        )
+        substrate_summary["relations_created"] = (
+            intelligence_projection["relations_created"]
+            + operational_projection["relations_created"]
+        )
+        substrate_summary["events_created"] = operational_projection["events_created"]
+        substrate_summary["events_created"] += network_projection["events_created"]
+        substrate_summary["ambiguous_links"] = operational_projection["ambiguous_links"]
+        substrate_summary["network_connections_projected"] = network_projection["projected_connections"]
+        substrate_summary["network_connections_unresolved"] = network_projection["unresolved_connections"]
+        substrate_summary["network_truth_waiting_for_evidence"] = network_projection[
+            "epistemic_state_pending_evidence"
+        ]
+        substrate_summary["entities_created"] += network_projection["entities_created"]
+        substrate_summary["relations_created"] += network_projection["relations_created"]
+        db.commit()
+    except Exception as exc:
+        stage_errors["substrate_adapters"] = str(exc)
+        try:
+            db.rollback()
+        except Exception:
+            pass
 
     # 10. Money Engine: classify monetization models, flag opportunities
     #    needing revenue validation. Identification only — see
@@ -378,6 +414,11 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         "patterns_found": len(patterns),
         "substrate_entities_created": substrate_summary["entities_created"],
         "substrate_relations_created": substrate_summary["relations_created"],
+        "substrate_events_created": substrate_summary["events_created"],
+        "substrate_ambiguous_legacy_links": substrate_summary["ambiguous_links"],
+        "substrate_network_connections_projected": substrate_summary["network_connections_projected"],
+        "substrate_network_connections_unresolved": substrate_summary["network_connections_unresolved"],
+        "substrate_network_truth_waiting_for_evidence": substrate_summary["network_truth_waiting_for_evidence"],
         "beliefs_updated": beliefs_updated,
         "predictions_created": predictions_created,
         "predictions_resolved": len(resolved_predictions),

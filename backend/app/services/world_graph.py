@@ -74,6 +74,8 @@ def seed_core_types(db: Session) -> int:
             "signal", "pattern", "belief", "claim", "research_question", "opportunity",
             "provider", "service_listing", "domain_record", "outcome", "customer", "person",
             "organization", "resource", "capability", "tool", "agent", "project", "market", "relation",
+            "action", "learning_event", "booking_request", "decision", "experiment", "product",
+            "repair_work_item",
         },
         "relation_type": {
             "derived_from", "supports", "possible_match", "co_occurs_with", "informs", "informed_by",
@@ -83,7 +85,9 @@ def seed_core_types(db: Session) -> int:
             "entity_created", "relation_created", "signal_ingested", "state_changed",
             "capability_test_passed", "capability_test_failed", "type_status_changed",
             "entity_identity_changed", "entity_merged", "entity_archived",
-            "entity_source_refreshed",
+            "entity_source_refreshed", "action_attempt_started", "action_attempt_status_changed",
+            "outcome_recorded", "learning_recorded", "network_relation_projected",
+            "network_relation_unresolved",
         },
         "capability_type": {"tool", "workflow", "integration", "agent", "model"},
     }
@@ -110,7 +114,8 @@ def seed_core_types(db: Session) -> int:
                 schema_json = canonical_schema if category == "entity_type" and name in {
                     "signal", "pattern", "belief", "claim", "research_question", "opportunity",
                     "provider", "service_listing", "domain_record", "outcome", "customer",
-                    "relation",
+                    "relation", "action", "learning_event", "booking_request", "decision",
+                    "experiment", "product", "repair_work_item",
                 } else open_schema
                 db.add(models.TypeRegistry(
                     category=category,
@@ -283,15 +288,47 @@ def create_entity(
     return entity
 
 
-def find_canonical_entity(db: Session, entity_type: str, entity_id: int) -> models.SubstrateEntity | None:
+def find_canonical_entity(
+    db: Session,
+    entity_type: str,
+    entity_id: int,
+    *,
+    source_system: str | None = None,
+) -> models.SubstrateEntity | None:
     kind = canonical_entity_type(entity_type)
+    explicit_source = source_system is not None
+    if source_system is None:
+        adapter = CANONICAL_ADAPTERS.get(kind)
+        source_system = adapter[0].__tablename__ if adapter is not None else None
+    if source_system is not None:
+        entity = (
+            db.query(models.SubstrateEntity)
+            .filter_by(entity_type=kind, source_system=source_system, source_id=str(entity_id))
+            .order_by(models.SubstrateEntity.id.asc())
+            .first()
+        )
+        if entity is not None:
+            return entity
+        if explicit_source:
+            legacy_attrs = _dump_json(
+                {"canonical_ref": {"entity_type": kind, "entity_id": int(entity_id)}},
+                "attributes",
+            )
+            legacy = (
+                db.query(models.SubstrateEntity)
+                .filter_by(entity_type=kind, attributes=legacy_attrs)
+                .order_by(models.SubstrateEntity.id.asc())
+                .first()
+            )
+            return legacy if legacy is not None and legacy.source_system is None and legacy.identity_key is None else None
     attrs = _dump_json({"canonical_ref": {"entity_type": kind, "entity_id": int(entity_id)}}, "attributes")
-    return (
-        db.query(models.SubstrateEntity)
-        .filter_by(entity_type=kind, attributes=attrs)
-        .order_by(models.SubstrateEntity.id.asc())
-        .first()
-    )
+    query = db.query(models.SubstrateEntity).filter_by(entity_type=kind, attributes=attrs)
+    if source_system is not None:
+        query = query.filter(
+            models.SubstrateEntity.source_system.is_(None),
+            models.SubstrateEntity.identity_key.is_(None),
+        )
+    return query.order_by(models.SubstrateEntity.id.asc()).first()
 
 
 def ensure_canonical_entity(
@@ -300,20 +337,35 @@ def ensure_canonical_entity(
     entity_id: int,
     *,
     created_by: str = "canonical_adapter",
+    source_system: str | None = None,
 ) -> models.SubstrateEntity:
     """Create a minimal wrapper for an existing record, never copy its payload."""
     kind = canonical_entity_type(entity_type)
     if isinstance(entity_id, bool) or not isinstance(entity_id, int) or entity_id < 1:
         raise SubstrateError("canonical entity id must be a positive integer")
     adapter = CANONICAL_ADAPTERS.get(kind)
+    if kind == "action" and source_system == "experiments":
+        adapter = (models.Experiment, lambda row: f"{row.action_type or 'Experiment'} attempt #{row.id}")
     if adapter is None:
         raise SubstrateError(f"no canonical adapter for entity type: {kind}")
+    if source_system is not None and adapter[0].__tablename__ != source_system:
+        raise SubstrateError("source_system is not registered for this canonical entity type")
+    source_system = adapter[0].__tablename__
     row = db.query(adapter[0]).filter(adapter[0].id == entity_id).first()
     if row is None:
         raise SubstrateError(f"missing canonical record {kind}:{entity_id}")
-    existing = find_canonical_entity(db, kind, entity_id)
+    action_eligible = True
+    if kind == "action":
+        action_eligible = (
+            _is_authorized_experiment_attempt(row) if source_system == "experiments"
+            else _is_authorized_action_attempt(row)
+        )
+    if kind == "action" and not action_eligible:
+        raise SubstrateError(
+            "operational action is not a substrate Action attempt until an allowed, authorized execution has started"
+        )
+    existing = find_canonical_entity(db, kind, entity_id, source_system=source_system)
     display_name = adapter[1](row)
-    source_system = adapter[0].__tablename__
     canonical_identifier = _canonical_identifier(
         getattr(row, "canonical_url", None) or getattr(row, "external_id", None)
     )
@@ -711,8 +763,9 @@ def create_evidence(
         raise SubstrateError("tested evidence requires provenance")
     if clean_source.lower() == "pytest":
         test_meta = _parse_json(provenance_json)
-        if test_meta.get("result") != "passed" or not test_meta.get("test_ref"):
-            raise SubstrateError("test evidence must cite a passing test reference")
+        test_ref = (test_meta.get("test_ref") or "").split("::", 1)[0]
+        if test_meta.get("result") != "passed" or not _repo_file_exists(test_ref):
+            raise SubstrateError("test evidence must cite an existing passing test reference")
     evidence = models.Evidence(
         subject_kind=kind,
         subject_id=subject_id,
@@ -987,6 +1040,350 @@ def sync_intelligence_path(db: Session, *, limit: int = 100) -> dict[str, int]:
     return {"entities_created": entities_added, "relations_created": relations_added}
 
 
+def sync_action_outcome_learning_path(db: Session, *, limit: int = 100) -> dict[str, int]:
+    """Project existing authorized attempts and their measured learning path.
+
+    The operational tables remain write authority. Proposals, blocked actions,
+    and actions without a recorded start are not logical Action attempts. A
+    learning/outcome edge is added only when a unique experiment and matching
+    data scope identify it; ambiguous legacy links remain unconnected.
+    """
+    seed_core_types(db)
+    source_limit = max(1, int(limit))
+    action_rows = (
+        db.query(models.Action)
+        .filter(models.Action.started_at.isnot(None))
+        .order_by(models.Action.started_at.desc(), models.Action.id.desc())
+        .limit(source_limit)
+        .all()
+    )
+    actions = {row.id: row for row in action_rows if _is_authorized_action_attempt(row)}
+    experiment_rows = (
+        db.query(models.Experiment)
+        .filter(models.Experiment.started_at.isnot(None))
+        .order_by(models.Experiment.started_at.desc(), models.Experiment.id.desc())
+        .limit(source_limit)
+        .all()
+    )
+    experiment_ids = [row.id for row in experiment_rows]
+    existing_action_experiment_ids = {
+        experiment_id
+        for (experiment_id,) in db.query(models.Action.experiment_id)
+        .filter(models.Action.experiment_id.in_(experiment_ids or [-1]))
+        .all()
+        if experiment_id is not None
+    }
+    experiments = {
+        row.id: row
+        for row in experiment_rows
+        if row.id not in existing_action_experiment_ids and _is_authorized_experiment_attempt(row)
+    }
+    outcomes = (
+        db.query(models.Outcome)
+        .order_by(models.Outcome.observed_at.desc(), models.Outcome.id.desc())
+        .limit(source_limit)
+        .all()
+    )
+    learning_events = (
+        db.query(models.LearningEvent)
+        .order_by(models.LearningEvent.created_at.desc(), models.LearningEvent.id.desc())
+        .limit(source_limit)
+        .all()
+    )
+
+    created = {"entities_created": 0, "relations_created": 0, "events_created": 0}
+    action_entities: dict[int, models.SubstrateEntity] = {}
+    experiment_entities: dict[int, models.SubstrateEntity] = {}
+    actions_by_experiment: dict[int, list[models.SubstrateEntity]] = {}
+    outcome_entities: dict[int, models.SubstrateEntity] = {}
+    learning_entities: dict[int, models.SubstrateEntity] = {}
+
+    def ensure(kind: str, row: Any) -> models.SubstrateEntity:
+        before = find_canonical_entity(db, kind, row.id)
+        entity = ensure_canonical_entity(db, kind, row.id)
+        if before is None:
+            created["entities_created"] += 1
+        return entity
+
+    def record_event(
+        *,
+        kind: str,
+        source_row: Any,
+        entity: models.SubstrateEntity,
+        key: str,
+        payload: dict[str, Any],
+        occurred_at: datetime | None,
+    ) -> bool:
+        if db.query(models.WorldEvent).filter_by(idempotency_key=key).first() is not None:
+            return False
+        create_event(
+            db,
+            event_type=kind,
+            source="legacy_action_outcome_learning_adapter",
+            entity_id=entity.id,
+        payload={
+                **payload,
+                "source_system": source_row.__tablename__,
+                "source_id": source_row.id,
+                "source_ref": {
+                    "entity_type": entity.entity_type,
+                    "entity_id": source_row.id,
+                    "source_system": source_row.__tablename__,
+                },
+                "source_provenance": {
+                    "adapter": "legacy_action_outcome_learning_adapter",
+                    "source_system": source_row.__tablename__,
+                    "source_id": source_row.id,
+                },
+                "entity_identity_provenance": _parse_json(entity.identity_provenance),
+            },
+            occurred_at=occurred_at,
+            idempotency_key=key,
+        )
+        created["events_created"] += 1
+        return True
+
+    def record_attempt(row: Any, entity: models.SubstrateEntity, *, source_system: str, source_id: int) -> None:
+        if source_system == "actions":
+            start_key = f"action-attempt-started:actions:{source_id}"
+            status_key_prefix = f"action-attempt-status:actions:{source_id}"
+            policy = row.policy_result
+            ongoing = {"RUNNING", "PROPOSED", "APPROVAL_REQUIRED"}
+            adapter_name = row.adapter_name
+        else:
+            start_key = f"action-attempt-started:experiments:{source_id}"
+            status_key_prefix = f"action-attempt-status:experiments:{source_id}"
+            policy = row.policy_decision or row.authorization_status
+            ongoing = {"in_progress", "planned", "ready"}
+            adapter_name = None
+        record_event(
+            kind="action_attempt_started",
+            source_row=row,
+            entity=entity,
+            key=start_key,
+            payload={
+                "status": row.status,
+                "policy_result": policy,
+                "approved_at": _datetime_iso(row.approved_at),
+                "started_at": _datetime_iso(row.started_at),
+                "adapter_name": adapter_name,
+            },
+            occurred_at=row.started_at,
+        )
+        if row.status not in ongoing:
+            previous_state_events = (
+                db.query(models.WorldEvent)
+                .filter_by(event_type="action_attempt_status_changed", entity_id=entity.id)
+                .order_by(models.WorldEvent.id.desc())
+                .all()
+            )
+            previous_status = next((
+                prior_payload.get("status")
+                for prior_payload in (_parse_json(event.payload) for event in previous_state_events)
+                if prior_payload.get("source_system") == source_system
+            ), None)
+            record_event(
+                kind="action_attempt_status_changed",
+                source_row=row,
+                entity=entity,
+                key=f"{status_key_prefix}:{row.status}",
+                payload={
+                    "from_status": previous_status,
+                    "status": row.status,
+                    "verification_state": getattr(row, "verification_state", None),
+                    "completed_at": _datetime_iso(row.completed_at),
+                },
+                occurred_at=row.completed_at or row.started_at,
+            )
+
+    for row in actions.values():
+        experiment_entity = (
+            find_canonical_entity(db, "action", row.experiment_id, source_system="experiments")
+            if row.experiment_id is not None else None
+        )
+        entity = experiment_entity or ensure("action", row)
+        action_entities[row.id] = entity
+        if row.experiment_id is not None:
+            actions_by_experiment.setdefault(row.experiment_id, []).append(entity)
+        record_attempt(row, entity, source_system="actions", source_id=row.id)
+
+    for row in experiments.values():
+        before = find_canonical_entity(db, "action", row.id, source_system="experiments")
+        entity = ensure_canonical_entity(
+            db, "action", row.id, created_by="legacy_action_outcome_learning_adapter",
+            source_system="experiments",
+        )
+        if before is None:
+            created["entities_created"] += 1
+        experiment_entities[row.id] = entity
+        actions_by_experiment.setdefault(row.id, []).append(entity)
+        record_attempt(row, entity, source_system="experiments", source_id=row.id)
+
+    for row in outcomes:
+        entity = outcome_entities[row.id] = ensure("outcome", row)
+        record_event(
+            kind="outcome_recorded",
+            source_row=row,
+            entity=entity,
+            key=f"outcome-recorded:{row.id}",
+            payload={
+                "outcome_type": row.outcome_type,
+                "verification_state": row.verification_state,
+                "data_scope": row.data_scope,
+                "observed_at": _datetime_iso(row.observed_at),
+            },
+            occurred_at=row.observed_at,
+        )
+
+    for row in learning_events:
+        entity = learning_entities[row.id] = ensure("learning_event", row)
+        record_event(
+            kind="learning_recorded",
+            source_row=row,
+            entity=entity,
+            key=f"learning-recorded:{row.id}",
+            payload={
+                "experiment_id": row.experiment_id,
+                "data_scope": row.data_scope,
+                "created_at": _datetime_iso(row.created_at),
+            },
+            occurred_at=row.created_at,
+        )
+
+    outcomes_by_experiment_scope: dict[tuple[int, str], list[models.Outcome]] = {}
+    for row in outcomes:
+        if row.experiment_id is not None:
+            outcomes_by_experiment_scope.setdefault(
+                (row.experiment_id, (row.data_scope or "").upper()), []
+            ).append(row)
+
+    ambiguous_links = 0
+    for outcome in outcomes:
+        linked_entity: models.SubstrateEntity | None = None
+        link_basis: str | None = None
+        if outcome.action_id is not None:
+            linked_entity = action_entities.get(outcome.action_id)
+            if linked_entity is not None:
+                link_basis = "outcome.action_id"
+        elif outcome.experiment_id is not None:
+            candidates = actions_by_experiment.get(outcome.experiment_id, [])
+            if len(candidates) == 1:
+                linked_entity, link_basis = candidates[0], "shared_experiment_id"
+            elif len(candidates) > 1:
+                ambiguous_links += 1
+            elif outcome.experiment_id in existing_action_experiment_ids:
+                ambiguous_links += 1
+        if linked_entity is None:
+            continue
+        if _ensure_operational_relation(
+            db,
+            outcome_entities[outcome.id],
+            linked_entity,
+            key=f"outcome:{outcome.id}:derived_from:action-entity:{linked_entity.id}",
+            adapter="action_outcome_learning",
+            source_ref={"entity_type": "outcome", "entity_id": outcome.id, "source_system": "outcomes"},
+            related_ref=_source_identity_ref(linked_entity),
+            link_basis=link_basis,
+        ):
+            created["relations_created"] += 1
+
+    for learning in learning_events:
+        if learning.experiment_id is None:
+            continue
+        scope = (learning.data_scope or "").upper()
+        candidates = outcomes_by_experiment_scope.get((learning.experiment_id, scope), [])
+        if len(candidates) != 1:
+            if len(candidates) > 1:
+                ambiguous_links += 1
+            continue
+        outcome = candidates[0]
+        if _ensure_operational_relation(
+            db,
+            learning_entities[learning.id],
+            outcome_entities[outcome.id],
+            key=f"learning:{learning.id}:derived_from:outcome:{outcome.id}",
+            adapter="action_outcome_learning",
+            source_ref={"entity_type": "learning_event", "entity_id": learning.id, "source_system": "learning_events"},
+            related_ref={"entity_type": "outcome", "entity_id": outcome.id, "source_system": "outcomes"},
+            link_basis="shared_experiment_id_and_data_scope",
+        ):
+            created["relations_created"] += 1
+
+    db.flush()
+    return {**created, "ambiguous_links": ambiguous_links}
+
+
+def _is_authorized_action_attempt(row: models.Action) -> bool:
+    if row.started_at is None:
+        return False
+    if row.policy_result == "ALLOW":
+        return True
+    return row.policy_result == "REQUIRE_APPROVAL" and row.approved_at is not None
+
+
+def _is_authorized_experiment_attempt(row: models.Experiment) -> bool:
+    if row.started_at is None or row.status in {"blocked", "abandoned"}:
+        return False
+    if row.policy_decision == "block":
+        return False
+    if row.requires_owner_approval and row.approved_at is None:
+        return False
+    if row.authorization_status == "allowed" and row.authorized_at is not None:
+        return True
+    if row.requires_owner_approval and row.approved_at is not None:
+        return True
+    return row.policy_decision == "allow" and bool(row.execution_allowed)
+
+
+def _datetime_iso(value: datetime | None) -> str | None:
+    return value.isoformat() if value is not None else None
+
+
+def _source_identity_ref(entity: models.SubstrateEntity) -> dict[str, Any]:
+    source_id: Any = entity.source_id
+    if isinstance(source_id, str) and source_id.isdigit():
+        source_id = int(source_id)
+    return {
+        "entity_type": entity.entity_type,
+        "entity_id": source_id,
+        "source_system": entity.source_system,
+    }
+
+
+def _ensure_operational_relation(
+    db: Session,
+    source: models.SubstrateEntity,
+    related: models.SubstrateEntity,
+    *,
+    key: str,
+    adapter: str,
+    source_ref: dict[str, Any],
+    related_ref: dict[str, Any],
+    link_basis: str,
+) -> bool:
+    before = _find_idempotent_relation(db, source.id, related.id, "derived_from", key)
+    if before is not None:
+        return False
+    create_relation(
+        db,
+        from_entity_id=source.id,
+        to_entity_id=related.id,
+        relation_type="derived_from",
+        attributes={
+            "adapter": adapter,
+            "source_ref": source_ref,
+            "related_ref": related_ref,
+            "link_basis": link_basis,
+            "source_identity": {"source_system": source.source_system, "source_id": source.source_id},
+            "related_identity": {"source_system": related.source_system, "source_id": related.source_id},
+        },
+        truth_state="hypothesized",
+        created_by="legacy_action_outcome_learning_adapter",
+        idempotency_key=key,
+    )
+    return True
+
+
 def _ensure_relation(
     db: Session,
     subject: models.SubstrateEntity,
@@ -1148,7 +1545,8 @@ def _has_test_or_source_provenance(evidence: models.Evidence) -> bool:
     provenance = evidence.provenance or ""
     if evidence.source and evidence.source.lower() == "pytest":
         data = _parse_json(provenance)
-        return data.get("result") == "passed" and bool(data.get("test_ref"))
+        test_ref = (data.get("test_ref") or "").split("::", 1)[0]
+        return data.get("result") == "passed" and _repo_file_exists(test_ref)
     return bool(provenance.strip())
 
 
@@ -1208,7 +1606,14 @@ CANONICAL_ADAPTERS: dict[str, tuple[type, Any]] = {
     "provider": (models.Provider, lambda row: _canonical_display(row, "business_name", "name")),
     "service_listing": (models.ServiceListing, lambda row: _canonical_display(row, "title")),
     "domain_record": (models.DomainRecord, lambda row: _canonical_display(row, "title")),
-    "outcome": (models.Outcome, lambda row: _canonical_display(row, "qualitative_result")),
+    "booking_request": (models.BookingRequest, lambda row: f"Booking request #{row.id}"),
+    "decision": (models.Decision, lambda row: _canonical_display(row, "title")),
+    "experiment": (models.Experiment, lambda row: _canonical_display(row, "action")),
+    "action": (models.Action, lambda row: f"{row.action_type or 'Action'} attempt #{row.id}"),
+    "outcome": (models.Outcome, lambda row: f"{row.outcome_type or 'Outcome'} #{row.id}"),
+    "learning_event": (models.LearningEvent, lambda row: f"Learning event #{row.id}"),
+    "product": (models.Product, lambda row: _canonical_display(row, "name")),
+    "repair_work_item": (models.RepairWorkItem, lambda row: _canonical_display(row, "asset_label")),
     "customer": (models.Customer, lambda row: _canonical_display(row, "name")),
     "relation": (models.WorldRelation, lambda row: f"{row.relation_type} relation #{row.id}"),
 }

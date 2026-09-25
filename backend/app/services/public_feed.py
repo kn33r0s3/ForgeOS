@@ -413,7 +413,14 @@ def build_public_feed(
             relations=[
                 schemas.PublicFeedRelation(entity_type=left_type, entity_id=connection.left_id, relation="left_side"),
                 schemas.PublicFeedRelation(entity_type=right_type, entity_id=connection.right_id, relation="right_side"),
-            ],
+            ] + (
+                [schemas.PublicFeedRelation(
+                    entity_type="relation",
+                    entity_id=connection.relation_id,
+                    relation="substrate_relation",
+                )]
+                if connection.relation_id is not None else []
+            ),
         ))
 
     for outcome in outcomes:

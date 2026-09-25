@@ -1400,6 +1400,7 @@ def list_network_connections(db: Session = Depends(get_db)):
     return [
         {
             "id": row.id,
+            "substrate_relation_id": row.relation_id,
             "left_kind": row.left_kind,
             "left_id": row.left_id,
             "relation_type": row.relation_type or "possible_match",

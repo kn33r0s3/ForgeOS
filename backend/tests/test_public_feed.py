@@ -356,11 +356,24 @@ def test_public_feed_composes_connections_but_keeps_endpoint_visibility_gates(db
     db.add_all([second, private_edge])
     db.commit()
 
+    from app.services import network_substrate_adapter
+    network_substrate_adapter.sync_network_connections(db)
+    db.commit()
+
     feed = build_public_feed(db, limit=100, kind="connection")
     visible_ids = {item.entity_id for item in feed}
     assert visible_ids == {first.id, second.id}
     assert all(item.epistemic_state == "hypothesized" for item in feed)
     assert next(item for item in feed if item.entity_id == first.id).relation_type == "possible_match"
+    by_id = {item.entity_id: item for item in feed}
+    for source_connection in (first, second):
+        projected = next(
+            relation for relation in by_id[source_connection.id].relations
+            if relation.relation == "substrate_relation"
+        )
+        assert (projected.entity_type, projected.entity_id) == (
+            "relation", source_connection.relation_id
+        )
 
     context = build_public_feed(
         db,

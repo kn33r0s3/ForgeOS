@@ -1226,6 +1226,7 @@ class DomainRecordCreated(DomainRecordOut):
 
 class PublicConnectionOut(BaseModel):
     id: int
+    substrate_relation_id: Optional[int] = None
     left_kind: str
     left_id: int
     relation_type: str = "possible_match"

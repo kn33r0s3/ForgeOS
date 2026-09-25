@@ -411,6 +411,16 @@ def test_registry_evidence_and_relation_validations_fail_closed(db):
             source="simulated fixture",
             provenance={"url": "https://example.org/not-real"},
         )
+    with pytest.raises(world_graph.SubstrateError, match="existing passing test reference"):
+        world_graph.create_evidence(
+            db,
+            subject_kind="entity",
+            subject_id=entity.id,
+            claim="A test reference that does not exist cannot support this.",
+            support_level="tested",
+            source="pytest",
+            provenance={"test_ref": "backend/tests/missing_test.py::test_missing", "result": "passed"},
+        )
     with pytest.raises(world_graph.SubstrateError, match="event may reference"):
         world_graph.create_event(
             db,

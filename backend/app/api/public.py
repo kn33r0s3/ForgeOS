@@ -355,6 +355,7 @@ def list_public_connections(db: Session = Depends(get_db)):
     return [
         schemas.PublicConnectionOut(
             id=row.id,
+            substrate_relation_id=row.relation_id,
             left_kind=row.left_kind,
             left_id=row.left_id,
             relation_type=_connection_graph_state(db, row)[0],
@@ -433,6 +434,7 @@ def record_public_connection_response(
     relation_type, epistemic_state = _connection_graph_state(db, connection)
     return schemas.PublicConnectionOut(
         id=connection.id,
+        substrate_relation_id=connection.relation_id,
         left_kind=connection.left_kind,
         left_id=connection.left_id,
         relation_type=relation_type,
