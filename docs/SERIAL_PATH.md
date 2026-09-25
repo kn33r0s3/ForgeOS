@@ -10,7 +10,7 @@ Vercel, when `DATABASE_URL` is unset, uses `sqlite:////tmp/forge.db`. That file 
 
 ## Now
 
-S11 is complete. S12 is open: turn typed feed relations into safe, scoped network-context navigation.
+S11 and S12 are complete. S13 is open: generalize governed source discovery beyond the current single-source clearance.
 S10 remains evidence-gated for real provider verification and operator-submitted bookings; that does not block network engineering. Never seed providers, prices, bookings, or outcomes. The footer domain and contact mailbox stay pending until the operator supplies real details.
 Production was last reported healthy on 2026-09-25; production state has not been rechecked in this turn. Local code and tests are not proof of a live deployment.
 
@@ -52,7 +52,7 @@ S9. Public copy and build.
 Forge stays the name. Nepal stays the first geography. Pending domain and pending mailbox stay until the operator supplies real ones.
 `src/lib/content.test.ts` and `npm run build` pass before a push.
 
-S10. One pilot, then stop.
+S10. One verified provider pilot.
 A provider exists only if a person supplied evidence. A booking exists only if the operator submitted it.
 No fabricated pilot data. This real-world pilot gate does not end Forge engineering.
 
@@ -60,7 +60,7 @@ S11. Generalized public Network Feed. COMPLETE.
 Project existing public signals/claims, questions, patterns, beliefs, evidence-linked opportunity hypotheses, verified actors/capabilities, open work records, public connections, and real recorded outcomes into one chronological API. Keep canonical records in their current tables, preserve type/provenance/relations, and enforce each source's existing visibility gate. The root page is the feed. No popularity or trust score.
 Acceptance: `/api/public/feed` passes integration tests for heterogeneous records, provenance, relationships, empty state, and private/sandbox exclusion; the browser shows the feed on desktop and mobile; build/typecheck pass.
 
-S12. Feed context navigation.
+S12. Feed context navigation. COMPLETE.
 Feed relations open a scoped feed view around that typed entity reference, composed only from entries that already pass their original public visibility rules. Preserve privacy for provider contact fields, booking requests, internal actions, and unpublished outcomes.
 Acceptance: entity context includes its public record and related public items, rejects incomplete filters, cannot use a public edge to reveal a hidden endpoint, and can be cleared back to the whole feed.
 

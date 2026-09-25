@@ -3,7 +3,7 @@ export const SITE = {
   legalName: "Forge",
   domain: "Domain pending verification",
   url: "",
-  email: "hello@pending-domain.local",
+  email: "",
   location: "Starting in Nepal",
   tagline: "A network of real work, evidence, and outcomes.",
   description:

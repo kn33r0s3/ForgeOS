@@ -58,6 +58,17 @@ export function ProjectForm() {
     [],
   );
 
+  if (!SITE.email) {
+    return (
+      <div className="rounded-xl border border-line bg-surface p-6" role="status">
+        <p className="font-mono text-micro uppercase tracking-[0.12em] text-cyan">Contact mailbox pending</p>
+        <p className="mt-3 text-sm leading-relaxed text-muted">
+          This inquiry form is paused until Forge has a monitored mailbox. No personal details are collected, sent, or stored here.
+        </p>
+      </div>
+    );
+  }
+
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;

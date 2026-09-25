@@ -67,18 +67,16 @@ export function SiteFooter() {
           >
             Explore the network
           </Link>
-          <a
-            href={`mailto:${SITE.email}`}
-            className="text-sm text-muted transition-colors duration-150 hover:text-cyan"
-          >
-            {SITE.email}
-          </a>
-          <a
-            href={SITE.url}
-            className="text-sm text-muted transition-colors duration-150 hover:text-cyan"
-          >
-            {SITE.domain}
-          </a>
+          {SITE.email ? (
+            <a href={`mailto:${SITE.email}`} className="text-sm text-muted transition-colors duration-150 hover:text-cyan">
+              {SITE.email}
+            </a>
+          ) : <span className="text-sm text-muted">Contact mailbox pending</span>}
+          {SITE.url ? (
+            <a href={SITE.url} className="text-sm text-muted transition-colors duration-150 hover:text-cyan">
+              {SITE.domain}
+            </a>
+          ) : <span className="text-sm text-muted">{SITE.domain}</span>}
         </div>
       </Container>
       <Container className="flex flex-col gap-2 border-t border-line py-5 font-mono text-micro uppercase tracking-[0.12em] text-dim sm:flex-row sm:items-center sm:justify-between">

@@ -1,11 +1,11 @@
-# CURRENT_FOCUS.md — S12: Feed Context Navigation
+# CURRENT_FOCUS.md — S13: Governed Source Registry
 
 **Last updated**: 2026-09-25
 **Work order**: [SERIAL_PATH.md](SERIAL_PATH.md) is the only queue.
 
 ## Current state
 
-S11's generalized public feed is implemented. S12 adds scoped network context from typed feed relations. S10's pilot remains evidence-gated; that gate does not block engineering. No provider, price, booking, or outcome may be invented.
+S11's generalized public feed and S12's scoped network context are implemented. S13 makes the governed source layer extensible beyond the single currently cleared GovInfo document. S10's pilot remains evidence-gated; that gate does not block engineering. No provider, price, booking, or outcome may be invented.
 
 The feed uses existing source visibility rules and shows chronological activity without popularity or trust scores. Context queries return only already-public feed items. Local tests/build do not prove production deployment. Production was last reported healthy on 2026-09-25 and has not been rechecked in this session.
 
@@ -15,11 +15,18 @@ The feed uses existing source visibility rules and shows chronological activity 
 - [x] Feed entries retain canonical IDs, epistemic state, provenance, and typed relations.
 - [x] Feed integration tests, UI, build/typecheck, and desktop/mobile browser verification pass.
 
-## S12 acceptance
+## S12 completed
 
-- [ ] Feed item and relation links open a scoped network context.
-- [ ] Only public related records appear; hidden endpoints and incomplete filters return no data/validation error.
-- [ ] Context can be cleared; typecheck/build and browser interaction pass.
+- [x] Feed item and relation links open a scoped network context.
+- [x] Only public related records appear; hidden endpoints and incomplete filters return no data/validation error.
+- [x] Context can be cleared; typecheck/build and browser interaction pass.
+
+## S13 acceptance
+
+- [ ] Source approvals are represented in one validated registry with scope, geography/category, evidence references, and review/expiry dates.
+- [ ] Collector dispatch uses the registry; unknown, expired, changed-terms, robots-blocked, or redirect-out-of-scope URLs fail closed.
+- [ ] Existing GovInfo clearance still passes; an unapproved source cannot fetch.
+- [ ] Feed provenance retains the source identity and canonical reference.
 
 ## S10 pilot gate
 

@@ -104,6 +104,15 @@ describe("Forge public content", () => {
       assert.equal(/\b\/tools\b/.test(blob), false, blob);
     }
   });
+
+  it("does not present placeholder contact details as live destinations", () => {
+    assert.equal(SITE.email, "");
+    assert.equal(SITE.url, "");
+    const footer = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../components/layout/site-footer.tsx"), "utf8");
+    const form = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../components/pages/project-form.tsx"), "utf8");
+    assert.match(footer, /Contact mailbox pending/);
+    assert.match(form, /No personal details are collected, sent, or stored here/);
+  });
 });
 
 describe("Forge public root", () => {

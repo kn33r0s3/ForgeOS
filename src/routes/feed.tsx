@@ -5,12 +5,16 @@ import { Container } from "@/components/layout/container";
 import { loadPublicFeed, type PublicFeedItem } from "@/lib/content";
 
 export const Route = createFileRoute("/feed")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    entity_type: typeof search.entity_type === "string" ? search.entity_type : undefined,
-    entity_id: Number.isInteger(Number(search.entity_id)) && Number(search.entity_id) > 0
+  validateSearch: (search: Record<string, unknown>): { entity_type?: string; entity_id?: number } => {
+    const entityType = typeof search.entity_type === "string" ? search.entity_type : undefined;
+    const entityId = Number.isInteger(Number(search.entity_id)) && Number(search.entity_id) > 0
       ? Number(search.entity_id)
-      : undefined,
-  }),
+      : undefined;
+    return {
+      ...(entityType ? { entity_type: entityType } : {}),
+      ...(entityId ? { entity_id: entityId } : {}),
+    };
+  },
   component: NetworkFeedPage,
 });
 
