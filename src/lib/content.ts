@@ -229,26 +229,25 @@ function getPublicApiCandidates(path: string): string[] {
     candidates.unshift(`${backendBase}/public${path}`);
   }
 
-  if (typeof window !== "undefined") {
-    const origin = window.location.origin;
-    const sameOrigin = `${origin}${relativePath}`;
-    if (!candidates.includes(sameOrigin)) {
-      candidates.push(sameOrigin);
-    }
-  }
-
   return [...new Set(candidates)];
 }
 
 async function fetchJson<T>(url: string): Promise<T | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12_000);
   try {
-    const response = await fetch(url, { headers: { Accept: "application/json" } });
+    const response = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
     if (!response.ok) {
       return null;
     }
     return (await response.json()) as T;
   } catch {
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -262,11 +261,11 @@ async function fetchJsonFromCandidates<T>(path: string): Promise<T | null> {
   return null;
 }
 
-export async function loadDiscoveries(limit = 20): Promise<PublicDiscovery[]> {
+export async function loadDiscoveries(limit = 20): Promise<PublicDiscovery[] | null> {
   const payload = await fetchJsonFromCandidates<PublicDiscovery[]>(
     `/discoveries?limit=${encodeURIComponent(String(limit))}`,
   );
-  return Array.isArray(payload) ? payload : [];
+  return Array.isArray(payload) ? payload : null;
 }
 
 export async function loadPublicFeed(
@@ -281,19 +280,19 @@ export async function loadPublicFeed(
   return Array.isArray(payload) ? payload : null;
 }
 
-export async function loadPublicDomain(): Promise<PublicDomainRecord[]> {
+export async function loadPublicDomain(): Promise<PublicDomainRecord[] | null> {
   const payload = await fetchJsonFromCandidates<PublicDomainRecord[]>("/domain");
-  return Array.isArray(payload) ? payload : [];
+  return Array.isArray(payload) ? payload : null;
 }
 
-export async function loadPublicMatches(): Promise<PublicMatch[]> {
+export async function loadPublicMatches(): Promise<PublicMatch[] | null> {
   const payload = await fetchJsonFromCandidates<PublicMatch[]>("/matches");
-  return Array.isArray(payload) ? payload : [];
+  return Array.isArray(payload) ? payload : null;
 }
 
-export async function loadPublicConnections(): Promise<PublicConnection[]> {
+export async function loadPublicConnections(): Promise<PublicConnection[] | null> {
   const payload = await fetchJsonFromCandidates<PublicConnection[]>("/connections");
-  return Array.isArray(payload) ? payload : [];
+  return Array.isArray(payload) ? payload : null;
 }
 
 export async function loadRevenueMiner(): Promise<PublicRevenueMiner | null> {
@@ -302,9 +301,9 @@ export async function loadRevenueMiner(): Promise<PublicRevenueMiner | null> {
   return payload;
 }
 
-export async function loadPublicAlerts(limit = 20): Promise<PublicAlert[]> {
+export async function loadPublicAlerts(limit = 20): Promise<PublicAlert[] | null> {
   const payload = await fetchJsonFromCandidates<PublicAlert[]>(`/alerts?limit=${limit}`);
-  return Array.isArray(payload) ? payload : [];
+  return Array.isArray(payload) ? payload : null;
 }
 
 export async function loadPublicTrust(subjectKind: "provider" | "domain_record", subjectId: number): Promise<PublicTrust | null> {
@@ -379,7 +378,7 @@ export async function createPublicDomainRecord(input: {
   return null;
 }
 
-export async function loadProviders(filters?: { q?: string; category?: string; city?: string }): Promise<ProviderRecord[]> {
+export async function loadProviders(filters?: { q?: string; category?: string; city?: string }): Promise<ProviderRecord[] | null> {
   const params = new URLSearchParams();
   if (filters?.q?.trim()) params.set("q", filters.q.trim());
   if (filters?.category && filters.category !== "All") params.set("category", filters.category);
@@ -401,11 +400,12 @@ export async function loadProviders(filters?: { q?: string; category?: string; c
   }>>(`/services${suffix}`);
 
   if (!Array.isArray(servicePayload)) {
-    return [];
+    return null;
   }
 
   const providerMap = new Map<number, ProviderRecord>();
   const listingsMap = new Map<number, PublicServiceListing[]>();
+  let providerFetchSucceeded = false;
 
   for (const item of servicePayload) {
     if (!item || typeof item.provider_id !== "number") {
@@ -448,6 +448,7 @@ export async function loadProviders(filters?: { q?: string; category?: string; c
     if (!Array.isArray(payload)) {
       continue;
     }
+    providerFetchSucceeded = true;
 
     for (const item of payload) {
       const providerId = item.id ?? 0;
@@ -486,7 +487,7 @@ export async function loadProviders(filters?: { q?: string; category?: string; c
     }
   }
 
-  return [];
+  return providerFetchSucceeded ? [] : null;
 }
 
 export async function createBookingRequest(input: {

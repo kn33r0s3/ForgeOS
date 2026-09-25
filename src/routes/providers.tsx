@@ -29,6 +29,8 @@ function ProvidersPage() {
   const [category, setCategory] = useState("All");
   const navigate = useNavigate();
   const [providers, setProviders] = useState<ProviderRecord[]>([]);
+  const [providerLoadState, setProviderLoadState] = useState<"loading" | "ready" | "unavailable">("loading");
+  const [reloadVersion, setReloadVersion] = useState(0);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedListingId, setSelectedListingId] = useState<number | null>(null);
   const [booking, setBooking] = useState({
@@ -46,11 +48,18 @@ function ProvidersPage() {
 
   useEffect(() => {
     let active = true;
+    setProviderLoadState("loading");
     void loadProviders().then((loaded) => {
       if (!active) {
         return;
       }
+      if (loaded === null) {
+        setProviders([]);
+        setProviderLoadState("unavailable");
+        return;
+      }
       setProviders(loaded);
+      setProviderLoadState("ready");
       const requested = search.provider ? loaded.find((provider) => provider.id === search.provider) ?? null : loaded[0] ?? null;
       const firstListingId = requested?.listings[0]?.id ?? null;
       setSelectedId(requested?.id ?? null);
@@ -59,7 +68,7 @@ function ProvidersPage() {
     return () => {
       active = false;
     };
-  }, [search.provider]);
+  }, [reloadVersion, search.provider]);
 
   const filteredProviders = useMemo(() => {
     return providers.filter((provider) => {
@@ -178,7 +187,14 @@ function ProvidersPage() {
           </div>
 
           <div className="space-y-4">
-            {filteredProviders.length > 0 ? (
+            {providerLoadState === "loading" ? (
+              <p className="rounded-2xl border border-line bg-raised p-6 text-muted">Checking verified provider records…</p>
+            ) : providerLoadState === "unavailable" ? (
+              <div className="rounded-2xl border border-line bg-raised p-6 text-muted" role="alert">
+                <p>The provider service is unavailable. Forge could not check the public listings, so none are being reported as missing.</p>
+                <button type="button" onClick={() => setReloadVersion((version) => version + 1)} className="mt-3 min-h-10 rounded-full border border-line px-4 text-sm text-fg">Retry</button>
+              </div>
+            ) : filteredProviders.length > 0 ? (
               filteredProviders.map((provider) => (
                 <button
                   key={provider.id}
@@ -218,7 +234,7 @@ function ProvidersPage() {
               ))
             ) : (
               <div className="rounded-2xl border border-line bg-raised p-6 text-muted">
-                No live records match that search right now. The service catalog is still waiting for verified backend data.
+                No verified public providers match this search right now.
               </div>
             )}
           </div>
@@ -286,7 +302,11 @@ function ProvidersPage() {
             </>
           ) : (
             <div className="rounded-2xl border border-line bg-void p-4 text-sm text-muted">
-              {search.provider
+              {providerLoadState === "loading"
+                ? "Checking the selected provider…"
+                : providerLoadState === "unavailable"
+                  ? "Provider details are unavailable until the public service responds."
+                  : search.provider
                 ? "That provider is not on the public verified list."
                 : "No verified provider is selected. Choose one from the list when a public record exists."}
             </div>

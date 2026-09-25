@@ -46,27 +46,34 @@ function DomainPage() {
   const [disputeNote, setDisputeNote] = useState("");
   const [responseNote, setResponseNote] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [apiUnavailable, setApiUnavailable] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [chosenProvider, setChosenProvider] = useState<number | null>(null);
   const [requesterName, setRequesterName] = useState("");
   const [requestedService, setRequestedService] = useState("");
   const navigate = useNavigate();
 
   async function load() {
+    setIsLoading(true);
+    setEvents(null);
+    setTrust(null);
     const [domain, matched, changes, linked] = await Promise.all([
       loadPublicDomain(),
       loadPublicMatches(),
       loadPublicAlerts(),
       loadPublicConnections(),
     ]);
-    setRows(domain);
-    setMatches(matched);
-    setAlerts(changes);
-    setConnections(linked);
-    const latest = domain[0];
+    setApiUnavailable(domain === null || matched === null || changes === null || linked === null);
+    setRows(domain ?? []);
+    setMatches(matched ?? []);
+    setAlerts(changes ?? []);
+    setConnections(linked ?? []);
+    const latest = domain?.[0];
     if (latest) {
       setEvents(await loadPublicDomainEvents(latest.id));
       setTrust(await loadPublicTrust("domain_record", latest.id));
     }
+    setIsLoading(false);
   }
 
   useEffect(() => {
@@ -184,6 +191,12 @@ function DomainPage() {
         <p className="font-mono text-micro uppercase tracking-[0.14em] text-cyan">Our records</p>
         <h1 className="mt-2 font-display text-4xl tracking-tight text-fg">Work, offers, and trades posted here</h1>
         <p className="mt-3 text-muted">A price appears only if the person stated it. Closing a post requires the token from creation and a note about what happened.</p>
+        {apiUnavailable ? (
+          <div className="mt-5 rounded-2xl border border-line bg-void p-5" role="alert">
+            <p className="text-sm text-muted">Some public network services are unavailable. Missing records below are not being treated as confirmed empty results.</p>
+            <button type="button" onClick={() => void load()} className="mt-3 min-h-10 rounded-full border border-line px-4 text-sm text-fg">Retry</button>
+          </div>
+        ) : null}
 
         <form onSubmit={postRecord} className="mt-8 space-y-3 rounded-[2rem] border border-line bg-raised p-6">
           <select value={kind} onChange={(event) => setKind(event.target.value as Kind)} className="min-h-12 w-full rounded-xl border border-line bg-void px-4 text-fg">
@@ -232,7 +245,7 @@ function DomainPage() {
 
         <div className="mt-8 space-y-3">
           <h2 className="font-display text-2xl text-fg">Recorded changes</h2>
-          {alerts.length === 0 ? <p className="text-sm text-muted">No recorded change yet.</p> : alerts.map((alert) => (
+          {isLoading ? <p className="text-sm text-muted">Checking recorded changes…</p> : !apiUnavailable && alerts.length === 0 ? <p className="text-sm text-muted">No recorded change yet.</p> : alerts.map((alert) => (
             <p key={alert.id} className="text-sm text-muted">{alert.text}</p>
           ))}
         </div>
@@ -243,7 +256,8 @@ function DomainPage() {
             <p className="mt-2 text-sm text-muted">
               {trust
                 ? `${trust.recorded_requests} request(s) recorded · ${trust.disputes} dispute(s)`
-                : "No trust record is available for the latest post."}
+                : apiUnavailable ? "Trust data is unavailable while the public service is failing."
+                  : "No trust record is available for the latest post."}
             </p>
             {trust?.unknowns.length ? <p className="mt-2 text-xs text-muted">{trust.unknowns.join(" · ")}</p> : null}
           </section>
@@ -254,14 +268,14 @@ function DomainPage() {
                 {events.completions} completion(s) · {events.payments.length} payment event(s) · {events.disputes.length} dispute event(s)
               </p>
             ) : (
-              <p className="mt-2 text-sm text-muted">No event timeline is recorded yet.</p>
+              <p className="mt-2 text-sm text-muted">{apiUnavailable ? "The event timeline could not be checked." : "No event timeline is recorded yet."}</p>
             )}
           </section>
         </div>
 
         <div className="mt-8 space-y-3">
           <h2 className="font-display text-2xl text-fg">Public connections</h2>
-          {connections.length === 0 ? (
+          {!isLoading && !apiUnavailable && connections.length === 0 ? (
             <p className="text-sm text-muted">No public connection is recorded yet.</p>
           ) : connections.map((connection) => (
             <article key={connection.id} className="rounded-2xl border border-line bg-void p-5">
@@ -292,7 +306,7 @@ function DomainPage() {
         <div className="mt-8 space-y-3">
           <h2 className="font-display text-2xl text-fg">Recorded matches</h2>
           <p className="text-sm text-muted">A match is a shared city or shared words in our records. Missing price, availability, or a completed outcome stays listed as unknown.</p>
-          {matches.length === 0 ? <p className="text-sm text-muted">No open post to match.</p> : matches.map((match) => (
+          {!isLoading && !apiUnavailable && matches.length === 0 ? <p className="text-sm text-muted">No open post to match.</p> : matches.map((match) => (
             <article key={match.need_id} className="rounded-2xl border border-line bg-void p-5">
               <h3 className="font-display text-xl text-fg">{match.need_title}</h3>
               {match.candidates.length === 0 ? <p className="mt-2 text-sm text-muted">No recorded counterparty.</p> : match.candidates.map((candidate) => (
@@ -313,7 +327,7 @@ function DomainPage() {
         </div>
 
         <div className="mt-8 space-y-3">
-          {rows.length === 0 ? (
+          {!isLoading && !apiUnavailable && rows.length === 0 ? (
             <p className="rounded-2xl border border-line bg-void p-5 text-muted">No open jobs, offers, or trades are in our records.</p>
           ) : rows.map((row) => (
             <article key={row.id} className="rounded-2xl border border-line bg-void p-5">
