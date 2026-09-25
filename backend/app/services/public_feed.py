@@ -556,6 +556,16 @@ def build_public_feed(
             visible_connection_ids.add(connection.id)
             public_references.add(("network_connection", connection.id))
 
+    public_titles: dict[tuple[str, int], str] = {}
+    for item in items:
+        public_titles[(item.entity_type, item.entity_id)] = item.title
+        for reference in item.relations:
+            if reference.entity_type == "signal":
+                public_titles.setdefault((reference.entity_type, reference.entity_id), item.title)
+    for outcome in outcomes:
+        if (outcome.qualitative_result or "").strip():
+            public_titles[("outcome", outcome.id)] = "Recorded outcome"
+
     for connection in connections:
         if connection.id not in visible_connection_ids:
             continue
@@ -566,16 +576,20 @@ def build_public_feed(
         graph = relation_read_model(db, connection)
         relation_type = graph["relation_type"]
         truth_state = graph["epistemic_state"]
+        left_title = public_titles.get(
+            (left_type, connection.left_id),
+            connection.left_kind.replace("_", " ").title(),
+        )
+        right_title = public_titles.get(
+            (right_type, connection.right_id),
+            connection.right_kind.replace("_", " ").title(),
+        )
         items.append(schemas.PublicFeedItem(
             id=f"connection:{connection.id}",
             kind="connection",
             entity_type="network_connection",
             entity_id=connection.id,
-            title=(
-                f"{connection.left_kind.replace('_', ' ').title()} "
-                f"{relation_type.replace('_', ' ')} "
-                f"{connection.right_kind.replace('_', ' ').title()}"
-            ),
+            title=f"{left_title} · {relation_type.replace('_', ' ')} · {right_title}",
             summary=connection.reason,
             occurred_at=connection.created_at,
             updated_at=connection.updated_at,

@@ -20,7 +20,7 @@ export function Hero() {
             <span className="text-muted">for real work.</span>
           </h1>
           <p className="mt-6 max-w-xl text-lede text-muted">
-            Services are one path that is usable now. Work, offers, trades, evidence, and outcomes stay in the same world. Nepal is the first geography.
+            Services are an executable path through the network when verified listings and an operating contact route are available. Work, offers, trades, evidence, and outcomes stay in the same world. Nepal is the first geography.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
             <Button asChild size="lg">
@@ -38,7 +38,7 @@ export function Hero() {
           </div>
           <p className="mt-10 flex items-center gap-2 font-mono text-micro uppercase tracking-[0.14em] text-dim">
             <span className="size-1.5 rounded-full bg-cyan" />
-            backend-backed listings · live service flow
+            backend-backed listings · verified provider gate
           </p>
         </div>
         <div className="relative min-h-80 overflow-hidden rounded-xl border border-line bg-raised p-5 shadow-[var(--shadow-border)] sm:min-h-96 lg:min-h-[28rem]">

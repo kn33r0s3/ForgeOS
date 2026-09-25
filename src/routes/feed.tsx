@@ -160,6 +160,18 @@ function NetworkFeedPage() {
     () => filter === "all" ? items : items.filter((item) => item.kind === filter),
     [filter, items],
   );
+  const titleByReference = useMemo(() => {
+    const titles = new Map<string, string>();
+    for (const item of items) {
+      titles.set(`${item.entity_type}:${item.entity_id}`, item.title);
+      for (const relation of item.relations) {
+        if (relation.entity_type === "signal") {
+          titles.set(`${relation.entity_type}:${relation.entity_id}`, item.title);
+        }
+      }
+    }
+    return titles;
+  }, [items]);
 
   return (
     <main className="min-h-full py-10 sm:py-14">
@@ -242,9 +254,9 @@ function NetworkFeedPage() {
           {visible.map((item) => {
             const Icon = KIND_ICONS[item.kind] ?? Radio;
             const safeSourceUrl = item.source_url?.startsWith("https://") ? item.source_url : null;
-              const relatedProviderId = item.kind === "actor"
-                ? item.entity_id
-                : item.relations.find((relation) => relation.entity_type === "provider")?.entity_id;
+            const relatedProviderId = item.kind === "actor"
+              ? item.entity_id
+              : item.relations.find((relation) => relation.entity_type === "provider")?.entity_id;
             return (
               <article key={item.id} className="rounded-2xl border border-line bg-void p-5 sm:p-6">
                 <div className="flex items-start gap-3">
@@ -275,7 +287,7 @@ function NetworkFeedPage() {
                             search={{ entity_type: relation.entity_type, entity_id: relation.entity_id }}
                             className="text-cyan hover:underline"
                           >
-                            {RELATION_LABELS[relation.relation] ?? "Related to"} · {ENTITY_LABELS[relation.entity_type] ?? "Network record"}
+                            {RELATION_LABELS[relation.relation] ?? "Related to"} · {titleByReference.get(`${relation.entity_type}:${relation.entity_id}`) ?? ENTITY_LABELS[relation.entity_type] ?? "Network record"}
                           </Link>
                         ))}
                       </div>

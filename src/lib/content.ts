@@ -7,7 +7,7 @@ export const SITE = {
   location: "Starting in Nepal",
   tagline: "A network of real work, evidence, and outcomes.",
   description:
-    "Forge is a world of record. People, organizations, capabilities, needs, work, services, offers, trades, and outcomes stay in one network. Verified services are one path that is usable now. Nepal is the first geography, not the boundary of the system.",
+    "Forge is a world of record. People, organizations, capabilities, needs, work, services, offers, trades, and outcomes stay in one network. Verified services are an executable path through the network when public listings are available. Nepal is the first geography, not the boundary of the system.",
 } as const;
 
 export const NAV = [

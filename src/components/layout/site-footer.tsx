@@ -26,7 +26,7 @@ export function SiteFooter() {
         <div className="sm:col-span-2 lg:col-span-1">
           <BrandMark />
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
-            Forge is the network. Services are one path through it, and the one that can be used now. Nepal is where that path starts.
+            Forge is the network. Services are one executable path through it when public listings and contact routes are available. Nepal is where that path starts.
           </p>
         </div>
         <div className="flex flex-col gap-3">

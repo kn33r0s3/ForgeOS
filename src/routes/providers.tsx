@@ -163,7 +163,7 @@ function ProvidersPage() {
           <div>
             <p className="font-mono text-micro uppercase tracking-[0.14em] text-cyan">Services, one path</p>
             <h1 className="mt-2 font-display text-4xl tracking-tight text-fg">Verified services</h1>
-            <p className="mt-2 max-w-xl text-sm text-muted">This list is the usable service path. It is not the whole network. A provider appears only when that record is verified and public.</p>
+            <p className="mt-2 max-w-xl text-sm text-muted">This is the verified-service path within the network. A provider appears only when that record is verified and public.</p>
           </div>
 
           <div className="flex flex-col gap-4 rounded-2xl border border-line bg-raised p-4 sm:flex-row">

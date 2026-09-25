@@ -529,7 +529,12 @@ def test_public_feed_composes_connections_but_keeps_endpoint_visibility_gates(db
     visible_ids = {item.entity_id for item in feed}
     assert visible_ids == {first.id, second.id}
     assert all(item.epistemic_state == "hypothesized" for item in feed)
-    assert next(item for item in feed if item.entity_id == first.id).relation_type == "possible_match"
+    first_item = next(item for item in feed if item.entity_id == first.id)
+    assert first_item.relation_type == "possible_match"
+    assert "A public test need" in first_item.title
+    assert "Verified test actor" in first_item.title
+    second_item = next(item for item in feed if item.entity_id == second.id)
+    assert "Recorded outcome" in second_item.title
     by_id = {item.entity_id: item for item in feed}
     for source_connection in (first, second):
         projected = next(

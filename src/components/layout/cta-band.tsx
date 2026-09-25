@@ -6,7 +6,7 @@ import { Container } from "./container";
 import { Eyebrow } from "./eyebrow";
 
 export function CtaBand({
-  eyebrow = "One path that is usable now",
+  eyebrow = "Services, one path through the network",
   title = (
     <>
       Verified services
