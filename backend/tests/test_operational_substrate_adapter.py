@@ -379,6 +379,7 @@ def test_canonical_cycle_runs_the_registered_substrate_adapters(db):
     assert summary["substrate_capability_events_created"] > 0
     assert summary["substrate_legacy_records_projected"] >= 4
     assert summary["substrate_evidence_relationships_projected"] >= 1
+    assert summary["substrate_research_question_relations_projected"] >= 1
     assert world_graph.find_canonical_entity(db, "signal", signal.id) is not None
     assert world_graph.find_canonical_entity(db, "action", action.id) is not None
     assert world_graph.find_canonical_entity(db, "outcome", outcome.id) is not None
@@ -390,4 +391,8 @@ def test_canonical_cycle_runs_the_registered_substrate_adapters(db):
     assert world_graph.find_canonical_entity(db, "decision", decision.id) is not None
     assert evidence_link.substrate_relation_id is not None
     assert db.get(models.WorldRelation, evidence_link.substrate_relation_id).relation_type == "derived_from"
+    question_relation = db.query(models.WorldRelation).filter_by(
+        idempotency_key=f"legacy-research-question:{research_question.id}:source_claim_id:derived-from-v1"
+    ).one()
+    assert question_relation.relation_type == "derived_from"
     assert db.query(models.ForgeCapability).filter_by(status="proposed").count() > 0

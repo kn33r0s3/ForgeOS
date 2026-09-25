@@ -372,6 +372,8 @@ class ForgeCycleSummary(BaseModel):
     substrate_legacy_evidence_batch_seen: int = 0
     substrate_evidence_relationships_projected: int = 0
     substrate_evidence_relationships_unresolved: int = 0
+    substrate_research_question_relations_projected: int = 0
+    substrate_research_question_relations_unresolved: int = 0
     scenario: dict = {"status": "not_run"}  # SECONDARY, additive sub-result — never overwrites the fields above it; {"status": "completed"|"failed", "reason"?, "signals_reviewed", "signals_classified"}
     lessons_memory: Optional[dict] = None  # v2.10 — durable lesson consolidation + recall snapshot for this cycle
     orchestration: Optional[dict] = None  # v2.11 — canonical E2E flow advancement + honest pipeline snapshot

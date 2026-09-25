@@ -106,6 +106,8 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         evidence_relationship_substrate_adapter,
         legacy_evidence_substrate_adapter,
         legacy_record_substrate_adapter,
+        market_signal_substrate_adapter,
+        research_question_relation_substrate_adapter,
         network_connections,
         network_substrate_adapter,
         public_services_substrate_adapter,
@@ -236,6 +238,8 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         "legacy_evidence_batch_seen": 0,
         "evidence_relationships_projected": 0,
         "evidence_relationships_unresolved": 0,
+        "research_question_relations_projected": 0,
+        "research_question_relations_unresolved": 0,
     }
     try:
         intelligence_projection = world_graph.sync_intelligence_path(db, limit=100)
@@ -251,6 +255,9 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         evidence_relationship_projection = evidence_relationship_substrate_adapter.sync_evidence_relationships(
             db,
             limit=max(1, min(int(os.environ.get("FORGEOS_SUBSTRATE_LINK_BATCH", "250")), 2000)),
+        )
+        research_question_relation_projection = (
+            research_question_relation_substrate_adapter.sync_research_question_sources(db, limit=250)
         )
         substrate_summary["entities_created"] = (
             intelligence_projection["entities_created"]
@@ -300,6 +307,21 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         substrate_summary["relations_created"] += evidence_relationship_projection["relations_created"]
         substrate_summary["evidence_relationships_projected"] = evidence_relationship_projection["relations_created"]
         substrate_summary["evidence_relationships_unresolved"] = evidence_relationship_projection["unresolved_records"]
+        substrate_summary["entities_created"] += research_question_relation_projection["entities_created"]
+        substrate_summary["relations_created"] += research_question_relation_projection["relations_created"]
+        substrate_summary["research_question_relations_projected"] = research_question_relation_projection["relations_created"]
+        substrate_summary["research_question_relations_unresolved"] = research_question_relation_projection["unresolved_links"]
+        market_signal_projection = market_signal_substrate_adapter.sync_market_signal_signals(db, limit=250)
+        substrate_summary["market_signal_signals_seen"] = market_signal_projection["signals_seen"]
+        substrate_summary["market_signal_entities_created"] = market_signal_projection["entities_created"]
+        substrate_summary["market_signal_relations_created"] = market_signal_projection["relations_created"]
+        substrate_summary["market_signal_events_created"] = market_signal_projection["events_created"]
+        substrate_summary["market_signal_evidence_created"] = market_signal_projection["evidence_created"]
+        substrate_summary["market_signal_signals_unresolved"] = market_signal_projection["unresolved_signals"]
+        substrate_summary["entities_created"] += market_signal_projection["entities_created"]
+        substrate_summary["relations_created"] += market_signal_projection["relations_created"]
+        substrate_summary["events_created"] += market_signal_projection["events_created"]
+        substrate_summary["substrate_evidence_created"] += market_signal_projection["evidence_created"]
         db.commit()
     except Exception as exc:
         stage_errors["substrate_adapters"] = str(exc)
@@ -496,6 +518,8 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         "substrate_legacy_evidence_batch_seen": substrate_summary["legacy_evidence_batch_seen"],
         "substrate_evidence_relationships_projected": substrate_summary["evidence_relationships_projected"],
         "substrate_evidence_relationships_unresolved": substrate_summary["evidence_relationships_unresolved"],
+        "substrate_research_question_relations_projected": substrate_summary["research_question_relations_projected"],
+        "substrate_research_question_relations_unresolved": substrate_summary["research_question_relations_unresolved"],
         "beliefs_updated": beliefs_updated,
         "predictions_created": predictions_created,
         "predictions_resolved": len(resolved_predictions),

@@ -74,14 +74,16 @@ def seed_core_types(db: Session) -> int:
         "entity_type": {
             "signal", "pattern", "belief", "claim", "research_question", "opportunity",
             "provider", "service_listing", "domain_record", "outcome", "customer", "person",
-            "organization", "resource", "capability", "tool", "agent", "project", "market", "relation",
-            "action", "learning_event", "booking_request", "decision", "experiment", "scenario_prediction",
+            "organization", "resource", "capability", "tool", "agent", "project", "market",
+            "market_signal", "market_segment", "relation", "action", "learning_event",
+            "booking_request", "decision", "experiment", "scenario_prediction",
             "evidence_record", "product",
             "repair_work_item",
         },
         "relation_type": {
             "derived_from", "supports", "possible_match", "co_occurs_with", "informs", "informed_by",
             "offered_by", "owned_by", "part_of", "enables", "observed_with",
+            "signals", "tracks", "responds_to",
         },
         "event_type": {
             "entity_created", "relation_created", "signal_ingested", "state_changed",
@@ -90,8 +92,9 @@ def seed_core_types(db: Session) -> int:
             "entity_source_refreshed", "action_attempt_started", "action_attempt_status_changed",
             "outcome_recorded", "learning_recorded", "network_relation_projected",
             "network_relation_unresolved", "capability_source_refreshed",
+            "market_signal_observed", "market_signal_aggregated", "market_signal_related",
         },
-        "capability_type": {"tool", "workflow", "integration", "agent", "model"},
+        "capability_type": {"tool", "workflow", "integration", "agent", "model", "market_signal_analysis"},
     }
     inserted = 0
     db.info[_CORE_SEED_AUTH_KEY] = True
