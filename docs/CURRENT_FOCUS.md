@@ -1,4 +1,4 @@
-# Current focus — NetworkConnection → substrate relation adapter
+# Current focus — public Feed provenance closure
 
 **Architecture authority:** [`FORGE_SUBSTRATE_BLUEPRINT.md`](../FORGE_SUBSTRATE_BLUEPRINT.md)
 **Claim ledger:** [`CAPABILITY_QUEUE.md`](CAPABILITY_QUEUE.md)
@@ -26,10 +26,14 @@ an authorized `Experiment` attempt is a fallback only when no corresponding
 `Action` row exists. Outcomes and learning remain linked through existing
 source identifiers and explicit provenance.
 
-The active claim maps the existing `NetworkConnection` workflow into substrate
-relations while preserving the workflow row as the migration-stage write
-authority. Feed and Network stay projections; endpoint visibility and source
-provenance remain required.
+The `NetworkConnection` adapter is complete: existing workflow rows project to
+typed substrate relations, and Feed items expose those relation references
+without bypassing public endpoint visibility.
+
+The active claim audits each public Feed item for an explicit trace path to its
+source identity and any available substrate relation/event and evidence. Feed
+remains a read-only projection; source tables stay authoritative during this
+migration slice, and private evidence content must not leak through traversal.
 
 Earlier S10–S14 and BP work remains recorded in `SERIAL_PATH.md` as history.
 Its prior `NetworkConnection`-first substrate direction is superseded by the

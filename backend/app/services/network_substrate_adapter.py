@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import timezone
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -275,7 +276,15 @@ def _record_projection_event(
 
 
 def _iso(value: Any) -> str | None:
-    return value.isoformat() if value is not None else None
+    if value is None:
+        return None
+    # SQLite drops timezone metadata; treat persisted naive timestamps as UTC
+    # so their event fingerprints survive a close/reopen cycle.
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    else:
+        value = value.astimezone(timezone.utc)
+    return value.isoformat()
 
 
 def _record_unresolved(db: Session, connection: models.NetworkConnection, reason: str) -> int:

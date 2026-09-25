@@ -218,11 +218,7 @@ def test_network_projection_survives_database_restart_and_remains_idempotent(tmp
         connection = restarted_session.get(models.NetworkConnection, connection_id)
         assert connection.relation_id == relation_id
         assert repeated["relations_created"] == 0
-        projection_payloads = [
-            row.payload for row in restarted_session.query(models.WorldEvent)
-            .filter_by(event_type="network_relation_projected").all()
-        ]
-        assert repeated["events_created"] == 0, projection_payloads
+        assert repeated["events_created"] == 0
         assert restarted_session.query(models.WorldRelation).count() == 1
         assert restarted_session.query(models.WorldEvent).filter_by(
             event_type="network_relation_projected"
