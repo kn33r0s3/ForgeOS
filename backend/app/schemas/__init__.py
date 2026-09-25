@@ -1168,12 +1168,14 @@ class PublicFeedItem(BaseModel):
     epistemic_state: str
     source: Optional[str] = None
     source_url: Optional[str] = None
+    relation_type: Optional[str] = None
     relations: list[PublicFeedRelation] = Field(default_factory=list)
 
 
 class PublicMatchCandidate(BaseModel):
     kind: str
     id: int
+    entity_type: Optional[str] = None
     name: str
     where: Optional[str] = None
     stated_price: Optional[str] = None
@@ -1224,9 +1226,11 @@ class PublicConnectionOut(BaseModel):
     id: int
     left_kind: str
     left_id: int
+    relation_type: str = "possible_match"
     right_kind: str
     right_id: int
     state: str
+    epistemic_state: str = "hypothesized"
     reason: str
     known: Optional[str] = None
     unknown: Optional[str] = None

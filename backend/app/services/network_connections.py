@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.api.public import _match_for_need
+from app.services import world_graph
 
 STATES = (
     "candidate",
@@ -88,6 +89,7 @@ def can_advance(current: str, nxt: str) -> bool:
 
 def scan_candidates(db: Session, limit: int = 50) -> list[models.NetworkConnection]:
     created: list[models.NetworkConnection] = []
+    world_graph.seed_core_types(db)
     needs = (
         db.query(models.DomainRecord)
         .filter(models.DomainRecord.status == "open")
@@ -101,23 +103,16 @@ def scan_candidates(db: Session, limit: int = 50) -> list[models.NetworkConnecti
         for candidate in match.candidates:
             if len(created) >= limit:
                 break
-            exists = (
-                db.query(models.NetworkConnection)
-                .filter_by(
-                    left_kind="domain_record",
-                    left_id=need.id,
-                    right_kind=candidate.kind,
-                    right_id=candidate.id,
-                )
-                .filter(models.NetworkConnection.state != "failed")
-                .first()
+            candidate_type = candidate.entity_type or candidate.kind
+            exists = world_graph.find_match_workflow(
+                db, "domain_record", need.id, candidate_type, candidate.id
             )
-            if exists:
+            if exists is not None and exists.state != "failed":
                 continue
             row = models.NetworkConnection(
                 left_kind="domain_record",
                 left_id=need.id,
-                right_kind=candidate.kind,
+                right_kind=candidate_type,
                 right_id=candidate.id,
                 state="candidate",
                 reason="; ".join(candidate.reasons),
@@ -132,10 +127,22 @@ def scan_candidates(db: Session, limit: int = 50) -> list[models.NetworkConnecti
                 or None,
                 unknown="; ".join(candidate.unknowns),
                 agreement_gap="A person must propose, authorize, and accept before this is an agreement.",
-                public_visible=False,
             )
             db.add(row)
             db.flush()
+            left_entity = world_graph.ensure_canonical_entity(db, "domain_record", need.id)
+            right_entity = world_graph.ensure_canonical_entity(db, candidate_type, candidate.id)
+            relation = world_graph.create_relation(
+                db,
+                from_entity_id=left_entity.id,
+                to_entity_id=right_entity.id,
+                relation_type="possible_match",
+                attributes={"workflow": "network_connection", "workflow_id": row.id},
+                truth_state="hypothesized",
+                created_by="network_connections",
+                idempotency_key=f"network-connection:{row.id}:possible-match",
+            )
+            row.relation_id = relation.id
             _hypothesis(db, row, need)
             created.append(row)
     if created:

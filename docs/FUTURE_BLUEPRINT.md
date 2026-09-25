@@ -4,6 +4,51 @@ This is the ceiling. It is the system Forge is being built toward, written the w
 
 Today’s running system is the seed of this one system. The blueprint does not replace it with a second product.
 
+## 0. North Star and shared substrate
+
+ForgeOS is a continuously expanding value-creation system. Its loop is:
+
+```text
+OBSERVE → UNDERSTAND → CONNECT → DISCOVER → CREATE → TEST → ACT
+→ COORDINATE → CAPTURE VALUE → MEASURE OUTCOMES → LEARN
+→ EXPAND CAPABILITIES → repeat
+```
+
+Revenue is a primary objective alongside other practical and social value. The
+system must be able to discover activity without waiting for someone to post a
+job or listing. Services are the bootstrap vertical; Nepal is the first launch
+and density-building geography. Neither defines the permanent product boundary.
+
+Forge’s shared substrate is a **world/value graph** over existing canonical
+records. It represents typed entities, relations, context, time, state,
+evidence, provenance, uncertainty, capabilities, resources, possibilities,
+actions, and outcomes. A relation is not automatically a fact. Possible,
+hypothesized, tested, supported, refuted, and unknown remain distinguishable.
+The first implementation extends the existing typed `NetworkConnection`
+record and endpoint adapters; it does not copy provider, signal, opportunity,
+action, or outcome records into a second graph store.
+
+The architectural areas are:
+
+1. **North Star:** continuously discover and create legitimate value, then use real outcomes to improve the next cycle.
+2. **Universal substrate:** canonical records connected by open relation types, typed endpoint adapters, evidence, provenance, uncertainty, context, and time.
+3. **World/value graph:** a composable model for observations, concepts, actors, organizations, resources, capabilities, possibilities, actions, and outcomes; new kinds extend adapters rather than require a redesign.
+4. **Feed:** a chronological, visibility-gated projection of meaningful network changes, not a second store or a listings-only surface.
+5. **Network:** people, organizations, tools, agents, resources, projects, markets, knowledge, capabilities, and work, according to evidence and authorization.
+6. **Intelligence:** research and inference keep their evidence chain and uncertainty; weak signals can be investigated without being promoted to fact.
+7. **Capability factory:** a missing ability becomes a bounded research/build/integrate/test problem; successful abilities can be reused elsewhere in Forge.
+8. **Autonomous execution:** internal transitions can proceed from sufficient evidence; contact, transactions, publication, and other commitments use explicit authorization and an available channel.
+9. **Economic engine:** evaluate expected value against execution, transaction, compute, risk, and opportunity costs; financial activity is one domain over the same substrate.
+10. **Learning and compounding:** actual responses and outcomes improve shared knowledge and can compose into new capabilities and opportunities.
+11. **Open-world extensibility:** categories, relation types, geographies, domains, and actor kinds are data and adapters, not a closed set of workflows.
+12. **Nepal-first launch:** build density across multiple practical and economic domains in Nepal without making Nepal a permanent data-model boundary.
+13. **Global expansion:** add reviewed sources, scopes, and endpoint adapters through the same evidence and policy gates; do not preload invented activity.
+14. **Constitutional boundaries:** no fabricated people, evidence, prices, transactions, or outcomes; no unlawful access, privacy bypass, spam, unauthorized financial action, or unrestricted self-modification of security controls.
+
+These are architecture constraints, not a finite feature checklist. After each
+capability is integrated, trace the observe-to-learning loop again and build the
+next missing capability that can be implemented legitimately.
+
 ---
 
 ForgeOS is not merely a registry of what exists. It continuously searches for economically and socially useful connections that could exist, checks them against evidence and constraints, and helps authorized parties make them real.
@@ -468,25 +513,32 @@ Each step is done only when the chain can be shown on the real database: data, s
 
 ---
 
-## 13. What “finished” means
+## 13. How capability maturity is measured
 
-Forge is finished enough when a person in Nepal can find work, hire help, post an offer, trade, and get a true status, while the machine has already been reading the world and can show a sourced opportunity the person did not have to discover alone.
+There is no terminal “finished” state while meaningful capability gaps remain.
+Maturity is measured by how much of the shared loop Forge can complete safely:
+coverage across domains, reusable capabilities, useful network density,
+evidence quality, authorized autonomy, real value captured, and learning that
+improves later work. A person in Nepal finding work or help is an important
+proof point; it is not the ceiling. The same substrate must be able to connect a
+neighborhood need, a new tool, a researched market gap, and a recorded outcome
+without turning hypotheses into facts.
 
-It is at the ceiling when that same machine also watches the wider asset surface, keeps every important claim traceable, learns from real completions and real payments, and still tells the truth when it does not know.
+## 14. Continuous capability-development loop
 
-The impossible-looking part — one world that spans a neighborhood repair and a global commodity gap, and gets more useful every time either one actually happens — is the point of the map. It is reached by growing this Forge, not by starting another one.
+`docs/SERIAL_PATH.md` carries the next near-term task and its acceptance
+evidence. Work remains sequential, but task numbers are not the architecture
+boundary or a stopping condition. After each change, rescan:
 
-## 14. The 200-day work order
+```text
+trace world → observation → representation → relation → understanding
+→ possibility → capability → opportunity → authorized action → outcome
+→ learning → capability expansion
+```
 
-`docs/SERIAL_PATH.md` is the only work order. One step at a time. `TWO_HUNDRED_DAY_COPILOT.txt` is the long session budget for that same order. If they disagree, `docs/SERIAL_PATH.md` wins. The steps follow section 12:
-
-1. The public API stays the existing FastAPI app, and a write survives a second request. On Vercel that requires `DATABASE_URL`. `/tmp/forge.db` is not the world of record.
-2. The verified service path, bookings, and honest empty lists.
-3. Needs, gaps, and lawful public sources. A headline is not an open job.
-4. Canonical beliefs, then the cockpit that reads them.
-5. The one scheduler and bounded collectors.
-6. Trust, alerts, disputes, and payments as records.
-7. One real pilot only after a person acts.
-8. Stop. No new product after the last task.
-
-Publicity stays shut until `docs/PUBLICITY_GATE.md` is checked from command output. A live health JSON is not a launch.
+For the next gap: implement it, add integrity/privacy/authorization tests,
+integrate it into the cycle or the surface that consumes it, verify the result,
+record what changed, and rescan. If a real-world credential or operator action
+is missing, record that dependency and continue with independent engineering.
+The publicity gate remains separate: health or local tests do not establish a
+launch or production deployment.

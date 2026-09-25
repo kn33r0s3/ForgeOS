@@ -107,6 +107,9 @@ def init_db():
     Base.metadata.create_all(bind=engine)
     run_migrations(engine)
     from app.services.belief_engine import repair_historical_beliefs
+    from app.services.world_graph import seed_core_types
 
     with SessionLocal() as db:
+        seed_core_types(db)
+        db.commit()
         repair_historical_beliefs(db)

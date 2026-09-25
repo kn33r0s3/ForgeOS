@@ -473,6 +473,8 @@ def test_public_match_uses_recorded_terms_and_names_unknowns(client_with_db, db)
     assert "Hill Repair" in names
     assert "Hidden Repair" not in names
     hill = next(row for row in body[0]["candidates"] if row["name"] == "Hill Repair")
+    assert hill["kind"] == "provider"
+    assert hill["entity_type"] == "provider"
     assert "same city" in hill["reasons"]
     assert "price not stated" in hill["unknowns"]
     assert hill["stated_availability"] == "weekdays"
@@ -501,6 +503,8 @@ def test_public_match_uses_recorded_terms_and_names_unknowns(client_with_db, db)
     knowledge = [row for row in again[0]["candidates"] if row["kind"] == "knowledge"]
     assert knowledge
     assert knowledge[0]["id"] == claim.id
+    assert knowledge[0]["kind"] == "knowledge"
+    assert knowledge[0]["entity_type"] == "claim"
     assert "not a verified counterparty" in knowledge[0]["unknowns"]
     assert any(item.startswith("evidence is ") for item in knowledge[0]["unknowns"])
 

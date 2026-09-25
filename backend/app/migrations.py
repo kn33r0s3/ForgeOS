@@ -86,13 +86,18 @@ def _build_expected_columns() -> dict[str, list[tuple[str, str]]]:
 
 EXPECTED_COLUMNS = _build_expected_columns()
 
-# This is intentionally narrow: the current model defines one missing indexed
-# column on an existing table. The lightweight column migration above cannot
-# recreate indexes on an already-existing SQLite table, so keep the one
-# required index explicit rather than introducing a broad schema synchronizer.
+# Column additions are safe on existing SQLite files, but they do not create
+# indexes declared on the ORM model. Keep the small set of indexes for newly
+# added query paths explicit rather than pretending create_all repairs them.
 EXPECTED_INDEXES = {
     "evidence_relationships": [
         ("ix_evidence_relationships_judgment_id", "judgment_id"),
+    ],
+    "evidence": [
+        ("ix_evidence_subject_id", "subject_id"),
+    ],
+    "network_connections": [
+        ("ix_network_connections_relation_id", "relation_id"),
     ],
 }
 

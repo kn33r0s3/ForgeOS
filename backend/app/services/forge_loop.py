@@ -186,6 +186,20 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
     #    docstring.
     discovery_summary = opportunity_engine.run_autonomous_opportunity_discovery(db)
 
+    # 9.5. The universal substrate receives typed references to the existing
+    # canonical intelligence chain. Entity data stays in its owner tables;
+    # relation rows preserve only the derivation paths and hypotheses.
+    substrate_summary = {"entities_created": 0, "relations_created": 0}
+    try:
+        from app.services import world_graph
+        substrate_summary = world_graph.sync_intelligence_path(db, limit=200)
+    except Exception as exc:
+        stage_errors["world_graph_sync"] = str(exc)
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
     # 10. Money Engine: classify monetization models, flag opportunities
     #    needing revenue validation. Identification only — see
     #    money_engine.run_money_cycle()'s docstring for the boundary.
@@ -354,6 +368,8 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         "claims_linked": linked_claim_ids,
         "network_connection_ids": network_connection_ids,
         "patterns_found": len(patterns),
+        "substrate_entities_created": substrate_summary["entities_created"],
+        "substrate_relations_created": substrate_summary["relations_created"],
         "beliefs_updated": beliefs_updated,
         "predictions_created": predictions_created,
         "predictions_resolved": len(resolved_predictions),

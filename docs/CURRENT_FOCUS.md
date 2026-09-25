@@ -1,11 +1,15 @@
-# CURRENT_FOCUS.md — S15: General Entities and Actor Capabilities
+# CURRENT_FOCUS.md — Continuous Capability Development / S15: World Relations
 
 **Last updated**: 2026-09-25
 **Work order**: [SERIAL_PATH.md](SERIAL_PATH.md) is the only queue.
 
 ## Current state
 
-S11's generalized public feed, S12's scoped context, S13's governed source registry, and S14's same-run evidence-to-network cycle are implemented. S15 audits shared actor/resource identity and generalizes typed endpoint resolution only where the canonical records and connections need it. S10 remains evidence-gated; no provider, price, booking, payment, response, or outcome may be invented.
+`docs/FUTURE_BLUEPRINT.md` defines ForgeOS as an open-ended, autonomous value-creation system. Its numbered tasks are near-term work evidence, never the system boundary or a stopping condition. Keep work serial, and rescan the full observe-to-learning loop after each integrated capability.
+
+S11's generalized public feed, S12's scoped context, S13's governed source registry, and S14's same-run evidence-to-network cycle are implemented. The S15 audit found `NetworkConnection` doubles as a match/action workflow but lacks general relation predicates, explicit epistemic state, temporal/context fields, and reusable typed endpoint adapters. This is the current implementation focus. It must extend existing canonical records, preserve public visibility gates, and avoid a second entity store.
+
+S10 remains evidence-gated; no provider, price, booking, payment, response, or outcome may be invented. Local test results are not evidence of a live deployment.
 
 The only active external clearance is one exact GovInfo document, valid through 2026-09-25 UTC. Every other collector stays disabled until its source is reviewed and entered in the registry. Local tests/build do not prove production deployment. Production was last reported healthy on 2026-09-25 and has not been rechecked in this session.
 
@@ -38,10 +42,17 @@ The only active external clearance is one exact GovInfo document, valid through 
 
 ## S15 acceptance
 
-- [ ] Feed and context references resolve to existing canonical records with each record's own visibility rules.
-- [ ] Typed connections can point to general actors/capabilities/resources without copying provider, signal, opportunity, action, or outcome data.
-- [ ] Add a shared identity record only if an evidenced cross-record identity cannot be represented safely by existing records and typed connections.
-- [ ] Tests reject dangling or private endpoint exposure and preserve provider contact privacy.
+- [x] Feed/context canonical references resolve through endpoint adapters; legacy `post` / `knowledge` labels map to existing canonical records.
+- [x] Relations have extensible predicates, direction, epistemic state, optional strength/uncertainty, evidence links, provenance, context, conditions, and validity time.
+- [x] Relation workflow state remains independent from epistemic state; supported relations require stored evidence.
+- [x] Relation-to-relation endpoints compose without copying endpoint data.
+- [x] Public feed resolves both endpoints through original visibility rules, including relation chains; a public edge cannot expose a hidden or dangling record.
+- [x] Matching preserves its response vocabulary and persists canonical endpoint types.
+- [ ] Run migration and full integration verification; then rescan for the next missing capability.
+
+## Continuous rescan
+
+After S15 passes its migration and integration tests, trace world → observation → representation → relation → understanding → possibility → capability → opportunity → authorized action → outcome → learning → capability expansion. Replace this focus with the next code-backed gap. Do not stop because S16 or another finite list ends.
 
 ## S10 pilot gate
 

@@ -239,6 +239,7 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
             schemas.PublicMatchCandidate(
                 kind="provider",
                 id=provider.id,
+                entity_type="provider",
                 name=provider.name,
                 where=provider.city,
                 stated_price=f"{primary.price_from} {primary.currency or 'NPR'}" if primary and primary.price_from else None,
@@ -273,6 +274,7 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
             schemas.PublicMatchCandidate(
                 kind="post",
                 id=other.id,
+                entity_type="domain_record",
                 name=other.title,
                 where=other.city,
                 stated_price=other.stated_price,
@@ -305,6 +307,7 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
             schemas.PublicMatchCandidate(
                 kind="knowledge",
                 id=claim.id,
+                entity_type="claim",
                 name=(signal.title or claim.statement)[:160],
                 where=signal.source,
                 stated_price=None,
@@ -348,9 +351,11 @@ def list_public_connections(db: Session = Depends(get_db)):
             id=row.id,
             left_kind=row.left_kind,
             left_id=row.left_id,
+            relation_type=_connection_graph_state(db, row)[0],
             right_kind=row.right_kind,
             right_id=row.right_id,
             state=row.state,
+            epistemic_state=_connection_graph_state(db, row)[1],
             reason=row.reason,
             known=row.known,
             unknown=row.unknown,
@@ -379,18 +384,17 @@ def _public_connection_response(db: Session, row: models.NetworkConnection) -> s
 def _public_candidate_connection(
     db: Session, record_id: int, right_kind: str, right_id: int
 ) -> models.NetworkConnection | None:
-    return (
-        db.query(models.NetworkConnection)
-        .filter_by(
-            left_kind="domain_record",
-            left_id=record_id,
-            right_kind=right_kind,
-            right_id=right_id,
-            public_visible=True,
-        )
-        .order_by(models.NetworkConnection.id.desc())
-        .first()
-    )
+    from app.services import world_graph
+
+    row = world_graph.find_match_workflow(db, "domain_record", record_id, right_kind, right_id)
+    return row if row is not None and row.public_visible else None
+
+
+def _connection_graph_state(db: Session, row: models.NetworkConnection) -> tuple[str, str]:
+    relation = db.get(models.WorldRelation, row.relation_id) if row.relation_id is not None else None
+    if relation is None:
+        return "possible_match", "hypothesized"
+    return relation.relation_type, relation.truth_state
 
 
 @router.post("/domain/{record_id}/connections/{connection_id}/response", response_model=schemas.PublicConnectionOut)
@@ -423,13 +427,16 @@ def record_public_connection_response(
         network_connections.record_response(db, connection, body.note)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
+    relation_type, epistemic_state = _connection_graph_state(db, connection)
     return schemas.PublicConnectionOut(
         id=connection.id,
         left_kind=connection.left_kind,
         left_id=connection.left_id,
+        relation_type=relation_type,
         right_kind=connection.right_kind,
         right_id=connection.right_id,
         state=connection.state,
+        epistemic_state=epistemic_state,
         reason=connection.reason,
         known=connection.known,
         unknown=connection.unknown,

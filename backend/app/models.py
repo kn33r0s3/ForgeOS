@@ -13,7 +13,7 @@ run on SQLite today and maps cleanly onto Postgres later.
 """
 
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, Text, Float, Boolean, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, Text, Float, Boolean, DateTime, ForeignKey, JSON, CheckConstraint, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -626,6 +626,13 @@ class Evidence(Base):
     content_fingerprint = Column(String, nullable=True, index=True)
     provenance = Column(Text, nullable=True)
     collection_status = Column(String, nullable=False, default="collected")
+    # Universal-substrate evidence fields. Legacy claim/opportunity links stay
+    # intact; these fields attach evidence to a substrate entity or relation.
+    subject_kind = Column(String, nullable=True)
+    subject_id = Column(Integer, nullable=True, index=True)
+    claim = Column(Text, nullable=True)
+    support_level = Column(String, nullable=True)
+    recorded_at = Column(DateTime, nullable=True)
 
     signal = relationship("Signal")
     opportunity = relationship("Opportunity", back_populates="evidence_items")
@@ -675,6 +682,121 @@ class EvidenceRelationship(Base):
     evidence = relationship("Evidence", back_populates="claim_links")
     claim = relationship("Claim", back_populates="evidence_links")
     judgment = relationship("Judgment", back_populates="evidence_links")
+
+
+class TypeRegistry(Base):
+    """Open vocabulary registry; new domains add typed rows, not ORM tables."""
+
+    __tablename__ = "type_registry"
+    __table_args__ = (
+        CheckConstraint(
+            "category IN ('entity_type','relation_type','event_type','capability_type')",
+            name="ck_type_registry_category",
+        ),
+        CheckConstraint("status IN ('proposed','active','deprecated')", name="ck_type_registry_status"),
+        UniqueConstraint("category", "type_name", name="uq_type_registry_category_name"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    category = Column(String, nullable=False)
+    type_name = Column(String, nullable=False)
+    schema_json = Column(Text, nullable=False)
+    description = Column(Text, nullable=True)
+    owner_agent = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="proposed")
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+
+
+class SubstrateEntity(Base):
+    """Generic identity and attributes for canonical or newly represented things."""
+
+    __tablename__ = "entities"
+    __table_args__ = (
+        CheckConstraint("status IN ('active','archived','merged')", name="ck_entities_status"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    entity_type = Column(String, nullable=False, index=True)
+    display_name = Column(Text, nullable=False)
+    attributes = Column(Text, nullable=False, default="{}")
+    status = Column(String, nullable=False, default="active", index=True)
+    created_by = Column(String, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+    updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+
+
+class WorldRelation(Base):
+    """Open typed relationship between two substrate entities."""
+
+    __tablename__ = "relations"
+    __table_args__ = (
+        CheckConstraint("direction IN ('directed','bidirectional')", name="ck_relations_direction"),
+        CheckConstraint(
+            "truth_state IN ('possible','hypothesized','tested','supported','refuted','unknown')",
+            name="ck_relations_truth_state",
+        ),
+        CheckConstraint("strength IS NULL OR (strength >= 0 AND strength <= 1)", name="ck_relations_strength"),
+        CheckConstraint("valid_to IS NULL OR valid_from IS NULL OR valid_to > valid_from", name="ck_relations_validity"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    from_entity_id = Column(Integer, ForeignKey("entities.id"), nullable=False, index=True)
+    to_entity_id = Column(Integer, ForeignKey("entities.id"), nullable=False, index=True)
+    relation_type = Column(String, nullable=False, index=True)
+    attributes = Column(Text, nullable=False, default="{}")
+    direction = Column(String, nullable=False, default="directed")
+    strength = Column(Float, nullable=True)
+    truth_state = Column(String, nullable=False, default="hypothesized", index=True)
+    valid_from = Column(DateTime, nullable=True)
+    valid_to = Column(DateTime, nullable=True)
+    created_by = Column(String, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+
+    from_entity = relationship("SubstrateEntity", foreign_keys=[from_entity_id])
+    to_entity = relationship("SubstrateEntity", foreign_keys=[to_entity_id])
+
+
+class WorldEvent(Base):
+    """A typed occurrence tied to an entity, relation, or the world generally."""
+
+    __tablename__ = "events"
+    __table_args__ = (
+        CheckConstraint(
+            "entity_id IS NULL OR relation_id IS NULL",
+            name="ck_events_single_subject",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True)
+    event_type = Column(String, nullable=False, index=True)
+    entity_id = Column(Integer, ForeignKey("entities.id"), nullable=True, index=True)
+    relation_id = Column(Integer, ForeignKey("relations.id"), nullable=True, index=True)
+    payload = Column(Text, nullable=False, default="{}")
+    source = Column(String, nullable=False)
+    occurred_at = Column(DateTime, nullable=False, default=utcnow)
+
+
+class ForgeCapability(Base):
+    """A reusable ability Forge proposes, builds, tests, then activates."""
+
+    __tablename__ = "capabilities"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('proposed','building','tested','active','deprecated')",
+            name="ck_capabilities_status",
+        ),
+        CheckConstraint("status != 'active' OR test_ref IS NOT NULL", name="ck_capabilities_active_test_ref"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    capability_type = Column(String, nullable=False, index=True)
+    name = Column(String, nullable=False, unique=True)
+    description = Column(Text, nullable=False)
+    status = Column(String, nullable=False, default="proposed", index=True)
+    spec_ref = Column(Text, nullable=True)
+    test_ref = Column(Text, nullable=True)
+    owner_agent = Column(String, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
 
 
 class Judgment(Base):
@@ -1718,7 +1840,7 @@ class DomainRecord(Base):
 
 
 class NetworkConnection(Base):
-    """A possible link between two records. State is explicit and never skipped."""
+    """A specialized match/action workflow over canonical record references."""
 
     __tablename__ = "network_connections"
 
@@ -1727,6 +1849,7 @@ class NetworkConnection(Base):
     left_id = Column(Integer, nullable=False, index=True)
     right_kind = Column(String, nullable=False)
     right_id = Column(Integer, nullable=False, index=True)
+    relation_id = Column(Integer, ForeignKey("relations.id"), nullable=True, index=True)
     state = Column(String, nullable=False, default="candidate", index=True)
     reason = Column(Text, nullable=False)
     evidence_reference = Column(Text, nullable=True)

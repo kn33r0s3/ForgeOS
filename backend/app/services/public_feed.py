@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app import models, schemas
+from app.services import world_graph
 
 
 _PUBLIC_CLAIM_STATES = ("observed", "supported", "contested")
@@ -49,6 +50,11 @@ def build_public_feed(
     score is introduced; source-specific visibility gates remain authoritative.
     """
     requested_kind = (kind or "").strip().lower()
+    requested_entity_type = (
+        world_graph.canonical_entity_type(entity_type, strict=False)
+        if entity_type is not None
+        else None
+    ) or entity_type
     items: list[schemas.PublicFeedItem] = []
 
     # A signal enters the public network only when it is externally sourced,
@@ -307,21 +313,25 @@ def build_public_feed(
             source="public work board",
         ))
 
-    connections = (
-        db.query(models.NetworkConnection)
-        .filter(models.NetworkConnection.public_visible.is_(True))
-        .order_by(models.NetworkConnection.updated_at.desc())
-        .limit(limit)
-        .all()
-    )
-
-    # A public edge does not make either endpoint public by itself. Validate
-    # both nodes against their original record visibility before exposing IDs.
+    # A public edge does not make either endpoint public by itself. Build the
+    # direct endpoint set from the existing per-record visibility gates.
     public_provider_ids = {
         provider.id for provider in db.query(models.Provider)
         .filter(models.Provider.public_visible.is_(True), models.Provider.is_active.is_(True))
         .filter(models.Provider.verification_status == "verified")
         .all()
+    }
+    outcomes = (
+        db.query(models.Outcome)
+        .filter(models.Outcome.source.in_(_PUBLIC_OUTCOME_SOURCES))
+        .filter(models.Outcome.data_scope == "REAL")
+        .filter(models.Outcome.qualitative_result.isnot(None))
+        .order_by(models.Outcome.observed_at.desc())
+        .limit(limit)
+        .all()
+    )
+    public_outcome_ids = {
+        outcome.id for outcome in outcomes if (outcome.qualitative_result or "").strip()
     }
     public_references = (
         {("claim", claim_id) for claim_id in public_claims}
@@ -333,39 +343,72 @@ def build_public_feed(
         | {("provider", provider_id) for provider_id in public_provider_ids}
         | {("service_listing", service_id) for service_id in public_service_ids}
         | {("domain_record", record_id) for record_id in public_domain_ids}
+        | {("outcome", outcome_id) for outcome_id in public_outcome_ids}
     )
+    connections = (
+        db.query(models.NetworkConnection)
+        .filter(models.NetworkConnection.public_visible.is_(True))
+        .order_by(models.NetworkConnection.updated_at.desc())
+        .limit(limit * 4)
+        .all()
+    )
+
+    # Relation endpoints can themselves be relations. Resolve that closure
+    # only through explicitly public links whose two endpoints are already
+    # visible. A dangling/private node cannot become public through an edge.
+    visible_connection_ids: set[int] = set()
+    pending = list(connections)
+    while pending:
+        newly_visible = []
+        for connection in pending:
+            left_type = world_graph.canonical_entity_type(connection.left_kind, strict=False)
+            right_type = world_graph.canonical_entity_type(connection.right_kind, strict=False)
+            if left_type is None or right_type is None:
+                continue
+            if (left_type, connection.left_id) in public_references and (
+                right_type, connection.right_id
+            ) in public_references:
+                newly_visible.append(connection)
+        if not newly_visible:
+            break
+        for connection in newly_visible:
+            pending.remove(connection)
+            visible_connection_ids.add(connection.id)
+            public_references.add(("network_connection", connection.id))
+
     for connection in connections:
-        if (connection.left_kind, connection.left_id) not in public_references:
+        if connection.id not in visible_connection_ids:
             continue
-        if (connection.right_kind, connection.right_id) not in public_references:
+        left_type = world_graph.canonical_entity_type(connection.left_kind, strict=False)
+        right_type = world_graph.canonical_entity_type(connection.right_kind, strict=False)
+        if left_type is None or right_type is None:
             continue
+        graph_relation = db.get(models.WorldRelation, connection.relation_id) if connection.relation_id else None
+        relation_type = graph_relation.relation_type if graph_relation else "possible_match"
+        truth_state = graph_relation.truth_state if graph_relation else "hypothesized"
         items.append(schemas.PublicFeedItem(
             id=f"connection:{connection.id}",
             kind="connection",
             entity_type="network_connection",
             entity_id=connection.id,
-            title=f"{connection.left_kind.replace('_', ' ').title()} ↔ {connection.right_kind.replace('_', ' ').title()}",
+            title=(
+                f"{connection.left_kind.replace('_', ' ').title()} "
+                f"{relation_type.replace('_', ' ')} "
+                f"{connection.right_kind.replace('_', ' ').title()}"
+            ),
             summary=connection.reason,
             occurred_at=connection.created_at,
             updated_at=connection.updated_at,
             status=connection.state,
-            epistemic_state="candidate_connection",
+            epistemic_state=truth_state,
             source="public Forge network",
+            relation_type=relation_type,
             relations=[
-                schemas.PublicFeedRelation(entity_type=connection.left_kind, entity_id=connection.left_id, relation="left_side"),
-                schemas.PublicFeedRelation(entity_type=connection.right_kind, entity_id=connection.right_id, relation="right_side"),
+                schemas.PublicFeedRelation(entity_type=left_type, entity_id=connection.left_id, relation="left_side"),
+                schemas.PublicFeedRelation(entity_type=right_type, entity_id=connection.right_id, relation="right_side"),
             ],
         ))
 
-    outcomes = (
-        db.query(models.Outcome)
-        .filter(models.Outcome.source.in_(_PUBLIC_OUTCOME_SOURCES))
-        .filter(models.Outcome.data_scope == "REAL")
-        .filter(models.Outcome.qualitative_result.isnot(None))
-        .order_by(models.Outcome.observed_at.desc())
-        .limit(limit)
-        .all()
-    )
     for outcome in outcomes:
         if not (outcome.qualitative_result or "").strip():
             continue
@@ -387,9 +430,9 @@ def build_public_feed(
     if entity_type is not None and entity_id is not None:
         items = [
             item for item in items
-            if (item.entity_type == entity_type and item.entity_id == entity_id)
+            if (item.entity_type == requested_entity_type and item.entity_id == entity_id)
             or any(
-                relation.entity_type == entity_type and relation.entity_id == entity_id
+                relation.entity_type == requested_entity_type and relation.entity_id == entity_id
                 for relation in item.relations
             )
         ]

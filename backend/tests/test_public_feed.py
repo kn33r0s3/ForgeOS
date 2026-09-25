@@ -205,3 +205,85 @@ def test_public_feed_excludes_unverified_services_and_unlinked_internal_signals(
         assert client.get("/public/feed?limit=101").status_code == 422
     finally:
         cleanup()
+
+
+def test_public_feed_composes_relations_but_keeps_endpoint_visibility_gates(db):
+    from app.services.public_feed import build_public_feed
+    from app.services.world_graph import create_relation
+
+    provider = models.Provider(
+        name="Verified test actor",
+        country="Nepal",
+        public_visible=True,
+        is_active=True,
+        verification_status="verified",
+    )
+    hidden = models.Provider(
+        name="Unverified test actor",
+        country="Nepal",
+        public_visible=True,
+        is_active=True,
+        verification_status="unverified",
+    )
+    need = models.DomainRecord(
+        kind="job",
+        title="A public test need",
+        detail="A bounded operator-submitted record.",
+        close_token_hash="test-hash",
+        status="open",
+    )
+    result = models.Outcome(
+        source="domain_record",
+        outcome_type="QUALITATIVE",
+        qualitative_result="A real recorded test outcome.",
+        data_scope="REAL",
+    )
+    db.add_all([provider, hidden, need, result])
+    db.flush()
+
+    first = create_relation(
+        db,
+        subject_type="domain_record",
+        subject_id=need.id,
+        relation_type="could_use",
+        object_type="provider",
+        object_id=provider.id,
+        reason="A hypothetical connection to a verified public actor.",
+    )
+    first.public_visible = True
+    second = create_relation(
+        db,
+        subject_type="network_connection",
+        subject_id=first.id,
+        relation_type="observed_with",
+        object_type="outcome",
+        object_id=result.id,
+        reason="A relation can point to another relation and an outcome.",
+    )
+    second.public_visible = True
+    private_edge = create_relation(
+        db,
+        subject_type="domain_record",
+        subject_id=need.id,
+        relation_type="could_use",
+        object_type="provider",
+        object_id=hidden.id,
+        reason="A public edge cannot reveal an unverified actor.",
+    )
+    private_edge.public_visible = True
+    db.commit()
+
+    feed = build_public_feed(db, limit=100, kind="connection")
+    visible_ids = {item.entity_id for item in feed}
+    assert visible_ids == {first.id, second.id}
+    assert all(item.epistemic_state == "hypothesized" for item in feed)
+    assert next(item for item in feed if item.entity_id == first.id).relation_type == "could_use"
+
+    context = build_public_feed(
+        db,
+        limit=100,
+        entity_type="network_connection",
+        entity_id=first.id,
+    )
+    assert {item.entity_id for item in context if item.kind == "connection"} == {first.id, second.id}
+    assert private_edge.id not in visible_ids

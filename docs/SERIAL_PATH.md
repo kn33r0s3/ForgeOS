@@ -1,8 +1,11 @@
 # Serial path
 
-This is the only work order. One step is open at a time. The next step starts when the current step’s test is true. Nothing else in the repo is a second queue.
-
-Do not run phases side by side. Do not split the public app, the API, the cockpit, and the cycle across workers. One worker, one step.
+This file tracks the next near-term engineering task. Work stays sequential:
+one capability is changed, tested, integrated, and verified before the next
+begins. The numbered items are not ForgeOS's product boundary or a terminal
+roadmap. After each item, rescan the end-to-end capability loop in
+`docs/FUTURE_BLUEPRINT.md` and replace this focus with the next demonstrated
+gap. Do not develop surfaces in parallel.
 
 Production origin: `https://forge-os-ebon.vercel.app`.
 Local database: `storage/forge.db`.
@@ -10,9 +13,17 @@ Vercel, when `DATABASE_URL` is unset, uses `sqlite:////tmp/forge.db`. That file 
 
 ## Now
 
-S11 through S14 are complete. S15 is open: generalize typed actor/capability references while preserving canonical records.
-S10 remains evidence-gated for real provider verification and operator-submitted bookings; that does not block network engineering. Never seed providers, prices, bookings, or outcomes. The footer domain and contact mailbox stay pending until the operator supplies real details.
-Production was last reported healthy on 2026-09-25; production state has not been rechecked in this turn. Local code and tests are not proof of a live deployment.
+S11 through S14 are complete. S15 is open: generalize the shared typed-relation
+substrate and endpoint adapters while preserving canonical records. The audit
+found that `NetworkConnection` is currently a narrow matching workflow: it
+does not represent general relation types, temporal/context conditions, typed
+evidence sets, or epistemic status independently from workflow state.
+
+S10 remains evidence-gated for real provider verification and operator-submitted
+bookings; this does not block network engineering. Never seed providers,
+prices, bookings, or outcomes. The footer domain and contact mailbox stay
+pending until the operator supplies real details. Local tests do not establish
+a live deployment.
 
 ## Then, in this order
 
@@ -67,25 +78,22 @@ Acceptance: entity context includes its public record and related public items, 
 S13. Governed discovery expansion. COMPLETE.
 Move the currently narrow source clearance into a validated source-registry workflow that can add lawful sources and categories without arbitrary fetching. Keep exact-target allowlists, live robots/terms checks, cross-instance rate limits, provenance, deduplication, and expiry per source. Collector, tool-adapter, CLI, task, and feed paths share the gate. A source with uncertain terms stays disabled.
 
-S14. Autonomous structuring and learning.
+S14. Autonomous structuring and learning. COMPLETE.
 Connect collected external signals to evidence, research questions, patterns, beliefs, opportunities, public projections, authorized actions, observed responses, outcomes, and learning. Automate internal transitions when existing evidence is sufficient; retain approval for contact, transactions, or other external commitments unless an authorized channel and policy permit the action.
 
-S15. General entities and actor capabilities.
-Only introduce durable shared identity or resource records when cross-record identity cannot be represented safely by existing models and typed connections. Migrate by compatibility views/adapters; do not fork provider, signal, opportunity, action, or outcome records.
-
-S14. Autonomous structuring and learning.
-Connect collected external signals to evidence, research questions, patterns, beliefs, opportunities, public projections, authorized actions, observed responses, outcomes, and learning. Automate internal transitions when existing evidence is sufficient; retain approval for contact, transactions, or other external commitments unless an authorized channel and policy permit the action.
-
-S15. General entities and actor capabilities.
-Only introduce durable shared identity or resource records when cross-record identity cannot be represented safely by existing models and typed connections. Migrate by compatibility views/adapters; do not fork provider, signal, opportunity, action, or outcome records.
+S15. General world relations and endpoint adapters. IN PROGRESS.
+Use existing canonical records as graph endpoints. Support open relation predicates, direction, epistemic state, optional strength/uncertainty, evidence IDs, provenance, context, conditions, and validity time. Keep the existing matching/action lifecycle separate. Reject dangling endpoints and invalid evidence. Public projections must resolve every endpoint using that record's existing visibility rules. Do not add duplicate identity or resource records without a demonstrated cross-record identity need.
+Acceptance: service and migration tests cover legacy compatibility, idempotency, relation-to-relation composition, provenance/time bounds, dangling endpoints, and public/private endpoint exclusion; matching persists canonical endpoint types while preserving its public vocabulary.
 
 S16. Geography and category expansion.
 Add categories and geographies as data and source-registry configuration, keeping Nepal as the bootstrap geography. Verify each new source and category against the same evidence/privacy/authorization gates.
 
+S17 and later are discovered by the continuous rescan; they are not a closed task list. Likely next gaps include open-world observations beyond source headlines, reusable capability creation, action-channel qualification, and outcome-to-capability reuse. The rescan must confirm the actual code gap before implementation.
+
 ## Plans that are not queues
 
-`docs/FUTURE_BLUEPRINT.md` is the ceiling.
-`docs/IMPLEMENTATION_BACKLOG.md` is the belief detail inside S5.
+`docs/FUTURE_BLUEPRINT.md` is the North Star and architecture.
+`docs/IMPLEMENTATION_BACKLOG.md` contains historical belief detail and must stay aligned with that architecture.
 `docs/PUBLICITY_GATE.md` is the launch lock.
 `docs/NEPAL_FIRST_PRODUCT_PLAN.md` is the first geography.
-`TWO_HUNDRED_DAY_COPILOT.txt` repeats this order for a long session budget. If it disagrees with this file, this file wins.
+`TWO_HUNDRED_DAY_COPILOT.txt` is historical session guidance, not a stop condition or a second queue.
