@@ -1,15 +1,131 @@
-# SUPERSEDED: ForgeOS Universal Substrate — Blueprint & Multi-Agent Contract
+# ForgeOS Universal Substrate — Blueprint & Multi-Agent Contract
 
-This pasted design is retained as source history only. It was superseded on
-2026-09-25 by the end-state architecture in `docs/FUTURE_BLUEPRINT.md` and its
-sequential Build Path, which extends canonical records and `NetworkConnection`
-without introducing a type registry or second entity store. Do not use this
-file as an active implementation contract.
+**Authority:** This is the authoritative Universal Substrate specification. The
+dated amendment below resolves implementation and migration ambiguities in the
+original blueprint. Where older wording elsewhere in this file conflicts with
+the amendment, the amendment governs. This is a narrow hardening, not a change
+to the North Star.
 
 > **North Star.** ForgeOS is never finished by exhausting a list of features; it is designed to
 > continuously discover new domains, capabilities, relationships, and forms of value, and incorporate
 > legitimate new capabilities into the network. No initial category, geography, ontology, business
 > model, or interface defines the limits of ForgeOS.
+
+## Implementation amendment — 2026-09-25
+
+This amendment clarifies how the Universal Substrate coexists with ForgeOS's
+existing working systems and makes its validation, identity, evidence, and
+migration rules enforceable. It preserves the open-world vision below.
+
+### Logical primitives and physical records
+
+ForgeOS has exactly six **logical substrate primitives**: `ENTITY`, `RELATION`,
+`EVENT`, `EVIDENCE`, `CAPABILITY`, and `ACTION`. “Six primitives” describes
+the logical model; it does not claim the physical database has only six tables.
+Existing operational and legacy tables—including `decisions`, `actions`,
+`outcomes`, `learning_events`, `CycleRun`, and current vertical tables—may
+remain during migration. Each must map to a logical primitive, serve as
+operational infrastructure, or be progressively adapted toward the substrate.
+They are not additional logical primitives.
+
+`type_registry.schema_json` is authoritative for the attributes of each
+entity, relation, event, or capability type. One shared validation service
+must resolve the type, require `active` status for new rows, validate the
+attributes with a JSON Schema validator before persistence, and fail closed on
+unknown, proposed, deprecated, or malformed types/schemas. The service is the
+single implementation point; callers must not duplicate schema rules.
+
+New registry rows start `proposed`. The only path to `active` is an explicit
+activation operation that records the approving actor, rationale, and
+verifiable activation evidence/process; the operation validates that record
+and is covered by tests. `active → deprecated` is likewise an explicit,
+recorded lifecycle operation. Creation of a registry row alone never activates
+it. Trusted bootstrap vocabulary may be installed active only by a
+deterministic, versioned system seed process that records that source.
+
+### Truth transitions and evidence
+
+One canonical transition service governs relation truth-state changes. Its
+minimum supported path is `possible → hypothesized → tested → supported`,
+with `possible`/`hypothesized → refuted` allowed only when the constitution's
+evidence requirements are met; `unknown` remains first-class. No application
+path may assign `supported` directly. A transition to `supported` requires a
+corresponding stored evidence record with preserved provenance. `refuted`
+cannot become `supported` by a direct state edit; new contrary information is
+recorded as new evidence and must pass the transition process. Raw evidence is
+append-preserved when state changes. Tests must cover transition bypasses,
+missing evidence, provenance retention, and attempted revival of refuted
+claims.
+
+### Identity, deduplication, and merge history
+
+Entity identity distinguishes the same real-world thing from distinct things
+that merely look alike. Adapters use stable source identifiers and canonical
+URLs/identifiers, alongside normalized identity attributes and provenance, to
+form deterministic idempotency keys protected by database uniqueness. Fuzzy
+or uncertain matches are candidates, not merges. Identity progresses through
+`candidate → corroborated → canonical` only with recorded evidence/process;
+when identity is uncertain, keep separate candidates and state the uncertainty.
+Merge detection must be reviewable and must never silently merge. A confirmed
+merge archives/marks the displaced row as merged, points to its survivor, and
+records merge history as substrate events/evidence. Neither entity nor its
+raw evidence is deleted.
+
+### Migration authority and adapters
+
+During each migration stage, existing vertical tables remain functional and
+are authoritative for their existing records until an explicit, tested
+cutover names the substrate as authority. Registered adapters expose those
+records to substrate projections and preserve source IDs, provenance, and
+source-to-substrate traceability. Migrations are additive and non-destructive;
+source/substrate comparison tests are required. A feature may not silently
+maintain two independent truths. The end state converges on the substrate
+without discarding useful history.
+
+The first adapter is the mature `Signal → Pattern → Belief → Opportunity`
+path. Its existing tables remain authoritative during Wave 1; substrate
+entities, relations, events, and evidence are idempotent projections with
+links back to their source rows. Wave 1 must prove insertion, type validation,
+identity/deduplication, evidence validation, truth transitions, provenance,
+idempotency, restart behavior, and adapter consistency before any new domain
+is started.
+
+### Feed and Network authority
+
+The Feed is a projection, never canonical storage. During migration it reads
+the substrate plus explicitly registered legacy adapters; each item retains
+its path to an entity, relation, or event and to its evidence/provenance. The
+Network is a projection/traversal over entities, relations, events, and
+evidence, plus registered legacy adapters during migration. Relationships
+belong in the substrate; neither projection is a hidden entity or relation
+database.
+
+### Action, Outcome, LearningEvent
+
+`ACTION` is the logical primitive for an authorized real-world attempt.
+`Outcome` is the observation/state resulting from that action. `LearningEvent`
+is learning derived from an outcome. Existing physical action, outcome, and
+learning tables may remain operational during migration, but adapters map
+them to the substrate; they do not form a competing universe. Existing
+authorization rules still govern whether an action may execute.
+
+### Concurrent claims and database safety
+
+`docs/CAPABILITY_QUEUE.md` remains the human/agent claim ledger; claim scope
+before implementation. Database uniqueness and idempotency keys additionally
+protect type, entity identity, and relation/event creation. A missed claim
+collision must be recoverable through idempotent retries and explicit
+duplicate/merge review, never destructive cleanup or silent merging.
+
+### Preserved constitutional vision
+
+The system remains open-world and is never fixed to its initial categories;
+relationship types are arbitrary and extensible; anything can become an
+input; possibilities and unknowns are first-class reasoning states; ForgeOS
+creates capabilities, discovers value autonomously, composes the network,
+propagates capabilities, uses Nepal as bootstrap geography rather than a
+boundary, treats money as a primary objective, and continuously expands its
+capabilities. None of these principles is narrowed by this amendment.
 
 ## 0. Review protocol — how this document gets enforced across agents
 
@@ -45,9 +161,10 @@ none of them are allowed to invent new structure alone.
 ## 1. The Universal Substrate — concrete, not aspirational
 
 Everything in ForgeOS — every Provider, ServiceListing, Opportunity, Belief, Discovery, market signal,
-research question, capability, agent, tool — is one of exactly **six** primitives. No agent may create a
-seventh. No agent may create a new top-level database table for "a new kind of thing." New *kinds* of
-things are represented as **data**, not schema.
+research question, capability, agent, tool — maps to one of exactly **six logical substrate primitives**.
+No seventh logical primitive may be introduced. Existing physical operational and vertical tables may
+remain during migration under the rules in the amendment above; new concepts use extensible type data
+and substrate records rather than a new top-level domain table.
 
 ```
 ENTITY      — any thing: a person, org, resource, capability, tool, idea, market, product...
@@ -58,7 +175,13 @@ CAPABILITY  — any reusable thing Forge can now do (a tool, workflow, integrati
 ACTION      — any authorized attempt at real-world effect, with a resulting OUTCOME
 ```
 
-### 1.1 Schema (SQLite/Postgres-compatible; this is authoritative — implement exactly this)
+### 1.1 Reference record shapes (SQLite/Postgres-compatible)
+
+The SQL below illustrates a compact physical representation of the six logical primitives and their
+open type registry. It is not a claim that the live database contains only these tables, nor a mandate
+to destructively replace existing tables. Existing physical tables and additive migrations follow the
+authority and compatibility rules in the amendment above. `schema_json` and the behavioral invariants
+are authoritative; the precise storage layout may evolve through additive, tested migrations.
 
 ```sql
 -- The open-world registry: THIS is how new "kinds" of entities/relations/events/capabilities
@@ -139,15 +262,17 @@ CREATE TABLE capabilities (
     created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- Decision -> Action -> Outcome -> Learning already exists in ForgeOS today (decisions, actions,
--- outcomes, learning_events tables in the closed-loop work). DO NOT rebuild these. They already ARE
--- the ACTION/OUTCOME primitives this substrate calls for. Extend them; do not duplicate them.
+-- Existing decisions/actions/outcomes/learning_events remain physical operational records during
+-- migration. ACTION is the logical authorized attempt; Outcome is its resulting observation/state;
+-- LearningEvent is learning derived from that outcome. Registered adapters map them to the substrate.
 ```
 
 ### 1.2 The rule that makes parallel agents safe
 
-> **An agent may always INSERT a new row. An agent may never CREATE a new top-level table, and may
-> never ALTER the six core tables above, without a human-reviewed spec change to this document.**
+> **An agent may propose a new type row, but it begins proposed. Do not add a new top-level domain
+> table. Existing substrate and vertical tables may receive additive, non-destructive migrations when
+> required by this contract; document the change, preserve source authority during migration, and test
+> adapter/source consistency.**
 
 A new domain (trading, logistics, research-question tracking, whatever a future agent invents) is
 implemented as:
@@ -156,8 +281,9 @@ implemented as:
    `entity_type`/`relation_type` — i.e. business logic, not new storage
 3. Optionally, a thin API router and a Feed projection (below) — never a new database table
 
-This is what "never be defined by the current ontology" means *in practice*: the ontology lives in the
-`type_registry` **data**, which any agent can extend at any time, not in the **schema**, which is frozen.
+This is what "never be defined by the current ontology" means *in practice*: the ontology lives in
+extensible `type_registry` **data**. New rows are proposed first and only become active through the
+recorded activation process in the amendment; physical changes remain additive and tested.
 
 ---
 
@@ -185,18 +311,19 @@ completes, or pick a different gap.** When done, the agent edits its own entry t
 the capability row it created and the tests that pass. Claims older than 48 hours with no `[DONE]`/
 `[ABANDONED]` update are considered stale and may be reclaimed.
 
-This isn't real locking — it's a norm every agent is instructed to follow. It's enough, because the
-underlying schema rule (§1.2) means even a missed collision is *additive*, not *destructive*: two agents
-adding overlapping `type_registry` rows is a cleanup task; two agents each inventing their own
-`market_signals` table is architectural fragmentation.
+This isn't real locking. Database uniqueness and idempotency keys are the second line of defense for
+types, entity identities, and relation/event creation. A collision remains recoverable through retries
+and explicit duplicate review; it must not trigger silent merging or deletion.
 
 ### 2.2 Non-negotiable invariants ("the constitution")
 
 Any agent's output that violates these gets reverted, regardless of how much work it represents:
 
-1. **No new top-level tables.** Extend via `entities`/`relations`/`type_registry`. (§1.2)
-2. **No claim without evidence.** Nothing may be inserted as `support_level='supported'` or
-   `truth_state='supported'` without a corresponding `evidence` row citing a real source or test result.
+1. **No new top-level domain tables.** Extend through the logical substrate and registered adapters.
+   Existing vertical/operational tables remain during migration; additive schema changes are allowed
+   under the amendment. (§1.2)
+2. **No claim without evidence.** A canonical transition path must reject unsupported truth-state
+   changes. `supported` requires a corresponding `evidence` row with preserved source/test provenance.
 3. **No action without authorization.** Every `actions` row (existing closed-loop table) must carry a
    real authorization reference before execution; no autonomous financial or external-communication
    action without one. This is unchanged from the existing ForgeOS rules — it now applies to *every*
@@ -230,28 +357,28 @@ This is the first real task for whichever agent picks this up, and it should be 
 | Existing ForgeOS concept | Becomes, under the substrate |
 |---|---|
 | `Signal` (raw collected item) | `entities` with `entity_type='signal'`, plus an `events` row for its ingestion |
-| `Pattern` | `relations` between the `signal` entities it clusters, `relation_type='co_occurs_with'` |
-| `Belief` | `evidence` rows attached to whatever `entities`/`relations` it's a claim about |
+| `Pattern` | a substrate entity with `derived_from`/`co_occurs_with` relations to its source Signal entities |
+| `Belief` | a substrate entity and typed relations to its Pattern/Signal sources; its claims map to evidence with provenance |
 | `Opportunity` | `entities` with `entity_type='opportunity'`, linked via `relations` to the signals/patterns/beliefs that produced it |
-| `Decision` / `Action` / `Outcome` / `LearningEvent` | **unchanged** — these already are the ACTION/OUTCOME primitives; add `relations` linking them to the `entities` they act on |
+| `Decision` / `Action` / `Outcome` / `LearningEvent` | Decision authorizes/records intent; Action is the logical authorized real-world attempt; Outcome is its resulting observation/state; LearningEvent is learning derived from Outcome. Existing physical records remain operational and are progressively mapped to substrate actions/events/evidence/relations. |
 | Repair-shop `Customer`, `RepairWorkItem`, `WorkItemEvent` | `entities` (`entity_type='customer'`, `'work_item'`) + `events` — this is proof the substrate can hold a real vertical, not just theory |
 | Nepal Earn workspace `Offer` | `entities` with `entity_type='earning_offer'`, its status-transition history as `events` |
 | `CycleRun` | stays as-is (operational/observability record, not a domain concept) |
 
-**Do not migrate existing data destructively.** Write adapters: the existing tables keep working, and a
-migration path copies/mirrors them into the substrate incrementally, verified with tests at each step
-(per the mission doc's own testing section). This satisfies "keep existing useful work... generalize
-where necessary" literally, not just in spirit.
+**Do not migrate existing data destructively.** Registered adapters expose existing tables to the
+substrate while those tables remain authoritative for their records. Preserve provenance and source
+links, compare source and substrate representations in tests, and name each authority cutover before
+the substrate becomes authoritative. Never maintain two independent truths.
 
 ---
 
 ## 4. The Feed and Network — projections, not new storage
 
-The mission doc is right that the Feed must not become "a chronological list of service listings." Under
-this design that's automatic: **the Feed is a read-only query over `entities`+`relations`+`events`
-filtered/ranked by recency, relevance, and `truth_state`** — it has no storage of its own. Any agent
-building "a Feed feature" is by definition writing a query/ranking function, never a new table. Same for
-"the Network" — it's a graph traversal over `entities`/`relations`, not a separate system.
+The Feed is a projection, not storage. During migration it may read substrate records plus explicitly
+registered legacy adapters; it has no canonical feed database. Every item retains a trace path to its
+entity/relation/event and its evidence/provenance. The Network is a projection/traversal over substrate
+entities, relations, events, and evidence plus explicitly registered legacy adapters; relationships live
+in the substrate, not in a hidden Network entity store.
 
 ---
 
@@ -290,13 +417,15 @@ see §1.2; this sequencing is about product rollout, not schema):
    wrong — this is the same falsifiability check as Wave 2 below, applied to geography instead of domain.
 
 **Wave 1 — Substrate exists and is provably correct**
-- Implement the six tables + `type_registry` exactly as in §1.1
-- Write the mapping adapters from §3 for at least one existing subsystem (suggest: Signal → Pattern →
-  Belief → Opportunity, since it's the most mature)
-- Tests: insertion, type validation against `type_registry.schema_json`, `truth_state` transition rules
-  (can't jump `possible` → `supported` without an intermediate `tested` evidence row), idempotency,
-  restart behavior
-- Gate: `pytest` passing on all of the above before Wave 2 starts
+- Inspect the existing logical primitives, physical tables, and migration authority; harden their
+  validation, identity, truth, evidence, and provenance contracts without replacing existing systems.
+- Implement/verify a registered adapter for Signal → Pattern → Belief → Opportunity. The source tables
+  remain authoritative in this wave; substrate references/relations/events must be idempotent and
+  traceable to source rows.
+- Tests: insertion; valid/invalid/unknown/proposed/deprecated types and malformed schemas; identity and
+  duplicate detection; evidence validation; canonical truth transitions; provenance retention;
+  idempotency; restart behavior; adapter/source consistency.
+- Gate: the Wave 1 acceptance tests pass before any new domain begins.
 
 **Wave 2 — One new domain proves the substrate is actually general**
 - Pick ONE domain not currently modeled (trading, or logistics, or research-question tracking —

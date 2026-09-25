@@ -1,26 +1,29 @@
-# Serial path
+# Historical Build Path — superseded 2026-09-25
 
-This is ForgeOS's single active work queue. Execute one task at a time:
-claim it here, build, test, integrate, verify, then record the evidence and
-actual result before claiming the next. Re-scan the full capability loop after
-each task. Task numbers are not a product boundary or stopping condition.
+The Universal Substrate amendment in `FORGE_SUBSTRATE_BLUEPRINT.md` is now the
+implementation authority. Claim new work in `docs/CAPABILITY_QUEUE.md` before
+coding. The material below is retained as completed-work/history context; its
+old `NetworkConnection`-first direction and active BP-5 claim are no longer
+current.
+
+## Archived serial path
+
+This archived sequence records prior serial work and verification. Its old
+queue/claim instructions no longer apply; use `docs/CAPABILITY_QUEUE.md` and
+the active Universal Substrate contract for all new work.
 
 ## Blueprint authority and amendments
 
-`docs/FUTURE_BLUEPRINT.md` is the architecture authority; this file is the
-single sequential implementation queue. The older six-primitives/type-registry
-framing is superseded. A future pasted blueprint is an amendment proposal:
-diff it against the current architecture, append a dated numbered amendment,
-then update this queue. A full incompatible rewrite requires a human checkpoint
-before implementation.
+`../FORGE_SUBSTRATE_BLUEPRINT.md` is the active substrate authority. The
+Build Path claims below are historical implementation notes only.
 
-## Current status
+## Historical status
 
-S11 through S14 are complete. The earlier S15 type-registry/world-graph
-framing is superseded by the end-state blueprint and the Build Path dated
-2026-09-25. Existing committed code remains in place, but new work follows the
-canonical-record/`NetworkConnection` path. Do not add new domains to the
-type-registry framing.
+S11 through S14 and BP-1 through BP-4A below document prior work and its test
+results. The older claims that the type-registry substrate is superseded and
+that `NetworkConnection` is the canonical relation store are obsolete. Current
+work uses the Universal Substrate amendment and the active claim in
+`docs/CAPABILITY_QUEUE.md`.
 
 **BP-1 — Canonical epistemic-label mapping. DONE (2026-09-25).** Added
 `backend/app/services/public_epistemics.py` and routed `/discoveries`, the

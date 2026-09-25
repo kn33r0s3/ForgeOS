@@ -711,6 +711,9 @@ class TypeRegistry(Base):
     description = Column(Text, nullable=True)
     owner_agent = Column(String, nullable=False)
     status = Column(String, nullable=False, default="proposed")
+    # Append-only lifecycle decisions (activation/deprecation actor, rationale,
+    # and evidence/process reference). Existing rows remain readable.
+    status_evidence = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
 
@@ -720,12 +723,27 @@ class SubstrateEntity(Base):
     __tablename__ = "entities"
     __table_args__ = (
         CheckConstraint("status IN ('active','archived','merged')", name="ck_entities_status"),
+        CheckConstraint(
+            "identity_state IN ('candidate','corroborated','canonical')",
+            name="ck_entities_identity_state",
+        ),
     )
 
     id = Column(Integer, primary_key=True)
     entity_type = Column(String, nullable=False, index=True)
     display_name = Column(Text, nullable=False)
     attributes = Column(Text, nullable=False, default="{}")
+    # Stable adapter identity prevents one source record from creating multiple
+    # substrate wrappers. Nullable unique keys keep hand-created candidates open.
+    identity_key = Column(String, nullable=True, unique=True)
+    source_system = Column(String, nullable=True, index=True)
+    source_id = Column(String, nullable=True)
+    canonical_identifier = Column(Text, nullable=True, index=True)
+    normalized_identity = Column(Text, nullable=True, index=True)
+    identity_state = Column(String, nullable=False, default="candidate", index=True)
+    identity_uncertainty = Column(Text, nullable=True)
+    identity_provenance = Column(Text, nullable=True)
+    merged_into_id = Column(Integer, ForeignKey("entities.id"), nullable=True, index=True)
     status = Column(String, nullable=False, default="active", index=True)
     created_by = Column(String, nullable=False)
     created_at = Column(DateTime, nullable=False, default=utcnow)
@@ -754,6 +772,7 @@ class WorldRelation(Base):
     direction = Column(String, nullable=False, default="directed")
     strength = Column(Float, nullable=True)
     truth_state = Column(String, nullable=False, default="hypothesized", index=True)
+    idempotency_key = Column(String, nullable=True, unique=True)
     valid_from = Column(DateTime, nullable=True)
     valid_to = Column(DateTime, nullable=True)
     created_by = Column(String, nullable=False)
@@ -780,6 +799,7 @@ class WorldEvent(Base):
     relation_id = Column(Integer, ForeignKey("relations.id"), nullable=True, index=True)
     payload = Column(Text, nullable=False, default="{}")
     source = Column(String, nullable=False)
+    idempotency_key = Column(String, nullable=True, unique=True)
     occurred_at = Column(DateTime, nullable=False, default=utcnow)
 
 
@@ -802,6 +822,7 @@ class ForgeCapability(Base):
     status = Column(String, nullable=False, default="proposed", index=True)
     spec_ref = Column(Text, nullable=True)
     test_ref = Column(Text, nullable=True)
+    attributes = Column(Text, nullable=False, default="{}")
     owner_agent = Column(String, nullable=False)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 

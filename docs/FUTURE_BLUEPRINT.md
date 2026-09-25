@@ -1,5 +1,11 @@
 # Forge — end-state blueprint
 
+**Implementation authority:** [`FORGE_SUBSTRATE_BLUEPRINT.md`](../FORGE_SUBSTRATE_BLUEPRINT.md)
+defines the six logical primitives and the migration contract. Earlier wording
+below that names `NetworkConnection` as the first canonical relation store is
+superseded: it remains an existing operational/legacy record during migration,
+with the substrate and registered adapters governing graph projections.
+
 This is the ceiling. It is the system Forge is being built toward, written the way an engineering team writes the final map before the work, including parts that are not possible yet. Nothing in this file is a claim that it already exists. Nothing in this file is permission to invent records, ratings, prices, payments, or emergencies.
 
 Today’s running system is the seed of this one system. The blueprint does not replace it with a second product.
@@ -24,9 +30,10 @@ records. It represents typed entities, relations, context, time, state,
 evidence, provenance, uncertainty, capabilities, resources, possibilities,
 actions, and outcomes. A relation is not automatically a fact. Possible,
 hypothesized, tested, supported, refuted, and unknown remain distinguishable.
-The first implementation extends the existing typed `NetworkConnection`
-record and endpoint adapters; it does not copy provider, signal, opportunity,
-action, or outcome records into a second graph store.
+The implementation hardens the six logical substrate primitives and adapts
+existing canonical records without destructively copying their payloads. The
+existing `NetworkConnection` workflow remains a legacy/operational record
+during migration; it is not a second canonical relation store.
 
 The architectural areas are:
 
@@ -526,9 +533,9 @@ without turning hypotheses into facts.
 
 ## 14. Continuous capability-development loop
 
-`docs/SERIAL_PATH.md` carries the next near-term task and its acceptance
-evidence. Work remains sequential, but task numbers are not the architecture
-boundary or a stopping condition. After each change, rescan:
+`docs/CAPABILITY_QUEUE.md` carries the active claim and its acceptance evidence.
+Work remains sequential, but task numbers are not the architecture boundary
+or a stopping condition. After each change, rescan:
 
 ```text
 trace world → observation → representation → relation → understanding

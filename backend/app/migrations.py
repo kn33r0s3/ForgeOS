@@ -104,6 +104,15 @@ EXPECTED_INDEXES = {
     ],
 }
 
+# SQLite ALTER TABLE cannot add a UNIQUE constraint in place. These nullable
+# idempotency columns are added first, then guarded by unique indexes; existing
+# rows keep NULL and all history/data remains intact.
+EXPECTED_UNIQUE_INDEXES = {
+    "entities": [("uq_entities_identity_key", "identity_key")],
+    "relations": [("uq_relations_idempotency_key", "idempotency_key")],
+    "events": [("uq_events_idempotency_key", "idempotency_key")],
+}
+
 
 def _repair_stale_experiment_references(engine: Engine) -> int:
     """Point foreign keys back at experiments after a rename-based rebuild."""
@@ -278,6 +287,23 @@ def run_migrations(engine: Engine) -> list[str]:
             if index_name in existing_indexes:
                 continue
             statement = f"CREATE INDEX {index_name} ON {table} ({column_name})"
+            with engine.begin() as conn:
+                conn.execute(text(statement))
+            applied.append(statement)
+
+    inspector = inspect(engine)
+    for table, indexes in EXPECTED_UNIQUE_INDEXES.items():
+        if table not in inspector.get_table_names():
+            continue
+        existing_indexes = {index["name"] for index in inspector.get_indexes(table)}
+        existing_unique_columns = {
+            tuple(constraint["column_names"])
+            for constraint in inspector.get_unique_constraints(table)
+        }
+        for index_name, column_name in indexes:
+            if index_name in existing_indexes or (column_name,) in existing_unique_columns:
+                continue
+            statement = f"CREATE UNIQUE INDEX {index_name} ON {table} ({column_name})"
             with engine.begin() as conn:
                 conn.execute(text(statement))
             applied.append(statement)

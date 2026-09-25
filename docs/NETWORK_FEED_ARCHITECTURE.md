@@ -1,16 +1,20 @@
 # Forge Network Feed: architecture audit and first implementation
 
+**Substrate authority:** `../FORGE_SUBSTRATE_BLUEPRINT.md` governs current
+implementation. This audit remains useful for feed visibility and source-path
+constraints; its earlier `NetworkConnection`-first relation direction is
+superseded.
+
 The feed is a public projection over canonical records. It does not store a second copy of signals, needs, opportunities, providers, or outcomes.
 
 ## Shared world/value graph
 
-The feed is one surface over Forge's shared world/value graph, not its data
-model. Canonical records stay in their existing tables. `NetworkConnection` is
-the first relation record to generalize: it should gain open relation
-predicates, evidence and provenance, context, and time while keeping its
-match/action lifecycle distinct from whether a relation is believed. Do not
-add a second entity registry or copy provider, signal, opportunity, action, or
-outcome records into another store.
+The Feed and Network are projections over Forge's shared world/value graph,
+not storage. Relations belong in the substrate. During migration, existing
+canonical vertical tables and `NetworkConnection` workflow records remain
+authoritative for their own records and are exposed only through registered
+adapters. Preserve provenance and source links; do not create a second hidden
+entity or feed store.
 
 Public projection is narrower than internal relation storage. Every endpoint
 must qualify under its canonical record's existing visibility rules before a
@@ -28,7 +32,7 @@ context.
 | Capability | `ServiceListing`, `Product`, `EarningOffer` | Only active, public listings under verified providers are public capabilities today. |
 | Actor / organization | `Provider`, `Customer` | No general actor or organization identity; organization is implicit in provider fields. Customer records stay private. |
 | Resource | `RevenueSource`, `Option`, `ServiceListing` | No general resource model; these records cover distinct existing workflows. |
-| Relation | `NetworkConnection` over canonical records | The matching workflow exists; general relation predicates and richer evidence/time semantics are the next relation-model task. A full actor identity record is not justified yet. |
+| Relation | substrate `relations` over substrate `entities` | Existing `NetworkConnection` rows remain an operational/legacy adapter during migration; new graph relations use the open typed substrate and evidence path. |
 | Action | `Action`, `Experiment`, `WorkerTask`, `IntegrationDelivery` | Internal execution records; public contact/action remains authorization-gated. |
 | Outcome | `Outcome`, `CustomerEvent`, booking/domain lifecycle events | No universal public-visibility flag; the feed only follows the already public outcome-source contract and excludes sandbox rows. |
 
@@ -50,4 +54,4 @@ The root route enters `/feed`; the feed is a public surface distinct from operat
 
 `source_clearance_registry` validates exact HTTPS targets, reviewed evidence references, geography/category scope, robots and terms locations, current review windows, and an explicit redirect allowlist. A persistent database gate enforces per-source request intervals across worker/API instances. Task dispatch, the tool adapter, the smoke CLI, and collector entry points use this policy; collector implementations with no active registry entries fail before network access. Only the exact GovInfo notice is cleared, and its clearance expires at the recorded UTC day boundary. Additional source categories and geographies use the same record shape after their policy review; uncertain sources remain disabled.
 
-S11 and S12 complete the feed projection and context navigation. S13 completed governed discovery expansion. S14 moved source-address repair, evidence-to-claim linking, and candidate-connection discovery into the canonical cycle; when bounded collection creates signals, the scheduler performs one internal follow-up pass so those signals can reach patterns, beliefs, opportunities, and the feed during the same run. The opportunity feed projection follows its existing Evidence-to-Signal-to-Claim relations, not a duplicate identity table. The current serial work follows `docs/SERIAL_PATH.md` and the 2026-09-25 Build Path.
+S11 and S12 complete the feed projection and context navigation. S13 completed governed discovery expansion. S14 moved source-address repair, evidence-to-claim linking, and candidate-connection discovery into the canonical cycle; when bounded collection creates signals, the scheduler performs one internal follow-up pass so those signals can reach patterns, beliefs, opportunities, and the feed during the same run. The opportunity feed projection follows its existing Evidence-to-Signal-to-Claim relations, not a duplicate identity table. New work follows the claim in `CAPABILITY_QUEUE.md` and the Universal Substrate contract; `SERIAL_PATH.md` is historical.
