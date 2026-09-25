@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
 import {
   NAV,
   SITE,
@@ -99,5 +102,27 @@ describe("Forge public content", () => {
       assert.equal(FORBIDDEN_CLAIM_RE.test(blob), false, blob);
       assert.equal(/\b\/tools\b/.test(blob), false, blob);
     }
+  });
+});
+
+describe("Forge public root", () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
+
+  it("serves the stored-world home and does not publish the Sanip site", () => {
+    const home = readFileSync(join(root, "src/routes/index.tsx"), "utf8");
+    const sitemap = readFileSync(join(root, "public/sitemap.xml"), "utf8");
+    const robots = readFileSync(join(root, "public/robots.txt"), "utf8");
+    const work = readFileSync(join(root, "src/routes/work.tsx"), "utf8");
+    assert.match(home, /What is stored right now/);
+    assert.equal(home.includes("Sanip Ops"), false);
+    assert.equal(home.includes("parent operations and infrastructure group"), false);
+    assert.equal(sitemap.includes("sanipoperations.com.np"), false);
+    assert.equal(sitemap.includes("Sanip"), false);
+    assert.match(sitemap, /https:\/\/forge-os-ebon\.vercel\.app\/providers/);
+    assert.match(sitemap, /https:\/\/forge-os-ebon\.vercel\.app\/domain/);
+    assert.match(sitemap, /https:\/\/forge-os-ebon\.vercel\.app\/discoveries/);
+    assert.equal(robots.includes("sanipoperations.com.np"), false);
+    assert.match(robots, /Sitemap: https:\/\/forge-os-ebon\.vercel\.app\/sitemap\.xml/);
+    assert.match(work, /to: "\/domain"/);
   });
 });

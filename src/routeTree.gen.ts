@@ -24,6 +24,7 @@ import { Route as RequestAProjectRouteImport } from './routes/request-a-project'
 import { Route as ServicesRouteImport } from './routes/services'
 import { Route as TechnologyRouteImport } from './routes/technology'
 import { Route as VenturesRouteImport } from './routes/ventures'
+import { Route as WorkRouteImport } from './routes/work'
 import { Route as GroupIndexRouteImport } from './routes/group.index'
 import { Route as GroupBusinessesRouteImport } from './routes/group.businesses'
 import { Route as RequestsIdRouteImport } from './routes/requests.$id'
@@ -105,6 +106,11 @@ const VenturesRoute = VenturesRouteImport.update({
   path: '/ventures',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkRoute = WorkRouteImport.update({
+  id: '/work',
+  path: '/work',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GroupIndexRoute = GroupIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -147,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/services': typeof ServicesRouteWithChildren
   '/technology': typeof TechnologyRoute
   '/ventures': typeof VenturesRoute
+  '/work': typeof WorkRoute
   '/group/businesses': typeof GroupBusinessesRoute
   '/requests/$id': typeof RequestsIdRoute
   '/services/$slug': typeof ServicesSlugRoute
@@ -167,6 +174,7 @@ export interface FileRoutesByTo {
   '/request-a-project': typeof RequestAProjectRoute
   '/technology': typeof TechnologyRoute
   '/ventures': typeof VenturesRoute
+  '/work': typeof WorkRoute
   '/group/businesses': typeof GroupBusinessesRoute
   '/requests/$id': typeof RequestsIdRoute
   '/services/$slug': typeof ServicesSlugRoute
@@ -190,6 +198,7 @@ export interface FileRoutesById {
   '/services': typeof ServicesRouteWithChildren
   '/technology': typeof TechnologyRoute
   '/ventures': typeof VenturesRoute
+  '/work': typeof WorkRoute
   '/group/businesses': typeof GroupBusinessesRoute
   '/requests/$id': typeof RequestsIdRoute
   '/services/$slug': typeof ServicesSlugRoute
@@ -214,6 +223,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/technology'
     | '/ventures'
+    | '/work'
     | '/group/businesses'
     | '/requests/$id'
     | '/services/$slug'
@@ -234,6 +244,7 @@ export interface FileRouteTypes {
     | '/request-a-project'
     | '/technology'
     | '/ventures'
+    | '/work'
     | '/group/businesses'
     | '/requests/$id'
     | '/services/$slug'
@@ -256,6 +267,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/technology'
     | '/ventures'
+    | '/work'
     | '/group/businesses'
     | '/requests/$id'
     | '/services/$slug'
@@ -279,6 +291,7 @@ export interface RootRouteChildren {
   ServicesRoute: typeof ServicesRouteWithChildren
   TechnologyRoute: typeof TechnologyRoute
   VenturesRoute: typeof VenturesRoute
+  WorkRoute: typeof WorkRoute
   RequestsIdRoute: typeof RequestsIdRoute
 }
 
@@ -389,6 +402,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VenturesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/work': {
+      id: '/work'
+      path: '/work'
+      fullPath: '/work'
+      preLoaderRoute: typeof WorkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/group/': {
       id: '/group/'
       path: '/'
@@ -469,6 +489,7 @@ const rootRouteChildren: RootRouteChildren = {
   ServicesRoute: ServicesRouteWithChildren,
   TechnologyRoute: TechnologyRoute,
   VenturesRoute: VenturesRoute,
+  WorkRoute: WorkRoute,
   RequestsIdRoute: RequestsIdRoute,
 }
 export const routeTree = rootRouteImport
