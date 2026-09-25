@@ -99,6 +99,8 @@ EXPECTED_INDEXES = {
 
 def _repair_stale_experiment_references(engine: Engine) -> int:
     """Point foreign keys back at experiments after a rename-based rebuild."""
+    if engine.dialect.name != "sqlite":
+        return 0
     with engine.begin() as conn:
         rows = conn.execute(
             text("SELECT type, name, sql FROM sqlite_master WHERE sql LIKE '%experiments__old%'")
