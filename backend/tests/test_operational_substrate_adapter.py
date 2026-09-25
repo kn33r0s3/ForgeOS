@@ -337,6 +337,23 @@ def test_canonical_cycle_runs_the_registered_substrate_adapters(db):
     )
     db.add(claim)
     db.flush()
+    linked_evidence = models.Evidence(
+        signal_id=signal.id,
+        source=signal.source,
+        content="The existing evidence row is the provenance source.",
+        direction="supports",
+        confidence=72.0,
+        provenance='{"cycle_fixture":true}',
+    )
+    db.add(linked_evidence)
+    db.flush()
+    evidence_link = models.EvidenceRelationship(
+        evidence_id=linked_evidence.id,
+        claim_id=claim.id,
+        relation_type="derived_from",
+        relation_key="cycle-evidence-claim-link",
+    )
+    db.add(evidence_link)
     research_question = models.ResearchQuestion(
         question="What evidence would verify those interruptions?",
         source_claim_id=claim.id,
@@ -361,6 +378,7 @@ def test_canonical_cycle_runs_the_registered_substrate_adapters(db):
     assert summary["substrate_capabilities_created"] > 0
     assert summary["substrate_capability_events_created"] > 0
     assert summary["substrate_legacy_records_projected"] >= 4
+    assert summary["substrate_evidence_relationships_projected"] >= 1
     assert world_graph.find_canonical_entity(db, "signal", signal.id) is not None
     assert world_graph.find_canonical_entity(db, "action", action.id) is not None
     assert world_graph.find_canonical_entity(db, "outcome", outcome.id) is not None
@@ -370,4 +388,6 @@ def test_canonical_cycle_runs_the_registered_substrate_adapters(db):
     assert world_graph.find_canonical_entity(db, "research_question", research_question.id) is not None
     assert world_graph.find_canonical_entity(db, "domain_record", domain_record.id) is not None
     assert world_graph.find_canonical_entity(db, "decision", decision.id) is not None
+    assert evidence_link.substrate_relation_id is not None
+    assert db.get(models.WorldRelation, evidence_link.substrate_relation_id).relation_type == "derived_from"
     assert db.query(models.ForgeCapability).filter_by(status="proposed").count() > 0
