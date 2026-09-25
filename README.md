@@ -66,13 +66,15 @@ Stop: `./stop.sh`
 
 ### Production frontend/API configuration
 
-The Vercel frontend must not point at `localhost` or `127.0.0.1`. In production, the browser runs off the public Vercel domain, so the required environment variable is:
+The current public Forge app is the root Vite service. Its browser client uses the same-origin `/api` path, which Vercel routes to the FastAPI service declared in `vercel.json`; do not point it at `localhost` or `127.0.0.1`. The API service owns the `/api` aliases and receives the original request path.
+
+The separate `frontend/` Next.js dashboard is a legacy/local app. If it is run independently against another backend, its client may use:
 
 ```bash
 NEXT_PUBLIC_API_URL=https://<actual-production-backend>
 ```
 
-This value must be set in the Vercel project environment for Production. The backend must be a public HTTPS FastAPI deployment that serves the real ForgeOS API and persists the same ForgeOS database/worker stack.
+That variable is not required by the current root Vite service. Production API health must be checked at `/api/health`; local build success alone does not establish deployment health.
 
 ---
 

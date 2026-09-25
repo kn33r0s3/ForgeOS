@@ -10,19 +10,7 @@
     "api": {
       "root": "backend/",
       "framework": "fastapi",
-      "entrypoint": "app.main:app",
-      "routes": [
-        {
-          "src": "/api/(.*)",
-          "transforms": [
-            {
-              "type": "request.path",
-              "op": "set",
-              "args": "/$1"
-            }
-          ]
-        }
-      ]
+      "entrypoint": "app.main:app"
     }
   },
   "crons": [

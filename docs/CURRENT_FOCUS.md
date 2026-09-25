@@ -1,37 +1,42 @@
-# Current focus — Explicit ResearchQuestion source relations
+yet present. The first canonical path remains Signal → Pattern → Belief →
+# Current focus — Vercel API ingress recovery
 
 **Architecture authority:** [`FORGE_SUBSTRATE_BLUEPRINT.md`](../FORGE_SUBSTRATE_BLUEPRINT.md)
 **Claim ledger:** [`CAPABILITY_QUEUE.md`](CAPABILITY_QUEUE.md)
 **Work order:** serial; claim → build → test → integrate → verify → record.
 
-Wave 1's six logical primitives are in the ORM with additive migration
-support. The read-only legacy database inspection found `evidence` as the only
-one of those six already present as a physical table; the other five are not
-yet present. The first canonical path remains Signal → Pattern → Belief →
-Opportunity.
+## Observed failure
 
-Verified adapters now cover the intelligence path; authorized Action, Outcome
-and LearningEvent; NetworkConnection relations; Provider and ServiceListing;
-runtime ToolRegistry capabilities; Claim, ResearchQuestion, DomainRecord and
-Decision; historical Evidence; and explicit EvidenceRelationship → Claim links.
-The `/forge/substrate` API routes writes through the canonical services. Feed
-and Network remain read projections and existing tables retain their
-migration-stage authority.
+As of 2026-09-26, the public Vercel web app responds, but `/api/health`,
+`/api/public/feed`, and other API routes return HTTP 500
+`FUNCTION_INVOCATION_FAILED`. Vercel function logs require deployment-owner
+authentication and are not available in this session. Do not claim the live API
+or public record counts are healthy/empty until production responds successfully.
 
-Historical Evidence now maps incrementally to its explicit Belief,
-ScenarioPrediction, Opportunity, or Signal subject in the same row, preserving
-all legacy raw fields and confidence scales. The verified
-EvidenceRelationship adapter maps explicit Evidence → Claim links to source-
-linked WorldRelations, without adding Evidence rows or changing Claim state.
-The complete backend suite passed after these slices (355 tests, 21 existing
-warnings).
+## Code-side work completed
 
-The active claim covers explicit `ResearchQuestion.source_pattern_id`,
-`source_belief_id`, and `source_claim_id` links. A read-only audit found 89
-ResearchQuestions, including 23 Pattern links and 52 Belief links; these
-foreign keys are not yet projected as substrate relations. The adapter will
-preserve those source links without interpreting question text.
+The Vercel API service now explicitly declares `backend/`, the `fastapi`
+framework, and `app.main:app`. FastAPI owns both unprefixed and `/api`-prefixed
+routes; Vercel only routes the original `/api/*` path to the service. The
+duplicate service path transform and unused `app.vercel_asgi` wrapper were
+removed. This preserves handlers, response contracts, data sources, and the
+substrate's read-projection authority.
 
-Earlier S10–S14 and BP work remains recorded in [`SERIAL_PATH.md`](../SERIAL_PATH.md)
-as history. Its prior `NetworkConnection`-first substrate direction is
-superseded by the Universal Substrate amendment.
+Local verification (2026-09-26, macOS/Python 3.13):
+
+- `cd backend && ../.venv/bin/python -m pytest tests/test_public_feed.py -q` → 10 passed.
+- `cd backend && ../.venv/bin/python -m pytest -q` → 362 passed, 21 warnings.
+- `npm run typecheck && npm run build` → typecheck and Vercel production build passed; migration step skipped because local `DATABASE_URL` is unset.
+- Vercel-shaped ASGI startup with `VERCEL=1` and an isolated `/tmp` SQLite URL returned 200 for `/health`, `/api/health`, `/public/feed?limit=1`, and `/api/public/feed?limit=1`.
+- `git diff --check` → clean.
+
+These checks do not prove the deployed Python function recovered. Live
+`GET /api/health` and `GET /api/public/feed?limit=1` still return HTTP 500.
+
+## Remaining gate
+
+Deploy this Vercel service configuration, then verify production health and
+feed endpoints and inspect the function logs if either still fails. Keep the
+publicity gate open until those checks pass. The prior substrate claim for
+explicit `ResearchQuestion.source_*` relations remains in the ledger and should
+resume after this production blocker is resolved.

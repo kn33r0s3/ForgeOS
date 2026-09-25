@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from fastapi.testclient import TestClient
 from datetime import timedelta
 
@@ -13,6 +15,21 @@ def _client(db):
 
     app.dependency_overrides[get_db] = override_get_db
     return TestClient(app), lambda: app.dependency_overrides.clear()
+
+
+def test_vercel_api_service_routes_original_path_to_fastapi_aliases():
+    config_path = Path(__file__).resolve().parents[2] / "vercel.json"
+    config = json.loads(config_path.read_text())
+    api_service = config["services"]["api"]
+
+    assert api_service["root"] == "backend/"
+    assert api_service["framework"] == "fastapi"
+    assert api_service["entrypoint"] == "app.main:app"
+    assert "routes" not in api_service
+    assert config["rewrites"][0] == {
+        "source": "/api/(.*)",
+        "destination": {"service": "api"},
+    }
 
 
 def _public_claim(db, *, opportunity=None):
@@ -301,6 +318,8 @@ def test_public_feed_projects_heterogeneous_records_with_evidence_and_relations(
         response = client.get("/public/feed")
         assert response.status_code == 200, response.text
         payload = response.json()
+        health_alias_response = client.get("/api/health")
+        assert health_alias_response.status_code == 200, health_alias_response.text
         alias_response = client.get("/api/public/feed?limit=2")
         assert alias_response.status_code == 200
         assert len(alias_response.json()) <= 2
