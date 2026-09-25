@@ -225,9 +225,9 @@ def mine_knowledge(payload: schemas.KnowledgeMineRequest, db: Session = Depends(
 def run_task(task_id: int, db: Session = Depends(get_db)):
     """Execute one planned research task through its matching collector
     right now (rather than waiting for the Background Forge Worker).
-    Hits a real external source — Reddit/GitHub/Google News — so
-    network issues or rate limits can cause it to fail; the task is
-    marked 'failed' rather than raising."""
+    An uncleared source fails the task and does not collect. A cleared
+    web task may open that page. Network errors mark the task failed
+    rather than raising."""
     task = db.query(models.ResearchTask).filter(models.ResearchTask.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Research task not found")
@@ -242,11 +242,9 @@ def run_pending_tasks(limit: int = 5, db: Session = Depends(get_db)):
 
 @router.post("/collect", response_model=list[schemas.DefaultCollectionResult])
 def collect_default(db: Session = Depends(get_db)):
-    """Trigger autonomous collection right now: every network collector
-    (Reddit, GitHub, RSS, arXiv) runs with no query, falling back to
-    its own default feed/topic. This is the same step the Background
-    Forge Worker runs automatically each cycle — exposed here so it can
-    be tested/triggered without waiting for the worker's interval."""
+    """Record that the standing Reddit, GitHub, RSS, and arXiv feeds
+    are skipped. None is cleared in docs/PUBLIC_SOURCES.md, so this
+    route does not open those requests."""
     return collector_runner.run_default_collection(db)
 
 

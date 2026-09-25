@@ -196,3 +196,30 @@ def test_contradictory_evidence_preserves_contested_claim_and_no_revenue(db, mon
     assert db.query(models.Opportunity).count() == 0
     assert db.query(models.Experiment).count() == 0
     assert db.query(models.Outcome).count() == 0
+
+
+def test_default_collection_does_not_fetch_uncleared_feeds(monkeypatch):
+    def explode(self, query=None):
+        raise AssertionError("uncleared collector was called")
+
+    for name in ("reddit", "github", "rss", "arxiv"):
+        monkeypatch.setattr(collector_runner.COLLECTORS[name], "collect", explode)
+
+    results = collector_runner.run_default_collection(db=None)
+    assert [row["status"] for row in results] == ["skipped", "skipped", "skipped", "skipped"]
+    assert all(row["signals_created"] == 0 for row in results)
+
+
+def test_uncleared_task_source_fails_without_collection(db, monkeypatch):
+    _, task = make_claim_task(db)
+    task.source = "reddit"
+    db.commit()
+
+    def explode(self, query=None):
+        raise AssertionError("reddit collector was called")
+
+    monkeypatch.setattr(collector_runner.RedditCollector, "collect", explode)
+    result = collector_runner.execute_task(db, task)
+    assert result["status"] == "failed"
+    assert "not cleared" in result["reason"]
+    assert db.query(models.Signal).count() == 0

@@ -63,15 +63,11 @@ def opportunity_handler(db: Session, task: WorkerTask) -> dict:
 
 
 def builder_handler(db: Session, task: WorkerTask) -> dict:
-    output = {"build_success": True, "message": "No build tasks pending"}
-    follow_up = WorkerTask(
-        worker_type="qa",
-        task_name="qa_opportunity",
-        priority=task.priority,
-        inputs=output,
-    )
-    db.add(follow_up)
-    return output
+    """No build ran. Do not report success or queue a QA pass."""
+    return {
+        "build_success": False,
+        "message": "No build was run. No artifact was produced.",
+    }
 
 
 def qa_handler(db: Session, task: WorkerTask) -> dict:

@@ -10,11 +10,10 @@ Vercel, when `DATABASE_URL` is unset, uses `sqlite:////tmp/forge.db`. That file 
 
 ## Now
 
-S0. Durable writes.
-`GET /api/health` already returns JSON. `GET /api/public/providers` already returns `[]`.
-A `POST /api/public/domain` must still be open on a second request, then close as withdrawn.
-That is true only after the operator supplies `DATABASE_URL` and Production redeploys.
-Until then, do not seed providers, prices, or bookings, and do not check a publicity box.
+S10 is the open step, and its software side is finished.
+Observed 2026-09-25: Production `/api/health` returned JSON, `/api/public/providers` returned `[]`, and a domain post stayed open on a second request and then closed as withdrawn. `DATABASE_URL` is set on Production.
+A provider exists only if a person supplies evidence. A booking exists only if the operator submits it. The footer domain and contact mailbox stay pending until the operator supplies them.
+Until that person or those details arrive, stop. Do not seed providers, prices, or bookings. Do not start a second app, market, or scraper.
 
 ## Then, in this order
 

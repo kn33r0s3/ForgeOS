@@ -28,6 +28,8 @@ SOURCE_HINTS: dict[str, list[str]] = {
     "rss": ["trend", "trends", "market", "industry", "growth", "news", "price", "prices", "currency", "bond", "equity", "commodity", "commodities"],
     "arxiv": ["research", "study", "studies", "paper", "papers", "academic", "science", "evidence"],
 }
+# These names stay the planning hints. collector_runner fails them
+# until docs/PUBLIC_SOURCES.md clears the source. Planning is not collection.
 DEFAULT_SOURCES = ["reddit", "github", "rss"]
 
 
@@ -77,9 +79,12 @@ def plan_tasks_for_open_questions(db: Session, limit: int = 20) -> list[models.R
     """Plan tasks for every currently-open question (used by the Forge
     intelligence cycle). Marks each question "planned" once tasks
     exist for it, so it isn't re-planned every cycle."""
+    # Gap questions stay open until a counterparty exists. They must not
+    # occupy this limit, or real questions never get planned.
     questions = (
         db.query(models.ResearchQuestion)
         .filter(models.ResearchQuestion.status == "open")
+        .filter(~models.ResearchQuestion.question.like("Gap:%"))
         .order_by(models.ResearchQuestion.priority_score.desc())
         .limit(limit)
         .all()
@@ -87,8 +92,6 @@ def plan_tasks_for_open_questions(db: Session, limit: int = 20) -> list[models.R
 
     all_tasks: list[models.ResearchTask] = []
     for question in questions:
-        if question.question.lstrip().startswith("Gap:"):
-            continue
         tasks = plan_tasks_for_question(db, question)
         all_tasks.extend(tasks)
         question.status = "planned"

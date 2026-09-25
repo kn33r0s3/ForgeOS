@@ -33,11 +33,11 @@ Cockpit surfaces: `/knowledge`, `/research`, `/network`, `/actions`, `/outcomes`
 | Persistence, API, scheduler, forge_loop | EXISTS |
 | Signals, evidence, research questions, collectors, curiosity | EXISTS |
 | Claims | PARTIAL — states exist; stale is a freshness label, not a claim state |
-| Patterns | BROKEN — overlap merge still emits a new title from a different top-4 keyword slice |
-| Beliefs | BROKEN — one belief per title string; template asserts a "real, addressable business problem"; confidence is frequency |
+| Patterns | Identity is the sorted keyword set. `test_belief_canonical.py` passed on 2026-09-25. |
+| Beliefs | One hypothesis per sorted keyword set. The template no longer asserts a real business problem. Repeated copies of one URL do not count as independent confirmation. |
 | Discoveries, connections, payments, disputes, trust, alerts | PARTIAL — wired, truth-gated, not a settlement rail |
-| Opportunities | PARTIAL — connection hypotheses are honest; `opportunity_from_idea` can still invent price and buyer |
-| Public frontend, cockpit | PARTIAL — grouped pages exist; knowledge page still renders the bad beliefs |
+| Opportunities | A manual idea stores a price only when the text states one. A named customer is kept only when the text names one. Keyword patterns do not receive a generated price. |
+| Public frontend, cockpit | PARTIAL — grouped pages exist. The knowledge page lists presentable hypotheses and a signal count. |
 | Matching | PARTIAL — city/token overlap, no independent-source confidence |
 | Transactions | PARTIAL — booking and recorded payment events, not a money rail |
 | Integrations, AI providers | EXISTS / PARTIAL — outbox exists; reasoning must degrade if a model is absent |
@@ -126,7 +126,7 @@ Security/truth constraints:
 
 Public/internal consumer: internal `/knowledge` via the existing beliefs API. The public app must not show these rows.
 
-Status: NEEDS_REVIEW
+Status: Acceptance tests in `backend/tests/test_belief_canonical.py` passed, 6 tests, on 2026-09-25. The full backend suite was not re-run in that check.
 
 ### COPILOT_TASK
 
@@ -144,7 +144,7 @@ Definition of done: that regression test and the full suite pass on the current 
 
 Title: Knowledge page shows the canonical hypothesis and its evidence count.
 
-Status: BLOCKED on TASK-001.
+Status: The knowledge page lists canonical hypotheses and their signal counts. It is not blocked on TASK-001.
 
 Depends on: TASK-001.
 Existing components to reuse: `frontend/app` knowledge route, existing beliefs API, `Belief.supporting_signal_ids`.
@@ -154,7 +154,7 @@ Goal: the cockpit lists one row per canonical belief, with signal count and the 
 
 Title: Confidence counts independent sources, not repeated copies.
 
-Status: BLOCKED on TASK-001.
+Status: Covered by `test_repeated_copies_of_one_source_do_not_count_as_independent_confirmation`. Not blocked on TASK-001.
 
 Depends on: TASK-001.
 Existing components to reuse: `Signal.source`, `Signal.canonical_url`, `Pattern.confidence_score`, existing bulk-source penalty in `pattern_engine`.
@@ -164,7 +164,7 @@ Goal: twenty copies of one URL do not raise confidence as twenty confirmations.
 
 Title: Do not open an economic opportunity from an uncorroborated keyword belief.
 
-Status: BLOCKED on TASK-001.
+Status: `test_unpriced_manual_idea_keeps_price_fields_empty` and `test_pattern_opportunity_stores_only_recorded_hypothesis_fields` passed on 2026-09-25. Not blocked on TASK-001.
 
 Depends on: TASK-001.
 Existing components to reuse: opportunity creation inside `forge_loop` / `opportunity_engine`.
@@ -174,7 +174,7 @@ Goal: a keyword hypothesis does not become an `Opportunity` with a price or a bu
 
 Title: Re-running the cycle keeps the same belief identity.
 
-Status: BLOCKED on TASK-001.
+Status: A second detection in `test_keyword_permutations_become_one_hypothesis` keeps one belief. Not blocked on TASK-001.
 
 Depends on: TASK-001, TASK-003.
 Existing components to reuse: `run_daily_cycle`, existing cycle tests.

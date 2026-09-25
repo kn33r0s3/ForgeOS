@@ -44,28 +44,12 @@ def test_worker_pipeline(db: Session):
     assert builder_task is not None
     assert builder_task.status == "queued"
 
-    # Process again - builder -> qa
+    # A builder with nothing to build must not claim success or queue QA.
     process_worker_tasks(db)
     db.refresh(builder_task)
     assert builder_task.status == "completed"
-
-    qa_task = db.query(models.WorkerTask).filter(models.WorkerTask.worker_type == "qa").first()
-    assert qa_task is not None
-    assert qa_task.status == "queued"
-
-    # Process again - qa -> evolution
-    process_worker_tasks(db)
-    db.refresh(qa_task)
-    assert qa_task.status == "completed"
-
-    evolution_task = db.query(models.WorkerTask).filter(models.WorkerTask.worker_type == "evolution").first()
-    assert evolution_task is not None
-    assert evolution_task.status == "queued"
-
-    # Process again - evolution -> discovery (next loop)
-    process_worker_tasks(db)
-    db.refresh(evolution_task)
-    assert evolution_task.status == "completed"
+    assert builder_task.outputs["build_success"] is False
+    assert db.query(models.WorkerTask).filter(models.WorkerTask.worker_type == "qa").count() == 0
 
 
 def test_worker_pipeline_deduplicates_pending_followups(db: Session):

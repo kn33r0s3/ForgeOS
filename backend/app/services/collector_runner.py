@@ -8,11 +8,10 @@ implementations (in app/services/collectors/) and the Observer Engine:
   - Query-driven: execute_task() / run_pending_tasks() — runs a
     ResearchTask planned by research_planner.py from a Curiosity
     Engine question, passing its query to the matching collector.
-  - Autonomous: run_default_collection() — calls every collector with
-    NO query, so each one falls back to its own default feed/topic.
-    This is what the Background Forge Worker calls each cycle so Forge
-    collects real signals even with zero planned tasks and zero human
-    input — the actual "wakes up on its own" mechanism.
+  - Standing sweep: run_default_collection() — records a skip for
+    Reddit, GitHub, RSS, and arXiv. None of those feeds is cleared in
+    docs/PUBLIC_SOURCES.md, so this sweep does not open a request.
+    A cleared page is collected only as a web ResearchTask.
 
 Failures (network errors, rate limits, an unimplemented source) mark a
 task "failed" or are skipped per-collector rather than raised — a bad
@@ -42,6 +41,11 @@ COLLECTORS = {
     "web": WebCollector,
 }
 
+# Bulk feeds are not cleared in docs/PUBLIC_SOURCES.md. The one cleared
+# source is a specific GovInfo page, collected as a web task, not as a
+# standing default feed.
+UNCLEARED_DEFAULT_SOURCES = ("reddit", "github", "rss", "news", "arxiv")
+
 
 def execute_task(db: Session, task: models.ResearchTask) -> dict:
     """Run one ResearchTask through its matching collector, observe
@@ -52,6 +56,11 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
         return {"task_id": task.id, "status": task.status, "reused": task.status == "completed", "signals_created": 0}
 
     started = monotonic()
+    if task.source in UNCLEARED_DEFAULT_SOURCES:
+        reason = f"Source '{task.source}' is not cleared for collection"
+        research_task_engine.fail_task(db, task, reason)
+        return {"task_id": task.id, "status": "failed", "reason": reason}
+
     collector_cls = COLLECTORS.get(task.source)
     if not collector_cls:
         research_task_engine.fail_task(db, task, f"No collector registered for source '{task.source}'")
@@ -179,33 +188,19 @@ def run_pending_tasks(db: Session, limit: int = 5) -> list[dict]:
 
 
 def run_default_collection(db: Session) -> list[dict]:
-    """Call every network collector with NO query, so each falls back
-    to its own default feed/topic (Reddit/GitHub: a few standing
-    search terms; RSS: a fixed feed list; arXiv: a default category).
-    This is autonomous collection — no ResearchTask, no Curiosity
-    Engine question, no human input required. Excludes 'manual' (not a
-    collector) and 'web' (collect() there expects a specific URL, not
-    a default — nothing sensible to autonomously fetch)."""
-    autonomous_sources = {"reddit": RedditCollector, "github": GithubCollector, "rss": RSSCollector, "arxiv": ArxivCollector}
-    observer = ObserverEngine(db)
-    results = []
+    """Refuse standing feeds that docs/PUBLIC_SOURCES.md has not cleared.
 
-    for source_name, collector_cls in autonomous_sources.items():
-        collector = collector_cls()
-        try:
-            raw_items = collector.collect(None)
-        except Exception as exc:
-            results.append({"source": source_name, "status": "failed", "reason": str(exc)})
-            continue
-
-        created = 0
-        for raw_item in raw_items:
-            normalized = collector.normalize(raw_item)
-            if not normalized["content"]:
-                continue
-            observer.observe(normalized["content"], source=normalized["source"], metadata=normalized)
-            created += 1
-
-        results.append({"source": source_name, "status": "completed", "signals_created": created})
-
-    return results
+    Reddit, GitHub, RSS, and arXiv each have a collector, but none has a
+    robots-and-terms clearance. This returns a skip record and does not
+    open a network request. A cleared page is collected through a web
+    ResearchTask, not through this default sweep.
+    """
+    return [
+        {
+            "source": source_name,
+            "status": "skipped",
+            "reason": "source is not cleared for collection",
+            "signals_created": 0,
+        }
+        for source_name in ("reddit", "github", "rss", "arxiv")
+    ]

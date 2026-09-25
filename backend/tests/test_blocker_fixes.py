@@ -33,6 +33,23 @@ from sqlalchemy import text
 
 
 # ---------------------------------------------------------------------------
+# Blocker 0 — production persistence guard
+# ---------------------------------------------------------------------------
+
+def test_vercel_database_resolution_requires_explicit_durable_url(monkeypatch):
+    """Vercel must use its documented ephemeral fallback unless an explicit
+    database URL is supplied; it must never silently select local storage."""
+    from app import database
+
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setenv("VERCEL", "1")
+    assert database._database_url() == "sqlite:////tmp/forge.db"
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://example.invalid/forge")
+    assert database._database_url() == "postgresql://example.invalid/forge"
+
+
+# ---------------------------------------------------------------------------
 # Blocker 1 — session-poison hardening
 # ---------------------------------------------------------------------------
 

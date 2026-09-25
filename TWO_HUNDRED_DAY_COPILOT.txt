@@ -317,3 +317,149 @@ FACT: The Vercel deployment reports no DATABASE_URL; without it, the configured 
 CHANGE: NONE — no secret was guessed, created, or configured; no provider, booking, payment, or publicity data was seeded.
 TEST: Production curl — /api/health HTTP 200 {"status":"ok","cycle":null}; /api/public/providers [], /api/public/services [], /api/public/discoveries [], /api/public/domain [], /api/public/alerts []; final evidence capture reported DATABASE_URL no.
 STOP:
+
+CLAIM: S0-GUARD — Vercel database resolution is regression-tested to require an explicit durable URL.
+SOURCE: REPO plus backend/app/database.py and backend/tests/test_blocker_fixes.py
+FACT: Without DATABASE_URL, Vercel resolves to sqlite:////tmp/forge.db; an explicit URL takes precedence, and local storage/forge.db is not selected.
+CHANGE: Added a focused regression test for the Vercel fallback and explicit DATABASE_URL precedence; no production environment or data changed.
+TEST: .venv/bin/python -m pytest backend/tests/test_blocker_fixes.py -q — 10 passed, 1 warning; .venv/bin/python -m pytest backend/tests -q — 247 passed, 15 warnings.
+STOP:
+
+CLAIM: S0 — A production domain write survived a second request and then closed.
+SOURCE: https://forge-os-ebon.vercel.app and REPO plus backend/app/migrations.py
+FACT: DATABASE_URL is set on Vercel Production for forge-os. POST /api/public/domain created open record 1, a later GET listed it, POST close returned status closed, and a following GET of open records did not list it.
+CHANGE: Neon Postgres resource forge-os-db connected to production. Startup no longer runs the SQLite sqlite_master repair on Postgres. Commit 88ae0a7.
+TEST: curl /api/health HTTP 200 {"status":"ok","cycle":null}; domain POST HTTP 200 id 1; GET matched [1]; close HTTP 200 status closed; second GET still_listed False. pytest backend/tests/test_experiment_lifecycle.py backend/tests/test_blocker_fixes.py — 12 passed.
+STOP:
+
+CLAIM: S1 — The six public production reads return JSON.
+SOURCE: https://forge-os-ebon.vercel.app
+FACT: /api/health is {"status":"ok","cycle":null}. providers, services, discoveries, and domain are []. alerts is a JSON list of the two domain_record events from the storage-proof close. No response was HTML.
+CHANGE: NONE.
+TEST: curl of those six paths — each HTTP 200 and parsed as JSON.
+STOP:
+
+CLAIM: S2 — Verified publication, null prices, and booking privacy already hold on the existing tables.
+SOURCE: REPO plus backend/app/services/action_engine.py, backend/app/services/opportunity_engine.py, backend/app/api/public.py, backend/tests/test_public_value_flow.py
+FACT: provider_verify requires evidence_type, evidence_reference, and reviewed_by, and leaves the provider non-public. provider_publish requires verified status; a listing needs title, description, and availability; a missing price stays null. Opportunity creation stores no generated price, model, or customer. Unknown or unverified booking posts return 404. A public booking read omits name, phone, email, and notes. Pending is stored, not accepted.
+CHANGE: NONE.
+TEST: .venv/bin/python -m pytest those six tests -q — 6 passed.
+STOP:
+
+CLAIM: S3 — Incomplete posts stay open, gap questions do not collect, and matches name unknowns without a score.
+SOURCE: REPO plus backend/app/api/forge.py, backend/app/api/public.py, backend/tests/test_public_value_flow.py, backend/tests/test_research_planner.py
+FACT: A domain post can exist without a complete contract. Moving a connection to accepted returns 409 until terms_complete. A question starting with Gap: creates no ResearchTask. Match payloads include unknowns, forge_role stays introducer, and the response text has no score.
+CHANGE: NONE.
+TEST: pytest of the gap planner test, the match test, the unmatched-need test, and the complete-contract test — 4 passed.
+STOP:
+
+CLAIM: S4 — No source is cleared for collection.
+SOURCE: https://bolpatra.gov.np/robots.txt and REPO plus docs/PUBLIC_SOURCES.md
+FACT: The Bolpatra robots URL returned HTTP 200 HTML titled System Under Maintenance, not a robots file. docs/PUBLIC_SOURCES.md still has no row whose robots and terms are both cleared. No ResearchTask, collector run, discovery, or approach draft was created.
+CHANGE: NONE.
+TEST: curl -A ForgeOS-operator-check https://bolpatra.gov.np/robots.txt — HTTP 200, content-type text/html, body starts with a maintenance page.
+STOP:
+
+CLAIM: S4 — Still no source whose robots and terms both allow collection.
+SOURCE: docs/PUBLIC_SOURCES.md plus the URLs recorded there on 2026-09-25
+FACT: NRB, The Rising Nepal, Gorkhapatra, the Department of Industry, and the Nepal Law Commission were opened. Some robots files allow ordinary public pages. None had a terms page that grants collection. The Rising Nepal privacy policy only describes the site's own visitor tracking. No row was marked cleared. No ResearchTask or collector run was created.
+CHANGE: Recorded those checks in docs/PUBLIC_SOURCES.md. Collection remains unapproved.
+TEST: curl of the robots and terms URLs named in that file, as recorded in each row.
+STOP:
+
+CLAIM: S4 — One GovInfo notice was collected once and stayed an observation.
+SOURCE: https://www.govinfo.gov/about/policies and https://www.govinfo.gov/content/pkg/FR-2026-08-12/html/2026-16432.htm
+FACT: GovInfo robots do not disallow /content/. The policies page says United States Government works are in the public domain under 17 U.S.C. § 105 and that public documents can generally be reprinted. One web ResearchTask completed. One external signal was stored with that canonical URL. The linked claim is observed. The public discoveries list shows that one row. The approach file quotes the two printed phone contacts, says the emails were redacted on the page, asks one question, and is not sent.
+CHANGE: docs/PUBLIC_SOURCES.md records the cleared row. docs/approach/nepal-cultural-property-import-rule.md is the unsent draft. Production holds research question 1, research task 1, signal 1, and claim 1.
+TEST: collector result status completed, signals_created 1. GET /api/public/discoveries HTTP 200, one object, epistemic_state observed, canonical_url the GovInfo page.
+STOP:
+
+CLAIM: S5 — Keyword permutations stay one hypothesis, and repeated copies do not count as independent confirmation.
+SOURCE: REPO plus backend/app/services/pattern_engine.py, backend/app/services/belief_engine.py, backend/tests/test_belief_canonical.py, frontend/app/knowledge/page.tsx
+FACT: Pattern identity is the sorted keyword set. Belief text is an uncorroborated keyword hypothesis and does not say "real, addressable business problem". A second detection keeps one belief. Twenty copies of one URL plus one other URL leave pattern confidence under 20. The knowledge page lists presentable beliefs with a signal count. These rows are not on the public discovery list.
+CHANGE: NONE.
+TEST: .venv/bin/python -m pytest backend/tests/test_belief_canonical.py -q — 6 passed.
+STOP:
+
+CLAIM: S6 — The cockpit does not rewrite its API to this Mac, and empty network fields stay unknown.
+SOURCE: REPO plus frontend/next.config.js, frontend/app/network/page.tsx, frontend/app/runtime/page.tsx
+FACT: Rewrites are added only when NEXT_PUBLIC_API_URL or NEXT_PUBLIC_API_BASE_URL is set. An empty base returns no rewrite, so there is no localhost:8000 destination. A missing viability quote says cost, margin, buyer, and route stay unknown. Runtime renders stored counts. The network buttons change a stored connection state. No frontend action page sends mail.
+CHANGE: NONE.
+TEST: Read of those three files. No occurrence of localhost:8000.
+STOP:
+
+CLAIM: S7 — One dry cycle finished without collection, a public provider, or a price.
+SOURCE: REPO plus backend/scripts/run_daily_cycle.py and backend/tests/test_daily_cycle_rollback.py
+FACT: With FORGEOS_COLLECT_LIMIT=0, run_once on sqlite:////tmp/forge-s7.db returned collection null, no forge error, and no autonomy error. Provider count was 0 and public listings were 0. The pytest dry-cycle test left the gap question open and created no opportunity. The long-running scheduler process was not started.
+CHANGE: NONE. The temporary database was deleted.
+TEST: pytest test_cycle_scans_open_needs_when_collection_is_disabled — 1 passed. The temporary-database run_once completed.
+STOP:
+
+CLAIM: S8 — Trust stays a record of events, and payment or closure needs the recorded amount or token.
+SOURCE: REPO plus backend/tests/test_public_value_flow.py
+FACT: A public trust response lists recorded payments and has no score. Moving to paid requires amount_npr and stays unconfirmed until confirm-payment. A wrong close token is rejected. An alert is a recorded public change and does not include an operator phone number. No wallet or payment-provider credential was added.
+CHANGE: NONE.
+TEST: pytest of the alert, dispute, paid-connection, and trust tests — 4 passed.
+STOP:
+
+CLAIM: S9 — The public copy names ForgeOS and does not invent customers or metrics.
+SOURCE: REPO plus src/lib/content.test.ts
+FACT: The copy test checks the network name, public paths, the separation of commercial services from prototype capabilities, strategic directions, and the absence of fake metrics, testimonials, and phantom clients.
+CHANGE: NONE.
+TEST: /opt/homebrew/bin/node --experimental-strip-types --test src/lib/content.test.ts — 5 passed.
+STOP:
+
+CLAIM: S9 — The public copy test and the production build both pass.
+SOURCE: REPO plus src/lib/content.test.ts and package.json
+FACT: Node at /opt/homebrew/bin/node ran the copy test: 5 passed. npm run build completed the Vite client build, the SSR build, and the Nitro Vercel output. db:migrate skipped because DATABASE_URL was not set in that local shell. No copy defect was found.
+CHANGE: NONE in application code. docs/PUBLICITY_GATE.md now records that production health and the provider list return JSON, and that a durable database is configured. The domain, mailbox, and verified-provider boxes stay open.
+TEST: content test 5 passed; npm run build exit 0. curl /api/health HTTP 200 {"status":"ok","cycle":null}; curl /api/public/providers HTTP 200 [].
+STOP:
+
+CLAIM: S10 — No external pilot is recorded.
+SOURCE: REPO plus docs/CURRENT_FOCUS.md and docs/PUBLICITY_GATE.md
+FACT: Current focus still says one real Nepali person remains the external gate. No name, receipt, or completed task is stored. The publicity boxes stay unchecked. No person, provider, price, or payment was invented.
+CHANGE: NONE.
+TEST: Read of docs/CURRENT_FOCUS.md and docs/PUBLICITY_GATE.md. No completed pilot record was found.
+STOP:
+
+CLAIM: S10 remains open — the stale opportunity note was corrected, and no pilot was added.
+SOURCE: REPO plus backend/tests/test_opportunity_quality.py and docs/IMPLEMENTATION_BACKLOG.md
+FACT: An idea with no recorded buyer or price keeps pricing_idea, estimated_price, and estimated_revenue empty. A pattern opportunity stores no generated price, model, or customer. The backlog no longer says idea creation invents a price and a buyer. No person, booking, or payment was created.
+CHANGE: docs/IMPLEMENTATION_BACKLOG.md opportunity status and TASK-004 status.
+TEST: pytest of the unpriced-idea, pattern-hypothesis, and derived-target tests — 3 passed.
+STOP:
+
+POST-S10 CONTINUATION
+
+NEXT-001. Open research questions must still be planned when unmatched gap questions fill the planner limit.
+NEXT-002. Standing Reddit, GitHub, RSS, and arXiv collection stays stopped until a source is cleared.
+NEXT-003. The worker builder must not report a successful build when no build ran.
+
+CLAIM: S10 — The public catalog is an honest zero: no provider and no booking exist because no person supplied evidence and the operator submitted none.
+SOURCE: docs/SERIAL_PATH.md and https://forge-os-ebon.vercel.app
+FACT: Production health, providers, services, and domain are JSON. Providers and services are []. Discoveries is one observed GovInfo row. Trust for provider 1 is HTTP 404. The providers page says a provider appears only when verified and public, and that no verified provider is selected. DATABASE_URL is present on the Vercel production environment. The latest production deployment is Ready. The footer still shows hello@pending-domain.local. No person, booking, or payment was created. No second scraper was added.
+CHANGE: docs/PUBLICITY_GATE.md checks the honest-empty provider box and the no-invented-price box. Domain and mailbox stay open.
+TEST: curl of /api/health, /api/public/providers, /api/public/services, /api/public/discoveries, /api/public/domain, /api/public/alerts, and /api/public/trust/provider/1; curl of / and /providers; vercel env ls showed the name DATABASE_URL without printing its value.
+STOP:
+
+CLAIM: NEXT-001 — Unmatched gap questions no longer occupy the research-planning limit.
+SOURCE: REPO plus backend/app/services/research_planner.py and backend/tests/test_research_planner.py
+FACT: plan_tasks_for_open_questions loads only open questions that do not start with Gap:. Twenty high-priority gap rows left one ordinary question planned and created tasks only for that question.
+CHANGE: The planner query excludes Gap: questions before applying the limit.
+TEST: .venv/bin/python -m pytest backend/tests/test_research_planner.py -q — 2 passed.
+STOP:
+
+CLAIM: NEXT-002 — Standing Reddit, GitHub, RSS, and arXiv collection does not run.
+SOURCE: REPO plus backend/app/services/collector_runner.py, backend/app/api/forge.py, and backend/tests/test_verified_research.py
+FACT: run_default_collection returns skipped for those four sources and does not call their collectors. A ResearchTask whose source is one of those feeds, or news, fails before collection and creates no signal. The cleared GovInfo page stays a web task, not a standing feed. No new source was collected.
+CHANGE: collector_runner refuses those sources. The collect and task-run descriptions match that refusal.
+TEST: .venv/bin/python -m pytest backend/tests/test_research_planner.py backend/tests/test_verified_research.py backend/tests/test_worker_pipeline.py backend/tests/test_blocker_fixes.py -q — 21 passed.
+STOP:
+
+CLAIM: NEXT-003 — A builder with nothing to build does not report a successful build.
+SOURCE: REPO plus backend/app/services/worker_manager.py and backend/tests/test_worker_pipeline.py
+FACT: builder_handler returns build_success false and the message that no build was run. It does not queue a QA task. The worker row is completed because the handler finished, and the output says the build did not succeed.
+CHANGE: builder_handler no longer returns build_success true or schedules qa_opportunity.
+TEST: The same 21-test pytest run, including test_worker_pipeline.
+STOP:
