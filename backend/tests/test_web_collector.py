@@ -143,3 +143,54 @@ def test_cleared_page_redirect_cannot_leave_the_allowlist():
 
     redirected = handler.redirect_request(request, None, 302, "Found", {}, approved)
     assert redirected.full_url == approved
+
+
+def test_live_source_clearance_checks_robots_and_terms(monkeypatch):
+    robots = "User-agent: *\nDisallow: /search/\nDisallow: /app/search/"
+    policy = (
+        "<p>Public documents can generally be reprinted without legal restriction.</p>"
+        "<p>Publication in a Government document does not authorize any use or appropriation "
+        "of such copyright material without consent of the owner.</p>"
+    )
+    fetched = []
+
+    def fetch(self, url):
+        fetched.append(url)
+        return robots if url.endswith("robots.txt") else policy
+
+    monkeypatch.setattr(WebCollector, "_fetch_policy_text", fetch)
+    WebCollector()._verify_live_clearance(
+        "https://www.govinfo.gov/content/pkg/FR-2026-08-12/html/2026-16432.htm"
+    )
+
+    assert fetched == [
+        "https://www.govinfo.gov/robots.txt",
+        "https://www.govinfo.gov/about/policies",
+    ]
+
+
+def test_live_source_clearance_fails_when_robots_blocks_page(monkeypatch):
+    monkeypatch.setattr(
+        WebCollector,
+        "_fetch_policy_text",
+        lambda self, url: "User-agent: *\nDisallow: /content/",
+    )
+
+    with pytest.raises(RuntimeError, match="robots.txt disallows"):
+        WebCollector()._verify_live_clearance(
+            "https://www.govinfo.gov/content/pkg/FR-2026-08-12/html/2026-16432.htm"
+        )
+
+
+def test_live_source_clearance_fails_when_terms_permission_changes(monkeypatch):
+    monkeypatch.setattr(
+        WebCollector,
+        "_fetch_policy_text",
+        lambda self, url: "User-agent: *\nDisallow: /search/" if url.endswith("robots.txt")
+        else "<p>Terms updated.</p>",
+    )
+
+    with pytest.raises(RuntimeError, match="terms no longer match"):
+        WebCollector()._verify_live_clearance(
+            "https://www.govinfo.gov/content/pkg/FR-2026-08-12/html/2026-16432.htm"
+        )
