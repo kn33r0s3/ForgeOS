@@ -4,6 +4,7 @@ from datetime import timedelta
 from app import models
 from app.database import get_db
 from app.main import app
+from app.services import opportunity_engine, public_feed
 
 
 def _client(db):
@@ -369,3 +370,49 @@ def test_public_feed_composes_connections_but_keeps_endpoint_visibility_gates(db
     )
     assert {item.entity_id for item in context if item.kind == "connection"} == {first.id, second.id}
     assert private_edge.id not in visible_ids
+
+
+def test_opportunity_claim_question_link_respects_regulated_publication_gate(db):
+    signal = models.Signal(
+        source="market bulletin",
+        content="A public bulletin describes a change in equity prices.",
+        source_type="external",
+        canonical_url="https://example.gov/equity-update",
+        retrieved_at=models.utcnow(),
+    )
+    opportunity = models.Opportunity(problem="A hypothesis about a reported equity change")
+    claim = models.Claim(
+        statement="The bulletin reports that equity prices changed.",
+        normalized_statement="the bulletin reports that equity prices changed",
+        epistemic_state="observed",
+        provenance='{"regulated_asset_class":"equity"}',
+    )
+    claim_evidence = models.Evidence(
+        signal=signal,
+        source=signal.source,
+        content=signal.content,
+        canonical_url=signal.canonical_url,
+    )
+    opportunity_evidence = models.Evidence(
+        opportunity=opportunity,
+        signal=signal,
+        source=signal.source,
+        content="A stored opportunity evidence link.",
+        canonical_url=signal.canonical_url,
+    )
+    db.add_all([signal, opportunity, claim, claim_evidence, opportunity_evidence])
+    db.flush()
+    db.add(models.EvidenceRelationship(
+        evidence_id=claim_evidence.id,
+        claim_id=claim.id,
+        relation_type="derived_from",
+        relation_key=f"claim:{claim.id}:signal:{signal.id}",
+    ))
+    db.commit()
+
+    assert opportunity_engine.link_opportunity_evidence_to_claim_questions(db) == 0
+    assert db.query(models.ResearchQuestion).filter_by(source_claim_id=claim.id).count() == 0
+    assert not any(
+        item.entity_type == "opportunity"
+        for item in public_feed.build_public_feed(db)
+    )

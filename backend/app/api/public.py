@@ -390,17 +390,14 @@ def _public_connection_response(db: Session, row: models.NetworkConnection) -> s
 def _public_candidate_connection(
     db: Session, record_id: int, right_kind: str, right_id: int
 ) -> models.NetworkConnection | None:
-    from app.services import world_graph
+    from app.services import network_connections
 
-    row = world_graph.find_match_workflow(db, "domain_record", record_id, right_kind, right_id)
+    row = network_connections.find_connection(db, "domain_record", record_id, right_kind, right_id)
     return row if row is not None and row.public_visible else None
 
 
 def _connection_graph_state(db: Session, row: models.NetworkConnection) -> tuple[str, str]:
-    relation = db.get(models.WorldRelation, row.relation_id) if row.relation_id is not None else None
-    if relation is None:
-        return "possible_match", "hypothesized"
-    return relation.relation_type, relation.truth_state
+    return row.relation_type or "possible_match", row.epistemic_state or "hypothesized"
 
 
 @router.post("/domain/{record_id}/connections/{connection_id}/response", response_model=schemas.PublicConnectionOut)

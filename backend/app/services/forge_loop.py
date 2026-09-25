@@ -186,19 +186,27 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
     #    docstring.
     discovery_summary = opportunity_engine.run_autonomous_opportunity_discovery(db)
 
-    # 9.5. The universal substrate receives typed references to the existing
-    # canonical intelligence chain. Entity data stays in its owner tables;
-    # relation rows preserve only the derivation paths and hypotheses.
-    substrate_summary = {"entities_created": 0, "relations_created": 0}
+    # 9.1. Complete only the stored public path from opportunity evidence to
+    #      source-linked claim to research question. Publication eligibility
+    #      and regulated-asset review are applied before the question link is
+    #      created; the feed remains the final visibility gate.
+    opportunity_questions_linked = 0
     try:
-        from app.services import world_graph
-        substrate_summary = world_graph.sync_intelligence_path(db, limit=200)
+        opportunity_questions_linked = (
+            opportunity_engine.link_opportunity_evidence_to_claim_questions(db)
+        )
     except Exception as exc:
-        stage_errors["world_graph_sync"] = str(exc)
+        stage_errors["opportunity_claim_questions"] = str(exc)
         try:
             db.rollback()
         except Exception:
             pass
+
+    # 9.5. Legacy substrate tables are retained for existing installations,
+    #      but the canonical cycle no longer copies records into them. New
+    #      relationships live on NetworkConnection rows over their source
+    #      records.
+    substrate_summary = {"entities_created": 0, "relations_created": 0}
 
     # 10. Money Engine: classify monetization models, flag opportunities
     #    needing revenue validation. Identification only — see
@@ -379,6 +387,7 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         "rare_signal_research_questions": len(rare_questions),
         "patterns_reviewed_for_opportunities": discovery_summary["patterns_reviewed"],
         "opportunities_discovered": discovery_summary["opportunities_created"] + discovery_summary.get("single_signal_opportunities_created", 0),
+        "opportunity_questions_linked": opportunity_questions_linked,
         "pattern_opportunities_created": discovery_summary["opportunities_created"],
         "single_signal_opportunities_created": discovery_summary.get("single_signal_opportunities_created", 0),
         "single_strong_signals_scanned": discovery_summary.get("single_strong_signals_scanned", 0),

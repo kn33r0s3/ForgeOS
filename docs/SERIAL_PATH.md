@@ -43,9 +43,43 @@ tests passed: 11.
 the separate stale flag; the feed now requires a public research question
 between a claim and its opportunity. Focused BP-3/public tests passed: 11.
 
-**[CLAIMED] BP-4 — Public world shows only what passes publication rules.**
-Audit every public response schema for internal scoring/confidence fields, then
-add one automated contract test.
+**BP-4 — Public world shows only what passes publication rules. DONE
+(2026-09-25).** Added a recursive automated audit for every typed public route
+response model, including nested models and list/optional wrappers. It fails
+on score, confidence, quality, importance, reliability, risk, rank, probability,
+expected-value, owner-priority, or unverified field names. Contract test passes.
+The first full run surfaced two BP-3 integration failures and two existing
+legacy world-graph failures. BP-4A closed the opportunity-chain integration;
+the latest full run passed 306 tests, with only the same two legacy failures.
+
+**BP-4A — Complete the stored opportunity publication chain. DONE
+(2026-09-25).** Added an idempotent cycle step that links only stored
+opportunity Evidence, its external Signal, and a Claim already linked to that
+same Signal. It adds one open ResearchQuestion per eligible Claim and runs the
+BP-1 compliance/epistemic gate first. No evidence or opportunity is created by
+the linking step. Focused cycle, feed, schema, and compliance tests passed: 14.
+Full backend run: 306 passed, 2 failed in the existing superseded
+world-graph tests.
+
+**[CLAIMED] BP-5 prerequisite — Generalize `NetworkConnection` as the canonical
+relation record.** The current model holds the matching-specific state machine
+and endpoint references, but its relation meaning, epistemic state, provenance,
+context, evidence, and validity interval still depend on the legacy
+`relations`/`entities` substrate. Extend `NetworkConnection` itself using
+canonical endpoint adapters; preserve matching workflow state as a separate
+field. Keep relation predicates open vocabulary and relation epistemic state
+distinct (`possible`, `hypothesized`, `tested`, `supported`, `refuted`,
+`unknown`). Attach existing evidence/provenance and context/time semantics to
+the same connection record. Keep migrations additive and existing rows
+readable. Do not create a second relation/entity registry or copy canonical
+records into a graph store.
+
+Tests: known endpoint adapters resolve only existing canonical records;
+unknown adapter kinds fail closed; arbitrary non-empty relation predicates do
+not require a closed registry; relation epistemic state is independent of
+matching workflow state; evidence/provenance and time bounds round-trip; public
+projection reads the connection's own relation fields and still gates both
+endpoints; existing connection rows remain valid after migration.
 
 S10 remains evidence-gated for real provider verification and operator-submitted
 bookings. Never seed providers, prices, bookings, payments, or outcomes. Local
@@ -111,16 +145,66 @@ chain. Focused tests passed: 11.
 
 Depends on BP-1 and BP-2.
 
-### BP-4 — Public world shows only what passes publication rules [IN PROGRESS]
+### BP-4 — Public world shows only what passes publication rules [DONE]
 
 No internal score, confidence, or unverified field reaches a public response.
 Add one automated schema/snapshot check across public serializers that rejects
 internal-only field names.
 
-Tests: one automated public-serializer check fails if a field name matching
-`score`, `confidence`, or another internal-only marker appears.
+Tests: one automated recursive public-serializer check fails if a field name
+matching `score`, `confidence`, or another internal-only marker appears.
+
+Result: DONE. The route/schema contract audit passes. After BP-4A, the full
+backend run reported 306 passed and 2 failures in existing superseded
+world-graph tests.
 
 Depends on BP-1 and BP-3.
+
+### BP-4A — Complete the stored opportunity publication chain [DONE]
+
+Integration verification found that autonomous opportunity discovery stored
+real opportunity evidence, but did not associate its eligible external
+signal's stored claim with a research question. The public feed correctly
+withheld those opportunities under BP-3. An idempotent cycle step now links
+only the opportunity's already-stored Evidence, external Signal, linked Claim,
+and a ResearchQuestion sourced from that Claim. BP-1's publication/compliance
+gate runs before the question link. The linking step does not create evidence
+or opportunities.
+
+Tests: both autonomous and daily-cycle flows publish the opportunity only
+after its real signal/claim/question/evidence links exist; repeated cycles do
+not duplicate questions; an ineligible claim is not linked.
+
+Result: DONE. The autonomous-cycle, daily-cycle, public-feed, schema, and
+regulated-claim tests passed (14). The full backend run reported 306 passed and
+2 failures in existing superseded world-graph tests.
+
+Depends on BP-1, BP-3, and BP-4.
+
+### BP-5 prerequisite — Generalize `NetworkConnection` as the canonical
+relation record [CLAIMED]
+
+The current model holds the matching-specific state machine and endpoint
+references, but its relation meaning, epistemic state, provenance, context,
+evidence, and validity interval still depend on the legacy `relations` and
+`entities` substrate. Extend `NetworkConnection` itself using canonical
+endpoint adapters; preserve matching workflow state as a separate field. Keep
+relation predicates open vocabulary and relation epistemic state distinct
+(`possible`, `hypothesized`, `tested`, `supported`, `refuted`, `unknown`).
+Attach existing evidence/provenance and context/time semantics to the same
+connection record. Keep migrations additive and existing rows readable. Do not
+create a second relation/entity registry or copy canonical records into a
+graph store.
+
+Tests: known endpoint adapters resolve only existing canonical records;
+unknown adapter kinds fail closed; arbitrary non-empty relation predicates do
+not require a closed registry; relation epistemic state is independent of
+matching workflow state; evidence/provenance and time bounds round-trip; public
+projection reads the connection's own relation fields and still gates both
+endpoints; existing connection rows remain valid after migration.
+
+This is the immediate serial prerequisite for BP-5. BP-5 stays unclaimed until
+this prerequisite passes.
 
 ### BP-5 — Matching as one canonical state machine [HUMAN CHECKPOINT, PENDING]
 
@@ -128,16 +212,15 @@ Use exactly `candidate → evidenced → viable → proposed → authorized →
 contacted → accepted → fulfilled → paid → completed`, through one transition
 function. Fresh stored evidence is required for `evidenced`; a figure is only
 stored in `viable` when it appears in the cited source, otherwise it stays
-null. Before starting BP-5, verify that generalized `NetworkConnection`
-semantics have been implemented and tested. If they are absent after BP-4,
-insert that work as the immediate serial prerequisite; never build it in
-parallel. Do not mark BP-5 done without explicit human approval.
+null. Do not start BP-5 until its claimed `NetworkConnection` prerequisite
+above is complete and tested. Do not mark BP-5 done without explicit human
+approval.
 
 Tests: reject every illegal edge, including `candidate → paid` and
 `proposed → fulfilled`; prove `viable` cannot store a figure absent from the
 cited source.
 
-Depends on BP-1 and BP-4.
+Depends on BP-1, BP-4, BP-4A, and the BP-5 prerequisite.
 
 ### BP-6 — Payment and dispute as recorded events [HUMAN CHECKPOINT, PENDING]
 

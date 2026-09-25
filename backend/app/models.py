@@ -675,6 +675,12 @@ class EvidenceRelationship(Base):
     experiment_id = Column(Integer, ForeignKey("experiments.id"), nullable=True, index=True)
     outcome_id = Column(Integer, ForeignKey("outcomes.id"), nullable=True, index=True)
     judgment_id = Column(Integer, ForeignKey("judgments.id"), nullable=True, index=True)
+    network_connection_id = Column(
+        Integer,
+        ForeignKey("network_connections.id"),
+        nullable=True,
+        index=True,
+    )
     relation_type = Column(String, nullable=False)
     relation_key = Column(String, nullable=False, index=True)
     created_at = Column(DateTime, default=utcnow, nullable=False)
@@ -682,6 +688,7 @@ class EvidenceRelationship(Base):
     evidence = relationship("Evidence", back_populates="claim_links")
     claim = relationship("Claim", back_populates="evidence_links")
     judgment = relationship("Judgment", back_populates="evidence_links")
+    network_connection = relationship("NetworkConnection")
 
 
 class TypeRegistry(Base):
@@ -1840,7 +1847,7 @@ class DomainRecord(Base):
 
 
 class NetworkConnection(Base):
-    """A specialized match/action workflow over canonical record references."""
+    """A relation between canonical records with a separate match lifecycle."""
 
     __tablename__ = "network_connections"
 
@@ -1849,6 +1856,15 @@ class NetworkConnection(Base):
     left_id = Column(Integer, nullable=False, index=True)
     right_kind = Column(String, nullable=False)
     right_id = Column(Integer, nullable=False, index=True)
+    relation_type = Column(String, nullable=True, default="possible_match", index=True)
+    direction = Column(String, nullable=False, default="directed")
+    epistemic_state = Column(String, nullable=True, default="hypothesized", index=True)
+    context = Column(JSON, nullable=True)
+    uncertainty = Column(JSON, nullable=True)
+    provenance = Column(JSON, nullable=True)
+    valid_from = Column(DateTime, nullable=True)
+    valid_until = Column(DateTime, nullable=True)
+    # Retained for rows written by the superseded entity/relation graph.
     relation_id = Column(Integer, ForeignKey("relations.id"), nullable=True, index=True)
     state = Column(String, nullable=False, default="candidate", index=True)
     reason = Column(Text, nullable=False)

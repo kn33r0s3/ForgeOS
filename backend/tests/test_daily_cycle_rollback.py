@@ -211,6 +211,18 @@ def test_daily_cycle_structures_collected_external_signals_in_same_run(db, monke
     assert record["post_collection_cycle"]["patterns_found"] >= 1
     assert record["post_collection_cycle"]["beliefs_updated"] >= 1
     assert record["post_collection_cycle"]["opportunities_discovered"] >= 1
+    assert record["post_collection_cycle"]["opportunity_questions_linked"] >= 1
     projected = public_feed.build_public_feed(db)
-    assert any(item.kind == "opportunity" for item in projected)
+    opportunity_items = [item for item in projected if item.kind == "opportunity"]
+    assert opportunity_items
+    claim_ids = {
+        relation.entity_id
+        for item in opportunity_items
+        for relation in item.relations
+        if relation.entity_type == "claim"
+    }
+    assert claim_ids
+    assert db.query(models.ResearchQuestion).filter(
+        models.ResearchQuestion.source_claim_id.in_(claim_ids)
+    ).count() >= 1
     assert all("evidence.example.test" in (item.source_url or "") for item in projected if item.kind == "signal")

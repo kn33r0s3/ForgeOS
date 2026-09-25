@@ -59,17 +59,33 @@ def test_canonical_cycle_links_external_evidence_into_public_network(db):
     assert summary["patterns_found"] >= 1
     assert summary["beliefs_updated"] >= 1
     assert summary["opportunities_discovered"] >= 1
+    assert summary["opportunity_questions_linked"] >= 1
     assert db.query(models.ResearchQuestion).filter(
         models.ResearchQuestion.question.like(f"Gap: open job #{need.id}%")
     ).one().status == "open"
+    linked_claim_ids = {
+        row[0]
+        for row in db.query(models.ResearchQuestion.source_claim_id)
+        .filter(models.ResearchQuestion.source_claim_id.isnot(None))
+        .all()
+    }
+    assert linked_claim_ids & {claim.id for claim in claims}
 
     feed = public_feed.build_public_feed(db)
     feed_refs = {(item.entity_type, item.entity_id) for item in feed}
     assert all(("claim", claim.id) in feed_refs for claim in claims)
     assert any(item.entity_type == "pattern" for item in feed)
     assert any(item.entity_type == "belief" for item in feed)
-    assert any(item.entity_type == "opportunity" for item in feed)
+    opportunity_item = next(item for item in feed if item.entity_type == "opportunity")
+    assert any(
+        relation.entity_type == "claim" and relation.entity_id in linked_claim_ids
+        for relation in opportunity_item.relations
+    )
 
     repeated = forge_loop.run_cycle(db)
     assert repeated["claims_linked"] == []
+    assert repeated["opportunity_questions_linked"] == 0
     assert db.query(models.Claim).count() == len(signals)
+    assert db.query(models.ResearchQuestion).filter(
+        models.ResearchQuestion.source_claim_id.in_(linked_claim_ids)
+    ).count() == len(linked_claim_ids)

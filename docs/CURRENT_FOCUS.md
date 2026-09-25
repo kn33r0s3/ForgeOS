@@ -1,4 +1,4 @@
-# CURRENT_FOCUS.md — BP-4: Public Serializer Audit
+# CURRENT_FOCUS.md — BP-5 prerequisite: Generalize NetworkConnection
 
 **Last updated**: 2026-09-25
 **Work order**: [SERIAL_PATH.md](SERIAL_PATH.md) is the only queue.
@@ -7,7 +7,7 @@
 
 `docs/FUTURE_BLUEPRINT.md` defines ForgeOS as an open-ended, autonomous value-creation system. The 2026-09-25 Build Path is the current sequential implementation order. Keep work serial, and rescan the full observe-to-learning loop after each integrated capability.
 
-S11's generalized public feed, S12's scoped context, S13's governed source registry, and S14's same-run evidence-to-network cycle are implemented. The previous S15 type-registry/world-graph framing has been superseded. BP-1's shared evidence-aware labels/compliance gate, BP-2's bounded agenda, and BP-3's signal → claim → question → opportunity publication chain are implemented. BP-4 is active: audit every public serializer for internal scoring or confidence fields.
+S11's generalized public feed, S12's scoped context, S13's governed source registry, and S14's same-run evidence-to-network cycle are implemented. The previous S15 type-registry/world-graph framing has been superseded. BP-1 through BP-4 are complete. BP-4A repaired the autonomous opportunity path so publication requires the stored signal → claim → research question → opportunity evidence chain. The remaining two full-suite failures are in existing superseded world-graph tests. The active serial task is the prerequisite to BP-5: generalize `NetworkConnection` as the canonical relation record, with evidence, provenance, context, and time semantics independent of matching workflow state.
 
 S10 remains evidence-gated; no provider, price, booking, payment, response, or outcome may be invented. Local test results are not evidence of a live deployment.
 
@@ -64,12 +64,26 @@ The only active external clearance is one exact GovInfo document, valid through 
 
 ## BP-4 verification target
 
-- [ ] One automated audit covers every public response schema.
-- [ ] Internal field names matching score/confidence and known private ranking markers fail the audit.
+- [x] One automated recursive audit covers every typed public response schema and nested model.
+- [x] Internal field names matching score/confidence and known private ranking markers fail the audit.
+
+## BP-4A complete
+
+- [x] Autonomous and scheduled cycles link only already-stored opportunity evidence, external signals, and claims from those signals.
+- [x] Eligible claims receive one open linked research question; repeated cycles do not duplicate it.
+- [x] Inference and regulated claims without approved compliance review are not linked for publication.
+- [x] Focused tests pass: 14. Full backend run: 306 passed, 2 existing legacy world-graph failures.
+
+## BP-5 prerequisite in progress
+
+- [ ] Keep `NetworkConnection` as the canonical relation record over typed endpoint adapters; do not require a second entity/relation registry.
+- [ ] Separate open relation predicate and epistemic state from the matching workflow state.
+- [ ] Add evidence, provenance, context, and valid-time semantics using additive migrations.
+- [ ] Update the public projection and test existing-row compatibility and endpoint visibility.
 
 ## Continuous rescan
 
-After BP-4 is integrated and verified, proceed to BP-5 in `SERIAL_PATH.md`, then trace the full capability loop again after every completed task. Finite task numbers are never a stopping condition.
+Complete and verify the claimed BP-5 prerequisite before starting BP-5. Keep the BP-5 human approval checkpoint for the transaction state machine. Trace the full capability loop after each completed task; finite task numbers are never a stopping condition.
 
 ## S10 pilot gate
 

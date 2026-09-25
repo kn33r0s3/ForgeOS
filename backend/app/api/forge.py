@@ -1394,16 +1394,31 @@ def _seconds_to_recorded_payment(db: Session, row: models.NetworkConnection) -> 
 
 @router.get("/connections")
 def list_network_connections(db: Session = Depends(get_db)):
+    from app.services import network_connections
+
     rows = db.query(models.NetworkConnection).order_by(models.NetworkConnection.id.desc()).limit(100).all()
     return [
         {
             "id": row.id,
             "left_kind": row.left_kind,
             "left_id": row.left_id,
+            "relation_type": row.relation_type or "possible_match",
+            "direction": row.direction or "directed",
+            "epistemic_state": row.epistemic_state or "hypothesized",
             "right_kind": row.right_kind,
             "right_id": row.right_id,
             "state": row.state,
             "reason": row.reason,
+            "context": row.context,
+            "uncertainty": row.uncertainty,
+            "provenance": row.provenance,
+            "valid_from": row.valid_from,
+            "valid_until": row.valid_until,
+            "observed_at": row.observed_at,
+            "evidence_ids": [
+                evidence.id
+                for evidence in network_connections.evidence_for_connection(db, row.id)
+            ],
             "evidence_reference": row.evidence_reference,
             "constraints": row.constraints,
             "unknown": row.unknown,

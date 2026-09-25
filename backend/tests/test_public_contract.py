@@ -29,25 +29,21 @@ def test_every_public_route_schema_excludes_internal_metrics():
     missing_models = [route.path for route in routes if route.response_model is None]
     assert not missing_models, f"public routes need explicit response models: {missing_models}"
 
+    pending_models = [
+        model
+        for route in routes
+        for model in _models_in(route.response_model)
+    ]
     checked_models = set()
     violations = []
-    for route in routes:
-        for model in _models_in(route.response_model):
-            if model in checked_models:
-                continue
-            checked_models.add(model)
-            for field_name, field in model.model_fields.items():
-                if _INTERNAL_FIELD.search(field_name):
-                    violations.append(f"{route.path}: {model.__name__}.{field_name}")
-                for nested in _models_in(field.annotation):
-                    if nested not in checked_models:
-                        # The route's response may contain nested payment,
-                        # relation, or status models not used at the top level.
-                        checked_models.add(nested)
-                        for nested_name, nested_field in nested.model_fields.items():
-                            if _INTERNAL_FIELD.search(nested_name):
-                                violations.append(
-                                    f"{route.path}: {nested.__name__}.{nested_name}"
-                                )
+    while pending_models:
+        model = pending_models.pop()
+        if model in checked_models:
+            continue
+        checked_models.add(model)
+        for field_name, field in model.model_fields.items():
+            if _INTERNAL_FIELD.search(field_name):
+                violations.append(f"{model.__name__}.{field_name}")
+            pending_models.extend(_models_in(field.annotation))
 
     assert not violations, "internal fields must stay out of public schemas: " + ", ".join(violations)

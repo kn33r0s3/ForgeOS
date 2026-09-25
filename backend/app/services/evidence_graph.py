@@ -218,6 +218,7 @@ def _target_key(
     experiment_id: int | None,
     outcome_id: int | None,
     judgment_id: int | None = None,
+    network_connection_id: int | None = None,
 ) -> str:
     values = {
         "claim": claim_id,
@@ -226,6 +227,7 @@ def _target_key(
         "experiment": experiment_id,
         "outcome": outcome_id,
         "judgment": judgment_id,
+        "network_connection": network_connection_id,
     }
     target = next(((kind, value) for kind, value in values.items() if value is not None), None)
     if target is None:
@@ -244,6 +246,7 @@ def link_evidence(
     experiment_id: int | None = None,
     outcome_id: int | None = None,
     judgment_id: int | None = None,
+    network_connection: models.NetworkConnection | None = None,
 ) -> tuple[models.EvidenceRelationship, bool]:
     if relation_type not in RELATION_TYPES:
         raise ValueError(f"invalid evidence relationship: {relation_type}")
@@ -255,6 +258,7 @@ def link_evidence(
         experiment_id=experiment_id,
         outcome_id=outcome_id,
         judgment_id=judgment_id,
+        network_connection_id=network_connection.id if network_connection else None,
     )
     relation_key = hashlib.sha256(
         f"{evidence.id}:{target}:{relation_type}".encode("utf-8")
@@ -270,6 +274,7 @@ def link_evidence(
         experiment_id=experiment_id,
         outcome_id=outcome_id,
         judgment_id=judgment_id,
+        network_connection_id=network_connection.id if network_connection else None,
         relation_type=relation_type,
         relation_key=relation_key,
     )

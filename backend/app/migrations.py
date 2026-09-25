@@ -92,12 +92,15 @@ EXPECTED_COLUMNS = _build_expected_columns()
 EXPECTED_INDEXES = {
     "evidence_relationships": [
         ("ix_evidence_relationships_judgment_id", "judgment_id"),
+        ("ix_evidence_relationships_network_connection_id", "network_connection_id"),
     ],
     "evidence": [
         ("ix_evidence_subject_id", "subject_id"),
     ],
     "network_connections": [
         ("ix_network_connections_relation_id", "relation_id"),
+        ("ix_network_connections_relation_type", "relation_type"),
+        ("ix_network_connections_epistemic_state", "epistemic_state"),
     ],
 }
 
@@ -123,6 +126,48 @@ def _repair_stale_experiment_references(engine: Engine) -> int:
             )
         conn.execute(text("PRAGMA writable_schema=RESET"))
     return len(rows)
+
+
+def _backfill_network_connection_semantics(engine: Engine) -> int:
+    """Copy legacy relation meaning onto its canonical connection row."""
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+    if "network_connections" not in tables or "relations" not in tables:
+        return 0
+    columns = {column["name"] for column in inspector.get_columns("network_connections")}
+    required = {
+        "relation_id", "relation_type", "epistemic_state", "direction",
+        "valid_from", "valid_until", "observed_at", "created_at",
+    }
+    if not required <= columns:
+        return 0
+
+    statements = (
+        "UPDATE network_connections SET relation_type = ("
+        "SELECT relation_type FROM relations WHERE relations.id = network_connections.relation_id) "
+        "WHERE relation_id IS NOT NULL AND relation_type = 'possible_match' "
+        "AND EXISTS (SELECT 1 FROM relations WHERE relations.id = network_connections.relation_id)",
+        "UPDATE network_connections SET epistemic_state = ("
+        "SELECT truth_state FROM relations WHERE relations.id = network_connections.relation_id) "
+        "WHERE relation_id IS NOT NULL AND epistemic_state = 'hypothesized' "
+        "AND EXISTS (SELECT 1 FROM relations WHERE relations.id = network_connections.relation_id)",
+        "UPDATE network_connections SET direction = ("
+        "SELECT direction FROM relations WHERE relations.id = network_connections.relation_id) "
+        "WHERE relation_id IS NOT NULL AND direction = 'directed' "
+        "AND EXISTS (SELECT 1 FROM relations WHERE relations.id = network_connections.relation_id)",
+        "UPDATE network_connections SET valid_from = ("
+        "SELECT valid_from FROM relations WHERE relations.id = network_connections.relation_id) "
+        "WHERE valid_from IS NULL AND relation_id IS NOT NULL",
+        "UPDATE network_connections SET valid_until = ("
+        "SELECT valid_to FROM relations WHERE relations.id = network_connections.relation_id) "
+        "WHERE valid_until IS NULL AND relation_id IS NOT NULL",
+        "UPDATE network_connections SET observed_at = created_at WHERE observed_at IS NULL",
+    )
+    changed = 0
+    with engine.begin() as conn:
+        for statement in statements:
+            changed += conn.execute(text(statement)).rowcount or 0
+    return changed
 
 
 def run_migrations(engine: Engine) -> list[str]:
@@ -217,6 +262,12 @@ def run_migrations(engine: Engine) -> list[str]:
     repaired = _repair_stale_experiment_references(engine)
     if repaired:
         applied.append(f"rewrote {repaired} schema objects still referencing experiments__old")
+
+    backfilled_connections = _backfill_network_connection_semantics(engine)
+    if backfilled_connections:
+        applied.append(
+            f"copied legacy relation semantics onto {backfilled_connections} network connection fields"
+        )
 
     inspector = inspect(engine)
     for table, indexes in EXPECTED_INDEXES.items():

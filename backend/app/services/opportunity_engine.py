@@ -43,14 +43,14 @@ built to stop. Its problem/target_customer/economic_consequence come
 from real extracted text instead.
 """
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 from datetime import datetime, timezone
 import hashlib
 import json
 import re
 
 from app import models
-from app.services import ai_engine, economic_intelligence
+from app.services import ai_engine, economic_intelligence, public_epistemics
 from typing import Optional
 
 
@@ -526,6 +526,71 @@ def generate_opportunity_from_signal_if_strong(db: Session, signal: models.Signa
 def _evidence_hash(signal: models.Signal) -> str:
     identity = signal.content_fingerprint or signal.external_id or signal.canonical_url or str(signal.id)
     return hashlib.sha256(f"{signal.source}:{identity}".encode("utf-8")).hexdigest()
+
+
+def link_opportunity_evidence_to_claim_questions(db: Session) -> int:
+    """Connect stored opportunity evidence to eligible claims and questions.
+
+    This only joins records already in the database: an opportunity evidence
+    row, its external source signal, and a claim already supported by evidence
+    from that same signal. It creates one open research question per claim if
+    one is not already linked. It never invents evidence or an opportunity.
+    """
+    claim_evidence = aliased(models.Evidence)
+    rows = (
+        db.query(models.Opportunity, models.Signal, models.Claim)
+        .join(models.Evidence, models.Evidence.opportunity_id == models.Opportunity.id)
+        .join(models.Signal, models.Signal.id == models.Evidence.signal_id)
+        .join(claim_evidence, claim_evidence.signal_id == models.Signal.id)
+        .join(
+            models.EvidenceRelationship,
+            models.EvidenceRelationship.evidence_id == claim_evidence.id,
+        )
+        .join(models.Claim, models.Claim.id == models.EvidenceRelationship.claim_id)
+        .filter(models.Signal.source_type == "external")
+        .filter(models.Signal.canonical_url.isnot(None), models.Signal.canonical_url != "")
+        .filter(models.Signal.is_duplicate_of.is_(None))
+        .distinct()
+        .all()
+    )
+
+    linked = 0
+    seen_claims: set[int] = set()
+    for opportunity, _signal, claim in rows:
+        if claim.id in seen_claims:
+            continue
+        seen_claims.add(claim.id)
+        if public_epistemics.public_claim_label(db, claim) is None:
+            continue
+        existing = (
+            db.query(models.ResearchQuestion.id)
+            .filter(models.ResearchQuestion.source_claim_id == claim.id)
+            .first()
+        )
+        if existing:
+            continue
+
+        statement = " ".join((claim.statement or "").split())
+        if len(statement) > 240:
+            statement = statement[:237].rstrip() + "..."
+        if not statement:
+            continue
+        question = models.ResearchQuestion(
+            question=(
+                "What further evidence would confirm or qualify this reported problem: "
+                f'"{statement}"?'
+            ),
+            priority_score=75.0,
+            status="open",
+            source_pattern_id=opportunity.pattern_id,
+            source_claim_id=claim.id,
+        )
+        db.add(question)
+        linked += 1
+
+    if linked:
+        db.commit()
+    return linked
 
 
 def run_autonomous_opportunity_discovery(db: Session) -> dict:

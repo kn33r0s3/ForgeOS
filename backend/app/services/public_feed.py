@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app import models, schemas
-from app.services import public_epistemics, world_graph
+from app.services import network_endpoints, public_epistemics
 
 
 _PUBLIC_OUTCOME_SOURCES = ("domain_record", "booking_request", "network_connection")
@@ -50,7 +50,7 @@ def build_public_feed(
     """
     requested_kind = (kind or "").strip().lower()
     requested_entity_type = (
-        world_graph.canonical_entity_type(entity_type, strict=False)
+        network_endpoints.canonical_endpoint_type(entity_type, strict=False)
         if entity_type is not None
         else None
     ) or entity_type
@@ -369,8 +369,8 @@ def build_public_feed(
     while pending:
         newly_visible = []
         for connection in pending:
-            left_type = world_graph.canonical_entity_type(connection.left_kind, strict=False)
-            right_type = world_graph.canonical_entity_type(connection.right_kind, strict=False)
+            left_type = network_endpoints.canonical_endpoint_type(connection.left_kind, strict=False)
+            right_type = network_endpoints.canonical_endpoint_type(connection.right_kind, strict=False)
             if left_type is None or right_type is None:
                 continue
             if (left_type, connection.left_id) in public_references and (
@@ -387,13 +387,12 @@ def build_public_feed(
     for connection in connections:
         if connection.id not in visible_connection_ids:
             continue
-        left_type = world_graph.canonical_entity_type(connection.left_kind, strict=False)
-        right_type = world_graph.canonical_entity_type(connection.right_kind, strict=False)
+        left_type = network_endpoints.canonical_endpoint_type(connection.left_kind, strict=False)
+        right_type = network_endpoints.canonical_endpoint_type(connection.right_kind, strict=False)
         if left_type is None or right_type is None:
             continue
-        graph_relation = db.get(models.WorldRelation, connection.relation_id) if connection.relation_id else None
-        relation_type = graph_relation.relation_type if graph_relation else "possible_match"
-        truth_state = graph_relation.truth_state if graph_relation else "hypothesized"
+        relation_type = connection.relation_type or "possible_match"
+        truth_state = connection.epistemic_state or "hypothesized"
         items.append(schemas.PublicFeedItem(
             id=f"connection:{connection.id}",
             kind="connection",
