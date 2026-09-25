@@ -75,7 +75,8 @@ def seed_core_types(db: Session) -> int:
             "signal", "pattern", "belief", "claim", "research_question", "opportunity",
             "provider", "service_listing", "domain_record", "outcome", "customer", "person",
             "organization", "resource", "capability", "tool", "agent", "project", "market", "relation",
-            "action", "learning_event", "booking_request", "decision", "experiment", "product",
+            "action", "learning_event", "booking_request", "decision", "experiment", "scenario_prediction",
+            "evidence_record", "product",
             "repair_work_item",
         },
         "relation_type": {
@@ -116,7 +117,7 @@ def seed_core_types(db: Session) -> int:
                     "signal", "pattern", "belief", "claim", "research_question", "opportunity",
                     "provider", "service_listing", "domain_record", "outcome", "customer",
                     "relation", "action", "learning_event", "booking_request", "decision",
-                    "experiment", "product", "repair_work_item",
+                    "experiment", "scenario_prediction", "evidence_record", "product", "repair_work_item",
                 } else open_schema
                 db.add(models.TypeRegistry(
                     category=category,
@@ -517,7 +518,7 @@ def transition_entity_identity(
         or evidence.subject_kind != "entity"
         or evidence.subject_id != entity.id
         or evidence.support_level not in {"tested", "supported"}
-        or _is_simulated_source(evidence.source)
+        or _is_simulated_source(evidence_source(evidence))
         or not _has_test_or_source_provenance(evidence)
     ):
         raise SubstrateError("identity transition requires stored, provenance-backed evidence for the entity")
@@ -569,7 +570,7 @@ def merge_entities(
         or evidence.subject_kind != "entity"
         or evidence.subject_id != duplicate.id
         or evidence.support_level not in {"tested", "supported"}
-        or _is_simulated_source(evidence.source)
+        or _is_simulated_source(evidence_source(evidence))
         or not _has_test_or_source_provenance(evidence)
     ):
         raise SubstrateError("merge requires stored provenance-backed evidence for the duplicate")
@@ -803,8 +804,8 @@ def create_evidence(
             expected = (kind, subject_id, clean_claim, state, clean_source, provenance_json,
                         confidence if confidence is not None else 0.0)
             actual = (existing.subject_kind, existing.subject_id, existing.claim,
-                      existing.support_level, existing.source, existing.provenance,
-                      existing.confidence)
+                      existing.support_level, evidence_source(existing), evidence_provenance(existing),
+                      existing.substrate_confidence if existing.substrate_confidence is not None else existing.confidence)
             if actual != expected:
                 raise SubstrateError("evidence idempotency key collision; investigate before retrying")
             return existing
@@ -816,6 +817,9 @@ def create_evidence(
         confidence=confidence if confidence is not None else 0.0,
         source=clean_source,
         provenance=provenance_json,
+        substrate_source=clean_source,
+        substrate_confidence=confidence if confidence is not None else 0.0,
+        substrate_provenance=provenance_json,
         recorded_at=models.utcnow(),
         idempotency_key=key,
     )
@@ -839,11 +843,61 @@ def create_evidence(
             expected = (kind, subject_id, clean_claim, state, clean_source, provenance_json,
                         confidence if confidence is not None else 0.0)
             actual = (existing.subject_kind, existing.subject_id, existing.claim,
-                      existing.support_level, existing.source, existing.provenance,
-                      existing.confidence)
+                      existing.support_level, evidence_source(existing), evidence_provenance(existing),
+                      existing.substrate_confidence if existing.substrate_confidence is not None else existing.confidence)
             if actual != expected:
                 raise SubstrateError("evidence idempotency key collision; investigate before retrying") from exc
             return existing
+    return evidence
+
+
+def attach_legacy_evidence(
+    db: Session,
+    evidence: models.Evidence,
+    *,
+    subject_id: int,
+    source: str,
+    substrate_provenance: Mapping[str, Any],
+    recorded_at: datetime,
+) -> models.Evidence:
+    """Attach one existing raw Evidence row through the canonical validator.
+
+    Legacy source, content, direction, confidence, provenance, identifiers,
+    and timestamps remain byte-for-byte source authority. Historical truth is
+    represented as ``unknown`` until a separate evidence-backed transition.
+    """
+    if evidence.id is None or db.get(models.Evidence, evidence.id) is None:
+        raise SubstrateError("legacy evidence must already be persisted")
+    subject = db.get(models.SubstrateEntity, subject_id)
+    if subject is None:
+        raise SubstrateError("legacy evidence subject does not exist")
+    clean_source = (source or "").strip()
+    provenance_json = _dump_json(dict(substrate_provenance), "substrate provenance")
+    if not clean_source or not (evidence.content or "").strip():
+        raise SubstrateError("legacy evidence requires its raw content and a resolvable source")
+
+    if evidence.subject_kind is not None:
+        if (
+            evidence.subject_kind == "entity"
+            and evidence.subject_id == subject_id
+            and evidence.substrate_source == clean_source
+            and evidence.substrate_provenance == provenance_json
+            and evidence.support_level == "unknown"
+        ):
+            return evidence
+        raise SubstrateError("legacy evidence is already mapped; investigate before changing its subject")
+    if evidence.subject_id is not None:
+        raise SubstrateError("legacy evidence has a dangling substrate subject id")
+
+    evidence.subject_kind = "entity"
+    evidence.subject_id = subject_id
+    evidence.support_level = "unknown"
+    evidence.substrate_source = clean_source
+    evidence.substrate_confidence = None
+    evidence.substrate_provenance = provenance_json
+    evidence.recorded_at = recorded_at
+    _validate_substrate_evidence(db, evidence)
+    db.flush()
     return evidence
 
 
@@ -1597,23 +1651,34 @@ def _validate_truth_transition(db: Session, relation: models.WorldRelation, old:
         evidence = _relation_evidence(db, relation.id, new)
         if evidence is None:
             raise SubstrateError(f"transition to {new} requires recorded {new} evidence")
-        if _is_simulated_source(evidence.source):
+        if _is_simulated_source(evidence_source(evidence)):
             raise SubstrateError("simulated evidence cannot establish a relation")
         if not _has_test_or_source_provenance(evidence):
             raise SubstrateError("evidence needs source provenance or a passing test reference")
     if new == "supported":
         tested = _relation_evidence(db, relation.id, "tested")
-        if tested is None or _is_simulated_source(tested.source) or not _has_test_or_source_provenance(tested):
+        if tested is None or _is_simulated_source(evidence_source(tested)) or not _has_test_or_source_provenance(tested):
             raise SubstrateError("transition to supported requires prior tested evidence")
 
 
 def _has_test_or_source_provenance(evidence: models.Evidence) -> bool:
-    provenance = evidence.provenance or ""
-    if evidence.source and evidence.source.lower() == "pytest":
+    provenance = evidence_provenance(evidence)
+    source = evidence_source(evidence)
+    if source and source.lower() == "pytest":
         data = _parse_json(provenance)
         test_ref = (data.get("test_ref") or "").split("::", 1)[0]
         return data.get("result") == "passed" and _repo_file_exists(test_ref)
     return bool(provenance.strip())
+
+
+def evidence_source(evidence: models.Evidence) -> str | None:
+    """Return the validated substrate source, falling back to its legacy source."""
+    return evidence.substrate_source or evidence.source
+
+
+def evidence_provenance(evidence: models.Evidence) -> str:
+    """Return substrate provenance when present without rewriting legacy provenance."""
+    return evidence.substrate_provenance or evidence.provenance or ""
 
 
 def _is_simulated_source(source: str | None) -> bool:
@@ -1674,6 +1739,8 @@ CANONICAL_ADAPTERS: dict[str, tuple[type, Any]] = {
     "domain_record": (models.DomainRecord, lambda row: _canonical_display(row, "title")),
     "booking_request": (models.BookingRequest, lambda row: f"Booking request #{row.id}"),
     "decision": (models.Decision, lambda row: _canonical_display(row, "title")),
+    "scenario_prediction": (models.ScenarioPrediction, lambda row: _canonical_display(row, "claim")),
+    "evidence_record": (models.Evidence, lambda row: f"Evidence record #{row.id}"),
     "experiment": (models.Experiment, lambda row: _canonical_display(row, "action")),
     "action": (models.Action, lambda row: f"{row.action_type or 'Action'} attempt #{row.id}"),
     "outcome": (models.Outcome, lambda row: f"{row.outcome_type or 'Outcome'} #{row.id}"),
@@ -1703,10 +1770,10 @@ def _validate_substrate_evidence(db: Session, evidence: models.Evidence) -> None
         raise SubstrateError("evidence subject must resolve to an existing substrate record")
     if evidence.support_level not in TRUTH_STATES:
         raise SubstrateError("invalid evidence support level")
-    if not (evidence.claim or "").strip() or not (evidence.source or "").strip():
+    if not (evidence.claim or evidence.content or "").strip() or not evidence_source(evidence):
         raise SubstrateError("evidence source and claim are required")
     if evidence.support_level in {"tested", "supported", "refuted"}:
-        if _is_simulated_source(evidence.source):
+        if _is_simulated_source(evidence_source(evidence)):
             raise SubstrateError("simulated evidence cannot be tested, supported, or refuted")
         if not _has_test_or_source_provenance(evidence):
             raise SubstrateError("tested evidence requires provenance")

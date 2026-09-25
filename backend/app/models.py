@@ -636,6 +636,12 @@ class Evidence(Base):
     claim = Column(Text, nullable=True)
     support_level = Column(String, nullable=True)
     recorded_at = Column(DateTime, nullable=True)
+    # Substrate interpretations are kept separate from historic raw fields.
+    # In particular, legacy confidence is commonly 0–100 and must not be
+    # rescaled or overwritten during substrate migration.
+    substrate_source = Column(String, nullable=True)
+    substrate_confidence = Column(Float, nullable=True)
+    substrate_provenance = Column(Text, nullable=True)
 
     signal = relationship("Signal")
     opportunity = relationship("Opportunity", back_populates="evidence_items")
@@ -666,7 +672,7 @@ class Claim(Base):
 
 
 class EvidenceRelationship(Base):
-    """Typed, de-duplicated edge from evidence to a claim or domain record."""
+    """Typed, de-duplicated legacy link with an optional substrate relation ref."""
 
     __tablename__ = "evidence_relationships"
 
@@ -689,6 +695,7 @@ class EvidenceRelationship(Base):
     # New link writes use a unique key. Historical relation_key values remain
     # untouched because old databases may contain duplicates.
     idempotency_key = Column(String, nullable=True, unique=True)
+    substrate_relation_id = Column(Integer, ForeignKey("relations.id"), nullable=True, unique=True)
     created_at = Column(DateTime, default=utcnow, nullable=False)
 
     evidence = relationship("Evidence", back_populates="claim_links")

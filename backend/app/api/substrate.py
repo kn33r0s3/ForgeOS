@@ -205,9 +205,12 @@ def _evidence_out(row: models.Evidence) -> dict[str, Any]:
         "subject_id": row.subject_id,
         "claim": row.claim,
         "support_level": row.support_level,
-        "confidence": row.confidence,
-        "source": row.source,
-        "provenance": _json_value(row.provenance),
+        "confidence": row.substrate_confidence if row.substrate_confidence is not None else (
+            row.confidence if row.subject_kind is not None and row.substrate_provenance is None else None
+        ),
+        "source": row.substrate_source or row.source,
+        "provenance": _json_value(row.substrate_provenance or row.provenance),
+        "legacy_ref": {"table": "evidence", "id": row.id},
         "idempotency_key": row.idempotency_key,
         "recorded_at": row.recorded_at,
     }
