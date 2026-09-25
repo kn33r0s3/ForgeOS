@@ -7,7 +7,6 @@ import {
   ProductPipeline,
   ProductSummary,
   Channel,
-  CustomerEvent,
 } from "@/lib/api";
 import GlassPanel from "@/components/GlassPanel";
 import { useForgeQuery } from "@/lib/useForgeQuery";
@@ -18,7 +17,7 @@ import StatusPill from "@/components/StatusPill";
 // Revenue & customer counts here come ONLY from real ACTUAL_* outcomes the
 // user records; the system never invents a sale, customer, or dollar.
 export default function ProductsPage() {
-  const [scope, setScope] = useState<DataScope>("REAL");
+  const [scope] = useState<DataScope>("REAL");
   const { state, data, error, reload } = useForgeQuery<ProductPipeline>(
     () => api.getProductPipeline(scope),
     (d) => d.total_products === 0 && d.total_leads === 0,
@@ -60,9 +59,9 @@ export default function ProductsPage() {
     }
   }
 
-  const products = data?.products ?? [];
-  const channels = data?.channels ?? [];
-  const events = data?.customer_events ?? [];
+  const products = useMemo(() => data?.products ?? [], [data?.products]);
+  const channels = useMemo(() => data?.channels ?? [], [data?.channels]);
+  const events = useMemo(() => data?.customer_events ?? [], [data?.customer_events]);
   const productMap = useMemo(() => {
     const m = new Map<number, ProductSummary>();
     products.forEach((p) => m.set(p.id, p));

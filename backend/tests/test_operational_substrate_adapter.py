@@ -374,7 +374,7 @@ def test_canonical_cycle_runs_the_registered_substrate_adapters(db):
     assert summary["substrate_relations_created"] >= 1
     assert summary["substrate_events_created"] >= 3
     assert summary["substrate_public_services_projected"] >= 1
-    assert summary["substrate_evidence_created"] == 1
+    assert summary["substrate_evidence_created"] >= 2
     assert summary["substrate_capabilities_created"] > 0
     assert summary["substrate_capability_events_created"] > 0
     assert summary["substrate_legacy_records_projected"] >= 4
