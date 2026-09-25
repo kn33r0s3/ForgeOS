@@ -52,7 +52,15 @@ def test_public_feed_projects_heterogeneous_records_with_evidence_and_relations(
     opportunity = models.Opportunity(problem="A hypothesis about a documented unmet infrastructure need")
     db.add(opportunity)
     db.flush()
-    signal, claim = _public_claim(db, opportunity=opportunity)
+    signal, claim = _public_claim(db)
+    db.add(models.Evidence(
+        opportunity_id=opportunity.id,
+        signal_id=signal.id,
+        source="govinfo",
+        content="The published change supports this opportunity hypothesis.",
+        canonical_url=signal.canonical_url,
+        provenance_hash="public-feed-opportunity-evidence",
+    ))
     db.add_all([
         models.ResearchQuestion(
             question="What changed in the documented infrastructure notice?",

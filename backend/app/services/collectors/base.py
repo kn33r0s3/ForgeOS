@@ -33,6 +33,13 @@ class SourceCollector(ABC):
     source_name: str
     source_type: str
 
+    def require_cleared_source(self) -> None:
+        """Fail before network access unless this collector has active scope."""
+        from app.services import source_clearance_registry
+
+        if not source_clearance_registry.collector_is_cleared(self.source_name):
+            raise PermissionError(f"Source '{self.source_name}' has no active source-registry clearance")
+
     @abstractmethod
     def collect(self, query: Optional[str] = None) -> list[dict]:
         """

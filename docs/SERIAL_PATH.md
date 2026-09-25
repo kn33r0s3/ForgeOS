@@ -10,7 +10,7 @@ Vercel, when `DATABASE_URL` is unset, uses `sqlite:////tmp/forge.db`. That file 
 
 ## Now
 
-S11 and S12 are complete. S13 is open: generalize governed source discovery beyond the current single-source clearance.
+S11 through S14 are complete. S15 is open: generalize typed actor/capability references while preserving canonical records.
 S10 remains evidence-gated for real provider verification and operator-submitted bookings; that does not block network engineering. Never seed providers, prices, bookings, or outcomes. The footer domain and contact mailbox stay pending until the operator supplies real details.
 Production was last reported healthy on 2026-09-25; production state has not been rechecked in this turn. Local code and tests are not proof of a live deployment.
 
@@ -64,8 +64,14 @@ S12. Feed context navigation. COMPLETE.
 Feed relations open a scoped feed view around that typed entity reference, composed only from entries that already pass their original public visibility rules. Preserve privacy for provider contact fields, booking requests, internal actions, and unpublished outcomes.
 Acceptance: entity context includes its public record and related public items, rejects incomplete filters, cannot use a public edge to reveal a hidden endpoint, and can be cleared back to the whole feed.
 
-S13. Governed discovery expansion.
-Move the currently narrow source clearance into a source-registry workflow that can add lawful sources and categories without arbitrary fetching. Keep allowlists, robots/terms checks, rate limits, provenance, deduplication, and expiry per source. A source with uncertain terms stays disabled.
+S13. Governed discovery expansion. COMPLETE.
+Move the currently narrow source clearance into a validated source-registry workflow that can add lawful sources and categories without arbitrary fetching. Keep exact-target allowlists, live robots/terms checks, cross-instance rate limits, provenance, deduplication, and expiry per source. Collector, tool-adapter, CLI, task, and feed paths share the gate. A source with uncertain terms stays disabled.
+
+S14. Autonomous structuring and learning.
+Connect collected external signals to evidence, research questions, patterns, beliefs, opportunities, public projections, authorized actions, observed responses, outcomes, and learning. Automate internal transitions when existing evidence is sufficient; retain approval for contact, transactions, or other external commitments unless an authorized channel and policy permit the action.
+
+S15. General entities and actor capabilities.
+Only introduce durable shared identity or resource records when cross-record identity cannot be represented safely by existing models and typed connections. Migrate by compatibility views/adapters; do not fork provider, signal, opportunity, action, or outcome records.
 
 S14. Autonomous structuring and learning.
 Connect collected external signals to evidence, research questions, patterns, beliefs, opportunities, public projections, authorized actions, observed responses, outcomes, and learning. Automate internal transitions when existing evidence is sufficient; retain approval for contact, transactions, or other external commitments unless an authorized channel and policy permit the action.

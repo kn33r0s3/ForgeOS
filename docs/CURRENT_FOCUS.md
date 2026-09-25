@@ -1,13 +1,13 @@
-# CURRENT_FOCUS.md — S13: Governed Source Registry
+# CURRENT_FOCUS.md — S15: General Entities and Actor Capabilities
 
 **Last updated**: 2026-09-25
 **Work order**: [SERIAL_PATH.md](SERIAL_PATH.md) is the only queue.
 
 ## Current state
 
-S11's generalized public feed and S12's scoped network context are implemented. S13 makes the governed source layer extensible beyond the single currently cleared GovInfo document. S10's pilot remains evidence-gated; that gate does not block engineering. No provider, price, booking, or outcome may be invented.
+S11's generalized public feed, S12's scoped context, S13's governed source registry, and S14's same-run evidence-to-network cycle are implemented. S15 audits shared actor/resource identity and generalizes typed endpoint resolution only where the canonical records and connections need it. S10 remains evidence-gated; no provider, price, booking, payment, response, or outcome may be invented.
 
-The feed uses existing source visibility rules and shows chronological activity without popularity or trust scores. Context queries return only already-public feed items. Local tests/build do not prove production deployment. Production was last reported healthy on 2026-09-25 and has not been rechecked in this session.
+The only active external clearance is one exact GovInfo document, valid through 2026-09-25 UTC. Every other collector stays disabled until its source is reviewed and entered in the registry. Local tests/build do not prove production deployment. Production was last reported healthy on 2026-09-25 and has not been rechecked in this session.
 
 ## S11 completed
 
@@ -21,12 +21,27 @@ The feed uses existing source visibility rules and shows chronological activity 
 - [x] Only public related records appear; hidden endpoints and incomplete filters return no data/validation error.
 - [x] Context can be cleared; typecheck/build and browser interaction pass.
 
-## S13 acceptance
+## S13 completed
 
-- [ ] Source approvals are represented in one validated registry with scope, geography/category, evidence references, and review/expiry dates.
-- [ ] Collector dispatch uses the registry; unknown, expired, changed-terms, robots-blocked, or redirect-out-of-scope URLs fail closed.
-- [ ] Existing GovInfo clearance still passes; an unapproved source cannot fetch.
-- [ ] Feed provenance retains the source identity and canonical reference.
+- [x] A typed registry validates exact HTTPS scope, source ID, geography/category, bounded need, review evidence, and review/expiry dates.
+- [x] Dispatch, direct web collection, tool adapters, CLI, and research tasks fail closed for unknown/expired URLs; robots, terms, and redirect scope are checked live.
+- [x] A database-backed rate gate serializes requests across SQLite/PostgreSQL instances; only the one reviewed GovInfo target is enabled.
+- [x] Registry identity and canonical source URL remain in signal provenance; tests cover unauthorized collectors and route bypasses.
+
+## S14 completed
+
+- [x] A bounded second internal pass now structures signals collected during the scheduled run, without starting a second fetch or executing an external commitment.
+- [x] Canonical cycles restore source links, connect unclaimed external evidence to observed claims, scan typed network connections, and report these transitions.
+- [x] Opportunity hypotheses now reach the public feed through their existing evidence/signal/claim chain; no parallel record is added.
+- [x] Policy gates for external actions remain active. Real response/outcome recording and learning continue through the existing actual-outcome path.
+- [x] Full backend integration tests pass with network-free fixtures in isolated test storage.
+
+## S15 acceptance
+
+- [ ] Feed and context references resolve to existing canonical records with each record's own visibility rules.
+- [ ] Typed connections can point to general actors/capabilities/resources without copying provider, signal, opportunity, action, or outcome data.
+- [ ] Add a shared identity record only if an evidenced cross-record identity cannot be represented safely by existing records and typed connections.
+- [ ] Tests reject dangling or private endpoint exposure and preserve provider contact privacy.
 
 ## S10 pilot gate
 

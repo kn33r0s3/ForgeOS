@@ -28,6 +28,21 @@ above, only on its recorded review date (UTC). Before fetching that page, it
 re-reads robots.txt and the policies page, checks that this path remains allowed
 and the reviewed permission plus copyright caveat remain present, and fails
 closed on changes or network errors. Redirects must remain at the exact
-allowlisted URL. The manual review expires at the UTC date change; review
-robots.txt and terms again, then update the code and this date before another
-day's collection. Every other `web` task is failed before a network request.
+allowlisted URL. A database-backed source gate enforces the minimum interval
+across API and worker instances. The manual review expires at the UTC date
+change; review robots.txt and terms again, then update the code and this date
+before another day's collection. Every other `web` task is failed before a
+network request. Reddit, GitHub, RSS, and arXiv collectors are also blocked
+inside their collector implementations until separately cleared.
+
+Runtime approvals live in `backend/app/services/source_clearance_registry.py`.
+Each entry binds one exact HTTPS target to its source ID, country/category
+scope, allowed need, evidence references, robots URL, terms URL, required
+permission/copyright language, redirect allowlist, review dates, and minimum
+request interval. Registry validation rejects duplicate IDs/URLs, non-HTTPS or
+cross-host policy links, broad redirects, missing evidence, unsupported
+collectors, and invalid review windows. The register currently has one approved
+entry: the GovInfo row above. The other rows in this document remain research
+notes and are not collection permissions. When a source is reviewed, update its
+evidence row and add a typed runtime entry; registry tests ensure the runtime
+URL and documentation reference remain connected.

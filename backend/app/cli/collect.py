@@ -22,6 +22,7 @@ from app.database import SessionLocal, init_db
 from app import models
 from app.services.collector_runner import COLLECTORS
 from app.services.observer_engine import ObserverEngine
+from app.services import source_clearance_registry
 
 
 def run_collection_smoke(
@@ -56,7 +57,14 @@ def run_collection_smoke(
             
             collector = collector_cls()
             try:
-                raw_items = collector.collect(query)
+                if source_name != "web":
+                    raise PermissionError(f"Source '{source_name}' is not cleared for collection")
+                authorization = source_clearance_registry.authorize_request(
+                    query or "",
+                    collector=source_name,
+                    db=db,
+                )
+                raw_items = collector.collect(query or "", authorization=authorization)
             except Exception as exc:
                 summary["items"].append({
                     "source": source_name,

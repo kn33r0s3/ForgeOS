@@ -10,23 +10,18 @@ proper search layer (e.g. a self-hosted SearXNG instance) in front of
 this without changing the SourceCollector interface.
 """
 
-import json
 import re
 import urllib.robotparser
 import urllib.request
 from html.parser import HTMLParser
-from urllib.parse import urljoin, urlsplit, urlunsplit
+from urllib.parse import urljoin
 from urllib.request import HTTPRedirectHandler
 
 from app.services.collectors.base import SourceCollector
+from app.services import source_clearance_registry
 
 USER_AGENT = "ForgeOS/0.1 (research collector)"
 TIMEOUT_SECONDS = 10
-POLICY_URL = "https://www.govinfo.gov/about/policies"
-REQUIRED_POLICY_TEXT = (
-    "public documents can generally be reprinted without legal restriction",
-    "does not authorize any use or appropriation of such copyright material without consent",
-)
 SKIP_TAGS = {"script", "style", "noscript"}
 
 
@@ -73,6 +68,13 @@ class WebCollector(SourceCollector):
     source_type = "general"
 
     def _fetch_policy_text(self, url: str) -> str:
+        policy_urls = {
+            policy_url
+            for entry in source_clearance_registry.source_clearances()
+            for policy_url in (entry.robots_url, entry.terms_url)
+        }
+        if url not in policy_urls:
+            raise PermissionError("Policy URL is not in the source clearance registry")
         request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
         opener = urllib.request.build_opener(_AllowedRedirectHandler({url}))
         try:
@@ -81,130 +83,42 @@ class WebCollector(SourceCollector):
         except Exception as exc:
             raise RuntimeError("Could not recheck source robots or terms") from exc
 
-    def _verify_live_clearance(self, url: str) -> None:
-        robots_url = "https://www.govinfo.gov/robots.txt"
+    def _verify_live_clearance(self, url: str, source_clearance=None) -> None:
+        source_clearance = source_clearance_registry.validate_authorization(
+            source_clearance,
+            url=url,
+            collector=self.source_name,
+        )
+        if url not in source_clearance.redirect_urls:
+            raise RuntimeError("Requested page is not in the source clearance registry")
+        robots_url = source_clearance.robots_url
         robots_text = self._fetch_policy_text(robots_url)
         robots = urllib.robotparser.RobotFileParser(robots_url)
         robots.parse(robots_text.splitlines())
         if not robots.can_fetch(USER_AGENT, url):
             raise RuntimeError("Source robots.txt disallows this page")
 
-        policy_html = self._fetch_policy_text(POLICY_URL)
+        policy_html = self._fetch_policy_text(source_clearance.terms_url)
         parser = _VisibleTextExtractor()
         parser.feed(policy_html)
         policy_text = re.sub(r"\s+", " ", parser.text()).lower()
-        if not all(phrase in policy_text for phrase in REQUIRED_POLICY_TEXT):
+        if not source_clearance.required_terms_phrases or not all(
+            phrase.lower() in policy_text for phrase in source_clearance.required_terms_phrases
+        ):
             raise RuntimeError("Source terms no longer match the reviewed clearance")
-
-    def _collect_reddit(self, query: str) -> list[dict] | None:
-        parsed_url = urlsplit(query)
-        host = (parsed_url.hostname or "").lower()
-
-        if not host.endswith("reddit.com"):
-            return None
-
-        path = parsed_url.path.rstrip("/")
-        if not path.endswith(".json"):
-            path += ".json"
-
-        json_url = urlunsplit(
-            (
-                parsed_url.scheme,
-                parsed_url.netloc,
-                path,
-                parsed_url.query,
-                "",
-            )
-        )
-
-        request = urllib.request.Request(
-            json_url,
-            headers={
-                "User-Agent": USER_AGENT,
-                "Accept": "application/json",
-            },
-        )
-
-        try:
-            with urllib.request.urlopen(
-                request,
-                timeout=TIMEOUT_SECONDS,
-            ) as response:
-                payload = response.read().decode("utf-8", errors="ignore")
-        except Exception:
-            # Let the normal HTML path handle the URL. If that only yields a
-            # shell page, the existing fail-closed rules will reject it.
-            return None
-
-        try:
-            data = json.loads(payload)
-        except json.JSONDecodeError:
-            return []
-
-        post = None
-
-        if isinstance(data, list) and data:
-            listing = data[0]
-            if isinstance(listing, dict):
-                children = listing.get("data", {}).get("children", [])
-                if children and isinstance(children[0], dict):
-                    post = children[0].get("data")
-
-        elif isinstance(data, dict):
-            children = data.get("data", {}).get("children", [])
-            if children and isinstance(children[0], dict):
-                post = children[0].get("data")
-
-        if not isinstance(post, dict):
-            return []
-
-        title = " ".join(str(post.get("title") or "").split())
-        author = " ".join(str(post.get("author") or "").split())
-        subreddit = " ".join(
-            str(post.get("subreddit_name_prefixed") or "").split()
-        )
-        body = " ".join(str(post.get("selftext") or "").split())
-
-        parts = []
-
-        if title:
-            parts.append(f"Title: {title}")
-        if author:
-            parts.append(f"Author: u/{author}")
-        if subreddit:
-            parts.append(f"Subreddit: {subreddit}")
-        if body:
-            parts.append(f"Body: {body}")
-
-        normalized = " ".join(parts).strip()
-
-        if len(normalized) < 120 or len(normalized.split()) < 20:
-            return []
-
-        return [{
-            "content": normalized[:1500],
-            "timestamp": None,
-            "metadata": {
-                "url": query,
-                "extraction": "reddit_json",
-                "source_url": json_url,
-            },
-        }]
 
     def collect(
         self,
         query: str,
         *,
-        allowed_redirect_urls: set[str] | frozenset[str] | None = None,
+        authorization: source_clearance_registry.CollectionAuthorization | None = None,
     ) -> list[dict]:
-        if allowed_redirect_urls is not None:
-            if query not in allowed_redirect_urls:
-                raise RuntimeError("Requested page is not in the collection allowlist")
-            self._verify_live_clearance(query)
-
-        reddit_result = self._collect_reddit(query)
-        if reddit_result is not None:
-            return reddit_result
+        entry = source_clearance_registry.validate_authorization(
+            authorization,
+            url=query,
+            collector=self.source_name,
+        )
+        self._verify_live_clearance(query, authorization)
 
         request = urllib.request.Request(
             query,
@@ -212,16 +126,8 @@ class WebCollector(SourceCollector):
         )
 
         try:
-            opener = (
-                urllib.request.build_opener(_AllowedRedirectHandler(allowed_redirect_urls))
-                if allowed_redirect_urls is not None
-                else None
-            )
-            response_context = (
-                opener.open(request, timeout=TIMEOUT_SECONDS)
-                if opener is not None
-                else urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS)
-            )
+            opener = urllib.request.build_opener(_AllowedRedirectHandler(frozenset(entry.redirect_urls)))
+            response_context = opener.open(request, timeout=TIMEOUT_SECONDS)
             with response_context as response:
                 html = response.read().decode("utf-8", errors="ignore")
         except Exception as exc:

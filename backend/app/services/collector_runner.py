@@ -18,10 +18,8 @@ task "failed" or are skipped per-collector rather than raised — a bad
 network call should never take down a cycle or the API.
 """
 
-from datetime import date, datetime, timezone
+from datetime import date
 from time import monotonic
-from urllib.parse import urlsplit
-
 from sqlalchemy.orm import Session
 
 from app import models
@@ -34,6 +32,7 @@ from app.services.collectors.web import WebCollector
 from app.services import research_task_engine
 from app.services import evidence_graph
 from app.services import tool_usefulness
+from app.services import source_clearance_registry
 
 COLLECTORS = {
     "reddit": RedditCollector,
@@ -44,35 +43,16 @@ COLLECTORS = {
     "web": WebCollector,
 }
 
-# Bulk feeds are not cleared in docs/PUBLIC_SOURCES.md. The one cleared
-# source is a specific GovInfo page, collected as a web task, not as a
-# standing default feed.
+# Bulk feeds are not cleared in docs/PUBLIC_SOURCES.md. Clearances are
+# represented by source_clearance_registry; a URL is not permission by itself.
 UNCLEARED_DEFAULT_SOURCES = ("reddit", "github", "rss", "news", "arxiv")
-CLEARED_WEB_URLS = frozenset({
-    "https://www.govinfo.gov/content/pkg/FR-2026-08-12/html/2026-16432.htm",
-})
-CLEARED_WEB_REVIEW_DATE = date(2026, 9, 25)
+CLEARED_WEB_URLS = frozenset(entry.url for entry in source_clearance_registry.source_clearances())
+CLEARED_WEB_REVIEW_DATE = source_clearance_registry.source_clearances()[0].reviewed_on
 
 
 def _web_clearance_error(value: str, *, today: date | None = None) -> str | None:
-    """Enforce the exact page and same-day review recorded in the source register."""
-    if value not in CLEARED_WEB_URLS:
-        return "Web URL is not explicitly cleared in docs/PUBLIC_SOURCES.md"
-    parsed = urlsplit(value)
-    if not (
-        parsed.scheme == "https"
-        and parsed.hostname == "www.govinfo.gov"
-        and parsed.username is None
-        and parsed.password is None
-        and parsed.port is None
-        and not parsed.query
-        and not parsed.fragment
-    ):
-        return "Web URL is not a canonical cleared URL"
-    current_date = today or datetime.now(timezone.utc).date()
-    if current_date != CLEARED_WEB_REVIEW_DATE:
-        return "GovInfo robots and terms clearance has expired; review it again before collection"
-    return None
+    """Validate exact target, canonical URL, approval, and review window."""
+    return source_clearance_registry.clearance_error(value, today=today)
 
 
 def execute_task(db: Session, task: models.ResearchTask) -> dict:
@@ -89,9 +69,17 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
         research_task_engine.fail_task(db, task, reason)
         return {"task_id": task.id, "status": "failed", "reason": reason}
 
-    if task.source == "web" and (reason := _web_clearance_error(task.query)):
-        research_task_engine.fail_task(db, task, reason)
-        return {"task_id": task.id, "status": "failed", "reason": reason}
+    authorization = None
+    if task.source == "web":
+        try:
+            authorization = source_clearance_registry.authorize_request(
+                task.query,
+                collector=task.source,
+                db=db,
+            )
+        except Exception as exc:
+            research_task_engine.fail_task(db, task, str(exc))
+            return {"task_id": task.id, "status": "failed", "reason": str(exc)}
 
     collector_cls = COLLECTORS.get(task.source)
     if not collector_cls:
@@ -115,8 +103,8 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
     observer = ObserverEngine(db)
 
     try:
-        if task.source == "web":
-            raw_items = collector.collect(task.query, allowed_redirect_urls=CLEARED_WEB_URLS)
+        if authorization:
+            raw_items = collector.collect(task.query, authorization=authorization)
         else:
             raw_items = collector.collect(task.query)
     except Exception as exc:
@@ -136,6 +124,27 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
     evidence_ids = []
     for raw_item in raw_items:
         normalized = collector.normalize(raw_item)
+        if authorization:
+            web_clearance = authorization.entry
+            metadata = dict(normalized.get("metadata") or {})
+            metadata.update({
+                "source_registry_id": web_clearance.registry_id,
+                "source_display_name": web_clearance.display_name,
+                "source_geographies": list(web_clearance.geographies),
+                "source_categories": list(web_clearance.categories),
+                "source_reviewed_on": web_clearance.reviewed_on.isoformat(),
+            })
+            normalized["metadata"] = metadata
+            provenance = normalized.get("provenance")
+            provenance = dict(provenance) if isinstance(provenance, dict) else {}
+            provenance.update({
+                "source_registry_id": web_clearance.registry_id,
+                "source_geographies": list(web_clearance.geographies),
+                "source_categories": list(web_clearance.categories),
+                "source_reviewed_on": web_clearance.reviewed_on.isoformat(),
+            })
+            normalized["provenance"] = provenance
+            normalized["source"] = web_clearance.registry_id
         if not normalized["content"]:
             continue
         signal = observer.observe(normalized["content"], source=normalized["source"], metadata=normalized)

@@ -36,6 +36,7 @@ class RedditCollector(SourceCollector):
     source_type = "discussion"
 
     def collect(self, query: Optional[str] = None) -> list[dict]:
+        self.require_cleared_source()
         queries = [query] if query else DEFAULT_QUERIES
         items: list[dict] = []
         for term in queries:
@@ -43,6 +44,7 @@ class RedditCollector(SourceCollector):
         return items
 
     def _search(self, query: str) -> list[dict]:
+        self.require_cleared_source()
         url = (
             "https://www.reddit.com/search.json?"
             + urllib.parse.urlencode({"q": query, "limit": 10, "sort": "relevance"})

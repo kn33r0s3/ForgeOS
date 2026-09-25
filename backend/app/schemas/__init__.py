@@ -349,6 +349,9 @@ class SourceOut(BaseModel):
 
 class ForgeCycleSummary(BaseModel):
     signals_processed: int
+    source_addresses_restored: int = 0
+    claims_linked: List[int] = Field(default_factory=list)
+    network_connection_ids: List[int] = Field(default_factory=list)
     patterns_found: int
     beliefs_updated: int
     predictions_created: int

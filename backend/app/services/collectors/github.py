@@ -27,6 +27,7 @@ class GithubCollector(SourceCollector):
     source_type = "code"
 
     def collect(self, query: Optional[str] = None) -> list[dict]:
+        self.require_cleared_source()
         queries = [query] if query else DEFAULT_QUERIES
         items: list[dict] = []
         for term in queries:
@@ -34,6 +35,7 @@ class GithubCollector(SourceCollector):
         return items
 
     def _search(self, query: str) -> list[dict]:
+        self.require_cleared_source()
         url = (
             "https://api.github.com/search/issues?"
             + urllib.parse.urlencode({"q": query, "per_page": 10})

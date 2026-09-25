@@ -175,11 +175,31 @@ def build_public_feed(
         ))
 
     # Opportunities are hypotheses here, not offers. Only surface hypotheses
-    # that are explicitly connected to one of the public evidence claims.
+    # explicitly connected to public claims either through the legacy claim
+    # pointer or their canonical Evidence rows. The latter is how the
+    # opportunity engine records provenance today.
     opportunity_claims: dict[int, list[int]] = {}
+    claims_by_signal_id: dict[int, set[int]] = {}
     for claim, _ in public_claims.values():
         if claim.opportunity_id is not None:
             opportunity_claims.setdefault(claim.opportunity_id, []).append(claim.id)
+    for claim, signal in public_claims.values():
+        claims_by_signal_id.setdefault(signal.id, set()).add(claim.id)
+    if public_signal_ids:
+        opportunity_evidence = (
+            db.query(models.Evidence.opportunity_id, models.Evidence.signal_id)
+            .filter(models.Evidence.opportunity_id.isnot(None))
+            .filter(models.Evidence.signal_id.in_(list(public_signal_ids)))
+            .all()
+        )
+        for opportunity_id, signal_id in opportunity_evidence:
+            for claim_id in claims_by_signal_id.get(signal_id, ()):
+                opportunity_claims.setdefault(opportunity_id, []).append(claim_id)
+    opportunity_claims = {
+        opportunity_id: sorted(set(claim_ids))
+        for opportunity_id, claim_ids in opportunity_claims.items()
+        if claim_ids
+    }
     if opportunity_claims:
         opportunities = (
             db.query(models.Opportunity)

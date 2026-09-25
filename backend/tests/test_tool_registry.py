@@ -81,3 +81,13 @@ def test_default_registry_keeps_mock_fallback_when_ollama_is_not_active():
 
     assert selection.tool.capability.name == "offline-mock"
     assert selection.tool.execute("hello")
+
+
+def test_unapproved_collection_tools_are_unavailable_and_web_rejects_unknown_targets(db):
+    registry = default_registry()
+
+    assert not registry.get("reddit").is_available()
+    with pytest.raises(ToolUnavailableError, match="not cleared"):
+        registry.get("reddit").execute("automation", db=db)
+    with pytest.raises(ToolUnavailableError, match="not cleared"):
+        registry.get("web").execute("https://example.com/article", db=db)

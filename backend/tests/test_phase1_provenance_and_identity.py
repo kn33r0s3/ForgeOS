@@ -128,6 +128,7 @@ def test_collector_dry_run_performs_no_database_writes(db):
     count_after = db.query(models.Signal).count()
     assert res["mode"] == "dry-run"
     assert res["inserted"] == 0
+    assert "not cleared" in res["items"][0]["error"]
     assert count_before == count_after
 
 
@@ -280,4 +281,3 @@ def test_manual_signal_with_url_semantics(db):
     assert sig.source == "manual"
     assert sig.source_type == "manual"
     assert sig.canonical_url == "https://example.com/item"
-

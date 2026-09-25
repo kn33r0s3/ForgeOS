@@ -83,6 +83,7 @@ class CollectorToolAdapter:
 
     def __init__(self, name: str, collector_factory: Callable[[], Any], source_type: str):
         self._collector_factory = collector_factory
+        self._name = name
         self.capability = ToolCapability(
             name=name,
             category="collection",
@@ -97,6 +98,10 @@ class CollectorToolAdapter:
         )
 
     def is_available(self) -> bool:
+        from app.services import source_clearance_registry
+
+        if not source_clearance_registry.collector_is_cleared(self._name):
+            return False
         try:
             self._collector_factory()
             return True
@@ -104,8 +109,22 @@ class CollectorToolAdapter:
             return False
 
     def execute(self, payload: Any, **kwargs: Any) -> Any:
+        from app.services import source_clearance_registry
+
+        query = str(payload) if payload else ""
+        if self._name != "web":
+            raise ToolUnavailableError(f"Source '{self._name}' is not cleared for collection execution")
+        db = kwargs.get("db")
+        try:
+            authorization = source_clearance_registry.authorize_request(
+                query,
+                collector=self._name,
+                db=db,
+            )
+        except Exception as exc:
+            raise ToolUnavailableError(str(exc)) from exc
         collector = self._collector_factory()
-        return collector.collect(str(payload) if payload else None)
+        return collector.collect(query, authorization=authorization)
 
 
 @dataclass

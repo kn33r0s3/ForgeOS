@@ -580,6 +580,15 @@ class Source(Base):
     url = Column(String, nullable=True)  # default feed/endpoint for this source, if any — collectors read this via source_manager.get_source_url()
 
 
+class SourceFetchGate(Base):
+    """Durable per-source throttle shared by workers and API instances."""
+
+    __tablename__ = "source_fetch_gates"
+
+    registry_id = Column(String, primary_key=True)
+    last_reserved_at = Column(DateTime(timezone=True), nullable=False)
+
+
 # ---------------------------------------------------------------------
 # Reality Memory
 #

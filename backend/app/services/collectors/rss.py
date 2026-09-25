@@ -42,6 +42,7 @@ class RSSCollector(SourceCollector):
     source_type = "media"
 
     def collect(self, query: Optional[str] = None) -> list[dict]:
+        self.require_cleared_source()
         if query:
             return self._fetch_feed(self._google_news_search_url(query), query=query)
 
@@ -64,6 +65,7 @@ class RSSCollector(SourceCollector):
         return "https://news.google.com/rss/search?" + urllib.parse.urlencode(params)
 
     def _fetch_feed(self, feed_url: str, query: Optional[str] = None) -> list[dict]:
+        self.require_cleared_source()
         request = urllib.request.Request(feed_url, headers={"User-Agent": USER_AGENT})
         try:
             with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:

@@ -97,8 +97,10 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
     independently — one failure must not paint the whole cycle successful.
     """
     import json
+    import os
     from datetime import datetime, timezone
     from app import models as _models
+    from app.services import evidence_graph, network_connections
 
     cycle = _models.CycleRun(started_at=datetime.now(timezone.utc), status="RUNNING")
     db.add(cycle)
@@ -109,6 +111,17 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
     # 1. Signals currently in memory
     observer = ObserverEngine(db)
     signals_processed = len(observer.list_signals(limit=1000, min_importance=0.0))
+
+    # 1.5. Complete the canonical signal-to-network handoff here so API,
+    # scheduled, and worker cycles share the same behavior. External
+    # observations become explicitly observed claims only when a canonical
+    # source URL and existing Evidence row are present. Candidate connections
+    # stay private and unapproved until a person advances them.
+    claim_limit = max(0, min(int(os.environ.get("FORGEOS_CLAIM_LINK_LIMIT", "20")), 100))
+    source_addresses_restored = evidence_graph.restore_source_addresses(db, limit=claim_limit)
+    linked_claim_ids = evidence_graph.link_unclaimed_observations(db, limit=claim_limit)
+    connection_rows = network_connections.scan_candidates(db, limit=50)
+    network_connection_ids = [row.id for row in connection_rows]
 
     # 2. Detect patterns across all signals. Each Pattern already
     #    carries its own origin_signal_ids (exact, not approximated —
@@ -337,6 +350,9 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
 
     summary = {
         "signals_processed": signals_processed,
+        "source_addresses_restored": source_addresses_restored,
+        "claims_linked": linked_claim_ids,
+        "network_connection_ids": network_connection_ids,
         "patterns_found": len(patterns),
         "beliefs_updated": beliefs_updated,
         "predictions_created": predictions_created,

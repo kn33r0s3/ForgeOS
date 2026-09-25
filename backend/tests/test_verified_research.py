@@ -240,26 +240,19 @@ def test_unapproved_web_url_fails_without_collection(db, monkeypatch):
     result = collector_runner.execute_task(db, task)
 
     assert result["status"] == "failed"
-    assert "not explicitly cleared" in result["reason"]
+    assert "not cleared" in result["reason"]
     assert db.query(models.Signal).count() == 0
 
 
-def test_cleared_web_url_gets_redirect_allowlist(db, monkeypatch):
+def test_cleared_web_url_gets_registry_authorization(db, monkeypatch):
     _, task = make_claim_task(db)
     task.source = "web"
     task.query = "https://www.govinfo.gov/content/pkg/FR-2026-08-12/html/2026-16432.htm"
     db.commit()
     observed = {}
-    clearance_check = collector_runner._web_clearance_error
-    monkeypatch.setattr(
-        collector_runner,
-        "_web_clearance_error",
-        lambda value: clearance_check(value, today=date(2026, 9, 25)),
-    )
-
-    def fail_without_fetch(self, query, *, allowed_redirect_urls=None):
+    def fail_without_fetch(self, query, *, authorization=None):
         observed["query"] = query
-        observed["allowed_redirect_urls"] = allowed_redirect_urls
+        observed["authorization"] = authorization
         raise RuntimeError("test stops before network access")
 
     monkeypatch.setattr(collector_runner.WebCollector, "collect", fail_without_fetch)
@@ -267,7 +260,32 @@ def test_cleared_web_url_gets_redirect_allowlist(db, monkeypatch):
 
     assert result["status"] == "failed"
     assert observed["query"] == task.query
-    assert observed["allowed_redirect_urls"] == collector_runner.CLEARED_WEB_URLS
+    assert observed["authorization"].entry.registry_id == "govinfo-nepal-cultural-property-rule-2026"
+    assert frozenset(observed["authorization"].entry.redirect_urls) == collector_runner.CLEARED_WEB_URLS
+
+
+def test_web_collection_stores_registry_identity_in_signal_provenance(db, monkeypatch):
+    _, task = make_claim_task(db)
+    task.source = "web"
+    task.query = "https://www.govinfo.gov/content/pkg/FR-2026-08-12/html/2026-16432.htm"
+    db.commit()
+
+    def collect_without_network(self, query, *, authorization=None):
+        assert authorization.entry.url == query
+        assert authorization.entry.registry_id == "govinfo-nepal-cultural-property-rule-2026"
+        return [{
+            "content": "A public Federal Register notice describes an import restriction and its stated rationale. "
+            "This test observation is synthetic and remains within the isolated pytest database.",
+            "metadata": {"url": query},
+        }]
+
+    monkeypatch.setattr(collector_runner.WebCollector, "collect", collect_without_network)
+    result = collector_runner.execute_task(db, task)
+
+    assert result["status"] == "completed"
+    signal = db.query(models.Signal).filter_by(source="govinfo-nepal-cultural-property-rule-2026").one()
+    assert signal.canonical_url == task.query
+    assert '"source_registry_id": "govinfo-nepal-cultural-property-rule-2026"' in signal.provenance
 
 
 def test_web_clearance_expires_after_review_day():

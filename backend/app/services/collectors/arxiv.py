@@ -33,6 +33,7 @@ class ArxivCollector(SourceCollector):
     source_type = "research"
 
     def collect(self, query: Optional[str] = None) -> list[dict]:
+        self.require_cleared_source()
         search_query = f"all:{query}" if query else DEFAULT_SEARCH_QUERY
         params = {
             "search_query": search_query,

@@ -2,8 +2,9 @@
 DAILY FORCED CYCLE RUNNER — Phase 1
 ======================================
 
-Runs one Forge Cycle followed by one Autonomy Cycle, end to end, and
-appends a structured diagnostic line to logs/daily_cycle_log.jsonl.
+Runs a Forge Cycle, bounded collection, one conditional internal follow-up
+when collection produces signals, and one Autonomy Cycle. It appends a
+structured diagnostic line to logs/daily_cycle_log.jsonl.
 
 This exists so "run it every day and log exactly where it breaks" is a
 single command instead of a manual set of clicks through the UI. It
@@ -91,13 +92,38 @@ def run_once() -> dict:
             if collect_limit > 0:
                 from app.services import collector_runner
                 record["collection"] = collector_runner.run_pending_tasks(db, limit=collect_limit)
-            from app.services import evidence_graph, network_connections
-            claim_limit = int(os.environ.get("FORGEOS_CLAIM_LINK_LIMIT", "20"))
-            record["restored_source_addresses"] = evidence_graph.restore_source_addresses(db, limit=claim_limit)
-            record["linked_claims"] = evidence_graph.link_unclaimed_observations(db, limit=claim_limit)
-            record["connections"] = [
-                row.id for row in network_connections.scan_candidates(db, limit=50)
-            ]
+                signals_created = sum(
+                    int(item.get("signals_created") or 0)
+                    for item in record["collection"]
+                    if isinstance(item, dict)
+                )
+                if signals_created:
+                    # A bounded second internal pass closes the same-run
+                    # handoff from collected Signal/Evidence to claims,
+                    # beliefs, opportunities, and policy-gated proposals.
+                    # It does not fetch again or execute external actions.
+                    post_collection = forge_loop.run_cycle(db)
+                    record["post_collection_cycle"] = post_collection
+                    record["restored_source_addresses"] = (
+                        int(cycle_summary.get("source_addresses_restored") or 0)
+                        + int(post_collection.get("source_addresses_restored") or 0)
+                    )
+                    record["linked_claims"] = list(dict.fromkeys(
+                        (cycle_summary.get("claims_linked") or [])
+                        + (post_collection.get("claims_linked") or [])
+                    ))
+                    record["connections"] = list(dict.fromkeys(
+                        (cycle_summary.get("network_connection_ids") or [])
+                        + (post_collection.get("network_connection_ids") or [])
+                    ))
+                else:
+                    record["restored_source_addresses"] = cycle_summary.get("source_addresses_restored", 0)
+                    record["linked_claims"] = cycle_summary.get("claims_linked", [])
+                    record["connections"] = cycle_summary.get("network_connection_ids", [])
+            else:
+                record["restored_source_addresses"] = cycle_summary.get("source_addresses_restored", 0)
+                record["linked_claims"] = cycle_summary.get("claims_linked", [])
+                record["connections"] = cycle_summary.get("network_connection_ids", [])
         except Exception as exc:
             record["forge_cycle_error"] = f"{type(exc).__name__}: {exc}"
             record["forge_cycle_traceback"] = traceback.format_exc()
