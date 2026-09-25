@@ -70,21 +70,11 @@ v1.2 adds three things beyond the v1.1 skeleton:
     opportunity already classified is never reclassified, so repeated
     cycles don't churn or duplicate anything.
 
-v1.3 adds Revenue Sources: REAL, sourced, dated platforms/programs
-that already have documented, verifiable ways of paying people
-(Amazon Associates, Upwork, YouTube Partner Program, Gumroad — seeded
-via seed_default_revenue_sources(), figures obtained by web search,
-never invented or recalled from memory as if certain). An Opportunity
-can optionally link to one (Opportunity.revenue_source_id), which:
-
-  - Adds a small, capped, transparent grounding bonus to money_score
-    (REVENUE_SOURCE_GROUNDING_BONUS) — being tied to a known, real
-    payout mechanism is stronger evidence than an assumed one.
-  - Shows up in classify_evidence() as its own "observed" fact.
-  - Is suggested (never auto-assigned) by suggest_revenue_sources(),
-    based on the opportunity's already-inferred monetization_model —
-    linking always requires an explicit call, matching the "propose,
-    don't assume" principle every other engine in Forge follows.
+v1.3 adds Revenue Sources. An Opportunity can optionally link to
+one (Opportunity.revenue_source_id). Startup does not insert payout
+percentages. A grounding bonus applies only when the linked row stores
+an https citation and a payout figure. A name alone does not ground a score.
+suggest_revenue_sources() proposes candidates and does not link them.
 
 Because platform payout terms change, every RevenueSource carries
 data_as_of and source_citation — a number presented as current when
@@ -139,84 +129,11 @@ MONETIZATION_MODEL_KEYWORDS: dict[str, list[str]] = {
 
 # --- Revenue Sources (v1.3) -------------------------------------------
 #
-# REAL, sourced, dated payout data for well-known platforms — verified
-# via web search, not recalled from memory or guessed. Each entry
-# records where the figure came from and when it was checked, because
-# presenting a stale number as current would itself be a kind of
-# fabrication (see RevenueSource's docstring in models.py). These are
-# starting reference points, not a promise that terms haven't changed
-# since data_as_of — always verify against the platform's own current
-# terms before relying on a number here.
-DEFAULT_REVENUE_SOURCES = [
-    {
-        "name": "Amazon Associates",
-        "source_type": "affiliate",
-        "payout_structure": (
-            "Commission on qualifying purchases via referral links, category-dependent "
-            "(most physical goods ~1-4.5%; luxury beauty/Amazon Explore ~10%; Amazon "
-            "digital games ~20%), plus flat bounties ($3-$25) for specific actions like "
-            "Prime/Audible/Kindle Unlimited signups. Rates set unilaterally by Amazon and "
-            "have trended downward over time."
-        ),
-        "payout_share_percent_min": 1.0,
-        "payout_share_percent_max": 20.0,
-        "minimum_payout": 10.0,
-        "payment_frequency": "monthly (net-60)",
-        "requires_approval": True,
-        "source_citation": "Multiple affiliate-marketing guides current as of 2026 (web search, this session)",
-        "data_as_of": "2026-08",
-    },
-    {
-        "name": "Upwork",
-        "source_type": "gig_platform",
-        "payout_structure": (
-            "Freelancer service fee is variable, 0-15% per contract, set at proposal time; "
-            "most freelancers pay approximately 10%. Replaced the older tiered 20%/10%/5% "
-            "model in 2025. Deducted before payout; separate Connects cost to submit proposals."
-        ),
-        "payout_share_percent_min": 85.0,
-        "payout_share_percent_max": 100.0,
-        "minimum_payout": None,
-        "payment_frequency": "5-10 days after contract milestone/period ends",
-        "requires_approval": False,
-        "source_citation": "Multiple freelance-platform fee guides current as of 2026 (web search, this session)",
-        "data_as_of": "2026-08",
-    },
-    {
-        "name": "YouTube Partner Program",
-        "source_type": "ad_revenue_share",
-        "payout_structure": (
-            "55% of ad revenue to the creator / 45% to YouTube on long-form video content "
-            "(unchanged since program launch); Shorts use a separate pooled model paying "
-            "roughly 45% of the Shorts ad pool, proportional to view share. Requires 1,000 "
-            "subscribers + 4,000 watch hours (or equivalent Shorts views) for standard-tier "
-            "eligibility. $100 minimum payout threshold."
-        ),
-        "payout_share_percent_min": 45.0,
-        "payout_share_percent_max": 55.0,
-        "minimum_payout": 100.0,
-        "payment_frequency": "monthly",
-        "requires_approval": True,
-        "source_citation": "YouTube Help (support.google.com) + multiple creator-economy sources current as of 2026 (web search, this session)",
-        "data_as_of": "2026-08",
-    },
-    {
-        "name": "Gumroad",
-        "source_type": "marketplace",
-        "payout_structure": (
-            "10% + $0.50 per transaction on direct sales (your own links/profile/embed); "
-            "30% flat on sales via Gumroad's own Discover marketplace. No monthly fee. "
-            "Card processing (~2.9% + $0.30) applies on top of the platform fee."
-        ),
-        "payout_share_percent_min": 70.0,
-        "payout_share_percent_max": 90.0,
-        "minimum_payout": None,
-        "payment_frequency": "based on payout schedule set in account settings",
-        "requires_approval": False,
-        "source_citation": "Multiple digital-product platform fee guides current as of 2026 (web search, this session)",
-        "data_as_of": "2026-08",
-    },
-]
+# A payout figure belongs on a row only when its citation is a stored
+# primary page. Startup does not invent percentages for named platforms.
+UNSOURCED_SEED_MARK = "web search, this session"
+UNKNOWN_PAYOUT_TEXT = "Payout terms are unknown. No primary terms page is stored for this name."
+UNKNOWN_CITATION = "No primary terms page is stored. Earlier percentages were not a sourced record."
 
 REVENUE_SOURCE_GROUNDING_BONUS = 10.0  # flat, capped bonus for being tied to a KNOWN real payout mechanism, not an assumed one — see score_opportunity()
 
@@ -285,7 +202,8 @@ def score_opportunity(db: Session, opportunity: models.Opportunity) -> dict:
     # above) so it never changes behavior for any opportunity that
     # isn't linked to a revenue source (the common case, and every
     # scenario this module's prior scoring tests were verified against).
-    if opportunity.revenue_source_id is not None:
+    grounded = _recorded_payout(db, opportunity.revenue_source_id)
+    if grounded:
         penalized += REVENUE_SOURCE_GROUNDING_BONUS
     money_score = round(max(0.0, min(100.0, penalized)), 1)
 
@@ -302,7 +220,7 @@ def score_opportunity(db: Session, opportunity: models.Opportunity) -> dict:
     return {
         "money_score": money_score,
         "expected_value": expected_value,
-        "revenue_source_grounded": opportunity.revenue_source_id is not None,
+        "revenue_source_grounded": grounded,
         "problem_evidence": problem_evidence,
         "willingness_evidence": willingness_evidence,
         "market_confidence": opportunity.market_confidence,
@@ -327,7 +245,7 @@ def _build_reasoning(opportunity: models.Opportunity, breakdown: dict) -> str:
     if breakdown["willingness_evidence"] == 0.0:
         parts.append("No willingness-to-pay evidence exists yet — this is unvalidated, not confirmed.")
     if breakdown.get("revenue_source_grounded"):
-        parts.append("Grounded in a known, real revenue-sharing mechanism, not an assumed one.")
+        parts.append("A payout figure is stored with an https citation.")
     if breakdown["expected_value"] is not None:
         parts.append(f"Expected value: ${breakdown['expected_value']:.2f} (from real recorded evidence).")
     else:
@@ -529,10 +447,10 @@ def classify_evidence(opportunity: models.Opportunity) -> dict:
             "value": opportunity.willingness_evidence_ids,
         },
         "revenue_source": {
-            # "observed" here means "tied to a real, known payout
-            # mechanism" (see RevenueSource), not "revenue observed" —
-            # distinct from estimated_revenue below.
-            "status": "observed" if opportunity.revenue_source_id is not None else "unknown",
+            # A foreign key is not an observed payout. The score adds a
+            # grounding bonus only after the linked row has an https
+            # citation and a figure.
+            "status": "unknown",
             "value": opportunity.revenue_source_id,
         },
         "estimated_revenue": {
@@ -706,17 +624,47 @@ def run_money_cycle(db: Session) -> dict:
 # --- Revenue Sources (v1.3) -------------------------------------------
 
 
+def _recorded_payout(db: Session, revenue_source_id: Optional[int]) -> bool:
+    """True only when the linked row stores both an https citation and a figure."""
+    if revenue_source_id is None:
+        return False
+    source = db.query(models.RevenueSource).filter(models.RevenueSource.id == revenue_source_id).first()
+    if source is None:
+        return False
+    citation = (source.source_citation or "").strip()
+    has_figure = any(
+        value is not None
+        for value in (
+            source.payout_share_percent_min,
+            source.payout_share_percent_max,
+            source.minimum_payout,
+        )
+    )
+    return citation.startswith("https://") and has_figure
+
+
 def seed_default_revenue_sources(db: Session) -> None:
-    """Insert the default RevenueSource rows if they don't already
-    exist. Called on app/worker startup, same pattern as
-    source_manager.seed_default_sources() — safe to call every time,
-    a no-op once seeded."""
-    for entry in DEFAULT_REVENUE_SOURCES:
-        exists = db.query(models.RevenueSource).filter(models.RevenueSource.name == entry["name"]).first()
-        if exists:
+    """Do not insert payout figures.
+
+    Older startups stored platform percentages under a citation that
+    said they came from a web search in that session. Those numbers are
+    withdrawn. A row with any other citation is left as stored.
+    """
+    changed = False
+    for row in db.query(models.RevenueSource).all():
+        if UNSOURCED_SEED_MARK not in (row.source_citation or ""):
             continue
-        db.add(models.RevenueSource(**entry))
-    db.commit()
+        row.payout_structure = UNKNOWN_PAYOUT_TEXT
+        row.payout_share_percent_min = None
+        row.payout_share_percent_max = None
+        row.minimum_payout = None
+        row.payment_frequency = None
+        row.requires_approval = False
+        row.source_citation = UNKNOWN_CITATION
+        row.data_as_of = None
+        changed = True
+    if changed:
+        db.commit()
 
 
 def list_revenue_sources(db: Session) -> list[models.RevenueSource]:

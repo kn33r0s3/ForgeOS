@@ -126,7 +126,7 @@ function OperationsPage() {
       const res = await fetch("/api/forge/cycle", { method: "POST" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setCycleMsg(`Cycle complete. Status: ${data.status || "COMPLETED"} · Cycle ID: ${data.cycle_id ?? "—"}`);
+      setCycleMsg(`Cycle complete. Status: ${data.status || "status not recorded"} · Cycle ID: ${data.cycle_id ?? "—"}`);
       await loadOperatingData();
     } catch (err: any) {
       setCycleMsg(`Cycle error: ${err.message}`);
@@ -364,7 +364,7 @@ function OperationsPage() {
                           <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                               <span className="font-mono text-micro uppercase text-cyan">
-                                Opp #{opp.id} · {opp.customer_segment || opp.target_customer || "General"}
+                                Opp #{opp.id} · {opp.customer_segment || opp.target_customer || "Customer not recorded"}
                               </span>
                               <span className="font-mono text-micro rounded-full border border-amber/30 bg-amber/10 px-2 py-0.5 text-amber">
                                 Score: {opp.score.toFixed(1)}
@@ -378,8 +378,8 @@ function OperationsPage() {
                             </p>
                           </div>
                           <div className="border-t border-line pt-3 flex items-center justify-between text-xs text-dim font-mono">
-                            <span>Model: {opp.business_model || "SaaS"}</span>
-                            <span>Diff: {opp.difficulty || "medium"}</span>
+                            <span>Model: {opp.business_model || "Model not recorded"}</span>
+                            <span>Diff: {opp.difficulty || "Difficulty not recorded"}</span>
                           </div>
                           {/* ── Change 5: show money_score honestly even when 0 ── */}
                           <div className="text-xs text-dim font-mono">
@@ -426,7 +426,7 @@ function OperationsPage() {
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-micro uppercase text-cyan">
-                              Proposal #{act.id} · {act.action_type || "Validation"}
+                              Proposal #{act.id} · {act.action_type || "Action type not recorded"}
                             </span>
                             <span className={`rounded-full border px-2 py-0.5 font-mono text-micro ${
                               act.status === "completed"

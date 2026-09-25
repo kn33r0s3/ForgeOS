@@ -574,12 +574,9 @@ def get_money_dashboard(db: Session = Depends(get_db)):
 @router.get("/revenue-sources", response_model=list[schemas.RevenueSourceOut])
 def get_revenue_sources(db: Session = Depends(get_db)):
     """
-    Every known, real revenue-sharing mechanism Forge has on file
-    (Amazon Associates, Upwork, YouTube Partner Program, Gumroad, and
-    any custom ones added) — each with a source citation and a
-    data_as_of date. These figures were obtained by web search at
-    seeding time and can go stale; verify against the platform's own
-    current terms before relying on one.
+    Revenue-source rows stored in this database. A percentage is present
+    only when a primary citation was stored with it. Startup does not
+    add platform fee figures.
     """
     return money_engine.list_revenue_sources(db)
 

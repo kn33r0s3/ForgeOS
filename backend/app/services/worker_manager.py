@@ -71,21 +71,16 @@ def builder_handler(db: Session, task: WorkerTask) -> dict:
 
 
 def qa_handler(db: Session, task: WorkerTask) -> dict:
+    """No inspection ran. A build flag is not an inspected artifact."""
     if not (task.inputs and task.inputs.get("build_success")):
-        raise RuntimeError("Build failed – cannot QA")
-    output = {"qa_passed": True, "message": "System QA passed"}
-    follow_up = WorkerTask(
-        worker_type="evolution",
-        task_name="evolve_system",
-        priority=task.priority,
-        inputs=output,
-    )
-    db.add(follow_up)
-    return output
+        message = "No successful build was recorded. No QA inspection ran."
+    else:
+        message = "No QA inspection ran. A build flag is not an inspected artifact."
+    return {"qa_passed": False, "message": message}
 
 
 def evolution_handler(db: Session, task: WorkerTask) -> dict:
-    output = {"next": "discovery", "message": "Evolution evaluated the system and scheduled discovery"}
+    output = {"next": "discovery", "message": "Scheduled the next discovery. No system evaluation ran."}
 
     existing_pending = (
         db.query(WorkerTask)

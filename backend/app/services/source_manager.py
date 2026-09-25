@@ -19,42 +19,60 @@ from typing import Optional
 from app import models
 
 
-# Starting reliability estimates. These are deliberately rough — the
-# point is that sources are NOT treated equally, not that these exact
-# numbers are correct. reliability_score moves over time based on
-# whether each source's evidence held up under resolved Predictions
-# (see reality_memory.py's _adjust_source_reliability). `url` is each
-# source's default feed/endpoint where one applies — collectors read
-# it via get_source_url() so the endpoint lives in one place (the DB),
-# not hardcoded across every collector file.
+# Unmeasured sources share one baseline. A differentiated score is stored
+# only after evidence adjusts it. The old startup values below were not
+# measurements. `url` is a default endpoint, not a clearance to collect.
+UNMEASURED_RELIABILITY = 50.0
+INVENTED_SEED_SCORES = {
+    "manual": 90.0,
+    "arxiv": 88.0,
+    "paper": 85.0,
+    "github": 80.0,
+    "book": 75.0,
+    "reddit": 65.0,
+    "rss": 55.0,
+    "news": 55.0,
+    "web": 40.0,
+}
 DEFAULT_SOURCES = [
-    {"name": "manual", "type": "human", "reliability_score": 90.0, "lifespan": "permanent", "url": None},
-    {"name": "arxiv", "type": "research", "reliability_score": 88.0, "lifespan": "permanent",
+    {"name": "manual", "type": "human", "reliability_score": UNMEASURED_RELIABILITY, "lifespan": "permanent", "url": None},
+    {"name": "arxiv", "type": "research", "reliability_score": UNMEASURED_RELIABILITY, "lifespan": "permanent",
      "url": "http://export.arxiv.org/api/query"},
-    {"name": "paper", "type": "research", "reliability_score": 85.0, "lifespan": "permanent", "url": None},
-    {"name": "github", "type": "code", "reliability_score": 80.0, "lifespan": "long",
+    {"name": "paper", "type": "research", "reliability_score": UNMEASURED_RELIABILITY, "lifespan": "permanent", "url": None},
+    {"name": "github", "type": "code", "reliability_score": UNMEASURED_RELIABILITY, "lifespan": "long",
      "url": "https://api.github.com/search/issues"},
-    {"name": "book", "type": "human", "reliability_score": 75.0, "lifespan": "permanent", "url": None},
-    {"name": "reddit", "type": "discussion", "reliability_score": 65.0, "lifespan": "medium",
+    {"name": "book", "type": "human", "reliability_score": UNMEASURED_RELIABILITY, "lifespan": "permanent", "url": None},
+    {"name": "reddit", "type": "discussion", "reliability_score": UNMEASURED_RELIABILITY, "lifespan": "medium",
      "url": "https://www.reddit.com/search.json"},
-    {"name": "rss", "type": "media", "reliability_score": 55.0, "lifespan": "short", "url": None},
+    {"name": "rss", "type": "media", "reliability_score": UNMEASURED_RELIABILITY, "lifespan": "short", "url": None},
     # kept for backward compatibility with any already-planned ResearchTask
     # rows tagged "news" from before rss.py absorbed that functionality —
     # collector_runner.py maps both "news" and "rss" to the same RSSCollector.
-    {"name": "news", "type": "media", "reliability_score": 55.0, "lifespan": "short", "url": None},
-    {"name": "web", "type": "general", "reliability_score": 40.0, "lifespan": "variable", "url": None},
+    {"name": "news", "type": "media", "reliability_score": UNMEASURED_RELIABILITY, "lifespan": "short", "url": None},
+    {"name": "web", "type": "general", "reliability_score": UNMEASURED_RELIABILITY, "lifespan": "variable", "url": None},
 ]
 
 
 def seed_default_sources(db: Session) -> None:
-    """Insert the default Source rows if they don't already exist.
-    Called on app/worker startup — safe to call every time (no-op once seeded)."""
+    """Insert source names if they are missing.
+
+    A row still sitting on an old invented startup score is returned to
+    the unmeasured baseline. A score that has moved off that exact value
+    is left as stored.
+    """
+    changed = False
     for entry in DEFAULT_SOURCES:
         exists = db.query(models.Source).filter(models.Source.name == entry["name"]).first()
         if exists:
+            invented = INVENTED_SEED_SCORES.get(exists.name)
+            if invented is not None and exists.reliability_score == invented:
+                exists.reliability_score = UNMEASURED_RELIABILITY
+                changed = True
             continue
         db.add(models.Source(**entry))
-    db.commit()
+        changed = True
+    if changed:
+        db.commit()
 
 
 def get_reliability(db: Session, source_name: str) -> float:

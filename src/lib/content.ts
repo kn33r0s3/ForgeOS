@@ -366,13 +366,13 @@ export async function loadProviders(filters?: { q?: string; category?: string; c
       provider_id: item.provider_id,
       title: item.title ?? "",
       description: item.description ?? "",
-      category: item.category ?? "Service",
+      category: item.category ?? "Category not recorded",
       location: item.location ?? null,
       price_from: item.price_from ?? null,
-      currency: item.currency ?? "NPR",
+      currency: item.currency ?? null,
       availability_status: item.availability_status ?? null,
-      is_active: item.is_active ?? true,
-      public_visible: item.public_visible ?? true,
+      is_active: item.is_active ?? false,
+      public_visible: item.public_visible ?? false,
     };
     const existing = listingsMap.get(item.provider_id) ?? [];
     existing.push(listing);
@@ -412,10 +412,10 @@ export async function loadProviders(filters?: { q?: string; category?: string; c
         id: providerId,
         slug: `provider-${providerId}`,
         name,
-        category: item.category || primaryListing?.category || "Service",
+        category: item.category || primaryListing?.category || "Category not recorded",
         location,
         response: primaryListing?.availability_status ? `Availability: ${primaryListing.availability_status}` : "Availability not recorded",
-        price: primaryListing?.price_from ? `${primaryListing.price_from} ${primaryListing.currency ?? "NPR"}` : "Price not recorded",
+        price: primaryListing?.price_from ? `${primaryListing.price_from} ${primaryListing.currency ?? "currency not recorded"}` : "Price not recorded",
         verified: (item.verification_status ?? "unverified") === "verified",
         summary,
         service: primaryListing?.title ?? summary,
@@ -758,7 +758,7 @@ export const groupAreas: GroupArea[] = [
     status: "strategic direction",
     description:
       "Practical operating systems and disciplined execution across the work the group takes on.",
-    href: "/operations",
+    href: undefined,
   },
   {
     name: "Commerce",

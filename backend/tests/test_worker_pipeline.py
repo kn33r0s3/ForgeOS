@@ -52,6 +52,24 @@ def test_worker_pipeline(db: Session):
     assert db.query(models.WorkerTask).filter(models.WorkerTask.worker_type == "qa").count() == 0
 
 
+def test_qa_does_not_pass_without_an_inspection(db: Session):
+    task = models.WorkerTask(
+        worker_type="qa",
+        task_name="qa_opportunity",
+        priority=1,
+        inputs={"build_success": True},
+    )
+    db.add(task)
+    db.commit()
+
+    process_worker_tasks(db)
+    db.refresh(task)
+
+    assert task.status == "completed"
+    assert task.outputs["qa_passed"] is False
+    assert db.query(models.WorkerTask).filter(models.WorkerTask.worker_type == "evolution").count() == 0
+
+
 def test_worker_pipeline_deduplicates_pending_followups(db: Session):
     task = models.WorkerTask(
         worker_type="discovery",

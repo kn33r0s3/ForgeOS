@@ -566,9 +566,8 @@ class BeliefExperiment(Base):
 class Source(Base):
     """Tracks how reliable each observation source has been, so
     evidence can eventually be weighted rather than treated equally.
-    Seeded with defaults on startup. reliability_score is now actually
-    adjusted over time by reality_memory.py when a Prediction resolves
-    (this is how Forge "learns from being wrong")."""
+    Startup stores one unmeasured baseline. reliability_score moves
+    when a Prediction resolves."""
 
     __tablename__ = "sources"
 
@@ -909,11 +908,9 @@ class Strategy(Base):
 # ---------------------------------------------------------------------
 # Revenue Sources
 #
-# A REAL, known channel through which people actually get paid — an
-# affiliate program, ad revenue share, marketplace, or gig platform
-# with a publicly documented payout structure. Seeded from web-searched,
-# dated, sourced data (see money_engine.seed_default_revenue_sources())
-# — never invented. Opportunities can optionally link to one via
+# A named payout channel. Startup does not fill its percentages.
+# A figure belongs here only when a primary terms page is stored.
+# Opportunities can optionally link to one via
 # Opportunity.revenue_source_id, grounding their monetization model in
 # a real, verifiable mechanism instead of an assumed percentage.
 # Linking is always explicit (an owner/API call), never auto-inferred —

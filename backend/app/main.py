@@ -38,10 +38,9 @@ app.middleware("http")(api_key_middleware)
 @app.on_event("startup")
 def on_startup():
     init_db()
-    # Seed default Source reliability rows (manual/github/reddit/news/web)
-    # and default RevenueSource rows (real, sourced, dated payout data —
-    # see money_engine.py's DEFAULT_REVENUE_SOURCES). Both are no-ops
-    # once already seeded — safe to run every startup.
+    # Seed default Source reliability rows. Revenue-source startup
+    # withdraws payout percentages that were stored without a primary
+    # terms page. It does not insert new figures.
     db = SessionLocal()
     try:
         truth_audit.reconcile_stale_cycles(db)

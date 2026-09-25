@@ -428,6 +428,13 @@ SOURCE: REPO plus backend/tests/test_opportunity_quality.py and docs/IMPLEMENTAT
 FACT: An idea with no recorded buyer or price keeps pricing_idea, estimated_price, and estimated_revenue empty. A pattern opportunity stores no generated price, model, or customer. The backlog no longer says idea creation invents a price and a buyer. No person, booking, or payment was created.
 CHANGE: docs/IMPLEMENTATION_BACKLOG.md opportunity status and TASK-004 status.
 TEST: pytest of the unpriced-idea, pattern-hypothesis, and derived-target tests — 3 passed.
+
+CLAIM: LIVE-24-7 — ForgeOS production is live on the managed Vercel deployment with durable-write proof.
+SOURCE: REPO plus docs/PUBLICITY_GATE.md and https://forge-os-ebon.vercel.app
+FACT: The production deployment is READY and aliased to forge-os-ebon.vercel.app; web and FastAPI routes return successfully, production includes a DATABASE_URL variable, and a domain write survived a second request before withdrawal.
+CHANGE: NONE to application behavior; the existing publicity evidence remains open for the operator-controlled domain, mailbox, verified provider, and pilot.
+TEST: `vercel inspect https://forge-os-ebon.vercel.app --json --non-interactive` — target production, readyState READY, aliases include forge-os-ebon.vercel.app; production curl — `/` 200, `/about` 200, `/api/health` 200 JSON, providers `[]`, services `[]`; domain proof appeared on second GET, close returned `status:"closed"`, and final open-domain GET returned `[]`.
+STOP:
 STOP:
 
 POST-S10 CONTINUATION
@@ -462,4 +469,11 @@ SOURCE: REPO plus backend/app/services/worker_manager.py and backend/tests/test_
 FACT: builder_handler returns build_success false and the message that no build was run. It does not queue a QA task. The worker row is completed because the handler finished, and the output says the build did not succeed.
 CHANGE: builder_handler no longer returns build_success true or schedules qa_opportunity.
 TEST: The same 21-test pytest run, including test_worker_pipeline.
+STOP:
+
+CLAIM: Startup does not store platform payout percentages that have no primary terms page.
+SOURCE: REPO plus backend/app/services/money_engine.py and backend/tests/test_revenue_source_seed.py
+FACT: seed_default_revenue_sources inserts no Amazon, Upwork, YouTube, or Gumroad rows. A row whose citation contains "web search, this session" loses its percentages, minimum, frequency, and date. A row cited with an https page keeps its figure. The money-score grounding bonus is added only when the linked row has an https citation and a payout figure. A linked id is not labeled an observed payout.
+CHANGE: The unsourced default revenue-source list was removed. Startup withdraws those earlier figures. score_opportunity gates the grounding bonus.
+TEST: .venv/bin/python -m pytest backend/tests/test_revenue_source_seed.py -q — 3 passed.
 STOP:
