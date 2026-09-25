@@ -114,6 +114,52 @@ def test_daily_cycle_runs_one_internal_pass_after_real_collection_results(db, mo
     assert record["linked_claims"] == [1, 2]
 
 
+def test_daily_cycle_collects_no_more_than_existing_batch_limit(db, monkeypatch):
+    questions = [
+        models.ResearchQuestion(question=f"Bounded cycle research question {index}")
+        for index in range(3)
+    ]
+    db.add_all(questions)
+    db.flush()
+    tasks = [
+        models.ResearchTask(
+            question_id=question.id,
+            source="pytest-source",
+            query=question.question,
+            objective=question.question,
+            status="planned",
+        )
+        for question in questions
+    ]
+    db.add_all(tasks)
+    db.commit()
+    executed = []
+
+    def execute(_db, task):
+        executed.append(task.id)
+        return {"task_id": task.id, "status": "completed", "signals_created": 0}
+
+    monkeypatch.setattr(run_daily_cycle, "SessionLocal", lambda: db)
+    monkeypatch.setattr(
+        run_daily_cycle.forge_loop,
+        "run_cycle",
+        lambda _db: {"claims_linked": [], "network_connection_ids": [], "source_addresses_restored": 0},
+    )
+    monkeypatch.setattr(collector_runner, "execute_task", execute)
+    monkeypatch.setattr(
+        run_daily_cycle.execution_engine,
+        "run_autonomous_action_cycle",
+        lambda _db: {"proposed": 0, "allowed": 0, "blocked": 0, "require_approval": 0},
+    )
+    monkeypatch.setenv("FORGEOS_COLLECT_LIMIT", "2")
+
+    record = run_daily_cycle.run_once()
+
+    assert len(record["collection"]) == 2
+    assert len(executed) == 2
+    assert len({task_id for task_id in executed}) == 2
+
+
 def test_daily_cycle_structures_collected_external_signals_in_same_run(db, monkeypatch):
     texts = [
         "At least 12 restaurants in Kathmandu still take phone orders and write them on paper tickets. Managers report 3-5 wrong dishes per busy night, losing roughly NPR 8000-15000 each weekend.",

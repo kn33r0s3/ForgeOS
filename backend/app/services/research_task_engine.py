@@ -178,6 +178,7 @@ def finish_task(
         task.remaining_questions = [task.objective or task.query]
         _event(db, task, "remaining_question", details={"question": task.objective or task.query})
     task.updated_at = utcnow()
+    _refresh_question_status(db, task.question_id)
     db.commit()
     db.refresh(task)
     return task
@@ -231,13 +232,14 @@ def fail_task(db: Session, task: models.ResearchTask, error: str) -> models.Rese
     task.errors = list(task.errors or []) + [{"attempt": task.attempts, "error": error}]
     _set_step(db, task, task.current_step or "execute", "failed", error=error)
     _event(db, task, "failed", details={"error": error, "attempt": task.attempts})
+    _refresh_question_status(db, task.question_id)
     db.commit()
     db.refresh(task)
     return task
 
 
 def retry_task(db: Session, task: models.ResearchTask) -> models.ResearchTask:
-    if task.status != "failed":
+    if task.status not in {"failed", "needs_research"}:
         return task
     if task.attempts >= task.max_attempts:
         return task
@@ -248,6 +250,17 @@ def retry_task(db: Session, task: models.ResearchTask) -> models.ResearchTask:
     db.commit()
     db.refresh(task)
     return task
+
+
+def _refresh_question_status(db: Session, question_id: int) -> None:
+    """Keep unanswered questions open after every task has settled without evidence."""
+    question = db.get(models.ResearchQuestion, question_id)
+    if question is None or question.status == "closed":
+        return
+    tasks = db.query(models.ResearchTask).filter_by(question_id=question_id).all()
+    pending = any(task.status in {"planned", "running"} for task in tasks)
+    has_evidence = any(bool((task.evidence_ids or "").strip()) for task in tasks)
+    question.status = "planned" if pending or has_evidence else "open"
 
 
 def resume_running_tasks(db: Session, limit: int = 10) -> list[int]:

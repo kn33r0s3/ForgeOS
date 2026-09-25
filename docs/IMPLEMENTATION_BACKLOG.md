@@ -20,7 +20,6 @@ storage/forge.db
             → research planner
        → bounded collectors (FORGEOS_COLLECT_LIMIT)
        → network_connections.scan_candidates
-       → world_graph typed relation adapters over canonical records
        → execution_engine.run_autonomous_action_cycle (proposes, does not execute external contact)
 ```
 
@@ -37,7 +36,6 @@ Cockpit surfaces: `/knowledge`, `/research`, `/network`, `/actions`, `/outcomes`
 | Patterns | Identity is the sorted keyword set. `test_belief_canonical.py` passed on 2026-09-25. |
 | Beliefs | One hypothesis per sorted keyword set. The template no longer asserts a real business problem. Repeated copies of one URL do not count as independent confirmation. |
 | Discoveries, connections, payments, disputes, trust, alerts | PARTIAL — wired, truth-gated, not a settlement rail |
-| World/value graph | IN PROGRESS — canonical endpoint adapters and open relation semantics are being integrated; no universal copied entity registry |
 | Opportunities | A manual idea stores a price only when the text states one. A named customer is kept only when the text names one. Keyword patterns do not receive a generated price. |
 | Public frontend, cockpit | PARTIAL — grouped pages exist. The knowledge page lists presentable hypotheses and a signal count. |
 | Matching | PARTIAL — city/token overlap, no independent-source confidence |

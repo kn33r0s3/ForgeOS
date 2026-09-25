@@ -84,13 +84,15 @@ WORLD_RESEARCH_AGENDA = (
     "What current public evidence describes goods, trades, and stated prices people in Nepal actually post?",
     "What current public evidence describes residential and commercial real estate conditions in Nepal?",
     "What current public evidence describes supply and movement in gold, oil, and agricultural commodities?",
-    "What current public evidence describes government bond and cash-market conditions relevant to Nepal?",
+    "What current public evidence describes fixed-income, government-bond, and cash-market conditions relevant to Nepal?",
     "What current public evidence describes equity market conditions relevant to Nepal and the region?",
+    "What current public evidence describes derivatives markets and their risks relevant to Nepal and the region?",
     "What current public evidence describes currency moves of NPR against USD, INR, and EUR?",
     "What current public evidence describes infrastructure, energy, and data-center investment affecting Nepal?",
     "What current public evidence describes private credit, startup funding, and small-business capital in Nepal?",
+    "What current public evidence describes hedge-fund situations and documented exposure relevant to Nepal and the region?",
     "What current public evidence describes cryptocurrency use and risk relevant to Nepal?",
-    "What current public evidence describes insurance, remittances, and household financial protection in Nepal?",
+    "What current public evidence describes insurance, reinsurance, remittances, and household financial protection in Nepal?",
 )
 
 LOW_CONFIDENCE_THRESHOLD = 50.0

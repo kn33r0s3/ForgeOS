@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+from datetime import timedelta
 
 from app import models
 from app.database import get_db
@@ -207,9 +208,87 @@ def test_public_feed_excludes_unverified_services_and_unlinked_internal_signals(
         cleanup()
 
 
-def test_public_feed_composes_relations_but_keeps_endpoint_visibility_gates(db):
+def test_discoveries_require_claim_and_keep_staleness_separate(db):
+    old = models.utcnow() - timedelta(days=120)
+    unclaimed = models.Signal(
+        source="govinfo",
+        source_type="external",
+        content="A public notice without a stored claim.",
+        canonical_url="https://example.gov/unclaimed",
+        retrieved_at=old,
+    )
+    signal = models.Signal(
+        source="govinfo",
+        source_type="external",
+        content="A public notice with one stale evidence item.",
+        canonical_url="https://example.gov/stale",
+        retrieved_at=old,
+    )
+    db.add_all([unclaimed, signal])
+    db.flush()
+    claim = models.Claim(
+        statement="A cited observation with stale evidence.",
+        normalized_statement="cited observation stale evidence",
+        epistemic_state="observed",
+    )
+    evidence = models.Evidence(
+        signal_id=signal.id,
+        source="govinfo",
+        content=signal.content,
+        canonical_url=signal.canonical_url,
+        retrieved_at=old,
+    )
+    db.add_all([claim, evidence])
+    db.flush()
+    db.add(models.EvidenceRelationship(
+        evidence_id=evidence.id,
+        claim_id=claim.id,
+        relation_type="derived_from",
+        relation_key=f"stale-discovery:{claim.id}:{evidence.id}",
+    ))
+    db.commit()
+
+    client, cleanup = _client(db)
+    try:
+        response = client.get("/public/discoveries")
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert [row["id"] for row in body] == [claim.id]
+        assert body[0]["epistemic_state"] == "observed"
+        assert body[0]["stale"] is True
+        assert body[0]["freshness"] == "stale"
+    finally:
+        cleanup()
+
+
+def test_public_opportunity_requires_question_after_evidenced_claim(db):
     from app.services.public_feed import build_public_feed
-    from app.services.world_graph import create_relation
+
+    opportunity = models.Opportunity(problem="A documented hypothesis that needs more research")
+    db.add(opportunity)
+    db.flush()
+    _signal, claim = _public_claim(db, opportunity=opportunity)
+    db.commit()
+
+    assert not any(item.entity_type == "opportunity" for item in build_public_feed(db))
+
+    question = models.ResearchQuestion(
+        question="What additional public evidence tests the documented hypothesis?",
+        source_claim_id=claim.id,
+    )
+    db.add(question)
+    db.commit()
+
+    opportunity_item = next(
+        item for item in build_public_feed(db) if item.entity_type == "opportunity"
+    )
+    assert [relation.model_dump() for relation in opportunity_item.relations] == [
+        {"entity_type": "claim", "entity_id": claim.id, "relation": "informed_by"}
+    ]
+
+
+def test_public_feed_composes_connections_but_keeps_endpoint_visibility_gates(db):
+    from app.services.public_feed import build_public_feed
 
     provider = models.Provider(
         name="Verified test actor",
@@ -241,43 +320,46 @@ def test_public_feed_composes_relations_but_keeps_endpoint_visibility_gates(db):
     db.add_all([provider, hidden, need, result])
     db.flush()
 
-    first = create_relation(
-        db,
-        subject_type="domain_record",
-        subject_id=need.id,
-        relation_type="could_use",
-        object_type="provider",
-        object_id=provider.id,
+    first = models.NetworkConnection(
+        left_kind="domain_record",
+        left_id=need.id,
+        right_kind="provider",
+        right_id=provider.id,
+        state="candidate",
         reason="A hypothetical connection to a verified public actor.",
+        agreement_gap="No agreement recorded.",
+        public_visible=True,
     )
-    first.public_visible = True
-    second = create_relation(
-        db,
-        subject_type="network_connection",
-        subject_id=first.id,
-        relation_type="observed_with",
-        object_type="outcome",
-        object_id=result.id,
-        reason="A relation can point to another relation and an outcome.",
+    db.add(first)
+    db.flush()
+    second = models.NetworkConnection(
+        left_kind="network_connection",
+        left_id=first.id,
+        right_kind="outcome",
+        right_id=result.id,
+        state="candidate",
+        reason="A connection can point to another connection and an outcome.",
+        agreement_gap="No agreement recorded.",
+        public_visible=True,
     )
-    second.public_visible = True
-    private_edge = create_relation(
-        db,
-        subject_type="domain_record",
-        subject_id=need.id,
-        relation_type="could_use",
-        object_type="provider",
-        object_id=hidden.id,
-        reason="A public edge cannot reveal an unverified actor.",
+    private_edge = models.NetworkConnection(
+        left_kind="domain_record",
+        left_id=need.id,
+        right_kind="provider",
+        right_id=hidden.id,
+        state="candidate",
+        reason="A public connection cannot reveal an unverified actor.",
+        agreement_gap="No agreement recorded.",
+        public_visible=True,
     )
-    private_edge.public_visible = True
+    db.add_all([second, private_edge])
     db.commit()
 
     feed = build_public_feed(db, limit=100, kind="connection")
     visible_ids = {item.entity_id for item in feed}
     assert visible_ids == {first.id, second.id}
     assert all(item.epistemic_state == "hypothesized" for item in feed)
-    assert next(item for item in feed if item.entity_id == first.id).relation_type == "could_use"
+    assert next(item for item in feed if item.entity_id == first.id).relation_type == "possible_match"
 
     context = build_public_feed(
         db,

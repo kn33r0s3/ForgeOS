@@ -660,11 +660,13 @@ def _csv_ids(value: str | None) -> list[int]:
     return sorted(set(found))
 
 
-def canonical_entity_type(value: str) -> str:
+def canonical_entity_type(value: str, *, strict: bool = True) -> str | None:
     kind = (value or "").strip().lower()
     kind = ENTITY_ALIASES.get(kind, kind)
     if not _TYPE_NAME.fullmatch(kind):
-        raise SubstrateError("entity type must be lowercase snake case")
+        if strict:
+            raise SubstrateError("entity type must be lowercase snake case")
+        return None
     return kind
 
 

@@ -1,4 +1,10 @@
-# ForgeOS Universal Substrate — Blueprint & Multi-Agent Contract
+# SUPERSEDED: ForgeOS Universal Substrate — Blueprint & Multi-Agent Contract
+
+This pasted design is retained as source history only. It was superseded on
+2026-09-25 by the end-state architecture in `docs/FUTURE_BLUEPRINT.md` and its
+sequential Build Path, which extends canonical records and `NetworkConnection`
+without introducing a type registry or second entity store. Do not use this
+file as an active implementation contract.
 
 > **North Star.** ForgeOS is never finished by exhausting a list of features; it is designed to
 > continuously discover new domains, capabilities, relationships, and forms of value, and incorporate

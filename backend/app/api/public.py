@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.database import get_db
+from app.services import public_epistemics
 
 router = APIRouter(prefix="/public", tags=["public"])
 
@@ -167,7 +168,6 @@ def list_public_discoveries(limit: int = Query(default=20, ge=1, le=50), db: Ses
         .join(models.EvidenceRelationship, models.EvidenceRelationship.claim_id == models.Claim.id)
         .join(models.Evidence, models.Evidence.id == models.EvidenceRelationship.evidence_id)
         .join(models.Signal, models.Signal.id == models.Evidence.signal_id)
-        .filter(models.Claim.epistemic_state.in_(["observed", "supported", "contested"]))
         .filter(models.Signal.source_type == "external")
         .filter(models.Signal.canonical_url.isnot(None))
         .filter(models.Signal.is_duplicate_of.is_(None))
@@ -178,6 +178,9 @@ def list_public_discoveries(limit: int = Query(default=20, ge=1, le=50), db: Ses
     discoveries = []
     seen = set()
     for claim, signal in rows:
+        label = public_epistemics.public_claim_label(db, claim)
+        if label is None:
+            continue
         if claim.id in seen:
             continue
         seen.add(claim.id)
@@ -192,8 +195,9 @@ def list_public_discoveries(limit: int = Query(default=20, ge=1, le=50), db: Ses
                 excerpt=excerpt,
                 canonical_url=signal.canonical_url,
                 retrieved_at=signal.retrieved_at,
-                epistemic_state=claim.epistemic_state,
-                freshness=evidence_freshness(signal.retrieved_at),
+                epistemic_state=label["epistemic_state"],
+                stale=label["stale"],
+                freshness="stale" if label["stale"] else "fresh",
             )
         )
     return discoveries
@@ -290,13 +294,15 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
         .join(models.EvidenceRelationship, models.EvidenceRelationship.claim_id == models.Claim.id)
         .join(models.Evidence, models.Evidence.id == models.EvidenceRelationship.evidence_id)
         .join(models.Signal, models.Signal.id == models.Evidence.signal_id)
-        .filter(models.Claim.epistemic_state.in_(["observed", "supported", "contested"]))
         .filter(models.Signal.canonical_url.isnot(None))
         .filter(models.Signal.is_duplicate_of.is_(None))
         .all()
     )
     seen_claims = set()
     for claim, signal in knowledge:
+        label = public_epistemics.public_claim_label(db, claim)
+        if label is None:
+            continue
         if claim.id in seen_claims:
             continue
         shared = need_tokens & _match_tokens(f"{claim.statement} {signal.title or ''} {signal.content}")
@@ -314,8 +320,8 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
                 stated_availability=None,
                 reasons=["shared words: " + ", ".join(sorted(shared)[:6]), f"from {signal.source}"],
                 unknowns=[
-                    f"epistemic state is {claim.epistemic_state}",
-                    f"evidence is {evidence_freshness(signal.retrieved_at)}",
+                    f"epistemic state is {label['epistemic_state']}",
+                    "evidence is stale" if label["stale"] else "evidence is not marked stale",
                     "not a verified counterparty",
                     "not a completed trade",
                 ],

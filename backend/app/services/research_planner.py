@@ -56,6 +56,9 @@ def plan_tasks_for_question(db: Session, question: models.ResearchQuestion) -> l
             .first()
         )
         if existing:
+            if existing.status == "needs_research":
+                research_task_engine.retry_task(db, existing)
+                created.append(existing)
             continue
         task = research_task_engine.create_task(
             db,
@@ -94,7 +97,12 @@ def plan_tasks_for_open_questions(db: Session, limit: int = 20) -> list[models.R
     for question in questions:
         tasks = plan_tasks_for_question(db, question)
         all_tasks.extend(tasks)
-        question.status = "planned"
+        question_tasks = db.query(models.ResearchTask).filter_by(question_id=question.id).all()
+        has_pending_or_evidence = any(
+            task.status in {"planned", "running"} or bool((task.evidence_ids or "").strip())
+            for task in question_tasks
+        )
+        question.status = "planned" if has_pending_or_evidence else "open"
 
     db.commit()
     return all_tasks

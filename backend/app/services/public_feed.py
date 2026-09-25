@@ -9,10 +9,9 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app import models, schemas
-from app.services import world_graph
+from app.services import public_epistemics, world_graph
 
 
-_PUBLIC_CLAIM_STATES = ("observed", "supported", "contested")
 _PUBLIC_OUTCOME_SOURCES = ("domain_record", "booking_request", "network_connection")
 
 
@@ -64,7 +63,6 @@ def build_public_feed(
         .join(models.EvidenceRelationship, models.EvidenceRelationship.claim_id == models.Claim.id)
         .join(models.Evidence, models.Evidence.id == models.EvidenceRelationship.evidence_id)
         .join(models.Signal, models.Signal.id == models.Evidence.signal_id)
-        .filter(models.Claim.epistemic_state.in_(_PUBLIC_CLAIM_STATES))
         .filter(models.Signal.source_type == "external")
         .filter(models.Signal.canonical_url.isnot(None))
         .filter(models.Signal.is_duplicate_of.is_(None))
@@ -73,15 +71,22 @@ def build_public_feed(
         .all()
     )
     public_claims: dict[int, tuple[models.Claim, models.Signal]] = {}
+    public_labels: dict[int, public_epistemics.PublicClaimLabel] = {}
     public_question_ids: set[int] = set()
+    public_question_claim_ids: set[int] = set()
     public_pattern_ids: set[int] = set()
     public_belief_ids: set[int] = set()
     public_opportunity_ids: set[int] = set()
     for claim, signal in evidence_rows:
+        label = public_epistemics.public_claim_label(db, claim)
+        if label is None:
+            continue
         public_claims.setdefault(claim.id, (claim, signal))
+        public_labels.setdefault(claim.id, label)
     public_signal_ids = {signal.id for _, signal in public_claims.values()}
 
     for claim, signal in public_claims.values():
+        label = public_labels[claim.id]
         excerpt = " ".join((signal.content or "").split())
         if len(excerpt) > 280:
             excerpt = excerpt[:277].rstrip() + "..."
@@ -95,7 +100,8 @@ def build_public_feed(
             occurred_at=signal.published_at or signal.retrieved_at or signal.timestamp,
             updated_at=claim.updated_at,
             status=None,
-            epistemic_state=claim.epistemic_state,
+            epistemic_state=label["epistemic_state"],
+            stale=label["stale"],
             source=signal.source,
             source_url=signal.canonical_url,
             relations=[schemas.PublicFeedRelation(
@@ -115,6 +121,7 @@ def build_public_feed(
         )
         for question in questions:
             public_question_ids.add(question.id)
+            public_question_claim_ids.add(question.source_claim_id)
             claim, signal = public_claims[question.source_claim_id]
             items.append(schemas.PublicFeedItem(
                 id=f"research-question:{question.id}",
@@ -180,17 +187,18 @@ def build_public_feed(
             ) for sid in related_signal_ids],
         ))
 
-    # Opportunities are hypotheses here, not offers. Only surface hypotheses
-    # explicitly connected to public claims either through the legacy claim
-    # pointer or their canonical Evidence rows. The latter is how the
-    # opportunity engine records provenance today.
+    # Opportunities are hypotheses here, not offers. Require the complete
+    # public chain: external Signal -> eligible Claim -> ResearchQuestion ->
+    # Opportunity. The legacy claim pointer and Evidence rows may connect the
+    # last edge, but neither can skip the ResearchQuestion.
     opportunity_claims: dict[int, list[int]] = {}
     claims_by_signal_id: dict[int, set[int]] = {}
     for claim, _ in public_claims.values():
-        if claim.opportunity_id is not None:
+        if claim.id in public_question_claim_ids and claim.opportunity_id is not None:
             opportunity_claims.setdefault(claim.opportunity_id, []).append(claim.id)
     for claim, signal in public_claims.values():
-        claims_by_signal_id.setdefault(signal.id, set()).add(claim.id)
+        if claim.id in public_question_claim_ids:
+            claims_by_signal_id.setdefault(signal.id, set()).add(claim.id)
     if public_signal_ids:
         opportunity_evidence = (
             db.query(models.Evidence.opportunity_id, models.Evidence.signal_id)

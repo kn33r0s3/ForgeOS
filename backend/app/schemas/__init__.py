@@ -1143,6 +1143,7 @@ class PublicDiscoveryOut(BaseModel):
     retrieved_at: Optional[datetime] = None
     epistemic_state: str = "observation"
     freshness: str = "unknown"
+    stale: bool = False
 
 
 class PublicFeedRelation(BaseModel):
@@ -1166,6 +1167,7 @@ class PublicFeedItem(BaseModel):
     location: Optional[str] = None
     status: Optional[str] = None
     epistemic_state: str
+    stale: bool = False
     source: Optional[str] = None
     source_url: Optional[str] = None
     relation_type: Optional[str] = None

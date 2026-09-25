@@ -1,13 +1,13 @@
-# CURRENT_FOCUS.md — Continuous Capability Development / S15: World Relations
+# CURRENT_FOCUS.md — BP-4: Public Serializer Audit
 
 **Last updated**: 2026-09-25
 **Work order**: [SERIAL_PATH.md](SERIAL_PATH.md) is the only queue.
 
 ## Current state
 
-`docs/FUTURE_BLUEPRINT.md` defines ForgeOS as an open-ended, autonomous value-creation system. Its numbered tasks are near-term work evidence, never the system boundary or a stopping condition. Keep work serial, and rescan the full observe-to-learning loop after each integrated capability.
+`docs/FUTURE_BLUEPRINT.md` defines ForgeOS as an open-ended, autonomous value-creation system. The 2026-09-25 Build Path is the current sequential implementation order. Keep work serial, and rescan the full observe-to-learning loop after each integrated capability.
 
-S11's generalized public feed, S12's scoped context, S13's governed source registry, and S14's same-run evidence-to-network cycle are implemented. The S15 audit found `NetworkConnection` doubles as a match/action workflow but lacks general relation predicates, explicit epistemic state, temporal/context fields, and reusable typed endpoint adapters. This is the current implementation focus. It must extend existing canonical records, preserve public visibility gates, and avoid a second entity store.
+S11's generalized public feed, S12's scoped context, S13's governed source registry, and S14's same-run evidence-to-network cycle are implemented. The previous S15 type-registry/world-graph framing has been superseded. BP-1's shared evidence-aware labels/compliance gate, BP-2's bounded agenda, and BP-3's signal → claim → question → opportunity publication chain are implemented. BP-4 is active: audit every public serializer for internal scoring or confidence fields.
 
 S10 remains evidence-gated; no provider, price, booking, payment, response, or outcome may be invented. Local test results are not evidence of a live deployment.
 
@@ -40,19 +40,36 @@ The only active external clearance is one exact GovInfo document, valid through 
 - [x] Policy gates for external actions remain active. Real response/outcome recording and learning continue through the existing actual-outcome path.
 - [x] Full backend integration tests pass with network-free fixtures in isolated test storage.
 
-## S15 acceptance
+## BP-1 complete
 
-- [x] Feed/context canonical references resolve through endpoint adapters; legacy `post` / `knowledge` labels map to existing canonical records.
-- [x] Relations have extensible predicates, direction, epistemic state, optional strength/uncertainty, evidence links, provenance, context, conditions, and validity time.
-- [x] Relation workflow state remains independent from epistemic state; supported relations require stored evidence.
-- [x] Relation-to-relation endpoints compose without copying endpoint data.
-- [x] Public feed resolves both endpoints through original visibility rules, including relation chains; a public edge cannot expose a hidden or dangling record.
-- [x] Matching preserves its response vocabulary and persists canonical endpoint types.
-- [ ] Run migration and full integration verification; then rescan for the next missing capability.
+- [x] Facts and independently corroborated external claims map to `supported`.
+- [x] Single-source observations and claims map to `observed`.
+- [x] Direct conflicts map to `contested`; inferences and unknowns are excluded.
+- [x] Stale evidence adds a separate `stale: true` flag without changing the label.
+- [x] Discoveries, feed/context, and matching share the same label function.
+- [x] Regulated-asset claims require an explicit compliance review before publication.
+- [x] BP-1 mapping, stale-evidence, and compliance tests pass.
+
+## BP-2 complete
+
+- [x] One fixed, deduplicated agenda covers Nepal work/services/trade/housing/money/infrastructure and the wider asset surface for research only.
+- [x] Repeated cycle runs do not duplicate a question; no-result questions remain open and can reuse the existing task.
+- [x] Per-cycle collection reuses the current configured batch limit and never exceeds it.
+
+## BP-3 verification target
+
+- [x] A signal with no linked claim is absent from `/discoveries`.
+- [x] A claim whose only evidence is stale retains its BP-1 label and exposes `stale: true`.
+- [x] An opportunity is publicly reachable only through its stored signal/claim/question path.
+
+## BP-4 verification target
+
+- [ ] One automated audit covers every public response schema.
+- [ ] Internal field names matching score/confidence and known private ranking markers fail the audit.
 
 ## Continuous rescan
 
-After S15 passes its migration and integration tests, trace world → observation → representation → relation → understanding → possibility → capability → opportunity → authorized action → outcome → learning → capability expansion. Replace this focus with the next code-backed gap. Do not stop because S16 or another finite list ends.
+After BP-4 is integrated and verified, proceed to BP-5 in `SERIAL_PATH.md`, then trace the full capability loop again after every completed task. Finite task numbers are never a stopping condition.
 
 ## S10 pilot gate
 

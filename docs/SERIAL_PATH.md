@@ -1,99 +1,182 @@
 # Serial path
 
-This file tracks the next near-term engineering task. Work stays sequential:
-one capability is changed, tested, integrated, and verified before the next
-begins. The numbered items are not ForgeOS's product boundary or a terminal
-roadmap. After each item, rescan the end-to-end capability loop in
-`docs/FUTURE_BLUEPRINT.md` and replace this focus with the next demonstrated
-gap. Do not develop surfaces in parallel.
+This is ForgeOS's single active work queue. Execute one task at a time:
+claim it here, build, test, integrate, verify, then record the evidence and
+actual result before claiming the next. Re-scan the full capability loop after
+each task. Task numbers are not a product boundary or stopping condition.
 
-Production origin: `https://forge-os-ebon.vercel.app`.
-Local database: `storage/forge.db`.
-Vercel, when `DATABASE_URL` is unset, uses `sqlite:////tmp/forge.db`. That file is not the world of record.
+## Blueprint authority and amendments
 
-## Now
+`docs/FUTURE_BLUEPRINT.md` is the architecture authority; this file is the
+single sequential implementation queue. The older six-primitives/type-registry
+framing is superseded. A future pasted blueprint is an amendment proposal:
+diff it against the current architecture, append a dated numbered amendment,
+then update this queue. A full incompatible rewrite requires a human checkpoint
+before implementation.
 
-S11 through S14 are complete. S15 is open: generalize the shared typed-relation
-substrate and endpoint adapters while preserving canonical records. The audit
-found that `NetworkConnection` is currently a narrow matching workflow: it
-does not represent general relation types, temporal/context conditions, typed
-evidence sets, or epistemic status independently from workflow state.
+## Current status
+
+S11 through S14 are complete. The earlier S15 type-registry/world-graph
+framing is superseded by the end-state blueprint and the Build Path dated
+2026-09-25. Existing committed code remains in place, but new work follows the
+canonical-record/`NetworkConnection` path. Do not add new domains to the
+type-registry framing.
+
+**BP-1 — Canonical epistemic-label mapping. DONE (2026-09-25).** Added
+`backend/app/services/public_epistemics.py` and routed `/discoveries`, the
+public feed/context, and knowledge matching through its label and compliance
+gate. Facts and independently corroborated external claims map to
+`supported`; observations and single-source claims map to `observed`; direct
+conflicts map to `contested`; inferences/unknowns are excluded. Staleness is a
+separate flag. Regulated classes require an approved review with reviewer and
+reference in claim provenance. Focused BP-1/public tests passed: 34.
+
+**BP-2 — Standing research agenda, bounded per-cycle collection. DONE
+(2026-09-25).** Extended the fixed agenda with derivatives and hedge-fund
+research and made insurance/reinsurance explicit. Empty or failed collection
+reopens the question; a later cycle reuses its task rather than duplicating it.
+Daily execution continues to use only `FORGEOS_COLLECT_LIMIT`. Focused BP-2
+tests passed: 11.
+
+**BP-3 — Discoveries link the full chain without skipping evidence rules. DONE
+(2026-09-25).** `/discoveries` remains claim/evidence/signal-gated and exposes
+the separate stale flag; the feed now requires a public research question
+between a claim and its opportunity. Focused BP-3/public tests passed: 11.
+
+**[CLAIMED] BP-4 — Public world shows only what passes publication rules.**
+Audit every public response schema for internal scoring/confidence fields, then
+add one automated contract test.
 
 S10 remains evidence-gated for real provider verification and operator-submitted
-bookings; this does not block network engineering. Never seed providers,
-prices, bookings, or outcomes. The footer domain and contact mailbox stay
-pending until the operator supplies real details. Local tests do not establish
-a live deployment.
+bookings. Never seed providers, prices, bookings, payments, or outcomes. Local
+tests do not establish a live deployment.
 
-## Then, in this order
+## Build Path (strictly sequential)
 
-S1. Public read contract.
-`/api/health`, `/api/public/providers`, `/api/public/services`, `/api/public/discoveries`, `/api/public/domain`, `/api/public/alerts` return JSON. HTML is a failure. Empty arrays are a pass.
+### BP-1 — Canonical epistemic-label mapping [DONE]
 
-S2. Verified service path.
-`Provider`, `ServiceListing`, and `BookingRequest` stay the only tables for that path.
-Publish only after `provider_verify` with evidence_type, evidence_reference, and reviewed_by.
-A missing price stays null. `opportunity_from_idea` and `opportunity_from_pattern` store no invented model, price, or customer.
-Booking status for an unknown provider is 404. A public booking read has no name, phone, email, or notes.
+One `derive_public_label` function maps internal claim state and stored
+evidence to `observed`, `supported`, or `contested`, plus a separate `stale`
+boolean. Facts map to supported; external claims require at least two
+independent sources to map to supported; one-source observations/claims map to
+observed; directly conflicting claims map to contested. Inferences and unknowns
+are not published. Staleness is freshness metadata and never changes the
+epistemic label. Every public claim label uses this function, including
+`/discoveries`, feed/context, and matching.
 
-S3. Needs and gaps.
-A domain post can exist with an incomplete contract. Acceptance stays blocked until `terms_complete`.
-A question whose text starts with `Gap:` creates no collector task.
-Matches expose unknowns and no score. `forge_role` stays introducer.
+The same publication-compliance module checks whether a claim concerns
+equities, fixed income, derivatives, private credit, hedge-fund situations, or
+insurance/reinsurance. Publication of those subjects is blocked unless the
+existing approval path has an explicit compliance review with a named reviewer
+and reference.
 
-S4. One lawful source.
-Add a row to `docs/PUBLIC_SOURCES.md` only after robots.txt and the terms allow it.
-One `ResearchTask`, one collector run, `FORGEOS_COLLECT_LIMIT`. A failure stays failed.
-A discovery stays observed. An approach file is a draft, or it says no lawful contact. Nothing is sent.
+Acceptance: one exact-output test for each mapping row; one stale-evidence test;
+one test proving a regulated-asset claim cannot publish without explicit
+compliance review even when its evidence is otherwise sufficient.
 
-S5. Canonical beliefs.
-`docs/IMPLEMENTATION_BACKLOG.md` TASK-001, then 002, then 003, then 004, then 005.
-The knowledge page reads that belief. No new belief UI.
+Result: DONE. Four mapping/compliance tests and the public feed/value-flow tests
+passed (34 total). The full backend suite separately reported two failures in
+the legacy graph tests; see Current status.
 
-S6. Cockpit reads the same API.
-`frontend/` stays `/forge`. It is not the public site. Network fields that are not stored stay unknown. Runtime is counts. Actions propose and do not send.
+### BP-2 — Standing research agenda, bounded per-cycle collection [DONE]
 
-S7. One cycle.
-`python -m scripts.scheduler` is the only runner. It does not publish providers, send messages, or invent prices. Dry cycle uses the pytest database.
+Maintain one fixed, deduplicated agenda of evidence-seeking questions covering
+Nepal work/services/trade/housing/money/infrastructure and the wider asset
+surface as research-only. Reuse the existing collector batch limit. Repeated
+cycles must not duplicate questions; a zero-result question stays open; each
+cycle executes no more than the configured batch size.
 
-S8. Trust and money as records.
-`/public/trust` is not a score. Alerts exist only after an outcome. Close needs the token. Paid needs an amount that was stated. No payment credentials.
+Tests: repeated cycles never duplicate a question; a zero-result question
+stays open; a cycle with more pending tasks than the existing configured batch
+executes no more than that batch.
 
-S9. Public copy and build.
-Forge stays the name. Nepal stays the first geography. Pending domain and pending mailbox stay until the operator supplies real ones.
-`src/lib/content.test.ts` and `npm run build` pass before a push.
+Result: DONE. Agenda coverage, unresolved-question retry, and a three-task
+cycle with `FORGEOS_COLLECT_LIMIT=2` are covered. Focused tests passed: 11.
 
-S10. One verified provider pilot.
-A provider exists only if a person supplied evidence. A booking exists only if the operator submitted it.
-No fabricated pilot data. This real-world pilot gate does not end Forge engineering.
+Depends on BP-1.
 
-S11. Generalized public Network Feed. COMPLETE.
-Project existing public signals/claims, questions, patterns, beliefs, evidence-linked opportunity hypotheses, verified actors/capabilities, open work records, public connections, and real recorded outcomes into one chronological API. Keep canonical records in their current tables, preserve type/provenance/relations, and enforce each source's existing visibility gate. The root page is the feed. No popularity or trust score.
-Acceptance: `/api/public/feed` passes integration tests for heterogeneous records, provenance, relationships, empty state, and private/sandbox exclusion; the browser shows the feed on desktop and mobile; build/typecheck pass.
+### BP-3 — Discoveries link the full chain without skipping evidence rules [DONE]
 
-S12. Feed context navigation. COMPLETE.
-Feed relations open a scoped feed view around that typed entity reference, composed only from entries that already pass their original public visibility rules. Preserve privacy for provider contact fields, booking requests, internal actions, and unpublished outcomes.
-Acceptance: entity context includes its public record and related public items, rejects incomplete filters, cannot use a public edge to reveal a hidden endpoint, and can be cleared back to the whole feed.
+Preserve the exact chain `signal → claim → question → opportunity`. A signal
+without a claim is absent; stale-only evidence stays labeled stale; opportunities
+are reachable through the evidence chain and not legacy shortcuts.
 
-S13. Governed discovery expansion. COMPLETE.
-Move the currently narrow source clearance into a validated source-registry workflow that can add lawful sources and categories without arbitrary fetching. Keep exact-target allowlists, live robots/terms checks, cross-instance rate limits, provenance, deduplication, and expiry per source. Collector, tool-adapter, CLI, task, and feed paths share the gate. A source with uncertain terms stays disabled.
+Tests: a signal with no claim is absent from `/discoveries`; stale-only evidence
+uses BP-1's `stale: true` label; opportunities are reachable only through the
+stored evidence chain.
 
-S14. Autonomous structuring and learning. COMPLETE.
-Connect collected external signals to evidence, research questions, patterns, beliefs, opportunities, public projections, authorized actions, observed responses, outcomes, and learning. Automate internal transitions when existing evidence is sufficient; retain approval for contact, transactions, or other external commitments unless an authorized channel and policy permit the action.
+Result: DONE. Regression tests prove the unclaimed-signal exclusion, stale
+label, and opportunity suppression until a public question links the evidence
+chain. Focused tests passed: 11.
 
-S15. General world relations and endpoint adapters. IN PROGRESS.
-Use existing canonical records as graph endpoints. Support open relation predicates, direction, epistemic state, optional strength/uncertainty, evidence IDs, provenance, context, conditions, and validity time. Keep the existing matching/action lifecycle separate. Reject dangling endpoints and invalid evidence. Public projections must resolve every endpoint using that record's existing visibility rules. Do not add duplicate identity or resource records without a demonstrated cross-record identity need.
-Acceptance: service and migration tests cover legacy compatibility, idempotency, relation-to-relation composition, provenance/time bounds, dangling endpoints, and public/private endpoint exclusion; matching persists canonical endpoint types while preserving its public vocabulary.
+Depends on BP-1 and BP-2.
 
-S16. Geography and category expansion.
-Add categories and geographies as data and source-registry configuration, keeping Nepal as the bootstrap geography. Verify each new source and category against the same evidence/privacy/authorization gates.
+### BP-4 — Public world shows only what passes publication rules [IN PROGRESS]
 
-S17 and later are discovered by the continuous rescan; they are not a closed task list. Likely next gaps include open-world observations beyond source headlines, reusable capability creation, action-channel qualification, and outcome-to-capability reuse. The rescan must confirm the actual code gap before implementation.
+No internal score, confidence, or unverified field reaches a public response.
+Add one automated schema/snapshot check across public serializers that rejects
+internal-only field names.
+
+Tests: one automated public-serializer check fails if a field name matching
+`score`, `confidence`, or another internal-only marker appears.
+
+Depends on BP-1 and BP-3.
+
+### BP-5 — Matching as one canonical state machine [HUMAN CHECKPOINT, PENDING]
+
+Use exactly `candidate → evidenced → viable → proposed → authorized →
+contacted → accepted → fulfilled → paid → completed`, through one transition
+function. Fresh stored evidence is required for `evidenced`; a figure is only
+stored in `viable` when it appears in the cited source, otherwise it stays
+null. Before starting BP-5, verify that generalized `NetworkConnection`
+semantics have been implemented and tested. If they are absent after BP-4,
+insert that work as the immediate serial prerequisite; never build it in
+parallel. Do not mark BP-5 done without explicit human approval.
+
+Tests: reject every illegal edge, including `candidate → paid` and
+`proposed → fulfilled`; prove `viable` cannot store a figure absent from the
+cited source.
+
+Depends on BP-1 and BP-4.
+
+### BP-6 — Payment and dispute as recorded events [HUMAN CHECKPOINT, PENDING]
+
+Only fulfilled connections can become paid, and only for a recorded amount that
+changed hands. Reported and verified are distinct. Disputes name no winner;
+settlement requires a stated new amount and note. Trust reports separate
+reported/verified/disputed/settled counts, never a score. Disputes and
+settlements write learning events. Do not mark BP-6 done without explicit
+human approval.
+
+Tests: separately reject payment without fulfillment/amount, reported treated
+as verified, a dispute with a winner, and a settlement without a new
+amount/note; verify separate trust counts and a learning event for each
+dispute/settlement.
+
+Depends on BP-5.
+
+### BP-7 — Public alerts only from already-recorded outcomes [PENDING]
+
+An alert requires a matching stored `Outcome` for a post, booking, or
+connection. A reply can count as an outcome but never as acceptance.
+
+Tests: alert generation without a matching stored Outcome fails; a reply-only
+outcome may produce an alert without advancing connection state.
+
+Depends on BP-5 and BP-6.
+
+## After BP-7
+
+Trace `OBSERVE → UNDERSTAND → CONNECT → DISCOVER → CREATE → TEST → ACT →
+COORDINATE → CAPTURE VALUE → MEASURE OUTCOMES → LEARN → EXPAND CAPABILITIES`.
+Identify the next code-backed gap and add it here before implementation. Keep
+work serial and apply the same claim → build → test → integrate → verify →
+record discipline. Section 11's safety layer remains out of scope until opened
+as its own deliberate task with an explicit evidence threshold.
 
 ## Plans that are not queues
 
 `docs/FUTURE_BLUEPRINT.md` is the North Star and architecture.
-`docs/IMPLEMENTATION_BACKLOG.md` contains historical belief detail and must stay aligned with that architecture.
+`docs/IMPLEMENTATION_BACKLOG.md` contains historical belief detail.
 `docs/PUBLICITY_GATE.md` is the launch lock.
 `docs/NEPAL_FIRST_PRODUCT_PLAN.md` is the first geography.
-`TWO_HUNDRED_DAY_COPILOT.txt` is historical session guidance, not a stop condition or a second queue.

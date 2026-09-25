@@ -1041,9 +1041,14 @@ def test_world_research_agenda_opens_once_and_does_not_state_prices(db):
     engine = CuriosityEngine(db)
     opened = engine.open_world_research()
     assert len(opened) == len(WORLD_RESEARCH_AGENDA)
+    assert len(set(WORLD_RESEARCH_AGENDA)) == len(WORLD_RESEARCH_AGENDA)
     assert engine.open_world_research() == []
     assert all("$" not in question.question for question in opened)
     assert all("trillion" not in question.question.lower() for question in opened)
+    agenda_text = " ".join(WORLD_RESEARCH_AGENDA).casefold()
+    assert "derivatives" in agenda_text
+    assert "hedge-fund" in agenda_text
+    assert "reinsurance" in agenda_text
     tasks = research_planner.plan_tasks_for_question(db, opened[0])
     assert tasks
     assert all(task.query for task in tasks)
