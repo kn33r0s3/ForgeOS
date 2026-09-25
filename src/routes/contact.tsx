@@ -1,9 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowUpRight } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
 import { SITE } from "@/lib/content";
-import { Button } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
 import { Eyebrow } from "@/components/layout/eyebrow";
+import { ProjectInquiryCta } from "@/components/pages/project-inquiry-cta";
 
 export const Route = createFileRoute("/contact")({
   component: ContactPage,
@@ -25,12 +24,7 @@ function ContactPage() {
             For a project, operating question, or conversation about building
             something useful, start with the context.
           </p>
-          <Button asChild className="mt-8">
-            <Link to="/request">
-              Start a Project
-              <ArrowUpRight />
-            </Link>
-          </Button>
+          <ProjectInquiryCta />
         </div>
         <aside className="self-start rounded-xl border border-line bg-surface p-7">
           <Eyebrow>Direct line</Eyebrow>

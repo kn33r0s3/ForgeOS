@@ -609,3 +609,24 @@ def test_opportunity_claim_question_link_respects_regulated_publication_gate(db)
         item.entity_type == "opportunity"
         for item in public_feed.build_public_feed(db)
     )
+
+
+def test_public_feed_preserves_outcome_verification_state(db):
+    for verification_state in ("REPORTED", "VERIFIED", "DISPUTED"):
+        db.add(models.Outcome(
+            source="domain_record",
+            outcome_type="QUALITATIVE",
+            qualitative_result=f"{verification_state.lower()} outcome note.",
+            verification_state=verification_state,
+            data_scope="REAL",
+        ))
+    db.commit()
+
+    items = public_feed.build_public_feed(db, kind="outcome", limit=10)
+    states = {item.status: item.epistemic_state for item in items}
+
+    assert states == {
+        "reported": "reported_outcome",
+        "verified": "verified_outcome",
+        "disputed": "disputed_outcome",
+    }

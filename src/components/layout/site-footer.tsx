@@ -7,7 +7,7 @@ import { Eyebrow } from "./eyebrow";
 const GROUP_LINKS = [
   { label: "Network feed", to: "/feed" },
   { label: "Search services", to: "/providers" },
-  { label: "Popular categories", to: "/services" },
+  { label: "Service categories", to: "/services" },
   { label: "How it works", to: "/about" },
   { label: "Contact", to: "/contact" },
 ] as const;

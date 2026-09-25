@@ -119,6 +119,19 @@ function dateLabel(value?: string | null) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
+function sourceLabel(value?: string | null) {
+  const labels: Record<string, string> = {
+    "Forge pattern engine": "Forge analysis",
+    "Forge knowledge graph": "Forge synthesis",
+    "Forge opportunity engine": "Forge opportunity assessment",
+    "public provider registry": "Verified provider record",
+    "public service registry": "Verified service listing",
+    "public work board": "Public work post",
+    "public Forge network": "Public network record",
+  };
+  return value ? labels[value] ?? value : "Source not recorded";
+}
+
 function NetworkFeedPage() {
   const { entity_type: entityType, entity_id: entityId } = Route.useSearch();
   const [items, setItems] = useState<PublicFeedItem[]>([]);
@@ -160,7 +173,7 @@ function NetworkFeedPage() {
             </p>
             {entityType && entityId ? (
               <p className="mt-4 inline-flex items-center gap-2 rounded-full border border-line bg-raised px-3 py-2 text-xs text-muted">
-                Network context: {entityType.replaceAll("_", " ")} #{entityId}
+                Network context: {ENTITY_LABELS[entityType] ?? entityType.replaceAll("_", " ")}
                 <Link to="/feed" search={{}} className="text-cyan hover:underline">Clear</Link>
               </p>
             ) : null}
@@ -229,6 +242,9 @@ function NetworkFeedPage() {
           {visible.map((item) => {
             const Icon = KIND_ICONS[item.kind] ?? Radio;
             const safeSourceUrl = item.source_url?.startsWith("https://") ? item.source_url : null;
+              const relatedProviderId = item.kind === "actor"
+                ? item.entity_id
+                : item.relations.find((relation) => relation.entity_type === "provider")?.entity_id;
             return (
               <article key={item.id} className="rounded-2xl border border-line bg-void p-5 sm:p-6">
                 <div className="flex items-start gap-3">
@@ -244,7 +260,7 @@ function NetworkFeedPage() {
                     <h2 className="mt-1 font-display text-xl text-fg sm:text-2xl">{item.title}</h2>
                     <p className="mt-2 whitespace-pre-line text-sm leading-6 text-muted">{item.summary}</p>
                     <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
-                      <span>{item.source || "Source not recorded"}</span>
+                      <span>{sourceLabel(item.source)}</span>
                       <span>{item.epistemic_state.replaceAll("_", " ")}</span>
                       <time dateTime={item.updated_at || item.occurred_at || undefined}>{dateLabel(item.updated_at || item.occurred_at)}</time>
                       {item.location ? <span>{item.location}</span> : null}
@@ -279,7 +295,7 @@ function NetworkFeedPage() {
                     {item.kind === "capability" || item.kind === "actor" ? (
                       <Link
                         to="/providers"
-                        search={item.kind === "actor" ? { provider: item.entity_id } : {}}
+                        search={relatedProviderId ? { provider: relatedProviderId } : {}}
                         className="ml-4 mt-4 inline-flex items-center gap-1 text-xs text-cyan hover:underline"
                       >
                         Explore providers <ArrowUpRight className="size-3.5" />

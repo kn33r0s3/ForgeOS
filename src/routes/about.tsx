@@ -1,9 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowUpRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { createFileRoute } from "@tanstack/react-router";
 import { Container } from "@/components/layout/container";
 import { PageHero } from "@/components/layout/page-hero";
 import { CtaBand } from "@/components/layout/cta-band";
+import { ProjectInquiryCta } from "@/components/pages/project-inquiry-cta";
 
 export const Route = createFileRoute("/about")({
   component: AboutPage,
@@ -42,12 +41,7 @@ function AboutPage() {
         }
         lede="Forge stores recorded people, organizations, capabilities, needs, work, services, offers, trades, evidence, and outcomes. It helps people read what is known and what remains unknown; it does not decide a match."
       >
-        <Button asChild className="mt-8">
-          <Link to="/request">
-            Start a Project
-            <ArrowUpRight />
-          </Link>
-        </Button>
+        <ProjectInquiryCta />
       </PageHero>
       <section className="py-16 sm:py-20">
         <Container className="max-w-3xl">

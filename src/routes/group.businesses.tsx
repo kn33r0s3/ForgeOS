@@ -1,13 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowUpRight } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
 import { currentOffers, groupAreas } from "@/lib/content";
-import { Button } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
 import { PageHero } from "@/components/layout/page-hero";
 import { SectionMarker } from "@/components/layout/section-marker";
 import { TextLink } from "@/components/layout/text-link";
 import { CtaBand } from "@/components/layout/cta-band";
 import { OfferCard } from "@/components/pages/offer-card";
+import { ProjectInquiryCta } from "@/components/pages/project-inquiry-cta";
 
 export const Route = createFileRoute("/group/businesses")({
   component: BusinessesPage,
@@ -27,16 +26,9 @@ function BusinessesPage() {
         }
         lede="Forge is the parent platform. Today, the practical offer is technical and operational work that helps ideas become systems, and systems become durable businesses."
       >
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <Button asChild>
-            <Link to="/request">
-              Partner with us
-              <ArrowUpRight />
-            </Link>
-          </Button>
-          <Button asChild variant="secondary">
-            <Link to="/contact">Start a conversation</Link>
-          </Button>
+        <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+          <ProjectInquiryCta />
+          <TextLink to="/contact">Contact details</TextLink>
         </div>
       </PageHero>
       <Container className="py-16 sm:py-20">

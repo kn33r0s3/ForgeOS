@@ -1,11 +1,11 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowUpRight, Check } from "lucide-react";
+import { createFileRoute, notFound } from "@tanstack/react-router";
+import { Check } from "lucide-react";
 import { getService } from "@/lib/content";
-import { Button } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
 import { Eyebrow } from "@/components/layout/eyebrow";
 import { TextLink } from "@/components/layout/text-link";
 import { CtaBand } from "@/components/layout/cta-band";
+import { ProjectInquiryCta } from "@/components/pages/project-inquiry-cta";
 
 export const Route = createFileRoute("/services/$slug")({
   loader: ({ params }) => {
@@ -45,12 +45,7 @@ function ServicePage() {
               {service.title}
             </h1>
             <p className="mt-6 max-w-xl text-lede text-muted">{service.short}</p>
-            <Button asChild className="mt-8">
-              <Link to="/request">
-                Start a Project
-                <ArrowUpRight />
-              </Link>
-            </Button>
+            <ProjectInquiryCta />
           </div>
           <div className="flex min-h-48 flex-col justify-between rounded-xl bg-fg p-6 text-void shadow-[8px_8px_0_rgb(0_0_0_/_0.28)]">
             <span className="font-mono text-micro uppercase tracking-[0.12em] opacity-60">
@@ -100,7 +95,7 @@ function ServicePage() {
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted">{service.next}</p>
                 <div className="mt-4">
-                  <TextLink to="/request">Share the situation</TextLink>
+                  <TextLink to="/contact">Contact details</TextLink>
                 </div>
               </div>
             </article>

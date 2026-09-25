@@ -600,6 +600,11 @@ def build_public_feed(
     for outcome in outcomes:
         if not (outcome.qualitative_result or "").strip():
             continue
+        verification_state = (outcome.verification_state or "REPORTED").strip().upper()
+        epistemic_state = {
+            "VERIFIED": "verified_outcome",
+            "DISPUTED": "disputed_outcome",
+        }.get(verification_state, "reported_outcome")
         items.append(schemas.PublicFeedItem(
             id=f"outcome:{outcome.id}",
             kind="outcome",
@@ -608,8 +613,8 @@ def build_public_feed(
             title="Recorded outcome",
             summary=outcome.qualitative_result,
             occurred_at=outcome.observed_at,
-            status=outcome.verification_state.lower(),
-            epistemic_state="observed_outcome",
+            status=verification_state.lower(),
+            epistemic_state=epistemic_state,
             source=outcome.source,
         ))
 

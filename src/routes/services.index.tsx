@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowUpRight } from "lucide-react";
 import { services } from "@/lib/content";
-import { Button } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
 import { PageHero } from "@/components/layout/page-hero";
 import { CtaBand } from "@/components/layout/cta-band";
+import { ProjectInquiryCta } from "@/components/pages/project-inquiry-cta";
 
 export const Route = createFileRoute("/services/")({ component: ServicesPage });
 
@@ -22,12 +22,7 @@ function ServicesPage() {
         }
         lede="Focused technical and operational services for work that needs to become clearer, more reliable, or easier to run."
       >
-        <Button asChild className="mt-8">
-          <Link to="/request">
-            Start a Project
-            <ArrowUpRight />
-          </Link>
-        </Button>
+        <ProjectInquiryCta />
       </PageHero>
       <section className="py-6 sm:py-10">
         <Container>

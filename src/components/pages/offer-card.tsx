@@ -1,5 +1,5 @@
 import type { BusinessOffer } from "@/lib/content";
-import { TextLink } from "@/components/layout/text-link";
+import { ProjectInquiryCta } from "@/components/pages/project-inquiry-cta";
 
 export function OfferCard({ offer }: { offer: BusinessOffer }) {
   return (
@@ -28,9 +28,7 @@ export function OfferCard({ offer }: { offer: BusinessOffer }) {
           <dd className="mt-1 leading-relaxed text-muted">{offer.start}</dd>
         </div>
       </dl>
-      <div className="mt-6">
-        <TextLink to="/request">Explore this need</TextLink>
-      </div>
+      <ProjectInquiryCta />
     </article>
   );
 }
