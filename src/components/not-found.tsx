@@ -15,7 +15,7 @@ export function NotFoundPage() {
           <span className="text-muted">is not here.</span>
         </h1>
         <p className="mt-6 max-w-md text-lede text-muted">
-          The address does not match a public Sanip Ops route. Utility tools are not
+          The address does not match a public Forge route. Utility tools are not
           part of this platform.
         </p>
         <Button asChild className="mt-8">

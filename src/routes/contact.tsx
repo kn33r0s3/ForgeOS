@@ -7,7 +7,7 @@ import { Eyebrow } from "@/components/layout/eyebrow";
 
 export const Route = createFileRoute("/contact")({
   component: ContactPage,
-  head: () => ({ meta: [{ title: "Contact — Sanip Ops" }] }),
+  head: () => ({ meta: [{ title: "Contact — Forge" }] }),
 });
 
 function ContactPage() {
@@ -15,7 +15,7 @@ function ContactPage() {
     <main className="py-16 sm:py-20 lg:py-24">
       <Container className="grid gap-12 lg:grid-cols-2 lg:gap-20">
         <div>
-          <Eyebrow>Contact Sanip Ops</Eyebrow>
+          <Eyebrow>Contact Forge</Eyebrow>
           <h1 className="font-display text-display tracking-tight text-fg">
             Start with the
             <br />

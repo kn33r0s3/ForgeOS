@@ -6,7 +6,7 @@ import { ProjectForm } from "@/components/pages/project-form";
 
 export const Route = createFileRoute("/request")({
   component: RequestPage,
-  head: () => ({ meta: [{ title: "Start a project — Sanip Ops" }] }),
+  head: () => ({ meta: [{ title: "Start a project — Forge" }] }),
 });
 
 const checks = [

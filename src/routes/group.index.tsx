@@ -14,7 +14,7 @@ function GroupPage() {
   return (
     <main>
       <PageHero
-        eyebrow="Sanip Operations / The group"
+        eyebrow="Forge / The group"
         title={
           <>
             One parent.
@@ -22,7 +22,7 @@ function GroupPage() {
             <span className="text-muted">Serious directions.</span>
           </>
         }
-        lede="Sanip Ops is built to eventually own, operate, and scale businesses across technology, operations, and ventures — from Nepal, remote-ready. What exists today is stated plainly; what is being built and what is long-term are kept visibly separate."
+        lede="Forge is built to eventually own, operate, and scale businesses across technology, operations, and ventures — from Nepal, remote-ready. What exists today is stated plainly; what is being built and what is long-term are kept visibly separate."
       >
         <StatusPill>One unified platform</StatusPill>
       </PageHero>
@@ -86,10 +86,9 @@ function GroupPage() {
               The operating core.
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
-              ForgeOS is in development as Sanip Ops’ internal, local-first
-              intelligence and operations engine: observe, verify, understand,
-              decide, act, measure, learn. It grounds the group’s decisions in
-              evidence and is not sold as a product or connected to this website.
+              Forge is the record this site reads: observe, verify, understand,
+              decide, act, measure, learn. An empty list means that record is
+              not stored. It is not sold as a product.
             </p>
             <div className="mt-5">
               <TextLink to="/process">How we work</TextLink>

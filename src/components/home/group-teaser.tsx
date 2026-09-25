@@ -34,7 +34,7 @@ export function GroupTeaser() {
             </h2>
           </div>
           <p className="max-w-xl text-sm leading-relaxed text-muted lg:justify-self-end">
-            Sanip Ops is built to eventually own, operate, and scale businesses
+            Forge is built to eventually own, operate, and scale businesses
             across technology, operations, and ventures — from Nepal, remote-ready.
             What exists today is stated plainly.
           </p>

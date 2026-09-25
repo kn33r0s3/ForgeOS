@@ -14,7 +14,7 @@ const items = [
   {
     number: "01",
     title: "The parent",
-    body: "Sanip Operations is the parent identity. Future group areas are strategic directions, not a claim that subsidiaries or operating companies already exist.",
+    body: "Forge is the parent identity. Future group areas are strategic directions, not a claim that subsidiaries or operating companies already exist.",
   },
   {
     number: "02",

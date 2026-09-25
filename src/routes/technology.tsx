@@ -7,5 +7,5 @@ export const Route = createFileRoute("/technology")({
       <AreaView name="Technology" />
     </main>
   ),
-  head: () => ({ meta: [{ title: "Technology — Sanip Ops" }] }),
+  head: () => ({ meta: [{ title: "Technology — Forge" }] }),
 });

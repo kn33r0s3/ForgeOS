@@ -25,7 +25,7 @@ function BusinessesPage() {
             <span className="text-muted">Useful work today.</span>
           </>
         }
-        lede="Sanip Ops is the parent platform. Today, the practical offer is technical and operational work that helps ideas become systems, and systems become durable businesses."
+        lede="Forge is the parent platform. Today, the practical offer is technical and operational work that helps ideas become systems, and systems become durable businesses."
       >
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Button asChild>
@@ -44,7 +44,7 @@ function BusinessesPage() {
           <SectionMarker label="Today" index="01" />
           <div>
             <h2 className="font-display text-title tracking-tight text-fg">
-              What Sanip Ops can do now
+              What Forge can do now
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
               Current offerings are focused engagements around technology,
@@ -65,10 +65,9 @@ function BusinessesPage() {
               Developing the group’s operating core.
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
-              ForgeOS is in development as Sanip Ops’ internal local-first
-              intelligence, operations, and business-software engine. It supports
-              the long-term direction; it is not being sold as a public product or
-              connected to this website.
+              Forge is the record this site reads. It supports the long-term
+              direction. An empty list means that record is not stored, and it
+              is not being sold as a separate product.
             </p>
             <div className="mt-5">
               <TextLink to="/about">See the group context</TextLink>

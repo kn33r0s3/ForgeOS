@@ -6,7 +6,7 @@ import { CtaBand } from "@/components/layout/cta-band";
 
 export const Route = createFileRoute("/process")({
   component: ProcessPage,
-  head: () => ({ meta: [{ title: "How we work — Sanip Ops" }] }),
+  head: () => ({ meta: [{ title: "How we work — Forge" }] }),
 });
 
 function ProcessPage() {

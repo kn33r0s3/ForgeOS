@@ -560,7 +560,7 @@ export const services: Service[] = [
     body: "Websites, web apps, and focused tools designed around the work they need to support.",
     problem:
       "A digital presence or application has to be more than a polished surface: it needs to help someone find, decide, submit, manage, or operate.",
-    does: "Sanip Ops shapes and builds focused web experiences, interfaces, and applications around the users, constraints, and workflows involved.",
+    does: "Forge shapes and builds focused web experiences, interfaces, and applications around the users, constraints, and workflows involved.",
     deliverable:
       "A scoped website or web application, responsive interface, documented handoff, and a clear path for future improvement.",
     process:
@@ -577,7 +577,7 @@ export const services: Service[] = [
     body: "Reduce repeat work with practical automation, integrations, and clearer handoffs.",
     problem:
       "Repeated manual steps, disconnected tools, and unclear ownership create friction that compounds over time.",
-    does: "Sanip Ops maps the current path, identifies safe opportunities to automate, and connects the smallest useful set of steps or systems.",
+    does: "Forge maps the current path, identifies safe opportunities to automate, and connects the smallest useful set of steps or systems.",
     deliverable:
       "A documented automation or integration, with boundaries, ownership, and an understandable fallback when automation should stop.",
     process:
@@ -594,7 +594,7 @@ export const services: Service[] = [
     body: "Turn scattered information and recurring tasks into an operating picture people can use.",
     problem:
       "Information is scattered across messages, documents, spreadsheets, and people, making status and next actions hard to see.",
-    does: "Sanip Ops helps structure requests, decisions, handoffs, documentation, and lightweight operating routines around the work itself.",
+    does: "Forge helps structure requests, decisions, handoffs, documentation, and lightweight operating routines around the work itself.",
     deliverable:
       "A practical operating flow, supporting documentation, and where appropriate a small digital surface that makes work visible.",
     process:
@@ -611,7 +611,7 @@ export const services: Service[] = [
     body: "Small, purposeful interfaces for teams, operators, and the decisions they make every day.",
     problem:
       "Generic tools can leave the important context buried, while custom systems can become oversized before anyone uses them.",
-    does: "Sanip Ops designs focused internal tools around the decisions, states, and handoffs that matter to the team using them.",
+    does: "Forge designs focused internal tools around the decisions, states, and handoffs that matter to the team using them.",
     deliverable:
       "A focused internal interface or dashboard, with clear ownership and a maintainable scope.",
     process:
@@ -628,7 +628,7 @@ export const services: Service[] = [
     body: "Map the path from request to outcome, then make ownership and progress visible.",
     problem:
       "Work gets lost between intake, decisions, execution, and follow-up when no one can see the path or owns the next step.",
-    does: "Sanip Ops turns a real workflow into visible stages, meaningful handoffs, and lightweight systems that help people move work forward.",
+    does: "Forge turns a real workflow into visible stages, meaningful handoffs, and lightweight systems that help people move work forward.",
     deliverable:
       "A documented workflow model and, when useful, a supporting interface, automation, or dashboard.",
     process:
@@ -645,7 +645,7 @@ export const services: Service[] = [
     body: "Reliable technical thinking and hands-on help when a system needs attention.",
     problem:
       "A technical issue can block work even when the fix is small, especially when context and ownership are unclear.",
-    does: "Sanip Ops investigates the stated problem, explains what is known, and helps with a focused fix or next step within the agreed scope.",
+    does: "Forge investigates the stated problem, explains what is known, and helps with a focused fix or next step within the agreed scope.",
     deliverable:
       "A documented diagnosis, targeted correction where appropriate, and clear follow-up notes or recommendations.",
     process:

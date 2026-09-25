@@ -18,8 +18,8 @@ export const Route = createFileRoute("/services/$slug")({
     meta: [
       {
         title: loaderData
-          ? `${loaderData.service.title} — Sanip Ops`
-          : "Service — Sanip Ops",
+          ? `${loaderData.service.title} — Forge`
+          : "Service — Forge",
       },
     ],
   }),
@@ -29,7 +29,7 @@ function ServicePage() {
   const { service } = Route.useLoaderData();
   const sections = [
     ["The problem", service.problem],
-    ["What Sanip Ops does", service.does],
+    ["What Forge does", service.does],
     ["What is delivered", service.deliverable],
     ["How the process works", service.process],
     ["Who it is for", service.forWho],
@@ -62,7 +62,7 @@ function ServicePage() {
               Clear ownership.
             </strong>
             <small className="font-mono text-micro uppercase tracking-[0.12em] opacity-60">
-              Sanip Operations · Nepal
+              Forge · Nepal
             </small>
           </div>
         </Container>

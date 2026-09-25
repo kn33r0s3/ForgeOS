@@ -33,7 +33,7 @@ export function ServicesSection() {
             >
               <div className="flex items-center justify-between font-mono text-micro uppercase tracking-[0.12em] text-dim">
                 <span className="text-cyan">{service.number}</span>
-                <span>Sanip / Ops</span>
+                <span>Forge</span>
               </div>
               <h3 className="mt-12 max-w-[14rem] font-display text-xl font-semibold tracking-tight text-fg">
                 {service.title}

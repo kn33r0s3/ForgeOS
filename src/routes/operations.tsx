@@ -7,7 +7,7 @@ import { RefreshCw, Play, Shield, CheckCircle, AlertTriangle, Activity, Trending
 
 export const Route = createFileRoute("/operations")({
   component: OperationsPage,
-  head: () => ({ meta: [{ title: "Operations — Sanip Ops" }] }),
+  head: () => ({ meta: [{ title: "Operations — Forge" }] }),
 });
 
 interface OpportunityItem {
@@ -202,7 +202,7 @@ function OperationsPage() {
             <div>
               <Eyebrow tone="amber">
                 <span className="size-1.5 rounded-full bg-amber shadow-[0_0_0_4px_var(--color-amber-dim)]" />
-                Sanip Operations · Internal Engine
+                Forge · Internal Engine
               </Eyebrow>
               <h1 className="font-display text-title tracking-tight text-fg">
                 Operating Dashboard
@@ -210,9 +210,9 @@ function OperationsPage() {
                 <span className="text-muted">Evidence, opportunities &amp; proposed actions.</span>
               </h1>
               <p className="mt-4 max-w-2xl text-lede text-muted">
-                Sanip Ops internal operating window. Exposes real evidence, scored opportunities,
-                policy-governed approval queues, and verified economic results.
-                All figures are drawn directly from the ForgeOS database — no fabricated data.
+                Forge operating window. It shows stored evidence, recorded
+                opportunities, and actions that still need approval. A missing
+                amount stays unknown. Figures come from the Forge database.
               </p>
             </div>
 

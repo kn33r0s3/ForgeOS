@@ -44,7 +44,7 @@ function buildMailto(values: z.infer<typeof schema>) {
     values.problem,
     values.details ? `\nNotes:\n${values.details}` : null,
   ].filter((line) => line !== null);
-  const subject = encodeURIComponent(`Sanip Ops inquiry — ${values.projectType}`);
+  const subject = encodeURIComponent(`Forge inquiry — ${values.projectType}`);
   const body = encodeURIComponent(lines.join("\n"));
   return `mailto:${SITE.email}?subject=${subject}&body=${body}`;
 }
@@ -190,7 +190,7 @@ export function ProjectForm() {
             className="mt-1 size-4 shrink-0 accent-cyan"
           />
           <span>
-            I agree to Sanip Operations using this information to respond to my
+            I agree to Forge using this information to respond to my
             conversation request.
           </span>
         </label>

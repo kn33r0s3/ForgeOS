@@ -19,7 +19,7 @@ export function AreaView({ name }: { name: "Technology" | "Operations" | "Ventur
             <span className="text-muted">is building.</span>
           </>
         }
-        lede={`${area?.description ?? ""} This is a long-term direction for Sanip Ops, not a claim that a separate subsidiary or operating company exists today.`}
+        lede={`${area?.description ?? ""} This is a long-term direction for Forge, not a claim that a separate subsidiary or operating company exists today.`}
       >
         <StatusPill tone="amber">Long-term direction</StatusPill>
       </PageHero>
@@ -30,7 +30,7 @@ export function AreaView({ name }: { name: "Technology" | "Operations" | "Ventur
             Direction before declaration.
           </h2>
           <p className="mt-4 text-sm leading-relaxed text-muted">
-            Sanip Ops will only describe a business area as active when there is
+            Forge will only describe a business area as active when there is
             clear evidence of an operating business behind it. Until then, the work
             is to learn, build carefully, and keep the distinction visible.
           </p>

@@ -13,17 +13,17 @@ export function ForgeOSSection() {
           <h2 className="font-display text-title tracking-tight text-fg">
             ForgeOS is how
             <br />
-            <span className="text-muted">Sanip thinks ahead.</span>
+            <span className="text-muted">the record stays current.</span>
           </h2>
           <p className="mt-5 max-w-xl text-lede text-muted">
             ForgeOS is the internal, local-first operating engine behind the
-            longer-term Sanip Ops vision: a way to connect evidence, decisions,
+            longer-term Forge vision: a way to connect evidence, decisions,
             actions, and outcomes without losing the human context.
           </p>
           <p className="mt-6 max-w-xl border-t border-line pt-5 text-xs leading-relaxed text-dim">
-            It is an internal direction, not a product claim. Planned capabilities
-            are not presented as already shipped. ForgeOS is not connected to this
-            website and is not offered for sale.
+            This website reads the public Forge API. An empty list means that
+            record is not stored. Planned capabilities are not presented as
+            already shipped, and Forge is not offered for sale.
           </p>
         </div>
       </Container>
