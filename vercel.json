@@ -24,6 +24,12 @@
       ]
     }
   },
+  "crons": [
+    {
+      "path": "/api/scheduled/cycle",
+      "schedule": "0 0 * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",

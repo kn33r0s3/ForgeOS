@@ -18,6 +18,10 @@ task "failed" or are skipped per-collector rather than raised — a bad
 network call should never take down a cycle or the API.
 """
 
+from datetime import date, datetime, timezone
+from time import monotonic
+from urllib.parse import urlsplit
+
 from sqlalchemy.orm import Session
 
 from app import models
@@ -30,7 +34,6 @@ from app.services.collectors.web import WebCollector
 from app.services import research_task_engine
 from app.services import evidence_graph
 from app.services import tool_usefulness
-from time import monotonic
 
 COLLECTORS = {
     "reddit": RedditCollector,
@@ -45,6 +48,31 @@ COLLECTORS = {
 # source is a specific GovInfo page, collected as a web task, not as a
 # standing default feed.
 UNCLEARED_DEFAULT_SOURCES = ("reddit", "github", "rss", "news", "arxiv")
+CLEARED_WEB_URLS = frozenset({
+    "https://www.govinfo.gov/content/pkg/FR-2026-08-12/html/2026-16432.htm",
+})
+CLEARED_WEB_REVIEW_DATE = date(2026, 9, 25)
+
+
+def _web_clearance_error(value: str, *, today: date | None = None) -> str | None:
+    """Enforce the exact page and same-day review recorded in the source register."""
+    if value not in CLEARED_WEB_URLS:
+        return "Web URL is not explicitly cleared in docs/PUBLIC_SOURCES.md"
+    parsed = urlsplit(value)
+    if not (
+        parsed.scheme == "https"
+        and parsed.hostname == "www.govinfo.gov"
+        and parsed.username is None
+        and parsed.password is None
+        and parsed.port is None
+        and not parsed.query
+        and not parsed.fragment
+    ):
+        return "Web URL is not a canonical cleared URL"
+    current_date = today or datetime.now(timezone.utc).date()
+    if current_date != CLEARED_WEB_REVIEW_DATE:
+        return "GovInfo robots and terms clearance has expired; review it again before collection"
+    return None
 
 
 def execute_task(db: Session, task: models.ResearchTask) -> dict:
@@ -58,6 +86,10 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
     started = monotonic()
     if task.source in UNCLEARED_DEFAULT_SOURCES:
         reason = f"Source '{task.source}' is not cleared for collection"
+        research_task_engine.fail_task(db, task, reason)
+        return {"task_id": task.id, "status": "failed", "reason": reason}
+
+    if task.source == "web" and (reason := _web_clearance_error(task.query)):
         research_task_engine.fail_task(db, task, reason)
         return {"task_id": task.id, "status": "failed", "reason": reason}
 
@@ -83,7 +115,10 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
     observer = ObserverEngine(db)
 
     try:
-        raw_items = collector.collect(task.query)
+        if task.source == "web":
+            raw_items = collector.collect(task.query, allowed_redirect_urls=CLEARED_WEB_URLS)
+        else:
+            raw_items = collector.collect(task.query)
     except Exception as exc:
         research_task_engine.fail_task(db, task, str(exc))
         tool_usefulness.record_usage(

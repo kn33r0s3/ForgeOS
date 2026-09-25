@@ -1,5 +1,9 @@
 # ForgeOS Overnight Engineering Report
 
+> Historical deployment report. Its Sanip Ops alias and Vercel-binding claims
+> predate the Forge deployment recorded in `TWO_HUNDRED_DAY_COPILOT.txt`.
+> This is not a work queue; see [SERIAL_PATH.md](SERIAL_PATH.md).
+
 ## What actually improved
 - Corrected the canonical repository identity: `kn33r0s3/ForgeOS` on `main`
 - Verified the frontend Earn source in [frontend/app/earn/page.tsx](../frontend/app/earn/page.tsx) is the real ForgeOS implementation and not a stale Sanip Ops artifact

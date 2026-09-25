@@ -1,6 +1,9 @@
 from unittest.mock import patch
+from urllib.request import Request
 
-from app.services.collectors.web import WebCollector
+import pytest
+
+from app.services.collectors.web import WebCollector, _AllowedRedirectHandler
 
 
 class FakeResponse:
@@ -128,3 +131,15 @@ def test_web_collector_falls_closed_when_reddit_json_has_no_substantive_post():
         )
 
     assert result == []
+
+
+def test_cleared_page_redirect_cannot_leave_the_allowlist():
+    approved = "https://www.govinfo.gov/content/pkg/FR-2026-08-12/html/2026-16432.htm"
+    handler = _AllowedRedirectHandler({approved})
+    request = Request(approved)
+
+    with pytest.raises(RuntimeError, match="not explicitly cleared"):
+        handler.redirect_request(request, None, 302, "Found", {}, "https://example.com/out")
+
+    redirected = handler.redirect_request(request, None, 302, "Found", {}, approved)
+    assert redirected.full_url == approved

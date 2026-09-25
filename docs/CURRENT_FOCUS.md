@@ -1,52 +1,26 @@
-# CURRENT_FOCUS.md — Nepal-First Real Result
+# CURRENT_FOCUS.md — S10: One Verified Provider Pilot
 
-**Last updated**: 2026-09-14  
-**Status**: Software workflow complete and verified locally; one real-person pilot remains the external gate.
+**Last updated**: 2026-09-25
+**Work order**: [SERIAL_PATH.md](SERIAL_PATH.md) is the only queue.
 
-## Single Goal
+## Current state
 
-Get **one real Nepali user** through one safe earning experiment with evidence:
+S10's code path is in place. No provider or booking may be added without real evidence and an operator-submitted request. At the last production verification on 2026-09-25, the provider and service lists were empty. The current production state has not been rechecked in this session.
 
-```
-Real person (14+)
-→ real offer
-→ real customer conversation
-→ delivery or clear refusal
-→ verified payment OR honest zero
-→ outcome recorded in ForgeOS
-```
+The repository now contains a protected, once-daily Vercel trigger for the existing cycle runner. Its production deployment and `CRON_SECRET` configuration are unverified, so this code is not evidence that production cycles are running.
 
-## What Already Exists
+## S10 evidence checklist
 
-- `/earn` workspace (Nepali + English)
-- 5 earning pathways
-- Age gate 14+ with safety copy for 14–17
-- Offline offer drafting (localStorage)
-- Clear labeling: draft = hypothesis, not revenue
-- Payment provider plan (eSewa, Khalti, Fonepay) — credentials not yet live
-- Durable integration outbox pattern in architecture
+- [ ] A real provider supplies evidence for a service they actually offer.
+- [ ] An operator reviews and records the verification evidence type, reference, and reviewer.
+- [ ] Publish the provider and service only after that verification; leave a missing price null.
+- [ ] An operator submits a real booking request before a booking record is created.
+- [ ] Record the actual result when it occurs; do not infer acceptance, fulfillment, or payment.
 
-## Highest-Leverage Next Steps (in order)
+Do not seed demo providers, prices, bookings, or outcomes. Do not fabricate a person or contact anyone on their behalf. No payment credentials are part of this step.
 
-1. Make the Earn workspace support honest status progression:
-   - draft → customer_confirmed → paid / failed / abandoned
-2. Add a simple “next real action” checklist per offer so a human knows exactly what to do offline.
-3. Run one pilot with a real person (not simulated).
-4. Only after one verified payment or clear negative result, expand pathways or connect live payment credentials.
+## Separate publicity gate
 
-## Explicitly Forbidden Until One Real Outcome
+The footer domain and contact mailbox remain pending until the operator supplies a domain they control and a monitored mailbox. See [PUBLICITY_GATE.md](PUBLICITY_GATE.md).
 
-- Claiming income guarantees
-- Treating drafts as customers or revenue
-- Collecting OTP, PIN, citizenship numbers, or wallet secrets
-- Mass unsolicited outreach tools
-- Expanding to many pathways before one pathway works end-to-end
-
-## Success Criteria (this phase)
-
-- [x] User can save an offer and advance its status honestly
-- [x] Each offer shows a concrete next real-world action
-- [ ] One real person completes the loop (even if result is “no sale”)
-- [ ] Outcome is recorded without fake revenue
-
-Parent company direction remains open (Aether Group / Apex). First product experiments stay Nepal-first and truth-first.
+The cycle trigger also needs a production deployment and a configured `CRON_SECRET`; its once-daily schedule invokes the canonical runner only. It does not publish providers, send messages, or invent prices.

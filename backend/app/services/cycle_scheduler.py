@@ -110,6 +110,10 @@ class CycleScheduler:
             while self._running.is_set():
                 time.sleep(0.2)
 
+    def run_single_cycle(self) -> dict:
+        """Run one scheduled invocation through the canonical timeout/log path."""
+        return self._run_cycle_with_timeout()
+
     def _tick(self, force_backup_check: bool = False) -> None:
         if self._running.is_set():
             log.warning("Skipping tick: a cycle run is still in progress.")

@@ -1,5 +1,9 @@
 # ForgeOS — left to do (from the Claude session on 2026-09-14)
 
+> Historical checklist, superseded by [`docs/SERIAL_PATH.md`](docs/SERIAL_PATH.md).
+> Its unchecked items are not current work. Use the serial path and
+> [`docs/CURRENT_FOCUS.md`](docs/CURRENT_FOCUS.md) for present status.
+
 I don't have network access or a working Python venv in my sandbox, so I
 could read and edit code but could NOT run the backend, run the test
 suite, or run a real cycle. Everything below is either (a) done and

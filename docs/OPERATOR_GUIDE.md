@@ -184,6 +184,15 @@ Backups: `storage/backups/*.db.gz` using SQLite VACUUM INTO, gzip, restore integ
 validation, then retention. `safe_backup()` returns the actual gzip path.
 Retention must be at least one. Never delete the working database to test recovery.
 
+On Vercel, `vercel.json` invokes the same runner once daily through
+`/api/scheduled/cycle`. The endpoint requires a `CRON_SECRET` environment
+variable and an exact `Authorization: Bearer …` header; it returns 503 until
+that secret is configured. Vercel sends the header automatically for cron
+invocations when `CRON_SECRET` is set. The deployment must use the durable
+`DATABASE_URL`; Vercel's `/tmp` SQLite fallback is not a persistent world of
+record. The daily schedule is compatible with Hobby plan limits. It runs one
+bounded cycle per day, not a continuously resident process.
+
 Manual verified snapshot:
 
 ```sh

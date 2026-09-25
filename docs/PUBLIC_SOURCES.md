@@ -22,3 +22,9 @@ are reviewed again at collection time.
 The register is descriptive, not permission to collect. A research task may use
 only a row whose robots and terms are both explicitly cleared. No signal or
 domain record is created from these pages by this register alone.
+
+The collector currently allowlists only the exact GovInfo Federal Register URL
+above, only on its recorded review date (UTC). Its redirect handler refuses any
+destination outside that same URL. The approval expires at the UTC date change;
+review robots.txt and terms again, then update this date before another run.
+Every other `web` task is failed before a network request.

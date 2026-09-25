@@ -1,3 +1,5 @@
+from datetime import date
+
 from app import models
 from app.services import collector_runner, multi_judge, research_planner, research_task_engine
 from app.services import evidence_graph
@@ -223,3 +225,55 @@ def test_uncleared_task_source_fails_without_collection(db, monkeypatch):
     assert result["status"] == "failed"
     assert "not cleared" in result["reason"]
     assert db.query(models.Signal).count() == 0
+
+
+def test_unapproved_web_url_fails_without_collection(db, monkeypatch):
+    _, task = make_claim_task(db)
+    task.source = "web"
+    task.query = "https://example.com/anything"
+    db.commit()
+
+    def explode(self, query, **kwargs):
+        raise AssertionError("unapproved web URL was fetched")
+
+    monkeypatch.setattr(collector_runner.WebCollector, "collect", explode)
+    result = collector_runner.execute_task(db, task)
+
+    assert result["status"] == "failed"
+    assert "not explicitly cleared" in result["reason"]
+    assert db.query(models.Signal).count() == 0
+
+
+def test_cleared_web_url_gets_redirect_allowlist(db, monkeypatch):
+    _, task = make_claim_task(db)
+    task.source = "web"
+    task.query = "https://www.govinfo.gov/content/pkg/FR-2026-08-12/html/2026-16432.htm"
+    db.commit()
+    observed = {}
+    clearance_check = collector_runner._web_clearance_error
+    monkeypatch.setattr(
+        collector_runner,
+        "_web_clearance_error",
+        lambda value: clearance_check(value, today=date(2026, 9, 25)),
+    )
+
+    def fail_without_fetch(self, query, *, allowed_redirect_urls=None):
+        observed["query"] = query
+        observed["allowed_redirect_urls"] = allowed_redirect_urls
+        raise RuntimeError("test stops before network access")
+
+    monkeypatch.setattr(collector_runner.WebCollector, "collect", fail_without_fetch)
+    result = collector_runner.execute_task(db, task)
+
+    assert result["status"] == "failed"
+    assert observed["query"] == task.query
+    assert observed["allowed_redirect_urls"] == collector_runner.CLEARED_WEB_URLS
+
+
+def test_web_clearance_expires_after_review_day():
+    url = "https://www.govinfo.gov/content/pkg/FR-2026-08-12/html/2026-16432.htm"
+
+    reason = collector_runner._web_clearance_error(url, today=date(2026, 9, 26))
+
+    assert reason is not None
+    assert "expired" in reason

@@ -1,5 +1,10 @@
 # ForgeOS Current Status
 
+> Historical snapshot updated September 14, 2026. Current work order and gates
+> are maintained in [`docs/SERIAL_PATH.md`](docs/SERIAL_PATH.md) and
+> [`docs/CURRENT_FOCUS.md`](docs/CURRENT_FOCUS.md); do not infer current
+> production state from this older environment report.
+
 **Updated:** September 14, 2026  
 **Release posture:** Container-hardened and local-pilot-ready. No real-person pilot or real revenue has been claimed.
 
