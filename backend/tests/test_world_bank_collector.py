@@ -155,9 +155,8 @@ def test_world_bank_parser_keeps_permitted_fields_and_third_party_attribution(db
     assert row["provenance"]["third_party_sources_indicated"] is True
     assert row["provenance"]["ownership_assessment"].startswith("third-party source organizations listed")
     assert "CC BY 4.0" in row["provenance"]["license_basis"]
-    assert row["provenance"]["license_status"] == (
-        "dataset_default_requires_attribution; indicator_specific_license_unreported"
-    )
+    assert row["provenance"]["license_status"] == "unconfirmed_third_party"
+    assert row["provenance"]["license_compatibility_verified"] is False
     assert requested[0][0] == f"{world_bank.API_ROOT}/indicator/{INDICATOR_ID}"
     assert requested[1][0] == f"{world_bank.API_ROOT}/country/NPL/indicator/{INDICATOR_ID}"
     assert requested[1][1]["format"] == "json"
@@ -205,7 +204,8 @@ def test_world_bank_macro_evidence_never_satisfies_market_requirements():
         "country_code": "NPL",
         "year": 2022,
         "value": 29715436,
-        "third_party_sources_indicated": True,
+        "third_party_sources_indicated": False,
+        "license_status": "dataset_default_requires_attribution; indicator_specific_license_unreported",
     }
     eligible, reason = world_bank_requirement_eligibility(
         "population_baseline",
@@ -240,7 +240,32 @@ def test_world_bank_macro_evidence_never_satisfies_market_requirements():
     assert mismatch_reason == "world_bank_observation_country_out_of_scope"
 
 
-def test_planner_satisfies_only_scoped_macro_requirement_and_keeps_demand_unresolved(
+def test_unconfirmed_third_party_world_bank_data_cannot_satisfy_requirements():
+    provenance = {
+        "source_registry_id": "world-bank-indicators-v2",
+        "canonical_url": "https://api.worldbank.org/v2/country/NPL/indicator/SP.POP.TOTL",
+        "attribution": "World Bank, World Development Indicators",
+        "indicator_id": INDICATOR_ID,
+        "country_code": "NPL",
+        "year": 2022,
+        "value": 29715436,
+        "third_party_sources_indicated": True,
+        "license_status": "unconfirmed_third_party",
+        "license_compatibility_verified": False,
+    }
+
+    eligible, reason = world_bank_requirement_eligibility("population_baseline", provenance)
+
+    assert eligible is False
+    assert reason == "world_bank_third_party_license_unconfirmed"
+
+    provenance["license_status"] = "confirmed_cc_by_4.0"
+    eligible, reason = world_bank_requirement_eligibility("population_baseline", provenance)
+    assert eligible is False
+    assert reason == "world_bank_third_party_license_unconfirmed"
+
+
+def test_planner_keeps_unlicensed_macro_and_demand_requirements_unresolved(
     db, monkeypatch
 ):
     requested = _mock_api(monkeypatch)
@@ -260,8 +285,9 @@ def test_planner_satisfies_only_scoped_macro_requirement_and_keeps_demand_unreso
         item for item in question.research_plan["requirements"]
         if item["id"] == "population_baseline"
     )
-    assert population["status"] == "satisfied"
-    assert len(population["evidence_ids"]) == 1
+    assert population["status"] == "terminal_unresolved"
+    assert population["terminal_reason"] == "world_bank_third_party_license_unconfirmed"
+    assert population["evidence_ids"] == []
     assert db.query(models.Evidence).filter_by(source="world_bank_indicators").count() == 1
     buyer_requirement = next(
         item for item in question.research_plan["requirements"]
@@ -299,6 +325,7 @@ def test_world_bank_observations_persist_idempotently(db, monkeypatch):
     assert len(evidence) == 1
     assert signal.external_id == f"NPL:{INDICATOR_ID}:2022"
     assert provenance["third_party_sources_indicated"] is True
+    assert provenance["license_status"] == "unconfirmed_third_party"
     assert provenance["attribution"].startswith("World Bank, World Development Indicators")
 
 

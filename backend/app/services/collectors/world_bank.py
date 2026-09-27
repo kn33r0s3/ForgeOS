@@ -180,7 +180,12 @@ class WorldBankCollector(SourceCollector):
                     "open datasets and that some datasets use other licenses; the API response does "
                     "not provide an indicator-specific license."
                 ),
-                "license_status": "dataset_default_requires_attribution; indicator_specific_license_unreported",
+                "license_status": (
+                    "unconfirmed_third_party"
+                    if third_party_sources
+                    else "dataset_default_requires_attribution; indicator_specific_license_unreported"
+                ),
+                "license_compatibility_verified": False,
                 "attribution": _attribution(metadata),
                 "retrieved_fields": list(_PERMITTED_OBSERVATION_FIELDS),
                 "metadata_fields": ["name", "source.id", "source.value", "sourceOrganization", "sourceNote"],

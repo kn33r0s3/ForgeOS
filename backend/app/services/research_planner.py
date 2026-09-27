@@ -384,8 +384,9 @@ def _verified_world_bank_evidence_ids(
     db: Session,
     tasks: list[models.ResearchTask],
     requirement: dict[str, Any],
-) -> list[int]:
+) -> tuple[list[int], str | None]:
     verified: set[int] = set()
+    rejected_reasons: list[str] = []
     scope = requirement.get("world_bank_scope") or {}
     for task in tasks:
         if task.source != "world_bank_indicators" or task.status != "completed":
@@ -418,7 +419,7 @@ def _verified_world_bank_evidence_ids(
                 continue
             if not isinstance(provenance, dict):
                 continue
-            eligible, _reason = world_bank_requirement_eligibility(
+            eligible, reason = world_bank_requirement_eligibility(
                 requirement["id"],
                 provenance,
                 expected_country=scope.get("country_code"),
@@ -431,7 +432,9 @@ def _verified_world_bank_evidence_ids(
             )
             if eligible:
                 verified.add(evidence_id)
-    return sorted(verified)
+            else:
+                rejected_reasons.append(reason)
+    return sorted(verified), next(iter(rejected_reasons), None)
 
 
 def _macro_market_unresolved_reason(requirement_id: str) -> str | None:
@@ -484,10 +487,10 @@ def _refresh_plan_from_tasks(
             if requirement["id"] == "bibliographic_discovery"
             else []
         )
-        verified_world_bank_ids = (
+        verified_world_bank_ids, world_bank_rejection_reason = (
             _verified_world_bank_evidence_ids(db, tasks, requirement)
             if requirement["id"] in {"macro_demographics", "population_baseline", "economic_indicator"}
-            else []
+            else ([], None)
         )
         if not requirement["capable_sources"]:
             if verified_metadata_ids:
@@ -575,10 +578,14 @@ def _refresh_plan_from_tasks(
                 else "terminal_unresolved"
             )
             requirement["evidence_ids"] = (
-                verified_metadata_ids or verified_world_bank_ids or evidence_ids
+                verified_metadata_ids
+                or verified_world_bank_ids
+                or (evidence_ids if primary.source != "world_bank_indicators" else [])
             )
             if verified_metadata_ids or verified_world_bank_ids:
                 requirement["terminal_reason"] = None
+            elif world_bank_rejection_reason:
+                requirement["terminal_reason"] = world_bank_rejection_reason
             elif primary.source == "crossref":
                 requirement["terminal_reason"] = (
                     "metadata_leads_do_not_establish_content_relevance_or_answer_the_claim"

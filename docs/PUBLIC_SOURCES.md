@@ -20,6 +20,8 @@ are reviewed again at collection time.
 | Semantic Scholar Academic Graph API — candidate, NOT cleared | https://api.semanticscholar.org/graph/v1/paper/search | Candidate scholarly abstract search for substantive research | `https://api.semanticscholar.org/robots.txt` returned `404`; API-only access was inspected, not general website crawling | Official API license at `https://www.semanticscholar.org/product/api/license` says S2 Data is separately governed by accompanying data licenses and underlying third-party content may have its own license; it also requires attribution to “Semantic Scholar”. The requested Graph API response fields do not identify an applicable per-paper/abstract license. The endpoint probe on 2026-09-27 returned HTTP 429; no abstract was retained. The API product page recommends an API key; `SEMANTIC_SCHOLAR_API_KEY` was not configured. No abstract collection or persistence is approved until compatible product use and per-item content-license compliance are established, and access can proceed without violating provider rate limits | 2026-09-27 |
 | World Bank Indicators API v2 — bounded country indicator endpoints | https://api.worldbank.org/v2 | Read-only country-year indicators and separate indicator/source metadata for macro statistical observations | `https://api.worldbank.org/robots.txt` returned `404`; integration uses only the documented JSON API and exact `/v2/indicator/{id}` and `/v2/country/{country}/indicator/{id}` path forms over HTTPS | The World Bank Data Catalog licensing page says CC BY 4.0 is the default for World Bank-produced open datasets, but many datasets have other licenses, including externally specified and custom licenses. WDI metadata identifies source organizations; those are captured, not treated as proof of exclusive ownership or an indicator-specific license. Attribution is retained. Macro data cannot establish customer pain, product demand, local market demand, or willingness to pay. Persistent rate gate: at least 1 second between API calls | 2026-09-27 |
 
+| ILOSTAT SDMX REST API — candidate, NOT cleared | https://sdmx.ilo.org/rest/v1 | Candidate public aggregate country-level labor statistics; restricted constituent microdata explicitly excluded | Exact SDMX robots policy was not established; metadata reads only, with no observation collection | ILO's official policy states datasets published/made available on or after 2023-05-03 are CC BY 4.0, excluding restricted constituent microdata. `DF_EMP_TEMP_SEX_AGE_NB` metadata exposes a `LAST_UPDATE` annotation but no dataset publication date or explicit license tag; no data was persisted. Dataset-specific eligibility and API terms remain unverified; no collector clearance | 2026-09-27 |
+
 ## Operating rule
 
 The register is descriptive, not permission to collect. A research task may use
@@ -98,7 +100,32 @@ duplicate IDs/URLs, non-HTTPS or unapproved policy links, broad redirects,
 missing evidence, unsupported collectors, and invalid review windows. The
 runtime registry currently has three entries: the expired GovInfo page (still
 blocked), the time-limited Crossref API row, and the time-limited World Bank
-Indicators API v2 row. The Semantic Scholar row above remains a research note,
-not a collection permission. When a source is reviewed, update its evidence
-row and add a typed runtime entry; registry tests ensure runtime URLs and
-documentation references remain connected.
+Indicators API v2 row. The Semantic Scholar and ILOSTAT rows above remain
+research notes, not collection permissions. When a source is reviewed, update
+its evidence row and add a typed runtime entry; registry tests ensure runtime
+URLs and documentation references remain connected.
+
+## 2026-09-27 — Third-party license hardening and ILOSTAT review
+
+World Bank records whose indicator metadata lists source organizations are
+stored with `license_status: "unconfirmed_third_party"` and
+`license_compatibility_verified: false` unless compatible item-specific reuse
+terms have been explicitly verified. The research planner will not use those
+records to satisfy even macro baseline requirements. It retains the traceable
+Evidence as a lead, with an explicit rejection reason; the World Bank
+dataset-level default is not treated as proof of third-party rights.
+
+ILOSTAT was inspected but not registered. The official ILO
+[rights-and-permissions policy](https://www.ilo.org/rights-and-permissions)
+says datasets and referential metadata published or made available on/after
+2023-05-03 are CC BY 4.0, except restricted microdata from constituents and
+partners; pre-date datasets do not automatically carry that license. Live
+metadata for
+[`DF_EMP_TEMP_SEX_AGE_NB`](https://sdmx.ilo.org/rest/v1/dataflow/ILO/DF_EMP_TEMP_SEX_AGE_NB/latest?references=children)
+returned HTTP 200 and described "Employment by sex and age". Its flow/structure
+metadata showed a `LAST_UPDATE` annotation but no dataset publication date or
+explicit CC BY 4.0 tag. That update timestamp is not treated as proof of the
+license eligibility condition. Exact SDMX robots and endpoint terms were not
+established, and no labor observations were retrieved or persisted. ILOSTAT
+remains blocked pending dataset-specific publication/license evidence and
+permission review.

@@ -61,6 +61,11 @@ def world_bank_requirement_eligibility(
         return False, "world_bank_observation_value_missing_or_non_numeric"
     if not isinstance(provenance.get("third_party_sources_indicated"), bool):
         return False, "world_bank_third_party_source_assessment_missing"
+    if provenance["third_party_sources_indicated"] and (
+        provenance.get("license_status") != "confirmed_cc_by_4.0"
+        or provenance.get("license_compatibility_verified") is not True
+    ):
+        return False, "world_bank_third_party_license_unconfirmed"
     if expected_country and provenance["country_code"].casefold() != expected_country.casefold():
         return False, "world_bank_observation_country_out_of_scope"
     if expected_indicator and provenance["indicator_id"] != expected_indicator:
