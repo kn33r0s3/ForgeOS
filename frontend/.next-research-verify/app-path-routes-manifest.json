@@ -1,0 +1,19 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/actions/page": "/actions",
+  "/analyze/page": "/analyze",
+  "/earn/page": "/earn",
+  "/execution/page": "/execution",
+  "/flow/page": "/flow",
+  "/network/page": "/network",
+  "/opportunities/page": "/opportunities",
+  "/outcomes/page": "/outcomes",
+  "/repair-shop/page": "/repair-shop",
+  "/products/page": "/products",
+  "/revenue/page": "/revenue",
+  "/research/page": "/research",
+  "/world/page": "/world",
+  "/knowledge/page": "/knowledge",
+  "/runtime/page": "/runtime",
+  "/page": "/"
+}

@@ -1,6 +1,8 @@
 from app import models
 from app.services.observer_engine import ObserverEngine
 from app.services import opportunity_engine, reality_memory
+import json
+import pytest
 
 
 def test_collector_evidence_deduplicates_and_changed_content_is_historical(db):
@@ -42,12 +44,28 @@ def test_collector_evidence_deduplicates_and_changed_content_is_historical(db):
 
 
 def test_pattern_opportunity_creation_is_idempotent_and_history_is_deduplicated(db):
+    signals = [
+        models.Signal(source="manual", content=f"Contractor report {index}: contractors lose hours.")
+        for index in range(2)
+    ]
+    db.add_all(signals)
+    db.flush()
+    evidence_rows = [
+        models.Evidence(
+            signal_id=signal.id,
+            source=signal.source,
+            content=signal.content,
+            provenance=json.dumps({"source_type": "manual"}),
+        )
+        for signal in signals
+    ]
+    db.add_all(evidence_rows)
     pattern = models.Pattern(
         title="Recurring theme: contractors, manually",
         description="Contractors manually lose hours every week.",
         frequency=2,
         confidence_score=80,
-        origin_signal_ids="1,2",
+        origin_signal_ids=",".join(str(signal.id) for signal in signals),
     )
     db.add(pattern)
     db.commit()
@@ -59,6 +77,38 @@ def test_pattern_opportunity_creation_is_idempotent_and_history_is_deduplicated(
     assert first.id == second.id
     assert db.query(models.Opportunity).filter_by(pattern_id=pattern.id).count() == 1
     assert db.query(models.OpportunityEvent).filter_by(opportunity_id=first.id, event_type="created").count() == 1
+    assert db.query(models.EvidenceRelationship).filter_by(
+        opportunity_id=first.id, relation_type="derived_from"
+    ).count() == 2
+
+
+def test_pattern_opportunity_rejects_missing_or_metadata_only_evidence(db):
+    pattern = models.Pattern(
+        title="Unsupported source-less pattern",
+        description="A pattern without attributable evidence.",
+        frequency=1,
+        confidence_score=99,
+    )
+    db.add(pattern)
+    db.commit()
+    with pytest.raises(ValueError, match="attributable source evidence"):
+        opportunity_engine.opportunity_from_pattern(db, pattern)
+
+    signal = models.Signal(
+        source="crossref",
+        source_type="external",
+        content="Crossref metadata record: plausible sounding commercial claim.",
+        canonical_url="https://doi.org/10.1234/metadata",
+        external_id="10.1234/metadata",
+        provenance=json.dumps({"metadata_only": True}),
+    )
+    db.add(signal)
+    db.flush()
+    db.add(models.Evidence(signal_id=signal.id, source="crossref", content=signal.content))
+    pattern.origin_signal_ids = str(signal.id)
+    db.commit()
+    with pytest.raises(ValueError, match="non-metadata evidence"):
+        opportunity_engine.opportunity_from_pattern(db, pattern)
 
 
 def test_new_economic_evidence_updates_existing_opportunity(db):

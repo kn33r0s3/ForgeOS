@@ -13,7 +13,6 @@ from app.services import research_task_engine, source_clearance_registry
 from app.services.research_evidence_assessment import explicit_contradiction_edges
 
 MAX_TASKS_PER_QUESTION = 5
-MAX_FOLLOW_UPS_PER_REQUIREMENT = 1
 
 _STOP_WORDS = {
     "about", "after", "against", "also", "among", "because", "before", "being",
@@ -293,6 +292,7 @@ def _refresh_plan_from_tasks(
     active = False
     all_terminal = True
     for requirement in plan["requirements"]:
+        task_count = db.query(models.ResearchTask).filter_by(question_id=question.id).count()
         active_capabilities = source_clearance_registry.capabilities_for_requirement(
             requirement["id"]
         )
@@ -352,6 +352,7 @@ def _refresh_plan_from_tasks(
                         follow_up_of=primary.id,
                         follow_up_depth=1,
                     )
+                    task_count += 1
                     requirement["status"] = "in_progress"
                     requirement["terminal_reason"] = None
                     active = True
@@ -389,6 +390,7 @@ def _refresh_plan_from_tasks(
                     source=capability["source"],
                     query=requirement["question"],
                 )
+                task_count += 1
                 requirement["status"] = "in_progress"
                 requirement["terminal_reason"] = None
                 active = True

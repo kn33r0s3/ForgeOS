@@ -1,5 +1,6 @@
 from datetime import date, datetime, timezone
 import json
+from types import SimpleNamespace
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -128,6 +129,30 @@ def test_partial_crossref_lead_creates_idempotent_narrow_follow_up(db):
     assert question.research_plan["status"] == "research_in_progress"
 
 
+def test_research_task_budget_is_enforced_across_all_requirements(db, monkeypatch):
+    question = models.ResearchQuestion(question="A question with several potentially answerable requirements.")
+    db.add(question)
+    db.commit()
+    db.refresh(question)
+    capability = source_clearance_registry.capabilities_for_requirement(
+        "bibliographic_discovery",
+        today=date(2026, 9, 27),
+    )[0]
+    monkeypatch.setattr(
+        source_clearance_registry,
+        "capabilities_for_requirement",
+        lambda requirement, **kwargs: (capability,),
+    )
+
+    tasks = research_planner.plan_tasks_for_question(db, question)
+    research_planner.plan_tasks_for_question(db, question)
+
+    assert len(tasks) == research_planner.MAX_TASKS_PER_QUESTION
+    assert db.query(models.ResearchTask).filter_by(question_id=question.id).count() == 5
+    assert question.research_plan["budget"]["tasks_created"] == 5
+    assert question.research_plan["budget"]["remaining_tasks"] == 0
+
+
 def test_source_capabilities_are_requirement_scoped_and_expiry_checked():
     assert source_clearance_registry.capabilities_for_requirement(
         "problem_incidence",
@@ -233,6 +258,67 @@ def test_metadata_only_research_cannot_support_claim_or_create_opportunity(db):
     assert opportunity_engine.generate_opportunity_from_signal_if_strong(db, signal) is None
     assert opportunity_engine.generate_opportunity_from_pattern_if_economic(db, pattern) is None
     assert db.query(models.Opportunity).count() == 0
+
+
+def test_crossref_metadata_is_excluded_when_other_evidence_is_judged(db, monkeypatch):
+    claim = models.Claim(
+        statement="A commercial claim.",
+        normalized_statement="a commercial claim",
+        epistemic_state="observed",
+    )
+    db.add(claim)
+    db.flush()
+    question = models.ResearchQuestion(
+        question="Can this evidence substantiate a commercial claim?",
+        source_claim_id=claim.id,
+    )
+    db.add(question)
+    db.flush()
+    task = research_task_engine.create_task(
+        db,
+        question_id=question.id,
+        source="crossref",
+        query=question.question,
+        claim_id=claim.id,
+    )
+    metadata = models.Evidence(
+        source="crossref",
+        content="A bibliographic title containing relevant words.",
+        provenance=json.dumps({"metadata_only": True}),
+    )
+    reviewed = models.Evidence(
+        source="reviewed-source",
+        content="A separately reviewed observation.",
+        provenance=json.dumps({"reviewed_content": True}),
+    )
+    db.add_all([metadata, reviewed])
+    db.commit()
+    judged = {}
+
+    def run_judgments(database, *, question, evidence_ids, claim_id, research_task_id):
+        judged["evidence_ids"] = evidence_ids
+        return [SimpleNamespace(id=77, status="completed")]
+
+    comparison = SimpleNamespace(
+        id=88,
+        outcome="uncertain",
+        contradictory_claims=[],
+        follow_up_question_id=None,
+        summary="Not enough evidence.",
+    )
+    from app.services import multi_judge
+
+    monkeypatch.setattr(multi_judge, "run_judgments", run_judgments)
+    monkeypatch.setattr(multi_judge, "compare_judgments", lambda *args, **kwargs: comparison)
+
+    research_task_engine.evaluate_claim_after_research(
+        db,
+        task,
+        [metadata.id, reviewed.id],
+    )
+
+    assert judged["evidence_ids"] == [reviewed.id]
+    assert task.results["excluded_metadata_only_evidence_ids"] == [metadata.id]
 
 
 def test_explicit_contradiction_relationship_is_preserved(db):

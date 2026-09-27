@@ -1,0 +1,149 @@
+{
+  "version": 3,
+  "pages404": true,
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [
+      {
+        "source": "/api/:path*",
+        "destination": "http://localhost:8000/:path*",
+        "regex": "^/api(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      }
+    ],
+    "fallback": []
+  },
+  "dynamicRoutes": [],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/actions",
+      "regex": "^/actions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/actions(?:/)?$"
+    },
+    {
+      "page": "/analyze",
+      "regex": "^/analyze(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/analyze(?:/)?$"
+    },
+    {
+      "page": "/earn",
+      "regex": "^/earn(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/earn(?:/)?$"
+    },
+    {
+      "page": "/execution",
+      "regex": "^/execution(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/execution(?:/)?$"
+    },
+    {
+      "page": "/flow",
+      "regex": "^/flow(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/flow(?:/)?$"
+    },
+    {
+      "page": "/knowledge",
+      "regex": "^/knowledge(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/knowledge(?:/)?$"
+    },
+    {
+      "page": "/network",
+      "regex": "^/network(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/network(?:/)?$"
+    },
+    {
+      "page": "/opportunities",
+      "regex": "^/opportunities(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/opportunities(?:/)?$"
+    },
+    {
+      "page": "/outcomes",
+      "regex": "^/outcomes(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/outcomes(?:/)?$"
+    },
+    {
+      "page": "/products",
+      "regex": "^/products(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/products(?:/)?$"
+    },
+    {
+      "page": "/repair-shop",
+      "regex": "^/repair\\-shop(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/repair\\-shop(?:/)?$"
+    },
+    {
+      "page": "/research",
+      "regex": "^/research(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/research(?:/)?$"
+    },
+    {
+      "page": "/revenue",
+      "regex": "^/revenue(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/revenue(?:/)?$"
+    },
+    {
+      "page": "/runtime",
+      "regex": "^/runtime(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/runtime(?:/)?$"
+    },
+    {
+      "page": "/world",
+      "regex": "^/world(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/world(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSuffix": ".prefetch.rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments"
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

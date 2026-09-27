@@ -8,6 +8,7 @@ const apiBaseUrl =
 
 const nextConfig = {
   reactStrictMode: true,
+  distDir: process.env.FORGE_NEXT_DIST_DIR || '.next',
   // The repo root also has a lockfile. Pin tracing to this app so Next
   // does not treat the parent TanStack project as the workspace root.
   outputFileTracingRoot: path.join(__dirname),

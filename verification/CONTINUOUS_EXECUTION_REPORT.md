@@ -128,3 +128,35 @@ The first Crossref API calls failed because of the unsupported selected field; a
 ForgeOS now accepts unfamiliar questions, decomposes them into general subquestions, creates durable permitted research tasks, retrieves actual public bibliographic metadata, persists provenance, resumes after database reopen, and refuses to call task completion a validated opportunity. It does **not** yet assess semantic relevance, source reliability, freshness, or contradictions; it has no authorized general public-web search integration. The repair-shop search produced mostly hospital studies, so there is no evidence-backed repair-shop opportunity to report. No person was contacted; no offer was published; no transaction, customer, or revenue was fabricated.
 
 Next: review an appropriate no-cost primary public source's current terms before enabling content retrieval. General web discovery remains blocked until an authorized source/integration is available. A real validation experiment still requires the owner's explicit authorization and a real human response.
+
+## 2026-09-27 RESULT — source-grounded requirements and honest stopping
+
+### Failure corrected
+
+The previous planner had three generic Crossref queries, considered a task with any Evidence row completed, and had no persisted relation between a source result and the particular unknown it could address. Crossref bibliographic metadata could therefore look like research progress without representing what it did or did not establish. Opportunity-from-pattern also had an unconditional manual creation path that could accept a pattern without a persisted source trail.
+
+### Implemented
+
+- Added requirement-level persisted plan state to `ResearchQuestion` (an existing record), covering bibliographic discovery, incidence, alternatives/costs, disconfirmation, and buyer willingness to pay. The capability registry now declares exact endpoint, operation, allowed fields, requirement coverage, and provenance requirements. Only active Crossref metadata can satisfy `bibliographic_discovery`; expired GovInfo and all uncleared sources are refused.
+- Research tasks persist their requirement ID, source registry ID, evidence kind, query, parent task, and follow-up depth. The per-question task budget is five; a metadata title can create one deterministic narrow follow-up. Empty/failed tasks remain unresolved and retry within the existing attempt limit. A requirement with no authorized source gets an explicit terminal reason. No requirement is marked satisfied without an actual content assessment.
+- Evidence assessment persists source identity, canonical URL, registry provenance, retrieval/publication timestamps, exact-token overlap and publication age. Lexical overlap does not become semantic relevance; metadata-only records remain `metadata_only_lead`, reliability/semantic relevance/contradictions remain unassessed absent inspected content, and claim support remains `not_inferred`.
+- Only persisted explicit contradiction relationships are reported as contradictions. Crossref metadata is excluded from claim judgments and economic opportunity generation. Pattern opportunities now require attributable source Evidence; experiment proposals require a research response whose requirements are all evidence-grounded.
+- Worker task claims use a conditional DB state update; recovery only requeues stale running tasks, and current work holds its lease. No new domain table or substrate primitive was added.
+
+### Actual runtime evidence and limits
+
+An isolated local FastAPI runtime accepted an unfamiliar postharvest-loss question at `POST /analyze` (HTTP 200), called the currently authorized Crossref `/works` API, and persisted **5 Evidence records and 5 external Signals** with DOI, timestamps, registry identity, and metadata-only provenance. One result was “Assessing Drivers of Storage Decision-Making to Prevent Postharvest Loss Among Smallholder Ginger Farmers in Palpa District, Nepal.” This is a bibliographic lead only: no abstract/full text was retrieved, and no conclusion about measured losses is asserted. A title-specific follow-up task was also persisted. After closing and reopening SQLite, the question's requirement plan, completed collection task, five evidence rows, and planned follow-up remained present.
+
+All four commercial/content requirements remain terminal-unresolved because there is no current authorized capability to answer them. No opportunity, customer, demand, competitor price, market size, willingness to pay, external response, transaction, or revenue was fabricated. No external contact, offer, or spend was made.
+
+### Verification record
+
+- `cd backend && ../.venv/bin/python -m pytest tests/test_grounded_research_loop.py tests/test_research_planner.py tests/test_research_agenda.py tests/test_research_task_engine.py tests/test_research_evidence_assessment.py tests/test_crossref_collector.py tests/test_public_value_flow.py tests/test_verified_research.py tests/test_experiment_api.py -q` → 74 passed before adding the final concurrency/budget/opportunity-gate regressions; rerun results are recorded after this card is appended.
+- `cd backend && ../.venv/bin/python -m pytest -q` → 394 passed, 22 warnings before the last regression additions; rerun results are recorded after this card is appended.
+- Root `npm run typecheck` → passed. Next.js frontend typecheck → passed. Production build is pending an isolated output-directory verification so the currently live Next.js preview is not disrupted.
+- Existing local API `/health` and public Next.js `/analyze` both returned HTTP 200; isolated API `/health` returned HTTP 200. Integrated-browser snapshot and screenshot show the public research UI renders. Direct local Playwright automation could not start because the browser binary is absent.
+- `git diff --check` was clean before documentation edits; rerun after updates.
+
+### Remaining blocker and next capability
+
+The runtime source-authorization boundary is exact: no reviewed capability permits retrieving article/page contents or broad public-web results. Crossref clearance permits bibliographic fields only; GovInfo clearance is expired. A current terms/policy review and bounded authorization for a specific content source is required before semantic relevance, reliability, factual support, contradictions, or evidence-grounded opportunity conclusions can legitimately be assessed. The next capability is source-specific primary-content clearance plus a content assessor constrained to that declared scope. Do not simulate it.

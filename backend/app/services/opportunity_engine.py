@@ -216,6 +216,13 @@ def opportunity_from_pattern(db: Session, pattern: models.Pattern) -> models.Opp
                     existing.problem_evidence_signal_ids = _append_signal_id(
                         existing.problem_evidence_signal_ids, int(sig_id.strip())
                     )
+            if source_signal_ids:
+                existing_evidence = (
+                    db.query(models.Evidence)
+                    .filter(models.Evidence.signal_id.in_(set(source_signal_ids)))
+                    .all()
+                )
+                _link_pattern_evidence(db, existing, existing_evidence)
             db.commit()
         return existing
     problem_text = pattern.description
@@ -240,9 +247,26 @@ def opportunity_from_pattern(db: Session, pattern: models.Pattern) -> models.Opp
     db.add(opportunity)
     db.commit()
     db.refresh(opportunity)
+    _link_pattern_evidence(db, opportunity, evidence_rows)
     _record_event(db, opportunity, "created", {"pattern_id": pattern.id, "score": score})
     db.commit()
     return opportunity
+
+
+def _link_pattern_evidence(
+    db: Session,
+    opportunity: models.Opportunity,
+    evidence_rows: list[models.Evidence],
+) -> None:
+    from app.services import evidence_graph
+
+    for evidence in evidence_rows:
+        evidence_graph.link_evidence(
+            db,
+            evidence,
+            opportunity_id=opportunity.id,
+            relation_type="derived_from",
+        )
 
 
 def opportunity_from_idea(db: Session, idea_text: str) -> models.Opportunity:
@@ -401,7 +425,31 @@ def generate_opportunity_from_pattern_if_economic(db: Session, pattern: models.P
             existing_opportunity.updated_at = datetime.now(timezone.utc)
             existing_opportunity.no_meaningful_change = False
             db.commit()
-        return existing_opportunity
+        return existing
+
+    if not source_signal_ids:
+        raise ValueError("Pattern opportunity requires attributable source evidence")
+    if len(source_signals) != len(set(source_signal_ids)):
+        raise ValueError("Pattern opportunity references missing source signals")
+    evidence_rows = (
+        db.query(models.Evidence)
+        .filter(models.Evidence.signal_id.in_(set(source_signal_ids)))
+        .all()
+    )
+    evidence_signal_ids = {row.signal_id for row in evidence_rows}
+    eligible_signals = [
+        signal
+        for signal in source_signals
+        if signal.is_duplicate_of is None and not _signal_is_metadata_only(signal)
+    ]
+    if (
+        not eligible_signals
+        or any(signal.id not in evidence_signal_ids for signal in eligible_signals)
+        or any(_signal_is_metadata_only(signal) for signal in source_signals)
+    ):
+        raise ValueError(
+            "Pattern opportunity requires attributable non-metadata evidence for every source signal"
+        )_opportunity
 
     prov_hash = _evidence_hash(best_signal)
 
