@@ -155,7 +155,21 @@ export default function AnalyzePage() {
           {result.research_plan && (
             <div className="grid gap-5 lg:grid-cols-2">
               <Section title="Research plan">
-                {result.research_plan.subquestions.map((question) => `• ${question}`).join("\n")}
+                {result.research_plan.status}
+                {result.research_plan.budget
+                  ? ` · ${result.research_plan.budget.tasks_created}/${result.research_plan.budget.max_tasks} tasks`
+                  : ""}
+                {"\n\n"}
+                Requirements:
+                {"\n"}
+                {result.research_plan.requirements
+                  .map((requirement) => {
+                    const reason = requirement.terminal_reason
+                      ? ` — ${requirement.terminal_reason}`
+                      : "";
+                    return `• ${requirement.question}\n  ${requirement.status}${reason}`;
+                  })
+                  .join("\n")}
                 {"\n\n"}
                 Candidate sources:
                 {"\n"}

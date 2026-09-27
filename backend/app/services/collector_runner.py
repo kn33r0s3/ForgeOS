@@ -35,6 +35,7 @@ from app.services import evidence_graph
 from app.services import tool_usefulness
 from app.services import source_clearance_registry
 from app.services.research_evidence_assessment import assess_source_record
+import json
 
 COLLECTORS = {
     "reddit": RedditCollector,
@@ -194,6 +195,27 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
         )
         if evidence:
             evidence_ids.append(evidence.id)
+            provenance = normalized.get("provenance")
+            provenance = provenance if isinstance(provenance, dict) else {}
+            assessment = assess_source_record(
+                task.query,
+                title=signal.title,
+                content=signal.content,
+                published_at=signal.published_at,
+                retrieved_at=signal.retrieved_at,
+                source_identity=signal.external_id or signal.source,
+                canonical_url=signal.canonical_url,
+                provenance=provenance,
+            )
+            evidence_provenance = (
+                json.loads(evidence.provenance)
+                if evidence.provenance
+                else {}
+            )
+            evidence.provenance = json.dumps(
+                {**evidence_provenance, "assessment": assessment},
+                sort_keys=True,
+            )
             source_results.append(
                 {
                     "signal_id": signal.id,
@@ -204,13 +226,7 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
                     "published_at": signal.published_at.isoformat() if signal.published_at else None,
                     "retrieved_at": signal.retrieved_at.isoformat() if signal.retrieved_at else None,
                     "source": signal.source,
-                    "assessment": assess_source_record(
-                        task.query,
-                        title=signal.title,
-                        content=signal.content,
-                        published_at=signal.published_at,
-                        retrieved_at=signal.retrieved_at,
-                    ),
+                    "assessment": assessment,
                 }
             )
             statement = (normalized.get("content") or "").strip()[:400]
@@ -252,6 +268,11 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
             .all()
         ]
     evaluation = research_task_engine.evaluate_claim_after_research(db, final_task, claim_evidence_ids)
+    question = db.get(models.ResearchQuestion, final_task.question_id)
+    if question is not None and isinstance(question.research_plan, dict):
+        from app.services import research_planner
+
+        research_planner.plan_tasks_for_question(db, question)
     evidence_rows = db.query(models.Evidence).filter(models.Evidence.id.in_(evidence_ids)).all() if evidence_ids else []
     evidence_edges = db.query(models.EvidenceRelationship).filter(
         models.EvidenceRelationship.evidence_id.in_(evidence_ids)
@@ -284,6 +305,7 @@ def run_pending_tasks(db: Session, limit: int = 5) -> list[dict]:
     """Execute up to `limit` currently-planned tasks (curiosity-driven
     collection). Used by the Background Forge Worker and available
     on-demand via the API."""
+    research_task_engine.resume_running_tasks(db, limit=limit)
     tasks = (
         db.query(models.ResearchTask)
         .filter(models.ResearchTask.status == "planned")

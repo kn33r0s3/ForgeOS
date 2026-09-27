@@ -564,19 +564,52 @@ export interface AnalyzeResponse {
 }
 
 export interface ResearchPlan {
+  question_id: number;
+  question: string;
+  status: string;
   subquestions: string[];
+  requirements: ResearchRequirement[];
   assumptions: string[];
   unknowns: string[];
   candidate_sources: ResearchCandidateSource[];
-  selected_sources: string[];
   stopping_conditions: string[];
   known_observations: ResearchObservation[];
+  unresolved_requirements?: string[];
+  terminal_reason?: string | null;
+  contradictions?: Array<{ evidence_id: number; claim_id: number | null }>;
+  budget?: { max_tasks: number; tasks_created: number; remaining_tasks: number };
+}
+
+export interface ResearchRequirement {
+  id: string;
+  question: string;
+  evidence_kind: string;
+  can_resolve_claim: boolean;
+  status: string;
+  terminal_reason: string | null;
+  capable_sources: Array<{
+    source: string;
+    registry_id: string;
+    endpoint: string;
+    operation: string;
+    allowed_fields: string[];
+    provenance_requirements: string[];
+  }>;
+  evidence_ids: number[];
+  task_ids: number[];
 }
 
 export interface ResearchCandidateSource {
   source: string;
   available: boolean;
-  rank: number;
+  registry_id?: string;
+  endpoint?: string;
+  operation?: string;
+  allowed_fields?: string[];
+  supports_requirements?: string[];
+  valid_through?: string;
+  rate_limit_seconds?: number;
+  rank?: number;
   rationale?: string;
   reason?: string;
   scope?: string;
@@ -592,6 +625,7 @@ export interface ResearchObservation {
   retrieved_at: string | null;
   matched_term_fraction: number;
   epistemic_status: string;
+  matching_is_not_semantic_relevance?: boolean;
 }
 
 export interface ResearchEvidenceSource {
@@ -604,6 +638,15 @@ export interface ResearchEvidenceSource {
   retrieved_at: string | null;
   source: string;
   assessment?: {
+    assessment_state: string;
+    provenance: {
+      present: boolean;
+      source_registry_id: string | null;
+      retrieval_timestamp: string | null;
+      publication_timestamp: string | null;
+      canonical_url: string | null;
+      source_identity: string | null;
+    };
     keyword_overlap: {
       method: string;
       query_term_count: number;

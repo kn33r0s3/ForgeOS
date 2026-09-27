@@ -162,8 +162,36 @@ def _looks_like_imported_instruction(text: str | None) -> bool:
     return sum(marker in low for marker in markers) >= 2
 
 
+def _signal_is_metadata_only(signal: models.Signal) -> bool:
+    if (signal.source or "").casefold().startswith("crossref"):
+        return True
+    import json
+
+    try:
+        provenance = json.loads(signal.provenance) if signal.provenance else {}
+    except (TypeError, json.JSONDecodeError):
+        return False
+    return isinstance(provenance, dict) and (
+        provenance.get("metadata_only") is True
+        or provenance.get("source_registry_id") == "crossref-public-works-metadata"
+    )
+
+
 def opportunity_from_pattern(db: Session, pattern: models.Pattern) -> models.Opportunity:
     """Build and persist a full Opportunity from an existing Pattern."""
+    source_signal_ids = [
+        int(value)
+        for value in (pattern.origin_signal_ids or "").split(",")
+        if value.strip().isdigit()
+    ]
+    source_signals = (
+        db.query(models.Signal).filter(models.Signal.id.in_(source_signal_ids)).all()
+        if source_signal_ids
+        else []
+    )
+    if source_signals and all(_signal_is_metadata_only(signal) for signal in source_signals):
+        raise ValueError("Bibliographic metadata cannot support an opportunity assessment")
+
     problem_text = pattern.title or pattern.description
     key = _identity_key(problem_text)
 
@@ -328,6 +356,8 @@ def generate_opportunity_from_pattern_if_economic(db: Session, pattern: models.P
     for signal in signals:
         if signal.is_duplicate_of is not None:
             continue  # a syndicated duplicate isn't independent evidence — see economic_intelligence.compute_corroboration()
+        if _signal_is_metadata_only(signal):
+            continue
         extraction = economic_intelligence.extract_economic_signal(signal.content)
         scores = economic_intelligence.score_economic_signal(extraction, signal.reliability_score)
         if not economic_intelligence.is_economically_meaningful(extraction, scores):
@@ -450,6 +480,8 @@ def generate_opportunity_from_signal_if_strong(db: Session, signal: models.Signa
     """
     if signal.is_duplicate_of is not None:
         return None  # a syndicated duplicate isn't independent evidence
+    if _signal_is_metadata_only(signal):
+        return None
 
     extraction = economic_intelligence.extract_economic_signal(signal.content)
     scores = economic_intelligence.score_economic_signal(extraction, signal.reliability_score)

@@ -25,7 +25,7 @@ def test_zero_result_question_stays_open_and_uses_cleared_research_tasks(db):
     retried_ids = {row.id for row in retried}
     assert task.id not in retried_ids
     assert db.get(models.ResearchTask, task.id).status == "needs_research"
-    assert len(retried_ids) == 3
+    assert len(retried_ids) == 1
     assert {row.source for row in retried} == {"crossref"}
     assert db.get(models.ResearchQuestion, question.id).status == "planned"
     assert db.query(models.ResearchQuestion).filter_by(question=question.question).count() == 1

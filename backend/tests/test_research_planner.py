@@ -20,9 +20,9 @@ def test_unrelated_questions_get_general_subquestions_and_only_cleared_sources(d
         for question in questions
     ]
 
-    assert all(len(plan["subquestions"]) == 3 for plan in plans)
+    assert all(len(plan["subquestions"]) == 5 for plan in plans)
     assert all(plan["subquestions"] != plans[1 - index]["subquestions"] for index, plan in enumerate(plans))
-    assert all("premise is unverified" in plan["assumptions"][0] for plan in plans)
+    assert all("not external evidence" in plan["assumptions"][0] for plan in plans)
     assert all(
         next(source for source in plan["candidate_sources"] if source["source"] == "crossref")["available"]
         for plan in plans
@@ -31,8 +31,24 @@ def test_unrelated_questions_get_general_subquestions_and_only_cleared_sources(d
         not next(source for source in plan["candidate_sources"] if source["source"] == "web_search")["available"]
         for plan in plans
     )
-    assert all(len(tasks) == 3 for tasks in planned_tasks)
+    assert all(
+        not next(source for source in plan["candidate_sources"] if source["source"] == "direct_web")["available"]
+        for plan in plans
+    )
+    assert all(len(tasks) == 1 for tasks in planned_tasks)
     assert all(task.source == "crossref" for tasks in planned_tasks for task in tasks)
+    assert all(
+        next(item for item in plan["requirements"] if item["id"] == "bibliographic_discovery")[
+            "capable_sources"
+        ]
+        for plan in plans
+    )
+    assert all(
+        not next(item for item in plan["requirements"] if item["id"] == "buyer_willingness_to_pay")[
+            "capable_sources"
+        ]
+        for plan in plans
+    )
 
 
 def test_prior_external_evidence_is_reused_as_unverified_context(db):

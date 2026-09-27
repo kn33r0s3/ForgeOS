@@ -27,10 +27,15 @@ def _normalize_auth_status(raw_value: str | None) -> str:
 
 
 def build_experiment_from_analyze(data: AnalyzeResponse | dict[str, Any]) -> ExperimentProposalCreate:
-    """Build a proposal from one completed ``/analyze`` response."""
+    """Build a proposal only from a research response whose requirements are grounded."""
     analyze = data if isinstance(data, AnalyzeResponse) else AnalyzeResponse.model_validate(data)
-    if analyze.research_status != "source_collection_complete":
-        raise ValueError("Experiment proposals require completed source collection")
+    requirements = analyze.research_plan.get("requirements", [])
+    if (
+        analyze.research_status != "research_complete"
+        or not requirements
+        or any(row.get("status") != "satisfied" for row in requirements if isinstance(row, dict))
+    ):
+        raise ValueError("Experiment proposals require all research requirements to be evidence-grounded")
     if analyze.signal_id is None or analyze.research_question_id is None or not analyze.research_task_ids:
         raise ValueError("Completed research response is missing provenance")
 

@@ -53,7 +53,15 @@ def analyze_idea(payload: schemas.AnalyzeRequest, db: Session = Depends(get_db))
         db.refresh(question)
 
     research_planner.plan_tasks_for_question(db, question)
-    collector_runner.run_pending_tasks(db, limit=1)
+    next_task = (
+        db.query(models.ResearchTask)
+        .filter_by(question_id=question.id, status="planned")
+        .order_by(models.ResearchTask.id.asc())
+        .first()
+    )
+    if next_task is not None:
+        collector_runner.execute_task(db, next_task)
+    research_planner.plan_tasks_for_question(db, question)
     tasks = (
         db.query(models.ResearchTask)
         .filter(models.ResearchTask.question_id == question.id)
@@ -98,41 +106,27 @@ def analyze_idea(payload: schemas.AnalyzeRequest, db: Session = Depends(get_db))
     states = {task.status for task in tasks}
     has_pending_tasks = bool(states & {"planned", "running"})
     has_unresolved_tasks = bool(states & {"failed", "needs_research"})
-    all_tasks_have_evidence = bool(tasks) and all(
-        bool(task.evidence_ids)
-        and bool(
-            {
-                int(value)
-                for value in task.evidence_ids.split(",")
-                if value.isdigit()
-            }
-            & persisted_evidence_ids
-        )
-        for task in tasks
-    )
-    source_collection_complete = (
-        bool(tasks)
-        and states == {"completed"}
-        and all_tasks_have_evidence
-        and bool(persisted_evidence_ids)
-    )
-    if source_collection_complete:
-        research_status = "source_collection_complete"
-    elif evidence_count > 0:
-        research_status = "evidence_found"
-    elif states & {"failed"}:
+    research_plan = question.research_plan or research_planner.build_research_plan(db, question)
+    if research_plan.get("status") == "research_complete":
+        research_status = "research_complete"
+    elif research_plan.get("status") == "research_terminal_unresolved":
+        research_status = "research_terminal_unresolved"
+    elif states & {"failed"} and not has_pending_tasks:
         research_status = "research_failed"
     elif states & {"needs_research"} or states == {"completed"}:
         research_status = "research_needs_evidence"
+    elif evidence_count > 0:
+        research_status = "research_in_progress"
     else:
         research_status = "research_started"
 
-    research_plan = (
-        tasks[0].results.get("research_plan")
-        if tasks and isinstance(tasks[0].results, dict)
-        else None
-    ) or research_planner.build_research_plan(db, question)
-    unknowns = list(research_plan["unknowns"])
+    unknowns = [
+        f'{requirement["question"]} — '
+        f'{requirement.get("terminal_reason") or requirement.get("status", "unresolved")}'
+        for requirement in research_plan.get("requirements", [])
+        if requirement.get("status") != "satisfied"
+    ]
+    unknowns.extend(research_plan["unknowns"])
     if not evidence_count:
         unknowns.insert(0, "No external research evidence has been persisted for this question yet.")
 
@@ -151,17 +145,17 @@ def analyze_idea(payload: schemas.AnalyzeRequest, db: Session = Depends(get_db))
         "treat a proposed test as an executed experiment."
     )
 
-    if source_collection_complete:
+    if research_status == "research_terminal_unresolved":
         findings_summary = (
-            f"All {len(tasks)} planned source tasks returned attributable records. This completes "
-            "collection only: relevance, factual support, customer demand, willingness to pay, and "
-            "commercial viability remain unvalidated."
+            f"The bounded research loop reached a terminal state after {len(tasks)} task(s), but "
+            f"{len(research_plan.get('unresolved_requirements', []))} evidence requirement(s) remain unresolved. "
+            "Collected bibliographic records are leads only; no opportunity or market claim is validated."
         )
     elif evidence_count:
         findings_summary = (
             f"Persisted {evidence_count} attributable evidence record(s); "
             f"{sum(task.status in {'planned', 'running'} for task in tasks)} task(s) remain queued or running. "
-            "These are research leads, not validated demand."
+            "These are research leads, not validated demand or answers to unrelated requirements."
         )
     elif has_pending_tasks:
         findings_summary = (
@@ -236,7 +230,10 @@ def create_opportunity_from_pattern(pattern_id: int, db: Session = Depends(get_d
     pattern = db.query(models.Pattern).filter(models.Pattern.id == pattern_id).first()
     if not pattern:
         raise HTTPException(status_code=404, detail="Pattern not found")
-    return opportunity_engine.opportunity_from_pattern(db, pattern)
+    try:
+        return opportunity_engine.opportunity_from_pattern(db, pattern)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/stats", response_model=schemas.StatsOut)

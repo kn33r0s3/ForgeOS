@@ -408,6 +408,7 @@ class ResearchQuestion(Base):
     source_belief_id = Column(Integer, ForeignKey("beliefs.id"), nullable=True)
     source_claim_id = Column(Integer, ForeignKey("claims.id"), nullable=True, index=True)
     source_rare_signal_id = Column(Integer, ForeignKey("rare_signal_assessments.id"), nullable=True, index=True)
+    research_plan = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=utcnow)
 
 

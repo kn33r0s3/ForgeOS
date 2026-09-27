@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 from typing import Any
 
+from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -156,18 +157,41 @@ def _set_step(
 
 def begin_task(db: Session, task: models.ResearchTask) -> bool:
     """Start or resume a task. Returns False for completed/exhausted tasks."""
-    _ensure_steps(db, task)
-    if task.status == "completed":
+    previous_status = task.status
+    previous_attempts = task.attempts or 0
+    if previous_status not in {"planned", "failed"}:
         return False
-    if task.status == "failed":
-        if task.attempts >= task.max_attempts:
-            return False
-        task.status = "planned"
-        _event(db, task, "retry_requested", details={"attempt": task.attempts + 1})
-    task.status = "running"
-    task.started_at = task.started_at or utcnow()
-    task.updated_at = utcnow()
-    task.attempts += 1
+    if previous_attempts >= task.max_attempts:
+        return False
+
+    now = utcnow()
+    claimed = (
+        db.query(models.ResearchTask)
+        .filter(
+            models.ResearchTask.id == task.id,
+            models.ResearchTask.status == previous_status,
+            models.ResearchTask.attempts == previous_attempts,
+        )
+        .update(
+            {
+                models.ResearchTask.status: "running",
+                models.ResearchTask.started_at: func.coalesce(
+                    models.ResearchTask.started_at, now
+                ),
+                models.ResearchTask.updated_at: now,
+                models.ResearchTask.attempts: models.ResearchTask.attempts + 1,
+            },
+            synchronize_session=False,
+        )
+    )
+    if claimed != 1:
+        db.expire(task)
+        return False
+    db.commit()
+    db.refresh(task)
+    _ensure_steps(db, task)
+    if previous_status == "failed":
+        _event(db, task, "retry_requested", details={"attempt": task.attempts})
     _set_step(db, task, "plan", "completed", output={"objective": task.objective or task.query})
     from app.services.tool_registry import default_registry
 
@@ -210,7 +234,9 @@ def finish_task(
             "status": "evidence_collected" if unique_evidence else "no_evidence",
         }
     ]
-    task.contradictions = []
+    from app.services.research_evidence_assessment import explicit_contradiction_edges
+
+    task.contradictions = explicit_contradiction_edges(db, unique_evidence)
     task.results = {
         **(task.results or {}),
         "signal_ids": signal_ids,
@@ -242,6 +268,38 @@ def evaluate_claim_after_research(
     """Re-run P3 against all evidence currently linked to this claim."""
     if task.claim_id is None or not evidence_ids:
         return None
+    from app.services.research_evidence_assessment import explicit_contradiction_edges
+
+    requested_evidence_ids = sorted(set(evidence_ids))
+    evidence_rows = (
+        db.query(models.Evidence)
+        .filter(models.Evidence.id.in_(requested_evidence_ids))
+        .all()
+    )
+    metadata_only_ids = sorted(
+        row.id for row in evidence_rows if _evidence_is_metadata_only(row)
+    )
+    evidence_ids = sorted(
+        row.id for row in evidence_rows if not _evidence_is_metadata_only(row)
+    )
+    if not evidence_ids:
+        task.judgments = [
+            {
+                "status": "unassessed_metadata_only",
+                "evidence_ids": metadata_only_ids,
+            }
+        ]
+        task.results = {
+            **(task.results or {}),
+            "comparison_outcome": "unassessed",
+            "claim_support": "not_inferred",
+            "excluded_metadata_only_evidence_ids": metadata_only_ids,
+            "contradictions": [],
+        }
+        _event(db, task, "judgment_skipped", details=task.results)
+        db.commit()
+        db.refresh(task)
+        return None
     from app.services import multi_judge
 
     question = task.objective or task.query
@@ -266,6 +324,7 @@ def evaluate_claim_after_research(
         "judgment_ids": [judgment.id for judgment in judgments],
         "comparison_id": comparison.id,
         "comparison_outcome": comparison.outcome,
+        "excluded_metadata_only_evidence_ids": metadata_only_ids,
     }
     if comparison.follow_up_question_id:
         task.remaining_questions = [comparison.summary]
@@ -274,6 +333,21 @@ def evaluate_claim_after_research(
     db.commit()
     db.refresh(task)
     return {"judgments": judgments, "comparison": comparison}
+
+
+def _evidence_is_metadata_only(evidence: models.Evidence) -> bool:
+    import json
+
+    for value in (evidence.provenance, evidence.substrate_provenance):
+        if not value:
+            continue
+        try:
+            provenance = json.loads(value) if isinstance(value, str) else value
+        except (TypeError, json.JSONDecodeError):
+            continue
+        if isinstance(provenance, dict) and provenance.get("metadata_only") is True:
+            return True
+    return False
 
 
 def fail_task(db: Session, task: models.ResearchTask, error: str) -> models.ResearchTask:
@@ -285,6 +359,12 @@ def fail_task(db: Session, task: models.ResearchTask, error: str) -> models.Rese
     _refresh_question_status(db, task.question_id)
     db.commit()
     db.refresh(task)
+    question = db.get(models.ResearchQuestion, task.question_id)
+    if question is not None and isinstance(question.research_plan, dict):
+        from app.services import research_planner
+
+        research_planner.plan_tasks_for_question(db, question)
+        db.refresh(task)
     return task
 
 
@@ -327,30 +407,75 @@ def _refresh_question_status(db: Session, question_id: int) -> None:
     question.status = "planned" if pending or has_evidence else "open"
 
 
-def resume_running_tasks(db: Session, limit: int = 10) -> list[int]:
-    """Return tasks abandoned in running to planned. Does not complete them."""
+def resume_running_tasks(
+    db: Session,
+    limit: int = 10,
+    *,
+    stale_after_seconds: int = 300,
+    now: datetime | None = None,
+) -> list[int]:
+    """Requeue only stale running tasks; a live worker retains its lease."""
     if limit <= 0:
         return []
+    current = now or utcnow()
+    cutoff = current - timedelta(seconds=stale_after_seconds)
     tasks = (
         db.query(models.ResearchTask)
-        .filter(models.ResearchTask.status == "running")
+        .filter(
+            models.ResearchTask.status == "running",
+            or_(
+                models.ResearchTask.updated_at.is_(None),
+                models.ResearchTask.updated_at <= cutoff,
+            ),
+        )
         .order_by(models.ResearchTask.id.asc())
         .limit(limit)
         .all()
     )
     resumed: list[int] = []
     for task in tasks:
-        resume_task(db, task)
-        resumed.append(task.id)
+        if resume_task(
+            db,
+            task,
+            stale_after_seconds=stale_after_seconds,
+            now=current,
+        ).status == "planned":
+            resumed.append(task.id)
     return resumed
 
 
-def resume_task(db: Session, task: models.ResearchTask) -> models.ResearchTask:
-    """Return a persisted task ready for the worker to execute again."""
+def resume_task(
+    db: Session,
+    task: models.ResearchTask,
+    *,
+    stale_after_seconds: int = 300,
+    now: datetime | None = None,
+) -> models.ResearchTask:
+    """Return an abandoned persisted task to the queue with a conditional update."""
+    current = now or utcnow()
+    cutoff = current - timedelta(seconds=stale_after_seconds)
     if task.status == "running":
-        task.status = "planned"
-        task.updated_at = utcnow()
-        _event(db, task, "resumed", details={"step": task.current_step})
-        db.commit()
-        db.refresh(task)
+        resumed = (
+            db.query(models.ResearchTask)
+            .filter(
+                models.ResearchTask.id == task.id,
+                models.ResearchTask.status == "running",
+                or_(
+                    models.ResearchTask.updated_at.is_(None),
+                    models.ResearchTask.updated_at <= cutoff,
+                ),
+            )
+            .update(
+                {
+                    models.ResearchTask.status: "planned",
+                    models.ResearchTask.updated_at: current,
+                },
+                synchronize_session=False,
+            )
+        )
+        if resumed:
+            db.expire(task)
+            db.refresh(task)
+            _event(db, task, "resumed", details={"step": task.current_step})
+            db.commit()
     return task

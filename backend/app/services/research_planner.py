@@ -1,7 +1,8 @@
-"""Build reusable, evidence-aware plans over the existing research task model."""
+"""Build bounded, requirement-first plans over the existing research records."""
 
 from __future__ import annotations
 
+import copy
 import re
 from typing import Any
 
@@ -9,6 +10,10 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.services import research_task_engine, source_clearance_registry
+from app.services.research_evidence_assessment import explicit_contradiction_edges
+
+MAX_TASKS_PER_QUESTION = 5
+MAX_FOLLOW_UPS_PER_REQUIREMENT = 1
 
 _STOP_WORDS = {
     "about", "after", "against", "also", "among", "because", "before", "being",
@@ -19,12 +24,11 @@ _STOP_WORDS = {
 }
 
 _UNCERTAINTIES = [
-    "Prevalence, frequency, and severity are not established by a publication record alone.",
-    "Willingness to pay and buyer authority remain unknown until directly evidenced.",
-    "Affected customer or beneficiary groups and decision context remain unidentified.",
-    "Existing alternatives, prices, switching costs, and competitor performance need source-level verification.",
-    "Required resources, capabilities, distribution, legal constraints, startup cost, and downside risk remain unassessed.",
-    "Evidence that would disprove the premise must be sought before treating the opportunity as supported.",
+    "Problem prevalence, frequency, and severity are unverified.",
+    "Affected customer groups, decision authority, and willingness to pay are unknown.",
+    "Existing alternatives, prices, switching costs, and competitor performance are unverified.",
+    "Required resources, capabilities, distribution, legal constraints, startup costs, and downside risk are unassessed.",
+    "Disconfirming evidence has not been reviewed against source content.",
 ]
 
 
@@ -36,12 +40,43 @@ def _tokens(text: str) -> set[str]:
     }
 
 
-def _subquestions(question_text: str) -> list[str]:
-    topic = " ".join(question_text.split()).rstrip("?.! ")
+def _topic(question_text: str) -> str:
+    return " ".join(question_text.split()).rstrip("?.! ")
+
+
+def _requirement_specs(question_text: str) -> list[dict[str, Any]]:
+    topic = _topic(question_text)
     return [
-        f"What verifiable observations or measurements address: {topic}?",
-        f"What existing solutions, alternatives, providers, and documented costs address: {topic}?",
-        f"What evidence contradicts or limits the premise: {topic}?",
+        {
+            "id": "bibliographic_discovery",
+            "question": f"Which scholarly publications may merit content review for: {topic}?",
+            "evidence_kind": "bibliographic_metadata",
+            "can_resolve_claim": False,
+        },
+        {
+            "id": "problem_incidence",
+            "question": f"What independent observations measure whether and how often this problem occurs: {topic}?",
+            "evidence_kind": "observations_of_incidence",
+            "can_resolve_claim": True,
+        },
+        {
+            "id": "alternatives_and_costs",
+            "question": f"What existing alternatives and documented costs address: {topic}?",
+            "evidence_kind": "solution_and_price_observations",
+            "can_resolve_claim": True,
+        },
+        {
+            "id": "disconfirming_evidence",
+            "question": f"What source content could disconfirm or materially limit this premise: {topic}?",
+            "evidence_kind": "claim_counterevidence",
+            "can_resolve_claim": True,
+        },
+        {
+            "id": "buyer_willingness_to_pay",
+            "question": f"What actual evidence establishes buyer authority and willingness to pay for: {topic}?",
+            "evidence_kind": "buyer_response_or_transaction",
+            "can_resolve_claim": True,
+        },
     ]
 
 
@@ -90,129 +125,334 @@ def _prior_observations(db: Session, question_text: str, *, limit: int = 5) -> l
                 "retrieved_at": signal.retrieved_at.isoformat() if signal.retrieved_at else None,
                 "matched_term_fraction": round(relevance, 3),
                 "epistemic_status": "prior_observation_unverified",
+                "matching_is_not_semantic_relevance": True,
             }
         )
     return observations
 
 
 def build_research_plan(db: Session, question: models.ResearchQuestion) -> dict[str, Any]:
-    """Describe known observations, unknowns, assumptions, and permitted strategies."""
-    candidates: list[dict[str, Any]] = [
-        {
-            "source": "internal_evidence",
-            "available": True,
-            "rank": 1,
-            "rationale": "Reuse attributable prior external observations without creating duplicates.",
-        }
-    ]
-    external_sources = []
+    """Describe requirements and candidate capabilities without equating metadata to answers."""
+    requirements: list[dict[str, Any]] = []
+    for spec in _requirement_specs(question.question):
+        capabilities = source_clearance_registry.capabilities_for_requirement(spec["id"])
+        requirements.append(
+            {
+                **spec,
+                "status": "pending" if capabilities else "terminal_unresolved",
+                "capable_sources": [
+                    {
+                        "source": entry.collector,
+                        "registry_id": entry.registry_id,
+                        "endpoint": entry.url,
+                        "operation": entry.allowed_operation,
+                        "allowed_fields": list(entry.allowed_fields),
+                        "provenance_requirements": list(entry.provenance_requirements),
+                    }
+                    for entry in capabilities
+                ],
+                "terminal_reason": None if capabilities else "no_currently_authorized_source_capability",
+                "evidence_ids": [],
+                "task_ids": [],
+            }
+        )
+
+    candidates = []
     for entry in source_clearance_registry.source_clearances():
-        active = source_clearance_registry.collector_is_cleared(entry.collector)
-        candidate = {
-            "source": entry.collector,
-            "available": active,
-            "rank": len(candidates) + 1,
-            "scope": entry.url,
-            "rationale": entry.allowed_need,
-            "registry_id": entry.registry_id,
-        }
-        candidates.append(candidate)
-        if active:
-            external_sources.append(entry.collector)
+        candidates.append(
+            {
+                "source": entry.collector,
+                "registry_id": entry.registry_id,
+                "available": source_clearance_registry.collector_is_cleared(entry.collector),
+                "endpoint": entry.url,
+                "operation": entry.allowed_operation,
+                "allowed_fields": list(entry.allowed_fields),
+                "supports_requirements": list(entry.supports_requirements),
+                "valid_through": entry.valid_through.isoformat(),
+                "rate_limit_seconds": entry.min_interval_seconds,
+            }
+        )
     candidates.extend(
         [
             {
                 "source": "web_search",
                 "available": False,
-                "rank": len(candidates) + 1,
-                "reason": "No currently reviewed general web-search API is configured.",
+                "reason": "No currently reviewed general web-search capability is configured.",
             },
             {
                 "source": "direct_web",
                 "available": False,
-                "rank": len(candidates) + 2,
-                "reason": "The only direct-page clearance is expired; no page will be fetched.",
+                "reason": "The direct-page clearance has expired; no page will be fetched.",
             },
         ]
     )
-    subquestions = _subquestions(question.question)
     return {
         "question_id": question.id,
-        "subquestions": subquestions,
+        "question": question.question,
+        "status": "research_in_progress",
+        "subquestions": [item["question"] for item in requirements],
+        "requirements": requirements,
         "known_observations": _prior_observations(db, question.question),
         "assumptions": [
-            "The question's premise is unverified; wording is not evidence.",
-            "A Crossref metadata match proves a bibliographic record exists, not that the publication supports the premise.",
-            "No commercial demand, customer, price, revenue, or transaction is inferred from scholarly metadata.",
+            "The premise and wording supplied by the requester are not external evidence.",
+            "Bibliographic metadata identifies a record only; paper contents have not been retrieved or reviewed.",
+            "Lexical overlap is a discovery cue, not semantic relevance or claim support.",
+            "No customer, market demand, price, revenue, transaction, or human response is inferred.",
         ],
         "unknowns": list(_UNCERTAINTIES),
         "candidate_sources": candidates,
-        "selected_sources": external_sources,
         "stopping_conditions": [
-            "Stop a source task when the source returns attributable records or a recorded no-result outcome.",
-            "Keep the overall question open while subquestions are queued, source access is blocked, or material unknowns remain.",
-            "Do not create a supported claim or opportunity from metadata discovery alone.",
+            "A requirement is grounded only by persisted evidence assessed as directly relevant to that requirement.",
+            "End unresolved requirements explicitly when no current authorized capability can answer them.",
+            f"Stop after at most {MAX_TASKS_PER_QUESTION} persisted tasks for this question.",
+            "Never describe a terminal-but-unresolved loop as a validated research conclusion.",
         ],
+        "budget": {"max_tasks": MAX_TASKS_PER_QUESTION},
     }
 
 
-def _sources_for_question(question_text: str) -> list[str]:
-    """Return only currently cleared general-purpose discovery sources."""
-    del question_text
+def _question_plan(question: models.ResearchQuestion) -> dict[str, Any]:
+    plan = question.research_plan
+    if isinstance(plan, dict) and isinstance(plan.get("requirements"), list):
+        return copy.deepcopy(plan)
+    return {}
+
+
+def _tasks_for_requirement(
+    db: Session,
+    question_id: int,
+    requirement_id: str,
+) -> list[models.ResearchTask]:
+    rows = db.query(models.ResearchTask).filter_by(question_id=question_id).order_by(models.ResearchTask.id).all()
     return [
-        entry.collector
-        for entry in source_clearance_registry.source_clearances()
-        if entry.collector != "web"
-        and source_clearance_registry.collector_is_cleared(entry.collector)
+        task
+        for task in rows
+        if isinstance(task.results, dict)
+        and task.results.get("research_requirement_id") == requirement_id
     ]
 
 
-def plan_tasks_for_question(db: Session, question: models.ResearchQuestion) -> list[models.ResearchTask]:
-    """Persist idempotent, source-specific tasks for answerable subquestions."""
-    plan = build_research_plan(db, question)
-    sources = _sources_for_question(question.question)
-    created: list[models.ResearchTask] = []
+def _create_task(
+    db: Session,
+    question: models.ResearchQuestion,
+    requirement: dict[str, Any],
+    *,
+    source: str,
+    query: str,
+    follow_up_of: int | None = None,
+    follow_up_depth: int = 0,
+) -> models.ResearchTask:
+    task = research_task_engine.create_task(
+        db,
+        question_id=question.id,
+        source=source,
+        query=query,
+        objective=requirement["question"],
+        claim_id=question.source_claim_id,
+    )
+    task.results = {
+        **(task.results or {}),
+        "research_requirement_id": requirement["id"],
+        "evidence_kind": requirement["evidence_kind"],
+        "source_registry_id": next(
+            (
+                capability["registry_id"]
+                for capability in requirement["capable_sources"]
+                if capability["source"] == source
+            ),
+            None,
+        ),
+        "follow_up_of_task_id": follow_up_of,
+        "follow_up_depth": follow_up_depth,
+        "research_question_id": question.id,
+    }
+    db.flush()
+    return task
 
-    for subquestion in plan["subquestions"]:
-        for source in sources:
-            existing = (
-                db.query(models.ResearchTask)
-                .filter_by(
-                    question_id=question.id,
-                    source=source,
-                    query=subquestion,
-                )
-                .first()
-            )
-            if existing is not None:
-                existing.results = {
-                    **(existing.results or {}),
-                    "research_plan": plan,
-                }
-                if existing.status in {"needs_research", "failed"}:
-                    retried = research_task_engine.retry_task(db, existing)
-                    if retried.status == "planned":
-                        created.append(retried)
-                continue
-            task = research_task_engine.create_task(
-                db,
-                question_id=question.id,
-                source=source,
-                query=subquestion,
-                objective=subquestion,
-                claim_id=question.source_claim_id,
-            )
-            task.results = {
-                **(task.results or {}),
-                "research_plan": plan,
+
+def _follow_up_query(task: models.ResearchTask) -> str | None:
+    results = task.results if isinstance(task.results, dict) else {}
+    records = results.get("source_results")
+    if not isinstance(records, list):
+        return None
+    title = next(
+        (row.get("title") for row in records if isinstance(row, dict) and row.get("title")),
+        None,
+    )
+    if not title:
+        return None
+    return f"Bibliographic follow-up for unresolved publication lead: {title}"
+
+
+def _refresh_plan_from_tasks(
+    db: Session,
+    question: models.ResearchQuestion,
+    plan: dict[str, Any],
+) -> None:
+    task_count = db.query(models.ResearchTask).filter_by(question_id=question.id).count()
+    active = False
+    all_terminal = True
+    for requirement in plan["requirements"]:
+        active_capabilities = source_clearance_registry.capabilities_for_requirement(
+            requirement["id"]
+        )
+        requirement["capable_sources"] = [
+            {
+                "source": entry.collector,
+                "registry_id": entry.registry_id,
+                "endpoint": entry.url,
+                "operation": entry.allowed_operation,
+                "allowed_fields": list(entry.allowed_fields),
+                "provenance_requirements": list(entry.provenance_requirements),
             }
-            created.append(task)
+            for entry in active_capabilities
+        ]
+        tasks = _tasks_for_requirement(db, question.id, requirement["id"])
+        evidence_ids = sorted(
+            {
+                int(value)
+                for task in tasks
+                for value in (task.evidence_ids or "").split(",")
+                if value.isdigit()
+            }
+        )
+        requirement["task_ids"] = [task.id for task in tasks]
+        requirement["evidence_ids"] = evidence_ids
+        if not requirement["capable_sources"]:
+            requirement["status"] = "terminal_unresolved"
+            requirement["terminal_reason"] = (
+                "no_currently_authorized_source_capability"
+                if not tasks
+                else "source_capability_unavailable_or_expired"
+            )
+            continue
 
-    if created:
-        db.commit()
-        for task in created:
-            db.refresh(task)
-    return created
+        pending = [task for task in tasks if task.status in {"planned", "running"}]
+        if pending:
+            requirement["status"] = "in_progress"
+            requirement["terminal_reason"] = None
+            active = True
+            all_terminal = False
+            continue
+
+        successful = [task for task in tasks if task.status == "completed" and task.evidence_ids]
+        if successful:
+            primary = successful[0]
+            depth = int((primary.results or {}).get("follow_up_depth") or 0)
+            followups = [task for task in tasks if int((task.results or {}).get("follow_up_depth") or 0) > 0]
+            if not followups and depth == 0 and task_count < MAX_TASKS_PER_QUESTION:
+                query = _follow_up_query(primary)
+                if query:
+                    _create_task(
+                        db,
+                        question,
+                        requirement,
+                        source=primary.source,
+                        query=query,
+                        follow_up_of=primary.id,
+                        follow_up_depth=1,
+                    )
+                    requirement["status"] = "in_progress"
+                    requirement["terminal_reason"] = None
+                    active = True
+                    all_terminal = False
+                    continue
+            requirement["status"] = "terminal_unresolved"
+            requirement["terminal_reason"] = (
+                "metadata_leads_do_not_establish_content_relevance_or_answer_the_claim"
+                if primary.source == "crossref"
+                else "collected_evidence_has_not_been_assessed_as_direct_support"
+            )
+            continue
+
+        retryable = [
+            task
+            for task in tasks
+            if task.status in {"failed", "needs_research"} and task.attempts < task.max_attempts
+        ]
+        if retryable:
+            retried = research_task_engine.retry_task(db, retryable[0])
+            if retried.status == "planned":
+                requirement["status"] = "in_progress"
+                requirement["terminal_reason"] = None
+                active = True
+                all_terminal = False
+                continue
+
+        if not tasks:
+            capability = requirement["capable_sources"][0]
+            if task_count < MAX_TASKS_PER_QUESTION:
+                _create_task(
+                    db,
+                    question,
+                    requirement,
+                    source=capability["source"],
+                    query=requirement["question"],
+                )
+                requirement["status"] = "in_progress"
+                requirement["terminal_reason"] = None
+                active = True
+                all_terminal = False
+                continue
+            requirement["terminal_reason"] = "research_task_budget_exhausted"
+        elif any(task.status in {"failed", "needs_research"} for task in tasks):
+            requirement["terminal_reason"] = "source_attempt_budget_exhausted_without_answer"
+        else:
+            requirement["terminal_reason"] = "no_successful_source_evidence"
+        requirement["status"] = "terminal_unresolved"
+
+    task_count = db.query(models.ResearchTask).filter_by(question_id=question.id).count()
+    plan["budget"] = {
+        "max_tasks": MAX_TASKS_PER_QUESTION,
+        "tasks_created": task_count,
+        "remaining_tasks": max(0, MAX_TASKS_PER_QUESTION - task_count),
+    }
+    plan["status"] = "research_in_progress" if active else "research_terminal_unresolved"
+    plan["unresolved_requirements"] = [
+        item["id"]
+        for item in plan["requirements"]
+        if item["status"] != "satisfied"
+    ]
+    all_evidence_ids = sorted(
+        {
+            evidence_id
+            for requirement in plan["requirements"]
+            for evidence_id in requirement["evidence_ids"]
+        }
+    )
+    plan["contradictions"] = explicit_contradiction_edges(db, all_evidence_ids)
+    plan["contradiction_assessment"] = (
+        "explicit_relationships_recorded"
+        if plan["contradictions"]
+        else "unassessed"
+    )
+    plan["terminal_reason"] = None if active else (
+        "one_or_more_requirements_remain_unresolved_under_current_source_clearances"
+        if all_terminal
+        else "research_remains_active"
+    )
+    question.research_plan = plan
+    question.status = "planned" if active else "closed"
+    db.flush()
+
+
+def plan_tasks_for_question(db: Session, question: models.ResearchQuestion) -> list[models.ResearchTask]:
+    """Persist idempotent tasks for resolvable requirements and explicit terminal gaps."""
+    plan = _question_plan(question) or build_research_plan(db, question)
+    created_before = {
+        task.id
+        for task in db.query(models.ResearchTask).filter_by(question_id=question.id).all()
+    }
+    _refresh_plan_from_tasks(db, question, plan)
+    db.commit()
+    return [
+        task
+        for task in db.query(models.ResearchTask)
+        .filter_by(question_id=question.id)
+        .order_by(models.ResearchTask.id)
+        .all()
+        if task.id not in created_before
+    ]
 
 
 def plan_tasks_for_open_questions(db: Session, limit: int = 20) -> list[models.ResearchTask]:
@@ -225,17 +465,7 @@ def plan_tasks_for_open_questions(db: Session, limit: int = 20) -> list[models.R
         .limit(limit)
         .all()
     )
-
     all_tasks: list[models.ResearchTask] = []
     for question in questions:
-        tasks = plan_tasks_for_question(db, question)
-        all_tasks.extend(tasks)
-        question_tasks = db.query(models.ResearchTask).filter_by(question_id=question.id).all()
-        has_pending_or_evidence = any(
-            task.status in {"planned", "running"} or bool((task.evidence_ids or "").strip())
-            for task in question_tasks
-        )
-        question.status = "planned" if has_pending_or_evidence else "open"
-
-    db.commit()
+        all_tasks.extend(plan_tasks_for_question(db, question))
     return all_tasks

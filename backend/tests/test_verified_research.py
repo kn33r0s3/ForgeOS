@@ -86,11 +86,11 @@ def test_media_claim_creates_subquestions_on_cleared_sources_without_duplication
     tasks = research_planner.plan_tasks_for_question(db, question)
     again = research_planner.plan_tasks_for_question(db, question)
 
-    assert len(tasks) == 3
+    assert len(tasks) == 1
     assert len(again) == 0
     assert {task.source for task in tasks} == {"crossref"}
-    assert len({task.query for task in tasks}) == 3
-    assert all(task.results["research_plan"]["subquestions"] for task in tasks)
+    assert len({task.query for task in tasks}) == 1
+    assert all(task.results["research_requirement_id"] == "bibliographic_discovery" for task in tasks)
     assert all(task.claim_id == claim.id for task in tasks)
 
 

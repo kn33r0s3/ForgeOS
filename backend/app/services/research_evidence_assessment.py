@@ -6,6 +6,9 @@ import re
 from datetime import datetime, timezone
 from typing import Any
 
+from app import models
+from sqlalchemy.orm import Session
+
 _STOP_WORDS = {
     "about", "after", "against", "also", "among", "because", "before", "being",
     "between", "could", "does", "during", "from", "have", "into", "more",
@@ -38,6 +41,9 @@ def assess_source_record(
     content: str | None,
     published_at: datetime | None,
     retrieved_at: datetime | None,
+    source_identity: str | None = None,
+    canonical_url: str | None = None,
+    provenance: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Describe observable metadata without inferring semantic support."""
     query_terms = _terms(query)
@@ -51,6 +57,19 @@ def assess_source_record(
         ).days
 
     return {
+        "assessment_state": (
+            "metadata_only_lead"
+            if provenance and provenance.get("metadata_only") is True
+            else "content_not_reviewed"
+        ),
+        "provenance": {
+            "present": bool(provenance),
+            "source_registry_id": (provenance or {}).get("source_registry_id"),
+            "retrieval_timestamp": _as_utc(retrieved_at).isoformat() if retrieved_at else None,
+            "publication_timestamp": _as_utc(published_at).isoformat() if published_at else None,
+            "canonical_url": canonical_url,
+            "source_identity": source_identity,
+        },
         "keyword_overlap": {
             "method": "case-insensitive exact-token overlap; not semantic relevance",
             "query_term_count": len(query_terms),
@@ -69,3 +88,25 @@ def assess_source_record(
         "contradictions": "unassessed",
         "claim_support": "not_inferred",
     }
+
+
+def explicit_contradiction_edges(
+    db: Session,
+    evidence_ids: list[int],
+) -> list[dict[str, int]]:
+    """Return only persisted, explicitly typed contradiction relationships."""
+    if not evidence_ids:
+        return []
+    rows = (
+        db.query(models.EvidenceRelationship)
+        .filter(
+            models.EvidenceRelationship.evidence_id.in_(set(evidence_ids)),
+            models.EvidenceRelationship.relation_type == "contradicts",
+        )
+        .order_by(models.EvidenceRelationship.id)
+        .all()
+    )
+    return [
+        {"evidence_id": row.evidence_id, "claim_id": row.claim_id}
+        for row in rows
+    ]

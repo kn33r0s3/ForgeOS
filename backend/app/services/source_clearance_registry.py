@@ -34,6 +34,10 @@ class SourceClearance:
     terms_url: str
     required_terms_phrases: tuple[str, ...]
     redirect_urls: tuple[str, ...]
+    allowed_operation: str
+    allowed_fields: tuple[str, ...]
+    supports_requirements: tuple[str, ...]
+    provenance_requirements: tuple[str, ...]
     min_interval_seconds: int = 3600
     policy_hostnames: tuple[str, ...] = ()
 
@@ -82,6 +86,10 @@ SOURCE_CLEARANCES: tuple[SourceClearance, ...] = (
             "does not authorize any use or appropriation of such copyright material without consent",
         ),
         redirect_urls=(_GOVINFO_URL,),
+        allowed_operation="retrieve_exact_publication",
+        allowed_fields=("public_document_text", "publication_date", "document_url"),
+        supports_requirements=("public_rule_text",),
+        provenance_requirements=("canonical_url", "retrieved_at", "source_registry_id", "policy_review"),
     ),
     SourceClearance(
         registry_id="crossref-public-works-metadata",
@@ -111,6 +119,16 @@ SOURCE_CLEARANCES: tuple[SourceClearance, ...] = (
             "some abstracts contained in the metadata may be subject to copyright",
         ),
         redirect_urls=(_CROSSREF_WORKS_URL,),
+        allowed_operation="search_bibliographic_metadata",
+        allowed_fields=(
+            "DOI", "title", "publisher", "type", "published", "created", "URL",
+            "container-title", "is-referenced-by-count", "author", "score",
+        ),
+        supports_requirements=("bibliographic_discovery",),
+        provenance_requirements=(
+            "canonical_url", "external_id", "retrieved_at", "published_at",
+            "source_registry_id", "query", "metadata_only",
+        ),
         min_interval_seconds=60,
         policy_hostnames=("api.crossref.org", "www.crossref.org"),
     ),
@@ -184,6 +202,16 @@ def validate_registry(entries: tuple[SourceClearance, ...]) -> tuple[SourceClear
             raise ValueError(f"Source registry entry {entry.registry_id} has an out-of-scope redirect")
         if entry.min_interval_seconds <= 0:
             raise ValueError(f"Source registry entry {entry.registry_id} needs a positive request interval")
+        if not entry.allowed_operation or not entry.allowed_fields:
+            raise ValueError(f"Source registry entry {entry.registry_id} needs a bounded operation and fields")
+        if not entry.supports_requirements or any(
+            not requirement.strip() for requirement in entry.supports_requirements
+        ):
+            raise ValueError(f"Source registry entry {entry.registry_id} needs explicit evidence requirements")
+        if not entry.provenance_requirements or any(
+            not requirement.strip() for requirement in entry.provenance_requirements
+        ):
+            raise ValueError(f"Source registry entry {entry.registry_id} needs provenance requirements")
         ids.add(entry.registry_id)
         urls.add(entry.url)
     return entries
@@ -194,6 +222,21 @@ SOURCE_CLEARANCES = validate_registry(SOURCE_CLEARANCES)
 
 def source_clearances() -> tuple[SourceClearance, ...]:
     return SOURCE_CLEARANCES
+
+
+def capabilities_for_requirement(
+    requirement: str,
+    *,
+    today: date | None = None,
+) -> tuple[SourceClearance, ...]:
+    """Return only currently cleared capabilities scoped to this evidence need."""
+    current_date = today or datetime.now(timezone.utc).date()
+    return tuple(
+        entry
+        for entry in SOURCE_CLEARANCES
+        if requirement in entry.supports_requirements
+        and entry.reviewed_on <= current_date <= entry.valid_through
+    )
 
 
 def clearance_for_url(url: str) -> SourceClearance | None:
@@ -292,6 +335,7 @@ def clearance_metadata(entry: SourceClearance) -> dict:
     for key in (
         "geographies", "categories", "evidence_references",
         "required_terms_phrases", "redirect_urls", "policy_hostnames",
+        "allowed_fields", "supports_requirements", "provenance_requirements",
     ):
         data[key] = list(data[key])
     return data

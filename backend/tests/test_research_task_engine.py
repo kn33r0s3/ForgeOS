@@ -54,8 +54,11 @@ def make_task(db):
 
 
 def test_running_task_is_planned_again_before_collection(db):
+    from datetime import timedelta
+
     task = make_task(db)
     task.status = "running"
+    task.updated_at = research_task_engine.utcnow() - timedelta(minutes=10)
     db.commit()
     resumed = research_task_engine.resume_running_tasks(db, limit=10)
     assert resumed == [task.id]

@@ -62,12 +62,13 @@ def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     assert payload["opportunity_id"] is None
     assert payload["research_question_id"] is not None
     assert payload["research_task_ids"]
-    assert payload["research_status"] == "evidence_found"
-    assert len(payload["research_plan"]["subquestions"]) == 3
+    assert payload["research_status"] == "research_in_progress"
+    assert len(payload["research_plan"]["requirements"]) == 5
+    assert payload["research_plan"]["requirements"][0]["status"] == "in_progress"
     assert payload["research_sources"][0]["url"] == "https://doi.org/10.1234/repair.1"
     assert "repair" in payload["problem"].lower()
     assert payload["unknowns"]
-    assert any("Willingness to pay" in item for item in payload["unknowns"])
+    assert any("willingness to pay" in item.lower() for item in payload["unknowns"])
     assert db.query(models.Signal).count() >= 1
     assert db.query(models.ResearchQuestion).filter_by(id=payload["research_question_id"]).count() == 1
     assert db.query(models.ResearchTask).filter(models.ResearchTask.question_id == payload["research_question_id"]).count() >= 1
