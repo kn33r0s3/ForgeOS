@@ -151,12 +151,20 @@ All four commercial/content requirements remain terminal-unresolved because ther
 
 ### Verification record
 
-- `cd backend && ../.venv/bin/python -m pytest tests/test_grounded_research_loop.py tests/test_research_planner.py tests/test_research_agenda.py tests/test_research_task_engine.py tests/test_research_evidence_assessment.py tests/test_crossref_collector.py tests/test_public_value_flow.py tests/test_verified_research.py tests/test_experiment_api.py -q` → 74 passed before adding the final concurrency/budget/opportunity-gate regressions; rerun results are recorded after this card is appended.
-- `cd backend && ../.venv/bin/python -m pytest -q` → 394 passed, 22 warnings before the last regression additions; rerun results are recorded after this card is appended.
-- Root `npm run typecheck` → passed. Next.js frontend typecheck → passed. Production build is pending an isolated output-directory verification so the currently live Next.js preview is not disrupted.
-- Existing local API `/health` and public Next.js `/analyze` both returned HTTP 200; isolated API `/health` returned HTTP 200. Integrated-browser snapshot and screenshot show the public research UI renders. Direct local Playwright automation could not start because the browser binary is absent.
-- `git diff --check` was clean before documentation edits; rerun after updates.
+- `cd backend && ../.venv/bin/python -m pytest tests/test_grounded_research_loop.py tests/test_research_planner.py tests/test_research_agenda.py tests/test_research_task_engine.py tests/test_research_evidence_assessment.py tests/test_crossref_collector.py tests/test_public_value_flow.py tests/test_verified_research.py tests/test_experiment_api.py tests/test_intelligence_fabric.py tests/test_opportunity_quality.py tests/test_phase1_provenance_and_identity.py -q` → **107 passed, 10 warnings**.
+- `cd backend && ../.venv/bin/python -m pytest -q` → **396 passed, 22 warnings**.
+- Root `npm run typecheck` and `cd frontend && npx tsc --noEmit` → passed. Production build → passed in the isolated output directory. `git diff --check` → clean.
+- Existing local API `/health` and public Next.js `/analyze` returned HTTP 200. Fresh isolated Crossref `/analyze` and `/health` returned HTTP 200. Integrated-browser rendering showed the Analyze UI and no page errors; at 390px the document width was 390px.
 
 ### Remaining blocker and next capability
 
 The runtime source-authorization boundary is exact: no reviewed capability permits retrieving article/page contents or broad public-web results. Crossref clearance permits bibliographic fields only; GovInfo clearance is expired. A current terms/policy review and bounded authorization for a specific content source is required before semantic relevance, reliability, factual support, contradictions, or evidence-grounded opportunity conclusions can legitimately be assessed. The next capability is source-specific primary-content clearance plus a content assessor constrained to that declared scope. Do not simulate it.
+
+## 2026-09-27 RESULT — final research-loop regression and runtime verification
+
+- Implemented capability: the existing research planner marks bibliographic discovery satisfied only when persisted Crossref evidence includes DOI/URL, retrieval timestamp, and matching registry provenance. Metadata remains a discovery lead, never support for the underlying paper or a market claim.
+- Files changed in this final verification pass: `backend/app/services/research_planner.py`, `backend/tests/test_grounded_research_loop.py`, `STATUS.md`, `docs/CAPABILITY_QUEUE.md`, and this report. Earlier implementation files are listed in the preceding RESULT card.
+- Tests/checks: focused suite **107 passed, 10 warnings**; full backend **396 passed, 22 warnings**; root typecheck, frontend TypeScript check, production build, and `git diff --check` passed.
+- Live/runtime evidence: a fresh isolated Crossref-backed `POST /analyze` returned HTTP 200 and persisted five Evidence records and five external Signals. Only bibliographic discovery was satisfied; four content/commercial requirements remained terminal-unresolved. Restarting the API against the same SQLite file preserved one question, two tasks, five Evidence records, six Signals, and the requirement plan; restarted `/health` returned HTTP 200. Existing local `/health` and `/analyze` returned HTTP 200. The browser UI rendered without page errors or horizontal overflow at 390px.
+- Claims deliberately NOT made: no paper-content finding, customer demand, market size, buyer willingness to pay, validated opportunity, customer, experiment, external response, transaction, or revenue.
+- Remaining blocker / exact next capability: obtain and record review/authorization for a bounded substantive-content source, including exact target, operation, permitted fields, clearance evidence/expiry, rate and redirect limits, and provenance requirements. No person was contacted and no external action was authorized or executed.
