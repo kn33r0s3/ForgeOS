@@ -364,18 +364,30 @@ def _refresh_plan_from_tasks(
         )
         requirement["task_ids"] = [task.id for task in tasks]
         requirement["evidence_ids"] = evidence_ids
+        verified_metadata_ids = (
+            _verified_bibliographic_evidence_ids(db, tasks)
+            if requirement["id"] == "bibliographic_discovery"
+            else []
+        )
         if not requirement["capable_sources"]:
-            requirement["status"] = "terminal_unresolved"
-            requirement["terminal_reason"] = (
-                "no_currently_authorized_source_capability"
-                if not tasks
-                else "source_capability_unavailable_or_expired"
-            )
+            if verified_metadata_ids:
+                requirement["status"] = "satisfied"
+                requirement["evidence_ids"] = verified_metadata_ids
+                requirement["terminal_reason"] = None
+            else:
+                requirement["status"] = "terminal_unresolved"
+                requirement["terminal_reason"] = (
+                    "no_currently_authorized_source_capability"
+                    if not tasks
+                    else "source_capability_unavailable_or_expired"
+                )
             continue
 
         pending = [task for task in tasks if task.status in {"planned", "running"}]
         if pending:
-            requirement["status"] = "in_progress"
+            requirement["status"] = "satisfied" if verified_metadata_ids else "in_progress"
+            if verified_metadata_ids:
+                requirement["evidence_ids"] = verified_metadata_ids
             requirement["terminal_reason"] = None
             active = True
             all_terminal = False

@@ -99,7 +99,12 @@ def test_partial_crossref_lead_creates_idempotent_narrow_follow_up(db):
         canonical_url="https://doi.org/10.1234/hospital",
         external_id="10.1234/hospital",
         retrieved_at=datetime.now(timezone.utc),
-        provenance=json.dumps({"metadata_only": True}),
+        provenance=json.dumps(
+            {
+                "metadata_only": True,
+                "source_registry_id": "crossref-public-works-metadata",
+            }
+        ),
     )
     db.add(evidence)
     db.flush()
