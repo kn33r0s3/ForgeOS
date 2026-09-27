@@ -17,6 +17,7 @@ are reviewed again at collection time.
 | U.S. International Trade Administration, Nepal distribution guide | https://www.trade.gov/country-commercial-guides/nepal-distribution-sales-channels | Public description of Nepal distribution channels | `200` text; `User-agent: *` does not disallow this path. Disallowed paths are admin, search, user, and core | `https://www.trade.gov/endorsement-disclaimer` is an endorsement disclaimer. It does not grant collection | 2026-09-25 |
 | GovInfo, Federal Register notice on Nepal cultural-property import restrictions | https://www.govinfo.gov/content/pkg/FR-2026-08-12/html/2026-16432.htm | A public final rule restricting import of archaeological and ethnological material from Nepal | `https://www.govinfo.gov/robots.txt` returned `200` text. `User-agent: *` does not disallow `/content/`. Disallowed paths include `/search/` and `/app/search/*` | `https://www.govinfo.gov/about/policies` states that 17 U.S.C. § 105 places United States Government works in the public domain and that public documents can generally be reprinted without legal restriction. Third-party copyrighted material inside a document is not covered | 2026-09-25 |
 | Crossref REST API `/works` | https://api.crossref.org/works | Search publicly registered scholarly bibliographic metadata for research leads across topics and geographies | `https://api.crossref.org/robots.txt` returned `404`; integration uses only Crossref's documented API, not general site crawling | Crossref REST API docs at `https://www.crossref.org/documentation/retrieve-metadata/rest-api/` state no signup is required and almost all metadata may be reused; some abstracts may be copyrighted. The adapter requests only DOI, title, publisher, type, publication dates, container title, citation count, and authors; abstracts/full text are excluded. Public rate limits are conservatively restricted to one request per minute | 2026-09-27 |
+| Semantic Scholar Academic Graph API — candidate, NOT cleared | https://api.semanticscholar.org/graph/v1/paper/search | Candidate scholarly abstract search for substantive research | `https://api.semanticscholar.org/robots.txt` returned `404`; API-only access was inspected, not general website crawling | Official API license at `https://www.semanticscholar.org/product/api/license` says S2 Data is separately governed by accompanying data licenses and underlying third-party content may have its own license; it also requires attribution to “Semantic Scholar”. The requested Graph API response fields do not identify an applicable per-paper/abstract license. The endpoint probe on 2026-09-27 returned HTTP 429; no abstract was retained. The API product page recommends an API key; `SEMANTIC_SCHOLAR_API_KEY` was not configured. No abstract collection or persistence is approved until compatible product use and per-item content-license compliance are established, and access can proceed without violating provider rate limits | 2026-09-27 |
 
 ## Operating rule
 
@@ -40,6 +41,19 @@ endpoint, public bibliographic fields, a 60-second persistent minimum interval,
 and the review window recorded in the runtime registry. Returned metadata is a
 discovery lead, not the contents of the underlying paper or proof of a market
 claim.
+
+Semantic Scholar is a reviewed candidate only, not a runtime clearance. Its
+official API license (linked above) requires compliance with the licenses
+accompanying S2 Data and any underlying Third Party Content, and requires
+attribution. The requested search response fields do not include a per-record
+content license, so an abstract cannot currently be verified as eligible for
+storage in Forge Evidence or use in a commercial research loop. The one live
+endpoint probe returned HTTP 429; do not retry until access is appropriately
+authenticated or the provider permits retry. Do not add Semantic Scholar to
+the runtime registry, persist abstracts, or mark problem-incidence/alternatives
+requirements answerable until these conditions are reviewed and evidenced. A
+local one-request-per-second throttle cannot override provider responses or
+data-license requirements.
 
 Runtime approvals live in `backend/app/services/source_clearance_registry.py`.
 Each entry binds one exact HTTPS target to its source ID, country/category
