@@ -117,6 +117,9 @@ EXPECTED_UNIQUE_INDEXES = {
         ("uq_evidence_relationships_idempotency_key", "idempotency_key"),
         ("uq_evidence_relationships_substrate_relation_id", "substrate_relation_id"),
     ],
+    "research_tasks": [
+        ("uq_research_tasks_idempotency_key", "idempotency_key"),
+    ],
 }
 
 

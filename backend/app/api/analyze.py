@@ -74,6 +74,14 @@ def analyze_idea(payload: schemas.AnalyzeRequest, db: Session = Depends(get_db))
         .all()
     )
     evidence_count = len({edge.evidence_id for edge in claim_evidence})
+    persisted_evidence_ids = set()
+    if evidence_ids:
+        persisted_evidence_ids = {
+            row[0]
+            for row in db.query(models.Evidence.id)
+            .filter(models.Evidence.id.in_(set(evidence_ids)))
+            .all()
+        }
     evidence_quality = "LIMITED"
     if evidence_count == 0 and evidence_ids:
         evidence_count = len(evidence_ids)
@@ -81,10 +89,26 @@ def analyze_idea(payload: schemas.AnalyzeRequest, db: Session = Depends(get_db))
     states = {task.status for task in tasks}
     has_pending_tasks = bool(states & {"planned", "running"})
     has_unresolved_tasks = bool(states & {"failed", "needs_research"})
-    task_evidence_count = len(set(evidence_ids))
-    all_tasks_collected = bool(tasks) and states == {"completed"} and task_evidence_count > 0
-    if all_tasks_collected:
-        research_status = "research_completed"
+    all_tasks_have_evidence = bool(tasks) and all(
+        bool(task.evidence_ids)
+        and bool(
+            {
+                int(value)
+                for value in task.evidence_ids.split(",")
+                if value.isdigit()
+            }
+            & persisted_evidence_ids
+        )
+        for task in tasks
+    )
+    source_collection_complete = (
+        bool(tasks)
+        and states == {"completed"}
+        and all_tasks_have_evidence
+        and bool(persisted_evidence_ids)
+    )
+    if source_collection_complete:
+        research_status = "source_collection_complete"
     elif evidence_count > 0:
         research_status = "evidence_found"
     elif states & {"failed"}:
@@ -118,7 +142,7 @@ def analyze_idea(payload: schemas.AnalyzeRequest, db: Session = Depends(get_db))
         "treat a proposed test as an executed experiment."
     )
 
-    if all_tasks_collected:
+    if source_collection_complete:
         findings_summary = (
             f"All {len(tasks)} planned source tasks returned attributable records. This completes "
             "collection only: relevance, factual support, customer demand, willingness to pay, and "

@@ -6,6 +6,8 @@ import urllib.parse
 
 import pytest
 
+from app import models
+from app.services import collector_runner, research_task_engine
 from app.services.collectors import crossref
 from app.services import source_clearance_registry
 
@@ -101,6 +103,65 @@ def test_crossref_collector_requires_current_registry_authorization(db, monkeypa
 
     with pytest.raises(PermissionError, match="current source registry authorization"):
         crossref.CrossrefCollector().collect("a new research query")
+
+
+def test_crossref_task_persists_attributed_metadata_evidence(db, monkeypatch):
+    _policy_responses(monkeypatch)
+    payload = {
+        "status": "ok",
+        "message": {
+            "items": [
+                {
+                    "DOI": "10.1234/persisted.1",
+                    "title": ["Measuring postharvest loss in smallholder supply chains"],
+                    "publisher": "Example Academic Press",
+                    "type": "journal-article",
+                    "published": {"date-parts": [[2025, 3, 1]]},
+                    "URL": "https://doi.org/10.1234/persisted.1",
+                    "abstract": "This field must not be requested or stored.",
+                }
+            ]
+        },
+    }
+
+    class FakeOpener:
+        def open(self, request, timeout):
+            return BytesIO(json.dumps(payload).encode())
+
+    monkeypatch.setattr(
+        crossref.urllib.request,
+        "build_opener",
+        lambda handler: FakeOpener(),
+    )
+    question = models.ResearchQuestion(
+        question="What measurements describe postharvest loss for smallholder farmers?"
+    )
+    db.add(question)
+    db.commit()
+    db.refresh(question)
+    task = research_task_engine.create_task(
+        db,
+        question_id=question.id,
+        source="crossref",
+        query=question.question,
+    )
+
+    result = collector_runner.execute_task(db, task)
+
+    evidence = db.query(models.Evidence).one()
+    signal = db.get(models.Signal, evidence.signal_id)
+    provenance = json.loads(evidence.provenance)
+    assert result["status"] == "completed"
+    assert evidence.canonical_url == "https://doi.org/10.1234/persisted.1"
+    assert evidence.external_id == "10.1234/persisted.1"
+    assert evidence.published_at is not None
+    assert evidence.retrieved_at is not None
+    assert provenance["metadata_only"] is True
+    assert provenance["abstract_or_full_text_stored"] is False
+    assert "abstract" not in provenance
+    assert signal.source_type == "external"
+    assert task.idempotency_key
+    assert result["evidence_found"] == 1
 
 
 def test_crossref_http_429_is_a_recoverable_rate_limit(db, monkeypatch):

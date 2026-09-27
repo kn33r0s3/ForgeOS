@@ -2,7 +2,9 @@ from app import models
 from app.services import collector_runner, research_task_engine
 from app.database import get_db
 from app.main import app
+from app.migrations import run_migrations
 from fastapi.testclient import TestClient
+from sqlalchemy import inspect
 
 
 class FakeCollector:
@@ -74,6 +76,44 @@ def test_create_persist_and_resume_research_task(db):
     resumed = research_task_engine.resume_task(db, restored)
     assert resumed.id == task_id
     assert db.query(models.ResearchTaskEvent).filter_by(task_id=task_id, event_type="created").count() == 1
+
+
+def test_research_task_identity_is_reused_and_backfilled(db):
+    task = make_task(db)
+    identity = task.idempotency_key
+
+    repeated = research_task_engine.create_task(
+        db,
+        question_id=task.question_id,
+        source=task.source,
+        query=task.query,
+    )
+    assert repeated.id == task.id
+    assert repeated.idempotency_key == identity
+
+    task.idempotency_key = None
+    db.commit()
+    backfilled = research_task_engine.create_task(
+        db,
+        question_id=task.question_id,
+        source=task.source,
+        query=task.query,
+    )
+    assert backfilled.id == task.id
+    assert backfilled.idempotency_key == identity
+
+
+def test_research_task_idempotency_key_is_unique_in_migrated_database(db):
+    run_migrations(db.get_bind())
+
+    indexes = inspect(db.get_bind()).get_indexes("research_tasks")
+
+    assert any(
+        index["name"] == "uq_research_tasks_idempotency_key"
+        and index["unique"]
+        and index["column_names"] == ["idempotency_key"]
+        for index in indexes
+    )
 
 
 def test_failed_step_can_retry_and_complete(db, monkeypatch):

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import hashlib
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import models
@@ -26,16 +28,44 @@ def create_task(
     claim_id: int | None = None,
 ) -> models.ResearchTask:
     """Create or reuse the durable task for one question/source/query."""
+    idempotency_key = hashlib.sha256(
+        f"{question_id}\0{source}\0{query}".encode("utf-8")
+    ).hexdigest()
     existing = (
         db.query(models.ResearchTask)
-        .filter_by(question_id=question_id, source=source, query=query)
+        .filter_by(idempotency_key=idempotency_key)
         .first()
     )
     if existing:
         return existing
+    existing = (
+        db.query(models.ResearchTask)
+        .filter_by(question_id=question_id, source=source, query=query)
+        .order_by(models.ResearchTask.id.asc())
+        .first()
+    )
+    if existing:
+        if existing.idempotency_key not in (None, idempotency_key):
+            raise ValueError("Existing research task identity has a conflicting idempotency key")
+        if existing.idempotency_key is None:
+            existing.idempotency_key = idempotency_key
+            try:
+                db.commit()
+            except IntegrityError:
+                db.rollback()
+                winner = (
+                    db.query(models.ResearchTask)
+                    .filter_by(idempotency_key=idempotency_key)
+                    .first()
+                )
+                if winner:
+                    return winner
+                raise
+        return existing
     task = models.ResearchTask(
         question_id=question_id,
         claim_id=claim_id,
+        idempotency_key=idempotency_key,
         source=source,
         query=query,
         objective=objective or query,
@@ -52,10 +82,21 @@ def create_task(
         current_step="plan",
     )
     db.add(task)
-    db.flush()
-    _ensure_steps(db, task)
-    _event(db, task, "created", details={"objective": task.objective})
-    db.commit()
+    try:
+        db.flush()
+        _ensure_steps(db, task)
+        _event(db, task, "created", details={"objective": task.objective})
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        winner = (
+            db.query(models.ResearchTask)
+            .filter_by(idempotency_key=idempotency_key)
+            .first()
+        )
+        if winner:
+            return winner
+        raise
     db.refresh(task)
     return task
 

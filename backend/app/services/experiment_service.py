@@ -29,8 +29,8 @@ def _normalize_auth_status(raw_value: str | None) -> str:
 def build_experiment_from_analyze(data: AnalyzeResponse | dict[str, Any]) -> ExperimentProposalCreate:
     """Build a proposal from one completed ``/analyze`` response."""
     analyze = data if isinstance(data, AnalyzeResponse) else AnalyzeResponse.model_validate(data)
-    if analyze.research_status != "research_completed":
-        raise ValueError("Experiment proposals require completed research")
+    if analyze.research_status != "source_collection_complete":
+        raise ValueError("Experiment proposals require completed source collection")
     if analyze.signal_id is None or analyze.research_question_id is None or not analyze.research_task_ids:
         raise ValueError("Completed research response is missing provenance")
 

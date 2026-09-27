@@ -421,6 +421,7 @@ class ResearchTask(Base):
     id = Column(Integer, primary_key=True, index=True)
     question_id = Column(Integer, ForeignKey("research_questions.id"), nullable=False)
     claim_id = Column(Integer, ForeignKey("claims.id"), nullable=True, index=True)
+    idempotency_key = Column(String, nullable=True)
     source = Column(String, nullable=False)  # e.g. "reddit", "github", "news"
     query = Column(Text, nullable=False)
     status = Column(String, nullable=False, default="planned")  # planned | running | completed | needs_research | failed
