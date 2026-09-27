@@ -31,6 +31,7 @@ from app.services.collectors.arxiv import ArxivCollector
 from app.services.collectors.web import WebCollector
 from app.services.collectors.crossref import API_URL as CROSSREF_API_URL, CrossrefCollector
 from app.services.collectors.world_bank import WorldBankCollector
+from app.services.collectors.gdelt import API_URL as GDELT_API_URL, GdeltCollector
 from app.services import research_task_engine
 from app.services import evidence_graph
 from app.services import tool_usefulness
@@ -47,6 +48,7 @@ COLLECTORS = {
     "web": WebCollector,
     "crossref": CrossrefCollector,
     "world_bank_indicators": WorldBankCollector,
+    "gdelt_doc": GdeltCollector,
 }
 
 # Bulk feeds are not cleared in docs/PUBLIC_SOURCES.md. Clearances are
@@ -109,6 +111,24 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
         except Exception as exc:
             research_task_engine.fail_task(db, task, str(exc))
             return {"task_id": task.id, "status": "failed", "reason": str(exc)}
+    elif task.source == "gdelt_doc":
+        try:
+            authorization = source_clearance_registry.authorize_request(
+                GDELT_API_URL,
+                collector=task.source,
+                db=db,
+            )
+        except source_clearance_registry.SourceRateLimitError as exc:
+            research_task_engine.defer_task(db, task, str(exc))
+            return {
+                "task_id": task.id,
+                "status": "planned",
+                "deferred": True,
+                "reason": str(exc),
+            }
+        except Exception as exc:
+            research_task_engine.fail_task(db, task, str(exc))
+            return {"task_id": task.id, "status": "failed", "reason": str(exc)}
 
     collector_cls = COLLECTORS.get(task.source)
     if not collector_cls:
@@ -138,6 +158,8 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
             raw_items = collector.collect(task.query, authorization=authorization)
         elif task.source == "world_bank_indicators":
             raw_items = collector.collect(task.query, db=db)
+        elif task.source == "gdelt_doc":
+            raw_items = collector.collect(task.query, authorization=authorization)
         else:
             raw_items = collector.collect(task.query)
     except source_clearance_registry.SourceRateLimitError as exc:
@@ -167,26 +189,27 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
     for raw_item in raw_items:
         normalized = collector.normalize(raw_item)
         if authorization:
-            web_clearance = authorization.entry
+            authorized_source = authorization.entry
             metadata = dict(normalized.get("metadata") or {})
             metadata.update({
-                "source_registry_id": web_clearance.registry_id,
-                "source_display_name": web_clearance.display_name,
-                "source_geographies": list(web_clearance.geographies),
-                "source_categories": list(web_clearance.categories),
-                "source_reviewed_on": web_clearance.reviewed_on.isoformat(),
+                "source_registry_id": authorized_source.registry_id,
+                "source_display_name": authorized_source.display_name,
+                "source_geographies": list(authorized_source.geographies),
+                "source_categories": list(authorized_source.categories),
+                "source_reviewed_on": authorized_source.reviewed_on.isoformat(),
             })
             normalized["metadata"] = metadata
             provenance = normalized.get("provenance")
             provenance = dict(provenance) if isinstance(provenance, dict) else {}
             provenance.update({
-                "source_registry_id": web_clearance.registry_id,
-                "source_geographies": list(web_clearance.geographies),
-                "source_categories": list(web_clearance.categories),
-                "source_reviewed_on": web_clearance.reviewed_on.isoformat(),
+                "source_registry_id": authorized_source.registry_id,
+                "source_geographies": list(authorized_source.geographies),
+                "source_categories": list(authorized_source.categories),
+                "source_reviewed_on": authorized_source.reviewed_on.isoformat(),
             })
             normalized["provenance"] = provenance
-            normalized["source"] = web_clearance.registry_id
+            if task.source == "web":
+                normalized["source"] = authorized_source.registry_id
         if not normalized["content"]:
             continue
         signal = observer.observe(normalized["content"], source=normalized["source"], metadata=normalized)

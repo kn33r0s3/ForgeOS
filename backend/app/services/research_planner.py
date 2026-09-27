@@ -13,6 +13,7 @@ from app import models
 from app.services import research_task_engine, source_clearance_registry
 from app.services.research_evidence_assessment import (
     explicit_contradiction_edges,
+    gdelt_requirement_eligibility,
     world_bank_requirement_eligibility,
 )
 
@@ -81,6 +82,31 @@ def _requirement_specs(question_text: str) -> list[dict[str, Any]]:
             "can_resolve_claim": True,
         },
     ]
+    if re.search(r"\bmedia\b|\bnews\b|\breporting\b|\bcoverage\b|\brecent event\b", question_text, re.I):
+        if re.search(r"\breporting velocity\b", question_text, re.I):
+            requirements.append(
+                {
+                    "id": "public_reporting_velocity",
+                    "question": f"What is the measured public reporting velocity for: {topic}?",
+                    "evidence_kind": "bounded_reporting_timeline",
+                    "can_resolve_claim": False,
+                }
+            )
+        else:
+            requirement_id = (
+                "recent_event_signal"
+                if re.search(r"\brecent event\b", question_text, re.I)
+                else "media_coverage_observation"
+            )
+            requirements.append(
+                {
+                    "id": requirement_id,
+                    "question": f"What recent media coverage is indexed for: {topic}?",
+                    "evidence_kind": "article_metadata_observation",
+                    "can_resolve_claim": False,
+                    "gdelt_query": topic,
+                }
+            )
     world_bank_scope = _world_bank_scope(question_text)
     if world_bank_scope:
         indicator_id = world_bank_scope["indicator_id"]
@@ -317,6 +343,15 @@ def _create_task(
     }
     if source == "world_bank_indicators":
         task.query = json.dumps(requirement["world_bank_scope"], sort_keys=True)
+    elif source == "gdelt_doc":
+        task.query = json.dumps(
+            {
+                "query": requirement["gdelt_query"],
+                "timespan": "1w",
+                "max_records": 25,
+            },
+            sort_keys=True,
+        )
     db.flush()
     return task
 
@@ -437,6 +472,46 @@ def _verified_world_bank_evidence_ids(
     return sorted(verified), next(iter(rejected_reasons), None)
 
 
+def _verified_gdelt_evidence_ids(
+    db: Session,
+    tasks: list[models.ResearchTask],
+    requirement: dict[str, Any],
+) -> tuple[list[int], str | None]:
+    verified: set[int] = set()
+    rejected_reasons: list[str] = []
+    for task in tasks:
+        if task.source != "gdelt_doc" or task.status != "completed":
+            continue
+        results = task.results if isinstance(task.results, dict) else {}
+        source_results = results.get("source_results")
+        if not isinstance(source_results, list):
+            continue
+        task_evidence_ids = {
+            int(value)
+            for value in (task.evidence_ids or "").split(",")
+            if value.isdigit()
+        }
+        for result in source_results:
+            if not isinstance(result, dict) or not isinstance(result.get("evidence_id"), int):
+                continue
+            evidence_id = result["evidence_id"]
+            evidence = db.get(models.Evidence, evidence_id)
+            if evidence is None or evidence_id not in task_evidence_ids or evidence.source != "gdelt_doc":
+                continue
+            try:
+                provenance = json.loads(evidence.provenance) if evidence.provenance else {}
+            except (TypeError, json.JSONDecodeError):
+                continue
+            if not isinstance(provenance, dict):
+                continue
+            eligible, reason = gdelt_requirement_eligibility(requirement["id"], provenance)
+            if eligible:
+                verified.add(evidence_id)
+            else:
+                rejected_reasons.append(reason)
+    return sorted(verified), next(iter(rejected_reasons), None)
+
+
 def _macro_market_unresolved_reason(requirement_id: str) -> str | None:
     if not source_clearance_registry.capabilities_for_requirement("population_baseline"):
         return None
@@ -492,6 +567,12 @@ def _refresh_plan_from_tasks(
             if requirement["id"] in {"macro_demographics", "population_baseline", "economic_indicator"}
             else ([], None)
         )
+        verified_gdelt_ids, gdelt_rejection_reason = (
+            _verified_gdelt_evidence_ids(db, tasks, requirement)
+            if requirement["id"]
+            in {"media_coverage_observation", "recent_event_signal", "public_reporting_velocity"}
+            else ([], None)
+        )
         if not requirement["capable_sources"]:
             if verified_metadata_ids:
                 requirement["status"] = "satisfied"
@@ -501,11 +582,13 @@ def _refresh_plan_from_tasks(
                 requirement["status"] = "satisfied"
                 requirement["evidence_ids"] = verified_world_bank_ids
                 requirement["terminal_reason"] = None
+            elif verified_gdelt_ids:
+                requirement["status"] = "satisfied"
+                requirement["evidence_ids"] = verified_gdelt_ids
+                requirement["terminal_reason"] = None
             else:
                 requirement["status"] = "terminal_unresolved"
-                requirement["terminal_reason"] = _macro_market_unresolved_reason(
-                    requirement["id"]
-                ) or (
+                requirement["terminal_reason"] = gdelt_rejection_reason or _macro_market_unresolved_reason(requirement["id"]) or (
                     "no_currently_authorized_source_capability"
                     if not tasks
                     else "source_capability_unavailable_or_expired"
@@ -516,13 +599,15 @@ def _refresh_plan_from_tasks(
         if pending:
             requirement["status"] = (
                 "satisfied"
-                if verified_metadata_ids or verified_world_bank_ids
+                if verified_metadata_ids or verified_world_bank_ids or verified_gdelt_ids
                 else "in_progress"
             )
             if verified_metadata_ids:
                 requirement["evidence_ids"] = verified_metadata_ids
             elif verified_world_bank_ids:
                 requirement["evidence_ids"] = verified_world_bank_ids
+            elif verified_gdelt_ids:
+                requirement["evidence_ids"] = verified_gdelt_ids
             requirement["terminal_reason"] = None
             active = True
             all_terminal = False
@@ -574,16 +659,23 @@ def _refresh_plan_from_tasks(
             )
             requirement["status"] = (
                 "satisfied"
-                if verified_metadata_ids or verified_world_bank_ids
+                if verified_metadata_ids or verified_world_bank_ids or verified_gdelt_ids
                 else "terminal_unresolved"
             )
             requirement["evidence_ids"] = (
                 verified_metadata_ids
                 or verified_world_bank_ids
-                or (evidence_ids if primary.source != "world_bank_indicators" else [])
+                or verified_gdelt_ids
+                or (
+                    evidence_ids
+                    if primary.source not in {"world_bank_indicators", "gdelt_doc"}
+                    else []
+                )
             )
-            if verified_metadata_ids or verified_world_bank_ids:
+            if verified_metadata_ids or verified_world_bank_ids or verified_gdelt_ids:
                 requirement["terminal_reason"] = None
+            elif gdelt_rejection_reason:
+                requirement["terminal_reason"] = gdelt_rejection_reason
             elif world_bank_rejection_reason:
                 requirement["terminal_reason"] = world_bank_rejection_reason
             elif primary.source == "crossref":
@@ -631,7 +723,8 @@ def _refresh_plan_from_tasks(
             requirement["terminal_reason"] = "source_attempt_budget_exhausted_without_answer"
         else:
             requirement["terminal_reason"] = (
-                _macro_market_unresolved_reason(requirement["id"])
+                gdelt_rejection_reason
+                or _macro_market_unresolved_reason(requirement["id"])
                 or "no_successful_source_evidence"
             )
         requirement["status"] = "terminal_unresolved"

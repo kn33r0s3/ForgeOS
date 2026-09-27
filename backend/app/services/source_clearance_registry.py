@@ -40,6 +40,7 @@ class SourceClearance:
     provenance_requirements: tuple[str, ...]
     min_interval_seconds: int = 3600
     policy_hostnames: tuple[str, ...] = ()
+    license_tag: str = "terms-reviewed"
 
 
 @dataclass(frozen=True)
@@ -59,6 +60,9 @@ _CROSSREF_TERMS = "https://www.crossref.org/documentation/retrieve-metadata/rest
 _WORLD_BANK_V2_URL = "https://api.worldbank.org/v2"
 _WORLD_BANK_ROBOTS = "https://api.worldbank.org/robots.txt"
 _WORLD_BANK_TERMS = "https://datacatalog.worldbank.org/public-licenses"
+_GDELT_DOC_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
+_GDELT_ROBOTS = "https://api.gdeltproject.org/robots.txt"
+_GDELT_TERMS = "https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/"
 
 
 class SourceRateLimitError(PermissionError):
@@ -203,6 +207,54 @@ SOURCE_CLEARANCES: tuple[SourceClearance, ...] = (
             "datacatalog.worldbank.org",
         ),
     ),
+    SourceClearance(
+        registry_id="gdelt-doc-api-v2",
+        display_name="GDELT DOC API v2 metadata",
+        collector="gdelt_doc",
+        url=_GDELT_DOC_URL,
+        hostname="api.gdeltproject.org",
+        geographies=("GLOBAL",),
+        categories=("public_reporting", "media_coverage_metadata"),
+        allowed_need=(
+            "Observe bounded article metadata for media coverage only. Do not fetch article pages, "
+            "store article bodies, or infer the truth of reported claims or commercial demand."
+        ),
+        evidence_references=(
+            "docs/PUBLIC_SOURCES.md",
+            _GDELT_TERMS,
+            "https://gdeltproject.org/data.html",
+            _GDELT_ROBOTS,
+            _GDELT_DOC_URL,
+        ),
+        reviewed_on=date(2026, 9, 27),
+        valid_through=date(2026, 10, 27),
+        robots_url=_GDELT_ROBOTS,
+        terms_url=_GDELT_TERMS,
+        required_terms_phrases=(
+            "json and jsonp output formats",
+            "volume timeline",
+        ),
+        redirect_urls=(_GDELT_DOC_URL,),
+        allowed_operation="search_bounded_article_metadata",
+        allowed_fields=("url", "title", "seendate", "domain", "language", "sourcecountry"),
+        supports_requirements=("media_coverage_observation", "recent_event_signal"),
+        provenance_requirements=(
+            "canonical_url",
+            "external_id",
+            "retrieved_at",
+            "published_at",
+            "source_registry_id",
+            "query",
+            "domain",
+            "language",
+            "country",
+            "attribution",
+            "metadata_only",
+        ),
+        min_interval_seconds=5,
+        policy_hostnames=("api.gdeltproject.org", "blog.gdeltproject.org", "gdeltproject.org"),
+        license_tag="GDELT Open Data / Attribution Required",
+    ),
 )
 
 
@@ -232,7 +284,7 @@ def validate_registry(entries: tuple[SourceClearance, ...]) -> tuple[SourceClear
             raise ValueError("Source registry IDs must be non-empty and unique")
         if not entry.display_name.strip() or not entry.allowed_need.strip():
             raise ValueError(f"Source registry entry {entry.registry_id} needs a name and bounded need")
-        if entry.collector not in {"web", "crossref", "world_bank_indicators"}:
+        if entry.collector not in {"web", "crossref", "world_bank_indicators", "gdelt_doc"}:
             raise ValueError("Source clearance collector is not supported")
         if not _valid_https_url(entry.url, hostname=entry.hostname) or entry.url in urls:
             raise ValueError(f"Source registry entry {entry.registry_id} needs a unique canonical HTTPS URL")
@@ -275,6 +327,8 @@ def validate_registry(entries: tuple[SourceClearance, ...]) -> tuple[SourceClear
             raise ValueError(f"Source registry entry {entry.registry_id} needs a positive request interval")
         if not entry.allowed_operation or not entry.allowed_fields:
             raise ValueError(f"Source registry entry {entry.registry_id} needs a bounded operation and fields")
+        if not entry.license_tag.strip():
+            raise ValueError(f"Source registry entry {entry.registry_id} needs a license tag")
         if not entry.supports_requirements or any(
             not requirement.strip() for requirement in entry.supports_requirements
         ):

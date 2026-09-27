@@ -30,6 +30,37 @@ WORLD_BANK_MICRO_REQUIREMENTS = frozenset(
         "disconfirming_evidence",
     }
 )
+GDELT_MARKET_REQUIREMENTS = frozenset(
+    {"customer_pain", "buyer_willingness_to_pay", "product_demand", "market_size", "financial_viability"}
+)
+
+
+def gdelt_requirement_eligibility(
+    requirement_id: str,
+    provenance: dict[str, Any],
+) -> tuple[bool, str]:
+    """Treat GDELT records as evidence of coverage, never of article claims."""
+    if requirement_id in GDELT_MARKET_REQUIREMENTS:
+        return False, "media_coverage_metadata_cannot_validate_commercial_demand_or_viability"
+    if requirement_id == "public_reporting_velocity":
+        return False, "capped_article_list_cannot_measure_public_reporting_velocity"
+    if requirement_id not in {"media_coverage_observation", "recent_event_signal"}:
+        return False, "gdelt_article_metadata_not_scoped_to_this_requirement"
+    if provenance.get("source_registry_id") != "gdelt-doc-api-v2":
+        return False, "gdelt_source_clearance_provenance_missing"
+    if provenance.get("source_type") != "gdelt_doc" or provenance.get("metadata_only") is not True:
+        return False, "gdelt_article_content_was_not_reviewed"
+    if provenance.get("traceable") is not True:
+        return False, "gdelt_article_metadata_is_not_traceable"
+    if not provenance.get("canonical_url") or not provenance.get("domain"):
+        return False, "gdelt_article_url_or_domain_missing"
+    if not provenance.get("published_at") or not provenance.get("retrieved_at"):
+        return False, "gdelt_article_publication_or_retrieval_time_missing"
+    if not provenance.get("query") or provenance.get("attribution") != "GDELT Project":
+        return False, "gdelt_query_or_attribution_missing"
+    if provenance.get("article_body_fetched") is not False:
+        return False, "gdelt_article_body_retrieval_not_permitted"
+    return True, "attributable_observation_of_media_coverage_only"
 
 
 def world_bank_requirement_eligibility(
