@@ -24,7 +24,7 @@ from app.services.collectors import gdelt
 from app.services.observer_engine import ObserverEngine
 from app.services.research_evidence_assessment import gdelt_requirement_eligibility
 
-QUERY = '"supply chain" OR agriculture'
+QUERY = '("supply chain" OR "logistics")'
 ARTICLES = {
     "articles": [
         {
@@ -113,9 +113,16 @@ def test_gdelt_clearance_is_bounded_documented_and_paced(db):
     assert entry.url == gdelt.API_URL
     assert entry.allowed_operation == "search_bounded_article_metadata"
     assert entry.allowed_fields == ("url", "title", "seendate", "domain", "language", "sourcecountry")
-    assert entry.license_tag == "GDELT Open Data / Attribution Required"
+    assert entry.license_tag == (
+        "GDELT Open Data (Unlimited reuse with attribution to "
+        "https://www.gdeltproject.org/)"
+    )
     assert entry.min_interval_seconds == 5
-    assert entry.supports_requirements == ("media_coverage_observation", "recent_event_signal")
+    assert entry.supports_requirements == (
+        "media_coverage_observation",
+        "recent_event_signal",
+        "public_reporting_velocity",
+    )
     assert source_clearance_registry.collector_is_cleared(
         "gdelt_doc", today=date(2026, 9, 27)
     )
@@ -179,10 +186,14 @@ def test_gdelt_parser_stores_only_metadata_and_uses_bounded_request(db, monkeypa
     assert provenance["source_id"] == expected_id
     assert provenance["traceable"] is True
     assert provenance["metadata_only"] is True
-    assert provenance["attribution"] == "GDELT Project"
+    assert provenance["attribution"] == "GDELT Project (https://www.gdeltproject.org/)"
     assert provenance["domain"] == "news.example.org"
     assert provenance["language"] == "English"
     assert provenance["country"] == "United States"
+    assert provenance["sourcecountry"] == "United States"
+    assert provenance["reported_result_count"] == 1
+    assert provenance["max_records"] == 1
+    assert provenance["result_set_capped"] is True
     assert provenance["article_body_fetched"] is False
     assert provenance["publisher_page_fetched"] is False
     assert "body" not in provenance
@@ -232,6 +243,8 @@ def test_gdelt_http_429_defers_task_without_consuming_attempt(db, monkeypatch):
         "build_opener",
         lambda *_handlers: _RateLimitedOpener(),
     )
+    sleeps = []
+    monkeypatch.setattr(gdelt.time, "sleep", sleeps.append)
     question, task = _create_gdelt_task(db, "GDELT recent media coverage")
 
     result = collector_runner.execute_task(db, task)
@@ -242,12 +255,48 @@ def test_gdelt_http_429_defers_task_without_consuming_attempt(db, monkeypatch):
     assert result["deferred"] is True
     assert task.status == "planned"
     assert task.attempts == 0
+    assert sleeps == [5, 10]
     assert db.query(models.Signal).filter_by(source="gdelt_doc").count() == 0
     assert db.query(models.Evidence).filter_by(source="gdelt_doc").count() == 0
     assert db.query(models.ResearchTaskEvent).filter_by(
         task_id=task.id,
         event_type="deferred",
     ).count() == 1
+
+
+def test_gdelt_retries_429_with_exponential_backoff(db, monkeypatch):
+    _entry, authorization, _requests = _mock_gdelt(monkeypatch, db)
+    sleeps = []
+
+    class _RetryingOpener:
+        def __init__(self):
+            self.calls = 0
+
+        def open(self, request, timeout):
+            self.calls += 1
+            if self.calls < 3:
+                raise urllib.error.HTTPError(
+                    request.full_url,
+                    429,
+                    "Too Many Requests",
+                    {},
+                    None,
+                )
+            return _Response(ARTICLES)
+
+    opener = _RetryingOpener()
+    monkeypatch.setattr(gdelt.urllib.request, "build_opener", lambda *_handlers: opener)
+    monkeypatch.setattr(gdelt.time, "sleep", sleeps.append)
+
+    items = gdelt.fetch_gdelt_signals(
+        QUERY,
+        max_records=5,
+        authorization=authorization,
+    )
+
+    assert len(items) == 2
+    assert opener.calls == 3
+    assert sleeps == [5, 10]
 
 
 def test_gdelt_epistemic_requirements_exclude_velocity_and_commercial_claims():
@@ -261,8 +310,12 @@ def test_gdelt_epistemic_requirements_exclude_velocity_and_commercial_claims():
         "published_at": "2026-09-27T12:30:00+00:00",
         "retrieved_at": "2026-09-27T12:35:00+00:00",
         "query": QUERY,
-        "attribution": "GDELT Project",
+        "attribution": "GDELT Project (https://www.gdeltproject.org/)",
         "article_body_fetched": False,
+        "timespan": "1w",
+        "reported_result_count": 2,
+        "max_records": 5,
+        "result_set_capped": False,
     }
 
     eligible, reason = gdelt_requirement_eligibility("media_coverage_observation", provenance)
@@ -280,8 +333,34 @@ def test_gdelt_epistemic_requirements_exclude_velocity_and_commercial_claims():
         eligible, _reason = gdelt_requirement_eligibility(requirement_id, provenance)
         assert eligible is False
     eligible, reason = gdelt_requirement_eligibility("public_reporting_velocity", provenance)
+    assert eligible is True
+    assert reason == "bounded_gdelt_indexed_article_count_over_declared_timespan"
+    capped = {**provenance, "reported_result_count": 25, "max_records": 25, "result_set_capped": True}
+    eligible, reason = gdelt_requirement_eligibility("public_reporting_velocity", capped)
     assert eligible is False
-    assert reason == "capped_article_list_cannot_measure_public_reporting_velocity"
+    assert reason == "capped_or_unbounded_gdelt_result_set_cannot_measure_reporting_velocity"
+
+
+def test_planner_can_satisfy_only_uncapped_gdelt_reporting_velocity(db, monkeypatch):
+    _mock_gdelt(monkeypatch, db)
+    question = models.ResearchQuestion(
+        question="Measure public reporting velocity for repair-shop scheduling."
+    )
+    db.add(question)
+    db.commit()
+
+    planned = research_planner.plan_tasks_for_question(db, question)
+    task = next(item for item in planned if item.source == "gdelt_doc")
+    result = collector_runner.execute_task(db, task)
+    db.refresh(question)
+
+    velocity_requirement = next(
+        item for item in question.research_plan["requirements"]
+        if item["id"] == "public_reporting_velocity"
+    )
+    assert result["status"] == "completed"
+    assert velocity_requirement["status"] == "satisfied"
+    assert len(velocity_requirement["evidence_ids"]) == 2
 
 
 def test_planner_media_coverage_does_not_clear_demand_or_create_opportunity(db, monkeypatch):
@@ -308,6 +387,7 @@ def test_planner_media_coverage_does_not_clear_demand_or_create_opportunity(db, 
         [(item.source, item.id, item.provenance) for item in db.query(models.Evidence).all()],
     )
     assert len(coverage_requirement["evidence_ids"]) == 2
+    assert len({signal.canonical_url for signal in db.query(models.Signal).filter_by(source="gdelt_doc")}) == 2
     for requirement_id in ("buyer_willingness_to_pay", "problem_incidence"):
         requirement = next(
             item for item in question.research_plan["requirements"]
@@ -327,6 +407,10 @@ def test_planner_media_coverage_does_not_clear_demand_or_create_opportunity(db, 
     db.add(pattern)
     db.commit()
     assert opportunity_engine.generate_opportunity_from_pattern_if_economic(db, pattern) is None
+    assert all(
+        opportunity_engine.generate_opportunity_from_signal_if_strong(db, signal) is None
+        for signal in signals
+    )
     assert db.query(models.Opportunity).count() == 0
 
 

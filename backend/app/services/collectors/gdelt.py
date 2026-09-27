@@ -7,6 +7,7 @@ from hashlib import sha256
 from html.parser import HTMLParser
 import json
 import re
+import time
 import urllib.error
 import urllib.parse
 import urllib.robotparser
@@ -24,6 +25,8 @@ USER_AGENT = "ForgeOS/0.1 (GDELT metadata; https://github.com/kn33r0s3/ForgeOS)"
 TIMEOUT_SECONDS = 20
 MAX_RESULTS = 25
 MAX_QUERY_LENGTH = 500
+MAX_429_RETRIES = 2
+MAX_BACKOFF_SECONDS = 30
 ALLOWED_TIMESPANS = frozenset({"1d", "3d", "1w", "1m", "3m"})
 ALLOWED_FIELDS = ("url", "title", "seendate", "domain", "language", "sourcecountry")
 _SEENDATE = re.compile(r"^(?:\d{14}|\d{8}T\d{6}Z)$")
@@ -108,18 +111,29 @@ def fetch_gdelt_signals(
     )
     opener = urllib.request.build_opener(_SameDocEndpointRedirect())
     try:
-        with opener.open(request, timeout=TIMEOUT_SECONDS) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        if exc.code == 429:
-            raise source_clearance_registry.SourceRateLimitError(
-                "GDELT DOC API returned HTTP 429; defer until its rate window permits another request"
-            ) from exc
-        raise RuntimeError(f"GDELT DOC API returned HTTP {exc.code}") from exc
+        for attempt in range(MAX_429_RETRIES + 1):
+            try:
+                with opener.open(request, timeout=TIMEOUT_SECONDS) as response:
+                    payload = json.loads(response.read().decode("utf-8"))
+                break
+            except urllib.error.HTTPError as exc:
+                if exc.code != 429:
+                    raise RuntimeError(f"GDELT DOC API returned HTTP {exc.code}") from exc
+                if attempt == MAX_429_RETRIES:
+                    raise source_clearance_registry.SourceRateLimitError(
+                        "GDELT DOC API remained rate-limited after bounded exponential backoff"
+                    ) from exc
+                retry_after = exc.headers.get("Retry-After") if exc.headers else None
+                delay = max(5 * (2**attempt), _retry_after_seconds(retry_after))
+                if delay > MAX_BACKOFF_SECONDS:
+                    raise source_clearance_registry.SourceRateLimitError(
+                        f"GDELT DOC API requested a retry delay of {delay} seconds; defer the task"
+                    ) from exc
+                time.sleep(delay)
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise RuntimeError("GDELT DOC API returned invalid JSON") from exc
     except Exception as exc:
-        if isinstance(exc, RuntimeError):
+        if isinstance(exc, (RuntimeError, source_clearance_registry.SourceRateLimitError)):
             raise
         raise RuntimeError(f"GDELT DOC API request failed: {exc}") from exc
 
@@ -127,11 +141,13 @@ def fetch_gdelt_signals(
     if not isinstance(articles, list):
         raise RuntimeError("GDELT DOC API response did not contain an article list")
 
+    article_count = len(articles[:max_records])
+    result_set_capped = article_count >= max_records
     retrieved_at = datetime.now(timezone.utc).isoformat()
     results: list[dict[str, Any]] = []
     for article in articles[:max_records]:
         if not isinstance(article, dict):
-            continue
+            raise RuntimeError("GDELT DOC API returned a non-object article record")
         metadata = _permitted_article(article)
         url = metadata["url"]
         seendate = metadata["seendate"]
@@ -150,6 +166,9 @@ def fetch_gdelt_signals(
             "metadata_only": True,
             "query": query,
             "timespan": timespan,
+            "reported_result_count": article_count,
+            "max_records": max_records,
+            "result_set_capped": result_set_capped,
             "retrieved_at": retrieved_at,
             "published_at": published_at,
             "url": url,
@@ -159,7 +178,8 @@ def fetch_gdelt_signals(
             "domain": domain,
             "language": metadata["language"],
             "country": metadata["sourcecountry"],
-            "attribution": "GDELT Project",
+            "sourcecountry": metadata["sourcecountry"],
+            "attribution": "GDELT Project (https://www.gdeltproject.org/)",
             "license_tag": entry.license_tag,
             "retrieved_fields": list(ALLOWED_FIELDS),
             "article_body_fetched": False,
@@ -254,6 +274,15 @@ def _permitted_article(article: dict[str, Any]) -> dict[str, str]:
 
 def _optional_text(value: Any) -> str:
     return value.strip()[:100] if isinstance(value, str) else ""
+
+
+def _retry_after_seconds(value: str | None) -> int:
+    if not value:
+        return 0
+    try:
+        return max(0, int(value))
+    except ValueError:
+        return 0
 
 
 def _published_at(seendate: str) -> str:

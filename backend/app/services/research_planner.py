@@ -87,9 +87,13 @@ def _requirement_specs(question_text: str) -> list[dict[str, Any]]:
             requirements.append(
                 {
                     "id": "public_reporting_velocity",
-                    "question": f"What is the measured public reporting velocity for: {topic}?",
+                    "question": (
+                        f"What uncapped count of GDELT-indexed articles matching this query was "
+                        f"observed over the bounded time window for: {topic}?"
+                    ),
                     "evidence_kind": "bounded_reporting_timeline",
                     "can_resolve_claim": False,
+                    "gdelt_query": topic,
                 }
             )
         else:
@@ -346,7 +350,7 @@ def _create_task(
     elif source == "gdelt_doc":
         task.query = json.dumps(
             {
-                "query": requirement["gdelt_query"],
+                "query": requirement.get("gdelt_query", _topic(question.question)),
                 "timespan": "1w",
                 "max_records": 25,
             },

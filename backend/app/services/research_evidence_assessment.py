@@ -42,9 +42,11 @@ def gdelt_requirement_eligibility(
     """Treat GDELT records as evidence of coverage, never of article claims."""
     if requirement_id in GDELT_MARKET_REQUIREMENTS:
         return False, "media_coverage_metadata_cannot_validate_commercial_demand_or_viability"
-    if requirement_id == "public_reporting_velocity":
-        return False, "capped_article_list_cannot_measure_public_reporting_velocity"
-    if requirement_id not in {"media_coverage_observation", "recent_event_signal"}:
+    if requirement_id not in {
+        "media_coverage_observation",
+        "recent_event_signal",
+        "public_reporting_velocity",
+    }:
         return False, "gdelt_article_metadata_not_scoped_to_this_requirement"
     if provenance.get("source_registry_id") != "gdelt-doc-api-v2":
         return False, "gdelt_source_clearance_provenance_missing"
@@ -56,10 +58,27 @@ def gdelt_requirement_eligibility(
         return False, "gdelt_article_url_or_domain_missing"
     if not provenance.get("published_at") or not provenance.get("retrieved_at"):
         return False, "gdelt_article_publication_or_retrieval_time_missing"
-    if not provenance.get("query") or provenance.get("attribution") != "GDELT Project":
+    if not provenance.get("query") or provenance.get("attribution") != (
+        "GDELT Project (https://www.gdeltproject.org/)"
+    ):
         return False, "gdelt_query_or_attribution_missing"
     if provenance.get("article_body_fetched") is not False:
         return False, "gdelt_article_body_retrieval_not_permitted"
+    if requirement_id == "public_reporting_velocity":
+        result_count = provenance.get("reported_result_count")
+        max_records = provenance.get("max_records")
+        if (
+            provenance.get("result_set_capped") is not False
+            or not isinstance(result_count, int)
+            or isinstance(result_count, bool)
+            or result_count < 1
+            or not isinstance(max_records, int)
+            or isinstance(max_records, bool)
+            or not result_count < max_records <= 25
+            or provenance.get("timespan") not in {"1d", "3d", "1w", "1m", "3m"}
+        ):
+            return False, "capped_or_unbounded_gdelt_result_set_cannot_measure_reporting_velocity"
+        return True, "bounded_gdelt_indexed_article_count_over_declared_timespan"
     return True, "attributable_observation_of_media_coverage_only"
 
 

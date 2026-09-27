@@ -237,7 +237,11 @@ SOURCE_CLEARANCES: tuple[SourceClearance, ...] = (
         redirect_urls=(_GDELT_DOC_URL,),
         allowed_operation="search_bounded_article_metadata",
         allowed_fields=("url", "title", "seendate", "domain", "language", "sourcecountry"),
-        supports_requirements=("media_coverage_observation", "recent_event_signal"),
+        supports_requirements=(
+            "media_coverage_observation",
+            "recent_event_signal",
+            "public_reporting_velocity",
+        ),
         provenance_requirements=(
             "canonical_url",
             "external_id",
@@ -253,7 +257,10 @@ SOURCE_CLEARANCES: tuple[SourceClearance, ...] = (
         ),
         min_interval_seconds=5,
         policy_hostnames=("api.gdeltproject.org", "blog.gdeltproject.org", "gdeltproject.org"),
-        license_tag="GDELT Open Data / Attribution Required",
+        license_tag=(
+            "GDELT Open Data (Unlimited reuse with attribution to "
+            "https://www.gdeltproject.org/)"
+        ),
     ),
 )
 

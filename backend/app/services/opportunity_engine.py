@@ -190,6 +190,8 @@ def opportunity_from_pattern(db: Session, pattern: models.Pattern) -> models.Opp
         else []
     )
     if any(_signal_is_metadata_only(signal) for signal in source_signals):
+        if any(signal.source == "gdelt_doc" for signal in source_signals):
+            raise ValueError("GDELT metadata-only evidence cannot support an opportunity assessment")
         raise ValueError("Bibliographic metadata cannot support an opportunity assessment")
 
     problem_text = pattern.title or pattern.description
