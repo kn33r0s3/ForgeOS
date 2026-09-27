@@ -188,8 +188,19 @@ export default function AnalyzePage() {
                           {source.retrieved_at ? ` · retrieved ${source.retrieved_at}` : ""}
                         </p>
                         <p className="mt-1 text-xs text-neutral-400">
-                          Evidence #{source.evidence_id} · relevance {source.relevance}
+                          Evidence #{source.evidence_id}
+                          {source.assessment
+                            ? ` · keyword overlap ${source.assessment.keyword_overlap.matched_terms.length}/${source.assessment.keyword_overlap.query_term_count}; source reliability ${source.assessment.source_reliability}; semantic relevance ${source.assessment.semantic_relevance}; contradictions ${source.assessment.contradictions}; claim support ${source.assessment.claim_support}`
+                            : ""}
                         </p>
+                        {source.assessment && (
+                          <p className="mt-1 text-xs text-neutral-500">
+                            {source.assessment.keyword_overlap.method}
+                            {source.assessment.publication_age_days !== null
+                              ? ` · publication age ${source.assessment.publication_age_days} days`
+                              : ""}
+                          </p>
+                        )}
                       </article>
                     ))}
                   </div>

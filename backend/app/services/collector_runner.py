@@ -34,6 +34,7 @@ from app.services import research_task_engine
 from app.services import evidence_graph
 from app.services import tool_usefulness
 from app.services import source_clearance_registry
+from app.services.research_evidence_assessment import assess_source_record
 
 COLLECTORS = {
     "reddit": RedditCollector,
@@ -48,8 +49,13 @@ COLLECTORS = {
 # Bulk feeds are not cleared in docs/PUBLIC_SOURCES.md. Clearances are
 # represented by source_clearance_registry; a URL is not permission by itself.
 UNCLEARED_DEFAULT_SOURCES = ("reddit", "github", "rss", "news", "arxiv")
-CLEARED_WEB_URLS = frozenset(entry.url for entry in source_clearance_registry.source_clearances())
-CLEARED_WEB_REVIEW_DATE = source_clearance_registry.source_clearances()[0].reviewed_on
+_WEB_CLEARANCES = tuple(
+    entry
+    for entry in source_clearance_registry.source_clearances()
+    if entry.collector == "web"
+)
+CLEARED_WEB_URLS = frozenset(entry.url for entry in _WEB_CLEARANCES)
+CLEARED_WEB_REVIEW_DATE = _WEB_CLEARANCES[0].reviewed_on
 
 
 def _web_clearance_error(value: str, *, today: date | None = None) -> str | None:
@@ -198,7 +204,13 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
                     "published_at": signal.published_at.isoformat() if signal.published_at else None,
                     "retrieved_at": signal.retrieved_at.isoformat() if signal.retrieved_at else None,
                     "source": signal.source,
-                    "relevance": "unassessed",
+                    "assessment": assess_source_record(
+                        task.query,
+                        title=signal.title,
+                        content=signal.content,
+                        published_at=signal.published_at,
+                        retrieved_at=signal.retrieved_at,
+                    ),
                 }
             )
             statement = (normalized.get("content") or "").strip()[:400]

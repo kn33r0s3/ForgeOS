@@ -126,6 +126,7 @@ def test_evidence_relationship_projection_survives_restart(tmp_path):
         legacy_evidence_substrate_adapter.sync_legacy_evidence(first_session)
         first = adapter.sync_evidence_relationships(first_session)
         first_session.commit()
+        run_migrations(engine)
         assert first["relations_created"] == 1
         link_id, relation_id, evidence_id, claim_id = link.id, link.substrate_relation_id, evidence.id, claim.id
     engine.dispose()

@@ -126,6 +126,43 @@ def test_analyze_does_not_report_completed_for_mixed_empty_task_results(
     assert payload["research_status"] == "research_failed"
 
 
+def test_analyze_requires_persisted_evidence_before_source_collection_can_complete(
+    client_with_db, db, monkeypatch
+):
+    def plan_with_stale_evidence_reference(database, question):
+        task = research_task_engine.create_task(
+            database,
+            question_id=question.id,
+            source="crossref",
+            query="completed task with a stale evidence reference",
+            objective="Check that its evidence still exists.",
+        )
+        task.status = "completed"
+        task.evidence_ids = "999999"
+        database.commit()
+        return [task]
+
+    monkeypatch.setattr(
+        "app.api.analyze.research_planner.plan_tasks_for_question",
+        plan_with_stale_evidence_reference,
+    )
+    monkeypatch.setattr(
+        "app.api.analyze.collector_runner.run_pending_tasks",
+        lambda database, limit: [],
+    )
+
+    response = client_with_db.post(
+        "/analyze",
+        json={"idea": "Could an unfamiliar question reveal a recurring unmet need?"},
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["research_status"] == "research_needs_evidence"
+    assert payload["evidence_count"] == 0
+    assert "No external research evidence" in payload["unknowns"][0]
+
+
 def test_public_provider_and_service_visibility_requires_verified_status(client_with_db, db):
     unverified = models.Provider(
         name="Unverified provider",

@@ -93,3 +93,38 @@ ForgeOS now contains production-oriented eSewa and Khalti adapters based on thei
 Credentials are environment-only: `ESEWA_MERCHANT_CODE`, `ESEWA_SECRET_KEY`, `KHALTI_SECRET_KEY`, and related endpoint settings are documented in `backend/.env.example` and are not present in the repository or archive. The API fails closed with a provider-configuration error when credentials are absent. A successful redirect or API response is not itself recorded as revenue; callers must verify the provider status before recording a paid outcome.
 
 The complete backend suite passed with **128 tests**, the frontend production build passed, callback tamper rejection passed, and both providers correctly fail closed without configured credentials.
+
+## 2026-09-27 continuing milestone — evidence-grounded public research
+
+### Failure found and corrected
+
+`POST /analyze` previously treated any completed task as completed research, even if no evidence was stored or other tasks failed. Crossref requests also selected an unsupported `updated` field and received HTTP 400. In addition, research-task uniqueness was only an application-level lookup, prior-evidence lookup could raise when one Signal had multiple Evidence rows, and the general planner generated retries for legacy sources that are not currently cleared.
+
+The response now reports persisted evidence and task state, uses `source_collection_complete` only when every planned task points to persisted evidence, and explicitly says collection is not commercial validation. Each task has a deterministic idempotency key enforced by an additive unique index. The planner chooses currently cleared Crossref tasks while leaving blocked legacy rows intact. The evidence lookup selects the latest linked record; failed/no-judge comparison does not recursively add questions. The Crossref field list now matches the API's available fields, and HTTP failure responses retain a bounded provider detail.
+
+### Actual external-source runtime checks
+
+The live Crossref `/works` API returned five bibliographic records for each of two unrelated questions:
+
+- Nepal smallholder postharvest-loss measurements: included a 2025 paper titled “Assessing Drivers of Storage Decision-Making to Prevent Postharvest Loss Among Smallholder Ginger Farmers in Palpa District, Nepal” (`https://doi.org/10.1177/21582440251367083`).
+- Bicycle repair-shop appointment reminders: returned several hospital appointment-reminder papers and other weak matches, not repair-shop demand evidence.
+
+Both runs used `collector_runner` and separate temporary SQLite files. Each wrote **5 Signals + 5 Evidence rows**, including DOI URLs, publication/retrieval timestamps, registry metadata provenance, and `metadata_only=true`; after closing and reopening each SQLite file the counts remained **5 Signals + 5 Evidence**. The files were temporary and were removed after inspection. No live project database was written. Crossref results are discovery records, not article contents, proof of demand, or supported claims; relevance remains unassessed.
+
+The first Crossref API calls failed because of the unsupported selected field; after correction, both live queries returned records. The permitted field list excludes abstracts and full text. The source gate remains at one request per minute.
+
+### Verification
+
+- Final `cd backend && ../.venv/bin/python -m pytest tests -q` after adding exact-token/publication-age assessment → **383 passed, 22 warnings**.
+- `cd frontend && npx tsc --noEmit` → passed.
+- `cd frontend && npm run build` → passed.
+- Local backend `/health` and frontend `/analyze` → HTTP 200.
+- Browser check found a dev/build `.next` output collision (missing CSS/chunks); after restarting only the confirmed ForgeOS Next.js dev process, the page rendered with styling and all checked CSS/JS assets returned HTTP 200.
+- The page displays exact-token overlap and publication age. Reliability, semantic relevance, contradiction assessment, and claim support remain explicitly unassessed/not inferred. Mobile inspection at 390px found no horizontal overflow.
+- `git diff --check` → clean at the time of verification.
+
+### Current limit and next work
+
+ForgeOS now accepts unfamiliar questions, decomposes them into general subquestions, creates durable permitted research tasks, retrieves actual public bibliographic metadata, persists provenance, resumes after database reopen, and refuses to call task completion a validated opportunity. It does **not** yet assess semantic relevance, source reliability, freshness, or contradictions; it has no authorized general public-web search integration. The repair-shop search produced mostly hospital studies, so there is no evidence-backed repair-shop opportunity to report. No person was contacted; no offer was published; no transaction, customer, or revenue was fabricated.
+
+Next: review an appropriate no-cost primary public source's current terms before enabling content retrieval. General web discovery remains blocked until an authorized source/integration is available. A real validation experiment still requires the owner's explicit authorization and a real human response.

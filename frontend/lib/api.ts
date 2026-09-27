@@ -603,7 +603,21 @@ export interface ResearchEvidenceSource {
   published_at: string | null;
   retrieved_at: string | null;
   source: string;
-  relevance: string;
+  assessment?: {
+    keyword_overlap: {
+      method: string;
+      query_term_count: number;
+      matched_terms: string[];
+      unmatched_terms: string[];
+    };
+    publication_age_days: number | null;
+    freshness_basis: string;
+    source_record: string;
+    source_reliability: string;
+    semantic_relevance: string;
+    contradictions: string;
+    claim_support: string;
+  };
 }
 
 // ---------- request plumbing ----------

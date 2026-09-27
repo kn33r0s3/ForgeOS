@@ -73,7 +73,16 @@ def analyze_idea(payload: schemas.AnalyzeRequest, db: Session = Depends(get_db))
         .filter(models.EvidenceRelationship.claim_id == claim.id)
         .all()
     )
-    evidence_count = len({edge.evidence_id for edge in claim_evidence})
+    claim_evidence_ids = {edge.evidence_id for edge in claim_evidence}
+    persisted_claim_evidence_ids = set()
+    if claim_evidence_ids:
+        persisted_claim_evidence_ids = {
+            row[0]
+            for row in db.query(models.Evidence.id)
+            .filter(models.Evidence.id.in_(claim_evidence_ids))
+            .all()
+        }
+    evidence_count = len(persisted_claim_evidence_ids)
     persisted_evidence_ids = set()
     if evidence_ids:
         persisted_evidence_ids = {
@@ -83,8 +92,8 @@ def analyze_idea(payload: schemas.AnalyzeRequest, db: Session = Depends(get_db))
             .all()
         }
     evidence_quality = "LIMITED"
-    if evidence_count == 0 and evidence_ids:
-        evidence_count = len(evidence_ids)
+    if evidence_count == 0 and persisted_evidence_ids:
+        evidence_count = len(persisted_evidence_ids)
 
     states = {task.status for task in tasks}
     has_pending_tasks = bool(states & {"planned", "running"})

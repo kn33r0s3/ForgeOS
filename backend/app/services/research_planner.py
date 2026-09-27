@@ -74,6 +74,7 @@ def _prior_observations(db: Session, question_text: str, *, limit: int = 5) -> l
             db.query(models.Evidence.id)
             .filter_by(signal_id=signal.id)
             .order_by(models.Evidence.id.desc())
+            .limit(1)
             .scalar()
         )
         if evidence_id is None:
