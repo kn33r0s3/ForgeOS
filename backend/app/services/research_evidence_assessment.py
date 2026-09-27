@@ -17,6 +17,60 @@ _STOP_WORDS = {
     "where", "which", "while", "with", "would", "your",
 }
 
+WORLD_BANK_MACRO_REQUIREMENTS = frozenset(
+    {"macro_demographics", "population_baseline", "economic_indicator"}
+)
+WORLD_BANK_MICRO_REQUIREMENTS = frozenset(
+    {
+        "buyer_willingness_to_pay",
+        "product_demand",
+        "customer_pain",
+        "problem_incidence",
+        "alternatives_and_costs",
+        "disconfirming_evidence",
+    }
+)
+
+
+def world_bank_requirement_eligibility(
+    requirement_id: str,
+    provenance: dict[str, Any],
+    *,
+    expected_country: str | None = None,
+    expected_indicator: str | None = None,
+    expected_years: tuple[int, int] | None = None,
+) -> tuple[bool, str]:
+    """Allow attributable macro observations only; never use them for market claims."""
+    if requirement_id in {"problem_incidence", "customer_pain"}:
+        return False, "macro_indicator_data_cannot_validate_customer_pain_or_micro_incidence"
+    if requirement_id == "alternatives_and_costs":
+        return False, "macro_indicator_data_cannot_validate_product_alternatives_or_prices"
+    if requirement_id in WORLD_BANK_MICRO_REQUIREMENTS:
+        return False, "macro_indicator_data_cannot_validate_micro_demand_or_buyer_willingness_to_pay"
+    if requirement_id not in WORLD_BANK_MACRO_REQUIREMENTS:
+        return False, "world_bank_indicator_not_scoped_to_this_requirement"
+    if provenance.get("source_registry_id") != "world-bank-indicators-v2":
+        return False, "world_bank_source_clearance_provenance_missing"
+    if not provenance.get("canonical_url") or not provenance.get("attribution"):
+        return False, "world_bank_canonical_source_or_attribution_missing"
+    if not provenance.get("indicator_id") or not provenance.get("country_code"):
+        return False, "world_bank_indicator_or_country_identity_missing"
+    if not isinstance(provenance.get("value"), (int, float)) or isinstance(
+        provenance.get("value"), bool
+    ):
+        return False, "world_bank_observation_value_missing_or_non_numeric"
+    if not isinstance(provenance.get("third_party_sources_indicated"), bool):
+        return False, "world_bank_third_party_source_assessment_missing"
+    if expected_country and provenance["country_code"].casefold() != expected_country.casefold():
+        return False, "world_bank_observation_country_out_of_scope"
+    if expected_indicator and provenance["indicator_id"] != expected_indicator:
+        return False, "world_bank_observation_indicator_out_of_scope"
+    if expected_years:
+        year = provenance.get("year")
+        if not isinstance(year, int) or not expected_years[0] <= year <= expected_years[1]:
+            return False, "world_bank_observation_year_out_of_scope"
+    return True, "attributable_macro_indicator_observation"
+
 
 def _terms(value: str | None) -> set[str]:
     if not value:

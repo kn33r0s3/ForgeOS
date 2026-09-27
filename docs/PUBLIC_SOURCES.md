@@ -18,6 +18,7 @@ are reviewed again at collection time.
 | GovInfo, Federal Register notice on Nepal cultural-property import restrictions | https://www.govinfo.gov/content/pkg/FR-2026-08-12/html/2026-16432.htm | A public final rule restricting import of archaeological and ethnological material from Nepal | `https://www.govinfo.gov/robots.txt` returned `200` text. `User-agent: *` does not disallow `/content/`. Disallowed paths include `/search/` and `/app/search/*` | `https://www.govinfo.gov/about/policies` states that 17 U.S.C. § 105 places United States Government works in the public domain and that public documents can generally be reprinted without legal restriction. Third-party copyrighted material inside a document is not covered | 2026-09-25 |
 | Crossref REST API `/works` | https://api.crossref.org/works | Search publicly registered scholarly bibliographic metadata for research leads across topics and geographies | `https://api.crossref.org/robots.txt` returned `404`; integration uses only Crossref's documented API, not general site crawling | Crossref REST API docs at `https://www.crossref.org/documentation/retrieve-metadata/rest-api/` state no signup is required and almost all metadata may be reused; some abstracts may be copyrighted. The adapter requests only DOI, title, publisher, type, publication dates, container title, citation count, and authors; abstracts/full text are excluded. Public rate limits are conservatively restricted to one request per minute | 2026-09-27 |
 | Semantic Scholar Academic Graph API — candidate, NOT cleared | https://api.semanticscholar.org/graph/v1/paper/search | Candidate scholarly abstract search for substantive research | `https://api.semanticscholar.org/robots.txt` returned `404`; API-only access was inspected, not general website crawling | Official API license at `https://www.semanticscholar.org/product/api/license` says S2 Data is separately governed by accompanying data licenses and underlying third-party content may have its own license; it also requires attribution to “Semantic Scholar”. The requested Graph API response fields do not identify an applicable per-paper/abstract license. The endpoint probe on 2026-09-27 returned HTTP 429; no abstract was retained. The API product page recommends an API key; `SEMANTIC_SCHOLAR_API_KEY` was not configured. No abstract collection or persistence is approved until compatible product use and per-item content-license compliance are established, and access can proceed without violating provider rate limits | 2026-09-27 |
+| World Bank Indicators API v2 — bounded country indicator endpoints | https://api.worldbank.org/v2 | Read-only country-year indicators and separate indicator/source metadata for macro statistical observations | `https://api.worldbank.org/robots.txt` returned `404`; integration uses only the documented JSON API and exact `/v2/indicator/{id}` and `/v2/country/{country}/indicator/{id}` path forms over HTTPS | The World Bank Data Catalog licensing page says CC BY 4.0 is the default for World Bank-produced open datasets, but many datasets have other licenses, including externally specified and custom licenses. WDI metadata identifies source organizations; those are captured, not treated as proof of exclusive ownership or an indicator-specific license. Attribution is retained. Macro data cannot establish customer pain, product demand, local market demand, or willingness to pay. Persistent rate gate: at least 1 second between API calls | 2026-09-27 |
 
 ## Operating rule
 
@@ -55,6 +56,39 @@ requirements answerable until these conditions are reviewed and evidenced. A
 local one-request-per-second throttle cannot override provider responses or
 data-license requirements.
 
+World Bank Indicators API v2 is a bounded, reviewed capability for annual
+country-level numeric observations only. The adapter makes HTTPS GET requests
+to `/v2/country/{country_code}/indicator/{indicator_id}` and a separate
+`/v2/indicator/{indicator_id}` metadata path, bounded to a maximum 21-year
+window and exact ISO country/indicator syntax. It stores only the declared
+observation fields plus the indicator metadata required for attribution;
+unrelated API response fields are discarded. The indicator metadata call is
+necessary because the observation payload's `source` may be null while the
+metadata contains `source`, `sourceOrganization`, and `sourceNote`. Provenance
+retains this attribution and flags when third-party source organizations are
+listed, without inferring exclusive ownership or an indicator-specific license.
+Collection fails closed if the current Data Catalog license language cannot be
+rechecked. Persistent rate reservation enforces a one-second minimum between
+both API calls.
+
+World Bank evidence is limited to macro requirements
+(`macro_demographics`, `population_baseline`, and `economic_indicator`) and
+must match the requested country, indicator, and year scope. It cannot satisfy
+customer pain, product demand, problem incidence, alternatives/prices, or
+buyer willingness-to-pay requirements. The current indicator API does not
+report an item-specific license; provenance records the World Bank Data
+Catalog's dataset-level default and its exception for other licenses rather
+than asserting each indicator is individually CC BY 4.0.
+
+Reviewed live examples:
+
+- `https://api.worldbank.org/v2/country/NPL/indicator/SP.POP.TOTL`
+- `https://api.worldbank.org/v2/indicator/SP.POP.TOTL`
+- API v2 overview: `https://datahelpdesk.worldbank.org/knowledgebase/articles/889392-about-the-indicators-api-documentation`
+- API call structure: `https://datahelpdesk.worldbank.org/knowledgebase/articles/898581-api-basic-call-structures`
+- Data license: `https://datacatalog.worldbank.org/public-licenses`
+- API robots response: `https://api.worldbank.org/robots.txt` (404; the integration uses the documented API endpoints)
+
 Runtime approvals live in `backend/app/services/source_clearance_registry.py`.
 Each entry binds one exact HTTPS target to its source ID, country/category
 scope, allowed need, evidence references, robots URL, terms URL, required
@@ -62,8 +96,9 @@ permission/copyright language, redirect allowlist, policy-host allowlist,
 review dates, and minimum request interval. Registry validation rejects
 duplicate IDs/URLs, non-HTTPS or unapproved policy links, broad redirects,
 missing evidence, unsupported collectors, and invalid review windows. The
-register currently has two approved entries: the expired GovInfo page (which
-remains blocked) and the time-limited Crossref API row above. Other rows remain
-research notes, not collection permissions. When a source is reviewed, update
-its evidence row and add a typed runtime entry; registry tests ensure the
-runtime URL and documentation reference remain connected.
+runtime registry currently has three entries: the expired GovInfo page (still
+blocked), the time-limited Crossref API row, and the time-limited World Bank
+Indicators API v2 row. The Semantic Scholar row above remains a research note,
+not a collection permission. When a source is reviewed, update its evidence
+row and add a typed runtime entry; registry tests ensure runtime URLs and
+documentation references remain connected.

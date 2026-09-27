@@ -11,7 +11,10 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.services import research_task_engine, source_clearance_registry
-from app.services.research_evidence_assessment import explicit_contradiction_edges
+from app.services.research_evidence_assessment import (
+    explicit_contradiction_edges,
+    world_bank_requirement_eligibility,
+)
 
 MAX_TASKS_PER_QUESTION = 5
 
@@ -46,7 +49,7 @@ def _topic(question_text: str) -> str:
 
 def _requirement_specs(question_text: str) -> list[dict[str, Any]]:
     topic = _topic(question_text)
-    return [
+    requirements = [
         {
             "id": "bibliographic_discovery",
             "question": f"Which scholarly publications may merit content review for: {topic}?",
@@ -78,6 +81,52 @@ def _requirement_specs(question_text: str) -> list[dict[str, Any]]:
             "can_resolve_claim": True,
         },
     ]
+    world_bank_scope = _world_bank_scope(question_text)
+    if world_bank_scope:
+        indicator_id = world_bank_scope["indicator_id"]
+        if indicator_id.startswith("SP.POP."):
+            requirement_id = "population_baseline"
+        elif indicator_id.startswith(("NY.", "NE.", "FP.CPI.")):
+            requirement_id = "economic_indicator"
+        else:
+            requirement_id = "macro_demographics"
+        requirements.append(
+            {
+                "id": requirement_id,
+                "question": (
+                    f"What country-level World Bank indicator observations are available for "
+                    f"{world_bank_scope['country_code']} {indicator_id} "
+                    f"({world_bank_scope['start_year']}-{world_bank_scope['end_year']})?"
+                ),
+                "evidence_kind": "attributed_macro_indicator_observation",
+                "can_resolve_claim": False,
+                "world_bank_scope": world_bank_scope,
+            }
+        )
+    return requirements
+
+
+_WORLD_BANK_SCOPE_PATTERN = re.compile(
+    r"\bWB:([A-Z]{2,3}):([A-Z0-9._-]{1,80}):(\d{4})(?::(\d{4}))?\b",
+    re.IGNORECASE,
+)
+
+
+def _world_bank_scope(question_text: str) -> dict[str, Any] | None:
+    match = _WORLD_BANK_SCOPE_PATTERN.search(question_text)
+    if not match:
+        return None
+    country_code, indicator_id, start_year, end_year = match.groups()
+    start = int(start_year)
+    end = int(end_year) if end_year else start
+    if end < start or end - start > 20:
+        return None
+    return {
+        "country_code": country_code.upper(),
+        "indicator_id": indicator_id,
+        "start_year": start,
+        "end_year": end,
+    }
 
 
 def _prior_observations(db: Session, question_text: str, *, limit: int = 5) -> list[dict[str, Any]]:
@@ -266,6 +315,8 @@ def _create_task(
         "follow_up_depth": follow_up_depth,
         "research_question_id": question.id,
     }
+    if source == "world_bank_indicators":
+        task.query = json.dumps(requirement["world_bank_scope"], sort_keys=True)
     db.flush()
     return task
 
@@ -329,6 +380,70 @@ def _verified_bibliographic_evidence_ids(
     return sorted(verified)
 
 
+def _verified_world_bank_evidence_ids(
+    db: Session,
+    tasks: list[models.ResearchTask],
+    requirement: dict[str, Any],
+) -> list[int]:
+    verified: set[int] = set()
+    scope = requirement.get("world_bank_scope") or {}
+    for task in tasks:
+        if task.source != "world_bank_indicators" or task.status != "completed":
+            continue
+        results = task.results if isinstance(task.results, dict) else {}
+        source_results = results.get("source_results")
+        if not isinstance(source_results, list):
+            continue
+        task_evidence_ids = {
+            int(value)
+            for value in (task.evidence_ids or "").split(",")
+            if value.isdigit()
+        }
+        for result in source_results:
+            if not isinstance(result, dict) or not isinstance(result.get("evidence_id"), int):
+                continue
+            evidence_id = result["evidence_id"]
+            if evidence_id not in task_evidence_ids:
+                continue
+            evidence = db.get(models.Evidence, evidence_id)
+            if (
+                evidence is None
+                or evidence.source != "world_bank_indicators"
+                or not evidence.provenance
+            ):
+                continue
+            try:
+                provenance = json.loads(evidence.provenance)
+            except (TypeError, json.JSONDecodeError):
+                continue
+            if not isinstance(provenance, dict):
+                continue
+            eligible, _reason = world_bank_requirement_eligibility(
+                requirement["id"],
+                provenance,
+                expected_country=scope.get("country_code"),
+                expected_indicator=scope.get("indicator_id"),
+                expected_years=(
+                    (scope["start_year"], scope["end_year"])
+                    if "start_year" in scope and "end_year" in scope
+                    else None
+                ),
+            )
+            if eligible:
+                verified.add(evidence_id)
+    return sorted(verified)
+
+
+def _macro_market_unresolved_reason(requirement_id: str) -> str | None:
+    if not source_clearance_registry.capabilities_for_requirement("population_baseline"):
+        return None
+    if requirement_id in {"problem_incidence", "customer_pain", "product_demand"}:
+        return "macro_indicator_data_cannot_validate_customer_pain_or_micro_incidence"
+    if requirement_id in {"buyer_willingness_to_pay", "alternatives_and_costs"}:
+        return "macro_indicator_data_cannot_validate_micro_demand_or_buyer_willingness_to_pay"
+    return None
+
+
 def _refresh_plan_from_tasks(
     db: Session,
     question: models.ResearchQuestion,
@@ -369,14 +484,25 @@ def _refresh_plan_from_tasks(
             if requirement["id"] == "bibliographic_discovery"
             else []
         )
+        verified_world_bank_ids = (
+            _verified_world_bank_evidence_ids(db, tasks, requirement)
+            if requirement["id"] in {"macro_demographics", "population_baseline", "economic_indicator"}
+            else []
+        )
         if not requirement["capable_sources"]:
             if verified_metadata_ids:
                 requirement["status"] = "satisfied"
                 requirement["evidence_ids"] = verified_metadata_ids
                 requirement["terminal_reason"] = None
+            elif verified_world_bank_ids:
+                requirement["status"] = "satisfied"
+                requirement["evidence_ids"] = verified_world_bank_ids
+                requirement["terminal_reason"] = None
             else:
                 requirement["status"] = "terminal_unresolved"
-                requirement["terminal_reason"] = (
+                requirement["terminal_reason"] = _macro_market_unresolved_reason(
+                    requirement["id"]
+                ) or (
                     "no_currently_authorized_source_capability"
                     if not tasks
                     else "source_capability_unavailable_or_expired"
@@ -385,9 +511,15 @@ def _refresh_plan_from_tasks(
 
         pending = [task for task in tasks if task.status in {"planned", "running"}]
         if pending:
-            requirement["status"] = "satisfied" if verified_metadata_ids else "in_progress"
+            requirement["status"] = (
+                "satisfied"
+                if verified_metadata_ids or verified_world_bank_ids
+                else "in_progress"
+            )
             if verified_metadata_ids:
                 requirement["evidence_ids"] = verified_metadata_ids
+            elif verified_world_bank_ids:
+                requirement["evidence_ids"] = verified_world_bank_ids
             requirement["terminal_reason"] = None
             active = True
             all_terminal = False
@@ -398,7 +530,12 @@ def _refresh_plan_from_tasks(
             primary = successful[0]
             depth = int((primary.results or {}).get("follow_up_depth") or 0)
             followups = [task for task in tasks if int((task.results or {}).get("follow_up_depth") or 0) > 0]
-            if not followups and depth == 0 and task_count < MAX_TASKS_PER_QUESTION:
+            if (
+                primary.source == "crossref"
+                and not followups
+                and depth == 0
+                and task_count < MAX_TASKS_PER_QUESTION
+            ):
                 query = _follow_up_query(primary)
                 if query:
                     _create_task(
@@ -432,13 +569,24 @@ def _refresh_plan_from_tasks(
                 if requirement["id"] == "bibliographic_discovery"
                 else []
             )
-            requirement["status"] = "satisfied" if verified_metadata_ids else "terminal_unresolved"
-            requirement["evidence_ids"] = verified_metadata_ids or evidence_ids
-            requirement["terminal_reason"] = None if verified_metadata_ids else (
-                "metadata_leads_do_not_establish_content_relevance_or_answer_the_claim"
-                if primary.source == "crossref"
-                else "collected_evidence_has_not_been_assessed_as_direct_support"
+            requirement["status"] = (
+                "satisfied"
+                if verified_metadata_ids or verified_world_bank_ids
+                else "terminal_unresolved"
             )
+            requirement["evidence_ids"] = (
+                verified_metadata_ids or verified_world_bank_ids or evidence_ids
+            )
+            if verified_metadata_ids or verified_world_bank_ids:
+                requirement["terminal_reason"] = None
+            elif primary.source == "crossref":
+                requirement["terminal_reason"] = (
+                    "metadata_leads_do_not_establish_content_relevance_or_answer_the_claim"
+                )
+            else:
+                requirement["terminal_reason"] = (
+                    "collected_evidence_has_not_been_assessed_as_direct_support"
+                )
             continue
 
         retryable = [
@@ -475,7 +623,10 @@ def _refresh_plan_from_tasks(
         elif any(task.status in {"failed", "needs_research"} for task in tasks):
             requirement["terminal_reason"] = "source_attempt_budget_exhausted_without_answer"
         else:
-            requirement["terminal_reason"] = "no_successful_source_evidence"
+            requirement["terminal_reason"] = (
+                _macro_market_unresolved_reason(requirement["id"])
+                or "no_successful_source_evidence"
+            )
         requirement["status"] = "terminal_unresolved"
 
     task_count = db.query(models.ResearchTask).filter_by(question_id=question.id).count()

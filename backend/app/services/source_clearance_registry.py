@@ -56,6 +56,9 @@ _GOVINFO_TERMS = "https://www.govinfo.gov/about/policies"
 _CROSSREF_WORKS_URL = "https://api.crossref.org/works"
 _CROSSREF_ROBOTS = "https://api.crossref.org/robots.txt"
 _CROSSREF_TERMS = "https://www.crossref.org/documentation/retrieve-metadata/rest-api/"
+_WORLD_BANK_V2_URL = "https://api.worldbank.org/v2"
+_WORLD_BANK_ROBOTS = "https://api.worldbank.org/robots.txt"
+_WORLD_BANK_TERMS = "https://datacatalog.worldbank.org/public-licenses"
 
 
 class SourceRateLimitError(PermissionError):
@@ -132,6 +135,74 @@ SOURCE_CLEARANCES: tuple[SourceClearance, ...] = (
         min_interval_seconds=60,
         policy_hostnames=("api.crossref.org", "www.crossref.org"),
     ),
+    SourceClearance(
+        registry_id="world-bank-indicators-v2",
+        display_name="World Bank Indicators API v2",
+        collector="world_bank_indicators",
+        url=_WORLD_BANK_V2_URL,
+        hostname="api.worldbank.org",
+        geographies=("GLOBAL",),
+        categories=("public_statistics", "macro_demographics", "economic_indicators"),
+        allowed_need=(
+            "Retrieve bounded country-level annual indicator observations and indicator-level "
+            "attribution metadata. Macro statistics do not establish local customer demand."
+        ),
+        evidence_references=(
+            "docs/PUBLIC_SOURCES.md",
+            "https://datahelpdesk.worldbank.org/knowledgebase/articles/889392-about-the-indicators-api-documentation",
+            "https://datahelpdesk.worldbank.org/knowledgebase/articles/898581-api-basic-call-structures",
+            _WORLD_BANK_TERMS,
+            _WORLD_BANK_ROBOTS,
+            "https://api.worldbank.org/v2/country/NPL/indicator/SP.POP.TOTL",
+            "https://api.worldbank.org/v2/indicator/SP.POP.TOTL",
+        ),
+        reviewed_on=date(2026, 9, 27),
+        valid_through=date(2026, 10, 27),
+        robots_url=_WORLD_BANK_ROBOTS,
+        terms_url=_WORLD_BANK_TERMS,
+        required_terms_phrases=(
+            "licenses datasets under the creative commons attribution 4.0 international license",
+            "many datasets are available under other licenses",
+            "license specified externally",
+        ),
+        redirect_urls=(_WORLD_BANK_V2_URL,),
+        allowed_operation="read_indicator_observations_and_indicator_attribution",
+        allowed_fields=(
+            "indicator.id",
+            "indicator.value",
+            "country.id",
+            "country.value",
+            "date",
+            "value",
+            "unit",
+            "source.id",
+            "source.value",
+            "sourceOrganization",
+            "sourceNote",
+        ),
+        supports_requirements=(
+            "macro_demographics",
+            "population_baseline",
+            "economic_indicator",
+        ),
+        provenance_requirements=(
+            "canonical_url",
+            "retrieved_at",
+            "source_registry_id",
+            "indicator_id",
+            "country_code",
+            "source_organization",
+            "third_party_sources_indicated",
+            "attribution",
+            "license_basis",
+        ),
+        min_interval_seconds=1,
+        policy_hostnames=(
+            "api.worldbank.org",
+            "datahelpdesk.worldbank.org",
+            "datacatalog.worldbank.org",
+        ),
+    ),
 )
 
 
@@ -161,7 +232,7 @@ def validate_registry(entries: tuple[SourceClearance, ...]) -> tuple[SourceClear
             raise ValueError("Source registry IDs must be non-empty and unique")
         if not entry.display_name.strip() or not entry.allowed_need.strip():
             raise ValueError(f"Source registry entry {entry.registry_id} needs a name and bounded need")
-        if entry.collector not in {"web", "crossref"}:
+        if entry.collector not in {"web", "crossref", "world_bank_indicators"}:
             raise ValueError("Source clearance collector is not supported")
         if not _valid_https_url(entry.url, hostname=entry.hostname) or entry.url in urls:
             raise ValueError(f"Source registry entry {entry.registry_id} needs a unique canonical HTTPS URL")

@@ -30,6 +30,7 @@ from app.services.collectors.rss import RSSCollector
 from app.services.collectors.arxiv import ArxivCollector
 from app.services.collectors.web import WebCollector
 from app.services.collectors.crossref import API_URL as CROSSREF_API_URL, CrossrefCollector
+from app.services.collectors.world_bank import WorldBankCollector
 from app.services import research_task_engine
 from app.services import evidence_graph
 from app.services import tool_usefulness
@@ -45,6 +46,7 @@ COLLECTORS = {
     "arxiv": ArxivCollector,
     "web": WebCollector,
     "crossref": CrossrefCollector,
+    "world_bank_indicators": WorldBankCollector,
 }
 
 # Bulk feeds are not cleared in docs/PUBLIC_SOURCES.md. Clearances are
@@ -134,6 +136,8 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
             raw_items = collector.collect(task.query, authorization=authorization)
         elif task.source == "crossref":
             raw_items = collector.collect(task.query, authorization=authorization)
+        elif task.source == "world_bank_indicators":
+            raw_items = collector.collect(task.query, db=db)
         else:
             raw_items = collector.collect(task.query)
     except source_clearance_registry.SourceRateLimitError as exc:
