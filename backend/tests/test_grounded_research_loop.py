@@ -127,6 +127,13 @@ def test_partial_crossref_lead_creates_idempotent_narrow_follow_up(db):
     assert followup.results["follow_up_depth"] == 1
     assert "Appointment scheduling in hospitals" in followup.query
     assert question.research_plan["status"] == "research_in_progress"
+    bibliography = next(
+        row for row in question.research_plan["requirements"]
+        if row["id"] == "bibliographic_discovery"
+    )
+    assert bibliography["status"] == "satisfied"
+    assert bibliography["evidence_ids"] == [evidence.id]
+    assert question.research_plan["unresolved_requirements"]
 
 
 def test_research_task_budget_is_enforced_across_all_requirements(db, monkeypatch):

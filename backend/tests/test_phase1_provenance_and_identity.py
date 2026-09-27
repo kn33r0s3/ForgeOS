@@ -37,8 +37,25 @@ def test_identity_key_stability_across_pattern_ids():
 
 
 def test_duplicate_opportunity_is_not_inserted(db):
-    p1 = models.Pattern(title="Repair shop pain", description="Repair shops lose hours manually calling customers.", frequency=3)
-    p2 = models.Pattern(title="Repair shop pain", description="Repair shops lose hours manually calling customers.", frequency=5)
+    signal = models.Signal(
+        source="manual",
+        content="Repair shops lose hours manually calling customers.",
+    )
+    db.add(signal)
+    db.flush()
+    db.add(models.Evidence(signal_id=signal.id, source="manual", content=signal.content))
+    p1 = models.Pattern(
+        title="Repair shop pain",
+        description=signal.content,
+        frequency=3,
+        origin_signal_ids=str(signal.id),
+    )
+    p2 = models.Pattern(
+        title="Repair shop pain",
+        description=signal.content,
+        frequency=5,
+        origin_signal_ids=str(signal.id),
+    )
     db.add_all([p1, p2])
     db.commit()
 
@@ -50,13 +67,30 @@ def test_duplicate_opportunity_is_not_inserted(db):
 
 
 def test_same_underlying_problem_across_two_cycle_runs_results_in_one_opportunity(db):
-    p1 = models.Pattern(title="Contractor photo problem", description="Small property managers struggle to collect photos.", frequency=2)
+    signal = models.Signal(
+        source="manual",
+        content="Small property managers struggle to collect photos.",
+    )
+    db.add(signal)
+    db.flush()
+    db.add(models.Evidence(signal_id=signal.id, source="manual", content=signal.content))
+    p1 = models.Pattern(
+        title="Contractor photo problem",
+        description=signal.content,
+        frequency=2,
+        origin_signal_ids=str(signal.id),
+    )
     db.add(p1)
     db.commit()
 
     opp1 = opportunity_engine.opportunity_from_pattern(db, p1)
 
-    p2 = models.Pattern(title="Contractor photo problem", description="Small property managers struggle to collect photos.", frequency=4)
+    p2 = models.Pattern(
+        title="Contractor photo problem",
+        description=signal.content,
+        frequency=4,
+        origin_signal_ids=str(signal.id),
+    )
     db.add(p2)
     db.commit()
 

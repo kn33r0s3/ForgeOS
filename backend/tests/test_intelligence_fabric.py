@@ -107,7 +107,7 @@ def test_pattern_opportunity_rejects_missing_or_metadata_only_evidence(db):
     db.add(models.Evidence(signal_id=signal.id, source="crossref", content=signal.content))
     pattern.origin_signal_ids = str(signal.id)
     db.commit()
-    with pytest.raises(ValueError, match="non-metadata evidence"):
+    with pytest.raises(ValueError, match="Bibliographic metadata"):
         opportunity_engine.opportunity_from_pattern(db, pattern)
 
 

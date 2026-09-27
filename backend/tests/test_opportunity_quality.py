@@ -61,11 +61,19 @@ def test_manual_idea_creation_uses_derived_target_without_claiming_validation(db
 
 
 def test_pattern_opportunity_stores_only_recorded_hypothesis_fields(db, monkeypatch):
+    signal = models.Signal(
+        source="manual",
+        content="A repair workflow is difficult to coordinate.",
+    )
+    db.add(signal)
+    db.flush()
+    db.add(models.Evidence(signal_id=signal.id, source="manual", content=signal.content))
     pattern = models.Pattern(
         title="Unpriced repair workflow",
-        description="A repair workflow is difficult to coordinate.",
+        description=signal.content,
         frequency=2,
         confidence_score=60.0,
+        origin_signal_ids=str(signal.id),
     )
     db.add(pattern)
     db.commit()

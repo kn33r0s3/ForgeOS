@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import re
 from typing import Any
 
@@ -283,6 +284,51 @@ def _follow_up_query(task: models.ResearchTask) -> str | None:
     return f"Bibliographic follow-up for unresolved publication lead: {title}"
 
 
+def _verified_bibliographic_evidence_ids(
+    db: Session,
+    tasks: list[models.ResearchTask],
+) -> list[int]:
+    verified: set[int] = set()
+    for task in tasks:
+        if task.source != "crossref" or task.status != "completed":
+            continue
+        results = task.results if isinstance(task.results, dict) else {}
+        source_results = results.get("source_results")
+        if not isinstance(source_results, list):
+            continue
+        for result in source_results:
+            if not isinstance(result, dict):
+                continue
+            evidence_id = result.get("evidence_id")
+            if not isinstance(evidence_id, int):
+                continue
+            evidence = db.get(models.Evidence, evidence_id)
+            if (
+                evidence is None
+                or evidence_id not in {
+                    int(value)
+                    for value in (task.evidence_ids or "").split(",")
+                    if value.isdigit()
+                }
+                or not evidence.canonical_url
+                or not evidence.external_id
+                or evidence.retrieved_at is None
+                or not evidence.provenance
+            ):
+                continue
+            try:
+                provenance = json.loads(evidence.provenance)
+            except (TypeError, json.JSONDecodeError):
+                continue
+            if (
+                isinstance(provenance, dict)
+                and provenance.get("metadata_only") is True
+                and provenance.get("source_registry_id") == "crossref-public-works-metadata"
+            ):
+                verified.add(evidence_id)
+    return sorted(verified)
+
+
 def _refresh_plan_from_tasks(
     db: Session,
     question: models.ResearchQuestion,
@@ -353,13 +399,30 @@ def _refresh_plan_from_tasks(
                         follow_up_depth=1,
                     )
                     task_count += 1
-                    requirement["status"] = "in_progress"
+                    verified_metadata_ids = (
+                        _verified_bibliographic_evidence_ids(db, tasks)
+                        if requirement["id"] == "bibliographic_discovery"
+                        else []
+                    )
+                    requirement["status"] = "satisfied" if verified_metadata_ids else "in_progress"
+                    if verified_metadata_ids:
+                        requirement["evidence_ids"] = verified_metadata_ids
                     requirement["terminal_reason"] = None
-                    active = True
+                    active = active or bool(
+                        db.query(models.ResearchTask)
+                        .filter_by(question_id=question.id, status="planned")
+                        .count()
+                    )
                     all_terminal = False
                     continue
-            requirement["status"] = "terminal_unresolved"
-            requirement["terminal_reason"] = (
+            verified_metadata_ids = (
+                _verified_bibliographic_evidence_ids(db, tasks)
+                if requirement["id"] == "bibliographic_discovery"
+                else []
+            )
+            requirement["status"] = "satisfied" if verified_metadata_ids else "terminal_unresolved"
+            requirement["evidence_ids"] = verified_metadata_ids or evidence_ids
+            requirement["terminal_reason"] = None if verified_metadata_ids else (
                 "metadata_leads_do_not_establish_content_relevance_or_answer_the_claim"
                 if primary.source == "crossref"
                 else "collected_evidence_has_not_been_assessed_as_direct_support"

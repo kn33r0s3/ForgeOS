@@ -64,7 +64,7 @@ def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     assert payload["research_task_ids"]
     assert payload["research_status"] == "research_in_progress"
     assert len(payload["research_plan"]["requirements"]) == 5
-    assert payload["research_plan"]["requirements"][0]["status"] == "in_progress"
+    assert payload["research_plan"]["requirements"][0]["status"] == "satisfied"
     assert payload["research_sources"][0]["url"] == "https://doi.org/10.1234/repair.1"
     assert "repair" in payload["problem"].lower()
     assert payload["unknowns"]
