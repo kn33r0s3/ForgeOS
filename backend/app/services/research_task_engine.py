@@ -163,9 +163,18 @@ def finish_task(
     unique_evidence = list(dict.fromkeys(evidence_ids))
     task.evidence_ids = ",".join(str(value) for value in unique_evidence)
     task.claims = [{"type": "observed", "evidence_id": value} for value in unique_evidence]
-    task.judgments = [{"evidence_count": len(unique_evidence), "status": "sufficient" if unique_evidence else "insufficient"}]
+    task.judgments = [
+        {
+            "evidence_count": len(unique_evidence),
+            "status": "evidence_collected" if unique_evidence else "no_evidence",
+        }
+    ]
     task.contradictions = []
-    task.results = {"signal_ids": signal_ids, "evidence_ids": unique_evidence}
+    task.results = {
+        **(task.results or {}),
+        "signal_ids": signal_ids,
+        "evidence_ids": unique_evidence,
+    }
     _set_step(db, task, "execute", "completed", output=task.results)
     _set_step(db, task, "evaluate", "completed", output=task.judgments[0])
     if unique_evidence:
@@ -233,6 +242,20 @@ def fail_task(db: Session, task: models.ResearchTask, error: str) -> models.Rese
     _set_step(db, task, task.current_step or "execute", "failed", error=error)
     _event(db, task, "failed", details={"error": error, "attempt": task.attempts})
     _refresh_question_status(db, task.question_id)
+    db.commit()
+    db.refresh(task)
+    return task
+
+
+def defer_task(db: Session, task: models.ResearchTask, reason: str) -> models.ResearchTask:
+    """Return a temporarily rate-limited task to the queue without using an attempt."""
+    if task.status == "running" and task.attempts > 0:
+        task.attempts -= 1
+    task.status = "planned"
+    task.updated_at = utcnow()
+    task.current_step = "execute"
+    _set_step(db, task, "execute", "pending", output={"deferred": reason})
+    _event(db, task, "deferred", details={"reason": reason, "attempts": task.attempts})
     db.commit()
     db.refresh(task)
     return task

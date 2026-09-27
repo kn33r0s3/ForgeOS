@@ -26,7 +26,12 @@ def _client_for(db):
     return client
 
 
-def test_research_first_experiment_lifecycle_rejection_is_real_and_no_opportunity_needed(db):
+def test_research_first_experiment_lifecycle_rejection_is_real_and_no_opportunity_needed(
+    db, monkeypatch
+):
+    from app.services import collector_runner
+
+    monkeypatch.setattr(collector_runner, "run_pending_tasks", lambda *args, **kwargs: [])
     client = _client_for(db)
 
     analyze = client.post(

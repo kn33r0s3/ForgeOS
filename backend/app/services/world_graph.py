@@ -264,24 +264,53 @@ def create_entity(
     if source_system and not identity.get("provenance"):
         raise SubstrateError("source identity requires recorded provenance")
     identity_key = f"source:{kind}:{source_system}:{source_id}" if source_system and source_id else None
+    attributes_json = _dump_json(dict(attributes), "attributes")
+    canonical_identifier = _canonical_identifier(identity.get("canonical_identifier"))
+    normalized_identity = identity.get("normalized_identity") or normalize_identity(name)
+    identity_uncertainty = (
+        identity.get("identity_uncertainty")
+        or "Real-world identity is not independently corroborated."
+    )
+    identity_provenance = _dump_json(identity.get("provenance", {}), "identity provenance")
     if identity_key:
         existing = db.query(models.SubstrateEntity).filter_by(identity_key=identity_key).one_or_none()
         if existing is not None:
-            if (existing.entity_type, existing.source_system, existing.source_id) == (kind, source_system, source_id):
-                return existing
-            raise SubstrateError("identity key collision; retain separate candidates and investigate")
+            expected = (
+                name,
+                attributes_json,
+                canonical_identifier,
+                normalized_identity,
+                identity_uncertainty,
+                identity_provenance,
+            )
+            actual = (
+                existing.display_name,
+                existing.attributes,
+                existing.canonical_identifier,
+                existing.normalized_identity,
+                existing.identity_uncertainty,
+                existing.identity_provenance,
+            )
+            if (existing.entity_type, existing.source_system, existing.source_id) != (
+                kind, source_system, source_id
+            ) or actual != expected:
+                raise SubstrateError(
+                    "source identity already exists with a different payload; "
+                    "use its registered adapter to refresh it"
+                )
+            return existing
     entity = models.SubstrateEntity(
         entity_type=kind,
         display_name=name,
-        attributes=_dump_json(dict(attributes), "attributes"),
+        attributes=attributes_json,
         identity_key=identity_key,
         source_system=source_system,
         source_id=source_id,
-        canonical_identifier=_canonical_identifier(identity.get("canonical_identifier")),
-        normalized_identity=identity.get("normalized_identity") or normalize_identity(name),
+        canonical_identifier=canonical_identifier,
+        normalized_identity=normalized_identity,
         identity_state="candidate",
-        identity_uncertainty=identity.get("identity_uncertainty") or "Real-world identity is not independently corroborated.",
-        identity_provenance=_dump_json(identity.get("provenance", {}), "identity provenance"),
+        identity_uncertainty=identity_uncertainty,
+        identity_provenance=identity_provenance,
         created_by=owner,
     )
     db.add(entity)
@@ -927,6 +956,7 @@ def create_event(
     clean_source = (source or "").strip()
     if not clean_source:
         raise SubstrateError("event source is required")
+    normalized_occurred_at = _utc_naive(occurred_at)
     if idempotency_key:
         key = idempotency_key.strip()
         if not key:
@@ -935,6 +965,8 @@ def create_event(
         if existing is not None:
             if (existing.event_type, existing.entity_id, existing.relation_id, existing.payload) != (
                 kind, entity_id, relation_id, _dump_json(clean_payload, "payload")
+            ) or existing.source != clean_source or (
+                normalized_occurred_at is not None and existing.occurred_at != normalized_occurred_at
             ):
                 raise SubstrateError("event idempotency key collision; investigate before retrying")
             return existing
@@ -945,7 +977,7 @@ def create_event(
         payload=_dump_json(clean_payload, "payload"),
         source=clean_source,
         idempotency_key=key if idempotency_key else None,
-        occurred_at=_utc_naive(occurred_at) or models.utcnow(),
+        occurred_at=normalized_occurred_at or models.utcnow(),
     )
     db.add(event)
     db.flush()

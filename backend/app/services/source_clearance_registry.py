@@ -35,6 +35,7 @@ class SourceClearance:
     required_terms_phrases: tuple[str, ...]
     redirect_urls: tuple[str, ...]
     min_interval_seconds: int = 3600
+    policy_hostnames: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -48,6 +49,13 @@ class CollectionAuthorization:
 _GOVINFO_URL = "https://www.govinfo.gov/content/pkg/FR-2026-08-12/html/2026-16432.htm"
 _GOVINFO_ROBOTS = "https://www.govinfo.gov/robots.txt"
 _GOVINFO_TERMS = "https://www.govinfo.gov/about/policies"
+_CROSSREF_WORKS_URL = "https://api.crossref.org/works"
+_CROSSREF_ROBOTS = "https://api.crossref.org/robots.txt"
+_CROSSREF_TERMS = "https://www.crossref.org/documentation/retrieve-metadata/rest-api/"
+
+
+class SourceRateLimitError(PermissionError):
+    """A cleared source is temporarily unavailable under its rate policy."""
 
 SOURCE_CLEARANCES: tuple[SourceClearance, ...] = (
     SourceClearance(
@@ -74,6 +82,37 @@ SOURCE_CLEARANCES: tuple[SourceClearance, ...] = (
             "does not authorize any use or appropriation of such copyright material without consent",
         ),
         redirect_urls=(_GOVINFO_URL,),
+    ),
+    SourceClearance(
+        registry_id="crossref-public-works-metadata",
+        display_name="Crossref public scholarly metadata API",
+        collector="crossref",
+        url=_CROSSREF_WORKS_URL,
+        hostname="api.crossref.org",
+        geographies=("GLOBAL",),
+        categories=("scholarly_metadata", "research_discovery"),
+        allowed_need=(
+            "Discover scholarly publication metadata relevant to a research question; "
+            "do not retrieve or persist abstracts or full text."
+        ),
+        evidence_references=(
+            "docs/PUBLIC_SOURCES.md",
+            _CROSSREF_WORKS_URL,
+            _CROSSREF_ROBOTS,
+            _CROSSREF_TERMS,
+        ),
+        reviewed_on=date(2026, 9, 27),
+        valid_through=date(2026, 10, 27),
+        robots_url=_CROSSREF_ROBOTS,
+        terms_url=_CROSSREF_TERMS,
+        required_terms_phrases=(
+            "no sign-up is required to use the REST API",
+            "almost none of the metadata is subject to copyright",
+            "some abstracts contained in the metadata may be subject to copyright",
+        ),
+        redirect_urls=(_CROSSREF_WORKS_URL,),
+        min_interval_seconds=60,
+        policy_hostnames=("api.crossref.org", "www.crossref.org"),
     ),
 )
 
@@ -104,11 +143,14 @@ def validate_registry(entries: tuple[SourceClearance, ...]) -> tuple[SourceClear
             raise ValueError("Source registry IDs must be non-empty and unique")
         if not entry.display_name.strip() or not entry.allowed_need.strip():
             raise ValueError(f"Source registry entry {entry.registry_id} needs a name and bounded need")
-        if entry.collector != "web":
-            raise ValueError("Only exact-target web clearances are currently supported")
+        if entry.collector not in {"web", "crossref"}:
+            raise ValueError("Source clearance collector is not supported")
         if not _valid_https_url(entry.url, hostname=entry.hostname) or entry.url in urls:
             raise ValueError(f"Source registry entry {entry.registry_id} needs a unique canonical HTTPS URL")
-        if not entry.geographies or any(code != code.upper() or len(code) != 2 for code in entry.geographies):
+        if not entry.geographies or any(
+            code != "GLOBAL" and (code != code.upper() or len(code) != 2)
+            for code in entry.geographies
+        ):
             raise ValueError(f"Source registry entry {entry.registry_id} needs normalized geography codes")
         if not entry.categories or any(not value.strip() for value in entry.categories):
             raise ValueError(f"Source registry entry {entry.registry_id} needs at least one category")
@@ -124,10 +166,16 @@ def validate_registry(entries: tuple[SourceClearance, ...]) -> tuple[SourceClear
                     raise ValueError(f"Source registry entry {entry.registry_id} has an invalid documentation reference")
         if entry.reviewed_on > entry.valid_through:
             raise ValueError(f"Source registry entry {entry.registry_id} has an invalid review window")
-        if not _valid_https_url(entry.robots_url, hostname=entry.hostname):
-            raise ValueError(f"Source registry entry {entry.registry_id} needs same-host HTTPS robots evidence")
-        if not _valid_https_url(entry.terms_url, hostname=entry.hostname):
-            raise ValueError(f"Source registry entry {entry.registry_id} needs same-host HTTPS terms evidence")
+        policy_hostnames = entry.policy_hostnames or (entry.hostname,)
+        if entry.hostname not in policy_hostnames or any(
+            not hostname or hostname != hostname.casefold()
+            for hostname in policy_hostnames
+        ):
+            raise ValueError(f"Source registry entry {entry.registry_id} needs explicit policy hosts")
+        if not any(_valid_https_url(entry.robots_url, hostname=hostname) for hostname in policy_hostnames):
+            raise ValueError(f"Source registry entry {entry.registry_id} needs approved HTTPS robots evidence")
+        if not any(_valid_https_url(entry.terms_url, hostname=hostname) for hostname in policy_hostnames):
+            raise ValueError(f"Source registry entry {entry.registry_id} needs approved HTTPS terms evidence")
         if not entry.required_terms_phrases or any(not phrase.strip() for phrase in entry.required_terms_phrases):
             raise ValueError(f"Source registry entry {entry.registry_id} needs reviewed terms language")
         if not entry.redirect_urls or entry.url not in entry.redirect_urls:
@@ -155,7 +203,7 @@ def clearance_for_url(url: str) -> SourceClearance | None:
 def clearance_error(url: str, *, today: date | None = None) -> str | None:
     entry = clearance_for_url(url)
     if entry is None:
-        return "Web URL is not explicitly cleared in docs/PUBLIC_SOURCES.md"
+        return "Source target is not explicitly cleared in docs/PUBLIC_SOURCES.md"
     if not _valid_https_url(url, hostname=entry.hostname) or url != entry.url:
         return "Web URL is not a canonical cleared URL"
     current_date = today or datetime.now(timezone.utc).date()
@@ -215,7 +263,7 @@ def authorize_request(
     result = db.execute(statement)
     db.commit()
     if result.rowcount != 1:
-        raise PermissionError("Source rate limit is active; retry after the clearance interval")
+        raise SourceRateLimitError("Source rate limit is active; retry after the clearance interval")
     return CollectionAuthorization(entry=entry, reserved_at=current)
 
 
@@ -241,6 +289,9 @@ def clearance_metadata(entry: SourceClearance) -> dict:
     data = asdict(entry)
     for key in ("reviewed_on", "valid_through"):
         data[key] = data[key].isoformat()
-    for key in ("geographies", "categories", "evidence_references", "required_terms_phrases", "redirect_urls"):
+    for key in (
+        "geographies", "categories", "evidence_references",
+        "required_terms_phrases", "redirect_urls", "policy_hostnames",
+    ):
         data[key] = list(data[key])
     return data

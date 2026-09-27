@@ -79,16 +79,18 @@ def judge_specs():
     ]
 
 
-def test_media_claim_creates_multiple_source_tasks_without_duplication(db):
+def test_media_claim_creates_subquestions_on_cleared_sources_without_duplication(db):
     claim, _ = make_claim_task(db)
     question = db.query(models.ResearchQuestion).filter_by(source_claim_id=claim.id).one()
 
     tasks = research_planner.plan_tasks_for_question(db, question)
     again = research_planner.plan_tasks_for_question(db, question)
 
-    assert len(tasks) >= 2
+    assert len(tasks) == 3
     assert len(again) == 0
-    assert {task.source for task in tasks}.issuperset({"reddit", "github"})
+    assert {task.source for task in tasks} == {"crossref"}
+    assert len({task.query for task in tasks}) == 3
+    assert all(task.results["research_plan"]["subquestions"] for task in tasks)
     assert all(task.claim_id == claim.id for task in tasks)
 
 
@@ -244,7 +246,7 @@ def test_unapproved_web_url_fails_without_collection(db, monkeypatch):
     assert db.query(models.Signal).count() == 0
 
 
-def test_cleared_web_url_gets_registry_authorization(db, monkeypatch):
+def test_cleared_web_url_gets_registry_authorization(db, monkeypatch, govinfo_review_clock):
     _, task = make_claim_task(db)
     task.source = "web"
     task.query = "https://www.govinfo.gov/content/pkg/FR-2026-08-12/html/2026-16432.htm"
@@ -264,7 +266,9 @@ def test_cleared_web_url_gets_registry_authorization(db, monkeypatch):
     assert frozenset(observed["authorization"].entry.redirect_urls) == collector_runner.CLEARED_WEB_URLS
 
 
-def test_web_collection_stores_registry_identity_in_signal_provenance(db, monkeypatch):
+def test_web_collection_stores_registry_identity_in_signal_provenance(
+    db, monkeypatch, govinfo_review_clock
+):
     _, task = make_claim_task(db)
     task.source = "web"
     task.query = "https://www.govinfo.gov/content/pkg/FR-2026-08-12/html/2026-16432.htm"

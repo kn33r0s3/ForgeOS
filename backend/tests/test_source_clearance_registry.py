@@ -84,3 +84,49 @@ def test_registry_validation_rejects_unsafe_redirect_and_missing_evidence():
 def test_uncleared_collector_families_are_not_active():
     assert registry.collector_is_cleared("web", today=date(2026, 9, 25))
     assert not registry.collector_is_cleared("reddit", today=date(2026, 9, 25))
+
+
+def test_crossref_api_clearance_is_bounded_and_current(db):
+    entry = next(
+        item for item in registry.source_clearances()
+        if item.collector == "crossref"
+    )
+    assert entry.url == "https://api.crossref.org/works"
+    assert entry.geographies == ("GLOBAL",)
+    assert entry.min_interval_seconds == 60
+    assert registry.collector_is_cleared("crossref", today=date(2026, 9, 27))
+    assert not registry.collector_is_cleared("crossref", today=date(2026, 10, 28))
+
+    authorization = registry.authorize_request(
+        entry.url,
+        collector="crossref",
+        db=db,
+        today=date(2026, 9, 27),
+        now=datetime(2026, 9, 27, 12, tzinfo=timezone.utc),
+    )
+    assert authorization.entry == entry
+    with pytest.raises(registry.SourceRateLimitError):
+        registry.authorize_request(
+            entry.url,
+            collector="crossref",
+            db=db,
+            today=date(2026, 9, 27),
+            now=datetime(2026, 9, 27, 12, 0, 59, tzinfo=timezone.utc),
+        )
+
+
+def test_crossref_clearance_is_documented_in_public_source_register():
+    entry = next(
+        item for item in registry.source_clearances()
+        if item.collector == "crossref"
+    )
+    source_register = Path(__file__).resolve().parents[2] / "docs" / "PUBLIC_SOURCES.md"
+    register_text = source_register.read_text()
+
+    assert entry.url in register_text
+    assert all(
+        reference in register_text
+        if reference.startswith("https://")
+        else (source_register.parents[1] / reference).exists()
+        for reference in entry.evidence_references
+    )

@@ -237,7 +237,9 @@ def compare_judgments(
         summary = "Judges reached materially different conclusions; Forge preserves both views."
     disagreement_points = [{"labels": sorted(labels), "question": question}] if outcome in {"disagreement", "partial_agreement"} else []
     follow_up = None
-    if outcome in {"disagreement", "partial_agreement", "missing_evidence"}:
+    if outcome in {"disagreement", "partial_agreement"} or (
+        outcome == "missing_evidence" and normalized_ids
+    ):
         detail = "Resolve disagreement about" if outcome != "missing_evidence" else "Find missing evidence for"
         follow_up = _follow_up_question(db, f"{detail}: {question}", claim_id=claim_id)
     comparison = models.JudgmentComparison(

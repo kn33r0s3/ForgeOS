@@ -94,7 +94,7 @@ export default function AnalyzePage() {
             >
               {loading ? statusText + "…" : "Research this problem"}
             </button>
-            <span className="text-sm text-neutral-400">ForgeOS researches the problem, gathers evidence, and turns it into an action brief.</span>
+            <span className="text-sm text-neutral-400">ForgeOS checks authorized sources. Research leads are not proof of customer demand.</span>
           </div>
         </form>
 
@@ -151,6 +151,54 @@ export default function AnalyzePage() {
               {typeof result.evidence_count === "number" ? `\nEvidence collected: ${result.evidence_count}` : ""}
             </Section>
           </div>
+
+          {result.research_plan && (
+            <div className="grid gap-5 lg:grid-cols-2">
+              <Section title="Research plan">
+                {result.research_plan.subquestions.map((question) => `• ${question}`).join("\n")}
+                {"\n\n"}
+                Candidate sources:
+                {"\n"}
+                {result.research_plan.candidate_sources
+                  .map((source) => `• ${source.source}: ${source.available ? "available" : source.reason || "not cleared"}`)
+                  .join("\n")}
+                {"\n\n"}
+                {result.research_plan.assumptions.map((item) => `Assumption: ${item}`).join("\n")}
+              </Section>
+              <Section title="Attributed source records">
+                {result.research_sources && result.research_sources.length > 0 ? (
+                  <div className="space-y-4">
+                    {result.research_sources.map((source) => (
+                      <article key={source.evidence_id} className="border-b border-white/10 pb-3 last:border-0">
+                        {source.url ? (
+                          <a
+                            href={source.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-medium text-white underline decoration-forge-accent/60 underline-offset-4"
+                          >
+                            {source.title || source.external_id || `Evidence #${source.evidence_id}`}
+                          </a>
+                        ) : (
+                          <p className="font-medium text-white">{source.title || `Evidence #${source.evidence_id}`}</p>
+                        )}
+                        <p className="mt-1 break-all text-xs text-neutral-400">
+                          {source.source}
+                          {source.published_at ? ` · published ${source.published_at}` : ""}
+                          {source.retrieved_at ? ` · retrieved ${source.retrieved_at}` : ""}
+                        </p>
+                        <p className="mt-1 text-xs text-neutral-400">
+                          Evidence #{source.evidence_id} · relevance {source.relevance}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  "No external source records have been persisted for this question yet."
+                )}
+              </Section>
+            </div>
+          )}
 
           <div className="grid gap-5 lg:grid-cols-2">
             <Section title="Uncertainty">

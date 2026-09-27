@@ -128,6 +128,30 @@ def test_insufficient_evidence_remains_resumable(db, monkeypatch):
     assert db.query(models.ResearchTaskEvent).filter_by(task_id=task.id, event_type="remaining_question").count() == 1
 
 
+def test_rate_limited_research_is_deferred_without_consuming_attempt(db, monkeypatch):
+    task = make_task(db)
+    task.source = "crossref"
+    db.commit()
+
+    def rate_limited(*args, **kwargs):
+        from app.services.source_clearance_registry import SourceRateLimitError
+
+        raise SourceRateLimitError("Source rate limit is active")
+
+    monkeypatch.setattr(
+        collector_runner.source_clearance_registry,
+        "authorize_request",
+        rate_limited,
+    )
+
+    result = collector_runner.execute_task(db, task)
+
+    assert result["status"] == "planned"
+    assert result["deferred"] is True
+    assert db.get(models.ResearchTask, task.id).attempts == 0
+    assert db.query(models.ResearchTaskEvent).filter_by(task_id=task.id, event_type="deferred").count() == 1
+
+
 def test_task_survives_sqlite_restart(tmp_path):
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker

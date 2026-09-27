@@ -143,6 +143,28 @@ def test_failed_judge_missing_evidence_and_contradiction_are_preserved(db):
     assert db.get(models.Claim, claim.id).epistemic_state == "contested"
 
 
+def test_no_available_judges_does_not_create_recursive_research_questions(db):
+    evidence = evidence_fixture(db)
+    judgments = multi_judge.run_judgments(
+        db,
+        question="Does this publication establish customer demand?",
+        evidence_ids=[evidence.id],
+        judges=[],
+    )
+
+    comparison = multi_judge.compare_judgments(
+        db,
+        question="Does this publication establish customer demand?",
+        judgment_ids=[item.id for item in judgments],
+        evidence_ids=[evidence.id],
+    )
+
+    assert judgments == []
+    assert comparison.outcome == "missing_evidence"
+    assert comparison.follow_up_question_id is None
+    assert db.query(models.ResearchQuestion).count() == 0
+
+
 def test_new_evidence_allows_rejudgment_with_new_work_key(db):
     first = evidence_fixture(db, "https://example.test/judgment-1")
     second = evidence_fixture(db, "https://example.test/judgment-2")

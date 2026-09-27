@@ -84,6 +84,15 @@ def test_type_entity_and_identity_api_use_canonical_services(substrate_client, d
     assert substrate_client.get(f"/forge/substrate/entities/{first.json()['id']}").json()["source_id"] == "resource-17"
     assert db.query(models.SubstrateEntity).filter_by(identity_key="source:field_resource:catalogue:resource-17").count() == 1
 
+    conflicting_retry = substrate_client.post(
+        "/forge/substrate/entities",
+        json={**body, "attributes": {"region": "Madhesh"}},
+    )
+    assert conflicting_retry.status_code == 409
+    persisted = substrate_client.get(f"/forge/substrate/entities/{first.json()['id']}")
+    assert persisted.json()["attributes"] == {"region": "Koshi"}
+    assert db.query(models.SubstrateEntity).filter_by(identity_key="source:field_resource:catalogue:resource-17").count() == 1
+
     deprecated = substrate_client.post(
         "/forge/substrate/types/entity_type/field_resource/status",
         json={
@@ -195,6 +204,12 @@ def test_event_and_capability_api_enforce_lifecycle_and_idempotency(substrate_cl
     repeated_event = substrate_client.post("/forge/substrate/events", json=event_body)
     assert first_event.status_code == 201, first_event.text
     assert repeated_event.json()["id"] == first_event.json()["id"]
+    conflicting_event = substrate_client.post(
+        "/forge/substrate/events",
+        json={**event_body, "source": "different-agent"},
+    )
+    assert conflicting_event.status_code == 409
+    assert db.query(models.WorldEvent).filter_by(idempotency_key=event_body["idempotency_key"]).count() == 1
     assert substrate_client.get("/forge/substrate/events", params={"entity_id": entity["id"]}).json()
 
     capability_body = {

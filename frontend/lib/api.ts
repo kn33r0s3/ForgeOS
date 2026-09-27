@@ -559,6 +559,51 @@ export interface AnalyzeResponse {
   research_status?: string;
   evidence_count?: number;
   findings_summary?: string | null;
+  research_plan?: ResearchPlan;
+  research_sources?: ResearchEvidenceSource[];
+}
+
+export interface ResearchPlan {
+  subquestions: string[];
+  assumptions: string[];
+  unknowns: string[];
+  candidate_sources: ResearchCandidateSource[];
+  selected_sources: string[];
+  stopping_conditions: string[];
+  known_observations: ResearchObservation[];
+}
+
+export interface ResearchCandidateSource {
+  source: string;
+  available: boolean;
+  rank: number;
+  rationale?: string;
+  reason?: string;
+  scope?: string;
+}
+
+export interface ResearchObservation {
+  signal_id: number;
+  evidence_id: number;
+  source: string;
+  title: string | null;
+  url: string;
+  published_at: string | null;
+  retrieved_at: string | null;
+  matched_term_fraction: number;
+  epistemic_status: string;
+}
+
+export interface ResearchEvidenceSource {
+  signal_id: number;
+  evidence_id: number;
+  title: string | null;
+  url: string | null;
+  external_id: string | null;
+  published_at: string | null;
+  retrieved_at: string | null;
+  source: string;
+  relevance: string;
 }
 
 // ---------- request plumbing ----------

@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from sqlalchemy import cast, String
 from sqlalchemy.orm import Session
 
 from app import models
@@ -43,8 +44,13 @@ def sync_market_signal_signals(db: Session, *, limit: int = 250) -> dict[str, in
         "unresolved_signals": 0,
     }
 
+    projected_source_ids = (
+        db.query(models.SubstrateEntity.source_id)
+        .filter_by(entity_type="market_signal", source_system="signals")
+    )
     signals = (
         db.query(models.Signal)
+        .filter(~cast(models.Signal.id, String).in_(projected_source_ids))
         .order_by(models.Signal.id.asc())
         .limit(max(1, int(limit)))
         .all()
@@ -63,7 +69,7 @@ def sync_market_signal_signals(db: Session, *, limit: int = 250) -> dict[str, in
                     created_by="market_signal_substrate_adapter",
                     source_system="signals",
                 )
-        except Exception:
+        except world_graph.SubstrateError:
             result["unresolved_signals"] += 1
             continue
 

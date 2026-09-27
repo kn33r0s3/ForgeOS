@@ -52,8 +52,14 @@ def analyze_idea(payload: schemas.AnalyzeRequest, db: Session = Depends(get_db))
         db.commit()
         db.refresh(question)
 
-    tasks = research_planner.plan_tasks_for_question(db, question)
-    task_results = collector_runner.run_pending_tasks(db, limit=max(1, len(tasks))) if tasks else []
+    research_planner.plan_tasks_for_question(db, question)
+    collector_runner.run_pending_tasks(db, limit=1)
+    tasks = (
+        db.query(models.ResearchTask)
+        .filter(models.ResearchTask.question_id == question.id)
+        .order_by(models.ResearchTask.id.asc())
+        .all()
+    )
 
     evidence_ids = []
     for task in db.query(models.ResearchTask).filter(models.ResearchTask.question_id == question.id).all():
@@ -68,55 +74,87 @@ def analyze_idea(payload: schemas.AnalyzeRequest, db: Session = Depends(get_db))
         .all()
     )
     evidence_count = len({edge.evidence_id for edge in claim_evidence})
+    evidence_quality = "LIMITED"
     if evidence_count == 0 and evidence_ids:
         evidence_count = len(evidence_ids)
 
-    if task_results and any(result.get("status") == "completed" for result in task_results):
+    states = {task.status for task in tasks}
+    has_pending_tasks = bool(states & {"planned", "running"})
+    has_unresolved_tasks = bool(states & {"failed", "needs_research"})
+    task_evidence_count = len(set(evidence_ids))
+    all_tasks_collected = bool(tasks) and states == {"completed"} and task_evidence_count > 0
+    if all_tasks_collected:
         research_status = "research_completed"
     elif evidence_count > 0:
         research_status = "evidence_found"
-    elif any(result.get("status") in {"failed", "needs_research"} for result in task_results):
+    elif states & {"failed"}:
         research_status = "research_failed"
+    elif states & {"needs_research"} or states == {"completed"}:
+        research_status = "research_needs_evidence"
     else:
         research_status = "research_started"
 
-    unknowns = [
-        "Willingness to pay (UNKNOWN until tested)",
-        "Frequency / severity across a representative sample (LIMITED evidence)",
-        "Existing alternatives and switching costs (UNKNOWN)",
-        "True market size (ESTIMATED at best, not measured)",
-        "Acquisition path that actually works (UNKNOWN)",
-    ]
+    research_plan = (
+        tasks[0].results.get("research_plan")
+        if tasks and isinstance(tasks[0].results, dict)
+        else None
+    ) or research_planner.build_research_plan(db, question)
+    unknowns = list(research_plan["unknowns"])
+    if not evidence_count:
+        unknowns.insert(0, "No external research evidence has been persisted for this question yet.")
 
-    evidence_quality = "LIMITED"
-    if evidence_count >= 3:
-        evidence_quality = "MODERATE"
-    if evidence_count >= 8:
-        evidence_quality = "STRONG"
+    source_results_by_evidence: dict[int, dict] = {}
+    for task in tasks:
+        task_results = task.results if isinstance(task.results, dict) else {}
+        for source_result in task_results.get("source_results", []):
+            if isinstance(source_result, dict) and isinstance(source_result.get("evidence_id"), int):
+                source_results_by_evidence[source_result["evidence_id"]] = source_result
+    research_sources = list(source_results_by_evidence.values())
 
     recommended = (
-        "Interview or contact 10–20 people in the stated target audience. "
-        "Record how many confirm the problem, how severe they rate it, "
-        "and whether they would pay for a solution (and at what price). "
-        "This produces ACTUAL evidence; research results remain provisional until tested."
+        "After reviewing the cited sources and unresolved questions, the cheapest meaningful validation "
+        "is a consent-based conversation with people in the relevant group. Record actual confirmations, "
+        "rejections, severity, and any stated willingness to pay. ForgeOS does not contact anyone or "
+        "treat a proposed test as an executed experiment."
     )
+
+    if all_tasks_collected:
+        findings_summary = (
+            f"All {len(tasks)} planned source tasks returned attributable records. This completes "
+            "collection only: relevance, factual support, customer demand, willingness to pay, and "
+            "commercial viability remain unvalidated."
+        )
+    elif evidence_count:
+        findings_summary = (
+            f"Persisted {evidence_count} attributable evidence record(s); "
+            f"{sum(task.status in {'planned', 'running'} for task in tasks)} task(s) remain queued or running. "
+            "These are research leads, not validated demand."
+        )
+    elif has_pending_tasks:
+        findings_summary = (
+            f"{len(tasks)} durable task(s) are planned or running; no external evidence has been persisted yet."
+        )
+    elif has_unresolved_tasks:
+        findings_summary = (
+            f"No external evidence was persisted. {len(tasks)} task(s) ended with an access failure or no-result "
+            "outcome and remain unverified."
+        )
+    else:
+        findings_summary = "No cleared external source strategy is currently available for this question."
 
     return schemas.AnalyzeResponse(
         opportunity_id=None,
         problem=idea,
-        target_customer="Customer segment not yet validated by research",
+        target_customer="Customer segment not yet identified or validated",
         market_analysis=(
-            "Research has started, but no opportunity is claimed until the problem, target customer, "
-            "and willingness-to-pay signals are validated with actual evidence."
+            "No opportunity is claimed. Bibliographic search results can identify research leads, but do not "
+            "establish an unmet need, a customer, willingness to pay, or a business case."
         ),
         solution="No solution is claimed yet; research is still validating the problem.",
         business_model="No validated business model is claimed yet.",
         pricing_idea="",
         mvp_plan="",
-        validation_plan=(
-            "Validate whether the problem is real by interviewing the intended users and checking whether "
-            "customers confirm the pain and would pay for a fix."
-        ),
+        validation_plan=recommended,
         difficulty="unknown",
         score=0.0,
         signal_id=signal.id,
@@ -136,10 +174,9 @@ def analyze_idea(payload: schemas.AnalyzeRequest, db: Session = Depends(get_db))
         research_task_ids=[task.id for task in tasks],
         research_status=research_status,
         evidence_count=evidence_count,
-        findings_summary=(
-            f"Research has created {len(tasks)} task(s) and collected {evidence_count} evidence item(s) "
-            f"for review. No opportunity is claimed until evidence is strong enough to justify it."
-        ),
+        findings_summary=findings_summary,
+        research_plan=research_plan,
+        research_sources=research_sources,
     )
 
 

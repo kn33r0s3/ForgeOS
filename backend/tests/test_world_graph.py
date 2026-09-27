@@ -120,6 +120,98 @@ def test_type_registry_validates_open_domain_attributes(db):
     assert db.query(models.WorldEvent).filter_by(event_type="type_status_changed").count() == 2
 
 
+def test_source_identity_retry_rejects_conflicting_entity_payload(db):
+    _seed(db)
+    identity = {
+        "source_system": "catalogue",
+        "source_id": "asset-17",
+        "canonical_identifier": "https://example.test/assets/17",
+        "provenance": {"source_ref": "catalogue:asset-17"},
+    }
+    original = world_graph.create_entity(
+        db,
+        entity_type="resource",
+        display_name="Available storage",
+        attributes={"capacity": 2},
+        created_by="catalogue_adapter",
+        identity=identity,
+    )
+    repeated = world_graph.create_entity(
+        db,
+        entity_type="resource",
+        display_name="Available storage",
+        attributes={"capacity": 2},
+        created_by="catalogue_adapter",
+        identity=identity,
+    )
+
+    assert repeated.id == original.id
+
+    conflicting_payloads = (
+        {"display_name": "Different resource", "attributes": {"capacity": 2}, "identity": identity},
+        {"display_name": "Available storage", "attributes": {"capacity": 3}, "identity": identity},
+        {
+            "display_name": "Available storage",
+            "attributes": {"capacity": 2},
+            "identity": {**identity, "provenance": {"source_ref": "different-record"}},
+        },
+    )
+    for conflict in conflicting_payloads:
+        with pytest.raises(world_graph.SubstrateError, match="source identity.*different payload"):
+            world_graph.create_entity(
+                db,
+                entity_type="resource",
+                created_by="catalogue_adapter",
+                **conflict,
+            )
+
+    db.refresh(original)
+    assert original.display_name == "Available storage"
+    assert json.loads(original.attributes) == {"capacity": 2}
+    assert json.loads(original.identity_provenance) == {"source_ref": "catalogue:asset-17"}
+    assert db.query(models.SubstrateEntity).filter_by(identity_key=original.identity_key).count() == 1
+
+
+def test_event_idempotency_rejects_provenance_and_timestamp_conflicts(db):
+    _seed(db)
+    entity = world_graph.create_entity(
+        db, entity_type="resource", display_name="Event subject",
+        attributes={}, created_by="test_agent",
+    )
+    occurred_at = datetime(2026, 9, 25, 12, tzinfo=timezone.utc)
+    event_args = {
+        "event_type": "state_changed",
+        "entity_id": entity.id,
+        "source": "reviewed_source",
+        "payload": {"state": "observed"},
+        "occurred_at": occurred_at,
+        "idempotency_key": "event-review-source-1",
+    }
+    original = world_graph.create_event(db, **event_args)
+    repeated = world_graph.create_event(db, **event_args)
+    assert repeated.id == original.id
+
+    with pytest.raises(world_graph.SubstrateError, match="event idempotency key collision"):
+        world_graph.create_event(db, **{**event_args, "source": "different_source"})
+    with pytest.raises(world_graph.SubstrateError, match="event idempotency key collision"):
+        world_graph.create_event(
+            db,
+            **{
+                **event_args,
+                "occurred_at": datetime(2026, 9, 25, 12, 1, tzinfo=timezone.utc),
+            },
+        )
+
+    implicit_time_args = {
+        **event_args,
+        "idempotency_key": "event-generated-time-1",
+        "occurred_at": None,
+    }
+    first_implicit_time = world_graph.create_event(db, **implicit_time_args)
+    repeated_implicit_time = world_graph.create_event(db, **implicit_time_args)
+    assert repeated_implicit_time.id == first_implicit_time.id
+
+
 def test_direct_type_activation_assignment_is_rejected(db):
     _seed(db)
     registry = world_graph.register_type(

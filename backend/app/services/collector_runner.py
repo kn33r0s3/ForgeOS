@@ -29,6 +29,7 @@ from app.services.collectors.github import GithubCollector
 from app.services.collectors.rss import RSSCollector
 from app.services.collectors.arxiv import ArxivCollector
 from app.services.collectors.web import WebCollector
+from app.services.collectors.crossref import API_URL as CROSSREF_API_URL, CrossrefCollector
 from app.services import research_task_engine
 from app.services import evidence_graph
 from app.services import tool_usefulness
@@ -41,6 +42,7 @@ COLLECTORS = {
     "news": RSSCollector,  # backward-compat alias — see rss.py's docstring
     "arxiv": ArxivCollector,
     "web": WebCollector,
+    "crossref": CrossrefCollector,
 }
 
 # Bulk feeds are not cleared in docs/PUBLIC_SOURCES.md. Clearances are
@@ -80,6 +82,24 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
         except Exception as exc:
             research_task_engine.fail_task(db, task, str(exc))
             return {"task_id": task.id, "status": "failed", "reason": str(exc)}
+    elif task.source == "crossref":
+        try:
+            authorization = source_clearance_registry.authorize_request(
+                CROSSREF_API_URL,
+                collector=task.source,
+                db=db,
+            )
+        except source_clearance_registry.SourceRateLimitError as exc:
+            research_task_engine.defer_task(db, task, str(exc))
+            return {
+                "task_id": task.id,
+                "status": "planned",
+                "deferred": True,
+                "reason": str(exc),
+            }
+        except Exception as exc:
+            research_task_engine.fail_task(db, task, str(exc))
+            return {"task_id": task.id, "status": "failed", "reason": str(exc)}
 
     collector_cls = COLLECTORS.get(task.source)
     if not collector_cls:
@@ -103,10 +123,20 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
     observer = ObserverEngine(db)
 
     try:
-        if authorization:
+        if task.source == "web":
+            raw_items = collector.collect(task.query, authorization=authorization)
+        elif task.source == "crossref":
             raw_items = collector.collect(task.query, authorization=authorization)
         else:
             raw_items = collector.collect(task.query)
+    except source_clearance_registry.SourceRateLimitError as exc:
+        research_task_engine.defer_task(db, task, str(exc))
+        return {
+            "task_id": task.id,
+            "status": "planned",
+            "deferred": True,
+            "reason": str(exc),
+        }
     except Exception as exc:
         research_task_engine.fail_task(db, task, str(exc))
         tool_usefulness.record_usage(
@@ -122,6 +152,7 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
 
     created_signal_ids = []
     evidence_ids = []
+    source_results = []
     for raw_item in raw_items:
         normalized = collector.normalize(raw_item)
         if authorization:
@@ -157,6 +188,19 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
         )
         if evidence:
             evidence_ids.append(evidence.id)
+            source_results.append(
+                {
+                    "signal_id": signal.id,
+                    "evidence_id": evidence.id,
+                    "title": signal.title,
+                    "url": signal.canonical_url,
+                    "external_id": signal.external_id,
+                    "published_at": signal.published_at.isoformat() if signal.published_at else None,
+                    "retrieved_at": signal.retrieved_at.isoformat() if signal.retrieved_at else None,
+                    "source": signal.source,
+                    "relevance": "unassessed",
+                }
+            )
             statement = (normalized.get("content") or "").strip()[:400]
             if statement and not task.claim_id:
                 claim, _ = evidence_graph.create_or_get_claim(
@@ -181,6 +225,12 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
     final_task = research_task_engine.finish_task(
         db, task, signal_ids=created_signal_ids, evidence_ids=evidence_ids
     )
+    final_task.results = {
+        **(final_task.results or {}),
+        "source_results": source_results,
+        "source_result_count": len(source_results),
+    }
+    db.commit()
     claim_evidence_ids = evidence_ids
     if task.claim_id:
         claim_evidence_ids = [

@@ -55,7 +55,9 @@ def test_unapproved_collector_families_fail_before_network(monkeypatch):
             collector.collect("automation")
 
 
-def test_web_collector_extracts_substantive_text_only_with_rate_authorization(db, monkeypatch):
+def test_web_collector_extracts_substantive_text_only_with_rate_authorization(
+    db, monkeypatch, govinfo_review_clock
+):
     body = (
         "Our company operates a support desk for a growing team. "
         "We currently manage customer requests by email and spreadsheets. "
@@ -118,7 +120,7 @@ def test_cleared_page_redirect_cannot_leave_the_allowlist():
     assert redirected.full_url == approved
 
 
-def test_live_source_clearance_checks_robots_and_terms(db, monkeypatch):
+def test_live_source_clearance_checks_robots_and_terms(db, monkeypatch, govinfo_review_clock):
     entry = source_clearance_registry.source_clearances()[0]
     authorization = source_clearance_registry.authorize_request(
         entry.url,
@@ -144,7 +146,7 @@ def test_live_source_clearance_checks_robots_and_terms(db, monkeypatch):
     assert fetched == [entry.robots_url, entry.terms_url]
 
 
-def test_live_source_clearance_fails_when_robots_blocks_page(db, monkeypatch):
+def test_live_source_clearance_fails_when_robots_blocks_page(db, monkeypatch, govinfo_review_clock):
     entry = source_clearance_registry.source_clearances()[0]
     authorization = source_clearance_registry.authorize_request(
         entry.url,
@@ -162,7 +164,9 @@ def test_live_source_clearance_fails_when_robots_blocks_page(db, monkeypatch):
         WebCollector()._verify_live_clearance(entry.url, authorization)
 
 
-def test_live_source_clearance_fails_when_terms_permission_changes(db, monkeypatch):
+def test_live_source_clearance_fails_when_terms_permission_changes(
+    db, monkeypatch, govinfo_review_clock
+):
     entry = source_clearance_registry.source_clearances()[0]
     authorization = source_clearance_registry.authorize_request(
         entry.url,

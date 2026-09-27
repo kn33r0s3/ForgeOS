@@ -197,6 +197,8 @@ class AnalyzeResponse(BaseModel):
     research_status: str = "research_started"
     evidence_count: int = 0
     findings_summary: Optional[str] = None
+    research_plan: dict = Field(default_factory=dict)
+    research_sources: List[dict] = Field(default_factory=list)
 
 
 # ---------- Pattern-run (pattern engine trigger) ----------

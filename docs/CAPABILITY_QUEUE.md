@@ -151,6 +151,15 @@ enforcement layer when claims overlap.
 - Authority during this slice: `research_questions` owns question content/status and explicit source fields; registered WorldRelations are graph projections only. Feed visibility remains its existing gate.
 - Repository evidence: read-only inspection of `storage/forge.db` found 89 ResearchQuestions: 23 with `source_pattern_id`, 52 with `source_belief_id`, and none with `source_claim_id` or `source_rare_signal_id`. These explicit relationships are not currently projected by the legacy record adapter.
 - Acceptance: supported explicit FKs map to one directed typed relation with full provenance; missing/ambiguous/inactive sources remain unresolved; repeat sync/restart creates no duplicates; no question/Claim/Belief state or source payload changes; Feed/Network visibility stays intact; full backend suite passes.
+- Status: DONE — `cd backend && ../.venv/bin/python -m pytest tests/test_research_question_relation_substrate_adapter.py -q` → 4 passed. `cd backend && ../.venv/bin/python -m pytest tests -q` → 364 passed, 21 warnings. The explicit-FK adapter creates directed, hypothesized `derived_from` relations only for registered source fields; missing sources and a deprecated relation type remain unresolved, text similarity creates no relation, and restart retries create no duplicates. The adapter is called from the canonical Forge cycle; no source rows or target truth were changed.
+
+## [CLAIMED] Preserve failures in market-signal substrate projection
+
+- Agent: Copilot, user-directed current task
+- Claimed at: 2026-09-27T07:00:00Z
+- Scope: narrow the market-signal adapter's broad exception handler to expected substrate conflicts so programming, database, and infrastructure failures are not silently reclassified as unresolved data. Keep expected `SubstrateError` handling nonfatal and preserve subsequent cycle behavior for known source conflicts. No schema changes.
+- Acceptance: expected substrate conflicts increment `unresolved_signals`; unexpected exceptions propagate; normal projection/idempotency tests and the full backend suite pass.
+- Status: DONE — `cd backend && ../.venv/bin/python -m pytest tests/test_wave2_market_signal_domain.py -q` → 3 passed. `cd backend && ../.venv/bin/python -m pytest tests -q` → 366 passed, 21 warnings. Known `SubstrateError` identity conflicts remain counted as unresolved; unexpected runtime errors propagate. No schema change. Live checks during this slice: frontend `/` → HTTP 200; backend `/health` → HTTP 200. `git diff --check` → clean.
 
 ## [CLAIMED] Wave 2 — generic market signal substrate projection
 
@@ -161,6 +170,23 @@ enforcement layer when claims overlap.
 - Acceptance: `world_graph.seed_core_types()` includes `market_signal`, `market_segment`, `signals`, `tracks`, `responds_to`, and the `market_signal_observed` event type; raw signals create one wrapper entity per source row, one `signals` relation, one typed observation event, and one `hypothesized` evidence item; repeated sync is idempotent; the canonical Forge cycle includes the adapter in the substrate summary; the backend suite passes under the repo virtual environment with no destructive schema changes.
 - Status: DONE — the new adapter is implemented in `backend/app/services/market_signal_substrate_adapter.py`, registered in the Forge cycle, and verified by the focused regression tests plus the backend suite.
 
+## [CLAIMED] Advance bounded market-signal projection batches
+
+- Agent: Copilot, user-directed current task
+- Claimed at: 2026-09-27T07:05:00Z
+- Scope: prevent the registered market-signal adapter from retrying only the lowest-ID batch forever. Select the next unprojected source rows in bounded batches using the existing source-linked market-signal entity identity; preserve exact retry behavior and source table authority. No cursor table or schema changes.
+- Acceptance: repeated calls with a fixed limit project every source Signal exactly once across batches; subsequent calls do not duplicate entities, relations, events, or evidence; existing adapter and full backend tests pass.
+- Status: DONE — `cd backend && ../.venv/bin/python -m pytest tests/test_wave2_market_signal_domain.py -q` → 4 passed. `cd backend && ../.venv/bin/python -m pytest tests -q` → 367 passed, 21 warnings. Repeated limit-2 sync calls projected three Signals in batches of 2, 1, then 0 without duplicates. Frontend `/` and backend `/health` both returned HTTP 200; `git diff --check` was clean. No schema change.
+
+## [CLAIMED] Enable source-grounded general research with honest completion state
+
+- Agent: Copilot, user-directed current task
+- Claimed at: 2026-09-27T13:03:00Z
+- Scope: trace and correct `/analyze` task/result status; replace planner defaults that point only to uncleared feeds with general-purpose, permissioned source strategies; persist subquestions, prior public observations, unknowns, assumptions, source status, and restart-safe follow-up tasks in the existing ResearchQuestion/ResearchTask/Evidence/Signal path. Add a no-key Crossref public metadata API adapter using only fields safe for reuse (never abstracts), current policy validation, persistent rate limiting, source timestamps/provenance, and recoverable deferrals. Preserve the expired GovInfo clearance and do not create unsupported claims/opportunities.
+- Source review evidence: Crossref REST API docs state public access requires no signup and metadata may be used for any purpose while some abstracts may be copyrighted; access docs state public pool is rate limited. On 2026-09-27, Crossref API returned records for independent searches on repair-scheduling demand and Nepal postharvest loss. Its `/robots.txt` returned 404; the integration uses only the documented `/works` API, not site crawling.
+- Acceptance: unfamiliar, unrelated questions produce reusable source plans/subquestions; actual API records persist with DOI/URL, retrieval/publication timestamps and source provenance; no abstract is stored; no result is called complete when incomplete/empty; rate-limit deferrals do not consume retry attempts; retry/restart is idempotent; focused + full backend tests and local HTTP/runtime checks pass.
+- Status: BUILDING
+
 ## [CLAIMED] Vercel FastAPI ingress ownership and verification
 
 - Agent: GitHub Copilot, user-directed current task
@@ -169,3 +195,19 @@ enforcement layer when claims overlap.
 - Authority: `backend/app/main.py` owns direct and `/api`-prefixed HTTP aliases; the Vercel top-level rewrite selects the API service and passes the original path. Existing FastAPI routers/services remain the sole implementation.
 - Acceptance: the Vercel configuration parses with the API rooted at `backend/`, framework `fastapi`, and entrypoint `app.main:app`; local cold-start checks return 200 for `/health`, `/api/health`, `/public/feed`, and `/api/public/feed`; public-feed tests/build pass; deployment health and feed smoke return JSON/200 before status is DONE.
 - Status: CODE COMPLETE, PRODUCTION BLOCKED — verification evidence (2026-09-26, macOS/Python 3.13): `cd backend && ../.venv/bin/python -m pytest tests/test_public_feed.py -q` → 10 passed; `cd backend && ../.venv/bin/python -m pytest -q` → 362 passed, 21 warnings; `npm run typecheck && npm run build` → passed; `git diff --check` → clean. A `VERCEL=1` cold-start `TestClient` check with an isolated `/tmp` SQLite URL returned 200 for `/health`, `/api/health`, `/public/feed?limit=1`, and `/api/public/feed?limit=1`. Live production probes on 2026-09-26 still return HTTP 500. Deployment and owner-only function logs are unavailable in this session. Do not mark DONE until production `/api/health` and `/api/public/feed` return JSON successfully.
+
+## [CLAIMED] Reject conflicting substrate source-identity retries
+
+- Agent: Copilot, user-directed current task
+- Claimed at: 2026-09-27T06:43:00Z
+- Scope: make `world_graph.create_entity` reject reuse of an existing stable source identity when the identity-bound entity payload or provenance differs. Preserve exact retries as idempotent and leave source refreshes to registered canonical adapters. No schema/table changes and no fuzzy matching.
+- Acceptance: exact repeat returns the original entity; conflicting payload/provenance raises `SubstrateError` without mutating the original; canonical adapters can still refresh their source-linked projections; focused and full backend tests pass.
+- Status: DONE — reproduced three silently accepted source-identity conflicts before the fix. `world_graph.create_entity` now returns the original only for identical payload/provenance and raises an explicit conflict for changed name, attributes, canonical identifier, normalized identity, uncertainty, or provenance. Registered adapter refreshes remain separate. `pytest backend/tests/test_world_graph.py backend/tests/test_substrate_api.py backend/tests/test_public_services_substrate_adapter.py backend/tests/test_wave2_market_signal_domain.py -q` → 23 passed; the HTTP identity/lifecycle test → 1 passed; full `pytest backend/tests -q` → 363 passed, 21 warnings. No migration required.
+
+## [CLAIMED] Reject conflicting substrate event retries
+
+- Agent: Copilot, user-directed current task
+- Claimed at: 2026-09-27T06:46:00Z
+- Scope: make keyed `world_graph.create_event` retries reject changes to source/provenance and to an explicitly supplied occurrence timestamp while retaining idempotency for exact retries and retries that omit the generated timestamp. No schema/table changes.
+- Acceptance: same key + same intent returns original; changed source, payload, target, or explicit timestamp conflicts; existing adapters remain idempotent; focused and full backend tests pass.
+- Status: DONE — `cd backend && ../.venv/bin/python -m pytest tests/test_world_graph.py::test_event_idempotency_rejects_provenance_and_timestamp_conflicts tests/test_substrate_api.py::test_event_and_capability_api_enforce_lifecycle_and_idempotency -q` → 2 passed. `cd backend && ../.venv/bin/python -m pytest tests -q` → 364 passed, 21 warnings. Exact retries return the stored event; changed source or explicitly supplied occurrence time conflict; retries omitting generated time remain idempotent. `git diff --check` → clean; no migration required.

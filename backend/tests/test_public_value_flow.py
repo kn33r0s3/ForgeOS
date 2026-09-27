@@ -8,6 +8,8 @@ from app import models
 from app.database import Base, get_db
 from app.main import app
 from app.migrations import run_migrations
+from app.services import collector_runner, research_task_engine
+from app.services.collectors.base import SourceCollector
 
 
 @pytest.fixture
@@ -19,13 +21,35 @@ def client_with_db(db):
             db.rollback()
 
     app.dependency_overrides[get_db] = override_get_db
-    client = TestClient(app, raise_server_exceptions=False)
+    client = TestClient(app, raise_server_exceptions=True)
     yield client
     app.dependency_overrides.clear()
     client.close()
 
 
-def test_public_problem_submission_starts_real_research_and_defers_opportunity(client_with_db, db):
+def test_public_problem_submission_starts_real_research_and_defers_opportunity(
+    client_with_db, db, monkeypatch
+):
+    class CrossrefFixture(SourceCollector):
+        source_name = "crossref"
+
+        def collect(self, query, *, authorization=None):
+            assert authorization is not None
+            return [
+                {
+                    "content": "Crossref metadata record: Repair scheduling evidence study.",
+                    "title": "Repair scheduling evidence study",
+                    "canonical_url": "https://doi.org/10.1234/repair.1",
+                    "external_id": "10.1234/repair.1",
+                    "timestamp": "2026-09-27T12:00:00+00:00",
+                    "published_at": "2025-04-01T00:00:00+00:00",
+                    "retrieved_at": "2026-09-27T12:00:00+00:00",
+                    "provenance": {"metadata_only": True, "query": query},
+                    "metadata": {"source_type": "external", "collection_status": "collected"},
+                }
+            ]
+
+    monkeypatch.setitem(collector_runner.COLLECTORS, "crossref", CrossrefFixture)
     response = client_with_db.post(
         "/analyze",
         json={
@@ -38,6 +62,9 @@ def test_public_problem_submission_starts_real_research_and_defers_opportunity(c
     assert payload["opportunity_id"] is None
     assert payload["research_question_id"] is not None
     assert payload["research_task_ids"]
+    assert payload["research_status"] == "evidence_found"
+    assert len(payload["research_plan"]["subquestions"]) == 3
+    assert payload["research_sources"][0]["url"] == "https://doi.org/10.1234/repair.1"
     assert "repair" in payload["problem"].lower()
     assert payload["unknowns"]
     assert any("Willingness to pay" in item for item in payload["unknowns"])
@@ -50,6 +77,53 @@ def test_public_problem_submission_starts_real_research_and_defers_opportunity(c
 def test_public_problem_submission_rejects_empty_input(client_with_db):
     response = client_with_db.post("/analyze", json={"idea": "   "})
     assert response.status_code == 422
+
+
+def test_analyze_does_not_report_completed_for_mixed_empty_task_results(
+    client_with_db, db, monkeypatch
+):
+    def plan_with_mixed_results(database, question):
+        completed = research_task_engine.create_task(
+            database,
+            question_id=question.id,
+            source="crossref",
+            query="completed but empty",
+            objective="Check one subquestion.",
+        )
+        failed = research_task_engine.create_task(
+            database,
+            question_id=question.id,
+            source="crossref",
+            query="failed source",
+            objective="Check another subquestion.",
+        )
+        completed.status = "completed"
+        completed.evidence_ids = ""
+        failed.status = "failed"
+        database.commit()
+        return [completed, failed]
+
+    monkeypatch.setattr(
+        "app.api.analyze.research_planner.plan_tasks_for_question",
+        plan_with_mixed_results,
+    )
+    monkeypatch.setattr(
+        "app.api.analyze.collector_runner.run_pending_tasks",
+        lambda database, limit: [
+            {"status": "completed", "evidence_found": 0},
+            {"status": "failed", "reason": "source unavailable"},
+        ],
+    )
+
+    response = client_with_db.post(
+        "/analyze",
+        json={"idea": "Does a public service reduce crop storage losses?"},
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["evidence_count"] == 0
+    assert payload["research_status"] == "research_failed"
 
 
 def test_public_provider_and_service_visibility_requires_verified_status(client_with_db, db):

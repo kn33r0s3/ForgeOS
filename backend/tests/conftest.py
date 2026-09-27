@@ -49,3 +49,18 @@ def db():
     yield session
     session.close()
     engine.dispose()
+
+
+@pytest.fixture
+def govinfo_review_clock(monkeypatch):
+    """Freeze source-registry validation at the notice's reviewed-through date."""
+    from datetime import datetime as RealDateTime, timezone
+    from app.services import source_clearance_registry
+
+    class ReviewDateTime(RealDateTime):
+        @classmethod
+        def now(cls, tz=None):
+            reviewed_at = RealDateTime(2026, 9, 25, 12, tzinfo=timezone.utc)
+            return reviewed_at.astimezone(tz) if tz else reviewed_at.replace(tzinfo=None)
+
+    monkeypatch.setattr(source_clearance_registry, "datetime", ReviewDateTime)
