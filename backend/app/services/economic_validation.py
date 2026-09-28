@@ -85,12 +85,14 @@ def assess_need_economics(
         unusable = sorted(
             evidence_id
             for evidence_id, row in evidence_by_id.items()
-            if not (row.provenance or row.substrate_provenance)
-            or row.support_level in {"unknown", "refuted"}
+            if not (row.source or row.substrate_source)
+            or not (row.provenance or row.substrate_provenance)
+            or not (row.claim or row.content)
+            or row.support_level not in {"possible", "hypothesized", "tested", "supported"}
         )
         if unusable:
             raise ValueError(
-                f"economic assumption evidence needs stored provenance and non-refuted support: {unusable}"
+                f"economic assumption evidence needs a source, claim, provenance, and classifiable non-refuted support: {unusable}"
             )
 
     solution = (solution_hypothesis or "").strip()

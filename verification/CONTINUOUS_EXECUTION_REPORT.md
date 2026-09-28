@@ -435,6 +435,9 @@ Added an assessment route on the existing Opportunity API surface. A Need must b
 
 Also tightened the existing CustomerEvent ledger: `contacted` requires a properly authorized started Experiment-linked Action of matching data scope or an actual recorded response; `interested` requires a linked `ACTUAL_RESPONSE`; `paid_customer` requires linked, verified positive `ACTUAL_REVENUE`. Evidence-free and reported-only payment claims are rejected.
 
+FILES CHANGED:
+`backend/app/api/opportunities.py`, `backend/app/api/products.py`, `backend/app/services/economic_validation.py`, `backend/app/services/product_engine.py`, `backend/app/services/world_graph.py`, `backend/tests/test_economic_validation.py`, `backend/tests/test_commercial_ops.py`, `backend/tests/test_http_canonical_final.py`, `STATUS.md`, `docs/CAPABILITY_QUEUE.md`, and this report. `storage/scheduler.log` was already a dirty worktree file; existing log content was preserved.
+
 TARGET ARCHITECTURE:
 `Real input → existing Signal/Need understanding → existing bounded capability search → hypothesis-grade economic assessment → separately authorized Experiment/Action → real response/payment EVENT + EVIDENCE → append-only learning`. All state remains over the six canonical primitives and existing compatible Opportunity, Experiment, Action, Outcome, and CustomerEvent records.
 
@@ -481,7 +484,7 @@ REGRESSIONS:
 Generic `/signals` behavior and public API tests passed. Existing demand-understanding tests still prove adequate cleared capability reuse avoids unnecessary research and an inadequate match uses the existing durable gap path. Existing experiment/action authorization and orchestration regressions passed. Customer stage promotions now reject missing response/payment evidence; reported revenue alone does not make a paying customer.
 
 DIFF/STATUS:
-`git diff --check` passed after documentation update. Existing `storage/scheduler.log` was already dirty and was preserved; test-run scheduler entries were not treated as product evidence. Final status is recorded after the final diff check.
+`git diff --check` passed. Final `git status --short --untracked-files=all`: clean. The existing `storage/scheduler.log` worktree content was retained; its cycle-run entries are test/runtime logs, not product evidence.
 
 REMAINING BLOCKER:
 No genuine authorized external prospect-discovery source or real response channel was available or exercised. A ForgeCapability fit is not established merely by a research-source match, and the isolated assessment remained insufficiently evidenced.

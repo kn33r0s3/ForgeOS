@@ -282,6 +282,7 @@ def create_customer_event(db: Session, *, product_id=None, channel_id=None,
         response_recorded = bool(
             outcome is not None
             and outcome.outcome_type == "ACTUAL_RESPONSE"
+            and outcome.verification_state != "DISPUTED"
             and (outcome.qualitative_result or "").strip()
         )
         if not action_started and not response_recorded:
@@ -290,6 +291,7 @@ def create_customer_event(db: Session, *, product_id=None, channel_id=None,
         if not (
             outcome is not None
             and outcome.outcome_type == "ACTUAL_RESPONSE"
+            and outcome.verification_state != "DISPUTED"
             and (outcome.qualitative_result or "").strip()
         ):
             raise ValueError("interested stage requires a linked actual response outcome")

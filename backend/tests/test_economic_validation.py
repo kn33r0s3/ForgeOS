@@ -209,7 +209,7 @@ def test_refuted_or_unprovenanced_records_cannot_back_an_economic_assumption(db)
     db.add(evidence)
     db.commit()
 
-    with pytest.raises(ValueError, match="non-refuted support"):
+    with pytest.raises(ValueError, match="classifiable non-refuted support"):
         _assessment(
             db,
             result.inferred_need_id,
