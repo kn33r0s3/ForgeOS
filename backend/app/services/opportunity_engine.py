@@ -163,7 +163,7 @@ def _looks_like_imported_instruction(text: str | None) -> bool:
 
 
 def _signal_is_metadata_only(signal: models.Signal) -> bool:
-    if (signal.source or "").casefold().startswith("crossref"):
+    if (signal.source or "").casefold().startswith("crossref") or signal.source == "openalex":
         return True
     import json
 
@@ -192,6 +192,8 @@ def opportunity_from_pattern(db: Session, pattern: models.Pattern) -> models.Opp
     if any(_signal_is_metadata_only(signal) for signal in source_signals):
         if any(signal.source == "gdelt_doc" for signal in source_signals):
             raise ValueError("GDELT metadata-only evidence cannot support an opportunity assessment")
+        if any(signal.source == "openalex" for signal in source_signals):
+            raise ValueError("OpenAlex scholarly evidence cannot support an opportunity assessment")
         raise ValueError("Bibliographic metadata cannot support an opportunity assessment")
 
     problem_text = pattern.title or pattern.description

@@ -14,10 +14,48 @@ from app.services import research_task_engine, source_clearance_registry
 from app.services.research_evidence_assessment import (
     explicit_contradiction_edges,
     gdelt_requirement_eligibility,
+    openalex_requirement_eligibility,
     world_bank_requirement_eligibility,
 )
 
 MAX_TASKS_PER_QUESTION = 5
+_OPENALEX_UNRESOLVED_DIMENSIONS = [
+    "local_applicability",
+    "population_alignment",
+    "study_period",
+    "customer_pain",
+    "buyer_willingness_to_pay",
+    "local_market_size",
+    "product_demand",
+    "commercial_viability",
+]
+_GEOGRAPHY_TERMS = (
+    "Nepal",
+    "India",
+    "Bangladesh",
+    "Pakistan",
+    "Bhutan",
+    "China",
+    "United States",
+    "United Kingdom",
+    "Africa",
+    "South Asia",
+)
+_POPULATION_TERMS = (
+    "smallholder farmers",
+    "subsistence farmers",
+    "rural households",
+    "urban households",
+    "microenterprises",
+    "small businesses",
+    "farmers",
+    "households",
+    "students",
+    "patients",
+)
+_QUESTION_WORDS = frozenset(
+    {"what", "which", "who", "when", "where", "why", "how"}
+)
 
 _STOP_WORDS = {
     "about", "after", "against", "also", "among", "because", "before", "being",
@@ -133,6 +171,52 @@ def _requirement_specs(question_text: str) -> list[dict[str, Any]]:
                 "world_bank_scope": world_bank_scope,
             }
         )
+    if re.search(
+        r"\b(scholarly evidence|prior research|prior literature|documented intervention|"
+        r"literature existence|academic evidence|what studies|what research)\b",
+        question_text,
+        re.I,
+    ):
+        if re.search(r"\bdocumented intervention\b", question_text, re.I):
+            scholarly_requirement_id = "documented_intervention"
+        elif re.search(r"\bprior research\b|\bprior literature\b", question_text, re.I):
+            scholarly_requirement_id = "prior_research"
+        elif re.search(r"\bliterature existence\b", question_text, re.I):
+            scholarly_requirement_id = "literature_existence"
+        else:
+            scholarly_requirement_id = "scholarly_evidence"
+        requirements.append(
+            {
+                "id": scholarly_requirement_id,
+                "question": f"What scholarly works and abstracts are indexed about: {topic}?",
+                "evidence_kind": "openalex_scholarly_abstract",
+                "can_resolve_claim": False,
+                "openalex_query": topic,
+            }
+        )
+        if re.search(r"\bnepal\b|\blocal(?:ly)?\b|\btarget (?:market|region)\b", question_text, re.I):
+            requirements.append(
+                {
+                    "id": "local_applicability",
+                    "question": (
+                        f"Which evidence establishes whether the scholarly findings apply to the "
+                        f"target geography and population for: {topic}?"
+                    ),
+                    "evidence_kind": "geographic_population_alignment",
+                    "can_resolve_claim": False,
+                }
+            )
+        if re.search(r"\b(?:19|20)\d{2}\b", question_text):
+            requirements.append(
+                {
+                    "id": "study_context_alignment",
+                    "question": (
+                        f"What evidence establishes the study period and population context for: {topic}?"
+                    ),
+                    "evidence_kind": "temporal_population_alignment",
+                    "can_resolve_claim": False,
+                }
+            )
     return requirements
 
 
@@ -321,11 +405,29 @@ def _create_task(
     follow_up_of: int | None = None,
     follow_up_depth: int = 0,
 ) -> models.ResearchTask:
+    task_query = query
+    openalex_context: dict[str, Any] = {}
+    if source == "openalex":
+        original_question = question.question
+        derived_query = requirement.get("openalex_query", _topic(original_question))
+        search_mode = _openalex_search_mode(original_question, derived_query)
+        max_length = 2000 if search_mode == "semantic" else 500
+        task_query = " ".join(str(derived_query).split())[:max_length].strip()
+        if not task_query:
+            raise ValueError("OpenAlex retrieval query must not be empty")
+        openalex_context = {
+            "original_research_question": original_question,
+            "derived_retrieval_query": task_query,
+            "search_mode": search_mode,
+            **_openalex_qualifications(original_question),
+            "unresolved_dimensions": list(_OPENALEX_UNRESOLVED_DIMENSIONS),
+        }
+
     task = research_task_engine.create_task(
         db,
         question_id=question.id,
         source=source,
-        query=query,
+        query=task_query,
         objective=requirement["question"],
         claim_id=question.source_claim_id,
     )
@@ -356,8 +458,58 @@ def _create_task(
             },
             sort_keys=True,
         )
+    elif source == "openalex":
+        task.results = {**task.results, **openalex_context}
     db.flush()
     return task
+
+
+def _openalex_search_mode(question: str, query: str) -> str:
+    """Choose exact lookup for explicit identifiers/names, semantic otherwise."""
+    exact_lookup = re.search(
+        r"""(?ix)
+        \b(?:doi\s*:\s*|https?://doi\.org/)?10\.\d{4,9}/[-._;()/:A-Z0-9]+
+        |\b(?:author|authored\s+by|written\s+by|works?\s+by|publications?\s+by)\b
+        |\b(?:paper|article|study|work)\s+(?:titled|called|named)\b
+        |["“][^"”\n]{2,}["”]
+        """,
+        question,
+    )
+    geo_terms = {term.casefold() for term in _GEOGRAPHY_TERMS}
+    named_entity = any(
+        match.start() > 0
+        and match.group().casefold() not in _QUESTION_WORDS | geo_terms
+        for match in re.finditer(r"\b[A-Z][A-Za-z0-9&.-]{2,}\b", question)
+    )
+    if exact_lookup or named_entity or re.search(
+        r"""(?ix)\b(?:find|identify)\s+(?:the\s+)?(?:author|researcher|paper|article)\b""",
+        query,
+    ):
+        return "keyword"
+    return "semantic"
+
+
+def _openalex_qualifications(question: str) -> dict[str, str | None]:
+    geographic = next(
+        (
+            term
+            for term in _GEOGRAPHY_TERMS
+            if re.search(rf"\b{re.escape(term)}\b", question, re.I)
+        ),
+        None,
+    )
+    population = next(
+        (
+            term
+            for term in _POPULATION_TERMS
+            if re.search(rf"\b{re.escape(term)}\b", question, re.I)
+        ),
+        None,
+    )
+    return {
+        "geographic_qualification": geographic,
+        "population_qualification": population,
+    }
 
 
 def _follow_up_query(task: models.ResearchTask) -> str | None:
@@ -417,6 +569,51 @@ def _verified_bibliographic_evidence_ids(
             ):
                 verified.add(evidence_id)
     return sorted(verified)
+
+
+def _verified_openalex_evidence_ids(
+    db: Session,
+    tasks: list[models.ResearchTask],
+    requirement: dict[str, Any],
+) -> tuple[list[int], str | None]:
+    verified: set[int] = set()
+    rejected_reasons: list[str] = []
+    for task in tasks:
+        if task.source != "openalex" or task.status != "completed":
+            continue
+        results = task.results if isinstance(task.results, dict) else {}
+        source_results = results.get("source_results")
+        if not isinstance(source_results, list):
+            continue
+        task_evidence_ids = {
+            int(value)
+            for value in (task.evidence_ids or "").split(",")
+            if value.isdigit()
+        }
+        for result in source_results:
+            if not isinstance(result, dict) or not isinstance(result.get("evidence_id"), int):
+                continue
+            evidence_id = result["evidence_id"]
+            evidence = db.get(models.Evidence, evidence_id)
+            if (
+                evidence is None
+                or evidence_id not in task_evidence_ids
+                or evidence.source != "openalex"
+                or not evidence.provenance
+            ):
+                continue
+            try:
+                provenance = json.loads(evidence.provenance)
+            except (TypeError, json.JSONDecodeError):
+                continue
+            if not isinstance(provenance, dict):
+                continue
+            eligible, reason = openalex_requirement_eligibility(requirement["id"], provenance)
+            if eligible:
+                verified.add(evidence_id)
+            else:
+                rejected_reasons.append(reason)
+    return sorted(verified), next(iter(rejected_reasons), None)
 
 
 def _verified_world_bank_evidence_ids(
@@ -566,6 +763,16 @@ def _refresh_plan_from_tasks(
             if requirement["id"] == "bibliographic_discovery"
             else []
         )
+        verified_openalex_ids, openalex_rejection_reason = (
+            _verified_openalex_evidence_ids(
+                db,
+                tasks,
+                requirement,
+            )
+            if requirement["id"]
+            in {"scholarly_evidence", "prior_research", "documented_intervention", "literature_existence"}
+            else ([], None)
+        )
         verified_world_bank_ids, world_bank_rejection_reason = (
             _verified_world_bank_evidence_ids(db, tasks, requirement)
             if requirement["id"] in {"macro_demographics", "population_baseline", "economic_indicator"}
@@ -590,12 +797,21 @@ def _refresh_plan_from_tasks(
                 requirement["status"] = "satisfied"
                 requirement["evidence_ids"] = verified_gdelt_ids
                 requirement["terminal_reason"] = None
+            elif verified_openalex_ids:
+                requirement["status"] = "satisfied"
+                requirement["evidence_ids"] = verified_openalex_ids
+                requirement["terminal_reason"] = None
             else:
                 requirement["status"] = "terminal_unresolved"
-                requirement["terminal_reason"] = gdelt_rejection_reason or _macro_market_unresolved_reason(requirement["id"]) or (
+                requirement["terminal_reason"] = (
+                    openalex_rejection_reason
+                    or gdelt_rejection_reason
+                    or _macro_market_unresolved_reason(requirement["id"])
+                    or (
                     "no_currently_authorized_source_capability"
                     if not tasks
                     else "source_capability_unavailable_or_expired"
+                    )
                 )
             continue
 
@@ -603,7 +819,10 @@ def _refresh_plan_from_tasks(
         if pending:
             requirement["status"] = (
                 "satisfied"
-                if verified_metadata_ids or verified_world_bank_ids or verified_gdelt_ids
+                if verified_metadata_ids
+                or verified_world_bank_ids
+                or verified_gdelt_ids
+                or verified_openalex_ids
                 else "in_progress"
             )
             if verified_metadata_ids:
@@ -612,6 +831,8 @@ def _refresh_plan_from_tasks(
                 requirement["evidence_ids"] = verified_world_bank_ids
             elif verified_gdelt_ids:
                 requirement["evidence_ids"] = verified_gdelt_ids
+            elif verified_openalex_ids:
+                requirement["evidence_ids"] = verified_openalex_ids
             requirement["terminal_reason"] = None
             active = True
             all_terminal = False
@@ -645,9 +866,13 @@ def _refresh_plan_from_tasks(
                         if requirement["id"] == "bibliographic_discovery"
                         else []
                     )
-                    requirement["status"] = "satisfied" if verified_metadata_ids else "in_progress"
-                    if verified_metadata_ids:
-                        requirement["evidence_ids"] = verified_metadata_ids
+                    requirement["status"] = (
+                        "satisfied"
+                        if verified_metadata_ids or verified_openalex_ids
+                        else "in_progress"
+                    )
+                    if verified_metadata_ids or verified_openalex_ids:
+                        requirement["evidence_ids"] = verified_metadata_ids or verified_openalex_ids
                     requirement["terminal_reason"] = None
                     active = active or bool(
                         db.query(models.ResearchTask)
@@ -663,21 +888,27 @@ def _refresh_plan_from_tasks(
             )
             requirement["status"] = (
                 "satisfied"
-                if verified_metadata_ids or verified_world_bank_ids or verified_gdelt_ids
+                if verified_metadata_ids
+                or verified_world_bank_ids
+                or verified_gdelt_ids
+                or verified_openalex_ids
                 else "terminal_unresolved"
             )
             requirement["evidence_ids"] = (
                 verified_metadata_ids
+                or verified_openalex_ids
                 or verified_world_bank_ids
                 or verified_gdelt_ids
                 or (
                     evidence_ids
-                    if primary.source not in {"world_bank_indicators", "gdelt_doc"}
+                    if primary.source not in {"world_bank_indicators", "gdelt_doc", "openalex"}
                     else []
                 )
             )
-            if verified_metadata_ids or verified_world_bank_ids or verified_gdelt_ids:
+            if verified_metadata_ids or verified_openalex_ids or verified_world_bank_ids or verified_gdelt_ids:
                 requirement["terminal_reason"] = None
+            elif openalex_rejection_reason:
+                requirement["terminal_reason"] = openalex_rejection_reason
             elif gdelt_rejection_reason:
                 requirement["terminal_reason"] = gdelt_rejection_reason
             elif world_bank_rejection_reason:
@@ -727,7 +958,8 @@ def _refresh_plan_from_tasks(
             requirement["terminal_reason"] = "source_attempt_budget_exhausted_without_answer"
         else:
             requirement["terminal_reason"] = (
-                gdelt_rejection_reason
+                openalex_rejection_reason
+                or gdelt_rejection_reason
                 or _macro_market_unresolved_reason(requirement["id"])
                 or "no_successful_source_evidence"
             )

@@ -33,6 +33,61 @@ WORLD_BANK_MICRO_REQUIREMENTS = frozenset(
 GDELT_MARKET_REQUIREMENTS = frozenset(
     {"customer_pain", "buyer_willingness_to_pay", "product_demand", "market_size", "financial_viability"}
 )
+OPENALEX_SCHOLARLY_REQUIREMENTS = frozenset(
+    {
+        "scholarly_evidence",
+        "prior_research",
+        "documented_intervention",
+        "literature_existence",
+    }
+)
+
+
+def openalex_requirement_eligibility(
+    requirement_id: str,
+    provenance: dict[str, Any],
+) -> tuple[bool, str]:
+    """Use OpenAlex only for traceable literature observations, not market claims."""
+    if requirement_id in {
+        "customer_pain",
+        "buyer_willingness_to_pay",
+        "local_market_size",
+        "market_size",
+        "revenue_potential",
+        "product_demand",
+    }:
+        return False, "scholarly_retrieval_cannot_validate_local_demand_or_revenue"
+    if requirement_id == "local_applicability":
+        return False, "openalex_affiliations_and_abstracts_do_not_establish_local_applicability"
+    if requirement_id not in OPENALEX_SCHOLARLY_REQUIREMENTS:
+        return False, "openalex_work_not_scoped_to_this_requirement"
+    if provenance.get("source_registry_id") != "openalex-public-works-cc0":
+        return False, "openalex_source_clearance_provenance_missing"
+    if provenance.get("source_type") != "openalex" or provenance.get("license") != "CC0":
+        return False, "openalex_cc0_provenance_missing"
+    if provenance.get("traceable") is not True:
+        return False, "openalex_work_is_not_traceable"
+    openalex_id = provenance.get("openalex_id")
+    if not isinstance(openalex_id, str) or not re.fullmatch(
+        r"https://openalex\.org/W\d+",
+        openalex_id,
+    ):
+        return False, "openalex_work_identity_missing"
+    if not provenance.get("title") or not provenance.get("query"):
+        return False, "openalex_title_or_search_query_missing"
+    if requirement_id != "literature_existence" and (
+        provenance.get("abstract_reconstructed") is not True
+        or not isinstance(provenance.get("abstract"), str)
+        or not provenance["abstract"].strip()
+    ):
+        return False, "openalex_abstract_not_available_for_scholarly_observation"
+    if provenance.get("geographic_scope_status") != "not_assessed_from_affiliations_or_retrieval_relevance":
+        return False, "openalex_geographic_alignment_must_remain_unassessed"
+    if provenance.get("temporal_scope_status") != "publication_year_only_not_study_period":
+        return False, "openalex_temporal_alignment_must_remain_unassessed"
+    if provenance.get("retrieval_relevance_is_not_empirical_support") is not True:
+        return False, "openalex_retrieval_relevance_cannot_be_empirical_support"
+    return True, "openalex_literature_record_observed_without_local_or_empirical_claim"
 
 
 def gdelt_requirement_eligibility(

@@ -63,6 +63,9 @@ _WORLD_BANK_TERMS = "https://datacatalog.worldbank.org/public-licenses"
 _GDELT_DOC_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
 _GDELT_ROBOTS = "https://api.gdeltproject.org/robots.txt"
 _GDELT_TERMS = "https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/"
+_OPENALEX_WORKS_URL = "https://api.openalex.org/works"
+_OPENALEX_ROBOTS = "https://api.openalex.org/robots.txt"
+_OPENALEX_TERMS = "https://help.openalex.org/api/"
 
 
 class SourceRateLimitError(PermissionError):
@@ -262,6 +265,69 @@ SOURCE_CLEARANCES: tuple[SourceClearance, ...] = (
             "https://www.gdeltproject.org/)"
         ),
     ),
+    SourceClearance(
+        registry_id="openalex-public-works-cc0",
+        display_name="OpenAlex public works API",
+        collector="openalex",
+        url=_OPENALEX_WORKS_URL,
+        hostname="api.openalex.org",
+        geographies=("GLOBAL",),
+        categories=("scholarly_evidence", "research_discovery"),
+        allowed_need=(
+            "Search OpenAlex work records and persist CC0 scholarly metadata plus reconstructed "
+            "abstracts. Do not fetch publisher pages or external PDFs, or treat retrieval relevance "
+            "as empirical truth or local market validation. Keyword queries are capped at 100 works; "
+            "semantic queries are capped at 50 works and 2,000 query characters."
+        ),
+        evidence_references=(
+            "docs/PUBLIC_SOURCES.md",
+            _OPENALEX_WORKS_URL,
+            _OPENALEX_ROBOTS,
+            _OPENALEX_TERMS,
+            "https://help.openalex.org/data/works/",
+            "https://creativecommons.org/publicdomain/zero/1.0/",
+        ),
+        reviewed_on=date(2026, 9, 27),
+        valid_through=date(2026, 10, 27),
+        robots_url=_OPENALEX_ROBOTS,
+        terms_url=_OPENALEX_TERMS,
+        required_terms_phrases=("all data is cc0",),
+        redirect_urls=(_OPENALEX_WORKS_URL,),
+        allowed_operation="search_cc0_work_metadata_and_abstracts",
+        allowed_fields=(
+            "id",
+            "doi",
+            "title",
+            "publication_year",
+            "cited_by_count",
+            "authorships",
+            "concepts",
+            "primary_location",
+            "open_access",
+            "abstract_inverted_index",
+        ),
+        supports_requirements=(
+            "scholarly_evidence",
+            "prior_research",
+            "documented_intervention",
+            "literature_existence",
+        ),
+        provenance_requirements=(
+            "canonical_url",
+            "external_id",
+            "retrieved_at",
+            "published_at",
+            "source_registry_id",
+            "query",
+            "openalex_id",
+            "license",
+            "abstract_reconstructed",
+            "geographic_scope_status",
+        ),
+        min_interval_seconds=1,
+        policy_hostnames=("api.openalex.org", "help.openalex.org"),
+        license_tag="CC0 Public Domain Dedication (OpenAlex Dataset Metadata)",
+    ),
 )
 
 
@@ -291,7 +357,9 @@ def validate_registry(entries: tuple[SourceClearance, ...]) -> tuple[SourceClear
             raise ValueError("Source registry IDs must be non-empty and unique")
         if not entry.display_name.strip() or not entry.allowed_need.strip():
             raise ValueError(f"Source registry entry {entry.registry_id} needs a name and bounded need")
-        if entry.collector not in {"web", "crossref", "world_bank_indicators", "gdelt_doc"}:
+        if entry.collector not in {
+            "web", "crossref", "world_bank_indicators", "gdelt_doc", "openalex"
+        }:
             raise ValueError("Source clearance collector is not supported")
         if not _valid_https_url(entry.url, hostname=entry.hostname) or entry.url in urls:
             raise ValueError(f"Source registry entry {entry.registry_id} needs a unique canonical HTTPS URL")

@@ -224,6 +224,7 @@ def finish_task(
     *,
     signal_ids: list[int],
     evidence_ids: list[int],
+    retrieval_observation: dict[str, Any] | None = None,
 ) -> models.ResearchTask:
     unique_evidence = list(dict.fromkeys(evidence_ids))
     task.evidence_ids = ",".join(str(value) for value in unique_evidence)
@@ -241,6 +242,11 @@ def finish_task(
         **(task.results or {}),
         "signal_ids": signal_ids,
         "evidence_ids": unique_evidence,
+        **(
+            {"retrieval_observation": retrieval_observation}
+            if retrieval_observation is not None
+            else {}
+        ),
     }
     _set_step(db, task, "execute", "completed", output=task.results)
     _set_step(db, task, "evaluate", "completed", output=task.judgments[0])

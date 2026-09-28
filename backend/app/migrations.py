@@ -113,6 +113,7 @@ EXPECTED_UNIQUE_INDEXES = {
     "relations": [("uq_relations_idempotency_key", "idempotency_key")],
     "events": [("uq_events_idempotency_key", "idempotency_key")],
     "evidence": [("uq_evidence_idempotency_key", "idempotency_key")],
+    "signals": [("uq_signals_identity_key", "identity_key")],
     "evidence_relationships": [
         ("uq_evidence_relationships_idempotency_key", "idempotency_key"),
         ("uq_evidence_relationships_substrate_relation_id", "substrate_relation_id"),
@@ -121,6 +122,35 @@ EXPECTED_UNIQUE_INDEXES = {
         ("uq_research_tasks_idempotency_key", "idempotency_key"),
     ],
 }
+
+
+def _clear_duplicate_signal_identity_keys(engine: Engine) -> int:
+    """Preserve duplicate legacy Signal rows while reserving their new identity keys."""
+    if "signals" not in inspect(engine).get_table_names():
+        return 0
+    columns = {column["name"] for column in inspect(engine).get_columns("signals")}
+    if "identity_key" not in columns:
+        return 0
+    with engine.begin() as conn:
+        rows = conn.execute(
+            text(
+                "SELECT id, identity_key FROM signals "
+                "WHERE identity_key IS NOT NULL ORDER BY id"
+            )
+        ).all()
+        seen: set[str] = set()
+        duplicate_ids = []
+        for row_id, identity_key in rows:
+            if identity_key in seen:
+                duplicate_ids.append(row_id)
+            else:
+                seen.add(identity_key)
+        for row_id in duplicate_ids:
+            conn.execute(
+                text("UPDATE signals SET identity_key = NULL WHERE id = :row_id"),
+                {"row_id": row_id},
+            )
+    return len(duplicate_ids)
 
 
 def _repair_stale_experiment_references(engine: Engine) -> int:
@@ -312,6 +342,12 @@ def run_migrations(engine: Engine) -> list[str]:
         for index_name, column_name in indexes:
             if index_name in existing_indexes or (column_name,) in existing_unique_columns:
                 continue
+            if table == "signals" and column_name == "identity_key":
+                cleared = _clear_duplicate_signal_identity_keys(engine)
+                if cleared:
+                    applied.append(
+                        f"preserved {cleared} duplicate legacy signals with nullable identity keys"
+                    )
             statement = f"CREATE UNIQUE INDEX {index_name} ON {table} ({column_name})"
             with engine.begin() as conn:
                 conn.execute(text(statement))

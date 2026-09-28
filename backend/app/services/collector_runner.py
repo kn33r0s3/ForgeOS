@@ -20,6 +20,8 @@ network call should never take down a cycle or the API.
 
 from datetime import date
 from time import monotonic
+from hashlib import sha256
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app import models
@@ -32,6 +34,7 @@ from app.services.collectors.web import WebCollector
 from app.services.collectors.crossref import API_URL as CROSSREF_API_URL, CrossrefCollector
 from app.services.collectors.world_bank import WorldBankCollector
 from app.services.collectors.gdelt import API_URL as GDELT_API_URL, GdeltCollector
+from app.services.collectors.openalex import API_URL as OPENALEX_API_URL, OpenAlexCollector
 from app.services import research_task_engine
 from app.services import evidence_graph
 from app.services import tool_usefulness
@@ -49,6 +52,7 @@ COLLECTORS = {
     "crossref": CrossrefCollector,
     "world_bank_indicators": WorldBankCollector,
     "gdelt_doc": GdeltCollector,
+    "openalex": OpenAlexCollector,
 }
 
 # Bulk feeds are not cleared in docs/PUBLIC_SOURCES.md. Clearances are
@@ -129,6 +133,24 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
         except Exception as exc:
             research_task_engine.fail_task(db, task, str(exc))
             return {"task_id": task.id, "status": "failed", "reason": str(exc)}
+    elif task.source == "openalex":
+        try:
+            authorization = source_clearance_registry.authorize_request(
+                OPENALEX_API_URL,
+                collector=task.source,
+                db=db,
+            )
+        except source_clearance_registry.SourceRateLimitError as exc:
+            research_task_engine.defer_task(db, task, str(exc))
+            return {
+                "task_id": task.id,
+                "status": "planned",
+                "deferred": True,
+                "reason": str(exc),
+            }
+        except Exception as exc:
+            research_task_engine.fail_task(db, task, str(exc))
+            return {"task_id": task.id, "status": "failed", "reason": str(exc)}
 
     collector_cls = COLLECTORS.get(task.source)
     if not collector_cls:
@@ -160,6 +182,17 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
             raw_items = collector.collect(task.query, db=db)
         elif task.source == "gdelt_doc":
             raw_items = collector.collect(task.query, authorization=authorization)
+        elif task.source == "openalex":
+            task_context = task.results if isinstance(task.results, dict) else {}
+            search_mode = OpenAlexCollector.validate_search_mode(
+                task_context.get("search_mode", "keyword")
+            )
+            raw_items = collector.collect(
+                task.query,
+                search_mode=search_mode,
+                task_provenance=task_context,
+                authorization=authorization,
+            )
         else:
             raw_items = collector.collect(task.query)
     except source_clearance_registry.SourceRateLimitError as exc:
@@ -277,8 +310,82 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
                 if claim:
                     evidence_graph.link_evidence(db, evidence, claim=claim, relation_type=relation)
 
+    if task.source == "openalex" and not raw_items:
+        task_context = task.results if isinstance(task.results, dict) else {}
+        search_mode = OpenAlexCollector.validate_search_mode(
+            task_context.get("search_mode", "keyword")
+        )
+        observation_id = sha256(
+            f"openalex:empty:{task.query}:{search_mode}".encode("utf-8")
+        ).hexdigest()
+        original_question = task_context.get("original_research_question")
+        geography = task_context.get("geographic_qualification")
+        population = task_context.get("population_qualification")
+        unresolved = task_context.get("unresolved_dimensions")
+        observation_provenance = {
+            "source_type": "openalex",
+            "source_registry_id": authorization.entry.registry_id if authorization else None,
+            "metadata_only": True,
+            "traceable": True,
+            "observation_type": "valid_empty_retrieval",
+            "query": task.query,
+            "derived_retrieval_query": task.query,
+            "search_mode": search_mode,
+            "original_research_question": (
+                original_question if isinstance(original_question, str) else task.objective
+            ),
+            "geographic_qualification": geography if isinstance(geography, str) else None,
+            "population_qualification": population if isinstance(population, str) else None,
+            "unresolved_dimensions": unresolved if isinstance(unresolved, list) else [],
+            "returned_works": 0,
+            "claim_effect": "none",
+            "external_pdf_fetched": False,
+            "publisher_page_fetched": False,
+        }
+        empty_signal = observer.observe(
+            f"0 scholarly works found in OpenAlex for query: {task.query}",
+            source="openalex",
+            metadata={
+                "source_type": "external",
+                "title": "OpenAlex empty scholarly retrieval",
+                "canonical_url": OPENALEX_API_URL,
+                "external_id": observation_id,
+                "identity_key": f"openalex:empty:{observation_id}",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "retrieved_at": datetime.now(timezone.utc).isoformat(),
+                "collection_status": "valid_empty_retrieval",
+                "provenance": observation_provenance,
+            },
+            persist_evidence=False,
+        )
+        created_signal_ids.append(empty_signal.id)
+        source_results.append(
+            {
+                "signal_id": empty_signal.id,
+                "evidence_id": None,
+                "source": "openalex",
+                "observation_type": "valid_empty_retrieval",
+                "returned_works": 0,
+            }
+        )
+
     final_task = research_task_engine.finish_task(
-        db, task, signal_ids=created_signal_ids, evidence_ids=evidence_ids
+        db,
+        task,
+        signal_ids=created_signal_ids,
+        evidence_ids=evidence_ids,
+        retrieval_observation=(
+            {
+                "source": "openalex",
+                "query": task.query,
+                "search_mode": (task.results or {}).get("search_mode", "keyword"),
+                "returned_works": 0,
+                "outcome": "valid_empty_retrieval",
+                "claim_effect": "none",
+            }
+            if task.source == "openalex" and not raw_items
+            else None
+        ),
     )
     final_task.results = {
         **(final_task.results or {}),
@@ -294,7 +401,13 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
             .filter(models.EvidenceRelationship.claim_id == task.claim_id)
             .all()
         ]
-    evaluation = research_task_engine.evaluate_claim_after_research(db, final_task, claim_evidence_ids)
+    evaluation = (
+        research_task_engine.evaluate_claim_after_research(
+            db, final_task, claim_evidence_ids
+        )
+        if evidence_ids
+        else None
+    )
     question = db.get(models.ResearchQuestion, final_task.question_id)
     if question is not None and isinstance(question.research_plan, dict):
         from app.services import research_planner
@@ -317,8 +430,10 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
         duplicate_result_count=duplicate_count,
         corroborated_evidence_count=verified_count, contradicted_claim_count=contradicted_count,
         freshness=100.0 if created_signal_ids else None,
-        latency_ms=(monotonic() - started) * 1000, success=bool(raw_items),
-        failure_kind="empty_result" if not raw_items else None, result_ids=evidence_ids,
+        latency_ms=(monotonic() - started) * 1000,
+        success=task.source == "openalex" or bool(raw_items),
+        failure_kind=None if task.source == "openalex" or raw_items else "empty_result",
+        result_ids=evidence_ids,
     )
     return {
         "task_id": task.id,

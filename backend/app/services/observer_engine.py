@@ -42,6 +42,7 @@ import hashlib
 import json
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
+from sqlalchemy.exc import IntegrityError
 from app import models
 from app.services import signal_processor, importance_ranker, source_manager, signal_quality
 
@@ -59,7 +60,14 @@ class ObserverEngine:
     def __init__(self, db: Session):
         self.db = db
 
-    def observe(self, content: str, source: str = "manual", metadata: dict | None = None) -> models.Signal:
+    def observe(
+        self,
+        content: str,
+        source: str = "manual",
+        metadata: dict | None = None,
+        *,
+        persist_evidence: bool = True,
+    ) -> models.Signal:
         """Process one piece of raw text end-to-end and persist it as a
         fully-scored Signal. This is the one method every observer
         source — manual or collector-driven — should call."""
@@ -67,6 +75,7 @@ class ObserverEngine:
         metadata = metadata or {}
         canonical_url = _normalize_url(metadata.get("canonical_url") or metadata.get("url") or metadata.get("link"))
         external_id = metadata.get("external_id")
+        identity_key = metadata.get("identity_key")
         
         # Determine source_type
         source_type = metadata.get("source_type")
@@ -98,15 +107,26 @@ class ObserverEngine:
             content_fingerprint = _fingerprint(content)
 
         previous = None
-        if canonical_url or external_id:
+        if identity_key:
+            previous = (
+                self.db.query(models.Signal)
+                .filter(
+                    models.Signal.source == source,
+                    models.Signal.identity_key == str(identity_key),
+                )
+                .order_by(models.Signal.id.desc())
+                .first()
+            )
+        if previous is None and (canonical_url or external_id):
             identity_query = self.db.query(models.Signal).filter(models.Signal.source == source)
             if external_id:
                 previous = identity_query.filter(models.Signal.external_id == str(external_id)).order_by(models.Signal.id.desc()).first()
             if previous is None and canonical_url:
                 previous = identity_query.filter(models.Signal.canonical_url == canonical_url).order_by(models.Signal.id.desc()).first()
-            if previous is not None and previous.content_fingerprint == content_fingerprint:
+        if previous is not None and previous.content_fingerprint == content_fingerprint:
+            if persist_evidence:
                 _ensure_evidence(self.db, previous, metadata)
-                return previous
+            return previous
 
         processed = signal_processor.process_signal(content)
         importance = importance_ranker.score_importance(content)
@@ -131,6 +151,7 @@ class ObserverEngine:
             is_duplicate_of=quality["duplicate_of_signal_id"],
             canonical_url=canonical_url,
             external_id=str(external_id) if external_id is not None else None,
+            identity_key=str(identity_key) if identity_key is not None else None,
             title=metadata.get("title"),
             published_at=_parse_datetime(metadata.get("published_at") or metadata.get("timestamp")),
             retrieved_at=retrieved_at,
@@ -139,10 +160,34 @@ class ObserverEngine:
             collection_status=metadata.get("collection_status", "observed"),
             supersedes_signal_id=previous.id if previous is not None else None,
         )
-        self.db.add(signal)
-        self.db.commit()
-        self.db.refresh(signal)
-        if metadata:
+        try:
+            if identity_key:
+                with self.db.begin_nested():
+                    self.db.add(signal)
+                    self.db.flush()
+            else:
+                self.db.add(signal)
+            self.db.commit()
+            self.db.refresh(signal)
+        except IntegrityError:
+            self.db.rollback()
+            if not identity_key:
+                raise
+            signal = (
+                self.db.query(models.Signal)
+                .filter(
+                    models.Signal.source == source,
+                    models.Signal.identity_key == str(identity_key),
+                )
+                .order_by(models.Signal.id.desc())
+                .first()
+            )
+            if signal is None:
+                raise
+            if persist_evidence:
+                _ensure_evidence(self.db, signal, metadata)
+            return signal
+        if metadata and persist_evidence:
             _ensure_evidence(self.db, signal, metadata)
         return signal
 
@@ -298,9 +343,19 @@ def _ensure_evidence(db: Session, signal: models.Signal, metadata: dict) -> mode
         provenance=signal.provenance,
         collection_status=signal.collection_status,
     )
-    db.add(evidence)
-    db.commit()
-    db.refresh(evidence)
+    try:
+        with db.begin_nested():
+            db.add(evidence)
+            db.flush()
+        db.commit()
+        db.refresh(evidence)
+    except IntegrityError:
+        db.rollback()
+        evidence = db.query(models.Evidence).filter(
+            models.Evidence.idempotency_key == f"evidence-provenance:{provenance_hash}"
+        ).first()
+        if evidence is None:
+            raise
     return evidence
 
 

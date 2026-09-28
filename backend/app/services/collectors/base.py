@@ -82,6 +82,7 @@ class SourceCollector(ABC):
             "title": raw_item.get("title") or metadata.get("title"),
             "canonical_url": canonical_url,
             "external_id": raw_item.get("external_id") or metadata.get("external_id"),
+            "identity_key": raw_item.get("identity_key") or metadata.get("identity_key"),
             "provenance": raw_item.get("provenance") or metadata,
             "collection_status": raw_item.get("collection_status", "collected"),
             "metadata": metadata,

@@ -57,6 +57,7 @@ class Signal(Base):
     is_duplicate_of = Column(Integer, ForeignKey("signals.id"), nullable=True)  # set if this signal was recognized as a near-duplicate of an existing one
     canonical_url = Column(String, nullable=True, index=True)
     external_id = Column(String, nullable=True, index=True)
+    identity_key = Column(String, nullable=True, unique=True)
     title = Column(Text, nullable=True)
     published_at = Column(DateTime, nullable=True)
     retrieved_at = Column(DateTime, default=utcnow, nullable=True)

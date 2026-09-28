@@ -299,7 +299,7 @@ def test_gdelt_retries_429_with_exponential_backoff(db, monkeypatch):
     assert sleeps == [5, 10]
 
 
-def test_gdelt_epistemic_requirements_exclude_velocity_and_commercial_claims():
+def test_gdelt_epistemic_requirements_bound_velocity_and_reject_commercial_claims():
     provenance = {
         "source_registry_id": "gdelt-doc-api-v2",
         "source_type": "gdelt_doc",
@@ -412,6 +412,21 @@ def test_planner_media_coverage_does_not_clear_demand_or_create_opportunity(db, 
         for signal in signals
     )
     assert db.query(models.Opportunity).count() == 0
+    candidate = models.Opportunity(
+        problem="Existing candidate grounded in non-GDELT evidence.",
+        pattern_id=pattern.id,
+        status="identified",
+        market_confidence=0,
+        uncertainty=100,
+    )
+    db.add(candidate)
+    db.commit()
+
+    assert opportunity_engine.generate_opportunity_from_pattern_if_economic(db, pattern) is None
+    db.refresh(candidate)
+    assert candidate.status == "identified"
+    assert candidate.market_confidence == 0
+    assert candidate.uncertainty == 100
 
 
 def test_repeated_gdelt_queries_are_idempotent_across_tasks(db, monkeypatch):
