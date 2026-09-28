@@ -6,6 +6,7 @@ are reviewed again at collection time.
 
 | Source | Start URL | Public need it may show | robots.txt | Terms | Opened |
 |---|---|---|---|---|---|
+| TED Search API — candidate, NOT CLEARED for ForgeOS ingestion | https://api.ted.europa.eu/v3/notices/search | Published procurement notices; official documentation says analysis/reuse is supported | `https://api.ted.europa.eu/robots.txt` returned `404`; the separate `https://ted.europa.eu/robots.txt` disallows dynamic browser search query URLs but allows `/simap/xml-bulk-download`. No API robots prohibition was found; this does not settle field-level permission | Official API docs state published notices are available anonymously for analysis/reuse and describe commercial buyer/vendor services, but no machine-readable field schema, numerical rate cap, or blanket license for the selected notice fields was established. One bounded API request returned HTTP 400 for unsupported `fields` values. No results were returned or persisted | 2026-09-28 |
 | Nepal Public Procurement Monitoring Office / Bolpatra | https://bolpatra.gov.np/egp/ | Official e-GP procurement notices and tenders | `https://bolpatra.gov.np/robots.txt` and `/egp/robots.txt` returned maintenance-page HTML, not directives. PPMO's separate `https://www.ppmo.gov.np/robots.txt` states `Crawl-delay: 10` for that host only | No applicable automation/API/reuse terms or license found; procurement collection is NOT CLEARED | Opened 2026-09-25; rechecked 2026-09-28 |
 | Kathmandu Post | https://kathmandupost.com/ | Public notices or tender reporting | `403`; not cleared | The landing page returned `403`; terms were not cleared | 2026-09-25 |
 | Nepal Rastra Bank | https://www.nrb.org.np/ | Public notices | `200` text; `User-agent: *` disallows `/wp-admin/` only | `https://www.nrb.org.np/disclaimer/` returned `404`. No terms page granting collection was found | 2026-09-25 |
@@ -186,6 +187,54 @@ date. The source must be rechecked when the portal is operational. Public
 notice visibility and the PPMO-host crawl delay are not a substitute for this
 permission. Do not add a clearance, adapter, or live procurement query before
 these conditions are evidenced.
+
+### TED published procurement notices — candidate review, NOT CLEARED (2026-09-28)
+
+The European Union Publications Office's official TED developer
+[Search API documentation](https://docs.ted.europa.eu/api/latest/search.html)
+describes `POST https://api.ted.europa.eu/v3/notices/search` for already
+published procurement notices. It explicitly says published notices are
+available anonymously for analysis and reuse, targets data reusers, and lists
+commercial organizations integrating TED data into added-value services for
+vendors and buyers. The general [TED API documentation](https://docs.ted.europa.eu/api/latest/index.html)
+also confirms anonymous access for published-notice search/retrieval. This
+establishes a strong, official purpose-compatible candidate; it does not
+authorize bids, buyer contact, or treating a notice as ForgeOS-specific
+interest, WTP, or customer evidence.
+
+**Operational field contract not established.** The official API documentation
+page names `POST /v3/notices/search` but does not provide a machine-readable
+search request/response schema or supported selected-field catalog. To test
+the documented interface, one request was attempted with a 3-day publication
+date query, result limit 1, and only the intended notice ID/title/buyer/date/
+deadline/country/CPV fields. TED returned HTTP 400 stating that one or more
+`fields` values were unsupported and listing accepted values. The adapter
+therefore received no notices; no retry was made, no records were returned,
+and no source data was persisted. The API's live Swagger UI currently exposes
+the general TED Apps API spec but not a retrievable schema for this Search
+operation.
+
+The API host's `/robots.txt` returned 404. TED's separate
+`https://ted.europa.eu/en/robots.txt` disallows dynamic browser search query
+URLs, but does not govern the distinct API host. TED's Search API documentation
+does not state a numeric request quota, notice-field-specific license/rights,
+or retention terms. The HTTP 400 also prevents verifying the exact allowed
+minimal fields. No source clearance or adapter is registered; the registry
+continues to fail closed for TED. The attempted request reserved the local
+persistent source rate gate; no further TED request should be made until the
+one-hour interval has elapsed and the exact supported, permitted field schema
+has been established.
+
+**Precise unlock:** obtain the Search API's current machine-readable schema or
+written TED confirmation mapping the public notice ID, subject/title,
+contracting authority, publication/deadline, CPV, and country fields to valid
+request names; confirm those fields are covered by its reuse permission and
+privacy/retention conditions; and obtain the source's numeric rate policy or
+written permission for a conservative client-side interval. Then add only
+those fields to the registry, implement the exact documented request, and
+perform one bounded, rate-compliant read-only search. Until then, public
+availability and general-purpose reuse language are not enough to clear the
+unverified field contract.
 
 ## 2026-09-27 — Third-party license hardening and ILOSTAT review
 

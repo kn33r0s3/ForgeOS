@@ -599,3 +599,36 @@ TEST / VERIFICATION RESULTS:
 - Frontend TypeScript: `npm run typecheck` **passed**.
 - Existing file-backed SQLite close/reopen tests for demand observations, provenance, Need/capability links, economic assessments, and prospect handoff: **passed** in focused/full runs. Procurement-specific reopen evidence is **not applicable** because no cleared procurement observation exists.
 - `git diff --check` and final worktree/diff inspection: recorded after this card was added.
+
+## 2026-09-28 RESULT CARD — Global TED procurement-source evaluation (blocked at field contract)
+
+SOURCE / RIGHTS:
+The strongest global candidate is the European Union Publications Office's TED Search API at `https://api.ted.europa.eu/v3/notices/search`. Official [TED Search API docs](https://docs.ted.europa.eu/api/latest/search.html) describe anonymous search/retrieval of published notices for analysis and reuse and explicitly list commercial organizations building added-value services for vendors and buyers. The API host's `/robots.txt` returned 404. The separate TED website robots file disallows dynamic browser-search query URLs but does not state a restriction on the API host. Source documentation does not disclose a numeric request quota or the field-level license/privacy/retention contract for the fields needed by ForgeOS. Purpose-level reuse evidence is strong, but field-level machine use was not safely established; no TED runtime clearance remains registered.
+
+OTHER CANDIDATES:
+Official UK Contracts Finder API docs (`https://www.contractsfinder.service.gov.uk/apidocumentation`) reviewed here describe interfaces for approved notice publishers to feed opportunities into the service; this review did not establish an authorized read/reuse API for ForgeOS. USAspending's official data overview (`https://www.usaspending.gov/data/about-the-data`) concerns award/spend data, not current open solicitations; its source-specific commercial reuse/license conditions were not verified in this review. Nepal PPMO/Bolpatra remains blocked under the separate preceding result card. No random mirrors or search-result data were used.
+
+REAL SOURCE EXERCISE:
+One read-only POST was made to TED's documented Search API with query `PD >= 20260926 AND PD <= 20260928`, `page=1`, `limit=1`, and a minimal selected-field list for notice ID/title, buyer name, publication/deadline, country and CPV. HTTP response: **400**, with the service reporting unsupported `fields` values and listing supported values. The request returned **0 notices**; no search retry occurred. The API's official docs do not publish the accepted Search field schema, and the currently exposed Swagger spec did not expose this Search operation. The local persistent rate gate was reserved for one hour by this single attempt; do not retry until it expires and the exact allowed field names/rights are verified.
+
+CURRENTLY IMPLEMENTED:
+No TED adapter, source-clearance entry, endpoint, schema, or procurement data was retained. Removed the unverified draft instead of guessing accepted field names or persisting unexpected fields. `test_public_bolpatra_url_is_not_cleared_for_procurement_discovery` now verifies both Bolpatra and the TED Search target fail exact-URL clearance, `procurement_demand_discovery` has no active source, and rejected access creates no rate reservation in an isolated test DB. The generic existing authorized-observation → EVENT/EVIDENCE → demand-understanding → Need-if-warranted → capability-search → economic-assessment flow is unchanged.
+
+REAL DEMAND / SUBSTRATE:
+Procurement notices returned: **0**. Buying/requesting organizations identified: **0**. Procurement Signal/EVENT/EVIDENCE: **0**. Need and Opportunity linkage from procurement: **none**. Candidate/corroborated/canonical buyer: **none**. Potential buyer/prospect: **0**. No data from the rejected API response was retained.
+
+OUTREACH:
+**NONE.** No organization or person was contacted; no message, form, email, SMS, call, bid, quotation, or ACTION occurred.
+
+COMMERCIAL STATE:
+This review created no WTP, buyer-interest, customer, order, payment, or revenue evidence.
+
+PRECISE BLOCKER:
+Obtain a current machine-readable TED Search request/response schema or written TED confirmation of accepted field names for public notice ID, title, contracting authority, publication/deadline, CPV and country; confirmation that those fields are covered by the reuse authorization and their privacy/retention terms; and the numeric request quota or permission for a conservative local throttle. After the source's one-hour local cooldown expires, only then may one bounded query be retried under exact field clearance. This is the strongest candidate, but there is not yet one verified, successfully exercised demand source.
+
+VERIFICATION:
+- Focused source-clearance, prospect, economic, demand, capability, research, and public/customer-stage selection: **137 passed**.
+- Full backend suite after removing the unverified adapter: **487 passed, 2 skipped, 33 warnings**.
+- Frontend `npm run typecheck`: **passed**.
+- `git diff --check`: **passed after final documentation edits**.
+- Existing SQLite reopen tests for generic authorized demand/economic/prospect paths passed in these suites. Procurement-specific SQLite persistence is **not applicable**: the only TED request returned HTTP 400 and no procurement record was persisted.
