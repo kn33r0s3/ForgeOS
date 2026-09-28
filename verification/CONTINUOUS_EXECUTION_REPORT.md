@@ -674,3 +674,58 @@ FINAL WORKTREE VERIFICATION:
 - Final modified project files: `STATUS.md`, `backend/tests/test_source_clearance_registry.py`, `docs/CAPABILITY_QUEUE.md`, `docs/PUBLIC_SOURCES.md`, and this report.
 - `storage/scheduler.log` also remains modified as an operational worktree file; it was not edited or reverted.
 - Final diff review confirmed no runtime Contracts Finder clearance/collector, no procurement record, and no changes to the six-primitive or economic-validation implementation.
+
+## 2026-09-28 RESULT CARD — Request acknowledgement and background progress
+
+### CURRENTLY IMPLEMENTED
+
+- `POST /analyze` now returns after the local observation/question/research plan is persisted and dispatches at most one already-planned `ResearchTask` with FastAPI `BackgroundTasks`. It does not wait for that task's collector. Its existing response contract is additive (`research_status_url`); initial research state remains `research_started`, without representing uncollected evidence as complete.
+- `GET /analyze/{question_id}/status` reads the persisted research plan, task states, and only evidence IDs that still exist. It distinguishes an actively `running` task (`researching`) from merely `planned` tasks (`queued`). Terminal failures/no-evidence remain unresolved; no Opportunity is created.
+- Explicit `POST /signals` demand-understanding submissions retain the existing observation EVENT/EVIDENCE and persisted `WorkerTask` path, then dispatch the deterministic local handler after acknowledgement. The response adds a focused status URL. The existing worker manager now atomically claims queued tasks, preventing a duplicate worker/API execution of one demand task.
+- The update mechanism is **polling**, not streaming. The Analyze screen polls the returned status URL every 1.5 seconds for up to 20 checks or 45 seconds, then stops on terminal phases; it renders the persisted phase and evidence/task counts and gives a visible notice on repeated poll errors, timeout, or work that remains active when checks pause. The saved result is updated, but polling does not resume after a page reload. This UI currently covers `/analyze`; `/signals` consumers use its API status URL directly. The global worker's 30-minute cadence is unchanged; only the first local demand interpretation and one `/analyze` task are dispatched immediately. Remaining planned research still depends on the existing worker loop.
+- No cache, new database, schema primitive, or generic event bus was added. The six canonical primitives and source-clearance checks remain unchanged. Core type-registry seeding remains a measured repeated-query hotspot: an attempted batch-read optimization was reverted after it exposed a concurrent capability-gap SQLite write race; no query-count improvement is claimed.
+
+### MEASURED FACTS
+
+All request data below is an explicitly labelled **developer fixture** in isolated in-memory or temporary SQLite. No live market-demand claim, external collector request, or contact resulted.
+
+| Path / measurement | Observed result | Interpretation |
+|---|---:|---|
+| Prior `POST /signals` baseline, 5 TestClient samples, request only | 12.339 ms median; 118 SQL statements | Local enqueue/observation baseline; no external fetch |
+| Final `POST /signals` TestClient round trip, 5 samples, including background interpretation | 20.397 ms median; 210 SQL statements; first cold sample 78.429 ms / 290 statements | Includes more work than the baseline; not a like-for-like acknowledgement comparison and not a query reduction |
+| Final demand path, isolated loopback HTTP | 41.907 ms acknowledgement; completed `possible_demand` observed at 63.194 ms after 3 polls | No Need, no external request, no Action/outreach |
+| Final `/analyze` delayed-fixture HTTP probe | 68.306 ms acknowledgement with a 250 ms delayed background fixture; first poll `running`; final `needs_research` / `research_needs_evidence` at 333.270 ms | Handoff worked; 0 evidence was produced; fixture made no source call |
+| Existing local `GET /workers` payload | 66,591 bytes; first read 120.964 ms; three warm reads 2.874–3.413 ms | Cold-vs-warm variation observed; endpoint was not changed |
+
+The initial baseline and final round trip use different amounts of work. Therefore **no percentage latency improvement is claimed**. The measured benefit is the response/background separation for the research collector path; its actual external-source latency was not benchmarked, and no source request was made by these tests.
+
+### LATENCY BUDGETS (PROVISIONAL ENGINEERING TARGETS)
+
+- Warm local acknowledgement: ≤100 ms.
+- Persisted deterministic local demand interpretation: ≤500 ms.
+- Focused persisted-status read: ≤50 ms.
+- Deep source research and authorized external actions: no numeric SLA established; latency depends on current authorized source and its rate/access limits.
+
+These targets are not certified p95/p99 SLAs. Only the individual runs and five-sample local harness measurements above were observed.
+
+### VERIFICATION
+
+- Focused API/demand/worker/research progress tests: **47 passed** after the final phase-state changes.
+- Full backend suite: **497 passed, 2 skipped, 34 warnings**.
+- Root `npm run typecheck`: **passed**.
+- Root production `npm run build`: **passed**; its migration step correctly skipped because `DATABASE_URL` was not set.
+- Pylance problems check on all changed backend Python/test files: **no errors found**.
+- `git diff --check`: **passed**.
+- Existing local frontend and backend health endpoint: **HTTP 200** each.
+- Regression measurements: synchronous `/analyze` handoff test uses a **500 ms** local guard; warm demand submission plus background processing is capped at **230 SQL statements**. These guards do not certify a p95 SLA.
+
+### REAL-WORLD / COMMERCIAL STATE
+
+- Actual market demand, corroborated prospect, buyer, customer, WTP evidence, order, payment, and revenue from this work: **none**.
+- Outside source requests during timing probes: **0**.
+- External outreach/contact, form submission, email/message/call, or outbound Action: **NONE**.
+- No production database was modified by the isolated HTTP probes.
+
+### TARGET ARCHITECTURE / FUTURE CAPABILITY
+
+The implemented slice is: persisted user report → immediate truthful acknowledgement → one bounded existing background task → persisted status/evidence read by polling. A sufficiently understood Need may use the existing capability search; the flow still does not infer one from an ambiguous report. Future work includes making the existing frontend consume the status URLs, adding a transaction-safe reduction for the measured core-type seed query fan-out, and extending the same evidence-backed status pattern to capability/economic decision stages. Do not claim full real-time completion, external-demand discovery, or economic validation from this slice.

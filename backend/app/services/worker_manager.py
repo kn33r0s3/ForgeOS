@@ -15,6 +15,62 @@ from app.services import collector_runner, forge_loop, opportunity_engine
 from app.services.revenue_miner import mine_revenue_proposals
 from app.services import demand_understanding
 
+
+def process_worker_task_by_id(
+    db: Session,
+    task_id: int,
+    *,
+    worker_type: str | None = None,
+) -> bool:
+    """Atomically claim and execute one queued task, if it is eligible."""
+    now = utcnow()
+    claim = db.query(WorkerTask).filter(
+        WorkerTask.id == task_id,
+        WorkerTask.status == "queued",
+        (WorkerTask.next_run_at == None) | (WorkerTask.next_run_at <= now),
+    )
+    if worker_type is not None:
+        claim = claim.filter(WorkerTask.worker_type == worker_type)
+    claimed = claim.update(
+        {"status": "running", "updated_at": now},
+        synchronize_session=False,
+    )
+    db.commit()
+    if not claimed:
+        return False
+
+    db.expire_all()
+    task = db.get(WorkerTask, task_id)
+    if task is None:
+        return False
+    handler = HANDLERS.get(task.worker_type)
+    if not handler:
+        task.status = "failed"
+        task.error = f"no handler for worker_type='{task.worker_type}'"
+    else:
+        try:
+            task.outputs = handler(db, task)
+            task.status = "completed"
+        except Exception as exc:  # pylint: disable=broad-except
+            task.error = str(exc)
+            _schedule_retry(task)
+    task.updated_at = utcnow()
+    db.commit()
+    return True
+
+
+def process_demand_task_in_background(task_id: int) -> None:
+    """Run a queued local-only demand interpretation outside the request path."""
+    from app.database import SessionLocal
+
+    with SessionLocal() as db:
+        process_worker_task_by_id(
+            db,
+            task_id,
+            worker_type="demand_understanding",
+        )
+
+
 # ---------------------------------------------------------------------------
 # Handlers – in a real system these would import the actual worker modules.
 # ---------------------------------------------------------------------------
@@ -144,8 +200,8 @@ def _schedule_retry(task: WorkerTask) -> None:
 
 def process_worker_tasks(db: Session) -> None:
     now = utcnow()
-    tasks = (
-        db.query(WorkerTask)
+    task_ids = (
+        db.query(WorkerTask.id)
         .filter(WorkerTask.status == "queued")
         .filter((WorkerTask.next_run_at == None) | (WorkerTask.next_run_at <= now))
         .order_by(WorkerTask.priority.desc(), WorkerTask.created_at)
@@ -153,25 +209,8 @@ def process_worker_tasks(db: Session) -> None:
         .all()
     )
 
-    for task in tasks:
-        handler = HANDLERS.get(task.worker_type)
-        if not handler:
-            task.status = "failed"
-            task.error = f"no handler for worker_type='{task.worker_type}'"
-            continue
-        task.status = "running"
-        task.updated_at = utcnow()
-        db.commit()
-        try:
-            result = handler(db, task)
-            task.outputs = result
-            task.status = "completed"
-        except Exception as exc:  # pylint: disable=broad-except
-            task.error = str(exc)
-            _schedule_retry(task)
-        finally:
-            task.updated_at = utcnow()
-            db.commit()
+    for (task_id,) in task_ids:
+        process_worker_task_by_id(db, task_id)
 
     retention = now - timedelta(days=7)
     db.query(WorkerTask).filter(WorkerTask.status == "completed", WorkerTask.updated_at < retention).delete()

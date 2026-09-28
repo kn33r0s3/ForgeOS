@@ -52,6 +52,17 @@ class SignalOut(BaseModel):
     is_duplicate_of: Optional[int] = None
 
 
+class DemandUnderstandingTaskStatus(BaseModel):
+    task_id: int
+    status: str
+    phase: str
+    interpretation_state: Optional[str] = None
+    need_id: Optional[int] = None
+    unresolved_questions: List[str] = Field(default_factory=list)
+    updated_at: datetime
+    next_run_at: Optional[datetime] = None
+
+
 # ---------- Pattern ----------
 
 class PatternOut(BaseModel):
@@ -202,8 +213,31 @@ class AnalyzeResponse(BaseModel):
     research_question_id: Optional[int] = None
     research_task_ids: List[int] = []
     research_status: str = "research_started"
+    research_status_url: Optional[str] = None
     evidence_count: int = 0
     findings_summary: Optional[str] = None
+    research_plan: dict = Field(default_factory=dict)
+    research_sources: List[dict] = Field(default_factory=list)
+
+
+class AnalyzeTaskProgress(BaseModel):
+    id: int
+    source: str
+    status: str
+    current_step: Optional[str] = None
+    attempts: int
+    evidence_count: int
+    updated_at: datetime
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+
+class AnalyzeProgressResponse(BaseModel):
+    research_question_id: int
+    phase: str
+    research_status: str
+    evidence_count: int
+    tasks: List[AnalyzeTaskProgress]
     research_plan: dict = Field(default_factory=dict)
     research_sources: List[dict] = Field(default_factory=list)
 

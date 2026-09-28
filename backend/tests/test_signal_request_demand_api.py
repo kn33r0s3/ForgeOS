@@ -1,15 +1,16 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 from app import models
 from app.database import Base, get_db
+import app.database as database
 from app.main import app
 from app.migrations import run_migrations
-from app.services import demand_understanding, worker_manager
+from app.services import demand_understanding, world_graph
 
 
 def _client_for(db):
@@ -41,6 +42,7 @@ def test_explicit_signal_request_enters_observation_and_demand_worker(db):
             },
             headers={"Idempotency-Key": "developer-test-request-001"},
         )
+        status = client.get(response.headers["x-demand-understanding-status-url"])
     finally:
         client.close()
         app.dependency_overrides.clear()
@@ -54,6 +56,14 @@ def test_explicit_signal_request_enters_observation_and_demand_worker(db):
     assert "test.user@example.test" not in signal.content
     assert "+1-202-555-0147" not in signal.content
     assert response.headers["x-demand-understanding-task-id"]
+    assert status.status_code == 200
+    assert status.json()["status"] == "completed"
+    assert status.json()["phase"] == "completed"
+    assert status.json()["interpretation_state"] == "possible_demand"
+    assert status.json()["need_id"] is None
+    assert status.json()["unresolved_questions"] == list(
+        demand_understanding._DEFAULT_UNRESOLVED
+    )
 
     event = db.query(models.WorldEvent).filter_by(event_type="demand_observed").one()
     assert json.loads(event.payload)["signal_id"] == signal.id
@@ -70,15 +80,83 @@ def test_explicit_signal_request_enters_observation_and_demand_worker(db):
     assert provenance["idempotency_key_sha256"]
     assert datetime.fromisoformat(provenance["submitted_at"]).tzinfo is not None
 
-    task = db.get(models.WorkerTask, int(response.headers["x-demand-understanding-task-id"]))
-    result = worker_manager.HANDLERS[task.worker_type](db, task)
-    assert result["state"] == "possible_demand"
-    assert result["external_action"] is False
-    assert result["need_id"] is None
-    assert result["unresolved_questions"] == list(demand_understanding._DEFAULT_UNRESOLVED)
+    task = (
+        db.query(models.WorkerTask)
+        .filter_by(id=int(response.headers["x-demand-understanding-task-id"]))
+        .populate_existing()
+        .one()
+    )
+    assert task.status == "completed"
+    assert task.outputs["external_action"] is False
+    assert task.outputs["need_id"] is None
     assert db.query(models.SubstrateEntity).filter_by(entity_type="need").count() == 0
     assert db.query(models.Opportunity).count() == 0
     assert db.query(models.BookingRequest).count() == 0
+
+
+def test_demand_status_endpoint_does_not_expose_other_worker_tasks(db):
+    task = models.WorkerTask(worker_type="research", task_name="unrelated", inputs={})
+    db.add(task)
+    db.commit()
+    client = _client_for(db)
+    try:
+        response = client.get(f"/signals/demand-understanding/{task.id}")
+    finally:
+        client.close()
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 404
+
+
+def test_demand_submission_query_count_stays_within_measured_budget(db):
+    world_graph.seed_core_types(db)
+    statements = []
+    bind = db.get_bind()
+
+    def count_statement(connection, cursor, statement, parameters, context, executemany):
+        statements.append(statement)
+
+    event.listen(bind, "before_cursor_execute", count_statement)
+    client = _client_for(db)
+    try:
+        response = client.post(
+            "/signals",
+            json={
+                "content": "Developer performance fixture, not market demand: need bicycle repair.",
+                "purpose": "demand_understanding",
+            },
+            headers={"Idempotency-Key": "demand-query-budget-fixture"},
+        )
+    finally:
+        client.close()
+        app.dependency_overrides.clear()
+        event.remove(bind, "before_cursor_execute", count_statement)
+
+    assert response.status_code == 200, response.text
+    assert len(statements) <= 230
+
+
+def test_demand_status_distinguishes_delayed_retry_from_active_work(db):
+    task = models.WorkerTask(
+        worker_type="demand_understanding",
+        task_name="understand_demand",
+        status="queued",
+        inputs={"observation_ids": []},
+        next_run_at=datetime.now(timezone.utc) + timedelta(minutes=2),
+    )
+    db.add(task)
+    db.commit()
+    client = _client_for(db)
+    try:
+        response = client.get(f"/signals/demand-understanding/{task.id}")
+    finally:
+        client.close()
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "queued"
+    assert response.json()["phase"] == "retry_wait"
+    assert response.json()["next_run_at"] is not None
 
 
 def test_idempotent_signal_request_reuses_observation_event_evidence_and_task(db):
@@ -166,6 +244,8 @@ def test_signal_request_sqlite_reopen_preserves_authorization_and_epistemic_boun
     run_migrations(engine)
     factory = sessionmaker(bind=engine, expire_on_commit=False)
     prior_overrides = dict(app.dependency_overrides)
+    prior_session_local = database.SessionLocal
+    database.SessionLocal = factory
     try:
         with factory() as db:
             client = _client_for(db)
@@ -184,10 +264,8 @@ def test_signal_request_sqlite_reopen_preserves_authorization_and_epistemic_boun
                 assert response.status_code == 200, response.text
                 signal_id = response.json()["id"]
                 task_id = int(response.headers["x-demand-understanding-task-id"])
-                task = db.get(models.WorkerTask, task_id)
-                task.outputs = worker_manager.HANDLERS[task.worker_type](db, task)
-                task.status = "completed"
-                db.commit()
+                task = db.query(models.WorkerTask).filter_by(id=task_id).populate_existing().one()
+                assert task.status == "completed"
                 event_id = db.query(models.WorldEvent).filter_by(
                     event_type="demand_observed"
                 ).one().id
@@ -223,6 +301,7 @@ def test_signal_request_sqlite_reopen_preserves_authorization_and_epistemic_boun
             assert reopened.query(models.Opportunity).count() == 0
             assert reopened.query(models.BookingRequest).count() == 0
     finally:
+        database.SessionLocal = prior_session_local
         app.dependency_overrides.clear()
         app.dependency_overrides.update(prior_overrides)
         engine.dispose()

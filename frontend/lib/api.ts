@@ -557,10 +557,31 @@ export interface AnalyzeResponse {
   research_question_id?: number | null;
   research_task_ids?: number[];
   research_status?: string;
+  research_status_url?: string | null;
   evidence_count?: number;
   findings_summary?: string | null;
   research_plan?: ResearchPlan;
   research_sources?: ResearchEvidenceSource[];
+}
+
+export interface AnalyzeProgressResponse {
+  research_question_id: number;
+  phase: string;
+  research_status: string;
+  evidence_count: number;
+  tasks: {
+    id: number;
+    source: string;
+    status: string;
+    current_step?: string | null;
+    attempts: number;
+    evidence_count: number;
+    updated_at: string;
+    started_at?: string | null;
+    completed_at?: string | null;
+  }[];
+  research_plan: Record<string, unknown>;
+  research_sources: Record<string, unknown>[];
 }
 
 export interface ResearchPlan {
@@ -1035,6 +1056,8 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ idea }),
     }),
+  getAnalyzeProgress: (researchStatusUrl: string, signal?: AbortSignal) =>
+    request<AnalyzeProgressResponse>(researchStatusUrl, { signal }),
 
   // Observer Engine
   observe: (content: string, source = "manual") =>

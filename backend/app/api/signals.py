@@ -4,13 +4,14 @@ import hashlib
 import secrets
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app import models, schemas
 from app.services import observer
 from app.services import demand_understanding
+from app.services import worker_manager
 
 router = APIRouter(prefix="/signals", tags=["signals"])
 
@@ -19,6 +20,7 @@ router = APIRouter(prefix="/signals", tags=["signals"])
 def create_signal(
     payload: schemas.SignalCreate,
     response: Response,
+    background_tasks: BackgroundTasks,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     db: Session = Depends(get_db),
 ):
@@ -69,6 +71,10 @@ def create_signal(
             )
         task = demand_understanding.enqueue_understanding(db, [signal.id])
         response.headers["X-Demand-Understanding-Task-ID"] = str(task.id)
+        response.headers["X-Demand-Understanding-Status-URL"] = (
+            f"/signals/demand-understanding/{task.id}"
+        )
+        background_tasks.add_task(worker_manager.process_demand_task_in_background, task.id)
         return signal
 
     signal = observer.record_signal(
@@ -81,3 +87,44 @@ def create_signal(
 def get_signals(limit: int = 200, db: Session = Depends(get_db)):
     """List stored signals, most recent first."""
     return observer.list_signals(db, limit=limit)
+
+
+@router.get(
+    "/demand-understanding/{task_id}",
+    response_model=schemas.DemandUnderstandingTaskStatus,
+)
+def get_demand_understanding_status(task_id: int, db: Session = Depends(get_db)):
+    """Return persisted progress for one demand-understanding task."""
+    task = (
+        db.query(models.WorkerTask)
+        .filter_by(id=task_id, worker_type="demand_understanding")
+        .populate_existing()
+        .one_or_none()
+    )
+    if task is None:
+        raise HTTPException(status_code=404, detail="demand-understanding task not found")
+
+    outputs = task.outputs if isinstance(task.outputs, dict) else {}
+    phase = {
+        "queued": "understanding",
+        "running": "understanding",
+        "completed": "completed",
+        "failed": "blocked",
+        "blocked": "blocked",
+    }.get(task.status, "unknown")
+    if task.status == "queued" and task.next_run_at is not None:
+        next_run_at = task.next_run_at
+        if next_run_at.tzinfo is None:
+            next_run_at = next_run_at.replace(tzinfo=timezone.utc)
+        if next_run_at > datetime.now(timezone.utc):
+            phase = "retry_wait"
+    return schemas.DemandUnderstandingTaskStatus(
+        task_id=task.id,
+        status=task.status,
+        phase=phase,
+        interpretation_state=outputs.get("state"),
+        need_id=outputs.get("need_id"),
+        unresolved_questions=outputs.get("unresolved_questions") or [],
+        updated_at=task.updated_at,
+        next_run_at=task.next_run_at,
+    )

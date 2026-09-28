@@ -1,14 +1,15 @@
 """
 API routes that drive Forge's core analysis loop:
 
-  POST /analyze        -> turn one free-text idea into structured intelligence + Opportunity
+  POST /analyze        -> acknowledge a problem and start bounded background research
+  GET  /analyze/{id}/status -> read persisted progress for that research question
   POST /patterns/run    -> re-scan all stored signals and (re)detect patterns
   GET  /patterns        -> list currently detected patterns
   POST /patterns/{id}/opportunity -> generate an Opportunity from a specific pattern
   GET  /stats           -> dashboard totals
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -19,15 +20,38 @@ from app.services.observer_engine import ObserverEngine
 router = APIRouter(tags=["analyze"])
 
 
+def execute_research_task_in_background(task_id: int) -> None:
+    """Execute one persisted, source-governed research task after acknowledgement."""
+    from app.database import SessionLocal
+
+    with SessionLocal() as db:
+        task = (
+            db.query(models.ResearchTask)
+            .filter_by(id=task_id, status="planned")
+            .one_or_none()
+        )
+        if task is None:
+            return
+        question_id = task.question_id
+        collector_runner.execute_task(db, task)
+        question = db.get(models.ResearchQuestion, question_id)
+        if question is not None:
+            research_planner.plan_tasks_for_question(db, question)
+
+
 @router.post("/analyze", response_model=schemas.AnalyzeResponse)
-def analyze_idea(payload: schemas.AnalyzeRequest, db: Session = Depends(get_db)):
+def analyze_idea(
+    payload: schemas.AnalyzeRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     """Start the real research pipeline for a user-submitted problem.
 
     This route still accepts input and records it as a Signal, but it does NOT
     create a fresh Opportunity on the basis of a raw idea alone. The public flow
-    now creates a ResearchQuestion tied to a claim and executes the existing
-    research pipeline (ResearchTask -> collector -> Evidence -> evaluation)
-    before any Opportunity can be justified.
+    creates a ResearchQuestion tied to a claim and returns its current persisted
+    state. One planned, source-governed ResearchTask runs after acknowledgement;
+    no Opportunity is justified by the raw idea alone.
     """
     idea = payload.idea.strip()
     observer = ObserverEngine(db)
@@ -60,8 +84,7 @@ def analyze_idea(payload: schemas.AnalyzeRequest, db: Session = Depends(get_db))
         .first()
     )
     if next_task is not None:
-        collector_runner.execute_task(db, next_task)
-    research_planner.plan_tasks_for_question(db, question)
+        background_tasks.add_task(execute_research_task_in_background, next_task.id)
     tasks = (
         db.query(models.ResearchTask)
         .filter(models.ResearchTask.question_id == question.id)
@@ -200,10 +223,126 @@ def analyze_idea(payload: schemas.AnalyzeRequest, db: Session = Depends(get_db))
         research_question_id=question.id,
         research_task_ids=[task.id for task in tasks],
         research_status=research_status,
+        research_status_url=f"/analyze/{question.id}/status",
         evidence_count=evidence_count,
         findings_summary=findings_summary,
         research_plan=research_plan,
         research_sources=research_sources,
+    )
+
+
+@router.get(
+    "/analyze/{question_id}/status",
+    response_model=schemas.AnalyzeProgressResponse,
+)
+def get_analyze_status(question_id: int, db: Session = Depends(get_db)):
+    """Return current persisted progress without rerunning research."""
+    question = db.get(models.ResearchQuestion, question_id)
+    if question is None:
+        raise HTTPException(status_code=404, detail="research question not found")
+
+    tasks = (
+        db.query(models.ResearchTask)
+        .filter(models.ResearchTask.question_id == question.id)
+        .order_by(models.ResearchTask.id.asc())
+        .populate_existing()
+        .all()
+    )
+    task_evidence_ids = {
+        int(value)
+        for task in tasks
+        for value in (task.evidence_ids or "").split(",")
+        if value.isdigit()
+    }
+    claim_evidence_ids = set()
+    if question.source_claim_id is not None:
+        claim_evidence_ids = {
+            row[0]
+            for row in db.query(models.EvidenceRelationship.evidence_id)
+            .filter(models.EvidenceRelationship.claim_id == question.source_claim_id)
+            .all()
+        }
+    all_evidence_ids = task_evidence_ids | claim_evidence_ids
+    persisted_evidence_ids = set()
+    if all_evidence_ids:
+        persisted_evidence_ids = {
+            row[0]
+            for row in db.query(models.Evidence.id)
+            .filter(models.Evidence.id.in_(all_evidence_ids))
+            .all()
+        }
+    persisted_claim_evidence_ids = persisted_evidence_ids & claim_evidence_ids
+    evidence_count = len(persisted_claim_evidence_ids)
+    if not evidence_count:
+        evidence_count = len(persisted_evidence_ids & task_evidence_ids)
+
+    research_plan = question.research_plan or {}
+    states = {task.status for task in tasks}
+    has_pending_tasks = bool(states & {"planned", "running"})
+    has_unresolved_tasks = bool(states & {"failed", "needs_research"})
+    if research_plan.get("status") == "research_complete":
+        research_status = "research_complete"
+    elif research_plan.get("status") == "research_terminal_unresolved":
+        research_status = "research_terminal_unresolved"
+    elif states & {"failed"} and not has_pending_tasks:
+        research_status = "research_failed"
+    elif states & {"needs_research"} or states == {"completed"}:
+        research_status = "research_needs_evidence"
+    elif evidence_count > 0:
+        research_status = "research_in_progress"
+    else:
+        research_status = "research_started"
+
+    if "running" in states:
+        phase = "researching"
+    elif "planned" in states:
+        phase = "queued"
+    elif research_status == "research_complete":
+        phase = "completed"
+    elif research_status in {"research_terminal_unresolved", "research_failed"}:
+        phase = "blocked"
+    elif evidence_count:
+        phase = "evidence_found"
+    elif research_status == "research_needs_evidence" or has_unresolved_tasks:
+        phase = "awaiting_evidence"
+    else:
+        phase = "not_started"
+
+    source_results = []
+    task_progress = []
+    for task in tasks:
+        results = task.results if isinstance(task.results, dict) else {}
+        source_results.extend(
+            item
+            for item in results.get("source_results", [])
+            if isinstance(item, dict) and isinstance(item.get("evidence_id"), int)
+        )
+        task_ids = {
+            int(value)
+            for value in (task.evidence_ids or "").split(",")
+            if value.isdigit()
+        }
+        task_progress.append(
+            schemas.AnalyzeTaskProgress(
+                id=task.id,
+                source=task.source,
+                status=task.status,
+                current_step=task.current_step,
+                attempts=task.attempts,
+                evidence_count=len(task_ids & persisted_evidence_ids),
+                updated_at=task.updated_at,
+                started_at=task.started_at,
+                completed_at=task.completed_at,
+            )
+        )
+    return schemas.AnalyzeProgressResponse(
+        research_question_id=question.id,
+        phase=phase,
+        research_status=research_status,
+        evidence_count=evidence_count,
+        tasks=task_progress,
+        research_plan=research_plan,
+        research_sources=source_results,
     )
 
 

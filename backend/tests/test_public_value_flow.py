@@ -1,10 +1,14 @@
+import asyncio
 import sqlite3
+import time
 
 import pytest
+from fastapi import BackgroundTasks
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 
-from app import models
+from app import models, schemas
+from app.api.analyze import analyze_idea
 from app.database import Base, get_db
 from app.main import app
 from app.migrations import run_migrations
@@ -62,13 +66,22 @@ def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     assert payload["opportunity_id"] is None
     assert payload["research_question_id"] is not None
     assert payload["research_task_ids"]
-    assert payload["research_status"] == "research_terminal_unresolved"
-    assert payload["research_plan"]["terminal_reason"] == (
+    assert payload["research_status"] == "research_started"
+    assert payload["evidence_count"] == 0
+    assert payload["research_sources"] == []
+    progress = client_with_db.get(payload["research_status_url"])
+    assert progress.status_code == 200, progress.text
+    progress_payload = progress.json()
+    assert progress_payload["phase"] == "blocked"
+    assert progress_payload["research_status"] == "research_terminal_unresolved"
+    assert progress_payload["research_plan"]["terminal_reason"] == (
         "one_or_more_requirements_remain_unresolved_under_current_source_clearances"
     )
-    assert len(payload["research_plan"]["requirements"]) == 5
-    assert payload["research_plan"]["requirements"][0]["status"] == "satisfied"
-    assert payload["research_sources"][0]["url"] == "https://doi.org/10.1234/repair.1"
+    assert len(progress_payload["research_plan"]["requirements"]) == 5
+    assert progress_payload["research_plan"]["requirements"][0]["status"] == "satisfied"
+    assert progress_payload["research_sources"][0]["url"] == "https://doi.org/10.1234/repair.1"
+    assert any(task["status"] == "completed" for task in progress_payload["tasks"])
+    assert progress_payload["evidence_count"] == 1
     assert "repair" in payload["problem"].lower()
     assert payload["unknowns"]
     assert any("willingness to pay" in item.lower() for item in payload["unknowns"])
@@ -81,6 +94,75 @@ def test_public_problem_submission_starts_real_research_and_defers_opportunity(
 def test_public_problem_submission_rejects_empty_input(client_with_db):
     response = client_with_db.post("/analyze", json={"idea": "   "})
     assert response.status_code == 422
+
+
+def test_analyze_acknowledges_before_the_collector_background_task(db, monkeypatch):
+    collector_calls = []
+
+    def record_background_collection(database, task):
+        collector_calls.append(task.id)
+
+    monkeypatch.setattr(
+        "app.api.analyze.collector_runner.execute_task",
+        record_background_collection,
+    )
+    background_tasks = BackgroundTasks()
+    started_at = time.perf_counter()
+    response = analyze_idea(
+        schemas.AnalyzeRequest(
+            idea="Developer timing fixture only: synthetic problem for background handoff."
+        ),
+        background_tasks,
+        db,
+    )
+    acknowledgement_ms = (time.perf_counter() - started_at) * 1000
+
+    assert acknowledgement_ms < 500
+    assert response.research_status == "research_started"
+    assert response.research_status_url == (
+        f"/analyze/{response.research_question_id}/status"
+    )
+    assert response.evidence_count == 0
+    assert response.research_sources == []
+    assert collector_calls == []
+    assert len(background_tasks.tasks) == 1
+
+    asyncio.run(background_tasks())
+
+    assert collector_calls == [background_tasks.tasks[0].args[0]]
+
+
+@pytest.mark.parametrize(
+    ("task_status", "expected_phase"),
+    [
+        ("planned", "queued"),
+        ("running", "researching"),
+        ("completed", "awaiting_evidence"),
+        ("needs_research", "awaiting_evidence"),
+        ("failed", "blocked"),
+    ],
+)
+def test_research_status_distinguishes_queued_from_running_work(
+    client_with_db, db, task_status, expected_phase
+):
+    question = models.ResearchQuestion(question=f"Status fixture: {task_status}")
+    db.add(question)
+    db.commit()
+    task = models.ResearchTask(
+        question_id=question.id,
+        source="crossref",
+        query="Developer status fixture only",
+        status=task_status,
+    )
+    db.add(task)
+    db.commit()
+
+    response = client_with_db.get(f"/analyze/{question.id}/status")
+
+    assert response.status_code == 200, response.text
+    assert response.json()["phase"] == expected_phase
+    assert response.json()["tasks"][0]["status"] == task_status
+    assert response.json()["evidence_count"] == 0
 
 
 def test_analyze_does_not_report_completed_for_mixed_empty_task_results(

@@ -1,7 +1,38 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api, AnalyzeResponse } from "@/lib/api";
+import { api, AnalyzeProgressResponse, AnalyzeResponse } from "@/lib/api";
+
+const MAX_PROGRESS_POLLS = 20;
+const PROGRESS_POLL_INTERVAL_MS = 1_500;
+const PROGRESS_POLL_TIMEOUT_MS = 45_000;
+
+function progressLabel(progress?: AnalyzeProgressResponse | null, result?: AnalyzeResponse | null) {
+  const phase = progress?.phase;
+  if (phase === "queued") return "Queued";
+  if (phase === "researching") return "Running";
+  if (phase === "completed") return "Research complete";
+  if (phase === "evidence_found") return "Evidence found";
+  if (phase === "awaiting_evidence") return "Awaiting evidence";
+  if (phase === "not_started") return "Not started";
+  if (phase) return phase.replaceAll("_", " ");
+  const researchStatus = progress?.research_status || result?.research_status;
+  if (researchStatus === "research_complete") return "Research complete";
+  if (
+    phase === "blocked" ||
+    researchStatus === "research_terminal_unresolved" ||
+    researchStatus === "research_failed"
+  ) return "Blocked";
+  if (researchStatus === "research_started") return "Queued";
+  if (researchStatus === "research_in_progress") return "Running";
+  if (researchStatus === "research_needs_evidence") return "Awaiting evidence";
+  const status = researchStatus;
+  return status ? status.replaceAll("_", " ") : "Status unavailable";
+}
+
+function isProgressActive(progress: AnalyzeProgressResponse) {
+  return progress.phase === "queued" || progress.phase === "researching";
+}
 
 const samplePrompts = [
   "I run a small repair shop and want to know whether customers are actively looking for mobile repair services.",
@@ -22,6 +53,8 @@ export default function AnalyzePage() {
   const [idea, setIdea] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
+  const [progress, setProgress] = useState<AnalyzeProgressResponse | null>(null);
+  const [progressNotice, setProgressNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusText, setStatusText] = useState("Researching");
 
@@ -47,15 +80,68 @@ export default function AnalyzePage() {
     if (!trimmed) return;
     setLoading(true);
     setError(null);
+    setProgress(null);
+    setProgressNotice(null);
     setStatusText("Researching");
 
     try {
-      setStatusText("Collecting evidence");
       const res = await api.analyze(trimmed);
-      setStatusText("Evaluating findings");
       setResult(res);
       setIdea("");
-      setStatusText("Result ready");
+
+      if (
+        res.research_status_url &&
+        (res.research_status === "research_started" || res.research_status === "research_in_progress")
+      ) {
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(
+          () => controller.abort(),
+          PROGRESS_POLL_TIMEOUT_MS,
+        );
+        let latestProgress: AnalyzeProgressResponse | null = null;
+        let failedPolls = 0;
+
+        try {
+          for (let attempt = 0; attempt < MAX_PROGRESS_POLLS; attempt += 1) {
+            if (controller.signal.aborted) break;
+            try {
+              const currentProgress = await api.getAnalyzeProgress(res.research_status_url, controller.signal);
+              latestProgress = currentProgress;
+              failedPolls = 0;
+              setProgress(currentProgress);
+              setStatusText(progressLabel(currentProgress));
+              setResult((current) => current ? {
+                ...current,
+                research_status: currentProgress.research_status,
+                evidence_count: currentProgress.evidence_count,
+                research_task_ids: currentProgress.tasks.map((task) => task.id),
+              } : current);
+              if (!isProgressActive(currentProgress)) break;
+            } catch {
+              failedPolls += 1;
+              if (failedPolls >= 3) {
+                setProgressNotice("The persisted progress endpoint could not be reached; the last known status is shown.");
+                break;
+              }
+            }
+
+            if (attempt < MAX_PROGRESS_POLLS - 1 && !controller.signal.aborted) {
+              await new Promise((resolve) => window.setTimeout(resolve, PROGRESS_POLL_INTERVAL_MS));
+            }
+          }
+        } finally {
+          window.clearTimeout(timeoutId);
+        }
+
+        if (controller.signal.aborted) {
+          setProgressNotice("Progress checks timed out; the last persisted status is shown.");
+        } else if (latestProgress && isProgressActive(latestProgress)) {
+          setProgressNotice("Research is still running; automatic status checks have paused.");
+        }
+        setStatusText(progressLabel(latestProgress, res));
+      } else {
+        setStatusText(progressLabel(null, res));
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Could not reach the Forge backend.";
       setError(message || "Could not reach the Forge backend.");
@@ -117,6 +203,11 @@ export default function AnalyzePage() {
           {error}
         </div>
       )}
+      {progressNotice && (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          {progressNotice}
+        </div>
+      )}
 
       {result && (
         <div className="space-y-5">
@@ -127,9 +218,9 @@ export default function AnalyzePage() {
                 <p className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-white">{result.problem}</p>
               </div>
               <div className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-right text-sm text-neutral-200">
-                <div>{result.opportunity_id ? `Score: ${result.score.toFixed(0)}/100` : "Research in progress"}</div>
+                <div>{result.opportunity_id ? `Score: ${result.score.toFixed(0)}/100` : progressLabel(progress, result)}</div>
                 <div className="text-xs text-neutral-400">
-                  {result.opportunity_id ? result.evidence_quality || "Limited evidence" : `${result.research_status || "research_started"}`}
+                  {result.opportunity_id ? result.evidence_quality || "Limited evidence" : progress?.phase || result.research_status || "Status unavailable"}
                 </div>
               </div>
             </div>
@@ -144,11 +235,15 @@ export default function AnalyzePage() {
               {result.market_analysis || "No market analysis was produced yet. The system is still validating whether the problem is real and worth solving."}
             </Section>
             <Section title="Research status">
-              {result.findings_summary || "The submitted problem has entered the research pipeline, but no opportunity claim has been justified yet."}
+              {progress
+                ? `Latest persisted state: ${progress.research_status}`
+                : result.findings_summary || "No findings summary was returned."}
+              {"\n\n"}
+              {progressLabel(progress, result)}
               {"\n\n"}
               {result.research_question_id ? `Research question: #${result.research_question_id}` : "No research question persisted yet."}
               {result.research_task_ids && result.research_task_ids.length > 0 ? `\nResearch tasks: ${result.research_task_ids.join(", ")}` : "\nNo tasks have completed yet."}
-              {typeof result.evidence_count === "number" ? `\nEvidence collected: ${result.evidence_count}` : ""}
+              {typeof (progress?.evidence_count ?? result.evidence_count) === "number" ? `\nEvidence collected: ${progress?.evidence_count ?? result.evidence_count}` : ""}
             </Section>
           </div>
 
