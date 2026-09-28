@@ -24,8 +24,11 @@ from sqlalchemy.dialects import sqlite
 # Build the manifest from the live SQLAlchemy metadata so older SQLite files
 # get every column the current ORM expects. This keeps the migration path in
 # sync with models.py without having to maintain a stale hand-written list.
-def _sql_type_for(column) -> str:
-    """Map SQLAlchemy column types to SQLite-friendly DDL fragments."""
+def _sql_type_for(column, dialect=None) -> str:
+    """Compile a column type for the dialect being migrated."""
+    if dialect is not None:
+        return column.type.compile(dialect=dialect)
+
     from sqlalchemy import Boolean, DateTime, Float, Integer, JSON, String, Text
 
     if isinstance(column.type, JSON):
@@ -66,7 +69,7 @@ def _default_sql_for(column) -> str:
     return ""
 
 
-def _build_expected_columns() -> dict[str, list[tuple[str, str]]]:
+def _build_expected_columns(dialect=None) -> dict[str, list[tuple[str, str]]]:
     from app.database import Base
 
     expected: dict[str, list[tuple[str, str]]] = {}
@@ -75,7 +78,7 @@ def _build_expected_columns() -> dict[str, list[tuple[str, str]]]:
         for column in table.columns:
             if column.primary_key:
                 continue
-            column_type = _sql_type_for(column)
+            column_type = _sql_type_for(column, dialect)
             default_sql = _default_sql_for(column)
             ddl = column_type if not default_sql else f"{column_type} {default_sql}"
             column_entries.append((column.name, ddl))
@@ -233,7 +236,7 @@ def run_migrations(engine: Engine) -> list[str]:
     existing_tables = set(inspector.get_table_names())
     applied: list[str] = []
 
-    for table, columns in _build_expected_columns().items():
+    for table, columns in _build_expected_columns(engine.dialect).items():
         if table not in existing_tables:
             # Table doesn't exist yet — Base.metadata.create_all() (run
             # right before this) will have created it fresh with every
