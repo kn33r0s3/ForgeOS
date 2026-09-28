@@ -298,3 +298,19 @@ enforcement layer when claims overlap.
 - **Verification status:** not implemented or cleared. The isolated follow-up regression proves only that an empty OpenAlex semantic retrieval can generate a bounded, clearance-preserving keyword task. Its deterministic test-double Evidence remained `claim_support: not_inferred`; affected-population and local-applicability claims stayed unresolved.
 - **Terminal boundary:** customer pain, buyer willingness-to-pay, and commercial demand still require genuine direct customer or transaction evidence. Neither the follow-up nor any public-source capability may unlock an Opportunity or commercial validation.
 - **Latest verification:** focused research selection **56 passed, 1 skipped, 7 warnings**; full backend **447 passed, 2 skipped, 27 warnings**; isolated SQLite follow-up persistence/reopen **1 passed, 3 warnings**. See the latest RESULT in `verification/CONTINUOUS_EXECUTION_REPORT.md`.
+
+## [IMPLEMENTED — TEST VERIFIED] General research capability discovery
+
+- Unanswered requirements now create a durable CAPABILITY-primitive gap record rather than Evidence. The record includes requirement/question IDs, evidence and geographic/temporal/population scope, insufficiency reason, candidate-discovery state, clearance state, provenance, and a bounded next action.
+- Discovery is deliberately conservative: it creates at most **3** generic source-adapter hypotheses at depth **1**, performs **0** external requests in the current implementation, and enforces a **2-second** cycle budget. It does not invent providers, query uncleared hosts, activate candidates, or treat search metadata as evidence.
+- Lifecycle is explicit: `candidate` → `reviewed` (must bind an existing registry entry) → `cleared` (must match a current exact clearance) → substrate-tested `active`. The planner refuses inactive/uncleared discovered candidates; only an active candidate plus the authoritative registry clearance can create a ResearchTask.
+- Verified isolated SQLite reopen retained the gap, candidate, active lifecycle, ResearchTask, and Evidence. The task and Evidence both retained the activated capability ID and source registry ID. Discovery itself created no Evidence, Signal, Opportunity, or Decision.
+- The Nepal-specific agriculture capability remains **NOT CLEARED**. The next missing capability is still a reviewed primary Nepal agriculture/postharvest source with crop/loss, geography, season, and smallholder scope.
+
+## [IMPLEMENTED — TEST VERIFIED] Demand-first understanding
+
+- Raw observations now enter through the existing `Signal` observer and are projected into substrate `WorldEvent` + `Evidence` records before any category or need type is required. The new `need` entity type is an open-vocabulary substrate type; no vertical table was added.
+- The deterministic seam records `possible_demand`, `hypothesized`, or `sufficiently_understood_need`, keeps unresolved outcome questions explicit, and uses only `possible`/`hypothesized` evidence. It does not infer customers, market size, willingness-to-pay, fulfillment, or Opportunity state.
+- A sufficiently understood need calls the existing `active_cleared_sources()` path. Existing cleared capability is reused without research; an empty authorized match calls the existing `ensure_capability_gap()` path. Inactive/uncleared capability candidates remain non-executable under the prior lifecycle.
+- Isolated SQLite proof (synthetic mechanics fixture): after close/reopen, Signal **1**, Need **2**, and capability gap **1** remained durable; one downstream ResearchQuestion was created only for the explicit no-capability gap; Opportunity and Decision counts were **0**.
+- Remaining capability: consent-preserving real-world demand observation plus an authorized response/fulfillment channel. This increment does not claim real demand validation or economic action.

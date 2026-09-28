@@ -1,1448 +1,259 @@
-# ForgeOS Universal Substrate — Blueprint & Multi-Agent Contract
+# ForgeOS Blueprint — Amendment 2026-09-28: Demand-First + Reuse-First
 
-**Authority:** This is the authoritative Universal Substrate specification. The dated amendment below resolves implementation and migration ambiguities in the original blueprint. Where older wording elsewhere in this file conflicts with the amendment, the amendment governs. This is a narrow hardening and expansion of the operating model, not a narrowing of the North Star.
+**Nature:** narrow, additive amendment to the CURRENT authoritative Universal Substrate blueprint. Not a parallel blueprint. It does not touch the 2026-09-25 six-primitive amendment, which stays in force unchanged.
 
-> **North Star.** ForgeOS is never finished by exhausting a list of features. It is designed to continuously discover new domains, capabilities, relationships, information, resources, opportunities, and forms of value, incorporate legitimate new capabilities into the network, and compose what it knows and can do into useful outcomes.
+**How to apply:** Part A is inserted verbatim as a new section immediately after the "Implementation amendment — 2026-09-25 / Logical primitives and physical records" section (before "# 0. Universal Product Model"). Part B is a list of anchored in-place edits (find the quoted anchor text, apply the change). Part C is the status table. Where older wording conflicts, this amendment governs.
+
+---
+
+# PART A — Insert as new section
+
+## Implementation amendment — 2026-09-28: Demand-first, reuse-first
+
+### A.1 Economic objective
+
+> ForgeOS does not exist to endlessly hunt signals, collect data, or reinvent solved problems.
 >
-> No initial category, geography, ontology, business model, product, marketplace, or interface defines the limits of ForgeOS.
+> ForgeOS exists to understand the world's unmet demand and mobilize existing authorized capabilities to create value — researching or inventing only when existing capability is insufficient.
 
-> **Core operating thesis.** The world already contains enormous amounts of information, demand, supply, capability, unused capacity, relationships, assets, work, and opportunity. ForgeOS does not need to manually recreate the world. It builds lawful, permissioned, evidence-backed connections to it, structures what it can legitimately know, and uses that network to discover, compose, and execute useful outcomes.
+Higher-level objective:
 
-> **User principle.** Users are guests, not operators of the machinery. ForgeOS should absorb complexity internally and expose simple intentions, choices, approvals, and outcomes. The sophistication of the engine should increase the simplicity of the experience.
+> Discover what people, organizations, and markets are trying to obtain, understand the unmet need, and connect that need to existing authorized capabilities wherever possible.
 
----
+**Principle:**
 
-# Implementation amendment — 2026-09-25
+> **Reuse before research. Research before invention. Invention only when necessary.**
 
-## Logical primitives and physical records
+This is not blind copying. Reuse or adaptation must remain within applicable law, licenses, contracts, permissions, privacy/IP constraints, platform terms, and explicit economic authorization. Signal collection, data accumulation, and research are subordinate mechanisms; none is an objective.
 
-ForgeOS has exactly six **logical substrate primitives**:
+### A.2 Operating hierarchy (mandatory ordering)
 
-`ENTITY`, `RELATION`, `EVENT`, `EVIDENCE`, `CAPABILITY`, and `ACTION`.
+1. **Observe / identify possible demand**
+2. **Understand the actual need**
+3. **Search existing knowledge, patterns, capabilities, suppliers, services, software, infrastructure, marketplaces, algorithms, logistics, payment rails, and other authorized resources**
+4. **Reuse or adapt** an existing proven solution when one exists
+5. **Test / validate** the fit and economics
+6. **Take authorized action**
+7. **Observe** the real-world result
+8. **Learn**
+9. **Only if existing capability is insufficient:** research the unknown
+10. **Only when genuinely necessary:** develop or invent a new capability
 
-“Six primitives” describes the logical model; it does not claim the physical database has only six tables.
+Steps 9–10 are reachable only through a recorded capability gap (A.6). Planners, agents, and schedulers must not enter them by default.
 
-Existing operational and legacy tables—including `decisions`, `actions`, `outcomes`, `learning_events`, `CycleRun`, and current vertical tables—may remain during migration. Each must map to a logical primitive, serve as operational infrastructure, or be progressively adapted toward the substrate. They are not additional logical primitives.
+### A.3 Do not over-categorize the world
 
-`type_registry.schema_json` is authoritative for the attributes of each entity, relation, event, or capability type. One shared validation service must resolve the type, require `active` status for new rows, validate the attributes with a JSON Schema validator before persistence, and fail closed on unknown, proposed, deprecated, or malformed types/schemas.
+- Raw observations may originate anywhere and may initially be uncategorized. No fixed taxonomy (product / service / job / B2B / consumer / agriculture / manufacturing / …) is required before a possible need can be observed.
+- Categories are **derived projections**, never prerequisites for observation or ingestion.
+- Demand-shaped observations the system should be able to recognize include: requests, unmet needs, complaints, searches, procurement needs, unavailable products, unavailable services, recurring work, shortages, price/availability gaps, capability gaps, emerging demand, customization requests, requests for suppliers/providers, and other economically meaningful demand signals.
+- The canonical substrate remains exactly the six primitives: `ENTITY`, `RELATION`, `EVENT`, `EVIDENCE`, `CAPABILITY`, `ACTION`. **No new top-level primitive is added.**
 
-The service is the single implementation point; callers must not duplicate schema rules.
+**Representation of a need.** The existing blueprint already lists `Need` as a registered entity type (see mapping table). That remains the only formal representation. Specifically:
 
-New registry rows start `proposed`. The only path to `active` is an explicit `proposed → active` activation operation. `active → deprecated` is the only deprecation transition. Each records the actor, rationale, and verifiable activation evidence/process; the operation validates that record and is covered by tests.
+- A raw observation is an `EVENT` (with `EVIDENCE` and provenance) that may reference `ENTITY` rows and `RELATION`s, and may be stored **before** any need type is assigned.
+- A `need` `ENTITY` is a *derived, hypothesis-grade projection* created only when the observation is understood well enough to type it. It is not required for observation.
+- Need types and any refinements go through `type_registry` (`schema_json` authoritative; new rows `proposed`; explicit `proposed → active`).
+- Category labels (housing, procurement, repair, …) are attributes or projections over needs and must not gate ingestion.
 
-Trusted bootstrap vocabulary may be installed active only by a deterministic, versioned system seed process that records its source.
+### A.4 Demand is not automatically truth
 
----
+A demand signal is not automatically:
 
-# 0. Universal Product Model
+- a verified customer
+- a validated market
+- an opportunity
+- a supported claim
+- evidence of willingness to pay
+- evidence that fulfillment is possible
 
-ForgeOS is simultaneously:
-
-1. a **universal substrate** for representing the world,
-2. a **network** connecting what exists,
-3. an **evidence system** for distinguishing what is known from what is uncertain,
-4. a **capability system** describing what Forge can do,
-5. an **opportunity engine** identifying potentially valuable combinations,
-6. an **action engine** capable of authorized real-world execution,
-7. a **composition engine** capable of combining existing resources into useful outcomes,
-8. a **learning system** that improves from outcomes,
-9. and a **user interface** that hides this complexity behind simple experiences.
-
-The public website is therefore not the entire product.
-
-The website is the human-facing surface of a deeper network and execution system.
-
----
-
-# 0.1 The world is already full of supply
-
-ForgeOS must not assume that every useful record must be manually discovered and entered by Forge staff or agents.
-
-Real-world information already exists through many legitimate channels:
-
-* users
-* businesses
-* providers
-* marketplaces
-* directories
-* public datasets
-* websites
-* APIs
-* feeds
-* partners
-* organizations
-* communities
-* documents
-* transactions
-* previous Forge interactions
-* other authorized sources
-
-The objective is therefore not:
-
-> manually create a record for every thing in existence.
-
-The objective is:
-
-> **connect Forge to useful existing information and allow the network to grow through many lawful sources and participants.**
-
-A marketplace does not manufacture the houses it lists.
-
-Likewise, Forge does not need to manufacture every opportunity it eventually represents.
-
-It needs to create the infrastructure through which existing supply, demand, information, capability, and opportunity can enter, connect, become useful, and produce outcomes.
-
----
-
-# 0.2 Network density is an engine, not a vanity metric
-
-Every legitimate addition to the network can potentially create new relationships and new combinations.
-
-For example:
-
-```text
-person
-  +
-capability
-  +
-business need
-  +
-market information
-  +
-available asset
-  +
-distribution channel
-  +
-existing service
-      ↓
-new combination
-      ↓
-useful product / service / work / outcome
-```
-
-The value of the network therefore does not grow only linearly with the number of records.
-
-Relationships, evidence, capabilities, and combinations can create additional value from information that already exists.
-
-Forge should continuously search for useful combinations rather than merely accumulate records.
-
----
-
-# 0.3 Opportunity composition
-
-ForgeOS must distinguish between:
-
-### Discovery
-
-Finding a potentially useful thing, relationship, signal, need, capability, asset, or opportunity.
-
-### Assessment
-
-Determining whether the possibility is sufficiently supported, feasible, valuable, authorized, and actionable.
-
-### Composition
-
-Combining existing resources, information, capabilities, relationships, opportunities, and infrastructure into a potentially useful outcome.
-
-### Execution
-
-Taking an authorized real-world action.
-
-### Verification
-
-Observing what actually happened and preserving evidence.
-
-### Learning
-
-Using the result to improve future discovery, composition, and execution.
-
-The core loop is therefore:
-
-```text
-WORLD
-  ↓
-DATA / SIGNALS
-  ↓
-STRUCTURE
-  ↓
-RELATIONSHIPS
-  ↓
-EVIDENCE
-  ↓
-OPPORTUNITIES
-  ↓
-COMPOSITION
-  ↓
-ACTION
-  ↓
-OUTCOME
-  ↓
-LEARNING
-  ↓
-BETTER NETWORK
-  ↓
-MORE OPPORTUNITIES
-```
-
-This loop is continuous.
-
----
-
-# 0.4 Opportunity composition is not arbitrary combination
-
-Forge must not interpret “compose anything” as “execute everything.”
-
-Potential combinations must be evaluated against:
-
-* evidence
-* feasibility
-* authorization
-* law
-* privacy
-* source terms
-* ownership
-* security
-* transaction cost
-* compute cost
-* execution cost
-* risk
-* opportunity cost
-* expected value
-* reversibility
-* user intent where user approval is required
-
-The objective is:
-
-> **minimize legitimate value left unrealized**
-
-not:
-
-> execute every conceivable transaction.
-
----
-
-# 0.5 One network, many products
-
-Forge should not need a separate conceptual universe for every product it creates.
-
-The same underlying network may support:
-
-* marketplaces
-* service businesses
-* matching systems
-* directories
-* research products
-* analytics
-* APIs
-* workflow products
-* procurement systems
-* discovery tools
-* job/work systems
-* logistics systems
-* knowledge products
-* financial/economic opportunities
-* internal automation
-* new products not yet conceived
-
-A new product is often a **projection, workflow, capability composition, or interface over the existing network**, rather than a new universe.
-
----
-
-# 0.6 Users are guests
-
-ForgeOS should make the system's internal complexity invisible wherever possible.
-
-A user should not be required to understand:
-
-* entities
-* relations
-* evidence graphs
-* ontology
-* research tasks
-* capability registries
-* opportunity schemas
-* agent orchestration
-* database structure
-* network traversal
-* internal state machines
-
-A user may simply express an intention:
-
-> “I want to buy a house in Kathmandu.”
-
-or:
-
-> “I need someone to repair my website.”
-
-or:
-
-> “I have this skill. Can Forge find useful ways to make money from it?”
-
-or:
-
-> “I don't know exactly what I need.”
-
-Forge should handle as much of the underlying work as it is legitimately able to perform.
-
-The user should primarily encounter:
-
-* understandable results
-* useful recommendations
-* simple actions
-* clear approvals
-* meaningful explanations
-* honest uncertainty
-* verified outcomes
-
-The internal complexity should be absorbed by Forge.
-
----
-
-# 0.7 The Guest-to-Engine model
-
-The ideal interaction is:
-
-```text
-USER
-  ↓
-simple intention
-  ↓
-FORGE UNDERSTANDS
-  ↓
-DISCOVERS
-  ↓
-RESEARCHES
-  ↓
-CONNECTS
-  ↓
-COMPOSES
-  ↓
-PROPOSES
-  ↓
-USER APPROVES WHEN REQUIRED
-  ↓
-ACTS
-  ↓
-VERIFIES
-  ↓
-DELIVERS OUTCOME
-```
-
-Where Forge can legally and technically complete the workflow itself, it should not unnecessarily make the user perform internal operations manually.
-
-Where authorization, consent, payment approval, account access, legal responsibility, or another human decision is required, Forge should stop at that boundary and make the required decision easy.
-
----
-
-# 0.8 Data is an economic input, not an end in itself
-
-ForgeOS should treat useful information as a major form of leverage.
-
-However:
-
-> **Data is valuable when it is accurate, relevant, fresh, connected, permissioned, and actionable.**
-
-The system should therefore preserve:
-
-* provenance
-* source identity
-* acquisition method
-* timestamps
-* freshness
-* confidence
-* truth state
-* authorization/usage constraints
-* transformation history
-* relationships
-* resulting outcomes
-
-Forge should be able to transform:
-
-```text
-raw information
-    ↓
-structured information
-    ↓
-connected information
-    ↓
-knowledge
-    ↓
-intelligence
-    ↓
-opportunity
-    ↓
-product/service/action
-    ↓
-economic or useful outcome
-```
-
-The same underlying network may support multiple legitimate value surfaces.
-
-This is a central economic property of the substrate.
-
----
-
-# 0.9 Data acquisition must remain lawful and permission-aware
-
-“Mine the world” does not mean unrestricted collection.
-
-Forge may use information only where it has a legitimate basis to access, store, transform, and use that information.
-
-Agents must respect:
-
-* law
-* privacy
-* contractual restrictions
-* source terms
-* ownership/IP
-* authentication boundaries
-* rate limits
-* robots/access controls where applicable
-* user permissions
-* partner permissions
-* security requirements
-
-The network should preserve enough provenance to determine where information came from and what its allowed use is.
-
----
-
-# 0.10 The economic flywheel
-
-ForgeOS should continuously seek useful value creation:
-
-```text
-MORE LEGITIMATE SOURCES
-        ↓
-MORE NETWORK INFORMATION
-        ↓
-MORE CONNECTIONS
-        ↓
-MORE EVIDENCE
-        ↓
-MORE DISCOVERABLE OPPORTUNITIES
-        ↓
-MORE COMBINATIONS
-        ↓
-MORE PRODUCTS / SERVICES / WORK
-        ↓
-MORE OUTCOMES
-        ↓
-MORE VERIFIED KNOWLEDGE
-        ↓
-BETTER NETWORK
-        ↓
-MORE VALUE CREATION
-```
-
-Revenue is a primary objective where appropriate, but not every useful outcome is immediately monetized.
-
-The engine should recognize:
-
-* direct revenue
-* cost reduction
-* increased utilization
-* customer acquisition
-* new products
-* new capabilities
-* new distribution
-* partnerships
-* information assets
-* improved decision quality
-* strategic optionality
-* future opportunities
-
-as potentially valuable outcomes.
-
----
-
-# Implementation amendment — Truth, identity, migration, and evidence
-
-## Truth transitions and evidence
-
-One canonical transition service governs relation truth-state changes.
-
-Minimum supported path:
+ForgeOS must keep observation, hypothesis, evidence, validation, and real-world outcome distinct. The truth progression is unchanged:
 
 `possible → hypothesized → tested → supported`
 
-`possible` / `hypothesized → refuted` is allowed only when the constitution's evidence requirements are met.
+Supported claims still require stored evidence with preserved provenance. No application path may assign `supported` directly. Willingness to pay and fulfillability are separate claims, each needing its own evidence.
 
-`unknown` remains first-class.
+### A.5 Existing-capability utilization
 
-No application path may assign `supported` directly.
+ForgeOS should preferentially use the capability already present in the world, where legally and technically authorized, including:
 
-A transition to `supported` requires a corresponding stored evidence record with preserved provenance.
+- existing software and APIs
+- known algorithms and mathematical methods
+- established business models
+- manufacturers, suppliers, service providers, workers, and professionals
+- marketplaces
+- logistics networks and payment systems
+- communication infrastructure
+- public and licensed datasets
+- established scientific and technical knowledge
+- existing production infrastructure and distribution channels
 
-`refuted` cannot become `supported` through direct state editing. New contrary information is recorded as new evidence and must pass the transition process.
+ForgeOS's value is therefore often in **connecting and orchestrating** existing capabilities around unmet demand rather than recreating them. Modeling: these are `CAPABILITY` and `ENTITY` records distinguished by the existing states (known / accessible / authorized / available / owned / controlled / partner-provided / externally hosted / merely possible). Discovering that a resource exists never implies Forge may use it.
 
-Raw evidence is append-preserved when state changes.
+### A.6 Capability gap (evidence-based)
 
-Tests must cover:
+A **capability gap** is a recorded finding that a search of existing authorized capabilities (A.2 step 3) did not yield an adequate match for a specific need. It must be stored as `EVENT` + `EVIDENCE` (what was searched, when, what was found, why insufficient) linked to the need and any candidate capabilities. A gap may not be asserted from assumption. Only a recorded gap authorizes bounded research or capability creation. Each gap still requires a `docs/CAPABILITY_QUEUE.md` claim before implementation.
 
-* transition bypasses
-* missing evidence
-* provenance retention
-* attempted revival of refuted claims
-* contradictory evidence
-* stale evidence
-* source traceability
+### A.7 Demand → capability → value loop
 
----
-
-# Identity, deduplication, and merge history
-
-Entity identity distinguishes the same real-world thing from distinct things that merely look alike.
-
-Adapters use:
-
-* stable source identifiers
-* canonical URLs/identifiers
-* normalized identity attributes
-* provenance
-
-to form deterministic idempotency keys protected by database uniqueness.
-
-Fuzzy or uncertain matches are candidates, not merges.
-
-Identity progresses through:
-
-`candidate → corroborated → canonical`
-
-only with recorded evidence/process.
-
-When identity is uncertain, keep separate candidates and state the uncertainty.
-
-Merge detection must be reviewable and must never silently merge.
-
-A confirmed merge:
-
-* archives/marks the displaced row as merged
-* points to its survivor
-* records merge history as substrate events/evidence
-* preserves raw evidence
-
-Neither entity nor its raw evidence is silently deleted.
-
----
-
-# Migration authority and adapters
-
-During each migration stage, existing vertical tables remain functional and authoritative for their existing records until an explicit, tested cutover names the substrate as authority.
-
-Registered adapters expose those records to substrate projections while preserving:
-
-* source IDs
-* provenance
-* source-to-substrate traceability
-
-Migrations are:
-
-* additive
-* non-destructive
-* tested
-* reversible where practical
-
-Source/substrate comparison tests are required.
-
-A feature may not silently maintain two independent truths.
-
-The end state converges on the substrate without discarding useful history.
-
-The first adapter remains the mature:
-
-`Signal → Pattern → Belief → Opportunity`
-
-path.
-
-Its existing tables remain authoritative during Wave 1.
-
-Substrate entities, relations, events, and evidence are idempotent projections with links back to source rows.
-
-Wave 1 must prove:
-
-* insertion
-* type validation
-* identity/deduplication
-* evidence validation
-* truth transitions
-* provenance
-* idempotency
-* restart behavior
-* adapter consistency
-
-before new domains are expanded.
-
----
-
-# Feed and Network authority
-
-The Feed is a projection, never canonical storage.
-
-During migration it reads:
-
-* substrate records
-* explicitly registered legacy adapters
-
-Every item retains its path to:
-
-* entity
-* relation
-* event
-* evidence
-* provenance
-
-The Network is a projection/traversal over:
-
-* entities
-* relations
-* events
-* evidence
-* registered legacy adapters during migration
-
-Relationships belong in the substrate.
-
-Neither Feed nor Network is a hidden entity/relation database.
-
----
-
-# Action, Outcome, LearningEvent
-
-`ACTION` is the logical primitive for an authorized real-world attempt.
-
-`Outcome` is the observation/state resulting from that action.
-
-`LearningEvent` is learning derived from an outcome.
-
-Existing physical action, outcome, and learning tables may remain operational during migration.
-
-Adapters map them to the substrate.
-
-They do not form a competing universe.
-
-Existing authorization rules continue to govern whether an action may execute.
-
----
-
-# Composition Engine
-
-ForgeOS must eventually maintain an explicit **composition layer** above the substrate.
-
-The composition layer does not introduce a seventh logical primitive.
-
-It operates by discovering useful combinations among existing primitives.
-
-A composition may contain:
-
-* entities
-* relations
-* evidence
-* capabilities
-* opportunities
-* actions
-* outcomes
-* external resources
-* authorized integrations
-
-A composition should be representable through existing substrate primitives and their relationships.
-
----
-
-## Composition lifecycle
+**Default path (existing capability suffices):**
 
 ```text
-candidate combination
-        ↓
-evidence check
-        ↓
-constraint check
-        ↓
-capability check
-        ↓
-value estimation
-        ↓
-feasibility check
-        ↓
-authorization check
-        ↓
-compose plan
-        ↓
-user approval if required
-        ↓
-authorized actions
-        ↓
-outcome
-        ↓
-verification
-        ↓
-learning
+WORLD
+  → OBSERVATION
+  → POSSIBLE NEED
+  → NEED UNDERSTANDING
+  → EXISTING-CAPABILITY SEARCH
+  → SOLUTION MATCH
+  → ECONOMIC VALIDATION
+  → AUTHORIZED OFFER/ACTION
+  → REAL-WORLD RESPONSE
+  → FULFILLMENT
+  → PAYMENT/OUTCOME
+  → EVIDENCE
+  → LEARNING
+  → NEXT DEMAND
 ```
 
-The engine should be capable of discovering both:
-
-### Direct opportunities
+**Exception path (no adequate existing capability):**
 
 ```text
-need ↔ capability
+WORLD
+  → NEED
+  → EXISTING-CAPABILITY SEARCH
+  → CAPABILITY GAP
+  → BOUNDED RESEARCH/DISCOVERY
+  → TEST
+  → NEW/ACTIVATED CAPABILITY
+  → ACTION
 ```
 
-and:
+The second path is the exception, not the default. It is bounded by the need it serves.
 
-### Composed opportunities
+### A.8 Research system role
 
-```text
-need
-+
-capability A
-+
-capability B
-+
-asset
-+
-distribution
-+
-existing infrastructure
-+
-market information
-    ↓
-new product/service/work opportunity
-```
+Research is a mechanism, not the objective. It is invoked only when:
 
----
+- the need is insufficiently understood,
+- existing capabilities cannot be identified,
+- existing evidence is insufficient,
+- a capability must be validated,
+- an economic assumption needs testing, or
+- genuinely new knowledge or capability is required.
 
-# Composition does not imply ownership
+The research planner's governing question is, eventually:
 
-Forge may discover that useful resources exist without owning them.
+> **What do we need to know or obtain next to resolve this economically meaningful need?**
 
-The system should distinguish:
+not "What source can we query next?" Every research task should therefore reference the need (or gap) it serves and the decision it would unblock. The capability-discovery work already in progress is preserved; its purpose is resolving genuine capability gaps, not indiscriminate web crawling.
 
-* known
-* accessible
-* authorized
-* available
-* owned
-* controlled
-* partner-provided
-* externally hosted
-* merely possible
+### A.9 Demand-first (inventory-light) commerce
 
-No action may assume ownership or authority that Forge does not actually possess.
+Value creation may begin with demand, not inventory. ForgeOS does not inherently require inventory ownership before demand is discovered. Where legally and contractually permitted, an operator or business may:
 
----
+1. identify genuine demand,
+2. determine a credible fulfillment path,
+3. make an accurate offer,
+4. receive an order,
+5. procure / manufacture / source afterward,
+6. fulfill, or
+7. cancel/refund according to disclosed terms if fulfillment genuinely fails.
 
-# Capability propagation
+This is **not** permission to fabricate availability, pretend to possess inventory, misrepresent shipping or lead times, or accept orders with no credible fulfillment path. A credible fulfillment path must exist as stored `EVIDENCE` (supplier/provider identified, terms, lead time, cost basis) before any offer `ACTION` is authorized, and offers must disclose terms accurately. The invariant is unchanged:
 
-Once Forge develops or acquires a verified capability, that capability should be reusable across domains where applicable.
+> **No unsupported claim and no unauthorized action.**
 
-For example:
+### A.10 Status vocabulary
 
-```text
-research capability
-      ↓
-housing research
-business research
-supplier research
-market research
-job research
-...
-```
+Every capability referenced in future work under this amendment must be labeled **CURRENTLY IMPLEMENTED**, **TARGET ARCHITECTURE**, or **FUTURE CAPABILITY** (see Part C). Nothing is "currently implemented" without literal verification evidence (Invariant 7).
 
-Likewise:
+### A.11 Contradictions resolved
 
-```text
-matching capability
-      ↓
-provider matching
-job matching
-supplier matching
-asset matching
-capital matching
-...
-```
-
-Capabilities should therefore be modeled as reusable system assets rather than hard-coded into one vertical.
+- "Discovery" of signals/data as a goal → discovery serves need identification; signal/data accumulation is never an objective.
+- Research/build/find offered as peer options to reuse → reuse is strictly first; research/invention require a recorded gap.
+- Taxonomy-implying vertical framing → categories are projections only.
+- Implicit inventory-before-demand assumptions → demand may precede inventory under A.9.
 
 ---
 
-# Marketplace pattern
+# PART B — Anchored in-place edits
 
-A marketplace is one valid pattern Forge can compose.
+**B1. Authority header.** After the sentence beginning "This is the authoritative Universal Substrate specification," add:
+> A second dated amendment (2026-09-28, Demand-first, reuse-first) follows the 2026-09-25 amendment. Both govern; the North Star is unchanged and is realized through demand-first, reuse-first operation.
 
-Forge does not need to manually create all supply.
+**B2. Core operating thesis** (the blockquote beginning "The world already contains enormous amounts…"). Append one sentence:
+> ForgeOS's economic purpose is to find unmet demand and connect it to that existing capability; it collects information only in service of that purpose.
 
-Instead:
+**B3. §0 Universal Product Model.** Item 5 "an **opportunity engine** identifying potentially valuable combinations" → "an **opportunity engine** identifying unmet demand and potentially valuable combinations of existing capability". Add after the item list: "These are means to demand-first value creation, not ends."
 
-```text
-existing world
-      ↓
-authorized sources / participants
-      ↓
-Forge network
-      ↓
-identity + evidence + normalization
-      ↓
-search + matching + composition
-      ↓
-transaction / service / outcome
-```
+**B4. §0.1 "The world is already full of supply."** After "connect Forge to useful existing information and allow the network to grow through many lawful sources and participants." add: "The same holds for capability and fulfillment: the world already contains manufacturers, suppliers, providers, software, logistics, and payment rails. Forge connects to them before building anything."
 
-Users and organizations may contribute supply directly.
+**B5. §0.3 core loop.** The diagram beginning `WORLD → DATA / SIGNALS → STRUCTURE …` is retained as the *knowledge-side* view. Immediately after it add: "The action-side operating loop is the demand→capability→value loop (2026-09-28 amendment A.7). `DATA / SIGNALS` denotes raw observations that may include demand signals; structuring exists to identify unmet demand and match existing capability." In the "Discovery" definition add: "Discovery is primarily discovery of unmet demand and of existing capability able to meet it."
 
-External sources may contribute authorized data.
+**B6. §0.3 Composition.** Add: "Composition begins by searching existing authorized capabilities. Composing from existing capability is the default; creating a capability is the exception (A.6)."
 
-Forge may discover demand.
+**B7. §0.4 (composition evaluation list).** Add two items: "* existence of an adequate existing capability (reuse over invention)" and "* credible fulfillment path where an offer is contemplated".
 
-Forge may discover relationships between supply and demand.
+**B8. §0.7 Guest-to-Engine diagram.** Replace the `DISCOVERS → RESEARCHES → CONNECTS → COMPOSES` segment with `UNDERSTANDS THE NEED → FINDS EXISTING CAPABILITY → RESEARCHES ONLY IF NEEDED → CONNECTS → COMPOSES`.
 
-Forge may create interfaces or services over the resulting network.
+**B9. §0.8 Data is an economic input.** Add: "Data is collected or retained to the extent it helps resolve an identified need, validate a capability match, or evidence an outcome. Volume of data is not a goal."
 
-This allows large-scale network density without requiring Forge to manually visit every real-world participant.
+**B10. §0.10 Economic flywheel.** No structural change. Add: "The flywheel is driven by resolved demand (need → capability → outcome), not by ingestion volume."
 
----
+**B11. Composition lifecycle.** Before `candidate combination` insert `need understood → existing-capability search`. Under "Direct opportunities `need ↔ capability`" add: "This is the default and is attempted first. Composed opportunities apply when no single existing capability suffices."
 
-# Coordination mechanism — parallel agents
+**B12. Capability propagation.** Add: "Propagation is one form of reuse: a verified capability is applied to a new need before a new capability is built."
 
-Parallel agents have no guaranteed real-time communication.
+**B13. Marketplace pattern.** Add: "A marketplace may be initiated by demand before supply is onboarded, subject to A.9 (no fabricated availability)."
 
-The mechanism remains the file-based claim ledger:
+**B14. Non-negotiable invariants.** Add:
+> **11. Reuse before research; research before invention.** Agents and planners must record an existing-capability search before proposing research or capability creation for a need. Capability creation without a recorded gap is reverted.
+>
+> **12. Demand is not truth, and no offer without a credible fulfillment path.** Demand observations remain `possible`/`hypothesized` until evidenced. No offer/order action without stored fulfillment-path evidence and accurate disclosed terms.
+>
+> **13. Categories are projections.** No ingestion or need recognition path may require a fixed taxonomy.
 
-`docs/CAPABILITY_QUEUE.md`
+Also amend Invariant 10 "No narrow vertical capture": add "Needs must not be modeled through vertical-specific need tables."
 
-Before starting work on any capability gap, an agent appends:
+**B15. Mapping table.** Change the `Signal` row to: `ENTITY(signal)` + ingestion `EVENT` (a raw observation; may or may not indicate demand). Change the `Need` row to: registered entity type — derived, hypothesis-grade projection of observed demand (A.3). Add row: `Capability gap` → `EVENT` + `EVIDENCE` linked to need and candidate capabilities (A.6). Add row: `Demand observation` → `EVENT` + `EVIDENCE` (+ optional `RELATION`s); no new primitive. Change `ResearchQuestion` note: "serves a need or capability gap".
 
-```markdown
-## [CLAIMED] Example capability
+**B16. Feed and Network philosophy.** No change to authority (projection only). Add to the Feed list: "needs (unmet demand) and matched existing capability are first-class feed content".
 
-- Agent: agent-session-id
-- Claimed at: timestamp
-- Scope: exact scope
-- Status: building
-```
+**B17. Product generation.** Replace step 2 "research it" with "search existing capability and solutions for it; research only remaining unknowns" and step 5 "acquire/build/test those capabilities" with "reuse, integrate, or (only for recorded gaps) acquire/build/test those capabilities".
 
-An agent must grep the queue before beginning.
+**B18. Economic engine.** Add to the list: "demand-first commerce under A.9". Add: "Reusing and orchestrating existing authorized capability is the preferred route to revenue over building new capability."
 
-If an unresolved claim already covers the scope:
+**B19. Autonomous capability creation loop.** In the diagram, change `Can Forge solve it?` to `Can existing authorized capability solve it? (search first)`. Change the `no` branch label to `recorded capability gap`. Change `research / build / find` to `find existing → bounded research → build (in that order)`. Add below: "Every capability gap becomes a `CAPABILITY_QUEUE.md` claim before implementation" (existing sentence) — and "must reference the need and recorded search evidence".
 
-* do not duplicate it
-* extend the existing output
-* or choose another gap
+**B20. Sequencing.** Wave 3: replace "**network usefulness**, not raw record count" with "**resolved demand and network usefulness**, not raw record count". Wave 4: add "existing-capability search precedes composition". Wave 5: add "only for recorded gaps; existing capability is reused first". Wave 6: add "demand-first, reuse-first". No wave is added or removed.
 
-Claims older than 48 hours without `[DONE]` or `[ABANDONED]` may be reclaimed.
+**B21. Design-test table.** Add rows: `demand understanding + existing-capability search` **instead of** `blind signal collection`; `capability reuse/adaptation` **instead of** `reinvention`. Add to the design test question: "…or reduce collection/reinvention by connecting demand to existing capability?"
 
-This is not real locking.
+**B22. Launch definition.** Add after the quoted definition: "Meaningful operation includes resolving real unmet demand using existing capability at least once with evidence."
 
-Database uniqueness and idempotency remain the second line of defense.
+**B23. Review protocol.** Add step: "Before proposing research or capability work for a need, confirm the existing-capability search is recorded."
+
+**B24. "What ForgeOS ultimately becomes."** Append the two A.1 quoted sentences.
 
 ---
 
-# Non-negotiable invariants
+# PART C — Status table (labels must be verified against the repo before finalizing)
 
-Any agent output violating these rules gets reverted.
-
-## 1. No new top-level domain tables
-
-Extend through the logical substrate and registered adapters.
-
-Existing vertical/operational tables remain during migration.
-
-Additive schema changes are permitted only under this contract.
-
----
-
-## 2. No claim without evidence
-
-Canonical truth transitions must reject unsupported state changes.
-
-`supported` requires corresponding evidence with preserved provenance.
+| Item | Status | Basis |
+|---|---|---|
+| Six logical primitives, `type_registry` validation, proposed→active | CURRENTLY IMPLEMENTED (per 2026-09-25 amendment; verify) | Blueprint; not independently verified here |
+| Signal → Pattern → Belief → Opportunity path as Wave 1 adapter source | CURRENTLY IMPLEMENTED (existing tables) | Blueprint; Phase 1 forced cycle previously hit a SQLite `disk I/O error`, so end-to-end status unverified |
+| Truth-transition service, identity/merge, Feed/Network projections | TARGET ARCHITECTURE unless verified | Blueprint Wave 1 requirements |
+| `docs/CAPABILITY_QUEUE.md` claim ledger | CURRENTLY IMPLEMENTED as a convention (verify file) | Blueprint |
+| Capability discovery (in progress) | IN PROGRESS; re-scoped to gap resolution | This amendment A.8 |
+| Existing-capability search step preceding research | TARGET ARCHITECTURE | A.2/A.6 |
+| Capability-gap records (`EVENT`+`EVIDENCE`) | TARGET ARCHITECTURE | A.6 |
+| Need-centred research planner | TARGET ARCHITECTURE | A.8 |
+| Demand-first offer/order flow with fulfillment-path evidence | FUTURE CAPABILITY | A.9 |
+| Autonomous orchestration of suppliers/logistics/payments | FUTURE CAPABILITY | A.5 |
+| Autonomous capability invention | FUTURE CAPABILITY | A.2 step 10 |
 
 ---
 
-## 3. No action without authorization
+# PART D — Immutable under this amendment
 
-Every real-world action must have an appropriate authorization reference before execution.
-
-No autonomous financial or external-communication action without the required authorization.
-
----
-
-## 4. No fabricated humans, transactions, opportunities, or evidence
-
-Simulated/seed data must be labeled:
-
-`source='simulated'`
-
-and must never reach `support_level='supported'`.
-
----
-
-## 5. No deletion of another agent's rows
-
-Use:
-
-* deprecated
-* archived
-* merged
-
-where appropriate.
-
-History is data.
-
----
-
-## 6. No capability becomes active without a passing test
-
-`status='active'` requires a valid `test_ref` and currently passing test.
-
----
-
-## 7. Every verified claim must have literal verification evidence
-
-Every report claiming verification must include:
-
-* command
-* relevant output
-* date/context
-* test/build reference
-
----
-
-## 8. Existing subsystems are foundation, not disposable
-
-The following are generalized rather than casually replaced:
-
-* `belief_engine`
-* `pattern_engine`
-* `opportunity_engine`
-* Decision/Action/Outcome/Learning loop
-* Nepal Earn workspace
-* scheduler
-* existing public API
-* existing useful frontend
-* existing provider/service systems
-
----
-
-## 9. No user-hostile complexity by default
-
-New capabilities should not automatically become new forms, dashboards, configuration screens, or workflows for users.
-
-If Forge can perform complexity internally, it should.
-
-The default product question is:
-
-> **Can Forge do this for the user instead of asking the user to operate the machinery?**
-
----
-
-## 10. No narrow vertical capture
-
-A new capability should be designed so that useful portions can generalize.
-
-A housing marketplace may be an initial application.
-
-The underlying capabilities should remain reusable for:
-
-* vehicles
-* services
-* jobs
-* assets
-* suppliers
-* equipment
-* businesses
-* other future domains
-
----
-
-# Existing concepts mapped onto the substrate
-
-| Existing concept | Substrate representation                                    |
-| ---------------- | ----------------------------------------------------------- |
-| Signal           | `ENTITY(signal)` + ingestion `EVENT`                        |
-| Pattern          | substrate entity + source relations                         |
-| Belief           | substrate entity + evidence-backed relations                |
-| Opportunity      | `ENTITY(opportunity)` + evidence/causal relations           |
-| Decision         | operational authorization/intent record mapped to substrate |
-| Action           | logical `ACTION`                                            |
-| Outcome          | resulting observation/state                                 |
-| LearningEvent    | learning derived from outcome                               |
-| Provider         | `ENTITY(provider)`                                          |
-| ServiceListing   | entity + typed capability/availability relations            |
-| Customer         | `ENTITY(customer)`                                          |
-| RepairWorkItem   | `ENTITY(work_item)` + events                                |
-| Offer            | `ENTITY(earning_offer)` + status events                     |
-| MarketSignal     | registered entity type                                      |
-| ResearchQuestion | registered entity/event types                               |
-| UnusedCapacity   | registered entity type                                      |
-| Asset            | registered entity type                                      |
-| Product          | registered entity type                                      |
-| Need             | registered entity type                                      |
-| Capability       | logical `CAPABILITY`                                        |
-| Relationship     | logical `RELATION`                                          |
-| Feed item        | projection of substrate record                              |
-| Marketplace      | product/projection/workflow over substrate                  |
-| Composition      | relationships + capabilities + opportunity/action workflow  |
-| `CycleRun`       | operational observability record                            |
-
-Do not migrate existing data destructively.
-
----
-
-# Feed and Network product philosophy
-
-The Feed should expose the network without forcing users to understand the network.
-
-It may contain:
-
-* signals
-* needs
-* work
-* opportunities
-* capabilities
-* people
-* organizations
-* assets
-* discoveries
-* connections
-* evidence
-* outcomes
-
-But the presentation should remain human-oriented.
-
-The Feed should answer:
-
-> **What is useful to me right now?**
-
-rather than:
-
-> What database records exist?
-
-The Network should make the richness of Forge discoverable without turning users into database operators.
-
----
-
-# Product generation
-
-ForgeOS should be able to identify when the network contains enough:
-
-* demand
-* supply
-* data
-* capability
-* evidence
-* distribution
-* infrastructure
-* relationships
-
-to justify constructing a new useful product or service.
-
-The engine may then:
-
-1. identify the opportunity,
-2. research it,
-3. estimate feasibility and value,
-4. identify missing capabilities,
-5. acquire/build/test those capabilities,
-6. compose the required resources,
-7. construct a product/workflow/service,
-8. test it,
-9. expose it through an appropriate interface,
-10. observe outcomes,
-11. learn,
-12. iterate.
-
-This does not mean every idea becomes a product.
-
-The system should continuously compare potential value against:
-
-* cost
-* risk
-* feasibility
-* authorization
-* available capability
-* time
-* competition
-* distribution
-* evidence
-* opportunity cost
-
----
-
-# Economic engine
-
-ForgeOS should treat legitimate economic value creation as a primary system objective.
-
-It should continuously look for:
-
-* revenue opportunities
-* useful services
-* underutilized assets
-* unmet demand
-* valuable information
-* capability gaps
-* distribution opportunities
-* partnerships
-* efficiency gains
-* new products
-* arbitrage-like inefficiencies where lawful and authorized
-* opportunities to package existing capabilities
-* opportunities to create reusable infrastructure
-
-The system must not assume that one business model, marketplace fee, or vertical is the economic endpoint.
-
-The same network may generate many independent economic surfaces.
-
----
-
-# Autonomous capability creation loop
-
-The capability lifecycle remains:
-
-`proposed → building → tested → active → deprecated`
-
-The autonomous capability loop is:
-
-```text
-Need / opportunity discovered
-            ↓
-      Can Forge solve it?
-       ↙      ↓       ↘
-     yes   partially    no
-      ↓       ↓         ↓
-     act   decompose   capability gap
-                         ↓
-                    research / build / find
-                         ↓
-                    acquire capability
-                         ↓
-                       test
-                         ↓
-                  activate capability
-                         ↓
-                     compose
-                         ↓
-                       act
-                         ↓
-                     outcome
-                         ↓
-                     learning
-                         ↓
-                  scan again
-```
-
-Every capability gap becomes a `CAPABILITY_QUEUE.md` claim before implementation.
-
----
-
-# Sequencing
-
-The mission is continuous.
-
-These are waves, not a final checklist.
-
-## Wave 1 — Correct substrate
-
-Prove:
-
-* type validation
-* identity
-* deduplication
-* evidence
-* truth transitions
-* provenance
-* idempotency
-* migration safety
-* adapter consistency
-
-using the existing Signal → Pattern → Belief → Opportunity path.
-
----
-
-## Wave 2 — Generality proof
-
-Select one genuinely new domain.
-
-Implement it using:
-
-* `type_registry`
-* substrate primitives
-* services
-* adapters
-
-and zero unnecessary new top-level domain tables.
-
-If the domain cannot be represented cleanly, fix the substrate.
-
-Do not patch around a flawed abstraction.
-
----
-
-## Wave 3 — Network density
-
-Expand legitimate ingestion and contribution paths.
-
-Enable the network to accumulate:
-
-* entities
-* relationships
-* evidence
-* capabilities
-* needs
-* opportunities
-* assets
-* work
-* outcomes
-
-from multiple legitimate sources.
-
-The objective is **network usefulness**, not raw record count.
-
----
-
-## Wave 4 — Composition engine
-
-Implement real opportunity composition.
-
-Forge should be able to identify combinations such as:
-
-```text
-need
-+
-available capability
-+
-asset
-+
-data
-+
-distribution
-+
-existing infrastructure
-→
-potential useful outcome
-```
-
-and evaluate them before action.
-
----
-
-## Wave 5 — Autonomous capability expansion
-
-Forge identifies capability gaps and:
-
-* researches
-* builds
-* acquires
-* integrates
-* tests
-* activates
-* reuses
-
-capabilities.
-
----
-
-## Wave 6 — Product generation
-
-Forge identifies sufficiently supported opportunities to create:
-
-* products
-* services
-* marketplaces
-* APIs
-* workflows
-* internal tools
-* information products
-
-using the existing network.
-
----
-
-## Wave 7 — Economic engine
-
-Continuously optimize legitimate value creation across multiple domains and business models.
-
-The objective is not one successful marketplace.
-
-It is a reusable system capable of discovering and executing many forms of legitimate value creation.
-
----
-
-## Wave 8 — Replication
-
-Geography becomes configuration rather than architecture.
-
-Nepal is a bootstrap geography, not a boundary.
-
-A successful capability should be portable across:
-
-* cities
-* countries
-* industries
-* domains
-
-without rewriting the substrate.
-
----
-
-# Launch definition
-
-Forge Nepal is considered meaningfully operational when it is:
-
-> **a continuously updating, evidence-backed network of real-world signals, needs, capabilities, opportunities, resources, people, relationships, and outcomes, with machinery capable of transforming that network into useful actions, products, services, and economic value.**
-
-A first transaction is valuable evidence that the machine works.
-
-It is not the definition of the machine.
-
-The stronger measure is whether the system can repeatedly:
-
-```text
-discover
-→ understand
-→ connect
-→ compose
-→ act
-→ verify
-→ learn
-→ create more value
-```
-
-with progressively less manual intervention.
-
----
-
-# Design test for every proposed feature
-
-Before implementation, every agent must ask:
-
-> **Does this make Forge more general, more composable, more autonomous, more data-aware, more capable of discovering value, or easier for a user to benefit from?**
-
-Prefer:
-
-| Build this                             | Instead of this                  |
-| -------------------------------------- | -------------------------------- |
-| entity discovery + evidence            | manual listing entry             |
-| generic matching capability            | one provider matcher             |
-| reusable research capability           | one research page                |
-| opportunity composition                | one hard-coded opportunity       |
-| network traversal                      | one category feed                |
-| reusable transaction/outcome machinery | one payment page                 |
-| source adapters                        | manually copied records          |
-| capability propagation                 | vertical-specific implementation |
-| simple user intention                  | complex user workflow            |
-| product generation infrastructure      | one hard-coded marketplace       |
-| evidence-backed recommendations        | fabricated recommendations       |
-
-A feature that merely makes one page prettier is not automatically bad.
-
-But it should not consume architectural attention that belongs to general capability unless the product need justifies it.
-
----
-
-# Constitutional boundaries
-
-Open-world does not mean unconstrained.
-
-ForgeOS must never violate:
-
-### Truth
-
-Do not pretend something happened.
-
-### Authorization
-
-Do not act through permissions Forge does not possess.
-
-### Law
-
-Do not violate applicable law.
-
-### Terms
-
-Do not use information or systems contrary to applicable contractual/source restrictions.
-
-### Privacy
-
-Do not expose or exploit private information without appropriate authorization.
-
-### Security
-
-Do not weaken safeguards to gain capability.
-
-### Ownership/IP
-
-Do not treat another party's protected assets as Forge's own.
-
-### Risk
-
-Do not execute high-risk actions merely because they are theoretically profitable.
-
-### Economic discipline
-
-Evaluate expected value against execution cost, transaction cost, compute cost, risk, and opportunity cost.
-
----
-
-# Review protocol
-
-Every agent touching ForgeOS reads this document first.
-
-The workflow is:
-
-1. Read this blueprint.
-2. Read `docs/CAPABILITY_QUEUE.md`.
-3. Query the live `type_registry`.
-4. Read `STATUS.md`.
-5. Inspect the existing implementation.
-6. Claim the exact scope.
-7. Implement the smallest general solution.
-8. Test it.
-9. Record evidence.
-10. Update the claim.
-11. Report exact verification commands/results.
-
-If an agent conflicts with this document, this document wins.
-
-If an implementation reveals a flaw in this document, the agent must document the conflict rather than silently inventing a parallel architecture.
-
----
-
-# What ForgeOS ultimately becomes
-
-ForgeOS is not defined as:
-
-* a property marketplace
-* a service marketplace
-* a job board
-* an AI assistant
-* a social network
-* a directory
-* a research tool
-* a trading system
-* a CRM
-* a workflow engine
-
-It may contain or generate all of those.
-
-The deeper abstraction is:
-
-> **ForgeOS is a universal network and capability engine that structures legitimate knowledge about the world, connects entities and opportunities, discovers useful relationships, composes available resources and capabilities, executes authorized actions, learns from outcomes, and continuously creates new useful products, services, opportunities, and economic value.**
-
-The world supplies information, needs, capabilities, resources, relationships, and possibilities.
-
-Forge structures them.
-
-Evidence constrains what Forge may believe.
-
-Capabilities determine what Forge can do.
-
-Composition determines what Forge can create from what it knows and can access.
-
-Actions create outcomes.
-
-Outcomes create learning.
-
-Learning improves the network.
-
-The network creates new possibilities.
-
-And the cycle continues without a predefined final state.
-
-> **ForgeOS is therefore not finished when its feature list is complete. It is successful when its ability to discover, connect, compose, act, learn, and create useful value keeps expanding.**
+Exactly six logical primitives; `type_registry.schema_json` authoritative; proposed → active explicit activation; Feed is a projection; Network is traversal/projection; no unsupported claims; no action without authorization; no fabricated humans, transactions, evidence, sources, or outcomes; no silent fuzzy identity merges; no destructive deletes (archive/merge); provenance mandatory; existing vertical tables remain during additive migration; existing useful capabilities not degraded; additive evolution only; no parallel architecture.

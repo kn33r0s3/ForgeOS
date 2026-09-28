@@ -235,6 +235,7 @@ class WorkerTask(Base):
     __tablename__ = "worker_tasks"
 
     id = Column(Integer, primary_key=True, index=True)
+    idempotency_key = Column(String, nullable=True, unique=True, index=True)
     worker_type = Column(String, nullable=False)  # e.g. discovery, research, builder, etc.
     task_name = Column(String, nullable=False)   # short description of the work to do
     status = Column(String, nullable=False, default="queued")  # queued, running, completed, failed, blocked

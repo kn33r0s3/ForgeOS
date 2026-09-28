@@ -5,6 +5,8 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from threading import Lock
+from datetime import datetime, timezone
 from time import monotonic
 from typing import Any
 from urllib.parse import urlsplit
@@ -27,6 +29,7 @@ _CANDIDATE_KINDS = (
 _COMMERCIAL_REQUIREMENTS = frozenset(
     {"customer_pain", "buyer_willingness_to_pay", "commercial_demand", "product_demand"}
 )
+_CAPABILITY_WRITE_LOCK = Lock()
 
 
 def _dump(value: dict[str, Any]) -> str:
@@ -67,25 +70,26 @@ def _upsert_capability(
     existing = db.query(models.ForgeCapability).filter_by(name=name).one_or_none()
     if existing is not None:
         return existing
-    world_graph.seed_core_types(db)
-    try:
-        with db.begin_nested():
-            capability = world_graph.create_capability(
-                db,
-                capability_type="integration",
-                name=name,
-                description=description,
-                owner_agent="research_capability_discovery",
-                spec_ref=spec_ref,
-                attributes=attributes,
-            )
-            db.flush()
-        return capability
-    except IntegrityError:
-        winner = db.query(models.ForgeCapability).filter_by(name=name).one_or_none()
-        if winner is None:
-            raise
-        return winner
+    with _CAPABILITY_WRITE_LOCK:
+        world_graph.seed_core_types(db)
+        try:
+            with db.begin_nested():
+                capability = world_graph.create_capability(
+                    db,
+                    capability_type="integration",
+                    name=name,
+                    description=description,
+                    owner_agent="research_capability_discovery",
+                    spec_ref=spec_ref,
+                    attributes=attributes,
+                )
+                db.flush()
+            return capability
+        except IntegrityError:
+            winner = db.query(models.ForgeCapability).filter_by(name=name).one_or_none()
+            if winner is None:
+                raise
+            return winner
 
 
 def _temporal_scope(text: str) -> str | None:
@@ -135,6 +139,8 @@ def ensure_capability_gap(
         if requirement_id in _COMMERCIAL_REQUIREMENTS
         else "no_active_cleared_capability"
     )
+    registered_sources = source_clearance_registry.capabilities_for_requirement(requirement_id)
+    searched_at = datetime.now(timezone.utc).isoformat()
     gap_data = {
         "record_kind": "research_capability_gap",
         "idempotency_key": identity,
@@ -142,6 +148,14 @@ def ensure_capability_gap(
         "requirement_id": requirement_id,
         "required_scope": _scope_for(question, requirement),
         "why_insufficient": reason,
+        "search_result": {
+            "searched_at": searched_at,
+            "search_method": "current exact source-clearance registry lookup",
+            "registered_sources_considered": [entry.registry_id for entry in registered_sources],
+            "active_cleared_sources_found": [],
+            "candidate_capabilities_found": [],
+            "insufficiency_reason": reason,
+        },
         "candidate_discovery_status": "not_started",
         "clearance_status": "not_cleared",
         "candidate_ids": [],
@@ -177,6 +191,60 @@ def ensure_capability_gap(
     )
     if not requirement.get("capability_gap_id"):
         requirement["capability_gap_id"] = capability.id
+    question_entity = world_graph.ensure_canonical_entity(
+        db,
+        "research_question",
+        question.id,
+        created_by="research_capability_discovery",
+    )
+    event_key = f"capability-gap-recorded:{identity}"
+    event = db.query(models.WorldEvent).filter_by(idempotency_key=event_key).one_or_none()
+    if event is None:
+        event = models.WorldEvent(
+            event_type="capability_gap_recorded",
+            entity_id=question_entity.id,
+            payload=_dump(
+                {
+                    "capability_gap_id": capability.id,
+                    "research_question_id": question.id,
+                    "requirement_id": requirement_id,
+                    "searched_at": searched_at,
+                    **gap_data["search_result"],
+                }
+            ),
+            source="research_capability_discovery",
+            idempotency_key=event_key,
+        )
+        db.add(event)
+        db.flush()
+    evidence_key = f"capability-gap-evidence:{identity}"
+    evidence = db.query(models.Evidence).filter_by(idempotency_key=evidence_key).one_or_none()
+    if evidence is None:
+        evidence = world_graph.create_evidence(
+            db,
+            subject_kind="entity",
+            subject_id=question_entity.id,
+            claim=(
+                f"An exact source-clearance registry search for requirement "
+                f"{requirement_id} found no active cleared capability."
+            ),
+            support_level="possible",
+            source="research_capability_discovery",
+            provenance={
+                "capability_gap_id": capability.id,
+                "research_question_id": question.id,
+                "requirement_id": requirement_id,
+                "search_result": gap_data["search_result"],
+                "event_id": event.id,
+                "candidate_ids": list(gap_data.get("candidate_ids") or []),
+                "claim_boundary": "This records the bounded registry search, not evidence that no capability exists in the world.",
+            },
+            confidence=0.25,
+            idempotency_key=evidence_key,
+        )
+    gap_data["search_result"]["event_id"] = event.id
+    gap_data["search_result"]["evidence_id"] = evidence.id
+    _persist_discovery_data(capability, gap_data)
     return capability
 
 
@@ -283,6 +351,58 @@ def discover_candidates(
         }
     )
     _persist_discovery_data(gap, gap_data)
+    candidate_event_key = (
+        f"capability-gap-candidates:{gap_data['idempotency_key']}:"
+        f"{_key(*candidate_ids)}"
+    )
+    if candidate_ids and db.query(models.WorldEvent).filter_by(
+        idempotency_key=candidate_event_key
+    ).one_or_none() is None:
+        question = db.get(models.ResearchQuestion, gap_data["research_question_id"])
+        if question is not None:
+            question_entity = world_graph.ensure_canonical_entity(
+                db,
+                "research_question",
+                question.id,
+                created_by="research_capability_discovery",
+            )
+            event = models.WorldEvent(
+                event_type="capability_gap_candidates_discovered",
+                entity_id=question_entity.id,
+                payload=_dump(
+                    {
+                        "capability_gap_id": gap.id,
+                        "requirement_id": requirement["id"],
+                        "candidate_ids": candidate_ids,
+                        "discovery_limits": gap_data.get("discovery_limits"),
+                    }
+                ),
+                source="research_capability_discovery",
+                idempotency_key=candidate_event_key,
+            )
+            db.add(event)
+            db.flush()
+            world_graph.create_evidence(
+                db,
+                subject_kind="entity",
+                subject_id=question_entity.id,
+                claim=(
+                    f"Bounded capability hypothesis discovery produced "
+                    f"{len(candidate_ids)} inactive candidate records."
+                ),
+                support_level="possible",
+                source="research_capability_discovery",
+                provenance={
+                    "capability_gap_id": gap.id,
+                    "requirement_id": requirement["id"],
+                    "candidate_ids": candidate_ids,
+                    "event_id": event.id,
+                    "requests_made": 0,
+                    "candidates_are_not_sources_or_evidence": True,
+                },
+                confidence=0.25,
+                idempotency_key=f"{candidate_event_key}:evidence",
+            )
     return proposals
 
 
@@ -453,6 +573,32 @@ def active_cleared_sources(
 ) -> tuple[source_clearance_registry.SourceClearance, ...]:
     """Filter registry entries by activation when a candidate manages their scope."""
     entries = source_clearance_registry.capabilities_for_requirement(requirement_id)
+    gap_rows = db.query(models.ForgeCapability).filter_by(
+        capability_type="integration"
+    ).all()
+    discovered_gap = any(
+        (data := _discovery_data(row)).get("record_kind") == "research_capability_gap"
+        and data.get("requirement_id") == requirement_id
+        and data.get("candidate_ids")
+        for row in gap_rows
+    )
+    if discovered_gap:
+        entries = tuple(
+            entry
+            for entry in entries
+            if any(
+                candidate.status == "active"
+                and (data := _discovery_data(candidate)).get("lifecycle") == "active"
+                and data.get("clearance_status") == "cleared"
+                and data.get("source_registry_id") == entry.registry_id
+                and data.get("source_endpoint") == entry.url
+                and data.get("source_collector") == entry.collector
+                for candidate in _managed_candidates_for(
+                    db, requirement_id, entry.registry_id
+                )
+            )
+        )
+        return tuple(entries)
     usable = []
     for entry in entries:
         managed = _managed_candidates_for(db, requirement_id, entry.registry_id)
@@ -467,6 +613,20 @@ def active_cleared_sources(
             continue
         usable.append(entry)
     return tuple(usable)
+
+
+def active_capability_id(
+    db: Session, requirement_id: str, registry_id: str
+) -> int | None:
+    for candidate in _managed_candidates_for(db, requirement_id, registry_id):
+        data = _discovery_data(candidate)
+        if (
+            candidate.status == "active"
+            and data.get("lifecycle") == "active"
+            and data.get("clearance_status") == "cleared"
+        ):
+            return candidate.id
+    return None
 
 
 def gap_candidates(db: Session, gap_id: int) -> list[models.ForgeCapability]:

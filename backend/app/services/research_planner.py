@@ -936,6 +936,16 @@ def _create_task(
             ),
             None,
         ),
+        "capability_id": next(
+            (
+                capability_discovery.active_capability_id(
+                    db, requirement["id"], capability["registry_id"]
+                )
+                for capability in requirement["capable_sources"]
+                if capability["source"] == source
+            ),
+            None,
+        ),
         "follow_up_of_task_id": follow_up_of,
         "follow_up_depth": follow_up_depth,
         "research_question_id": question.id,

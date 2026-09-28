@@ -78,7 +78,7 @@ def seed_core_types(db: Session) -> int:
             "market_signal", "market_segment", "relation", "action", "learning_event",
             "booking_request", "decision", "experiment", "scenario_prediction",
             "evidence_record", "product",
-            "repair_work_item",
+            "repair_work_item", "need",
         },
         "relation_type": {
             "derived_from", "supports", "possible_match", "co_occurs_with", "informs", "informed_by",
@@ -93,6 +93,8 @@ def seed_core_types(db: Session) -> int:
             "outcome_recorded", "learning_recorded", "network_relation_projected",
             "network_relation_unresolved", "capability_source_refreshed",
             "market_signal_observed", "market_signal_aggregated", "market_signal_related",
+            "demand_observed", "demand_understood", "capability_search_performed",
+            "capability_gap_recorded", "capability_gap_candidates_discovered",
         },
         "capability_type": {"tool", "workflow", "integration", "agent", "model", "market_signal_analysis"},
     }

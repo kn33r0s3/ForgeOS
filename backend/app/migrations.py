@@ -121,6 +121,9 @@ EXPECTED_UNIQUE_INDEXES = {
     "research_tasks": [
         ("uq_research_tasks_idempotency_key", "idempotency_key"),
     ],
+    "worker_tasks": [
+        ("uq_worker_tasks_idempotency_key", "idempotency_key"),
+    ],
 }
 
 

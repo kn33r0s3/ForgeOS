@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.models import WorkerTask, utcnow
 from app.services import collector_runner, forge_loop, opportunity_engine
 from app.services.revenue_miner import mine_revenue_proposals
+from app.services import demand_understanding
 
 # ---------------------------------------------------------------------------
 # Handlers – in a real system these would import the actual worker modules.
@@ -90,6 +91,11 @@ def revenue_miner_handler(db: Session, task: WorkerTask) -> dict:
     }
 
 
+def demand_understanding_handler(db: Session, task: WorkerTask) -> dict:
+    """Process demand asynchronously without contacting people or providers."""
+    return demand_understanding.process_understanding_task(db, task)
+
+
 def evolution_handler(db: Session, task: WorkerTask) -> dict:
     output = {"next": "discovery", "message": "Scheduled the next discovery. No system evaluation ran."}
 
@@ -121,6 +127,7 @@ HANDLERS: Dict[str, Callable[[Session, WorkerTask], dict]] = {
     "qa": qa_handler,
     "evolution": evolution_handler,
     "revenue_miner": revenue_miner_handler,
+    "demand_understanding": demand_understanding_handler,
 }
 
 
