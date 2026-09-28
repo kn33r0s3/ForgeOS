@@ -566,3 +566,36 @@ TEST / VERIFICATION RESULTS:
 - SQLite close/reopen provenance test for discovery EVENT/EVIDENCE and Opportunity linkage: **passed** within the focused selection.
 - `git diff --check`: **passed after the final report update**.
 - No further live OCR request was performed.
+
+## 2026-09-28 RESULT CARD — PPMO / Bolpatra procurement-demand source gate
+
+CURRENTLY IMPLEMENTED:
+No procurement adapter, clearance, schema/table, or procurement-specific query path was added because the official source did not establish permission or a usable machine interface. The already-implemented deterministic internal substrate path remains available to an authorized observation: exact source authorization → Signal plus `demand_observed` EVENT/EVIDENCE with provenance → demand understanding → existing capability search/gap → evidence-bounded economic assessment and Opportunity. This is generic internal infrastructure, not procurement evidence or a procurement adapter. Added `test_public_bolpatra_url_is_not_cleared_for_procurement_discovery` to prove the source gate rejects the Bolpatra target before persisting a rate reservation.
+
+SOURCE / AUTHORIZATION:
+The official PPMO site is `https://www.ppmo.gov.np/`; the official e-GP target is `https://bolpatra.gov.np/egp/`. At review time, Bolpatra root, e-GP, and both host/path robots URLs returned a system-maintenance page, not a search interface, machine-readable contract, or robots directives. The separate PPMO host's `https://www.ppmo.gov.np/robots.txt` says `User-agent: *` and `Crawl-delay: 10`; it grants no permission for the separate Bolpatra host. No current public API/export documentation, terms/license, permitted field list, rate limit, privacy/retention terms, or explicit automated read/reuse authorization for procurement-demand analysis was established. Historical notice reuse and commercial prospect-identification use are unknown. The source is **NOT CLEARED**. No other configured or documented official procurement feed in the repository currently qualifies.
+
+TARGET ARCHITECTURE:
+If current permission and a documented source contract are obtained: bounded official notice query → source-attributed procurement EVENT/EVIDENCE → demand understanding → Need only when sufficiently warranted → existing capability search → economic assessment → purchasing-organization ENTITY/RELATION only when explicitly evidenced → qualification handoff. A notice establishes at most a source-reported procurement requirement; it does not establish ForgeOS-specific interest, WTP, customer status, or contact authorization.
+
+REAL PROCUREMENT DISCOVERY:
+Official landing and robots pages were checked for source governance; **no procurement search or notice query was made**. Procurement records observed: **0**. Procuring organizations identified: **0**. Potential buyers: **0**. No procurement data or personal/contact fields were retained.
+
+OUTREACH:
+**NONE.** No organization/person was contacted; no form, email, SMS, message, call, bid, or quotation was sent.
+
+COMMERCIAL STATE:
+This source review created no WTP evidence, customer evidence, order, payment, or revenue. Production-wide commercial totals were not queried.
+
+FUTURE CAPABILITY / PRECISE BLOCKER:
+Obtain current PPMO authorization or applicable published terms explicitly permitting automated read-only access and Opportunity-scoped procurement-demand analysis; a documented operational API/export and bounded query; allowed notice and organization fields, geography and historical scope; privacy/retention, rate, and attribution rules; and effective/review dates. Recheck and exercise the official source only after those conditions are evidenced and the interface is available. Do not create an adapter or infer contact permission from a notice.
+
+FILES CHANGED FOR THIS PROCUREMENT-SOURCE REVIEW:
+`backend/tests/test_source_clearance_registry.py`, `docs/PUBLIC_SOURCES.md`, `docs/CAPABILITY_QUEUE.md`, `STATUS.md`, and this report. No application source, database schema, source clearance, procurement record, buyer, or outreach ACTION was created.
+
+TEST / VERIFICATION RESULTS:
+- Focused source-clearance, collector, prospect, economic, demand, capability, research, public API, and customer-stage selection: **137 passed**.
+- Full backend suite: **487 passed, 2 skipped, 33 warnings**.
+- Frontend TypeScript: `npm run typecheck` **passed**.
+- Existing file-backed SQLite close/reopen tests for demand observations, provenance, Need/capability links, economic assessments, and prospect handoff: **passed** in focused/full runs. Procurement-specific reopen evidence is **not applicable** because no cleared procurement observation exists.
+- `git diff --check` and final worktree/diff inspection: recorded after this card was added.
