@@ -303,6 +303,16 @@ _EMAIL = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
 _PHONE = re.compile(r"(?<!\w)(?:\+?\d[\d .()\-]{7,}\d)(?!\w)")
 
 
+def normalize_observation_content(content: str) -> str:
+    """Normalize submitted content and remove common contact details."""
+    return _normalize_observation_content(content)
+
+
+def normalized_identity_key(identity: str) -> str:
+    """Return the storage-form digest used for an observer identity key."""
+    return _key("observation-identity-v1", identity)
+
+
 def _normalize_observation_content(content: str) -> str:
     normalized = " ".join((content or "").split())
     normalized = _EMAIL.sub("[redacted-email]", normalized)

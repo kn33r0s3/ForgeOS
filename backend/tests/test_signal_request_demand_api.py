@@ -105,6 +105,37 @@ def test_idempotent_signal_request_reuses_observation_event_evidence_and_task(db
     assert db.query(models.WorkerTask).filter_by(worker_type="demand_understanding").count() == 1
 
 
+def test_idempotency_key_reuse_with_different_content_is_rejected(db):
+    client = _client_for(db)
+    headers = {"Idempotency-Key": "developer-test-request-conflict"}
+    try:
+        first = client.post(
+            "/signals",
+            json={
+                "content": "Developer test request (not market demand): need bicycle repair.",
+                "purpose": "demand_understanding",
+            },
+            headers=headers,
+        )
+        conflict = client.post(
+            "/signals",
+            json={
+                "content": "Developer test request (not market demand): need plumbing repair.",
+                "purpose": "demand_understanding",
+            },
+            headers=headers,
+        )
+    finally:
+        client.close()
+        app.dependency_overrides.clear()
+
+    assert first.status_code == 200
+    assert conflict.status_code == 409
+    assert db.query(models.Signal).filter_by(source="user_request").count() == 1
+    assert db.query(models.WorldEvent).filter_by(event_type="demand_observed").count() == 1
+    assert db.query(models.WorkerTask).filter_by(worker_type="demand_understanding").count() == 1
+
+
 def test_ordinary_signal_api_behavior_is_unchanged(db):
     client = _client_for(db)
     try:

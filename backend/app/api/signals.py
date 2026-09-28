@@ -35,25 +35,38 @@ def create_signal(
         request_key = idempotency_key.strip() if idempotency_key else secrets.token_urlsafe(24)
         request_key_digest = hashlib.sha256(request_key.encode("utf-8")).hexdigest()
         submitted_at = datetime.now(timezone.utc).isoformat()
-        signal = demand_understanding.record_raw_observation(
-            db,
-            content,
-            source="user_request",
-            metadata={
-                "identity_key": request_key_digest,
-                "source_type": "manual",
-                "collection_status": "user_submitted",
-                "retrieved_at": submitted_at,
-                "provenance": {
-                    "request_boundary": "POST /signals",
-                    "purpose": "demand_understanding",
-                    "authorization_context": "explicit_user_submission_for_demand_understanding",
-                    "idempotency_key_sha256": request_key_digest,
-                    "submitted_at": submitted_at,
-                    "content_handling": "whitespace-normalized; email and phone patterns redacted",
-                },
-            },
+        signal_identity = demand_understanding.normalized_identity_key(request_key_digest)
+        signal = (
+            db.query(models.Signal)
+            .filter_by(source="user_request", identity_key=signal_identity)
+            .one_or_none()
         )
+        if signal is not None:
+            if signal.content != demand_understanding.normalize_observation_content(content):
+                raise HTTPException(
+                    status_code=409,
+                    detail="Idempotency-Key was already used for different request content",
+                )
+        else:
+            signal = demand_understanding.record_raw_observation(
+                db,
+                content,
+                source="user_request",
+                metadata={
+                    "identity_key": request_key_digest,
+                    "source_type": "manual",
+                    "collection_status": "user_submitted",
+                    "retrieved_at": submitted_at,
+                    "provenance": {
+                        "request_boundary": "POST /signals",
+                        "purpose": "demand_understanding",
+                        "authorization_context": "explicit_user_submission_for_demand_understanding",
+                        "idempotency_key_sha256": request_key_digest,
+                        "submitted_at": submitted_at,
+                        "content_handling": "whitespace-normalized; email and phone patterns redacted",
+                    },
+                },
+            )
         task = demand_understanding.enqueue_understanding(db, [signal.id])
         response.headers["X-Demand-Understanding-Task-ID"] = str(task.id)
         return signal
