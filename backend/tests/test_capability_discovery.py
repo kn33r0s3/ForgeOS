@@ -249,7 +249,9 @@ def test_cleared_active_candidate_becomes_plannable_and_evidence_keeps_provenanc
     )
     result = collector_runner.execute_task(db, task)
     db.refresh(question)
-    evidence = db.query(models.Evidence).one()
+    evidence = db.query(models.Evidence).filter(
+        models.Evidence.source == "crossref"
+    ).one()
     provenance = json.loads(evidence.provenance)
     assert result["status"] == "completed"
     assert provenance["source_registry_id"] == entry.registry_id

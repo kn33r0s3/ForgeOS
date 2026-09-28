@@ -218,7 +218,10 @@ def test_planner_creates_bounded_multisource_tasks_and_runner_executes_sequentia
     assert [outcome["status"] for outcome in outcomes] == ["completed"] * len(tasks)
     assert len({task.evidence_ids for task in tasks}) == len(tasks)
     assert all(task.status == "completed" for task in tasks)
-    assert db.query(models.Evidence).count() == 3
+    task_evidence = db.query(models.Evidence).filter(
+        models.Evidence.source.in_({"openalex", "world_bank_indicators"})
+    )
+    assert task_evidence.count() == 3
     assert question.research_plan["status"] != "research_completed"
 
 
@@ -266,19 +269,27 @@ def test_mocked_multisource_evidence_survives_database_reopen(tmp_path, monkeypa
     monkeypatch.setattr(collector_runner, "execute_task", execute_task)
     outcomes = collector_runner.run_pending_tasks(session, limit=5)
     assert len(outcomes) == task_count
-    assert session.query(models.Evidence).count() == task_count
+    task_evidence = session.query(models.Evidence).filter(
+        models.Evidence.source.in_({"openalex", "world_bank_indicators"})
+    )
+    assert task_evidence.count() == task_count
     persisted_evidence_ids = sorted(int(task.evidence_ids) for task in tasks)
-    assert persisted_evidence_ids == list(range(1, task_count + 1))
+    assert persisted_evidence_ids == sorted(
+        row.id for row in task_evidence.all()
+    )
     session.close()
     engine.dispose()
 
     reopened_engine = create_engine(f"sqlite:///{database_path}")
     reopened_session = sessionmaker(bind=reopened_engine)()
     assert reopened_session.query(models.ResearchTask).filter_by(status="completed").count() == task_count
-    assert reopened_session.query(models.Evidence).count() == task_count
+    reopened_task_evidence = reopened_session.query(models.Evidence).filter(
+        models.Evidence.source.in_({"openalex", "world_bank_indicators"})
+    )
+    assert reopened_task_evidence.count() == task_count
     assert [
         evidence.id
-        for evidence in reopened_session.query(models.Evidence)
+        for evidence in reopened_task_evidence
         .order_by(models.Evidence.id)
         .all()
     ] == persisted_evidence_ids
@@ -775,7 +786,15 @@ def test_unanswerable_requirement_is_durably_deferred_without_fake_evidence(
     plan = question.research_plan
     assert plan["status"] == "research_terminal_unresolved"
     assert db.query(models.ResearchTask).filter_by(question_id=question.id).count() == 0
-    assert db.query(models.Evidence).count() == 0
+    gap_evidence = db.query(models.Evidence).filter_by(
+        source="research_capability_discovery"
+    ).all()
+    assert gap_evidence
+    assert all(row.support_level == "possible" for row in gap_evidence)
+    assert all(
+        "claim_boundary" in json.loads(row.provenance)
+        for row in gap_evidence
+    )
     assert db.query(models.Opportunity).count() == 0
     assert all(
         row["epistemic_state"] == "blocked"
@@ -939,6 +958,7 @@ def test_empty_semantic_retrieval_generates_assessed_keyword_follow_up_in_sqlite
         )
         persisted_evidence = (
             reopened.query(models.Evidence)
+            .filter_by(source="openalex")
             .order_by(models.Evidence.id)
             .all()
         )

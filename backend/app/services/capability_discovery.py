@@ -165,6 +165,7 @@ def ensure_capability_gap(
             "research_question_id": question.id,
             "original_research_question": question.question,
             "requirement_id": requirement_id,
+            "need_id": requirement.get("need_id"),
         },
         "bounded_next_action": (
             "Obtain consent-based direct customer or transaction evidence."
@@ -198,16 +199,24 @@ def ensure_capability_gap(
         created_by="research_capability_discovery",
     )
     event_key = f"capability-gap-recorded:{identity}"
+    need_id = requirement.get("need_id")
+    need_entity = db.get(models.SubstrateEntity, need_id) if need_id is not None else None
+    event_entity = (
+        need_entity
+        if need_entity is not None and need_entity.entity_type == "need"
+        else question_entity
+    )
     event = db.query(models.WorldEvent).filter_by(idempotency_key=event_key).one_or_none()
     if event is None:
         event = models.WorldEvent(
             event_type="capability_gap_recorded",
-            entity_id=question_entity.id,
+            entity_id=event_entity.id,
             payload=_dump(
                 {
                     "capability_gap_id": capability.id,
                     "research_question_id": question.id,
                     "requirement_id": requirement_id,
+                    "need_id": requirement.get("need_id"),
                     "searched_at": searched_at,
                     **gap_data["search_result"],
                 }
@@ -223,7 +232,7 @@ def ensure_capability_gap(
         evidence = world_graph.create_evidence(
             db,
             subject_kind="entity",
-            subject_id=question_entity.id,
+            subject_id=event_entity.id,
             claim=(
                 f"An exact source-clearance registry search for requirement "
                 f"{requirement_id} found no active cleared capability."
@@ -234,6 +243,7 @@ def ensure_capability_gap(
                 "capability_gap_id": capability.id,
                 "research_question_id": question.id,
                 "requirement_id": requirement_id,
+                "need_id": requirement.get("need_id"),
                 "search_result": gap_data["search_result"],
                 "event_id": event.id,
                 "candidate_ids": list(gap_data.get("candidate_ids") or []),

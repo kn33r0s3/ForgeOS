@@ -254,7 +254,7 @@ def record_authorized_source_observation(
     normalized_metadata.update(
         {
             "canonical_url": entry.url,
-            "external_id": observation_identity.strip(),
+            "external_id": _key("source-observation-id-v1", entry.registry_id, observation_identity.strip()),
             "source_type": "external",
             "source_timestamp": source_timestamp.isoformat() if source_timestamp else None,
             "published_at": source_timestamp.isoformat() if source_timestamp else None,
@@ -319,6 +319,9 @@ def _minimize_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
         for key, value in metadata.items()
         if key in allowed
     }
+    for key in ("external_id", "identity_key"):
+        if result.get(key):
+            result[key] = _key("observation-identity-v1", result[key])
     title = result.get("title")
     if isinstance(title, str):
         result["title"] = _normalize_observation_content(title)[:500]
@@ -523,6 +526,7 @@ def search_existing_capabilities(
         "geographic_qualification": geographic_scope,
         "population_qualification": population_scope,
         "unresolved_dimensions": list(understanding.unresolved_questions),
+        "need_id": understanding.inferred_need_id,
     }
     sources = capability_discovery.active_cleared_sources(db, requirement_id)
     _event(
@@ -536,6 +540,36 @@ def search_existing_capabilities(
         },
         key=f"capability-search:{understanding.inferred_need_id}:{requirement_id}:v1",
     )
+    need_entity = db.get(models.SubstrateEntity, understanding.inferred_need_id)
+    if need_entity is None or need_entity.entity_type != "need":
+        raise ValueError("sufficiently understood need entity is unavailable")
+    search_key = (
+        f"need-capability-search-evidence:{understanding.inferred_need_id}:"
+        f"{_key(requirement_id, *(entry.registry_id for entry in sources))}"
+    )
+    if db.query(models.Evidence).filter_by(idempotency_key=search_key).one_or_none() is None:
+        world_graph.create_evidence(
+            db,
+            subject_kind="entity",
+            subject_id=need_entity.id,
+            claim=(
+                f"Capability search for this need identified {len(sources)} "
+                "currently cleared matching capability record(s)."
+            ),
+            support_level="possible",
+            source="demand_understanding",
+            provenance={
+                "need_id": need_entity.id,
+                "requirement_id": requirement_id,
+                "source_registry_ids": [entry.registry_id for entry in sources],
+                "event_idempotency_key": (
+                    f"capability-search:{understanding.inferred_need_id}:{requirement_id}:v1"
+                ),
+                "claim_boundary": "A cleared capability match is not proof of fit, availability, or fulfillment.",
+            },
+            confidence=0.25,
+            idempotency_key=search_key,
+        )
     gap = None
     if not sources:
         gap = capability_discovery.ensure_capability_gap(db, _question_for_need(db, understanding), requirement)
