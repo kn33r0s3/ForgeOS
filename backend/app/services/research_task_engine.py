@@ -27,9 +27,11 @@ def create_task(
     query: str,
     objective: str | None = None,
     claim_id: int | None = None,
+    idempotency_key: str | None = None,
 ) -> models.ResearchTask:
     """Create or reuse the durable task for one question/source/query."""
-    idempotency_key = hashlib.sha256(
+    supplied_identity = idempotency_key is not None
+    idempotency_key = idempotency_key or hashlib.sha256(
         f"{question_id}\0{source}\0{query}".encode("utf-8")
     ).hexdigest()
     existing = (
@@ -39,12 +41,14 @@ def create_task(
     )
     if existing:
         return existing
-    existing = (
-        db.query(models.ResearchTask)
-        .filter_by(question_id=question_id, source=source, query=query)
-        .order_by(models.ResearchTask.id.asc())
-        .first()
-    )
+    existing = None
+    if not supplied_identity:
+        existing = (
+            db.query(models.ResearchTask)
+            .filter_by(question_id=question_id, source=source, query=query)
+            .order_by(models.ResearchTask.id.asc())
+            .first()
+        )
     if existing:
         if existing.idempotency_key not in (None, idempotency_key):
             raise ValueError("Existing research task identity has a conflicting idempotency key")

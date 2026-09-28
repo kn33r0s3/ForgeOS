@@ -465,26 +465,22 @@ def test_planner_keeps_local_geographic_claim_unresolved_with_openalex_literatur
 
     scholarly = next(
         item for item in question.research_plan["requirements"]
-        if item["id"] == "prior_research"
-    )
-    local = next(
-        item for item in question.research_plan["requirements"]
-        if item["id"] == "local_applicability"
+        if item["id"] == "scholarly_evidence"
     )
     buyer = next(
         item for item in question.research_plan["requirements"]
         if item["id"] == "buyer_willingness_to_pay"
     )
-    study_context = next(
-        item for item in question.research_plan["requirements"]
-        if item["id"] == "study_context_alignment"
+    scholarly_node = next(
+        item for item in question.research_plan["orchestration_requirements"]
+        if item["requirement_id"] == "phenomenon_existence"
     )
     assert result["status"] == "completed"
     assert scholarly["status"] == "satisfied"
     assert len(scholarly["evidence_ids"]) == 2
-    assert local["status"] == "terminal_unresolved"
     assert buyer["status"] == "terminal_unresolved"
-    assert study_context["status"] == "terminal_unresolved"
+    assert "local_applicability" in scholarly_node["unresolved_dimensions"]
+    assert "study_period" in scholarly_node["unresolved_dimensions"]
     assert db.query(models.Opportunity).count() == 0
 
 
@@ -495,8 +491,8 @@ def test_semantic_openalex_task_satisfies_literature_only(db, monkeypatch):
     )
     db.add(question)
     db.commit()
-    research_planner.plan_tasks_for_question(db, question)
-    task = _create_openalex_task(db, question)
+    planned = research_planner.plan_tasks_for_question(db, question)
+    task = next(item for item in planned if item.source == "openalex")
     task.results = {**task.results, "search_mode": "semantic"}
     db.commit()
 
@@ -508,14 +504,14 @@ def test_semantic_openalex_task_satisfies_literature_only(db, monkeypatch):
 
     scholarly = next(
         item for item in question.research_plan["requirements"]
-        if item["id"] == "prior_research"
+        if item["id"] == "scholarly_evidence"
     )
     buyer = next(
         item for item in question.research_plan["requirements"]
         if item["id"] == "buyer_willingness_to_pay"
     )
     assert result["status"] == "completed"
-    assert params["search.semantic"] == [QUERY]
+    assert params["search.semantic"] == [task.results["derived_retrieval_query"]]
     assert scholarly["status"] == "satisfied"
     assert buyer["status"] == "terminal_unresolved"
     assert db.query(models.Opportunity).count() == 0

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+from hashlib import sha256
 import json
 import re
 from datetime import date
@@ -30,6 +31,14 @@ _OPENALEX_UNRESOLVED_DIMENSIONS = [
     "product_demand",
     "commercial_viability",
 ]
+_COMMERCIAL_REQUIREMENT_IDS = frozenset(
+    {
+        "buyer_willingness_to_pay",
+        "customer_pain",
+        "commercial_demand",
+        "product_demand",
+    }
+)
 _GEOGRAPHY_TERMS = (
     "Nepal",
     "India",
@@ -95,8 +104,187 @@ def _topic(question_text: str) -> str:
     return " ".join(question_text.split()).rstrip("?.! ")
 
 
+def _objective_profile(question_text: str) -> str | None:
+    if re.search(
+        r"\b(?:corridor|freight|logistics|shipment|supply chain|"
+        r"transport|warehouse|distribution route)\b",
+        question_text,
+        re.I,
+    ):
+        return "logistics"
+    if re.search(
+        r"\b(?:software|saas|service|platform|application|mobile app|"
+        r"workflow|subscription|digital product|api)\b",
+        question_text,
+        re.I,
+    ):
+        return "software_service"
+    if re.search(
+        r"\b(?:agricultur\w*|farmer\w*|crop\w*|postharvest|post-harvest|"
+        r"harvest|commodity|grain|produce|livestock|food loss)\b",
+        question_text,
+        re.I,
+    ):
+        return "agriculture_commodity"
+    return None
+
+
+def _country_scope(question_text: str, indicator_id: str) -> dict[str, Any] | None:
+    country = _openalex_qualifications(question_text)["geographic_qualification"]
+    if not country:
+        return None
+    country_code = _COUNTRY_ISO3.get(country.casefold())
+    if not country_code:
+        return None
+    current_year = date.today().year
+    return {
+        "country_code": country_code,
+        "indicator_id": indicator_id,
+        "start_year": current_year - 5,
+        "end_year": current_year - 1,
+    }
+
+
+def _domain_requirement_specs(
+    question_text: str,
+    profile: str,
+) -> list[dict[str, Any]]:
+    topic = _topic(question_text)
+    country = _openalex_qualifications(question_text)["geographic_qualification"]
+    specs: list[dict[str, Any]] = []
+
+    if profile == "agriculture_commodity":
+        specs.extend(
+            [
+                {
+                    "id": "scholarly_evidence",
+                    "question": f"What scholarly evidence documents {topic}?",
+                    "evidence_kind": "openalex_scholarly_abstract",
+                    "can_resolve_claim": False,
+                    "openalex_query": topic,
+                },
+                {
+                    "id": "documented_intervention",
+                    "question": f"What documented interventions address {topic}?",
+                    "evidence_kind": "openalex_scholarly_abstract",
+                    "can_resolve_claim": False,
+                    "openalex_query": f"documented interventions: {topic}",
+                },
+            ]
+        )
+        population_scope = _country_scope(question_text, "SP.POP.TOTL")
+        if population_scope:
+            specs.append(
+                {
+                    "id": "population_baseline",
+                    "question": f"What country-level population baseline is available for {country}?",
+                    "evidence_kind": "attributed_macro_indicator_observation",
+                    "can_resolve_claim": False,
+                    "world_bank_scope": population_scope,
+                }
+            )
+        if re.search(r"\b(?:economic|GDP|income|macro(?:economic)? context)\b", question_text, re.I):
+            economic_scope = _country_scope(question_text, "NY.GDP.MKTP.CD")
+            if economic_scope:
+                specs.append(
+                    {
+                        "id": "economic_indicator",
+                        "question": f"What bounded national economic context is available for {country}?",
+                        "evidence_kind": "attributed_macro_indicator_observation",
+                        "can_resolve_claim": False,
+                        "world_bank_scope": economic_scope,
+                    }
+                )
+        specs.append(
+            {
+                "id": "buyer_willingness_to_pay",
+                "question": f"What direct buyer evidence establishes willingness to pay for {topic}?",
+                "evidence_kind": "buyer_response_or_transaction",
+                "can_resolve_claim": True,
+            }
+        )
+        return specs
+
+    if profile == "software_service":
+        specs.extend(
+            [
+                {
+                    "id": "problem_incidence",
+                    "question": f"What evidence measures prevalence of the software/service problem in {topic}?",
+                    "evidence_kind": "observations_of_incidence",
+                    "can_resolve_claim": False,
+                },
+                {
+                    "id": "scholarly_evidence",
+                    "question": f"What scholarly work discusses technical approaches relevant to {topic}?",
+                    "evidence_kind": "openalex_scholarly_abstract",
+                    "can_resolve_claim": False,
+                    "openalex_query": topic,
+                },
+                {
+                    "id": "bibliographic_discovery",
+                    "question": f"What published solutions or related work may merit review for {topic}?",
+                    "evidence_kind": "bibliographic_metadata",
+                    "can_resolve_claim": False,
+                },
+                {
+                    "id": "buyer_willingness_to_pay",
+                    "question": f"What direct buyer evidence establishes willingness to pay for {topic}?",
+                    "evidence_kind": "buyer_response_or_transaction",
+                    "can_resolve_claim": True,
+                },
+            ]
+        )
+        return specs
+
+    specs.extend(
+        [
+            {
+                "id": "scholarly_evidence",
+                "question": f"What scholarly work documents operational bottlenecks relevant to {topic}?",
+                "evidence_kind": "openalex_scholarly_abstract",
+                "can_resolve_claim": False,
+                "openalex_query": topic,
+            },
+            {
+                "id": "regulatory_environment",
+                "question": f"What authoritative regulatory evidence applies to the corridor in {topic}?",
+                "evidence_kind": "authoritative_regulatory_record",
+                "can_resolve_claim": False,
+            },
+            {
+                "id": "buyer_willingness_to_pay",
+                "question": f"What direct buyer or transaction evidence validates demand for {topic}?",
+                "evidence_kind": "buyer_response_or_transaction",
+                "can_resolve_claim": True,
+            },
+        ]
+    )
+    if country:
+        for requirement_id, indicator_id, label in (
+            ("population_baseline", "SP.POP.TOTL", "population"),
+            ("economic_indicator", "NY.GDP.MKTP.CD", "economic volume"),
+        ):
+            scope = _country_scope(question_text, indicator_id)
+            if scope:
+                specs.append(
+                    {
+                        "id": requirement_id,
+                        "question": f"What bounded national {label} baseline is available for {country}?",
+                        "evidence_kind": "attributed_macro_indicator_observation",
+                        "can_resolve_claim": False,
+                        "world_bank_scope": scope,
+                    }
+                )
+    return specs
+
+
 def _requirement_specs(question_text: str) -> list[dict[str, Any]]:
     topic = _topic(question_text)
+    profile = _objective_profile(question_text)
+    if profile:
+        return _domain_requirement_specs(question_text, profile)
+
     requirements = [
         {
             "id": "bibliographic_discovery",
@@ -374,11 +562,11 @@ def _orchestration_requirement_specs(
     question_text: str,
     planned_requirements: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Describe the bounded multi-source program without implying completion."""
+    """Derive domain-specific needs and attach only registered source candidates."""
     qualifications = _openalex_qualifications(question_text)
     by_id = {requirement["id"]: requirement for requirement in planned_requirements}
 
-    def candidates_for(*requirement_ids: str) -> list[dict[str, Any]]:
+    def candidates_for(requirement_ids: tuple[str, ...]) -> list[dict[str, Any]]:
         candidates: dict[tuple[str, str], dict[str, Any]] = {}
         for requirement_id in requirement_ids:
             requirement = by_id.get(requirement_id)
@@ -400,63 +588,76 @@ def _orchestration_requirement_specs(
                 }
         return list(candidates.values())
 
-    specifications = (
-        (
-            "phenomenon_existence",
-            "scholarly_abstract_or_bibliographic_lead",
-            ("scholarly_evidence", "literature_existence", "bibliographic_discovery"),
-            ["prevalence", "causality", "local_applicability"],
-        ),
-        (
-            "affected_population",
-            "country_level_population_baseline",
-            ("population_baseline", "macro_demographics"),
-            ["target_population_share", "affected_population_count", "customer_impact"],
-        ),
-        (
-            "geographic_boundary",
-            "country_scoped_macro_observation",
-            ("population_baseline", "macro_demographics"),
-            ["subnational_variation", "local_customer_distribution"],
-        ),
-        (
-            "reporting_velocity",
-            "bounded_media_coverage_metadata",
-            ("public_reporting_velocity",),
-            ["article_claim_truth", "market_demand", "uncapped_coverage_count"],
-        ),
-        (
-            "documented_interventions",
-            "scholarly_abstract_or_bibliographic_lead",
-            ("documented_intervention", "bibliographic_discovery"),
-            ["intervention_effectiveness", "local_transferability", "implementation_cost"],
-        ),
-        (
-            "commercial_validation_gap",
-            "direct_customer_or_transaction_evidence",
-            (),
-            ["customer_pain", "buyer_willingness_to_pay", "commercial_demand"],
-        ),
-    )
+    profile = _objective_profile(question_text)
+    topic = _topic(question_text)
+    if profile == "agriculture_commodity":
+        specifications = [
+            ("phenomenon_existence", "scholarly_abstract", ("scholarly_evidence",), ["prevalence", "causality", "study_period", "population_alignment", "local_applicability"]),
+            ("affected_population", "national_population_baseline", ("population_baseline",), ["target_population_share", "affected_population_count", "customer_impact"]),
+            ("geographic_baseline", "country_scoped_macro_observation", ("population_baseline", "economic_indicator"), ["subnational_variation", "local_customer_distribution"]),
+            ("documented_interventions", "scholarly_abstract", ("documented_intervention",), ["effectiveness", "local_transferability", "implementation_cost"]),
+            ("commercial_validation_gap", "direct_customer_or_transaction_evidence", (), ["customer_pain", "buyer_willingness_to_pay", "commercial_demand"]),
+        ]
+    elif profile == "software_service":
+        specifications = [
+            ("problem_prevalence", "direct_incidence_or_user_study", ("problem_incidence",), ["frequency", "severity", "sampling_bias"]),
+            ("technical_feasibility", "technical_research_and_test_evidence", ("scholarly_evidence",), ["prototype_test", "integration_constraints", "operational_reliability"]),
+            ("existing_solutions", "published_solution_metadata", ("bibliographic_discovery",), ["current_products", "pricing", "switching_costs"]),
+            ("target_user_segment", "direct_user_and_population_evidence", ("problem_incidence",), ["decision_authority", "segment_size", "user_buyer_alignment"]),
+            ("commercial_validation_gap", "direct_customer_or_transaction_evidence", (), ["customer_pain", "buyer_willingness_to_pay", "commercial_demand"]),
+        ]
+    elif profile == "logistics":
+        specifications = [
+            ("operational_bottleneck", "route_specific_operational_observations", ("scholarly_evidence",), ["route_level_delay", "throughput", "cause"]),
+            ("geographic_corridor", "country_macro_baseline", ("population_baseline", "economic_indicator"), ["border_crossing_data", "route_volume", "subnational_alignment"]),
+            ("regulatory_environment", "authoritative_regulatory_records", ("regulatory_environment",), ["current_rules", "jurisdiction", "implementation"]),
+            ("macro_economic_volume", "attributed_country_economic_indicator", ("economic_indicator",), ["sector_specific_volume", "local_market_size", "commercial_demand"]),
+            ("commercial_validation_gap", "direct_customer_or_transaction_evidence", (), ["customer_pain", "buyer_willingness_to_pay", "commercial_demand"]),
+        ]
+    else:
+        specifications = []
+        for requirement in planned_requirements:
+            requirement_id = requirement["id"]
+            if requirement_id in _COMMERCIAL_REQUIREMENT_IDS:
+                continue
+            specifications.append(
+                (
+                    requirement_id,
+                    requirement["evidence_kind"],
+                    (requirement_id,),
+                    list(requirement.get("unresolved_dimensions", _OPENALEX_UNRESOLVED_DIMENSIONS)),
+                )
+            )
+        if "buyer_willingness_to_pay" in by_id:
+            specifications.append(
+                (
+                    "commercial_validation_gap",
+                    "direct_customer_or_transaction_evidence",
+                    ("buyer_willingness_to_pay",),
+                    ["customer_pain", "buyer_willingness_to_pay", "commercial_demand"],
+                )
+            )
+
     nodes = []
     for requirement_id, evidence_type, related_ids, unresolved in specifications:
+        candidate_sources = candidates_for(related_ids)
         nodes.append(
             {
                 "requirement_id": requirement_id,
                 "original_research_question": question_text,
+                "objective_subject": topic,
                 "required_evidence_type": evidence_type,
                 "geographic_qualification": qualifications["geographic_qualification"],
                 "population_qualification": qualifications["population_qualification"],
                 "epistemic_state": "unresolved",
-                "candidate_sources": (
-                    []
-                    if requirement_id == "commercial_validation_gap"
-                    else candidates_for(*related_ids)
-                ),
+                "candidate_sources": candidate_sources,
                 "unresolved_dimensions": unresolved,
-                "related_requirement_ids": [
-                    value for value in related_ids if value in by_id
-                ],
+                "related_requirement_ids": [value for value in related_ids if value in by_id],
+                "resolution_state": (
+                    "unresolved"
+                    if candidate_sources
+                    else "blocked_external_evidence_required"
+                ),
             }
         )
     return nodes
@@ -617,6 +818,7 @@ def _create_task(
 ) -> models.ResearchTask:
     task_query = " ".join(query.split())[:300] if source == "crossref" else query
     openalex_context: dict[str, Any] = {}
+    search_mode = "not_applicable"
     if source == "openalex":
         original_question = question.question
         derived_query = requirement.get("openalex_query", _topic(original_question))
@@ -632,6 +834,31 @@ def _create_task(
             **_openalex_qualifications(original_question),
             "unresolved_dimensions": list(_OPENALEX_UNRESOLVED_DIMENSIONS),
         }
+    elif source == "world_bank_indicators":
+        task_query = json.dumps(requirement["world_bank_scope"], sort_keys=True)
+    elif source == "gdelt_doc":
+        gdelt_query = " ".join(
+            str(requirement.get("gdelt_query", _topic(question.question))).split()
+        )[:500]
+        task_query = json.dumps(
+            {
+                "query": gdelt_query,
+                "timespan": "1w",
+                "max_records": 25,
+            },
+            sort_keys=True,
+        )
+
+    identity_material = "\0".join(
+        (
+            str(question.id),
+            requirement["id"],
+            source,
+            search_mode,
+            task_query,
+        )
+    )
+    task_identity = sha256(identity_material.encode("utf-8")).hexdigest()
 
     task = research_task_engine.create_task(
         db,
@@ -640,6 +867,7 @@ def _create_task(
         query=task_query,
         objective=requirement["question"],
         claim_id=question.source_claim_id,
+        idempotency_key=task_identity,
     )
     task_results = task.results if isinstance(task.results, dict) else {}
     requirement_ids = task_results.get("research_requirement_ids", [])
@@ -690,21 +918,9 @@ def _create_task(
         "unresolved_dimensions": list(_OPENALEX_UNRESOLVED_DIMENSIONS),
     }
     if source == "world_bank_indicators":
-        task.query = json.dumps(requirement["world_bank_scope"], sort_keys=True)
         task_context["derived_retrieval_query"] = task.query
     elif source == "gdelt_doc":
-        gdelt_query = " ".join(
-            str(requirement.get("gdelt_query", _topic(question.question))).split()
-        )[:500]
-        task.query = json.dumps(
-            {
-                "query": gdelt_query,
-                "timespan": "1w",
-                "max_records": 25,
-            },
-            sort_keys=True,
-        )
-        task_context["derived_retrieval_query"] = gdelt_query
+        task_context["derived_retrieval_query"] = json.loads(task.query)["query"]
     elif source == "openalex":
         task.results = {**task.results, **openalex_context}
         task_context = {**task_context, **openalex_context, "source_type": source}
@@ -972,6 +1188,55 @@ def _macro_market_unresolved_reason(requirement_id: str) -> str | None:
     return None
 
 
+def _create_next_unqueried_capability_task(
+    db: Session,
+    question: models.ResearchQuestion,
+    requirement: dict[str, Any],
+    tasks: list[models.ResearchTask],
+    *,
+    task_count: int,
+) -> models.ResearchTask | None:
+    if task_count >= MAX_TASKS_PER_QUESTION:
+        return None
+    queried_registry_ids = {
+        (task.results or {}).get("source_registry_id")
+        for task in tasks
+        if isinstance(task.results, dict)
+    }
+    active_registry_ids = {
+        (task.results or {}).get("source_registry_id")
+        for task in tasks
+        if task.status in {"planned", "running"}
+        and isinstance(task.results, dict)
+    }
+    for capability in requirement["capable_sources"]:
+        registry_id = capability["registry_id"]
+        if registry_id in queried_registry_ids or registry_id in active_registry_ids:
+            continue
+        if capability["source"] == "openalex":
+            query = requirement.get("openalex_query", requirement["question"])
+        else:
+            query = requirement["question"]
+        return _create_task(
+            db,
+            question,
+            requirement,
+            source=capability["source"],
+            query=query,
+            follow_up_of=tasks[-1].id if tasks else None,
+            follow_up_depth=max(
+                (
+                    int((task.results or {}).get("follow_up_depth") or 0)
+                    for task in tasks
+                    if isinstance(task.results, dict)
+                ),
+                default=0,
+            )
+            + 1,
+        )
+    return None
+
+
 def _refresh_plan_from_tasks(
     db: Session,
     question: models.ResearchQuestion,
@@ -1007,6 +1272,16 @@ def _refresh_plan_from_tasks(
         )
         requirement["task_ids"] = [task.id for task in tasks]
         requirement["evidence_ids"] = evidence_ids
+        requirement["task_failures"] = [
+            {
+                "task_id": task.id,
+                "source": task.source,
+                "status": task.status,
+                "errors": list(task.errors or []),
+            }
+            for task in tasks
+            if task.status in {"failed", "needs_research"}
+        ]
         verified_metadata_ids = (
             _verified_bibliographic_evidence_ids(db, tasks)
             if requirement["id"] == "bibliographic_discovery"
@@ -1062,6 +1337,14 @@ def _refresh_plan_from_tasks(
                     else "source_capability_unavailable_or_expired"
                     )
                 )
+            requirement["epistemic_state"] = (
+                "supported" if requirement["status"] == "satisfied" else "blocked"
+            )
+            requirement["resolution_state"] = (
+                requirement["epistemic_state"]
+                if requirement["status"] == "satisfied"
+                else "blocked_external_evidence_required"
+            )
             continue
 
         pending = [task for task in tasks if task.status in {"planned", "running"}]
@@ -1083,6 +1366,12 @@ def _refresh_plan_from_tasks(
             elif verified_openalex_ids:
                 requirement["evidence_ids"] = verified_openalex_ids
             requirement["terminal_reason"] = None
+            requirement["epistemic_state"] = (
+                "supported"
+                if requirement["status"] == "satisfied"
+                else "unresolved"
+            )
+            requirement["resolution_state"] = requirement["epistemic_state"]
             active = True
             all_terminal = False
             continue
@@ -1170,6 +1459,12 @@ def _refresh_plan_from_tasks(
                 requirement["terminal_reason"] = (
                     "collected_evidence_has_not_been_assessed_as_direct_support"
                 )
+            requirement["epistemic_state"] = (
+                "supported"
+                if requirement["status"] == "satisfied"
+                else "unresolved"
+            )
+            requirement["resolution_state"] = requirement["epistemic_state"]
             continue
 
         retryable = [
@@ -1182,6 +1477,8 @@ def _refresh_plan_from_tasks(
             if retried.status == "planned":
                 requirement["status"] = "in_progress"
                 requirement["terminal_reason"] = None
+                requirement["epistemic_state"] = "unresolved"
+                requirement["resolution_state"] = "unresolved"
                 active = True
                 all_terminal = False
                 continue
@@ -1202,6 +1499,8 @@ def _refresh_plan_from_tasks(
                 ).count()
                 requirement["status"] = "in_progress"
                 requirement["terminal_reason"] = None
+                requirement["epistemic_state"] = "unresolved"
+                requirement["resolution_state"] = "unresolved"
                 active = True
                 all_terminal = False
                 continue
@@ -1216,19 +1515,13 @@ def _refresh_plan_from_tasks(
                 or "no_successful_source_evidence"
             )
         requirement["status"] = "terminal_unresolved"
+        requirement["epistemic_state"] = "unresolved"
+        requirement["resolution_state"] = (
+            "blocked_external_evidence_required"
+            if not requirement["capable_sources"]
+            else "unresolved"
+        )
 
-    task_count = db.query(models.ResearchTask).filter_by(question_id=question.id).count()
-    plan["budget"] = {
-        "max_tasks": MAX_TASKS_PER_QUESTION,
-        "tasks_created": task_count,
-        "remaining_tasks": max(0, MAX_TASKS_PER_QUESTION - task_count),
-    }
-    plan["status"] = "research_in_progress" if active else "research_terminal_unresolved"
-    plan["unresolved_requirements"] = [
-        item["id"]
-        for item in plan["requirements"]
-        if item["status"] != "satisfied"
-    ]
     all_evidence_ids = sorted(
         {
             evidence_id
@@ -1245,6 +1538,60 @@ def _refresh_plan_from_tasks(
     from app.services.research_synthesis_engine import synthesize_research_plan
 
     plan["synthesis"] = synthesize_research_plan(db, plan)
+    for requirement in plan["requirements"]:
+        if requirement.get("epistemic_state") not in {
+            "unresolved",
+            "partially_supported",
+        }:
+            continue
+        current_tasks = _tasks_for_requirement(db, question.id, requirement["id"])
+        if any(task.status in {"planned", "running"} for task in current_tasks):
+            continue
+        task_count = db.query(models.ResearchTask).filter_by(
+            question_id=question.id
+        ).count()
+        next_task = _create_next_unqueried_capability_task(
+            db,
+            question,
+            requirement,
+            current_tasks,
+            task_count=task_count,
+        )
+        if next_task is None:
+            continue
+        requirement["task_ids"] = [task.id for task in current_tasks] + [next_task.id]
+        requirement["status"] = "in_progress"
+        requirement["terminal_reason"] = None
+        requirement["epistemic_state"] = "unresolved"
+        requirement["resolution_state"] = "unresolved"
+        active = True
+        all_terminal = False
+    if any(
+        requirement.get("status") in {"in_progress", "satisfied"}
+        and requirement.get("task_ids")
+        for requirement in plan["requirements"]
+    ):
+        active = active or bool(
+            db.query(models.ResearchTask)
+            .filter(
+                models.ResearchTask.question_id == question.id,
+                models.ResearchTask.status.in_(("planned", "running")),
+            )
+            .count()
+        )
+    plan["synthesis"] = synthesize_research_plan(db, plan)
+    task_count = db.query(models.ResearchTask).filter_by(question_id=question.id).count()
+    plan["budget"] = {
+        "max_tasks": MAX_TASKS_PER_QUESTION,
+        "tasks_created": task_count,
+        "remaining_tasks": max(0, MAX_TASKS_PER_QUESTION - task_count),
+    }
+    plan["status"] = "research_in_progress" if active else "research_terminal_unresolved"
+    plan["unresolved_requirements"] = [
+        item["id"]
+        for item in plan["requirements"]
+        if item["epistemic_state"] not in {"supported"}
+    ]
     plan["terminal_reason"] = None if active else (
         "one_or_more_requirements_remain_unresolved_under_current_source_clearances"
         if all_terminal

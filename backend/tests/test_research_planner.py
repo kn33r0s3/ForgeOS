@@ -20,7 +20,8 @@ def test_unrelated_questions_get_general_subquestions_and_only_cleared_sources(d
         for question in questions
     ]
 
-    assert all(len(plan["subquestions"]) == 5 for plan in plans)
+    assert len(plans[0]["orchestration_requirements"]) == 5
+    assert len(plans[1]["subquestions"]) == 5
     assert all(plan["subquestions"] != plans[1 - index]["subquestions"] for index, plan in enumerate(plans))
     assert all("not external evidence" in plan["assumptions"][0] for plan in plans)
     assert all(
@@ -35,14 +36,23 @@ def test_unrelated_questions_get_general_subquestions_and_only_cleared_sources(d
         not next(source for source in plan["candidate_sources"] if source["source"] == "direct_web")["available"]
         for plan in plans
     )
-    assert all(len(tasks) == 1 for tasks in planned_tasks)
-    assert all(task.source == "crossref" for tasks in planned_tasks for task in tasks)
-    assert all(
-        next(item for item in plan["requirements"] if item["id"] == "bibliographic_discovery")[
-            "capable_sources"
-        ]
-        for plan in plans
+    assert len(planned_tasks[0]) == 3
+    assert {task.source for task in planned_tasks[0]} == {
+        "openalex",
+        "world_bank_indicators",
+    }
+    assert len(planned_tasks[1]) == 1
+    assert planned_tasks[1][0].source == "crossref"
+    assert any(
+        item["capable_sources"]
+        for item in plans[0]["requirements"]
+        if item["id"] == "scholarly_evidence"
     )
+    assert next(
+        item
+        for item in plans[1]["requirements"]
+        if item["id"] == "bibliographic_discovery"
+    )["capable_sources"]
     assert all(
         not next(item for item in plan["requirements"] if item["id"] == "buyer_willingness_to_pay")[
             "capable_sources"
