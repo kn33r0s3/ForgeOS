@@ -216,6 +216,7 @@ def record_authorized_source_observation(
     *,
     authorization: source_clearance_registry.CollectionAuthorization,
     source_reference: str,
+    observation_field: str,
     source_timestamp: datetime | None,
     observation_identity: str,
     metadata: dict[str, Any] | None = None,
@@ -245,6 +246,8 @@ def record_authorized_source_observation(
         raise PermissionError("source authorization reservation is stale or superseded")
     if not observation_identity.strip():
         raise ValueError("a stable source observation identity is required")
+    if observation_field not in entry.allowed_fields:
+        raise PermissionError("source field is not covered by the exact clearance")
     if source_timestamp is not None and source_timestamp.tzinfo is None:
         source_timestamp = source_timestamp.replace(tzinfo=timezone.utc)
     normalized_metadata = _minimize_metadata(metadata or {})
@@ -270,6 +273,7 @@ def record_authorized_source_observation(
                 "source_identity": entry.display_name,
                 "source_type": entry.collector,
                 "source_reference": source_reference,
+                "observation_field": observation_field,
                 "source_timestamp": source_timestamp.isoformat() if source_timestamp else None,
                 "ingested_at": datetime.now(timezone.utc).isoformat(),
                 "authorization_reserved_at": authorization.reserved_at.isoformat(),

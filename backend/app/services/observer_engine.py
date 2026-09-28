@@ -117,12 +117,9 @@ class ObserverEngine:
                 .order_by(models.Signal.id.desc())
                 .first()
             )
-        if previous is None and (canonical_url or external_id):
+        if previous is None and not identity_key and not external_id and canonical_url:
             identity_query = self.db.query(models.Signal).filter(models.Signal.source == source)
-            if external_id:
-                previous = identity_query.filter(models.Signal.external_id == str(external_id)).order_by(models.Signal.id.desc()).first()
-            if previous is None and canonical_url:
-                previous = identity_query.filter(models.Signal.canonical_url == canonical_url).order_by(models.Signal.id.desc()).first()
+            previous = identity_query.filter(models.Signal.canonical_url == canonical_url).order_by(models.Signal.id.desc()).first()
         if previous is not None and previous.content_fingerprint == content_fingerprint:
             if persist_evidence:
                 _ensure_evidence(self.db, previous, metadata)

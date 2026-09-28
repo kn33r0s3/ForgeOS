@@ -23,7 +23,11 @@ def _observation(db, text, key):
 
 
 def _authorized_fixture_observation(
-    db, *, when, observation_id="fixture-record-1", authorized_at=datetime(2026, 9, 28, 12, 0, tzinfo=timezone.utc)
+    db,
+    *,
+    when,
+    observation_id="fixture-record-1",
+    authorized_at=datetime(2026, 9, 28, 12, 0, tzinfo=timezone.utc),
 ):
     entry = next(
         item
@@ -38,9 +42,10 @@ def _authorized_fixture_observation(
     )
     return demand_understanding.record_authorized_source_observation(
         db,
-        "An independent report says ingredient X is unavailable. Contact: sample.person@example.test +1-202-555-0147",
+        "Synthetic fixture: independent report says ingredient X is unavailable. Contact: sample.person@example.test +1-202-555-0147",
         authorization=authorization,
         source_reference=entry.url,
+        observation_field="title",
         source_timestamp=when,
         observation_identity=observation_id,
         metadata={"provenance": {"fixture": "synthetic adapter response"}},
@@ -85,6 +90,7 @@ def test_uncleared_or_stale_source_authorization_is_rejected(db):
             "Unverified public page.",
             authorization=None,
             source_reference=entry.url,
+            observation_field="title",
             source_timestamp=None,
             observation_identity="untrusted",
         )
@@ -100,8 +106,19 @@ def test_uncleared_or_stale_source_authorization_is_rejected(db):
             "Wrong endpoint.",
             authorization=authorization,
             source_reference="https://example.com/public",
+            observation_field="title",
             source_timestamp=None,
             observation_identity="wrong-endpoint",
+        )
+    with __import__("pytest").raises(PermissionError):
+        demand_understanding.record_authorized_source_observation(
+            db,
+            "Uncleared abstract text.",
+            authorization=authorization,
+            source_reference=entry.url,
+            observation_field="abstract",
+            source_timestamp=None,
+            observation_identity="wrong-field",
         )
     assert db.query(models.Signal).count() == 0
 
@@ -111,12 +128,13 @@ def test_duplicate_and_independent_observations_are_distinct_and_idempotent(db):
     first = _authorized_fixture_observation(db, when=first_time)
     duplicate = demand_understanding.record_authorized_source_observation(
         db,
-        "An independent report says ingredient X is unavailable. Contact: sample.person@example.test +1-202-555-0147",
+        "Synthetic fixture: independent report says ingredient X is unavailable. Contact: sample.person@example.test +1-202-555-0147",
         authorization=source_clearance_registry.CollectionAuthorization(
             entry=source_clearance_registry.clearance_for_url(first.canonical_url),
             reserved_at=datetime(2026, 9, 28, 12, 0, tzinfo=timezone.utc),
         ),
         source_reference=first.canonical_url,
+        observation_field="title",
         source_timestamp=first_time,
         observation_identity="fixture-record-1",
         metadata={"provenance": {"fixture": "synthetic adapter response"}},
@@ -225,10 +243,11 @@ def test_inadequate_capability_enters_existing_gap_path(db):
     gap = db.get(models.ForgeCapability, match["capability_gap_id"])
     assert match["research_eligible"] is True
     assert json.loads(gap.attributes)["capability_discovery"]["record_kind"] == "research_capability_gap"
-    assert all(
-        "research_capability_gap" not in (row.provenance or "")
-        for row in db.query(models.Evidence).all()
-    )
+    gap_data = json.loads(gap.attributes)["capability_discovery"]
+    gap_evidence = db.get(models.Evidence, gap_data["search_result"]["evidence_id"])
+    assert gap_evidence is not None
+    assert gap_evidence.support_level == "possible"
+    assert json.loads(gap_evidence.provenance)["capability_gap_id"] == gap.id
 
 
 def test_repeated_observations_and_need_are_idempotent(db):
@@ -255,34 +274,94 @@ def test_sqlite_reopen_preserves_demand_to_capability_gap(tmp_path):
     run_migrations(engine)
     factory = sessionmaker(bind=engine, expire_on_commit=False)
     with factory() as session:
-        signal = _observation(session, "A buyer seeks an unavailable local item.", "obs-reopen")
-        result = demand_understanding.understand(
+        adequate_signal = _authorized_fixture_observation(
             session,
-            [signal.id],
-            object_description="the unavailable local item",
-            desired_outcome="obtain the item locally",
+            when=datetime(2026, 9, 26, 10, 0, tzinfo=timezone.utc),
+            observation_id="sqlite-adequate-record",
+        )
+        adequate_result = demand_understanding.understand(
+            session,
+            [adequate_signal.id],
+            object_description="a bounded scholarly estimate",
+            desired_outcome="obtain a cited estimate",
             unresolved_questions=[],
             sufficient=True,
         )
-        match = demand_understanding.search_existing_capabilities(
+        adequate_match = demand_understanding.search_existing_capabilities(
             session,
-            result,
-            requirement_id="unserved_local_item",
-            required_evidence_type="local_availability",
+            adequate_result,
+            requirement_id="scholarly_evidence",
+            required_evidence_type="scholarly_metadata",
         )
-        ids = (signal.id, result.inferred_need_id, match["capability_gap_id"])
+        assert adequate_match["matched_sources"]
+        assert adequate_match["capability_gap_id"] is None
+        assert session.query(models.ResearchQuestion).count() == 0
+
+        insufficient_signal = _authorized_fixture_observation(
+            session,
+            when=datetime(2026, 9, 27, 10, 0, tzinfo=timezone.utc),
+            observation_id="sqlite-insufficient-record",
+            authorized_at=datetime(2026, 9, 28, 13, 0, tzinfo=timezone.utc),
+        )
+        insufficient_result = demand_understanding.understand(
+            session,
+            [insufficient_signal.id],
+            object_description="a local postharvest observation",
+            desired_outcome="obtain crop loss evidence",
+            unresolved_questions=[],
+            sufficient=True,
+        )
+        insufficient_match = demand_understanding.search_existing_capabilities(
+            session,
+            insufficient_result,
+            requirement_id="primary_agriculture_observation",
+            required_evidence_type="primary_agriculture_observation",
+            geographic_scope="Nepal",
+            population_scope="smallholder farmers",
+        )
+        gap = session.get(models.ForgeCapability, insufficient_match["capability_gap_id"])
+        gap_data = json.loads(gap.attributes)["capability_discovery"]
+        ids = {
+            "adequate_signal": adequate_signal.id,
+            "adequate_need": adequate_result.inferred_need_id,
+            "insufficient_signal": insufficient_signal.id,
+            "insufficient_need": insufficient_result.inferred_need_id,
+            "gap": gap.id,
+            "gap_event": gap_data["search_result"]["event_id"],
+            "gap_evidence": gap_data["search_result"]["evidence_id"],
+        }
+        assert insufficient_match["research_eligible"] is True
     with factory() as reopened:
-        assert reopened.get(models.Signal, ids[0]) is not None
-        assert reopened.get(models.SubstrateEntity, ids[1]).entity_type == "need"
-        assert reopened.get(models.ForgeCapability, ids[2]) is not None
+        assert reopened.get(models.Signal, ids["adequate_signal"]) is not None
+        assert reopened.get(models.Signal, ids["insufficient_signal"]) is not None
+        assert reopened.get(models.SubstrateEntity, ids["adequate_need"]).entity_type == "need"
+        assert reopened.get(models.SubstrateEntity, ids["insufficient_need"]).entity_type == "need"
+        persisted_gap = reopened.get(models.ForgeCapability, ids["gap"])
+        persisted_gap_data = json.loads(persisted_gap.attributes)["capability_discovery"]
+        assert reopened.get(models.WorldEvent, ids["gap_event"]) is not None
+        assert reopened.get(models.Evidence, ids["gap_evidence"]).support_level == "possible"
+        assert persisted_gap_data["search_result"]["registered_sources_considered"] == []
+        assert reopened.get(
+            models.SourceFetchGate, "crossref-public-works-metadata"
+        ) is not None
+        assert reopened.query(models.WorldRelation).filter_by(
+            relation_type="derived_from"
+        ).count() == 2
+        observation_evidence = reopened.query(models.Evidence).filter(
+            models.Evidence.idempotency_key.like("demand-observation-evidence:%")
+        ).all()
+        assert len(observation_evidence) == 2
+        assert all(
+            "crossref-public-works-metadata"
+            in json.loads(row.provenance)["metadata"]["provenance"]["source_registry_id"]
+            for row in observation_evidence
+        )
         assert reopened.query(models.Opportunity).count() == 0
         assert reopened.query(models.Decision).count() == 0
         print(
             json.dumps(
                 {
-                    "signal_id": ids[0],
-                    "need_id": ids[1],
-                    "capability_gap_id": ids[2],
+                    **ids,
                     "research_questions": reopened.query(models.ResearchQuestion).count(),
                     "opportunities": reopened.query(models.Opportunity).count(),
                     "decisions": reopened.query(models.Decision).count(),
