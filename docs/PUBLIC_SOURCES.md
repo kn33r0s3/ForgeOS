@@ -6,7 +6,7 @@ are reviewed again at collection time.
 
 | Source | Start URL | Public need it may show | robots.txt | Terms | Opened |
 |---|---|---|---|---|---|
-| Nepal Public Procurement Monitoring Office / Bolpatra | https://bolpatra.gov.np/ | Public procurement notices and tenders | `200` HTML maintenance page, not a robots file. `https://bolpatra.gov.np/egp/robots.txt` was the same maintenance page | The public landing page returned `200`; no separate terms URL was established, so collection remains unapproved | 2026-09-25 |
+| Nepal Public Procurement Monitoring Office / Bolpatra | https://bolpatra.gov.np/egp/ | Official e-GP procurement notices and tenders | `https://bolpatra.gov.np/robots.txt` and `/egp/robots.txt` returned maintenance-page HTML, not directives. PPMO's separate `https://www.ppmo.gov.np/robots.txt` states `Crawl-delay: 10` for that host only | No applicable automation/API/reuse terms or license found; procurement collection is NOT CLEARED | Opened 2026-09-25; rechecked 2026-09-28 |
 | Kathmandu Post | https://kathmandupost.com/ | Public notices or tender reporting | `403`; not cleared | The landing page returned `403`; terms were not cleared | 2026-09-25 |
 | Nepal Rastra Bank | https://www.nrb.org.np/ | Public notices | `200` text; `User-agent: *` disallows `/wp-admin/` only | `https://www.nrb.org.np/disclaimer/` returned `404`. No terms page granting collection was found | 2026-09-25 |
 | The Rising Nepal | https://risingnepaldaily.com/ | Public notices in news pages | `200` text; `User-agent: *` allows `/` and disallows login, admin, api, and search. Named AI crawlers are disallowed | Privacy policy at `https://risingnepaldaily.com/privacy-policy` describes the site's own visitor tracking. It does not grant collection | 2026-09-25 |
@@ -22,6 +22,7 @@ are reviewed again at collection time.
 | World Bank Indicators API v2 — bounded country indicator endpoints | https://api.worldbank.org/v2 | Read-only country-year indicators and separate indicator/source metadata for macro statistical observations | `https://api.worldbank.org/robots.txt` returned `404`; integration uses only the documented JSON API and exact `/v2/indicator/{id}` and `/v2/country/{country}/indicator/{id}` path forms over HTTPS | The World Bank Data Catalog licensing page says CC BY 4.0 is the default for World Bank-produced open datasets, but many datasets have other licenses, including externally specified and custom licenses. WDI metadata identifies source organizations; those are captured, not treated as proof of exclusive ownership or an indicator-specific license. Attribution is retained. Macro data cannot establish customer pain, product demand, local market demand, or willingness to pay. Persistent rate gate: at least 1 second between API calls | 2026-09-27 |
 | GDELT DOC API v2 — bounded article metadata | https://api.gdeltproject.org/api/v2/doc/doc | Observe matching article title, URL, domain, publication date, language, and source country; metadata describes coverage and is not verification of the article's claims | `https://api.gdeltproject.org/robots.txt` returned `404`; collector uses only the documented API endpoint and fixed `artlist` mode over HTTPS | Official GDELT DOC API documentation at `https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/` documents JSON output, article metadata, and volume timelines. The GDELT data overview is `https://gdeltproject.org/data.html`. Clearance attribution tag: `GDELT Open Data (Unlimited reuse with attribution to https://www.gdeltproject.org/)`; this does not grant rights to publisher article bodies or images, which are never fetched or stored. The persistent source gate enforces the provider's observed five-second pacing guidance; HTTP 429 receives bounded exponential backoff, then defers the task without consuming an attempt. Article metadata may satisfy media coverage and recent-event observations. It may satisfy only a narrow GDELT-indexed article count over a bounded window when the result set is uncapped; a capped list cannot measure reporting velocity. No GDELT metadata may establish customer pain, market demand, willingness to pay, or financial viability | 2026-09-27 |
 | ILOSTAT SDMX REST API — candidate, NOT cleared | https://sdmx.ilo.org/rest/v1 | Candidate public aggregate country-level labor statistics; restricted constituent microdata explicitly excluded | Exact SDMX robots policy was not established; metadata reads only, with no observation collection | ILO's official policy states datasets published/made available on or after 2023-05-03 are CC BY 4.0, excluding restricted constituent microdata. `DF_EMP_TEMP_SEX_AGE_NB` metadata exposes a `LAST_UPDATE` annotation but no dataset publication date or explicit license tag; no data was persisted. Dataset-specific eligibility and API terms remain unverified; no collector clearance | 2026-09-27 |
+| Nepal Office of Company Registrar (OCR), Public Data Portal — candidate, NOT CLEARED | https://ocr.gov.np/ links to https://company.ocr.gov.np/ and `/company-register` | Public-company verification/search. OCR's portal advertises free public access to CAMIS-updated registration data and search by PAN, company name, or registration number. The company table exposes English/Nepali legal name, registration number, masked PAN, type, status, address, registration date, and expiry date | `https://ocr.gov.np/robots.txt` returned `User-agent: *` and `Crawl-delay: 10` for the OCR host. `https://company.ocr.gov.np/robots.txt` returned the SPA HTML shell, not a robots policy for the company-data subdomain | The portal says common public functions need no login and the company-search page presents a mathematical challenge before search. No portal terms, privacy notice, API specification, reuse license, prospecting permission, automated access permission, rate limit, or permitted commercial purpose was found. `/terms` and `/privacy` returned the app shell without policy text. The UI exposed `/api/public/v1/company-register` as a resource; it is not documented as a supported public API. A default page load in this review triggered its first-page listing; no search was submitted, no detail opened, no company row copied into Forge, and no candidate/prospect was created. This incidental UI request is not source clearance or a discovery exercise. Personal/contact/shareholder/beneficial-owner fields and their availability/permission were not inspected. Do not automate or reuse this source for prospecting without OCR's explicit written authorization covering the exact interface, data fields, use, retention, and rate | 2026-09-28 |
 
 ## Operating rule
 
@@ -99,12 +100,92 @@ permission/copyright language, redirect allowlist, policy-host allowlist,
 review dates, and minimum request interval. Registry validation rejects
 duplicate IDs/URLs, non-HTTPS or unapproved policy links, broad redirects,
 missing evidence, unsupported collectors, and invalid review windows. The
-runtime registry currently has three entries: the expired GovInfo page (still
-blocked), the time-limited Crossref API row, and the time-limited World Bank
-Indicators API v2 row. The Semantic Scholar and ILOSTAT rows above remain
-research notes, not collection permissions. When a source is reviewed, update
-its evidence row and add a typed runtime entry; registry tests ensure runtime
-URLs and documentation references remain connected.
+runtime registry currently has five entries: the expired GovInfo page (still
+blocked), time-limited Crossref, World Bank Indicators, GDELT, and OpenAlex
+entries. None supports `authorized_prospect_discovery`. The Semantic Scholar,
+ILOSTAT, OCR, and Bolpatra rows above remain research notes, not collection
+permissions. A source becomes usable only after source-specific review is
+documented here, a typed runtime entry binds its exact target/purpose/fields
+and review window, its adapter validates the exact `CollectionAuthorization`,
+and any live robots/terms checks and persistent rate reservation pass. Registry
+tests ensure runtime URLs and documentation references remain connected.
+
+### OCR Public Data Portal — discovery clearance decision (2026-09-28)
+
+The official OCR site links the CAMIS portal as a public service. The portal's
+landing page describes free access to updated company registration data and
+states that general public functions do not require login. Its company-search
+page presents a mathematical challenge and describes lookup by PAN, name, or
+registration number. The visible company table has legal names, registration
+number, masked PAN, entity type/status, business address, and registration/
+expiry dates. The landing page's advertised database total and the register
+page's result total differed during inspection; neither count is treated as a
+validated registry total.
+
+This establishes that human-facing lookup and some company-level attributes
+are publicly presented; it does **not** establish permission for bots, bulk
+enumeration, API use, commercial prospecting, or retention/reuse. The portal
+does not expose a written terms/privacy or reuse policy in its UI. Its
+`/terms` and `/privacy` routes served the application shell without policy
+text; its subdomain `robots.txt` also served application HTML rather than
+robots directives. The OCR parent site's 10-second robots crawl delay is
+specific to `ocr.gov.np` and cannot be assumed to authorize automated requests
+to `company.ocr.gov.np`. The public UI's mathematical challenge is an
+interactive control and must not be bypassed. Only masked PAN was visible in
+the table reviewed; unmasked identifiers, detail-page fields, contact people,
+shareholders, and beneficial-owner data were not inspected and are not cleared.
+
+While opening `/company-register` to inspect the user-facing form, the
+application automatically loaded its default first-page listing from the
+undocumented `/api/public/v1/company-register` resource. The UI rendered ten
+rows and reported 181,992 results; the home page had separately advertised
+111,290 registered companies. No search criteria were submitted, no entity
+was selected or copied to Forge, no detail view was opened, and no prospect
+was recorded. This incidental page-load request was not authorized prospect
+discovery and must not be repeated by a collector.
+
+**Decision: NOT CLEARED.** Before any request beyond normal manual public use,
+obtain OCR's written, applicable authorization or published terms that
+explicitly permit automated access and reuse for business/prospect discovery,
+identify a documented machine interface and allowed request shape, confirm
+permitted fields (excluding personal/contact/shareholder/beneficial-owner data
+unless separately authorized), scope, rate, retention, attribution, privacy
+basis, and review/expiry date. Then add the exact clearance plus a bounded
+adapter and tests. Do not treat public display, a browser-visible endpoint, or
+a successful HTTP response as authorization.
+
+### PPMO / Bolpatra procurement source decision (2026-09-28)
+
+The official Nepal Public Procurement Monitoring Office (PPMO) site is
+`https://www.ppmo.gov.np/`; its homepage identifies the office and exposes an
+e-GP help-desk reference. The official e-GP address listed for the system is
+`https://bolpatra.gov.np/egp/`. At review time, the Bolpatra root, `/egp/`, and
+both corresponding `robots.txt` URLs returned a system-maintenance page rather
+than a search interface, machine-readable schema, or robots directives. The
+PPMO host's separate `robots.txt` says `Crawl-delay: 10`; that rule does not
+authorize access to the separate Bolpatra host.
+
+No current API documentation, export contract, source terms/license, privacy
+or retention rules, field list, rate limit, or permission for automated
+retrieval and reuse for procurement-demand analysis was found. Whether the
+portal allows read-only automation, historical notice reuse, or any
+commercial-prospect identification is therefore **unknown**, not permitted.
+Procurement demand analysis would establish only the public requirement in a
+notice; it would not authorize contacting the procuring organization, imply
+interest in ForgeOS, or establish customer status, willingness to pay, or a
+sale. No notice search, record query, or procurement record retrieval was
+performed; no organization or personal data was collected.
+
+**Decision: NOT CLEARED.** Before machine access, obtain PPMO's current written
+authorization or published terms that explicitly cover automated read-only
+access and Opportunity-scoped procurement-demand analysis, a documented API
+or export and query limits, permitted fields (excluding personal-contact
+details unless separately authorized), geographic and historical scope,
+privacy/retention and attribution rules, rate limits, and an effective/review
+date. The source must be rechecked when the portal is operational. Public
+notice visibility and the PPMO-host crawl delay are not a substitute for this
+permission. Do not add a clearance, adapter, or live procurement query before
+these conditions are evidenced.
 
 ## 2026-09-27 — Third-party license hardening and ILOSTAT review
 

@@ -13,6 +13,10 @@ from app.services import demand_understanding, worker_manager
 
 
 def _client_for(db):
+    from app import security
+
+    security.settings.FORGE_API_KEY = ""
+
     def override_get_db():
         try:
             yield db

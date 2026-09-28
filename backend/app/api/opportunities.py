@@ -14,6 +14,7 @@ from app.services import opportunity_monitor
 from app.services import option_space, outcome_learning, experiment_service
 from app.services import experiment_action_service
 from app.services import economic_validation
+from app.services import prospect_discovery
 from app.schemas.experiment import ExperimentAuthorize, ExperimentOutcomeCreate, ExperimentProposalCreate
 
 router = APIRouter(tags=["opportunities"])
@@ -42,6 +43,16 @@ class NeedEconomicAssessmentBody(BaseModel):
     experiment_tests_willingness_to_pay: bool = False
 
 
+class ProspectDiscoveryReadinessBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    target_profile: str = Field(..., min_length=1, max_length=1000)
+    geographic_scope: str = Field(..., min_length=1, max_length=160)
+    max_candidates: int = Field(default=5, ge=1, le=10)
+    requested_source_registry_ids: list[str] = Field(default_factory=list, max_length=10)
+    qualification_questions: list[str] | None = Field(default=None, max_length=10)
+
+
 @router.get("/opportunities", response_model=list[schemas.OpportunityOut])
 def get_opportunities(limit: int = 200, db: Session = Depends(get_db)):
     """List discovered opportunities, highest score first."""
@@ -68,6 +79,29 @@ def assess_need_economic_validation(
             experiment_definition=payload.experiment_definition,
             experiment_tests_willingness_to_pay=payload.experiment_tests_willingness_to_pay,
         )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/opportunities/{opportunity_id}/prospect-discovery/readiness")
+def evaluate_prospect_discovery_readiness(
+    opportunity_id: int,
+    payload: ProspectDiscoveryReadinessBody,
+    db: Session = Depends(get_db),
+):
+    """Record a bounded source-clearance audit; this endpoint does not query a source."""
+    try:
+        return prospect_discovery.evaluate_prospect_discovery_readiness(
+            db,
+            opportunity_id,
+            target_profile=payload.target_profile,
+            geographic_scope=payload.geographic_scope,
+            max_candidates=payload.max_candidates,
+            requested_source_registry_ids=payload.requested_source_registry_ids,
+            qualification_questions=payload.qualification_questions,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

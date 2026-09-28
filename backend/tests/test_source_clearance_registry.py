@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from app import models
 from app.services import source_clearance_registry as registry
 
 
@@ -84,6 +85,21 @@ def test_registry_validation_rejects_unsafe_redirect_and_missing_evidence():
 def test_uncleared_collector_families_are_not_active():
     assert registry.collector_is_cleared("web", today=date(2026, 9, 25))
     assert not registry.collector_is_cleared("reddit", today=date(2026, 9, 25))
+
+
+def test_public_bolpatra_url_is_not_cleared_for_procurement_discovery(db):
+    bolpatra_url = "https://bolpatra.gov.np/"
+
+    assert registry.clearance_for_url(bolpatra_url) is None
+    assert registry.capabilities_for_requirement("procurement_demand_discovery") == ()
+    with pytest.raises(PermissionError, match="not cleared"):
+        registry.authorize_request(
+            bolpatra_url,
+            collector="web",
+            db=db,
+            today=date(2026, 9, 28),
+        )
+    assert db.query(models.SourceFetchGate).count() == 0
 
 
 def test_crossref_api_clearance_is_bounded_and_current(db):

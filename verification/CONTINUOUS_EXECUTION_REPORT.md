@@ -431,12 +431,12 @@ A genuine non-test user submission through an appropriately configured public/au
 ## 2026-09-28 RESULT CARD — Need-linked economic assessment and client evidence gate
 
 CURRENTLY IMPLEMENTED:
-Added an assessment route on the existing Opportunity API surface. A Need must be sufficiently specified and have a persisted bounded capability-search EVENT before it can create/use an Opportunity assessment. Existing OpportunityEvent history plus substrate EVENT and hypothesized Need relation persist the assessment. States are `insufficient_evidence`, `economically_uncertain`, or `testable`. Unknown cost, price, and WTP remain unknown. Supplied Evidence IDs must resolve to stored, provenance-bearing, non-refuted records; semantic support is explicitly not adjudicated. A `testable` assessment is only a proposed experiment description and records that separate external authorization is required and absent.
+Added an assessment route on the existing Opportunity API surface. A Need must be sufficiently specified and have a persisted bounded capability-search EVENT before it can create/use an Opportunity assessment. Existing OpportunityEvent history plus substrate EVENT and hypothesized Need relation persist the assessment. States are `insufficient_evidence`, `economically_uncertain`, or `testable`. Unknown cost, price, and WTP remain unknown. Supplied Evidence IDs must resolve to stored records with a source, claim/content, provenance, and explicit non-refuted support state; semantic support is explicitly not adjudicated. A `testable` assessment is only a proposed experiment description and records that separate external authorization is required and absent.
 
-Also tightened the existing CustomerEvent ledger: `contacted` requires a properly authorized started Experiment-linked Action of matching data scope or an actual recorded response; `interested` requires a linked `ACTUAL_RESPONSE`; `paid_customer` requires linked, verified positive `ACTUAL_REVENUE`. Evidence-free and reported-only payment claims are rejected.
+Also tightened the existing CustomerEvent ledger: `contacted` requires a properly authorized started Experiment-linked Action of matching data scope or an actual recorded response; `interested` requires a non-disputed linked `ACTUAL_RESPONSE`; `paid_customer` requires linked, verified positive `ACTUAL_REVENUE`. Evidence-free and reported-only payment claims are rejected.
 
 FILES CHANGED:
-`backend/app/api/opportunities.py`, `backend/app/api/products.py`, `backend/app/services/economic_validation.py`, `backend/app/services/product_engine.py`, `backend/app/services/world_graph.py`, `backend/tests/test_economic_validation.py`, `backend/tests/test_commercial_ops.py`, `backend/tests/test_http_canonical_final.py`, `STATUS.md`, `docs/CAPABILITY_QUEUE.md`, and this report. `storage/scheduler.log` was already a dirty worktree file; existing log content was preserved.
+`backend/app/api/opportunities.py`, `backend/app/api/products.py`, `backend/app/services/economic_validation.py`, `backend/app/services/product_engine.py`, `backend/app/services/world_graph.py`, `backend/tests/test_economic_validation.py`, `backend/tests/test_commercial_ops.py`, `backend/tests/test_http_canonical_final.py`, `backend/tests/test_signal_request_demand_api.py`, `STATUS.md`, `docs/CAPABILITY_QUEUE.md`, and this report. `storage/scheduler.log` was already a dirty worktree file; existing log content was preserved.
 
 TARGET ARCHITECTURE:
 `Real input → existing Signal/Need understanding → existing bounded capability search → hypothesis-grade economic assessment → separately authorized Experiment/Action → real response/payment EVENT + EVIDENCE → append-only learning`. All state remains over the six canonical primitives and existing compatible Opportunity, Experiment, Action, Outcome, and CustomerEvent records.
@@ -478,16 +478,91 @@ SQLITE REOPEN:
 Passed using an isolated file-backed database and the actual Signal → Need understanding → existing capability-search → economic-assessment integration. The Need, search EVENT/Evidence provenance, Opportunity, OpportunityEvent, hypothesized Opportunity→Need relation, and authorization flags were present after close/reopen.
 
 TEST RESULTS:
-Focused economic/demand/public API/capability/research/action regressions: **102 passed, 15 warnings**. Complete backend: **479 passed, 2 skipped, 32 warnings**. Frontend TypeScript check passed with `tsc --noEmit` using a temporary build-info file.
+Focused economic/public API/customer-stage regressions: **34 passed, 11 warnings**. Complete backend, including demand/capability/research/action/orchestration regressions: **479 passed, 2 skipped, 32 warnings**. Frontend TypeScript check passed with `tsc --noEmit` using a temporary build-info file.
 
 REGRESSIONS:
 Generic `/signals` behavior and public API tests passed. Existing demand-understanding tests still prove adequate cleared capability reuse avoids unnecessary research and an inadequate match uses the existing durable gap path. Existing experiment/action authorization and orchestration regressions passed. Customer stage promotions now reject missing response/payment evidence; reported revenue alone does not make a paying customer.
 
 DIFF/STATUS:
-`git diff --check` passed. Final `git status --short --untracked-files=all`: clean. The existing `storage/scheduler.log` worktree content was retained; its cycle-run entries are test/runtime logs, not product evidence.
+`git diff --check` passed. Final `git status --short --untracked-files=all`:
+```text
+ M STATUS.md
+ M backend/tests/test_signal_request_demand_api.py
+ M docs/CAPABILITY_QUEUE.md
+ M storage/scheduler.log
+ M verification/CONTINUOUS_EXECUTION_REPORT.md
+```
+The scheduler log was already a worktree modification before this task; its existing content was retained. Additional `cycle_run` entries are test/runtime logs, not product evidence.
 
 REMAINING BLOCKER:
 No genuine authorized external prospect-discovery source or real response channel was available or exercised. A ForgeCapability fit is not established merely by a research-source match, and the isolated assessment remained insufficiently evidenced.
 
 NEXT MISSING CAPABILITY:
 Specify and authorize one bounded prospect-discovery source/channel and its consent basis, then connect its provenance to existing ENTITY/RELATION/EVENT/EVIDENCE and the existing owner-approved Experiment/Action/Outcome flow. No parallel CRM and no outbound action without explicit authorization.
+
+## 2026-09-28 RESULT CARD — Opportunity-scoped prospect-source authorization handoff
+
+CURRENTLY IMPLEMENTED:
+Added `POST /opportunities/{opportunity_id}/prospect-discovery/readiness`. It requires an existing Opportunity, its latest `testable` `economic_validation_assessed` OpportunityEvent, and the existing Opportunity ENTITY→Need RELATION. It records an idempotent `prospect_discovery_evaluated` EVENT and `possible` EVIDENCE against the existing Opportunity ENTITY. The evidence retains the criteria, Opportunity/Need and assessment references, exact source registry IDs/scopes/fields/terms references/rate limits, audit timestamp, and explicit boundary that only the configured registry was checked. Different criteria or clearance snapshots remain distinguishable. No new table, primitive, CRM, lead store, or economic assessment was added.
+
+SOURCE REVIEW / AUTHORIZATION:
+The configured clearance registry contains five entries: `govinfo-nepal-cultural-property-rule-2026` (one exact Federal Register publication; review expired 2026-09-25), `crossref-public-works-metadata` (scholarly metadata only), `world-bank-indicators-v2` (country-level indicators only), `gdelt-doc-api-v2` (bounded article metadata; commercial-demand inference prohibited), and `openalex-public-works-cc0` (scholarly works/abstracts, not local market validation). Runtime `capabilities_for_requirement("authorized_prospect_discovery")` returned no eligible entries. Other public-source pages listed in `docs/PUBLIC_SOURCES.md` are not cleared for this purpose (Bolpatra terms were not established). Existing public Provider/ServiceListing records were excluded: directory visibility/verification does not authorize buyer/client prospecting or reuse of their contact fields. User-created public posts/domain records were not treated as an external, authorized prospect source.
+
+REAL DISCOVERY:
+No source was queried because no reviewed source authorizes business/client prospect discovery. External source requests: **0**. Real candidate entities: **0**. Potential prospects created: **0**. The recorded result is limited to the configured registry and does not claim that no relevant businesses or people exist outside the reviewed scope. The readiness EVENT/EVIDENCE is a source-authorization finding, not market evidence.
+
+QUALIFICATION / OUTREACH:
+The handoff records explicit qualification evidence/questions as not started because no candidate exists. Candidate identity promotion and potential/qualified/interested/customer stages do not occur. Outreach eligibility is false and separate authorization is required. Outreach: **NONE**. No message, form, call, Experiment, ACTION, or response was created or executed.
+
+COMMERCIAL STATE:
+This milestone created **0** interested parties, buyers/customers, WTP evidence, orders, payments, or revenue. Production-wide commercial totals were not queried.
+
+FILES CHANGED:
+`backend/app/api/opportunities.py`, `backend/app/services/prospect_discovery.py`, `backend/app/services/world_graph.py`, `backend/tests/test_prospect_discovery.py`, `STATUS.md`, `docs/CAPABILITY_QUEUE.md`, and this report. No database migration was added. The unrelated pre-existing `storage/scheduler.log` change was preserved.
+
+WORKTREE RUNTIME FILES:
+At final inspection `storage/scheduler.log` showed twelve added runtime lines, and `storage/forge.db-shm` plus `storage/forge.db-wal` were modified and held open by a Python worker (PID 62800). These shared runtime files were left intact and were not reverted or deleted.
+
+TEST RESULTS:
+- Focused prospect-discovery module: **7 passed**.
+- Prospect/economic/demand/capability/research/public/customer-stage regressions: **121 passed**.
+- Full backend: **486 passed, 2 skipped, 33 warnings**.
+- Frontend TypeScript: `npm run typecheck` **passed**.
+- Isolated file-backed SQLite close/reopen for EVENT, EVIDENCE, provenance, and Opportunity→Need linkage: **passed**.
+- `git diff --check`: **passed** before final status/diff inspection.
+
+REMAINING CAPABILITY:
+A source-specific current terms/privacy/authorization review that explicitly permits bounded business/client identification for an economic hypothesis, plus a source adapter constrained to the granted fields, query scope, rate policy, and provenance. Scholarly, macroeconomic, media metadata, and public provider-directory access are not that authorization. The safe next step is to select one source and verify its written applicable authorization; until then, real client discovery remains blocked and no outreach may occur.
+
+## 2026-09-28 RESULT CARD — OCR public company portal source decision
+
+CURRENTLY IMPLEMENTED:
+No additional readiness layer, clearance record, or OCR adapter was added. The existing source-governance path was inspected: an exact URL must exist in `source_clearance_registry`, be within its review dates, match its collector, reserve the persistent `SourceFetchGate` interval through `authorize_request`, and provide a `CollectionAuthorization` validated by the collector. API collectors also recheck source-specific policy/terms; the generic Web collector rechecks exact robots and terms phrases and restricts redirects. Provenance lives in existing Signal/Evidence and substrate ENTITY/RELATION/EVENT records. Existing `capability_discovery.py` proposes non-executable CAPABILITY gaps and does not authorize sources.
+
+OCR SOURCE / CLEARANCE:
+OCR's official website links `https://company.ocr.gov.np/` and its `/company-register` page. The portal says its company-registration data is free for public access and common public services do not require login. The interface offers a math challenge and describes lookups by name, registration number, or PAN. The rendered table columns are English/Nepali company name, registration number, masked PAN, type, status, address, registration date, and expiry date. Whether personal-contact, shareholder, beneficial-owner or additional company-detail fields are exposed was not inspected.
+
+The portal's `/terms` and `/privacy` URLs did not expose policy text; `company.ocr.gov.np/robots.txt` served the SPA HTML shell, not robots directives. `ocr.gov.np/robots.txt` states a 10-second crawl delay for the parent host only; it does not establish permission for automated collection on the company-data subdomain. No OCR API documentation, commercial-prospecting reuse license, bulk/automated access permission, field-level privacy rule, or rate limit was found. The query UI is public to human users; automation and prospecting remain ambiguous and therefore NOT CLEARED. No sensitive detail fields were presumed permitted. No runtime clearance or collector was implemented.
+
+REAL DISCOVERY:
+An incidental live portal request occurred during interface inspection: navigating to `/company-register` caused the page to load its default first-page listing from the visible but undocumented `/api/public/v1/company-register` resource. The page rendered **10 rows** and reported **181,992 results**; the homepage separately advertised **111,290 registered companies**, so these displayed totals conflict and neither is treated as a reliable dataset count. No search criteria were submitted, no detail page opened, and no company was evaluated, copied, or persisted as an ENTITY. This accidental default listing request was not an authorized discovery exercise and will not be repeated absent clearance. Candidate entities retained: **0**; potential prospects: **0**.
+
+OUTREACH:
+**NONE.** No person or company was contacted. No form was submitted, and no outreach ACTION was created or executed.
+
+COMMERCIAL STATE:
+This review generated no WTP evidence, interested party, buyer/customer, order, payment, or revenue. Production-wide commercial totals were not queried.
+
+NEXT SOURCE CANDIDATE:
+Official Nepal PPMO/Bolpatra procurement notice and award/vendor data is the next plausible source category because tenders can expose a particular public buying need and bounded organization/vendor identities relevant to an Opportunity. The repository's prior source inspection found Bolpatra's robots URL returned a maintenance page rather than robots directives and did not establish reuse terms. It remains NOT CLEARED. The exact dependency is PPMO's written authorization for automated read-only access and reuse specifically for Opportunity-scoped business/prospect discovery, plus a documented API/export and request bounds, authorized company-level fields, privacy/retention conditions, rate limit, attribution, and dated review/expiry.
+
+FILES CHANGED FOR THIS SOURCE REVIEW:
+`docs/PUBLIC_SOURCES.md`, `STATUS.md`, `docs/CAPABILITY_QUEUE.md`, and this report. No application code, clearance registry, source adapter, database schema, or persisted prospect data was changed for this review.
+
+TEST / VERIFICATION RESULTS:
+- Focused source-clearance, prospect-discovery, economic-validation, demand-understanding, capability-discovery, research, public API, and customer-stage regression selection: **136 passed**.
+- Full backend suite: **486 passed, 2 skipped, 33 warnings**.
+- Frontend TypeScript: `npm run typecheck` **passed**.
+- SQLite close/reopen provenance test for discovery EVENT/EVIDENCE and Opportunity linkage: **passed** within the focused selection.
+- `git diff --check`: **passed after the final report update**.
+- No further live OCR request was performed.
