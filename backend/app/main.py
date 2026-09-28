@@ -8,11 +8,14 @@ This file only wires things together: app instance, CORS, startup DB
 init, and router registration. All logic lives in services/ and api/.
 """
 
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.config import settings
-from app.database import init_db, SessionLocal
+from app.database import init_db
 from app.api import signals, analyze, opportunities, observer, forge, world, workers, intelligence, rare_signals, products, lessons, orchestrator, earn, payments, repair_shop, evidence_triage, public, scheduled, substrate
 from app.services import source_manager, money_engine, autonomy_engine, scenario_engine, truth_audit
 from app.security import api_key_middleware
@@ -33,6 +36,8 @@ app.add_middleware(
 # Optional API-key gate (only enforced on POST/PUT/PATCH/DELETE when
 # FORGE_API_KEY is set). Silent pass-through otherwise — local-first by default.
 app.middleware("http")(api_key_middleware)
+
+CRON_SCHEDULE = "0 0 * * *"
 
 
 @app.on_event("startup")
@@ -68,11 +73,23 @@ def root():
 @app.get("/health")
 def health():
     cycle = None
+    database_error = None
+    from app import database, models
+
+    database_url_configured = bool(os.getenv("DATABASE_URL"))
+    is_vercel = bool(os.getenv("VERCEL"))
+    cron_secret_configured = bool(os.getenv("CRON_SECRET"))
+    database_driver = database.engine.dialect.name
+    database_durability = (
+        "ephemeral"
+        if is_vercel and database_driver == "sqlite" and not database_url_configured
+        else "configured"
+    )
+
     try:
-        from app.database import SessionLocal
-        from app import models
-        db = SessionLocal()
+        db = database.SessionLocal()
         try:
+            db.execute(text("SELECT 1"))
             row = db.query(models.CycleRun).order_by(models.CycleRun.id.desc()).first()
             if row is not None:
                 cycle = {
@@ -83,9 +100,36 @@ def health():
                 }
         finally:
             db.close()
-    except Exception:
-        cycle = None
-    return {"status": "ok", "cycle": cycle}
+    except Exception as exc:
+        database_error = type(exc).__name__
+
+    blockers = []
+    if is_vercel and database_durability == "ephemeral":
+        blockers.append("durable_database_not_configured")
+    if is_vercel and not cron_secret_configured:
+        blockers.append("cron_secret_not_configured")
+    if database_error is not None:
+        blockers.append("database_unavailable")
+
+    return {
+        "status": "degraded" if blockers else "ok",
+        "cycle": cycle,
+        "database": {
+            "driver": database_driver,
+            "durability": database_durability,
+            "url_configured": database_url_configured,
+            "available": database_error is None,
+            "error": database_error,
+        },
+        "scheduler": {
+            "cron_secret_configured": cron_secret_configured,
+            "cron_schedule": CRON_SCHEDULE,
+        },
+        "readiness": {
+            "ready": not blockers,
+            "blockers": blockers,
+        },
+    }
 
 
 @app.get("/ai/status")
