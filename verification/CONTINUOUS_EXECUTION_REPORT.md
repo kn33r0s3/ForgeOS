@@ -372,7 +372,7 @@ TARGET ARCHITECTURE:
 `explicit user request → existing POST /signals boundary → normalized Signal observation → existing EVENT → possible EVIDENCE/provenance → existing demand-understanding worker → Need only when justified → existing cleared-capability search → adequate match OR existing durable gap`.
 
 LIVE REQUEST EXERCISED:
-Yes: one actual local HTTP POST to the existing API, labeled in the submitted content as a developer pipeline test. This was not a non-test user submission or a third-party source request.
+Yes: one actual local HTTP POST to the existing API, labeled in the submitted content as a developer pipeline test. A byte-for-byte retry returned the same Signal/WorkerTask IDs; reuse of that key with different content returned HTTP 409. This was not a non-test user submission or a third-party source request.
 
 LIVE REQUEST CONTENT:
 “Developer test request (not market demand): I need a bicycle repair appointment; this is only a pipeline test.”
@@ -408,13 +408,19 @@ SQLITE REOPEN:
 Passed. In a separate process after close/reopen, Signal **1**, EVENT **2**, Evidence **1** and **2**, completed WorkerTask **1**, purpose/auth context, timestamp, and worker result remained persisted. Need, customer, Opportunity, BookingRequest, and Decision counts were all **0**.
 
 TEST RESULTS:
-Focused request/public API/demand/capability/research regressions: **115 passed, 17 warnings**. Complete backend: **470 passed, 2 skipped, 31 warnings**. `npm run typecheck` passed. Isolated request-boundary SQLite reopen passed.
+Focused request/public API/demand/capability/research regressions: **116 passed, 17 warnings**. Complete backend: **471 passed, 2 skipped, 31 warnings**. `npm run typecheck` passed. Isolated request-boundary SQLite reopen passed.
 
 REGRESSIONS:
-Generic `POST /signals` without a purpose retains the prior signal response and does not create demand events or workers. Focused public API, demand, capability discovery, and research/orchestration suites passed.
+Generic `POST /signals` without a purpose retains the prior signal response and does not create demand events or workers. Same-key/same-content retries are idempotent; same-key/different-content returns 409. Focused public API, demand, capability discovery, and research/orchestration suites passed.
 
 DIFF/STATUS:
-`git diff --check` and final `git status --short` recorded after this result card. Existing `storage/scheduler.log` remains untouched by this task.
+`git diff --check` passed. Final `git status --short`:
+```text
+ M STATUS.md
+ M storage/scheduler.log
+ M verification/CONTINUOUS_EXECUTION_REPORT.md
+```
+The existing scheduler-log worktree modification was preserved and not cleaned up.
 
 REMAINING BLOCKER:
 No genuine non-test user submission was available. The frontend has no dedicated request form, and behavior behind deployed authentication/configuration was not exercised.

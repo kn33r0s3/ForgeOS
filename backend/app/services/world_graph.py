@@ -95,6 +95,7 @@ def seed_core_types(db: Session) -> int:
             "market_signal_observed", "market_signal_aggregated", "market_signal_related",
             "demand_observed", "demand_understood", "capability_search_performed",
             "capability_gap_recorded", "capability_gap_candidates_discovered",
+            "economic_validation_assessed",
         },
         "capability_type": {"tool", "workflow", "integration", "agent", "model", "market_signal_analysis"},
     }

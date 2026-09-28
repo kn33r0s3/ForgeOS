@@ -77,21 +77,24 @@ def list_customers(db: Session = Depends(get_db)):
 
 @router.post("/customers", response_model=schemas.CustomerEventOut)
 def add_customer_event_global(body: schemas.CustomerEventCreate, db: Session = Depends(get_db)):
-    return product_engine.create_customer_event(
-        db,
-        product_id=body.product_id,
-        channel_id=body.channel_id,
-        opportunity_id=body.opportunity_id,
-        contact_name=body.contact_name,
-        contact_identifier=body.contact_identifier,
-        segment=body.segment,
-        stage=body.stage,
-        event_type=body.event_type,
-        notes=body.notes,
-        action_id=body.action_id,
-        outcome_id=body.outcome_id,
-        data_scope=body.data_scope,
-    )
+    try:
+        return product_engine.create_customer_event(
+            db,
+            product_id=body.product_id,
+            channel_id=body.channel_id,
+            opportunity_id=body.opportunity_id,
+            contact_name=body.contact_name,
+            contact_identifier=body.contact_identifier,
+            segment=body.segment,
+            stage=body.stage,
+            event_type=body.event_type,
+            notes=body.notes,
+            action_id=body.action_id,
+            outcome_id=body.outcome_id,
+            data_scope=body.data_scope,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.patch("/channels/{channel_id}", response_model=schemas.ChannelOut)
@@ -110,21 +113,24 @@ def add_customer_event(channel_id: int, body: schemas.CustomerEventCreate, db: S
     ch = db.query(models.DistributionChannel).filter_by(id=channel_id).first()
     if ch is None:
         raise HTTPException(404, "channel not found")
-    return product_engine.create_customer_event(
-        db,
-        product_id=ch.product_id or body.product_id,
-        channel_id=channel_id,
-        opportunity_id=body.opportunity_id or ch.opportunity_id,
-        contact_name=body.contact_name,
-        contact_identifier=body.contact_identifier,
-        segment=body.segment,
-        stage=body.stage,
-        event_type=body.event_type,
-        notes=body.notes,
-        action_id=body.action_id,
-        outcome_id=body.outcome_id,
-        data_scope=body.data_scope,
-    )
+    try:
+        return product_engine.create_customer_event(
+            db,
+            product_id=ch.product_id or body.product_id,
+            channel_id=channel_id,
+            opportunity_id=body.opportunity_id or ch.opportunity_id,
+            contact_name=body.contact_name,
+            contact_identifier=body.contact_identifier,
+            segment=body.segment,
+            stage=body.stage,
+            event_type=body.event_type,
+            notes=body.notes,
+            action_id=body.action_id,
+            outcome_id=body.outcome_id,
+            data_scope=body.data_scope,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 # ---------------------------------------------------------------- product by id

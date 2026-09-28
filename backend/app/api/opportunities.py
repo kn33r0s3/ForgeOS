@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 
 from app.database import get_db
@@ -13,6 +13,7 @@ from app.services import multi_judge
 from app.services import opportunity_monitor
 from app.services import option_space, outcome_learning, experiment_service
 from app.services import experiment_action_service
+from app.services import economic_validation
 from app.schemas.experiment import ExperimentAuthorize, ExperimentOutcomeCreate, ExperimentProposalCreate
 
 router = APIRouter(tags=["opportunities"])
@@ -27,10 +28,48 @@ class ExperimentOutcomeBody(BaseModel):
     lesson: Optional[str] = None
 
 
+class NeedEconomicAssessmentBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    solution_hypothesis: str = Field(..., min_length=1, max_length=2000)
+    capability_id: Optional[int] = Field(default=None, ge=1)
+    cost_assumption: Optional[float] = Field(default=None, ge=0, allow_inf_nan=False)
+    price_assumption: Optional[float] = Field(default=None, ge=0, allow_inf_nan=False)
+    evidence_by_assumption: dict[str, list[int]] = Field(default_factory=dict)
+    fulfillment_constraints: list[str] = Field(default_factory=list, max_length=30)
+    unresolved_uncertainties: list[str] = Field(default_factory=list, max_length=30)
+    experiment_definition: str = Field(..., min_length=1, max_length=3000)
+    experiment_tests_willingness_to_pay: bool = False
+
+
 @router.get("/opportunities", response_model=list[schemas.OpportunityOut])
 def get_opportunities(limit: int = 200, db: Session = Depends(get_db)):
     """List discovered opportunities, highest score first."""
     return opportunity_engine.list_opportunities(db, limit=limit)
+
+
+@router.post("/needs/{need_id}/economic-validation")
+def assess_need_economic_validation(
+    need_id: int,
+    payload: NeedEconomicAssessmentBody,
+    db: Session = Depends(get_db),
+):
+    try:
+        return economic_validation.assess_need_economics(
+            db,
+            need_id,
+            solution_hypothesis=payload.solution_hypothesis,
+            capability_id=payload.capability_id,
+            cost_assumption=payload.cost_assumption,
+            price_assumption=payload.price_assumption,
+            evidence_by_assumption=payload.evidence_by_assumption,
+            fulfillment_constraints=payload.fulfillment_constraints,
+            unresolved_uncertainties=payload.unresolved_uncertainties,
+            experiment_definition=payload.experiment_definition,
+            experiment_tests_willingness_to_pay=payload.experiment_tests_willingness_to_pay,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post("/opportunities/{opportunity_id}/monitor")

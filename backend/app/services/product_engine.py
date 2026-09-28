@@ -254,8 +254,50 @@ def create_customer_event(db: Session, *, product_id=None, channel_id=None,
     if product_id:
         product = _parent(db, models.Product, product_id, data_scope)
         opportunity_id = opportunity_id or product.opportunity_id
+    outcome = None
     if outcome_id:
-        _parent(db, models.Outcome, outcome_id, data_scope)
+        outcome = _parent(db, models.Outcome, outcome_id, data_scope)
+    action = None
+    if action_id:
+        action = _parent(db, models.Action, action_id, data_scope)
+    if stage == "contacted":
+        action_started = bool(
+            action is not None
+            and action.started_at is not None
+            and (
+                action.policy_result == "ALLOW"
+                or (
+                    action.policy_result == "REQUIRE_APPROVAL"
+                    and action.approved_at is not None
+                )
+            )
+        )
+        response_recorded = bool(
+            outcome is not None
+            and outcome.outcome_type == "ACTUAL_RESPONSE"
+            and (outcome.qualitative_result or "").strip()
+        )
+        if not action_started and not response_recorded:
+            raise ValueError("contacted stage requires a recorded authorized action or response outcome")
+    elif stage == "interested":
+        if not (
+            outcome is not None
+            and outcome.outcome_type == "ACTUAL_RESPONSE"
+            and (outcome.qualitative_result or "").strip()
+        ):
+            raise ValueError("interested stage requires a linked actual response outcome")
+    elif stage == "paid_customer":
+        if not (
+            outcome is not None
+            and outcome.outcome_type == "ACTUAL_REVENUE"
+            and outcome.verification_state == "VERIFIED"
+            and outcome.actual_value is not None
+            and outcome.actual_value > 0
+        ):
+            raise ValueError("paid_customer stage requires linked verified positive revenue evidence")
+    elif stage == "churned":
+        if outcome is None:
+            raise ValueError("churned stage requires a linked outcome")
     ev = models.CustomerEvent(
         product_id=product_id,
         channel_id=channel_id,
