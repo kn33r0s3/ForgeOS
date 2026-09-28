@@ -427,3 +427,64 @@ No genuine non-test user submission was available. The frontend has no dedicated
 
 NEXT MISSING CAPABILITY:
 A genuine non-test user submission through an appropriately configured public/authenticated client; then direct human response and separate economic validation.
+
+## 2026-09-28 RESULT CARD — Need-linked economic assessment and client evidence gate
+
+CURRENTLY IMPLEMENTED:
+Added an assessment route on the existing Opportunity API surface. A Need must be sufficiently specified and have a persisted bounded capability-search EVENT before it can create/use an Opportunity assessment. Existing OpportunityEvent history plus substrate EVENT and hypothesized Need relation persist the assessment. States are `insufficient_evidence`, `economically_uncertain`, or `testable`. Unknown cost, price, and WTP remain unknown. Supplied Evidence IDs must resolve to stored, provenance-bearing, non-refuted records; semantic support is explicitly not adjudicated. A `testable` assessment is only a proposed experiment description and records that separate external authorization is required and absent.
+
+Also tightened the existing CustomerEvent ledger: `contacted` requires a properly authorized started Experiment-linked Action of matching data scope or an actual recorded response; `interested` requires a linked `ACTUAL_RESPONSE`; `paid_customer` requires linked, verified positive `ACTUAL_REVENUE`. Evidence-free and reported-only payment claims are rejected.
+
+TARGET ARCHITECTURE:
+`Real input → existing Signal/Need understanding → existing bounded capability search → hypothesis-grade economic assessment → separately authorized Experiment/Action → real response/payment EVENT + EVIDENCE → append-only learning`. All state remains over the six canonical primitives and existing compatible Opportunity, Experiment, Action, Outcome, and CustomerEvent records.
+
+LIVE REQUEST EXERCISED:
+No non-test or external request was exercised for this increment. The assessment HTTP route was exercised only using TestClient and explicitly synthetic developer fixtures.
+
+LIVE REQUEST CONTENT:
+No live request content. The isolated test fixture is labeled as developer/test input and is not market demand.
+
+SOURCE/AUTHORIZATION:
+Demand fixture entered through the existing Signal/demand-understanding functions. The isolated bounded search used the existing cleared scholarly-metadata capability registry; no external fetch was made. The assessment records `authorization_required_before_external_action: true` and `external_action_authorized: false`. No outreach or external action was authorized or executed.
+
+OBSERVATION PROOF:
+Synthetic developer/test Signal was processed through existing demand understanding into a hypothesis-grade Need. This is pipeline mechanics only; it is not an independently observed real user or market request.
+
+EVENT PROOF:
+The existing `capability_search_performed` EVENT and new idempotent `economic_validation_assessed` EVENT were persisted and reopened from isolated SQLite.
+
+EVIDENCE/PROVENANCE PROOF:
+Capability-search Evidence and its registry/requirement provenance survived close/reopen. Assessment Evidence IDs are references to existing provenance-bearing non-refuted records; the service explicitly does not claim their semantic support was adjudicated. The Opportunity→Need relation remains `hypothesized`.
+
+DEMAND-UNDERSTANDING RESULT:
+The test path can reach an explicitly specified hypothesis-grade Need. A `possible_demand` with no Need is refused by the assessment service; an unresolved Need records `insufficient_evidence` without creating an Opportunity. No Need was created from the synthetic request automatically.
+
+CAPABILITY SEARCH RESULT:
+The isolated adequate-source case reused the existing cleared capability search and created no ResearchQuestion or capability gap. The existing demand/capability regressions continue to cover the opposite bounded gap path. The test case had no identified commercial ForgeCapability with fit evidence, so its assessment remained `insufficient_evidence`; synthetic active-capability fixtures exercise uncertainty/testability states only.
+
+CUSTOMER VALIDATION:
+None. No real prospect, client, buyer, or customer was identified or contacted.
+
+MARKET VALIDATION:
+None. No market-size, demand-frequency, or WTP conclusion was produced.
+
+TRANSACTION/REVENUE:
+None. No Experiment, ACTION, Outcome, CustomerEvent, payment, order, or revenue was created by the economic assessment path. No external commercial side effect occurred.
+
+SQLITE REOPEN:
+Passed using an isolated file-backed database and the actual Signal → Need understanding → existing capability-search → economic-assessment integration. The Need, search EVENT/Evidence provenance, Opportunity, OpportunityEvent, hypothesized Opportunity→Need relation, and authorization flags were present after close/reopen.
+
+TEST RESULTS:
+Focused economic/demand/public API/capability/research/action regressions: **102 passed, 15 warnings**. Complete backend: **479 passed, 2 skipped, 32 warnings**. Frontend TypeScript check passed with `tsc --noEmit` using a temporary build-info file.
+
+REGRESSIONS:
+Generic `/signals` behavior and public API tests passed. Existing demand-understanding tests still prove adequate cleared capability reuse avoids unnecessary research and an inadequate match uses the existing durable gap path. Existing experiment/action authorization and orchestration regressions passed. Customer stage promotions now reject missing response/payment evidence; reported revenue alone does not make a paying customer.
+
+DIFF/STATUS:
+`git diff --check` passed after documentation update. Existing `storage/scheduler.log` was already dirty and was preserved; test-run scheduler entries were not treated as product evidence. Final status is recorded after the final diff check.
+
+REMAINING BLOCKER:
+No genuine authorized external prospect-discovery source or real response channel was available or exercised. A ForgeCapability fit is not established merely by a research-source match, and the isolated assessment remained insufficiently evidenced.
+
+NEXT MISSING CAPABILITY:
+Specify and authorize one bounded prospect-discovery source/channel and its consent basis, then connect its provenance to existing ENTITY/RELATION/EVENT/EVIDENCE and the existing owner-approved Experiment/Action/Outcome flow. No parallel CRM and no outbound action without explicit authorization.

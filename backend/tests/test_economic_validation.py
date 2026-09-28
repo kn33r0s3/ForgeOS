@@ -198,11 +198,31 @@ def test_referenced_assumptions_make_only_a_bounded_test_proposal(db):
     assert payload["willingness_to_pay"]["status"] == "unknown"
 
 
-def test_need_assessment_api_uses_existing_opportunity_surface(db, monkeypatch):
+def test_refuted_or_unprovenanced_records_cannot_back_an_economic_assumption(db):
+    result = _need(db)
+    _search(db, result)
+    evidence = models.Evidence(
+        source="synthetic_test_fixture",
+        provenance=json.dumps({"test_fixture": True}),
+        support_level="refuted",
+    )
+    db.add(evidence)
+    db.commit()
+
+    with pytest.raises(ValueError, match="non-refuted support"):
+        _assessment(
+            db,
+            result.inferred_need_id,
+            cost_assumption=10.0,
+            evidence_by_assumption={"cost": [evidence.id]},
+        )
+
+
+def test_need_assessment_api_uses_existing_opportunity_surface(db):
     understanding = _need(db)
     _search(db, understanding)
     from app import security
-    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    security.settings.FORGE_API_KEY = ""
 
     def override_db():
         yield db
@@ -244,6 +264,8 @@ def test_need_assessment_and_provenance_survive_sqlite_reopen(tmp_path):
         understanding = _need(session)
         search = _search(session, understanding)
         assert search["matched_sources"]
+        assert search["capability_gap_id"] is None
+        assert session.query(models.ResearchQuestion).count() == 0
         assessed = _assessment(session, understanding.inferred_need_id)
         assert assessed["opportunity_id"] is not None
         need_id = understanding.inferred_need_id
@@ -357,3 +379,22 @@ def test_customer_progression_requires_linked_outcome_evidence(db):
             outcome_id=reported_payment.id,
             data_scope="SANDBOX",
         )
+    verified_payment = models.Outcome(
+        product_id=product.id,
+        outcome_type="ACTUAL_REVENUE",
+        actual_value=1.0,
+        unit="USD",
+        verification_state="VERIFIED",
+        data_scope="SANDBOX",
+        source="synthetic test fixture",
+    )
+    db.add(verified_payment)
+    db.commit()
+    paid = product_engine.create_customer_event(
+        db,
+        product_id=product.id,
+        stage="paid_customer",
+        outcome_id=verified_payment.id,
+        data_scope="SANDBOX",
+    )
+    assert paid.stage == "paid_customer"
