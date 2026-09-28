@@ -221,6 +221,20 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
     source_results = []
     for raw_item in raw_items:
         normalized = collector.normalize(raw_item)
+        task_context = task.results if isinstance(task.results, dict) else {}
+        provenance = normalized.get("provenance")
+        provenance = dict(provenance) if isinstance(provenance, dict) else {}
+        for context_key in (
+            "original_research_question",
+            "derived_retrieval_query",
+            "search_mode",
+            "geographic_qualification",
+            "population_qualification",
+            "unresolved_dimensions",
+        ):
+            if task_context.get(context_key) is not None:
+                provenance[context_key] = task_context[context_key]
+        normalized["provenance"] = provenance
         if authorization:
             authorized_source = authorization.entry
             metadata = dict(normalized.get("metadata") or {})

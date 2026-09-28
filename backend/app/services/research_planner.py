@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import re
+from datetime import date
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -56,6 +57,14 @@ _POPULATION_TERMS = (
 _QUESTION_WORDS = frozenset(
     {"what", "which", "who", "when", "where", "why", "how"}
 )
+_COUNTRY_ISO3 = {
+    "bangladesh": "BGD",
+    "bhutan": "BTN",
+    "china": "CHN",
+    "india": "IND",
+    "nepal": "NPL",
+    "pakistan": "PAK",
+}
 
 _STOP_WORDS = {
     "about", "after", "against", "also", "among", "because", "before", "being",
@@ -120,8 +129,21 @@ def _requirement_specs(question_text: str) -> list[dict[str, Any]]:
             "can_resolve_claim": True,
         },
     ]
-    if re.search(r"\bmedia\b|\bnews\b|\breporting\b|\bcoverage\b|\brecent event\b", question_text, re.I):
-        if re.search(r"\breporting velocity\b", question_text, re.I):
+    if re.search(
+        r"\bmedia\b|\bnews\b|\breporting\b|\bcoverage\b|\brecent event\b",
+        question_text,
+        re.I,
+    ) or re.search(
+        r"\b(?:credible opportunity|determine whether|postharvest loss)\b",
+        question_text,
+        re.I,
+    ):
+        if re.search(
+            r"\breporting velocity\b|"
+            r"\b(?:credible opportunity|determine whether|postharvest loss)\b",
+            question_text,
+            re.I,
+        ):
             requirements.append(
                 {
                     "id": "public_reporting_velocity",
@@ -171,12 +193,18 @@ def _requirement_specs(question_text: str) -> list[dict[str, Any]]:
                 "world_bank_scope": world_bank_scope,
             }
         )
-    if re.search(
+    broad_research_objective = re.search(
+        r"\b(?:credible opportunity|determine whether|reduce|intervention|postharvest loss)\b",
+        question_text,
+        re.I,
+    )
+    has_scholarly_need = re.search(
         r"\b(scholarly evidence|prior research|prior literature|documented intervention|"
         r"literature existence|academic evidence|what studies|what research)\b",
         question_text,
         re.I,
-    ):
+    ) or broad_research_objective
+    if has_scholarly_need:
         if re.search(r"\bdocumented intervention\b", question_text, re.I):
             scholarly_requirement_id = "documented_intervention"
         elif re.search(r"\bprior research\b|\bprior literature\b", question_text, re.I):
@@ -194,6 +222,23 @@ def _requirement_specs(question_text: str) -> list[dict[str, Any]]:
                 "openalex_query": topic,
             }
         )
+        if (
+            scholarly_requirement_id != "documented_intervention"
+            and re.search(
+                r"\b(?:intervention|reduce|mitigat|solution)\w*\b",
+                question_text,
+                re.I,
+            )
+        ):
+            requirements.append(
+                {
+                    "id": "documented_intervention",
+                    "question": f"What documented interventions are described in scholarly work about: {topic}?",
+                    "evidence_kind": "openalex_scholarly_abstract",
+                    "can_resolve_claim": False,
+                    "openalex_query": f"documented interventions: {topic}",
+                }
+            )
         if re.search(r"\bnepal\b|\blocal(?:ly)?\b|\btarget (?:market|region)\b", question_text, re.I):
             requirements.append(
                 {
@@ -206,6 +251,37 @@ def _requirement_specs(question_text: str) -> list[dict[str, Any]]:
                     "can_resolve_claim": False,
                 }
             )
+
+    if not world_bank_scope:
+        qualification = _openalex_qualifications(question_text)
+        country = qualification["geographic_qualification"]
+        if (
+            country
+            and qualification["population_qualification"]
+            and broad_research_objective
+        ):
+            country_code = _COUNTRY_ISO3.get(country.casefold())
+            if country_code:
+                current_year = date.today().year
+                world_bank_scope = {
+                    "country_code": country_code,
+                    "indicator_id": "SP.POP.TOTL",
+                    "start_year": current_year - 5,
+                    "end_year": current_year - 1,
+                }
+                requirements.append(
+                    {
+                        "id": "population_baseline",
+                        "question": (
+                            f"What country-level population baseline is available for "
+                            f"{country} ({world_bank_scope['start_year']}-"
+                            f"{world_bank_scope['end_year']})?"
+                        ),
+                        "evidence_kind": "attributed_macro_indicator_observation",
+                        "can_resolve_claim": False,
+                        "world_bank_scope": world_bank_scope,
+                    }
+                )
         if re.search(r"\b(?:19|20)\d{2}\b", question_text):
             requirements.append(
                 {
@@ -294,14 +370,138 @@ def _prior_observations(db: Session, question_text: str, *, limit: int = 5) -> l
     return observations
 
 
+def _orchestration_requirement_specs(
+    question_text: str,
+    planned_requirements: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Describe the bounded multi-source program without implying completion."""
+    qualifications = _openalex_qualifications(question_text)
+    by_id = {requirement["id"]: requirement for requirement in planned_requirements}
+
+    def candidates_for(*requirement_ids: str) -> list[dict[str, Any]]:
+        candidates: dict[tuple[str, str], dict[str, Any]] = {}
+        for requirement_id in requirement_ids:
+            requirement = by_id.get(requirement_id)
+            if requirement is None:
+                continue
+            for capability in requirement["capable_sources"]:
+                source_key = (capability["source"], capability["registry_id"])
+                evidence_type = (
+                    "bibliographic_metadata_lead_only"
+                    if capability["source"] == "crossref"
+                    else requirement["evidence_kind"]
+                )
+                candidates[source_key] = {
+                    "source": capability["source"],
+                    "registry_id": capability["registry_id"],
+                    "endpoint": capability["endpoint"],
+                    "operation": capability["operation"],
+                    "required_evidence_type": evidence_type,
+                }
+        return list(candidates.values())
+
+    specifications = (
+        (
+            "phenomenon_existence",
+            "scholarly_abstract_or_bibliographic_lead",
+            ("scholarly_evidence", "literature_existence", "bibliographic_discovery"),
+            ["prevalence", "causality", "local_applicability"],
+        ),
+        (
+            "affected_population",
+            "country_level_population_baseline",
+            ("population_baseline", "macro_demographics"),
+            ["target_population_share", "affected_population_count", "customer_impact"],
+        ),
+        (
+            "geographic_boundary",
+            "country_scoped_macro_observation",
+            ("population_baseline", "macro_demographics"),
+            ["subnational_variation", "local_customer_distribution"],
+        ),
+        (
+            "reporting_velocity",
+            "bounded_media_coverage_metadata",
+            ("public_reporting_velocity",),
+            ["article_claim_truth", "market_demand", "uncapped_coverage_count"],
+        ),
+        (
+            "documented_interventions",
+            "scholarly_abstract_or_bibliographic_lead",
+            ("documented_intervention", "bibliographic_discovery"),
+            ["intervention_effectiveness", "local_transferability", "implementation_cost"],
+        ),
+        (
+            "commercial_validation_gap",
+            "direct_customer_or_transaction_evidence",
+            (),
+            ["customer_pain", "buyer_willingness_to_pay", "commercial_demand"],
+        ),
+    )
+    nodes = []
+    for requirement_id, evidence_type, related_ids, unresolved in specifications:
+        nodes.append(
+            {
+                "requirement_id": requirement_id,
+                "original_research_question": question_text,
+                "required_evidence_type": evidence_type,
+                "geographic_qualification": qualifications["geographic_qualification"],
+                "population_qualification": qualifications["population_qualification"],
+                "epistemic_state": "unresolved",
+                "candidate_sources": (
+                    []
+                    if requirement_id == "commercial_validation_gap"
+                    else candidates_for(*related_ids)
+                ),
+                "unresolved_dimensions": unresolved,
+                "related_requirement_ids": [
+                    value for value in related_ids if value in by_id
+                ],
+            }
+        )
+    return nodes
+
+
 def build_research_plan(db: Session, question: models.ResearchQuestion) -> dict[str, Any]:
     """Describe requirements and candidate capabilities without equating metadata to answers."""
     requirements: list[dict[str, Any]] = []
+    qualifications = _openalex_qualifications(question.question)
     for spec in _requirement_specs(question.question):
         capabilities = source_clearance_registry.capabilities_for_requirement(spec["id"])
+        candidate_sources = [
+            {
+                "source": entry.collector,
+                "registry_id": entry.registry_id,
+                "endpoint": entry.url,
+                "operation": entry.allowed_operation,
+                "required_evidence_type": spec["evidence_kind"],
+            }
+            for entry in capabilities
+        ]
+        if spec["id"] == "bibliographic_discovery":
+            candidate_sources = [
+                {
+                    "source": entry.collector,
+                    "registry_id": entry.registry_id,
+                    "endpoint": entry.url,
+                    "operation": entry.allowed_operation,
+                    "required_evidence_type": "bibliographic_metadata_lead_only",
+                }
+                for entry in source_clearance_registry.capabilities_for_requirement(
+                    "bibliographic_discovery"
+                )
+            ]
         requirements.append(
             {
                 **spec,
+                "requirement_id": spec["id"],
+                "original_research_question": question.question,
+                "required_evidence_type": spec["evidence_kind"],
+                "geographic_qualification": qualifications["geographic_qualification"],
+                "population_qualification": qualifications["population_qualification"],
+                "epistemic_state": "unresolved",
+                "candidate_sources": candidate_sources,
+                "unresolved_dimensions": list(_OPENALEX_UNRESOLVED_DIMENSIONS),
                 "status": "pending" if capabilities else "terminal_unresolved",
                 "capable_sources": [
                     {
@@ -320,6 +520,9 @@ def build_research_plan(db: Session, question: models.ResearchQuestion) -> dict[
             }
         )
 
+    orchestration_requirements = _orchestration_requirement_specs(
+        question.question, requirements
+    )
     candidates = []
     for entry in source_clearance_registry.source_clearances():
         candidates.append(
@@ -355,6 +558,7 @@ def build_research_plan(db: Session, question: models.ResearchQuestion) -> dict[
         "status": "research_in_progress",
         "subquestions": [item["question"] for item in requirements],
         "requirements": requirements,
+        "orchestration_requirements": orchestration_requirements,
         "known_observations": _prior_observations(db, question.question),
         "assumptions": [
             "The premise and wording supplied by the requester are not external evidence.",
@@ -391,7 +595,13 @@ def _tasks_for_requirement(
         task
         for task in rows
         if isinstance(task.results, dict)
-        and task.results.get("research_requirement_id") == requirement_id
+        and (
+            task.results.get("research_requirement_id") == requirement_id
+            or (
+                isinstance(task.results.get("research_requirement_ids"), list)
+                and requirement_id in task.results["research_requirement_ids"]
+            )
+        )
     ]
 
 
@@ -405,7 +615,7 @@ def _create_task(
     follow_up_of: int | None = None,
     follow_up_depth: int = 0,
 ) -> models.ResearchTask:
-    task_query = query
+    task_query = " ".join(query.split())[:300] if source == "crossref" else query
     openalex_context: dict[str, Any] = {}
     if source == "openalex":
         original_question = question.question
@@ -431,9 +641,33 @@ def _create_task(
         objective=requirement["question"],
         claim_id=question.source_claim_id,
     )
+    task_results = task.results if isinstance(task.results, dict) else {}
+    requirement_ids = task_results.get("research_requirement_ids", [])
+    if not isinstance(requirement_ids, list):
+        requirement_ids = []
+    if task_results.get("research_requirement_id") and not requirement_ids:
+        requirement_ids = [task_results["research_requirement_id"]]
+    if requirement["id"] not in requirement_ids:
+        requirement_ids.append(requirement["id"])
+    requirement_contexts = task_results.get("requirement_contexts", [])
+    if not isinstance(requirement_contexts, list):
+        requirement_contexts = []
+    if not any(
+        isinstance(context, dict) and context.get("requirement_id") == requirement["id"]
+        for context in requirement_contexts
+    ):
+        requirement_contexts.append(
+            {
+                "requirement_id": requirement["id"],
+                "objective": requirement["question"],
+                "evidence_kind": requirement["evidence_kind"],
+            }
+        )
     task.results = {
-        **(task.results or {}),
-        "research_requirement_id": requirement["id"],
+        **task_results,
+        "research_requirement_id": requirement_ids[0],
+        "research_requirement_ids": requirement_ids,
+        "requirement_contexts": requirement_contexts,
         "evidence_kind": requirement["evidence_kind"],
         "source_registry_id": next(
             (
@@ -447,19 +681,34 @@ def _create_task(
         "follow_up_depth": follow_up_depth,
         "research_question_id": question.id,
     }
+    task_context = {
+        "original_research_question": question.question,
+        "derived_retrieval_query": task_query,
+        "source_type": source,
+        "search_mode": None,
+        **_openalex_qualifications(question.question),
+        "unresolved_dimensions": list(_OPENALEX_UNRESOLVED_DIMENSIONS),
+    }
     if source == "world_bank_indicators":
         task.query = json.dumps(requirement["world_bank_scope"], sort_keys=True)
+        task_context["derived_retrieval_query"] = task.query
     elif source == "gdelt_doc":
+        gdelt_query = " ".join(
+            str(requirement.get("gdelt_query", _topic(question.question))).split()
+        )[:500]
         task.query = json.dumps(
             {
-                "query": requirement.get("gdelt_query", _topic(question.question)),
+                "query": gdelt_query,
                 "timespan": "1w",
                 "max_records": 25,
             },
             sort_keys=True,
         )
+        task_context["derived_retrieval_query"] = gdelt_query
     elif source == "openalex":
         task.results = {**task.results, **openalex_context}
+        task_context = {**task_context, **openalex_context, "source_type": source}
+    task.results = {**task.results, **task_context}
     db.flush()
     return task
 
@@ -940,14 +1189,17 @@ def _refresh_plan_from_tasks(
         if not tasks:
             capability = requirement["capable_sources"][0]
             if task_count < MAX_TASKS_PER_QUESTION:
-                _create_task(
+                planned_task = _create_task(
                     db,
                     question,
                     requirement,
                     source=capability["source"],
                     query=requirement["question"],
                 )
-                task_count += 1
+                requirement["task_ids"] = [planned_task.id]
+                task_count = db.query(models.ResearchTask).filter_by(
+                    question_id=question.id
+                ).count()
                 requirement["status"] = "in_progress"
                 requirement["terminal_reason"] = None
                 active = True
@@ -990,6 +1242,9 @@ def _refresh_plan_from_tasks(
         if plan["contradictions"]
         else "unassessed"
     )
+    from app.services.research_synthesis_engine import synthesize_research_plan
+
+    plan["synthesis"] = synthesize_research_plan(db, plan)
     plan["terminal_reason"] = None if active else (
         "one_or_more_requirements_remain_unresolved_under_current_source_clearances"
         if all_terminal
