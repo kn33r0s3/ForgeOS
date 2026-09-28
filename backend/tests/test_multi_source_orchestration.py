@@ -577,7 +577,7 @@ def test_empty_evidence_synthesis_stays_unresolved_and_commercially_blocked(db):
     assert synthesis["commercial_validation"]["opportunity_gate_unlocked"] is False
 
 
-def test_concurrent_deterministic_task_creation_has_one_persisted_task(tmp_path):
+def test_concurrent_synthesis_and_task_creation_is_idempotent(tmp_path):
     database_path = tmp_path / "concurrent-orchestration.sqlite"
     engine = create_engine(
         f"sqlite:///{database_path}",
@@ -611,10 +611,42 @@ def test_concurrent_deterministic_task_creation_has_one_persisted_task(tmp_path)
                     ).encode("utf-8")
                 ).hexdigest(),
             )
-            return task.id
+            synthesis_plan = {
+            "requirements": [
+                {
+                    "id": "scholarly_evidence",
+                    "status": "in_progress",
+                    "evidence_ids": [],
+                },
+                {
+                    "id": "buyer_willingness_to_pay",
+                    "status": "terminal_unresolved",
+                    "evidence_ids": [],
+                },
+            ],
+            "orchestration_requirements": [
+                {
+                    "requirement_id": "phenomenon_existence",
+                    "related_requirement_ids": ["scholarly_evidence"],
+                    "unresolved_dimensions": ["local_applicability"],
+                    "candidate_sources": [{"source": "openalex"}],
+                },
+                {
+                    "requirement_id": "commercial_validation_gap",
+                    "related_requirement_ids": ["buyer_willingness_to_pay"],
+                    "unresolved_dimensions": ["buyer_willingness_to_pay"],
+                    "candidate_sources": [],
+                },
+            ],
+            }
+            synthesized = research_synthesis_engine.synthesize_research_plan(
+            session,
+            synthesis_plan,
+            )
+            return task.id, synthesized["state"]
 
     with ThreadPoolExecutor(max_workers=3) as pool:
-        task_ids = list(pool.map(create_same_task, range(3)))
+        worker_results = list(pool.map(create_same_task, range(3)))
 
     with session_factory() as session:
         tasks = (
@@ -622,7 +654,8 @@ def test_concurrent_deterministic_task_creation_has_one_persisted_task(tmp_path)
             .filter_by(question_id=question_id)
             .all()
         )
-        assert len(set(task_ids)) == 1
+        assert len({task_id for task_id, _ in worker_results}) == 1
+        assert {state for _, state in worker_results} == {"unresolved"}
         assert len(tasks) == 1
         assert tasks[0].idempotency_key == sha256(
             "\0".join(
