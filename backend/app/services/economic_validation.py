@@ -73,14 +73,25 @@ def assess_need_economics(
     if set(assumptions) - allowed_assumptions:
         raise ValueError("unsupported economic assumption evidence key")
     evidence_ids = sorted({evidence_id for values in assumptions.values() for evidence_id in values})
+    evidence_by_id: dict[int, models.Evidence] = {}
     if evidence_ids:
-        found = {
-            row.id
+        evidence_by_id = {
+            row.id: row
             for row in db.query(models.Evidence).filter(models.Evidence.id.in_(evidence_ids)).all()
         }
-        missing = sorted(set(evidence_ids) - found)
+        missing = sorted(set(evidence_ids) - set(evidence_by_id))
         if missing:
             raise ValueError(f"economic assumption evidence does not exist: {missing}")
+        unusable = sorted(
+            evidence_id
+            for evidence_id, row in evidence_by_id.items()
+            if not (row.provenance or row.substrate_provenance)
+            or row.support_level in {"unknown", "refuted"}
+        )
+        if unusable:
+            raise ValueError(
+                f"economic assumption evidence needs stored provenance and non-refuted support: {unusable}"
+            )
 
     solution = (solution_hypothesis or "").strip()
     experiment = (experiment_definition or "").strip()
@@ -158,6 +169,10 @@ def assess_need_economics(
         },
         "capability_fit_evidence_ids": fit_evidence_ids,
         "demand_evidence_ids": assumptions.get("demand", []),
+        "evidence_reference_boundary": (
+            "Referenced Evidence IDs resolve to stored records with provenance and are not refuted; "
+            "semantic support for each assumption has not been independently adjudicated."
+        ),
         "fulfillment_constraints": [
             item.strip() for item in (fulfillment_constraints or []) if item and item.strip()
         ],

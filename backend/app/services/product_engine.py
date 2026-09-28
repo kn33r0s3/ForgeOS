@@ -259,10 +259,17 @@ def create_customer_event(db: Session, *, product_id=None, channel_id=None,
         outcome = _parent(db, models.Outcome, outcome_id, data_scope)
     action = None
     if action_id:
-        action = _parent(db, models.Action, action_id, data_scope)
+        action = db.get(models.Action, action_id)
+        if action is None:
+            raise ValueError("Linked action does not exist")
+        if action.experiment_id:
+            experiment = db.get(models.Experiment, action.experiment_id)
+            if experiment is None or experiment.data_scope != data_scope:
+                raise ValueError("Linked action experiment does not exist or scope does not match")
     if stage == "contacted":
         action_started = bool(
             action is not None
+            and action.experiment_id is not None
             and action.started_at is not None
             and (
                 action.policy_result == "ALLOW"

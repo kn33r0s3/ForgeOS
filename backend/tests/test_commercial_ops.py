@@ -215,9 +215,6 @@ def test_distribution_channel_and_customer_funnel(db):
                                          stage="contacted", event_type="response",
                                          outcome_id=response.id)
     product_engine.create_customer_event(db, channel_id=ch.id, product_id=p.id,
-                                         stage="interested", event_type="interest",
-                                         outcome_id=response.id)
-    product_engine.create_customer_event(db, channel_id=ch.id, product_id=p.id,
                                          stage="paid_customer", event_type="purchase",
                                          outcome_id=payment.id)
     roll = product_engine.rollup_channel(db, ch)
