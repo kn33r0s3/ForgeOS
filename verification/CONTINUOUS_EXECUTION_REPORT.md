@@ -361,4 +361,63 @@ REMAINING REAL-WORLD BLOCKER:
 No reviewed, authorized real-world channel currently supplies consent-preserving demand observations and buyer responses. Registry authorization for public scholarly metadata does not establish demand, a customer, WTP, fulfillment, or commercial validation.
 
 NEXT MISSING CAPABILITY:
-A reviewed, consent-preserving real-world demand observation and response channel, with purpose-limited authorization and evidence capture; then a separate explicit economic-validation and authorized-action path.
+A genuine non-test user submission through an appropriately configured public/authenticated client; then direct human response and separate explicit economic-validation and authorized-action paths.
+
+## 2026-09-28 RESULT CARD — Existing user-request API to demand observation
+
+CURRENTLY IMPLEMENTED:
+Reused `POST /signals`; explicit `purpose: "demand_understanding"` routes the submitted content through existing Signal-backed observation, `demand_observed` EVENT, possible EVIDENCE, and the existing demand-understanding WorkerTask. Omitted purpose preserves the previous generic signal behavior. `Idempotency-Key` values are SHA-256 digested; content normalization/redaction preserves named timestamp fields and redacts email/phone-like text. No new route, table, primitive, or observer architecture was added.
+
+TARGET ARCHITECTURE:
+`explicit user request → existing POST /signals boundary → normalized Signal observation → existing EVENT → possible EVIDENCE/provenance → existing demand-understanding worker → Need only when justified → existing cleared-capability search → adequate match OR existing durable gap`.
+
+LIVE REQUEST EXERCISED:
+Yes: one actual local HTTP POST to the existing API, labeled in the submitted content as a developer pipeline test. This was not a non-test user submission or a third-party source request.
+
+LIVE REQUEST CONTENT:
+“Developer test request (not market demand): I need a bicycle repair appointment; this is only a pipeline test.”
+
+SOURCE/AUTHORIZATION:
+Source is `user_request`; the request explicitly supplied `purpose: demand_understanding`. Provenance records `POST /signals`, purpose, explicit-submission authorization context, submission timestamp, and only the SHA-256 digest of the idempotency key. The content is privacy-normalized. No user identity or contact data was needed for this test. The local test server ran without `FORGE_API_KEY`; deployment and configured-auth behavior were not exercised.
+
+OBSERVATION PROOF:
+Persisted Signal **1**, source `user_request`, collection status `user_submitted`, with the submitted test text and persisted observation timestamp. No category was imposed.
+
+EVENT PROOF:
+Persisted `demand_observed` EVENT **2**, linked to Signal **1**.
+
+EVIDENCE/PROVENANCE PROOF:
+Observation Evidence **1** persisted at support level `possible`; interpretation Evidence **2** was created by the worker. Provenance retained request boundary, purpose, authorization context, digest, and a parseable submitted timestamp after a separate SQLite reopen.
+
+DEMAND-UNDERSTANDING RESULT:
+WorkerTask **1** completed with `possible_demand`, `need_id: null`, the seven default unresolved questions, and `external_action: false`. The request did not meet criteria for a Need; no Need was forced.
+
+CAPABILITY SEARCH RESULT:
+No search was performed for this request because demand remained possible and no sufficiently understood Need existed. Existing regression tests still verify that an adequate active/cleared capability prevents an unnecessary ResearchQuestion and that an insufficient match follows the existing durable capability-gap path.
+
+CUSTOMER VALIDATION:
+None. The submitted text was a developer/test fixture, not a customer statement or buyer identity.
+
+MARKET VALIDATION:
+None. A local developer test request is not market evidence.
+
+TRANSACTION/REVENUE:
+None. BookingRequest **0**, Opportunity **0**, Decision **0**; no order, payment, or revenue was recorded.
+
+SQLITE REOPEN:
+Passed. In a separate process after close/reopen, Signal **1**, EVENT **2**, Evidence **1** and **2**, completed WorkerTask **1**, purpose/auth context, timestamp, and worker result remained persisted. Need, customer, Opportunity, BookingRequest, and Decision counts were all **0**.
+
+TEST RESULTS:
+Focused request/public API/demand/capability/research regressions: **115 passed, 17 warnings**. Complete backend: **470 passed, 2 skipped, 31 warnings**. `npm run typecheck` passed. Isolated request-boundary SQLite reopen passed.
+
+REGRESSIONS:
+Generic `POST /signals` without a purpose retains the prior signal response and does not create demand events or workers. Focused public API, demand, capability discovery, and research/orchestration suites passed.
+
+DIFF/STATUS:
+`git diff --check` and final `git status --short` recorded after this result card. Existing `storage/scheduler.log` remains untouched by this task.
+
+REMAINING BLOCKER:
+No genuine non-test user submission was available. The frontend has no dedicated request form, and behavior behind deployed authentication/configuration was not exercised.
+
+NEXT MISSING CAPABILITY:
+A genuine non-test user submission through an appropriately configured public/authenticated client; then direct human response and separate economic validation.

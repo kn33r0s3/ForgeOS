@@ -62,13 +62,14 @@ def enqueue_understanding(
     ids = tuple(sorted({int(value) for value in observation_ids}))
     if not ids:
         raise ValueError("at least one observation is required")
-    questions = tuple(unresolved_questions or ())
+    questions = tuple(unresolved_questions) if unresolved_questions is not None else None
     identity = _key(
         "demand-understanding-v1",
         *ids,
         desired_outcome or "",
         object_description or "",
-        *questions,
+        "explicit-questions" if questions is not None else "default-questions",
+        *(questions or ()),
         sufficient,
     )
     existing = db.query(models.WorkerTask).filter_by(idempotency_key=identity).one_or_none()
@@ -83,7 +84,7 @@ def enqueue_understanding(
             "observation_ids": list(ids),
             "desired_outcome": desired_outcome,
             "object_description": object_description,
-            "unresolved_questions": list(questions),
+            "unresolved_questions": list(questions) if questions is not None else None,
             "sufficient": bool(sufficient),
         },
         max_attempts=2,
@@ -336,16 +337,27 @@ def _minimize_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-def _redact_metadata_value(value: Any) -> Any:
+_TIMESTAMP_METADATA_KEYS = {
+    "timestamp",
+    "published_at",
+    "retrieved_at",
+    "source_timestamp",
+    "submitted_at",
+    "authorization_reserved_at",
+    "ingested_at",
+}
+
+
+def _redact_metadata_value(value: Any, *, key: str | None = None) -> Any:
     if isinstance(value, str):
-        return _normalize_observation_content(value)
+        return value if key in _TIMESTAMP_METADATA_KEYS else _normalize_observation_content(value)
     if isinstance(value, list):
-        return [_redact_metadata_value(item) for item in value]
+        return [_redact_metadata_value(item, key=key) for item in value]
     if isinstance(value, dict):
         return {
-            str(key): _redact_metadata_value(item)
-            for key, item in value.items()
-            if not re.search(r"email|phone|address|recipient|person_name", str(key), re.I)
+            str(child_key): _redact_metadata_value(item, key=str(child_key))
+            for child_key, item in value.items()
+            if not re.search(r"email|phone|address|recipient|person_name", str(child_key), re.I)
         }
     return value
 

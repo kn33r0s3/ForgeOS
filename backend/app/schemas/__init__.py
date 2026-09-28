@@ -18,6 +18,13 @@ class SignalCreate(BaseModel):
     content: str = Field(..., min_length=1, description="The raw observed text")
     source: str = Field(default="manual")
     category: Optional[str] = None
+    purpose: Optional[Literal["demand_understanding"]] = Field(
+        default=None,
+        description=(
+            "Explicitly opt this submission into demand understanding. "
+            "Omitting it preserves ordinary signal behavior."
+        ),
+    )
 
 
 class SignalOut(BaseModel):
