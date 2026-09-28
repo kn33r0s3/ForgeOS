@@ -31,8 +31,10 @@ export default function ProductsPage() {
     target_customer: "",
     pricing: "",
   });
+  const [draftForm, setDraftForm] = useState({ problem: "", target_customer: "" });
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [draft, setDraft] = useState<ProductSummary | null>(null);
 
   async function createProduct() {
     if (!newForm.name.trim() || !newForm.offer.trim()) {
@@ -56,6 +58,45 @@ export default function ProductsPage() {
     } finally {
       setBusy(null);
       setCreating(false);
+    }
+  }
+
+  async function prepareDraft() {
+    if (!draftForm.problem.trim()) {
+      setMsg("Describe the business problem before preparing an offer.");
+      return;
+    }
+    setBusy("draft");
+    try {
+      const created = await api.createOfferDraft({
+        problem: draftForm.problem.trim(),
+        target_customer: draftForm.target_customer.trim() || null,
+      });
+      setDraft(created as ProductSummary);
+      setDraftForm({ problem: "", target_customer: "" });
+      setMsg("Offer draft prepared for owner review. Nothing was sent.");
+      await reload();
+    } catch (e: any) {
+      setMsg("Could not prepare offer draft: " + (e?.message || "error"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function approveDraft(status: "APPROVED" | "NEEDS_EDIT" | "REJECTED") {
+    if (!draft) return;
+    setBusy("approval");
+    try {
+      const updated = await api.updateOfferApproval(draft.id, { status });
+      setDraft(updated as ProductSummary);
+      setMsg(status === "APPROVED"
+        ? "Offer approved for owner-led presentation. ForgeOS still has not contacted anyone."
+        : `Offer marked ${status.toLowerCase().replace("_", " ")}.`);
+      await reload();
+    } catch (e: any) {
+      setMsg("Could not update approval: " + (e?.message || "error"));
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -124,6 +165,62 @@ export default function ProductsPage() {
           >
             {busy === "create" ? "Saving…" : "Create Product"}
           </button>
+        </GlassPanel>
+      )}
+
+      <GlassPanel className="p-5 space-y-3">
+        <p className="text-xs uppercase tracking-widest text-neutral-500">Prepare an owner offer</p>
+        <p className="text-sm text-neutral-400">
+          Enter a real business problem. ForgeOS uses currently available local capabilities to
+          draft a bounded, truthful offer. It never contacts a client automatically.
+        </p>
+        <textarea
+          className="w-full bg-black/30 border border-white/[0.08] rounded-md px-3 py-2 text-sm"
+          rows={3}
+          placeholder="What business problem should the owner help solve?"
+          value={draftForm.problem}
+          onChange={(e) => setDraftForm({ ...draftForm, problem: e.target.value })}
+        />
+        <input
+          className="w-full bg-black/30 border border-white/[0.08] rounded-md px-3 py-2 text-sm"
+          placeholder="Target business (optional)"
+          value={draftForm.target_customer}
+          onChange={(e) => setDraftForm({ ...draftForm, target_customer: e.target.value })}
+        />
+        <button
+          onClick={prepareDraft}
+          disabled={busy === "draft"}
+          className="px-4 py-2 rounded-lg bg-forge-accent/90 text-black text-sm font-semibold disabled:opacity-50"
+        >
+          {busy === "draft" ? "Preparing…" : "Prepare offer draft"}
+        </button>
+      </GlassPanel>
+
+      {draft && (
+        <GlassPanel glow className="p-5 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs uppercase tracking-widest text-neutral-500">Owner review required</p>
+            <span className="text-xs text-neutral-400">{draft.approval_status || "PENDING_REVIEW"}</span>
+          </div>
+          <h2 className="text-xl font-semibold">{draft.name}</h2>
+          <p className="text-sm text-neutral-300">{draft.offer}</p>
+          <p className="text-sm text-neutral-400">{draft.hypothesis}</p>
+          <p className="text-sm text-amber-200">
+            No outreach, customer, WTP, payment, or revenue is implied by this draft.
+          </p>
+          {draft.approval_status !== "APPROVED" && (
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => approveDraft("APPROVED")} disabled={busy === "approval"} className="px-4 py-2 rounded-lg bg-forge-accent text-black text-sm font-semibold">
+                Approve for owner-led presentation
+              </button>
+              <button onClick={() => approveDraft("NEEDS_EDIT")} disabled={busy === "approval"} className="px-4 py-2 rounded-lg border border-white/10 text-sm">
+                Needs edit
+              </button>
+              <button onClick={() => approveDraft("REJECTED")} disabled={busy === "approval"} className="px-4 py-2 rounded-lg border border-white/10 text-sm">
+                Reject
+              </button>
+            </div>
+          )}
         </GlassPanel>
       )}
 

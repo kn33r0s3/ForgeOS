@@ -1448,6 +1448,17 @@ class ProductCreate(BaseModel):
     launch_state: Optional[str] = Field(default="not_launched")
 
 
+class OfferDraftCreate(BaseModel):
+    data_scope: Literal["REAL", "SANDBOX"] = "REAL"
+    problem: str = Field(..., min_length=5, max_length=2000)
+    target_customer: Optional[str] = Field(default=None, max_length=500)
+
+
+class OfferApprovalUpdate(BaseModel):
+    status: Literal["APPROVED", "REJECTED", "NEEDS_EDIT"]
+    note: Optional[str] = Field(default=None, max_length=2000)
+
+
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
     offer: Optional[str] = None
@@ -1480,6 +1491,10 @@ class ProductOut(BaseModel):
     actual_revenue: float
     actual_cost: float
     data_scope: str = "REAL"
+    offer_brief: Optional[dict] = None
+    approval_status: str = "PENDING_REVIEW"
+    approval_note: Optional[str] = None
+    approved_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 

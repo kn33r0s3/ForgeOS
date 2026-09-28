@@ -723,6 +723,32 @@ These targets are not certified p95/p99 SLAs. Only the individual runs and five-
 
 - Actual market demand, corroborated prospect, buyer, customer, WTP evidence, order, payment, and revenue from this work: **none**.
 - Outside source requests during timing probes: **0**.
+
+## 2026-09-29 RESULT CARD — Owner-operated offer preparation
+
+### CURRENTLY IMPLEMENTED
+
+- `POST /products/offer-drafts` uses the existing Product substrate to persist an owner-reviewable offer hypothesis from a business problem.
+- The structured brief records the target business, proposed workflow, capabilities used, scope, exclusions, assumptions, unresolved delivery/cost/price/value hypotheses, authorization requirements, and next action.
+- The only capability marked currently available is the existing built-in `offline-mock` local reasoning provider. Optional providers are not claimed as available.
+- `POST /products/{id}/offer-approval` persists an explicit `PENDING_REVIEW` → `APPROVED`, `NEEDS_EDIT`, or `REJECTED` decision with optional note/timestamp. It does not execute external contact.
+- The Products UI now exposes problem entry, draft preparation, and owner approval controls while clearly stating that no outreach or commercial outcome is implied.
+
+### SYNTHETIC VERIFICATION
+
+- Isolated developer tests: **3 passed** for draft creation, unresolved economics, approval persistence, SQLite reopen, capability availability labeling, and the absence of Action/CustomerEvent/Outcome records.
+- The focused local draft path completed in **under 500 ms** in the test run. This is a mechanics observation, not a production SLA or market result.
+- Existing performance polling/acknowledgement behavior remains unchanged; no new primitive, database, event bus, cache, or external source was added.
+
+### REAL COMMERCIAL STATE
+
+- Real prospects **0**; real offers presented **0**; real responses **0**; customers **0**; fulfillment **0**; payments **0**; revenue **0**.
+- External contact during this work: **NONE**.
+- The single biggest blocker is one legitimate owner-authorized client channel/contact and authorization to present the reviewed offer. Uncleared public sources remain unavailable.
+
+### VERIFICATION LIMIT
+
+- The focused offer tests and root frontend typecheck/build passed. A broader mixed pytest command also exercised pre-existing scheduler setup tests that require the unavailable `jsonschema` package in this local environment; those failures were dependency-import errors, not offer-path assertions.
 - External outreach/contact, form submission, email/message/call, or outbound Action: **NONE**.
 - No production database was modified by the isolated HTTP probes.
 

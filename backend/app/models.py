@@ -13,6 +13,7 @@ run on SQLite today and maps cleanly onto Postgres later.
 """
 
 from datetime import datetime, timezone
+import json
 from sqlalchemy import Column, Integer, String, Text, Float, Boolean, DateTime, ForeignKey, JSON, CheckConstraint, UniqueConstraint
 from sqlalchemy.orm import relationship
 
@@ -1681,10 +1682,26 @@ class Product(Base):
     # meta
     hypothesis = Column(Text, nullable=True)  # what we believe must be true for this to be worth building
     data_scope = Column(String, nullable=False, default="REAL", index=True)  # sandbox products are never reported as real traction
+    # Structured offer-preparation artifact. These fields describe a hypothesis
+    # and owner review state; they never imply a customer, sale, or payment.
+    offer_brief_json = Column(Text, nullable=True)
+    approval_status = Column(String, nullable=False, default="PENDING_REVIEW", index=True)
+    approval_note = Column(Text, nullable=True)
+    approved_at = Column(DateTime, nullable=True)
 
     opportunity = relationship("Opportunity")
     channels = relationship("DistributionChannel", back_populates="product", cascade="all, delete-orphan")
     customer_events = relationship("CustomerEvent", back_populates="product", cascade="all, delete-orphan")
+
+    @property
+    def offer_brief(self):
+        if not self.offer_brief_json:
+            return None
+        try:
+            value = json.loads(self.offer_brief_json)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return None
+        return value if isinstance(value, dict) else None
 
 
 class DistributionChannel(Base):

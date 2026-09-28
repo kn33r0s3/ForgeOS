@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import schemas, models
 from app.services import product_engine
+from app.services import offer_preparation
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -49,6 +50,20 @@ def create_product(body: schemas.ProductCreate, db: Session = Depends(get_db)):
         launch_state=body.launch_state,
         data_scope=body.data_scope,
     )
+
+
+@router.post("/offer-drafts", response_model=schemas.ProductOut, status_code=201)
+def create_offer_draft(body: schemas.OfferDraftCreate, db: Session = Depends(get_db)):
+    """Prepare an owner-reviewable offer hypothesis without contacting anyone."""
+    try:
+        return offer_preparation.create_offer_draft(
+            db,
+            problem=body.problem,
+            target_customer=body.target_customer,
+            data_scope=body.data_scope,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("", response_model=list[schemas.ProductSummary])
@@ -140,6 +155,20 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
     if p is None:
         raise HTTPException(404, "product not found")
     return product_engine.product_summary(db, p)
+
+
+@router.post("/{product_id}/offer-approval", response_model=schemas.ProductOut)
+def update_offer_approval(
+    product_id: int,
+    body: schemas.OfferApprovalUpdate,
+    db: Session = Depends(get_db),
+):
+    product = offer_preparation.set_offer_approval(
+        db, product_id, status=body.status, note=body.note
+    )
+    if product is None:
+        raise HTTPException(status_code=404, detail="product not found")
+    return product
 
 
 @router.patch("/{product_id}", response_model=schemas.ProductOut)

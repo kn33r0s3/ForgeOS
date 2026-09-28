@@ -840,6 +840,10 @@ export interface Product {
   actual_customers: number;
   actual_revenue: number;
   actual_cost: number;
+  offer_brief?: Record<string, unknown> | null;
+  approval_status?: "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "NEEDS_EDIT" | string;
+  approval_note?: string | null;
+  approved_at?: string | null;
 }
 
 export interface ProductSummary extends Product {
@@ -943,6 +947,16 @@ export interface ProductUpdate {
   status?: string | null;
   launch_state?: string | null;
   retirement_reason?: string | null;
+}
+
+export interface OfferDraftCreate {
+  problem: string;
+  target_customer?: string | null;
+}
+
+export interface OfferApprovalUpdate {
+  status: "APPROVED" | "REJECTED" | "NEEDS_EDIT";
+  note?: string | null;
 }
 
 export interface ChannelCreate {
@@ -1222,6 +1236,10 @@ export const api = {
   listProducts: (scope: DataScope = "REAL") => request<ProductSummary[]>(withScope("/products", scope)),
   createProduct: (payload: Partial<ProductCreate>, scope: DataScope = "REAL") =>
     request<Product>("/products", { method: "POST", body: JSON.stringify({ ...payload, data_scope: scope }) }),
+  createOfferDraft: (payload: OfferDraftCreate, scope: DataScope = "REAL") =>
+    request<Product>("/products/offer-drafts", { method: "POST", body: JSON.stringify({ ...payload, data_scope: scope }) }),
+  updateOfferApproval: (id: number, payload: OfferApprovalUpdate) =>
+    request<Product>(`/products/${id}/offer-approval`, { method: "POST", body: JSON.stringify(payload) }),
   updateProduct: (id: number, payload: Partial<ProductUpdate>) =>
     request<Product>(`/products/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
   listChannels: () => request<Channel[]>("/products/channels"),
