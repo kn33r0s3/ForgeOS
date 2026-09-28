@@ -67,6 +67,7 @@ class ObserverEngine:
         metadata: dict | None = None,
         *,
         persist_evidence: bool = True,
+        categorize: bool = True,
     ) -> models.Signal:
         """Process one piece of raw text end-to-end and persist it as a
         fully-scored Signal. This is the one method every observer
@@ -117,6 +118,11 @@ class ObserverEngine:
                 .order_by(models.Signal.id.desc())
                 .first()
             )
+        if previous is None and not identity_key and external_id:
+            identity_query = self.db.query(models.Signal).filter(models.Signal.source == source)
+            previous = identity_query.filter(
+                models.Signal.external_id == str(external_id)
+            ).order_by(models.Signal.id.desc()).first()
         if previous is None and not identity_key and not external_id and canonical_url:
             identity_query = self.db.query(models.Signal).filter(models.Signal.source == source)
             previous = identity_query.filter(models.Signal.canonical_url == canonical_url).order_by(models.Signal.id.desc()).first()
@@ -125,7 +131,11 @@ class ObserverEngine:
                 _ensure_evidence(self.db, previous, metadata)
             return previous
 
-        processed = signal_processor.process_signal(content)
+        processed = (
+            signal_processor.process_signal(content)
+            if categorize
+            else {"category": None, "signal_type": "observation", "tags": []}
+        )
         importance = importance_ranker.score_importance(content)
         reliability = source_manager.get_reliability(self.db, source)
         quality = signal_quality.assess_quality(

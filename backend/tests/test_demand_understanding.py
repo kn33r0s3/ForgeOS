@@ -1,7 +1,7 @@
 import json
 from datetime import datetime, timezone
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
 
 from app import models
@@ -61,6 +61,8 @@ def test_authorized_clearance_observation_persists_event_evidence_and_provenance
     assert "[redacted-email]" in signal.content
     assert "[redacted-phone]" in signal.content
     assert "sample.person@example.test" not in signal.content
+    assert signal.category is None
+    assert signal.external_id != "fixture-record-1"
     assert db.get(models.SourceFetchGate, "crossref-public-works-metadata") is not None
     event = db.query(models.WorldEvent).filter_by(event_type="demand_observed").one()
     assert json.loads(event.payload)["signal_id"] == signal.id
@@ -76,6 +78,10 @@ def test_authorized_clearance_observation_persists_event_evidence_and_provenance
         "crossref-public-works-metadata"
     )
     assert signal_entity.entity_type == "signal"
+    assert db.query(models.Opportunity).count() == 0
+    assert db.query(models.Action).count() == 0
+    assert db.query(models.SubstrateEntity).filter_by(entity_type="customer").count() == 0
+    assert db.query(models.IntegrationDelivery).count() == 0
 
 
 def test_uncleared_or_stale_source_authorization_is_rejected(db):
@@ -170,6 +176,14 @@ def test_possible_demand_has_no_need_until_understood(db):
     assert result.state == "possible_demand"
     assert result.inferred_need_id is None
     assert db.query(models.SubstrateEntity).filter_by(entity_type="need").count() == 0
+    assert db.query(models.Opportunity).count() == 0
+
+
+def test_demand_layer_adds_no_vertical_or_parallel_observation_tables(db):
+    table_names = set(inspect(db.get_bind()).get_table_names())
+    assert not table_names.intersection(
+        {"observations", "demands", "orders", "event_bus"}
+    )
 
 
 def test_multiple_observations_strengthen_hypothesis_without_market_claim(db):
@@ -336,6 +350,20 @@ def test_sqlite_reopen_preserves_demand_to_capability_gap(tmp_path):
         assert reopened.get(models.Signal, ids["insufficient_signal"]) is not None
         assert reopened.get(models.SubstrateEntity, ids["adequate_need"]).entity_type == "need"
         assert reopened.get(models.SubstrateEntity, ids["insufficient_need"]).entity_type == "need"
+        for signal_id in (ids["adequate_signal"], ids["insufficient_signal"]):
+            persisted_signal = reopened.get(models.Signal, signal_id)
+            provenance = json.loads(persisted_signal.provenance)
+            assert persisted_signal.published_at is not None
+            assert persisted_signal.retrieved_at is not None
+            assert provenance["source_registry_id"] == "crossref-public-works-metadata"
+            assert provenance["source_reference"] == "https://api.crossref.org/works"
+            assert provenance["authorization_reserved_at"]
+            assert provenance["ingested_at"]
+        source_entry = source_clearance_registry.clearance_for_url(
+            "https://api.crossref.org/works"
+        )
+        assert source_entry is not None
+        assert source_entry.registry_id == "crossref-public-works-metadata"
         persisted_gap = reopened.get(models.ForgeCapability, ids["gap"])
         persisted_gap_data = json.loads(persisted_gap.attributes)["capability_discovery"]
         assert reopened.get(models.WorldEvent, ids["gap_event"]) is not None
@@ -347,6 +375,13 @@ def test_sqlite_reopen_preserves_demand_to_capability_gap(tmp_path):
         assert reopened.query(models.WorldRelation).filter_by(
             relation_type="derived_from"
         ).count() == 2
+        assert reopened.query(models.Evidence).filter(
+            models.Evidence.subject_id.in_(
+                (ids["adequate_need"], ids["insufficient_need"])
+            ),
+            models.Evidence.support_level == "hypothesized",
+        ).count() == 2
+        assert reopened.query(models.ResearchTask).count() == 0
         observation_evidence = reopened.query(models.Evidence).filter(
             models.Evidence.idempotency_key.like("demand-observation-evidence:%")
         ).all()
@@ -363,6 +398,7 @@ def test_sqlite_reopen_preserves_demand_to_capability_gap(tmp_path):
                 {
                     **ids,
                     "research_questions": reopened.query(models.ResearchQuestion).count(),
+                    "research_tasks": reopened.query(models.ResearchTask).count(),
                     "opportunities": reopened.query(models.Opportunity).count(),
                     "decisions": reopened.query(models.Decision).count(),
                 },

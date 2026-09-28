@@ -145,9 +145,16 @@ def _event(
         source="demand_understanding",
         idempotency_key=key,
     )
-    db.add(event)
-    db.flush()
-    return event
+    try:
+        with db.begin_nested():
+            db.add(event)
+            db.flush()
+        return event
+    except IntegrityError:
+        winner = db.query(models.WorldEvent).filter_by(idempotency_key=key).one_or_none()
+        if winner is None:
+            raise
+        return winner
 
 
 def record_raw_observation(
@@ -165,6 +172,7 @@ def record_raw_observation(
         source=source,
         metadata=safe_metadata,
         persist_evidence=False,
+        categorize=False,
     )
     world_graph.seed_core_types(db)
     signal_entity = world_graph.ensure_canonical_entity(
@@ -446,6 +454,31 @@ def _persist_interpretation(
             },
             key=f"demand-understood:{need_id}:v1",
         )
+        need_key = f"need-understanding-evidence:{_key(need_id, *ids, outcome or '')}"
+        need_evidence = db.query(models.Evidence).filter_by(
+            idempotency_key=need_key
+        ).one_or_none()
+        if need_evidence is None:
+            need_evidence = world_graph.create_evidence(
+                db,
+                subject_kind="entity",
+                subject_id=need_id,
+                claim=f"Possible need: {outcome}",
+                support_level="hypothesized",
+                source="demand_understanding",
+                provenance={
+                    "observation_ids": list(ids),
+                    "supporting_evidence_ids": evidence_ids,
+                    "interpretation": "human_or_caller_supplied_need_understanding",
+                    "claim_boundary": (
+                        "Hypothesis only; no customer, demand scale, willingness-to-pay, "
+                        "fulfillment, or market validation is established."
+                    ),
+                },
+                confidence=0.35,
+                idempotency_key=need_key,
+            )
+        evidence_ids.append(need_evidence.id)
     db.commit()
     return DemandUnderstanding(
         state=state,

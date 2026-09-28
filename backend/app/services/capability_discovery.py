@@ -45,6 +45,21 @@ def _key(*parts: object) -> str:
     return hashlib.sha256("\0".join(str(part) for part in parts).encode("utf-8")).hexdigest()
 
 
+def _insert_event_once(db: Session, event: models.WorldEvent) -> models.WorldEvent:
+    try:
+        with db.begin_nested():
+            db.add(event)
+            db.flush()
+        return event
+    except IntegrityError:
+        winner = db.query(models.WorldEvent).filter_by(
+            idempotency_key=event.idempotency_key
+        ).one_or_none()
+        if winner is None:
+            raise
+        return winner
+
+
 def _discovery_data(capability: models.ForgeCapability) -> dict[str, Any]:
     attributes = _load(capability.attributes)
     value = attributes.get("capability_discovery")
@@ -208,7 +223,7 @@ def ensure_capability_gap(
     )
     event = db.query(models.WorldEvent).filter_by(idempotency_key=event_key).one_or_none()
     if event is None:
-        event = models.WorldEvent(
+        event = _insert_event_once(db, models.WorldEvent(
             event_type="capability_gap_recorded",
             entity_id=event_entity.id,
             payload=_dump(
@@ -223,9 +238,7 @@ def ensure_capability_gap(
             ),
             source="research_capability_discovery",
             idempotency_key=event_key,
-        )
-        db.add(event)
-        db.flush()
+        ))
     evidence_key = f"capability-gap-evidence:{identity}"
     evidence = db.query(models.Evidence).filter_by(idempotency_key=evidence_key).one_or_none()
     if evidence is None:
@@ -376,7 +389,7 @@ def discover_candidates(
                 question.id,
                 created_by="research_capability_discovery",
             )
-            event = models.WorldEvent(
+            event = _insert_event_once(db, models.WorldEvent(
                 event_type="capability_gap_candidates_discovered",
                 entity_id=question_entity.id,
                 payload=_dump(
@@ -389,9 +402,7 @@ def discover_candidates(
                 ),
                 source="research_capability_discovery",
                 idempotency_key=candidate_event_key,
-            )
-            db.add(event)
-            db.flush()
+            ))
             world_graph.create_evidence(
                 db,
                 subject_kind="entity",

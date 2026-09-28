@@ -140,6 +140,12 @@ def test_concurrent_gap_creation_is_idempotent(tmp_path):
     with factory() as session:
         assert len(set(names)) == 1
         assert session.query(models.ForgeCapability).count() == 1
+        assert session.query(models.WorldEvent).filter_by(
+            event_type="capability_gap_recorded"
+        ).count() == 1
+        assert session.query(models.Evidence).filter_by(
+            source="research_capability_discovery"
+        ).count() == 1
     engine.dispose()
 
 

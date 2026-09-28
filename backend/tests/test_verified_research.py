@@ -113,7 +113,7 @@ def test_successful_collection_persists_evidence_and_triggers_p3(db, monkeypatch
 
     assert result["status"] == "completed"
     assert result["evidence_found"] == 1
-    evidence = db.query(models.Evidence).one()
+    evidence = db.query(models.Evidence).filter_by(source="fixture-source").one()
     edge = db.query(models.EvidenceRelationship).filter_by(claim_id=claim.id, evidence_id=evidence.id).one()
     assert edge.relation_type == "supports"
     assert db.query(models.Judgment).count() == 2

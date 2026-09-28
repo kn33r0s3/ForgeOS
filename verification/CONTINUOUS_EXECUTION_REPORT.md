@@ -300,3 +300,65 @@ The runtime source-authorization boundary is exact: no reviewed capability permi
 - **GIT STATUS:** changed implementation/docs/tests are listed by `git status --short`; unrelated `storage/scheduler.log` remains modified and was not cleaned.
 - **REMAINING BLOCKER:** no authorized real-world demand observation/response channel exists, so no customer, market, willingness-to-pay, fulfillment, order, payment, revenue, or outcome claim may be created.
 - **NEXT MISSING CAPABILITY:** consent-preserving demand observation plus an explicit authorized response/fulfillment/action channel that can record real-world response evidence without fabricating actors or economic outcomes.
+
+## 2026-09-28 RESULT CARD — Real-World Observation Layer
+
+CURRENTLY IMPLEMENTED:
+Existing `ObserverEngine` raw intake can persist uncategorized observations through Signal → substrate EVENT/EVIDENCE. Added exact-clearance ingestion validation, normalization/redaction, source/time/provenance preservation, deterministic duplicate handling, deterministic asynchronous demand processing on existing WorkerTask, and explicit gap-search EVENT/EVIDENCE on existing substrate records. No new canonical primitive, vertical table, broker, or memory store.
+
+TARGET ARCHITECTURE:
+`authorized source → existing source adapter → normalized Signal-backed observation → EVENT + possible EVIDENCE/provenance → demand understanding → hypothesis-grade Need → existing cleared capability search → adequate match OR evidence-backed capability gap → bounded research/discovery → test/activation → economic validation → explicit authorization → action`.
+
+FUTURE CAPABILITY:
+Live consent-preserving demand-observation channels, real demand-response/fulfillment integrations, economic validation, and authorized real-world outcome capture. The current code does not autonomously contact people, create offers, place orders, transact, or claim fulfillment.
+
+REAL SOURCE EXERCISED:
+**No live source and no HTTP request.** Tests used clearly marked synthetic adapter results only to exercise authorization and persistence mechanics. No synthetic fixture is real demand, a customer, a buyer, or market evidence.
+
+SOURCE AUTHORIZATION/CLEARANCE:
+The Crossref public-metadata registry entry was checked against the current exact URL/collector, current registry validity, the test's durable `SourceFetchGate` reservation, and the allowed `title` field. The ingestion seam rejects absent authorization, mismatched endpoint, unreserved/stale reservation, and fields outside `allowed_fields`. The Crossref endpoint was not contacted; its clearance does not imply permission to collect demand or abstracts.
+
+OBSERVATION → EVENT → EVIDENCE PROOF:
+Synthetic SQLite source fixtures persisted Signals **1** and **2**, two `demand_observed` Events, and possible-level observation Evidence with source-registry ID, source reference/type/field, source timestamp, retrieval/reservation/ingestion timestamps, and identity hashes. PII-like email and phone strings were redacted. Duplicate identity/time/content returned the same Signal; a second independent fixture record/time persisted separately. No observation was promoted to `supported`.
+
+DEMAND-UNDERSTANDING PROOF:
+Case 1 persisted Need **2** with hypothesized—not supported—Evidence, preserved source links, and an adequate existing Crossref metadata capability match; it created **no ResearchQuestion**. Case 2 persisted Need **4** with explicit evidence scope and hypothesis state, then entered the no-capability path. No Opportunity, customer, Action, IntegrationDelivery, order, payment, revenue, or outcome was created by observation or understanding.
+
+CAPABILITY-MATCH/GAP PROOF:
+Adequate-match case reused an active cleared registry capability and generated no research question. Insufficient-match case persisted capability gap **1**, `capability_gap_recorded` Event **14**, and possible-level search Evidence **9** after reopen. The search provenance records the timestamp, exact requirement, registry IDs considered (none for the primary-agriculture requirement), candidate IDs, and an explicit boundary that an empty registry result is not proof no capability exists in the world. `research_eligible` was true; no research task or candidate was automatically activated in this integration path.
+
+RESEARCH/ORCHESTRATION REGRESSION:
+Broad focused source-observation, demand worker, capability discovery, source clearance, worker, collector, verified-research, YouTube, substrate, and research orchestration suites: **73 passed, 9 warnings**. These include concurrent three-worker demand enqueue proving one deterministic WorkerTask, concurrent capability-gap persistence proving one gap EVENT and one gap EVIDENCE, and existing bounded follow-up/capability lifecycle behavior.
+
+PRIVACY/PROVENANCE:
+Text/title and nested provenance strings are normalized and email/phone-like content redacted; unapproved metadata fields are dropped and source observation IDs are stored as hashes. Source identity is not silently merged: explicit identity/time/content keys deduplicate repeats while distinct external IDs/timestamps persist separately. Provenance and the source reservation survived SQLite reopen.
+
+TEST RESULTS:
+Complete backend **466 passed, 2 skipped, 30 warnings**. Frontend `npm run typecheck` passed. Changed Python diagnostics reported no errors. Warnings are the existing Pydantic/Starlette/FastAPI deprecations, SQLAlchemy migration table-cycle warning, and existing datetime deprecation.
+
+ISOLATED SQLITE REOPEN RESULT:
+Both synthetic cases were run in one file-backed SQLite database and inspected after close/reopen. Persisted IDs: adequate Signal **1** → Need **2**; insufficient Signal **2** → Need **4** → capability gap **1** → gap Event **14** → gap Evidence **9**. SourceFetchGate for `crossref-public-works-metadata`, two `derived_from` Need/observation relations, two hypothesized Need Evidence rows, two observation Evidence rows and their provenance survived reopen. ResearchQuestion count **1** (only the inadequate-capability case), ResearchTask **0**, Opportunity **0**, Decision **0**.
+
+DIFF/STATUS:
+`git diff --check` passed after implementation and documentation updates. Exact final `git status --short`:
+```text
+ M STATUS.md
+ M backend/app/services/capability_discovery.py
+ M backend/app/services/demand_understanding.py
+ M backend/app/services/observer_engine.py
+ M backend/tests/test_capability_discovery.py
+ M backend/tests/test_demand_understanding.py
+ M backend/tests/test_operational_substrate_adapter.py
+ M backend/tests/test_verified_research.py
+ M backend/tests/test_youtube_intelligence.py
+ M docs/CAPABILITY_QUEUE.md
+ M storage/scheduler.log
+ M verification/CONTINUOUS_EXECUTION_REPORT.md
+```
+The existing scheduler log change was not edited or cleaned.
+
+REMAINING REAL-WORLD BLOCKER:
+No reviewed, authorized real-world channel currently supplies consent-preserving demand observations and buyer responses. Registry authorization for public scholarly metadata does not establish demand, a customer, WTP, fulfillment, or commercial validation.
+
+NEXT MISSING CAPABILITY:
+A reviewed, consent-preserving real-world demand observation and response channel, with purpose-limited authorization and evidence capture; then a separate explicit economic-validation and authorized-action path.

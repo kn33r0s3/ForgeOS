@@ -75,7 +75,7 @@ def test_transcript_timestamps_claims_provenance_and_reuse(db):
     assert all(claim.epistemic_state == "observed" for claim in first["claims"])
     assert all(claim.confidence is None for claim in first["claims"])
     assert db.query(models.WorldSourceDocument).count() == 1
-    assert db.query(models.Evidence).count() == 2
+    assert db.query(models.Evidence).filter_by(source="youtube").count() == 2
     assert db.query(models.EvidenceRelationship).count() == 2
     assert db.query(models.ResearchQuestion).count() == 2
 
@@ -84,7 +84,7 @@ def test_transcript_timestamps_claims_provenance_and_reuse(db):
     assert second["analysis"].id == analysis.id
     assert db.query(models.MediaAnalysis).count() == 1
     assert db.query(models.Claim).count() == 2
-    assert db.query(models.Evidence).count() == 2
+    assert db.query(models.Evidence).filter_by(source="youtube").count() == 2
 
 
 def test_youtube_tool_is_registered_without_making_ai_or_audio_claims():
