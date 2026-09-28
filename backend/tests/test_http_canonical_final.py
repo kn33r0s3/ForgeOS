@@ -109,7 +109,7 @@ def test_source_to_cash_to_learning_again_http_SANDBOX(httpdb):
     assert channel.status_code==200,channel.text
     cid=channel.json()['id']
     contact=c.post(f'/products/channels/{cid}/customers',json={'stage':'paid_customer','contact_name':'SANDBOX payer','data_scope':'SANDBOX'})
-    assert contact.status_code==200,contact.text
+    assert contact.status_code==422,contact.text
     assert c.get(f'/products/{pid}').json()['actual_revenue']==0 # event alone is not cash
     params={'outcome_type':'ACTUAL_REVENUE','product_id':pid,'actual_value':99,'unit':'USD','data_scope':'SANDBOX','source':'SANDBOX TEST payment fixture','idempotency_key':'sandbox-payment-1'}
     for _ in range(2):

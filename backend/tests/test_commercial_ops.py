@@ -192,10 +192,34 @@ def test_distribution_channel_and_customer_funnel(db):
     # log a lead, then a paid customer
     product_engine.create_customer_event(db, channel_id=ch.id, product_id=p.id,
                                          stage="lead", event_type="outbound", segment="repair shop")
+    response = models.Outcome(
+        product_id=p.id,
+        outcome_type="ACTUAL_RESPONSE",
+        qualitative_result="Synthetic test fixture: contact reported interest.",
+        source="synthetic_test_fixture",
+        verification_state="VERIFIED",
+        data_scope="REAL",
+    )
+    payment = models.Outcome(
+        product_id=p.id,
+        outcome_type="ACTUAL_REVENUE",
+        actual_value=1.0,
+        unit="USD",
+        source="synthetic_test_fixture",
+        verification_state="VERIFIED",
+        data_scope="REAL",
+    )
+    db.add_all([response, payment])
+    db.commit()
     product_engine.create_customer_event(db, channel_id=ch.id, product_id=p.id,
-                                         stage="contacted", event_type="response")
+                                         stage="contacted", event_type="response",
+                                         outcome_id=response.id)
     product_engine.create_customer_event(db, channel_id=ch.id, product_id=p.id,
-                                         stage="paid_customer", event_type="purchase")
+                                         stage="interested", event_type="interest",
+                                         outcome_id=response.id)
+    product_engine.create_customer_event(db, channel_id=ch.id, product_id=p.id,
+                                         stage="paid_customer", event_type="purchase",
+                                         outcome_id=payment.id)
     roll = product_engine.rollup_channel(db, ch)
     assert roll["outreach_count"] >= 3     # real logged contacts
     assert roll["response_count"] == 2      # contacted + paid
