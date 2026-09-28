@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.services import research_task_engine, source_clearance_registry
+from app.services import capability_discovery
 from app.services.research_evidence_assessment import (
     explicit_contradiction_edges,
     gdelt_requirement_eligibility,
@@ -21,6 +22,7 @@ from app.services.research_evidence_assessment import (
 )
 
 MAX_TASKS_PER_QUESTION = 5
+MAX_RESEARCH_DEPTH = 2
 _OPENALEX_UNRESOLVED_DIMENSIONS = [
     "local_applicability",
     "population_alignment",
@@ -559,6 +561,7 @@ def _prior_observations(db: Session, question_text: str, *, limit: int = 5) -> l
 
 
 def _orchestration_requirement_specs(
+    db: Session,
     question_text: str,
     planned_requirements: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
@@ -587,6 +590,16 @@ def _orchestration_requirement_specs(
                     "required_evidence_type": evidence_type,
                 }
         return list(candidates.values())
+
+    def gap_ids_for(requirement_ids: tuple[str, ...]) -> list[int]:
+        return sorted(
+            {
+                int(requirement["capability_gap_id"])
+                for requirement_id in requirement_ids
+                if (requirement := by_id.get(requirement_id)) is not None
+                and requirement.get("capability_gap_id") is not None
+            }
+        )
 
     profile = _objective_profile(question_text)
     topic = _topic(question_text)
@@ -652,6 +665,7 @@ def _orchestration_requirement_specs(
                 "epistemic_state": "unresolved",
                 "candidate_sources": candidate_sources,
                 "unresolved_dimensions": unresolved,
+                "capability_gap_ids": gap_ids_for(related_ids),
                 "related_requirement_ids": [value for value in related_ids if value in by_id],
                 "resolution_state": (
                     "unresolved"
@@ -668,7 +682,10 @@ def build_research_plan(db: Session, question: models.ResearchQuestion) -> dict[
     requirements: list[dict[str, Any]] = []
     qualifications = _openalex_qualifications(question.question)
     for spec in _requirement_specs(question.question):
-        capabilities = source_clearance_registry.capabilities_for_requirement(spec["id"])
+        capabilities = capability_discovery.active_cleared_sources(db, spec["id"])
+        gap = None
+        if not capabilities:
+            gap = capability_discovery.ensure_capability_gap(db, question, spec)
         candidate_sources = [
             {
                 "source": entry.collector,
@@ -688,8 +705,8 @@ def build_research_plan(db: Session, question: models.ResearchQuestion) -> dict[
                     "operation": entry.allowed_operation,
                     "required_evidence_type": "bibliographic_metadata_lead_only",
                 }
-                for entry in source_clearance_registry.capabilities_for_requirement(
-                    "bibliographic_discovery"
+                for entry in capability_discovery.active_cleared_sources(
+                    db, "bibliographic_discovery"
                 )
             ]
         requirements.append(
@@ -703,7 +720,13 @@ def build_research_plan(db: Session, question: models.ResearchQuestion) -> dict[
                 "epistemic_state": "unresolved",
                 "candidate_sources": candidate_sources,
                 "unresolved_dimensions": list(_OPENALEX_UNRESOLVED_DIMENSIONS),
+                **({"capability_gap_id": gap.id} if gap is not None else {}),
                 "status": "pending" if capabilities else "terminal_unresolved",
+                "resolution_state": (
+                    "unresolved"
+                    if capabilities
+                    else "blocked_external_evidence_required"
+                ),
                 "capable_sources": [
                     {
                         "source": entry.collector,
@@ -722,7 +745,7 @@ def build_research_plan(db: Session, question: models.ResearchQuestion) -> dict[
         )
 
     orchestration_requirements = _orchestration_requirement_specs(
-        question.question, requirements
+        db, question.question, requirements
     )
     candidates = []
     for entry in source_clearance_registry.source_clearances():
@@ -822,7 +845,15 @@ def _create_task(
     if source == "openalex":
         original_question = question.question
         derived_query = requirement.get("openalex_query", _topic(original_question))
-        search_mode = _openalex_search_mode(original_question, derived_query)
+        search_mode_override = requirement.get("search_mode_override")
+        if search_mode_override is not None and search_mode_override not in {
+            "keyword",
+            "semantic",
+        }:
+            raise ValueError("OpenAlex follow-up search mode must be keyword or semantic")
+        search_mode = search_mode_override or _openalex_search_mode(
+            original_question, derived_query
+        )
         max_length = 2000 if search_mode == "semantic" else 500
         task_query = " ".join(str(derived_query).split())[:max_length].strip()
         if not task_query:
@@ -975,20 +1006,6 @@ def _openalex_qualifications(question: str) -> dict[str, str | None]:
         "geographic_qualification": geographic,
         "population_qualification": population,
     }
-
-
-def _follow_up_query(task: models.ResearchTask) -> str | None:
-    results = task.results if isinstance(task.results, dict) else {}
-    records = results.get("source_results")
-    if not isinstance(records, list):
-        return None
-    title = next(
-        (row.get("title") for row in records if isinstance(row, dict) and row.get("title")),
-        None,
-    )
-    if not title:
-        return None
-    return f"Bibliographic follow-up for unresolved publication lead: {title}"
 
 
 def _verified_bibliographic_evidence_ids(
@@ -1188,53 +1205,352 @@ def _macro_market_unresolved_reason(requirement_id: str) -> str | None:
     return None
 
 
-def _create_next_unqueried_capability_task(
+_FOLLOW_UP_STOP_WORDS = _STOP_WORDS | frozenset(
+    {
+        "assess",
+        "determine",
+        "documented",
+        "evidence",
+        "exists",
+        "identify",
+        "publicly",
+        "research",
+        "scholarly",
+        "whether",
+    }
+)
+
+
+def _keyword_follow_up_query(question_text: str) -> str:
+    """Derive a bounded lexical query without adding facts or new qualifiers."""
+    subject = _topic(question_text)
+    about_match = re.search(r"\b(?:about|regarding|concerning)\s+(.+)", subject, re.I)
+    if about_match:
+        subject = about_match.group(1)
+    subject = re.split(r",|;\s*|\bwhat\s+", subject, maxsplit=1, flags=re.I)[0]
+    terms = [
+        match.group()
+        for match in re.finditer(r"[A-Za-z0-9][A-Za-z0-9-]*", subject)
+        if len(match.group()) >= 3
+        and match.group().casefold() not in _FOLLOW_UP_STOP_WORDS
+    ][:12]
+    qualifications = _openalex_qualifications(question_text)
+    for qualifier in (
+        qualifications["population_qualification"],
+        qualifications["geographic_qualification"],
+    ):
+        if qualifier and qualifier.casefold() not in " ".join(terms).casefold():
+            terms.extend(qualifier.split())
+    query = " ".join(terms).strip()
+    if not query:
+        raise ValueError("Could not derive a bounded keyword follow-up query")
+    return query[:500]
+
+
+def _capability_payload(entry, evidence_type: str) -> dict[str, Any]:
+    return {
+        "source": entry.collector,
+        "registry_id": entry.registry_id,
+        "endpoint": entry.url,
+        "operation": entry.allowed_operation,
+        "required_evidence_type": evidence_type,
+    }
+
+
+def _follow_up_decision_id(
+    question_id: int,
+    requirement_id: str,
+    parent_task_id: int | None,
+) -> str:
+    material = f"{question_id}\0{requirement_id}\0{parent_task_id or 'none'}"
+    return sha256(material.encode("utf-8")).hexdigest()
+
+
+def _record_gap_decision(
+    plan: dict[str, Any],
+    question_id: int,
+    requirement: dict[str, Any],
+    *,
+    decision: str,
+    reason: str,
+    parent_task_id: int | None = None,
+    follow_up_requirement_id: str | None = None,
+    follow_up_task_id: int | None = None,
+    depth: int = 0,
+) -> None:
+    decision_id = _follow_up_decision_id(
+        question_id, requirement["id"], parent_task_id
+    )
+    decisions = [
+        row
+        for row in plan.get("gap_decisions", [])
+        if isinstance(row, dict) and row.get("decision_id") != decision_id
+    ]
+    decisions.append(
+        {
+            "decision_id": decision_id,
+            "requirement_id": requirement["id"],
+            "parent_task_id": parent_task_id,
+            "follow_up_requirement_id": follow_up_requirement_id,
+            "follow_up_task_id": follow_up_task_id,
+            "decision": decision,
+            "reason": reason,
+            "depth": depth,
+            "max_depth": MAX_RESEARCH_DEPTH,
+            "task_budget_remaining": max(
+                0,
+                MAX_TASKS_PER_QUESTION
+                - int(plan.get("budget", {}).get("tasks_created", 0)),
+            ),
+        }
+    )
+    plan["gap_decisions"] = decisions
+
+
+def _create_follow_up_requirement(
     db: Session,
     question: models.ResearchQuestion,
+    plan: dict[str, Any],
     requirement: dict[str, Any],
-    tasks: list[models.ResearchTask],
     *,
     task_count: int,
-) -> models.ResearchTask | None:
+) -> tuple[dict[str, Any] | None, str]:
+    """Create one provenance-linked follow-up from an active cleared capability."""
+    requirement_id = requirement["id"]
+    evidence_requirement_id = requirement.get("evidence_requirement_id", requirement_id)
+    tasks = _tasks_for_requirement(db, question.id, requirement_id)
+    if any(task.status in {"planned", "running"} for task in tasks):
+        return None, "an_existing_task_is_still_active"
     if task_count >= MAX_TASKS_PER_QUESTION:
-        return None
-    queried_registry_ids = {
-        (task.results or {}).get("source_registry_id")
-        for task in tasks
-        if isinstance(task.results, dict)
-    }
-    active_registry_ids = {
-        (task.results or {}).get("source_registry_id")
-        for task in tasks
-        if task.status in {"planned", "running"}
-        and isinstance(task.results, dict)
-    }
-    for capability in requirement["capable_sources"]:
-        registry_id = capability["registry_id"]
-        if registry_id in queried_registry_ids or registry_id in active_registry_ids:
-            continue
-        if capability["source"] == "openalex":
-            query = requirement.get("openalex_query", requirement["question"])
-        else:
-            query = requirement["question"]
-        return _create_task(
-            db,
-            question,
-            requirement,
-            source=capability["source"],
-            query=query,
-            follow_up_of=tasks[-1].id if tasks else None,
-            follow_up_depth=max(
-                (
-                    int((task.results or {}).get("follow_up_depth") or 0)
-                    for task in tasks
-                    if isinstance(task.results, dict)
-                ),
-                default=0,
-            )
-            + 1,
+        return None, "research_task_budget_exhausted"
+    depth = max(
+        (
+            int((task.results or {}).get("follow_up_depth") or 0)
+            for task in tasks
+            if isinstance(task.results, dict)
+        ),
+        default=int(requirement.get("decomposition_depth", 0)),
+    )
+    if depth >= MAX_RESEARCH_DEPTH:
+        return None, "research_follow_up_depth_exhausted"
+
+    parent_task = tasks[-1] if tasks else None
+    source: str | None = None
+    query: str | None = None
+    mode_override: str | None = None
+    evidence_alias = evidence_requirement_id
+    capability_requirement_id = requirement.get(
+        "capability_requirement_id", requirement_id
+    )
+    candidate: dict[str, Any] | None = None
+    retrieval_observation = (
+        (parent_task.results or {}).get("retrieval_observation", {})
+        if parent_task is not None and isinstance(parent_task.results, dict)
+        else {}
+    )
+
+    if (
+        parent_task is not None
+        and parent_task.source == "openalex"
+        and isinstance(retrieval_observation, dict)
+        and retrieval_observation.get("outcome") == "valid_empty_retrieval"
+        and (parent_task.results or {}).get("search_mode") == "semantic"
+    ):
+        active = capability_discovery.active_cleared_sources(
+            db, capability_requirement_id
         )
-    return None
+        entry = next(
+            (
+                item
+                for item in active
+                if item.collector == "openalex"
+                and item.registry_id
+                == (parent_task.results or {}).get("source_registry_id")
+            ),
+            None,
+        )
+        if entry is not None:
+            source = "openalex"
+            query = _keyword_follow_up_query(question.question)
+            mode_override = "keyword"
+            candidate = _capability_payload(entry, requirement["evidence_kind"])
+
+    if (
+        source is None
+        and not requirement.get("capable_sources")
+        and evidence_requirement_id
+        in {"scholarly_evidence", "documented_intervention", "prior_research"}
+    ):
+        bibliography_capabilities = capability_discovery.active_cleared_sources(
+            db, "bibliographic_discovery"
+        )
+        entry = next(
+            (item for item in bibliography_capabilities if item.collector == "crossref"),
+            None,
+        )
+        if entry is not None:
+            source = "crossref"
+            query = _keyword_follow_up_query(question.question)
+            evidence_alias = "bibliographic_discovery"
+            capability_requirement_id = "bibliographic_discovery"
+            candidate = _capability_payload(
+                entry, "bibliographic_metadata_lead_only"
+            )
+
+    if source is None:
+        queried = {
+            (task.results or {}).get("source_registry_id")
+            for task in tasks
+            if isinstance(task.results, dict)
+        }
+        for capability in requirement.get("capable_sources", []):
+            if capability.get("registry_id") in queried:
+                continue
+            source = capability["source"]
+            query = (
+                requirement.get("openalex_query", requirement["question"])
+                if source == "openalex"
+                else requirement["question"]
+            )
+            mode_override = requirement.get("search_mode_override")
+            candidate = capability
+            break
+
+    if source is None or query is None or candidate is None:
+        if evidence_requirement_id in _COMMERCIAL_REQUIREMENT_IDS:
+            return None, "direct_customer_or_transaction_evidence_required"
+        if not requirement.get("capable_sources"):
+            return None, "no_currently_cleared_capability_for_requirement"
+        if parent_task is not None and retrieval_observation.get("outcome") == "valid_empty_retrieval":
+            return None, "no_distinct_cleared_retrieval_strategy_remains"
+        return None, "no_unqueried_cleared_capability_remains"
+
+    parent_task_id = parent_task.id if parent_task is not None else None
+    follow_up_depth = depth + 1
+    child_material = "\0".join(
+        (
+            str(question.id),
+            requirement_id,
+            str(parent_task_id or "none"),
+            source,
+            mode_override or "not_applicable",
+            query,
+        )
+    )
+    child_id = f"followup_{sha256(child_material.encode('utf-8')).hexdigest()[:20]}"
+    child = next(
+        (
+            row
+            for row in plan["requirements"]
+            if row.get("id") == child_id
+        ),
+        None,
+    )
+    if child is not None:
+        return child, "follow_up_already_exists"
+
+    child = {
+        "id": child_id,
+        "requirement_id": child_id,
+        "question": (
+            f"Run a bounded {source} retrieval for: {query}"
+        ),
+        "original_research_question": question.question,
+        "required_evidence_type": candidate["required_evidence_type"],
+        "evidence_kind": candidate["required_evidence_type"],
+        "geographic_qualification": requirement.get("geographic_qualification"),
+        "population_qualification": requirement.get("population_qualification"),
+        "epistemic_state": "unresolved",
+        "candidate_sources": [candidate],
+        "capable_sources": [
+            {
+                "source": candidate["source"],
+                "registry_id": candidate["registry_id"],
+                "endpoint": candidate["endpoint"],
+                "operation": candidate["operation"],
+                "allowed_fields": list(
+                    next(
+                        item.allowed_fields
+                        for item in source_clearance_registry.source_clearances()
+                        if item.registry_id == candidate["registry_id"]
+                    )
+                ),
+                "provenance_requirements": list(
+                    next(
+                        item.provenance_requirements
+                        for item in source_clearance_registry.source_clearances()
+                        if item.registry_id == candidate["registry_id"]
+                    )
+                ),
+            }
+        ],
+        "capability_requirement_id": capability_requirement_id,
+        "evidence_requirement_id": evidence_alias,
+        "parent_requirement_id": requirement_id,
+        "parent_task_id": parent_task_id,
+        "follow_up_depth": follow_up_depth,
+        "decomposition_depth": follow_up_depth,
+        "follow_up_reason": (
+            "valid_empty_semantic_retrieval_with_cleared_keyword_mode"
+            if mode_override == "keyword"
+            else "primary_capability_unavailable_metadata_discovery_only"
+            if source == "crossref"
+            else "unresolved_requirement_has_unqueried_cleared_capability"
+        ),
+        "unresolved_dimensions": list(
+            requirement.get("unresolved_dimensions", [])
+        ),
+        "status": "in_progress",
+        "terminal_reason": None,
+        "task_ids": [],
+        "evidence_ids": [],
+        "task_failures": [],
+    }
+    if source == "openalex":
+        child["openalex_query"] = query
+        if mode_override:
+            child["search_mode_override"] = mode_override
+    task_requirement = {
+        **requirement,
+        **child,
+        "id": child_id,
+        "capable_sources": child["capable_sources"],
+    }
+    task = _create_task(
+        db,
+        question,
+        task_requirement,
+        source=source,
+        query=query,
+        follow_up_of=parent_task_id,
+        follow_up_depth=follow_up_depth,
+    )
+    task.results = {
+        **(task.results or {}),
+        "follow_up_requirement_id": child_id,
+        "follow_up_parent_requirement_id": requirement_id,
+        "follow_up_of_task_id": parent_task_id,
+        "follow_up_reason": child["follow_up_reason"],
+    }
+    child["task_ids"] = [task.id]
+    plan["requirements"].append(child)
+    plan.setdefault("orchestration_requirements", []).append(
+        {
+            "requirement_id": child_id,
+            "original_research_question": question.question,
+            "required_evidence_type": child["required_evidence_type"],
+            "geographic_qualification": child["geographic_qualification"],
+            "population_qualification": child["population_qualification"],
+            "epistemic_state": "unresolved",
+            "candidate_sources": [candidate],
+            "unresolved_dimensions": list(child["unresolved_dimensions"]),
+            "related_requirement_ids": [child_id],
+            "parent_requirement_id": requirement_id,
+            "parent_task_id": parent_task_id,
+            "follow_up_depth": follow_up_depth,
+        }
+    )
+    return child, child["follow_up_reason"]
 
 
 def _refresh_plan_from_tasks(
@@ -1247,8 +1563,14 @@ def _refresh_plan_from_tasks(
     all_terminal = True
     for requirement in plan["requirements"]:
         task_count = db.query(models.ResearchTask).filter_by(question_id=question.id).count()
-        active_capabilities = source_clearance_registry.capabilities_for_requirement(
-            requirement["id"]
+        capability_requirement_id = requirement.get(
+            "capability_requirement_id", requirement["id"]
+        )
+        evidence_requirement_id = requirement.get(
+            "evidence_requirement_id", requirement["id"]
+        )
+        active_capabilities = capability_discovery.active_cleared_sources(
+            db, capability_requirement_id
         )
         requirement["capable_sources"] = [
             {
@@ -1284,27 +1606,31 @@ def _refresh_plan_from_tasks(
         ]
         verified_metadata_ids = (
             _verified_bibliographic_evidence_ids(db, tasks)
-            if requirement["id"] == "bibliographic_discovery"
+            if evidence_requirement_id == "bibliographic_discovery"
             else []
         )
+        assessment_requirement = {
+            **requirement,
+            "id": evidence_requirement_id,
+        }
         verified_openalex_ids, openalex_rejection_reason = (
             _verified_openalex_evidence_ids(
                 db,
                 tasks,
-                requirement,
+                assessment_requirement,
             )
-            if requirement["id"]
+            if evidence_requirement_id
             in {"scholarly_evidence", "prior_research", "documented_intervention", "literature_existence"}
             else ([], None)
         )
         verified_world_bank_ids, world_bank_rejection_reason = (
-            _verified_world_bank_evidence_ids(db, tasks, requirement)
-            if requirement["id"] in {"macro_demographics", "population_baseline", "economic_indicator"}
+            _verified_world_bank_evidence_ids(db, tasks, assessment_requirement)
+            if evidence_requirement_id in {"macro_demographics", "population_baseline", "economic_indicator"}
             else ([], None)
         )
         verified_gdelt_ids, gdelt_rejection_reason = (
-            _verified_gdelt_evidence_ids(db, tasks, requirement)
-            if requirement["id"]
+            _verified_gdelt_evidence_ids(db, tasks, assessment_requirement)
+            if evidence_requirement_id
             in {"media_coverage_observation", "recent_event_signal", "public_reporting_velocity"}
             else ([], None)
         )
@@ -1337,8 +1663,15 @@ def _refresh_plan_from_tasks(
                     else "source_capability_unavailable_or_expired"
                     )
                 )
+            requirement["substantive_support_assessed"] = bool(
+                verified_world_bank_ids
+            )
             requirement["epistemic_state"] = (
-                "supported" if requirement["status"] == "satisfied" else "blocked"
+                "supported"
+                if verified_world_bank_ids
+                else "partially_supported"
+                if verified_metadata_ids or verified_gdelt_ids or verified_openalex_ids
+                else "blocked"
             )
             requirement["resolution_state"] = (
                 requirement["epistemic_state"]
@@ -1366,9 +1699,14 @@ def _refresh_plan_from_tasks(
             elif verified_openalex_ids:
                 requirement["evidence_ids"] = verified_openalex_ids
             requirement["terminal_reason"] = None
+            requirement["substantive_support_assessed"] = bool(
+                verified_world_bank_ids
+            )
             requirement["epistemic_state"] = (
                 "supported"
-                if requirement["status"] == "satisfied"
+                if verified_world_bank_ids
+                else "partially_supported"
+                if verified_metadata_ids or verified_gdelt_ids or verified_openalex_ids
                 else "unresolved"
             )
             requirement["resolution_state"] = requirement["epistemic_state"]
@@ -1379,49 +1717,9 @@ def _refresh_plan_from_tasks(
         successful = [task for task in tasks if task.status == "completed" and task.evidence_ids]
         if successful:
             primary = successful[0]
-            depth = int((primary.results or {}).get("follow_up_depth") or 0)
-            followups = [task for task in tasks if int((task.results or {}).get("follow_up_depth") or 0) > 0]
-            if (
-                primary.source == "crossref"
-                and not followups
-                and depth == 0
-                and task_count < MAX_TASKS_PER_QUESTION
-            ):
-                query = _follow_up_query(primary)
-                if query:
-                    _create_task(
-                        db,
-                        question,
-                        requirement,
-                        source=primary.source,
-                        query=query,
-                        follow_up_of=primary.id,
-                        follow_up_depth=1,
-                    )
-                    task_count += 1
-                    verified_metadata_ids = (
-                        _verified_bibliographic_evidence_ids(db, tasks)
-                        if requirement["id"] == "bibliographic_discovery"
-                        else []
-                    )
-                    requirement["status"] = (
-                        "satisfied"
-                        if verified_metadata_ids or verified_openalex_ids
-                        else "in_progress"
-                    )
-                    if verified_metadata_ids or verified_openalex_ids:
-                        requirement["evidence_ids"] = verified_metadata_ids or verified_openalex_ids
-                    requirement["terminal_reason"] = None
-                    active = active or bool(
-                        db.query(models.ResearchTask)
-                        .filter_by(question_id=question.id, status="planned")
-                        .count()
-                    )
-                    all_terminal = False
-                    continue
             verified_metadata_ids = (
                 _verified_bibliographic_evidence_ids(db, tasks)
-                if requirement["id"] == "bibliographic_discovery"
+                if evidence_requirement_id == "bibliographic_discovery"
                 else []
             )
             requirement["status"] = (
@@ -1459,9 +1757,14 @@ def _refresh_plan_from_tasks(
                 requirement["terminal_reason"] = (
                     "collected_evidence_has_not_been_assessed_as_direct_support"
                 )
+            requirement["substantive_support_assessed"] = bool(
+                verified_world_bank_ids
+            )
             requirement["epistemic_state"] = (
                 "supported"
-                if requirement["status"] == "satisfied"
+                if verified_world_bank_ids
+                else "partially_supported"
+                if verified_metadata_ids or verified_gdelt_ids or verified_openalex_ids
                 else "unresolved"
             )
             requirement["resolution_state"] = requirement["epistemic_state"]
@@ -1470,7 +1773,14 @@ def _refresh_plan_from_tasks(
         retryable = [
             task
             for task in tasks
-            if task.status in {"failed", "needs_research"} and task.attempts < task.max_attempts
+            if task.status in {"failed", "needs_research"}
+            and task.attempts < task.max_attempts
+            and not (
+                isinstance(task.results, dict)
+                and isinstance(task.results.get("retrieval_observation"), dict)
+                and task.results["retrieval_observation"].get("outcome")
+                == "valid_empty_retrieval"
+            )
         ]
         if retryable:
             retried = research_task_engine.retry_task(db, retryable[0])
@@ -1538,34 +1848,112 @@ def _refresh_plan_from_tasks(
     from app.services.research_synthesis_engine import synthesize_research_plan
 
     plan["synthesis"] = synthesize_research_plan(db, plan)
-    for requirement in plan["requirements"]:
+    task_count = db.query(models.ResearchTask).filter_by(
+        question_id=question.id
+    ).count()
+    plan["budget"] = {
+        "max_tasks": MAX_TASKS_PER_QUESTION,
+        "tasks_created": task_count,
+        "remaining_tasks": max(0, MAX_TASKS_PER_QUESTION - task_count),
+        "max_research_depth": MAX_RESEARCH_DEPTH,
+    }
+    for requirement in list(plan["requirements"]):
+        if requirement.get("epistemic_state") == "supported":
+            _record_gap_decision(
+                plan,
+                question.id,
+                requirement,
+                decision="satisfied_no_follow_up",
+                reason="requirement_has_scoped_substantive_evidence",
+            )
+            continue
         if requirement.get("epistemic_state") not in {
             "unresolved",
             "partially_supported",
+            "blocked",
         }:
             continue
         current_tasks = _tasks_for_requirement(db, question.id, requirement["id"])
         if any(task.status in {"planned", "running"} for task in current_tasks):
+            _record_gap_decision(
+                plan,
+                question.id,
+                requirement,
+                decision="deferred",
+                reason="a_bounded_task_is_already_active",
+                parent_task_id=current_tasks[-1].id if current_tasks else None,
+            )
             continue
         task_count = db.query(models.ResearchTask).filter_by(
             question_id=question.id
         ).count()
-        next_task = _create_next_unqueried_capability_task(
+        follow_up, reason = _create_follow_up_requirement(
             db,
             question,
+            plan,
             requirement,
-            current_tasks,
             task_count=task_count,
         )
-        if next_task is None:
-            continue
-        requirement["task_ids"] = [task.id for task in current_tasks] + [next_task.id]
-        requirement["status"] = "in_progress"
-        requirement["terminal_reason"] = None
-        requirement["epistemic_state"] = "unresolved"
-        requirement["resolution_state"] = "unresolved"
-        active = True
-        all_terminal = False
+        if follow_up is not None:
+            task_count = db.query(models.ResearchTask).filter_by(
+                question_id=question.id
+            ).count()
+            plan["budget"].update(
+                {
+                    "tasks_created": task_count,
+                    "remaining_tasks": max(
+                        0, MAX_TASKS_PER_QUESTION - task_count
+                    ),
+                }
+            )
+            follow_up_tasks = [
+                db.get(models.ResearchTask, task_id)
+                for task_id in follow_up.get("task_ids", [])
+            ]
+            follow_up_task_id = (
+                follow_up_tasks[0].id
+                if follow_up_tasks and follow_up_tasks[0] is not None
+                else None
+            )
+            _record_gap_decision(
+                plan,
+                question.id,
+                requirement,
+                decision=(
+                    "follow_up_scheduled"
+                    if reason != "follow_up_already_exists"
+                    else "follow_up_reused"
+                ),
+                reason=follow_up.get("follow_up_reason", reason),
+                parent_task_id=follow_up.get("parent_task_id"),
+                follow_up_requirement_id=follow_up["id"],
+                follow_up_task_id=follow_up_task_id,
+                depth=follow_up.get("follow_up_depth", 0),
+            )
+            if follow_up_task_id is not None:
+                follow_up_task = db.get(models.ResearchTask, follow_up_task_id)
+                active = active or bool(
+                    follow_up_task and follow_up_task.status in {"planned", "running"}
+                )
+                all_terminal = False
+        else:
+            requirement["deferred_reason"] = reason
+            _record_gap_decision(
+                plan,
+                question.id,
+                requirement,
+                decision="deferred",
+                reason=reason,
+                parent_task_id=current_tasks[-1].id if current_tasks else None,
+                depth=max(
+                    (
+                        int((task.results or {}).get("follow_up_depth") or 0)
+                        for task in current_tasks
+                        if isinstance(task.results, dict)
+                    ),
+                    default=int(requirement.get("decomposition_depth", 0)),
+                ),
+            )
     if any(
         requirement.get("status") in {"in_progress", "satisfied"}
         and requirement.get("task_ids")
@@ -1585,18 +1973,26 @@ def _refresh_plan_from_tasks(
         "max_tasks": MAX_TASKS_PER_QUESTION,
         "tasks_created": task_count,
         "remaining_tasks": max(0, MAX_TASKS_PER_QUESTION - task_count),
+        "max_research_depth": MAX_RESEARCH_DEPTH,
     }
-    plan["status"] = "research_in_progress" if active else "research_terminal_unresolved"
     plan["unresolved_requirements"] = [
         item["id"]
         for item in plan["requirements"]
         if item["epistemic_state"] not in {"supported"}
     ]
-    plan["terminal_reason"] = None if active else (
-        "one_or_more_requirements_remain_unresolved_under_current_source_clearances"
-        if all_terminal
-        else "research_remains_active"
-    )
+    if active:
+        plan["status"] = "research_in_progress"
+        plan["terminal_reason"] = None
+    elif not plan["unresolved_requirements"]:
+        plan["status"] = "research_completed"
+        plan["terminal_reason"] = None
+    else:
+        plan["status"] = "research_terminal_unresolved"
+        plan["terminal_reason"] = (
+            "one_or_more_requirements_remain_unresolved_under_current_source_clearances"
+            if all_terminal
+            else "research_remains_active"
+        )
     question.research_plan = plan
     question.status = "planned" if active else "closed"
     db.flush()

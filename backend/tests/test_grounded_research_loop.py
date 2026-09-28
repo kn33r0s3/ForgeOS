@@ -85,7 +85,7 @@ def test_unrelated_evidence_does_not_satisfy_bibliographic_requirement(db):
     assert requirement["terminal_reason"] == "metadata_leads_do_not_establish_content_relevance_or_answer_the_claim"
 
 
-def test_partial_crossref_lead_creates_idempotent_narrow_follow_up(db):
+def test_satisfied_crossref_lead_does_not_repeat_metadata_as_follow_up(db):
     question = _planned_question(db)
     task = (
         db.query(models.ResearchTask)
@@ -125,13 +125,8 @@ def test_partial_crossref_lead_creates_idempotent_narrow_follow_up(db):
     followups = research_planner.plan_tasks_for_question(db, question)
     again = research_planner.plan_tasks_for_question(db, question)
 
-    assert len(followups) == 1
+    assert followups == []
     assert again == []
-    followup = followups[0]
-    assert followup.results["follow_up_of_task_id"] == task.id
-    assert followup.results["follow_up_depth"] == 1
-    assert "Appointment scheduling in hospitals" in followup.query
-    assert question.research_plan["status"] == "research_in_progress"
     bibliography = next(
         row for row in question.research_plan["requirements"]
         if row["id"] == "bibliographic_discovery"
@@ -139,6 +134,15 @@ def test_partial_crossref_lead_creates_idempotent_narrow_follow_up(db):
     assert bibliography["status"] == "satisfied"
     assert bibliography["evidence_ids"] == [evidence.id]
     assert question.research_plan["unresolved_requirements"]
+    assert any(
+        row["decision"] == "deferred"
+        and row["reason"] in {
+            "no_unqueried_cleared_capability_remains",
+            "no_currently_cleared_capability_for_requirement",
+            "direct_customer_or_transaction_evidence_required",
+        }
+        for row in question.research_plan["gap_decisions"]
+    )
 
 
 def test_research_task_budget_is_enforced_across_all_requirements(db, monkeypatch):

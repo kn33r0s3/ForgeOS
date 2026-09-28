@@ -62,7 +62,10 @@ def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     assert payload["opportunity_id"] is None
     assert payload["research_question_id"] is not None
     assert payload["research_task_ids"]
-    assert payload["research_status"] == "research_in_progress"
+    assert payload["research_status"] == "research_terminal_unresolved"
+    assert payload["research_plan"]["terminal_reason"] == (
+        "one_or_more_requirements_remain_unresolved_under_current_source_clearances"
+    )
     assert len(payload["research_plan"]["requirements"]) == 5
     assert payload["research_plan"]["requirements"][0]["status"] == "satisfied"
     assert payload["research_sources"][0]["url"] == "https://doi.org/10.1234/repair.1"

@@ -75,10 +75,18 @@ def _state_for_requirement(
         return "blocked"
     if any(evidence_id in contradiction_evidence_ids for evidence_id in evidence_ids):
         return "contradicted"
-    if requirement.get("status") == "satisfied":
+    declared_state = requirement.get("epistemic_state")
+    if declared_state == "blocked":
+        return "blocked"
+    if (
+        requirement.get("status") == "satisfied"
+        and requirement.get("substantive_support_assessed") is True
+    ):
         return "supported"
     if any(evidence_id in citations_by_id for evidence_id in evidence_ids):
         return "partially_supported"
+    if declared_state in {"partially_supported", "unresolved"}:
+        return declared_state
     return "unresolved"
 
 
@@ -223,6 +231,8 @@ def synthesize_research_plan(
     overall_state = (
         "contradicted"
         if any(row["state"] == "contradicted" for row in synthesized)
+        else "supported"
+        if synthesized and all(row["state"] == "supported" for row in synthesized)
         else "partially_supported"
         if any(row["state"] in {"supported", "partially_supported"} for row in synthesized)
         else "blocked"
