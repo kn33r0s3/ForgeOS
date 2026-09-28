@@ -90,10 +90,18 @@ def test_uncleared_collector_families_are_not_active():
 def test_public_bolpatra_url_is_not_cleared_for_procurement_discovery(db):
     bolpatra_url = "https://bolpatra.gov.np/"
     ted_url = "https://api.ted.europa.eu/v3/notices/search"
+    contracts_finder_url = (
+        "https://www.contractsfinder.service.gov.uk/api/rest/2/search_notices/json"
+    )
 
     assert registry.clearance_for_url(bolpatra_url) is None
     assert registry.clearance_for_url(ted_url) is None
+    assert registry.clearance_for_url(contracts_finder_url) is None
     assert registry.capabilities_for_requirement("procurement_demand_discovery") == ()
+    assert not registry.collector_is_cleared(
+        "contracts_finder",
+        today=date(2026, 9, 29),
+    )
     with pytest.raises(PermissionError, match="not cleared"):
         registry.authorize_request(
             bolpatra_url,
@@ -107,6 +115,13 @@ def test_public_bolpatra_url_is_not_cleared_for_procurement_discovery(db):
             collector="ted_procurement",
             db=db,
             today=date(2026, 9, 28),
+        )
+    with pytest.raises(PermissionError, match="not cleared"):
+        registry.authorize_request(
+            contracts_finder_url,
+            collector="contracts_finder",
+            db=db,
+            today=date(2026, 9, 29),
         )
     assert db.query(models.SourceFetchGate).count() == 0
 

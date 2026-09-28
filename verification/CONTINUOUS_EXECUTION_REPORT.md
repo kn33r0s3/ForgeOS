@@ -632,3 +632,45 @@ VERIFICATION:
 - Frontend `npm run typecheck`: **passed**.
 - `git diff --check`: **passed after final documentation edits**.
 - Existing SQLite reopen tests for generic authorized demand/economic/prospect paths passed in these suites. Procurement-specific SQLite persistence is **not applicable**: the only TED request returned HTTP 400 and no procurement record was persisted.
+
+## 2026-09-29 RESULT CARD — UK Contracts Finder API review (not cleared)
+
+CURRENTLY IMPLEMENTED:
+No Contracts Finder source-clearance entry, collector, procurement-specific subsystem/table, route, record, or buyer entity was added. The official V2 search URL remains absent from the runtime registry. The source-clearance regression now proves an authorization attempt fails before reserving a persistent fetch slot. Existing Signal/EVENT/EVIDENCE, demand-understanding, capability-search, and economic-validation services are unchanged.
+
+SOURCE AUTHORIZATION / ACCESS:
+The official [Contracts Finder V2 API documentation](https://www.contractsfinder.service.gov.uk/apidocumentation/V2) recommends `POST /api/rest/2/search_notices/{MimeType}` over deprecated V1 and documents date/type/status criteria, `Size`, and notice-summary responses. The operation-specific docs do not state whether this operation is public or authenticated; general API docs say authentication applies to certain methods. An official request to the API Authentication documentation returned HTTP **403** with a rate-limit message. No retry was made. The official source `/robots.txt` URL returned **404**. No numeric provider request limit or explicit operation-level authorization was established.
+
+REUSE / FIELD BOUNDARY:
+The current [Contracts Finder terms](https://www.contractsfinder.service.gov.uk/Home/TermsAndConditions) page (last updated 20 September 2019) says most content is Crown copyright and published under [OGL v3](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/), and that most content is distributed through feeds for use by other websites/applications. OGL permits commercial reuse with attribution, but excludes personal data and third-party rights. The terms also make access subject to business need and prohibit crawling that impairs/disrupts the service or avoids restrictions. API summaries document notice identifiers, title/description, dates, status/type, buyer organization name, CPV and region; full-notice retrieval can include contact details. These facts establish a strong candidate and a reuse basis for OGL-covered fields, not blanket permission for every notice field or unlimited API use. Operation-level authentication, request limits and item/field-level OGL coverage remain unresolved, so the runtime decision is **NOT CLEARED**.
+
+REAL SOURCE ACCESS / DEMAND:
+No Contracts Finder procurement search or data query was made. Real notices retrieved: **0**. Procurement observation Signal/EVENT/EVIDENCE: **0**. Demand-understanding result: **none**. Need entities, capability match, or economic assessment from Contracts Finder: **none**.
+
+BUYER / PROSPECT:
+Organizations identified: **0**. Candidate/corroborated/canonical buyer entities: **0**. Potential/qualified prospects: **0**. No buyer relation, qualification handoff, or customer stage was created.
+
+OUTREACH:
+**NONE.** No buyer or other external party was contacted; no bid, form, message, email, call, or ACTION occurred.
+
+COMMERCIAL STATE:
+This review created no WTP evidence, interested party, customer, order, payment, or revenue. Production-wide commercial totals were not queried.
+
+TARGET ARCHITECTURE:
+After the exact source access contract is confirmed: authorized read-only V2 search with a persistent conservative rate gate and `Size=1`/bounded criteria → allowlisted non-personal notice summary → existing Signal plus `demand_observed` EVENT/EVIDENCE with source, query, timestamp and attribution → demand understanding (possible demand unless the actual notice supports more) → Need only when warranted → existing capability search → economic assessment that leaves WTP unknown → source-evidenced organization as candidate identity only → future qualification and separately authorized external action.
+
+FUTURE CAPABILITY / PRECISE BLOCKER:
+Obtain authoritative confirmation that V2 search is permitted for public read-only procurement-demand analysis and whether the endpoint requires authentication; establish its request/fair-use limit (or a confirmed conservative limit); and confirm OGL coverage for the selected NoticeIndex summary fields while excluding contact, personal and third-party data. Re-review the current terms after ordinary source eligibility. The next source candidate is the official Find a Tender service: its current terms independently describe OGL reuse for most content and external feeds, but its public machine-readable retrieval contract, authentication and rate policy were not verified here. Neither endpoint is currently executable by ForgeOS.
+
+TEST RESULTS:
+- Focused source-clearance tests, including Contracts Finder fail-closed/no-reservation check: **8 passed**.
+- Full backend suite: **487 passed, 2 skipped, 33 warnings**.
+- Frontend `npm run typecheck`: **passed**.
+- Procurement collector tests and SQLite reopen: **not applicable; no collector or procurement record was authorized/created**. Existing generic source-clearance, observation, demand, economic, identity and persistence regressions passed in the full suite.
+- Final `git diff --check` and worktree/diff inspection: see final verification below.
+
+FINAL WORKTREE VERIFICATION:
+- `git diff --check`: **passed** after all documentation and test edits.
+- Final modified project files: `STATUS.md`, `backend/tests/test_source_clearance_registry.py`, `docs/CAPABILITY_QUEUE.md`, `docs/PUBLIC_SOURCES.md`, and this report.
+- `storage/scheduler.log` also remains modified as an operational worktree file; it was not edited or reverted.
+- Final diff review confirmed no runtime Contracts Finder clearance/collector, no procurement record, and no changes to the six-primitive or economic-validation implementation.

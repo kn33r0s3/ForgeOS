@@ -6,6 +6,7 @@ are reviewed again at collection time.
 
 | Source | Start URL | Public need it may show | robots.txt | Terms | Opened |
 |---|---|---|---|---|---|
+| UK Contracts Finder API — candidate, NOT CLEARED for ForgeOS ingestion | https://www.contractsfinder.service.gov.uk/api/rest/2/search_notices/json | Published UK contract opportunities and buyer-organization summaries | `https://www.contractsfinder.service.gov.uk/robots.txt` returned `404`; this is not a robots grant or access authorization | Contracts Finder terms say most content is under OGL and available through feeds for other websites/apps. OGL permits commercial reuse with attribution but excludes personal data and third-party rights. API docs define a V2 search operation, but endpoint-specific authentication and numeric/fair-use rate limits were not established. A later documentation request returned HTTP 403 with a rate-limit message; no retry or procurement query was made | 2026-09-29 |
 | TED Search API — candidate, NOT CLEARED for ForgeOS ingestion | https://api.ted.europa.eu/v3/notices/search | Published procurement notices; official documentation says analysis/reuse is supported | `https://api.ted.europa.eu/robots.txt` returned `404`; the separate `https://ted.europa.eu/robots.txt` disallows dynamic browser search query URLs but allows `/simap/xml-bulk-download`. No API robots prohibition was found; this does not settle field-level permission | Official API docs state published notices are available anonymously for analysis/reuse and describe commercial buyer/vendor services, but no machine-readable field schema, numerical rate cap, or blanket license for the selected notice fields was established. One bounded API request returned HTTP 400 for unsupported `fields` values. No results were returned or persisted | 2026-09-28 |
 | Nepal Public Procurement Monitoring Office / Bolpatra | https://bolpatra.gov.np/egp/ | Official e-GP procurement notices and tenders | `https://bolpatra.gov.np/robots.txt` and `/egp/robots.txt` returned maintenance-page HTML, not directives. PPMO's separate `https://www.ppmo.gov.np/robots.txt` states `Crawl-delay: 10` for that host only | No applicable automation/API/reuse terms or license found; procurement collection is NOT CLEARED | Opened 2026-09-25; rechecked 2026-09-28 |
 | Kathmandu Post | https://kathmandupost.com/ | Public notices or tender reporting | `403`; not cleared | The landing page returned `403`; terms were not cleared | 2026-09-25 |
@@ -260,3 +261,64 @@ license eligibility condition. Exact SDMX robots and endpoint terms were not
 established, and no labor observations were retrieved or persisted. ILOSTAT
 remains blocked pending dataset-specific publication/license evidence and
 permission review.
+
+### UK Contracts Finder procurement notices — candidate review, NOT CLEARED (2026-09-29)
+
+Official [Contracts Finder API documentation](https://www.contractsfinder.service.gov.uk/apidocumentation/V2)
+identifies Version 2 as the recommended replacement for deprecated Version 1
+methods. It documents a read/search operation,
+`POST /api/rest/2/search_notices/{MimeType}`, with date, type, status, keyword,
+and other criteria plus a result `Size`; the response is a collection of notice
+summaries. The documented Version 2 `NoticeIndex` summary contains notice ID,
+title, description, publication/deadline dates, type/status, buyer
+organization name, CPV, and region fields. The separate full-notice retrieval
+operation can return contact details and is out of scope; no full notice or
+contact data was requested.
+
+The official [service terms](https://www.contractsfinder.service.gov.uk/Home/TermsAndConditions)
+say most Contracts Finder content is Crown copyright and published under the
+[Open Government Licence v3](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/),
+that most content is made available through feeds for other websites and
+applications, and that OGL-covered material may be reproduced subject to its
+conditions. The terms page reports a last-updated date of 20 September 2019.
+OGL permits commercial reuse with attribution, but excludes
+personal data, third-party rights the provider cannot license, and specified
+marks. The terms require lawful use and state that service access is subject
+to business need; they prohibit crawling that impairs or disrupts the service
+and avoiding service restrictions. No numeric request quota or concrete
+retention period was published in the material reviewed. This is meaningful
+reuse permission for OGL-covered content, not blanket clearance for every
+field in every notice or unlimited automated access.
+
+**Decision: NOT CLEARED for runtime collection.** The API's general
+documentation says authentication is required for some parts of the Web API,
+but the V2 search-method documentation reviewed does not state whether that
+specific operation is public or authenticated. A request to the official API
+authentication documentation returned HTTP 403 with the page's message that
+the request rate limit may have been exceeded. No retry was made, no
+`Retry-After` or numerical limit was established, and no procurement
+search/query was sent. The source's `robots.txt` URL returned 404; that
+response grants no collection permission. The allowed source fields and OGL
+basis therefore cannot yet be bound to a confirmed operational access path
+and provider rate policy. The runtime source registry has no Contracts Finder
+entry or `procurement_demand_discovery` capability.
+
+Do not collect `ContactDetails`, personal names/contact channels, full-notice
+records, or any field marked as third-party/non-OGL. Before clearance, obtain
+authoritative confirmation of V2 search endpoint authentication/public access
+and applicable request limits (or a documented conservative use policy), and
+confirm that the chosen summary fields/content are OGL-covered or otherwise
+reusable. Then re-review the current terms and bind only a read-only search,
+small `Size`, bounded date/status/type criteria, UK scope, one request per
+conservative interval, attribution, data minimization, and a review/expiry
+date. No source data, buyer identity, or procurement demand was retrieved or
+persisted in this review.
+
+**Next source candidate:** the official [Find a Tender service](https://www.find-tender.service.gov.uk/)
+is a separate current procurement publication service. Its own current terms
+also state OGL coverage for most content and feeds for external websites/apps,
+and its service page says it carries new above- and below-threshold notices
+from 24 February 2025 (with a Scotland exception for below-threshold notices).
+It is a candidate for the next machine-interface review only: this review did
+not establish an operational public API/OCDS retrieval contract, endpoint
+authentication, or rate policy for it, and no Find a Tender notice was queried.
