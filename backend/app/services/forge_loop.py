@@ -111,6 +111,7 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         network_connections,
         network_substrate_adapter,
         public_services_substrate_adapter,
+        research_task_event_substrate_adapter,
         world_graph,
     )
 
@@ -240,6 +241,8 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         "evidence_relationships_unresolved": 0,
         "research_question_relations_projected": 0,
         "research_question_relations_unresolved": 0,
+        "research_task_events_projected": 0,
+        "research_task_events_unresolved": 0,
     }
     try:
         intelligence_projection = world_graph.sync_intelligence_path(db, limit=100)
@@ -258,6 +261,9 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         )
         research_question_relation_projection = (
             research_question_relation_substrate_adapter.sync_research_question_sources(db, limit=250)
+        )
+        research_task_event_projection = (
+            research_task_event_substrate_adapter.sync_research_task_events(db, limit=250)
         )
         substrate_summary["entities_created"] = (
             intelligence_projection["entities_created"]
@@ -311,6 +317,9 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         substrate_summary["relations_created"] += research_question_relation_projection["relations_created"]
         substrate_summary["research_question_relations_projected"] = research_question_relation_projection["relations_created"]
         substrate_summary["research_question_relations_unresolved"] = research_question_relation_projection["unresolved_links"]
+        substrate_summary["research_task_events_projected"] = research_task_event_projection["events_projected"]
+        substrate_summary["research_task_events_unresolved"] = research_task_event_projection["unresolved_events"]
+        substrate_summary["events_created"] += research_task_event_projection["events_projected"]
         market_signal_projection = market_signal_substrate_adapter.sync_market_signal_signals(db, limit=250)
         substrate_summary["market_signal_signals_seen"] = market_signal_projection["signals_seen"]
         substrate_summary["market_signal_entities_created"] = market_signal_projection["entities_created"]
@@ -520,6 +529,8 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         "substrate_evidence_relationships_unresolved": substrate_summary["evidence_relationships_unresolved"],
         "substrate_research_question_relations_projected": substrate_summary["research_question_relations_projected"],
         "substrate_research_question_relations_unresolved": substrate_summary["research_question_relations_unresolved"],
+        "substrate_research_task_events_projected": substrate_summary["research_task_events_projected"],
+        "substrate_research_task_events_unresolved": substrate_summary["research_task_events_unresolved"],
         "beliefs_updated": beliefs_updated,
         "predictions_created": predictions_created,
         "predictions_resolved": len(resolved_predictions),
