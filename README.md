@@ -15,6 +15,17 @@ Use a separate database for synthetic source inputs, plus SANDBOX labels downstr
 **Continuously improving intelligence + execution system.**  
 Grounded in reality. Offline-capable. $0 by default.
 
+## Engineering invariant
+
+**Drive owner dependency to zero**: prioritize fewer owner actions per verified
+real economic outcome, not endpoint count or internal activity. Every change
+must state the owner action it removes, what remains, and the next evidenced
+dependency. Preserve authorization, privacy, and evidence boundaries; see
+[AGENTS.md](AGENTS.md) for the project-level rule. Report
+`OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` as **NOT MEASURABLE** until a real
+transaction is verified. A successful intelligence cycle or an allowed policy
+decision is not itself an economic outcome or autonomous execution.
+
 ---
 
 ## What ForgeOS is

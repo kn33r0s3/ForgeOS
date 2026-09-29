@@ -1,3 +1,26 @@
+# FORGEOS TOP RULE — DRIVE OWNER DEPENDENCY TO ZERO
+
+This is ForgeOS's first substantive project rule: prefer fewer owner actions per
+real economic outcome, while keeping authorization, evidence, privacy, legal,
+and platform boundaries intact. Do not mistake more infrastructure, synthetic
+activity, or a policy `ALLOW` for economic autonomy.
+
+Before each change, identify from code or runtime evidence: (1) the routine
+owner action still required, (2) the action this change removes, (3) what
+remains and what permission or infrastructure blocks it, and (4) the next
+removable dependency. Record the current blocker and verification in the
+existing `docs/CAPABILITY_QUEUE.md` ledger. Do not introduce another ledger or
+canonical domain primitive.
+
+Measure `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` only from verified real
+transactions. If there are no such transactions, report the metric as
+**NOT MEASURABLE**, never as zero. A seam is not autonomous until its production
+path executes under explicit standing authorization without routine owner
+interaction. Standing authorization may remove repeated approvals only within
+its recorded action, purpose, scope, spend, rate, privacy, counterparty,
+exclusion, expiry, and evidence limits; it never supplies missing external
+permission or execution capability.
+
 # App Builder Workspace
 
 **The single source of truth** for the App Builder sandbox contract. You are

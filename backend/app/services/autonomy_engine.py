@@ -51,6 +51,12 @@ execution_engine.py), a completely separate question. Policy answers
 actually do this itself." Conflating the two would let an autonomously
 AUTHORIZED action look like an autonomously EXECUTED one, which is
 exactly the false claim this whole engine is built to prevent.
+
+FORGEOS TOP RULE: drive owner dependency to zero. Reduce repeated
+approval only when the active policy explicitly covers the action and a
+real execution adapter can perform it. An ALLOW verdict alone never
+removes an owner action, grants external permission, or proves an
+economic outcome.
 """
 
 from datetime import datetime, timezone

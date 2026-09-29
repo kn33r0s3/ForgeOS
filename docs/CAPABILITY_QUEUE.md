@@ -6,6 +6,14 @@ before implementation, and record verification before marking a claim DONE.
 Claims coordinate contributors; database uniqueness and idempotency remain the
 enforcement layer when claims overlap.
 
+## [CLAIMED] Owner-dependency invariant and production blocker snapshot
+
+- Agent: Copilot, user-directed current task
+- Claimed at: 2026-09-29T07:51:00Z
+- Scope: make “DRIVE OWNER DEPENDENCY TO ZERO” the first ForgeOS project rule, reference it in the existing agent instructions, README, and runtime autonomy policy, and refresh the existing prospect-discovery dependency record with current production evidence. Do not add a new domain primitive, authorize an uncleared source, or claim economic autonomy.
+- Acceptance: rank the current bottleneck from code and live production evidence; record why no safe in-repository automation removes it yet; document `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` as unmeasurable when there are no verified real transactions; run repository verification, push, verify CI, and confirm the production deployment.
+- Status: CLAIMED.
+
 ## [CLAIMED] Wave 1 — universal substrate hardening and intelligence-path adapter
 
 - Agent: Codex, current task (serial implementation)
@@ -334,10 +342,72 @@ enforcement layer when claims overlap.
 
 ## [FUTURE CAPABILITY — NOT IMPLEMENTED] Authorized prospect discovery and response path
 
+### Owner-dependency ranking — production snapshot 2026-09-29
+
+**Rank 1: acquiring a legitimate real need/opportunity without the owner
+supplying it.** This is the first blocked seam on the production path to money:
+production currently exposes 0 opportunities, 0 products, and a revenue
+breakdown of 0 potential, 0 expected, and 0 realized revenue. `/api/health`
+reports PostgreSQL available and ready, and `/api/forge/runtime` reports a
+completed cycle, 10 signals, and 4 outcome rows; cycle execution and row
+counts are not commercial validation. The public Feed contains 11 items; the
+inspected belief and pattern describe Crossref scholarly metadata and are
+explicitly uncorroborated, not buyer demand.
+
+The code confirms why this dependency remains:
+
+- `source_clearance_registry` contains five exact-purpose entries, none
+  supporting `authorized_prospect_discovery`; the readiness test asserts that
+  this yields no eligible source, no external request, and no candidate.
+- `collector_runner` explicitly excludes GitHub, Reddit, RSS, news, and arXiv
+  from standing collection until cleared. The separate GitHub bounty module
+  has a public-search helper, but no runtime caller for its fetch/ingest
+  functions; its claim mutation requires `GITHUB_TOKEN`.
+- `/api/signals/public-request` can receive a request from an external person,
+  and the demand worker can classify it as `possible_demand`; neither discovers
+  or attracts that person. Research collection and the public Feed do not
+  establish customer pain, buyer interest, or willingness to pay.
+
+**Exact owner dependency:** provide a genuine inbound need through the existing
+intake, or obtain/review source-specific authority for a bounded source that
+can reveal real commercial demand. Forge cannot remove this dependency merely
+by querying a publicly reachable endpoint. Existing automated work includes
+the intelligence cycle, bounded demand understanding after submission, source
+clearance checks, capability search, and evidence-gated economic assessment.
+
+**Why no economic implementation is made in this task:** the source registry
+has no applicable authorization, and no genuine opportunity exists to advance.
+Adding a collector or enabling the uncleared GitHub helper would bypass the
+existing source-authorization boundary; fabricating a demand record would not
+reduce owner actions on a real transaction. The external unblock is a current,
+documented source authorization and bounded permitted operation/fields. Once
+that exists, a source-specific adapter can be assessed against existing
+Signal/Evidence/Opportunity machinery.
+
+**Other observed downstream dependencies (not rankable before a real
+opportunity/transaction exists):**
+
+| Stage | Existing path and verified boundary | Remaining routine interaction or prerequisite |
+|---|---|---|
+| Understand / capability reuse | The demand worker and existing capability search run after intake; the economics service records unresolved evidence rather than inferring it. | A real requester must provide missing facts; a consented, configured clarification channel is not evidenced. |
+| Economic test / prospect qualification | Need economics can identify a `testable` hypothesis; prospect readiness is a read-only source audit and fails closed with no eligible prospect source. | Real cost/price/WTP evidence and source authorization are required before an external test or buyer discovery. |
+| Offer | `POST /products/offer-drafts` creates an existing Product with `PENDING_REVIEW`; the brief leaves delivery, cost, price, and value unresolved. | Owner review/approval and actual capability/customer-specific scope remain required; draft creation does not send an offer. |
+| Authorized action / communication | `AutonomyPolicy` evaluates boundaries; `execution_engine` maps external work to integrations or owner action. Existing SMTP and GitHub adapters report provider execution, not a buyer response. | A bounded standing policy plus an authorized, configured adapter and permitted recipient/channel are prerequisites. GitHub mutation fails closed without its token. |
+| Fulfillment / response | The offer brief explicitly reserves customer-facing delivery for manual review; actual responses enter through the existing outcome-recording path, whose default source is `manual`. | A real fulfillment capability and external response evidence are not demonstrated in production. |
+| Payment / outcome / learning | eSewa and Khalti routes support provider checkout/lookup and verification; outcome learning runs from recorded outcomes. | Production variable-name inspection found no eSewa/Khalti credential names; no payment/transaction was observed. Recording a response/outcome still requires an external event or owner-entered evidence. |
+
+Production API reads on 2026-09-29 returned `/api/opportunities` = `[]`,
+`/api/products` = `[]`, and revenue breakdown
+`{potential_30d: 0, potential_90d: 0, expected: 0, realized: 0}`. Therefore
+`OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE** (there are
+zero verified real transactions in the observed production state); it is not
+zero. No real buyer, response, fulfillment, payment, or revenue is established
+by the four runtime outcome rows.
+
 - **CURRENTLY IMPLEMENTED:** the Opportunity-scoped readiness endpoint requires the latest economic assessment to be `testable`, records a bounded criteria/source-registry audit as existing Opportunity ENTITY/EVENT/EVIDENCE, and retains the existing Opportunity→Need RELATION. It is idempotent, creates no candidate or prospect, and records unresolved qualification evidence while withholding outreach eligibility.
 - **Repository evidence for the source block:** the runtime registry has five entries (GovInfo, Crossref, World Bank, GDELT, OpenAlex); GovInfo's review expired 2026-09-25 and none includes the exact `authorized_prospect_discovery` requirement. Their authorized operations/fields are exact public-rule retrieval, scholarly metadata, country indicators, media article metadata, and scholarly metadata/abstracts—not business/client identification or sales prospecting. GDELT specifically bars commercial-demand inference. Additional public pages listed in `docs/PUBLIC_SOURCES.md` lack applicable terms/clearance (Bolpatra terms were not established); they are not source adapters. Provider/ServiceListing public visibility is directory publication, not prospecting/contact consent. No provider contacts were read.
 - **REAL DISCOVERY:** none. The bounded registry check made no external request and found zero eligible entries; no real candidate or potential prospect was created. The result does not assert no prospects exist outside this bounded review.
-- **OUTREACH / COMMERCIAL STATE:** outreach **NONE**; this milestone created no ACTION, response, interested party, buyer/customer, WTP evidence, order, payment, or revenue. Production-wide commercial counts were not queried.
+- **OUTREACH / COMMERCIAL STATE:** outreach **NONE**; this milestone created no ACTION, response, interested party, buyer/customer, WTP evidence, order, payment, or revenue. Production counts are recorded above; all verification intake remains internal/test data, not market evidence.
 - **TARGET ARCHITECTURE:** `testable Opportunity → explicit source authorization → bounded read-only query → candidate ENTITY + discovery EVENT/EVIDENCE + relevance RELATION → potential only with relevance evidence → later qualification evidence → separately authorized outreach/response`. Do not add a CRM, infer stage promotions, or execute an ACTION because an Opportunity exists.
 - **FUTURE CAPABILITY — precise blocker:** a source-specific, current terms/privacy/authorization review that explicitly permits bounded business/client discovery for an economic hypothesis, plus an adapter constrained to authorized fields and query/rate boundaries. Current research/macro/news sources and provider directories do not meet that requirement. Safest next step: select one source and verify its applicable written authorization before implementing an adapter; do not query a merely accessible source or contact anyone.
 
