@@ -119,6 +119,25 @@ def test_scheduler_skips_overlapping_run(dbcopy, tmp_path):
     assert s._running.is_set()  # still marked (unchanged by the skipped tick)
 
 
+def test_scheduler_log_uses_runtime_logger_on_vercel(monkeypatch, tmp_path, caplog):
+    caplog.set_level("INFO", logger="forgeos.backup")
+    from app.services import backup
+
+    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.setattr(backup, "SCHEDULER_LOG", tmp_path / "scheduler.log")
+
+    backup.append_scheduler_log(
+        "cycle_run",
+        "ok",
+        {"forge_cycle": {"cycle_id": 42}},
+        120,
+    )
+
+    assert "Scheduler event:" in caplog.text
+    assert '"detail": 42' in caplog.text
+    assert not (tmp_path / "scheduler.log").exists()
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------

@@ -3,6 +3,7 @@
 import gzip
 import json
 import logging
+import os
 import shutil
 import sqlite3
 from datetime import datetime, timezone
@@ -121,6 +122,9 @@ def archive_legacy_snapshots(keep: int = 2) -> dict[str, list[str]]:
 def append_scheduler_log(event: str, status: str, record: dict, duration_ms: int) -> None:
     line = {"ts": datetime.now(timezone.utc).isoformat(), "event": event, "status": status,
             "duration_ms": duration_ms, "detail": record.get("forge_cycle", {}).get("cycle_id")}
+    if os.getenv("VERCEL"):
+        log.info("Scheduler event: %s", json.dumps(line, default=str))
+        return
     try:
         SCHEDULER_LOG.parent.mkdir(parents=True, exist_ok=True)
         with SCHEDULER_LOG.open("a") as f:
