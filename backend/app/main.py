@@ -179,13 +179,20 @@ for _router in (
 
 
 def _alias_app_routes_under_api() -> None:
+    """Mirror every root route under /api for the Vercel service ingress.
+
+    Only `/api/*` reaches the Python service on Vercel, so the machine-readable
+    contract must answer there too. The interactive docs UIs are deliberately
+    left unaliased: their HTML points at `/openapi.json`, which the frontend
+    rewrite answers with the SPA, so aliasing them would ship a broken page.
+    """
     for route in list(app.routes):
         path = getattr(route, "path", None)
         endpoint = getattr(route, "endpoint", None)
         methods = getattr(route, "methods", None)
         if not path or endpoint is None or not path.startswith("/") or path.startswith("/api"):
             continue
-        if path in {"/openapi.json", "/docs", "/docs/oauth2-redirect", "/redoc"}:
+        if path in {"/docs", "/docs/oauth2-redirect", "/redoc"}:
             continue
         alias = "/api" if path == "/" else f"/api{path}"
         app.add_api_route(

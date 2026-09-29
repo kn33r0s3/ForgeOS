@@ -26,9 +26,13 @@ Production checks at this evidence cut:
   production health evidence); local defaults remain SQLite.
 - Vercel plan: Hobby. `vercel.json` has one daily cron at `0 0 * * *` for
   `/api/scheduled/cycle`. No deployed sub-daily `WorkerTask` poller was found.
-- Root `/openapi.json` returned HTTP 500 during this inspection, while
-  `/api/openapi.json` returned 404. Route inventory below is therefore derived
-  from the registered source routers, not live OpenAPI.
+- Production `/openapi.json` (re-checked 2026-09-30) answers the frontend SPA
+  HTML rather than the schema, and `/api/openapi.json` answered 404, because
+  only `/api/*` reaches the Python service on Vercel. The document itself
+  generates correctly, and the `/api` route mirror now covers the schema, so the
+  contract is readable at `/openapi.json` locally and at `/api/openapi.json`
+  after the next deploy. The route inventory below is cross-checkable against
+  that live document.
 - The last recorded `/api/public/feed` check was HTTP 200 with 11 items. It
   should be checked again before using the feed as a release gate.
 - Local OCI CLI/config/credentials and Oracle-related environment names were
