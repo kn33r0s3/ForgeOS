@@ -14,6 +14,7 @@ from app.models import WorkerTask, utcnow
 from app.services import collector_runner, forge_loop, opportunity_engine
 from app.services.revenue_miner import mine_revenue_proposals
 from app.services import demand_understanding
+from app.services.cognitive_worker import cognitive_handler
 
 
 def process_worker_task_by_id(
@@ -184,6 +185,7 @@ HANDLERS: Dict[str, Callable[[Session, WorkerTask], dict]] = {
     "evolution": evolution_handler,
     "revenue_miner": revenue_miner_handler,
     "demand_understanding": demand_understanding_handler,
+    "cognitive": cognitive_handler,
 }
 
 

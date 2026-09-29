@@ -6,6 +6,17 @@ before implementation, and record verification before marking a claim DONE.
 Claims coordinate contributors; database uniqueness and idempotency remain the
 enforcement layer when claims overlap.
 
+## [DONE WITH LIMITATION] Bounded Hami Cognitive Worker
+
+- Agent: Copilot, current user-directed task
+- Claimed at: 2026-09-29T20:40:00+05:45
+- Scope: add a replaceable proposal-only cognitive provider seam with a deterministic mock; dispatch bounded tasks through existing `WorkerTask` and `ResearchTask` records; validate proposal shape and evidence references; record provider provenance in the existing research and substrate event primitives. Do not create evidence, actions, new primitives/tables, execute collectors, invoke a paid provider, or change authorization boundaries.
+- Verification: focused cognitive/worker/research/substrate suite → **35 passed**; Python `compileall` passed; workspace Problems reports no diagnostics for changed Python files; `git diff --check` passed. The test run made no external provider calls.
+- Implementation: `COGNITIVE_PROVIDER=mock` is the default. A replaceable `CognitiveProvider` protocol and deterministic mock are wired through `WorkerTask`; `create_cognitive_task` reuses tasks by idempotency key and references an existing `ResearchTask`. Context is bounded to a 2,000-character objective and at most 10 persisted evidence IDs; outputs are limited to 3 validated `research_follow_up` proposals with `execution_authorized=false`. Successful proposals record hashes and provider mode in an idempotent `WorldEvent` and the existing `ResearchTaskEvent`; they do not mutate research evidence/status or create an `Action`.
+- Owner dependency: no real-transaction owner action is removed and no customer/revenue evidence is created. The code only replaces manual drafting of an internal follow-up proposal when explicitly queued. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+- Remaining blocker: no Gemini adapter, `GEMINI_API_KEY` setting, or Gemini client dependency exists in this repository; the Gemini provider selector therefore fails closed. Attachment archive path inspection found no Cognitive Worker specification file; implementation follows the explicit request scope and repository contracts. No provider call was authorized or attempted.
+- Next removable dependency: only after explicit owner authorization for provider/data handling and a credential/config decision, implement and verify an external provider adapter. No authorization, credential, or paid inference was assumed.
+
 ## [CLAIMED] Forge Bot bootstrap reconciliation and repository data hygiene
 
 - Agent: Copilot, current user-directed task

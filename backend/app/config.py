@@ -54,6 +54,10 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
+    # The proposal-only cognitive worker is offline by default. External
+    # providers require a separate adapter and explicit configuration.
+    COGNITIVE_PROVIDER: str = os.getenv("COGNITIVE_PROVIDER", "mock")
+
     # --- Nepal payment providers (credentials are environment-only) ---
     ESEWA_MERCHANT_CODE: str = os.getenv("ESEWA_MERCHANT_CODE", "")
     ESEWA_SECRET_KEY: str = os.getenv("ESEWA_SECRET_KEY", "")
