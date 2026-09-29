@@ -17,8 +17,15 @@ export function PageHero({
   className?: string;
 }) {
   return (
-    <section className={cn("border-b border-line py-16 sm:py-20 lg:py-24", className)}>
-      <Container className="max-w-3xl">
+    <section
+      className={cn(
+        "relative isolate overflow-hidden border-b border-line py-16 sm:py-20 lg:py-24",
+        className,
+      )}
+    >
+      <div className="hero-glow -z-10" aria-hidden="true" />
+      <div className="hero-grain -z-10" aria-hidden="true" />
+      <Container className="fade-in max-w-3xl">
         <Eyebrow>{eyebrow}</Eyebrow>
         <h1 className="font-display text-display tracking-tight text-ink">{title}</h1>
         {lede ? (

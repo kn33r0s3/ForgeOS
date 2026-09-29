@@ -17,7 +17,8 @@ const checks = [
 
 function RequestPage() {
   return (
-    <main className="py-16 sm:py-20 lg:py-24">
+    <main className="relative isolate overflow-hidden py-16 sm:py-20 lg:py-24">
+      <div className="hero-glow -z-10" aria-hidden="true" />
       <Container className="grid gap-12 lg:grid-cols-2 lg:gap-20">
         <div>
           <Eyebrow>Start a conversation</Eyebrow>
