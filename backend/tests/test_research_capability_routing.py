@@ -30,6 +30,8 @@ def test_planner_discovers_and_persists_existing_cleared_capability(db):
     candidate = requirement["selected_capability"]
 
     assert candidate["source"] == "crossref"
+    assert requirement["capability_route"] == "existing_untested_capability"
+    assert requirement["external_discovery_status"] == "not_required"
     assert candidate["registry_id"] == "crossref-public-works-metadata"
     assert candidate["capability_state"] == "untested"
     assert candidate["truth_state"] == "hypothesized"
@@ -101,6 +103,77 @@ def test_planner_discovers_and_persists_existing_cleared_capability(db):
         )
 
 
+def test_unserved_requirement_records_discovery_block_without_fake_candidates(db):
+    question = models.ResearchQuestion(
+        question=(
+            "What evidence measures prevalence of a software workflow problem in Nepal?"
+        )
+    )
+    db.add(question)
+    db.commit()
+
+    plan = research_planner.build_research_plan(db, question)
+    requirement = next(
+        row for row in plan["requirements"] if row["id"] == "problem_incidence"
+    )
+
+    assert requirement["capable_sources"] == []
+    assert requirement["capability_route"] == "external_discovery_required"
+    assert requirement["external_discovery_status"] == "blocked_by_authorization"
+    assert (
+        requirement["external_discovery_blocker"]
+        == "no_current_source_clearance_for_capability_catalog_discovery"
+    )
+    gap = db.get(models.ForgeCapability, requirement["capability_gap_id"])
+    gap_data = json.loads(gap.attributes)["capability_discovery"]
+    discovery = gap_data["external_discovery"]
+    assert discovery["source_registry_ids_eligible"] == []
+    assert discovery["external_catalogs_queried"] == []
+    assert discovery["external_requests_made"] == 0
+    assert discovery["candidate_count"] == 0
+    assert db.query(models.ResearchTask).filter_by(question_id=question.id).count() == 0
+    assert db.query(models.ForgeCapability).filter(
+        models.ForgeCapability.name.like("research-candidate-%")
+    ).count() == 0
+
+    lifecycle = [
+        event
+        for event in db.query(models.WorldEvent).filter_by(
+            source="research_capability_discovery",
+            event_type="state_changed",
+        )
+        if json.loads(event.payload).get("research_question_id") == question.id
+    ]
+    assert {
+        json.loads(event.payload)["lifecycle_event"] for event in lifecycle
+    } == {"capability_discovery_requested", "capability_discovery_blocked"}
+
+    gap_evidence = db.query(models.Evidence).filter_by(
+        idempotency_key=(
+            f"capability-gap-evidence:{gap_data['idempotency_key']}"
+        )
+    ).one()
+    evidence_provenance = json.loads(gap_evidence.provenance)
+    assert gap_evidence.support_level == "possible"
+    assert evidence_provenance["external_discovery"]["external_requests_made"] == 0
+
+    repeated_plan = research_planner.build_research_plan(db, question)
+    repeated_requirement = next(
+        row for row in repeated_plan["requirements"] if row["id"] == "problem_incidence"
+    )
+    assert repeated_requirement["capability_gap_id"] == gap.id
+    assert db.query(models.WorldEvent).filter_by(
+        source="research_capability_discovery",
+        event_type="state_changed",
+    ).count() == len(lifecycle)
+    assert db.query(models.Evidence).filter_by(
+        idempotency_key=f"capability-gap-evidence:{gap_data['idempotency_key']}"
+    ).count() == 1
+    assert db.query(models.Action).count() == 0
+    assert db.query(models.Customer).count() == 0
+    assert db.query(models.Outcome).count() == 0
+
+
 def test_source_route_ranking_reuses_measured_successful_capability(
     db, monkeypatch
 ):
@@ -159,6 +232,9 @@ def test_source_route_ranking_reuses_measured_successful_capability(
     assert all(item["authorization_status"].endswith("required") for item in ranked)
     assert all(item["cost"] == "unknown" for item in ranked)
     assert all(item["capability_id"] for item in ranked)
+    assert capability_discovery.route_assessment(ranked, None)[
+        "capability_route"
+    ] == "existing_tested_capability"
 
 
 def test_failed_capability_execution_is_projected_without_claiming_success(db):
@@ -249,6 +325,17 @@ def test_failed_capability_execution_is_projected_without_claiming_success(db):
     assert payload["observed_execution"]["failure_kind"] == "network_error"
     assert payload["observed_execution"]["result_count"] == 0
     assert payload["observed_execution"]["cost"] is None
+    failed_route = next(
+        item
+        for item in capability_discovery.ranked_source_capabilities(
+            db, "bibliographic_discovery"
+        )
+        if item["source"] == "crossref"
+    )
+    assert failed_route["observed_usage"]["failures"] == 1
+    assert capability_discovery.route_assessment([failed_route], None)[
+        "capability_route"
+    ] == "existing_tested_capability"
     assert db.query(models.Opportunity).count() == 0
     assert db.query(models.Action).count() == 0
     assert db.query(models.Outcome).count() == 0

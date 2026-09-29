@@ -691,6 +691,9 @@ def build_research_plan(db: Session, question: models.ResearchQuestion) -> dict[
         gap = None
         if not capabilities:
             gap = capability_discovery.ensure_capability_gap(db, question, spec)
+        route_assessment = capability_discovery.route_assessment(
+            capabilities, gap
+        )
         candidate_sources = [
             {
                 "source": capability["source"],
@@ -734,6 +737,7 @@ def build_research_plan(db: Session, question: models.ResearchQuestion) -> dict[
                 "candidate_sources": candidate_sources,
                 "candidate_capabilities": capabilities,
                 "selected_capability": capabilities[0] if capabilities else None,
+                **route_assessment,
                 "unresolved_dimensions": list(_OPENALEX_UNRESOLVED_DIMENSIONS),
                 **({"capability_gap_id": gap.id} if gap is not None else {}),
                 "status": "pending" if capabilities else "terminal_unresolved",
@@ -1718,6 +1722,19 @@ def _refresh_plan_from_tasks(
         )
         active_capabilities = capability_discovery.ranked_source_capabilities(
             db, capability_requirement_id
+        )
+        gap = (
+            db.get(models.ForgeCapability, requirement.get("capability_gap_id"))
+            if requirement.get("capability_gap_id") is not None
+            else None
+        )
+        if not active_capabilities and gap is None:
+            gap = capability_discovery.ensure_capability_gap(
+                db, question, requirement
+            )
+            requirement["capability_gap_id"] = gap.id
+        requirement.update(
+            capability_discovery.route_assessment(active_capabilities, gap)
         )
         requirement["capable_sources"] = [
             {

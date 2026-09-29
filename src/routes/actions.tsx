@@ -21,7 +21,7 @@ function ActionsPage() {
     let active = true;
     setLoading(true);
     setError(null);
-    void loadRuntimeSnapshot()
+    void loadRuntimeSnapshot({ fresh: reloadVersion > 0 })
       .then((result) => {
         if (!active) return;
         setRuntime(result);

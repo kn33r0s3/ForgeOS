@@ -51,7 +51,7 @@ function ProvidersPage() {
   useEffect(() => {
     let active = true;
     setProviderLoadState("loading");
-    void loadProviders().then((loaded) => {
+    void loadProviders(undefined, { fresh: reloadVersion > 0 }).then((loaded) => {
       if (!active) {
         return;
       }

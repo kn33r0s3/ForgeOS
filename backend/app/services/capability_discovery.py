@@ -140,6 +140,43 @@ def _scope_for(question: models.ResearchQuestion, requirement: dict[str, Any]) -
     }
 
 
+def route_assessment(
+    capabilities: list[dict[str, Any]],
+    gap: models.ForgeCapability | None,
+) -> dict[str, Any]:
+    """Describe whether an existing route is usable or discovery is blocked."""
+    if capabilities:
+        selected = capabilities[0]
+        return {
+            "capability_route": (
+                "existing_tested_capability"
+                if selected.get("capability_state") == "tested"
+                else "existing_untested_capability"
+            ),
+            "external_discovery_status": "not_required",
+            "external_discovery_blocker": None,
+        }
+
+    data = _discovery_data(gap) if gap is not None else {}
+    discovery = data.get("external_discovery")
+    discovery = discovery if isinstance(discovery, dict) else {}
+    if data.get("why_insufficient") == "direct_customer_or_transaction_evidence_required":
+        return {
+            "capability_route": "owner_evidence_required",
+            "external_discovery_status": "not_applicable",
+            "external_discovery_blocker": data["why_insufficient"],
+        }
+    return {
+        "capability_route": "external_discovery_required",
+        "external_discovery_status": discovery.get(
+            "status", "blocked_by_authorization"
+        ),
+        "external_discovery_blocker": discovery.get(
+            "blocker", "no_current_source_clearance_for_capability_catalog_discovery"
+        ),
+    }
+
+
 def ensure_capability_gap(
     db: Session,
     question: models.ResearchQuestion,
@@ -166,6 +203,9 @@ def ensure_capability_gap(
         entry for entry in active_sources
         if entry.collector in collector_runner.COLLECTORS
     ]
+    catalog_sources = source_clearance_registry.capabilities_for_requirement(
+        "capability_catalog_discovery"
+    )
     if (
         requirement_id not in _COMMERCIAL_REQUIREMENTS
         and active_sources
@@ -173,6 +213,46 @@ def ensure_capability_gap(
     ):
         reason = "cleared_source_has_no_registered_collector"
     searched_at = datetime.now(timezone.utc).isoformat()
+    existing_gap = db.query(models.ForgeCapability).filter_by(name=name).one_or_none()
+    existing_data = (
+        _discovery_data(existing_gap) if existing_gap is not None else {}
+    )
+    prior_discovery = existing_data.get("external_discovery")
+    prior_discovery = prior_discovery if isinstance(prior_discovery, dict) else {}
+    external_discovery = {
+        "purpose": "capability_catalog_discovery",
+        "route": (
+            "owner_evidence_required"
+            if reason == "direct_customer_or_transaction_evidence_required"
+            else "external_discovery_required"
+        ),
+        "status": (
+            "not_applicable"
+            if reason == "direct_customer_or_transaction_evidence_required"
+            else (
+                "blocked_by_authorization"
+                if not catalog_sources
+                else "blocked_by_execution_capability"
+            )
+        ),
+        "blocker": (
+            reason
+            if reason == "direct_customer_or_transaction_evidence_required"
+            else (
+                "no_current_source_clearance_for_capability_catalog_discovery"
+                if not catalog_sources
+                else "capability_catalog_source_has_no_discovery_executor"
+            )
+        ),
+        "clearance_requirement_id": "capability_catalog_discovery",
+        "source_registry_ids_eligible": [
+            entry.registry_id for entry in catalog_sources
+        ],
+        "external_catalogs_queried": [],
+        "external_requests_made": 0,
+        "candidate_count": 0,
+        "requested_at": prior_discovery.get("requested_at", searched_at),
+    }
     gap_data = {
         "record_kind": "research_capability_gap",
         "idempotency_key": identity,
@@ -199,6 +279,7 @@ def ensure_capability_gap(
         "clearance_status": "not_cleared",
         "candidate_ids": [],
         "discovery_depth": 0,
+        "external_discovery": external_discovery,
         "provenance": {
             "kind": "research_plan_requirement",
             "research_question_id": question.id,
@@ -268,6 +349,31 @@ def ensure_capability_gap(
             source="research_capability_discovery",
             idempotency_key=event_key,
         ))
+    if external_discovery["status"] != "not_applicable":
+        for lifecycle_event, status in (
+            ("capability_discovery_requested", "requested"),
+            ("capability_discovery_blocked", external_discovery["status"]),
+        ):
+            world_graph.create_event(
+                db,
+                event_type="state_changed",
+                entity_id=question_entity.id,
+                source="research_capability_discovery",
+                idempotency_key=f"capability-discovery:{identity}:{lifecycle_event}",
+                payload={
+                    "lifecycle_event": lifecycle_event,
+                    "capability_gap_id": capability.id,
+                    "research_question_id": question.id,
+                    "requirement_id": requirement_id,
+                    "discovery_status": status,
+                    "blocker": external_discovery["blocker"],
+                    "clearance_requirement_id": "capability_catalog_discovery",
+                    "source_registry_ids_eligible": [],
+                    "external_catalogs_queried": [],
+                    "external_requests_made": 0,
+                    "candidate_count": 0,
+                },
+            )
     evidence_key = f"capability-gap-evidence:{identity}"
     evidence = db.query(models.Evidence).filter_by(idempotency_key=evidence_key).one_or_none()
     if evidence is None:
@@ -276,8 +382,9 @@ def ensure_capability_gap(
             subject_kind="entity",
             subject_id=event_entity.id,
             claim=(
-                f"An exact source-clearance registry search for requirement "
-                f"{requirement_id} found no active cleared capability."
+                f"The exact source-clearance registry has no active collector route "
+                f"for requirement {requirement_id}; no external capability catalog "
+                "was queried."
             ),
             support_level="possible",
             source="research_capability_discovery",
@@ -287,6 +394,7 @@ def ensure_capability_gap(
                 "requirement_id": requirement_id,
                 "need_id": requirement.get("need_id"),
                 "search_result": gap_data["search_result"],
+                "external_discovery": external_discovery,
                 "event_id": event.id,
                 "candidate_ids": list(gap_data.get("candidate_ids") or []),
                 "claim_boundary": "This records the bounded registry search, not evidence that no capability exists in the world.",

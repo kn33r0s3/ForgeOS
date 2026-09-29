@@ -48,12 +48,14 @@ function HomePage() {
 
   useEffect(() => {
     let active = true;
+    // First paint reuses a recent read; a "Refresh" press must always re-query.
+    const fresh = reloadVersion > 0;
     setLoading(true);
     void Promise.allSettled([
-      loadEngineHealth(),
-      loadRuntimeSnapshot(),
-      loadPublicFeed(40),
-      loadDiscoveries(3),
+      loadEngineHealth({ fresh }),
+      loadRuntimeSnapshot({ fresh }),
+      loadPublicFeed(40, undefined, undefined, { fresh }),
+      loadDiscoveries(3, { fresh }),
     ]).then(([healthResult, runtimeResult, feedResult, discoveryResult]) => {
       if (!active) return;
       const failed: string[] = [];
@@ -131,6 +133,7 @@ function HomePage() {
               width={1376}
               height={768}
               fetchPriority="high"
+              decoding="async"
               className="absolute inset-0 size-full object-cover object-[52%_45%] opacity-40"
             />
             <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(45deg,#000_20%,rgb(0_0_0/0.55)_60%,rgb(0_0_0/0.2))]" />
@@ -167,7 +170,7 @@ function HomePage() {
 
           <div className="mt-10 grid items-center gap-8 lg:grid-cols-[auto_minmax(0,1fr)_minmax(0,22rem)] lg:gap-10">
             <div className="reveal mx-auto size-40 overflow-hidden rounded-full border-[3px] border-accent bg-black sm:size-48" style={{ "--i": 1 } as React.CSSProperties}>
-              <img src="/hami-home.jpg" alt="" width={1376} height={768} className="size-full object-cover object-[52%_45%]" />
+              <img src="/hami-home.jpg" alt="" width={1376} height={768} loading="lazy" decoding="async" className="size-full object-cover object-[52%_45%]" />
             </div>
             <div className="reveal" style={{ "--i": 2 } as React.CSSProperties}>
               <p className="slab px-5 py-4 text-center text-base italic leading-7 sm:text-lg">

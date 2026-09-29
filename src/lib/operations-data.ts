@@ -1,3 +1,5 @@
+import { cachedRead, type CacheScope } from "./api-cache";
+
 export interface OpportunityRecord {
   id: number;
   problem: string;
@@ -95,14 +97,31 @@ async function fetchApiJson<T>(path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-export function loadRuntimeSnapshot() {
-  return fetchApiJson<RuntimeSnapshot>("/api/forge/runtime");
+/**
+ * Engine reads are cached for a few seconds because several pages ask for the
+ * same snapshot (home, opportunities, actions each show part of
+ * `/api/forge/runtime`). Callers that must reflect a just-performed action pass
+ * `{ fresh: true }`.
+ *
+ * Errors are deliberately not cached: `fetchApiJson` throws on a bad response,
+ * so a failure stays a live signal for the next caller and for "Retry".
+ */
+export function loadRuntimeSnapshot(scope?: CacheScope) {
+  return cachedRead("/api/forge/runtime", () => fetchApiJson<RuntimeSnapshot>("/api/forge/runtime"), scope);
 }
 
-export function loadMoneyDashboard() {
-  return fetchApiJson<MoneyDashboard>("/api/forge/money/dashboard");
+export function loadMoneyDashboard(scope?: CacheScope) {
+  return cachedRead(
+    "/api/forge/money/dashboard",
+    () => fetchApiJson<MoneyDashboard>("/api/forge/money/dashboard"),
+    scope,
+  );
 }
 
-export function loadExecutionActions() {
-  return fetchApiJson<ActionRecord[]>("/api/forge/execution/actions");
+export function loadExecutionActions(scope?: CacheScope) {
+  return cachedRead(
+    "/api/forge/execution/actions",
+    () => fetchApiJson<ActionRecord[]>("/api/forge/execution/actions"),
+    scope,
+  );
 }

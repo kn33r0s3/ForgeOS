@@ -1,3 +1,5 @@
+import { cachedRead, type CacheScope } from "./api-cache";
+
 export const SITE = {
   name: "Hami",
   themeColor: "#04021f",
@@ -195,23 +197,32 @@ export type PublicRevenueMiner = {
   note: string;
 };
 
-export async function loadEngineHealth(): Promise<EngineHealth> {
-  const bases = getPublicApiBase() ? [getPublicApiBase()] : [];
-  const urls = [...bases.map((base) => `${base}/health`), "/api/health"];
-  if (typeof window !== "undefined") {
-    urls.push(`${window.location.origin}/api/health`);
-  }
-  for (const url of [...new Set(urls)]) {
-    try {
-      const response = await fetch(url, { headers: { Accept: "application/json" } });
-      if (!response.ok) continue;
-      const body = (await response.json()) as EngineHealth;
-      return { reachable: true, status: body.status, cycle: body.cycle ?? null };
-    } catch {
-      continue;
-    }
-  }
-  return { reachable: false };
+export async function loadEngineHealth(scope?: CacheScope): Promise<EngineHealth> {
+  // A failed probe is cached as `null` so the tile recovers within seconds
+  // rather than holding "not reachable" for the full read TTL.
+  const probe = await cachedRead<EngineHealth | null>(
+    "public:/health",
+    async () => {
+      const bases = getPublicApiBase() ? [getPublicApiBase()] : [];
+      const urls = [...bases.map((base) => `${base}/health`), "/api/health"];
+      if (typeof window !== "undefined") {
+        urls.push(`${window.location.origin}/api/health`);
+      }
+      for (const url of [...new Set(urls)]) {
+        try {
+          const response = await fetch(url, { headers: { Accept: "application/json" } });
+          if (!response.ok) continue;
+          const body = (await response.json()) as EngineHealth;
+          return { reachable: true, status: body.status, cycle: body.cycle ?? null };
+        } catch {
+          continue;
+        }
+      }
+      return null;
+    },
+    scope,
+  );
+  return probe ?? { reachable: false };
 }
 
 function getPublicApiBase() {
@@ -283,19 +294,31 @@ async function fetchJson<T>(url: string): Promise<T | null> {
   }
 }
 
-async function fetchJsonFromCandidates<T>(path: string): Promise<T | null> {
-  for (const url of getPublicApiCandidates(path)) {
-    const payload = await fetchJson<T>(url);
-    if (payload !== null) {
-      return payload;
-    }
-  }
-  return null;
+/**
+ * Single choke point for every read-only public GET, keyed by path (the loaders
+ * all pass their query string), so each page revisits the cache instead of the
+ * network and a `{ fresh: true }` retry still reaches the backend.
+ */
+async function fetchJsonFromCandidates<T>(path: string, scope?: CacheScope): Promise<T | null> {
+  return cachedRead(
+    `public:${path}`,
+    async () => {
+      for (const url of getPublicApiCandidates(path)) {
+        const payload = await fetchJson<T>(url);
+        if (payload !== null) {
+          return payload;
+        }
+      }
+      return null;
+    },
+    scope,
+  );
 }
 
-export async function loadDiscoveries(limit = 20): Promise<PublicDiscovery[] | null> {
+export async function loadDiscoveries(limit = 20, scope?: CacheScope): Promise<PublicDiscovery[] | null> {
   const payload = await fetchJsonFromCandidates<PublicDiscovery[]>(
     `/discoveries?limit=${encodeURIComponent(String(limit))}`,
+    scope,
   );
   return Array.isArray(payload) ? payload : null;
 }
@@ -304,46 +327,55 @@ export async function loadPublicFeed(
   limit = 50,
   entityType?: string,
   entityId?: number,
+  scope?: CacheScope,
 ): Promise<PublicFeedItem[] | null> {
   const entityFilter = entityType && entityId ? `&entity_type=${encodeURIComponent(entityType)}&entity_id=${encodeURIComponent(String(entityId))}` : "";
   const payload = await fetchJsonFromCandidates<PublicFeedItem[]>(
     `/feed?limit=${encodeURIComponent(String(limit))}${entityFilter}`,
+    scope,
   );
   return Array.isArray(payload) ? payload : null;
 }
 
-export async function loadPublicDomain(): Promise<PublicDomainRecord[] | null> {
-  const payload = await fetchJsonFromCandidates<PublicDomainRecord[]>("/domain");
+export async function loadPublicDomain(scope?: CacheScope): Promise<PublicDomainRecord[] | null> {
+  const payload = await fetchJsonFromCandidates<PublicDomainRecord[]>("/domain", scope);
   return Array.isArray(payload) ? payload : null;
 }
 
-export async function loadPublicMatches(): Promise<PublicMatch[] | null> {
-  const payload = await fetchJsonFromCandidates<PublicMatch[]>("/matches");
+export async function loadPublicMatches(scope?: CacheScope): Promise<PublicMatch[] | null> {
+  const payload = await fetchJsonFromCandidates<PublicMatch[]>("/matches", scope);
   return Array.isArray(payload) ? payload : null;
 }
 
-export async function loadPublicConnections(): Promise<PublicConnection[] | null> {
-  const payload = await fetchJsonFromCandidates<PublicConnection[]>("/connections");
+export async function loadPublicConnections(scope?: CacheScope): Promise<PublicConnection[] | null> {
+  const payload = await fetchJsonFromCandidates<PublicConnection[]>("/connections", scope);
   return Array.isArray(payload) ? payload : null;
 }
 
-export async function loadRevenueMiner(): Promise<PublicRevenueMiner | null> {
-  const payload = await fetchJsonFromCandidates<PublicRevenueMiner>("/revenue-miner");
+export async function loadRevenueMiner(scope?: CacheScope): Promise<PublicRevenueMiner | null> {
+  const payload = await fetchJsonFromCandidates<PublicRevenueMiner>("/revenue-miner", scope);
   if (!payload || typeof payload.paid_offers_recorded !== "number") return null;
   return payload;
 }
 
-export async function loadPublicAlerts(limit = 20): Promise<PublicAlert[] | null> {
-  const payload = await fetchJsonFromCandidates<PublicAlert[]>(`/alerts?limit=${limit}`);
+export async function loadPublicAlerts(limit = 20, scope?: CacheScope): Promise<PublicAlert[] | null> {
+  const payload = await fetchJsonFromCandidates<PublicAlert[]>(`/alerts?limit=${limit}`, scope);
   return Array.isArray(payload) ? payload : null;
 }
 
-export async function loadPublicTrust(subjectKind: "provider" | "domain_record", subjectId: number): Promise<PublicTrust | null> {
-  return fetchJsonFromCandidates<PublicTrust>(`/trust/${subjectKind}/${subjectId}`);
+export async function loadPublicTrust(
+  subjectKind: "provider" | "domain_record",
+  subjectId: number,
+  scope?: CacheScope,
+): Promise<PublicTrust | null> {
+  return fetchJsonFromCandidates<PublicTrust>(`/trust/${subjectKind}/${subjectId}`, scope);
 }
 
-export async function loadPublicDomainEvents(recordId: number): Promise<PublicDomainEvents | null> {
-  return fetchJsonFromCandidates<PublicDomainEvents>(`/domain/${recordId}/events`);
+export async function loadPublicDomainEvents(
+  recordId: number,
+  scope?: CacheScope,
+): Promise<PublicDomainEvents | null> {
+  return fetchJsonFromCandidates<PublicDomainEvents>(`/domain/${recordId}/events`, scope);
 }
 
 async function postPublicJson<T>(path: string, body: unknown): Promise<T | null> {
@@ -410,13 +442,21 @@ export async function createPublicDomainRecord(input: {
   return null;
 }
 
-export async function loadProviders(filters?: { q?: string; category?: string; city?: string }): Promise<ProviderRecord[] | null> {
+export async function loadProviders(
+  filters?: { q?: string; category?: string; city?: string },
+  scope?: CacheScope,
+): Promise<ProviderRecord[] | null> {
   const params = new URLSearchParams();
   if (filters?.q?.trim()) params.set("q", filters.q.trim());
   if (filters?.category && filters.category !== "All") params.set("category", filters.category);
   if (filters?.city?.trim()) params.set("city", filters.city.trim());
   const query = params.toString();
   const suffix = query ? `?${query}` : "";
+  // Listings and providers are read together, so the pair is cached as one read.
+  return cachedRead(`providers:${suffix}`, () => fetchProviders(suffix, scope), scope);
+}
+
+async function fetchProviders(suffix: string, scope?: CacheScope): Promise<ProviderRecord[] | null> {
   const servicePayload = await fetchJsonFromCandidates<Array<{
     id?: number;
     provider_id?: number;

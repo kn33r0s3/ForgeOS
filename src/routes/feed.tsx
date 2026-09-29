@@ -144,7 +144,7 @@ function NetworkFeedPage() {
   useEffect(() => {
     let active = true;
     setState("loading");
-    void loadPublicFeed(100, entityType, entityId).then((result) => {
+    void loadPublicFeed(100, entityType, entityId, { fresh: reloadVersion > 0 }).then((result) => {
       if (!active) return;
       if (result === null) {
         setState("unavailable");

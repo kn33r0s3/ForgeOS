@@ -19,7 +19,7 @@ function DiscoveriesPage() {
   useEffect(() => {
     let active = true;
     setReady(false);
-    void loadDiscoveries(50)
+    void loadDiscoveries(50, { fresh: reloadVersion > 0 })
       .then((body) => {
         if (active) setRows(body);
       })

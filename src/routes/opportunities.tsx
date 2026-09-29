@@ -21,7 +21,11 @@ function OpportunitiesPage() {
   useEffect(() => {
     let active = true;
     setLoading(true);
-    void Promise.allSettled([loadPublicFeed(100), loadRuntimeSnapshot()]).then(([feedResult, runtimeResult]) => {
+    const fresh = reloadVersion > 0;
+    void Promise.allSettled([
+      loadPublicFeed(100, undefined, undefined, { fresh }),
+      loadRuntimeSnapshot({ fresh }),
+    ]).then(([feedResult, runtimeResult]) => {
       if (!active) return;
       setItems(feedResult.status === "fulfilled" ? feedResult.value : null);
       setValidatedCount(
