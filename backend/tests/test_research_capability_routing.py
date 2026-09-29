@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from app import models
 from app.database import Base
 from app.services import (
@@ -86,6 +88,17 @@ def test_planner_discovers_and_persists_existing_cleared_capability(db):
         source="research_capability_discovery",
         event_type="capability_source_refreshed",
     ).count() == source_capability_events_before
+    selected_event.payload = "{}"
+    db.flush()
+    with pytest.raises(world_graph.SubstrateError, match="key collision"):
+        research_planner._record_capability_selection(
+            db,
+            question=question,
+            task=task,
+            requirement_id="bibliographic_discovery",
+            selection=selection,
+            task_identity=task.idempotency_key,
+        )
 
 
 def test_source_route_ranking_reuses_measured_successful_capability(
