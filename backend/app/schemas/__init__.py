@@ -105,6 +105,15 @@ class OpportunityOut(BaseModel):
     score: float
     created_at: datetime
 
+    @field_validator("target_customer", "solution", "business_model", mode="before")
+    @classmethod
+    def _nullable_text_as_empty(cls, value):
+        # These columns are nullable in the DB (an opportunity can be recorded
+        # before its solution or model is known). Serialize a missing value as
+        # "" so the response keeps its string contract instead of failing with
+        # a 422 for every endpoint that returns the row.
+        return "" if value is None else value
+
     # --- Money Engine fields (v1.1) ---
     customer_segment: Optional[str] = None
     economic_consequence: Optional[str] = None
