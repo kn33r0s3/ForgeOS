@@ -1037,8 +1037,9 @@ def _record_capability_selection(
     from app.services import world_graph
 
     event_key = f"research-capability-selection:{task_identity}"
-    if db.query(models.WorldEvent).filter_by(idempotency_key=event_key).first():
-        return
+    existing = db.query(models.WorldEvent).filter_by(
+        idempotency_key=event_key
+    ).one_or_none()
     question_entity = world_graph.ensure_canonical_entity(
         db,
         "research_question",
@@ -1069,6 +1070,23 @@ def _record_capability_selection(
         "selection_rank": selection["selection_rank"],
         "selection_reason": selection["selection_reason"],
     }
+    expected_payload = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+    if existing is not None:
+        if (
+            existing.event_type == "state_changed"
+            and existing.entity_id == question_entity.id
+            and existing.source == "research_planner"
+            and existing.payload == expected_payload
+        ):
+            return
+        raise world_graph.SubstrateError(
+            "research capability selection key collision; investigate before retrying"
+        )
     try:
         with db.begin_nested():
             world_graph.create_event(
@@ -1085,12 +1103,6 @@ def _record_capability_selection(
         ).one_or_none()
         if existing is None:
             raise
-        expected_payload = json.dumps(
-            payload,
-            sort_keys=True,
-            separators=(",", ":"),
-            ensure_ascii=False,
-        )
         if (
             existing.event_type != "state_changed"
             or existing.entity_id != question_entity.id
