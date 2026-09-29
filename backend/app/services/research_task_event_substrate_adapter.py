@@ -68,6 +68,38 @@ def sync_research_task_events(db: Session, *, limit: int = 250) -> dict[str, int
                 separators=(",", ":"),
                 default=str,
             )
+            task_results = task.results if isinstance(task.results, dict) else {}
+            selection = task_results.get("capability_selection")
+            selected_capability = selection if isinstance(selection, dict) else {}
+            usage_event = (
+                db.query(models.ToolUsageEvent)
+                .filter_by(
+                    research_task_id=task.id,
+                    tool_name=f"collector:{task.source}",
+                )
+                .order_by(models.ToolUsageEvent.id.desc())
+                .first()
+            )
+            source_usage_event = (
+                db.query(models.SourceUsageEvent)
+                .filter_by(research_task_id=task.id, source=task.source)
+                .order_by(models.SourceUsageEvent.id.desc())
+                .first()
+            )
+            observed_execution = None
+            if usage_event is not None:
+                observed_execution = {
+                    "tool_usage_event_id": usage_event.id,
+                    "source_usage_event_id": (
+                        source_usage_event.id if source_usage_event is not None else None
+                    ),
+                    "success": usage_event.success,
+                    "failure_kind": usage_event.failure_kind,
+                    "result_count": usage_event.result_count,
+                    "useful_result_count": usage_event.useful_result_count,
+                    "verified_result_count": usage_event.verified_result_count,
+                    "cost": usage_event.cost,
+                }
             world_graph.create_event(
                 db,
                 event_type="state_changed",
@@ -92,6 +124,31 @@ def sync_research_task_events(db: Session, *, limit: int = 250) -> dict[str, int
                     "source_details_sha256": hashlib.sha256(
                         details.encode("utf-8")
                     ).hexdigest(),
+                    "capability_ref": (
+                        {
+                            "table": "capabilities",
+                            "id": selected_capability.get("capability_id"),
+                        }
+                        if selected_capability.get("capability_id") is not None
+                        else None
+                    ),
+                    "source_registry_id": selected_capability.get(
+                        "registry_id", task_results.get("source_registry_id")
+                    ),
+                    "source_endpoint": selected_capability.get("endpoint"),
+                    "source_operation": selected_capability.get("operation"),
+                    "access_mode": selected_capability.get("access_mode"),
+                    "capability_state": selected_capability.get("capability_state"),
+                    "capability_record_status": selected_capability.get(
+                        "capability_record_status"
+                    ),
+                    "test_ref": selected_capability.get("test_ref"),
+                    "capability_truth_state": selected_capability.get("truth_state"),
+                    "authorization_status": selected_capability.get(
+                        "authorization_status"
+                    ),
+                    "cost": selected_capability.get("cost", "unknown"),
+                    "observed_execution": observed_execution,
                     "payload_copied": False,
                 },
             )

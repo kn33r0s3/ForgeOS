@@ -123,8 +123,19 @@ def tool_summary(db: Session, tool_name: str) -> dict[str, Any]:
     return _summary(events, useful_field="useful_result_count")
 
 
-def source_summary(db: Session, source: str) -> dict[str, Any]:
-    events = db.query(models.SourceUsageEvent).filter_by(source=source).order_by(models.SourceUsageEvent.created_at.asc()).all()
+def source_summary(
+    db: Session,
+    source: str,
+    *,
+    limit: int | None = None,
+) -> dict[str, Any]:
+    query = db.query(models.SourceUsageEvent).filter_by(source=source).order_by(
+        models.SourceUsageEvent.created_at.desc(),
+        models.SourceUsageEvent.id.desc(),
+    )
+    if limit is not None:
+        query = query.limit(max(1, int(limit)))
+    events = list(reversed(query.all()))
     result = _summary(events, useful_field="useful_evidence_count")
     result["novel_count"] = sum((event.novel_evidence_count or 0) for event in events)
     result["corroborated_count"] = sum((event.corroborated_evidence_count or 0) for event in events)

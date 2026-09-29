@@ -9,6 +9,7 @@ import re
 from datetime import date
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import models
@@ -587,6 +588,10 @@ def _orchestration_requirement_specs(
                     "registry_id": capability["registry_id"],
                     "endpoint": capability["endpoint"],
                     "operation": capability["operation"],
+                    "capability_id": capability["capability_id"],
+                    "capability_state": capability["capability_state"],
+                    "authorization_status": capability["authorization_status"],
+                    "cost": capability["cost"],
                     "required_evidence_type": evidence_type,
                 }
         return list(candidates.values())
@@ -682,30 +687,38 @@ def build_research_plan(db: Session, question: models.ResearchQuestion) -> dict[
     requirements: list[dict[str, Any]] = []
     qualifications = _openalex_qualifications(question.question)
     for spec in _requirement_specs(question.question):
-        capabilities = capability_discovery.active_cleared_sources(db, spec["id"])
+        capabilities = capability_discovery.ranked_source_capabilities(db, spec["id"])
         gap = None
         if not capabilities:
             gap = capability_discovery.ensure_capability_gap(db, question, spec)
         candidate_sources = [
             {
-                "source": entry.collector,
-                "registry_id": entry.registry_id,
-                "endpoint": entry.url,
-                "operation": entry.allowed_operation,
+                "source": capability["source"],
+                "registry_id": capability["registry_id"],
+                "endpoint": capability["endpoint"],
+                "operation": capability["operation"],
+                "capability_id": capability["capability_id"],
+                "capability_state": capability["capability_state"],
+                "authorization_status": capability["authorization_status"],
+                "cost": capability["cost"],
                 "required_evidence_type": spec["evidence_kind"],
             }
-            for entry in capabilities
+            for capability in capabilities
         ]
         if spec["id"] == "bibliographic_discovery":
             candidate_sources = [
                 {
-                    "source": entry.collector,
-                    "registry_id": entry.registry_id,
-                    "endpoint": entry.url,
-                    "operation": entry.allowed_operation,
+                    "source": capability["source"],
+                    "registry_id": capability["registry_id"],
+                    "endpoint": capability["endpoint"],
+                    "operation": capability["operation"],
+                    "capability_id": capability["capability_id"],
+                    "capability_state": capability["capability_state"],
+                    "authorization_status": capability["authorization_status"],
+                    "cost": capability["cost"],
                     "required_evidence_type": "bibliographic_metadata_lead_only",
                 }
-                for entry in capability_discovery.active_cleared_sources(
+                for capability in capability_discovery.ranked_source_capabilities(
                     db, "bibliographic_discovery"
                 )
             ]
@@ -719,6 +732,8 @@ def build_research_plan(db: Session, question: models.ResearchQuestion) -> dict[
                 "population_qualification": qualifications["population_qualification"],
                 "epistemic_state": "unresolved",
                 "candidate_sources": candidate_sources,
+                "candidate_capabilities": capabilities,
+                "selected_capability": capabilities[0] if capabilities else None,
                 "unresolved_dimensions": list(_OPENALEX_UNRESOLVED_DIMENSIONS),
                 **({"capability_gap_id": gap.id} if gap is not None else {}),
                 "status": "pending" if capabilities else "terminal_unresolved",
@@ -729,14 +744,10 @@ def build_research_plan(db: Session, question: models.ResearchQuestion) -> dict[
                 ),
                 "capable_sources": [
                     {
-                        "source": entry.collector,
-                        "registry_id": entry.registry_id,
-                        "endpoint": entry.url,
-                        "operation": entry.allowed_operation,
-                        "allowed_fields": list(entry.allowed_fields),
-                        "provenance_requirements": list(entry.provenance_requirements),
+                        **capability,
+                        "required_evidence_type": spec["evidence_kind"],
                     }
-                    for entry in capabilities
+                    for capability in capabilities
                 ],
                 "terminal_reason": None if capabilities else "no_currently_authorized_source_capability",
                 "evidence_ids": [],
@@ -938,9 +949,7 @@ def _create_task(
         ),
         "capability_id": next(
             (
-                capability_discovery.active_capability_id(
-                    db, requirement["id"], capability["registry_id"]
-                )
+                capability.get("capability_id")
                 for capability in requirement["capable_sources"]
                 if capability["source"] == source
             ),
@@ -966,8 +975,131 @@ def _create_task(
         task.results = {**task.results, **openalex_context}
         task_context = {**task_context, **openalex_context, "source_type": source}
     task.results = {**task.results, **task_context}
+    selected_capability = next(
+        (
+            capability
+            for capability in requirement.get("capable_sources", [])
+            if capability.get("source") == source
+            and capability.get("registry_id") == task.results["source_registry_id"]
+        ),
+        None,
+    )
+    if selected_capability is not None:
+        selection = {
+            key: selected_capability.get(key)
+            for key in (
+                "source",
+                "registry_id",
+                "endpoint",
+                "access_mode",
+                "operation",
+                "required_evidence_type",
+                "capability_id",
+                "capability_state",
+                "capability_record_status",
+                "test_ref",
+                "truth_state",
+                "clearance_status",
+                "authorization_status",
+                "request_authorization_required",
+                "cost",
+                "observed_usage",
+                "selection_rank",
+                "selection_reason",
+            )
+        }
+        task.results = {
+            **task.results,
+            "capability_selection": selection,
+        }
+        _record_capability_selection(
+            db,
+            question=question,
+            task=task,
+            requirement_id=requirement["id"],
+            selection=selection,
+            task_identity=task_identity,
+        )
     db.flush()
     return task
+
+
+def _record_capability_selection(
+    db: Session,
+    *,
+    question: models.ResearchQuestion,
+    task: models.ResearchTask,
+    requirement_id: str,
+    selection: dict[str, Any],
+    task_identity: str,
+) -> None:
+    """Record the bounded route decision once in the canonical EVENT primitive."""
+    from app.services import world_graph
+
+    event_key = f"research-capability-selection:{task_identity}"
+    if db.query(models.WorldEvent).filter_by(idempotency_key=event_key).first():
+        return
+    question_entity = world_graph.ensure_canonical_entity(
+        db,
+        "research_question",
+        question.id,
+        created_by="research_planner",
+    )
+    payload = {
+        "lifecycle_event": "research_capability_selected",
+        "research_question_id": question.id,
+        "research_task_id": task.id,
+        "requirement_id": requirement_id,
+        "required_evidence_type": selection["required_evidence_type"],
+        "capability_id": selection["capability_id"],
+        "source_registry_id": selection["registry_id"],
+        "source": selection["source"],
+        "endpoint": selection["endpoint"],
+        "access_mode": selection["access_mode"],
+        "operation": selection["operation"],
+        "capability_state": selection["capability_state"],
+        "capability_record_status": selection["capability_record_status"],
+        "test_ref": selection["test_ref"],
+        "truth_state": selection["truth_state"],
+        "clearance_status": selection["clearance_status"],
+        "authorization_status": selection["authorization_status"],
+        "request_authorization_required": True,
+        "cost": "unknown",
+        "observed_usage": selection["observed_usage"],
+        "selection_rank": selection["selection_rank"],
+        "selection_reason": selection["selection_reason"],
+    }
+    try:
+        with db.begin_nested():
+            world_graph.create_event(
+                db,
+                event_type="state_changed",
+                entity_id=question_entity.id,
+                source="research_planner",
+                idempotency_key=event_key,
+                payload=payload,
+            )
+    except IntegrityError:
+        existing = db.query(models.WorldEvent).filter_by(
+            idempotency_key=event_key
+        ).one_or_none()
+        if existing is None:
+            raise
+        expected_payload = json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        )
+        if (
+            existing.event_type != "state_changed"
+            or existing.entity_id != question_entity.id
+            or existing.source != "research_planner"
+            or existing.payload != expected_payload
+        ):
+            raise world_graph.SubstrateError(
+                "research capability selection key collision; investigate before retrying"
+            )
 
 
 def _openalex_search_mode(question: str, query: str) -> str:
@@ -1257,16 +1389,6 @@ def _keyword_follow_up_query(question_text: str) -> str:
     return query[:500]
 
 
-def _capability_payload(entry, evidence_type: str) -> dict[str, Any]:
-    return {
-        "source": entry.collector,
-        "registry_id": entry.registry_id,
-        "endpoint": entry.url,
-        "operation": entry.allowed_operation,
-        "required_evidence_type": evidence_type,
-    }
-
-
 def _follow_up_decision_id(
     question_id: int,
     requirement_id: str,
@@ -1366,24 +1488,26 @@ def _create_follow_up_requirement(
         and retrieval_observation.get("outcome") == "valid_empty_retrieval"
         and (parent_task.results or {}).get("search_mode") == "semantic"
     ):
-        active = capability_discovery.active_cleared_sources(
-            db, capability_requirement_id
-        )
-        entry = next(
+        capability = next(
             (
                 item
-                for item in active
-                if item.collector == "openalex"
-                and item.registry_id
+                for item in capability_discovery.ranked_source_capabilities(
+                    db, capability_requirement_id
+                )
+                if item["source"] == "openalex"
+                and item["registry_id"]
                 == (parent_task.results or {}).get("source_registry_id")
             ),
             None,
         )
-        if entry is not None:
+        if capability is not None:
             source = "openalex"
             query = _keyword_follow_up_query(question.question)
             mode_override = "keyword"
-            candidate = _capability_payload(entry, requirement["evidence_kind"])
+            candidate = {
+                **capability,
+                "required_evidence_type": requirement["evidence_kind"],
+            }
 
     if (
         source is None
@@ -1391,21 +1515,22 @@ def _create_follow_up_requirement(
         and evidence_requirement_id
         in {"scholarly_evidence", "documented_intervention", "prior_research"}
     ):
-        bibliography_capabilities = capability_discovery.active_cleared_sources(
+        bibliography_capabilities = capability_discovery.ranked_source_capabilities(
             db, "bibliographic_discovery"
         )
-        entry = next(
-            (item for item in bibliography_capabilities if item.collector == "crossref"),
+        capability = next(
+            (item for item in bibliography_capabilities if item["source"] == "crossref"),
             None,
         )
-        if entry is not None:
+        if capability is not None:
             source = "crossref"
             query = _keyword_follow_up_query(question.question)
             evidence_alias = "bibliographic_discovery"
             capability_requirement_id = "bibliographic_discovery"
-            candidate = _capability_payload(
-                entry, "bibliographic_metadata_lead_only"
-            )
+            candidate = {
+                **capability,
+                "required_evidence_type": "bibliographic_metadata_lead_only",
+            }
 
     if source is None:
         queried = {
@@ -1579,20 +1704,20 @@ def _refresh_plan_from_tasks(
         evidence_requirement_id = requirement.get(
             "evidence_requirement_id", requirement["id"]
         )
-        active_capabilities = capability_discovery.active_cleared_sources(
+        active_capabilities = capability_discovery.ranked_source_capabilities(
             db, capability_requirement_id
         )
         requirement["capable_sources"] = [
             {
-                "source": entry.collector,
-                "registry_id": entry.registry_id,
-                "endpoint": entry.url,
-                "operation": entry.allowed_operation,
-                "allowed_fields": list(entry.allowed_fields),
-                "provenance_requirements": list(entry.provenance_requirements),
+                **capability,
+                "required_evidence_type": requirement["evidence_kind"],
             }
-            for entry in active_capabilities
+            for capability in active_capabilities
         ]
+        requirement["candidate_capabilities"] = active_capabilities
+        requirement["selected_capability"] = (
+            active_capabilities[0] if active_capabilities else None
+        )
         tasks = _tasks_for_requirement(db, question.id, requirement["id"])
         evidence_ids = sorted(
             {

@@ -154,7 +154,24 @@ def ensure_capability_gap(
         if requirement_id in _COMMERCIAL_REQUIREMENTS
         else "no_active_cleared_capability"
     )
-    registered_sources = source_clearance_registry.capabilities_for_requirement(requirement_id)
+    from app.services import collector_runner
+
+    registered_sources = [
+        entry
+        for entry in source_clearance_registry.source_clearances()
+        if requirement_id in entry.supports_requirements
+    ]
+    active_sources = active_cleared_sources(db, requirement_id)
+    executable_sources = [
+        entry for entry in active_sources
+        if entry.collector in collector_runner.COLLECTORS
+    ]
+    if (
+        requirement_id not in _COMMERCIAL_REQUIREMENTS
+        and active_sources
+        and not executable_sources
+    ):
+        reason = "cleared_source_has_no_registered_collector"
     searched_at = datetime.now(timezone.utc).isoformat()
     gap_data = {
         "record_kind": "research_capability_gap",
@@ -165,9 +182,16 @@ def ensure_capability_gap(
         "why_insufficient": reason,
         "search_result": {
             "searched_at": searched_at,
-            "search_method": "current exact source-clearance registry lookup",
+            "search_method": (
+                "current exact source-clearance registry and registered collector lookup"
+            ),
             "registered_sources_considered": [entry.registry_id for entry in registered_sources],
-            "active_cleared_sources_found": [],
+            "active_cleared_sources_found": [
+                entry.registry_id for entry in active_sources
+            ],
+            "executable_collector_routes_found": [
+                entry.registry_id for entry in executable_sources
+            ],
             "candidate_capabilities_found": [],
             "insufficiency_reason": reason,
         },
@@ -186,8 +210,13 @@ def ensure_capability_gap(
             "Obtain consent-based direct customer or transaction evidence."
             if reason == "direct_customer_or_transaction_evidence_required"
             else (
-                "Review documented source catalogs or add a separately reviewed "
-                "metadata-discovery clearance; do not collect from a candidate."
+                "Verify or implement the registered collector for the current exact "
+                "clearance before planning collection."
+                if reason == "cleared_source_has_no_registered_collector"
+                else (
+                    "Review documented source catalogs or add a separately reviewed "
+                    "metadata-discovery clearance; do not collect from a candidate."
+                )
             )
         ),
     }
@@ -279,8 +308,17 @@ def discover_candidates(
     max_candidates: int = MAX_CANDIDATES_PER_GAP,
     time_budget_seconds: float = MAX_DISCOVERY_SECONDS,
 ) -> list[models.ForgeCapability]:
-    """Create bounded capability hypotheses without querying or asserting a source."""
+    """Reuse verified routes before proposing bounded, unverified gap hypotheses."""
     started = monotonic()
+    candidate_limit = max(0, min(int(max_candidates), MAX_CANDIDATES_PER_GAP))
+    existing_routes = ranked_source_capabilities(db, str(requirement["id"]))
+    if existing_routes:
+        return [
+            capability
+            for route in existing_routes[:candidate_limit]
+            if (capability := db.get(models.ForgeCapability, route["capability_id"]))
+            is not None
+        ]
     gap = ensure_capability_gap(db, question, requirement)
     gap_data = _discovery_data(gap)
     if gap_data.get("record_kind") != "research_capability_gap":
@@ -292,7 +330,6 @@ def discover_candidates(
             if db.get(models.ForgeCapability, candidate_id) is not None
         ]
 
-    candidate_limit = max(0, min(int(max_candidates), MAX_CANDIDATES_PER_GAP))
     proposals: list[models.ForgeCapability] = []
     scope = gap_data["required_scope"]
     for kind, label in _CANDIDATE_KINDS[:candidate_limit]:
@@ -648,6 +685,199 @@ def active_capability_id(
         ):
             return candidate.id
     return None
+
+
+def _registered_source_capability(
+    db: Session,
+    entry: source_clearance_registry.SourceClearance,
+    usage: dict[str, Any],
+) -> models.ForgeCapability:
+    """Persist the existing cleared source/collector pair as a CAPABILITY."""
+    identity = _key("registered-source-capability-v1", entry.registry_id)
+    name = f"source-capability-{identity[:32]}"
+    prior = db.query(models.ForgeCapability).filter_by(name=name).one_or_none()
+    if (
+        prior is not None
+        and _discovery_data(prior).get("record_kind")
+        != "registered_source_capability"
+    ):
+        raise ValueError("source capability identity conflicts with an existing capability")
+    recorded_test_ref = prior.test_ref if prior is not None else None
+    data = {
+        "record_kind": "registered_source_capability",
+        "idempotency_key": identity,
+        "source_registry_id": entry.registry_id,
+        "source_name": entry.display_name,
+        "collector": entry.collector,
+        "endpoint": entry.url,
+        "operation": entry.allowed_operation,
+        "supports_requirements": list(entry.supports_requirements),
+        "allowed_fields": list(entry.allowed_fields),
+        "provenance_requirements": list(entry.provenance_requirements),
+        "access_mode": "exact_reviewed_public_source",
+        "clearance_status": "current_exact_clearance",
+        "request_authorization_required": True,
+        "persistent_rate_reservation_required": True,
+        "cost": "unknown",
+        "test_ref": recorded_test_ref,
+        "execution_state": (
+            "tested"
+            if usage["attempts"]
+            or recorded_test_ref and prior.status in {"tested", "active"}
+            else "untested"
+        ),
+        "truth_state": (
+            "tested"
+            if usage["attempts"]
+            or recorded_test_ref and prior.status in {"tested", "active"}
+            else "hypothesized"
+        ),
+        "observed_usage": {
+            "attempts": usage["attempts"],
+            "successes": usage["successes"],
+            "failures": usage["failures"],
+            "result_count": usage["result_count"],
+            "useful_count": usage["useful_count"],
+            "success_rate": usage["success_rate"],
+            "useful_rate": usage["useful_rate"],
+        },
+        "provenance": {
+            "source_registry_id": entry.registry_id,
+            "evidence_references": list(entry.evidence_references),
+            "reviewed_on": entry.reviewed_on.isoformat(),
+            "valid_through": entry.valid_through.isoformat(),
+        },
+    }
+    capability = _upsert_capability(
+        db,
+        name=name,
+        description=(
+            f"Existing {entry.collector} collector for the reviewed "
+            f"{entry.display_name} source."
+        ),
+        spec_ref=f"source_clearance_registry:{entry.registry_id}",
+        attributes={
+            "logical_primitive": "CAPABILITY",
+            "executable": False,
+            "capability_discovery": data,
+        },
+    )
+    existing = _discovery_data(capability)
+    if prior is None or existing != data:
+        _persist_discovery_data(capability, data)
+        snapshot_digest = _key("source-capability-snapshot-v1", _dump(data))
+        event_key = f"source-capability-refreshed:{identity}:{snapshot_digest}"
+        _insert_event_once(
+            db,
+            models.WorldEvent(
+                event_type="capability_source_refreshed",
+                source="research_capability_discovery",
+                payload=_dump(
+                    {
+                        "capability_id": capability.id,
+                        "source_ref": {
+                            "registry": "source_clearance_registry",
+                            "registry_id": entry.registry_id,
+                        },
+                        "snapshot_sha256": snapshot_digest,
+                        "lifecycle_status": capability.status,
+                    }
+                ),
+                idempotency_key=event_key,
+            ),
+        )
+    return capability
+
+
+def ranked_source_capabilities(
+    db: Session,
+    requirement_id: str,
+) -> list[dict[str, Any]]:
+    """Return executable, currently cleared routes ranked only by observed outcomes."""
+    from app.services import collector_runner, tool_usefulness
+
+    candidates: list[dict[str, Any]] = []
+    for entry in active_cleared_sources(db, requirement_id):
+        if entry.collector not in collector_runner.COLLECTORS:
+            continue
+        usage = tool_usefulness.source_summary(
+            db,
+            entry.collector,
+            limit=250,
+        )
+        managed_capability_id = active_capability_id(
+            db, requirement_id, entry.registry_id
+        )
+        capability = (
+            db.get(models.ForgeCapability, managed_capability_id)
+            if managed_capability_id is not None
+            else _registered_source_capability(db, entry, usage)
+        )
+        if capability is None:
+            continue
+        score = tool_usefulness.learned_score(usage)
+        attempts = int(usage["attempts"])
+        tested = attempts > 0 or (
+            capability.status in {"tested", "active"} and bool(capability.test_ref)
+        )
+        candidates.append(
+            {
+                "source": entry.collector,
+                "registry_id": entry.registry_id,
+                "endpoint": entry.url,
+                "access_mode": "exact_reviewed_public_source",
+                "operation": entry.allowed_operation,
+                "allowed_fields": list(entry.allowed_fields),
+                "provenance_requirements": list(entry.provenance_requirements),
+                "required_evidence_type": None,
+                "capability_id": capability.id,
+                "capability_state": "tested" if tested else "untested",
+                "capability_record_status": capability.status,
+                "test_ref": capability.test_ref,
+                "truth_state": "tested" if tested else "hypothesized",
+                "clearance_status": "current_exact_clearance",
+                "authorization_status": (
+                    "request_time_source_authorization_and_rate_reservation_required"
+                ),
+                "request_authorization_required": True,
+                "cost": "unknown",
+                "observed_usage": {
+                    "attempts": attempts,
+                    "successes": int(usage["successes"]),
+                    "failures": int(usage["failures"]),
+                    "result_count": int(usage["result_count"]),
+                    "useful_count": int(usage["useful_count"]),
+                    "success_rate": usage["success_rate"],
+                    "useful_rate": usage["useful_rate"],
+                    "learned_score": score,
+                },
+                "selection_score": score,
+            }
+        )
+
+    candidates.sort(
+        key=lambda candidate: (
+            candidate["selection_score"] is None,
+            -(candidate["selection_score"] or 0.0),
+            -candidate["observed_usage"]["successes"],
+            candidate["registry_id"],
+        )
+    )
+    for index, candidate in enumerate(candidates):
+        if candidate["observed_usage"]["attempts"]:
+            candidate["selection_reason"] = (
+                "ordered using persisted source execution and usefulness outcomes"
+            )
+        elif len(candidates) == 1:
+            candidate["selection_reason"] = (
+                "only exact-cleared registered collector; no prior execution outcome"
+            )
+        else:
+            candidate["selection_reason"] = (
+                "no prior execution outcome; deterministic registry-id tie-break"
+            )
+        candidate["selection_rank"] = index + 1
+    return candidates
 
 
 def gap_candidates(db: Session, gap_id: int) -> list[models.ForgeCapability]:
