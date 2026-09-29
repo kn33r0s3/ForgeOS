@@ -21,7 +21,7 @@ const WORK_LINKS = [
 export function SiteFooter() {
   const year = new Date().getFullYear();
   return (
-    <footer className="mt-auto border-t border-line bg-raised">
+    <footer className="mt-auto border-t border-line bg-card">
       <Container className="grid gap-10 py-16 sm:grid-cols-2 lg:grid-cols-4">
         <div className="sm:col-span-2 lg:col-span-1">
           <BrandMark />
@@ -37,7 +37,7 @@ export function SiteFooter() {
             <Link
               key={item.to}
               to={item.to}
-              className="text-sm text-muted transition-colors duration-150 hover:text-cyan"
+              className="text-sm text-muted transition-colors duration-150 hover:text-accent"
             >
               {item.label}
             </Link>
@@ -51,7 +51,7 @@ export function SiteFooter() {
             <Link
               key={item.to}
               to={item.to}
-              className="text-sm text-muted transition-colors duration-150 hover:text-cyan"
+              className="text-sm text-muted transition-colors duration-150 hover:text-accent"
             >
               {item.label}
             </Link>
@@ -63,17 +63,17 @@ export function SiteFooter() {
           </Eyebrow>
           <Link
             to="/feed"
-            className="text-sm text-muted transition-colors duration-150 hover:text-cyan"
+            className="text-sm text-muted transition-colors duration-150 hover:text-accent"
           >
             Explore the network
           </Link>
           {SITE.email ? (
-            <a href={`mailto:${SITE.email}`} className="text-sm text-muted transition-colors duration-150 hover:text-cyan">
+            <a href={`mailto:${SITE.email}`} className="text-sm text-muted transition-colors duration-150 hover:text-accent">
               {SITE.email}
             </a>
           ) : <span className="text-sm text-muted">Contact mailbox pending</span>}
           {SITE.url ? (
-            <a href={SITE.url} className="text-sm text-muted transition-colors duration-150 hover:text-cyan">
+            <a href={SITE.url} className="text-sm text-muted transition-colors duration-150 hover:text-accent">
               {SITE.domain}
             </a>
           ) : <span className="text-sm text-muted">{SITE.domain}</span>}

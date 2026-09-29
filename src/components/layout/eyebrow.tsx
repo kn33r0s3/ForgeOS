@@ -10,12 +10,12 @@ export function Eyebrow({
   className?: string;
   tone?: "cyan" | "amber" | "muted";
 }) {
-  const toneClass =
-    tone === "amber" ? "text-amber" : tone === "muted" ? "text-dim" : "text-cyan";
+  // "cyan" and "amber" both map to the Hami gold accent; "muted" is dim ink.
+  const toneClass = tone === "muted" ? "text-dim" : "text-accent";
   return (
     <p
       className={cn(
-        "mb-5 flex items-center gap-2 font-mono text-kicker font-medium uppercase tracking-[0.16em]",
+        "mb-5 flex items-center gap-2 font-mono text-micro uppercase tracking-[0.14em]",
         toneClass,
         className,
       )}

@@ -21,11 +21,11 @@ export function CtaBand({
   body?: string;
 }) {
   return (
-    <section className="border-t border-line bg-raised py-16 sm:py-20">
+    <section className="border-t border-line bg-card py-16 sm:py-20">
       <Container className="flex flex-col items-start justify-between gap-8 lg:flex-row lg:items-end">
         <div className="max-w-xl">
           <Eyebrow>{eyebrow}</Eyebrow>
-          <h2 className="font-display text-title tracking-tight text-fg">{title}</h2>
+          <h2 className="font-display text-title tracking-tight text-ink">{title}</h2>
           <p className="mt-4 max-w-md text-sm leading-relaxed text-muted">{body}</p>
         </div>
         <Button asChild size="lg">

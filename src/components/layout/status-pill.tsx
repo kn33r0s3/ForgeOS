@@ -10,10 +10,8 @@ export function StatusPill({
   return (
     <span
       className={cn(
-        "mt-7 inline-flex items-center border px-3 py-2 font-mono text-micro uppercase tracking-[0.14em]",
-        tone === "amber"
-          ? "border-amber/40 text-amber"
-          : "border-cyan/40 text-cyan",
+        "status-pill mt-7",
+        tone === "amber" ? "status-pill-warning" : "status-pill-accent",
       )}
     >
       {children}

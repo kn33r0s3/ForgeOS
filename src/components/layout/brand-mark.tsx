@@ -8,15 +8,14 @@ export function BrandMark({ className }: { className?: string }) {
       className={cn("group flex items-center gap-2.5", className)}
       aria-label="Hami home"
     >
-      <span
-        className="grid size-8 place-items-center rounded-sm border border-line bg-raised font-display text-sm font-semibold tracking-tight text-fg transition-colors duration-150 group-hover:border-cyan/50 group-hover:text-cyan"
-        aria-hidden="true"
-      >
-        H
-      </span>
-      <span className="font-display text-base font-semibold tracking-tight text-fg">
-        Hami
-      </span>
+      <img
+        src="/hami-mark.png"
+        alt=""
+        width={32}
+        height={32}
+        className="size-8 rounded-card border border-line bg-card object-cover transition-colors duration-150 group-hover:border-accent/60"
+      />
+      <span className="font-display text-xl tracking-tight text-ink">Hami</span>
     </Link>
   );
 }

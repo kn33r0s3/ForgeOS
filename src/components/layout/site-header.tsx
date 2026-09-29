@@ -35,11 +35,11 @@ export function SiteHeader() {
   }, [open]);
 
   return (
-    <header className="sticky top-0 z-50 h-[var(--header-h)] border-b border-border bg-background/90 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 h-[var(--header-h)] border-b border-line bg-paper">
       <Container className="relative flex h-full items-center justify-between gap-4">
         <BrandMark />
         <nav
-          className="hidden items-center gap-5 lg:flex"
+          className="hidden items-center gap-7 lg:flex"
           aria-label="Main navigation"
         >
           {NAV.map((item) => (
@@ -48,7 +48,7 @@ export function SiteHeader() {
               to={item.to}
               aria-current={isActive(item.to, pathname) ? "page" : undefined}
               className={cn(
-                "relative py-2 text-nav text-muted transition-colors duration-150 hover:text-foreground",
+                "relative py-2 text-nav text-muted transition-colors duration-150 hover:text-ink",
                 isActive(item.to, pathname) && "nav-active",
               )}
             >
@@ -65,7 +65,7 @@ export function SiteHeader() {
           </Button>
           <button
             type="button"
-            className="inline-flex size-11 items-center justify-center rounded-md text-foreground lg:hidden"
+            className="inline-flex size-11 items-center justify-center rounded-card text-ink lg:hidden"
             aria-expanded={open}
             aria-controls="mobile-navigation"
             aria-label={open ? "Close navigation" : "Open navigation"}
@@ -92,7 +92,7 @@ export function SiteHeader() {
         id="mobile-navigation"
         hidden={!open}
         className={cn(
-          "absolute inset-x-0 top-[var(--header-h)] z-40 border-b border-border bg-surface-elevated lg:hidden",
+          "absolute inset-x-0 top-[var(--header-h)] z-40 border-b border-line bg-paper lg:hidden",
           open ? "block" : "hidden",
         )}
       >
@@ -103,8 +103,8 @@ export function SiteHeader() {
               to={item.to}
               aria-current={isActive(item.to, pathname) ? "page" : undefined}
               className={cn(
-                "flex min-h-11 items-center border-b border-border text-base text-muted last:border-b-0",
-                isActive(item.to, pathname) && "text-primary",
+                "flex min-h-11 items-center border-b border-line text-base text-muted last:border-b-0",
+                isActive(item.to, pathname) && "text-accent",
               )}
             >
               {item.label}

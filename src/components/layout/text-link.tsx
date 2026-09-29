@@ -29,7 +29,7 @@ export function TextLink({
       to={to}
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-1.5 text-nav font-semibold text-cyan transition-colors duration-150 hover:text-fg",
+        "inline-flex items-center gap-1.5 text-nav font-semibold text-accent transition-colors duration-150 hover:text-ink",
         className,
       )}
     >
