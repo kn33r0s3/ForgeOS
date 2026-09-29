@@ -6,6 +6,29 @@ before implementation, and record verification before marking a claim DONE.
 Claims coordinate contributors; database uniqueness and idempotency remain the
 enforcement layer when claims overlap.
 
+## [DONE WITH LIMITATION] Make the current Hami app the documented local UI
+
+- Agent: Copilot, current user-directed task
+- Scope: align the root local-run documentation with the same root Vite app used by the Hami deployment; preserve the backend and optional legacy Compose dashboard.
+- Repository evidence: the root Vite app is the current public app and is configured for port 8080; the Next.js UI under `frontend/` is labeled legacy in README/inventory and is still wired into optional Docker Compose. A root Vite instance was already serving Hami on port 8083 while the legacy Next.js app occupied 8080.
+- Owner action still required: start the backend separately when using only `npm run dev`; no separate UI selection is needed after stopping the legacy server and using the root app's standard port.
+- Implementation: updated Quick Start to identify `npm run dev` / port 8080 as the current Hami UI, and clearly labeled the port-3000 Compose UI as legacy. Stopped the identified `frontend/` Next.js process and the duplicate root Vite process, then started the root app with `npm run dev` on its configured port 8080. No uncertain source modules or compatibility code were deleted.
+- Verification: `http://127.0.0.1:8080/` rendered the Hami home and live local API data; same-origin `/api/health` returned HTTP 200/readiness true; `npm run check:auth` passed. The browser returned HTTP 200 for `/`, `/feed`, `/discoveries`, `/opportunities`, `/operations`, `/domain`, and `/work`, with no console errors or failed requests. A 390px viewport had no horizontal overflow. Local state is separate from production: its counts and recorded cycle differ from haminp.vercel.app.
+- Current blocker: the local API reports readiness true, but its most recent recorded cycle is FAILED (id 335, started 2026-09-24 and ended 2026-09-26). No cycle was launched during this UI switch; investigation/recovery must preserve existing evidence and avoid an unapproved external action.
+- Next removable dependency: decide whether the legacy Compose dashboard is still needed; do not delete it while Compose still references it.
+
+## [DONE WITH LIMITATION] Run the frontend test suite in CI
+
+- Agent: Copilot, current user-directed audit
+- Scope: connect the existing root frontend `npm test` suite to the existing GitHub Actions workflow; do not add test infrastructure or dependencies.
+- Repository evidence: `.github/workflows/forgeos-ci.yml` installed Node 22 dependencies, then ran typecheck and build, but omitted the existing `npm test` script.
+- Owner action still required: review CI results and authorize any merge or deployment; this change only removes reliance on a separate manual test invocation for PR/push CI.
+- Acceptance: the frontend workflow runs `npm test` after `npm ci` and before typecheck/build; the existing suite passes locally; backend authorization and deployment behavior are unchanged.
+- Implementation: added `npm test` to the `frontend` CI job.
+- Verification: `npm test` → 70 passed, 0 failed; `git diff --check` passes. Backend full suite → 549 passed, 2 skipped; root typecheck and production build pass.
+- Current blocker: CI will validate the test suite only after the change is pushed; production remains on the previous deployment until an explicitly authorized release.
+- Next removable dependency: after authorized publication, verify the deployed `/api/openapi.json` mirror, which currently still returns 404.
+
 ## [DONE WITH LIMITATION] Persist blocked external capability-discovery requirements
 
 - Agent: Copilot, current user-directed task

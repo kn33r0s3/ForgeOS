@@ -73,18 +73,24 @@ Knowledge is labeled: **OBSERVED / INFERRED / ESTIMATED / UNKNOWN / ACTUAL**.
 
 ## Quick Start
 
+The root Vite app is the current Hami web interface, matching the frontend
+deployed at `haminp.vercel.app`. Start it with the existing development
+command:
+
 ```bash
-chmod +x start.sh stop.sh
-./start.sh          # Mac/Linux
-# or
-.\start.ps1         # Windows
+npm run dev
 ```
 
-- Dashboard: http://localhost:3000  
-- API docs:  http://localhost:8000/docs  
-- Worker: disabled by default; enable deliberately with `FORGEOS_ENABLE_WORKER=true ./start.sh`  
+- Hami web app: http://localhost:8080
+- API docs: http://localhost:8000/docs (when the backend is running)
 
-Stop: `./stop.sh`
+`./start.sh` starts the native backend, scheduler, and root web app together.
+The task worker is disabled by default; enable deliberately with
+`FORGEOS_ENABLE_WORKER=true ./start.sh`. Stop that combined stack with
+`./stop.sh`.
+
+The optional Docker Compose frontend on port 3000 is the separate legacy
+Next.js dashboard; it is not the current Hami web app.
 
 ### Production frontend/API configuration
 
