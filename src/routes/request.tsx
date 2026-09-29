@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { Container } from "@/components/layout/container";
 import { Eyebrow } from "@/components/layout/eyebrow";
-import { ProjectForm } from "@/components/pages/project-form";
+import { DemandIntakeForm } from "@/components/pages/demand-intake-form";
 
 export const Route = createFileRoute("/request")({
   component: RequestPage,
@@ -10,9 +10,9 @@ export const Route = createFileRoute("/request")({
 });
 
 const checks = [
-  "A human review of every request",
-  "Clear scope before any build",
-  "No unsupported promises",
+  "Recorded as observed, possible demand",
+  "No automatic outreach or action",
+  "No customer or revenue claim from a submission",
 ] as const;
 
 function RequestPage() {
@@ -27,9 +27,9 @@ function RequestPage() {
             <span className="text-muted">business need.</span>
           </h1>
           <p className="mt-6 max-w-md text-lede text-muted">
-            Tell us whether you are exploring a partnership, technology project,
-            operational need, venture idea, or strategic inquiry. We’ll help shape
-            the right next step.
+            Describe a need or problem for Forge to understand. A submission is
+            evidence of a request only; it is not qualification, a commercial
+            offer, or a promise of follow-up.
           </p>
           <ul className="mt-10 grid gap-3 text-sm text-muted">
             {checks.map((item) => (
@@ -40,7 +40,7 @@ function RequestPage() {
             ))}
           </ul>
         </div>
-        <ProjectForm />
+        <DemandIntakeForm />
       </Container>
     </main>
   );

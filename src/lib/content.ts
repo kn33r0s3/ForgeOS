@@ -221,6 +221,15 @@ function getPublicApiBase() {
   return (import.meta.env.VITE_FORGE_API_BASE as string | undefined)?.replace(/\/$/, "") ?? "";
 }
 
+function getApiCandidates(path: string): string[] {
+  const backendBase = getPublicApiBase();
+  const candidates = [`/api${path}`];
+  if (backendBase) {
+    candidates.unshift(`${backendBase}${path}`);
+  }
+  return [...new Set(candidates)];
+}
+
 function getPublicApiCandidates(path: string): string[] {
   const backendBase = getPublicApiBase();
   const relativePath = `/api/public${path}`;
@@ -230,6 +239,32 @@ function getPublicApiCandidates(path: string): string[] {
   }
 
   return [...new Set(candidates)];
+}
+
+export async function submitPublicDemandRequest(
+  content: string,
+  idempotencyKey: string,
+): Promise<{ id: number } | null> {
+  for (const url of getApiCandidates("/signals/public-request")) {
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "Idempotency-Key": idempotencyKey,
+        },
+        body: JSON.stringify({ content }),
+      });
+      if (response.ok) {
+        const signal = (await response.json()) as { id?: number };
+        return typeof signal.id === "number" ? { id: signal.id } : null;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return null;
 }
 
 async function fetchJson<T>(url: string): Promise<T | null> {

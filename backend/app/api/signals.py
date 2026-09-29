@@ -16,6 +16,70 @@ from app.services import worker_manager
 router = APIRouter(prefix="/signals", tags=["signals"])
 
 
+def _record_demand_request(
+    content: str,
+    response: Response,
+    background_tasks: BackgroundTasks,
+    idempotency_key: str | None,
+    db: Session,
+    *,
+    request_boundary: str,
+    require_idempotency_key: bool = False,
+):
+    content = content.strip()
+    if not content:
+        raise HTTPException(status_code=422, detail="content must not be blank")
+    if len(content) > 5000:
+        raise HTTPException(status_code=422, detail="demand-understanding content exceeds 5000 characters")
+    if require_idempotency_key and idempotency_key is None:
+        raise HTTPException(status_code=400, detail="Idempotency-Key header is required")
+    if idempotency_key is not None and not 1 <= len(idempotency_key.strip()) <= 128:
+        raise HTTPException(status_code=422, detail="Idempotency-Key must contain 1-128 characters")
+
+    request_key = idempotency_key.strip() if idempotency_key else secrets.token_urlsafe(24)
+    request_key_digest = hashlib.sha256(request_key.encode("utf-8")).hexdigest()
+    submitted_at = datetime.now(timezone.utc).isoformat()
+    signal_identity = demand_understanding.normalized_identity_key(request_key_digest)
+    signal = (
+        db.query(models.Signal)
+        .filter_by(source="user_request", identity_key=signal_identity)
+        .one_or_none()
+    )
+    if signal is not None:
+        if signal.content != demand_understanding.normalize_observation_content(content):
+            raise HTTPException(
+                status_code=409,
+                detail="Idempotency-Key was already used for different request content",
+            )
+    else:
+        signal = demand_understanding.record_raw_observation(
+            db,
+            content,
+            source="user_request",
+            metadata={
+                "identity_key": request_key_digest,
+                "source_type": "manual",
+                "collection_status": "user_submitted",
+                "retrieved_at": submitted_at,
+                "provenance": {
+                    "request_boundary": request_boundary,
+                    "purpose": "demand_understanding",
+                    "authorization_context": "explicit_user_submission_for_demand_understanding",
+                    "idempotency_key_sha256": request_key_digest,
+                    "submitted_at": submitted_at,
+                    "content_handling": "whitespace-normalized; email and phone patterns redacted",
+                },
+            },
+        )
+    task = demand_understanding.enqueue_understanding(db, [signal.id])
+    response.headers["X-Demand-Understanding-Task-ID"] = str(task.id)
+    response.headers["X-Demand-Understanding-Status-URL"] = (
+        f"/signals/demand-understanding/{task.id}"
+    )
+    background_tasks.add_task(worker_manager.process_demand_task_in_background, task.id)
+    return signal
+
+
 @router.post("", response_model=schemas.SignalOut)
 def create_signal(
     payload: schemas.SignalCreate,
@@ -26,61 +90,43 @@ def create_signal(
 ):
     """Store a new observed signal (e.g. a customer complaint, a market note)."""
     if payload.purpose == "demand_understanding":
-        content = payload.content.strip()
-        if not content:
-            raise HTTPException(status_code=422, detail="content must not be blank")
-        if len(content) > 5000:
-            raise HTTPException(status_code=422, detail="demand-understanding content exceeds 5000 characters")
-        if idempotency_key is not None and not 1 <= len(idempotency_key.strip()) <= 128:
-            raise HTTPException(status_code=422, detail="Idempotency-Key must contain 1-128 characters")
-
-        request_key = idempotency_key.strip() if idempotency_key else secrets.token_urlsafe(24)
-        request_key_digest = hashlib.sha256(request_key.encode("utf-8")).hexdigest()
-        submitted_at = datetime.now(timezone.utc).isoformat()
-        signal_identity = demand_understanding.normalized_identity_key(request_key_digest)
-        signal = (
-            db.query(models.Signal)
-            .filter_by(source="user_request", identity_key=signal_identity)
-            .one_or_none()
+        return _record_demand_request(
+            payload.content,
+            response,
+            background_tasks,
+            idempotency_key,
+            db,
+            request_boundary="POST /signals",
         )
-        if signal is not None:
-            if signal.content != demand_understanding.normalize_observation_content(content):
-                raise HTTPException(
-                    status_code=409,
-                    detail="Idempotency-Key was already used for different request content",
-                )
-        else:
-            signal = demand_understanding.record_raw_observation(
-                db,
-                content,
-                source="user_request",
-                metadata={
-                    "identity_key": request_key_digest,
-                    "source_type": "manual",
-                    "collection_status": "user_submitted",
-                    "retrieved_at": submitted_at,
-                    "provenance": {
-                        "request_boundary": "POST /signals",
-                        "purpose": "demand_understanding",
-                        "authorization_context": "explicit_user_submission_for_demand_understanding",
-                        "idempotency_key_sha256": request_key_digest,
-                        "submitted_at": submitted_at,
-                        "content_handling": "whitespace-normalized; email and phone patterns redacted",
-                    },
-                },
-            )
-        task = demand_understanding.enqueue_understanding(db, [signal.id])
-        response.headers["X-Demand-Understanding-Task-ID"] = str(task.id)
-        response.headers["X-Demand-Understanding-Status-URL"] = (
-            f"/signals/demand-understanding/{task.id}"
-        )
-        background_tasks.add_task(worker_manager.process_demand_task_in_background, task.id)
-        return signal
 
     signal = observer.record_signal(
         db, content=payload.content, source=payload.source, category=payload.category
     )
     return signal
+
+
+@router.post(
+    "/public-request",
+    response_model=schemas.SignalOut,
+    status_code=202,
+)
+def create_public_demand_request(
+    payload: schemas.PublicDemandRequestCreate,
+    response: Response,
+    background_tasks: BackgroundTasks,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    db: Session = Depends(get_db),
+):
+    """Accept a bounded, anonymous request for demand understanding only."""
+    return _record_demand_request(
+        payload.content,
+        response,
+        background_tasks,
+        idempotency_key,
+        db,
+        request_boundary="POST /signals/public-request",
+        require_idempotency_key=True,
+    )
 
 
 @router.get("", response_model=list[schemas.SignalOut])

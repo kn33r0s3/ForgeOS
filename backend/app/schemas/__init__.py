@@ -27,6 +27,15 @@ class SignalCreate(BaseModel):
     )
 
 
+class PublicDemandRequestCreate(BaseModel):
+    content: str = Field(
+        ...,
+        min_length=1,
+        max_length=5000,
+        description="A need submitted for interpretation; not a customer or offer.",
+    )
+
+
 class SignalOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

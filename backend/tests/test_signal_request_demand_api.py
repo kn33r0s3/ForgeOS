@@ -235,6 +235,80 @@ def test_ordinary_signal_api_behavior_is_unchanged(db):
     assert db.query(models.WorkerTask).filter_by(worker_type="demand_understanding").count() == 0
 
 
+def test_public_demand_intake_uses_existing_signal_flow_and_is_idempotent(db, monkeypatch):
+    from app import security
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "private-api-key")
+
+    def override_get_db():
+        try:
+            yield db
+        finally:
+            db.rollback()
+
+    app.dependency_overrides[get_db] = override_get_db
+    client = TestClient(app, raise_server_exceptions=True)
+    body = {
+        "content": (
+            "TEST ONLY, not real demand: a hypothetical household needs "
+            "reliable weekly water delivery. test.person@example.test "
+            "+1-202-555-0147"
+        )
+    }
+    headers = {"Idempotency-Key": "public-demand-test-001"}
+    try:
+        private_write = client.post(
+            "/api/signals",
+            json={"content": "Must remain private"},
+        )
+        first = client.post("/api/signals/public-request", json=body, headers=headers)
+        retry = client.post("/api/signals/public-request", json=body, headers=headers)
+        conflict = client.post(
+            "/api/signals/public-request",
+            json={"content": "TEST ONLY, different request"},
+            headers=headers,
+        )
+        missing_key = client.post("/api/signals/public-request", json=body)
+    finally:
+        client.close()
+        app.dependency_overrides.clear()
+
+    assert private_write.status_code == 401
+    assert first.status_code == retry.status_code == 202
+    assert first.json()["id"] == retry.json()["id"]
+    assert first.headers["x-demand-understanding-task-id"] == (
+        retry.headers["x-demand-understanding-task-id"]
+    )
+    assert conflict.status_code == 409
+    assert missing_key.status_code == 400
+
+    signal = db.get(models.Signal, first.json()["id"])
+    assert signal.source == "user_request"
+    assert "test.person@example.test" not in signal.content
+    assert "+1-202-555-0147" not in signal.content
+    task = db.query(models.WorkerTask).filter_by(
+        id=int(first.headers["x-demand-understanding-task-id"])
+    ).one()
+    assert task.status == "completed"
+    assert task.outputs["state"] == "possible_demand"
+    assert task.outputs["need_id"] is None
+    assert task.outputs["external_action"] is False
+
+    evidence = db.query(models.Evidence).filter_by(
+        idempotency_key=f"demand-observation-evidence:{signal.id}:v1"
+    ).one()
+    assert evidence.support_level == "possible"
+    provenance = json.loads(evidence.provenance)["metadata"]["provenance"]
+    assert provenance["request_boundary"] == "POST /signals/public-request"
+    assert provenance["idempotency_key_sha256"]
+    assert provenance["submitted_at"]
+    assert db.query(models.Signal).filter_by(source="user_request").count() == 1
+    assert db.query(models.WorldEvent).filter_by(event_type="demand_observed").count() == 1
+    assert db.query(models.Opportunity).count() == 0
+    assert db.query(models.BookingRequest).count() == 0
+    assert db.query(models.Action).count() == 0
+
+
 def test_signal_request_sqlite_reopen_preserves_authorization_and_epistemic_boundary(tmp_path):
     engine = create_engine(
         f"sqlite:///{tmp_path / 'request-observation.sqlite'}",

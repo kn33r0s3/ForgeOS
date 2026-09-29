@@ -23,7 +23,13 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 
-PUBLIC_WRITE_PATHS = {"/analyze", "/public/booking-requests", "/public/domain"}
+PUBLIC_WRITE_PATHS = {
+    "/analyze",
+    "/public/booking-requests",
+    "/public/domain",
+    "/signals/public-request",
+    "/api/signals/public-request",
+}
 
 
 def _enabled() -> bool:
