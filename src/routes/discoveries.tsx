@@ -32,7 +32,7 @@ function DiscoveriesPage() {
       <Container className="max-w-3xl">
         <p className="font-mono text-micro uppercase tracking-[0.14em] text-cyan">Observations</p>
         <h1 className="mt-2 font-display text-4xl tracking-tight text-fg">What the engine has actually collected</h1>
-        <p className="mt-3 text-muted">Each item is something a source published. Forge has not verified it, priced it, or turned it into an offer.</p>
+        <p className="mt-3 text-muted">Each item is something a source published. Pulse has not necessarily verified it, priced it, or turned it into an offer.</p>
         {!ready ? <p className="mt-6 text-muted">Checking collected observations…</p> : null}
         {ready && rows === null ? (
           <div className="mt-6 rounded-2xl border border-line bg-void p-5" role="alert">

@@ -191,7 +191,7 @@ function ProvidersPage() {
               <p className="rounded-2xl border border-line bg-raised p-6 text-muted">Checking verified provider records…</p>
             ) : providerLoadState === "unavailable" ? (
               <div className="rounded-2xl border border-line bg-raised p-6 text-muted" role="alert">
-                <p>The provider service is unavailable. Forge could not check the public listings, so none are being reported as missing.</p>
+                <p>The provider service is unavailable. Pulse could not check the public listings, so none are being reported as missing.</p>
                 <button type="button" onClick={() => setReloadVersion((version) => version + 1)} className="mt-3 min-h-10 rounded-full border border-line px-4 text-sm text-fg">Retry</button>
               </div>
             ) : filteredProviders.length > 0 ? (

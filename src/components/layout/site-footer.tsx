@@ -26,7 +26,7 @@ export function SiteFooter() {
         <div className="sm:col-span-2 lg:col-span-1">
           <BrandMark />
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
-            Forge is the network. Services are one executable path through it when public listings and contact routes are available. Nepal is where that path starts.
+            Pulse is one system. Services are one recorded path through it when public listings and contact routes are available. Nepal is where that path starts.
           </p>
         </div>
         <div className="flex flex-col gap-3">
@@ -81,7 +81,7 @@ export function SiteFooter() {
       </Container>
       <Container className="flex flex-col gap-2 border-t border-line py-5 font-mono text-micro uppercase tracking-[0.12em] text-dim sm:flex-row sm:items-center sm:justify-between">
         <span>
-          © {year} {SITE.legalName}
+          © {year} {SITE.name}
         </span>
         <span>
           {SITE.name} · {SITE.domain}

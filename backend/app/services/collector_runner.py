@@ -459,17 +459,25 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
 
 
 def run_pending_tasks(db: Session, limit: int = 5) -> list[dict]:
-    """Execute up to `limit` currently-planned tasks (curiosity-driven
-    collection). Used by the Background Forge Worker and available
-    on-demand via the API."""
+    """Execute a bounded batch, including follow-ups planned during execution."""
+    if limit <= 0:
+        return []
+
     research_task_engine.resume_running_tasks(db, limit=limit)
-    tasks = (
-        db.query(models.ResearchTask)
-        .filter(models.ResearchTask.status == "planned")
-        .limit(limit)
-        .all()
-    )
-    return [execute_task(db, task) for task in tasks]
+    outcomes = []
+    attempted_task_ids = set()
+    while len(outcomes) < limit:
+        query = db.query(models.ResearchTask).filter(
+            models.ResearchTask.status == "planned"
+        )
+        if attempted_task_ids:
+            query = query.filter(models.ResearchTask.id.notin_(attempted_task_ids))
+        task = query.order_by(models.ResearchTask.id.asc()).first()
+        if task is None:
+            break
+        attempted_task_ids.add(task.id)
+        outcomes.append(execute_task(db, task))
+    return outcomes
 
 
 def run_default_collection(db: Session) -> list[dict]:

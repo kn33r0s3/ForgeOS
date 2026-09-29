@@ -11,13 +11,10 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { SITE } from "@/lib/content";
 import appCss from "../styles.css?url";
 
-const APP_NAME = "Forge";
-
 const jsonLd = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "Organization",
-  name: SITE.legalName,
-  alternateName: SITE.name,
+  name: SITE.name,
   ...(SITE.url ? { url: SITE.url } : {}),
   ...(SITE.email ? { email: SITE.email } : {}),
   areaServed: "NP",
@@ -29,7 +26,7 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: `${APP_NAME} — ${SITE.tagline}` },
+      { title: `${SITE.name} — ${SITE.tagline}` },
       { name: "description", content: SITE.description },
       { name: "theme-color", content: "#0a0a0c" },
     ],

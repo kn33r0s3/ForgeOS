@@ -1,5 +1,5 @@
 """
-Forge — main FastAPI application entry point.
+Pulse — main FastAPI application entry point.
 
 Run with:
     uvicorn app.main:app --reload
@@ -23,7 +23,7 @@ from app.security import api_key_middleware
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    description="ForgeOS — Personal AI Opportunity Intelligence Engine.",
+    description="Pulse — the ForgeOS-evolved research and execution system.",
 )
 
 app.add_middleware(

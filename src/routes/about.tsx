@@ -6,19 +6,19 @@ import { ProjectInquiryCta } from "@/components/pages/project-inquiry-cta";
 
 export const Route = createFileRoute("/about")({
   component: AboutPage,
-  head: () => ({ meta: [{ title: "About — Forge" }] }),
+  head: () => ({ meta: [{ title: "About — Pulse" }] }),
 });
 
 const items = [
   {
     number: "01",
-    title: "The parent",
-    body: "Forge is the parent identity. Future group areas are strategic directions, not a claim that subsidiaries or operating companies already exist.",
+    title: "One system",
+    body: "Pulse is one system. Nepal and global markets are intended product surfaces, not separate architectures; their domains and deployments are not claimed until verified.",
   },
   {
     number: "02",
     title: "The operating core",
-    body: "Forge is the network this site reads. Services, work, offers, and trades are domains inside it. Nepal is the first geography, not the boundary of the records.",
+    body: "Pulse evolves the existing ForgeOS implementation in place. Services, work, offers, trades, evidence, and outcomes remain connected through the existing system.",
   },
   {
     number: "03",
@@ -31,7 +31,7 @@ function AboutPage() {
   return (
     <main>
       <PageHero
-        eyebrow="Forge / About"
+        eyebrow="Pulse / About"
         title={
           <>
             A parent platform
@@ -39,7 +39,7 @@ function AboutPage() {
             <span className="text-muted">for useful work.</span>
           </>
         }
-        lede="Forge stores recorded people, organizations, capabilities, needs, work, services, offers, trades, evidence, and outcomes. It helps people read what is known and what remains unknown; it does not decide a match."
+        lede="Pulse stores records of people, organizations, capabilities, needs, work, services, offers, trades, evidence, and outcomes. It helps people distinguish what is known from what remains unknown; recorded information alone does not authorize or prove an action."
       >
         <ProjectInquiryCta />
       </PageHero>

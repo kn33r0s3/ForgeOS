@@ -1,6 +1,6 @@
 # FORGEOS TOP RULE — DRIVE OWNER DEPENDENCY TO ZERO
 
-This is ForgeOS's first substantive project rule: prefer fewer owner actions per
+This is Pulse's first substantive project rule: prefer fewer owner actions per
 real economic outcome, while keeping authorization, evidence, privacy, legal,
 and platform boundaries intact. Do not mistake more infrastructure, synthetic
 activity, or a policy `ALLOW` for economic autonomy.

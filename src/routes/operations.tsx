@@ -7,7 +7,7 @@ import { RefreshCw, Play, Shield, CheckCircle, AlertTriangle, Activity, Trending
 
 export const Route = createFileRoute("/operations")({
   component: OperationsPage,
-  head: () => ({ meta: [{ title: "Operations — Forge" }] }),
+  head: () => ({ meta: [{ title: "Operations — Pulse" }] }),
 });
 
 interface OpportunityItem {
@@ -83,7 +83,7 @@ function OperationsPage() {
     setBackendOnline(online);
 
     if (!online) {
-      setError("ForgeOS engine offline");
+      setError("Pulse engine offline");
       setLoading(false);
       return;
     }
@@ -103,7 +103,7 @@ function OperationsPage() {
       setDashboard(dashData);
       setActions(actData);
     } catch (err: any) {
-      setError(err.message || "Unable to query ForgeOS data endpoints");
+      setError(err.message || "Unable to query Pulse data endpoints");
     } finally {
       setLoading(false);
     }
@@ -112,8 +112,8 @@ function OperationsPage() {
   // ── Change 2: Explicit user action with confirmation ─────────────────────
   async function handleRunCycle() {
     const confirmed = window.confirm(
-      "Run Forge Intelligence Cycle?\n\n" +
-      "This operation writes to multiple ForgeOS database tables " +
+      "Run Pulse Intelligence Cycle?\n\n" +
+      "This operation writes to multiple Pulse database tables " +
       "(cycle_runs, patterns, beliefs, research_tasks, predictions, opportunities, and more).\n\n" +
       "It does NOT execute any actions or spend money. " +
       "Proceed only when you want to advance the intelligence cycle."
@@ -139,7 +139,7 @@ function OperationsPage() {
   async function handleRunDiscovery() {
     const confirmed = window.confirm(
       "Run Economic Discovery Scan?\n\n" +
-      "This operation writes to the ForgeOS opportunities table. " +
+      "This operation writes to the Pulse opportunities table. " +
       "It evaluates patterns and strong signals against the economic evidence gate " +
       "and creates new Opportunity records where the bar is met.\n\n" +
       "It does NOT contact customers or spend money. " +
@@ -176,7 +176,7 @@ function OperationsPage() {
       if (body === null) {
         alert(
           `Approval not applied for Action #${id}.\n\n` +
-          "The ForgeOS policy engine returned null, which means this action is currently " +
+          "The Pulse policy engine returned null, which means this action is currently " +
           "blocked by the autonomy policy. Review the policy_reason shown below the action."
         );
         return;
@@ -202,7 +202,7 @@ function OperationsPage() {
             <div>
               <Eyebrow tone="amber">
                 <span className="size-1.5 rounded-full bg-amber shadow-[0_0_0_4px_var(--color-amber-dim)]" />
-                Forge · Internal Engine
+                Pulse · Internal Engine
               </Eyebrow>
               <h1 className="font-display text-title tracking-tight text-fg">
                 Operating Dashboard
@@ -210,7 +210,7 @@ function OperationsPage() {
                 <span className="text-muted">Evidence, opportunities &amp; proposed actions.</span>
               </h1>
               <p className="mt-4 max-w-2xl text-lede text-muted">
-                Forge operating window. It shows stored evidence, recorded
+                Pulse operating window. It shows stored evidence, recorded
                 opportunities, and actions that still need approval. A missing
                 amount stays unknown. Figures come from the Forge database.
               </p>
@@ -226,7 +226,7 @@ function OperationsPage() {
                 className="gap-2"
               >
                 <Play className={`size-4 ${runningCycle ? "animate-spin" : ""}`} />
-                {runningCycle ? "Running Cycle..." : "Run Forge Cycle"}
+                {runningCycle ? "Running Cycle..." : "Run Pulse Cycle"}
               </Button>
               <Button
                 onClick={handleRunDiscovery}
@@ -258,7 +258,7 @@ function OperationsPage() {
           {loading ? (
             <div className="flex items-center justify-center py-20 text-muted">
               <RefreshCw className="size-6 animate-spin mr-3 text-cyan" />
-              Connecting to ForgeOS backend engine...
+              Connecting to Pulse backend engine...
             </div>
           ) : backendOnline === false ? (
             /* ── Change 4: Distinct offline banner ─────────────────────────── */
@@ -266,9 +266,9 @@ function OperationsPage() {
               <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-red-500/10 text-red-400">
                 <WifiOff className="size-6" />
               </div>
-              <h2 className="font-display text-lg font-semibold text-fg">ForgeOS Engine Offline</h2>
+              <h2 className="font-display text-lg font-semibold text-fg">Pulse Engine Offline</h2>
               <p className="max-w-md mx-auto text-sm text-muted">
-                The local ForgeOS backend (FastAPI, port 8000) is not responding. Economic data
+                The local Pulse backend (FastAPI, port 8000) is not responding. Economic data
                 cannot be shown — displaying empty state here would misrepresent the actual system
                 as having zero opportunities, which is not the same as an offline backend.
               </p>
@@ -288,7 +288,7 @@ function OperationsPage() {
               </div>
               <h2 className="font-display text-lg font-semibold text-fg">Data Load Error</h2>
               <p className="max-w-md mx-auto text-sm text-muted">
-                ForgeOS backend is reachable but returned an error: {error}
+                Pulse backend is reachable but returned an error: {error}
               </p>
               <Button onClick={loadOperatingData} variant="secondary" size="sm" className="gap-2">
                 <RefreshCw className="size-4" /> Retry
@@ -409,7 +409,7 @@ function OperationsPage() {
 
                 {/* ── Change 1 + 5: truthful description of actual state ── */}
                 <p className="mb-4 text-xs text-dim">
-                  These are ForgeOS-proposed validation actions (e.g. customer interviews). They are in{" "}
+                  These are Pulse-proposed validation actions (e.g. customer interviews). They are in{" "}
                   <span className="text-amber font-mono">planned</span> status with{" "}
                   <span className="text-amber font-mono">requires_owner_approval = true</span>.
                   None have been executed. Approving marks the record; it does not trigger automatic execution.
@@ -477,7 +477,7 @@ function OperationsPage() {
                       <p className="text-sm font-medium text-fg">Outcomes Currently Empty</p>
                       <p className="max-w-md mx-auto text-xs">
                         No customer validation experiments have completed yet. As approved proposals are
-                        manually executed and real outcomes are recorded into ForgeOS, results will appear here.
+                        manually executed and real outcomes are recorded into Pulse, results will appear here.
                       </p>
                     </div>
                   ) : (

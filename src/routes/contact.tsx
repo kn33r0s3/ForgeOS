@@ -6,7 +6,7 @@ import { ProjectInquiryCta } from "@/components/pages/project-inquiry-cta";
 
 export const Route = createFileRoute("/contact")({
   component: ContactPage,
-  head: () => ({ meta: [{ title: "Contact — Forge" }] }),
+  head: () => ({ meta: [{ title: "Contact — Pulse" }] }),
 });
 
 function ContactPage() {
@@ -14,7 +14,7 @@ function ContactPage() {
     <main className="py-16 sm:py-20 lg:py-24">
       <Container className="grid gap-12 lg:grid-cols-2 lg:gap-20">
         <div>
-          <Eyebrow>Contact Forge</Eyebrow>
+          <Eyebrow>Contact Pulse</Eyebrow>
           <h1 className="font-display text-display tracking-tight text-fg">
             Start with the
             <br />
@@ -40,10 +40,8 @@ function ContactPage() {
           <Eyebrow>Location</Eyebrow>
           <p className="text-sm text-muted">{SITE.location}</p>
           <div className="my-8 h-px bg-line" />
-          <Eyebrow>Entity</Eyebrow>
+          <Eyebrow>System</Eyebrow>
           <p className="text-sm text-muted">
-            {SITE.legalName}
-            <br />
             {SITE.name}
             <br />
             {SITE.domain}

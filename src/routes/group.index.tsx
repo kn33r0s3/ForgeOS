@@ -14,7 +14,7 @@ function GroupPage() {
   return (
     <main>
       <PageHero
-        eyebrow="Forge / The group"
+        eyebrow="Pulse / The group"
         title={
           <>
             One parent.
@@ -22,7 +22,7 @@ function GroupPage() {
             <span className="text-muted">Serious directions.</span>
           </>
         }
-        lede="Forge is built to eventually own, operate, and scale businesses across technology, operations, and ventures — from Nepal, remote-ready. What exists today is stated plainly; what is being built and what is long-term are kept visibly separate."
+        lede="Pulse is one evolving system, not separate Nepal and global architectures. What exists today is stated plainly; strategic directions are not presented as operating businesses."
       >
         <StatusPill>One unified platform</StatusPill>
       </PageHero>
@@ -86,7 +86,7 @@ function GroupPage() {
               The operating core.
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
-              Forge is the record this site reads: observe, verify, understand,
+              Pulse is the record this site reads: observe, verify, understand,
               decide, act, measure, learn. An empty list means that record is
               not stored. It is not sold as a product.
             </p>

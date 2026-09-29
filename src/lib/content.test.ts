@@ -51,11 +51,12 @@ function collectCopy(): string[] {
   return blobs;
 }
 
-describe("Forge public content", () => {
+describe("Pulse public content", () => {
   it("names the network without locking it to one purpose", () => {
-    assert.equal(SITE.name, "Forge");
-    assert.equal(SITE.legalName, "Forge");
+    assert.equal(SITE.name, "Pulse");
     assert.equal(/service marketplace|trusted service network/i.test(SITE.description), false);
+    assert.match(SITE.description, /ForgeOS system in place/);
+    assert.match(SITE.description, /not separate architectures/);
     assert.match(SITE.description, /Nepal/);
     assert.match(SITE.description, /services/i);
   });
@@ -115,7 +116,7 @@ describe("Forge public content", () => {
   });
 });
 
-describe("Forge public root", () => {
+describe("Pulse public root", () => {
   const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
   it("serves the stored-world home and does not publish the Sanip site", () => {

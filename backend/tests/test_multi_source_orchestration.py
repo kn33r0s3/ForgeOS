@@ -298,6 +298,94 @@ def test_mocked_multisource_evidence_survives_database_reopen(tmp_path, monkeypa
     reopened_engine.dispose()
 
 
+def test_pending_batch_executes_newly_planned_follow_up_within_limit(db, monkeypatch):
+    question = models.ResearchQuestion(question=QUESTION)
+    db.add(question)
+    db.commit()
+    first = research_task_engine.create_task(
+        db,
+        question_id=question.id,
+        source="crossref",
+        query="initial bounded task",
+        objective="Find initial evidence.",
+    )
+    second = research_task_engine.create_task(
+        db,
+        question_id=question.id,
+        source="crossref",
+        query="second bounded task",
+        objective="Find independent evidence.",
+    )
+    db.commit()
+    follow_up_ids = []
+    execution_order = []
+
+    def execute_task(session, task):
+        execution_order.append(task.id)
+        task.status = "completed"
+        if task.id == first.id:
+            follow_up = research_task_engine.create_task(
+                session,
+                question_id=question.id,
+                source="crossref",
+                query="follow-up planned by completed research",
+                objective="Resolve a gap found in the initial evidence.",
+            )
+            follow_up_ids.append(follow_up.id)
+        session.commit()
+        return {"task_id": task.id, "status": task.status}
+
+    monkeypatch.setattr(collector_runner, "execute_task", execute_task)
+
+    outcomes = collector_runner.run_pending_tasks(db, limit=3)
+
+    assert execution_order == [first.id, second.id, follow_up_ids[0]]
+    assert [item["task_id"] for item in outcomes] == execution_order
+    assert db.query(models.ResearchTask).filter_by(status="planned").count() == 0
+
+
+def test_pending_batch_attempts_deferred_task_only_once(db, monkeypatch):
+    question = models.ResearchQuestion(question=QUESTION)
+    db.add(question)
+    db.commit()
+    tasks = [
+        research_task_engine.create_task(
+            db,
+            question_id=question.id,
+            source="crossref",
+            query=f"deferred-batch-task-{index}",
+            objective="Test bounded retry handling.",
+        )
+        for index in range(3)
+    ]
+    db.commit()
+    execution_order = []
+
+    def defer_task(session, task):
+        execution_order.append(task.id)
+        return {"task_id": task.id, "status": "planned"}
+
+    monkeypatch.setattr(collector_runner, "execute_task", defer_task)
+
+    outcomes = collector_runner.run_pending_tasks(db, limit=2)
+
+    assert execution_order == [task.id for task in tasks[:2]]
+    assert [item["task_id"] for item in outcomes] == execution_order
+
+
+def test_pending_batch_with_nonpositive_limit_does_not_execute(db, monkeypatch):
+    executed = []
+    monkeypatch.setattr(
+        collector_runner,
+        "execute_task",
+        lambda session, task: executed.append(task.id),
+    )
+
+    assert collector_runner.run_pending_tasks(db, limit=0) == []
+    assert collector_runner.run_pending_tasks(db, limit=-1) == []
+    assert executed == []
+
+
 def test_canonical_runner_carries_planner_context_into_evidence_provenance(
     db, monkeypatch
 ):

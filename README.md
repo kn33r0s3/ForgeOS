@@ -10,7 +10,14 @@ Use a separate database for synthetic source inputs, plus SANDBOX labels downstr
 
 ---
 
-# ForgeOS
+# Pulse
+
+Pulse is the product/system identity evolving the existing ForgeOS
+implementation in place. `pulse.np` and `pulse.com` are intended geographic
+surfaces of one system; their DNS and deployments are not asserted by this
+repository change. Historical ForgeOS API paths, database records, environment
+variables, imports, and migration identifiers remain compatible unless a
+specific migration proves safe.
 
 **Continuously improving intelligence + execution system.**  
 Grounded in reality. Offline-capable. $0 by default.
@@ -28,9 +35,10 @@ decision is not itself an economic outcome or autonomous execution.
 
 ---
 
-## What ForgeOS is
+## What Pulse is
 
-ForgeOS is not a scoring SaaS and not a leaderboard of business ideas.
+Pulse is not a scoring SaaS and not a leaderboard of business ideas. It evolves
+the existing ForgeOS system rather than creating a parallel architecture.
 
 It is a system organized around:
 

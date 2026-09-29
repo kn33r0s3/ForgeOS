@@ -24,7 +24,7 @@ function BusinessesPage() {
             <span className="text-muted">Useful work today.</span>
           </>
         }
-        lede="Forge is the parent platform. Today, the practical offer is technical and operational work that helps ideas become systems, and systems become durable businesses."
+        lede="Pulse is one system evolving from ForgeOS. Today, the practical offer is technical and operational work that helps ideas become systems, and systems become durable businesses."
       >
         <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
           <ProjectInquiryCta />
@@ -36,7 +36,7 @@ function BusinessesPage() {
           <SectionMarker label="Today" index="01" />
           <div>
             <h2 className="font-display text-title tracking-tight text-fg">
-              What Forge can do now
+              What Pulse can do now
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
               Current offerings are focused engagements around technology,
@@ -57,7 +57,7 @@ function BusinessesPage() {
               Developing the group’s operating core.
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
-              Forge is the record this site reads. It supports the long-term
+              Pulse is the record this site reads. It supports the long-term
               direction. An empty list means that record is not stored, and it
               is not being sold as a separate product.
             </p>
