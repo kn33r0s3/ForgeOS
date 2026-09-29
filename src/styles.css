@@ -1,6 +1,20 @@
 @import "tailwindcss";
 
+/*
+ * Hami visual system, ported from the Hami app (pulsenp).
+ * Direction: intelligent, grounded, energetic. Gold from the Hami mark on a
+ * warm near-black paper. Semantic ForgeOS token names (void/raised/fg/cyan/…)
+ * are kept as aliases so existing pages re-skin without identifier renames.
+ */
 @theme {
+  /* Hami core palette */
+  --color-paper: var(--background);
+  --color-card: var(--surface);
+  --color-ink: var(--foreground);
+  --color-accent: var(--primary);
+  --color-accent-ink: var(--primary-foreground);
+
+  /* Semantic tokens */
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-surface-elevated: var(--surface-elevated);
@@ -16,75 +30,88 @@
   --color-info: var(--info);
   --color-focus: var(--focus);
 
+  /* Legacy ForgeOS aliases (kept so existing class names keep working) */
   --color-void: var(--background);
   --color-raised: var(--surface);
   --color-panel: var(--surface-elevated);
   --color-fg: var(--foreground);
-  --color-dim: color-mix(in srgb, var(--muted) 78%, var(--background));
+  --color-dim: #7a7668;
   --color-line: var(--border);
-  --color-line-strong: #bac9bf;
+  --color-line-strong: #444a3f;
   --color-cyan: var(--primary);
-  --color-cyan-dim: color-mix(in srgb, var(--primary) 10%, transparent);
-  --color-cyan-hot: color-mix(in srgb, var(--primary) 18%, transparent);
+  --color-cyan-dim: color-mix(in srgb, var(--primary) 14%, transparent);
+  --color-cyan-hot: color-mix(in srgb, var(--primary) 22%, transparent);
   --color-amber: var(--warning);
-  --color-amber-dim: color-mix(in srgb, var(--warning) 11%, transparent);
-  --color-ink: var(--primary-foreground);
+  --color-amber-dim: color-mix(in srgb, var(--warning) 14%, transparent);
 
-  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-display: "Instrument Serif", Georgia, serif;
 
-  --text-display: clamp(2.6rem, 7vw, 5.35rem);
-  --text-display--line-height: 0.92;
-  --text-display--letter-spacing: -0.045em;
-  --text-title: clamp(1.85rem, 4.2vw, 3.35rem);
-  --text-title--line-height: 1.02;
-  --text-title--letter-spacing: -0.035em;
+  --text-display: clamp(2.6rem, 7vw, 5.1rem);
+  --text-display--line-height: 0.96;
+  --text-display--letter-spacing: -0.03em;
+  --text-title: clamp(1.85rem, 4.2vw, 3.1rem);
+  --text-title--line-height: 1.08;
+  --text-title--letter-spacing: -0.02em;
   --text-lede: clamp(1.05rem, 1.4vw, 1.2rem);
   --text-lede--line-height: 1.6;
   --text-nav: 0.8125rem;
   --text-micro: 0.6875rem;
   --text-kicker: 0.6875rem;
 
+  /* Hami uses one flat card radius; larger radii collapse onto it. */
+  --radius-card: 0.5rem;
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1.25rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.5rem;
+  --radius-2xl: 0.5rem;
+  --radius-3xl: 0.75rem;
 
   --max-width-site: 76rem;
   --header-h: 4.25rem;
 
-  --shadow-border: 0 0 0 1px color-mix(in srgb, var(--foreground) 8%, transparent);
-  --shadow-border-hover: 0 0 0 1px color-mix(in srgb, var(--foreground) 14%, transparent);
-  --shadow-glow: 0 0 0 3px color-mix(in srgb, var(--focus) 16%, transparent);
+  /* Flat surfaces: borders carry structure, not drop shadows. */
+  --shadow-sm: 0 0 #0000;
+  --shadow-md: 0 0 0 1px var(--border);
+  --shadow-border: 0 0 0 1px var(--border);
+  --shadow-border-hover: 0 0 0 1px color-mix(in srgb, var(--primary) 45%, var(--border));
+  --shadow-glow: 0 0 0 3px color-mix(in srgb, var(--focus) 22%, transparent);
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 :root {
-  --background: #f5f7f3;
-  --surface: #ffffff;
-  --surface-elevated: #fbfcfa;
-  --foreground: #1c2b23;
-  --muted: #596a60;
-  --border: #dce5dd;
-  --primary: #176b5b;
-  --primary-foreground: #ffffff;
-  --secondary: #e9f1ec;
-  --success: #2d704f;
-  --warning: #8a5c19;
-  --danger: #a6423a;
-  --info: #376f8a;
-  --focus: #176b5b;
+  --background: #12140f;
+  --surface: #1c2018;
+  --surface-elevated: #23271e;
+  --foreground: #f3efe4;
+  --muted: #9a9586;
+  --border: #2f342c;
+  --primary: #e2a01a;
+  --primary-foreground: #12140f;
+  --secondary: #2a2f25;
+  --success: #7cb87a;
+  --warning: #e2a01a;
+  --danger: #d4654a;
+  --info: #6a9bb8;
+  --focus: #e2a01a;
 }
 
 @layer base {
   html {
+    color-scheme: dark;
     scroll-behavior: smooth;
     background: var(--background);
     color: var(--foreground);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  html,
+  body {
+    min-height: 100%;
   }
 
   body {
@@ -98,14 +125,19 @@
     line-height: 1.55;
   }
 
+  /* Instrument Serif ships a single 400 weight; never synthesize bold. */
   h1,
   h2,
   h3,
   h4 {
     font-family: var(--font-display);
-    font-weight: 600;
+    font-weight: 400;
     text-wrap: balance;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.02em;
+  }
+
+  .font-display {
+    font-synthesis-weight: none;
   }
 
   p {
@@ -122,14 +154,18 @@
     cursor: pointer;
   }
 
+  button:disabled {
+    cursor: not-allowed;
+  }
+
   :where(a, button, input, textarea, select):focus-visible {
     outline: 2px solid var(--focus);
     outline-offset: 3px;
   }
 
   ::selection {
-    background: color-mix(in srgb, var(--primary) 18%, transparent);
-    color: var(--foreground);
+    background: var(--primary);
+    color: var(--primary-foreground);
   }
 }
 
@@ -137,18 +173,21 @@
   .skip-link {
     position: absolute;
     left: 1rem;
-    top: -3rem;
+    top: -4rem;
     z-index: 80;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-card);
     background: var(--primary);
     color: var(--primary-foreground);
     padding: 0.5rem 0.85rem;
-    font-size: 0.8125rem;
     font-weight: 600;
   }
 
   .skip-link:focus {
-    top: 0.75rem;
+    top: 1rem;
+  }
+
+  .max-w-site {
+    max-width: var(--max-width-site);
   }
 
   .site-grid {
@@ -188,7 +227,7 @@
   }
 
   .identity-band {
-    background: var(--secondary);
+    background: var(--surface);
   }
 
   .nav-active {
@@ -200,9 +239,97 @@
     position: absolute;
     left: 0;
     right: 0;
-    bottom: -0.55rem;
+    bottom: 0;
     height: 1px;
     background: var(--primary);
+  }
+
+  .surface-aside {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    padding: 1.1rem 1.15rem;
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.35rem 0.65rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-micro);
+    line-height: 1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .status-pill-accent,
+  .status-pill-warning {
+    border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+    color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 14%, transparent);
+  }
+
+  .status-pill-success {
+    border-color: color-mix(in srgb, var(--success) 50%, var(--border));
+    color: var(--success);
+    background: color-mix(in srgb, var(--success) 10%, transparent);
+  }
+
+  .status-pill-danger {
+    border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
+    color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 10%, transparent);
+  }
+
+  .status-pill-neutral {
+    color: var(--muted);
+    background: color-mix(in srgb, var(--border) 28%, transparent);
+  }
+
+  .metric-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  }
+
+  .metric-card {
+    min-height: 9.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    padding: 1rem;
+  }
+
+  .loop-rail {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .loop-step {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    border-top: 1px solid var(--border);
+    padding: 0.8rem 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  .loop-index {
+    color: var(--primary);
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+
+  @media (min-width: 768px) {
+    .loop-rail {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
   }
 }
 

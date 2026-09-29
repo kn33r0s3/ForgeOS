@@ -29,6 +29,7 @@ export const Route = createRootRoute({
       { title: `${SITE.name} — ${SITE.tagline}` },
       { name: "description", content: SITE.description },
       { name: "theme-color", content: SITE.themeColor },
+      { name: "color-scheme", content: "dark" },
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
@@ -39,7 +40,7 @@ export const Route = createRootRoute({
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Space+Grotesk:wght@500;600;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap",
       },
       ...(SITE.url ? [{ rel: "canonical", href: SITE.url }] : []),
     ],
@@ -53,7 +54,7 @@ function RootDocument() {
       <head>
         <HeadContent />
       </head>
-      <body className="flex min-h-dvh flex-col bg-void font-sans text-fg">
+      <body className="flex min-h-dvh flex-col bg-paper font-sans text-ink">
         <PreviewHostBridge />
         <a href="#main" className="skip-link">
           Skip to content
