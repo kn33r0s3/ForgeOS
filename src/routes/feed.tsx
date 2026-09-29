@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowUpRight, CircleHelp, Compass, Lightbulb, Link2, Radio, RefreshCw, Users, Wrench } from "lucide-react";
+import { ArrowUpRight, CircleHelp, Compass, GitBranch, Lightbulb, Link2, Radio, ShieldCheck, Sparkles, Users, Wrench, X } from "lucide-react";
 import { Container } from "@/components/layout/container";
+import { PageHeader } from "@/components/layout/page-header";
+import { EmptyState, MetricTile, SkeletonCards, UnavailableState } from "@/components/ui/feedback";
 import { loadPublicFeed, type PublicFeedItem } from "@/lib/content";
 
 export const Route = createFileRoute("/feed")({
@@ -156,18 +158,11 @@ function NetworkFeedPage() {
     };
   }, [entityId, entityType, reloadVersion]);
 
-  const visible = useMemo(() => {
-    if (filter === "all") return items;
-    if (filter === "evidence") {
-      return items.filter((item) => item.relations.some((relation) =>
-        ["supported_by", "grounded_in", "informed_by"].includes(relation.relation),
-      ));
-    }
-    if (filter === "connection") {
-      return items.filter((item) => item.kind === "connection" || item.relations.length > 0);
-    }
-    return items.filter((item) => item.kind === filter);
-  }, [filter, items]);
+  const visible = useMemo(() => filterItems(items, filter), [filter, items]);
+  const filterCounts = useMemo(
+    () => Object.fromEntries(FILTERS.map((item) => [item.value, filterItems(items, item.value).length])) as Record<(typeof FILTERS)[number]["value"], number>,
+    [items],
+  );
   const graphStats = useMemo(() => {
     const entityRefs = new Set<string>();
     const relationRefs = new Set<string>();
@@ -207,183 +202,222 @@ function NetworkFeedPage() {
   }, [items]);
 
   return (
-    <main className="min-h-full py-10 sm:py-14">
-      <Container className="max-w-5xl">
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
-          <div>
-            <p className="font-mono text-micro uppercase tracking-[0.14em] text-primary">Hami / network</p>
-            <h1 className="mt-2 font-display text-4xl tracking-tight text-foreground sm:text-5xl">Explore the connected world</h1>
-            <p className="mt-4 max-w-2xl text-lede text-muted">
-              Public entities and their recorded relationships, capabilities, evidence links, and opportunity hypotheses. A connection is a stored relation, not proof of agreement.
+    <main className="min-h-full">
+      <PageHeader
+        eyebrow="Hami Network"
+        title="Explore the connected world"
+        lede="Public entities and their recorded relationships, capabilities, evidence links, and opportunity hypotheses. A connection is a stored relation, not proof of agreement."
+        aside={
+          <>
+            <p className="flex items-center gap-2 font-mono text-micro uppercase tracking-[0.12em] text-accent">
+              <ShieldCheck className="size-3.5" aria-hidden="true" /> Projection legend
             </p>
-            {entityType && entityId ? (
-              <p className="mt-4 inline-flex items-center gap-2 rounded-full border border-line bg-raised px-3 py-2 text-xs text-muted">
-                Network context: {ENTITY_LABELS[entityType] ?? entityType.replaceAll("_", " ")}
-                <Link to="/feed" search={{}} className="text-cyan hover:underline">Clear</Link>
-              </p>
-            ) : null}
-          </div>
-          <aside className="rounded-2xl border border-border bg-surface-elevated p-4">
-            <p className="font-mono text-micro uppercase tracking-[0.12em] text-primary">Projection legend</p>
             <p className="mt-2 text-sm leading-6 text-muted">
               Entities are records. Relations are sourced links. Capabilities and opportunities remain bounded by their evidence and state.
             </p>
-          </aside>
-        </div>
+          </>
+        }
+      >
+        {entityType && entityId ? (
+          <p className="mt-6 inline-flex items-center gap-2 rounded-full border border-accent/40 bg-accent/10 py-1.5 pl-3 pr-1.5 text-xs text-ink">
+            <GitBranch className="size-3.5 text-accent" aria-hidden="true" />
+            Network context: {ENTITY_LABELS[entityType] ?? entityType.replaceAll("_", " ")}
+            <Link
+              to="/feed"
+              search={{}}
+              className="inline-flex min-h-8 items-center gap-1 rounded-full px-2 text-accent hover:bg-accent/15"
+            >
+              <X className="size-3.5" aria-hidden="true" /> Clear
+            </Link>
+          </p>
+        ) : null}
+      </PageHeader>
 
-        <section aria-label="Visible network projection" className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <GraphStat label="Visible entity refs" value={state === "ready" ? graphStats.entityRefs : null} />
-          <GraphStat label="Recorded relations" value={state === "ready" ? graphStats.relationRefs : null} />
-          <GraphStat label="Capabilities" value={state === "ready" ? graphStats.capabilities : null} />
-          <GraphStat label="Opportunity hypotheses" value={state === "ready" ? graphStats.opportunities : null} />
-          <GraphStat label="Evidence links" value={state === "ready" ? graphStats.evidenceLinks : null} />
+      <Container className="max-w-5xl py-10 sm:py-14">
+        <section aria-label="Visible network projection" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <MetricTile index={0} loading={state === "loading"} label="Entity refs" value={state === "ready" ? graphStats.entityRefs : null} />
+          <MetricTile index={1} loading={state === "loading"} label="Relations" value={state === "ready" ? graphStats.relationRefs : null} />
+          <MetricTile index={2} loading={state === "loading"} label="Capabilities" value={state === "ready" ? graphStats.capabilities : null} />
+          <MetricTile index={3} loading={state === "loading"} label="Hypotheses" value={state === "ready" ? graphStats.opportunities : null} />
+          <MetricTile index={4} loading={state === "loading"} label="Evidence links" value={state === "ready" ? graphStats.evidenceLinks : null} className="col-span-2 sm:col-span-1" />
         </section>
 
-        <div className="mt-8 flex gap-2 overflow-x-auto pb-2" aria-label="Filter network feed">
+        <div
+          className="scroll-fade-x -mx-5 mt-8 flex gap-2 overflow-x-auto px-5 pb-2 sm:mx-0 sm:px-0"
+          role="group"
+          aria-label="Filter network feed"
+        >
           {FILTERS.map((item) => (
             <button
               key={item.value}
               type="button"
               aria-pressed={filter === item.value}
               onClick={() => setFilter(item.value)}
-              className={`min-h-11 shrink-0 rounded-full border px-4 text-sm transition-colors ${filter === item.value ? "border-primary bg-primary/10 text-primary" : "border-border text-muted hover:border-focus hover:text-foreground"}`}
+              className="chip"
             >
               {item.label}
+              {state === "ready" ? <span className="chip-count">{filterCounts[item.value]}</span> : null}
             </button>
           ))}
         </div>
 
-        {state === "loading" ? <p className="mt-8 text-muted">Reading the network…</p> : null}
+        {state === "loading" ? (
+          <SkeletonCards count={4} label="Reading the network…" className="mt-6 space-y-3" />
+        ) : null}
         {state === "unavailable" ? (
-          <div className="mt-8 rounded-2xl border border-border bg-surface p-6">
-            <h2 className="font-display text-xl text-fg">The network feed is unavailable</h2>
-            <p className="mt-2 text-sm text-muted">The public API did not return usable feed data. No sample activity is shown in its place.</p>
-            <button
-              type="button"
-              onClick={() => setReloadVersion((version) => version + 1)}
-              className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-md border border-border px-4 text-sm text-foreground hover:border-focus"
-            >
-              <RefreshCw className="size-4" aria-hidden="true" />
-              Retry
-            </button>
-          </div>
+          <UnavailableState
+            className="mt-6"
+            title="The network feed is unavailable"
+            body="The public API did not return usable feed data. No sample activity is shown in its place."
+            onRetry={() => setReloadVersion((version) => version + 1)}
+          />
         ) : null}
         {state === "ready" && visible.length === 0 ? (
-          <div className="mt-8 rounded-2xl border border-border bg-surface p-6">
-            <h2 className="font-display text-xl text-foreground">{filter === "all" ? "No public network records yet" : "No items in this part of the network yet"}</h2>
-            {filter === "all" ? (
-              <>
-                <p className="mt-2 max-w-2xl text-sm text-muted">Nothing is added to fill a quiet network. Records appear only when their source and visibility requirements are met.</p>
-                <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm">
-                  <Link to="/discoveries" className="text-primary hover:underline">Research observations</Link>
-                  <Link to="/domain" className="text-cyan hover:underline">Public work board</Link>
-                  <Link to="/providers" className="text-primary hover:underline">Provider capabilities</Link>
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="mt-2 max-w-2xl text-sm text-muted">{filter === "evidence" ? "No public records with evidence-related links are available." : EMPTY_GUIDANCE[filter]?.message ?? "New entries appear when real records meet their source and visibility requirements."}</p>
-                {EMPTY_GUIDANCE[filter] ? (
-                  <Link to={EMPTY_GUIDANCE[filter].to} className="mt-4 inline-flex text-sm text-primary hover:underline">
-                    {EMPTY_GUIDANCE[filter].link} <ArrowUpRight className="ml-1 size-4" />
-                  </Link>
-                ) : null}
-              </>
-            )}
-          </div>
+          filter === "all" ? (
+            <EmptyState
+              className="mt-6"
+              icon={Sparkles}
+              title="No public network records yet"
+              body="Nothing is added to fill a quiet network. Records appear only when their source and visibility requirements are met."
+            >
+              <Link to="/discoveries" className="link-arrow inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-accent">
+                Research observations <ArrowUpRight className="size-4" aria-hidden="true" />
+              </Link>
+              <Link to="/domain" className="link-arrow inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-accent">
+                Public work board <ArrowUpRight className="size-4" aria-hidden="true" />
+              </Link>
+              <Link to="/providers" className="link-arrow inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-accent">
+                Provider capabilities <ArrowUpRight className="size-4" aria-hidden="true" />
+              </Link>
+            </EmptyState>
+          ) : (
+            <EmptyState
+              className="mt-6"
+              icon={KIND_ICONS[filter] ?? Compass}
+              title="No items in this part of the network yet"
+              body={filter === "evidence" ? "No public records with evidence-related links are available." : EMPTY_GUIDANCE[filter]?.message ?? "New entries appear when real records meet their source and visibility requirements."}
+            >
+              {EMPTY_GUIDANCE[filter] ? (
+                <Link to={EMPTY_GUIDANCE[filter].to} className="link-arrow inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-accent">
+                  {EMPTY_GUIDANCE[filter].link} <ArrowUpRight className="size-4" aria-hidden="true" />
+                </Link>
+              ) : null}
+            </EmptyState>
+          )
         ) : null}
 
-        <div className="mt-5 space-y-3">
-          {visible.map((item) => {
+        {state === "ready" && visible.length > 0 ? (
+          <p className="mt-6 font-mono text-micro uppercase tracking-[0.12em] text-dim" aria-live="polite">
+            Showing {visible.length} of {items.length} record{items.length === 1 ? "" : "s"}
+          </p>
+        ) : null}
+
+        <ol className="mt-3 space-y-3">
+          {visible.map((item, index) => {
             const Icon = KIND_ICONS[item.kind] ?? Radio;
             const safeSourceUrl = item.source_url?.startsWith("https://") ? item.source_url : null;
             const relatedProviderId = item.kind === "actor"
               ? item.entity_id
               : item.relations.find((relation) => relation.entity_type === "provider")?.entity_id;
+            const visibleRelations = item.relations.filter((relation) => !["entity", "event", "evidence", "relation"].includes(relation.entity_type));
             return (
-              <article key={item.id} className="rounded-2xl border border-border bg-surface p-5 sm:p-6">
-                <div className="flex items-start gap-3">
-                  <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary text-primary" aria-hidden="true">
+              <li
+                key={item.id}
+                className="card card-interactive reveal p-5 sm:p-6"
+                style={{ "--i": Math.min(index, 8) } as React.CSSProperties}
+              >
+                <article className="flex items-start gap-4">
+                  <span className="icon-chip hidden sm:inline-flex" aria-hidden="true">
                     <Icon className="size-4" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs uppercase tracking-[0.1em] text-primary">
-                      <span>{KIND_LABELS[item.kind] ?? item.kind.replaceAll("_", " ")}</span>
-                      {item.category ? <><span aria-hidden="true">·</span><span>{item.category}</span></> : null}
-                      {item.status ? <><span aria-hidden="true">·</span><span>{item.status.replaceAll("_", " ")}</span></> : null}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="status-pill status-pill-accent">
+                        <Icon className="size-3 sm:hidden" aria-hidden="true" />
+                        {KIND_LABELS[item.kind] ?? item.kind.replaceAll("_", " ")}
+                      </span>
+                      {item.category ? <span className="status-pill status-pill-neutral">{item.category}</span> : null}
+                      {item.status ? <span className="status-pill status-pill-neutral">{item.status.replaceAll("_", " ")}</span> : null}
                     </div>
-                    <h2 className="mt-1 font-display text-xl text-foreground sm:text-2xl">{item.title}</h2>
+                    <h2 className="mt-3 font-display text-2xl leading-tight tracking-tight text-ink">{item.title}</h2>
                     <p className="mt-2 whitespace-pre-line text-sm leading-6 text-muted">{item.summary}</p>
-                    <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
-                      <span>{sourceLabel(item.source)}</span>
-                      <span>{item.epistemic_state.replaceAll("_", " ")}</span>
-                      <time dateTime={item.updated_at || item.occurred_at || undefined}>{dateLabel(item.updated_at || item.occurred_at)}</time>
-                      {item.location ? <span>{item.location}</span> : null}
-                    </div>
-                    {item.relations.some((relation) => !["entity", "event", "evidence", "relation"].includes(relation.entity_type)) ? (
-                      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-muted">
-                        <span>Connected to</span>
-                        {item.relations.filter((relation) => !["entity", "event", "evidence", "relation"].includes(relation.entity_type)).map((relation) => (
+                    <dl className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-dim">
+                      <div><dt className="sr-only">Source</dt><dd>{sourceLabel(item.source)}</dd></div>
+                      <div><dt className="sr-only">Evidence state</dt><dd>{item.epistemic_state.replaceAll("_", " ")}</dd></div>
+                      <div><dt className="sr-only">Updated</dt><dd><time dateTime={item.updated_at || item.occurred_at || undefined}>{dateLabel(item.updated_at || item.occurred_at)}</time></dd></div>
+                      {item.location ? <div><dt className="sr-only">Location</dt><dd>{item.location}</dd></div> : null}
+                    </dl>
+                    {visibleRelations.length > 0 ? (
+                      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+                        <span className="text-dim">Connected to</span>
+                        {visibleRelations.map((relation) => (
                           <Link
                             key={`${relation.entity_type}:${relation.entity_id}:${relation.relation}`}
                             to="/feed"
                             search={{ entity_type: relation.entity_type, entity_id: relation.entity_id }}
-                            className="text-primary hover:underline"
+                            className="inline-flex min-h-8 items-center gap-1 rounded-full border border-line bg-paper/60 px-3 text-muted transition-colors hover:border-accent/60 hover:text-accent"
                           >
+                            <Link2 className="size-3" aria-hidden="true" />
                             {RELATION_LABELS[relation.relation] ?? "Related to"} · {titleByReference.get(`${relation.entity_type}:${relation.entity_id}`) ?? ENTITY_LABELS[relation.entity_type] ?? "Network record"}
                           </Link>
                         ))}
                       </div>
                     ) : null}
-                    <Link
-                      to="/feed"
-                      search={{ entity_type: item.entity_type, entity_id: item.entity_id }}
-                      className="mt-4 inline-flex min-h-10 items-center gap-1 text-xs text-muted hover:text-primary"
-                    >
-                      Open network context <ArrowUpRight className="size-3.5" />
-                    </Link>
-                    {item.kind === "signal" || item.kind === "question" || item.kind === "pattern" || item.kind === "belief" || item.kind === "opportunity" ? (
-                      <Link to={item.kind === "opportunity" ? "/opportunities" : "/discoveries"} className="ml-4 mt-4 inline-flex min-h-10 items-center gap-1 text-xs text-primary hover:underline">
-                        Review observations <ArrowUpRight className="size-3.5" />
-                      </Link>
-                    ) : null}
-                    {item.kind === "capability" || item.kind === "actor" ? (
+                    <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-line pt-3">
                       <Link
-                        to="/providers"
-                        search={relatedProviderId ? { provider: relatedProviderId } : {}}
-                        className="ml-4 mt-4 inline-flex min-h-10 items-center gap-1 text-xs text-primary hover:underline"
+                        to="/feed"
+                        search={{ entity_type: item.entity_type, entity_id: item.entity_id }}
+                        className="link-arrow inline-flex min-h-10 items-center gap-1 text-xs text-muted hover:text-accent"
                       >
-                        Explore providers <ArrowUpRight className="size-3.5" />
+                        Open network context <ArrowUpRight className="size-3.5" />
                       </Link>
-                    ) : null}
-                    {item.kind === "work_item" || item.kind === "connection" || item.kind === "outcome" ? (
-                      <Link to="/domain" className="ml-4 mt-4 inline-flex min-h-10 items-center gap-1 text-xs text-primary hover:underline">
-                        Open work records <ArrowUpRight className="size-3.5" />
-                      </Link>
-                    ) : null}
-                    {safeSourceUrl ? (
-                      <a className="mt-4 inline-flex min-h-10 items-center gap-1 text-sm text-primary hover:underline" href={safeSourceUrl} target="_blank" rel="noreferrer">
-                        Open cited source <ArrowUpRight className="size-3.5" />
-                      </a>
-                    ) : null}
+                      {item.kind === "signal" || item.kind === "question" || item.kind === "pattern" || item.kind === "belief" || item.kind === "opportunity" ? (
+                        <Link to={item.kind === "opportunity" ? "/opportunities" : "/discoveries"} className="link-arrow inline-flex min-h-10 items-center gap-1 text-xs font-semibold text-accent">
+                          Review observations <ArrowUpRight className="size-3.5" />
+                        </Link>
+                      ) : null}
+                      {item.kind === "capability" || item.kind === "actor" ? (
+                        <Link
+                          to="/providers"
+                          search={relatedProviderId ? { provider: relatedProviderId } : {}}
+                          className="link-arrow inline-flex min-h-10 items-center gap-1 text-xs font-semibold text-accent"
+                        >
+                          Explore providers <ArrowUpRight className="size-3.5" />
+                        </Link>
+                      ) : null}
+                      {item.kind === "work_item" || item.kind === "connection" || item.kind === "outcome" ? (
+                        <Link to="/domain" className="link-arrow inline-flex min-h-10 items-center gap-1 text-xs font-semibold text-accent">
+                          Open work records <ArrowUpRight className="size-3.5" />
+                        </Link>
+                      ) : null}
+                      {safeSourceUrl ? (
+                        <a className="link-arrow inline-flex min-h-10 items-center gap-1 text-xs font-semibold text-accent" href={safeSourceUrl} target="_blank" rel="noreferrer">
+                          Open cited source <ArrowUpRight className="size-3.5" />
+                        </a>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              </article>
+                </article>
+              </li>
             );
           })}
-        </div>
+        </ol>
       </Container>
     </main>
   );
 }
 
-function GraphStat({ label, value }: { label: string; value: number | null }) {
-  return (
-    <div className="rounded-xl border border-border bg-surface px-4 py-3">
-      <p className="text-xs leading-5 text-muted">{label}</p>
-      <p className="mt-1 font-display text-xl font-semibold tabular-nums text-foreground">
-        {value === null ? "—" : value.toLocaleString()}
-      </p>
-    </div>
-  );
+type FeedFilter = (typeof FILTERS)[number]["value"];
+
+function filterItems(items: PublicFeedItem[], filter: FeedFilter) {
+  if (filter === "all") return items;
+  if (filter === "evidence") {
+    return items.filter((item) => item.relations.some((relation) =>
+      ["supported_by", "grounded_in", "informed_by"].includes(relation.relation),
+    ));
+  }
+  if (filter === "connection") {
+    return items.filter((item) => item.kind === "connection" || item.relations.length > 0);
+  }
+  return items.filter((item) => item.kind === filter);
 }
