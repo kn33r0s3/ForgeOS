@@ -32,7 +32,7 @@ export function DemandIntakeForm() {
 
   return (
     <section className="rounded-xl border border-line bg-surface p-5 sm:p-8">
-      <p className="font-mono text-micro uppercase tracking-[0.12em] text-cyan">Submit a need</p>
+      <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-cyan">Submit a need</p>
       <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-fg">
         What should Hami understand?
       </h2>
@@ -64,7 +64,7 @@ export function DemandIntakeForm() {
         <button
           type="submit"
           disabled={isSubmitting || !content.trim()}
-          className="min-h-11 w-fit rounded-full bg-fg px-5 text-sm text-void disabled:cursor-not-allowed disabled:opacity-50"
+          className="min-h-11 w-fit btn-wipe rounded-card border-2 border-black/70 bg-accent px-5 text-sm font-extrabold text-black shadow-sm hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSubmitting ? "Recording…" : "Submit for understanding"}
         </button>

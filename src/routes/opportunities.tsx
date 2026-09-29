@@ -46,7 +46,7 @@ function OpportunitiesPage() {
         lede="This view shows only opportunity records cleared for the public projection. A score or hypothesis is not buyer demand, an offer, or a verified opportunity."
         aside={
           <>
-            <p className="flex items-center gap-2 font-mono text-micro uppercase tracking-[0.12em] text-accent">
+            <p className="flex items-center gap-2 text-micro font-extrabold uppercase tracking-[0.12em] text-accent">
               <ShieldAlert className="size-3.5" aria-hidden="true" /> Validation state
             </p>
             {loading ? (
@@ -80,7 +80,7 @@ function OpportunitiesPage() {
             title="No opportunity hypotheses are publicly surfaced."
             body={
               <>
-                <span className="mb-2 block font-mono text-micro uppercase tracking-[0.14em] text-dim">Sparse by design</span>
+                <span className="mb-2 block text-micro font-extrabold uppercase tracking-[0.12em] text-dim">Sparse by design</span>
                 No opportunity hypotheses are currently surfaced in the public feed. Hami leaves the space honest rather than manufacturing entries.
               </>
             }

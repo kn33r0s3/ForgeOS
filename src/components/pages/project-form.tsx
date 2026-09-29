@@ -61,7 +61,7 @@ export function ProjectForm() {
   if (!SITE.email) {
     return (
       <div className="rounded-xl border border-line bg-surface p-6" role="status">
-        <p className="font-mono text-micro uppercase tracking-[0.12em] text-cyan">Contact mailbox pending</p>
+        <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-cyan">Contact mailbox pending</p>
         <p className="mt-3 text-sm leading-relaxed text-muted">
           This inquiry form is paused until Hami has a monitored mailbox. No personal details are collected, sent, or stored here.
         </p>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowUpRight, Menu, X } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { NAV } from "@/lib/content";
 import { cn } from "@/lib/utils";
@@ -42,25 +42,19 @@ export function SiteHeader() {
     };
   }, [open]);
 
-  // The mobile sheet is a sibling of <header>, not a child: the header's
-  // backdrop-filter would otherwise become the containing block for the
-  // fixed sheet and clip it to the header's height.
+  // The mobile panel is a sibling of <header>, not a child, so it is never
+  // clipped by the header's own box.
   return (
     <>
       <header
         className={cn(
-          "sticky top-0 z-50 h-[var(--header-h)] border-b transition-[background-color,border-color] duration-200",
-          scrolled || open
-            ? "border-line bg-paper/85 backdrop-blur-xl"
-            : "border-transparent bg-paper/60 backdrop-blur-md",
+          "masthead sticky top-0 z-50 h-[var(--header-h)] transition-shadow duration-150",
+          scrolled || open ? "shadow-[0_4px_0_0_#000]" : "",
         )}
       >
-        <Container className="relative flex h-full items-center justify-between gap-4">
-          <BrandMark />
-          <nav
-            className="hidden items-center gap-1 rounded-full border border-line/80 bg-card/50 p-1 lg:flex"
-            aria-label="Main navigation"
-          >
+        <Container className="relative flex h-full items-stretch justify-between gap-4">
+          <BrandMark tone="dark" className="self-center" />
+          <nav className="hidden h-full items-stretch lg:flex" aria-label="Main navigation">
             {NAV.map((item) => {
               const active = isActive(item.to, pathname);
               return (
@@ -68,12 +62,7 @@ export function SiteHeader() {
                   key={item.to}
                   to={item.to}
                   aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "relative rounded-full px-4 py-1.5 text-nav transition-colors duration-150",
-                    active
-                      ? "bg-accent/12 text-accent"
-                      : "text-muted hover:bg-secondary hover:text-ink",
-                  )}
+                  className="mast-link text-nav"
                 >
                   {item.label}
                 </Link>
@@ -81,34 +70,34 @@ export function SiteHeader() {
             })}
           </nav>
           <div className="flex items-center gap-2">
-            <Button asChild size="sm" className="hidden lg:inline-flex">
-              <Link to="/actions">
-                Review actions
-                <ArrowUpRight />
-              </Link>
-            </Button>
+            <Link
+              to="/actions"
+              className="btn-wipe hidden h-10 items-center gap-1.5 rounded-card border-2 border-black bg-black px-4 text-sm font-extrabold text-accent hover:text-wheat lg:inline-flex"
+              style={{ backgroundImage: "linear-gradient(45deg, #161515 50%, transparent 50%)" }}
+            >
+              Review actions
+              <ArrowUpRight className="size-4" aria-hidden="true" />
+            </Link>
             <button
               type="button"
-              className="inline-flex size-11 items-center justify-center rounded-card border border-line bg-card/60 text-ink transition-colors hover:border-accent/60 lg:hidden"
+              className="group relative inline-flex size-11 flex-col items-center justify-center gap-[5px] rounded-card lg:hidden"
               aria-expanded={open}
               aria-controls="mobile-navigation"
               aria-label={open ? "Close navigation" : "Open navigation"}
               onClick={() => setOpen((value) => !value)}
             >
-              <span className="relative size-5">
-                <Menu
+              {[0, 1, 2].map((bar) => (
+                <span
+                  key={bar}
+                  aria-hidden="true"
                   className={cn(
-                    "absolute inset-0 size-5 transition-[opacity,transform,filter] duration-200",
-                    open ? "scale-[0.25] opacity-0 blur-[4px]" : "scale-100 opacity-100",
+                    "block h-[3px] w-[26px] bg-black transition-transform duration-200 ease-[var(--ease-snap)]",
+                    open && bar === 0 && "translate-y-2 rotate-45",
+                    open && bar === 1 && "scale-x-0",
+                    open && bar === 2 && "-translate-y-2 -rotate-45",
                   )}
                 />
-                <X
-                  className={cn(
-                    "absolute inset-0 size-5 transition-[opacity,transform,filter] duration-200",
-                    open ? "scale-100 opacity-100" : "scale-[0.25] opacity-0 blur-[4px]",
-                  )}
-                />
-              </span>
+              ))}
             </button>
           </div>
         </Container>
@@ -117,12 +106,14 @@ export function SiteHeader() {
         id="mobile-navigation"
         hidden={!open}
         className={cn(
-          "fixed inset-x-0 bottom-0 top-[var(--header-h)] z-40 overflow-y-auto bg-paper/97 backdrop-blur-xl lg:hidden",
+          "fixed inset-x-0 bottom-0 top-[var(--header-h)] z-40 overflow-y-auto bg-black/70 lg:hidden",
           open ? "block" : "hidden",
         )}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) setOpen(false);
+        }}
       >
-        <div className="hero-glow" aria-hidden="true" />
-        <Container className="relative flex min-h-full flex-col py-6">
+        <div className="reveal mx-2 mt-2 rounded-card border-2 border-line-strong bg-card shadow-md">
           <nav aria-label="Mobile navigation">
             <ol className="flex flex-col">
               {NAV.map((item, index) => {
@@ -130,24 +121,24 @@ export function SiteHeader() {
                 return (
                   <li
                     key={item.to}
-                    className="reveal border-b border-line"
-                    style={{ "--i": index } as React.CSSProperties}
+                    className="reveal border-b-2 border-line last:border-b-0"
+                    style={{ "--i": index + 1 } as React.CSSProperties}
                   >
                     <Link
                       to={item.to}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "flex min-h-16 items-center justify-between gap-4 font-display text-3xl tracking-tight transition-colors",
-                        active ? "text-accent" : "text-ink hover:text-accent",
+                        "flex min-h-14 items-center gap-4 px-4 text-lg font-extrabold transition-colors",
+                        active
+                          ? "bg-black text-accent"
+                          : "text-wheat hover:bg-secondary hover:text-white",
                       )}
                     >
-                      <span className="flex items-baseline gap-4">
-                        <span className="font-mono text-micro tracking-[0.14em] text-dim">
-                          {String(index + 1).padStart(2, "0")}
-                        </span>
-                        {item.label}
+                      <span className="gothic-num w-8 text-right text-xl" aria-hidden="true">
+                        {ROMAN[index]}
                       </span>
-                      <ArrowUpRight className="size-5 text-dim" aria-hidden="true" />
+                      {item.label}
+                      <ArrowUpRight className="ml-auto size-5 text-dim" aria-hidden="true" />
                     </Link>
                   </li>
                 );
@@ -155,35 +146,34 @@ export function SiteHeader() {
             </ol>
           </nav>
           <div
-            className="reveal mt-8 grid grid-cols-2 gap-2 text-sm"
-            style={{ "--i": NAV.length } as React.CSSProperties}
+            className="reveal grid grid-cols-2 gap-2 border-t-2 border-line p-3 text-sm"
+            style={{ "--i": NAV.length + 1 } as React.CSSProperties}
           >
             {SECONDARY.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
-                className="flex min-h-11 items-center rounded-card border border-line bg-card/60 px-3 text-muted transition-colors hover:border-accent/60 hover:text-ink"
+                className="flex min-h-11 items-center rounded-card border-2 border-line bg-black px-3 font-bold text-wheat transition-colors hover:border-accent hover:text-white"
               >
                 {item.label}
               </Link>
             ))}
           </div>
-          <Button
-            asChild
-            size="lg"
-            className="reveal mt-auto w-full"
-            style={{ "--i": NAV.length + 1 } as React.CSSProperties}
-          >
-            <Link to="/actions">
-              Review actions
-              <ArrowUpRight />
-            </Link>
-          </Button>
-        </Container>
+          <div className="reveal p-3 pt-0" style={{ "--i": NAV.length + 2 } as React.CSSProperties}>
+            <Button asChild size="lg" className="w-full">
+              <Link to="/actions">
+                Review actions
+                <ArrowUpRight />
+              </Link>
+            </Button>
+          </div>
+        </div>
       </div>
     </>
   );
 }
+
+const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
 
 const SECONDARY = [
   { label: "Operations", to: "/operations" },

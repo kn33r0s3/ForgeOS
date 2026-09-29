@@ -4,7 +4,7 @@ import { ProjectInquiryCta } from "@/components/pages/project-inquiry-cta";
 export function OfferCard({ offer }: { offer: BusinessOffer }) {
   return (
     <article className="flex flex-col rounded-xl border border-line bg-surface p-6 transition-[border-color,transform] duration-150 hover:border-cyan/35">
-      <p className="font-mono text-micro uppercase tracking-[0.14em] text-cyan">
+      <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-cyan">
         Current offer
       </p>
       <h3 className="mt-5 font-display text-2xl font-semibold tracking-tight text-fg">

@@ -209,7 +209,7 @@ function NetworkFeedPage() {
         lede="Public entities and their recorded relationships, capabilities, evidence links, and opportunity hypotheses. A connection is a stored relation, not proof of agreement."
         aside={
           <>
-            <p className="flex items-center gap-2 font-mono text-micro uppercase tracking-[0.12em] text-accent">
+            <p className="flex items-center gap-2 text-micro font-extrabold uppercase tracking-[0.12em] text-accent">
               <ShieldCheck className="size-3.5" aria-hidden="true" /> Projection legend
             </p>
             <p className="mt-2 text-sm leading-6 text-muted">
@@ -219,13 +219,13 @@ function NetworkFeedPage() {
         }
       >
         {entityType && entityId ? (
-          <p className="mt-6 inline-flex items-center gap-2 rounded-full border border-accent/40 bg-accent/10 py-1.5 pl-3 pr-1.5 text-xs text-ink">
+          <p className="mt-6 inline-flex items-center gap-2 rounded-card border-2 border-accent bg-black py-1.5 pl-3 pr-1.5 text-xs text-ink">
             <GitBranch className="size-3.5 text-accent" aria-hidden="true" />
             Network context: {ENTITY_LABELS[entityType] ?? entityType.replaceAll("_", " ")}
             <Link
               to="/feed"
               search={{}}
-              className="inline-flex min-h-8 items-center gap-1 rounded-full px-2 text-accent hover:bg-accent/15"
+              className="inline-flex min-h-8 items-center gap-1 rounded-card px-2 text-accent hover:bg-accent hover:text-black"
             >
               <X className="size-3.5" aria-hidden="true" /> Clear
             </Link>
@@ -307,7 +307,7 @@ function NetworkFeedPage() {
         ) : null}
 
         {state === "ready" && visible.length > 0 ? (
-          <p className="mt-6 font-mono text-micro uppercase tracking-[0.12em] text-dim" aria-live="polite">
+          <p className="mt-6 text-micro font-extrabold uppercase tracking-[0.12em] text-dim" aria-live="polite">
             Showing {visible.length} of {items.length} record{items.length === 1 ? "" : "s"}
           </p>
         ) : null}
@@ -355,7 +355,7 @@ function NetworkFeedPage() {
                             key={`${relation.entity_type}:${relation.entity_id}:${relation.relation}`}
                             to="/feed"
                             search={{ entity_type: relation.entity_type, entity_id: relation.entity_id }}
-                            className="inline-flex min-h-8 items-center gap-1 rounded-full border border-line bg-paper/60 px-3 text-muted transition-colors hover:border-accent/60 hover:text-accent"
+                            className="inline-flex min-h-8 items-center gap-1 rounded-card border-2 border-line bg-black px-3 font-bold text-muted transition-colors hover:border-accent/60 hover:text-accent"
                           >
                             <Link2 className="size-3" aria-hidden="true" />
                             {RELATION_LABELS[relation.relation] ?? "Related to"} · {titleByReference.get(`${relation.entity_type}:${relation.entity_id}`) ?? ENTITY_LABELS[relation.entity_type] ?? "Network record"}

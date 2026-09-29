@@ -56,7 +56,7 @@ function DiscoveriesPage() {
           />
         ) : null}
         {ready && rows && rows.length > 0 ? (
-          <p className="mb-3 font-mono text-micro uppercase tracking-[0.12em] text-dim">
+          <p className="mb-3 text-micro font-extrabold uppercase tracking-[0.12em] text-dim">
             {rows.length} sourced observation{rows.length === 1 ? "" : "s"}
           </p>
         ) : null}

@@ -3,7 +3,7 @@ import { RefreshCw } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/** Shimmering placeholder block. Decorative: screen readers get the parent's status. */
+/** Striped placeholder block. Decorative: screen readers get the parent's status. */
 export function Skeleton({ className }: { className?: string }) {
   return <span aria-hidden="true" className={cn("skeleton block h-4", className)} />;
 }
@@ -67,22 +67,23 @@ export function EmptyState({
 }) {
   const Heading = headingLevel;
   return (
-    <div className={cn("card fade-in relative overflow-hidden p-6 sm:p-8", className)}>
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-accent/10 blur-3xl"
-      />
-      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start">
+    <div
+      className={cn(
+        "card fade-in relative overflow-hidden bg-[linear-gradient(45deg,#4a4953_0%,#000_45%_100%)] px-6 py-8 text-center sm:px-10 sm:py-10",
+        className,
+      )}
+    >
+      <div className="relative mx-auto flex max-w-2xl flex-col items-center">
         {Icon ? (
-          <span className="icon-chip" aria-hidden="true">
-            <Icon className="size-4" />
+          <span className="medallion mb-5" aria-hidden="true">
+            <Icon className="size-7" strokeWidth={2.25} />
           </span>
         ) : null}
-        <div className="min-w-0">
-          <Heading className="font-display text-2xl tracking-tight text-ink">{title}</Heading>
-          {body ? <div className="mt-2 max-w-2xl text-sm leading-6 text-muted">{body}</div> : null}
-          {children ? <div className="mt-5 flex flex-wrap items-center gap-3">{children}</div> : null}
-        </div>
+        <Heading className="text-2xl font-extrabold tracking-tight text-accent">{title}</Heading>
+        {body ? <div className="mt-3 text-sm leading-6 text-muted">{body}</div> : null}
+        {children ? (
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-3">{children}</div>
+        ) : null}
       </div>
     </div>
   );
@@ -104,20 +105,20 @@ export function UnavailableState({
     <div
       role="alert"
       className={cn(
-        "fade-in rounded-card border border-warning/35 bg-warning/5 p-5 sm:p-6",
+        "fade-in rounded-card border-2 border-warning/70 bg-black p-5 shadow-md sm:p-6",
         className,
       )}
     >
-      <p className="flex items-center gap-2 font-mono text-micro uppercase tracking-[0.14em] text-warning">
+      <p className="inline-flex items-center gap-2 rounded-[3px] bg-warning px-2 py-1 text-micro font-extrabold uppercase tracking-[0.14em] text-black">
         <span className="live-dot live-dot-warning" aria-hidden="true" /> Unavailable
       </p>
-      <h2 className="mt-3 font-display text-2xl tracking-tight text-ink">{title}</h2>
+      <h2 className="mt-3 text-2xl font-extrabold tracking-tight text-ink">{title}</h2>
       {body ? <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{body}</p> : null}
       {onRetry ? (
         <button
           type="button"
           onClick={onRetry}
-          className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-card border border-line bg-card px-4 text-sm font-semibold text-ink transition-colors hover:border-accent/60"
+          className="btn-wipe mt-4 inline-flex min-h-11 items-center gap-2 rounded-card border-2 border-black/70 bg-[#f5f1f1] px-4 text-sm font-extrabold text-black shadow-sm hover:text-white"
         >
           <RefreshCw className="size-4" aria-hidden="true" />
           Retry
@@ -152,14 +153,19 @@ export function MetricTile({
       className={cn("card card-interactive reveal p-4 sm:p-5", tone === "accent" && "card-accent", className)}
       style={{ "--i": index } as React.CSSProperties}
     >
-      <div className="flex items-center justify-between gap-2">
-        <p className="font-mono text-micro uppercase tracking-[0.12em] text-dim">{label}</p>
-        {Icon ? <Icon className="size-4 text-accent/80" aria-hidden="true" /> : null}
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-wheat">{label}</p>
+        {Icon ? (
+          <span className="icon-chip size-8" aria-hidden="true">
+            <Icon className="size-4" />
+          </span>
+        ) : null}
       </div>
+      <span className="mt-2 block h-[3px] w-8 bg-accent" aria-hidden="true" />
       {loading ? (
         <Skeleton className="mt-4 h-8 w-14" />
       ) : (
-        <p className="mt-3 font-display text-4xl leading-none tracking-tight tabular-nums text-ink">
+        <p className="mt-3 text-4xl font-black leading-none tracking-tight tabular-nums text-ink">
           {value === null ? <span className="text-dim" title="Unavailable">—</span> : typeof value === "number" ? value.toLocaleString() : value}
         </p>
       )}

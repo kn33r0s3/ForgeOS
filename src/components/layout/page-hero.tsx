@@ -3,6 +3,7 @@ import { Container } from "./container";
 import { Eyebrow } from "./eyebrow";
 import { cn } from "@/lib/utils";
 
+/** Marketing-page masthead: centred, blackletter title on the 45deg sheen. */
 export function PageHero({
   eyebrow,
   title,
@@ -17,22 +18,17 @@ export function PageHero({
   className?: string;
 }) {
   return (
-    <section
-      className={cn(
-        "relative isolate overflow-hidden border-b border-line py-16 sm:py-20 lg:py-24",
-        className,
-      )}
-    >
+    <section className={cn("relative isolate overflow-hidden", className)}>
       <div className="hero-glow -z-10" aria-hidden="true" />
       <div className="hero-grain -z-10" aria-hidden="true" />
-      <Container className="fade-in max-w-3xl">
+      <Container className="reveal flex max-w-3xl flex-col items-center py-16 text-center sm:py-20 lg:py-24">
         <Eyebrow>{eyebrow}</Eyebrow>
-        <h1 className="font-display text-display tracking-tight text-ink">{title}</h1>
-        {lede ? (
-          <p className="mt-6 max-w-xl text-lede text-muted">{lede}</p>
-        ) : null}
+        <h1 className="font-gothic text-display text-ink [text-shadow:3px_3px_0_#000]">{title}</h1>
+        <span className="cut-rule mt-6" aria-hidden="true" />
+        {lede ? <p className="mt-6 max-w-xl text-lede text-muted">{lede}</p> : null}
         {children}
       </Container>
+      <div className="band-rule" aria-hidden="true" />
     </section>
   );
 }

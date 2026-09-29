@@ -74,7 +74,7 @@ function ActionsPage() {
         ) : null}
         {!loading && runtime !== null ? (
           <div className="card fade-in mt-5 p-6 sm:p-8">
-            <p className="font-mono text-micro uppercase tracking-[0.14em] text-accent">Interpretation</p>
+            <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">Interpretation</p>
             {pending === 0 ? (
               <h2 className="mt-3 font-display text-3xl leading-tight tracking-tight text-ink">
                 No action records currently have a pending-review status.
@@ -93,12 +93,12 @@ function ActionsPage() {
             </p>
             <dl className="mt-6 grid gap-4 border-t border-line pt-5 text-sm sm:grid-cols-2">
               <div>
-                <dt className="font-mono text-micro uppercase tracking-[0.1em] text-dim">Current continuation state</dt>
+                <dt className="text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Current continuation state</dt>
                 <dd className="mt-1 font-medium text-ink">{runtime.active_stage}</dd>
               </div>
               {runtime.cycles.last_completed?.ended_at ? (
                 <div>
-                  <dt className="font-mono text-micro uppercase tracking-[0.1em] text-dim">Last completed cycle</dt>
+                  <dt className="text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Last completed cycle</dt>
                   <dd className="mt-1 text-muted">Recorded at {new Date(runtime.cycles.last_completed.ended_at).toLocaleString()}.</dd>
                 </div>
               ) : null}

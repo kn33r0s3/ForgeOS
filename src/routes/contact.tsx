@@ -16,7 +16,7 @@ function ContactPage() {
       <Container className="grid gap-12 lg:grid-cols-2 lg:gap-20">
         <div>
           <Eyebrow>Contact Hami</Eyebrow>
-          <h1 className="font-display text-display tracking-tight text-fg">
+          <h1 className="font-gothic text-display text-fg [text-shadow:3px_3px_0_#000]">
             Start with the
             <br />
             <span className="text-muted">situation.</span>

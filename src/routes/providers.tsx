@@ -197,7 +197,7 @@ function ProvidersPage() {
       <Container className="grid gap-8 py-10 sm:py-14 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
         <div className="space-y-3">
           {providerLoadState === "ready" && filteredProviders.length > 0 ? (
-            <p className="font-mono text-micro uppercase tracking-[0.12em] text-dim" aria-live="polite">
+            <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-dim" aria-live="polite">
               {filteredProviders.length} verified provider{filteredProviders.length === 1 ? "" : "s"}
             </p>
           ) : null}
@@ -227,7 +227,7 @@ function ProvidersPage() {
                         <Store className="size-4" />
                       </span>
                       <div>
-                        <p className="font-mono text-micro uppercase tracking-[0.12em] text-accent">{provider.category}</p>
+                        <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">{provider.category}</p>
                         <h2 className="mt-1 font-display text-2xl leading-tight tracking-tight text-ink">{provider.name}</h2>
                       </div>
                     </div>
@@ -266,7 +266,7 @@ function ProvidersPage() {
             <div className="fade-in" key={selectedProvider.id}>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-mono text-micro uppercase tracking-[0.12em] text-accent">Selected provider</p>
+                  <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">Selected provider</p>
                   <h2 className="mt-2 font-display text-3xl leading-tight tracking-tight text-ink">{selectedProvider.name}</h2>
                 </div>
                 <span className="status-pill status-pill-neutral">
@@ -281,7 +281,7 @@ function ProvidersPage() {
               </div>
 
               <div className="mt-5 rounded-card border border-line bg-paper/70 p-4">
-                <p className="flex items-center gap-2 font-mono text-micro uppercase tracking-[0.12em] text-accent"><ShieldCheck className="size-3.5" aria-hidden="true" /> Recorded trust</p>
+                <p className="flex items-center gap-2 text-micro font-extrabold uppercase tracking-[0.12em] text-accent"><ShieldCheck className="size-3.5" aria-hidden="true" /> Recorded trust</p>
                 <p className="mt-2 text-sm text-muted">
                   {trust
                     ? `${trust.recorded_requests} request(s) recorded · ${trust.disputes} dispute(s)`
@@ -290,7 +290,7 @@ function ProvidersPage() {
                 {trust?.unknowns.length ? <p className="mt-2 text-xs text-dim">{trust.unknowns.join(" · ")}</p> : null}
               </div>
 
-              <h3 className="mt-6 font-mono text-micro uppercase tracking-[0.12em] text-dim">Services</h3>
+              <h3 className="mt-6 text-micro font-extrabold uppercase tracking-[0.12em] text-dim">Services</h3>
               <div className="mt-2 space-y-2">
                 {selectedProvider.listings.length > 0 ? (
                   selectedProvider.listings.map((listing) => (
@@ -343,7 +343,7 @@ function ProvidersPage() {
               <h3 className="font-display text-2xl tracking-tight text-ink">Request this service</h3>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block">
-                  <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Your name</span>
+                  <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Your name</span>
                   <input
                     value={booking.name}
                     onChange={(event) => setBooking((current) => ({ ...current, name: event.target.value }))}
@@ -353,7 +353,7 @@ function ProvidersPage() {
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Phone</span>
+                  <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Phone</span>
                   <input
                     type="tel"
                     value={booking.phone}
@@ -365,7 +365,7 @@ function ProvidersPage() {
                 </label>
               </div>
               <label className="block">
-                <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Email</span>
+                <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Email</span>
                 <input
                   type="email"
                   value={booking.email}
@@ -377,7 +377,7 @@ function ProvidersPage() {
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block">
-                  <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Service</span>
+                  <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Service</span>
                   <input
                     value={booking.service}
                     onChange={(event) => setBooking((current) => ({ ...current, service: event.target.value }))}
@@ -386,7 +386,7 @@ function ProvidersPage() {
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Preferred date</span>
+                  <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Preferred date</span>
                   <input
                     type="date"
                     value={booking.date}
@@ -396,7 +396,7 @@ function ProvidersPage() {
                 </label>
               </div>
               <label className="block">
-                <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Notes</span>
+                <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Notes</span>
                 <textarea
                   value={booking.notes}
                   onChange={(event) => setBooking((current) => ({ ...current, notes: event.target.value }))}

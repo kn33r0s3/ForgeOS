@@ -119,98 +119,76 @@ function HomePage() {
 
   return (
     <main>
-      {/* ── Hero ─────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden border-b border-line">
-        <div className="hero-glow" aria-hidden="true" />
-        <div className="hero-grain" aria-hidden="true" />
-        <Container className="relative grid items-center gap-10 py-14 sm:py-20 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-14 lg:py-24">
-          <div>
-            <p className="reveal flex items-center gap-2 font-mono text-micro uppercase tracking-[0.14em] text-accent">
-              <span aria-hidden="true" className="h-px w-6 bg-accent/70" />
-              Hami · Nepal-first intelligence
-            </p>
-            <h1
-              className="reveal mt-5 font-display text-[clamp(2.75rem,6.4vw,5.25rem)] leading-[0.96] text-balance tracking-tight text-ink"
-              style={{ "--i": 1 } as React.CSSProperties}
-            >
-              Discover what matters.
-              <br />
-              <span className="text-gradient-gold">
-                Understand it. <span className="whitespace-nowrap">Act on it.</span>
-              </span>
-            </h1>
-            <p
-              className="reveal mt-6 max-w-xl text-lede text-muted"
-              style={{ "--i": 2 } as React.CSSProperties}
-            >
-              Hami connects observations, research, options, decisions, and outcomes.
-              Evidence stays visible; a hypothesis never becomes a customer or a result
-              just because it is recorded.
-            </p>
-            <div className="reveal mt-9 flex flex-wrap items-center gap-3" style={{ "--i": 3 } as React.CSSProperties}>
-              <Link
-                to="/feed"
-                className="link-arrow group inline-flex h-12 items-center gap-2 rounded-card bg-accent px-6 text-sm font-semibold text-accent-ink shadow-[0_12px_32px_-12px_rgb(226_160_26/0.6)] transition-[background-color,transform] duration-150 hover:bg-accent/90 active:scale-[0.98]"
-              >
-                Explore the network <ArrowRight className="size-4" aria-hidden="true" />
-              </Link>
-              <Link
-                to="/discoveries"
-                className="inline-flex h-12 items-center gap-2 rounded-card border border-line bg-card/60 px-5 text-sm font-semibold text-ink transition-colors hover:border-accent/60"
-              >
-                Review research
-              </Link>
-              <Link
-                to="/operations"
-                className="link-arrow inline-flex h-12 items-center gap-1.5 px-2 text-sm font-semibold text-muted transition-colors hover:text-accent"
-              >
-                Operating dashboard <ArrowUpRight className="size-4" aria-hidden="true" />
-              </Link>
+      {/* ── Hero: pinstripe-framed masthead, then slab statement + live status ── */}
+      <section className="relative isolate overflow-hidden">
+        <div className="hero-glow -z-10" aria-hidden="true" />
+        <div className="hero-grain -z-10" aria-hidden="true" />
+        <Container className="py-8 sm:py-12">
+          <div className="pinstripe reveal overflow-hidden">
+            <img
+              src="/hami-home.jpg"
+              alt=""
+              width={1376}
+              height={768}
+              fetchPriority="high"
+              className="absolute inset-0 size-full object-cover object-[52%_45%] opacity-40"
+            />
+            <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(45deg,#000_20%,rgb(0_0_0/0.55)_60%,rgb(0_0_0/0.2))]" />
+            <div className="relative z-[2] flex flex-col items-center px-4 py-12 text-center sm:px-10 sm:py-20">
+              <p className="tag">Hami · Nepal-first intelligence</p>
+              <h1 className="mt-6 font-gothic text-[clamp(2.6rem,7.4vw,6rem)] leading-[1.04] text-ink [text-shadow:3px_3px_0_#000]">
+                Discover what matters.
+                <br />
+                Understand it.{" "}
+                <span className="plate mt-2 inline-block whitespace-nowrap">Act on it.</span>
+              </h1>
+              <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+                <Link
+                  to="/feed"
+                  className="btn-wipe inline-flex h-12 items-center gap-2 rounded-card border-2 border-black/70 bg-accent px-6 text-base font-extrabold text-black shadow-sm hover:text-accent"
+                >
+                  Explore the network <ArrowRight className="size-4" aria-hidden="true" />
+                </Link>
+                <Link
+                  to="/discoveries"
+                  className="btn-wipe inline-flex h-12 items-center gap-2 rounded-card border-2 border-black/70 bg-[#f5f1f1] px-5 text-base font-extrabold text-black shadow-sm hover:text-white"
+                >
+                  Review research
+                </Link>
+                <Link
+                  to="/operations"
+                  className="link-arrow inline-flex h-12 items-center gap-1.5 px-2 text-sm font-bold text-wheat hover:text-white"
+                >
+                  Operating dashboard <ArrowUpRight className="size-4" aria-hidden="true" />
+                </Link>
+              </div>
             </div>
-            <ul
-              className="reveal mt-10 grid max-w-xl gap-4 border-t border-line pt-6 text-sm text-muted sm:grid-cols-3"
-              style={{ "--i": 4 } as React.CSSProperties}
-              aria-label="Operating principles"
-            >
-              <li className="flex items-start gap-2">
-                <Eye className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
-                Evidence stays visible
-              </li>
-              <li className="flex items-start gap-2">
-                <Scale className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
-                Hypotheses stay labelled
-              </li>
-              <li className="flex items-start gap-2">
-                <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
-                Owner approves actions
-              </li>
-            </ul>
           </div>
 
-          {/* Visual: workshop photograph with a live system card over it. */}
-          <div className="reveal relative" style={{ "--i": 2 } as React.CSSProperties}>
-            <div
-              aria-hidden="true"
-              className="absolute -inset-6 rounded-[2rem] bg-[radial-gradient(closest-side,rgb(226_160_26/0.22),transparent)] blur-2xl"
-            />
-            <figure className="relative overflow-hidden rounded-card border border-line">
-              <img
-                src="/hami-home.jpg"
-                alt="A lit workbench with tools and an open notebook in a dusk workshop doorway"
-                width={1376}
-                height={768}
-                fetchPriority="high"
-                className="aspect-[4/3] w-full object-cover object-[52%_45%] sm:aspect-[16/12] lg:aspect-[5/6]"
-              />
-              <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-paper via-paper/10 to-transparent" />
-            </figure>
+          <div className="mt-10 grid items-center gap-8 lg:grid-cols-[auto_minmax(0,1fr)_minmax(0,22rem)] lg:gap-10">
+            <div className="reveal mx-auto size-40 overflow-hidden rounded-full border-[3px] border-accent bg-black sm:size-48" style={{ "--i": 1 } as React.CSSProperties}>
+              <img src="/hami-home.jpg" alt="" width={1376} height={768} className="size-full object-cover object-[52%_45%]" />
+            </div>
+            <div className="reveal" style={{ "--i": 2 } as React.CSSProperties}>
+              <p className="slab px-5 py-4 text-center text-base italic leading-7 sm:text-lg">
+                “Hami connects observations, research, options, decisions, and outcomes.
+                Evidence stays visible; a hypothesis never becomes a customer or a result
+                just because it is recorded.”
+              </p>
+              <ul className="mt-5 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm font-bold text-wheat" aria-label="Operating principles">
+                <li className="flex items-center gap-2"><Eye className="size-4 text-accent" aria-hidden="true" />Evidence stays visible</li>
+                <li className="flex items-center gap-2"><Scale className="size-4 text-accent" aria-hidden="true" />Hypotheses stay labelled</li>
+                <li className="flex items-center gap-2"><ShieldCheck className="size-4 text-accent" aria-hidden="true" />Owner approves actions</li>
+              </ul>
+            </div>
 
             <section
               aria-labelledby="continuation-heading"
-              className="glass relative -mt-20 mx-3 p-5 sm:absolute sm:-bottom-10 sm:right-5 sm:mx-0 sm:mt-0 sm:w-[21rem]"
+              className="glass reveal border-t-4 border-t-accent p-5"
+              style={{ "--i": 3 } as React.CSSProperties}
             >
               <div className="flex items-center justify-between gap-3">
-                <p className="flex items-center gap-2 text-sm font-semibold text-ink" role="status">
+                <p className="flex items-center gap-2 text-sm font-bold text-ink" role="status">
                   <span
                     className={
                       statusTone === "live"
@@ -225,7 +203,7 @@ function HomePage() {
                 </p>
                 <Activity className="size-4 text-accent" aria-hidden="true" />
               </div>
-              <h2 id="continuation-heading" className="mt-4 font-display text-2xl tracking-tight text-ink">
+              <h2 id="continuation-heading" className="mt-3 text-xl font-extrabold text-accent">
                 What happens next
               </h2>
               {loading ? (
@@ -237,16 +215,16 @@ function HomePage() {
                     : "The continuation state has not loaded. No activity is assumed."}
                 </p>
               )}
-              <dl className="mt-4 grid grid-cols-2 gap-4 border-t border-line pt-4 text-sm">
+              <dl className="mt-4 grid grid-cols-2 gap-4 border-t-2 border-line pt-4 text-sm">
                 <div>
-                  <dt className="font-mono text-micro uppercase tracking-[0.1em] text-dim">Queued tasks</dt>
-                  <dd className="mt-1 font-semibold tabular-nums text-ink">
+                  <dt className="text-micro font-extrabold uppercase tracking-[0.1em] text-wheat">Queued tasks</dt>
+                  <dd className="mt-1 font-bold tabular-nums text-ink">
                     {loading ? <Skeleton className="h-4 w-8" /> : runtime ? runtime.worker.queued_tasks.toLocaleString() : "Unavailable"}
                   </dd>
                 </div>
                 <div>
-                  <dt className="font-mono text-micro uppercase tracking-[0.1em] text-dim">Last cycle</dt>
-                  <dd className="mt-1 font-semibold text-ink">
+                  <dt className="text-micro font-extrabold uppercase tracking-[0.1em] text-wheat">Last cycle</dt>
+                  <dd className="mt-1 font-bold text-ink">
                     {loading ? (
                       <Skeleton className="h-4 w-20" />
                     ) : lastCycle?.ended_at ? (
@@ -264,6 +242,7 @@ function HomePage() {
             </section>
           </div>
         </Container>
+        <div className="band-rule" aria-hidden="true" />
       </section>
 
       <Container className="max-w-site py-14 sm:py-20">
@@ -290,8 +269,8 @@ function HomePage() {
         <section aria-labelledby="overview-heading">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="font-mono text-micro uppercase tracking-[0.14em] text-accent">System state</p>
-              <h2 id="overview-heading" className="mt-2 font-display text-4xl tracking-tight text-ink sm:text-5xl">
+              <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">System state</p>
+              <h2 id="overview-heading" className="mt-2 text-3xl font-black tracking-tight text-ink sm:text-4xl">
                 Live state, not theatre.
               </h2>
             </div>
@@ -313,7 +292,7 @@ function HomePage() {
           <div className="card p-5 sm:p-7">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className="font-mono text-micro uppercase tracking-[0.14em] text-accent">Evidence trail</p>
+                <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">Evidence trail</p>
                 <h2 className="mt-2 font-display text-3xl tracking-tight text-ink">Recent public records</h2>
               </div>
               <Link to="/feed" className="link-arrow inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-accent">
@@ -377,7 +356,7 @@ function HomePage() {
             <section className="card card-accent p-5 sm:p-6">
               <div className="flex items-center gap-2 text-accent">
                 <Compass className="size-4" aria-hidden="true" />
-                <p className="font-mono text-micro uppercase tracking-[0.14em]">Opportunity status</p>
+                <p className="text-micro font-extrabold uppercase tracking-[0.12em]">Opportunity status</p>
               </div>
               {loading ? (
                 <div className="mt-4 space-y-2">
@@ -417,7 +396,7 @@ function HomePage() {
             <section className="card p-5 sm:p-6">
               <div className="flex items-center gap-2 text-accent">
                 <Network className="size-4" aria-hidden="true" />
-                <p className="font-mono text-micro uppercase tracking-[0.14em]">Research activity</p>
+                <p className="text-micro font-extrabold uppercase tracking-[0.12em]">Research activity</p>
               </div>
               {loading ? (
                 <div className="mt-4 space-y-3">
@@ -435,7 +414,7 @@ function HomePage() {
                     <li key={item.id} className="border-l-2 border-accent/50 pl-3">
                       <p className="text-sm font-semibold text-ink">{item.title || "Untitled observation"}</p>
                       <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted">{item.excerpt}</p>
-                      <p className="mt-1 font-mono text-micro uppercase tracking-[0.08em] text-dim">{item.source} · {item.epistemic_state}</p>
+                      <p className="mt-1 text-micro font-extrabold uppercase tracking-[0.08em] text-dim">{item.source} · {item.epistemic_state}</p>
                     </li>
                   ))}
                 </ul>
@@ -449,13 +428,13 @@ function HomePage() {
 
         {/* ── Operating loop ─────────────────────────────────────────── */}
         <section aria-labelledby="loop-heading" className="mt-20">
-          <p className="font-mono text-micro uppercase tracking-[0.14em] text-accent">How Hami works</p>
-          <h2 id="loop-heading" className="mt-2 max-w-2xl font-display text-4xl tracking-tight text-ink sm:text-5xl">
+          <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">How Hami works</p>
+          <h2 id="loop-heading" className="mt-2 max-w-2xl text-3xl font-black tracking-tight text-ink sm:text-4xl">
             One loop, every step on the record.
           </h2>
-          <ol className="step-rail mt-10 grid gap-px overflow-hidden rounded-card border border-line bg-line sm:grid-cols-2 lg:grid-cols-5">
+          <ol className="step-rail mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {LOOP.map((step) => (
-              <li key={step.title} className="bg-card p-5 transition-colors duration-200 hover:bg-surface-elevated">
+              <li key={step.title} className="card card-interactive p-5">
                 <step.icon className="mt-4 size-5 text-accent" aria-hidden="true" />
                 <h3 className="mt-3 font-display text-2xl tracking-tight text-ink">{step.title}</h3>
                 <p className="mt-2 text-sm leading-6 text-muted">{step.body}</p>

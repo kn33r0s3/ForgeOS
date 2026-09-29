@@ -1,7 +1,18 @@
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
-export function BrandMark({ className }: { className?: string }) {
+/**
+ * Stacked masthead mark: the Hami icon above a blackletter wordmark.
+ * `tone="dark"` is for the orange masthead (black type); `"light"` for
+ * dark surfaces such as the footer (orange type).
+ */
+export function BrandMark({
+  className,
+  tone = "light",
+}: {
+  className?: string;
+  tone?: "light" | "dark";
+}) {
   return (
     <Link
       to="/"
@@ -13,9 +24,19 @@ export function BrandMark({ className }: { className?: string }) {
         alt=""
         width={32}
         height={32}
-        className="size-8 rounded-card border border-line bg-card object-cover transition-colors duration-150 group-hover:border-accent/60"
+        className={cn(
+          "size-8 rounded-card border-2 object-cover transition-transform duration-150 group-hover:-rotate-6",
+          tone === "dark" ? "border-black bg-black" : "border-line bg-card",
+        )}
       />
-      <span className="font-display text-xl tracking-tight text-ink">Hami</span>
+      <span
+        className={cn(
+          "font-gothic text-2xl leading-none",
+          tone === "dark" ? "text-black" : "text-accent",
+        )}
+      >
+        Hami
+      </span>
     </Link>
   );
 }

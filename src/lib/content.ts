@@ -1,6 +1,6 @@
 export const SITE = {
   name: "Hami",
-  themeColor: "#12140f",
+  themeColor: "#04021f",
   domain: "Domain pending verification",
   url: "",
   email: "",

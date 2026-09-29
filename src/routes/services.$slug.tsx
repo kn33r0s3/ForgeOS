@@ -41,14 +41,14 @@ function ServicePage() {
         <Container className="grid items-end gap-10 lg:grid-cols-[1.15fr_0.85fr]">
           <div>
             <Eyebrow>Service / {service.slug}</Eyebrow>
-            <h1 className="max-w-3xl font-display text-display tracking-tight text-fg">
+            <h1 className="max-w-3xl font-gothic text-display text-fg [text-shadow:3px_3px_0_#000]">
               {service.title}
             </h1>
             <p className="mt-6 max-w-xl text-lede text-muted">{service.short}</p>
             <ProjectInquiryCta />
           </div>
           <div className="flex min-h-48 flex-col justify-between rounded-xl bg-foreground p-6 text-background shadow-md">
-            <span className="font-mono text-micro uppercase tracking-[0.12em] opacity-60">
+            <span className="text-micro font-extrabold uppercase tracking-[0.12em] opacity-60">
               01—06
             </span>
             <strong className="font-display text-2xl font-semibold tracking-tight">
@@ -56,7 +56,7 @@ function ServicePage() {
               <br />
               Clear ownership.
             </strong>
-            <small className="font-mono text-micro uppercase tracking-[0.12em] opacity-60">
+            <small className="text-micro font-extrabold uppercase tracking-[0.12em] opacity-60">
               Hami · Nepal
             </small>
           </div>

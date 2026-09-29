@@ -174,7 +174,7 @@ function OperationsPage() {
         lede="Hami operating window. It shows stored evidence, recorded opportunities, and actions that still need approval. A missing amount stays unknown. Figures come from the existing system data."
         aside={
           <>
-            <p className="font-mono text-micro uppercase tracking-[0.12em] text-accent">Manual controls</p>
+            <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">Manual controls</p>
             <p className="mt-2 text-xs leading-5 text-muted">
               Nothing runs on page load. Each run is started here, by you.
             </p>
@@ -339,7 +339,7 @@ function OperationsPage() {
                         >
                           <div>
                             <div className="flex items-start justify-between gap-3">
-                              <span className="font-mono text-micro uppercase tracking-[0.08em] text-accent">
+                              <span className="text-micro font-extrabold uppercase tracking-[0.08em] text-accent">
                                 Opp #{opp.id} · {opp.customer_segment || opp.target_customer || "Customer not recorded"}
                               </span>
                               <span className="status-pill status-pill-accent shrink-0">Score {opp.score.toFixed(1)}</span>
@@ -351,7 +351,7 @@ function OperationsPage() {
                               <p className="mt-2 line-clamp-2 text-sm text-muted">{opp.solution}</p>
                             ) : null}
                           </div>
-                          <dl className="grid grid-cols-3 gap-3 border-t border-line pt-3 font-mono text-micro uppercase tracking-[0.06em] text-dim">
+                          <dl className="grid grid-cols-3 gap-3 border-t border-line pt-3 text-micro font-extrabold uppercase tracking-[0.06em] text-dim">
                             <div>
                               <dt>Model</dt>
                               <dd className="mt-1 normal-case tracking-normal text-muted">{opp.business_model || "Model not recorded"}</dd>
@@ -407,7 +407,7 @@ function OperationsPage() {
                       >
                         <div className="min-w-0 space-y-1.5">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-mono text-micro uppercase tracking-[0.08em] text-accent">
+                            <span className="text-micro font-extrabold uppercase tracking-[0.08em] text-accent">
                               Proposal #{act.id} · {act.action_type || "Action type not recorded"}
                             </span>
                             <span
@@ -494,7 +494,7 @@ function SectionTitle({
         <Icon className="size-5 text-accent" aria-hidden="true" />
         {title}
       </h2>
-      {meta ? <span className="font-mono text-micro uppercase tracking-[0.1em] text-dim">{meta}</span> : null}
+      {meta ? <span className="text-micro font-extrabold uppercase tracking-[0.1em] text-dim">{meta}</span> : null}
     </div>
   );
 }

@@ -78,7 +78,7 @@ function RequestStatusPage() {
           <article className="card fade-in overflow-hidden">
             <div className="border-b border-line p-6 sm:p-8">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="font-mono text-micro uppercase tracking-[0.12em] text-dim">Request #{record.id}</p>
+                <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-dim">Request #{record.id}</p>
                 <span className={`status-pill ${record.status === "pending" ? "status-pill-warning" : "status-pill-accent"}`}>
                   <Clock3 className="size-3" aria-hidden="true" /> {record.status}
                 </span>

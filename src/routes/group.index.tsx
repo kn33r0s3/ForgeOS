@@ -47,7 +47,7 @@ function GroupPage() {
             </p>
             <div className="mt-8 grid gap-4 md:grid-cols-2">
               <article className="rounded-xl border border-line bg-surface p-6">
-                <p className="font-mono text-micro uppercase tracking-[0.14em] text-cyan">
+                <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-cyan">
                   Live
                 </p>
                 <h3 className="mt-4 font-display text-xl font-semibold tracking-tight text-fg">
@@ -62,7 +62,7 @@ function GroupPage() {
                 </div>
               </article>
               <article className="rounded-xl border border-line bg-surface p-6">
-                <p className="font-mono text-micro uppercase tracking-[0.14em] text-cyan">
+                <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-cyan">
                   Available
                 </p>
                 <h3 className="mt-4 font-display text-xl font-semibold tracking-tight text-fg">

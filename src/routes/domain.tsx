@@ -254,7 +254,7 @@ function DomainPage() {
                       <ul className="mt-3 divide-y divide-line">
                         {match.candidates.map((candidate) => (
                           <li key={`${candidate.kind}-${candidate.id}`} className="py-3 text-sm text-muted first:pt-0 last:pb-0">
-                            <p className="font-medium text-ink"><span className="font-mono text-micro uppercase tracking-[0.1em] text-accent">{candidate.kind}</span> · {candidate.name}</p>
+                            <p className="font-medium text-ink"><span className="text-micro font-extrabold uppercase tracking-[0.1em] text-accent">{candidate.kind}</span> · {candidate.name}</p>
                             <p className="mt-1">{candidate.reasons.join(" · ")}</p>
                             <p className="mt-1 text-dim">{candidate.stated_price || "Price not recorded"} · {candidate.stated_availability || "Availability not recorded"}</p>
                             <p className="mt-1 text-xs text-dim">{candidate.unknowns.join(" · ")}</p>
@@ -290,7 +290,7 @@ function DomainPage() {
                     {token && createdId === connection.left_id && connection.left_kind === "domain_record" && ["proposed", "authorized", "contacted"].includes(connection.state) ? (
                       <form onSubmit={(event) => respondToConnection(event, connection.id, createdId)} className="mt-4 space-y-2">
                         <label className="block">
-                          <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Response received</span>
+                          <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Response received</span>
                           <textarea
                             value={responseNote}
                             onChange={(event) => setResponseNote(event.target.value)}
@@ -315,7 +315,7 @@ function DomainPage() {
           <form id="post-form" onSubmit={postRecord} className="card card-accent scroll-mt-28 space-y-3 p-5 sm:p-6">
             <h2 className="flex items-center gap-2 font-display text-2xl tracking-tight text-ink"><PenLine className="size-5 text-accent" aria-hidden="true" /> Post in our records</h2>
             <label className="block">
-              <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Kind</span>
+              <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Kind</span>
               <select value={kind} onChange={(event) => setKind(event.target.value as Kind)} className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]">
                 <option value="job">Job</option>
                 <option value="offer">Offer</option>
@@ -323,20 +323,20 @@ function DomainPage() {
               </select>
             </label>
             <label className="block">
-              <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Title</span>
+              <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Title</span>
               <input value={title} onChange={(event) => setTitle(event.target.value)} required placeholder="Title" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
             </label>
             <label className="block">
-              <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Detail</span>
+              <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Detail</span>
               <textarea value={detail} onChange={(event) => setDetail(event.target.value)} required placeholder="What is actually being posted" className="min-h-28 w-full rounded-card border border-line bg-paper px-4 py-3 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
             </label>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
               <label className="block">
-                <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">City</span>
+                <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">City</span>
                 <input value={city} onChange={(event) => setCity(event.target.value)} placeholder="City, if stated" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
               </label>
               <label className="block">
-                <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Stated price</span>
+                <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Stated price</span>
                 <input value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Stated price, if any" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
               </label>
             </div>
@@ -349,7 +349,7 @@ function DomainPage() {
               <p className="text-muted">Closing records what happened. It does not move money. A dispute names no winner.</p>
               <form onSubmit={closeRecord} className="space-y-3">
                 <label className="block">
-                  <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Result</span>
+                  <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Result</span>
                   <select value={closeResult} onChange={(event) => setCloseResult(event.target.value as "completed" | "withdrawn" | "paid")} className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]">
                     <option value="completed">Completed, no amount recorded</option>
                     <option value="withdrawn">Withdrawn</option>
@@ -358,19 +358,19 @@ function DomainPage() {
                 </label>
                 {closeResult === "paid" ? (
                   <label className="block">
-                    <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Amount received</span>
+                    <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Amount received</span>
                     <input value={paidAmount} onChange={(event) => setPaidAmount(event.target.value)} inputMode="numeric" required placeholder="Amount received, whole NPR" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
                   </label>
                 ) : null}
                 <label className="block">
-                  <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">What happened</span>
+                  <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">What happened</span>
                   <textarea value={closeNote} onChange={(event) => setCloseNote(event.target.value)} required minLength={3} placeholder="What actually happened" className="min-h-20 w-full rounded-card border border-line bg-paper px-4 py-3 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
                 </label>
                 <button type="submit" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-card bg-accent px-5 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent/90">Record the close</button>
               </form>
               <form onSubmit={disputeRecord} className="space-y-3 border-t border-line pt-4">
                 <label className="block">
-                  <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Dispute</span>
+                  <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Dispute</span>
                   <textarea value={disputeNote} onChange={(event) => setDisputeNote(event.target.value)} required minLength={3} placeholder="What is disputed" className="min-h-20 w-full rounded-card border border-line bg-paper px-4 py-3 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
                 </label>
                 <button type="submit" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-card border border-line bg-card px-5 text-sm font-semibold text-ink transition-colors hover:border-accent/60">Record a dispute</button>
@@ -381,11 +381,11 @@ function DomainPage() {
             <form onSubmit={book} className="card fade-in space-y-3 p-5">
               <p className="text-sm text-ink">Request provider #{chosenProvider}. This records a request. It does not accept the work or record a payment.</p>
               <label className="block">
-                <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Your name</span>
+                <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Your name</span>
                 <input value={requesterName} onChange={(event) => setRequesterName(event.target.value)} required placeholder="Your name" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
               </label>
               <label className="block">
-                <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Request</span>
+                <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Request</span>
                 <input value={requestedService} onChange={(event) => setRequestedService(event.target.value)} required placeholder="What you are requesting" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
               </label>
               <button type="submit" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-card bg-accent px-5 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent/90">Record the request</button>
@@ -395,7 +395,7 @@ function DomainPage() {
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
             <section className="card p-5">
-              <p className="font-mono text-micro uppercase tracking-[0.12em] text-accent">Trust record</p>
+              <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">Trust record</p>
               <p className="mt-2 text-sm text-muted">
                 {trust
                   ? `${trust.recorded_requests} request(s) recorded · ${trust.disputes} dispute(s)`
@@ -405,7 +405,7 @@ function DomainPage() {
               {trust?.unknowns.length ? <p className="mt-2 text-xs text-dim">{trust.unknowns.join(" · ")}</p> : null}
             </section>
             <section className="card p-5">
-              <p className="font-mono text-micro uppercase tracking-[0.12em] text-accent">Event timeline</p>
+              <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">Event timeline</p>
               {events ? (
                 <p className="mt-2 text-sm text-muted">
                   {events.completions} completion(s) · {events.payments.length} payment event(s) · {events.disputes.length} dispute event(s)
