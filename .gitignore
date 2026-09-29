@@ -6,8 +6,9 @@ node_modules/
 .vercel
 .env*
 
-# SQLite runtime sidecars and scheduler output are generated locally.
-# Keep the canonical database and intentional snapshots/backups tracked.
+# The canonical SQLite database and its runtime sidecars are local runtime data.
+# Keep intentional snapshots and backups tracked.
+storage/forge.db
 storage/*.db-wal
 storage/*.db-shm
 storage/scheduler.log

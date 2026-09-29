@@ -10,6 +10,20 @@ def _health():
     return TestClient(app).get("/health")
 
 
+def test_fastapi_startup_executes_with_isolated_database(db, monkeypatch):
+    import app.database as database
+    import app.main as main
+
+    assert main.SessionLocal is not None
+    monkeypatch.setattr(main, "SessionLocal", database.SessionLocal)
+
+    with TestClient(main.app) as client:
+        response = client.get("/")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "running"
+
+
 def test_local_health_is_ok_and_ready_without_vercel_requirements(db, monkeypatch):
     monkeypatch.delenv("VERCEL", raising=False)
     monkeypatch.delenv("DATABASE_URL", raising=False)
