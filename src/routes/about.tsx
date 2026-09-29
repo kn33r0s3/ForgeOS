@@ -34,7 +34,7 @@ function AboutPage() {
         eyebrow="Pulse / About"
         title={
           <>
-            A parent platform
+            One system
             <br />
             <span className="text-muted">for useful work.</span>
           </>

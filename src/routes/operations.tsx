@@ -212,7 +212,7 @@ function OperationsPage() {
               <p className="mt-4 max-w-2xl text-lede text-muted">
                 Pulse operating window. It shows stored evidence, recorded
                 opportunities, and actions that still need approval. A missing
-                amount stays unknown. Figures come from the Forge database.
+                amount stays unknown. Figures come from the existing system data.
               </p>
             </div>
 
@@ -273,7 +273,7 @@ function OperationsPage() {
                 as having zero opportunities, which is not the same as an offline backend.
               </p>
               <p className="max-w-md mx-auto text-xs text-dim font-mono">
-                Start the backend: <span className="text-cyan">./run_forgeos.sh</span>
+                Start the backend: <span className="text-cyan">./run_forgeos.sh</span> (legacy command name)
                 <br />
                 or: <span className="text-cyan">cd backend &amp;&amp; uvicorn app.main:app --port 8000</span>
               </p>

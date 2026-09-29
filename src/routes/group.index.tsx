@@ -17,7 +17,7 @@ function GroupPage() {
         eyebrow="Pulse / The group"
         title={
           <>
-            One parent.
+            One system.
             <br />
             <span className="text-muted">Serious directions.</span>
           </>
@@ -99,7 +99,7 @@ function GroupPage() {
           <SectionMarker label="Long-term" index="03" />
           <div>
             <h2 className="font-display text-title tracking-tight text-fg">
-              Directions the group may grow into.
+              Directions the system may grow into.
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
               Strategic directions only — not existing subsidiaries, operating

@@ -96,6 +96,13 @@ def test_public_problem_submission_rejects_empty_input(client_with_db):
     assert response.status_code == 422
 
 
+def test_api_root_uses_pulse_product_identity(client_with_db):
+    response = client_with_db.get("/")
+
+    assert response.status_code == 200, response.text
+    assert response.json()["name"] == "Pulse"
+
+
 def test_analyze_acknowledges_before_the_collector_background_task(db, monkeypatch):
     collector_calls = []
 

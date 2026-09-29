@@ -1,4 +1,4 @@
-# ForgeOS capability claim ledger
+# Pulse capability claim ledger (ForgeOS repository)
 
 This is the active human/agent claim ledger required by
 `FORGE_SUBSTRATE_BLUEPRINT.md`. Search it before work, claim a bounded scope
@@ -15,6 +15,16 @@ enforcement layer when claims overlap.
 - Verification: native mapping and scope documents added; 47 tracked runtime/archive/context artifacts removed from the index (working copies retained); ignored paths verified; the runtime autonomy policy already states that an ALLOW verdict alone does not remove an owner action or prove execution. `WorkerTask` has due-time eligibility, conditional claim, and retry, but inspection found no stale-running-task recovery. The current `ea490c9` production deployment is READY. One health request briefly reported `OperationalError`; six later checks through the stable alias all returned HTTP 200, ready, PostgreSQL available, and the public feed returned 200 with 11 items. The last-hour production error-log query returned no matching request logs. The exact pushed-session SHA, CI, and deployment remain to be verified after this commit.
 - Status: DONE WITH LIMITATION — this work removes no owner action from a real economic transaction and builds no Bot runtime. There is still no measured lead or transaction. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE**.
 - Remaining dependency: the owner must conduct and report the five real licensed-agency discovery conversations before selecting fields, channel, cadence, or pilot terms. No software can truthfully substitute for those external conversations or their authorization. After discovery, the next technical prerequisites include consent-scoped contact storage, explicit authorization, and safe stale-task recovery for idempotent handlers.
+
+## [CLAIMED] Pulse identity migration and bounded research continuation
+
+- Agent: Copilot, current user-directed task
+- Claimed at: 2026-09-29T11:00:19Z
+- Scope: make Pulse the visible product/system identity across the active frontend, backend API metadata, and README while preserving ForgeOS paths, persisted data, environment keys, and the six-primitives authority; let a bounded research batch execute newly queued follow-ups within its remaining capacity; keep source clearances, evidence provenance, and external-action authorization unchanged.
+- Acceptance: regressions prove dynamically planned follow-ups can use remaining batch capacity, deferred tasks are not repeated, nonpositive limits do no work, identity surfaces say Pulse, and no route/schema/table/primitive/source-authorization contract changes.
+- Owner dependency: no routine economic transaction owner action is removed because no real transaction is available to measure. A research follow-up no longer waits for another scheduled batch when capacity remains; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+- Remaining dependency: relevant evidence and source access are still bounded by existing clearances; no currently available collector establishes buyer willingness to pay. Pulse domain/DNS deployment state is not established by repository branding.
+- Status: IN PROGRESS.
 
 ## [CLAIMED] Owner-dependency invariant and production blocker snapshot
 

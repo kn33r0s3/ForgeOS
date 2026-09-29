@@ -22,7 +22,6 @@ const FORBIDDEN_CLAIM_RE =
 function collectCopy(): string[] {
   const blobs: string[] = [
     SITE.name,
-    SITE.legalName,
     SITE.domain,
     SITE.tagline,
     SITE.description,
