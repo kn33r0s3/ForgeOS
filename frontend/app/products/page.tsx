@@ -90,7 +90,7 @@ export default function ProductsPage() {
       const updated = await api.updateOfferApproval(draft.id, { status });
       setDraft(updated as ProductSummary);
       setMsg(status === "APPROVED"
-        ? "Offer approved for owner-led presentation. ForgeOS still has not contacted anyone."
+        ? "Offer approved for owner-led presentation. Hami still has not contacted anyone."
         : `Offer marked ${status.toLowerCase().replace("_", " ")}.`);
       await reload();
     } catch (e: any) {
@@ -171,7 +171,7 @@ export default function ProductsPage() {
       <GlassPanel className="p-5 space-y-3">
         <p className="text-xs uppercase tracking-widest text-neutral-500">Prepare an owner offer</p>
         <p className="text-sm text-neutral-400">
-          Enter a real business problem. ForgeOS uses currently available local capabilities to
+          Enter a real business problem. Hami uses currently available local capabilities to
           draft a bounded, truthful offer. It never contacts a client automatically.
         </p>
         <textarea

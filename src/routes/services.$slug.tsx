@@ -47,7 +47,7 @@ function ServicePage() {
             <p className="mt-6 max-w-xl text-lede text-muted">{service.short}</p>
             <ProjectInquiryCta />
           </div>
-          <div className="flex min-h-48 flex-col justify-between rounded-xl bg-fg p-6 text-void shadow-[8px_8px_0_rgb(0_0_0_/_0.28)]">
+          <div className="flex min-h-48 flex-col justify-between rounded-xl bg-foreground p-6 text-background shadow-md">
             <span className="font-mono text-micro uppercase tracking-[0.12em] opacity-60">
               01—06
             </span>

@@ -143,7 +143,7 @@ export default function EarnPage() {
         const current = JSON.parse(localStorage.getItem("forgeos-nepal-offers") || "[]") as Offer[];
         const merged = current.map((item) => item.id === next.id ? synced : item);
         persist(merged);
-        setMessage("Saved locally and synced to ForgeOS. This is still a draft—not a customer, payment, or profit claim.");
+        setMessage("Saved locally and synced to Hami. This is still a draft—not a customer, payment, or profit claim.");
       }).catch(() => {
         queueSync({ kind: "create", localId: next.id, payload: {
           pathway: selected, title: offer.title, skill: offer.skill, customer: offer.customer,
@@ -151,7 +151,7 @@ export default function EarnPage() {
           age_band: numericAge < 18 ? "14_17" : "18_plus",
           next_actions: next.nextActions,
         }});
-        setMessage("Saved offline. ForgeOS queued this draft and will sync it when the server is reachable.");
+        setMessage("Saved offline. Hami queued this draft and will sync it when the server is reachable.");
       });
     }
     setOffer({ title: "", skill: "", customer: "", price: "" });
@@ -180,7 +180,7 @@ export default function EarnPage() {
     persist(all);
     if (current.serverId && workspaceKey) {
       api.updateEarningOfferStatus(current.serverId, workspaceKey, status, outcomeNote)
-        .then(() => setMessage(`Status updated in ForgeOS: ${STATUS_LABEL[status].en}`))
+        .then(() => setMessage(`Status updated in Hami: ${STATUS_LABEL[status].en}`))
         .catch(() => {
           queueSync({ kind: "status", localId: current.id, serverId: current.serverId, status, outcomeNote });
           setMessage(`Status saved offline: ${STATUS_LABEL[status].en}. Sync is queued.`);
@@ -200,7 +200,7 @@ export default function EarnPage() {
     persist(saved.map((o) => o.id === id ? { ...o, nextActions } : o));
     if (current.serverId && workspaceKey) {
       api.updateEarningOfferChecklist(current.serverId, workspaceKey, nextActions)
-        .then(() => setMessage("Next-action checklist saved in ForgeOS."))
+        .then(() => setMessage("Next-action checklist saved in Hami."))
         .catch(() => {
           queueSync({ kind: "checklist", localId: current.id, serverId: current.serverId, nextActions });
           setMessage("Checklist saved offline. Sync is queued.");
@@ -225,7 +225,7 @@ export default function EarnPage() {
           Turn a real skill into a real offer.
         </h1>
         <p className="text-neutral-400 max-w-3xl leading-relaxed">
-          आफ्नो सीपलाई वास्तविक आम्दानीको अवसरमा बदल्नुहोस्। ForgeOS helps you test demand safely.
+          आफ्नो सीपलाई वास्तविक आम्दानीको अवसरमा बदल्नुहोस्। Hami helps you test demand safely.
           It never guarantees profit and never counts a draft as a customer or payment.
         </p>
       </header>
@@ -249,7 +249,7 @@ export default function EarnPage() {
       <p className="text-xs text-neutral-600 leading-relaxed max-w-3xl">
         Payment providers (eSewa, Khalti, Fonepay) require merchant approval and live credentials before
         automatic verification. Until then, mark &ldquo;payment received&rdquo; only when money has actually arrived
-        in a real account you control. ForgeOS never invents revenue.
+        in a real account you control. Hami never invents revenue.
       </p>
     </div>
   );

@@ -4,16 +4,16 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-nav font-semibold tracking-tight transition-[transform,background-color,color,border-color,box-shadow] duration-150 ease-out disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-cyan/70 focus-visible:ring-offset-2 focus-visible:ring-offset-void active:not-disabled:scale-[0.96]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-nav font-semibold tracking-tight transition-[transform,background-color,color,border-color,box-shadow] duration-150 ease-out disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-focus/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:not-disabled:scale-[0.98]",
   {
     variants: {
       variant: {
         primary:
-          "border border-black/10 bg-white text-ink shadow-[0_10px_30px_rgba(15,23,42,0.08)] hover:border-cyan/50 hover:bg-cyan hover:text-ink",
+          "border border-primary bg-primary text-primary-foreground shadow-sm hover:bg-primary/90",
         secondary:
-          "border border-line bg-transparent text-fg hover:border-cyan/40 hover:text-cyan",
-        ghost: "text-muted hover:text-cyan",
-        amber: "bg-amber text-ink hover:bg-amber/90",
+          "border border-border bg-surface text-foreground hover:border-focus hover:bg-secondary",
+        ghost: "text-muted hover:bg-secondary hover:text-primary",
+        warning: "bg-warning text-primary-foreground hover:bg-warning/90",
       },
       size: {
         default: "h-11 px-4",

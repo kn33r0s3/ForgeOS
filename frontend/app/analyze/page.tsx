@@ -156,7 +156,7 @@ export default function AnalyzePage() {
       <div className="rounded-[28px] border border-white/10 bg-white/[0.03] p-6 md:p-10">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-forge-accent2">ForgeOS</p>
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-forge-accent2">Hami</p>
             <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white md:text-5xl">What problem are you trying to solve?</h1>
           </div>
           <a href="/" className="rounded-full border border-white/10 px-4 py-2 text-sm text-neutral-200 hover:border-white/25 hover:bg-white/[0.03]">
@@ -180,7 +180,7 @@ export default function AnalyzePage() {
             >
               {loading ? statusText + "…" : "Research this problem"}
             </button>
-            <span className="text-sm text-neutral-400">ForgeOS checks authorized sources. Research leads are not proof of customer demand.</span>
+            <span className="text-sm text-neutral-400">Hami checks authorized sources. Research leads are not proof of customer demand.</span>
           </div>
         </form>
 

@@ -18,7 +18,7 @@ const items = [
   {
     number: "02",
     title: "The operating core",
-    body: "Hami evolves the existing ForgeOS implementation in place. Services, work, offers, trades, evidence, and outcomes remain connected through the existing system.",
+    body: "Hami connects services, work, offers, trades, evidence, and outcomes through one shared system.",
   },
   {
     number: "03",

@@ -16,16 +16,16 @@ export const Route = createFileRoute("/feed")({
     };
   },
   component: NetworkFeedPage,
+  head: () => ({ meta: [{ title: "Network — Hami" }] }),
 });
 
 const FILTERS = [
-  { label: "Everything", value: "all" },
+  { label: "All records", value: "all" },
   { label: "Signals", value: "signal" },
-  { label: "Needs & work", value: "work_item" },
+  { label: "Evidence-linked", value: "evidence" },
   { label: "Opportunities", value: "opportunity" },
   { label: "Capabilities", value: "capability" },
-  { label: "People & groups", value: "actor" },
-  { label: "Connections", value: "connection" },
+  { label: "Connected records", value: "connection" },
 ] as const;
 
 const KIND_LABELS: Record<string, string> = {
@@ -156,10 +156,43 @@ function NetworkFeedPage() {
     };
   }, [entityId, entityType, reloadVersion]);
 
-  const visible = useMemo(
-    () => filter === "all" ? items : items.filter((item) => item.kind === filter),
-    [filter, items],
-  );
+  const visible = useMemo(() => {
+    if (filter === "all") return items;
+    if (filter === "evidence") {
+      return items.filter((item) => item.relations.some((relation) =>
+        ["supported_by", "grounded_in", "informed_by"].includes(relation.relation),
+      ));
+    }
+    if (filter === "connection") {
+      return items.filter((item) => item.kind === "connection" || item.relations.length > 0);
+    }
+    return items.filter((item) => item.kind === filter);
+  }, [filter, items]);
+  const graphStats = useMemo(() => {
+    const entityRefs = new Set<string>();
+    const relationRefs = new Set<string>();
+    for (const item of items) {
+      const source = `${item.entity_type}:${item.entity_id}`;
+      entityRefs.add(source);
+      for (const relation of item.relations) {
+        const target = `${relation.entity_type}:${relation.entity_id}`;
+        entityRefs.add(target);
+        relationRefs.add(`${source}:${relation.relation}:${target}`);
+      }
+    }
+    return {
+      entityRefs: entityRefs.size,
+      relationRefs: relationRefs.size,
+      capabilities: items.filter((item) => item.kind === "capability").length,
+      opportunities: items.filter((item) => item.kind === "opportunity").length,
+      evidenceLinks: items.reduce(
+        (total, item) => total + item.relations.filter((relation) =>
+          ["supported_by", "grounded_in", "informed_by"].includes(relation.relation),
+        ).length,
+        0,
+      ),
+    };
+  }, [items]);
   const titleByReference = useMemo(() => {
     const titles = new Map<string, string>();
     for (const item of items) {
@@ -178,10 +211,10 @@ function NetworkFeedPage() {
       <Container className="max-w-5xl">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
           <div>
-            <p className="font-mono text-micro uppercase tracking-[0.14em] text-cyan">Hami Network</p>
-            <h1 className="mt-2 font-display text-4xl tracking-tight text-fg sm:text-5xl">Signals, needs, and useful connections</h1>
+            <p className="font-mono text-micro uppercase tracking-[0.14em] text-primary">Hami / network</p>
+            <h1 className="mt-2 font-display text-4xl tracking-tight text-foreground sm:text-5xl">Explore the connected world</h1>
             <p className="mt-4 max-w-2xl text-lede text-muted">
-              A live view assembled from Hami evidence, research, work, capability, and network records. Each entry keeps its source and uncertainty visible.
+              Public entities and their recorded relationships, capabilities, evidence links, and opportunity hypotheses. A connection is a stored relation, not proof of agreement.
             </p>
             {entityType && entityId ? (
               <p className="mt-4 inline-flex items-center gap-2 rounded-full border border-line bg-raised px-3 py-2 text-xs text-muted">
@@ -190,11 +223,21 @@ function NetworkFeedPage() {
               </p>
             ) : null}
           </div>
-          <aside className="rounded-2xl border border-line bg-raised p-4">
-            <p className="font-mono text-micro uppercase tracking-[0.12em] text-cyan">How to read this feed</p>
-            <p className="mt-2 text-sm text-muted">Items are shown by most recent recorded change. “Hypothesis”, “possible”, and “unknown” are deliberate states. Hami does not publish a popularity or trust score.</p>
+          <aside className="rounded-2xl border border-border bg-surface-elevated p-4">
+            <p className="font-mono text-micro uppercase tracking-[0.12em] text-primary">Projection legend</p>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              Entities are records. Relations are sourced links. Capabilities and opportunities remain bounded by their evidence and state.
+            </p>
           </aside>
         </div>
+
+        <section aria-label="Visible network projection" className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <GraphStat label="Visible entity refs" value={state === "ready" ? graphStats.entityRefs : null} />
+          <GraphStat label="Recorded relations" value={state === "ready" ? graphStats.relationRefs : null} />
+          <GraphStat label="Capabilities" value={state === "ready" ? graphStats.capabilities : null} />
+          <GraphStat label="Opportunity hypotheses" value={state === "ready" ? graphStats.opportunities : null} />
+          <GraphStat label="Evidence links" value={state === "ready" ? graphStats.evidenceLinks : null} />
+        </section>
 
         <div className="mt-8 flex gap-2 overflow-x-auto pb-2" aria-label="Filter network feed">
           {FILTERS.map((item) => (
@@ -203,7 +246,7 @@ function NetworkFeedPage() {
               type="button"
               aria-pressed={filter === item.value}
               onClick={() => setFilter(item.value)}
-              className={`min-h-10 shrink-0 rounded-full border px-4 text-sm transition-colors ${filter === item.value ? "border-cyan bg-cyan/10 text-cyan" : "border-line text-muted hover:border-cyan/50 hover:text-fg"}`}
+              className={`min-h-11 shrink-0 rounded-full border px-4 text-sm transition-colors ${filter === item.value ? "border-primary bg-primary/10 text-primary" : "border-border text-muted hover:border-focus hover:text-foreground"}`}
             >
               {item.label}
             </button>
@@ -212,13 +255,13 @@ function NetworkFeedPage() {
 
         {state === "loading" ? <p className="mt-8 text-muted">Reading the network…</p> : null}
         {state === "unavailable" ? (
-          <div className="mt-8 rounded-2xl border border-line bg-void p-6">
+          <div className="mt-8 rounded-2xl border border-border bg-surface p-6">
             <h2 className="font-display text-xl text-fg">The network feed is unavailable</h2>
             <p className="mt-2 text-sm text-muted">The public API did not return usable feed data. No sample activity is shown in its place.</p>
             <button
               type="button"
               onClick={() => setReloadVersion((version) => version + 1)}
-              className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full border border-line px-4 text-sm text-fg hover:border-cyan/50"
+              className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-md border border-border px-4 text-sm text-foreground hover:border-focus"
             >
               <RefreshCw className="size-4" aria-hidden="true" />
               Retry
@@ -226,22 +269,22 @@ function NetworkFeedPage() {
           </div>
         ) : null}
         {state === "ready" && visible.length === 0 ? (
-          <div className="mt-8 rounded-2xl border border-line bg-void p-6">
-            <h2 className="font-display text-xl text-fg">{filter === "all" ? "No public network activity yet" : "No items in this part of the network yet"}</h2>
+          <div className="mt-8 rounded-2xl border border-border bg-surface p-6">
+            <h2 className="font-display text-xl text-foreground">{filter === "all" ? "No public network records yet" : "No items in this part of the network yet"}</h2>
             {filter === "all" ? (
               <>
-                <p className="mt-2 max-w-2xl text-sm text-muted">Nothing is added to fill a quiet network. Observations need a source, work appears when posted, and provider capabilities require verification.</p>
+                <p className="mt-2 max-w-2xl text-sm text-muted">Nothing is added to fill a quiet network. Records appear only when their source and visibility requirements are met.</p>
                 <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm">
-                  <Link to="/discoveries" className="text-cyan hover:underline">Collected observations</Link>
+                  <Link to="/discoveries" className="text-primary hover:underline">Research observations</Link>
                   <Link to="/domain" className="text-cyan hover:underline">Public work board</Link>
-                  <Link to="/providers" className="text-cyan hover:underline">Verified providers</Link>
+                  <Link to="/providers" className="text-primary hover:underline">Provider capabilities</Link>
                 </div>
               </>
             ) : (
               <>
-                <p className="mt-2 max-w-2xl text-sm text-muted">{EMPTY_GUIDANCE[filter]?.message ?? "New entries appear when real records meet their source and visibility requirements."}</p>
+                <p className="mt-2 max-w-2xl text-sm text-muted">{filter === "evidence" ? "No public records with evidence-related links are available." : EMPTY_GUIDANCE[filter]?.message ?? "New entries appear when real records meet their source and visibility requirements."}</p>
                 {EMPTY_GUIDANCE[filter] ? (
-                  <Link to={EMPTY_GUIDANCE[filter].to} className="mt-4 inline-flex text-sm text-cyan hover:underline">
+                  <Link to={EMPTY_GUIDANCE[filter].to} className="mt-4 inline-flex text-sm text-primary hover:underline">
                     {EMPTY_GUIDANCE[filter].link} <ArrowUpRight className="ml-1 size-4" />
                   </Link>
                 ) : null}
@@ -258,18 +301,18 @@ function NetworkFeedPage() {
               ? item.entity_id
               : item.relations.find((relation) => relation.entity_type === "provider")?.entity_id;
             return (
-              <article key={item.id} className="rounded-2xl border border-line bg-void p-5 sm:p-6">
+              <article key={item.id} className="rounded-2xl border border-border bg-surface p-5 sm:p-6">
                 <div className="flex items-start gap-3">
-                  <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl border border-line bg-raised text-cyan" aria-hidden="true">
+                  <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary text-primary" aria-hidden="true">
                     <Icon className="size-4" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] uppercase tracking-[0.1em] text-cyan">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs uppercase tracking-[0.1em] text-primary">
                       <span>{KIND_LABELS[item.kind] ?? item.kind.replaceAll("_", " ")}</span>
                       {item.category ? <><span aria-hidden="true">·</span><span>{item.category}</span></> : null}
                       {item.status ? <><span aria-hidden="true">·</span><span>{item.status.replaceAll("_", " ")}</span></> : null}
                     </div>
-                    <h2 className="mt-1 font-display text-xl text-fg sm:text-2xl">{item.title}</h2>
+                    <h2 className="mt-1 font-display text-xl text-foreground sm:text-2xl">{item.title}</h2>
                     <p className="mt-2 whitespace-pre-line text-sm leading-6 text-muted">{item.summary}</p>
                     <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
                       <span>{sourceLabel(item.source)}</span>
@@ -285,7 +328,7 @@ function NetworkFeedPage() {
                             key={`${relation.entity_type}:${relation.entity_id}:${relation.relation}`}
                             to="/feed"
                             search={{ entity_type: relation.entity_type, entity_id: relation.entity_id }}
-                            className="text-cyan hover:underline"
+                            className="text-primary hover:underline"
                           >
                             {RELATION_LABELS[relation.relation] ?? "Related to"} · {titleByReference.get(`${relation.entity_type}:${relation.entity_id}`) ?? ENTITY_LABELS[relation.entity_type] ?? "Network record"}
                           </Link>
@@ -295,12 +338,12 @@ function NetworkFeedPage() {
                     <Link
                       to="/feed"
                       search={{ entity_type: item.entity_type, entity_id: item.entity_id }}
-                      className="mt-4 inline-flex items-center gap-1 text-xs text-muted hover:text-cyan"
+                      className="mt-4 inline-flex min-h-10 items-center gap-1 text-xs text-muted hover:text-primary"
                     >
                       Open network context <ArrowUpRight className="size-3.5" />
                     </Link>
                     {item.kind === "signal" || item.kind === "question" || item.kind === "pattern" || item.kind === "belief" || item.kind === "opportunity" ? (
-                      <Link to="/discoveries" className="ml-4 mt-4 inline-flex items-center gap-1 text-xs text-cyan hover:underline">
+                      <Link to={item.kind === "opportunity" ? "/opportunities" : "/discoveries"} className="ml-4 mt-4 inline-flex min-h-10 items-center gap-1 text-xs text-primary hover:underline">
                         Review observations <ArrowUpRight className="size-3.5" />
                       </Link>
                     ) : null}
@@ -308,18 +351,18 @@ function NetworkFeedPage() {
                       <Link
                         to="/providers"
                         search={relatedProviderId ? { provider: relatedProviderId } : {}}
-                        className="ml-4 mt-4 inline-flex items-center gap-1 text-xs text-cyan hover:underline"
+                        className="ml-4 mt-4 inline-flex min-h-10 items-center gap-1 text-xs text-primary hover:underline"
                       >
                         Explore providers <ArrowUpRight className="size-3.5" />
                       </Link>
                     ) : null}
                     {item.kind === "work_item" || item.kind === "connection" || item.kind === "outcome" ? (
-                      <Link to="/domain" className="ml-4 mt-4 inline-flex items-center gap-1 text-xs text-cyan hover:underline">
+                      <Link to="/domain" className="ml-4 mt-4 inline-flex min-h-10 items-center gap-1 text-xs text-primary hover:underline">
                         Open work records <ArrowUpRight className="size-3.5" />
                       </Link>
                     ) : null}
                     {safeSourceUrl ? (
-                      <a className="mt-4 inline-flex items-center gap-1 text-sm text-cyan hover:underline" href={safeSourceUrl} target="_blank" rel="noreferrer">
+                      <a className="mt-4 inline-flex min-h-10 items-center gap-1 text-sm text-primary hover:underline" href={safeSourceUrl} target="_blank" rel="noreferrer">
                         Open cited source <ArrowUpRight className="size-3.5" />
                       </a>
                     ) : null}
@@ -331,5 +374,16 @@ function NetworkFeedPage() {
         </div>
       </Container>
     </main>
+  );
+}
+
+function GraphStat({ label, value }: { label: string; value: number | null }) {
+  return (
+    <div className="rounded-xl border border-border bg-surface px-4 py-3">
+      <p className="text-xs leading-5 text-muted">{label}</p>
+      <p className="mt-1 font-display text-xl font-semibold tabular-nums text-foreground">
+        {value === null ? "—" : value.toLocaleString()}
+      </p>
+    </div>
   );
 }

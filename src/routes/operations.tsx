@@ -4,51 +4,17 @@ import { Container } from "@/components/layout/container";
 import { Eyebrow } from "@/components/layout/eyebrow";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Play, Shield, CheckCircle, AlertTriangle, Activity, TrendingUp, Layers, WifiOff } from "lucide-react";
+import {
+  loadExecutionActions,
+  loadMoneyDashboard,
+  type ActionRecord as ActionItem,
+  type MoneyDashboard,
+} from "@/lib/operations-data";
 
 export const Route = createFileRoute("/operations")({
   component: OperationsPage,
   head: () => ({ meta: [{ title: "Operations — Hami" }] }),
 });
-
-interface OpportunityItem {
-  id: number;
-  problem: string;
-  target_customer: string;
-  solution: string;
-  business_model: string;
-  pricing_idea?: string;
-  score: number;
-  difficulty?: string;
-  customer_segment?: string;
-}
-
-interface RankedOpportunity {
-  opportunity: OpportunityItem;
-  money_score: number;
-  expected_value: number | null;
-}
-
-interface ActionItem {
-  id: number;
-  action: string;
-  action_type?: string;
-  status: string;
-  requires_owner_approval?: boolean;
-  policy_decision?: string;
-  policy_reason?: string;
-  approved_at?: string | null;
-  created_at?: string;
-}
-
-interface MoneyDashboard {
-  best_opportunities: RankedOpportunity[];
-  active_experiments: ActionItem[];
-  completed_experiments_count: number;
-  total_revenue_recorded: number;
-  conversion_rate: number | null;
-  winning_experiments: any[];
-  failed_experiments: any[];
-}
 
 function OperationsPage() {
   const [dashboard, setDashboard] = useState<MoneyDashboard | null>(null);
@@ -89,16 +55,10 @@ function OperationsPage() {
     }
 
     try {
-      const [dashRes, actRes] = await Promise.all([
-        fetch("/api/forge/money/dashboard"),
-        fetch("/api/forge/execution/actions"),
+      const [dashData, actData] = await Promise.all([
+        loadMoneyDashboard(),
+        loadExecutionActions(),
       ]);
-
-      if (!dashRes.ok) throw new Error(`Dashboard API HTTP ${dashRes.status}`);
-      if (!actRes.ok) throw new Error(`Actions API HTTP ${actRes.status}`);
-
-      const dashData = await dashRes.json();
-      const actData = await actRes.json();
 
       setDashboard(dashData);
       setActions(actData);
@@ -221,7 +181,7 @@ function OperationsPage() {
               <Button
                 onClick={handleRunCycle}
                 disabled={runningCycle || backendOnline === false}
-                variant="amber"
+                variant="warning"
                 size="sm"
                 className="gap-2"
               >
@@ -456,7 +416,7 @@ function OperationsPage() {
 
                         {/* Only show Approve button when truly unapproved and not completed */}
                         {act.requires_owner_approval && act.status !== "completed" && !act.approved_at && (
-                          <Button onClick={() => handleApproveAction(act.id)} size="sm" variant="amber" className="gap-1.5 self-start sm:self-auto">
+                          <Button onClick={() => handleApproveAction(act.id)} size="sm" variant="warning" className="gap-1.5 self-start sm:self-auto">
                             <CheckCircle className="size-4" /> Approve Proposal
                           </Button>
                         )}

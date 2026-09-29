@@ -35,11 +35,11 @@ export function SiteHeader() {
   }, [open]);
 
   return (
-    <header className="sticky top-0 z-50 h-[var(--header-h)] border-b border-line bg-void/75 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 h-[var(--header-h)] border-b border-border bg-background/90 backdrop-blur-xl">
       <Container className="relative flex h-full items-center justify-between gap-4">
         <BrandMark />
         <nav
-          className="hidden items-center gap-6 xl:flex"
+          className="hidden items-center gap-5 lg:flex"
           aria-label="Main navigation"
         >
           {NAV.map((item) => (
@@ -48,7 +48,7 @@ export function SiteHeader() {
               to={item.to}
               aria-current={isActive(item.to, pathname) ? "page" : undefined}
               className={cn(
-                "relative py-2 text-nav text-muted transition-colors duration-150 hover:text-fg",
+                "relative py-2 text-nav text-muted transition-colors duration-150 hover:text-foreground",
                 isActive(item.to, pathname) && "nav-active",
               )}
             >
@@ -57,15 +57,15 @@ export function SiteHeader() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          <Button asChild size="sm" className="hidden sm:inline-flex">
-            <Link to="/feed">
-              Explore network
+          <Button asChild size="sm" className="hidden lg:inline-flex">
+            <Link to="/actions">
+              Review actions
               <ArrowUpRight />
             </Link>
           </Button>
           <button
             type="button"
-            className="inline-flex size-11 items-center justify-center rounded-md text-fg xl:hidden"
+            className="inline-flex size-11 items-center justify-center rounded-md text-foreground lg:hidden"
             aria-expanded={open}
             aria-controls="mobile-navigation"
             aria-label={open ? "Close navigation" : "Open navigation"}
@@ -92,7 +92,7 @@ export function SiteHeader() {
         id="mobile-navigation"
         hidden={!open}
         className={cn(
-          "absolute inset-x-0 top-[var(--header-h)] z-40 border-b border-line bg-void/95 backdrop-blur-xl xl:hidden",
+          "absolute inset-x-0 top-[var(--header-h)] z-40 border-b border-border bg-surface-elevated lg:hidden",
           open ? "block" : "hidden",
         )}
       >
@@ -103,16 +103,16 @@ export function SiteHeader() {
               to={item.to}
               aria-current={isActive(item.to, pathname) ? "page" : undefined}
               className={cn(
-                "flex min-h-11 items-center border-b border-line text-base text-muted last:border-b-0",
-                isActive(item.to, pathname) && "text-cyan",
+                "flex min-h-11 items-center border-b border-border text-base text-muted last:border-b-0",
+                isActive(item.to, pathname) && "text-primary",
               )}
             >
               {item.label}
             </Link>
           ))}
-          <Button asChild className="mt-3 w-full sm:hidden">
-            <Link to="/feed">
-              Explore network
+          <Button asChild className="mt-3 w-full lg:hidden">
+            <Link to="/actions">
+              Review actions
               <ArrowUpRight />
             </Link>
           </Button>

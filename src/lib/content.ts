@@ -1,23 +1,21 @@
 export const SITE = {
   name: "Hami",
+  themeColor: "#f5f7f3",
   domain: "Domain pending verification",
   url: "",
   email: "",
   location: "Starting in Nepal",
-  tagline: "One system for evidence, work, and outcomes.",
+  tagline: "Discover what matters. Understand it. Act on it.",
   description:
-    "Hami evolves the existing ForgeOS system in place. It records people, organizations, capabilities, needs, work, services, offers, trades, evidence, and outcomes in one system. Nepal is the initial focus and global markets are a longer-term direction, not separate architectures or verified deployments. Public records do not imply verified demand, execution, or outcomes.",
+    "Hami connects observations, research, capabilities, decisions, and outcomes in one evidence-led system. Nepal is the initial focus; global reach remains a direction, not a verified deployment. Public records do not imply verified demand, execution, or outcomes.",
 } as const;
 
 export const NAV = [
   { label: "Home", to: "/" },
   { label: "Network", to: "/feed" },
-  { label: "Services", to: "/services" },
-  { label: "Providers", to: "/providers" },
-  { label: "Work", to: "/domain" },
-  { label: "Discoveries", to: "/discoveries" },
-  { label: "How it works", to: "/about" },
-  { label: "Contact", to: "/contact" },
+  { label: "Research", to: "/discoveries" },
+  { label: "Opportunities", to: "/opportunities" },
+  { label: "Actions", to: "/actions" },
 ] as const;
 
 export const providerCategories = ["All"] as const;

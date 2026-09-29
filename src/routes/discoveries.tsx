@@ -5,6 +5,7 @@ import { loadDiscoveries, type PublicDiscovery } from "@/lib/content";
 
 export const Route = createFileRoute("/discoveries")({
   component: DiscoveriesPage,
+  head: () => ({ meta: [{ title: "Research — Hami" }] }),
 });
 
 function DiscoveriesPage() {
@@ -30,8 +31,8 @@ function DiscoveriesPage() {
   return (
     <main className="py-10 sm:py-14">
       <Container className="max-w-3xl">
-        <p className="font-mono text-micro uppercase tracking-[0.14em] text-cyan">Observations</p>
-        <h1 className="mt-2 font-display text-4xl tracking-tight text-fg">What the engine has actually collected</h1>
+        <p className="font-mono text-micro uppercase tracking-[0.14em] text-primary">Research / sourced observations</p>
+        <h1 className="mt-2 font-display text-4xl tracking-tight text-foreground">What Hami has actually collected</h1>
         <p className="mt-3 text-muted">Each item is something a source published. Hami has not necessarily verified it, priced it, or turned it into an offer.</p>
         {!ready ? <p className="mt-6 text-muted">Checking collected observations…</p> : null}
         {ready && rows === null ? (

@@ -51,26 +51,22 @@ function collectCopy(): string[] {
 }
 
 describe("Hami public content", () => {
-  it("names the network without locking it to one purpose", () => {
+  it("names Hami without publishing compatibility names as product identities", () => {
     assert.equal(SITE.name, "Hami");
+    assert.doesNotMatch(SITE.description, /ForgeOS|Pulse/);
     assert.equal(/service marketplace|trusted service network/i.test(SITE.description), false);
-    assert.match(SITE.description, /ForgeOS system in place/);
-    assert.match(SITE.description, /not separate architectures/);
+    assert.match(SITE.description, /one evidence-led system/);
     assert.match(SITE.description, /Nepal/);
-    assert.match(SITE.description, /services/i);
   });
 
-  it("exposes the public paths and never routes tools", () => {
+  it("exposes five distinct primary destinations", () => {
     const hrefs = NAV.map((item) => item.to);
     assert.deepEqual(hrefs, [
       "/",
       "/feed",
-      "/services",
-      "/providers",
-      "/domain",
       "/discoveries",
-      "/about",
-      "/contact",
+      "/opportunities",
+      "/actions",
     ]);
     for (const path of FORBIDDEN_PUBLIC_PATHS) {
       assert.equal(hrefs.includes(path as any), false, `nav leaked ${path}`);
@@ -118,12 +114,21 @@ describe("Hami public content", () => {
 describe("Hami public root", () => {
   const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
-  it("serves the stored-world home and does not publish the Sanip site", () => {
+  it("serves a real Hami home distinct from Network and does not publish the Sanip site", () => {
     const home = readFileSync(join(root, "src/routes/index.tsx"), "utf8");
+    const network = readFileSync(join(root, "src/routes/feed.tsx"), "utf8");
+    const opportunities = readFileSync(join(root, "src/routes/opportunities.tsx"), "utf8");
+    const actions = readFileSync(join(root, "src/routes/actions.tsx"), "utf8");
     const sitemap = readFileSync(join(root, "public/sitemap.xml"), "utf8");
     const robots = readFileSync(join(root, "public/robots.txt"), "utf8");
     const work = readFileSync(join(root, "src/routes/work.tsx"), "utf8");
-    assert.match(home, /Navigate to="\/feed"/);
+    assert.match(home, /createFileRoute\("\/"\)/);
+    assert.doesNotMatch(home, /Navigate to=/);
+    assert.match(home, /Discover what matters/);
+    assert.match(network, /createFileRoute\("\/feed"\)/);
+    assert.match(network, /Hami Network/);
+    assert.match(opportunities, /createFileRoute\("\/opportunities"\)/);
+    assert.match(actions, /createFileRoute\("\/actions"\)/);
     assert.equal(home.includes("Sanip Ops"), false);
     assert.equal(home.includes("parent operations and infrastructure group"), false);
     assert.equal(sitemap.includes("sanipoperations.com.np"), false);

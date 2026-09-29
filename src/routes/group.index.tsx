@@ -28,9 +28,9 @@ function GroupPage() {
       </PageHero>
       <section className="identity-band" aria-hidden="true">
         <Container className="flex flex-wrap items-center justify-between gap-3 py-5 font-mono text-kicker font-semibold uppercase tracking-[0.16em]">
-          <span className="text-fg">Technology</span>
-          <span className="rounded-sm bg-amber px-2 py-0.5 text-ink">Operations</span>
-          <span className="text-ink">Ventures</span>
+          <span className="text-foreground">Technology</span>
+          <span className="rounded-sm bg-primary px-2 py-0.5 text-primary-foreground">Operations</span>
+          <span className="text-foreground">Ventures</span>
         </Container>
       </section>
       <Container className="py-16 sm:py-20">

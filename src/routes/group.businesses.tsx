@@ -24,7 +24,7 @@ function BusinessesPage() {
             <span className="text-muted">Useful work today.</span>
           </>
         }
-        lede="Hami is one system evolving from ForgeOS. Today, the practical offer is technical and operational work that helps ideas become systems, and systems become durable businesses."
+        lede="Hami is one connected system. Today, the practical offer is technical and operational work that helps ideas become systems, and systems become durable businesses."
       >
         <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
           <ProjectInquiryCta />
