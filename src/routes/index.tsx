@@ -11,9 +11,7 @@ import {
   type PublicFeedItem,
 } from "@/lib/content";
 import {
-  loadExecutionActions,
   loadRuntimeSnapshot,
-  type ActionRecord,
   type RuntimeSnapshot,
 } from "@/lib/operations-data";
 
@@ -22,19 +20,9 @@ export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Hami — Discover what matters" }] }),
 });
 
-function needsOwnerReview(action: ActionRecord) {
-  return (
-    action.data_scope === "REAL" &&
-    action.requires_owner_approval === true &&
-    !action.approved_at &&
-    !["blocked", "completed", "abandoned"].includes(action.status.toLowerCase())
-  );
-}
-
 function HomePage() {
   const [health, setHealth] = useState<EngineHealth | null>(null);
   const [runtime, setRuntime] = useState<RuntimeSnapshot | null>(null);
-  const [actions, setActions] = useState<ActionRecord[] | null>(null);
   const [feed, setFeed] = useState<PublicFeedItem[] | null>(null);
   const [discoveries, setDiscoveries] = useState<PublicDiscovery[] | null>(null);
   const [unavailable, setUnavailable] = useState<string[]>([]);
@@ -47,10 +35,9 @@ function HomePage() {
     void Promise.allSettled([
       loadEngineHealth(),
       loadRuntimeSnapshot(),
-      loadExecutionActions(),
       loadPublicFeed(40),
       loadDiscoveries(3),
-    ]).then(([healthResult, runtimeResult, actionsResult, feedResult, discoveryResult]) => {
+    ]).then(([healthResult, runtimeResult, feedResult, discoveryResult]) => {
       if (!active) return;
       const failed: string[] = [];
 
@@ -65,11 +52,6 @@ function HomePage() {
       else {
         setRuntime(null);
         failed.push("system state");
-      }
-      if (actionsResult.status === "fulfilled") setActions(actionsResult.value);
-      else {
-        setActions(null);
-        failed.push("actions");
       }
       if (feedResult.status === "fulfilled" && feedResult.value !== null) {
         setFeed(feedResult.value);
@@ -109,8 +91,8 @@ function HomePage() {
     ) ?? null,
     [feed],
   );
-  const awaitingReview = actions?.filter(needsOwnerReview).length ?? null;
   const labels = runtime?.truth?.epistemic_labels;
+  const pendingActions = runtime?.truth?.operations.pending_actions ?? null;
   const actualOutcomes = labels?.actual_outcomes;
   const validatedOpportunities = labels?.human_validated_problems;
   const lastCycle = runtime?.cycles.last_completed;
@@ -214,7 +196,7 @@ function HomePage() {
           <OverviewMetric label="Public signals" value={feed === null ? null : signals.length} note="Visible observation records" />
           <OverviewMetric label="Research tasks" value={runtime?.research_tasks ?? null} note="All recorded task states" />
           <OverviewMetric label="Opportunities" value={feed === null ? null : opportunities.length} note="Public hypotheses, not commitments" />
-          <OverviewMetric label="Actions" value={awaitingReview} note="REAL-scope items awaiting review" />
+          <OverviewMetric label="Pending actions" value={pendingActions} note="Stored review states; execution is not inferred" />
           <OverviewMetric label="Outcomes" value={actualOutcomes ?? null} note="REAL-scope outcome records" />
         </section>
 
