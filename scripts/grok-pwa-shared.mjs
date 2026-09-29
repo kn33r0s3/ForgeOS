@@ -9,6 +9,8 @@ import { join } from "node:path";
 export const DEFAULT_APP_NAME = "Grok App";
 export const OG_SERVICE_URL_DEFAULT = "https://og.grok.me";
 export const OG_SITE_REL_PATH = "src/lib/og/site.json";
+/** Hami paper colour; keep in sync with SITE.themeColor and --background in src/styles.css. */
+export const APP_THEME_COLOR = "#12140f";
 
 const SHARE_META_KEYS = new Set([
   "og:title",
@@ -167,8 +169,8 @@ export function renderWebManifest(hostHeader) {
       start_url: "/",
       scope: "/",
       display: "standalone",
-      background_color: "#000000",
-      theme_color: "#000000",
+      background_color: APP_THEME_COLOR,
+      theme_color: APP_THEME_COLOR,
       icons: [
         {
           src: "/__grok/icon-180.png",
@@ -196,7 +198,7 @@ export function grokPwaHeadTags(appName = DEFAULT_APP_NAME) {
       "apple-mobile-web-app-status-bar-style",
       '<meta name="apple-mobile-web-app-status-bar-style" content="black">',
     ],
-    ["theme-color", '<meta name="theme-color" content="#000000">'],
+    ["theme-color", `<meta name="theme-color" content="${APP_THEME_COLOR}">`],
   ];
 }
 
