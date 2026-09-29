@@ -186,6 +186,38 @@ def test_unsupported_adapter(db):
         assert executed.verification_state == "UNSUPPORTED" or executed.status == "FAILED"
 
 
+def test_malformed_action_parameters_fail_closed_without_adapter_execution(db, monkeypatch):
+    adapter_calls = []
+
+    class RecordingAdapter:
+        name = "recording"
+
+        def execute(self, action, params, db=None):
+            adapter_calls.append(params)
+            return {
+                "status": "SUCCEEDED",
+                "execution_result": "executed",
+                "verification_state": "UNVERIFIED",
+            }
+
+    monkeypatch.setattr(action_engine, "get_adapter", lambda _action_type: RecordingAdapter())
+    action = action_engine.propose_action(
+        db,
+        objective="Validate stored action parameters",
+        action_type="manual_note",
+        parameters={"valid": True},
+    )
+    action.parameters_json = "{"
+    db.commit()
+
+    executed = action_engine.start_and_execute_action(db, action.id)
+
+    assert adapter_calls == []
+    assert executed.status == "FAILED"
+    assert executed.verification_state == "FAILED"
+    assert "Execution failed closed" in executed.execution_error
+
+
 def test_ai_mock_status():
     st = get_provider_status()
     assert st["provider"] == "mock"

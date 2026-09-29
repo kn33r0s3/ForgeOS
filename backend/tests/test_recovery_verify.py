@@ -2,6 +2,7 @@
 
 import gzip
 import sqlite3
+from pathlib import Path
 
 import pytest
 
@@ -37,6 +38,7 @@ def test_verify_recovery_matches_live_counts_without_a_fixed_number(tmp_path):
     assert report["rows_total"] == 10
     assert report["canonical_database_modified"] is False
     assert report["snapshot_bytes"] > 0
+    assert Path(report["snapshot"]).is_file()
 
 
 def test_verify_recovery_grows_with_real_data(tmp_path):
@@ -92,8 +94,21 @@ def test_drill_never_prunes_the_canonical_backups_and_restores_the_directory(tmp
     existing.write_bytes(b"an operator recovery point")
     monkeypatch.setattr(backup, "BACKUPS_DIR", real_backups)
 
-    recovery_verify.verify_recovery(db_path=db)
+    report = recovery_verify.verify_recovery(db_path=db)
 
+    assert report["snapshot"] is None
     assert existing.exists()
     assert existing.read_bytes() == b"an operator recovery point"
     assert backup.BACKUPS_DIR == real_backups
+
+
+def test_cli_reports_that_its_temporary_snapshot_was_removed(tmp_path, monkeypatch, capsys):
+    db = tmp_path / "forge.db"
+    _make_db(db)
+    monkeypatch.setattr(recovery_verify, "CANONICAL_DB", db)
+
+    recovery_verify.main()
+
+    output = capsys.readouterr().out
+    assert "backup=pass (temporary snapshot verified and removed;" in output
+    assert "restore=pass (3 tables, 6 rows)" in output

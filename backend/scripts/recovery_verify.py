@@ -147,7 +147,7 @@ def verify_recovery(db_path: Path | None = None, workdir: Path | None = None) ->
 
         return {
             "database": str(source),
-            "snapshot": str(snapshot),
+            "snapshot": str(snapshot) if scratch_context is None else None,
             "snapshot_bytes": snapshot.stat().st_size,
             "integrity": integrity,
             "foreign_key_violations": 0,
@@ -169,7 +169,10 @@ def main() -> None:
     except RecoveryVerificationError as exc:
         print(f"recovery=FAIL {exc}")
         raise SystemExit(1) from exc
-    print(f"backup=pass ({report['snapshot']} {report['snapshot_bytes']} bytes)")
+    if report["snapshot"] is None:
+        print(f"backup=pass (temporary snapshot verified and removed; {report['snapshot_bytes']} bytes)")
+    else:
+        print(f"backup=pass ({report['snapshot']} {report['snapshot_bytes']} bytes)")
     print(f"restore=pass ({report['tables']} tables, {report['rows_total']} rows)")
     print("integrity=pass")
     print("foreign_keys=pass")

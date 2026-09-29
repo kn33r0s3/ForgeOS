@@ -14,6 +14,7 @@ import signal
 import time
 from pathlib import Path
 from threading import Event, Lock, Thread
+from typing import Callable
 
 from . import backup
 
@@ -110,9 +111,11 @@ class CycleScheduler:
             while self._running.is_set():
                 time.sleep(0.2)
 
-    def run_single_cycle(self) -> dict:
+    def run_single_cycle(
+        self, on_timeout: Callable[[], None] | None = None
+    ) -> dict:
         """Run one scheduled invocation through the canonical timeout/log path."""
-        return self._run_cycle_with_timeout()
+        return self._run_cycle_with_timeout(on_timeout=on_timeout)
 
     def _tick(self, force_backup_check: bool = False) -> None:
         if self._running.is_set():
@@ -126,21 +129,24 @@ class CycleScheduler:
             log.warning("Skipping tick: another scheduler process is in progress.")
             return
         self._running.set()
+        release_deferred = False
         try:
-            self._run_cycle_with_timeout()
+            result = self._run_cycle_with_timeout(on_timeout=self._release_run_locks)
+            release_deferred = result.get("lock_release_deferred") is True
         except Exception:
             log.exception("Unexpected scheduler error during cycle; next tick will continue.")
         finally:
-            self._running.clear()
-            self._process_lock.release()
-            self._lock.release()
+            if not release_deferred:
+                self._release_run_locks()
 
         now = time.time()
         if self.backup_interval_seconds and (force_backup_check or self._last_backup_ts is None or
                                              now - self._last_backup_ts >= self.backup_interval_seconds):
             self._maybe_backup()
 
-    def _run_cycle_with_timeout(self) -> dict:
+    def _run_cycle_with_timeout(
+        self, on_timeout: Callable[[], None] | None = None
+    ) -> dict:
         result: dict = {}
         error: list[BaseException] = []
 
@@ -157,10 +163,36 @@ class CycleScheduler:
         if thread.is_alive():
             log.error("Cycle timed out after %ss; run remains in progress and will not overlap.",
                       self.max_run_seconds)
-            return {"status": "timeout", "duration_ms": int((time.monotonic() - started) * 1000)}
+            if on_timeout is not None:
+                def release_when_finished() -> None:
+                    thread.join()
+                    on_timeout()
+
+                release_thread = Thread(
+                    target=release_when_finished,
+                    name="forgeos-cycle-lock-release",
+                    daemon=True,
+                )
+                try:
+                    release_thread.start()
+                except (OSError, RuntimeError):
+                    thread.join()
+                    raise
+            return {
+                "status": "timeout",
+                "duration_ms": int((time.monotonic() - started) * 1000),
+                "lock_release_deferred": on_timeout is not None,
+            }
         if error:
             raise error[0]
         return result
+
+    def _release_run_locks(self) -> None:
+        self._running.clear()
+        try:
+            self._process_lock.release()
+        finally:
+            self._lock.release()
 
     def _run_cycle(self) -> dict:
         started = time.monotonic()

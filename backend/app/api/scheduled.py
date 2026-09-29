@@ -32,6 +32,7 @@ def run_scheduled_cycle(authorization: str | None = Header(default=None)):
 
     connection = None
     acquired_postgres_lock = False
+    lock_release_deferred = False
     if engine.dialect.name == "postgresql":
         connection = engine.connect()
         try:
@@ -51,23 +52,28 @@ def run_scheduled_cycle(authorization: str | None = Header(default=None)):
     elif not _local_cycle_lock.acquire(blocking=False):
         raise HTTPException(status_code=409, detail="A cycle is already running")
 
-    try:
-        record = _cycle_scheduler.run_single_cycle()
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Cycle failed: {type(exc).__name__}") from exc
-    finally:
+    def release_cycle_lock() -> None:
         if connection is not None:
-            if acquired_postgres_lock:
-                try:
+            try:
+                if acquired_postgres_lock:
                     connection.execute(
                         text("SELECT pg_advisory_unlock(:lock_id)"),
                         {"lock_id": _POSTGRES_LOCK_ID},
                     )
                     connection.commit()
-                finally:
-                    connection.close()
+            finally:
+                connection.close()
         elif engine.dialect.name != "postgresql":
             _local_cycle_lock.release()
+
+    try:
+        record = _cycle_scheduler.run_single_cycle(on_timeout=release_cycle_lock)
+        lock_release_deferred = record.get("lock_release_deferred") is True
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Cycle failed: {type(exc).__name__}") from exc
+    finally:
+        if not lock_release_deferred:
+            release_cycle_lock()
 
     if record.get("status") == "timeout":
         raise HTTPException(status_code=504, detail="The canonical cycle timed out")

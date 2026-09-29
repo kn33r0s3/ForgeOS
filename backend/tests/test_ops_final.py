@@ -52,11 +52,19 @@ def test_scheduler_timeout_is_truthful_and_blocks_overlap(monkeypatch, tmp_path)
     release = threading.Event()
     calls = []
     def slow():
-        calls.append(1); entered.set(); release.wait(2)
+        calls.append(len(calls) + 1); entered.set(); release.wait(2)
         return {"forge_cycle": {}, "autonomy_cycle": {}}
     monkeypatch.setattr(cycle_scheduler.run_daily_cycle, "run_once", slow)
     s = cycle_scheduler.CycleScheduler(interval_seconds=10, backup_interval_seconds=None, max_run_seconds=1, lock_path=tmp_path / "scheduler.run.lock")
     start = time.monotonic(); s._tick(); elapsed = time.monotonic() - start
     assert entered.is_set() and elapsed < 1.8
-    assert calls == [1]
-    release.set()
+    try:
+        assert calls == [1]
+        s._tick()
+        assert calls == [1]
+    finally:
+        release.set()
+    assert s._lock.acquire(timeout=1)
+    s._lock.release()
+    s._tick()
+    assert calls == [1, 2]

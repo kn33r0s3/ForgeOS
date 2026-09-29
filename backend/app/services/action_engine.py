@@ -493,14 +493,8 @@ def start_and_execute_action(db: Session, action_id: int) -> Optional[models.Act
     action.started_at = utcnow()
     db.commit()
 
-    params = {}
-    if action.parameters_json:
-        try:
-            params = json.loads(action.parameters_json)
-        except Exception:
-            params = {}
-
     try:
+        params = json.loads(action.parameters_json) if action.parameters_json else {}
         if not isinstance(params, dict):
             raise ValueError("Action parameters must be a JSON object")
         adapter = get_adapter(action.action_type)
