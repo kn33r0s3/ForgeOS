@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, CalendarDays, MapPin, ShieldCheck } from "lucide-react";
+import { ArrowRight, CalendarDays, MapPin, Search, ShieldCheck, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
+import { PageHeader } from "@/components/layout/page-header";
+import { EmptyState, SkeletonCards, UnavailableState } from "@/components/ui/feedback";
 import {
   createBookingRequest,
   loadProviders,
@@ -157,26 +159,30 @@ function ProvidersPage() {
   };
 
   return (
-    <main className="py-10 sm:py-12">
-      <Container className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="space-y-6">
-          <div>
-            <p className="font-mono text-micro uppercase tracking-[0.14em] text-cyan">Services, one path</p>
-            <h1 className="mt-2 font-display text-4xl tracking-tight text-fg">Verified services</h1>
-            <p className="mt-2 max-w-xl text-sm text-muted">This is the verified-service path within the network. A provider appears only when that record is verified and public.</p>
-          </div>
-
-          <div className="flex flex-col gap-4 rounded-2xl border border-line bg-raised p-4 sm:flex-row">
+    <main>
+      <PageHeader
+        eyebrow="Services, one path"
+        title="Verified services"
+        lede="This is the verified-service path within the network. A provider appears only when that record is verified and public."
+      >
+        <div className="mt-8 flex max-w-2xl flex-col gap-2 rounded-card border border-line bg-card/80 p-2 backdrop-blur sm:flex-row" role="search">
+          <label className="relative flex-1">
+            <span className="sr-only">Search services</span>
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-dim" aria-hidden="true" />
             <input
+              type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search plumbing, repair, cleaning..."
-              className="min-h-12 flex-1 rounded-xl border border-line bg-void px-4 text-base text-fg placeholder:text-muted"
+              className="min-h-12 w-full rounded-card border border-transparent bg-paper pl-10 pr-4 text-base text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]"
             />
+          </label>
+          <label>
+            <span className="sr-only">Category</span>
             <select
               value={category}
               onChange={(event) => setCategory(event.target.value)}
-              className="min-h-12 rounded-xl border border-line bg-void px-4 text-base text-fg"
+              className="min-h-12 w-full rounded-card border border-transparent bg-paper px-4 text-base text-ink focus-visible:border-accent sm:w-auto"
             >
               {categories.map((item) => (
                 <option key={item} value={item}>
@@ -184,187 +190,231 @@ function ProvidersPage() {
                 </option>
               ))}
             </select>
-          </div>
+          </label>
+        </div>
+      </PageHeader>
 
-          <div className="space-y-4">
-            {providerLoadState === "loading" ? (
-              <p className="rounded-2xl border border-line bg-raised p-6 text-muted">Checking verified provider records…</p>
-            ) : providerLoadState === "unavailable" ? (
-              <div className="rounded-2xl border border-line bg-raised p-6 text-muted" role="alert">
-                <p>The provider service is unavailable. Hami could not check the public listings, so none are being reported as missing.</p>
-                <button type="button" onClick={() => setReloadVersion((version) => version + 1)} className="mt-3 min-h-10 rounded-full border border-line px-4 text-sm text-fg">Retry</button>
-              </div>
-            ) : filteredProviders.length > 0 ? (
-              filteredProviders.map((provider) => (
+      <Container className="grid gap-8 py-10 sm:py-14 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
+        <div className="space-y-3">
+          {providerLoadState === "ready" && filteredProviders.length > 0 ? (
+            <p className="font-mono text-micro uppercase tracking-[0.12em] text-dim" aria-live="polite">
+              {filteredProviders.length} verified provider{filteredProviders.length === 1 ? "" : "s"}
+            </p>
+          ) : null}
+          {providerLoadState === "loading" ? (
+            <SkeletonCards count={3} label="Checking verified provider records…" className="space-y-3" />
+          ) : providerLoadState === "unavailable" ? (
+            <UnavailableState
+              title="Provider service unavailable"
+              body="The provider service is unavailable. Hami could not check the public listings, so none are being reported as missing."
+              onRetry={() => setReloadVersion((version) => version + 1)}
+            />
+          ) : filteredProviders.length > 0 ? (
+            filteredProviders.map((provider, index) => {
+              const selected = selectedProvider?.id === provider.id;
+              return (
                 <button
                   key={provider.id}
                   type="button"
+                  aria-pressed={selected}
                   onClick={() => setSelectedId(provider.id)}
-                  className={`w-full rounded-2xl border p-4 text-left transition ${
-                    selectedProvider?.id === provider.id ? "border-cyan/40 bg-cyan-dim" : "border-line bg-raised hover:border-cyan/20"
-                  }`}
+                  className={`card card-interactive reveal block w-full p-5 text-left ${selected ? "card-accent" : ""}`}
+                  style={{ "--i": Math.min(index, 8) } as React.CSSProperties}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-mono text-micro uppercase tracking-[0.12em] text-cyan">{provider.category}</p>
-                      <h2 className="mt-2 font-display text-2xl text-fg">{provider.name}</h2>
+                    <div className="flex items-start gap-3">
+                      <span className="icon-chip" aria-hidden="true">
+                        <Store className="size-4" />
+                      </span>
+                      <div>
+                        <p className="font-mono text-micro uppercase tracking-[0.12em] text-accent">{provider.category}</p>
+                        <h2 className="mt-1 font-display text-2xl leading-tight tracking-tight text-ink">{provider.name}</h2>
+                      </div>
                     </div>
                     {provider.verified && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-cyan/40 bg-void px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-cyan">
-                        <ShieldCheck className="size-3" />
+                      <span className="status-pill status-pill-success shrink-0">
+                        <ShieldCheck className="size-3" aria-hidden="true" />
                         Verified
                       </span>
                     )}
                   </div>
 
-                  <p className="mt-3 text-sm text-muted">{provider.summary}</p>
+                  <p className="mt-3 text-sm leading-6 text-muted">{provider.summary}</p>
 
-                  <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-muted">
-                    <span className="inline-flex items-center gap-1"><MapPin className="size-4 text-cyan" /> {provider.location}</span>
-                    <span>{provider.response}</span>
-                  </div>
-
-                  <div className="mt-4 flex items-center justify-between text-sm">
-                    <span className="font-medium text-fg">{provider.price}</span>
-                    <span className="inline-flex items-center gap-1 text-cyan">
-                      View details <ArrowRight className="size-4" />
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3 text-sm">
+                    <span className="inline-flex items-center gap-1.5 text-muted"><MapPin className="size-4 text-accent" aria-hidden="true" /> {provider.location}</span>
+                    <span className="text-dim">{provider.response}</span>
+                    <span className="font-medium text-ink">{provider.price}</span>
+                    <span className="link-arrow inline-flex items-center gap-1 font-semibold text-accent">
+                      {selected ? "Selected" : "View details"} <ArrowRight className="size-4" aria-hidden="true" />
                     </span>
                   </div>
                 </button>
-              ))
-            ) : (
-              <div className="rounded-2xl border border-line bg-raised p-6 text-muted">
-                No verified public providers match this search right now.
-              </div>
-            )}
-          </div>
+              );
+            })
+          ) : (
+            <EmptyState
+              icon={Store}
+              title="No matching verified providers"
+              body="No verified public providers match this search right now. Providers appear only after verification and publication; nothing is listed to fill the space."
+            />
+          )}
         </div>
 
-        <aside className="rounded-card border border-line bg-raised p-5 sm:p-6">
+        <aside className="card p-5 sm:p-6 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)]" aria-label="Selected provider">
           {selectedProvider ? (
-            <>
-              <div className="flex items-center justify-between gap-3">
+            <div className="fade-in" key={selectedProvider.id}>
+              <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-mono text-micro uppercase tracking-[0.12em] text-cyan">Selected provider</p>
-                  <h2 className="mt-2 font-display text-2xl text-fg">{selectedProvider.name}</h2>
+                  <p className="font-mono text-micro uppercase tracking-[0.12em] text-accent">Selected provider</p>
+                  <h2 className="mt-2 font-display text-3xl leading-tight tracking-tight text-ink">{selectedProvider.name}</h2>
                 </div>
-                <span className="rounded-full border border-line bg-void px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-dim">
+                <span className="status-pill status-pill-neutral">
                   {selectedProvider.category}
                 </span>
               </div>
 
-              <div className="mt-4 space-y-3 text-sm text-muted">
-                <p className="inline-flex items-center gap-2"><MapPin className="size-4 text-cyan" /> {selectedProvider.location}</p>
-                <p className="inline-flex items-center gap-2"><CalendarDays className="size-4 text-cyan" /> {selectedProvider.response}</p>
-                <p>Verification is the recorded check on this provider. There is no review score until completed jobs exist.</p>
+              <div className="mt-4 space-y-2 text-sm text-muted">
+                <p className="flex items-center gap-2"><MapPin className="size-4 text-accent" aria-hidden="true" /> {selectedProvider.location}</p>
+                <p className="flex items-center gap-2"><CalendarDays className="size-4 text-accent" aria-hidden="true" /> {selectedProvider.response}</p>
+                <p className="pt-1 text-xs leading-5 text-dim">Verification is the recorded check on this provider. There is no review score until completed jobs exist.</p>
               </div>
 
-              <div className="mt-4 rounded-2xl border border-line bg-void p-4">
-                <p className="font-mono text-micro uppercase tracking-[0.12em] text-cyan">Recorded trust</p>
+              <div className="mt-5 rounded-card border border-line bg-paper/70 p-4">
+                <p className="flex items-center gap-2 font-mono text-micro uppercase tracking-[0.12em] text-accent"><ShieldCheck className="size-3.5" aria-hidden="true" /> Recorded trust</p>
                 <p className="mt-2 text-sm text-muted">
                   {trust
                     ? `${trust.recorded_requests} request(s) recorded · ${trust.disputes} dispute(s)`
                     : "No public trust record is available for this provider."}
                 </p>
-                {trust?.unknowns.length ? <p className="mt-2 text-xs text-muted">{trust.unknowns.join(" · ")}</p> : null}
+                {trust?.unknowns.length ? <p className="mt-2 text-xs text-dim">{trust.unknowns.join(" · ")}</p> : null}
               </div>
 
-              <div className="mt-5 space-y-3">
+              <h3 className="mt-6 font-mono text-micro uppercase tracking-[0.12em] text-dim">Services</h3>
+              <div className="mt-2 space-y-2">
                 {selectedProvider.listings.length > 0 ? (
                   selectedProvider.listings.map((listing) => (
                     <button
                       key={listing.id}
                       type="button"
+                      aria-pressed={selectedListing?.id === listing.id}
                       onClick={() => setSelectedListingId(listing.id)}
-                      className={`w-full rounded-2xl border p-3 text-left transition ${
-                        selectedListing?.id === listing.id ? "border-cyan/40 bg-cyan-dim" : "border-line bg-void hover:border-cyan/20"
+                      className={`w-full rounded-card border p-3 text-left transition-colors ${
+                        selectedListing?.id === listing.id ? "border-accent/60 bg-accent/10" : "border-line bg-paper/60 hover:border-accent/40"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <p className="font-medium text-fg">{listing.title}</p>
-                        <span className="text-sm font-medium text-cyan">
+                        <p className="font-medium text-ink">{listing.title}</p>
+                        <span className="shrink-0 text-sm font-medium text-accent">
                           {listing.price_from ? `${listing.price_from} ${listing.currency ?? "NPR"}` : "Price not recorded"}
                         </span>
                       </div>
-                      <p className="mt-2 text-sm text-muted">{listing.description}</p>
-                      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted">
+                      <p className="mt-1.5 text-sm text-muted">{listing.description}</p>
+                      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-dim">
                         <span>{listing.location ?? "Location pending"}</span>
                         <span>{listing.availability_status ?? "Availability not recorded"}</span>
                       </div>
                     </button>
                   ))
                 ) : (
-                  <div className="rounded-2xl border border-line bg-void p-4 text-sm text-muted">
+                  <div className="rounded-card border border-line bg-paper/60 p-4 text-sm text-muted">
                     No public service listing is attached to this provider yet.
                   </div>
                 )}
               </div>
-            </>
+            </div>
           ) : (
-            <div className="rounded-2xl border border-line bg-void p-4 text-sm text-muted">
-              {providerLoadState === "loading"
-                ? "Checking the selected provider…"
-                : providerLoadState === "unavailable"
-                  ? "Provider details are unavailable until the public service responds."
-                  : search.provider
-                ? "That provider is not on the public verified list."
-                : "No verified provider is selected. Choose one from the list when a public record exists."}
+            <div className="py-6 text-center">
+              <span className="icon-chip mx-auto" aria-hidden="true"><Store className="size-4" /></span>
+              <p className="mx-auto mt-4 max-w-xs text-sm leading-6 text-muted">
+                {providerLoadState === "loading"
+                  ? "Checking the selected provider…"
+                  : providerLoadState === "unavailable"
+                    ? "Provider details are unavailable until the public service responds."
+                    : search.provider
+                  ? "That provider is not on the public verified list."
+                  : "No verified provider is selected. Choose one from the list when a public record exists."}
+              </p>
             </div>
           )}
 
           {selectedProvider ? (
-            <form onSubmit={handleSubmit} className="mt-6 space-y-3">
+            <form onSubmit={handleSubmit} className="mt-6 space-y-3 border-t border-line pt-6">
+              <h3 className="font-display text-2xl tracking-tight text-ink">Request this service</h3>
               <div className="grid gap-3 sm:grid-cols-2">
-                <input
-                  value={booking.name}
-                  onChange={(event) => setBooking((current) => ({ ...current, name: event.target.value }))}
-                  placeholder="Your name"
-                  className="min-h-11 w-full rounded-xl border border-line bg-void px-3 text-sm text-fg placeholder:text-muted"
-                />
-                <input
-                  type="tel"
-                  value={booking.phone}
-                  onChange={(event) => setBooking((current) => ({ ...current, phone: event.target.value }))}
-                  placeholder="Phone"
-                  className="min-h-11 w-full rounded-xl border border-line bg-void px-3 text-sm text-fg placeholder:text-muted"
-                />
+                <label className="block">
+                  <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Your name</span>
+                  <input
+                    value={booking.name}
+                    onChange={(event) => setBooking((current) => ({ ...current, name: event.target.value }))}
+                    placeholder="Your name"
+                    autoComplete="name"
+                    className="min-h-11 w-full rounded-card border border-line bg-paper px-3 text-sm text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Phone</span>
+                  <input
+                    type="tel"
+                    value={booking.phone}
+                    onChange={(event) => setBooking((current) => ({ ...current, phone: event.target.value }))}
+                    placeholder="Phone"
+                    autoComplete="tel"
+                    className="min-h-11 w-full rounded-card border border-line bg-paper px-3 text-sm text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]"
+                  />
+                </label>
               </div>
-              <input
-                type="email"
-                value={booking.email}
-                onChange={(event) => setBooking((current) => ({ ...current, email: event.target.value }))}
-                placeholder="Email"
-                className="min-h-11 w-full rounded-xl border border-line bg-void px-3 text-sm text-fg placeholder:text-muted"
-              />
-              <input
-                value={booking.service}
-                onChange={(event) => setBooking((current) => ({ ...current, service: event.target.value }))}
-                placeholder={selectedListing?.title ?? "Service needed"}
-                className="min-h-11 w-full rounded-xl border border-line bg-void px-3 text-sm text-fg placeholder:text-muted"
-              />
-              <input
-                type="date"
-                value={booking.date}
-                onChange={(event) => setBooking((current) => ({ ...current, date: event.target.value }))}
-                className="min-h-11 w-full rounded-xl border border-line bg-void px-3 text-sm text-fg"
-              />
-              <textarea
-                value={booking.notes}
-                onChange={(event) => setBooking((current) => ({ ...current, notes: event.target.value }))}
-                rows={4}
-                placeholder="Tell the provider what you need help with"
-                className="w-full rounded-xl border border-line bg-void px-3 py-2 text-sm text-fg placeholder:text-muted"
-              />
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
+              <label className="block">
+                <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Email</span>
+                <input
+                  type="email"
+                  value={booking.email}
+                  onChange={(event) => setBooking((current) => ({ ...current, email: event.target.value }))}
+                  placeholder="Email"
+                  autoComplete="email"
+                  className="min-h-11 w-full rounded-card border border-line bg-paper px-3 text-sm text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]"
+                />
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Service</span>
+                  <input
+                    value={booking.service}
+                    onChange={(event) => setBooking((current) => ({ ...current, service: event.target.value }))}
+                    placeholder={selectedListing?.title ?? "Service needed"}
+                    className="min-h-11 w-full rounded-card border border-line bg-paper px-3 text-sm text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Preferred date</span>
+                  <input
+                    type="date"
+                    value={booking.date}
+                    onChange={(event) => setBooking((current) => ({ ...current, date: event.target.value }))}
+                    className="min-h-11 w-full rounded-card border border-line bg-paper px-3 text-sm text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)] [color-scheme:dark]"
+                  />
+                </label>
+              </div>
+              <label className="block">
+                <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Notes</span>
+                <textarea
+                  value={booking.notes}
+                  onChange={(event) => setBooking((current) => ({ ...current, notes: event.target.value }))}
+                  rows={4}
+                  placeholder="Tell the provider what you need help with"
+                  className="w-full rounded-card border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]"
+                />
+              </label>
+              <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? "Submitting..." : "Submit booking request"}
               </Button>
               {lastBookingId ? (
-                <p className="rounded-xl border border-cyan/30 bg-cyan/5 px-3 py-2 text-sm text-cyan">
+                <p role="status" className="rounded-card border border-success/35 bg-success/10 px-3 py-2 text-sm text-success">
                   Booking #{lastBookingId} created.
                 </p>
               ) : null}
               {bookingStatus ? (
-                <p className="rounded-xl border border-amber/30 bg-amber/5 px-3 py-2 text-sm text-muted">{bookingStatus}</p>
+                <p role="status" className="rounded-card border border-warning/35 bg-warning/5 px-3 py-2 text-sm text-muted">{bookingStatus}</p>
               ) : null}
             </form>
           ) : null}

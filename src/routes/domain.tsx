@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { ArrowUpRight, BriefcaseBusiness, Handshake, KeyRound, Link2, MapPin, PenLine, Radio } from "lucide-react";
 import { Container } from "@/components/layout/container";
+import { PageHeader } from "@/components/layout/page-header";
+import { EmptyState, SkeletonCards, UnavailableState } from "@/components/ui/feedback";
 import {
   closePublicDomainRecord,
   createBookingRequest,
@@ -186,159 +189,265 @@ function DomainPage() {
   }
 
   return (
-    <main className="py-10 sm:py-14">
-      <Container className="max-w-3xl">
-        <p className="font-mono text-micro uppercase tracking-[0.14em] text-cyan">Our records</p>
-        <h1 className="mt-2 font-display text-4xl tracking-tight text-fg">Work, offers, and trades posted here</h1>
-        <p className="mt-3 text-muted">A price appears only if the person stated it. Closing a post requires the token from creation and a note about what happened.</p>
-        {apiUnavailable ? (
-          <div className="mt-5 rounded-2xl border border-line bg-void p-5" role="alert">
-            <p className="text-sm text-muted">Some public network services are unavailable. Missing records below are not being treated as confirmed empty results.</p>
-            <button type="button" onClick={() => void load()} className="mt-3 min-h-10 rounded-full border border-line px-4 text-sm text-fg">Retry</button>
-          </div>
-        ) : null}
+    <main>
+      <PageHeader
+        eyebrow="Our records"
+        title="Work, offers, and trades posted here"
+        lede="A price appears only if the person stated it. Closing a post requires the token from creation and a note about what happened."
+      />
 
-        <form onSubmit={postRecord} className="mt-8 space-y-3 rounded-card border border-line bg-raised p-6">
-          <select value={kind} onChange={(event) => setKind(event.target.value as Kind)} className="min-h-12 w-full rounded-xl border border-line bg-void px-4 text-fg">
-            <option value="job">Job</option>
-            <option value="offer">Offer</option>
-            <option value="trade">Trade</option>
-          </select>
-          <input value={title} onChange={(event) => setTitle(event.target.value)} required placeholder="Title" className="min-h-12 w-full rounded-xl border border-line bg-void px-4 text-fg" />
-          <textarea value={detail} onChange={(event) => setDetail(event.target.value)} required placeholder="What is actually being posted" className="min-h-28 w-full rounded-xl border border-line bg-void px-4 py-3 text-fg" />
-          <input value={city} onChange={(event) => setCity(event.target.value)} placeholder="City, if stated" className="min-h-12 w-full rounded-xl border border-line bg-void px-4 text-fg" />
-          <input value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Stated price, if any" className="min-h-12 w-full rounded-xl border border-line bg-void px-4 text-fg" />
-          <button type="submit" className="min-h-11 rounded-full bg-fg px-5 text-sm text-void">Post in our records</button>
-        </form>
+      <Container className="grid gap-10 py-10 sm:py-14 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start">
+        <div className="min-w-0 space-y-12">
+          {apiUnavailable ? (
+            <UnavailableState
+              title="Some services did not respond"
+              body="Some public network services are unavailable. Missing records below are not being treated as confirmed empty results."
+              onRetry={() => void load()}
+            />
+          ) : null}
 
-        {token && createdId ? (
-          <div className="mt-4 space-y-4 rounded-2xl border border-line bg-void p-4 text-sm text-fg">
-            <p>Record #{createdId}. Close token, shown once: {token}</p>
-            <p className="text-muted">Closing records what happened. It does not move money. A dispute names no winner.</p>
-            <form onSubmit={closeRecord} className="space-y-3">
-              <select value={closeResult} onChange={(event) => setCloseResult(event.target.value as "completed" | "withdrawn" | "paid")} className="min-h-12 w-full rounded-xl border border-line bg-raised px-4 text-fg">
-                <option value="completed">Completed, no amount recorded</option>
-                <option value="withdrawn">Withdrawn</option>
-                <option value="paid">Paid, amount actually received</option>
-              </select>
-              {closeResult === "paid" ? (
-                <input value={paidAmount} onChange={(event) => setPaidAmount(event.target.value)} inputMode="numeric" required placeholder="Amount received, whole NPR" className="min-h-12 w-full rounded-xl border border-line bg-raised px-4 text-fg" />
-              ) : null}
-              <textarea value={closeNote} onChange={(event) => setCloseNote(event.target.value)} required minLength={3} placeholder="What actually happened" className="min-h-20 w-full rounded-xl border border-line bg-raised px-4 py-3 text-fg" />
-              <button type="submit" className="min-h-11 rounded-full bg-fg px-5 text-sm text-void">Record the close</button>
-            </form>
-            <form onSubmit={disputeRecord} className="space-y-3 border-t border-line pt-4">
-              <textarea value={disputeNote} onChange={(event) => setDisputeNote(event.target.value)} required minLength={3} placeholder="What is disputed" className="min-h-20 w-full rounded-xl border border-line bg-raised px-4 py-3 text-fg" />
-              <button type="submit" className="min-h-11 rounded-full border border-line px-5 text-sm text-fg">Record a dispute</button>
-            </form>
-          </div>
-        ) : null}
-        {chosenProvider ? (
-          <form onSubmit={book} className="mt-4 space-y-3 rounded-2xl border border-line bg-void p-5">
-            <p className="text-sm text-fg">Request provider #{chosenProvider}. This records a request. It does not accept the work or record a payment.</p>
-            <input value={requesterName} onChange={(event) => setRequesterName(event.target.value)} required placeholder="Your name" className="min-h-12 w-full rounded-xl border border-line bg-raised px-4 text-fg" />
-            <input value={requestedService} onChange={(event) => setRequestedService(event.target.value)} required placeholder="What you are requesting" className="min-h-12 w-full rounded-xl border border-line bg-raised px-4 text-fg" />
-            <button type="submit" className="min-h-11 rounded-full bg-fg px-5 text-sm text-void">Record the request</button>
-          </form>
-        ) : null}
-        {message ? <p className="mt-4 text-sm text-muted">{message}</p> : null}
-
-        <div className="mt-8 space-y-3">
-          <h2 className="font-display text-2xl text-fg">Recorded changes</h2>
-          {isLoading ? <p className="text-sm text-muted">Checking recorded changes…</p> : !apiUnavailable && alerts.length === 0 ? <p className="text-sm text-muted">No recorded change yet.</p> : alerts.map((alert) => (
-            <p key={alert.id} className="text-sm text-muted">{alert.text}</p>
-          ))}
-        </div>
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          <section className="rounded-2xl border border-line bg-void p-5">
-            <p className="font-mono text-micro uppercase tracking-[0.12em] text-cyan">Trust record</p>
-            <p className="mt-2 text-sm text-muted">
-              {trust
-                ? `${trust.recorded_requests} request(s) recorded · ${trust.disputes} dispute(s)`
-                : apiUnavailable ? "Trust data is unavailable while the public service is failing."
-                  : "No trust record is available for the latest post."}
-            </p>
-            {trust?.unknowns.length ? <p className="mt-2 text-xs text-muted">{trust.unknowns.join(" · ")}</p> : null}
-          </section>
-          <section className="rounded-2xl border border-line bg-void p-5">
-            <p className="font-mono text-micro uppercase tracking-[0.12em] text-cyan">Event timeline</p>
-            {events ? (
-              <p className="mt-2 text-sm text-muted">
-                {events.completions} completion(s) · {events.payments.length} payment event(s) · {events.disputes.length} dispute event(s)
-              </p>
+          <section aria-labelledby="open-posts">
+            <SectionHead id="open-posts" icon={BriefcaseBusiness} title="Open posts" count={isLoading ? null : rows.length} />
+            {isLoading ? (
+              <SkeletonCards count={3} label="Checking open posts…" className="grid gap-3 sm:grid-cols-2" />
+            ) : !apiUnavailable && rows.length === 0 ? (
+              <EmptyState
+                icon={BriefcaseBusiness}
+                headingLevel="h3"
+                title="The board is quiet"
+                body="No open jobs, offers, or trades are in our records."
+              >
+                <a href="#post-form" className="link-arrow inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-accent">
+                  Post the first one <ArrowUpRight className="size-4" aria-hidden="true" />
+                </a>
+              </EmptyState>
             ) : (
-              <p className="mt-2 text-sm text-muted">{apiUnavailable ? "The event timeline could not be checked." : "No event timeline is recorded yet."}</p>
+              <ol className="grid gap-3 sm:grid-cols-2">
+                {rows.map((row, index) => (
+                  <li key={row.id} className="card card-interactive reveal flex flex-col p-5" style={{ "--i": Math.min(index, 8) } as React.CSSProperties}>
+                    <article className="flex flex-1 flex-col">
+                      <span className={`status-pill self-start ${row.kind === "offer" ? "status-pill-success" : row.kind === "trade" ? "status-pill-neutral" : "status-pill-accent"}`}>{row.kind}</span>
+                      <h3 className="mt-3 font-display text-2xl leading-tight tracking-tight text-ink">{row.title}</h3>
+                      <p className="mt-2 flex-1 text-sm leading-6 text-muted">{row.detail}</p>
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3 text-sm">
+                        <span className="inline-flex items-center gap-1.5 text-muted"><MapPin className="size-4 text-accent" aria-hidden="true" />{row.city || "City not recorded"}</span>
+                        <span className={row.stated_price ? "font-semibold text-ink" : "text-dim"}>{row.stated_price || "Price not recorded"}</span>
+                      </div>
+                    </article>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+
+          <section aria-labelledby="recorded-matches">
+            <SectionHead id="recorded-matches" icon={Handshake} title="Recorded matches" count={isLoading ? null : matches.length} />
+            <p className="-mt-2 mb-4 max-w-2xl text-sm leading-6 text-muted">A match is a shared city or shared words in our records. Missing price, availability, or a completed outcome stays listed as unknown.</p>
+            {!isLoading && !apiUnavailable && matches.length === 0 ? (
+              <p className="rounded-card border border-dashed border-line p-5 text-sm text-muted">No open post to match.</p>
+            ) : (
+              <div className="space-y-3">
+                {matches.map((match) => (
+                  <article key={match.need_id} className="card p-5">
+                    <h3 className="font-display text-xl tracking-tight text-ink">{match.need_title}</h3>
+                    {match.candidates.length === 0 ? <p className="mt-2 text-sm text-muted">No recorded counterparty.</p> : (
+                      <ul className="mt-3 divide-y divide-line">
+                        {match.candidates.map((candidate) => (
+                          <li key={`${candidate.kind}-${candidate.id}`} className="py-3 text-sm text-muted first:pt-0 last:pb-0">
+                            <p className="font-medium text-ink"><span className="font-mono text-micro uppercase tracking-[0.1em] text-accent">{candidate.kind}</span> · {candidate.name}</p>
+                            <p className="mt-1">{candidate.reasons.join(" · ")}</p>
+                            <p className="mt-1 text-dim">{candidate.stated_price || "Price not recorded"} · {candidate.stated_availability || "Availability not recorded"}</p>
+                            <p className="mt-1 text-xs text-dim">{candidate.unknowns.join(" · ")}</p>
+                            {candidate.kind === "provider" ? (
+                              <button type="button" onClick={() => void chooseProvider(candidate.id)} className="link-arrow mt-2 inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-accent">
+                                See trust and request this provider <ArrowUpRight className="size-4" aria-hidden="true" />
+                              </button>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section aria-labelledby="public-connections">
+            <SectionHead id="public-connections" icon={Link2} title="Public connections" count={isLoading ? null : connections.length} />
+            {!isLoading && !apiUnavailable && connections.length === 0 ? (
+              <p className="rounded-card border border-dashed border-line p-5 text-sm text-muted">No public connection is recorded yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {connections.map((connection) => (
+                  <article key={connection.id} className="card p-5">
+                    <span className="status-pill status-pill-accent">{connection.state}</span>
+                    <p className="mt-3 text-sm text-ink">{connection.reason}</p>
+                    <p className="mt-2 text-xs text-dim">
+                      {connection.unknown || connection.agreement_gap || "No additional unknowns recorded."}
+                    </p>
+                    <p className="mt-2 text-sm text-muted">{connection.latest_response || "No public response recorded. A response is not acceptance."}</p>
+                    {token && createdId === connection.left_id && connection.left_kind === "domain_record" && ["proposed", "authorized", "contacted"].includes(connection.state) ? (
+                      <form onSubmit={(event) => respondToConnection(event, connection.id, createdId)} className="mt-4 space-y-2">
+                        <label className="block">
+                          <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Response received</span>
+                          <textarea
+                            value={responseNote}
+                            onChange={(event) => setResponseNote(event.target.value)}
+                            required
+                            placeholder="Record the response you received"
+                            className="min-h-20 w-full rounded-card border border-line bg-paper px-4 py-3 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)] text-sm"
+                          />
+                        </label>
+                        <p className="text-xs text-dim">A response records contact; it is not acceptance.</p>
+                        <button type="submit" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-card border border-line bg-card px-5 text-sm font-semibold text-ink transition-colors hover:border-accent/60">Record response</button>
+                      </form>
+                    ) : null}
+                    <p className="mt-2 text-sm text-muted">{connection.latest_fulfillment || "No fulfillment recorded. Fulfillment is not payment."}</p>
+                  </article>
+                ))}
+              </div>
             )}
           </section>
         </div>
 
-        <div className="mt-8 space-y-3">
-          <h2 className="font-display text-2xl text-fg">Public connections</h2>
-          {!isLoading && !apiUnavailable && connections.length === 0 ? (
-            <p className="text-sm text-muted">No public connection is recorded yet.</p>
-          ) : connections.map((connection) => (
-            <article key={connection.id} className="rounded-2xl border border-line bg-void p-5">
-              <p className="font-mono text-micro uppercase tracking-[0.12em] text-cyan">{connection.state}</p>
-              <p className="mt-2 text-sm text-fg">{connection.reason}</p>
-              <p className="mt-2 text-xs text-muted">
-                {connection.unknown || connection.agreement_gap || "No additional unknowns recorded."}
+        <div className="space-y-5 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)]">
+          <form id="post-form" onSubmit={postRecord} className="card card-accent scroll-mt-28 space-y-3 p-5 sm:p-6">
+            <h2 className="flex items-center gap-2 font-display text-2xl tracking-tight text-ink"><PenLine className="size-5 text-accent" aria-hidden="true" /> Post in our records</h2>
+            <label className="block">
+              <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Kind</span>
+              <select value={kind} onChange={(event) => setKind(event.target.value as Kind)} className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]">
+                <option value="job">Job</option>
+                <option value="offer">Offer</option>
+                <option value="trade">Trade</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Title</span>
+              <input value={title} onChange={(event) => setTitle(event.target.value)} required placeholder="Title" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Detail</span>
+              <textarea value={detail} onChange={(event) => setDetail(event.target.value)} required placeholder="What is actually being posted" className="min-h-28 w-full rounded-card border border-line bg-paper px-4 py-3 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+              <label className="block">
+                <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">City</span>
+                <input value={city} onChange={(event) => setCity(event.target.value)} placeholder="City, if stated" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Stated price</span>
+                <input value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Stated price, if any" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+              </label>
+            </div>
+            <button type="submit" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-card bg-accent px-5 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent/90 w-full">Post in our records</button>
+          </form>
+
+          {token && createdId ? (
+            <div className="card fade-in space-y-4 p-5 text-sm text-ink" role="status">
+              <p className="flex items-start gap-2"><KeyRound className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" /><span>Record #{createdId}. Close token, shown once: <code className="break-all rounded bg-paper px-1.5 py-0.5 font-mono text-accent">{token}</code></span></p>
+              <p className="text-muted">Closing records what happened. It does not move money. A dispute names no winner.</p>
+              <form onSubmit={closeRecord} className="space-y-3">
+                <label className="block">
+                  <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Result</span>
+                  <select value={closeResult} onChange={(event) => setCloseResult(event.target.value as "completed" | "withdrawn" | "paid")} className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]">
+                    <option value="completed">Completed, no amount recorded</option>
+                    <option value="withdrawn">Withdrawn</option>
+                    <option value="paid">Paid, amount actually received</option>
+                  </select>
+                </label>
+                {closeResult === "paid" ? (
+                  <label className="block">
+                    <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Amount received</span>
+                    <input value={paidAmount} onChange={(event) => setPaidAmount(event.target.value)} inputMode="numeric" required placeholder="Amount received, whole NPR" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+                  </label>
+                ) : null}
+                <label className="block">
+                  <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">What happened</span>
+                  <textarea value={closeNote} onChange={(event) => setCloseNote(event.target.value)} required minLength={3} placeholder="What actually happened" className="min-h-20 w-full rounded-card border border-line bg-paper px-4 py-3 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+                </label>
+                <button type="submit" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-card bg-accent px-5 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent/90">Record the close</button>
+              </form>
+              <form onSubmit={disputeRecord} className="space-y-3 border-t border-line pt-4">
+                <label className="block">
+                  <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Dispute</span>
+                  <textarea value={disputeNote} onChange={(event) => setDisputeNote(event.target.value)} required minLength={3} placeholder="What is disputed" className="min-h-20 w-full rounded-card border border-line bg-paper px-4 py-3 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+                </label>
+                <button type="submit" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-card border border-line bg-card px-5 text-sm font-semibold text-ink transition-colors hover:border-accent/60">Record a dispute</button>
+              </form>
+            </div>
+          ) : null}
+          {chosenProvider ? (
+            <form onSubmit={book} className="card fade-in space-y-3 p-5">
+              <p className="text-sm text-ink">Request provider #{chosenProvider}. This records a request. It does not accept the work or record a payment.</p>
+              <label className="block">
+                <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Your name</span>
+                <input value={requesterName} onChange={(event) => setRequesterName(event.target.value)} required placeholder="Your name" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block font-mono text-micro uppercase tracking-[0.1em] text-dim">Request</span>
+                <input value={requestedService} onChange={(event) => setRequestedService(event.target.value)} required placeholder="What you are requesting" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+              </label>
+              <button type="submit" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-card bg-accent px-5 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent/90">Record the request</button>
+            </form>
+          ) : null}
+          {message ? <p role="status" className="rounded-card border border-line bg-card px-4 py-3 text-sm text-muted">{message}</p> : null}
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <section className="card p-5">
+              <p className="font-mono text-micro uppercase tracking-[0.12em] text-accent">Trust record</p>
+              <p className="mt-2 text-sm text-muted">
+                {trust
+                  ? `${trust.recorded_requests} request(s) recorded · ${trust.disputes} dispute(s)`
+                  : apiUnavailable ? "Trust data is unavailable while the public service is failing."
+                    : "No trust record is available for the latest post."}
               </p>
-              <p className="mt-2 text-sm text-muted">{connection.latest_response || "No public response recorded. A response is not acceptance."}</p>
-              {token && createdId === connection.left_id && connection.left_kind === "domain_record" && ["proposed", "authorized", "contacted"].includes(connection.state) ? (
-                <form onSubmit={(event) => respondToConnection(event, connection.id, createdId)} className="mt-4 space-y-2">
-                  <textarea
-                    value={responseNote}
-                    onChange={(event) => setResponseNote(event.target.value)}
-                    required
-                    placeholder="Record the response you received"
-                    className="min-h-20 w-full rounded-xl border border-line bg-raised px-3 py-2 text-sm text-fg"
-                  />
-                  <p className="text-xs text-muted">A response records contact; it is not acceptance.</p>
-                  <button type="submit" className="min-h-10 rounded-full border border-line px-4 text-sm text-fg">Record response</button>
-                </form>
-              ) : null}
-              <p className="mt-2 text-sm text-muted">{connection.latest_fulfillment || "No fulfillment recorded. Fulfillment is not payment."}</p>
-            </article>
-          ))}
-        </div>
+              {trust?.unknowns.length ? <p className="mt-2 text-xs text-dim">{trust.unknowns.join(" · ")}</p> : null}
+            </section>
+            <section className="card p-5">
+              <p className="font-mono text-micro uppercase tracking-[0.12em] text-accent">Event timeline</p>
+              {events ? (
+                <p className="mt-2 text-sm text-muted">
+                  {events.completions} completion(s) · {events.payments.length} payment event(s) · {events.disputes.length} dispute event(s)
+                </p>
+              ) : (
+                <p className="mt-2 text-sm text-muted">{apiUnavailable ? "The event timeline could not be checked." : "No event timeline is recorded yet."}</p>
+              )}
+            </section>
+          </div>
 
-        <div className="mt-8 space-y-3">
-          <h2 className="font-display text-2xl text-fg">Recorded matches</h2>
-          <p className="text-sm text-muted">A match is a shared city or shared words in our records. Missing price, availability, or a completed outcome stays listed as unknown.</p>
-          {!isLoading && !apiUnavailable && matches.length === 0 ? <p className="text-sm text-muted">No open post to match.</p> : matches.map((match) => (
-            <article key={match.need_id} className="rounded-2xl border border-line bg-void p-5">
-              <h3 className="font-display text-xl text-fg">{match.need_title}</h3>
-              {match.candidates.length === 0 ? <p className="mt-2 text-sm text-muted">No recorded counterparty.</p> : match.candidates.map((candidate) => (
-                <div key={`${candidate.kind}-${candidate.id}`} className="mt-3 text-sm text-muted">
-                  <p className="text-fg">{candidate.kind}: {candidate.name}</p>
-                  <p>{candidate.reasons.join(" · ")}</p>
-                  <p>{candidate.stated_price || "Price not recorded"} · {candidate.stated_availability || "Availability not recorded"}</p>
-                  <p>{candidate.unknowns.join(" · ")}</p>
-                  {candidate.kind === "provider" ? (
-                    <button type="button" onClick={() => void chooseProvider(candidate.id)} className="mt-2 min-h-10 text-sm text-cyan">
-                      See trust and request this provider
-                    </button>
-                  ) : null}
-                </div>
+          <section className="card p-5" aria-labelledby="recorded-changes">
+            <h2 id="recorded-changes" className="flex items-center gap-2 font-display text-2xl tracking-tight text-ink"><Radio className="size-4 text-accent" aria-hidden="true" /> Recorded changes</h2>
+            <div className="mt-3 space-y-2">
+              {isLoading ? <p className="text-sm text-muted">Checking recorded changes…</p> : !apiUnavailable && alerts.length === 0 ? <p className="text-sm text-muted">No recorded change yet.</p> : alerts.map((alert) => (
+                <p key={alert.id} className="border-l-2 border-accent/40 pl-3 text-sm text-muted">{alert.text}</p>
               ))}
-            </article>
-          ))}
-        </div>
-
-        <div className="mt-8 space-y-3">
-          {!isLoading && !apiUnavailable && rows.length === 0 ? (
-            <p className="rounded-2xl border border-line bg-void p-5 text-muted">No open jobs, offers, or trades are in our records.</p>
-          ) : rows.map((row) => (
-            <article key={row.id} className="rounded-2xl border border-line bg-void p-5">
-              <p className="font-mono text-micro uppercase tracking-[0.12em] text-cyan">{row.kind}</p>
-              <h2 className="mt-1 font-display text-2xl text-fg">{row.title}</h2>
-              <p className="mt-2 text-sm text-muted">{row.detail}</p>
-              <p className="mt-2 text-sm text-muted">{row.city || "City not recorded"} · {row.stated_price || "Price not recorded"}</p>
-            </article>
-          ))}
+            </div>
+          </section>
         </div>
       </Container>
     </main>
+  );
+}
+
+function SectionHead({
+  id,
+  icon: Icon,
+  title,
+  count,
+}: {
+  id: string;
+  icon: typeof Radio;
+  title: string;
+  count: number | null;
+}) {
+  return (
+    <div className="mb-4 flex items-center justify-between gap-3 border-b border-line pb-3">
+      <h2 id={id} className="flex items-center gap-2 font-display text-3xl tracking-tight text-ink">
+        <Icon className="size-5 text-accent" aria-hidden="true" />
+        {title}
+      </h2>
+      {count !== null ? <span className="chip-count text-muted">{count}</span> : null}
+    </div>
   );
 }

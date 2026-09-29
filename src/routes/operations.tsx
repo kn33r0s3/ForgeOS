@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Container } from "@/components/layout/container";
-import { Eyebrow } from "@/components/layout/eyebrow";
+import { PageHeader } from "@/components/layout/page-header";
+import { EmptyState, MetricTile, SkeletonCards, Skeleton } from "@/components/ui/feedback";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Play, Shield, CheckCircle, AlertTriangle, Activity, TrendingUp, Layers, WifiOff } from "lucide-react";
+import { RefreshCw, Play, Shield, CheckCircle, AlertTriangle, Activity, TrendingUp, Layers, WifiOff, Lightbulb, Wallet, FlaskConical, X } from "lucide-react";
 import {
   loadExecutionActions,
   loadMoneyDashboard,
@@ -155,35 +156,35 @@ function OperationsPage() {
 
   return (
     <main>
-      {/* Header & Controls Section */}
-      <section className="border-b border-line py-12 lg:py-16">
-        <Container>
-          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-            <div>
-              <Eyebrow tone="amber">
-                <span className="size-1.5 rounded-full bg-amber shadow-[0_0_0_4px_var(--color-amber-dim)]" />
-                Hami · Internal Engine
-              </Eyebrow>
-              <h1 className="font-display text-title tracking-tight text-fg">
-                Operating Dashboard
-                <br />
-                <span className="text-muted">Evidence, opportunities &amp; proposed actions.</span>
-              </h1>
-              <p className="mt-4 max-w-2xl text-lede text-muted">
-                Hami operating window. It shows stored evidence, recorded
-                opportunities, and actions that still need approval. A missing
-                amount stays unknown. Figures come from the existing system data.
-              </p>
-            </div>
-
+      <PageHeader
+        eyebrow={
+          <>
+            <span className="live-dot live-dot-warning" aria-hidden="true" />
+            Hami · Internal engine
+          </>
+        }
+        title={
+          <>
+            Operating dashboard
+            <span className="mt-2 block text-[0.55em] leading-tight text-muted">
+              Evidence, opportunities &amp; proposed actions.
+            </span>
+          </>
+        }
+        lede="Hami operating window. It shows stored evidence, recorded opportunities, and actions that still need approval. A missing amount stays unknown. Figures come from the existing system data."
+        aside={
+          <>
+            <p className="font-mono text-micro uppercase tracking-[0.12em] text-accent">Manual controls</p>
+            <p className="mt-2 text-xs leading-5 text-muted">
+              Nothing runs on page load. Each run is started here, by you.
+            </p>
             {/* Explicit User Mutation Controls (Never automatic on page load) */}
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="mt-4 grid gap-2">
               <Button
                 onClick={handleRunCycle}
                 disabled={runningCycle || backendOnline === false}
-                variant="warning"
-                size="sm"
-                className="gap-2"
+                variant="primary"
+                className="w-full gap-2"
               >
                 <Play className={`size-4 ${runningCycle ? "animate-spin" : ""}`} />
                 {runningCycle ? "Running Cycle..." : "Run Hami Cycle"}
@@ -192,209 +193,232 @@ function OperationsPage() {
                 onClick={handleRunDiscovery}
                 disabled={runningCycle || backendOnline === false}
                 variant="secondary"
-                size="sm"
-                className="gap-2"
+                className="w-full gap-2"
               >
                 <RefreshCw className={`size-4 ${runningCycle ? "animate-spin" : ""}`} />
                 Run Discovery Scan
               </Button>
             </div>
+          </>
+        }
+      >
+        {cycleMsg && (
+          <div
+            role="status"
+            className="fade-in mt-6 flex items-start justify-between gap-4 rounded-card border border-warning/35 bg-warning/10 p-4 font-mono text-sm text-warning"
+          >
+            <span>{cycleMsg}</span>
+            <button
+              type="button"
+              onClick={() => setCycleMsg(null)}
+              className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded-card px-2 text-xs text-ink hover:bg-warning/15"
+            >
+              <X className="size-3.5" aria-hidden="true" /> Dismiss
+            </button>
           </div>
-
-          {cycleMsg && (
-            <div className="mt-6 rounded-lg border border-amber/30 bg-amber/10 p-4 font-mono text-sm text-amber flex items-center justify-between">
-              <span>{cycleMsg}</span>
-              <button onClick={() => setCycleMsg(null)} className="text-xs underline hover:text-fg">
-                Dismiss
-              </button>
-            </div>
-          )}
-        </Container>
-      </section>
+        )}
+      </PageHeader>
 
       {/* Main Dashboard Content */}
       <section className="py-12 lg:py-16">
         <Container>
           {loading ? (
-            <div className="flex items-center justify-center py-20 text-muted">
-              <RefreshCw className="size-6 animate-spin mr-3 text-cyan" />
-              Connecting to Hami backend engine...
+            <div role="status" aria-live="polite" className="space-y-10">
+              <span className="sr-only">Connecting to Hami backend engine...</span>
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                {Array.from({ length: 4 }, (_, index) => (
+                  <div key={index} className="card p-5" aria-hidden="true">
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="mt-4 h-8 w-20" />
+                    <Skeleton className="mt-3 h-3 w-32" />
+                  </div>
+                ))}
+              </div>
+              <SkeletonCards count={2} label="Loading opportunities" className="grid gap-3 sm:grid-cols-2" />
+              <SkeletonCards count={2} label="Loading proposed actions" className="space-y-3" />
             </div>
           ) : backendOnline === false ? (
             /* ── Change 4: Distinct offline banner ─────────────────────────── */
-            <div className="rounded-xl border border-danger/30 bg-danger/5 p-8 text-center space-y-4">
+            <div role="alert" className="fade-in mx-auto max-w-2xl rounded-card border border-danger/35 bg-danger/5 p-8 text-center">
               <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-danger/10 text-danger">
-                <WifiOff className="size-6" />
+                <WifiOff className="size-6" aria-hidden="true" />
               </div>
-              <h2 className="font-display text-lg font-semibold text-fg">Hami Engine Offline</h2>
-              <p className="max-w-md mx-auto text-sm text-muted">
+              <h2 className="mt-4 font-display text-3xl tracking-tight text-ink">Hami Engine Offline</h2>
+              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted">
                 The local Hami backend (FastAPI, port 8000) is not responding. Economic data
                 cannot be shown — displaying empty state here would misrepresent the actual system
                 as having zero opportunities, which is not the same as an offline backend.
               </p>
-              <p className="max-w-md mx-auto text-xs text-dim font-mono">
-                Start the backend: <span className="text-cyan">./run_forgeos.sh</span> (legacy command name)
+              <p className="mx-auto mt-4 max-w-md rounded-card border border-line bg-paper/70 p-3 text-left font-mono text-xs leading-6 text-dim">
+                Start the backend: <span className="text-accent">./run_forgeos.sh</span> (legacy command name)
                 <br />
-                or: <span className="text-cyan">cd backend &amp;&amp; uvicorn app.main:app --port 8000</span>
+                or: <span className="text-accent">cd backend &amp;&amp; uvicorn app.main:app --port 8000</span>
               </p>
-              <Button onClick={loadOperatingData} variant="secondary" size="sm" className="gap-2">
+              <Button onClick={loadOperatingData} variant="secondary" size="sm" className="mt-5 gap-2">
                 <RefreshCw className="size-4" /> Retry Connection
               </Button>
             </div>
           ) : error ? (
-            <div className="rounded-xl border border-line bg-surface p-8 text-center space-y-4">
-              <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-amber/10 text-amber">
-                <AlertTriangle className="size-6" />
+            <div role="alert" className="fade-in mx-auto max-w-2xl rounded-card border border-warning/35 bg-warning/5 p-8 text-center">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-warning/10 text-warning">
+                <AlertTriangle className="size-6" aria-hidden="true" />
               </div>
-              <h2 className="font-display text-lg font-semibold text-fg">Data Load Error</h2>
-              <p className="max-w-md mx-auto text-sm text-muted">
+              <h2 className="mt-4 font-display text-3xl tracking-tight text-ink">Data Load Error</h2>
+              <p className="mx-auto mt-3 max-w-md text-sm text-muted">
                 Hami backend is reachable but returned an error: {error}
               </p>
-              <Button onClick={loadOperatingData} variant="secondary" size="sm" className="gap-2">
+              <Button onClick={loadOperatingData} variant="secondary" size="sm" className="mt-5 gap-2">
                 <RefreshCw className="size-4" /> Retry
               </Button>
             </div>
           ) : dashboard ? (
-            <div className="space-y-12">
+            <div className="space-y-16">
               {/* 1. System Status & Economic State Overview */}
-              <div>
-                <h2 className="font-display text-lg font-semibold text-fg mb-4 flex items-center gap-2">
-                  <Activity className="size-5 text-cyan" /> 1. System &amp; Economic State
-                </h2>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="rounded-xl border border-line bg-surface p-5">
-                    <span className="font-mono text-micro uppercase text-dim block mb-1">Verified Revenue</span>
-                    <span className="font-display text-2xl font-semibold text-fg">
-                      NPR {dashboard.total_revenue_recorded.toFixed(2)}
-                    </span>
-                    <p className="mt-1 text-xs text-muted">Bank/wallet verified payout only</p>
-                  </div>
-
-                  <div className="rounded-xl border border-line bg-surface p-5">
-                    <span className="font-mono text-micro uppercase text-dim block mb-1">Evidence-Gated Hypotheses</span>
-                    <span className="font-display text-2xl font-semibold text-amber">
-                      {dashboard.best_opportunities.length}
-                    </span>
-                    {/* ── Change 5: truthful sub-label ── */}
-                    <p className="mt-1 text-xs text-muted">
-                      Opportunities scored by evidence — current money scores may be 0
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl border border-line bg-surface p-5">
-                    <span className="font-mono text-micro uppercase text-dim block mb-1">Proposed Actions</span>
-                    <span className="font-display text-2xl font-semibold text-cyan">
-                      {actions.length}
-                    </span>
-                    {/* ── Change 1 + 5: "queued" → "proposed, pending owner approval" ── */}
-                    <p className="mt-1 text-xs text-muted">All require owner approval before any execution</p>
-                  </div>
-
-                  <div className="rounded-xl border border-line bg-surface p-5">
-                    <span className="font-mono text-micro uppercase text-dim block mb-1">Completed Experiments</span>
-                    <span className="font-display text-2xl font-semibold text-fg">
-                      {dashboard.completed_experiments_count}
-                    </span>
-                    <p className="mt-1 text-xs text-muted">Measured validation tests</p>
-                  </div>
+              <section aria-labelledby="ops-state">
+                <SectionTitle id="ops-state" index="01" icon={Activity} title="System & economic state" />
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  <MetricTile
+                    index={0}
+                    icon={Wallet}
+                    tone="accent"
+                    label="Verified revenue"
+                    value={`NPR ${dashboard.total_revenue_recorded.toFixed(2)}`}
+                    note="Bank/wallet verified payout only"
+                  />
+                  {/* ── Change 5: truthful sub-label ── */}
+                  <MetricTile
+                    index={1}
+                    icon={Lightbulb}
+                    label="Evidence-gated hypotheses"
+                    value={dashboard.best_opportunities.length}
+                    note="Opportunities scored by evidence — current money scores may be 0"
+                  />
+                  {/* ── Change 1 + 5: "queued" → "proposed, pending owner approval" ── */}
+                  <MetricTile
+                    index={2}
+                    icon={Shield}
+                    label="Proposed actions"
+                    value={actions.length}
+                    note="All require owner approval before any execution"
+                  />
+                  <MetricTile
+                    index={3}
+                    icon={FlaskConical}
+                    label="Completed experiments"
+                    value={dashboard.completed_experiments_count}
+                    note="Measured validation tests"
+                  />
                 </div>
-              </div>
+              </section>
 
               {/* 2. Opportunities Section */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="font-display text-lg font-semibold text-fg flex items-center gap-2">
-                    <TrendingUp className="size-5 text-amber" /> 2. Ranked Opportunities
-                  </h2>
-                  <span className="font-mono text-micro uppercase text-dim">
-                    Ordered by Money Score · Evidence-gated hypotheses
-                  </span>
-                </div>
-
+              <section aria-labelledby="ops-opps">
+                <SectionTitle
+                  id="ops-opps"
+                  index="02"
+                  icon={TrendingUp}
+                  title="Ranked opportunities"
+                  meta="Ordered by Money Score · Evidence-gated hypotheses"
+                />
                 {dashboard.best_opportunities.length === 0 ? (
-                  <div className="rounded-xl border border-line bg-surface p-6 text-center text-sm text-muted">
-                    No opportunities currently cleared by the evidence engine. Click "Run Discovery Scan" to evaluate signals.
-                  </div>
+                  <EmptyState
+                    icon={Lightbulb}
+                    headingLevel="h3"
+                    title="No cleared opportunities"
+                    body={'No opportunities currently cleared by the evidence engine. Click "Run Discovery Scan" to evaluate signals.'}
+                  />
                 ) : (
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {dashboard.best_opportunities.slice(0, 4).map((item) => {
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {dashboard.best_opportunities.slice(0, 4).map((item, index) => {
                       const opp = item.opportunity;
                       return (
-                        <div key={opp.id} className="flex flex-col justify-between rounded-xl border border-line bg-surface p-5 space-y-3">
-                          <div className="space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="font-mono text-micro uppercase text-cyan">
+                        <article
+                          key={opp.id}
+                          className="card card-interactive reveal flex flex-col justify-between gap-4 p-5"
+                          style={{ "--i": index } as React.CSSProperties}
+                        >
+                          <div>
+                            <div className="flex items-start justify-between gap-3">
+                              <span className="font-mono text-micro uppercase tracking-[0.08em] text-accent">
                                 Opp #{opp.id} · {opp.customer_segment || opp.target_customer || "Customer not recorded"}
                               </span>
-                              <span className="font-mono text-micro rounded-full border border-amber/30 bg-amber/10 px-2 py-0.5 text-amber">
-                                Score: {opp.score.toFixed(1)}
-                              </span>
+                              <span className="status-pill status-pill-accent shrink-0">Score {opp.score.toFixed(1)}</span>
                             </div>
-                            <h3 className="font-display font-semibold text-fg text-base line-clamp-2">
+                            <h3 className="mt-3 line-clamp-2 font-display text-xl leading-snug tracking-tight text-ink">
                               {opp.problem}
                             </h3>
-                            <p className="text-xs text-muted line-clamp-2">
-                              {opp.solution}
-                            </p>
+                            {opp.solution ? (
+                              <p className="mt-2 line-clamp-2 text-sm text-muted">{opp.solution}</p>
+                            ) : null}
                           </div>
-                          <div className="border-t border-line pt-3 flex items-center justify-between text-xs text-dim font-mono">
-                            <span>Model: {opp.business_model || "Model not recorded"}</span>
-                            <span>Diff: {opp.difficulty || "Difficulty not recorded"}</span>
-                          </div>
-                          {/* ── Change 5: show money_score honestly even when 0 ── */}
-                          <div className="text-xs text-dim font-mono">
-                            Money Score: {item.money_score.toFixed(2)}
-                            {item.money_score === 0 && (
-                              <span className="ml-2 text-dim opacity-70">(pending revenue validation)</span>
-                            )}
-                          </div>
-                        </div>
+                          <dl className="grid grid-cols-3 gap-3 border-t border-line pt-3 font-mono text-micro uppercase tracking-[0.06em] text-dim">
+                            <div>
+                              <dt>Model</dt>
+                              <dd className="mt-1 normal-case tracking-normal text-muted">{opp.business_model || "Model not recorded"}</dd>
+                            </div>
+                            <div>
+                              <dt>Difficulty</dt>
+                              <dd className="mt-1 normal-case tracking-normal text-muted">{opp.difficulty || "Difficulty not recorded"}</dd>
+                            </div>
+                            {/* ── Change 5: show money_score honestly even when 0 ── */}
+                            <div>
+                              <dt>Money score</dt>
+                              <dd className="mt-1 normal-case tracking-normal text-muted">
+                                {item.money_score.toFixed(2)}
+                                {item.money_score === 0 && (
+                                  <span className="block text-dim">(pending revenue validation)</span>
+                                )}
+                              </dd>
+                            </div>
+                          </dl>
+                        </article>
                       );
                     })}
                   </div>
                 )}
-              </div>
+              </section>
 
               {/* 3. Proposed Actions & Approval Queue — Change 1 */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="font-display text-lg font-semibold text-fg flex items-center gap-2">
-                    {/* ── Change 1: renamed heading ── */}
-                    <Shield className="size-5 text-cyan" /> 3. Proposed Actions &amp; Approval Queue
-                  </h2>
-                  <span className="font-mono text-micro uppercase text-dim">
-                    Requires Owner Approval · None auto-executed
-                  </span>
-                </div>
-
+              <section aria-labelledby="ops-actions">
+                <SectionTitle
+                  id="ops-actions"
+                  index="03"
+                  icon={Shield}
+                  title="Proposed actions & approval queue"
+                  meta="Requires Owner Approval · None auto-executed"
+                />
                 {/* ── Change 1 + 5: truthful description of actual state ── */}
-                <p className="mb-4 text-xs text-dim">
+                <p className="mb-5 max-w-3xl text-sm leading-6 text-muted">
                   These are Hami-proposed validation actions (e.g. customer interviews). They are in{" "}
-                  <span className="text-amber font-mono">planned</span> status with{" "}
-                  <span className="text-amber font-mono">requires_owner_approval = true</span>.
+                  <span className="font-mono text-accent">planned</span> status with{" "}
+                  <span className="font-mono text-accent">requires_owner_approval = true</span>.
                   None have been executed. Approving marks the record; it does not trigger automatic execution.
                 </p>
 
                 {actions.length === 0 ? (
-                  <div className="rounded-xl border border-line bg-surface p-6 text-center text-sm text-muted">
-                    No proposed actions in the queue.
-                  </div>
+                  <EmptyState icon={Shield} headingLevel="h3" title="Queue is clear" body="No proposed actions in the queue." />
                 ) : (
-                  <div className="grid gap-3">
-                    {actions.map((act) => (
-                      <div key={act.id} className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-micro uppercase text-cyan">
+                  <ol className="grid gap-3">
+                    {actions.map((act, index) => (
+                      <li
+                        key={act.id}
+                        className="card card-interactive reveal flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between"
+                        style={{ "--i": index } as React.CSSProperties}
+                      >
+                        <div className="min-w-0 space-y-1.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-mono text-micro uppercase tracking-[0.08em] text-accent">
                               Proposal #{act.id} · {act.action_type || "Action type not recorded"}
                             </span>
-                            <span className={`rounded-full border px-2 py-0.5 font-mono text-micro ${
-                              act.status === "completed"
-                                ? "border-success/30 bg-success/10 text-success"
-                                : act.approved_at
-                                ? "border-cyan/30 bg-cyan/10 text-cyan"
-                                : "border-amber/30 bg-amber/10 text-amber"
-                            }`}>
+                            <span
+                              className={`status-pill ${
+                                act.status === "completed"
+                                  ? "status-pill-success"
+                                  : act.approved_at
+                                  ? "status-pill-accent"
+                                  : "status-pill-warning"
+                              }`}
+                            >
                               {/* ── Change 5: never show completed unless backend says so ── */}
                               {act.status === "completed"
                                 ? "completed"
@@ -403,9 +427,9 @@ function OperationsPage() {
                                 : act.status}
                             </span>
                           </div>
-                          <p className="font-display text-sm font-semibold text-fg">{act.action}</p>
+                          <p className="text-base font-semibold text-ink">{act.action}</p>
                           {act.policy_reason && (
-                            <p className="text-xs text-dim">Policy: {act.policy_reason}</p>
+                            <p className="text-xs leading-5 text-dim">Policy: {act.policy_reason}</p>
                           )}
                           {act.approved_at && (
                             <p className="text-xs text-dim">
@@ -420,37 +444,57 @@ function OperationsPage() {
                             <CheckCircle className="size-4" /> Approve Proposal
                           </Button>
                         )}
-                      </div>
+                      </li>
                     ))}
-                  </div>
+                  </ol>
                 )}
-              </div>
+              </section>
 
               {/* 4. Honest Learning & Measured Outcomes Section */}
-              <div>
-                <h2 className="font-display text-lg font-semibold text-fg mb-4 flex items-center gap-2">
-                  <Layers className="size-5 text-muted" /> 4. Measured Outcomes &amp; Learning
-                </h2>
-                <div className="rounded-xl border border-line bg-surface p-6 text-center">
-                  {dashboard.completed_experiments_count === 0 ? (
-                    <div className="space-y-2 text-muted">
-                      <p className="text-sm font-medium text-fg">Outcomes Currently Empty</p>
-                      <p className="max-w-md mx-auto text-xs">
-                        No customer validation experiments have completed yet. As approved proposals are
-                        manually executed and real outcomes are recorded into Hami, results will appear here.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="text-sm text-fg">
-                      {dashboard.winning_experiments.length} winning validation test(s) recorded.
-                    </div>
-                  )}
-                </div>
-              </div>
+              <section aria-labelledby="ops-outcomes">
+                <SectionTitle id="ops-outcomes" index="04" icon={Layers} title="Measured outcomes & learning" />
+                {dashboard.completed_experiments_count === 0 ? (
+                  <EmptyState
+                    icon={Layers}
+                    headingLevel="h3"
+                    title="Outcomes Currently Empty"
+                    body="No customer validation experiments have completed yet. As approved proposals are manually executed and real outcomes are recorded into Hami, results will appear here."
+                  />
+                ) : (
+                  <div className="card p-6 text-sm text-ink">
+                    {dashboard.winning_experiments.length} winning validation test(s) recorded.
+                  </div>
+                )}
+              </section>
             </div>
           ) : null}
         </Container>
       </section>
     </main>
+  );
+}
+
+function SectionTitle({
+  id,
+  index,
+  icon: Icon,
+  title,
+  meta,
+}: {
+  id: string;
+  index: string;
+  icon: typeof Activity;
+  title: string;
+  meta?: string;
+}) {
+  return (
+    <div className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-line pb-4">
+      <h2 id={id} className="flex items-center gap-3 font-display text-3xl tracking-tight text-ink">
+        <span className="font-mono text-micro tracking-[0.14em] text-accent">{index}</span>
+        <Icon className="size-5 text-accent" aria-hidden="true" />
+        {title}
+      </h2>
+      {meta ? <span className="font-mono text-micro uppercase tracking-[0.1em] text-dim">{meta}</span> : null}
+    </div>
   );
 }
