@@ -65,6 +65,58 @@ def test_auth_on_gates_writes_but_allows_correct_key():
     assert _decision("sec", "POST", query_key="sec") is True
 
 
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/products/customers",
+        "/api/products/customers",
+        "/products/pipeline",
+        "/api/products/pipeline",
+        "/repair-shop/work-items",
+        "/api/repair-shop/work-items",
+        "/repair-shop/work-items/1",
+        "/api/repair-shop/work-items/1",
+    ],
+)
+def test_private_customer_reads_require_configured_api_key(path, monkeypatch):
+    """Private customer read routes are gated without creating test customer data."""
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from app import security
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "private-api-key")
+    app = FastAPI()
+    app.middleware("http")(security.api_key_middleware)
+
+    @app.get("/{route:path}")
+    def public_handler(route: str):
+        return {"route": route}
+
+    with TestClient(app) as client:
+        assert client.get(path).status_code == 401
+        assert client.get(path, headers={"X-API-Key": "wrong"}).status_code == 401
+        assert client.get(path, headers={"X-API-Key": "private-api-key"}).status_code == 200
+        assert client.get("/public/feed").status_code == 200
+
+
+def test_private_customer_reads_remain_open_when_api_key_is_disabled(monkeypatch):
+    """Preserve the existing local-first behavior when no key is configured."""
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from app import security
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    app = FastAPI()
+    app.middleware("http")(security.api_key_middleware)
+
+    @app.get("/products/customers")
+    def local_handler():
+        return {"mode": "local"}
+
+    with TestClient(app) as client:
+        assert client.get("/products/customers").status_code == 200
+
+
 # ---------------------------------------------------------------------------
 # Backup (safe snapshot + retention)
 # ---------------------------------------------------------------------------

@@ -30,6 +30,11 @@ PUBLIC_WRITE_PATHS = {
     "/signals/public-request",
     "/api/signals/public-request",
 }
+PRIVATE_CONTACT_READ_PATH_PREFIXES = (
+    "/products/customers",
+    "/products/pipeline",
+    "/repair-shop/work-items",
+)
 
 
 def _enabled() -> bool:
@@ -52,24 +57,32 @@ def can_read_private_signals(request: Request) -> bool:
 
 
 async def api_key_middleware(request: Request, call_next):
-    """Apply the optional key to writes and to private substrate reads.
+    """Apply the optional key to writes and private contact/substrate reads.
 
-    Other read endpoints stay open for the existing dashboard behavior. The
-    substrate API exposes identity, provenance, and capability records, so it
-    is protected when an API key is configured.
+    Public projections and local-first reads stay open. Customer-event and
+    repair-work-item reads contain contact details and require the configured
+    key when one is present.
     """
     if _enabled():
         method = request.method.upper()
         path = request.url.path
         allowed_write = path in PUBLIC_WRITE_PATHS or path.startswith("/public/domain/")
         private_substrate_read = path.startswith(("/forge/substrate/", "/api/forge/substrate/"))
+        private_contact_read = method in {"GET", "HEAD"} and any(
+            path == prefix
+            or path.startswith(f"{prefix}/")
+            or path == f"/api{prefix}"
+            or path.startswith(f"/api{prefix}/")
+            for prefix in PRIVATE_CONTACT_READ_PATH_PREFIXES
+        )
         state_change = method in {"POST", "PUT", "PATCH", "DELETE"} and not allowed_write
-        if (state_change or private_substrate_read) and not _authorized(request):
-            message = (
-                "Unauthorized: missing or invalid X-API-Key for substrate access."
-                if private_substrate_read
-                else "Unauthorized: missing or invalid X-API-Key for a state-changing request."
-            )
+        if (state_change or private_substrate_read or private_contact_read) and not _authorized(request):
+            if private_substrate_read:
+                message = "Unauthorized: missing or invalid X-API-Key for substrate access."
+            elif private_contact_read:
+                message = "Unauthorized: missing or invalid X-API-Key for private customer data."
+            else:
+                message = "Unauthorized: missing or invalid X-API-Key for a state-changing request."
             return JSONResponse(
                 status_code=401,
                 content={"detail": message},
