@@ -240,7 +240,7 @@ function ProvidersPage() {
           </div>
         </div>
 
-        <aside className="rounded-[2rem] border border-line bg-raised p-5 sm:p-6">
+        <aside className="rounded-card border border-line bg-raised p-5 sm:p-6">
           {selectedProvider ? (
             <>
               <div className="flex items-center justify-between gap-3">

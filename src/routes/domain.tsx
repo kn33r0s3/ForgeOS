@@ -198,7 +198,7 @@ function DomainPage() {
           </div>
         ) : null}
 
-        <form onSubmit={postRecord} className="mt-8 space-y-3 rounded-[2rem] border border-line bg-raised p-6">
+        <form onSubmit={postRecord} className="mt-8 space-y-3 rounded-card border border-line bg-raised p-6">
           <select value={kind} onChange={(event) => setKind(event.target.value as Kind)} className="min-h-12 w-full rounded-xl border border-line bg-void px-4 text-fg">
             <option value="job">Job</option>
             <option value="offer">Offer</option>

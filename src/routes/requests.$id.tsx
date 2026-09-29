@@ -41,7 +41,7 @@ function RequestStatusPage() {
         ) : !record ? (
           <p className="mt-6 text-muted">Checking the recorded status…</p>
         ) : (
-          <div className="mt-6 space-y-4 rounded-[2rem] border border-line bg-raised p-6">
+          <div className="mt-6 space-y-4 rounded-card border border-line bg-raised p-6">
             <p className="font-mono text-micro uppercase tracking-[0.12em] text-dim">Request #{record.id}</p>
             <h2 className="font-display text-2xl text-fg">{record.requested_service}</h2>
             <p className="text-sm text-muted">

@@ -222,8 +222,8 @@ function OperationsPage() {
             </div>
           ) : backendOnline === false ? (
             /* ── Change 4: Distinct offline banner ─────────────────────────── */
-            <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-8 text-center space-y-4">
-              <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-red-500/10 text-red-400">
+            <div className="rounded-xl border border-danger/30 bg-danger/5 p-8 text-center space-y-4">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-danger/10 text-danger">
                 <WifiOff className="size-6" />
               </div>
               <h2 className="font-display text-lg font-semibold text-fg">Hami Engine Offline</h2>
@@ -390,7 +390,7 @@ function OperationsPage() {
                             </span>
                             <span className={`rounded-full border px-2 py-0.5 font-mono text-micro ${
                               act.status === "completed"
-                                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                                ? "border-success/30 bg-success/10 text-success"
                                 : act.approved_at
                                 ? "border-cyan/30 bg-cyan/10 text-cyan"
                                 : "border-amber/30 bg-amber/10 text-amber"
