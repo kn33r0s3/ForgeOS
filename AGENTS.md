@@ -5,6 +5,14 @@ real economic outcome, while keeping authorization, evidence, privacy, legal,
 and platform boundaries intact. Do not mistake more infrastructure, synthetic
 activity, or a policy `ALLOW` for economic autonomy.
 
+**Bootstrap rule:** no new paid software or infrastructure before first real
+customer revenue, except a verified legal, security, payment, or
+critical-execution requirement. Forge Bot runs natively in ForgeOS; n8n is not
+a dependency. Never contact a person, publish an offer, spend money, or
+simulate prospect conversations without explicit owner authorization. Keep
+`REAL`, `TEST`, `MOCK`, and `HYPOTHESIS` evidence distinct; tests never count as
+customer or revenue evidence.
+
 Before each change, identify from code or runtime evidence: (1) the routine
 owner action still required, (2) the action this change removes, (3) what
 remains and what permission or infrastructure blocks it, and (4) the next

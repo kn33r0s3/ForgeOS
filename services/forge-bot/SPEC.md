@@ -1,48 +1,103 @@
-# Forge Bot v0: Lead Follow-up and Booking
+# Forge Bot v0 — Native ForgeOS lead follow-up
 
-Status: **TARGET ARCHITECTURE.** Spec only, not yet implemented.
-Forge Bot is one ForgeOS feature, not a separate platform.
-Runtime: **self-hosted n8n**, built and maintained by the operator. Clients cannot edit workflows.
+Status: **HYPOTHESIS / TARGET ONLY. Not implemented, not enabled, and not
+authorized to contact anyone.** Forge Bot is one feature of ForgeOS. It must
+run natively on existing ForgeOS services; n8n is not a dependency.
 
-## Purpose
-Reply to every inbound lead for an education-abroad consultancy within 60 seconds, qualify it, follow up until it books or goes cold, and give the owner a daily view.
+## Bootstrap boundary
 
-## Flow
-1. **Intake.** A web form (n8n Form or a webhook from the client's site) and the client's inbound email. The lead is deduplicated by email or phone, and a lead ID is assigned.
-2. **Instant reply.** The reply includes an automation disclosure ("This is an automated assistant for <Consultancy>"), STOP instructions, and the first qualifying question.
-3. **Qualify.** Four fields: destination country, course or level, intake timeline, and budget range (client-defined bands, never an exact amount). Other questions are answered only from client-approved FAQ text.
-4. **Follow-up.** Configurable schedule, default day 1, day 3 and day 7, then the lead is marked cold. Messages are sent only outside the client's quiet hours. Follow-ups stop on reply, booking, opt-out or escalation.
-5. **Booking.** A qualified lead receives the client's booking link. A booking-tool webhook marks the lead `booked` where available. Otherwise staff mark it manually.
-6. **Daily owner summary.** An email with counts per status, new leads, and leads needing a human, plus a lead-status table with name, source, the four fields, status, last contact and next action.
+The goal is one real customer, one real paid outcome, then repeat and automate.
+Do not buy software or infrastructure before first real customer revenue,
+unless a verified legal, security, payment, or critical-execution requirement
+necessitates it. Do not contact a person, publish an offer, spend money, or
+simulate a prospect conversation without the owner's explicit authorization.
+Mark records `REAL`, `TEST`, `MOCK`, or `HYPOTHESIS`; test activity is never
+customer or revenue evidence.
 
-## Lead states
-`new → contacted → qualifying → qualified → booking_sent → booked`
-Side states: `escalated` (a human must act), `cold` (follow-ups exhausted), `opted_out` (permanent and terminal).
+The initial segment is only a hypothesis: licensed Nepal education-abroad
+consultancies. Foreign-employment agencies have additional regulatory and
+reputation risk and are not an initial target without separate owner review.
+The owner must conduct about five real discovery conversations. Only their
+reported findings may set qualification fields, channel order, follow-up
+cadence, booking method, and pilot terms. See
+[`docs/FORGE_BOT_DISCOVERY.md`](../../docs/FORGE_BOT_DISCOVERY.md).
 
-## Guardrails
-- Every first contact discloses automation. The bot never claims to be human.
-- **STOP:** STOP, UNSUBSCRIBE, and client-configured local-language equivalents set the lead to `opted_out` permanently. Every send path checks opt-out first. Emails carry an unsubscribe line.
-- **No visa, admission, job, fee or scholarship promises.** The bot answers only from client-approved text. Anything else escalates: the bot sends a holding reply and the owner is notified.
-- The bot also escalates on complaints, legal or refund topics, minors, and low AI confidence.
-- **Minimal data:** name, email or phone, source, the four fields, consent and opt-out flags, status and timestamps. No passport details, documents or academic records. Message bodies follow the client retention setting.
+## Intended lifecycle
 
-## Channels
-- **v0:** web form + email.
-- **v1: WhatsApp, lead-initiated only.** Per Meta docs checked 2026-09-29, a user message opens a 24-hour customer service window that resets with each user message. Free-form replies are allowed only inside that window. Outside it, only approved templates may be sent. From **2026-10-01** Meta charges per message for service (non-template) replies. This requires a verified WhatsApp Business account with a payment method on file. Re-verify before building v1.
-- **v2: Messenger.** 24-hour standard messaging window. Message tags cover approved use cases only, so sales follow-ups outside the window are not allowed. Re-verify before building v2.
+`inbound inquiry → deterministic reply → qualification → authorized follow-up
+→ booking request/link → reminder → evidence-backed status → daily owner summary`
 
-## Runtime design
-- **Workflows** (`services/forge-bot/workflows/*.json`): Intake, Converse/Qualify, a Send sub-workflow that every outbound message goes through (opt-out check, quiet hours, disclosure, logging), a Follow-up scheduler, a Booking webhook, the Daily summary, and an Error handler.
-- **State:** Postgres, see `state/schema.sql`. Per-client behaviour lives in `client_config`. The operator changes config, never the client.
-- Standard n8n nodes only. Committed JSON contains no secrets. Credentials are recreated per instance.
-- **Substrate mapping (later, no migration now):** lead = ENTITY, message = EVENT, booking or opt-out proof = EVIDENCE, channel = CAPABILITY, send = ACTION.
+The first channel is **not selected yet**. A web form is a candidate only; it
+does not exist in this flow. Choose the cheapest controllable channel justified
+by the owner's discovery, and build rate limiting, abuse controls, consent,
+idempotency, retention, deletion, and provenance before making it public.
+Email or WhatsApp is not assumed. Recheck current official channel policy
+before implementing an integration. No mass outbound.
 
-## Open decisions
-1. AI model provider (OpenAI / Anthropic / local).
-2. Email sending: client mailbox via SMTP/IMAP, or a sending service. SPF/DKIM are required either way.
-3. Booking tool: Cal.com (self-hostable, sends webhooks) or the client's existing tool.
+Qualification is client-configurable, not universal. Destination, course or
+service, timeline, and budget range are candidate fields only. The client's
+approved factual answers are the only permitted reply source. Use deterministic
+state-machine replies; AI remains `MOCK` unless a legitimate provider,
+credentials, budget, and separate approval exist.
 
-## Done when
-A test lead gets its reply within 60 seconds, is qualified over a few messages, receives follow-ups on schedule, stops immediately on STOP, escalates on a visa-odds question, and appears correctly in the daily summary.
+## Reuse and data boundary
 
-Pricing is out of scope until 5 owner conversations are logged in `docs/REVENUE_LOG.md`.
+Use only the existing ForgeOS records and workflows listed in
+[`state/MAPPING.md`](./state/MAPPING.md): Signal, SubstrateEntity, WorldEvent,
+Evidence, SubstrateCapability, WorkerTask, BookingRequest where its existing
+public-service contract applies, and the existing Product/offer and
+Outcome/Earn state machines. Do not create a second lead, message, opt-out,
+escalation, booking, or owner-intervention system.
+
+The anonymous demand intake remains demand-understanding-only and continues to
+redact email/phone patterns. Lead contact information requires a separate,
+consent-scoped contact record linked to an existing entity; it must include
+channel, consent timestamp, purpose, permanent opt-out, and a deletion path.
+Do not store passports, sensitive ID documents, or academic records.
+`BookingRequest` is for a request against an existing public provider/service
+listing, not a general-purpose appointment calendar. Elsewhere use only an
+owner-approved booking link or existing scheduling integration.
+
+## Truthful lifecycle and authorization
+
+Candidate labels are projections from evidence, not a new state architecture:
+`INQUIRY`, `CONTACTED`, `QUALIFYING`, `QUALIFIED`, `BOOKED`,
+`FOLLOW_UP_PENDING`, `INTERESTED`, `CUSTOMER`, and `PAYING_CUSTOMER`.
+Conversation alone must never infer interest, customer status, fulfillment, or
+payment. Booking requires booking evidence. Paid status requires payment
+evidence and the existing honest outcome-note contract.
+
+Before any outbound or public action, require an explicit owner authorization
+covering action, purpose, source, scope, counterparty, content, limits, opt-out,
+expiry/review, and evidence. No standing authorization currently exists for
+Forge Bot. `STOP` must be permanent; no resume without valid re-consent. Check
+opt-out and authorization on every send path. Disclose automation. Never make
+visa, admission, employment, scholarship, or unsupported fee promises. Escalate
+unknown/out-of-policy questions, complaints, legal/refund matters, and minors;
+halt outbound on integration or policy failure.
+
+Use `WorkerTask` idempotency, conditional claim, due time, and retry for
+follow-ups/reminders. Stale `running` task recovery is not currently
+implemented; add it to this existing machinery only after each handler's
+external side effects are idempotent and safe to resume. The current deployed
+Vercel cron runs once daily on Hobby and is not a sub-daily runner; the local
+`backend/worker.py` is a separate process and is not verified as running in
+production. Do not claim timed automation until safe recovery and a
+commercially permitted production runner are proven.
+
+## Not in v0
+
+No WhatsApp/email integration without owner-discovery justification, verified
+official policy, explicit authorization, and tested channel controls. No
+billing system, marketplace, mass outbound, full CRM, negotiation engine,
+unapproved publishing or spending, or fabricated prospect simulation.
+
+## Completion evidence
+
+Before activation, prove with labeled `TEST` records that consent gates,
+idempotency, rate/abuse limits, approved-answer-only behavior, STOP permanence,
+deletion, failure halt, delayed-task recovery, and status provenance work.
+Then require owner authorization before any `REAL` contact. Report actual
+owner interventions and time only from real activity; if no real transaction
+exists, `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE**.
+Architecture or tests alone do not establish autonomous operation.

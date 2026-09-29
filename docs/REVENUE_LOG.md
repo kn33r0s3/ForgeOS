@@ -1,43 +1,34 @@
-# ForgeOS Revenue Log
+# ForgeOS commercial evidence log
 
-Mode: **revenue-first, 60 days (2026-09-29 → 2026-11-28).**
-The blueprint is frozen. Only changes a paying client requires are allowed, and each one is logged under "Client-driven changes".
-The 2026-09-29 global-network amendment is a parked draft and is **not** applied.
-Forge Bot is one ForgeOS feature, not a separate platform.
+This file contains commercial evidence only. Every entry must be tagged
+`REAL`, `TEST`, `MOCK`, or `HYPOTHESIS`. Only `REAL` entries supported by
+traceable evidence count toward customer, payment, delivery, or revenue
+claims. `TEST`, `MOCK`, and `HYPOTHESIS` are never commercial proof.
 
-## Rules
-- Amounts come from received payments or signed agreements only. No projections in this file.
-- Pricing is not set until 5 owner conversations are logged (see Conversations).
-- Kill rule: if there is no paid pilot by day 30 (2026-10-29), change the customer or the offer, not the tech.
-- Owner dependency: log owner hours per client each week. It must trend down.
+Do not put personal contact details, sensitive data, credentials, or raw
+customer messages here. Link to an access-controlled source by a non-secret
+reference. No commercial evidence has been recorded in this log yet.
 
-## 60-day scoreboard
-| Checkpoint | Due | Target | Actual | Evidence |
-|---|---|---|---|---|
-| Entity, bank and foreign-receipt route confirmed | 2026-10-06 | done | | |
-| Forge Bot v0 demo (web form + email) | 2026-10-06 | working end-to-end | | |
-| Owner conversations | 2026-10-20 | 5 (pricing validated) | | |
-| Paid pilots (kill-rule check) | 2026-10-29 | at least 1 | | |
-| Paid pilots | 2026-11-12 | 3 | | |
-| Recurring clients | 2026-11-28 | 3 | | |
-| Owner hours per client per week | weekly | trending down | | |
+## Conversations and prospects
 
-## Conversations
-| Date | Business | Segment | Pain stated | Current lead volume / cost | Price reaction | Next step |
-|---|---|---|---|---|---|---|
+| Tag | Date | Prospect reference | Licensed segment | Problem stated (their words, minimized) | Leads/channel/response delay | Current qualification/follow-up/booking/tools | Owner pain/value estimate | Integration need | Next step and evidence reference |
+|---|---|---|---|---|---|---|---|---|---|
 
-## Revenue
-| Date received | Client | Type (pilot/setup/retainer) | Amount | Currency | Channel (bank/Payoneer/eSewa/Khalti/Fonepay) | Evidence ref |
-|---|---|---|---|---|---|---|
+## Offers and quoted prices
 
-## Costs
-| Date | Item (hosting/LLM/Meta/email/booking) | Amount | Currency | Client or shared |
-|---|---|---|---|---|
+| Tag | Date | Prospect reference | Offer actually described | Price quoted / currency | Acceptance or objection | Authorization reference | Evidence reference |
+|---|---|---|---|---|---|---|---|
 
-## Weekly owner hours
-| Week of | Client | Delivery hrs | Ops hrs | Sales hrs | Notes |
-|---|---|---|---|---|---|
+## Payments, delivery, and outcomes
 
-## Client-driven changes
-| Date | Client | Request | Change made | Reused later? |
-|---|---|---|---|---|
+| Tag | Date | Client reference | Payment received / currency | Owner-recorded bank or wallet reference | Delivery/outcome actually verified | Honest outcome note | Evidence reference |
+|---|---|---|---|---|---|---|---|
+
+## Client-driven changes and owner time
+
+| Tag | Period | Client reference | Change requested and delivered | Owner minutes per lead / booking | Automated follow-ups / bookings | Manual escalations | Result and evidence reference |
+|---|---|---|---|---|---|---|---|
+
+Keep technical health, deployment, and infrastructure facts in `STATUS.md`.
+Do not enter projections, targets, unreported discovery, test submissions, or
+verification activity as commercial evidence.

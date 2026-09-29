@@ -6,6 +6,16 @@ before implementation, and record verification before marking a claim DONE.
 Claims coordinate contributors; database uniqueness and idempotency remain the
 enforcement layer when claims overlap.
 
+## [CLAIMED] Forge Bot bootstrap reconciliation and repository data hygiene
+
+- Agent: Copilot, current user-directed task
+- Claimed at: 2026-09-29T08:35:00Z
+- Scope: keep DRIVE OWNER DEPENDENCY TO ZERO first; encode the bootstrap constraints; replace the n8n/second-database Bot proposal with a native ForgeOS mapping; keep commercial records evidence-only; prepare the owner-run discovery/baseline and hosting decision memo; remove tracked runtime data, archives, and exported agent context from the current index without rewriting history or deleting local copies. Do not contact prospects, publish an offer, spend money, fabricate evidence, or create a Bot contact architecture before discovery and authorization.
+- Acceptance: cite actual ForgeOS worker, event/entity/evidence, booking, and offer behavior; classify infrastructure from production/config evidence; verify production health/feed; ensure artifact paths are ignored and absent from the new index; report unparseable database files and any unresolved historical exposure; run repository verification and record the next real-world dependency.
+- Verification: native mapping and scope documents added; 47 tracked runtime/archive/context artifacts removed from the index (working copies retained); ignored paths verified; the runtime autonomy policy already states that an ALLOW verdict alone does not remove an owner action or prove execution. `WorkerTask` has due-time eligibility, conditional claim, and retry, but inspection found no stale-running-task recovery. The current `ea490c9` production deployment is READY. One health request briefly reported `OperationalError`; six later checks through the stable alias all returned HTTP 200, ready, PostgreSQL available, and the public feed returned 200 with 11 items. The last-hour production error-log query returned no matching request logs. The exact pushed-session SHA, CI, and deployment remain to be verified after this commit.
+- Status: DONE WITH LIMITATION — this work removes no owner action from a real economic transaction and builds no Bot runtime. There is still no measured lead or transaction. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE**.
+- Remaining dependency: the owner must conduct and report the five real licensed-agency discovery conversations before selecting fields, channel, cadence, or pilot terms. No software can truthfully substitute for those external conversations or their authorization. After discovery, the next technical prerequisites include consent-scoped contact storage, explicit authorization, and safe stale-task recovery for idempotent handlers.
+
 ## [CLAIMED] Owner-dependency invariant and production blocker snapshot
 
 - Agent: Copilot, user-directed current task

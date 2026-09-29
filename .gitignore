@@ -4,11 +4,17 @@ node_modules/
 .env
 .env.*
 .vercel
-.env*
 
-# The canonical SQLite database and its runtime sidecars are local runtime data.
-# Keep intentional snapshots and backups tracked.
-storage/forge.db
-storage/*.db-wal
-storage/*.db-shm
-storage/scheduler.log
+# Runtime state, mutable data, and local copies/attachments are not source.
+storage/
+logs/
+attachments/
+/screenshots/*
+!/screenshots/.gitkeep
+
+# Exported agent/repository context is not project source.
+/TWO_HUNDRED_*_COPILOT.txt
+/FORGEOS_*_REPO_CONTEXT.txt
+/forgeos_xray.txt
+/.copilot/
+/.agent-context/
