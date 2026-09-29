@@ -12,12 +12,14 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as ActionsRouteImport } from './routes/actions'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DiscoveriesRouteImport } from './routes/discoveries'
 import { Route as DomainRouteImport } from './routes/domain'
 import { Route as FeedRouteImport } from './routes/feed'
 import { Route as GroupRouteImport } from './routes/group'
 import { Route as OperationsRouteImport } from './routes/operations'
+import { Route as OpportunitiesRouteImport } from './routes/opportunities'
 import { Route as ProcessRouteImport } from './routes/process'
 import { Route as ProvidersRouteImport } from './routes/providers'
 import { Route as RequestRouteImport } from './routes/request'
@@ -45,6 +47,11 @@ const SplatRoute = SplatRouteImport.update({
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ActionsRoute = ActionsRouteImport.update({
+  id: '/actions',
+  path: '/actions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -75,6 +82,11 @@ const GroupRoute = GroupRouteImport.update({
 const OperationsRoute = OperationsRouteImport.update({
   id: '/operations',
   path: '/operations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OpportunitiesRoute = OpportunitiesRouteImport.update({
+  id: '/opportunities',
+  path: '/opportunities',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProcessRoute = ProcessRouteImport.update({
@@ -147,12 +159,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/about': typeof AboutRoute
+  '/actions': typeof ActionsRoute
   '/contact': typeof ContactRoute
   '/discoveries': typeof DiscoveriesRoute
   '/domain': typeof DomainRoute
   '/feed': typeof FeedRoute
   '/group': typeof GroupRouteWithChildren
   '/operations': typeof OperationsRoute
+  '/opportunities': typeof OpportunitiesRoute
   '/process': typeof ProcessRoute
   '/providers': typeof ProvidersRoute
   '/request': typeof RequestRoute
@@ -171,11 +185,13 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/about': typeof AboutRoute
+  '/actions': typeof ActionsRoute
   '/contact': typeof ContactRoute
   '/discoveries': typeof DiscoveriesRoute
   '/domain': typeof DomainRoute
   '/feed': typeof FeedRoute
   '/operations': typeof OperationsRoute
+  '/opportunities': typeof OpportunitiesRoute
   '/process': typeof ProcessRoute
   '/providers': typeof ProvidersRoute
   '/request': typeof RequestRoute
@@ -194,12 +210,14 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/about': typeof AboutRoute
+  '/actions': typeof ActionsRoute
   '/contact': typeof ContactRoute
   '/discoveries': typeof DiscoveriesRoute
   '/domain': typeof DomainRoute
   '/feed': typeof FeedRoute
   '/group': typeof GroupRouteWithChildren
   '/operations': typeof OperationsRoute
+  '/opportunities': typeof OpportunitiesRoute
   '/process': typeof ProcessRoute
   '/providers': typeof ProvidersRoute
   '/request': typeof RequestRoute
@@ -220,12 +238,14 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/about'
+    | '/actions'
     | '/contact'
     | '/discoveries'
     | '/domain'
     | '/feed'
     | '/group'
     | '/operations'
+    | '/opportunities'
     | '/process'
     | '/providers'
     | '/request'
@@ -244,11 +264,13 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/about'
+    | '/actions'
     | '/contact'
     | '/discoveries'
     | '/domain'
     | '/feed'
     | '/operations'
+    | '/opportunities'
     | '/process'
     | '/providers'
     | '/request'
@@ -266,12 +288,14 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/about'
+    | '/actions'
     | '/contact'
     | '/discoveries'
     | '/domain'
     | '/feed'
     | '/group'
     | '/operations'
+    | '/opportunities'
     | '/process'
     | '/providers'
     | '/request'
@@ -291,12 +315,14 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SplatRoute: typeof SplatRoute
   AboutRoute: typeof AboutRoute
+  ActionsRoute: typeof ActionsRoute
   ContactRoute: typeof ContactRoute
   DiscoveriesRoute: typeof DiscoveriesRoute
   DomainRoute: typeof DomainRoute
   FeedRoute: typeof FeedRoute
   GroupRoute: typeof GroupRouteWithChildren
   OperationsRoute: typeof OperationsRoute
+  OpportunitiesRoute: typeof OpportunitiesRoute
   ProcessRoute: typeof ProcessRoute
   ProvidersRoute: typeof ProvidersRoute
   RequestRoute: typeof RequestRoute
@@ -329,6 +355,13 @@ declare module '@tanstack/react-router' {
       path: '/about'
       fullPath: '/about'
       preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/actions': {
+      id: '/actions'
+      path: '/actions'
+      fullPath: '/actions'
+      preLoaderRoute: typeof ActionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -371,6 +404,13 @@ declare module '@tanstack/react-router' {
       path: '/operations'
       fullPath: '/operations'
       preLoaderRoute: typeof OperationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/opportunities': {
+      id: '/opportunities'
+      path: '/opportunities'
+      fullPath: '/opportunities'
+      preLoaderRoute: typeof OpportunitiesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/process': {
@@ -497,12 +537,14 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
   AboutRoute: AboutRoute,
+  ActionsRoute: ActionsRoute,
   ContactRoute: ContactRoute,
   DiscoveriesRoute: DiscoveriesRoute,
   DomainRoute: DomainRoute,
   FeedRoute: FeedRoute,
   GroupRoute: GroupRouteWithChildren,
   OperationsRoute: OperationsRoute,
+  OpportunitiesRoute: OpportunitiesRoute,
   ProcessRoute: ProcessRoute,
   ProvidersRoute: ProvidersRoute,
   RequestRoute: RequestRoute,
