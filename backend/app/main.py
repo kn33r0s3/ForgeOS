@@ -1,5 +1,5 @@
 """
-Pulse — main FastAPI application entry point.
+Hami — main FastAPI application entry point.
 
 Run with:
     uvicorn app.main:app --reload
@@ -23,7 +23,7 @@ from app.security import api_key_middleware
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    description="Pulse — the ForgeOS-evolved research and execution system.",
+    description="Hami — the ForgeOS-evolved economic intelligence system.",
 )
 
 app.add_middleware(

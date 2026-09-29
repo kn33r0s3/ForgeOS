@@ -14,7 +14,7 @@ function GroupPage() {
   return (
     <main>
       <PageHero
-        eyebrow="Pulse / The group"
+        eyebrow="Hami / The group"
         title={
           <>
             One system.
@@ -22,7 +22,7 @@ function GroupPage() {
             <span className="text-muted">Serious directions.</span>
           </>
         }
-        lede="Pulse is one evolving system, not separate Nepal and global architectures. What exists today is stated plainly; strategic directions are not presented as operating businesses."
+        lede="Hami is one evolving system, not separate Nepal and global architectures. What exists today is stated plainly; strategic directions are not presented as operating businesses."
       >
         <StatusPill>One unified platform</StatusPill>
       </PageHero>
@@ -86,7 +86,7 @@ function GroupPage() {
               The operating core.
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
-              Pulse is the record this site reads: observe, verify, understand,
+              Hami is the record this site reads: observe, verify, understand,
               decide, act, measure, learn. An empty list means that record is
               not stored. It is not sold as a product.
             </p>

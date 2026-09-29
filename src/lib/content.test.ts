@@ -50,9 +50,9 @@ function collectCopy(): string[] {
   return blobs;
 }
 
-describe("Pulse public content", () => {
+describe("Hami public content", () => {
   it("names the network without locking it to one purpose", () => {
-    assert.equal(SITE.name, "Pulse");
+    assert.equal(SITE.name, "Hami");
     assert.equal(/service marketplace|trusted service network/i.test(SITE.description), false);
     assert.match(SITE.description, /ForgeOS system in place/);
     assert.match(SITE.description, /not separate architectures/);
@@ -115,7 +115,7 @@ describe("Pulse public content", () => {
   });
 });
 
-describe("Pulse public root", () => {
+describe("Hami public root", () => {
   const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
   it("serves the stored-world home and does not publish the Sanip site", () => {

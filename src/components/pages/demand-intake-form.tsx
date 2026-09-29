@@ -34,7 +34,7 @@ export function DemandIntakeForm() {
     <section className="rounded-xl border border-line bg-surface p-5 sm:p-8">
       <p className="font-mono text-micro uppercase tracking-[0.12em] text-cyan">Submit a need</p>
       <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-fg">
-        What should Pulse understand?
+        What should Hami understand?
       </h2>
       <p className="mt-3 text-sm leading-relaxed text-muted">
         Your note is stored as an observed request and interpreted for clarity. It does not create a customer or opportunity, trigger outreach, or authorize work. This form does not ask for contact details or promise a reply.

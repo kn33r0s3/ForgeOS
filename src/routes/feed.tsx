@@ -101,7 +101,7 @@ const EMPTY_GUIDANCE: Record<string, { message: string; link: string; to: "/disc
     to: "/providers",
   },
   actor: {
-    message: "Public participant records are verified providers. Pulse does not publish generic people or group profiles yet.",
+    message: "Public participant records are verified providers. Hami does not publish generic people or group profiles yet.",
     link: "Explore verified providers",
     to: "/providers",
   },
@@ -121,9 +121,9 @@ function dateLabel(value?: string | null) {
 
 function sourceLabel(value?: string | null) {
   const labels: Record<string, string> = {
-    "Forge pattern engine": "Pulse analysis",
-    "Forge knowledge graph": "Pulse synthesis",
-    "Forge opportunity engine": "Pulse opportunity assessment",
+    "Forge pattern engine": "Hami analysis",
+    "Forge knowledge graph": "Hami synthesis",
+    "Forge opportunity engine": "Hami opportunity assessment",
     "public provider registry": "Verified provider record",
     "public service registry": "Verified service listing",
     "public work board": "Public work post",
@@ -178,10 +178,10 @@ function NetworkFeedPage() {
       <Container className="max-w-5xl">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
           <div>
-            <p className="font-mono text-micro uppercase tracking-[0.14em] text-cyan">Pulse Network</p>
+            <p className="font-mono text-micro uppercase tracking-[0.14em] text-cyan">Hami Network</p>
             <h1 className="mt-2 font-display text-4xl tracking-tight text-fg sm:text-5xl">Signals, needs, and useful connections</h1>
             <p className="mt-4 max-w-2xl text-lede text-muted">
-              A live view assembled from Pulse evidence, research, work, capability, and network records. Each entry keeps its source and uncertainty visible.
+              A live view assembled from Hami evidence, research, work, capability, and network records. Each entry keeps its source and uncertainty visible.
             </p>
             {entityType && entityId ? (
               <p className="mt-4 inline-flex items-center gap-2 rounded-full border border-line bg-raised px-3 py-2 text-xs text-muted">
@@ -192,7 +192,7 @@ function NetworkFeedPage() {
           </div>
           <aside className="rounded-2xl border border-line bg-raised p-4">
             <p className="font-mono text-micro uppercase tracking-[0.12em] text-cyan">How to read this feed</p>
-            <p className="mt-2 text-sm text-muted">Items are shown by most recent recorded change. “Hypothesis”, “possible”, and “unknown” are deliberate states. Pulse does not publish a popularity or trust score.</p>
+            <p className="mt-2 text-sm text-muted">Items are shown by most recent recorded change. “Hypothesis”, “possible”, and “unknown” are deliberate states. Hami does not publish a popularity or trust score.</p>
           </aside>
         </div>
 

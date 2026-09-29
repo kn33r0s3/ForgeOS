@@ -4,8 +4,8 @@ import "./globals.css";
 import Nav from "@/components/Nav";
 
 export const metadata: Metadata = {
-  title: "Pulse — Intelligence, made legible",
-  description: "Pulse observes reality, verifies evidence, and turns uncertainty into measured action.",
+  title: "Hami — Intelligence, made legible",
+  description: "Hami observes reality, verifies evidence, and turns uncertainty into measured action.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -1,5 +1,5 @@
 """
-Pulse configuration.
+Hami configuration.
 
 Centralizes all environment-driven settings so every module reads
 config from one place. This keeps the system modular: swapping the
@@ -14,7 +14,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # --- App ---
-    APP_NAME: str = "Pulse"
+    APP_NAME: str = "Hami"
     APP_VERSION: str = "2.3.0"
 
     # --- Database ---

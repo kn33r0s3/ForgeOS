@@ -6,19 +6,19 @@ import { ProjectInquiryCta } from "@/components/pages/project-inquiry-cta";
 
 export const Route = createFileRoute("/about")({
   component: AboutPage,
-  head: () => ({ meta: [{ title: "About — Pulse" }] }),
+  head: () => ({ meta: [{ title: "About — Hami" }] }),
 });
 
 const items = [
   {
     number: "01",
     title: "One system",
-    body: "Pulse is one system. Nepal and global markets are intended product surfaces, not separate architectures; their domains and deployments are not claimed until verified.",
+    body: "Hami is one system. Nepal is the initial focus; global markets are a longer-term direction, not separate architectures. Domains and deployments are not claimed until verified.",
   },
   {
     number: "02",
     title: "The operating core",
-    body: "Pulse evolves the existing ForgeOS implementation in place. Services, work, offers, trades, evidence, and outcomes remain connected through the existing system.",
+    body: "Hami evolves the existing ForgeOS implementation in place. Services, work, offers, trades, evidence, and outcomes remain connected through the existing system.",
   },
   {
     number: "03",
@@ -31,7 +31,7 @@ function AboutPage() {
   return (
     <main>
       <PageHero
-        eyebrow="Pulse / About"
+        eyebrow="Hami / About"
         title={
           <>
             One system
@@ -39,7 +39,7 @@ function AboutPage() {
             <span className="text-muted">for useful work.</span>
           </>
         }
-        lede="Pulse stores records of people, organizations, capabilities, needs, work, services, offers, trades, evidence, and outcomes. It helps people distinguish what is known from what remains unknown; recorded information alone does not authorize or prove an action."
+        lede="Hami stores records of people, organizations, capabilities, needs, work, services, offers, trades, evidence, and outcomes. It helps people distinguish what is known from what remains unknown; recorded information alone does not authorize or prove an action."
       >
         <ProjectInquiryCta />
       </PageHero>

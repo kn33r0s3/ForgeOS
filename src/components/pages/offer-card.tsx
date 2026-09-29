@@ -16,7 +16,7 @@ export function OfferCard({ offer }: { offer: BusinessOffer }) {
           <dd className="mt-1 leading-relaxed text-muted">{offer.problem}</dd>
         </div>
         <div>
-          <dt className="font-semibold text-fg">What Pulse does</dt>
+          <dt className="font-semibold text-fg">What Hami does</dt>
           <dd className="mt-1 leading-relaxed text-muted">{offer.does}</dd>
         </div>
         <div>

@@ -6,7 +6,7 @@ import { DemandIntakeForm } from "@/components/pages/demand-intake-form";
 
 export const Route = createFileRoute("/request")({
   component: RequestPage,
-  head: () => ({ meta: [{ title: "Start a project — Pulse" }] }),
+  head: () => ({ meta: [{ title: "Start a project — Hami" }] }),
 });
 
 const checks = [
@@ -27,7 +27,7 @@ function RequestPage() {
             <span className="text-muted">business need.</span>
           </h1>
           <p className="mt-6 max-w-md text-lede text-muted">
-            Describe a need or problem for Pulse to understand. A submission is
+            Describe a need or problem for Hami to understand. A submission is
             evidence of a request only; it is not qualification, a commercial
             offer, or a promise of follow-up.
           </p>

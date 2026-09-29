@@ -26,7 +26,7 @@ export function SiteFooter() {
         <div className="sm:col-span-2 lg:col-span-1">
           <BrandMark />
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
-            Pulse is one system. Services are one recorded path through it when public listings and contact routes are available. Nepal is where that path starts.
+            Hami is one system. Services are one recorded path through it when public listings and contact routes are available. Nepal is where that path starts.
           </p>
         </div>
         <div className="flex flex-col gap-3">

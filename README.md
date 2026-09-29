@@ -10,17 +10,20 @@ Use a separate database for synthetic source inputs, plus SANDBOX labels downstr
 
 ---
 
-# Pulse
+# Hami
 
-Pulse is the product/system identity evolving the existing ForgeOS
-implementation in place. `pulse.np` and `pulse.com` are intended geographic
-surfaces of one system; their DNS and deployments are not asserted by this
-repository change. Historical ForgeOS API paths, database records, environment
+Hami is the intended product identity evolving the existing ForgeOS
+implementation in place. No Hami domain, DNS, or deployment is asserted by
+this repository. Historical ForgeOS API paths, database records, environment
 variables, imports, and migration identifiers remain compatible unless a
 specific migration proves safe.
 
-**Continuously improving intelligence + execution system.**  
-Grounded in reality. Offline-capable. $0 by default.
+**One real customer → one real paid outcome → repeat → automate → scale.**
+The first pilot must follow owner-run discovery and demonstrate an outcome;
+no category, fee, or willingness to pay is assumed. The $249 Hami Revenue
+Operator is a later-stage offer only after demonstrated value. New paid
+software and infrastructure remain off-limits before first real revenue unless
+verified critical need justifies them.
 
 ## Engineering invariant
 
@@ -35,10 +38,10 @@ decision is not itself an economic outcome or autonomous execution.
 
 ---
 
-## What Pulse is
+## What Hami is
 
-Pulse is not a scoring SaaS and not a leaderboard of business ideas. It evolves
-the existing ForgeOS system rather than creating a parallel architecture.
+Hami is not a scoring SaaS or a leaderboard of business ideas. It evolves the
+existing ForgeOS system rather than creating a parallel architecture.
 
 It is a system organized around:
 

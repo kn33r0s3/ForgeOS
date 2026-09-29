@@ -6,7 +6,7 @@ import { ProjectInquiryCta } from "@/components/pages/project-inquiry-cta";
 
 export const Route = createFileRoute("/contact")({
   component: ContactPage,
-  head: () => ({ meta: [{ title: "Contact — Pulse" }] }),
+  head: () => ({ meta: [{ title: "Contact — Hami" }] }),
 });
 
 function ContactPage() {
@@ -14,7 +14,7 @@ function ContactPage() {
     <main className="py-16 sm:py-20 lg:py-24">
       <Container className="grid gap-12 lg:grid-cols-2 lg:gap-20">
         <div>
-          <Eyebrow>Contact Pulse</Eyebrow>
+          <Eyebrow>Contact Hami</Eyebrow>
           <h1 className="font-display text-display tracking-tight text-fg">
             Start with the
             <br />

@@ -1,4 +1,4 @@
-# Pulse capability claim ledger (ForgeOS repository)
+# Hami capability claim ledger (ForgeOS repository)
 
 This is the active human/agent claim ledger required by
 `FORGE_SUBSTRATE_BLUEPRINT.md`. Search it before work, claim a bounded scope
@@ -16,14 +16,25 @@ enforcement layer when claims overlap.
 - Status: DONE WITH LIMITATION — this work removes no owner action from a real economic transaction and builds no Bot runtime. There is still no measured lead or transaction. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE**.
 - Remaining dependency: the owner must conduct and report the five real licensed-agency discovery conversations before selecting fields, channel, cadence, or pilot terms. No software can truthfully substitute for those external conversations or their authorization. After discovery, the next technical prerequisites include consent-scoped contact storage, explicit authorization, and safe stale-task recovery for idempotent handlers.
 
-## [CLAIMED] Pulse identity migration and bounded research continuation
+## [SUPERSEDED] Pulse identity migration and bounded research continuation
 
 - Agent: Copilot, current user-directed task
 - Claimed at: 2026-09-29T11:00:19Z
-- Scope: make Pulse the visible product/system identity across the active frontend, backend API metadata, and README while preserving ForgeOS paths, persisted data, environment keys, and the six-primitives authority; let a bounded research batch execute newly queued follow-ups within its remaining capacity; keep source clearances, evidence provenance, and external-action authorization unchanged.
-- Acceptance: regressions prove dynamically planned follow-ups can use remaining batch capacity, deferred tasks are not repeated, nonpositive limits do no work, identity surfaces say Pulse, and no route/schema/table/primitive/source-authorization contract changes.
+- Scope: the interim Pulse identity pass was superseded by the Hami commercial direction. The bounded research continuation remains implemented; no separate Pulse architecture or product is intended.
+- Acceptance: retain the bounded follow-up regression coverage and replace interim Pulse product labels with Hami without changing ForgeOS route, schema, table, primitive, or source-authorization contracts.
 - Owner dependency: no routine economic transaction owner action is removed because no real transaction is available to measure. A research follow-up no longer waits for another scheduled batch when capacity remains; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
-- Remaining dependency: relevant evidence and source access are still bounded by existing clearances; no currently available collector establishes buyer willingness to pay. Pulse domain/DNS deployment state is not established by repository branding.
+- Remaining dependency: relevant evidence and source access are still bounded by existing clearances; no currently available collector establishes buyer willingness to pay. No Pulse domain or deployment is asserted.
+- Status: SUPERSEDED BY HAMI.
+
+## [CLAIMED] Hami identity, commercial guardrails, and blocker snapshot
+
+- Agent: Copilot, current user-directed task
+- Claimed at: 2026-09-29T11:30:08Z
+- Scope: make Hami the active product-facing identity while preserving ForgeOS API paths, persisted data, environment keys, imports, migrations, and the six canonical primitives; put the outcome-first pilot and bootstrap restrictions in the existing project instructions; record the evidenced Nepal demand-to-outcome blocker here. Do not create or publish an offer, contact a person, spend money, simulate a prospect, create customer evidence, or add a parallel architecture.
+- Acceptance: active product surfaces identify Hami; domain/DNS/deployment claims remain unverified unless independently checked; no API shape, schema, table, primitive, authorization, or source-clearance behavior changes; focused tests and build/typecheck pass; the ledger records the next external dependency without treating tests as evidence.
+- Owner dependency: no routine owner action per real transaction is removed by a brand/instruction migration. There is no verified real transaction from which to calculate `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION`; it remains **NOT MEASURABLE**.
+- Remaining dependency: the owner-run five licensed-agency discovery conversations remain necessary before selecting the pilot’s segment, qualification fields, channel, follow-up cadence, or outcome metric. Current public-source clearances do not establish Nepal commercial demand or authorize prospect contact; a public request is only possible demand, not a qualified opportunity or customer. Foreign-employment cases require additional legal/reputation review.
+- Reality matrix: **PASS** — one in-place ForgeOS/Hami identity and compatibility boundaries; **PARTIAL** — evidence-grounded research and bounded planning exist, but source coverage does not verify Nepal buyer demand; **BLOCKED** — owner discovery, authorized prospect acquisition/contact, a capable provider and evidence-backed pilot terms, fulfillment, payment verification, and repeatable revenue. No response, outcome, revenue, or $0 commercial result is created by this code change.
 - Status: IN PROGRESS.
 
 ## [CLAIMED] Owner-dependency invariant and production blocker snapshot

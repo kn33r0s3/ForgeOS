@@ -44,7 +44,7 @@ function buildMailto(values: z.infer<typeof schema>) {
     values.problem,
     values.details ? `\nNotes:\n${values.details}` : null,
   ].filter((line) => line !== null);
-  const subject = encodeURIComponent(`Pulse inquiry — ${values.projectType}`);
+  const subject = encodeURIComponent(`Hami inquiry — ${values.projectType}`);
   const body = encodeURIComponent(lines.join("\n"));
   return `mailto:${SITE.email}?subject=${subject}&body=${body}`;
 }
@@ -63,7 +63,7 @@ export function ProjectForm() {
       <div className="rounded-xl border border-line bg-surface p-6" role="status">
         <p className="font-mono text-micro uppercase tracking-[0.12em] text-cyan">Contact mailbox pending</p>
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          This inquiry form is paused until Pulse has a monitored mailbox. No personal details are collected, sent, or stored here.
+          This inquiry form is paused until Hami has a monitored mailbox. No personal details are collected, sent, or stored here.
         </p>
       </div>
     );
@@ -201,7 +201,7 @@ export function ProjectForm() {
             className="mt-1 size-4 shrink-0 accent-cyan"
           />
           <span>
-            I agree to Pulse using this information to respond to my
+            I agree to Hami using this information to respond to my
             conversation request.
           </span>
         </label>

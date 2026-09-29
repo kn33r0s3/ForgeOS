@@ -1,9 +1,20 @@
 # FORGEOS TOP RULE — DRIVE OWNER DEPENDENCY TO ZERO
 
-This is Pulse's first substantive project rule: prefer fewer owner actions per
+This is Hami's first substantive project rule: prefer fewer owner actions per
 real economic outcome, while keeping authorization, evidence, privacy, legal,
 and platform boundaries intact. Do not mistake more infrastructure, synthetic
 activity, or a policy `ALLOW` for economic autonomy.
+
+**Commercial focus:** one real customer → one real paid outcome → repeat →
+automate → scale. Hami is the existing ForgeOS system evolving in place, not a
+second architecture. The first pilot must be outcome-oriented and grounded in
+owner-run discovery; do not assume a category, price, willingness to pay, or
+public offer. The $249 Hami Revenue Operator is a later-stage offer only after
+demonstrated value, not a bootstrap product to sell now.
+The Nepal education-abroad and foreign-employment consultancy segments remain
+hypotheses until the owner reports the five real conversations. Work only with
+licensed agencies if those conversations support the segment; foreign
+employment requires additional regulatory and reputation review.
 
 **Bootstrap rule:** no new paid software or infrastructure before first real
 customer revenue, except a verified legal, security, payment, or
@@ -12,6 +23,12 @@ a dependency. Never contact a person, publish an offer, spend money, or
 simulate prospect conversations without explicit owner authorization. Keep
 `REAL`, `TEST`, `MOCK`, and `HYPOTHESIS` evidence distinct; tests never count as
 customer or revenue evidence.
+
+**Market-research rule:** do not frame another company, startup, marketplace,
+or product as Hami's competition, and do not build competitor rankings or
+"beat X" features. Study existing systems only for factual market context,
+available infrastructure, interoperability, user expectations, and
+implementation lessons.
 
 Before each change, identify from code or runtime evidence: (1) the routine
 owner action still required, (2) the action this change removes, (3) what
