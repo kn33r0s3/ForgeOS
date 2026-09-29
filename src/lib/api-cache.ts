@@ -51,10 +51,10 @@ export function createReadCache({
 }: ReadCacheOptions = {}): ReadCache {
   const entries = new Map<string, Entry>();
   const inFlight = new Map<string, Promise<unknown>>();
-
-  function forget(key: string, request: Promise<unknown>) {
-    if (inFlight.get(key) === request) inFlight.delete(key);
-  }
+  // A `fresh` read can start while an older request for the key is still open;
+  // the newest generation owns the in-flight entry, so a late finisher cannot
+  // clear a request that is still running.
+  const generations = new Map<string, number>();
 
   function read<T>(key: string, load: () => Promise<T>, { fresh = false }: CacheScope = {}): Promise<T> {
     if (!enabled) return load();
@@ -69,15 +69,20 @@ export function createReadCache({
       if (pending) return pending as Promise<T>;
     }
 
-    let request: Promise<T>;
-    request = load()
+    const generation = (generations.get(key) ?? 0) + 1;
+    generations.set(key, generation);
+    const request = load()
       .then((value) => {
         // Even a `fresh: true` read refreshes the shared entry, so the next
         // page visit starts from what this caller just observed.
         entries.set(key, { at: now(), value });
         return value;
       })
-      .finally(() => forget(key, request));
+      .finally(() => {
+        if (generations.get(key) !== generation) return;
+        generations.delete(key);
+        if (inFlight.get(key) === request) inFlight.delete(key);
+      });
     inFlight.set(key, request);
     return request;
   }
@@ -95,6 +100,7 @@ export function createReadCache({
   function reset() {
     entries.clear();
     inFlight.clear();
+    generations.clear();
   }
 
   return { read, invalidate, reset };

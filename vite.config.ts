@@ -142,6 +142,27 @@ function authPopupPlugin(): Plugin {
   };
 }
 
+/**
+ * Backend routes for the dev server.
+ *
+ * `vite preview` cannot use this map — the built app is served by the Nitro/Start
+ * handler, which owns every path including `/api`, so the local built-output
+ * preview renders with every live panel "unavailable" (the API answers the SPA
+ * fallback, not JSON). Deploys are unaffected: vercel.json rewrites `/api` to the
+ * `api` service.
+ */
+const backendProxy = {
+  "/api": {
+    target: "http://127.0.0.1:8000",
+    changeOrigin: true,
+    rewrite: (path: string) => path.replace(/^\/api/, ""),
+  },
+  "/forge": { target: "http://127.0.0.1:8000", changeOrigin: true },
+  "/repair-shop": { target: "http://127.0.0.1:8000", changeOrigin: true },
+  "/earn/offers": { target: "http://127.0.0.1:8000", changeOrigin: true },
+  "/observer": { target: "http://127.0.0.1:8000", changeOrigin: true },
+};
+
 // `0.0.0.0:8080` is the live-preview contract — don't change host/port.
 // The dev server starts once `src/router.tsx` and `src/routes/` exist — see
 // AGENTS.md § "First scaffold".
@@ -150,17 +171,7 @@ export default defineConfig(({ command, isPreview }) => ({
     host: "0.0.0.0",
     port: 8080,
     strictPort: true,
-    proxy: {
-      "/api": {
-        target: "http://127.0.0.1:8000",
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ""),
-      },
-      "/forge": { target: "http://127.0.0.1:8000", changeOrigin: true },
-      "/repair-shop": { target: "http://127.0.0.1:8000", changeOrigin: true },
-      "/earn/offers": { target: "http://127.0.0.1:8000", changeOrigin: true },
-      "/observer": { target: "http://127.0.0.1:8000", changeOrigin: true },
-    },
+    proxy: backendProxy,
   },
   preview: {
     host: "127.0.0.1",

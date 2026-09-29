@@ -105,6 +105,9 @@ export function UserButton() {
         <img
           src={user.profileImageUrl}
           alt=""
+          width={32}
+          height={32}
+          decoding="async"
           className="h-8 w-8 rounded-full object-cover"
         />
       ) : (

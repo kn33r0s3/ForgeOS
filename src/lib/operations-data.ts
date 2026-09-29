@@ -1,4 +1,4 @@
-import { cachedRead, type CacheScope } from "./api-cache";
+import { cachedRead, type CacheScope } from "./api-cache.ts";
 
 export interface OpportunityRecord {
   id: number;

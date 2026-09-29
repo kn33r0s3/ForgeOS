@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { groupAreas } from "@/lib/content";
 import { Container } from "@/components/layout/container";
-import { Eyebrow } from "@/components/layout/eyebrow";
 import { PageHero } from "@/components/layout/page-hero";
 import { SectionMarker } from "@/components/layout/section-marker";
 import { StatusPill } from "@/components/layout/status-pill";

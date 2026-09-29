@@ -1,4 +1,4 @@
-import { cachedRead, type CacheScope } from "./api-cache";
+import { cachedRead, type CacheScope } from "./api-cache.ts";
 
 export const SITE = {
   name: "Hami",
@@ -453,10 +453,10 @@ export async function loadProviders(
   const query = params.toString();
   const suffix = query ? `?${query}` : "";
   // Listings and providers are read together, so the pair is cached as one read.
-  return cachedRead(`providers:${suffix}`, () => fetchProviders(suffix, scope), scope);
+  return cachedRead(`providers:${suffix}`, () => fetchProviders(suffix), scope);
 }
 
-async function fetchProviders(suffix: string, scope?: CacheScope): Promise<ProviderRecord[] | null> {
+async function fetchProviders(suffix: string): Promise<ProviderRecord[] | null> {
   const servicePayload = await fetchJsonFromCandidates<Array<{
     id?: number;
     provider_id?: number;

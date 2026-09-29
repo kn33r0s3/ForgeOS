@@ -23,6 +23,7 @@ import {
   type PublicMatch,
   type PublicTrust,
 } from "@/lib/content";
+import type { CacheScope } from "@/lib/api-cache";
 
 export const Route = createFileRoute("/domain")({
   component: DomainPage,
@@ -56,15 +57,15 @@ function DomainPage() {
   const [requestedService, setRequestedService] = useState("");
   const navigate = useNavigate();
 
-  async function load() {
+  async function load(scope?: CacheScope) {
     setIsLoading(true);
     setEvents(null);
     setTrust(null);
     const [domain, matched, changes, linked] = await Promise.all([
-      loadPublicDomain(),
-      loadPublicMatches(),
-      loadPublicAlerts(),
-      loadPublicConnections(),
+      loadPublicDomain(scope),
+      loadPublicMatches(scope),
+      loadPublicAlerts(undefined, scope),
+      loadPublicConnections(scope),
     ]);
     setApiUnavailable(domain === null || matched === null || changes === null || linked === null);
     setRows(domain ?? []);
@@ -73,8 +74,8 @@ function DomainPage() {
     setConnections(linked ?? []);
     const latest = domain?.[0];
     if (latest) {
-      setEvents(await loadPublicDomainEvents(latest.id));
-      setTrust(await loadPublicTrust("domain_record", latest.id));
+      setEvents(await loadPublicDomainEvents(latest.id, scope));
+      setTrust(await loadPublicTrust("domain_record", latest.id, scope));
     }
     setIsLoading(false);
   }
@@ -102,9 +103,10 @@ function DomainPage() {
     setTitle("");
     setDetail("");
     setPrice("");
-    setEvents(await loadPublicDomainEvents(result.id));
-    setTrust(await loadPublicTrust("domain_record", result.id));
-    await load();
+    // Reads after a write must reflect it, so they bypass the short read cache.
+    setEvents(await loadPublicDomainEvents(result.id, { fresh: true }));
+    setTrust(await loadPublicTrust("domain_record", result.id, { fresh: true }));
+    await load({ fresh: true });
   }
 
   async function closeRecord(event: React.FormEvent) {
@@ -128,8 +130,8 @@ function DomainPage() {
       return;
     }
     setMessage(`Record #${closed.id} is closed as ${closeResult}. A recorded amount is not a money transfer.`);
-    setEvents(await loadPublicDomainEvents(closed.id));
-    await load();
+    setEvents(await loadPublicDomainEvents(closed.id, { fresh: true }));
+    await load({ fresh: true });
   }
 
   async function disputeRecord(event: React.FormEvent) {
@@ -165,7 +167,7 @@ function DomainPage() {
     }
     setResponseNote("");
     setMessage("The response is recorded. A response is not acceptance.");
-    await load();
+    await load({ fresh: true });
   }
 
   async function chooseProvider(providerId: number) {

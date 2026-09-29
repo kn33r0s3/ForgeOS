@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Container } from "@/components/layout/container";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState, MetricTile, SkeletonCards, Skeleton } from "@/components/ui/feedback";
@@ -40,8 +40,10 @@ function OperationsPage() {
     }
   }
 
-  // Read-only data loader (never auto-triggers cycles)
-  async function loadOperatingData() {
+  // Read-only data loader (never auto-triggers cycles). This surface shows
+  // pending approvals, so every read bypasses the short read cache: an action
+  // approved moments ago must never be hidden behind a stale snapshot.
+  const loadOperatingData = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -57,8 +59,8 @@ function OperationsPage() {
 
     try {
       const [dashData, actData] = await Promise.all([
-        loadMoneyDashboard(),
-        loadExecutionActions(),
+        loadMoneyDashboard({ fresh: true }),
+        loadExecutionActions({ fresh: true }),
       ]);
 
       setDashboard(dashData);
@@ -68,7 +70,7 @@ function OperationsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   // ── Change 2: Explicit user action with confirmation ─────────────────────
   async function handleRunCycle() {
@@ -151,8 +153,8 @@ function OperationsPage() {
   }
 
   useEffect(() => {
-    loadOperatingData();
-  }, []);
+    void loadOperatingData();
+  }, [loadOperatingData]);
 
   return (
     <main>

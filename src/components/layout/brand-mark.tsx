@@ -24,6 +24,7 @@ export function BrandMark({
         alt=""
         width={32}
         height={32}
+        decoding="async"
         className={cn(
           "size-8 rounded-card border-2 object-cover transition-transform duration-150 group-hover:-rotate-6",
           tone === "dark" ? "border-black bg-black" : "border-line bg-card",
