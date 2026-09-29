@@ -269,6 +269,15 @@ def test_public_demand_intake_uses_existing_signal_flow_and_is_idempotent(db, mo
             headers=headers,
         )
         missing_key = client.post("/api/signals/public-request", json=body)
+        anonymous_substrate_event = client.get(
+            "/api/forge/substrate/events",
+            params={"event_type": "demand_observed"},
+        )
+        authorized_substrate_event = client.get(
+            "/api/forge/substrate/events",
+            params={"event_type": "demand_observed"},
+            headers={"X-API-Key": "private-api-key"},
+        )
     finally:
         client.close()
         app.dependency_overrides.clear()
@@ -281,6 +290,9 @@ def test_public_demand_intake_uses_existing_signal_flow_and_is_idempotent(db, mo
     )
     assert conflict.status_code == 409
     assert missing_key.status_code == 400
+    assert anonymous_substrate_event.status_code == 401
+    assert authorized_substrate_event.status_code == 200
+    assert "TEST ONLY, not real demand" in authorized_substrate_event.text
 
     signal = db.get(models.Signal, first.json()["id"])
     assert signal.source == "user_request"
