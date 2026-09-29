@@ -46,6 +46,11 @@ def _authorized(request: Request) -> bool:
     return bool(presented) and _constant_time_eq(str(presented), str(key))
 
 
+def can_read_private_signals(request: Request) -> bool:
+    """Keep local-first reads open, but require the configured key for submitted requests."""
+    return not _enabled() or _authorized(request)
+
+
 async def api_key_middleware(request: Request, call_next):
     """Apply the optional key to writes and to private substrate reads.
 

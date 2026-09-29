@@ -31,10 +31,13 @@ def record_signal(db: Session, content: str, source: str = "manual", category: O
     return signal
 
 
-def list_signals(db: Session, limit: int = 200) -> list[models.Signal]:
-    return (
-        db.query(models.Signal)
-        .order_by(models.Signal.timestamp.desc())
-        .limit(limit)
-        .all()
-    )
+def list_signals(
+    db: Session,
+    limit: int = 200,
+    *,
+    include_user_requests: bool = True,
+) -> list[models.Signal]:
+    query = db.query(models.Signal)
+    if not include_user_requests:
+        query = query.filter(models.Signal.source != "user_request")
+    return query.order_by(models.Signal.timestamp.desc()).limit(limit).all()

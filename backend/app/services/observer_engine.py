@@ -198,27 +198,38 @@ class ObserverEngine:
             _ensure_evidence(self.db, signal, metadata)
         return signal
 
-    def list_signals(self, limit: int = 100, min_importance: float = 0.0) -> list[models.Signal]:
+    def list_signals(
+        self,
+        limit: int = 100,
+        min_importance: float = 0.0,
+        *,
+        include_user_requests: bool = True,
+    ) -> list[models.Signal]:
         """Return signals at or above a minimum importance score,
         highest importance first — Forge's "most worth paying attention
         to" view."""
-        return (
-            self.db.query(models.Signal)
-            .filter(models.Signal.importance_score >= min_importance)
-            .order_by(models.Signal.importance_score.desc(), models.Signal.timestamp.desc())
-            .limit(limit)
-            .all()
+        query = self.db.query(models.Signal).filter(
+            models.Signal.importance_score >= min_importance
         )
+        if not include_user_requests:
+            query = query.filter(models.Signal.source != "user_request")
+        return query.order_by(
+            models.Signal.importance_score.desc(),
+            models.Signal.timestamp.desc(),
+        ).limit(limit).all()
 
-    def recent_signals(self, limit: int = 10) -> list[models.Signal]:
+    def recent_signals(
+        self,
+        limit: int = 10,
+        *,
+        include_user_requests: bool = True,
+    ) -> list[models.Signal]:
         """Most recently observed signals, regardless of score — the
         Dashboard's "recent discoveries" feed."""
-        return (
-            self.db.query(models.Signal)
-            .order_by(models.Signal.timestamp.desc())
-            .limit(limit)
-            .all()
-        )
+        query = self.db.query(models.Signal)
+        if not include_user_requests:
+            query = query.filter(models.Signal.source != "user_request")
+        return query.order_by(models.Signal.timestamp.desc()).limit(limit).all()
 
     def stats(self) -> dict:
         """Summary numbers for the Dashboard's Observer section."""

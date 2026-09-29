@@ -309,6 +309,52 @@ def test_public_demand_intake_uses_existing_signal_flow_and_is_idempotent(db, mo
     assert db.query(models.Action).count() == 0
 
 
+def test_user_request_signals_are_hidden_from_public_lists_and_visible_with_api_key(
+    db,
+    monkeypatch,
+):
+    from app import security
+
+    private_content = "PRIVATE REQUEST CONTENT marker-do-not-publish-82915"
+    signal = models.Signal(source="user_request", content=private_content)
+    ordinary = models.Signal(source="manual", content="Ordinary observation remains listed")
+    db.add_all([signal, ordinary])
+    db.commit()
+    client = _client_for(db)
+    # _client_for resets the key for local-first tests; enable production-style reads.
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "internal-read-key")
+
+    try:
+        public_lists = (
+            "/signals",
+            "/observer/signals",
+            "/observer/recent",
+        )
+        anonymous_results = [client.get(path) for path in public_lists]
+        authorized_results = [
+            client.get(path, headers={"X-API-Key": "internal-read-key"})
+            for path in public_lists
+        ]
+        public_projections = [
+            client.get("/public/feed"),
+            client.get("/public/discoveries"),
+        ]
+    finally:
+        client.close()
+        app.dependency_overrides.clear()
+
+    for response in anonymous_results:
+        assert response.status_code == 200
+        assert private_content not in response.text
+        assert "Ordinary observation remains listed" in response.text
+    for response in authorized_results:
+        assert response.status_code == 200
+        assert private_content in response.text
+    for response in public_projections:
+        assert response.status_code == 200
+        assert private_content not in response.text
+
+
 def test_signal_request_sqlite_reopen_preserves_authorization_and_epistemic_boundary(tmp_path):
     engine = create_engine(
         f"sqlite:///{tmp_path / 'request-observation.sqlite'}",

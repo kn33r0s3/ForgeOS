@@ -13,11 +13,12 @@ the same ObserverEngine, so nothing downstream (Pattern Engine,
 Opportunity Engine) needs to know which route a signal came in through.
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app import schemas
+from app import security
 from app.services.observer_engine import ObserverEngine
 
 router = APIRouter(prefix="/observer", tags=["observer"])
@@ -35,21 +36,35 @@ def observe(payload: schemas.ObserveRequest, db: Session = Depends(get_db)):
 
 @router.get("/signals", response_model=list[schemas.SignalOut])
 def get_important_signals(
-    limit: int = 50, min_importance: float = 0.0, db: Session = Depends(get_db)
+    request: Request,
+    limit: int = 50,
+    min_importance: float = 0.0,
+    db: Session = Depends(get_db),
 ):
     """List observed signals ranked by importance score (highest
     first). Use min_importance to filter out noise, e.g. ?min_importance=70
     for only the signals most likely to matter."""
     engine = ObserverEngine(db)
-    return engine.list_signals(limit=limit, min_importance=min_importance)
+    return engine.list_signals(
+        limit=limit,
+        min_importance=min_importance,
+        include_user_requests=security.can_read_private_signals(request),
+    )
 
 
 @router.get("/recent", response_model=list[schemas.SignalOut])
-def get_recent_signals(limit: int = 10, db: Session = Depends(get_db)):
+def get_recent_signals(
+    request: Request,
+    limit: int = 10,
+    db: Session = Depends(get_db),
+):
     """Most recently observed signals, regardless of score — used for
     the Dashboard's 'recent discoveries' feed."""
     engine = ObserverEngine(db)
-    return engine.recent_signals(limit=limit)
+    return engine.recent_signals(
+        limit=limit,
+        include_user_requests=security.can_read_private_signals(request),
+    )
 
 
 @router.get("/stats", response_model=schemas.ObserverStatsOut)

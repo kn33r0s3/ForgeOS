@@ -4,7 +4,7 @@ import hashlib
 import secrets
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -12,6 +12,7 @@ from app import models, schemas
 from app.services import observer
 from app.services import demand_understanding
 from app.services import worker_manager
+from app import security
 
 router = APIRouter(prefix="/signals", tags=["signals"])
 
@@ -130,9 +131,17 @@ def create_public_demand_request(
 
 
 @router.get("", response_model=list[schemas.SignalOut])
-def get_signals(limit: int = 200, db: Session = Depends(get_db)):
+def get_signals(
+    request: Request,
+    limit: int = 200,
+    db: Session = Depends(get_db),
+):
     """List stored signals, most recent first."""
-    return observer.list_signals(db, limit=limit)
+    return observer.list_signals(
+        db,
+        limit=limit,
+        include_user_requests=security.can_read_private_signals(request),
+    )
 
 
 @router.get(
