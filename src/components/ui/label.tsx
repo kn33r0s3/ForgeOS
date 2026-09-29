@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 function Label({ className, ...props }: React.ComponentProps<"label">) {
   return (
     <label
-      className={cn("mb-2 block text-xs font-semibold tracking-tight text-fg", className)}
+      className={cn("mb-2 block text-xs font-semibold tracking-tight text-ink", className)}
       {...props}
     />
   );
