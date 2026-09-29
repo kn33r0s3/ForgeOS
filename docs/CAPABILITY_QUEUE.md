@@ -12,7 +12,8 @@ enforcement layer when claims overlap.
 - Claimed at: 2026-09-29T07:51:00Z
 - Scope: make “DRIVE OWNER DEPENDENCY TO ZERO” the first ForgeOS project rule, reference it in the existing agent instructions, README, and runtime autonomy policy, and refresh the existing prospect-discovery dependency record with current production evidence. Do not add a new domain primitive, authorize an uncleared source, or claim economic autonomy.
 - Acceptance: rank the current bottleneck from code and live production evidence; record why no safe in-repository automation removes it yet; document `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` as unmeasurable when there are no verified real transactions; run repository verification, push, verify CI, and confirm the production deployment.
-- Status: CLAIMED.
+- Verification: `cd backend && ../.venv/bin/python -m pytest tests -q` → **509 passed, 2 skipped**; `npm run typecheck` passed; `npm run build` passed; `git diff --check` clean. Production snapshot and source-authorization blocker are recorded below.
+- Status: DONE WITH LIMITATION — the project rule is in place, but no economic owner dependency was removed because the first blocker requires external source authorization and no real opportunity is available to advance. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
 
 ## [CLAIMED] Wave 1 — universal substrate hardening and intelligence-path adapter
 
@@ -350,9 +351,9 @@ production currently exposes 0 opportunities, 0 products, and a revenue
 breakdown of 0 potential, 0 expected, and 0 realized revenue. `/api/health`
 reports PostgreSQL available and ready, and `/api/forge/runtime` reports a
 completed cycle, 10 signals, and 4 outcome rows; cycle execution and row
-counts are not commercial validation. The public Feed contains 11 items; the
-inspected belief and pattern describe Crossref scholarly metadata and are
-explicitly uncorroborated, not buyer demand.
+counts are not commercial validation. The public Feed contains 11 items; its
+inspected belief is explicitly uncorroborated, and the inspected pattern is
+derived from Crossref scholarly metadata. Neither is buyer demand.
 
 The code confirms why this dependency remains:
 
@@ -362,7 +363,10 @@ The code confirms why this dependency remains:
 - `collector_runner` explicitly excludes GitHub, Reddit, RSS, news, and arXiv
   from standing collection until cleared. The separate GitHub bounty module
   has a public-search helper, but no runtime caller for its fetch/ingest
-  functions; its claim mutation requires `GITHUB_TOKEN`.
+  functions; its claim mutation requires `GITHUB_TOKEN`. Existing bounty tests
+  also accept a public issue with no amount as an Opportunity with unknown
+  price and low confidence, so that adapter cannot by itself establish a
+  funded offer or verified revenue.
 - `/api/signals/public-request` can receive a request from an external person,
   and the demand worker can classify it as `possible_demand`; neither discovers
   or attracts that person. Research collection and the public Feed do not
@@ -394,15 +398,17 @@ opportunity/transaction exists):**
 | Offer | `POST /products/offer-drafts` creates an existing Product with `PENDING_REVIEW`; the brief leaves delivery, cost, price, and value unresolved. | Owner review/approval and actual capability/customer-specific scope remain required; draft creation does not send an offer. |
 | Authorized action / communication | `AutonomyPolicy` evaluates boundaries; `execution_engine` maps external work to integrations or owner action. Existing SMTP and GitHub adapters report provider execution, not a buyer response. | A bounded standing policy plus an authorized, configured adapter and permitted recipient/channel are prerequisites. GitHub mutation fails closed without its token. |
 | Fulfillment / response | The offer brief explicitly reserves customer-facing delivery for manual review; actual responses enter through the existing outcome-recording path, whose default source is `manual`. | A real fulfillment capability and external response evidence are not demonstrated in production. |
-| Payment / outcome / learning | eSewa and Khalti routes support provider checkout/lookup and verification; outcome learning runs from recorded outcomes. | Production variable-name inspection found no eSewa/Khalti credential names; no payment/transaction was observed. Recording a response/outcome still requires an external event or owner-entered evidence. |
+| Payment / outcome / learning | eSewa and Khalti routes support provider checkout/lookup and verification; outcome learning runs from recorded outcomes. | Production variable-name inspection found no eSewa/Khalti credential names; no payment-provider call was made, and the public revenue projection reports zero realized revenue. Recording a response/outcome still requires an external event or owner-entered evidence. |
 
 Production API reads on 2026-09-29 returned `/api/opportunities` = `[]`,
 `/api/products` = `[]`, and revenue breakdown
 `{potential_30d: 0, potential_90d: 0, expected: 0, realized: 0}`. Therefore
 `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE** (there are
-zero verified real transactions in the observed production state); it is not
-zero. No real buyer, response, fulfillment, payment, or revenue is established
-by the four runtime outcome rows.
+no verified real transactions established by the inspected production
+responses); it is not zero. The runtime endpoint's count of four Outcome rows
+does not classify their evidence, so those rows are not counted as buyer
+responses or transactions. The public revenue projection reports zero
+realized revenue.
 
 - **CURRENTLY IMPLEMENTED:** the Opportunity-scoped readiness endpoint requires the latest economic assessment to be `testable`, records a bounded criteria/source-registry audit as existing Opportunity ENTITY/EVENT/EVIDENCE, and retains the existing Opportunity→Need RELATION. It is idempotent, creates no candidate or prospect, and records unresolved qualification evidence while withholding outreach eligibility.
 - **Repository evidence for the source block:** the runtime registry has five entries (GovInfo, Crossref, World Bank, GDELT, OpenAlex); GovInfo's review expired 2026-09-25 and none includes the exact `authorized_prospect_discovery` requirement. Their authorized operations/fields are exact public-rule retrieval, scholarly metadata, country indicators, media article metadata, and scholarly metadata/abstracts—not business/client identification or sales prospecting. GDELT specifically bars commercial-demand inference. Additional public pages listed in `docs/PUBLIC_SOURCES.md` lack applicable terms/clearance (Bolpatra terms were not established); they are not source adapters. Provider/ServiceListing public visibility is directory publication, not prospecting/contact consent. No provider contacts were read.
