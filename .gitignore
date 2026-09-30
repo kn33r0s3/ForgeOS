@@ -18,3 +18,16 @@ attachments/
 /forgeos_xray.txt
 /.copilot/
 /.agent-context/
+
+# Generated Python/Node artifacts and local environments are never source.
+__pycache__/
+*.pyc
+.pytest_cache/
+backend/venv/
+backend/.venv/
+backend/.deps/
+frontend/.next/
+frontend/node_modules/
+*.tsbuildinfo
+.DS_Store
+dist/

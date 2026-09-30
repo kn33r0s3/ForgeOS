@@ -1,0 +1,26 @@
+{
+  "name": "forgeos-evidence-triage",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ForgeOS machine-payable deterministic evidence triage service (x402).",
+  "scripts": {
+    "test": "node --experimental-strip-types --test 'test/**/*.test.ts'",
+    "typecheck": "tsc --noEmit",
+    "dev": "node --experimental-strip-types src/local/server.ts",
+    "inspect:x402": "node --experimental-strip-types scripts/inspect-sdk.ts"
+  },
+  "dependencies": {
+    "@x402/core": "2.27.0",
+    "@x402/evm": "2.27.0",
+    "@x402/extensions": "2.27.0",
+    "@x402/hono": "2.27.0",
+    "hono": "^4.11.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260923.1",
+    "@types/node": "^26.6.2",
+    "typescript": "^5.7.0",
+    "wrangler": "^4.136.3"
+  }
+}

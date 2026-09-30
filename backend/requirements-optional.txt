@@ -1,0 +1,7 @@
+# OPTIONAL. Only install this if you're intentionally using
+# AI_PROVIDER=openai for paid acceleration. Forge does not need this
+# package to run — the free "mock" and "ollama" providers use zero
+# extra dependencies (Ollama is talked to over stdlib urllib, no SDK).
+#
+#   pip install -r requirements-optional.txt
+openai==1.51.0

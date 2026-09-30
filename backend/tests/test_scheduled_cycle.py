@@ -1,0 +1,119 @@
+import time
+from threading import Event
+
+from fastapi.testclient import TestClient
+
+from app.api import scheduled
+from app.main import app
+
+
+def test_scheduled_cycle_fails_closed_without_secret(monkeypatch):
+    monkeypatch.delenv("CRON_SECRET", raising=False)
+    client = TestClient(app)
+
+    response = client.get("/scheduled/cycle", headers={"Authorization": "Bearer anything"})
+    api_response = client.get("/api/scheduled/cycle", headers={"Authorization": "Bearer anything"})
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Scheduled cycle is not configured"}
+    assert api_response.status_code == 503
+
+
+def test_scheduled_cycle_requires_bearer_secret(monkeypatch):
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    client = TestClient(app)
+
+    response = client.get("/scheduled/cycle")
+
+    assert response.status_code == 401
+
+
+def test_scheduled_cycle_runs_canonical_runner(monkeypatch):
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    monkeypatch.setattr(
+        scheduled._cycle_scheduler,
+        "run_single_cycle",
+        lambda **kwargs: {"forge_cycle": {"cycle_id": 27}, "autonomy_cycle": {"status": "ok"}},
+    )
+    client = TestClient(app)
+
+    response = client.get(
+        "/scheduled/cycle",
+        headers={"Authorization": "Bearer test-cron-secret"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "completed",
+        "cycle_id": 27,
+        "forge_cycle_failed": False,
+        "autonomy_cycle_failed": False,
+    }
+
+
+def test_scheduled_cycle_reports_runner_failure(monkeypatch):
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    monkeypatch.setattr(
+        scheduled._cycle_scheduler,
+        "run_single_cycle",
+        lambda **kwargs: {"forge_cycle_error": "details stay private", "autonomy_cycle": {"status": "ok"}},
+    )
+    client = TestClient(app)
+
+    response = client.get(
+        "/scheduled/cycle",
+        headers={"Authorization": "Bearer test-cron-secret"},
+    )
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "The canonical cycle reported a failure"}
+
+
+def test_scheduled_cycle_reports_timeout_as_incomplete(monkeypatch):
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    monkeypatch.setattr(
+        scheduled._cycle_scheduler,
+        "run_single_cycle",
+        lambda **kwargs: {"status": "timeout"},
+    )
+    client = TestClient(app)
+
+    response = client.get(
+        "/scheduled/cycle",
+        headers={"Authorization": "Bearer test-cron-secret"},
+    )
+
+    assert response.status_code == 504
+    assert response.json() == {"detail": "The canonical cycle timed out"}
+
+
+def test_scheduled_cycle_holds_its_lock_until_timed_out_worker_finishes(monkeypatch):
+    monkeypatch.setenv("CRON_SECRET", "audit-only-secret")
+    entered = Event()
+    release = Event()
+    calls = []
+
+    def slow_cycle():
+        calls.append(len(calls) + 1)
+        entered.set()
+        release.wait(2)
+        return {"forge_cycle": {}, "autonomy_cycle": {}}
+
+    monkeypatch.setattr(scheduled._cycle_scheduler, "max_run_seconds", 1)
+    monkeypatch.setattr(scheduled._cycle_scheduler, "_run_cycle", slow_cycle)
+    client = TestClient(app)
+    headers = {"Authorization": "Bearer audit-only-secret"}
+
+    try:
+        first = client.get("/scheduled/cycle", headers=headers)
+        assert first.status_code == 504
+        assert entered.is_set()
+
+        second = client.get("/scheduled/cycle", headers=headers)
+        assert second.status_code == 409
+        assert calls == [1]
+    finally:
+        release.set()
+        deadline = time.monotonic() + 1
+        while scheduled._local_cycle_lock.locked() and time.monotonic() < deadline:
+            time.sleep(0.01)
