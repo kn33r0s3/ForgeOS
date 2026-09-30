@@ -90,7 +90,7 @@ function HomePage() {
               <div className="mt-7 flex flex-wrap gap-3">
                 <Link
                   to="/domain"
-                  className="btn-wipe inline-flex min-h-12 items-center gap-2 rounded-card border-2 border-black bg-accent px-5 font-extrabold text-black shadow-[0_4px_0_#000] transition-transform hover:-translate-y-0.5 hover:shadow-[0_6px_0_#000]"
+                  className="btn-wipe inline-flex min-h-12 items-center gap-2 rounded-card border-2 border-black bg-accent px-5 font-extrabold text-black shadow-[0_4px_0_#000] transition-transform hover:-translate-y-0.5 hover:bg-black hover:bg-none hover:text-accent hover:shadow-[0_6px_0_#000] focus-visible:bg-black focus-visible:bg-none focus-visible:text-accent"
                 >
                   Browse or post work <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
