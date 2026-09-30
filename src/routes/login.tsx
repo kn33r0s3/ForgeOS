@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AUTH_PROVIDERS, authClient, authEnabled, signIn } from "@/lib/auth/client";
 import { getAuthAvailability } from "@/lib/auth/availability";
-import { requestSignupPermit } from "@/lib/auth/signup-gate.server";
+import { requestSignupPermit } from "@/lib/auth/signup-gate";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 
 export const Route = createFileRoute("/login")({

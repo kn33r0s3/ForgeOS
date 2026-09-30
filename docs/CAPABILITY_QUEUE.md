@@ -6,22 +6,26 @@ before implementation, and record verification before marking a claim DONE.
 Claims coordinate contributors; database uniqueness and idempotency remain the
 enforcement layer when claims overlap.
 
-## [IN PROGRESS] Harden local account creation and provider boundary
+## [DONE WITH LIMITATION] Harden local account creation and provider boundary
 
 - Owner action still required: supply direct Google OAuth credentials and an
   approved Hami terms document/version before enabling those signup paths. The
   owner must also arrange rotation of the preview OAuth secret previously
   committed to source history; this work will not rotate it.
-- Action removed by this change: relying on frontend-only age checks or on a
-  shared third-party broker for a provider labeled Google. New account
-  creation will require a server-consumed age/consent permit, and no DOB will
-  be retained.
-- Current blocker and verification: direct Google credentials are absent from
-  the local process environment; repository inspection found no Hami terms
-  document. The old shared preview secret is present in Git history. Google
-  will stay unavailable unless server-only credentials are configured, and
-  registration will stay closed until approved terms are configured. Tests and
-  local browser checks are pending.
+- Action removed by this change: the misleading broker-backed Google route,
+  user-visible X method, embedded preview OAuth credential, and reliance on a
+  frontend-only age check. Server-side account creation now requires a
+  single-use age/terms permit; DOB is not retained.
+- Current blocker and verification: all frontend tests (197 script + 99 app),
+  typecheck, production build, and auth-flag check pass. The local browser
+  rendered `/`, `/discoveries`, `/feed`, `/opportunities`, `/system`, and
+  `/login` without runtime errors or failed requests. A direct signup API call
+  without a permit returned 403. The login page shows Google disabled because
+  `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are absent; no Google OAuth
+  destination or session flow could be exercised. Signup remains closed
+  because no approved Hami terms document/version exists. ESLint cannot run
+  because the repository has no ESLint 9 configuration. The former preview
+  secret remains in Git history and needs owner-controlled rotation.
 - Next removable dependency: owner-provided Google client credentials with an
   exact Hami callback registered at Google, plus the approved legal terms and
   consent version; owner-controlled secret rotation remains outstanding.

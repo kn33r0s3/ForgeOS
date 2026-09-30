@@ -53,6 +53,15 @@ describe("account age eligibility", () => {
       evaluateSignupRequirements({
         dateOfBirth: "2000-01-01",
         acceptedTerms: true,
+        activeTerms: TEST_TERMS,
+        now: NOW,
+      }),
+      { eligible: true },
+    );
+    assert.deepEqual(
+      evaluateSignupRequirements({
+        dateOfBirth: "2000-01-01",
+        acceptedTerms: true,
         activeTerms: null,
         now: NOW,
       }),
