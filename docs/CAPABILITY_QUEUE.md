@@ -34,6 +34,9 @@ enforcement layer when claims overlap.
   `/actions`, `/operations`, and `/system`; no failed requests or console
   errors were observed, and the 390px mobile viewport had no horizontal
   overflow. No discovery run or production endpoint was called.
+- Tooling limitation: the targeted ESLint command could not run because the
+  repository has no `eslint.config.js`, `.mjs`, or `.cjs` configuration for its
+  installed ESLint 9. No lint configuration was added as part of this work.
 - Next removable dependency: a trusted, authenticated owner-context read path
   for private substrate records, so protected findings can be viewed without
   manually inspecting an API or exposing the backend key to the browser.
