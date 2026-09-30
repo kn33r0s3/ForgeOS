@@ -152,21 +152,13 @@ function HomePage() {
                 </span>
                 <span className="hero-badge">Reality first</span>
               </div>
-              <figcaption className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5 sm:p-7">
-                <div>
-                  <span className="status-pill border-white/20 bg-black/45 text-white">
-                    Illustrative workspace
-                  </span>
-                  <p className="mt-3 max-w-sm font-display text-2xl font-bold leading-tight text-white sm:text-3xl">
-                    Real needs. Clearer next steps.
-                  </p>
-                </div>
-                <span
-                  className="mb-1 hidden size-11 shrink-0 items-center justify-center rounded-full border border-white/40 bg-white/10 text-white backdrop-blur-sm sm:inline-flex"
-                  aria-hidden="true"
-                >
-                  <ArrowUpRight className="size-5" />
+              <figcaption className="absolute inset-x-0 bottom-0 p-5 sm:p-7">
+                <span className="status-pill border-white/20 bg-black/45 text-white">
+                  Illustrative workspace
                 </span>
+                <p className="mt-3 max-w-sm font-display text-2xl font-bold leading-tight text-white sm:text-3xl">
+                  Real needs. Clearer next steps.
+                </p>
               </figcaption>
             </figure>
           </div>

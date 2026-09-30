@@ -868,6 +868,7 @@
   .btn-wipe:hover,
   .btn-wipe:focus-visible {
     background-position: 0 0;
+    color: var(--primary);
   }
 }
 
