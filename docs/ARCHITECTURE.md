@@ -156,10 +156,16 @@ owner-run. No outreach, offer, contact channel, or spend is authorized by this
 architecture.
 
 Use deterministic rules grounded in owner-reported discovery and existing
-records. Do not assume a universal intake, channel, or follow-up cadence. The
-30-day kill rule is retained as an owner-directed constraint; its exact
-start-point and decision thresholds were not found in the inspected repository
-documents and must not be invented.
+records. Do not assume a universal intake, channel, or follow-up cadence. For
+an operational 30-day kill rule, start the clock on the date of the first
+recorded, real, owner-run customer discovery conversation. By the end of day
+30, Forge Bot v0 must have produced at least one verified real paid outcome
+from a consultancy; otherwise stop this bet. Conversations, stated
+willingness to pay, tests, simulations, and unverified payment claims do not
+meet this threshold. Stopping does not authorize a pivot, outreach, offer, or
+spend. The separate five-conversation gate for evaluating the Nepal
+education-abroad hypothesis remains in force and does not substitute for a
+paid outcome.
 
 ## 9. Parked Bets
 
@@ -254,10 +260,10 @@ regulatory and reputation review.
   and restoration claims. Use Section 11 for the repository configuration
   observed here; preserve the conflicting documents as history until a
   separate approved documentation task reconciles them.
-- The repository documents an outcome-first, owner-run discovery gate. The
-  exact 30-day kill-rule text and operational threshold were not located in
-  the inspected materials; the owner-specified rule in Section 8 stands
-  without invented criteria.
+- The repository documents an outcome-first, owner-run discovery gate. Section
+  8 operationalizes the 30-day kill rule as one verified real paid consultancy
+  outcome by day 30 after the first recorded owner-run discovery conversation;
+  this threshold was not found verbatim in the earlier inspected materials.
 - Production database, active production project/hosting plan, channel
   permissions, authorized consultancy, current pricing, and current real-world
   customer evidence are environment-dependent and are not established by this

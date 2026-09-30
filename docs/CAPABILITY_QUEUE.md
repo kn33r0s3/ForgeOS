@@ -1,5 +1,12 @@
 # Hami capability claim ledger (ForgeOS repository)
 
+## [RECORDED] Operationalize the 30-day Forge Bot v0 decision gate
+
+- Owner action still required: conduct and record real discovery only under the owner's existing authorization; this entry grants no contact or offer permission.
+- Action removed: define an observable start event and paid-outcome threshold for the 30-day rule, without treating conversations or stated intent as revenue.
+- Current blocker / verification: `docs/ARCHITECTURE.md` Section 8 starts the 30-day clock on the first recorded real owner-run discovery conversation and requires at least one verified real paid consultancy outcome by day 30; otherwise the bet stops without an automatic pivot. This is an operationalized threshold, not verbatim wording found in the prior materials.
+- Next removable dependency: owner-run discovery and attributable evidence of any real paid outcome; no customer, revenue, or transaction is asserted here.
+
 ## [DONE WITH LIMITATION] Align Vercel rewrite contract tests with Better Auth routing
 
 - Owner action still required: confirm production Google OAuth environment-variable presence in Vercel; the CLI is unavailable in this environment.
