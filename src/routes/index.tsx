@@ -102,6 +102,27 @@ function HomePage() {
                 </Link>
               </div>
 
+              <div className="mt-7 grid max-w-xl gap-3 sm:grid-cols-3">
+                <div className="card glass p-3">
+                  <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">
+                    Evidence
+                  </p>
+                  <p className="mt-2 text-base font-bold text-ink">Source first</p>
+                </div>
+                <div className="card glass p-3">
+                  <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">
+                    Action
+                  </p>
+                  <p className="mt-2 text-base font-bold text-ink">Next step</p>
+                </div>
+                <div className="card glass p-3">
+                  <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">
+                    Outcome
+                  </p>
+                  <p className="mt-2 text-base font-bold text-ink">Verified only</p>
+                </div>
+              </div>
+
               <div className="mt-7 flex max-w-xl items-start gap-3 border-l-2 border-accent pl-4">
                 <ShieldCheck className="mt-0.5 size-5 shrink-0 text-accent" aria-hidden="true" />
                 <p className="text-sm leading-6 text-muted">
@@ -112,17 +133,25 @@ function HomePage() {
               </div>
             </div>
 
-            <figure className="relative isolate mx-auto w-full max-w-2xl overflow-hidden rounded-[1.35rem] border-2 border-line bg-card shadow-[0_24px_70px_-32px_rgba(0,0,0,0.9)]">
+            <figure className="hero-visual relative isolate mx-auto w-full max-w-[36rem] overflow-hidden rounded-[1.35rem] border-2 border-line bg-card shadow-[0_24px_70px_-32px_rgba(0,0,0,0.9)]">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,155,4,0.24),transparent_36%),linear-gradient(135deg,rgba(255,255,255,0.04),transparent_40%,rgba(0,0,0,0.16))]" aria-hidden="true" />
               <img
                 src="/hami-home.jpg"
                 alt="A warmly lit workspace with tools and an open notebook"
-                className="h-[17rem] w-full object-cover sm:h-[23rem] lg:h-[26rem]"
+                className="relative h-[17rem] w-full object-cover sm:h-[23rem] lg:h-[27rem]"
                 fetchPriority="high"
               />
               <div
-                className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/5"
+                className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-black/5"
                 aria-hidden="true"
               />
+              <div className="hero-badges" aria-label="Key platform signals">
+                <span className="hero-badge">
+                  <span className="live-dot" aria-hidden="true" />
+                  Evidence-led
+                </span>
+                <span className="hero-badge">Reality first</span>
+              </div>
               <figcaption className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5 sm:p-7">
                 <div>
                   <span className="status-pill border-white/20 bg-black/45 text-white">
