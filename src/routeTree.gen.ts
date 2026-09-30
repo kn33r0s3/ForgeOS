@@ -25,6 +25,7 @@ import { Route as ProvidersRouteImport } from './routes/providers'
 import { Route as RequestRouteImport } from './routes/request'
 import { Route as RequestAProjectRouteImport } from './routes/request-a-project'
 import { Route as ServicesRouteImport } from './routes/services'
+import { Route as SystemRouteImport } from './routes/system'
 import { Route as TechnologyRouteImport } from './routes/technology'
 import { Route as VenturesRouteImport } from './routes/ventures'
 import { Route as WorkRouteImport } from './routes/work'
@@ -114,6 +115,11 @@ const ServicesRoute = ServicesRouteImport.update({
   path: '/services',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SystemRoute = SystemRouteImport.update({
+  id: '/system',
+  path: '/system',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TechnologyRoute = TechnologyRouteImport.update({
   id: '/technology',
   path: '/technology',
@@ -172,6 +178,7 @@ export interface FileRoutesByFullPath {
   '/request': typeof RequestRoute
   '/request-a-project': typeof RequestAProjectRoute
   '/services': typeof ServicesRouteWithChildren
+  '/system': typeof SystemRoute
   '/technology': typeof TechnologyRoute
   '/ventures': typeof VenturesRoute
   '/work': typeof WorkRoute
@@ -196,6 +203,7 @@ export interface FileRoutesByTo {
   '/providers': typeof ProvidersRoute
   '/request': typeof RequestRoute
   '/request-a-project': typeof RequestAProjectRoute
+  '/system': typeof SystemRoute
   '/technology': typeof TechnologyRoute
   '/ventures': typeof VenturesRoute
   '/work': typeof WorkRoute
@@ -223,6 +231,7 @@ export interface FileRoutesById {
   '/request': typeof RequestRoute
   '/request-a-project': typeof RequestAProjectRoute
   '/services': typeof ServicesRouteWithChildren
+  '/system': typeof SystemRoute
   '/technology': typeof TechnologyRoute
   '/ventures': typeof VenturesRoute
   '/work': typeof WorkRoute
@@ -251,6 +260,7 @@ export interface FileRouteTypes {
     | '/request'
     | '/request-a-project'
     | '/services'
+    | '/system'
     | '/technology'
     | '/ventures'
     | '/work'
@@ -275,6 +285,7 @@ export interface FileRouteTypes {
     | '/providers'
     | '/request'
     | '/request-a-project'
+    | '/system'
     | '/technology'
     | '/ventures'
     | '/work'
@@ -301,6 +312,7 @@ export interface FileRouteTypes {
     | '/request'
     | '/request-a-project'
     | '/services'
+    | '/system'
     | '/technology'
     | '/ventures'
     | '/work'
@@ -328,6 +340,7 @@ export interface RootRouteChildren {
   RequestRoute: typeof RequestRoute
   RequestAProjectRoute: typeof RequestAProjectRoute
   ServicesRoute: typeof ServicesRouteWithChildren
+  SystemRoute: typeof SystemRoute
   TechnologyRoute: typeof TechnologyRoute
   VenturesRoute: typeof VenturesRoute
   WorkRoute: typeof WorkRoute
@@ -448,6 +461,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServicesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/system': {
+      id: '/system'
+      path: '/system'
+      fullPath: '/system'
+      preLoaderRoute: typeof SystemRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/technology': {
       id: '/technology'
       path: '/technology'
@@ -550,6 +570,7 @@ const rootRouteChildren: RootRouteChildren = {
   RequestRoute: RequestRoute,
   RequestAProjectRoute: RequestAProjectRoute,
   ServicesRoute: ServicesRouteWithChildren,
+  SystemRoute: SystemRoute,
   TechnologyRoute: TechnologyRoute,
   VenturesRoute: VenturesRoute,
   WorkRoute: WorkRoute,
