@@ -870,6 +870,22 @@
     background-position: 0 0;
     color: var(--primary);
   }
+
+  .hero-primary-cta {
+    -webkit-text-stroke: 0.35px var(--primary);
+    transition:
+      background-position 260ms var(--ease-snap),
+      color 110ms var(--ease-out) 150ms,
+      border-color 160ms var(--ease-out),
+      transform 180ms var(--ease-out),
+      box-shadow 180ms var(--ease-out);
+  }
+
+  .hero-primary-cta:hover,
+  .hero-primary-cta:focus-visible {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #000;
+  }
 }
 
 @layer components {
