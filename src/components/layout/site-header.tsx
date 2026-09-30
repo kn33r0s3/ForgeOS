@@ -72,7 +72,7 @@ export function SiteHeader() {
           <div className="flex items-center gap-2">
             <Link
               to="/request"
-              className="btn-wipe hidden h-10 items-center gap-1.5 rounded-card border-2 border-black bg-black px-4 text-sm font-extrabold text-accent hover:text-wheat lg:inline-flex"
+              className="btn-header-cta hidden h-10 items-center gap-1.5 rounded-card border-2 border-black bg-black px-4 text-sm font-extrabold text-accent hover:text-wheat lg:inline-flex"
               style={{ backgroundImage: "linear-gradient(45deg, #161515 50%, transparent 50%)" }}
             >
               Share a need
@@ -80,7 +80,7 @@ export function SiteHeader() {
             </Link>
             <button
               type="button"
-              className="group relative inline-flex size-11 flex-col items-center justify-center gap-[5px] rounded-card lg:hidden"
+              className="btn-menu group relative inline-flex size-11 flex-col items-center justify-center gap-[5px] rounded-card lg:hidden"
               aria-expanded={open}
               aria-controls="mobile-navigation"
               aria-label={open ? "Close navigation" : "Open navigation"}

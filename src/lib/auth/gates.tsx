@@ -71,7 +71,7 @@ export function SignInButtons() {
           key={p.providerId}
           type="button"
           onClick={() => signIn(p.providerId, { callbackURL: "/" })}
-          className="w-full cursor-pointer rounded-md border border-neutral-300 px-4 py-2 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-900"
+          className="btn-secondary w-full cursor-pointer rounded-md border border-neutral-300 bg-white px-4 py-2 text-neutral-950 hover:border-accent focus-visible:border-accent dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100"
         >
           Continue with {p.label}
         </button>
@@ -125,7 +125,7 @@ export function UserButton() {
             // Success navigates away; on failure re-enable so it can be retried.
             void signOut().catch(() => setSigningOut(false));
           }}
-          className="cursor-pointer text-sm underline-offset-4 opacity-70 hover:underline disabled:cursor-wait disabled:no-underline"
+          className="btn-ghost cursor-pointer text-sm underline-offset-4 opacity-70 hover:text-accent focus-visible:text-accent disabled:cursor-wait disabled:no-underline"
         >
           {signingOut ? "Signing out…" : "Sign out"}
         </button>

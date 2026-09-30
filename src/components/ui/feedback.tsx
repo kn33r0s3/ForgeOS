@@ -118,7 +118,7 @@ export function UnavailableState({
         <button
           type="button"
           onClick={onRetry}
-          className="btn-wipe mt-4 inline-flex min-h-11 items-center gap-2 rounded-card border-2 border-black/70 bg-[#f5f1f1] px-4 text-sm font-extrabold text-black shadow-sm hover:text-white"
+          className="btn-secondary mt-4 inline-flex min-h-11 items-center gap-2 rounded-card border-2 border-black/70 bg-[#f5f1f1] px-4 text-sm font-extrabold text-black hover:border-accent focus-visible:border-accent"
         >
           <RefreshCw className="size-4" aria-hidden="true" />
           Retry

@@ -213,7 +213,7 @@ function OperationsPage() {
             <button
               type="button"
               onClick={() => setCycleMsg(null)}
-              className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded-card px-2 text-xs text-ink hover:bg-warning/15"
+              className="btn-ghost inline-flex min-h-8 shrink-0 items-center gap-1 rounded-card px-2 text-xs text-ink hover:text-accent focus-visible:text-accent"
             >
               <X className="size-3.5" aria-hidden="true" /> Dismiss
             </button>

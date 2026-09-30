@@ -261,7 +261,7 @@ function DomainPage() {
                             <p className="mt-1 text-dim">{candidate.stated_price || "Price not recorded"} · {candidate.stated_availability || "Availability not recorded"}</p>
                             <p className="mt-1 text-xs text-dim">{candidate.unknowns.join(" · ")}</p>
                             {candidate.kind === "provider" ? (
-                              <button type="button" onClick={() => void chooseProvider(candidate.id)} className="link-arrow mt-2 inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-accent">
+                              <button type="button" onClick={() => void chooseProvider(candidate.id)} className="btn-ghost mt-2 inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-accent">
                                 See trust and request this provider <ArrowUpRight className="size-4" aria-hidden="true" />
                               </button>
                             ) : null}
@@ -302,7 +302,7 @@ function DomainPage() {
                           />
                         </label>
                         <p className="text-xs text-dim">A response records contact; it is not acceptance.</p>
-                        <button type="submit" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-card border border-line bg-card px-5 text-sm font-semibold text-ink transition-colors hover:border-accent/60">Record response</button>
+                        <button type="submit" className="btn-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-card border border-line bg-card px-5 text-sm font-semibold text-ink hover:border-accent focus-visible:border-accent">Record response</button>
                       </form>
                     ) : null}
                     <p className="mt-2 text-sm text-muted">{connection.latest_fulfillment || "No fulfillment recorded. Fulfillment is not payment."}</p>
@@ -347,7 +347,7 @@ function DomainPage() {
                 <input value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Stated price, if any" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
               </label>
             </div>
-            <button type="submit" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-card bg-accent px-5 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent/90 w-full">Post in our records</button>
+            <button type="submit" className="btn-wipe btn-primary inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-card border-2 border-black/70 bg-accent px-5 text-sm font-extrabold text-black hover:text-accent focus-visible:text-accent">Post in our records</button>
           </form>
 
           {token && createdId ? (
@@ -373,14 +373,14 @@ function DomainPage() {
                   <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">What happened</span>
                   <textarea value={closeNote} onChange={(event) => setCloseNote(event.target.value)} required minLength={3} placeholder="What actually happened" className="min-h-20 w-full rounded-card border border-line bg-paper px-4 py-3 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
                 </label>
-                <button type="submit" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-card bg-accent px-5 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent/90">Record the close</button>
+                <button type="submit" className="btn-wipe btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-card border-2 border-black/70 bg-accent px-5 text-sm font-extrabold text-black hover:text-accent focus-visible:text-accent">Record the close</button>
               </form>
               <form onSubmit={disputeRecord} className="space-y-3 border-t border-line pt-4">
                 <label className="block">
                   <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Dispute</span>
                   <textarea value={disputeNote} onChange={(event) => setDisputeNote(event.target.value)} required minLength={3} placeholder="What is disputed" className="min-h-20 w-full rounded-card border border-line bg-paper px-4 py-3 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
                 </label>
-                <button type="submit" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-card border border-line bg-card px-5 text-sm font-semibold text-ink transition-colors hover:border-accent/60">Record a dispute</button>
+                <button type="submit" className="btn-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-card border border-line bg-card px-5 text-sm font-semibold text-ink hover:border-accent focus-visible:border-accent">Record a dispute</button>
               </form>
             </div>
           ) : null}
@@ -395,7 +395,7 @@ function DomainPage() {
                 <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Request</span>
                 <input value={requestedService} onChange={(event) => setRequestedService(event.target.value)} required placeholder="What you are requesting" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
               </label>
-              <button type="submit" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-card bg-accent px-5 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent/90">Record the request</button>
+              <button type="submit" className="btn-wipe btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-card border-2 border-black/70 bg-accent px-5 text-sm font-extrabold text-black hover:text-accent focus-visible:text-accent">Record the request</button>
             </form>
           ) : null}
           {message ? <p role="status" className="rounded-card border border-line bg-card px-4 py-3 text-sm text-muted">{message}</p> : null}

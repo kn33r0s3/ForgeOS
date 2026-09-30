@@ -871,8 +871,9 @@
     color: var(--primary);
   }
 
-  .hero-primary-cta {
+  .btn-primary {
     -webkit-text-stroke: 0.35px var(--primary);
+    box-shadow: var(--shadow-sm);
     transition:
       background-position 260ms var(--ease-snap),
       color 110ms var(--ease-out) 150ms,
@@ -881,10 +882,127 @@
       box-shadow 180ms var(--ease-out);
   }
 
-  .hero-primary-cta:hover,
-  .hero-primary-cta:focus-visible {
+  .btn-primary:hover,
+  .btn-primary:focus-visible {
     transform: translateY(-2px);
     box-shadow: 0 6px 0 #000;
+  }
+
+  .btn-secondary {
+    background-image: linear-gradient(
+      112deg,
+      transparent 0 42%,
+      color-mix(in srgb, var(--primary) 28%, transparent) 50%,
+      transparent 58% 100%
+    );
+    background-position: 120% 0;
+    background-size: 220% 100%;
+    box-shadow: var(--shadow-sm);
+    transition:
+      background-position 420ms var(--ease-snap),
+      border-color 180ms var(--ease-out),
+      box-shadow 180ms var(--ease-out),
+      transform 180ms var(--ease-out);
+  }
+
+  .btn-secondary:hover:not(:disabled),
+  .btn-secondary:focus-visible {
+    background-position: -20% 0;
+    border-color: var(--primary);
+    box-shadow: 0 4px 0 #000;
+    transform: translateY(-1px);
+  }
+
+  .btn-ghost {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    background-size: 0 2px;
+    transition:
+      background-size 220ms var(--ease-snap),
+      color 150ms var(--ease-out),
+      transform 150ms var(--ease-out);
+  }
+
+  .btn-ghost:hover,
+  .btn-ghost:focus-visible {
+    background-size: 100% 2px;
+    color: var(--primary);
+  }
+
+  .btn-ghost svg {
+    transition: transform 160ms var(--ease-out);
+  }
+
+  .btn-ghost:hover svg,
+  .btn-ghost:focus-visible svg {
+    transform: translateX(2px);
+  }
+
+  .btn-warning {
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent 0 9px,
+      rgb(0 0 0 / 0.11) 9px 13px
+    );
+    background-position: 0 0;
+    background-size: 18px 18px;
+    box-shadow: var(--shadow-sm);
+    transition:
+      background-position 260ms linear,
+      border-color 160ms var(--ease-out),
+      box-shadow 160ms var(--ease-out),
+      transform 160ms var(--ease-out);
+  }
+
+  .btn-warning:hover:not(:disabled),
+  .btn-warning:focus-visible {
+    background-position: 18px 0;
+    border-color: #000;
+    box-shadow: inset 5px 0 0 #000, 0 4px 0 #000;
+    transform: translateY(-1px);
+  }
+
+  .btn-menu {
+    border: 2px solid transparent;
+    transition:
+      background-color 150ms var(--ease-out),
+      border-color 150ms var(--ease-out),
+      transform 180ms var(--ease-snap);
+  }
+
+  .btn-menu:hover,
+  .btn-menu[aria-expanded="true"] {
+    border-color: rgb(0 0 0 / 0.18);
+    background-color: rgb(0 0 0 / 0.08);
+  }
+
+  .btn-menu:active {
+    transform: scale(0.94);
+  }
+
+  .btn-header-cta {
+    background-position: 100% 0;
+    background-size: 240% 100%;
+    transition:
+      background-position 280ms var(--ease-snap),
+      color 160ms var(--ease-out),
+      transform 160ms var(--ease-out);
+  }
+
+  .btn-header-cta:hover,
+  .btn-header-cta:focus-visible {
+    background-position: 0 0;
+    transform: translateY(-1px);
+  }
+
+  .btn-header-cta svg {
+    transition: transform 160ms var(--ease-out);
+  }
+
+  .btn-header-cta:hover svg,
+  .btn-header-cta:focus-visible svg {
+    transform: translate(2px, -2px);
   }
 }
 

@@ -90,13 +90,13 @@ function HomePage() {
               <div className="mt-7 flex flex-wrap gap-3">
                 <Link
                   to="/domain"
-                  className="btn-wipe hero-primary-cta inline-flex min-h-12 items-center gap-2 rounded-card border-2 border-black bg-accent px-5 font-extrabold text-black shadow-[0_4px_0_#000] hover:text-accent focus-visible:text-accent"
+                  className="btn-wipe btn-primary inline-flex min-h-12 items-center gap-2 rounded-card border-2 border-black bg-accent px-5 font-extrabold text-black hover:text-accent focus-visible:text-accent"
                 >
                   Browse or post work <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
                 <Link
                   to="/request"
-                  className="inline-flex min-h-12 items-center gap-2 rounded-card border-2 border-line bg-card px-5 font-bold text-ink transition-colors hover:border-accent"
+                  className="btn-secondary inline-flex min-h-12 items-center gap-2 rounded-card border-2 border-line bg-card px-5 font-bold text-ink hover:border-accent focus-visible:border-accent"
                 >
                   Share a need
                 </Link>
@@ -282,7 +282,7 @@ function HomePage() {
               <button
                 type="button"
                 onClick={() => setReloadVersion((version) => version + 1)}
-                className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-card px-3 text-sm font-semibold text-accent transition-colors hover:bg-secondary"
+                className="btn-ghost mt-3 inline-flex min-h-10 items-center gap-2 rounded-card px-3 text-sm font-semibold text-accent"
               >
                 <RefreshCw className="size-4" aria-hidden="true" /> Try again
               </button>
@@ -367,7 +367,7 @@ function HomePage() {
               <button
                 type="button"
                 onClick={() => setReloadVersion((version) => version + 1)}
-                className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-card px-3 text-sm font-semibold text-accent transition-colors hover:bg-secondary"
+                className="btn-ghost mt-3 inline-flex min-h-10 items-center gap-2 rounded-card px-3 text-sm font-semibold text-accent"
               >
                 <RefreshCw className="size-4" aria-hidden="true" /> Try again
               </button>
@@ -442,7 +442,7 @@ function HomePage() {
           </div>
           <Link
             to="/request"
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-card bg-accent px-5 text-sm font-extrabold text-accent-ink transition-colors hover:bg-accent/90"
+            className="btn-wipe btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-card border-2 border-black/70 bg-accent px-5 text-sm font-extrabold text-black hover:text-accent focus-visible:text-accent"
           >
             Submit a need <ArrowRight className="size-4" aria-hidden="true" />
           </Link>

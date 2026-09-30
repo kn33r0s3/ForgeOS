@@ -64,7 +64,7 @@ export function DemandIntakeForm() {
         <button
           type="submit"
           disabled={isSubmitting || !content.trim()}
-          className="min-h-11 w-fit btn-wipe rounded-card border-2 border-black/70 bg-accent px-5 text-sm font-extrabold text-black shadow-sm hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+          className="btn-wipe btn-primary min-h-11 w-fit rounded-card border-2 border-black/70 bg-accent px-5 text-sm font-extrabold text-black hover:text-accent focus-visible:text-accent disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSubmitting ? "Recording…" : "Submit for understanding"}
         </button>
