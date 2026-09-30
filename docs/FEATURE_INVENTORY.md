@@ -78,8 +78,9 @@ history at `7a437bb`; the `.py` must come from the machine that produced them.
    push, required backend CI) is an owner-side GitHub setting.
 2. **Production API/cron restored or deliberately retired** (owner decision:
    `vercel.json`).
-3. **Open-world discovery engine (Command 2):** research is requirement- and
-   clearance-bound; nothing yet generates candidate value hypotheses about
+3. **Open-world discovery engine (Command 2):** IMPLEMENTED 2026-09-30 — see
+   § Open-world discovery engine below. Before it, research was requirement- and
+   clearance-bound and nothing generated candidate value hypotheses about
    arbitrary entities from the substrate itself.
 4. **Server-verified capability tests (Command 3):** capability passes are
    attributable now, but still attested; a CI-reported result (e.g. GitHub
@@ -90,6 +91,46 @@ history at `7a437bb`; the `.py` must come from the machine that produced them.
    discovery-to-real-world experiments (Command 4).
 6. **One human surface over the canonical API** (Command 5) instead of the
    in-memory mock.
+
+## Open-world discovery engine — 2026-09-30 (owner Command 2)
+
+`backend/app/services/discovery_engine.py`, proven by
+`backend/tests/test_discovery_engine.py`. It lives inside the canonical
+substrate: no new table, primitive, workflow or service.
+
+**What it makes possible that was not possible before**
+
+| Before | Now |
+|---|---|
+| Hami investigated only questions that the Curiosity Engine derived from beliefs and patterns, routed to pre-declared source requirements. | Any explicitly invoked run looks across *all* recorded entities, relations, evidence, events and capabilities for things nobody asked about: contradictions, large measured differences across any dimension (price, place, time, …), unconnected entities that share a distinctive value, neglected or isolated entities, recurring behaviour, capabilities that claim `active` without a verified test, and refuted lines of inquiry. |
+| A question was never challenged. Only its answer was. | `question_reframe` flags a question whose premise is refuted by recorded evidence, or that repeated research tasks could not answer. It records a reframed question linked to the original by a `possible` `reframes` relation. |
+| Every output of the research pipeline was an opportunity, claim or question. | A finding's kind is open. The built-in kinds are observation, contradiction, capability_gap, information_gap, hypothesis, question, action_candidate, investigation_method, resource_candidate and reason_to_stop. A method may name a new kind. It is registered as a **proposed** `entity_type` in `type_registry` (its `schema_json` is authoritative) and the finding is deferred until someone activates the type through `set_type_status`. |
+| Methods of looking were hardcoded into the cycle. | `DiscoveryMethodRegistry` holds replaceable, versioned plugins. Each declares the input tags it `requires` and returns findings from a read-only `run(ctx)`. Engines, APIs, LLMs and databases are only possible inputs. |
+| A missing ability surfaced only for a research requirement. | If a method requires an input that the substrate doesn't provide and no **verified** active capability `provides`, Hami records a `proposed` `discovery_input` CAPABILITY (the gap itself) and a `capability_gap` finding. The gap closes only when a capability providing that input passes the hardened lifecycle. A legacy row that merely says `active` does not count. |
+| — | Testable value hypotheses come from the substrate itself. Each is stored as a `possible` `may_relate` relation plus a follow-up research question. These hypotheses advance or get refuted only through the existing truth-transition rules; a refuted one yields a `reason_to_stop`. |
+
+**Guarantees (tested):**
+
+- Each finding cites at least one recorded row that actually resolves, and it starts as `possible` or `hypothesized`. Findings without a basis, with a dangling basis, or that overclaim are rejected. A crashing plugin is isolated.
+- Everything is stored as ENTITY, EVIDENCE (source `discovery_engine:<method>`, provenance lists the basis), RELATION (`derived_from` hypothesized; proposed relations `possible`) and EVENT (`discovery_run_completed`, `discovery_deferred`).
+- Runs are idempotent through content fingerprints. The engine never changes the truth state of anything it inspects. An empty substrate yields nothing.
+
+**How it runs.** It runs only when invoked explicitly: `discovery_engine.run_discovery(db)`,
+`GET /forge/substrate/discovery/methods`, `GET /forge/substrate/discovery/preview`
+(pure read), `GET /forge/substrate/discovery/findings` and
+`POST /forge/substrate/discovery/runs`. The endpoints are private under
+`FORGE_API_KEY` like the rest of `/forge/substrate/*`. The engine is **not**
+wired into the scheduled cycle and not into `seed_core_types`. Its vocabulary is
+registered via `register_type` → `set_type_status` only on the first persisted
+run. It makes no network calls.
+
+**Not yet covered by a built-in method:** comparing against external,
+time-series or price feeds, which needs cleared sources expressed as input
+tags. The same gap applies to change detection across snapshots and to
+co-occurrence ("unusual combination") mining beyond shared values. The engine
+also has no automatic promotion of discovery questions into `ResearchQuestion`
+rows (planner hand-off). These are new methods or an explicit hand-off, not
+architecture changes.
 
 ## Inventory — 2026-09-26 evidence cut
 
@@ -167,9 +208,10 @@ redacted, anonymous demand only and explicitly does not promise contact.
 
 ## FastAPI route inventory
 
-There are 214 source-declared method/path operations in the 19 mounted routers.
+There are 218 source-declared method/path operations in the 19 mounted routers
+(214 at the 2026-09-26 cut + 4 discovery routes on 2026-09-30).
 The same router implementations are available at both the unprefixed path and
-the `/api` alias (428 method/path entries before framework-generated docs and
+the `/api` alias (436 method/path entries before framework-generated docs and
 health routes). `{name}` denotes a path parameter; an empty decorator path is
 the router root.
 
@@ -191,7 +233,7 @@ the router root.
 | `repair_shop` | `POST /work-items`; `GET /work-items`; `GET /work-items/{work_item_id}`; `POST /work-items/{work_item_id}/evidence`; `POST /work-items/{work_item_id}/triage`; `POST /work-items/{work_item_id}/communications`; `POST /communications/{communication_id}/approve`; `POST /communications/{communication_id}/response`; `POST /work-items/{work_item_id}/payment`; `POST /work-items/{work_item_id}/outcome` |
 | `scheduled` | `GET /cycle` |
 | `signals` | `POST /`; `POST /public-request`; `GET /`; `GET /demand-understanding/{task_id}` |
-| `substrate` | `GET /types`; `POST /types`; `POST /types/{category}/{type_name}/status`; `GET /entities`; `GET /entities/{entity_id}`; `POST /entities`; `POST /entities/{entity_id}/identity`; `POST /entities/{entity_id}/merge`; `POST /entities/{entity_id}/archive`; `GET /relations`; `POST /relations`; `POST /relations/{relation_id}/truth`; `GET /events`; `POST /events`; `GET /evidence`; `POST /evidence`; `GET /capabilities`; `POST /capabilities`; `POST /capabilities/{capability_id}/build`; `POST /capabilities/{capability_id}/test`; `POST /capabilities/{capability_id}/activate` |
+| `substrate` | `GET /types`; `POST /types`; `POST /types/{category}/{type_name}/status`; `GET /entities`; `GET /entities/{entity_id}`; `POST /entities`; `POST /entities/{entity_id}/identity`; `POST /entities/{entity_id}/merge`; `POST /entities/{entity_id}/archive`; `GET /relations`; `POST /relations`; `POST /relations/{relation_id}/truth`; `GET /events`; `POST /events`; `GET /evidence`; `POST /evidence`; `GET /capabilities`; `POST /capabilities`; `POST /capabilities/{capability_id}/build`; `POST /capabilities/{capability_id}/test`; `POST /capabilities/{capability_id}/activate`; `GET /discovery/methods`; `GET /discovery/preview`; `GET /discovery/findings`; `POST /discovery/runs` (added 2026-09-30) |
 | `workers` | `GET /`; `POST /` |
 | `world` | `POST /ingest`; `GET /claims`; `GET /ideas`; `GET /principles` |
 

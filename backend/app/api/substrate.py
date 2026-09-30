@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.database import get_db
-from app.services import type_validation, world_graph
+from app.services import discovery_engine, type_validation, world_graph
 
 router = APIRouter(prefix="/forge/substrate", tags=["substrate"])
 
@@ -570,6 +570,52 @@ def activate_capability(capability_id: int, db: Session = Depends(get_db)):
         world_graph.activate_capability(db, row)
         db.commit()
         return _capability_out(row, db)
+    except (type_validation.SubstrateError, IntegrityError) as exc:
+        db.rollback()
+        raise _write_error(exc) from exc
+
+
+class DiscoveryRun(BaseModel):
+    methods: list[str] | None = Field(default=None, max_length=50)
+
+
+@router.get("/discovery/methods")
+def list_discovery_methods():
+    """The replaceable discovery method registry (no database access)."""
+    return [method.describe() for method in discovery_engine.DEFAULT_REGISTRY.methods()]
+
+
+@router.get("/discovery/preview")
+def preview_discovery(
+    methods: str | None = Query(default=None, max_length=1000),
+    db: Session = Depends(get_db),
+):
+    """Run discovery methods as a pure read; nothing is persisted."""
+    names = [name.strip() for name in methods.split(",") if name.strip()] if methods else None
+    try:
+        return discovery_engine.run_discovery(db, methods=names, persist=False)
+    except type_validation.SubstrateError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    finally:
+        db.rollback()
+
+
+@router.get("/discovery/findings")
+def list_discovery_findings(
+    kind: str | None = Query(default=None, max_length=80),
+    limit: int = Query(default=100, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
+    return discovery_engine.list_discoveries(db, kind=kind, limit=limit)
+
+
+@router.post("/discovery/runs", status_code=201)
+def run_discovery(body: DiscoveryRun, db: Session = Depends(get_db)):
+    """Explicitly run and persist discovery; never part of the scheduled cycle."""
+    try:
+        report = discovery_engine.run_discovery(db, methods=body.methods, persist=True)
+        db.commit()
+        return report
     except (type_validation.SubstrateError, IntegrityError) as exc:
         db.rollback()
         raise _write_error(exc) from exc

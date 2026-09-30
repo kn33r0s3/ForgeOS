@@ -6,6 +6,33 @@ before implementation, and record verification before marking a claim DONE.
 Claims coordinate contributors; database uniqueness and idempotency remain the
 enforcement layer when claims overlap.
 
+## [DONE WITH LIMITATION] Command 2: open-world discovery engine
+
+- Agent: Grok (executor), owner-authorized direct commits to `origin/main`, 2026-09-30 NPT.
+- Scope: build a replaceable discovery capability inside the substrate so Hami can surface things it did not know to look for, without a fixed research workflow or a domain taxonomy. No new table, primitive, service or ledger. See `docs/FEATURE_INVENTORY.md` § Open-world discovery engine.
+- Implementation:
+  - `backend/app/services/discovery_engine.py` adds a `DiscoveryMethodRegistry` of versioned plugins and eight built-in methods: `evidence_contradiction`, `question_reframe`, `numeric_divergence`, `disconnection`, `isolation`, `recurrence`, `capability_integrity` and `refuted_basis_stop`.
+  - Findings persist only as ENTITY + EVIDENCE + RELATION + EVENT. Entities are validated by `type_registry.schema_json`. Evidence stays `possible`/`hypothesized` with basis provenance. Relations are `derived_from` (hypothesized), or `may_relate`/`reframes`/`stops` (possible). Events are `discovery_run_completed` and `discovery_deferred`.
+  - An unknown finding kind is registered as a proposed `entity_type` and deferred until activated through `set_type_status`.
+  - Unmet method inputs become a proposed `discovery_input` CAPABILITY plus a `capability_gap` finding. Only a capability that `provides` the input and has a verified activation record satisfies it.
+  - The discovery vocabulary is registered through `register_type` → `set_type_status` on the first persisted run, not in `seed_core_types`, so a deploy writes nothing.
+  - Endpoints: `GET /forge/substrate/discovery/{methods,preview,findings}` and `POST /forge/substrate/discovery/runs`, private under `FORGE_API_KEY`. The engine is not wired into the scheduled cycle and makes no network calls.
+- Proof (`backend/tests/test_discovery_engine.py`, 11 tests):
+  - In a world recorded through the canonical services, one run surfaces three things. First, a contradiction on a need that has supported and refuted evidence, citing both evidence ids. Second, a reframed question whose premise that need is. Third, a capability gap for a pre-contract `active` capability with no attributable pass.
+  - Every engine output is `possible`/`hypothesized` and cites resolvable rows. The inspected relation's truth is unchanged.
+  - An empty substrate yields nothing. Reruns add only the run event.
+  - A missing input creates a proposed gap row. An unverified "active" provider does not close it. Building, testing and activating the gap row does close it.
+  - A new kind is proposed and deferred, and materializes after activation, with no new table.
+  - Fabricated, basis-less and overclaiming findings are rejected, and a crashing plugin is isolated.
+  - A measured 2.8x price difference yields an observation and a research question. A shared address across an organization and a need yields a `possible` `may_relate` hypothesis. That relation cannot reach `tested` without evidence. After it is refuted by recorded evidence, the next run emits `reason_to_stop`.
+  - An unanswered question with two empty research tasks is reframed. Isolation and recurrence are detected.
+  - Methods are replaceable. Preview writes nothing, and the endpoints return 401 without the key when one is set.
+  - Mutation checks: disabling finding validation, or counting the engine's own relations as connections, makes the corresponding tests fail.
+- Verification (local): backend `pytest` 575 passed, 2 skipped (only the opt-in live GDELT/OpenAlex checks). `git diff --check` is clean. The root app was not touched.
+- Current limitation: the engine only proposes. No discovery has been run against production data (by instruction), so nothing about the real production substrate has been discovered yet. The built-in methods cover the recorded substrate only. External comparisons (prices, time series, other markets) need cleared sources declared as input tags and are surfaced as capability gaps until then. Discovery questions are not yet handed to `ResearchQuestion` or the planner automatically.
+- Owner action still required: decide whether and when to run `POST /forge/substrate/discovery/runs` against production. This writes discovery rows and registers the discovery vocabulary. Production answered `401` to an unauthenticated `GET /api/forge/substrate/types` on 2026-09-30 (OBSERVED), so `FORGE_API_KEY` is set there and these endpoints are key-gated.
+- Next removable dependency: an explicit, reviewed hand-off from discovery `question` entities to `ResearchQuestion` rows, so cleared collectors can gather evidence that advances or refutes them.
+
 ## [DONE WITH LIMITATION] Restore the Vercel API/web/cron topology (`vercel.json`)
 
 - Agent: Grok (executor), owner-authorized 2026-09-30 NPT after the Command 1 reconstruction.
