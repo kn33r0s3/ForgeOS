@@ -1,7 +1,5 @@
 import json
 from pathlib import Path
-
-import pytest
 from fastapi.testclient import TestClient
 from datetime import timedelta
 from sqlalchemy import event
@@ -22,8 +20,6 @@ def _client(db):
 
 def test_vercel_api_service_routes_original_path_to_fastapi_aliases():
     config_path = Path(__file__).resolve().parents[2] / "vercel.json"
-    if not config_path.is_file():
-        pytest.skip("vercel.json is absent: the Vercel API service/cron topology was removed in f240f3e and restoring it is an owner deployment decision (docs/CAPABILITY_QUEUE.md)")
     config = json.loads(config_path.read_text())
     api_service = config["services"]["api"]
 

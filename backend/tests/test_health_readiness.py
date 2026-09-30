@@ -1,8 +1,6 @@
 import json
 from pathlib import Path
 
-import pytest
-
 from fastapi.testclient import TestClient
 
 
@@ -72,8 +70,6 @@ def test_vercel_health_reports_ephemeral_database_and_missing_cron_secret(db, mo
 def test_health_reports_schedule_from_vercel_configuration(db, monkeypatch):
     monkeypatch.delenv("VERCEL", raising=False)
     config_path = Path(__file__).resolve().parents[2] / "vercel.json"
-    if not config_path.is_file():
-        pytest.skip("vercel.json is absent: the Vercel API service/cron topology was removed in f240f3e and restoring it is an owner deployment decision (docs/CAPABILITY_QUEUE.md)")
     config = json.loads(config_path.read_text())
 
     assert _health().json()["scheduler"]["cron_schedule"] == config["crons"][0]["schedule"]

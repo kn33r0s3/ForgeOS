@@ -6,6 +6,15 @@ before implementation, and record verification before marking a claim DONE.
 Claims coordinate contributors; database uniqueness and idempotency remain the
 enforcement layer when claims overlap.
 
+## [DONE WITH LIMITATION] Restore the Vercel API/web/cron topology (`vercel.json`)
+
+- Agent: Grok (executor), owner-authorized 2026-09-30 NPT after the Command 1 reconstruction.
+- Scope: restore `vercel.json` byte-identical from `bf8546e` (blob `617edb3`); no routing, service, or cron change. Re-enable the two tests that were skipped while it was absent and add `backend/tests/test_vercel_config_contract.py` (file exists; exact services; API rewrite ordered before the web catch-all; cron `/api/scheduled/cycle` at `0 0 * * *` equals `app.main.CRON_SCHEDULE`; `app.main:app` imports and its route table serves the cron path, `/api/health` and representative `/api/public/*` GETs, with negative controls; `/api/health` and `/api/public/feed` answer 200 under `/api` in-process). No cycle is run by these tests.
+- Compatibility: no correction needed. The `web` service builds the current root Vite app with `npm run build` (`vite build`, verified); the root `server.ts` Express mock is not part of the Vercel deployment.
+- Verification (local): backend `pytest` 564 passed, 2 skipped (only the opt-in live GDELT/OpenAlex checks); config tests fail (6) when `vercel.json` is removed; root `npm ci`, `npm run typecheck`, `npm run build` exit 0.
+- Current blocker: production restoration is **not** claimed by this entry; it depends on the Vercel project deploying this commit with its existing environment (database URL, `CRON_SECRET`) and plan. The root app's own `/api/stats`-style calls target a mock contract that the FastAPI API only partly serves.
+- Owner action still required: confirm the Vercel deployment and production environment; enable branch protection on `main`.
+
 ## [DONE WITH LIMITATION] Command 1 reconstruction: restore the canonical line and enforce the CAPABILITY lifecycle
 
 - Agent: Grok (executor), owner-authorized direct commits to `origin/main`, 2026-09-30 NPT.
