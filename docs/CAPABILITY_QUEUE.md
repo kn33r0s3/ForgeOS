@@ -6,6 +6,17 @@ before implementation, and record verification before marking a claim DONE.
 Claims coordinate contributors; database uniqueness and idempotency remain the
 enforcement layer when claims overlap.
 
+## [IN PROGRESS] Unify button motion and preserve readable states
+
+- Agent: Copilot, current user-directed UI task
+- Scope: define distinct, accessible interaction patterns for the existing semantic button variants and align remaining native action buttons with those patterns. Preserve the diagonal wipe as Hami's primary signature; no route behavior, authorization, or action semantics change.
+- Repository evidence: `src/components/ui/button.tsx` already centralizes primary, secondary, ghost, and warning variants; `src/styles.css` defines the shared diagonal wipe. The home CTA required route-specific hover overrides after the shared text color lost to utility classes. Direct `<button>` controls also use one-off Tailwind hover styles, so current interaction feedback is inconsistent across the public and operations surfaces.
+- Owner action still required: none for this presentation-only change. Any real-world action behind a button remains subject to its existing authorization and approval flow.
+- Change boundary: no backend, data, evidence, external communication, spending, or automation changes. This removes inconsistent visual interpretation of existing controls; it does not remove any owner approval or action.
+- Current blocker: none known; keep reduced-motion, focus-visible, disabled, and contrast behavior intact.
+- Verification required: typecheck/lint, focused live-browser checks of each semantic variant, keyboard focus, reduced motion, mobile overflow, and console errors.
+- Next removable dependency: replace remaining per-route hover-only button styling with the shared semantic variants where this can be done without changing behavior.
+
 ## [DONE WITH LIMITATION] Make the current Hami app the documented local UI
 
 - Agent: Copilot, current user-directed task
