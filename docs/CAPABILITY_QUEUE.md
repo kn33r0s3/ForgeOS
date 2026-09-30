@@ -659,5 +659,5 @@ realized revenue.
 - **Existing capability reused:** existing `public/hami-home.jpg` brand asset and current homepage components/tokens; no generated art, new package, route, data, or external service.
 - **Why this is a connection rather than a new implementation:** the Hami image already existed; the root page simply was not displaying it.
 - **Remaining blockers:** this is local-only UI; the image is explicitly labeled illustrative and does not represent a provider, customer, or transaction.
-- **Verification:** pending frontend tests/typecheck/build and desktop/mobile browser render.
+- **Verification:** `npm test` → 70 passed; `npm run typecheck` and `npm run build` passed; ESLint and `git diff --check` passed. Local browser confirms `/hami-home.jpg` loads at 1376×768, the hero headline fits its 350px mobile container at a 390px viewport, the document has no horizontal overflow, and all three existing public Feed cards still render. No API/data behavior changed.
 - **Owner-dependency delta:** no owner action removed from a real transaction; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**. Next removable dependency remains owner-controlled publication/hosting, not UI work.
