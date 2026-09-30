@@ -76,15 +76,12 @@ def analyze_idea(
         db.commit()
         db.refresh(question)
 
-    research_planner.plan_tasks_for_question(db, question)
-    next_task = (
-        db.query(models.ResearchTask)
-        .filter_by(question_id=question.id, status="planned")
-        .order_by(models.ResearchTask.id.asc())
-        .first()
-    )
-    if next_task is not None:
-        background_tasks.add_task(execute_research_task_in_background, next_task.id)
+    reserved_task = research_planner.reserve_task_for_acknowledgement(db, question)
+    if reserved_task is not None and reserved_task.status == "planned":
+        background_tasks.add_task(
+            execute_research_task_in_background,
+            reserved_task.id,
+        )
     tasks = (
         db.query(models.ResearchTask)
         .filter(models.ResearchTask.question_id == question.id)
@@ -129,7 +126,9 @@ def analyze_idea(
     states = {task.status for task in tasks}
     has_pending_tasks = bool(states & {"planned", "running"})
     has_unresolved_tasks = bool(states & {"failed", "needs_research"})
-    research_plan = question.research_plan or research_planner.build_research_plan(db, question)
+    research_plan = question.research_plan or research_planner.acknowledgement_plan(
+        question, tasks
+    )
     if research_plan.get("status") == "research_complete":
         research_status = "research_complete"
     elif research_plan.get("status") == "research_terminal_unresolved":

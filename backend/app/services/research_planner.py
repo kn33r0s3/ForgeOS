@@ -686,8 +686,17 @@ def build_research_plan(db: Session, question: models.ResearchQuestion) -> dict[
     """Describe requirements and candidate capabilities without equating metadata to answers."""
     requirements: list[dict[str, Any]] = []
     qualifications = _openalex_qualifications(question.question)
+    capabilities_by_requirement: dict[str, list[dict[str, Any]]] = {}
+
+    def ranked_capabilities(requirement_id: str) -> list[dict[str, Any]]:
+        if requirement_id not in capabilities_by_requirement:
+            capabilities_by_requirement[requirement_id] = (
+                capability_discovery.ranked_source_capabilities(db, requirement_id)
+            )
+        return capabilities_by_requirement[requirement_id]
+
     for spec in _requirement_specs(question.question):
-        capabilities = capability_discovery.ranked_source_capabilities(db, spec["id"])
+        capabilities = ranked_capabilities(spec["id"])
         gap = None
         if not capabilities:
             gap = capability_discovery.ensure_capability_gap(db, question, spec)
@@ -721,9 +730,7 @@ def build_research_plan(db: Session, question: models.ResearchQuestion) -> dict[
                     "cost": capability["cost"],
                     "required_evidence_type": "bibliographic_metadata_lead_only",
                 }
-                for capability in capability_discovery.ranked_source_capabilities(
-                    db, "bibliographic_discovery"
-                )
+                for capability in ranked_capabilities("bibliographic_discovery")
             ]
         requirements.append(
             {
@@ -1708,6 +1715,8 @@ def _refresh_plan_from_tasks(
     db: Session,
     question: models.ResearchQuestion,
     plan: dict[str, Any],
+    *,
+    capabilities_are_current: bool = False,
 ) -> None:
     task_count = db.query(models.ResearchTask).filter_by(question_id=question.id).count()
     active = False
@@ -1720,8 +1729,13 @@ def _refresh_plan_from_tasks(
         evidence_requirement_id = requirement.get(
             "evidence_requirement_id", requirement["id"]
         )
-        active_capabilities = capability_discovery.ranked_source_capabilities(
-            db, capability_requirement_id
+        active_capabilities = (
+            requirement.get("candidate_capabilities", [])
+            if capabilities_are_current
+            and capability_requirement_id == requirement["id"]
+            else capability_discovery.ranked_source_capabilities(
+                db, capability_requirement_id
+            )
         )
         gap = (
             db.get(models.ForgeCapability, requirement.get("capability_gap_id"))
@@ -2164,12 +2178,20 @@ def _refresh_plan_from_tasks(
 
 def plan_tasks_for_question(db: Session, question: models.ResearchQuestion) -> list[models.ResearchTask]:
     """Persist idempotent tasks for resolvable requirements and explicit terminal gaps."""
-    plan = _question_plan(question) or build_research_plan(db, question)
+    plan = _question_plan(question)
+    built_now = not plan
+    if built_now:
+        plan = build_research_plan(db, question)
     created_before = {
         task.id
         for task in db.query(models.ResearchTask).filter_by(question_id=question.id).all()
     }
-    _refresh_plan_from_tasks(db, question, plan)
+    _refresh_plan_from_tasks(
+        db,
+        question,
+        plan,
+        capabilities_are_current=built_now,
+    )
     db.commit()
     return [
         task
@@ -2179,6 +2201,91 @@ def plan_tasks_for_question(db: Session, question: models.ResearchQuestion) -> l
         .all()
         if task.id not in created_before
     ]
+
+
+def reserve_task_for_acknowledgement(
+    db: Session,
+    question: models.ResearchQuestion,
+) -> models.ResearchTask | None:
+    """Persist or reuse one cleared-source task without building a full plan."""
+    existing_tasks = (
+        db.query(models.ResearchTask)
+        .filter_by(question_id=question.id)
+        .order_by(models.ResearchTask.id.asc())
+        .all()
+    )
+    for status in ("planned", "running"):
+        existing = next((task for task in existing_tasks if task.status == status), None)
+        if existing is not None:
+            return existing
+    if existing_tasks:
+        return existing_tasks[-1]
+
+    for requirement in _requirement_specs(question.question):
+        capabilities = capability_discovery.ranked_source_capabilities(
+            db, requirement["id"]
+        )
+        if not capabilities:
+            continue
+
+        requirement = {
+            **requirement,
+            "original_research_question": question.question,
+            "required_evidence_type": requirement["evidence_kind"],
+            "capable_sources": [
+                {
+                    **capability,
+                    "required_evidence_type": requirement["evidence_kind"],
+                }
+                for capability in capabilities
+            ],
+        }
+        selected = requirement["capable_sources"][0]
+        task = _create_task(
+            db,
+            question,
+            requirement,
+            source=selected["source"],
+            query=requirement["question"],
+        )
+        question.status = "planned"
+        db.commit()
+        db.refresh(task)
+        return task
+    return None
+
+
+def acknowledgement_plan(
+    question: models.ResearchQuestion,
+    tasks: list[models.ResearchTask],
+) -> dict[str, Any]:
+    """Return only persisted queue facts while full planning remains pending."""
+    active = any(task.status in {"planned", "running"} for task in tasks)
+    return {
+        "question_id": question.id,
+        "question": question.question,
+        "status": "research_in_progress" if active else "research_terminal_unresolved",
+        "planning_status": "queued" if active else "not_started",
+        "requirements": [],
+        "known_observations": [],
+        "assumptions": [
+            "The premise and wording supplied by the requester are not external evidence.",
+            "No customer, market demand, price, revenue, transaction, or human response is inferred.",
+        ],
+        "unknowns": list(_UNCERTAINTIES),
+        "candidate_sources": [],
+        "stopping_conditions": [
+            "Full source-capability and requirement planning has not run yet."
+        ],
+        "budget": {
+            "max_tasks": MAX_TASKS_PER_QUESTION,
+            "tasks_created": len(tasks),
+            "remaining_tasks": max(
+                0, MAX_TASKS_PER_QUESTION - len(tasks)
+            ),
+            "max_research_depth": MAX_RESEARCH_DEPTH,
+        },
+    }
 
 
 def plan_tasks_for_open_questions(db: Session, limit: int = 20) -> list[models.ResearchTask]:

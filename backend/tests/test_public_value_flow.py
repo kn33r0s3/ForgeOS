@@ -8,11 +8,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 
 from app import models, schemas
-from app.api.analyze import analyze_idea
+from app.api.analyze import analyze_idea, get_analyze_status
 from app.database import Base, get_db
 from app.main import app
 from app.migrations import run_migrations
-from app.services import collector_runner, research_task_engine
+from app.services import collector_runner, research_planner, research_task_engine
 from app.services.collectors.base import SourceCollector
 
 
@@ -105,13 +105,23 @@ def test_api_root_uses_hami_product_identity(client_with_db):
 
 def test_analyze_acknowledges_before_the_collector_background_task(db, monkeypatch):
     collector_calls = []
+    planning_calls = []
+    build_research_plan = research_planner.build_research_plan
 
     def record_background_collection(database, task):
         collector_calls.append(task.id)
 
+    def record_full_planning(database, question):
+        planning_calls.append(question.id)
+        return build_research_plan(database, question)
+
     monkeypatch.setattr(
         "app.api.analyze.collector_runner.execute_task",
         record_background_collection,
+    )
+    monkeypatch.setattr(
+        "app.api.analyze.research_planner.build_research_plan",
+        record_full_planning,
     )
     background_tasks = BackgroundTasks()
     started_at = time.perf_counter()
@@ -132,11 +142,45 @@ def test_analyze_acknowledges_before_the_collector_background_task(db, monkeypat
     assert response.evidence_count == 0
     assert response.research_sources == []
     assert collector_calls == []
+    assert planning_calls == []
     assert len(background_tasks.tasks) == 1
+    assert db.get(models.Signal, response.signal_id) is not None
+    assert db.get(models.ResearchQuestion, response.research_question_id) is not None
+    assert response.research_task_ids
+    assert all(
+        db.get(models.ResearchTask, task_id).status == "planned"
+        for task_id in response.research_task_ids
+    )
+    status = get_analyze_status(response.research_question_id, db)
+    assert status.phase == "queued"
+    assert status.research_status == "research_started"
 
     asyncio.run(background_tasks())
 
     assert collector_calls == [background_tasks.tasks[0].args[0]]
+    assert planning_calls == [response.research_question_id]
+
+
+def test_analyze_reuses_the_same_durable_task_for_a_duplicate_request(db):
+    payload = schemas.AnalyzeRequest(
+        idea="What independently verified evidence could clarify a recurring local need?"
+    )
+    first_handoff = BackgroundTasks()
+    second_handoff = BackgroundTasks()
+
+    first = analyze_idea(payload, first_handoff, db)
+    second = analyze_idea(payload, second_handoff, db)
+
+    assert first.research_question_id == second.research_question_id
+    assert first.research_task_ids == second.research_task_ids
+    assert len(first_handoff.tasks) == len(second_handoff.tasks) == 1
+    assert first_handoff.tasks[0].args == second_handoff.tasks[0].args
+    assert (
+        db.query(models.ResearchTask)
+        .filter_by(question_id=first.research_question_id)
+        .count()
+        == 1
+    )
 
 
 @pytest.mark.parametrize(
@@ -173,87 +217,56 @@ def test_research_status_distinguishes_queued_from_running_work(
 
 
 def test_analyze_does_not_report_completed_for_mixed_empty_task_results(
-    client_with_db, db, monkeypatch
+    db,
 ):
-    def plan_with_mixed_results(database, question):
-        completed = research_task_engine.create_task(
-            database,
-            question_id=question.id,
-            source="crossref",
-            query="completed but empty",
-            objective="Check one subquestion.",
-        )
-        failed = research_task_engine.create_task(
-            database,
-            question_id=question.id,
-            source="crossref",
-            query="failed source",
-            objective="Check another subquestion.",
-        )
-        completed.status = "completed"
-        completed.evidence_ids = ""
-        failed.status = "failed"
-        database.commit()
-        return [completed, failed]
-
-    monkeypatch.setattr(
-        "app.api.analyze.research_planner.plan_tasks_for_question",
-        plan_with_mixed_results,
-    )
-    monkeypatch.setattr(
-        "app.api.analyze.collector_runner.run_pending_tasks",
-        lambda database, limit: [
-            {"status": "completed", "evidence_found": 0},
-            {"status": "failed", "reason": "source unavailable"},
-        ],
+    response = analyze_idea(
+        schemas.AnalyzeRequest(
+            idea="What independent evidence could confirm or disconfirm this proposed service need?"
+        ),
+        BackgroundTasks(),
+        db,
     )
 
-    response = client_with_db.post(
-        "/analyze",
-        json={"idea": "Does a public service reduce crop storage losses?"},
+    task = db.get(models.ResearchTask, response.research_task_ids[0])
+    task.status = "completed"
+    task.evidence_ids = ""
+    failed = research_task_engine.create_task(
+        db,
+        question_id=response.research_question_id,
+        source="crossref",
+        query="failed source",
+        objective="Check another subquestion.",
     )
+    failed.status = "failed"
+    db.commit()
 
-    assert response.status_code == 200, response.text
-    payload = response.json()
-    assert payload["evidence_count"] == 0
-    assert payload["research_status"] == "research_failed"
+    progress = get_analyze_status(response.research_question_id, db)
+    assert response.research_status == "research_started"
+    assert progress.evidence_count == 0
+    assert progress.research_status == "research_failed"
 
 
 def test_analyze_requires_persisted_evidence_before_source_collection_can_complete(
-    client_with_db, db, monkeypatch
+    client_with_db, db
 ):
-    def plan_with_stale_evidence_reference(database, question):
-        task = research_task_engine.create_task(
-            database,
-            question_id=question.id,
-            source="crossref",
-            query="completed task with a stale evidence reference",
-            objective="Check that its evidence still exists.",
-        )
-        task.status = "completed"
-        task.evidence_ids = "999999"
-        database.commit()
-        return [task]
-
-    monkeypatch.setattr(
-        "app.api.analyze.research_planner.plan_tasks_for_question",
-        plan_with_stale_evidence_reference,
-    )
-    monkeypatch.setattr(
-        "app.api.analyze.collector_runner.run_pending_tasks",
-        lambda database, limit: [],
+    response = analyze_idea(
+        schemas.AnalyzeRequest(
+            idea="Could an unfamiliar question reveal a recurring unmet need?"
+        ),
+        BackgroundTasks(),
+        db,
     )
 
-    response = client_with_db.post(
-        "/analyze",
-        json={"idea": "Could an unfamiliar question reveal a recurring unmet need?"},
-    )
+    assert "No external research evidence" in response.unknowns[0]
+    task = db.get(models.ResearchTask, response.research_task_ids[0])
+    task.status = "completed"
+    task.evidence_ids = "999999"
+    db.commit()
 
-    assert response.status_code == 200, response.text
-    payload = response.json()
-    assert payload["research_status"] == "research_needs_evidence"
-    assert payload["evidence_count"] == 0
-    assert "No external research evidence" in payload["unknowns"][0]
+    progress = client_with_db.get(response.research_status_url)
+    assert progress.status_code == 200, progress.text
+    assert progress.json()["research_status"] == "research_needs_evidence"
+    assert progress.json()["evidence_count"] == 0
 
 
 def test_public_provider_and_service_visibility_requires_verified_status(client_with_db, db):
