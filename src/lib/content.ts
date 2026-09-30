@@ -7,15 +7,14 @@ export const SITE = {
   url: "",
   email: "",
   location: "Starting in Nepal",
-  tagline: "Discover what matters. Understand it. Act on it.",
+  tagline: "A real-world System that keeps finding what is possible for you.",
   description:
     "Hami connects observations, research, capabilities, decisions, and outcomes in one evidence-led system. Nepal is the initial focus; global reach remains a direction, not a verified deployment. Public records do not imply verified demand, execution, or outcomes.",
 } as const;
 
 export const NAV = [
-  { label: "Home", to: "/" },
-  { label: "Work board", to: "/domain" },
-  { label: "Network", to: "/feed" },
+  { label: "My System", to: "/" },
+  { label: "World", to: "/feed" },
   { label: "Providers", to: "/providers" },
   { label: "Research", to: "/discoveries" },
 ] as const;
