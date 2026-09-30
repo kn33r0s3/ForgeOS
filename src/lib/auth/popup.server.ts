@@ -5,9 +5,9 @@
  * in a top-level popup (first-party cookies). This handler is the ENTIRE popup
  * document — no React shell:
  *
- *   Phase 1 (`?providerId=…`): start OAuth server-side and 302 straight to the
- *     broker / upstream login page. The popup never paints the app.
- *   Phase 2 (`?done=1`): after the broker round-trip, emit a tiny HTML page that
+ *   Phase 1 (`?providerId=google`): start OAuth server-side and 302 straight to
+ *     Google's authorization page. The popup never paints the app.
+ *   Phase 2 (`?done=1`): after the OAuth round-trip, emit a tiny HTML page that
  *     posts the session token to the opener and closes. No SPA hydrate, no
  *     server-fn round-trip.
  *
@@ -20,7 +20,7 @@ import { auth, SESSION_TOKEN_COOKIE } from "./server";
 
 /** Message shape the popup posts to the opener (must match `client.ts`). */
 type PopupMessage = {
-  source: "grok-auth-popup";
+  source: "hami-auth-popup";
   token: string | null;
   error?: string;
 };
@@ -37,7 +37,7 @@ export async function handleAuthPopupRequest(request: Request): Promise<Response
     const errored = url.searchParams.has("error");
     const token = errored ? null : readCookie(request, SESSION_TOKEN_COOKIE);
     const message: PopupMessage = {
-      source: "grok-auth-popup",
+      source: "hami-auth-popup",
       token,
       ...(errored ? { error: url.searchParams.get("error") ?? "sign_in_failed" } : {}),
     };
@@ -52,21 +52,22 @@ export async function handleAuthPopupRequest(request: Request): Promise<Response
   }
 
   const providerId = url.searchParams.get("providerId")?.trim();
-  if (!providerId) {
-    return new Response("Missing providerId", {
+  if (providerId !== "google") {
+    return new Response("Unsupported identity provider", {
       status: 400,
       headers: { "content-type": "text/plain; charset=utf-8" },
     });
   }
-
+  const requestSignUp = url.searchParams.get("requestSignUp") === "1";
   // Stay first-party for the callback so the session cookie lands in THIS popup.
   const back = `${url.origin}/auth/popup?done=1`;
   try {
-    const apiRes = await auth.api.signInWithOAuth2({
+    const apiRes = await auth.api.signInSocial({
       body: {
-        providerId,
+        provider: providerId,
         callbackURL: back,
         errorCallbackURL: `${back}&error=1`,
+        requestSignUp,
       },
       // Forward the preview host so Better Auth derives the correct baseURL /
       // redirect_uri for the dynamic `*.grok-sandbox.com` origin.
@@ -77,7 +78,7 @@ export async function handleAuthPopupRequest(request: Request): Promise<Response
     if (!apiRes.ok) {
       const detail = await apiRes.text().catch(() => "");
       return completionResponse({
-        source: "grok-auth-popup",
+        source: "hami-auth-popup",
         token: null,
         error: detail || `oauth_init_failed_${apiRes.status}`,
       });
@@ -89,14 +90,13 @@ export async function handleAuthPopupRequest(request: Request): Promise<Response
     const location = body?.url;
     if (!location) {
       return completionResponse({
-        source: "grok-auth-popup",
+        source: "hami-auth-popup",
         token: null,
         error: "oauth_init_missing_url",
       });
     }
 
-    // 302 to the broker (which headlessly forwards to Google/X). Forward any
-    // Set-Cookie (OAuth state / PKCE) so the callback can complete in this popup.
+    // Forward OAuth state / PKCE cookies so Google's callback can complete here.
     const headers = new Headers({ location, "cache-control": "no-store" });
     for (const cookie of apiRes.headers.getSetCookie()) {
       headers.append("set-cookie", cookie);
@@ -105,7 +105,7 @@ export async function handleAuthPopupRequest(request: Request): Promise<Response
   } catch (err) {
     const message = err instanceof Error ? err.message : "oauth_init_threw";
     return completionResponse({
-      source: "grok-auth-popup",
+      source: "hami-auth-popup",
       token: null,
       error: message,
     });
@@ -141,11 +141,11 @@ function completionHtml(message: PopupMessage): string {
 </head>
 <body>
 <main><p>Signing you in…</p></main>
-<script type="application/json" id="grok-auth-popup-msg">${payload}</script>
+<script type="application/json" id="hami-auth-popup-msg">${payload}</script>
 <script>
 (function () {
-  var el = document.getElementById("grok-auth-popup-msg");
-  var msg = { source: "grok-auth-popup", token: null };
+  var el = document.getElementById("hami-auth-popup-msg");
+  var msg = { source: "hami-auth-popup", token: null };
   try { if (el && el.textContent) msg = JSON.parse(el.textContent); } catch (e) {}
   try {
     if (window.opener) window.opener.postMessage(msg, window.location.origin);

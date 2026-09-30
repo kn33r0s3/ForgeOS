@@ -40,12 +40,12 @@ and `auth` skills.
 
 ## Auth wiring (only once §0.5 says accounts)
 
-- The app runs its **own** Better Auth at `/api/auth/*` and federates to the
-  shared Grok auth broker for **Google** and **X**. The only other supported
-  method is this app's own **email/password** (local Better Auth, off by
-  default — enable only via `src/lib/auth/email-password.ts`; **never rewrite**
-  `src/lib/auth/server.ts`). No other social providers, magic links, passkeys,
-  or OTP/phone.
+- The app runs its **own** Better Auth at `/api/auth/*`. Hami offers direct
+  Google OAuth (only with server-side `GOOGLE_CLIENT_ID` and
+  `GOOGLE_CLIENT_SECRET`) and this app's own **email/password**. Never expose X
+  or route Google through a shared identity broker. New accounts must pass a
+  server-side 18+ check and accept the current terms; DOB is not stored. If no
+  approved terms document/version is configured, registration stays closed.
 - Two routes: `src/routes/api/auth/$.ts` (mounts Better Auth at `/api/auth/*`)
   and `src/routes/login.tsx` (provider buttons via `signIn(providerId)`). Copy
   the snippets from the `auth` skill.
@@ -54,9 +54,10 @@ and `auth` skills.
   the rule about not adding a React route there.
 - Read the user with `useCurrentUser()` (`@/lib/auth/use-current-user`) and gate
   UI with `SignedIn` / `SignedOut` / `UserButton` (`@/lib/auth/gates`).
-- Sign-in is **real even in the live preview** — it federates via a baked shared
-  preview client — so a visitor is signed out until they sign in. Build real
-  sign-in; do **NOT** scaffold demo/mock/hardcoded users.
+- Sign-in is always real; do **NOT** scaffold demo/mock/hardcoded users. Direct
+  Google OAuth is unavailable until credentials and the exact callback URI are
+  configured. Local email/password uses PGLite; deployment uses the configured
+  Postgres database.
 - **Authorize every server function** with `authMiddleware`
   (`@/lib/auth/middleware`): `createServerFn().middleware([authMiddleware])`
   hands the handler a **verified** `context.userId` (resolved from the
@@ -75,11 +76,12 @@ flag (exit 0 agree, 1 diverged, 2 could not observe).
 
 ## Env
 
-On deploy the platform injects `DATABASE_URL` + per-app auth creds; live preview
-needs neither (baked preview client, PGLite fallback). Deployed behind the gate,
+On deploy configure `DATABASE_URL`, `BETTER_AUTH_SECRET`, and direct Google
+OAuth credentials on the server. Local development uses PGLite when
+`DATABASE_URL` is unset. Deployed behind the gate,
 signed-in Grok viewers get the app session automatically from `x-grok-identity`
-(see the `auth` skill — `references/grok-identity.md`); the broker federation
-covers anonymous viewers and no-gate contexts.
+(see the `auth` skill — `references/grok-identity.md`). The gate session is a
+platform-provided identity path, not a user-facing Google/X login method.
 
 ## HARD RULE — connector / AppData API (backend only)
 

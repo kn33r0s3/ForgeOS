@@ -1,6 +1,6 @@
 import { useState, useSyncExternalStore, type ReactNode } from "react";
-import { Navigate } from "@tanstack/react-router";
-import { GROK_PROVIDERS, authEnabled, signIn, signOut } from "./client";
+import { Link, Navigate } from "@tanstack/react-router";
+import { authEnabled, signOut } from "./client";
 import { hasGateSessionMarker } from "./gate-session-marker";
 import { resolveSignInGateState } from "./sign-in-gate";
 import { useCurrentUser, useCurrentUserState } from "./use-current-user";
@@ -66,16 +66,9 @@ export function SignInGate({
 export function SignInButtons() {
   return (
     <div className="flex w-full max-w-sm flex-col gap-2">
-      {GROK_PROVIDERS.map((p) => (
-        <button
-          key={p.providerId}
-          type="button"
-          onClick={() => signIn(p.providerId, { callbackURL: "/" })}
-          className="btn-secondary w-full cursor-pointer rounded-md border border-neutral-300 bg-white px-4 py-2 text-neutral-950 hover:border-accent focus-visible:border-accent dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100"
-        >
-          Continue with {p.label}
-        </button>
-      ))}
+      <Link to="/login" className="btn-secondary w-full text-center">
+        Sign in to Hami
+      </Link>
     </div>
   );
 }

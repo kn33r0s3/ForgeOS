@@ -7,21 +7,21 @@ description: >
   "users", "authentication", "protected", "who is logged in", "current user",
   "per-user".
 metadata:
-  short-description: "Auth via the Grok broker (Google, X) or local email/password — no other methods supported"
+  short-description: "Hami-owned Better Auth with direct Google OAuth and email/password"
 user-invocable: false
 ---
 
 # Auth
 
 This app runs its **own** [Better Auth](https://better-auth.com) at
-`/api/auth/*`, federating to the shared **Grok auth broker** (`auth.grok.me`)
-via the `genericOAuth` plugin. This template wires **Google** and **X**.
+`/api/auth/*`. Hami supports direct Google OAuth (only when server credentials
+are configured) and email/password. Do not route Google through a shared
+identity broker and do not expose X/Twitter as a Hami login method.
 
-**Supported sign-in methods — use ONLY these three; nothing else is supported:
-Google, X, and email/password.** No other social/OAuth provider (GitHub, Apple,
-Discord, …), no magic links, passkeys, OTP, phone/SMS, or anonymous sign-in. Do
-not add entries to `GROK_PROVIDERS`. Method detail and the email/password switch
-(edit **only** `src/lib/auth/email-password.ts`): `references/sign-in-methods.md`.
+**Supported sign-in methods: direct Google and email/password only.** No other
+social/OAuth provider (including X), magic links, passkeys, OTP, phone/SMS, or
+anonymous sign-in. `src/lib/auth/providers.ts` is the user-facing provider
+allowlist. Method and environment detail: `references/sign-in-methods.md`.
 **Exception — gate viewers are signed in already; NEVER render login/re-auth
 buttons for them. Connector / app-data apps: ONLY gate "Continue with Grok",
 no Google/X buttons**: `references/grok-identity.md`.
@@ -30,10 +30,12 @@ no Google/X buttons**: `references/grok-identity.md`.
 `{"VITE_AUTH_ENABLED": "false"}`, so only add accounts when the ask calls for
 them (AGENTS.md §0.5). Switching it on is "Turning sign-in on" below.
 
-**Once on, sign-in is REAL — including in the sandbox live preview.** Do **NOT**
-scaffold demo/mock/hardcoded users. Preview: popup + baked preview client;
-deployed: per-app client + `DATABASE_URL` + zero-click gate sign-in
-(`references/prewired-and-env.md`).
+**Sign-in is real, never mocked.** Direct Google requires the server-only
+`GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`; dynamic preview URLs may not be
+registered OAuth callbacks. Email/password uses the existing database. New
+accounts require a server-enforced 18+ eligibility check and current terms
+acceptance; DOB is not persisted. If no approved terms document is configured,
+account creation must remain disabled.
 
 **While OFF** (`VITE_AUTH_ENABLED=false`) a **dev user** is returned so a
 non-auth app renders without a signed-in visitor — dev and preview only.
@@ -41,10 +43,9 @@ Deployed, the flag is the platform's (always `"true"`), so `requireUserId`
 rejects every visitor — auth-off apps use neither it nor `authMiddleware`.
 
 Everything is **preinstalled and pre-wired in `src/lib/auth/`** — do not
-`npm install` anything; `better-auth` is the only auth package (never
-`@neondatabase/*`, `@stackframe/*`, or `@clerk/*`). **Do not edit or rewrite any
-file under `src/lib/auth/`** — `server.ts` least of all — except
-`email-password.ts` for its one flag. Per-file map:
+`npm install` anything; `better-auth` is the existing auth package. Make
+minimal changes to the existing auth wiring only when the task explicitly asks
+for them. Per-file map:
 `references/prewired-and-env.md`.
 
 **`/auth/popup` is already handled by the template Vite plugin**
@@ -75,7 +76,7 @@ Do all of this — the routes alone render the disabled branch:
    database that already has it will not re-run it.
 3. **Routes:** add `src/routes/api/auth/$.ts` + `src/routes/login.tsx` — copy
    both from `references/wiring.md` (the catch-all API route is what makes
-   `/api/auth/*` and the broker callback work).
+   `/api/auth/*` and the provider callback work).
 4. **Sign out:** a login with no way out is not done — render `<UserButton />`
    from `@/lib/auth/gates` (wires `signOut()`; hides sign-out for gate sessions).
 5. **Existing data:** wrap the app's server functions in `authMiddleware` (an
@@ -86,7 +87,7 @@ Do all of this — the routes alone render the disabled branch:
 ## Building on it once it's on
 
 - **Sign in / out:** `signIn(providerId)` and `signOut()` from
-  `@/lib/auth/client`; `GROK_PROVIDERS` renders the buttons. The popup,
+  `@/lib/auth/client`; `AUTH_PROVIDERS` is the client-safe provider list. The popup,
   bearer-token hand-off, and request attachment are internal — leave them alone.
   Prefer `<UserButton />` (it handles the pending and failure states); `signOut()`
   rejects when deployed if the server never confirms — catch it. Never
@@ -103,8 +104,6 @@ Do all of this — the routes alone render the disabled branch:
   the query. Keep `user_id` columns `TEXT`; never trust a client-supplied user id;
   signed out, the middleware throws `UnauthorizedError` (401). Code and
   disabled-mode semantics: `references/per-user-data.md`.
-- **Security model:** headless broker, `__Host-` cookies + `trustedOrigins`, and
-  Fetch-Metadata sibling isolation are already wired — never weaken them to make
-  an error go away (`references/sign-in-methods.md` covers the model and the
-  "Invalid origin" fix).
-
+- **Security model:** direct-provider OAuth, `__Host-` cookies, `trustedOrigins`,
+  server-side signup eligibility, and Fetch-Metadata sibling isolation must
+  remain enforced (`references/sign-in-methods.md` covers the boundary).

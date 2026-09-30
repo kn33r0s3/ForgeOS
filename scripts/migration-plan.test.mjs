@@ -63,6 +63,7 @@ test("the auth schema is copied into the applied migrations", () => {
     [
       { name: "0001_auth.sql", path: "0001_auth.sql" },
       { name: "0002_user_personal_context.sql", path: "0002_user_personal_context.sql" },
+      { name: "0003_auth_terms_consent.sql", path: "0003_auth_terms_consent.sql" },
     ],
   );
   assert.ok(readdirSync(join(migrationsDir, "auth")).includes("0001_auth.sql"));

@@ -6,6 +6,29 @@ before implementation, and record verification before marking a claim DONE.
 Claims coordinate contributors; database uniqueness and idempotency remain the
 enforcement layer when claims overlap.
 
+## [IN PROGRESS] Harden local account creation and provider boundary
+
+- Owner action still required: supply direct Google OAuth credentials and an
+  approved Hami terms document/version before enabling those signup paths. The
+  owner must also arrange rotation of the preview OAuth secret previously
+  committed to source history; this work will not rotate it.
+- Action removed by this change: relying on frontend-only age checks or on a
+  shared third-party broker for a provider labeled Google. New account
+  creation will require a server-consumed age/consent permit, and no DOB will
+  be retained.
+- Current blocker and verification: direct Google credentials are absent from
+  the local process environment; repository inspection found no Hami terms
+  document. The old shared preview secret is present in Git history. Google
+  will stay unavailable unless server-only credentials are configured, and
+  registration will stay closed until approved terms are configured. Tests and
+  local browser checks are pending.
+- Next removable dependency: owner-provided Google client credentials with an
+  exact Hami callback registered at Google, plus the approved legal terms and
+  consent version; owner-controlled secret rotation remains outstanding.
+- Evidence boundary: implementation and tests use `TEST` state only.
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE** because
+  there are no verified real transactions.
+
 ## [DONE WITH LIMITATION] Keep personal context private to its account
 
 - Owner action still required: a person chooses to create/sign in to an account

@@ -1,7 +1,6 @@
-import { genericOAuthClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 import { runPreSignInSignOut, runSignOut } from "../../../scripts/sign-out-plan.mjs";
-import { GROK_PROVIDERS } from "./providers";
+import { AUTH_PROVIDERS, type AuthProviderId } from "./providers";
 
 /**
  * Better Auth client for this React SPA (browser-side).
@@ -18,7 +17,6 @@ import { GROK_PROVIDERS } from "./providers";
  * the visitor stays signed in.
  */
 export const authClient = createAuthClient({
-  plugins: [genericOAuthClient()],
   fetchOptions: {
     onRequest(ctx) {
       const token = getBearerToken();
@@ -30,15 +28,13 @@ export const authClient = createAuthClient({
 
 /**
  * True when sign-in UI should be shown — i.e. whenever `VITE_AUTH_ENABLED` is
- * not `"false"`. The shipped template sets it to `"false"`
- * (`.grok/app-env.json`), which selects the dev user (see `use-current-user`);
- * with the key removed, sign-in is real in preview (baked preview client) and
- * when deployed (injected per-app client).
+ * not `"false"`. Provider availability is resolved separately on the server;
+ * Google credentials are never exposed to the browser.
  */
 export const authEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false";
 
-/** The upstream providers to render sign-in buttons for. */
-export { GROK_PROVIDERS };
+/** Direct identity providers supported by Hami. */
+export { AUTH_PROVIDERS };
 
 // ── Live-preview bearer token ────────────────────────────────────────────────
 // The embedded preview iframe has partitioned cookies, so we keep the session's
@@ -68,9 +64,9 @@ function setBearerToken(token: string | null): void {
 }
 
 /**
- * The sandbox live preview runs this app inside an iframe on a `*.grok-sandbox.com`
- * host, where a full-page redirect to the broker can't work — so sign-in uses a
- * popup there and a normal redirect everywhere else.
+ * The sandbox live preview runs this app inside an iframe on a
+ * `*.grok-sandbox.com` host, where a full-page redirect can't work — so sign-in
+ * uses a popup there and a normal redirect everywhere else.
  */
 function inLivePreview(): boolean {
   return (
@@ -80,25 +76,27 @@ function inLivePreview(): boolean {
 }
 
 /** Message the popup posts back to the opener once sign-in completes. */
-type PopupMessage = { source: "grok-auth-popup"; token: string | null; error?: string };
+type PopupMessage = { source: "hami-auth-popup"; token: string | null; error?: string };
 
 /**
- * Start sign-in with one upstream provider (`providerId` from `GROK_PROVIDERS`),
- * federating through the Grok auth broker.
+ * Start sign-in with a direct identity provider.
  *
  * - **Live preview** (`*.grok-sandbox.com` iframe): opens a POPUP to
  *   `/auth/popup`, served by the template Vite plugin (see `vite.config.ts` +
- *   `popup.server.ts`) — 302s to the broker/upstream login (no app chrome) and,
- *   on return, posts the session bearer token back. We store it and refresh the
- *   session; no top-level navigation of the iframe to the broker.
- * - **Deployed** (and local non-iframe): a normal full-page redirect into the broker.
+ *   `popup.server.ts`) — 302s to the provider (no app chrome) and, on return,
+ *   posts the session bearer token back. We store it and refresh the session.
+ * - **Deployed** (and local non-iframe): a normal full-page redirect to Google.
  *
  * Either way it clears any existing local session FIRST so switching providers
  * actually switches identity.
  */
 export async function signIn(
-  providerId: string,
-  opts: { callbackURL?: string; errorCallbackURL?: string } = {},
+  providerId: AuthProviderId,
+  opts: {
+    callbackURL?: string;
+    errorCallbackURL?: string;
+    requestSignUp?: boolean;
+  } = {},
 ): Promise<void> {
   const callbackURL = opts.callbackURL ?? "/";
   const errorCallbackURL = opts.errorCallbackURL ?? "/";
@@ -106,7 +104,9 @@ export async function signIn(
   // Open the popup SYNCHRONOUSLY on the user gesture — before any await
   // (including signOut). Awaiting first drops user-gesture privilege in some
   // browsers when the opener is a cross-origin live-preview iframe.
-  const popup = inLivePreview() ? openSignInPopup(providerId) : null;
+  const popup = inLivePreview()
+    ? openSignInPopup(providerId, opts.requestSignUp === true)
+    : null;
 
   // Clear any prior session so switching providers actually switches identity.
   // Bounded because the popup is already open — a request that never settles
@@ -143,10 +143,11 @@ export async function signIn(
     return;
   }
 
-  const { data, error } = await authClient.signIn.oauth2({
-    providerId,
+  const { data, error } = await authClient.signIn.social({
+    provider: providerId,
     callbackURL,
     errorCallbackURL,
+    requestSignUp: opts.requestSignUp,
   });
   if (error) throw new Error(error.message ?? "Sign-in failed");
   if (data?.url) window.location.href = data.url;
@@ -161,9 +162,11 @@ export async function signIn(
  * iframe the about:blank dance often fails on the first click and the window
  * ends up showing the app shell.
  */
-function openSignInPopup(providerId: string): Window | null {
+function openSignInPopup(providerId: AuthProviderId, requestSignUp: boolean): Window | null {
   const origin = window.location.origin;
-  const url = `${origin}/auth/popup?providerId=${encodeURIComponent(providerId)}`;
+  const url = new URL("/auth/popup", origin);
+  url.searchParams.set("providerId", providerId);
+  if (requestSignUp) url.searchParams.set("requestSignUp", "1");
   // Unique name per attempt so a prior attempt stuck on the SPA is not reused.
   const name = `grok-signin-${Date.now()}`;
   return window.open(url, name, "popup,width=500,height=650");
@@ -187,7 +190,7 @@ function waitForPopupToken(popup: Window): Promise<string | null> {
     const onMessage = (event: MessageEvent) => {
       if (event.origin !== origin) return;
       const data = event.data as PopupMessage | undefined;
-      if (!data || data.source !== "grok-auth-popup") return;
+      if (!data || data.source !== "hami-auth-popup") return;
       settle(data.token ?? null);
     };
     // Fallback when the user dismisses the popup. Grace period lets the

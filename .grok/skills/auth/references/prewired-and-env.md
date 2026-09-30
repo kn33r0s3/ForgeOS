@@ -1,54 +1,55 @@
-# What's pre-wired, and the env vars
+# What's pre-wired, and the environment variables
 
 ## `src/lib/auth/`
 
 | File | Use it for |
 |---|---|
-| `client.ts` | Browser client. `signIn(providerId)`, `signOut()`, `authEnabled`, `GROK_PROVIDERS`. |
-| `server.ts` | The Better Auth instance (server-only). **Do not edit or rewrite.** Import only from `/api/auth/$`. |
-| `email-password.ts` | **Only** place to enable local email/password (`emailAndPasswordEnabled = true`). |
-| `popup.server.ts` | Live-preview popup handler (server-only). Already wired by the Vite plugin — do not create a route for it. |
-| `providers.ts` | `GROK_PROVIDERS` — the fixed broker upstream list (Google and X only; don't add others). |
-| `use-current-user.ts` | `useCurrentUser()` / `useCurrentUserState()` React hooks. |
-| `gates.tsx` | `SignedIn`, `SignedOut`, `RedirectToSignIn`, `UserButton`. |
+| `client.ts` | Browser Better Auth client, direct sign-in popup, bearer handoff, and sign-out. |
+| `server.ts` | Server-only Better Auth instance, direct Google provider, and account-create hook. |
+| `email-password.ts` | Existing local email/password switch. |
+| `providers.ts` | Client-safe Hami provider allowlist; currently Google only. |
+| `availability.ts` | Server-derived provider and terms availability; never returns secrets. |
+| `signup-gate.server.ts` | Issues a short-lived one-time permit after DOB and terms checks. |
+| `age-policy.ts` | UTC civil-date age rule and permit consumption. DOB is not stored. |
+| `terms-policy.ts` | Approved terms version and URL. `null` keeps registration closed. |
+| `popup.server.ts` | Direct provider popup used by the local preview plugin. |
 | `middleware.ts` | `authMiddleware` for server functions → verified `context.userId`. |
-| `verify.server.ts` | `requireUserId()` / `getSessionUser()` (server-only) for manual wiring. |
+| `verify.server.ts` | `requireUserId()` / `getSessionUser()` for server-side session checks. |
 
-## How each mode gets its credentials
+## Credentials and provider behavior
 
-- **Live preview** (`*.grok-sandbox.com`): the app is an embedded iframe, so
-  sign-in opens a **popup** (a top-level redirect to the broker can't work inside
-  the iframe) and federates via a baked shared **preview client**
-  (`src/lib/auth/preview.ts`). The handler 302s straight to the broker/upstream
-  login; on return the popup posts the session bearer back in a tiny HTML page.
-  Sessions (and email/password users) persist in the app's embedded PGLite DB —
-  the SAME DB as app data — and, since the iframe's cookies are partitioned,
-  ride that bearer token; all of it lives in `src/lib/auth`.
-  Restarting the preview resets the DB.
-- **Deployed**: the deployer injects a per-app client + `DATABASE_URL`, so
-  sign-in persists identities in Postgres.
+- **Google** is Better Auth's built-in `socialProviders.google` provider. It
+  uses Google's own OAuth endpoints and the callback
+  `<HAMI_ORIGIN>/api/auth/callback/google`. The runtime needs both
+  `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. They are server-only; if either
+  is missing, the UI disables Google and explains why. Never replace this with
+  a broker or a demo redirect.
+- Dynamic preview hostnames are not automatically valid Google OAuth callback
+  URLs. Register each exact callback with Google or use a stable Hami origin.
+- Google sign-up is explicit (`requestSignUp`) and remains subject to the same
+  server-side age/terms gate as email signup.
+- **Email/password** uses this app's Better Auth database, with the existing
+  PGLite local fallback and Postgres deployment adapter. New-user creation is
+  denied by the database hook unless a one-time age/terms permit is consumed.
+- DOB is validated in memory only and is never stored in the user row, URL,
+  public projection, or log. A successful signup records only the accepted
+  terms version and timestamp.
 
-## Env vars — do **not** create a `.env` file
+## Environment variables
 
-**Never write a `.env` / `.env.local` / `.env.example` for auth (or anything
-else) in this sandbox.** Live preview sign-in works out of the box with **zero**
-env configuration: the server falls back to the baked preview client in
-`src/lib/auth/preview.ts`, derives the `*.grok-sandbox.com` origin per-request,
-mints a process-stable session secret, and persists sessions in embedded
-PGLite. Deployed apps get `GROK_AUTH_*` / `BETTER_AUTH_*` / `DATABASE_URL`
-injected by the platform — still not something you write into a file.
+Do not store credentials in `.grok/app-env.json`, any `VITE_` variable, or a
+tracked file. Supply provider credentials through the local process environment
+or the deployment's server-only environment configuration.
 
-Optional process-env knobs (platform / rare overrides only — **do not** put
-these in a file you create):
+| Variable | Purpose |
+|---|---|
+| `GOOGLE_CLIENT_ID` | Direct Google OAuth client id, server-side. |
+| `GOOGLE_CLIENT_SECRET` | Direct Google OAuth client secret, server-side only. |
+| `BETTER_AUTH_URL` | Stable public Hami origin when one is configured. |
+| `BETTER_AUTH_SECRET` | Signs this app's Better Auth sessions. |
+| `DATABASE_URL` | Optional Postgres connection; local development uses PGLite without it. |
+| `VITE_AUTH_ENABLED` | Public feature flag only; never put credentials in it. |
 
-| Var | Where | Purpose |
-|---|---|---|
-| `VITE_AUTH_ENABLED` | client | `"false"` in the shipped `.grok/app-env.json` (dev user); drop the key to turn sign-in ON. Only client-visible auth flag |
-| `BETTER_AUTH_URL` | server | app's own public origin; unset in preview (origin is derived per-request) |
-| `BETTER_AUTH_SECRET` | server | signs this app's own sessions (process-stable fallback in preview; survives HMR) |
-| `GROK_AUTH_ISSUER` | server | the shared broker (defaults to `https://auth.grok.me`) |
-| `GROK_AUTH_CLIENT_ID` / `GROK_AUTH_CLIENT_SECRET` | server | per-app client (falls back to the preview client) |
-| `DATABASE_URL` | server | when deployed, Better Auth persists here (preview persists to the embedded PGLite — same DB as app data) |
-
-Never expose a non-`VITE_` var to the client. The preview client id/secret live
-server-only in `src/lib/auth/preview.ts`.
+There is no baked preview OAuth client or fallback issuer. `src/lib/auth/terms-policy.ts`
+must point to an approved, current legal document before signup is enabled;
+until then its `ACTIVE_TERMS` value intentionally stays `null`.

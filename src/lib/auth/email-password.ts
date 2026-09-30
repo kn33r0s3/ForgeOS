@@ -1,5 +1,5 @@
 /**
- * Local email/password sign-in (this app's Better Auth DB — not the broker).
+ * Email/password sign-in using this app's Better Auth database.
  *
  * Enabled for the private personal-context account flow. The account owns
  * only private context; authentication does not authorize public sharing.
