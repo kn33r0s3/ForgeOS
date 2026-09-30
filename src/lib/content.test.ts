@@ -61,9 +61,9 @@ describe("Hami public content", () => {
 
   it("exposes public-first primary destinations", () => {
     const hrefs = NAV.map((item) => item.to);
+    // The System is the product; the work board is a secondary mechanism.
     assert.deepEqual(hrefs, [
       "/",
-      "/domain",
       "/feed",
       "/providers",
       "/discoveries",
@@ -126,23 +126,19 @@ describe("Hami public root", () => {
     const footer = readFileSync(join(root, "src/components/layout/site-footer.tsx"), "utf8");
     assert.match(home, /createFileRoute\("\/"\)/);
     assert.doesNotMatch(home, /Navigate to=/);
-    assert.match(home, /Make a real need clearer/);
-    assert.match(home, /src="\/hami-home\.jpg"/);
-    assert.match(home, /Illustrative workspace/);
-    assert.match(home, /loadDiscoveries/);
-    assert.match(home, /loadProviders/);
+    // Home is the person's System, not a post/request board.
+    assert.match(home, /A System around you/);
+    assert.match(home, /useSystemState/);
+    assert.match(home, /derivePaths/);
+    assert.match(home, /relevantFeed/);
     assert.match(home, /loadPublicFeed/);
-    assert.match(home, /Recent eligible records/);
-    assert.match(home, /item\.epistemic_state/);
-    assert.match(home, /Open network context/);
-    assert.match(home, /Public network records could not be checked/);
-    assert.match(home, /No public network records are available right now/);
-    assert.match(home, /to="\/domain"/);
-    assert.match(home, /to="\/request"/);
-    assert.doesNotMatch(home, /loadRuntimeSnapshot|loadEngineHealth|pending_actions|Queued tasks|Operating dashboard/);
+    assert.match(home, /Paths are possibilities, not promises/);
+    assert.match(home, /nothing is posted or shared/);
+    assert.doesNotMatch(home, /Browse or post work|to="\/domain"/);
     assert.match(work, /to: "\/domain"/);
-    assert.match(header, /Share a need/);
-    assert.match(header, /to="\/request"/);
+    assert.match(header, /My gear/);
+    assert.match(header, /to="\/system"/);
+    assert.match(header, /to: "\/request"/);
     assert.doesNotMatch(header, /Review actions|to="\/operations"|to="\/actions"/);
     assert.doesNotMatch(footer, /Service categories|to="\/services"|to="\/contact"/);
     const domain = readFileSync(join(root, "src/routes/domain.tsx"), "utf8");
