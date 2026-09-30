@@ -316,6 +316,11 @@ function DomainPage() {
         <div className="space-y-5 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)]">
           <form id="post-form" onSubmit={postRecord} className="card card-accent scroll-mt-28 space-y-3 p-5 sm:p-6">
             <h2 className="flex items-center gap-2 font-display text-2xl tracking-tight text-ink"><PenLine className="size-5 text-accent" aria-hidden="true" /> Post in our records</h2>
+            <p className="text-xs leading-5 text-muted">
+              This post will be public. Do not include phone numbers, email
+              addresses, identity documents, or other private information.
+              Posting does not contact anyone or guarantee a match.
+            </p>
             <label className="block">
               <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Kind</span>
               <select value={kind} onChange={(event) => setKind(event.target.value as Kind)} className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]">

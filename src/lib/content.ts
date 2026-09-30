@@ -14,10 +14,10 @@ export const SITE = {
 
 export const NAV = [
   { label: "Home", to: "/" },
+  { label: "Work board", to: "/domain" },
   { label: "Network", to: "/feed" },
+  { label: "Providers", to: "/providers" },
   { label: "Research", to: "/discoveries" },
-  { label: "Opportunities", to: "/opportunities" },
-  { label: "Actions", to: "/actions" },
 ] as const;
 
 export const providerCategories = ["All"] as const;

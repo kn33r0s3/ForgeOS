@@ -59,14 +59,14 @@ describe("Hami public content", () => {
     assert.match(SITE.description, /Nepal/);
   });
 
-  it("exposes five distinct primary destinations", () => {
+  it("exposes public-first primary destinations", () => {
     const hrefs = NAV.map((item) => item.to);
     assert.deepEqual(hrefs, [
       "/",
+      "/domain",
       "/feed",
+      "/providers",
       "/discoveries",
-      "/opportunities",
-      "/actions",
     ]);
     for (const path of FORBIDDEN_PUBLIC_PATHS) {
       assert.equal(hrefs.includes(path as any), false, `nav leaked ${path}`);
@@ -122,9 +122,24 @@ describe("Hami public root", () => {
     const sitemap = readFileSync(join(root, "public/sitemap.xml"), "utf8");
     const robots = readFileSync(join(root, "public/robots.txt"), "utf8");
     const work = readFileSync(join(root, "src/routes/work.tsx"), "utf8");
+    const header = readFileSync(join(root, "src/components/layout/site-header.tsx"), "utf8");
+    const footer = readFileSync(join(root, "src/components/layout/site-footer.tsx"), "utf8");
     assert.match(home, /createFileRoute\("\/"\)/);
     assert.doesNotMatch(home, /Navigate to=/);
-    assert.match(home, /Discover what matters/);
+    assert.match(home, /Make a real need clearer/);
+    assert.match(home, /loadDiscoveries/);
+    assert.match(home, /loadProviders/);
+    assert.match(home, /to="\/domain"/);
+    assert.match(home, /to="\/request"/);
+    assert.doesNotMatch(home, /loadRuntimeSnapshot|loadEngineHealth|pending_actions|Queued tasks|Operating dashboard/);
+    assert.match(work, /to: "\/domain"/);
+    assert.match(header, /Share a need/);
+    assert.match(header, /to="\/request"/);
+    assert.doesNotMatch(header, /Review actions|to="\/operations"|to="\/actions"/);
+    assert.doesNotMatch(footer, /Service categories|to="\/services"|to="\/contact"/);
+    const domain = readFileSync(join(root, "src/routes/domain.tsx"), "utf8");
+    assert.match(domain, /This post will be public/);
+    assert.match(domain, /Do not include phone numbers, email/);
     assert.match(network, /createFileRoute\("\/feed"\)/);
     assert.match(network, /Hami Network/);
     assert.match(opportunities, /createFileRoute\("\/opportunities"\)/);

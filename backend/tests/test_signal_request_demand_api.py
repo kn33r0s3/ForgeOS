@@ -269,6 +269,11 @@ def test_public_demand_intake_uses_existing_signal_flow_and_is_idempotent(db, mo
             headers=headers,
         )
         missing_key = client.post("/api/signals/public-request", json=body)
+        malformed = client.post(
+            "/api/signals/public-request",
+            json={"content": "   "},
+            headers={"Idempotency-Key": "public-demand-test-invalid"},
+        )
         anonymous_substrate_event = client.get(
             "/api/forge/substrate/events",
             params={"event_type": "demand_observed"},
@@ -290,6 +295,7 @@ def test_public_demand_intake_uses_existing_signal_flow_and_is_idempotent(db, mo
     )
     assert conflict.status_code == 409
     assert missing_key.status_code == 400
+    assert malformed.status_code == 422
     assert anonymous_substrate_event.status_code == 401
     assert authorized_substrate_event.status_code == 200
     assert "TEST ONLY, not real demand" in authorized_substrate_event.text
@@ -319,6 +325,8 @@ def test_public_demand_intake_uses_existing_signal_flow_and_is_idempotent(db, mo
     assert db.query(models.Opportunity).count() == 0
     assert db.query(models.BookingRequest).count() == 0
     assert db.query(models.Action).count() == 0
+    assert db.query(models.Outcome).count() == 0
+    assert db.query(models.Customer).count() == 0
 
 
 def test_user_request_signals_are_hidden_from_public_lists_and_visible_with_api_key(

@@ -71,11 +71,11 @@ export function SiteHeader() {
           </nav>
           <div className="flex items-center gap-2">
             <Link
-              to="/actions"
+              to="/request"
               className="btn-wipe hidden h-10 items-center gap-1.5 rounded-card border-2 border-black bg-black px-4 text-sm font-extrabold text-accent hover:text-wheat lg:inline-flex"
               style={{ backgroundImage: "linear-gradient(45deg, #161515 50%, transparent 50%)" }}
             >
-              Review actions
+              Share a need
               <ArrowUpRight className="size-4" aria-hidden="true" />
             </Link>
             <button
@@ -161,8 +161,8 @@ export function SiteHeader() {
           </div>
           <div className="reveal p-3 pt-0" style={{ "--i": NAV.length + 2 } as React.CSSProperties}>
             <Button asChild size="lg" className="w-full">
-              <Link to="/actions">
-                Review actions
+              <Link to="/request">
+                Share a need
                 <ArrowUpRight />
               </Link>
             </Button>
@@ -176,8 +176,6 @@ export function SiteHeader() {
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
 
 const SECONDARY = [
-  { label: "Operations", to: "/operations" },
-  { label: "Providers", to: "/providers" },
-  { label: "Work board", to: "/domain" },
+  { label: "Submit a need", to: "/request" },
   { label: "About", to: "/about" },
 ] as const;

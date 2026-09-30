@@ -16,18 +16,64 @@ output proves the condition.
     configured yet." instead of a `mailto:` link. The earlier value
     `hello@pending-domain.local` no longer appears anywhere in the rendered
     production HTML or in `src/lib/content.ts`.
-- [ ] Provider availability is established from a successful live API response.
-  - Observed 2026-09-30: the API read now succeeds, so the count is knowable: it is `[]`. Provider availability is therefore empty, not unverified.
+- [x] Public service availability is established from successful live API responses.
+  - Rechecked 2026-09-30: `GET /api/public/providers`, `/api/public/services`, and `/api/public/domain` returned HTTP 200 with `[]`; `GET /api/public/discoveries?limit=3` returned HTTP 200 with 3 records. Empty provider/service/work data is known, not inferred from a failed read.
 - [x] No invented prices or review scores are published.
   - The public provider list is `[]`. `GET /api/public/trust/provider/1` returned HTTP 404 `provider not found or not publicly verified` on 2026-09-30, unchanged from 2026-09-26. No price or review score was added.
 
+## Local public entry surface — 2026-09-30
+
+- **Files changed:** `src/routes/index.tsx`, `src/routes/domain.tsx`,
+  `src/components/layout/site-header.tsx`,
+  `src/components/layout/site-footer.tsx`, `src/lib/content.ts`,
+  `src/lib/content.test.ts`, `backend/tests/test_public_feed.py`,
+  `backend/tests/test_signal_request_demand_api.py`,
+  `docs/PUBLICITY_GATE.md`, and `docs/CAPABILITY_QUEUE.md`.
+- **Route scope:** the public homepage is `/`; the shared navigation links to
+  existing `/domain`, `/feed`, `/providers`, `/discoveries`, and `/request`
+  pages. No backend route was added or changed. Existing APIs remain
+  `GET /api/public/discoveries`, `GET /api/public/providers`,
+  `GET /api/public/services`, `GET /api/public/domain`,
+  `GET /api/public/feed`, `POST /api/public/domain`, and
+  `POST /api/signals/public-request` (the local Vite dev proxy exposes the
+  corresponding paths without `/api`).
+- The local homepage and shared navigation now guide visitors to the existing
+  public work board, verified-provider list, source-linked observations, and
+  anonymous demand-understanding form. They no longer present owner-only
+  runtime counts, queued tasks, or action-review links as the main public
+  entry points.
+- This change adds no provider, service, work post, customer, transaction,
+  payment, outcome, testimonial, or engagement record. Production's current
+  public reads remain as reported above; the updated frontend has **not** been
+  deployed.
+- The work-board form now warns that submitted posts are public and must not
+  contain contact details or private information. It does not initiate contact
+  or promise a match.
+- The only existing intake CTA is the anonymous `/signals/public-request`
+  path. It redacts email/phone patterns, provides a truthful receipt, and does
+  not create a contactable lead or promise a reply. No inbound email/SMS or
+  messaging channel is connected. The existing eSewa/Khalti adapters are not
+  required for browsing or submitting a request; their credentials and
+  provider-side merchant setup remain unverified, and their callback/lookup
+  responses are not connected to the canonical payment Outcome → Learning
+  writer.
+- Commercial hosting remains an external gate. The repository's last Vercel
+  account observation is Hobby, dated 2026-09-29; that account plan was not
+  rechecked today. Vercel's current [Hobby documentation](https://vercel.com/docs/plans/hobby)
+  describes it as free and aimed at personal projects. Do not deploy a
+  commercial launch until the operator verifies a commercially permitted
+  account/plan. No plan change, purchase, or deployment occurred.
+- The footer domain, monitored contact mailbox, and explicit publicity
+  authorization remain owner-controlled and unresolved. This local
+  implementation does not close or bypass those gates.
+
 ## Current gate state
 
-**OPEN, for a different reason than on 2026-09-26.** The FastAPI service is
-healthy in production: health, feed, providers, services, and discoveries all
-return JSON, so no data count may be called unknown any more. The gate stays
-shut because the footer domain and the contact mailbox are still placeholders
-and because no publicity or outreach is authorized by the owner. Public reads
-still show no verified demand, no customer, and no realized revenue
-(`/api/public/providers` = `[]`), so publishing would not misrepresent a
-transaction — it would only publish an unready shopfront.
+**OPEN.** The FastAPI service is healthy in production: read-only checks on
+2026-09-30 returned HTTP 200 for health, feed, providers, services, discoveries,
+and work-board projections. Providers, services, and work posts are currently
+empty; discoveries are source-linked observations, not buyer demand. The local
+homepage is improved, but has not been deployed. The current plan's commercial
+eligibility is not confirmed, the footer domain and monitored mailbox remain
+unconfigured, and the owner has not authorized publicity or outreach. No real
+customer, transaction, or revenue is claimed.

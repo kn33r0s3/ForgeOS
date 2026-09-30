@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from fastapi.testclient import TestClient
 from datetime import timedelta
+from sqlalchemy import event
 
 from app import models
 from app.database import get_db
@@ -30,6 +31,40 @@ def test_vercel_api_service_routes_original_path_to_fastapi_aliases():
         "source": "/api/(.*)",
         "destination": {"service": "api"},
     }
+
+
+def test_public_projection_gets_do_not_write_records(db, monkeypatch):
+    from app import security
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    statements = []
+
+    def record_statement(connection, cursor, statement, parameters, context, executemany):
+        operation = statement.lstrip().split(None, 1)[0].upper() if statement.strip() else ""
+        if operation in {"INSERT", "UPDATE", "DELETE", "REPLACE", "CREATE", "ALTER", "DROP"}:
+            statements.append(statement)
+
+    bind = db.get_bind()
+    event.listen(bind, "before_cursor_execute", record_statement)
+    client, cleanup = _client(db)
+    try:
+        responses = [
+            client.get(path)
+            for path in (
+                "/public/feed",
+                "/public/discoveries",
+                "/public/providers",
+                "/public/services",
+                "/public/network",
+            )
+        ]
+    finally:
+        client.close()
+        cleanup()
+        event.remove(bind, "before_cursor_execute", record_statement)
+
+    assert [response.status_code for response in responses] == [200] * 5
+    assert statements == []
 
 
 def _public_claim(db, *, opportunity=None):

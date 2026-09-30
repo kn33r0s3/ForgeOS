@@ -4,16 +4,16 @@ import { Container } from "./container";
 
 const GROUP_LINKS = [
   { label: "Network feed", to: "/feed" },
-  { label: "Search services", to: "/providers" },
-  { label: "Service categories", to: "/services" },
-  { label: "How it works", to: "/about" },
-  { label: "Contact", to: "/contact" },
+  { label: "Sourced observations", to: "/discoveries" },
+  { label: "Verified providers", to: "/providers" },
+  { label: "Public work board", to: "/domain" },
+  { label: "About Hami", to: "/about" },
 ] as const;
 
 const WORK_LINKS = [
-  { label: "Open network", to: "/feed" },
-  { label: "Service categories", to: "/services" },
-  { label: "Providers", to: "/providers" },
+  { label: "Browse or post work", to: "/domain" },
+  { label: "Submit a need", to: "/request" },
+  { label: "Browse provider records", to: "/providers" },
 ] as const;
 
 const LINK =
