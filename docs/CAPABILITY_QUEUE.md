@@ -1,5 +1,13 @@
 # Hami capability claim ledger (ForgeOS repository)
 
+## [DONE WITH LIMITATION] Align Vercel rewrite contract tests with Better Auth routing
+
+- Owner action still required: confirm production Google OAuth environment-variable presence in Vercel; the CLI is unavailable in this environment.
+- Action removed: resolve the mismatch between the intentional Better Auth web rewrite and two stale backend assertions; no runtime routing behavior changed.
+- Current blocker / verification: `/api/auth/$` is implemented by the web app's Better Auth handler, so the `/api/auth/(.*)` web rewrite must precede the general FastAPI `/api/(.*)` rewrite. Focused tests verify the ordered contract. No Vercel configuration or production state was changed.
+- Next removable dependency: verify Google variable names in the Vercel dashboard; do not reveal or copy their values.
+- Evidence boundary: test assertions are repository-contract checks, not evidence of production OAuth configuration or a completed login.
+
 This is the active human/agent claim ledger required by
 `FORGE_SUBSTRATE_BLUEPRINT.md`. Search it before work, claim a bounded scope
 before implementation, and record verification before marking a claim DONE.

@@ -27,7 +27,12 @@ def test_vercel_api_service_routes_original_path_to_fastapi_aliases():
     assert api_service["framework"] == "fastapi"
     assert api_service["entrypoint"] == "app.main:app"
     assert "routes" not in api_service
+    # Better Auth is served by the web app, so its specific rewrite precedes FastAPI.
     assert config["rewrites"][0] == {
+        "source": "/api/auth/(.*)",
+        "destination": {"service": "web"},
+    }
+    assert config["rewrites"][1] == {
         "source": "/api/(.*)",
         "destination": {"service": "api"},
     }

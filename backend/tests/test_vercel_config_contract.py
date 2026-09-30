@@ -51,8 +51,9 @@ def test_vercel_services_route_api_to_fastapi_and_everything_else_to_web():
             "entrypoint": "app.main:app",
         },
     }
-    # Order matters: the API rewrite must win before the web catch-all.
+    # Better Auth belongs to the web service; its specific route precedes FastAPI and the catch-all.
     assert config["rewrites"] == [
+        {"source": "/api/auth/(.*)", "destination": {"service": "web"}},
         {"source": "/api/(.*)", "destination": {"service": "api"}},
         {"source": "/(.*)", "destination": {"service": "web"}},
     ]
