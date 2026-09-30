@@ -131,11 +131,15 @@ describe("Hami public root", () => {
     // Home is the person's System, not a post/request board.
     assert.match(home, /A system that keeps observing reality/);
     assert.match(home, /useSystemState/);
+    assert.match(home, /<Welcome onStart={update} state={state}/);
+    assert.match(home, /<SystemEditor state={state} onSave={onStart}/);
     assert.match(home, /derivePaths/);
     assert.match(home, /relevantFeed/);
     assert.match(home, /loadPublicFeed/);
     assert.match(home, /Paths are possibilities, not promises/);
-    assert.match(home, /Your context stays on this device; nothing is posted or shared/);
+    assert.match(home, /Personal context is separate from the public world/);
+    assert.match(home, /Guests can keep temporary context in this tab/);
+    assert.match(home, /signed-in users can save it privately/);
     assert.doesNotMatch(home, /Browse or post work|to="\/domain"/);
     assert.match(work, /to: "\/domain"/);
     assert.match(header, /My System/);

@@ -1,9 +1,8 @@
 /**
  * The person's Hami System state ("gear").
  *
- * Ownership rule: this state belongs to the person. It is stored only on
- * their own device (localStorage) until they explicitly choose to share it.
- * Nothing here is sent to the server by this module.
+ * Ownership rule: guest state stays in tab-scoped session storage. Account
+ * state is persisted through owner-scoped server functions, never this module.
  *
  * Truth rule: every value records how Hami knows it. A value the person
  * typed is `stated`; it is never upgraded to `verified` on the client.
@@ -40,7 +39,8 @@ export type SystemState = {
   updatedAt: string;
 };
 
-export const STORAGE_KEY = "hami.system.v1";
+export const STORAGE_KEY = "hami.guest-system.v2";
+export const LEGACY_STORAGE_KEY = "hami.system.v1";
 
 export const TIME_LABELS: Record<TimeAvailability, string> = {
   under_5h: "Under 5 hours a week",
@@ -177,18 +177,53 @@ export function loadState(storage: Pick<Storage, "getItem"> | undefined): System
   }
 }
 
-export function saveState(storage: Pick<Storage, "setItem"> | undefined, state: SystemState): void {
-  if (!storage) return;
+export function saveState(storage: Pick<Storage, "setItem"> | undefined, state: SystemState): boolean {
+  if (!storage) return false;
   try {
     storage.setItem(STORAGE_KEY, JSON.stringify(state));
+    return true;
   } catch {
-    /* storage full or blocked: the System still works for this session */
+    return false;
   }
 }
 
 export function clearState(storage: Pick<Storage, "removeItem"> | undefined): void {
   try {
     storage?.removeItem(STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function loadGuestState(
+  sessionStorage: Pick<Storage, "getItem" | "setItem"> | undefined,
+  localStorage: Pick<Storage, "getItem" | "removeItem"> | undefined,
+): SystemState | null {
+  const temporary = loadState(sessionStorage);
+  let legacy: SystemState | null = null;
+  try {
+    legacy = parseState(localStorage?.getItem(LEGACY_STORAGE_KEY) ?? null);
+  } catch {
+    legacy = null;
+  }
+  try {
+    localStorage?.removeItem(LEGACY_STORAGE_KEY);
+  } catch {
+    // Storage may be unavailable; the legacy value is never uploaded here.
+  }
+  if (temporary) return temporary;
+  if (!legacy) return null;
+  saveState(sessionStorage, legacy);
+  return legacy;
+}
+
+export function clearGuestState(
+  sessionStorage: Pick<Storage, "removeItem"> | undefined,
+  localStorage: Pick<Storage, "removeItem"> | undefined,
+): void {
+  clearState(sessionStorage);
+  try {
+    localStorage?.removeItem(LEGACY_STORAGE_KEY);
   } catch {
     /* ignore */
   }

@@ -15,7 +15,9 @@ import {
 
 const execFileAsync = promisify(execFile);
 const WRAPPER = join(projectRoot(), "scripts/with-app-env.mjs");
-const PRINT_FLAG = "process.stdout.write(String(process.env.VITE_AUTH_ENABLED));";
+const PRINT_FLAG = "process.stdout.write(String(process.env.VITE_AUTH_ENABLED ?? 'unset'));";
+const AUTH_FLAG_REMOVED_ENV = { ...process.env };
+delete AUTH_FLAG_REMOVED_ENV.VITE_AUTH_ENABLED;
 
 function makeWorkspace(appEnvJson) {
   const root = mkdtempSync(join(tmpdir(), "app-env-"));
@@ -59,8 +61,8 @@ test("an explicit process-env override wins over the file", () => {
   assert.equal(merged.PATH, "/usr/bin");
 });
 
-test("the template ships auth off", () => {
-  assert.deepEqual(readAppEnv(projectRoot()), { VITE_AUTH_ENABLED: "false" });
+test("this app leaves auth enabled by default", () => {
+  assert.deepEqual(readAppEnv(projectRoot()), {});
 });
 
 test("vite loadEnv resolves the wrapped value", () => {
@@ -79,8 +81,8 @@ test("the wrapped command runs with the app env applied", async () => {
     process.execPath,
     "-e",
     PRINT_FLAG,
-  ]);
-  assert.equal(stdout, "false");
+  ], { env: AUTH_FLAG_REMOVED_ENV });
+  assert.equal(stdout, "unset");
 });
 
 test("the wrapped command sees an explicit override, not the file value", async () => {
@@ -123,6 +125,6 @@ test("the CLI still runs when invoked through a symlinked path", async () => {
     process.execPath,
     "-e",
     PRINT_FLAG,
-  ]);
-  assert.equal(stdout, "false");
+  ], { env: AUTH_FLAG_REMOVED_ENV });
+  assert.equal(stdout, "unset");
 });

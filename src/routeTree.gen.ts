@@ -18,6 +18,7 @@ import { Route as DiscoveriesRouteImport } from './routes/discoveries'
 import { Route as DomainRouteImport } from './routes/domain'
 import { Route as FeedRouteImport } from './routes/feed'
 import { Route as GroupRouteImport } from './routes/group'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as OperationsRouteImport } from './routes/operations'
 import { Route as OpportunitiesRouteImport } from './routes/opportunities'
 import { Route as ProcessRouteImport } from './routes/process'
@@ -34,6 +35,7 @@ import { Route as GroupBusinessesRouteImport } from './routes/group.businesses'
 import { Route as RequestsIdRouteImport } from './routes/requests.$id'
 import { Route as ServicesIndexRouteImport } from './routes/services.index'
 import { Route as ServicesSlugRouteImport } from './routes/services.$slug'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -78,6 +80,11 @@ const FeedRoute = FeedRouteImport.update({
 const GroupRoute = GroupRouteImport.update({
   id: '/group',
   path: '/group',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OperationsRoute = OperationsRouteImport.update({
@@ -160,6 +167,11 @@ const ServicesSlugRoute = ServicesSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => ServicesRoute,
 } as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -171,6 +183,7 @@ export interface FileRoutesByFullPath {
   '/domain': typeof DomainRoute
   '/feed': typeof FeedRoute
   '/group': typeof GroupRouteWithChildren
+  '/login': typeof LoginRoute
   '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
   '/process': typeof ProcessRoute
@@ -187,6 +200,7 @@ export interface FileRoutesByFullPath {
   '/services/$slug': typeof ServicesSlugRoute
   '/group/': typeof GroupIndexRoute
   '/services/': typeof ServicesIndexRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -197,6 +211,7 @@ export interface FileRoutesByTo {
   '/discoveries': typeof DiscoveriesRoute
   '/domain': typeof DomainRoute
   '/feed': typeof FeedRoute
+  '/login': typeof LoginRoute
   '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
   '/process': typeof ProcessRoute
@@ -212,6 +227,7 @@ export interface FileRoutesByTo {
   '/services/$slug': typeof ServicesSlugRoute
   '/group': typeof GroupIndexRoute
   '/services': typeof ServicesIndexRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -224,6 +240,7 @@ export interface FileRoutesById {
   '/domain': typeof DomainRoute
   '/feed': typeof FeedRoute
   '/group': typeof GroupRouteWithChildren
+  '/login': typeof LoginRoute
   '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
   '/process': typeof ProcessRoute
@@ -240,6 +257,7 @@ export interface FileRoutesById {
   '/services/$slug': typeof ServicesSlugRoute
   '/group/': typeof GroupIndexRoute
   '/services/': typeof ServicesIndexRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -253,6 +271,7 @@ export interface FileRouteTypes {
     | '/domain'
     | '/feed'
     | '/group'
+    | '/login'
     | '/operations'
     | '/opportunities'
     | '/process'
@@ -269,6 +288,7 @@ export interface FileRouteTypes {
     | '/services/$slug'
     | '/group/'
     | '/services/'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -279,6 +299,7 @@ export interface FileRouteTypes {
     | '/discoveries'
     | '/domain'
     | '/feed'
+    | '/login'
     | '/operations'
     | '/opportunities'
     | '/process'
@@ -294,6 +315,7 @@ export interface FileRouteTypes {
     | '/services/$slug'
     | '/group'
     | '/services'
+    | '/api/auth/$'
   id:
     | '__root__'
     | '/'
@@ -305,6 +327,7 @@ export interface FileRouteTypes {
     | '/domain'
     | '/feed'
     | '/group'
+    | '/login'
     | '/operations'
     | '/opportunities'
     | '/process'
@@ -321,6 +344,7 @@ export interface FileRouteTypes {
     | '/services/$slug'
     | '/group/'
     | '/services/'
+    | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -333,6 +357,7 @@ export interface RootRouteChildren {
   DomainRoute: typeof DomainRoute
   FeedRoute: typeof FeedRoute
   GroupRoute: typeof GroupRouteWithChildren
+  LoginRoute: typeof LoginRoute
   OperationsRoute: typeof OperationsRoute
   OpportunitiesRoute: typeof OpportunitiesRoute
   ProcessRoute: typeof ProcessRoute
@@ -345,6 +370,7 @@ export interface RootRouteChildren {
   VenturesRoute: typeof VenturesRoute
   WorkRoute: typeof WorkRoute
   RequestsIdRoute: typeof RequestsIdRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -410,6 +436,13 @@ declare module '@tanstack/react-router' {
       path: '/group'
       fullPath: '/group'
       preLoaderRoute: typeof GroupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/operations': {
@@ -524,6 +557,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServicesSlugRouteImport
       parentRoute: typeof ServicesRoute
     }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -563,6 +603,7 @@ const rootRouteChildren: RootRouteChildren = {
   DomainRoute: DomainRoute,
   FeedRoute: FeedRoute,
   GroupRoute: GroupRouteWithChildren,
+  LoginRoute: LoginRoute,
   OperationsRoute: OperationsRoute,
   OpportunitiesRoute: OpportunitiesRoute,
   ProcessRoute: ProcessRoute,
@@ -575,6 +616,7 @@ const rootRouteChildren: RootRouteChildren = {
   VenturesRoute: VenturesRoute,
   WorkRoute: WorkRoute,
   RequestsIdRoute: RequestsIdRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

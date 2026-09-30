@@ -155,6 +155,10 @@ const backendProxy = {
   "/api": {
     target: "http://127.0.0.1:8000",
     changeOrigin: true,
+    bypass: (req) => {
+      const path = req.url?.split("?", 1)[0] ?? "";
+      if (path === "/api/auth" || path.startsWith("/api/auth/")) return req.url;
+    },
     rewrite: (path: string) => path.replace(/^\/api/, ""),
   },
   "/forge": { target: "http://127.0.0.1:8000", changeOrigin: true },

@@ -47,7 +47,7 @@ function useWorldFeed() {
 }
 
 function HomePage() {
-  const { state, ready, update } = useSystemState();
+  const { state, ready, update, mode, error } = useSystemState();
   const world = useWorldFeed();
   const active = hasAnyState(state);
 
@@ -66,6 +66,10 @@ function HomePage() {
             Opening your System…
           </p>
         </Container>
+      ) : error ? (
+        <Container className="py-20">
+          <p className="text-sm font-semibold text-danger" role="alert">{error}</p>
+        </Container>
       ) : active ? (
         <ActiveSystem
           paths={paths}
@@ -73,9 +77,10 @@ function HomePage() {
           state={state}
           world={world}
           relevant={relevant}
+          privacyMode={mode}
         />
       ) : (
-        <Welcome onStart={update} world={world} />
+        <Welcome onStart={update} state={state} world={world} privacyMode={mode} />
       )}
     </main>
   );
@@ -89,12 +94,14 @@ function ActiveSystem({
   stages,
   world,
   relevant,
+  privacyMode,
 }: {
   state: NonNullable<ReturnType<typeof useSystemState>["state"]>;
   paths: ReturnType<typeof derivePaths>;
   stages: ReturnType<typeof deriveStages>;
   world: ReturnType<typeof useWorldFeed>;
   relevant: ReturnType<typeof relevantFeed>;
+  privacyMode: "guest" | "account";
 }) {
   const next = stages.find((s) => !s.reached && !s.evidenceGated);
   return (
@@ -175,10 +182,14 @@ const LOOP = [
 
 function Welcome({
   onStart,
+  state,
   world,
+  privacyMode,
 }: {
   onStart: ReturnType<typeof useSystemState>["update"];
+  state: ReturnType<typeof useSystemState>["state"];
   world: ReturnType<typeof useWorldFeed>;
+  privacyMode: "guest" | "account";
 }) {
   return (
     <>
@@ -197,8 +208,7 @@ function Welcome({
               </h1>
               <p className="mt-6 max-w-2xl text-base leading-7 text-muted sm:text-lg sm:leading-8">
                 Hami follows recorded sources, evidence, relationships, questions, and capability gaps without assuming one category or workflow.
-                Your on-device System is optional personal context, not Hami’s boundary. A possibility is not a fact, and actions remain under human authority.
-                Your context stays on this device; nothing is posted or shared.
+                Personal context is separate from the public world. Guests can keep temporary context in this tab; signed-in users can save it privately. Hami never puts it in public feed or network projections, and sharing requires your authorization.
               </p>
               <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-2">
                 {LOOP.map(({ icon: Icon, title, body }) => (
@@ -215,11 +225,11 @@ function Welcome({
 
             <div className="card border-accent/60 p-5 sm:p-6" id="start">
               <p className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.16em] text-accent">
-                Optional personal context · 1 minute
+                Personal context · optional
               </p>
               <h2 className="mt-1 text-2xl font-black tracking-tight text-ink">What should Hami keep in mind?</h2>
               <div className="mt-5">
-                <SystemEditor state={null} onSave={onStart} compact />
+                <SystemEditor state={state} onSave={onStart} privacyMode={privacyMode} compact />
               </div>
             </div>
           </div>

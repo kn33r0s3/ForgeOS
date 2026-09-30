@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  LEGACY_STORAGE_KEY,
   STORAGE_KEY,
+  clearGuestState,
   emptyState,
   hasAnyState,
+  loadGuestState,
   loadState,
   parseList,
   parseState,
@@ -78,8 +81,36 @@ describe("system state", () => {
     assert.equal(parseList(Array.from({ length: 60 }, (_, i) => `x${i}`).join(",")).length, 24);
   });
 
-  it("uses a versioned, local-only key", () => {
-    assert.equal(STORAGE_KEY, "hami.system.v1");
+  it("stores guest context under a tab-scoped key, not the legacy persistent key", () => {
+    assert.equal(STORAGE_KEY, "hami.guest-system.v2");
+    assert.equal(LEGACY_STORAGE_KEY, "hami.system.v1");
+  });
+
+  it("migrates old browser context to the current tab without uploading it", () => {
+    const session = memoryStorage();
+    const local = memoryStorage();
+    const old = withState({ location: stated("Butwal") });
+    local.setItem(LEGACY_STORAGE_KEY, JSON.stringify(old));
+
+    const loaded = loadGuestState(session, local);
+    assert.equal(loaded?.location?.value, "Butwal");
+    assert.equal(session.getItem(STORAGE_KEY) !== null, true);
+    assert.equal(local.getItem(LEGACY_STORAGE_KEY), null);
+
+    clearGuestState(session, local);
+    assert.equal(session.getItem(STORAGE_KEY), null);
+  });
+
+  it("clears tab-scoped and legacy guest data", () => {
+    const session = memoryStorage();
+    const local = memoryStorage();
+    session.setItem(STORAGE_KEY, JSON.stringify(withState({ location: stated("temporary") })));
+    local.setItem(LEGACY_STORAGE_KEY, JSON.stringify(withState({ location: stated("legacy") })));
+
+    clearGuestState(session, local);
+
+    assert.equal(session.getItem(STORAGE_KEY), null);
+    assert.equal(local.getItem(LEGACY_STORAGE_KEY), null);
   });
 });
 

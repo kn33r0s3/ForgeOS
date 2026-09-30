@@ -19,16 +19,18 @@ function joinValues(items: { value: string }[]) {
 }
 
 /**
- * Edits the person's own System state. Everything saved here is labelled
- * `stated` and stays on this device.
+ * Edits personal context. Values remain self-stated; guest saves stay local,
+ * while authenticated saves go to the owner's private account storage.
  */
 export function SystemEditor({
   state,
   onSave,
+  privacyMode,
   compact = false,
 }: {
   state: SystemState | null;
-  onSave: (next: (draft: SystemState) => SystemState) => void;
+  onSave: (next: (draft: SystemState) => SystemState) => void | Promise<void>;
+  privacyMode: "guest" | "account";
   compact?: boolean;
 }) {
   const [location, setLocation] = useState("");
@@ -38,15 +40,17 @@ export function SystemEditor({
   const [resources, setResources] = useState("");
   const [constraints, setConstraints] = useState("");
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!state) return;
-    setLocation(state.location?.value ?? "");
-    setTime(state.time?.value ?? "");
-    setGoals(state.goals.map((g) => g.value));
-    setCapabilities(joinValues(state.capabilities));
-    setResources(joinValues(state.resources));
-    setConstraints(joinValues(state.constraints));
+    setLocation(state?.location?.value ?? "");
+    setTime(state?.time?.value ?? "");
+    setGoals(state?.goals.map((g) => g.value) ?? []);
+    setCapabilities(state ? joinValues(state.capabilities) : "");
+    setResources(state ? joinValues(state.resources) : "");
+    setConstraints(state ? joinValues(state.constraints) : "");
+    setSaved(false);
+    setSaveError(null);
   }, [state]);
 
   function toggleGoal(goal: SystemGoal) {
@@ -55,13 +59,14 @@ export function SystemEditor({
 
   function submit(event: FormEvent) {
     event.preventDefault();
+    setSaveError(null);
     const now = new Date().toISOString();
     const keep = (prev: { value: string; provenance: string; updatedAt: string }[], next: string[]) =>
       next.map((value) => {
         const existing = prev.find((p) => p.value.toLowerCase() === value.toLowerCase());
         return existing && existing.value === value ? (existing as ReturnType<typeof stated<string>>) : stated(value, now);
       });
-    onSave((draft) => ({
+    const result = onSave((draft) => ({
       ...draft,
       location: location.trim() ? stated(location.trim().slice(0, 80), now) : undefined,
       time: time ? stated(time, now) : undefined,
@@ -70,8 +75,14 @@ export function SystemEditor({
       resources: keep(draft.resources, parseList(resources)),
       constraints: keep(draft.constraints, parseList(constraints)),
     }));
-    setSaved(true);
-    window.setTimeout(() => setSaved(false), 2200);
+    void Promise.resolve(result)
+      .then(() => {
+        setSaved(true);
+        window.setTimeout(() => setSaved(false), 2200);
+      })
+      .catch(() => {
+        setSaveError("Hami could not save this context. Your changes have not been reported as saved.");
+      });
   }
 
   return (
@@ -165,13 +176,16 @@ export function SystemEditor({
           className="btn-wipe hero-primary-cta inline-flex min-h-12 items-center gap-2 rounded-card border-2 border-black bg-accent px-5 font-extrabold text-black shadow-[0_4px_0_#000]"
         >
           {saved ? <Check className="size-4" aria-hidden="true" /> : null}
-          {saved ? "System updated" : "Update my System"}
+          {saved ? (privacyMode === "account" ? "Saved privately" : "Saved for this tab") : (privacyMode === "account" ? "Save private context" : "Save temporary context")}
         </button>
         <p className="flex items-center gap-2 text-sm text-muted">
           <Lock className="size-4 shrink-0 text-accent" aria-hidden="true" />
-          Stays on this device. Nothing is shared or published.
+          {privacyMode === "account"
+            ? "Private to you. Nothing is shared or published unless you authorize it."
+            : "Temporary in this tab. It is not sent to Hami's server."}
         </p>
       </div>
+      {saveError ? <p className="text-sm font-semibold text-danger" role="alert">{saveError}</p> : null}
     </form>
   );
 }

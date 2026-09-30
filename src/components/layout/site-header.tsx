@@ -4,6 +4,8 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { NAV } from "@/lib/content";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { UserButton } from "@/lib/auth/gates";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { BrandMark } from "./brand-mark";
 import { Container } from "./container";
 
@@ -70,6 +72,7 @@ export function SiteHeader() {
             })}
           </nav>
           <div className="flex items-center gap-2">
+            <AuthControl />
             <Link
               to="/system"
               className="btn-wipe hidden h-10 items-center gap-1.5 rounded-card border-2 border-black bg-black px-4 text-sm font-extrabold text-accent hover:text-wheat lg:inline-flex"
@@ -170,6 +173,22 @@ export function SiteHeader() {
         </div>
       </div>
     </>
+  );
+}
+
+function AuthControl() {
+  const { user, isPending } = useCurrentUserState();
+  if (isPending) {
+    return <span className="h-9 w-16 animate-pulse rounded-card bg-black/10" aria-label="Checking account" />;
+  }
+  if (user && !user.isDevFallback) return <UserButton />;
+  return (
+    <Link
+      to="/login"
+      className="inline-flex min-h-10 items-center rounded-card border-2 border-black px-3 text-sm font-extrabold text-black hover:bg-black hover:text-accent"
+    >
+      Sign in
+    </Link>
   );
 }
 

@@ -6,6 +6,31 @@ before implementation, and record verification before marking a claim DONE.
 Claims coordinate contributors; database uniqueness and idempotency remain the
 enforcement layer when claims overlap.
 
+## [DONE WITH LIMITATION] Keep personal context private to its account
+
+- Owner action still required: a person chooses to create/sign in to an account
+  and explicitly reviews and saves any guest context; authentication alone
+  never authorizes sharing.
+- Action removed: personal context no longer relies on the owner to keep
+  persistent browser storage separate from public Hami data. Guest drafts are
+  tab-local, and authenticated reads/writes/deletes derive ownership from the
+  verified session.
+- Current blocker and verification: local account flows, two-account
+  isolation, explicit guest save, reload persistence, and public-page
+  non-leakage were browser-tested. Local verification uses in-memory PGlite
+  with `DATABASE_URL` unset; no durable or production database was touched.
+  The clear action was verified to remove stored context and reset the visible
+  form. `npm test`, `npm run typecheck`, `npm run check:auth`, and
+  `env -u DATABASE_URL npm run build` pass.
+- Next removable dependency: verify the existing auth and context migrations
+  against an owner-authorized non-production database before relying on
+  persistence across server restarts; the local PGlite database is process
+  local. Do not provision infrastructure, run migrations against a durable
+  database, or deploy without that authorization.
+- Evidence boundary: all local accounts/context used for tests are `TEST`, not
+  human/customer or revenue evidence. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION`
+  remains **NOT MEASURABLE** because there are no verified real transactions.
+
 ## [DONE WITH LIMITATION] Surface persisted open-world discoveries in Hami
 
 - Evidence: the restored home centers on a browser-local personal System and a
