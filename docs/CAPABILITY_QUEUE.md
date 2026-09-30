@@ -6,16 +6,16 @@ before implementation, and record verification before marking a claim DONE.
 Claims coordinate contributors; database uniqueness and idempotency remain the
 enforcement layer when claims overlap.
 
-## [ACTIVE] Surface persisted open-world discoveries in Hami
+## [DONE WITH LIMITATION] Surface persisted open-world discoveries in Hami
 
 - Evidence: the restored home centers on a browser-local personal System and a
   public Feed; `/discoveries` currently shows only public sourced observations.
   The canonical backend already exposes persisted discovery entities through
   `GET /forge/substrate/discovery/findings`, using the existing substrate and
   discovery engine.
-- Owner action still required: manually inspect the internal discovery endpoint
-  separately from public source observations to see what the substrate has
-  actually recorded.
+- Owner action still required: decide whether to explicitly run a local
+  discovery pass after reviewing its methods and boundaries. This interface
+  does not run it, and no production run was made.
 - Action removed by this change: navigate to the backend endpoint manually to
   review already-persisted findings; the Hami discoveries surface will project
   those records alongside clearly separated public observations.
@@ -25,8 +25,15 @@ enforcement layer when claims overlap.
   no key is sent to the browser. The local endpoint currently reports no stored
   discovery findings. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT
   MEASURABLE** because this work has no verified real transaction evidence.
-- Verification: exercise only local GET routes and browser rendering; do not
-  invoke `POST /forge/substrate/discovery/runs` or any production endpoint.
+- Verification (local): `backend` pytest 575 passed, 2 skipped; `npm test`
+  passed 196 script tests and 81 app tests; `npm run typecheck`, `npm run
+  build`, and `git diff --check` passed. Build skipped database migration
+  because `DATABASE_URL` was unset. The local findings GET returned 200 with
+  an empty array; the public observations projection returned 34 records.
+  Browser checks rendered `/`, `/discoveries`, `/feed`, `/opportunities`,
+  `/actions`, `/operations`, and `/system`; no failed requests or console
+  errors were observed, and the 390px mobile viewport had no horizontal
+  overflow. No discovery run or production endpoint was called.
 - Next removable dependency: a trusted, authenticated owner-context read path
   for private substrate records, so protected findings can be viewed without
   manually inspecting an API or exposing the backend key to the browser.

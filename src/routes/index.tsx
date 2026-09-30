@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Eye, Lightbulb, Link2, ShieldCheck, Sparkles, Wrench } from "lucide-react";
+import { ArrowRight, Eye, Lightbulb, Link2, ShieldCheck, Sparkles } from "lucide-react";
 import { Container } from "@/components/layout/container";
 import { SystemEditor } from "@/components/system/system-editor";
 import {
@@ -19,11 +19,11 @@ export const Route = createFileRoute("/")({
   component: HomePage,
   head: () => ({
     meta: [
-      { title: "Hami — your real-world System" },
+      { title: "Hami — observing reality" },
       {
         name: "description",
         content:
-          "Hami keeps a System around you: what you can do, what you have, and what becomes possible as the world changes. Nepal first.",
+          "Hami observes recorded sources, evidence, relationships, and uncertainty to discover what may matter without assuming one fixed workflow.",
       },
     ],
   }),
@@ -198,6 +198,7 @@ function Welcome({
               <p className="mt-6 max-w-2xl text-base leading-7 text-muted sm:text-lg sm:leading-8">
                 Hami follows recorded sources, evidence, relationships, questions, and capability gaps without assuming one category or workflow.
                 Your on-device System is optional personal context, not Hami’s boundary. A possibility is not a fact, and actions remain under human authority.
+                Your context stays on this device; nothing is posted or shared.
               </p>
               <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-2">
                 {LOOP.map(({ icon: Icon, title, body }) => (

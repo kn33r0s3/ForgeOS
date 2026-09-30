@@ -3,7 +3,7 @@ import { SITE } from "@/lib/content";
 import { Container } from "./container";
 
 const GROUP_LINKS = [
-  { label: "My System", to: "/" },
+  { label: "Hami home", to: "/" },
   { label: "Persisted discoveries", to: "/discoveries" },
   { label: "World stream", to: "/feed" },
   { label: "Opportunity hypotheses", to: "/opportunities" },

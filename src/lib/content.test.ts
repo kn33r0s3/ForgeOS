@@ -61,7 +61,7 @@ describe("Hami public content", () => {
 
   it("exposes public-first primary destinations", () => {
     const hrefs = NAV.map((item) => item.to);
-    // The System is the product; the work board is a secondary mechanism.
+    // Broad system surfaces lead; the work board remains a secondary mechanism.
     assert.deepEqual(hrefs, [
       "/",
       "/discoveries",
@@ -135,7 +135,7 @@ describe("Hami public root", () => {
     assert.match(home, /relevantFeed/);
     assert.match(home, /loadPublicFeed/);
     assert.match(home, /Paths are possibilities, not promises/);
-    assert.match(home, /nothing is posted or shared/);
+    assert.match(home, /Your context stays on this device; nothing is posted or shared/);
     assert.doesNotMatch(home, /Browse or post work|to="\/domain"/);
     assert.match(work, /to: "\/domain"/);
     assert.match(header, /My System/);
