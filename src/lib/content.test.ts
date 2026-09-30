@@ -63,10 +63,9 @@ describe("Hami public content", () => {
     const hrefs = NAV.map((item) => item.to);
     assert.deepEqual(hrefs, [
       "/",
-      "/domain",
-      "/feed",
-      "/providers",
       "/discoveries",
+      "/opportunities",
+      "/feed",
     ]);
     for (const path of FORBIDDEN_PUBLIC_PATHS) {
       assert.equal(hrefs.includes(path as any), false, `nav leaked ${path}`);
