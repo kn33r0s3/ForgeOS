@@ -75,9 +75,10 @@ def test_metadata_refresh_preserves_canonical_capability_lifecycle(db):
         db,
         capability,
         test_ref="backend/tests/test_capability_substrate_adapter.py",
-        command="pytest capability adapter test",
+        command="pytest backend/tests/test_capability_substrate_adapter.py",
         exit_code=0,
         output_excerpt="passed",
+        provenance={"actor": "test", "revision": "bf8546ed26f9179e8522726e966a984fc1dd83c6"},
     )
     world_graph.activate_capability(db, capability)
     db.commit()

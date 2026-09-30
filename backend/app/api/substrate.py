@@ -115,6 +115,10 @@ class CapabilityTest(BaseModel):
     command: str = Field(min_length=1, max_length=1000)
     exit_code: int
     output_excerpt: str = Field(default="", max_length=2000)
+    # Provenance of the run. A passing run without an actor and the git
+    # revision it ran against is rejected by the substrate lifecycle service.
+    actor: str | None = Field(default=None, max_length=160)
+    revision: str | None = Field(default=None, max_length=40)
 
 
 def _json_value(raw: Any) -> Any:
@@ -216,7 +220,8 @@ def _evidence_out(row: models.Evidence) -> dict[str, Any]:
     }
 
 
-def _capability_out(row: models.ForgeCapability) -> dict[str, Any]:
+def _capability_out(row: models.ForgeCapability, db: Session | None = None) -> dict[str, Any]:
+    activation = world_graph.capability_activation_record(db, row) if db is not None else None
     return {
         "id": row.id,
         "capability_type": row.capability_type,
@@ -228,6 +233,9 @@ def _capability_out(row: models.ForgeCapability) -> dict[str, Any]:
         "attributes": _object(row.attributes),
         "owner_agent": row.owner_agent,
         "created_at": row.created_at,
+        # Independent of the stored status: older rows may claim "active"
+        # without an attributable passing test; they report verified=false.
+        "activation": {"verified": activation is not None, "record": activation},
     }
 
 
@@ -492,7 +500,7 @@ def list_capabilities(
         query = query.filter_by(status=status)
     if capability_type:
         query = query.filter_by(capability_type=capability_type)
-    return [_capability_out(row) for row in query.order_by(models.ForgeCapability.id.desc()).limit(limit).all()]
+    return [_capability_out(row, db) for row in query.order_by(models.ForgeCapability.id.desc()).limit(limit).all()]
 
 
 @router.post("/capabilities", status_code=201)
@@ -508,12 +516,12 @@ def add_capability(body: CapabilityCreate, db: Session = Depends(get_db)):
             body.owner_agent.strip(), body.spec_ref, body.attributes,
         )
         if expected == received:
-            return _capability_out(existing)
+            return _capability_out(existing, db)
         raise HTTPException(status_code=409, detail="capability name already exists with different attributes")
     try:
         row = world_graph.create_capability(db, **body.model_dump())
         db.commit()
-        return _capability_out(row)
+        return _capability_out(row, db)
     except (type_validation.SubstrateError, IntegrityError) as exc:
         db.rollback()
         raise _write_error(exc) from exc
@@ -527,7 +535,7 @@ def begin_capability_build(capability_id: int, db: Session = Depends(get_db)):
     try:
         world_graph.begin_capability_build(db, row)
         db.commit()
-        return _capability_out(row)
+        return _capability_out(row, db)
     except (type_validation.SubstrateError, IntegrityError) as exc:
         db.rollback()
         raise _write_error(exc) from exc
@@ -539,9 +547,15 @@ def test_capability(capability_id: int, body: CapabilityTest, db: Session = Depe
     if row is None:
         raise _not_found("capability not found")
     try:
-        world_graph.mark_capability_tested(db, row, **body.model_dump())
+        payload = body.model_dump()
+        provenance = {
+            key: value.strip()
+            for key in ("actor", "revision")
+            if isinstance((value := payload.pop(key)), str) and value.strip()
+        }
+        world_graph.mark_capability_tested(db, row, provenance=provenance, **payload)
         db.commit()
-        return _capability_out(row)
+        return _capability_out(row, db)
     except (type_validation.SubstrateError, IntegrityError) as exc:
         db.rollback()
         raise _write_error(exc) from exc
@@ -555,7 +569,7 @@ def activate_capability(capability_id: int, db: Session = Depends(get_db)):
     try:
         world_graph.activate_capability(db, row)
         db.commit()
-        return _capability_out(row)
+        return _capability_out(row, db)
     except (type_validation.SubstrateError, IntegrityError) as exc:
         db.rollback()
         raise _write_error(exc) from exc

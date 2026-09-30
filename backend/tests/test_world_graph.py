@@ -596,6 +596,7 @@ def test_capability_lifecycle_requires_a_passing_test_reference(db):
         command="pytest backend/tests/test_world_graph.py",
         exit_code=0,
         output_excerpt="all tests passed",
+        provenance={"actor": "test", "revision": "bf8546ed26f9179e8522726e966a984fc1dd83c6"},
     )
     activated = world_graph.activate_capability(db, capability)
     assert activated.status == "active"

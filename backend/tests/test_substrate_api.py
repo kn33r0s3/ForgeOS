@@ -236,6 +236,8 @@ def test_event_and_capability_api_enforce_lifecycle_and_idempotency(substrate_cl
         "command": "pytest backend/tests/test_substrate_api.py",
         "exit_code": 0,
         "output_excerpt": "passed",
+        "actor": "test-agent",
+        "revision": "bf8546ed26f9179e8522726e966a984fc1dd83c6",
     })
     assert tested.status_code == 200, tested.text
     activated = substrate_client.post(f"/forge/substrate/capabilities/{capability_id}/activate")

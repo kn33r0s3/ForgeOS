@@ -1,5 +1,98 @@
 # ForgeOS feature and runtime inventory
 
+## Reconstruction — 2026-09-30 (owner Command 1: reconstruct reality before building)
+
+**Evidence cut:** 2026-09-30 21:00 NPT, `origin/main` `7a437bb` → restored in
+`f99008d`. Labels: **VERIFIED** = executed/observed by running it in this pass;
+**OBSERVED** = read in code, git history, or a live HTTP response; **INFERRED** =
+concluded from those, not proven. The older 2026-09-26 inventory below remains
+valid for module-level detail of the restored backend.
+
+### What happened to the canonical line (OBSERVED from git/GitHub)
+
+| When (NPT) | Commit | What it did |
+|---|---|---|
+| 19:16 | `bf8546e` | Last full-source commit; backend CI green. VERIFIED locally: backend `pytest` 554 passed, 2 skipped (Python 3.12). |
+| 19:38 | `f240f3e` ("..") | Deleted 2,454 files: all backend Python source and tests, `docs/`, `verification/`, `services/`, `frontend/` source, root TanStack app (`src/lib`, `src/routes`, `scripts/`, `server/`, `public/`), `vercel.json`, `docker-compose.yml`. Added a new root Vite + Express app (`server.ts`, `src/App.tsx`, `metadata.json` with `MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API`). |
+| 19:44–19:55 | `147b821`, `e6a7148`, `6e941b9` | Three further commits on the new app ("Hami schema… six primitives" in TypeScript, `src/serverApp.ts`, `HAMI_SYSTEM_REPORT.md`, Vercel config). **No longer on `main`**: `main` was later moved to `7a437bb`, whose parent is `f240f3e`, so these are unreachable (fetchable by SHA only while GitHub retains them). |
+| 19:42 (pushed ~19:59) | `7a437bb` ("..") | Committed ~6,950 generated files (`backend/venv`, `backend/.deps`, `frontend/.next` hot-update chunks, `__pycache__` bytecode) and no source. |
+| 21:21 | `f99008d` | This pass: forward restoration of the canonical backend/docs/evidence from `bf8546e`, generated files untracked. |
+
+Bytecode in `7a437bb` shows four source files that were **never committed
+anywhere** (local-only work): `backend/app/services/procurement_demand.py`,
+`backend/app/services/collectors/ted_procurement.py`,
+`backend/tests/test_ted_procurement_collector.py`,
+`backend/tests/test_network_connection_relations.py`. Their `.pyc` remain in
+history at `7a437bb`; the `.py` must come from the machine that produced them.
+
+### Surfaces now on `main`
+
+| Surface | State | Label |
+|---|---|---|
+| FastAPI backend `backend/app` (19 routers, 66 ORM tables, `/api` mirror) | Restored, byte-identical to `bf8546e` plus the capability contract below. 558 passed, 4 skipped. | VERIFIED |
+| Root Vite/React app + `server.ts` Express API (from `f240f3e`) | `tsc --noEmit` and `vite build` pass. Its API is an **in-memory mock** seeded with hand-written signals, beliefs (with invented support counts, e.g. ">15 hrs/week per counselor"), opportunities with `estimated_revenue`, and decisions. Nothing persists; nothing is sourced. It is a parallel TypeScript model of the domain, not the canonical substrate. Revenue is kept at 0. | VERIFIED (build) / OBSERVED (content) |
+| Production `https://forge-os-ebon.vercel.app` | `/` serves the new Vite app; `/api/health`, `/api/stats`, `/api/signals`, `/api/public/feed` all return Vercel `404 NOT_FOUND` because `vercel.json` (web + FastAPI `api` service + daily cron) was deleted. The production API and daily cycle are therefore **down**; the front end's own `/api/*` calls also 404 in production. | VERIFIED (HTTP, 2026-09-30 ~21:10 NPT) |
+| Legacy Next.js dashboard `frontend/` + `docker-compose.yml` | Restored source; local Compose only. Not built in this pass. | OBSERVED |
+| `services/evidence-triage` (x402 triage), `services/forge-bot` (spec) | Restored; Compose-only / spec-only. | OBSERVED |
+| Root TanStack app of `bf8546e` (System home, feed, providers, request intake, auth wiring) | **Not restored** — replaced by the new root app and would collide with its `package.json`/`vite.config.ts`. Recoverable with `git checkout bf8546e -- src/routes src/lib src/components scripts server public`. | OBSERVED |
+
+### Capability map of the canonical backend
+
+| Subsystem | Code | What works | Gaps / honest limits |
+|---|---|---|---|
+| Six primitives | `models.py`: `entities` (ENTITY), `relations` (RELATION), `events` (EVENT), substrate columns on `evidence` (EVIDENCE), `capabilities` (CAPABILITY); ACTION is the operational `actions` table projected into the substrate by `world_graph.sync_action_outcome_learning_path` | Generic API `/forge/substrate/*` for types, entities, relations, events, evidence, capabilities. A SQLAlchemy `before_flush` write contract enforces lifecycles so ORM assignment cannot bypass services. VERIFIED by `test_world_graph.py`, `test_substrate_api.py`. | ACTION has no generic substrate endpoint and is not a substrate table (projection only). Substrate write endpoints are open when `FORGE_API_KEY` is unset (local default). |
+| Type registry | `type_registry` (`schema_json` validated as JSON Schema), `seed_core_types`, `register_type`, `set_type_status` | New types start `proposed`; activation/deprecation needs actor, rationale and an in-repo evidence ref. Attributes/payloads are validated against the registered schema. VERIFIED. | Categories fixed to entity/relation/event/capability types (no action_type category). |
+| Truth progression | `_validate_truth_transition` | possible→hypothesized→tested→supported; tested/supported/refuted require stored, non-simulated, provenance-backed evidence; supported requires prior tested evidence. VERIFIED. | Legacy `Belief`/`Opportunity` confidence scores still exist alongside and are not truth states. |
+| Identity | `transition_entity_identity`, `find_identity_candidates`, `merge_entities` | candidate→corroborated→canonical only with provenance-backed evidence; candidates are surfaced, never auto-merged; merges keep history. VERIFIED. | — |
+| Evidence/provenance | `Evidence` (+ idempotency keys, `legacy_evidence_substrate_adapter`) | Idempotent evidence writes; simulated sources (`simulated*`, `fixture*`, `mock*`, `seed*`, `test-data*`) cannot establish tested/supported. VERIFIED. | Historic rows keep legacy 0–100 confidence; substrate confidence is separate. |
+| Capability registry | `capabilities`, `capability_substrate_adapter` (runtime tools), `capability_discovery` (research source candidates: candidate→reviewed→cleared→active) | Lifecycle proposed→building→tested→active. **New in this pass:** enforced by the write contract, and a pass must carry provenance (actor + git revision + a command that invokes the test file). `GET /forge/substrate/capabilities` reports `activation.verified`. VERIFIED by `test_capability_lifecycle_contract.py`. | Test runs are still *attested* by the caller (the server does not re-execute pytest); no deprecation service. Legacy active rows without an attributable pass report `verified: false`. |
+| Research / discovery | `research_planner` (2.3k lines), `research_task_engine`, `research_synthesis_engine`, `research_evidence_assessment`, `multi_judge`, `demand_understanding`, `curiosity_engine` | Requirement-grounded research tasks, evidence gates, honest completion state, disagreement preserved. VERIFIED by tests (fixtures/mocked HTTP). | Live behaviour depends on cleared sources; question generation is bounded, not open-world. |
+| Collectors / external adapters | `collectors/`: arxiv, crossref, gdelt, github, openalex, reddit, rss, web, world_bank; `source_clearance_registry` + `docs/PUBLIC_SOURCES.md` | Fail-closed source clearance per requirement. Ledger records OpenAlex and World Bank as live-verified, GDELT live but rate-limited. Tests VERIFIED with fixtures only in this pass (no live calls made). | Semantic Scholar, ILOSTAT, Nepal procurement, UK Contracts Finder blocked; TED source never committed (above). |
+| Actions & authorization | `action_engine`, `autonomy_engine`/`autonomy_policies`, `execution_engine`, `integration_outbox`/`integration_dispatcher`, `nepal_payments` (eSewa/Khalti) | Policy ALLOW / REQUIRE_APPROVAL / BLOCK; execution ≠ verified outcome; payments fail closed without credentials. VERIFIED by tests. | No standing-authorization record with the full scope/spend/expiry envelope described in `AGENTS.md`; no real outbound channel is authorized. |
+| Observers / scheduled work | `observer_engine`, `forge_loop`, `cycle_scheduler`, `scripts/run_daily_cycle.py`, `worker.py`, `/api/scheduled/cycle` | Cycle rollback and stale-cycle recovery tested. VERIFIED (tests). | Production cron is gone with `vercel.json` (VERIFIED 404). |
+| Feed / network projections | `public_feed`, `public_network`, `network_substrate_adapter`, `public_epistemics` | Read-only projections over substrate with provenance; GETs do not write. VERIFIED (tests). | Not reachable in production (API down). |
+| Economic / commercial | `economic_validation`, `offer_preparation`, `product_engine`, `money_engine`, `revenue_miner`, `repair_shop` | Outcome-gated; willingness to pay stays `unknown` without evidence. VERIFIED (tests). | 0 verified customers, 0 revenue, `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` NOT MEASURABLE (no real transactions). |
+| Data | SQLite locally (`storage/`, not in git), PostgreSQL in production per earlier evidence | — | Production DB contents and reachability are UNKNOWN in this pass (no credentials used). |
+
+### Duplicated / dead / temporary (OBSERVED)
+
+- **Duplicated domain model:** the root `server.ts`/`src/types.ts` redefine
+  Signal/Opportunity/Belief/Decision/Execution in memory — a second
+  architecture relative to the substrate. Keep it as a UI surface only; point
+  it at the FastAPI API rather than growing its own model.
+- **Dead:** `app/cli/{collect,merge_duplicates}.py`,
+  `services/{intelligence_pipeline,offer_economics,qwen_worker}.py` (test-only
+  references, per the 2026-09-26 inventory).
+- **Temporary adapters (canonical until migrated):** the
+  `*_substrate_adapter.py` family mirrors vertical tables into the substrate.
+- **Generated junk previously tracked:** `backend/.deps` (vendored
+  site-packages, tracked since 2026-09-25), `backend/venv`, `frontend/.next`,
+  `__pycache__` — now untracked and ignored.
+
+### Highest-leverage missing capabilities (INFERRED, ranked)
+
+1. **A protected canonical line.** `main` accepted a whole-repo deletion and a
+   non-fast-forward move of `main` (`6e941b9` → `7a437bb`, OBSERVED from CI run
+   SHAs; INFERRED to be a force-push) within one hour, and
+   CI was red for both without anyone reacting. Branch protection (no force
+   push, required backend CI) is an owner-side GitHub setting.
+2. **Production API/cron restored or deliberately retired** (owner decision:
+   `vercel.json`).
+3. **Open-world discovery engine (Command 2):** research is requirement- and
+   clearance-bound; nothing yet generates candidate value hypotheses about
+   arbitrary entities from the substrate itself.
+4. **Server-verified capability tests (Command 3):** capability passes are
+   attributable now, but still attested; a CI-reported result (e.g. GitHub
+   check-run for the recorded revision) would make them independently
+   verifiable.
+5. **ACTION as a first-class substrate primitive** with a standing-authorization
+   envelope (scope, spend, rate, counterparty, expiry) — prerequisite for
+   discovery-to-real-world experiments (Command 4).
+6. **One human surface over the canonical API** (Command 5) instead of the
+   in-memory mock.
+
+## Inventory — 2026-09-26 evidence cut
+
 **Evidence cut:** 2026-09-26  
 **Repository:** `main` at `ea490c95f1fadd19e4aeef984d1381d301c2e54c`  
 **Purpose:** source-grounded map for work on the first Forge Bot pilot. This is a technical inventory, not a claim that every wired feature is commercially useful or currently producing outcomes.

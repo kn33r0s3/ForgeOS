@@ -686,6 +686,7 @@ def activate_candidate(
     command: str,
     exit_code: int,
     output_excerpt: str,
+    provenance: dict[str, Any] | None = None,
 ) -> models.ForgeCapability:
     """Activate only a cleared candidate with a passing substrate test record."""
     candidate = _find_candidate(db, candidate_id)
@@ -704,6 +705,7 @@ def activate_candidate(
         command=command,
         exit_code=exit_code,
         output_excerpt=output_excerpt,
+        provenance=provenance,
     )
     if candidate.status != "tested":
         raise RuntimeError("candidate capability test did not pass")

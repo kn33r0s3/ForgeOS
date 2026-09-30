@@ -12,6 +12,28 @@ from app.migrations import run_migrations
 from app.services import demand_understanding, economic_validation, prospect_discovery, world_graph
 
 
+
+def _activated_test_capability(db, *, name, description, test_ref):
+    """Reach ``active`` only through the substrate lifecycle (test fixture)."""
+    capability = world_graph.create_capability(
+        db,
+        capability_type="workflow",
+        name=name,
+        description=description,
+        owner_agent="test",
+    )
+    world_graph.begin_capability_build(db, capability)
+    world_graph.mark_capability_tested(
+        db,
+        capability,
+        test_ref=test_ref,
+        command=f"pytest {test_ref}",
+        exit_code=0,
+        output_excerpt="test fixture",
+        provenance={"actor": "test", "revision": "bf8546ed26f9179e8522726e966a984fc1dd83c6"},
+    )
+    return world_graph.activate_capability(db, capability)
+
 def _testable_opportunity(db):
     signal = demand_understanding.record_raw_observation(
         db,
@@ -48,15 +70,12 @@ def _testable_opportunity(db):
             idempotency_key=f"prospect-test:{need_id}:{assumption}",
         )
         evidence_ids[assumption] = [evidence.id]
-    capability = models.ForgeCapability(
-        capability_type="workflow",
+    capability = _activated_test_capability(
+        db,
         name="prospect-discovery-test-capability",
         description="Synthetic test fixture; not proof of commercial fulfillment.",
-        status="active",
         test_ref="backend/tests/test_prospect_discovery.py",
-        owner_agent="test",
     )
-    db.add(capability)
     db.commit()
     assessment = economic_validation.assess_need_economics(
         db,

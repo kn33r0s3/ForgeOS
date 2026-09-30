@@ -14,6 +14,28 @@ from app.services import demand_understanding, economic_validation, product_engi
 from app.services import source_manager
 
 
+
+def _activated_test_capability(db, *, name, description, test_ref):
+    """Reach ``active`` only through the substrate lifecycle (test fixture)."""
+    capability = world_graph.create_capability(
+        db,
+        capability_type="workflow",
+        name=name,
+        description=description,
+        owner_agent="test",
+    )
+    world_graph.begin_capability_build(db, capability)
+    world_graph.mark_capability_tested(
+        db,
+        capability,
+        test_ref=test_ref,
+        command=f"pytest {test_ref}",
+        exit_code=0,
+        output_excerpt="test fixture",
+        provenance={"actor": "test", "revision": "bf8546ed26f9179e8522726e966a984fc1dd83c6"},
+    )
+    return world_graph.activate_capability(db, capability)
+
 def _need(db, *, sufficient=True):
     signal = demand_understanding.record_raw_observation(
         db,
@@ -107,15 +129,12 @@ def test_sufficient_need_keeps_missing_economics_explicit(db):
     result = _need(db)
     _search(db, result)
     fit = _evidence(db, result.inferred_need_id, "capability fit")
-    capability = models.ForgeCapability(
-        capability_type="workflow",
+    capability = _activated_test_capability(
+        db,
         name="economic-uncertain-test-capability",
         description="Synthetic capability fixture; not evidence of commercial fulfillment.",
-        status="active",
         test_ref="backend/tests/test_economic_validation.py",
-        owner_agent="test",
     )
-    db.add(capability)
     db.commit()
 
     assessment = _assessment(
@@ -142,15 +161,12 @@ def test_referenced_assumptions_make_only_a_bounded_test_proposal(db):
     fit = _evidence(db, result.inferred_need_id, "capability fit")
     cost = _evidence(db, result.inferred_need_id, "cost")
     price = _evidence(db, result.inferred_need_id, "price")
-    capability = models.ForgeCapability(
-        capability_type="workflow",
+    capability = _activated_test_capability(
+        db,
         name="economic-validation-test-capability",
         description="Synthetic capability fixture; not evidence of commercial fulfillment.",
-        status="active",
         test_ref="backend/tests/test_economic_validation.py",
-        owner_agent="test",
     )
-    db.add(capability)
     db.commit()
 
     assessment = _assessment(

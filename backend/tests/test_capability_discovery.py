@@ -220,6 +220,7 @@ def test_cleared_active_candidate_becomes_plannable_and_evidence_keeps_provenanc
         command="pytest backend/tests/test_capability_discovery.py",
         exit_code=0,
         output_excerpt="state-machine test passed",
+        provenance={"actor": "reviewer", "revision": "bf8546ed26f9179e8522726e966a984fc1dd83c6"},
     )
     assert capability_discovery.active_cleared_sources(
         db, "problem_incidence"

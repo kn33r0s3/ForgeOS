@@ -45,6 +45,9 @@ _IDENTITY_TRANSITION_AUTH_KEY = "forgeos.identity_state_transition"
 _ENTITY_MERGE_AUTH_KEY = "forgeos.entity_merge"
 _ENTITY_ARCHIVE_AUTH_KEY = "forgeos.entity_archive"
 _ENTITY_SOURCE_REFRESH_AUTH_KEY = "forgeos.entity_source_refresh"
+_CAPABILITY_LIFECYCLE_AUTH_KEY = "forgeos.capability_lifecycle_transition"
+_CAPABILITY_TRANSITIONS = {"proposed": {"building"}, "building": {"tested"}, "tested": {"active"}}
+_REVISION = re.compile(r"^[0-9a-f]{7,40}$")
 
 
 def _schema_for_canonical_ref() -> dict[str, Any]:
@@ -1029,13 +1032,24 @@ def mark_capability_tested(
     command: str,
     exit_code: int,
     output_excerpt: str,
+    provenance: Mapping[str, Any] | None = None,
 ) -> models.ForgeCapability:
+    """Record one test run; only an attributable pass of ``test_ref`` advances it.
+
+    A pass must name who ran it (``provenance.actor``), the repository revision
+    it ran against (``provenance.revision``), and a command that actually
+    invokes the referenced test file. A failing run is still recorded as a
+    ``capability_test_failed`` event so failures are never erased.
+    """
     if capability.status != "building":
         raise SubstrateError("only a building capability can be tested")
     if not _repo_file_exists(test_ref):
         raise SubstrateError("test_ref must resolve to a file inside the ForgeOS repository")
     if not command.strip():
         raise SubstrateError("test command is required")
+    clean_provenance = dict(provenance or {})
+    if exit_code == 0:
+        _require_capability_test_provenance(test_ref, command, clean_provenance)
     event_type = "capability_test_passed" if exit_code == 0 else "capability_test_failed"
     _record_event(
         db,
@@ -1047,42 +1061,111 @@ def mark_capability_tested(
             "command": command,
             "exit_code": int(exit_code),
             "output_excerpt": output_excerpt[-2000:],
+            "provenance": clean_provenance,
         },
     )
     if exit_code == 0:
-        capability.test_ref = test_ref
-        capability.status = "tested"
-        db.flush()
+        _set_capability_lifecycle(db, capability, "tested", test_ref=test_ref)
     return capability
 
 
 def begin_capability_build(db: Session, capability: models.ForgeCapability) -> models.ForgeCapability:
     if capability.status != "proposed":
         raise SubstrateError(f"cannot begin build from {capability.status}")
-    capability.status = "building"
-    db.flush()
+    _set_capability_lifecycle(db, capability, "building")
     return capability
 
 
 def activate_capability(db: Session, capability: models.ForgeCapability) -> models.ForgeCapability:
     if capability.status != "tested" or not capability.test_ref:
         raise SubstrateError("capability must pass a recorded test before activation")
-    passed = False
-    for event in (
+    if capability_activation_record(db, capability) is None:
+        raise SubstrateError(
+            "a passing, provenance-backed test event and existing test_ref are required"
+        )
+    _set_capability_lifecycle(db, capability, "active")
+    return capability
+
+
+def capability_activation_record(
+    db: Session, capability: models.ForgeCapability
+) -> dict[str, Any] | None:
+    """Return the passing test event that justifies ``capability.test_ref``.
+
+    ``None`` means no stored, attributable passing run of the current test_ref
+    exists: such a capability must not be treated as verified, whatever its
+    stored status says (older rows may predate this rule).
+    """
+    if not capability.id or not capability.test_ref or not _repo_file_exists(capability.test_ref):
+        return None
+    events = (
         db.query(models.WorldEvent)
         .filter_by(event_type="capability_test_passed", source="pytest")
         .order_by(models.WorldEvent.id.desc())
         .all()
-    ):
+    )
+    for event in events:
         payload = _parse_json(event.payload)
-        if payload.get("capability_id") == capability.id and payload.get("test_ref") == capability.test_ref and payload.get("exit_code") == 0:
-            passed = True
-            break
-    if not passed or not _repo_file_exists(capability.test_ref):
-        raise SubstrateError("a passing test event and existing test_ref are required")
-    capability.status = "active"
-    db.flush()
-    return capability
+        if (
+            payload.get("capability_id") != capability.id
+            or payload.get("test_ref") != capability.test_ref
+            or payload.get("exit_code") != 0
+        ):
+            continue
+        provenance = payload.get("provenance")
+        try:
+            _require_capability_test_provenance(
+                capability.test_ref, str(payload.get("command") or ""),
+                provenance if isinstance(provenance, dict) else {},
+            )
+        except SubstrateError:
+            continue
+        return {
+            "test_event_id": event.id,
+            "test_ref": capability.test_ref,
+            "command": payload["command"],
+            "actor": provenance["actor"],
+            "revision": provenance["revision"],
+            "occurred_at": event.occurred_at,
+        }
+    return None
+
+
+def _require_capability_test_provenance(
+    test_ref: str, command: str, provenance: Mapping[str, Any]
+) -> None:
+    actor = provenance.get("actor")
+    revision = provenance.get("revision")
+    if not isinstance(actor, str) or not actor.strip():
+        raise SubstrateError("a passing capability test requires provenance.actor")
+    if not isinstance(revision, str) or not _REVISION.match(revision.strip().lower()):
+        raise SubstrateError("a passing capability test requires provenance.revision (a git commit SHA)")
+    if Path(test_ref).name not in command:
+        raise SubstrateError("the test command must invoke the referenced test_ref file")
+
+
+def _set_capability_lifecycle(
+    db: Session,
+    capability: models.ForgeCapability,
+    next_status: str,
+    *,
+    test_ref: str | None = None,
+) -> None:
+    old_status = capability.status
+    if next_status not in _CAPABILITY_TRANSITIONS.get(old_status, set()):
+        raise SubstrateError(f"cannot move capability from {old_status} to {next_status}")
+    prior = db.info.get(_CAPABILITY_LIFECYCLE_AUTH_KEY)
+    db.info[_CAPABILITY_LIFECYCLE_AUTH_KEY] = (capability, old_status, next_status)
+    try:
+        if test_ref is not None:
+            capability.test_ref = test_ref
+        capability.status = next_status
+        db.flush()
+    finally:
+        if prior is None:
+            db.info.pop(_CAPABILITY_LIFECYCLE_AUTH_KEY, None)
+        else:
+            db.info[_CAPABILITY_LIFECYCLE_AUTH_KEY] = prior
 
 
 def sync_intelligence_path(db: Session, *, limit: int = 100) -> dict[str, int]:
@@ -1927,6 +2010,25 @@ def _enforce_substrate_write_contract(session: Session, flush_context: Any, inst
                 _validate_attributes(session, "event_type", obj.event_type, _json_object(obj.payload, "event payload"))
             elif state.attrs.payload.history.has_changes():
                 _validate_attributes(session, "event_type", obj.event_type, _json_object(obj.payload, "event payload"))
+        if isinstance(obj, models.ForgeCapability):
+            if is_new:
+                if obj.status not in (None, "proposed") or obj.test_ref is not None:
+                    raise SubstrateError("new capabilities must begin proposed without a test_ref")
+            elif (
+                state.attrs.status.history.has_changes()
+                or state.attrs.test_ref.history.has_changes()
+            ):
+                authorization = session.info.get(_CAPABILITY_LIFECYCLE_AUTH_KEY)
+                previous = state.attrs.status.history.deleted
+                old_status = previous[0] if previous else obj.status
+                if (
+                    not authorization
+                    or authorization[0] is not obj
+                    or authorization[1:] != (old_status, obj.status)
+                ):
+                    raise SubstrateError("capability status and test_ref changes must use the lifecycle services")
+                if obj.status == "active" and capability_activation_record(session, obj) is None:
+                    raise SubstrateError("active capabilities require a passing, provenance-backed test event")
         if isinstance(obj, models.ForgeCapability):
             if is_new:
                 _validate_attributes(session, "capability_type", obj.capability_type, _json_object(obj.attributes, "capability attributes"))
