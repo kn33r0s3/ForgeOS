@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
+    "dev": "vite --host 0.0.0.0 --port 8080",
+    "test": "tsx --test src/lib/forgeApi.test.ts",
     "build": "vite build",
-    "start": "tsx server.ts",
+    "start": "vite preview --host 0.0.0.0 --port 8080",
     "preview": "vite preview --port 3000 --host 0.0.0.0",
     "typecheck": "tsc --noEmit"
   },

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Navbar } from './components/Navbar';
 import { OverviewTab } from './components/OverviewTab';
 import { SignalsTab } from './components/SignalsTab';
@@ -7,272 +7,130 @@ import { BeliefsTab } from './components/BeliefsTab';
 import { DecisionsTab } from './components/DecisionsTab';
 import { WorkersTab } from './components/WorkersTab';
 import { ApiExplorerTab } from './components/ApiExplorerTab';
-import { 
-  Signal, 
-  Opportunity, 
-  Belief, 
-  Decision, 
-  Execution, 
-  WorkerTask, 
-  SystemStats 
-} from './types';
+import { loadForgeDashboard, recordObservation } from './lib/forgeApi';
+import type { ForgeDashboardData } from './types';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('overview');
-  const [stats, setStats] = useState<SystemStats | null>(null);
-  const [signals, setSignals] = useState<Signal[]>([]);
-  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
-  const [beliefs, setBeliefs] = useState<Belief[]>([]);
-  const [decisions, setDecisions] = useState<Decision[]>([]);
-  const [executions, setExecutions] = useState<Execution[]>([]);
-  const [workers, setWorkers] = useState<WorkerTask[]>([]);
-  const [isCycling, setIsCycling] = useState(false);
+  const [dashboard, setDashboard] = useState<ForgeDashboardData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
 
-  const showNotification = (msg: string) => {
-    setNotification(msg);
-    setTimeout(() => setNotification(null), 3000);
-  };
-
-  const fetchData = async () => {
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
     try {
-      const [
-        statsRes,
-        signalsRes,
-        oppsRes,
-        beliefsRes,
-        decisionsRes,
-        executionsRes,
-        workersRes,
-      ] = await Promise.all([
-        fetch('/api/stats').then(r => r.json()),
-        fetch('/api/signals').then(r => r.json()),
-        fetch('/api/opportunities').then(r => r.json()),
-        fetch('/api/beliefs').then(r => r.json()),
-        fetch('/api/decisions').then(r => r.json()),
-        fetch('/api/executions').then(r => r.json()),
-        fetch('/api/workers').then(r => r.json()),
-      ]);
-
-      setStats(statsRes);
-      setSignals(signalsRes);
-      setOpportunities(oppsRes);
-      setBeliefs(beliefsRes);
-      setDecisions(decisionsRes);
-      setExecutions(executionsRes);
-      setWorkers(workersRes);
-    } catch (err) {
-      console.error('Error fetching data:', err);
+      setDashboard(await loadForgeDashboard());
+      setLoadError(null);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Unable to load canonical ForgeOS data');
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchData();
   }, []);
 
-  const handleTriggerCycle = async () => {
-    setIsCycling(true);
-    try {
-      const res = await fetch('/api/workers/trigger', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          worker_type: 'intelligence_cycle',
-          task_name: 'autonomous_evidence_pass',
-        }),
-      });
-      const data = await res.json();
-      showNotification(`Cycle #${data.task?.cycle_id || 'new'} completed cleanly!`);
-      await fetchData();
-    } catch (err) {
-      showNotification('Cycle failed to trigger');
-    } finally {
-      setIsCycling(false);
-    }
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const handleAddSignal = async (observation: { content: string; source: string }) => {
+    const created = await recordObservation(observation.content, observation.source);
+    setDashboard((current) => current
+      ? { ...current, signals: [created, ...current.signals] }
+      : current);
+    setNotification('Observation recorded by the canonical signal service');
+    window.setTimeout(() => setNotification(null), 3000);
   };
 
-  const handleAddSignal = async (signalData: Partial<Signal>) => {
-    try {
-      const res = await fetch('/api/signals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(signalData),
-      });
-      const created = await res.json();
-      setSignals([created, ...signals]);
-      showNotification('New signal ingested successfully');
-      fetchData();
-    } catch (err) {
-      showNotification('Failed to add signal');
-    }
-  };
-
-  const handleAddOpportunity = async (oppData: Partial<Opportunity>) => {
-    try {
-      const res = await fetch('/api/opportunities', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(oppData),
-      });
-      const created = await res.json();
-      setOpportunities([created, ...opportunities]);
-      showNotification('Opportunity formulated successfully');
-      fetchData();
-    } catch (err) {
-      showNotification('Failed to create opportunity');
-    }
-  };
-
-  const handleUpdateOpportunity = async (id: number, data: Partial<Opportunity>) => {
-    try {
-      const res = await fetch(`/api/opportunities/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      const updated = await res.json();
-      setOpportunities(opportunities.map(o => o.id === id ? updated : o));
-      showNotification('Opportunity record updated');
-      fetchData();
-    } catch (err) {
-      showNotification('Failed to update opportunity');
-    }
-  };
-
-  const handleAddBelief = async (beliefData: Partial<Belief>) => {
-    try {
-      const res = await fetch('/api/beliefs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(beliefData),
-      });
-      const created = await res.json();
-      setBeliefs([created, ...beliefs]);
-      showNotification('Belief hypothesis recorded');
-      fetchData();
-    } catch (err) {
-      showNotification('Failed to add belief');
-    }
-  };
-
-  const handleAddDecision = async (decData: Partial<Decision>) => {
-    try {
-      const res = await fetch('/api/decisions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(decData),
-      });
-      const created = await res.json();
-      setDecisions([created, ...decisions]);
-      showNotification('Decision proposed successfully');
-      fetchData();
-    } catch (err) {
-      showNotification('Failed to add decision');
-    }
-  };
-
-  const handleAddExecution = async (execData: Partial<Execution>) => {
-    try {
-      const res = await fetch('/api/executions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(execData),
-      });
-      const created = await res.json();
-      setExecutions([created, ...executions]);
-      showNotification('Execution outcome logged');
-      fetchData();
-    } catch (err) {
-      showNotification('Failed to log execution');
-    }
-  };
+  const latestCycle = dashboard?.cycles[0] ?? null;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        stats={stats}
-        onTriggerCycle={handleTriggerCycle}
-        isCycling={isCycling}
+        health={dashboard?.health ?? null}
+        latestCycle={latestCycle}
       />
 
-      {/* Notification Toast */}
       {notification && (
-        <div className="fixed bottom-5 right-5 z-50 bg-slate-800 border border-amber-500/40 text-amber-300 text-xs px-4 py-2.5 rounded-lg shadow-xl animate-fade-in flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-amber-400"></span>
+        <div role="status" className="fixed bottom-5 right-5 z-50 bg-slate-800 border border-emerald-500/40 text-emerald-300 text-xs px-4 py-2.5 rounded-lg shadow-xl animate-fade-in">
           {notification}
         </div>
       )}
 
-      {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeTab === 'overview' && (
+        {loadError && (
+          <div role="alert" className="mb-5 rounded-lg border border-rose-800 bg-rose-950/50 px-4 py-3 text-xs text-rose-200">
+            <strong className="font-semibold">Canonical data unavailable:</strong> {loadError}
+            {dashboard && <span className="block mt-1 text-rose-300/80">The last successfully loaded data remains visible.</span>}
+          </div>
+        )}
+
+        {!dashboard && isLoading && (
+          <div role="status" className="rounded-xl border border-slate-800 bg-slate-900 p-8 text-center text-sm text-slate-400">
+            Loading live ForgeOS data…
+          </div>
+        )}
+
+        {!dashboard && !isLoading && loadError && (
+          <div className="rounded-xl border border-slate-800 bg-slate-900 p-8 text-center text-sm text-slate-400">
+            No dashboard data is shown until the canonical backend responds successfully.
+          </div>
+        )}
+
+        {dashboard && activeTab === 'overview' && (
           <OverviewTab
-            stats={stats}
-            signals={signals}
-            opportunities={opportunities}
-            beliefs={beliefs}
-            decisions={decisions}
+            stats={dashboard.stats}
+            observerStats={dashboard.observerStats}
+            latestCycle={latestCycle}
+            recentSignals={dashboard.recentSignals}
+            opportunities={dashboard.opportunities}
+            beliefs={dashboard.beliefs}
             setActiveTab={setActiveTab}
-            onTriggerCycle={handleTriggerCycle}
-            isCycling={isCycling}
           />
         )}
 
-        {activeTab === 'signals' && (
+        {dashboard && activeTab === 'signals' && (
           <SignalsTab
-            signals={signals}
+            signals={dashboard.signals}
+            totalSignals={dashboard.stats.total_signals}
             onAddSignal={handleAddSignal}
           />
         )}
 
-        {activeTab === 'opportunities' && (
-          <OpportunitiesTab
-            opportunities={opportunities}
-            onUpdateOpportunity={handleUpdateOpportunity}
-            onAddOpportunity={handleAddOpportunity}
-          />
+        {dashboard && activeTab === 'opportunities' && (
+          <OpportunitiesTab opportunities={dashboard.opportunities} />
         )}
 
-        {activeTab === 'beliefs' && (
-          <BeliefsTab
-            beliefs={beliefs}
-            onAddBelief={handleAddBelief}
-          />
+        {dashboard && activeTab === 'beliefs' && (
+          <BeliefsTab beliefs={dashboard.beliefs} />
         )}
 
-        {activeTab === 'decisions' && (
+        {dashboard && activeTab === 'decisions' && (
           <DecisionsTab
-            decisions={decisions}
-            executions={executions}
-            onAddDecision={handleAddDecision}
-            onAddExecution={handleAddExecution}
+            decisions={dashboard.decisions}
+            actions={dashboard.actions}
+            outcomes={dashboard.outcomes}
           />
         )}
 
-        {activeTab === 'workers' && (
-          <WorkersTab
-            workers={workers}
-            stats={stats}
-            onTriggerCycle={handleTriggerCycle}
-            isCycling={isCycling}
-          />
+        {dashboard && activeTab === 'workers' && (
+          <WorkersTab workers={dashboard.workers} cycles={dashboard.cycles} />
         )}
 
         {activeTab === 'api' && <ApiExplorerTab />}
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-slate-800/80 py-4 bg-slate-950 text-slate-500 text-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div>
-            <span>ForgeOS / Hami Universal Substrate</span>
+            <span>ForgeOS / Hami</span>
             <span className="mx-2">•</span>
-            <span>Driver: Zero Owner Dependency</span>
+            <span>Canonical backend projection</span>
           </div>
           <div className="text-[11px] font-mono text-slate-600">
-            Port 3000 • Express + Vite React • Invariant Active
+            REAL, TEST, MOCK, and HYPOTHESIS records remain distinct
           </div>
         </div>
       </footer>

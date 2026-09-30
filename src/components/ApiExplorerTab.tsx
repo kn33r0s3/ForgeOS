@@ -7,42 +7,61 @@ export const ApiExplorerTab: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
 
   const endpoints = [
-    { path: '/api/health', method: 'GET', description: 'System health, WAL mode & DB status' },
+    { path: '/api/health', method: 'GET', description: 'Backend readiness and database availability' },
     { path: '/api/ai/status', method: 'GET', description: 'AI provider status & model readiness' },
-    { path: '/api/stats', method: 'GET', description: 'Aggregated domain metrics & loop counters' },
-    { path: '/api/signals', method: 'GET', description: 'List market signals, categories & score metadata' },
-    { path: '/api/opportunities', method: 'GET', description: 'Discovered opportunities, checklists & progression' },
-    { path: '/api/beliefs', method: 'GET', description: 'World hypotheses, confidence & evidence links' },
-    { path: '/api/decisions', method: 'GET', description: 'Action recommendations & standing authorizations' },
-    { path: '/api/executions', method: 'GET', description: 'Execution outcomes, honest notes & cost/revenue' },
-    { path: '/api/workers', method: 'GET', description: 'Background workers, tasks & cycle history' },
-    { path: '/api/experiments', method: 'GET', description: 'Hypothesis testing, metrics & baseline comparisons' },
-    { path: '/api/revenue', method: 'GET', description: 'Revenue ledger and validation tracking' },
+    { path: '/api/stats', method: 'GET', description: 'Canonical signal, pattern, opportunity and experiment counts' },
+    { path: '/api/observer/stats', method: 'GET', description: 'Observer counts and stored quality metrics' },
+    { path: '/api/signals', method: 'GET', description: 'Persisted observations and Observer scores' },
+    { path: '/api/opportunities', method: 'GET', description: 'Persisted opportunities and estimate fields' },
+    { path: '/api/forge/beliefs', method: 'GET', description: 'Persisted beliefs and supporting signal IDs' },
+    { path: '/api/forge/decisions', method: 'GET', description: 'Persisted decision records' },
+    { path: '/api/forge/execution/actions', method: 'GET', description: 'Execution action records and approval state' },
+    { path: '/api/forge/outcomes', method: 'GET', description: 'Recorded outcomes with REAL or SANDBOX scope' },
+    { path: '/api/workers', method: 'GET', description: 'Persisted background worker tasks' },
+    { path: '/api/forge/cycles', method: 'GET', description: 'Persisted cycle history' },
+    { path: '/api/forge/experiments', method: 'GET', description: 'Persisted experiment records' },
+    { path: '/api/forge/money/revenue-breakdown', method: 'GET', description: 'Potential, expected and realized values, kept separate' },
   ];
 
   const handleExecute = async (path: string) => {
     setLoading(true);
     setSelectedEndpoint(path);
     try {
-      const res = await fetch(path);
+      const res = await fetch(path, { headers: { Accept: 'application/json' } });
       setStatus(res.status);
-      const data = await res.json();
+      const body = await res.text();
+      let data: unknown;
+      try {
+        data = JSON.parse(body);
+      } catch {
+        throw new Error(`Expected JSON from ${path}; received HTTP ${res.status}`);
+      }
       setResponseJson(JSON.stringify(data, null, 2));
-    } catch (err: any) {
-      setStatus(500);
-      setResponseJson(JSON.stringify({ error: err.message }, null, 2));
+      if (!res.ok) {
+        setResponseJson(JSON.stringify({ status: res.status, response: data }, null, 2));
+      }
+    } catch (err: unknown) {
+      setStatus(null);
+      setResponseJson(JSON.stringify({ error: err instanceof Error ? err.message : 'Request failed' }, null, 2));
     } finally {
       setLoading(false);
     }
   };
 
-  const copyToClipboard = () => {
+  const copyToClipboard = async () => {
     if (!responseJson) return;
-    navigator.clipboard.writeText(responseJson);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(responseJson);
+      setCopied(true);
+      setCopyError(null);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+      setCopyError('Clipboard access was denied by the browser.');
+    }
   };
 
   return (
@@ -53,7 +72,7 @@ export const ApiExplorerTab: React.FC = () => {
           Interactive ForgeOS / Hami API Explorer
         </h2>
         <p className="text-xs text-slate-400 mt-0.5">
-          Live REST endpoints serving JSON data as documented in <span className="font-mono text-amber-300">API_REFERENCE.md</span>.
+          Read-only canonical FastAPI endpoints. The browser uses same-origin <span className="font-mono text-amber-300">/api</span> routes.
         </p>
       </div>
 
@@ -98,9 +117,9 @@ export const ApiExplorerTab: React.FC = () => {
                 <span className="text-amber-400 font-semibold">{selectedEndpoint}</span>
                 {status && (
                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                    status === 200 ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-rose-950 text-rose-400'
+                    status >= 200 && status < 300 ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-rose-950 text-rose-400'
                   }`}>
-                    {status} OK
+                    {status} {status >= 200 && status < 300 ? 'OK' : 'ERROR'}
                   </span>
                 )}
               </div>
@@ -125,6 +144,7 @@ export const ApiExplorerTab: React.FC = () => {
                 )}
               </div>
             </div>
+            {copyError && <p role="alert" className="pt-2 text-[11px] text-rose-300">{copyError}</p>}
 
             <div className="mt-3">
               {loading ? (
@@ -145,7 +165,7 @@ export const ApiExplorerTab: React.FC = () => {
           </div>
 
           <div className="pt-3 border-t border-slate-800 text-[11px] text-slate-500 font-mono">
-            Direct cURL: <code className="text-slate-400">curl http://0.0.0.0:3000{selectedEndpoint}</code>
+            Request path: <code className="text-slate-400">{selectedEndpoint}</code>
           </div>
         </div>
       </div>

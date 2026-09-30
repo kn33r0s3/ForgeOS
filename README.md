@@ -84,6 +84,13 @@ npm run dev
 - Hami web app: http://localhost:8080
 - API docs: http://localhost:8000/docs (when the backend is running)
 
+The Vite development server proxies same-origin `/api` requests to the local
+FastAPI backend at `http://127.0.0.1:8000` by default. To use a backend on a
+different local port, set `FORGEOS_API_TARGET` when starting the app, for
+example `FORGEOS_API_TARGET=http://127.0.0.1:8100 npm run dev`. The frontend
+does not provide mock API records; if the backend is unavailable, it shows the
+connection error rather than sample data.
+
 `./start.sh` starts the native backend, scheduler, and root web app together.
 The task worker is disabled by default; enable deliberately with
 `FORGEOS_ENABLE_WORKER=true ./start.sh`. Stop that combined stack with
