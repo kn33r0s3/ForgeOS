@@ -29,6 +29,10 @@ output proves the condition.
   `src/lib/content.test.ts`, `backend/tests/test_public_feed.py`,
   `backend/tests/test_signal_request_demand_api.py`,
   `docs/PUBLICITY_GATE.md`, and `docs/CAPABILITY_QUEUE.md`.
+- **Additional local-only Feed preview:** the current change touches
+  `src/routes/index.tsx`, `src/lib/content.test.ts`,
+  `docs/PUBLICITY_GATE.md`, and `docs/CAPABILITY_QUEUE.md`; it uses the
+  existing `GET /api/public/feed` only.
 - **Route scope:** the public homepage is `/`; the shared navigation links to
   existing `/domain`, `/feed`, `/providers`, `/discoveries`, and `/request`
   pages. No backend route was added or changed. Existing APIs remain
@@ -39,9 +43,11 @@ output proves the condition.
   corresponding paths without `/api`).
 - The local homepage and shared navigation now guide visitors to the existing
   public work board, verified-provider list, source-linked observations, and
-  anonymous demand-understanding form. They no longer present owner-only
-  runtime counts, queued tasks, or action-review links as the main public
-  entry points.
+  anonymous demand-understanding form. The homepage also previews up to three
+  records returned by the existing public Feed, retaining each record's
+  source, status, and epistemic label and distinguishing an empty response
+  from an unavailable API. They no longer present owner-only runtime counts,
+  queued tasks, or action-review links as the main public entry points.
 - This change adds no provider, service, work post, customer, transaction,
   payment, outcome, testimonial, or engagement record. Production's current
   public reads remain as reported above; the updated frontend has **not** been
@@ -49,6 +55,17 @@ output proves the condition.
 - The work-board form now warns that submitted posts are public and must not
   contain contact details or private information. It does not initiate contact
   or promise a match.
+- The new Feed preview is client-side read-only; it adds no API route, stored
+  record, scanner, or external action. Existing public Feed eligibility and
+  privacy gates remain the source of truth.
+- In local development, the existing Feed returns three records; one question
+  title explicitly says “Browser-only progress fixture” and remains labeled as
+  a question, not a customer, outcome, or revenue record. A read-only
+  production query for public questions returned HTTP 200 `[]`. This work did
+  not mutate either database or promote the local fixture into REAL evidence.
+- A separate read-only production request to `GET /api/public/feed?limit=3`
+  returned HTTP 200; its first record is explicitly labeled `inference` and
+  its text says it is not a verified business problem, demand claim, or price.
 - The only existing intake CTA is the anonymous `/signals/public-request`
   path. It redacts email/phone patterns, provides a truthful receipt, and does
   not create a contactable lead or promise a reply. No inbound email/SMS or

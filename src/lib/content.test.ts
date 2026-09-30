@@ -127,8 +127,16 @@ describe("Hami public root", () => {
     assert.match(home, /createFileRoute\("\/"\)/);
     assert.doesNotMatch(home, /Navigate to=/);
     assert.match(home, /Make a real need clearer/);
+    assert.match(home, /src="\/hami-home\.jpg"/);
+    assert.match(home, /Illustrative workspace/);
     assert.match(home, /loadDiscoveries/);
     assert.match(home, /loadProviders/);
+    assert.match(home, /loadPublicFeed/);
+    assert.match(home, /Recent eligible records/);
+    assert.match(home, /item\.epistemic_state/);
+    assert.match(home, /Open network context/);
+    assert.match(home, /Public network records could not be checked/);
+    assert.match(home, /No public network records are available right now/);
     assert.match(home, /to="\/domain"/);
     assert.match(home, /to="\/request"/);
     assert.doesNotMatch(home, /loadRuntimeSnapshot|loadEngineHealth|pending_actions|Queued tasks|Operating dashboard/);
