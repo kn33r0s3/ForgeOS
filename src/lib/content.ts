@@ -84,7 +84,7 @@ export type SubstrateDiscovery = {
   method: string;
   epistemic_state: "possible" | "hypothesized";
   basis: SubstrateDiscoveryBasis[];
-  next_step?: string;
+  next_step?: string | null;
 };
 
 export type PublicFeedRelation = {
@@ -360,7 +360,7 @@ function isSubstrateDiscovery(value: unknown): value is SubstrateDiscovery {
     (value.epistemic_state === "possible" || value.epistemic_state === "hypothesized") &&
     Array.isArray(value.basis) &&
     value.basis.every(isSubstrateDiscoveryBasis) &&
-    (value.next_step === undefined || typeof value.next_step === "string")
+    (value.next_step === undefined || value.next_step === null || typeof value.next_step === "string")
   );
 }
 

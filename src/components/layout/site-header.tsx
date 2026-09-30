@@ -75,7 +75,7 @@ export function SiteHeader() {
               className="btn-wipe hidden h-10 items-center gap-1.5 rounded-card border-2 border-black bg-black px-4 text-sm font-extrabold text-accent hover:text-wheat lg:inline-flex"
               style={{ backgroundImage: "linear-gradient(45deg, #161515 50%, transparent 50%)" }}
             >
-              My gear
+              My System
               <ArrowUpRight className="size-4" aria-hidden="true" />
             </Link>
             <button
@@ -162,7 +162,7 @@ export function SiteHeader() {
           <div className="reveal p-3 pt-0" style={{ "--i": NAV.length + 2 } as React.CSSProperties}>
             <Button asChild size="lg" className="w-full">
               <Link to="/system">
-                My gear
+                My System
                 <ArrowUpRight />
               </Link>
             </Button>

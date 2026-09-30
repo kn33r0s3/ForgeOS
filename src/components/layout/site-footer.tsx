@@ -4,8 +4,10 @@ import { Container } from "./container";
 
 const GROUP_LINKS = [
   { label: "My System", to: "/" },
+  { label: "Persisted discoveries", to: "/discoveries" },
   { label: "World stream", to: "/feed" },
-  { label: "Sourced observations", to: "/discoveries" },
+  { label: "Opportunity hypotheses", to: "/opportunities" },
+  { label: "Action state", to: "/actions" },
   { label: "Verified providers", to: "/providers" },
   { label: "Public work board", to: "/domain" },
   { label: "About Hami", to: "/about" },

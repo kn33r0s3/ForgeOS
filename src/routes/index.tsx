@@ -167,10 +167,10 @@ function ActiveSystem({
 /* ------------------------------------------------------------------ */
 
 const LOOP = [
-  { icon: Eye, title: "Observes", body: "Hami reads sourced public signals as the world changes." },
-  { icon: Wrench, title: "Understands you", body: "Your skills, time, place and what you already own." },
-  { icon: Link2, title: "Connects", body: "Finds what your gear could solve, with the unknowns shown." },
-  { icon: ShieldCheck, title: "Stays honest", body: "Possible, observed and verified are never blurred." },
+  { icon: Eye, title: "Observes", body: "Sourced records and the substrate show only what is actually recorded." },
+  { icon: Link2, title: "Discovers", body: "Existing methods can surface contradictions, relationships, questions, and capability gaps." },
+  { icon: Lightbulb, title: "Keeps uncertainty", body: "Possible and hypothesized findings stay distinct from supported claims." },
+  { icon: ShieldCheck, title: "Preserves agency", body: "External action requires authorization; outcomes require real evidence." },
 ];
 
 function Welcome({
@@ -192,13 +192,12 @@ function Welcome({
                 <Sparkles className="size-4" aria-hidden="true" /> Hami · Nepal first
               </p>
               <h1 className="mt-5 max-w-3xl text-[clamp(2.6rem,5.8vw,5rem)] font-black leading-[0.98] tracking-[-0.045em] text-ink">
-                A System around you
-                <span className="mt-2 block text-muted">that keeps finding what’s possible.</span>
+                A system that keeps observing reality
+                <span className="mt-2 block text-muted">and noticing what may matter.</span>
               </h1>
               <p className="mt-6 max-w-2xl text-base leading-7 text-muted sm:text-lg sm:leading-8">
-                Tell Hami what you can do and what you already have. It shows the paths those open —
-                work, income, skills, services — and keeps watching the world for new ones. You stay in
-                control; nothing is posted or shared.
+                Hami follows recorded sources, evidence, relationships, questions, and capability gaps without assuming one category or workflow.
+                Your on-device System is optional personal context, not Hami’s boundary. A possibility is not a fact, and actions remain under human authority.
               </p>
               <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-2">
                 {LOOP.map(({ icon: Icon, title, body }) => (
@@ -215,9 +214,9 @@ function Welcome({
 
             <div className="card border-accent/60 p-5 sm:p-6" id="start">
               <p className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.16em] text-accent">
-                Start your System · 1 minute
+                Optional personal context · 1 minute
               </p>
-              <h2 className="mt-1 text-2xl font-black tracking-tight text-ink">What do you have to work with?</h2>
+              <h2 className="mt-1 text-2xl font-black tracking-tight text-ink">What should Hami keep in mind?</h2>
               <div className="mt-5">
                 <SystemEditor state={null} onSave={onStart} compact />
               </div>
@@ -230,19 +229,19 @@ function Welcome({
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
           <div>
             <p className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.16em] text-accent">
-              Why a System, not a board
+              One open world, not one workflow
             </p>
             <h2 className="mt-2 text-3xl font-black tracking-tight text-ink">
-              You shouldn’t have to search for everything yourself.
+              The right next step depends on what reality shows.
             </h2>
             <p className="mt-3 max-w-xl text-base leading-7 text-muted">
-              Most useful possibilities are never posted anywhere. A skill that solves a neighbour’s
-              problem, a room that could be someone’s workshop, a scheme you qualify for. Hami looks for the
-              connections so you only step in where your choice matters.
+              One question may need a simple lookup; another may require several sources, contradiction checks,
+              an experiment, or a missing capability. Hami’s purpose stays stable while the investigation method
+              can change.
             </p>
             <p className="mt-4 max-w-xl text-sm leading-6 text-dim">
-              Hami is early. It shows only what it can source, and says clearly when something is a
-              hypothesis. No invented jobs, customers or income.
+              The discoveries view separates persisted substrate findings from public source observations.
+              Empty or protected data stays visibly empty or unavailable; no synthetic records fill the gap.
             </p>
           </div>
           <WorldStream items={world.items} relevant={[]} loading={world.loading} unavailable={world.unavailable} />

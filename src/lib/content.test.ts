@@ -64,9 +64,10 @@ describe("Hami public content", () => {
     // The System is the product; the work board is a secondary mechanism.
     assert.deepEqual(hrefs, [
       "/",
-      "/feed",
-      "/providers",
       "/discoveries",
+      "/feed",
+      "/opportunities",
+      "/actions",
     ]);
     for (const path of FORBIDDEN_PUBLIC_PATHS) {
       assert.equal(hrefs.includes(path as any), false, `nav leaked ${path}`);
@@ -122,12 +123,13 @@ describe("Hami public root", () => {
     const sitemap = readFileSync(join(root, "public/sitemap.xml"), "utf8");
     const robots = readFileSync(join(root, "public/robots.txt"), "utf8");
     const work = readFileSync(join(root, "src/routes/work.tsx"), "utf8");
+    const discoveries = readFileSync(join(root, "src/routes/discoveries.tsx"), "utf8");
     const header = readFileSync(join(root, "src/components/layout/site-header.tsx"), "utf8");
     const footer = readFileSync(join(root, "src/components/layout/site-footer.tsx"), "utf8");
     assert.match(home, /createFileRoute\("\/"\)/);
     assert.doesNotMatch(home, /Navigate to=/);
     // Home is the person's System, not a post/request board.
-    assert.match(home, /A System around you/);
+    assert.match(home, /A system that keeps observing reality/);
     assert.match(home, /useSystemState/);
     assert.match(home, /derivePaths/);
     assert.match(home, /relevantFeed/);
@@ -136,8 +138,11 @@ describe("Hami public root", () => {
     assert.match(home, /nothing is posted or shared/);
     assert.doesNotMatch(home, /Browse or post work|to="\/domain"/);
     assert.match(work, /to: "\/domain"/);
-    assert.match(header, /My gear/);
+    assert.match(header, /My System/);
     assert.match(header, /to="\/system"/);
+    assert.match(discoveries, /loadSubstrateDiscoveries/);
+    assert.match(discoveries, /Opening this page does not run discovery/);
+    assert.doesNotMatch(discoveries, /discovery\/runs/);
     assert.match(header, /to: "\/request"/);
     assert.doesNotMatch(header, /Review actions|to="\/operations"|to="\/actions"/);
     assert.doesNotMatch(footer, /Service categories|to="\/services"|to="\/contact"/);
