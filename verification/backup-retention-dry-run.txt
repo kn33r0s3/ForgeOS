@@ -1,7 +1,0 @@
-[DRY RUN] live database preserved: /workspace/forgeos-completion/ForgeOS/storage/forge.db
-legacy snapshots kept in storage:
-  forgeos_pre_p04_20260914_075559.db
-  forgeos_pre_schema_repair_20260914_071522.db
-legacy snapshots to archive:
-  forgeos_pre_repair_20260914_070700.db
-compressed snapshots to prune:

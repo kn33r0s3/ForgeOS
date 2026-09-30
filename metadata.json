@@ -1,0 +1,8 @@
+{
+  "name": "ForgeOS / Hami",
+  "description": "Universal economic intelligence, market signal processing, opportunity discovery, and decision execution platform.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

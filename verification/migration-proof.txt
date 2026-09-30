@@ -1,9 +1,0 @@
-second migration []
-integrity ok
-signals 11847
-tables 48
-real outcomes 0
-health 200
-flow 200
-pipeline {'products': [], 'channels': [], 'customer_events': [], 'total_products': 0, 'launched_products': 0, 'total_outreach': 0, 'total_leads': 0, 'total_paid_customers': 0, 'realized_revenue': 0.0, 'sandbox_revenue': 0.0, 'sandbox_products': 0}
-RESTORE ('ok',) (11847,)
