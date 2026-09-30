@@ -3,7 +3,8 @@ import { SITE } from "@/lib/content";
 import { Container } from "./container";
 
 const GROUP_LINKS = [
-  { label: "Network feed", to: "/feed" },
+  { label: "My System", to: "/" },
+  { label: "World stream", to: "/feed" },
   { label: "Sourced observations", to: "/discoveries" },
   { label: "Verified providers", to: "/providers" },
   { label: "Public work board", to: "/domain" },
@@ -11,8 +12,9 @@ const GROUP_LINKS = [
 ] as const;
 
 const WORK_LINKS = [
-  { label: "Browse or post work", to: "/domain" },
-  { label: "Submit a need", to: "/request" },
+  { label: "Map your gear", to: "/system" },
+  { label: "Share a need privately", to: "/request" },
+  { label: "Work board", to: "/domain" },
   { label: "Browse provider records", to: "/providers" },
 ] as const;
 

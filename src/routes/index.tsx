@@ -1,453 +1,253 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  ArrowRight,
-  ArrowUpRight,
-  BookOpenText,
-  BriefcaseBusiness,
-  RefreshCw,
-  ShieldCheck,
-} from "lucide-react";
+import { ArrowRight, Eye, Lightbulb, Link2, ShieldCheck, Sparkles, Wrench } from "lucide-react";
 import { Container } from "@/components/layout/container";
-import { EmptyState, SkeletonCards } from "@/components/ui/feedback";
+import { SystemEditor } from "@/components/system/system-editor";
 import {
-  loadDiscoveries,
-  loadPublicFeed,
-  loadProviders,
-  type ProviderRecord,
-  type PublicDiscovery,
-  type PublicFeedItem,
-} from "@/lib/content";
-
-function feedDateLabel(value?: string | null) {
-  if (!value) return "Time not recorded";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Time not recorded";
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date);
-}
+  PanelTitle,
+  PathCard,
+  ProgressPanel,
+  SituationPanel,
+  WorldStream,
+} from "@/components/system/system-panels";
+import { loadPublicFeed, type PublicFeedItem } from "@/lib/content";
+import { derivePaths, deriveStages, relevantFeed } from "@/lib/system/paths";
+import { hasAnyState } from "@/lib/system/state";
+import { useSystemState } from "@/lib/system/use-system";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
-  head: () => ({ meta: [{ title: "Hami — A useful next step" }] }),
+  head: () => ({
+    meta: [
+      { title: "Hami — your real-world System" },
+      {
+        name: "description",
+        content:
+          "Hami keeps a System around you: what you can do, what you have, and what becomes possible as the world changes. Nepal first.",
+      },
+    ],
+  }),
 });
 
-function HomePage() {
-  const [discoveries, setDiscoveries] = useState<PublicDiscovery[] | null>(null);
-  const [providers, setProviders] = useState<ProviderRecord[] | null>(null);
-  const [feedItems, setFeedItems] = useState<PublicFeedItem[] | null>(null);
+function useWorldFeed() {
+  const [items, setItems] = useState<PublicFeedItem[] | null>(null);
   const [loading, setLoading] = useState(true);
-  const [reloadVersion, setReloadVersion] = useState(0);
-
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    const scope = { fresh: reloadVersion > 0 };
-
-    void Promise.allSettled([
-      loadDiscoveries(3, scope),
-      loadProviders(undefined, scope),
-      loadPublicFeed(3, undefined, undefined, scope),
-    ]).then(([discoveryResult, providerResult, feedResult]) => {
+    void loadPublicFeed(40).then((result) => {
       if (!active) return;
-      setDiscoveries(
-        discoveryResult.status === "fulfilled" ? discoveryResult.value : null,
-      );
-      setProviders(
-        providerResult.status === "fulfilled" ? providerResult.value : null,
-      );
-      setFeedItems(
-        feedResult.status === "fulfilled" ? feedResult.value : null,
-      );
+      setItems(result);
       setLoading(false);
     });
-
     return () => {
       active = false;
     };
-  }, [reloadVersion]);
+  }, []);
+  return { items, loading, unavailable: !loading && items === null };
+}
+
+function HomePage() {
+  const { state, ready, update } = useSystemState();
+  const world = useWorldFeed();
+  const active = hasAnyState(state);
+
+  const paths = useMemo(() => (active ? derivePaths(state) : []), [active, state]);
+  const stages = useMemo(() => (active ? deriveStages(state) : []), [active, state]);
+  const relevant = useMemo(
+    () => (active && world.items ? relevantFeed(state, world.items) : []),
+    [active, state, world.items],
+  );
 
   return (
     <main>
+      {!ready ? (
+        <Container className="py-20">
+          <p className="text-sm text-dim" role="status">
+            Opening your System…
+          </p>
+        </Container>
+      ) : active ? (
+        <ActiveSystem
+          paths={paths}
+          stages={stages}
+          state={state}
+          world={world}
+          relevant={relevant}
+        />
+      ) : (
+        <Welcome onStart={update} world={world} />
+      )}
+    </main>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+function ActiveSystem({
+  state,
+  paths,
+  stages,
+  world,
+  relevant,
+}: {
+  state: NonNullable<ReturnType<typeof useSystemState>["state"]>;
+  paths: ReturnType<typeof derivePaths>;
+  stages: ReturnType<typeof deriveStages>;
+  world: ReturnType<typeof useWorldFeed>;
+  relevant: ReturnType<typeof relevantFeed>;
+}) {
+  const next = stages.find((s) => !s.reached && !s.evidenceGated);
+  return (
+    <Container className="py-8 sm:py-10">
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b-2 border-line pb-6">
+        <div>
+          <p className="flex items-center gap-2 font-mono text-[0.7rem] font-bold uppercase tracking-[0.18em] text-accent">
+            <span className="live-dot" aria-hidden="true" /> System active
+            {state.location ? <span className="text-dim">· {state.location.value}</span> : null}
+          </p>
+          <h1 className="mt-2 text-[clamp(1.9rem,4vw,2.9rem)] font-black leading-[1.05] tracking-[-0.03em] text-ink">
+            {paths.length
+              ? `${paths.length} possible ${paths.length === 1 ? "path" : "paths"} from what you have.`
+              : "Your System is listening."}
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+            Paths are possibilities, not promises. Each shows what is still unknown and the smallest real
+            next step.
+          </p>
+        </div>
+        {next ? (
+          <Link
+            to="/system"
+            className="inline-flex min-h-11 items-center gap-2 rounded-card border-2 border-accent/70 bg-black px-4 text-sm font-extrabold text-accent hover:bg-accent hover:text-black"
+          >
+            Next: {next.label} <ArrowRight className="size-4" aria-hidden="true" />
+          </Link>
+        ) : null}
+      </header>
+
+      <div className="mt-8 grid gap-6 lg:grid-cols-[18.5rem_minmax(0,1fr)_22rem]">
+        <div className="grid content-start gap-6">
+          <SituationPanel state={state} />
+          <ProgressPanel stages={stages} />
+        </div>
+
+        <section aria-label="Possible paths" className="min-w-0">
+          <PanelTitle icon={Lightbulb} kicker="What is possible" title="Paths from your gear" />
+          {paths.length ? (
+            <div className="mt-4 grid gap-4 xl:grid-cols-2">
+              {paths.map((p) => (
+                <PathCard key={p.id} path={p} />
+              ))}
+            </div>
+          ) : (
+            <div className="card mt-4 p-6">
+              <p className="text-sm leading-6 text-muted">
+                Add a capability or something you own and Hami will show what it could connect to.
+              </p>
+              <Link to="/system" className="link-arrow mt-3 inline-flex items-center gap-1 text-sm font-bold text-accent">
+                Map your gear <ArrowRight className="size-4" aria-hidden="true" />
+              </Link>
+            </div>
+          )}
+        </section>
+
+        <div className="min-w-0">
+          <WorldStream
+            items={world.items}
+            relevant={relevant}
+            loading={world.loading}
+            unavailable={world.unavailable}
+          />
+        </div>
+      </div>
+    </Container>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+const LOOP = [
+  { icon: Eye, title: "Observes", body: "Hami reads sourced public signals as the world changes." },
+  { icon: Wrench, title: "Understands you", body: "Your skills, time, place and what you already own." },
+  { icon: Link2, title: "Connects", body: "Finds what your gear could solve, with the unknowns shown." },
+  { icon: ShieldCheck, title: "Stays honest", body: "Possible, observed and verified are never blurred." },
+];
+
+function Welcome({
+  onStart,
+  world,
+}: {
+  onStart: ReturnType<typeof useSystemState>["update"];
+  world: ReturnType<typeof useWorldFeed>;
+}) {
+  return (
+    <>
       <section className="relative isolate overflow-hidden border-b-2 border-black">
         <div className="hero-glow -z-10" aria-hidden="true" />
         <div className="hero-grain -z-10" aria-hidden="true" />
         <Container className="py-12 sm:py-16 lg:py-20">
-          <p className="text-micro font-extrabold uppercase tracking-[0.14em] text-accent">
-            Hami · Nepal-first real-world coordination
-          </p>
-          <div className="mt-6 grid items-center gap-9 lg:grid-cols-[minmax(0,1.05fr)_minmax(22rem,0.95fr)] lg:gap-12">
-            <div className="max-w-3xl">
-              <h1 className="max-w-3xl font-display text-[clamp(2.7rem,5.7vw,5.25rem)] font-black leading-[0.98] tracking-[-0.045em] text-ink">
-                Make a real need clearer.
-                <span className="mt-2 block text-muted">Find what is already known.</span>
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,30rem)] lg:gap-14">
+            <div>
+              <p className="flex items-center gap-2 font-mono text-[0.72rem] font-bold uppercase tracking-[0.18em] text-accent">
+                <Sparkles className="size-4" aria-hidden="true" /> Hami · Nepal first
+              </p>
+              <h1 className="mt-5 max-w-3xl text-[clamp(2.6rem,5.8vw,5rem)] font-black leading-[0.98] tracking-[-0.045em] text-ink">
+                A System around you
+                <span className="mt-2 block text-muted">that keeps finding what’s possible.</span>
               </h1>
               <p className="mt-6 max-w-2xl text-base leading-7 text-muted sm:text-lg sm:leading-8">
-                Hami brings needs, public observations, and capabilities into one
-                shared view, so people can see what is known, what remains
-                uncertain, and where a human next step is needed.
+                Tell Hami what you can do and what you already have. It shows the paths those open —
+                work, income, skills, services — and keeps watching the world for new ones. You stay in
+                control; nothing is posted or shared.
               </p>
-
-              <div className="mt-7 flex flex-wrap gap-3">
-                <Link
-                  to="/domain"
-                  className="btn-wipe btn-primary inline-flex min-h-12 items-center gap-2 rounded-card border-2 border-black bg-accent px-5 font-extrabold text-black hover:text-accent focus-visible:text-accent"
-                >
-                  Browse or post work <ArrowRight className="size-4" aria-hidden="true" />
-                </Link>
-                <Link
-                  to="/request"
-                  className="btn-secondary inline-flex min-h-12 items-center gap-2 rounded-card border-2 border-line bg-card px-5 font-bold text-ink hover:border-accent focus-visible:border-accent"
-                >
-                  Share a need
-                </Link>
-              </div>
-
-              <div className="mt-7 grid max-w-xl gap-3 sm:grid-cols-3">
-                <div className="card glass p-3">
-                  <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">
-                    Evidence
-                  </p>
-                  <p className="mt-2 text-base font-bold text-ink">Source first</p>
-                </div>
-                <div className="card glass p-3">
-                  <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">
-                    Action
-                  </p>
-                  <p className="mt-2 text-base font-bold text-ink">Next step</p>
-                </div>
-                <div className="card glass p-3">
-                  <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">
-                    Outcome
-                  </p>
-                  <p className="mt-2 text-base font-bold text-ink">Verified only</p>
-                </div>
-              </div>
-
-              <div className="mt-7 flex max-w-xl items-start gap-3 border-l-2 border-accent pl-4">
-                <ShieldCheck className="mt-0.5 size-5 shrink-0 text-accent" aria-hidden="true" />
-                <p className="text-sm leading-6 text-muted">
-                  <span className="font-bold text-ink">No invented activity.</span>{" "}
-                  A post or possible match is not proof of availability,
-                  agreement, or an outcome.
-                </p>
+              <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-2">
+                {LOOP.map(({ icon: Icon, title, body }) => (
+                  <div key={title} className="glass flex gap-3 p-4">
+                    <Icon className="mt-0.5 size-5 shrink-0 text-accent" aria-hidden="true" />
+                    <div>
+                      <p className="text-sm font-extrabold text-ink">{title}</p>
+                      <p className="mt-0.5 text-sm leading-5 text-muted">{body}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <figure className="hero-visual relative isolate mx-auto w-full max-w-[36rem] overflow-hidden rounded-[1.35rem] border-2 border-line bg-card shadow-[0_24px_70px_-32px_rgba(0,0,0,0.9)]">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,155,4,0.24),transparent_36%),linear-gradient(135deg,rgba(255,255,255,0.04),transparent_40%,rgba(0,0,0,0.16))]" aria-hidden="true" />
-              <img
-                src="/hami-home.jpg"
-                alt="A warmly lit workspace with tools and an open notebook"
-                className="relative h-[17rem] w-full object-cover sm:h-[23rem] lg:h-[27rem]"
-                fetchPriority="high"
-              />
-              <div
-                className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-black/5"
-                aria-hidden="true"
-              />
-              <div className="hero-badges" aria-label="Key platform signals">
-                <span className="hero-badge">
-                  <span className="live-dot" aria-hidden="true" />
-                  Evidence-led
-                </span>
-                <span className="hero-badge">Reality first</span>
+            <div className="card border-accent/60 p-5 sm:p-6" id="start">
+              <p className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.16em] text-accent">
+                Start your System · 1 minute
+              </p>
+              <h2 className="mt-1 text-2xl font-black tracking-tight text-ink">What do you have to work with?</h2>
+              <div className="mt-5">
+                <SystemEditor state={null} onSave={onStart} compact />
               </div>
-              <figcaption className="absolute inset-x-0 bottom-0 p-5 sm:p-7">
-                <span className="status-pill border-white/20 bg-black/45 text-white">
-                  Illustrative workspace
-                </span>
-                <p className="mt-3 max-w-sm font-display text-2xl font-bold leading-tight text-white sm:text-3xl">
-                  Real needs. Clearer next steps.
-                </p>
-              </figcaption>
-            </figure>
+            </div>
           </div>
         </Container>
       </section>
 
-      <Container className="max-w-site py-12 sm:py-16">
-        <section aria-labelledby="start-heading">
-          <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">
-            Start with what you need
-          </p>
-          <h2
-            id="start-heading"
-            className="mt-2 max-w-3xl text-3xl font-black tracking-tight text-ink sm:text-4xl"
-          >
-            Useful paths, with their limits visible.
-          </h2>
-
-          <div className="mt-7 grid gap-4 lg:grid-cols-3">
-            <article className="card flex flex-col p-5 sm:p-6">
-              <BriefcaseBusiness className="size-5 text-accent" aria-hidden="true" />
-              <h3 className="mt-4 font-display text-2xl tracking-tight text-ink">
-                Find or share work
-              </h3>
-              <p className="mt-2 flex-1 text-sm leading-6 text-muted">
-                Browse public jobs, offers, and trades, or add a post. Posts
-                and suggested matches do not guarantee a response or agreement.
-              </p>
-              <Link
-                to="/domain"
-                className="link-arrow mt-5 inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-accent"
-              >
-                Open the public work board <ArrowUpRight className="size-4" aria-hidden="true" />
-              </Link>
-            </article>
-
-            <article className="card flex flex-col p-5 sm:p-6">
-              <ShieldCheck className="size-5 text-accent" aria-hidden="true" />
-              <h3 className="mt-4 font-display text-2xl tracking-tight text-ink">
-                Check listed services
-              </h3>
-              {loading ? (
-                <p className="mt-2 text-sm leading-6 text-muted">
-                  Checking public provider records…
-                </p>
-              ) : providers === null ? (
-                <p className="mt-2 text-sm leading-6 text-warning">
-                  Provider records could not be checked. No availability is assumed.
-                </p>
-              ) : providers.length === 0 ? (
-                <p className="mt-2 flex-1 text-sm leading-6 text-muted">
-                  No verified public providers are listed right now. Hami does
-                  not add names to fill an empty directory.
-                </p>
-              ) : (
-                <p className="mt-2 flex-1 text-sm leading-6 text-muted">
-                  {providers.length} verified public provider
-                  {providers.length === 1 ? "" : "s"} in the current listing.
-                  Availability and terms remain provider-specific.
-                </p>
-              )}
-              <Link
-                to="/providers"
-                className="link-arrow mt-5 inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-accent"
-              >
-                Browse provider records <ArrowUpRight className="size-4" aria-hidden="true" />
-              </Link>
-            </article>
-
-            <article className="card flex flex-col p-5 sm:p-6">
-              <BookOpenText className="size-5 text-accent" aria-hidden="true" />
-              <h3 className="mt-4 font-display text-2xl tracking-tight text-ink">
-                Follow a source
-              </h3>
-              <p className="mt-2 flex-1 text-sm leading-6 text-muted">
-                Review public observations with their source and evidence label.
-                A published source is not automatically a verified claim or an
-                offer.
-              </p>
-              <Link
-                to="/discoveries"
-                className="link-arrow mt-5 inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-accent"
-              >
-                Explore sourced observations <ArrowUpRight className="size-4" aria-hidden="true" />
-              </Link>
-            </article>
-          </div>
-        </section>
-
-        <section
-          aria-labelledby="observations-heading"
-          className="mt-14 rounded-card border-2 border-line bg-card p-5 sm:mt-16 sm:p-7"
-        >
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">
-                Current public evidence
-              </p>
-              <h2
-                id="observations-heading"
-                className="mt-2 font-display text-3xl tracking-tight text-ink"
-              >
-                Sourced observations
-              </h2>
-            </div>
-            <Link
-              to="/discoveries"
-              className="link-arrow inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-accent"
-            >
-              See all observations <ArrowUpRight className="size-4" aria-hidden="true" />
-            </Link>
-          </div>
-
-          {loading ? (
-            <SkeletonCards count={2} label="Checking sourced observations…" className="mt-6 space-y-3" />
-          ) : discoveries === null ? (
-            <div className="mt-6 rounded-card border border-warning/35 bg-warning/5 p-4">
-              <p className="text-sm text-ink" role="status">
-                The observation service could not be checked. This is not an empty result.
-              </p>
-              <button
-                type="button"
-                onClick={() => setReloadVersion((version) => version + 1)}
-                className="btn-ghost mt-3 inline-flex min-h-10 items-center gap-2 rounded-card px-3 text-sm font-semibold text-accent"
-              >
-                <RefreshCw className="size-4" aria-hidden="true" /> Try again
-              </button>
-            </div>
-          ) : discoveries.length === 0 ? (
-            <EmptyState
-              className="mt-6"
-              headingLevel="h3"
-              icon={BookOpenText}
-              title="No sourced observations are available right now"
-              body="Hami leaves this space empty until an eligible source record can be shown."
-            />
-          ) : (
-            <ol className="mt-6 grid gap-3 md:grid-cols-2">
-              {discoveries.map((item) => (
-                <li key={item.id} className="rounded-card border border-line bg-paper p-4">
-                  <div className="flex flex-wrap gap-2">
-                    <span className="status-pill status-pill-accent">{item.source}</span>
-                    <span className="status-pill status-pill-neutral">
-                      {item.epistemic_state}
-                    </span>
-                    <span className={`status-pill ${item.freshness === "stale" ? "status-pill-warning" : "status-pill-neutral"}`}>
-                      {item.freshness || "freshness unknown"}
-                    </span>
-                  </div>
-                  <h3 className="mt-3 font-display text-xl leading-tight text-ink">
-                    {item.title || "Untitled observation"}
-                  </h3>
-                  <p className="mt-2 text-sm leading-6 text-muted">{item.excerpt}</p>
-                  {item.canonical_url ? (
-                    <a
-                      href={item.canonical_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="link-arrow mt-3 inline-flex min-h-10 items-center gap-1 break-all text-sm text-accent"
-                    >
-                      Open source <ArrowUpRight className="size-4 shrink-0" aria-hidden="true" />
-                    </a>
-                  ) : null}
-                </li>
-              ))}
-            </ol>
-          )}
-        </section>
-
-        <section
-          aria-labelledby="network-preview-heading"
-          className="mt-10 rounded-card border-2 border-line bg-card p-5 sm:mt-12 sm:p-7"
-        >
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">
-                Current public network
-              </p>
-              <h2
-                id="network-preview-heading"
-                className="mt-2 font-display text-3xl tracking-tight text-ink"
-              >
-                Recent eligible records
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-                A small view of records already in Hami&apos;s public Feed.
-                Status and evidence labels stay attached; an opportunity
-                hypothesis is not a confirmed offer.
-              </p>
-            </div>
-            <Link
-              to="/feed"
-              className="link-arrow inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-accent"
-            >
-              Explore the network <ArrowUpRight className="size-4" aria-hidden="true" />
-            </Link>
-          </div>
-
-          {loading ? (
-            <SkeletonCards count={2} label="Checking public network records…" className="mt-6 space-y-3" />
-          ) : feedItems === null ? (
-            <div className="mt-6 rounded-card border border-warning/35 bg-warning/5 p-4">
-              <p className="text-sm text-ink" role="status">
-                Public network records could not be checked. This is not an empty result.
-              </p>
-              <button
-                type="button"
-                onClick={() => setReloadVersion((version) => version + 1)}
-                className="btn-ghost mt-3 inline-flex min-h-10 items-center gap-2 rounded-card px-3 text-sm font-semibold text-accent"
-              >
-                <RefreshCw className="size-4" aria-hidden="true" /> Try again
-              </button>
-            </div>
-          ) : feedItems.length === 0 ? (
-            <EmptyState
-              className="mt-6"
-              headingLevel="h3"
-              icon={BookOpenText}
-              title="No public network records are available right now"
-              body="Only eligible records appear here. Hami does not generate activity to fill this space."
-            />
-          ) : (
-            <ol className="mt-6 grid gap-3">
-              {feedItems.map((item) => {
-                const timestamp = item.updated_at || item.occurred_at;
-                return (
-                  <li key={item.id} className="rounded-card border border-line bg-paper p-4 sm:p-5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="status-pill status-pill-accent">
-                        {item.kind.replaceAll("_", " ")}
-                      </span>
-                      {item.status ? (
-                        <span className="status-pill status-pill-neutral">
-                          {item.status.replaceAll("_", " ")}
-                        </span>
-                      ) : null}
-                      <span className="status-pill status-pill-neutral">
-                        {item.epistemic_state.replaceAll("_", " ")}
-                      </span>
-                    </div>
-                    <h3 className="mt-3 font-display text-xl leading-tight text-ink">
-                      {item.title}
-                    </h3>
-                    <p className="mt-2 whitespace-pre-line text-sm leading-6 text-muted">
-                      {item.summary}
-                    </p>
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3 text-xs text-dim">
-                      <p>
-                        {item.source || "Source not recorded"}
-                        {" · "}
-                        {feedDateLabel(timestamp)}
-                      </p>
-                      <Link
-                        to="/feed"
-                        search={{ entity_type: item.entity_type, entity_id: item.entity_id }}
-                        className="link-arrow inline-flex min-h-9 items-center gap-1 font-semibold text-accent"
-                      >
-                        Open network context <ArrowUpRight className="size-3.5" aria-hidden="true" />
-                      </Link>
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-          )}
-        </section>
-
-        <section className="mt-10 grid gap-5 rounded-card border-l-4 border-accent bg-paper p-5 sm:grid-cols-[1fr_auto] sm:items-center sm:p-7">
+      <Container className="py-12 sm:py-14">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
           <div>
-            <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">
-              Have a need to clarify?
+            <p className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.16em] text-accent">
+              Why a System, not a board
             </p>
-            <h2 className="mt-2 font-display text-2xl tracking-tight text-ink">
-              Share it without sending contact details.
+            <h2 className="mt-2 text-3xl font-black tracking-tight text-ink">
+              You shouldn’t have to search for everything yourself.
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-              The request form stores a redacted observation and gives an
-              immediate receipt. It does not create a customer, contact anyone,
-              or promise a reply. Do not include sensitive information.
+            <p className="mt-3 max-w-xl text-base leading-7 text-muted">
+              Most useful possibilities are never posted anywhere. A skill that solves a neighbour’s
+              problem, a room that could be someone’s workshop, a scheme you qualify for. Hami looks for the
+              connections so you only step in where your choice matters.
+            </p>
+            <p className="mt-4 max-w-xl text-sm leading-6 text-dim">
+              Hami is early. It shows only what it can source, and says clearly when something is a
+              hypothesis. No invented jobs, customers or income.
             </p>
           </div>
-          <Link
-            to="/request"
-            className="btn-wipe btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-card border-2 border-black/70 bg-accent px-5 text-sm font-extrabold text-black hover:text-accent focus-visible:text-accent"
-          >
-            Submit a need <ArrowRight className="size-4" aria-hidden="true" />
-          </Link>
-        </section>
+          <WorldStream items={world.items} relevant={[]} loading={world.loading} unavailable={world.unavailable} />
+        </div>
       </Container>
-    </main>
+    </>
   );
 }
