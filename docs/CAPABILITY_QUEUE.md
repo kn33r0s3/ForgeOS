@@ -6,6 +6,31 @@ before implementation, and record verification before marking a claim DONE.
 Claims coordinate contributors; database uniqueness and idempotency remain the
 enforcement layer when claims overlap.
 
+## [ACTIVE] Surface persisted open-world discoveries in Hami
+
+- Evidence: the restored home centers on a browser-local personal System and a
+  public Feed; `/discoveries` currently shows only public sourced observations.
+  The canonical backend already exposes persisted discovery entities through
+  `GET /forge/substrate/discovery/findings`, using the existing substrate and
+  discovery engine.
+- Owner action still required: manually inspect the internal discovery endpoint
+  separately from public source observations to see what the substrate has
+  actually recorded.
+- Action removed by this change: navigate to the backend endpoint manually to
+  review already-persisted findings; the Hami discoveries surface will project
+  those records alongside clearly separated public observations.
+- Blocker and boundary: this is a read-only projection. It does not run
+  discovery, create findings, authorize actions, or claim real-world outcomes.
+  The findings endpoint remains subject to the backend's `FORGE_API_KEY` gate;
+  no key is sent to the browser. The local endpoint currently reports no stored
+  discovery findings. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT
+  MEASURABLE** because this work has no verified real transaction evidence.
+- Verification: exercise only local GET routes and browser rendering; do not
+  invoke `POST /forge/substrate/discovery/runs` or any production endpoint.
+- Next removable dependency: a trusted, authenticated owner-context read path
+  for private substrate records, so protected findings can be viewed without
+  manually inspecting an API or exposing the backend key to the browser.
+
 ## [DONE WITH LIMITATION] Command 2: open-world discovery engine
 
 - Agent: Grok (executor), owner-authorized direct commits to `origin/main`, 2026-09-30 NPT.
