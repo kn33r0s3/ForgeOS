@@ -1,0 +1,253 @@
+import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowRight, Eye, Lightbulb, Link2, ShieldCheck, Sparkles, Wrench } from "lucide-react";
+import { Container } from "@/components/layout/container";
+import { SystemEditor } from "@/components/system/system-editor";
+import {
+  PanelTitle,
+  PathCard,
+  ProgressPanel,
+  SituationPanel,
+  WorldStream,
+} from "@/components/system/system-panels";
+import { loadPublicFeed, type PublicFeedItem } from "@/lib/content";
+import { derivePaths, deriveStages, relevantFeed } from "@/lib/system/paths";
+import { hasAnyState } from "@/lib/system/state";
+import { useSystemState } from "@/lib/system/use-system";
+
+export const Route = createFileRoute("/")({
+  component: HomePage,
+  head: () => ({
+    meta: [
+      { title: "Hami — your real-world System" },
+      {
+        name: "description",
+        content:
+          "Hami keeps a System around you: what you can do, what you have, and what becomes possible as the world changes. Nepal first.",
+      },
+    ],
+  }),
+});
+
+function useWorldFeed() {
+  const [items, setItems] = useState<PublicFeedItem[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let active = true;
+    void loadPublicFeed(40).then((result) => {
+      if (!active) return;
+      setItems(result);
+      setLoading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+  return { items, loading, unavailable: !loading && items === null };
+}
+
+function HomePage() {
+  const { state, ready, update } = useSystemState();
+  const world = useWorldFeed();
+  const active = hasAnyState(state);
+
+  const paths = useMemo(() => (active ? derivePaths(state) : []), [active, state]);
+  const stages = useMemo(() => (active ? deriveStages(state) : []), [active, state]);
+  const relevant = useMemo(
+    () => (active && world.items ? relevantFeed(state, world.items) : []),
+    [active, state, world.items],
+  );
+
+  return (
+    <main>
+      {!ready ? (
+        <Container className="py-20">
+          <p className="text-sm text-dim" role="status">
+            Opening your System…
+          </p>
+        </Container>
+      ) : active ? (
+        <ActiveSystem
+          paths={paths}
+          stages={stages}
+          state={state}
+          world={world}
+          relevant={relevant}
+        />
+      ) : (
+        <Welcome onStart={update} world={world} />
+      )}
+    </main>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+function ActiveSystem({
+  state,
+  paths,
+  stages,
+  world,
+  relevant,
+}: {
+  state: NonNullable<ReturnType<typeof useSystemState>["state"]>;
+  paths: ReturnType<typeof derivePaths>;
+  stages: ReturnType<typeof deriveStages>;
+  world: ReturnType<typeof useWorldFeed>;
+  relevant: ReturnType<typeof relevantFeed>;
+}) {
+  const next = stages.find((s) => !s.reached && !s.evidenceGated);
+  return (
+    <Container className="py-8 sm:py-10">
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b-2 border-line pb-6">
+        <div>
+          <p className="flex items-center gap-2 font-mono text-[0.7rem] font-bold uppercase tracking-[0.18em] text-accent">
+            <span className="live-dot" aria-hidden="true" /> System active
+            {state.location ? <span className="text-dim">· {state.location.value}</span> : null}
+          </p>
+          <h1 className="mt-2 text-[clamp(1.9rem,4vw,2.9rem)] font-black leading-[1.05] tracking-[-0.03em] text-ink">
+            {paths.length
+              ? `${paths.length} possible ${paths.length === 1 ? "path" : "paths"} from what you have.`
+              : "Your System is listening."}
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+            Paths are possibilities, not promises. Each shows what is still unknown and the smallest real
+            next step.
+          </p>
+        </div>
+        {next ? (
+          <Link
+            to="/system"
+            className="inline-flex min-h-11 items-center gap-2 rounded-card border-2 border-accent/70 bg-black px-4 text-sm font-extrabold text-accent hover:bg-accent hover:text-black"
+          >
+            Next: {next.label} <ArrowRight className="size-4" aria-hidden="true" />
+          </Link>
+        ) : null}
+      </header>
+
+      <div className="mt-8 grid gap-6 lg:grid-cols-[18.5rem_minmax(0,1fr)_22rem]">
+        <div className="grid content-start gap-6">
+          <SituationPanel state={state} />
+          <ProgressPanel stages={stages} />
+        </div>
+
+        <section aria-label="Possible paths" className="min-w-0">
+          <PanelTitle icon={Lightbulb} kicker="What is possible" title="Paths from your gear" />
+          {paths.length ? (
+            <div className="mt-4 grid gap-4 xl:grid-cols-2">
+              {paths.map((p) => (
+                <PathCard key={p.id} path={p} />
+              ))}
+            </div>
+          ) : (
+            <div className="card mt-4 p-6">
+              <p className="text-sm leading-6 text-muted">
+                Add a capability or something you own and Hami will show what it could connect to.
+              </p>
+              <Link to="/system" className="link-arrow mt-3 inline-flex items-center gap-1 text-sm font-bold text-accent">
+                Map your gear <ArrowRight className="size-4" aria-hidden="true" />
+              </Link>
+            </div>
+          )}
+        </section>
+
+        <div className="min-w-0">
+          <WorldStream
+            items={world.items}
+            relevant={relevant}
+            loading={world.loading}
+            unavailable={world.unavailable}
+          />
+        </div>
+      </div>
+    </Container>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+const LOOP = [
+  { icon: Eye, title: "Observes", body: "Hami reads sourced public signals as the world changes." },
+  { icon: Wrench, title: "Understands you", body: "Your skills, time, place and what you already own." },
+  { icon: Link2, title: "Connects", body: "Finds what your gear could solve, with the unknowns shown." },
+  { icon: ShieldCheck, title: "Stays honest", body: "Possible, observed and verified are never blurred." },
+];
+
+function Welcome({
+  onStart,
+  world,
+}: {
+  onStart: ReturnType<typeof useSystemState>["update"];
+  world: ReturnType<typeof useWorldFeed>;
+}) {
+  return (
+    <>
+      <section className="relative isolate overflow-hidden border-b-2 border-black">
+        <div className="hero-glow -z-10" aria-hidden="true" />
+        <div className="hero-grain -z-10" aria-hidden="true" />
+        <Container className="py-12 sm:py-16 lg:py-20">
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,30rem)] lg:gap-14">
+            <div>
+              <p className="flex items-center gap-2 font-mono text-[0.72rem] font-bold uppercase tracking-[0.18em] text-accent">
+                <Sparkles className="size-4" aria-hidden="true" /> Hami · Nepal first
+              </p>
+              <h1 className="mt-5 max-w-3xl text-[clamp(2.6rem,5.8vw,5rem)] font-black leading-[0.98] tracking-[-0.045em] text-ink">
+                A System around you
+                <span className="mt-2 block text-muted">that keeps finding what’s possible.</span>
+              </h1>
+              <p className="mt-6 max-w-2xl text-base leading-7 text-muted sm:text-lg sm:leading-8">
+                Tell Hami what you can do and what you already have. It shows the paths those open —
+                work, income, skills, services — and keeps watching the world for new ones. You stay in
+                control; nothing is posted or shared.
+              </p>
+              <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-2">
+                {LOOP.map(({ icon: Icon, title, body }) => (
+                  <div key={title} className="glass flex gap-3 p-4">
+                    <Icon className="mt-0.5 size-5 shrink-0 text-accent" aria-hidden="true" />
+                    <div>
+                      <p className="text-sm font-extrabold text-ink">{title}</p>
+                      <p className="mt-0.5 text-sm leading-5 text-muted">{body}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="card border-accent/60 p-5 sm:p-6" id="start">
+              <p className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.16em] text-accent">
+                Start your System · 1 minute
+              </p>
+              <h2 className="mt-1 text-2xl font-black tracking-tight text-ink">What do you have to work with?</h2>
+              <div className="mt-5">
+                <SystemEditor state={null} onSave={onStart} compact />
+              </div>
+            </div>
+          </div>
+        </Container>
+      </section>
+
+      <Container className="py-12 sm:py-14">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+          <div>
+            <p className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.16em] text-accent">
+              Why a System, not a board
+            </p>
+            <h2 className="mt-2 text-3xl font-black tracking-tight text-ink">
+              You shouldn’t have to search for everything yourself.
+            </h2>
+            <p className="mt-3 max-w-xl text-base leading-7 text-muted">
+              Most useful possibilities are never posted anywhere. A skill that solves a neighbour’s
+              problem, a room that could be someone’s workshop, a scheme you qualify for. Hami looks for the
+              connections so you only step in where your choice matters.
+            </p>
+            <p className="mt-4 max-w-xl text-sm leading-6 text-dim">
+              Hami is early. It shows only what it can source, and says clearly when something is a
+              hypothesis. No invented jobs, customers or income.
+            </p>
+          </div>
+          <WorldStream items={world.items} relevant={[]} loading={world.loading} unavailable={world.unavailable} />
+        </div>
+      </Container>
+    </>
+  );
+}

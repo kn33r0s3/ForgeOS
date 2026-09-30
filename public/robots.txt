@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://forge-os-ebon.vercel.app/sitemap.xml
