@@ -9,7 +9,7 @@ export function NotFoundPage() {
     <main className="flex flex-1 items-center py-24">
       <Container className="max-w-xl">
         <Eyebrow tone="amber">404</Eyebrow>
-        <h1 className="font-gothic text-display text-fg [text-shadow:3px_3px_0_#000]">
+        <h1 className="font-display font-black tracking-[-0.045em] text-display text-fg">
           This page
           <br />
           <span className="text-muted">is not here.</span>

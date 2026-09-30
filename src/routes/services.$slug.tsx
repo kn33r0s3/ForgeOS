@@ -41,7 +41,7 @@ function ServicePage() {
         <Container className="grid items-end gap-10 lg:grid-cols-[1.15fr_0.85fr]">
           <div>
             <Eyebrow>Service / {service.slug}</Eyebrow>
-            <h1 className="max-w-3xl font-gothic text-display text-fg [text-shadow:3px_3px_0_#000]">
+            <h1 className="max-w-3xl font-display font-black tracking-[-0.045em] text-display text-fg">
               {service.title}
             </h1>
             <p className="mt-6 max-w-xl text-lede text-muted">{service.short}</p>

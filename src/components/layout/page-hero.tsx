@@ -23,7 +23,7 @@ export function PageHero({
       <div className="hero-grain -z-10" aria-hidden="true" />
       <Container className="reveal flex max-w-3xl flex-col items-center py-16 text-center sm:py-20 lg:py-24">
         <Eyebrow>{eyebrow}</Eyebrow>
-        <h1 className="font-gothic text-display text-ink [text-shadow:3px_3px_0_#000]">{title}</h1>
+        <h1 className="font-display font-black tracking-[-0.045em] text-display text-ink">{title}</h1>
         <span className="cut-rule mt-6" aria-hidden="true" />
         {lede ? <p className="mt-6 max-w-xl text-lede text-muted">{lede}</p> : null}
         {children}

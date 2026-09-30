@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { Container } from "./container";
 
 /**
- * Standard page masthead: section tag, blackletter headline with an orange
+ * Standard page masthead: section tag, sans-serif display headline with an orange
  * cut rule, lede, optional aside panel. Sits on the grey-to-black 45deg
  * sheen and closes with a pinstripe rule.
  */
@@ -32,7 +32,7 @@ export function PageHeader({
         <div className={cn("grid gap-8", aside && "lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-end")}>
           <div className="reveal">
             <p className="tag">{eyebrow}</p>
-            <h1 className="mt-5 max-w-3xl font-gothic text-[clamp(2.5rem,6vw,4.6rem)] leading-[1.02] text-ink [text-shadow:3px_3px_0_#000]">
+            <h1 className="mt-5 max-w-3xl font-display text-[clamp(2.5rem,6vw,4.6rem)] font-black leading-[0.98] tracking-[-0.045em] text-ink">
               {title}
             </h1>
             <span className="cut-rule mt-5" aria-hidden="true" />

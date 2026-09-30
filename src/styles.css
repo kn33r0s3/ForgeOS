@@ -138,11 +138,11 @@
     line-height: 1.55;
   }
 
-  /* Page titles are blackletter; everything below is heavy Roboto. */
+  /* Page titles use the same direct, sans-serif display face as the home hero. */
   h1 {
-    font-family: var(--font-gothic);
-    font-weight: 700;
-    letter-spacing: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: -0.045em;
     text-wrap: balance;
   }
 
