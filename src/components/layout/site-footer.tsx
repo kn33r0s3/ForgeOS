@@ -2,20 +2,27 @@ import { Link } from "@tanstack/react-router";
 import { SITE } from "@/lib/content";
 import { Container } from "./container";
 
-const GROUP_LINKS = [
-  { label: "My System", to: "/" },
-  { label: "World stream", to: "/feed" },
-  { label: "Sourced observations", to: "/discoveries" },
-  { label: "Verified providers", to: "/providers" },
-  { label: "Public work board", to: "/domain" },
-  { label: "About Hami", to: "/about" },
+const DISCOVERY_LINKS = [
+  { label: "Sourced discoveries", to: "/discoveries" },
+  { label: "Opportunities", to: "/opportunities" },
+  { label: "Network", to: "/feed" },
 ] as const;
 
-const WORK_LINKS = [
-  { label: "Map your gear", to: "/system" },
-  { label: "Share a need privately", to: "/request" },
+const ACTION_LINKS = [
   { label: "Work board", to: "/domain" },
-  { label: "Browse provider records", to: "/providers" },
+  { label: "Verified providers", to: "/providers" },
+  { label: "Services", to: "/services" },
+  { label: "Share a need", to: "/request" },
+] as const;
+
+const ABOUT_LINKS = [
+  { label: "About Hami", to: "/about" },
+  { label: "How we work", to: "/process" },
+  { label: "Hami group", to: "/group" },
+  { label: "Businesses", to: "/group/businesses" },
+  { label: "Technology", to: "/technology" },
+  { label: "Ventures", to: "/ventures" },
+  { label: "Contact", to: "/contact" },
 ] as const;
 
 const LINK =
@@ -26,7 +33,7 @@ export function SiteFooter() {
   return (
     <footer className="mt-auto border-t-2 border-white/20 bg-card">
       <div className="band-rule" aria-hidden="true" />
-      <Container className="grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr]">
+      <Container className="grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr_1.15fr_0.9fr]">
         <div className="sm:col-span-2 lg:col-span-1">
           <p className="font-gothic text-3xl text-accent">
             <span className="font-sans text-2xl font-normal text-wheat" aria-hidden="true">
@@ -38,24 +45,28 @@ export function SiteFooter() {
             Hami is one system. Services are one recorded path through it when public listings and contact routes are available. Nepal is where that path starts.
           </p>
         </div>
-        <FooterColumn title="Explore">
-          {GROUP_LINKS.map((item) => (
+        <FooterColumn title="Discover">
+          {DISCOVERY_LINKS.map((item) => (
             <Link key={item.to} to={item.to} className={LINK}>
               {item.label}
             </Link>
           ))}
         </FooterColumn>
-        <FooterColumn title="Quick links">
-          {WORK_LINKS.map((item) => (
+        <FooterColumn title="Take part">
+          {ACTION_LINKS.map((item) => (
+            <Link key={item.to} to={item.to} className={LINK}>
+              {item.label}
+            </Link>
+          ))}
+        </FooterColumn>
+        <FooterColumn title="About">
+          {ABOUT_LINKS.map((item) => (
             <Link key={item.to} to={item.to} className={LINK}>
               {item.label}
             </Link>
           ))}
         </FooterColumn>
         <FooterColumn title="Connect">
-          <Link to="/feed" className={LINK}>
-            Explore the network
-          </Link>
           {SITE.email ? (
             <a href={`mailto:${SITE.email}`} className={LINK}>
               {SITE.email}

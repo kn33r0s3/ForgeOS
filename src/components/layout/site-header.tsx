@@ -1,22 +1,30 @@
 import { useEffect, useState } from "react";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, ChevronDown } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { NAV } from "@/lib/content";
+import { NAV, NAV_GROUPS } from "@/lib/content";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "./brand-mark";
 import { Container } from "./container";
 
 function isActive(href: string, pathname: string) {
-  if (href === "/group") return pathname === "/group";
-  if (href === "/services") return pathname === "/services" || pathname.startsWith("/services/");
+  if (href === "/group/" || href === "/group") {
+    return pathname === "/group" || pathname === "/group/";
+  }
+  if (href === "/services/" || href === "/services") {
+    return pathname === "/services" || pathname.startsWith("/services/");
+  }
   return pathname === href;
 }
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
+  const [exploreOpen, setExploreOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [scrolled, setScrolled] = useState(false);
+  const exploreActive = NAV_GROUPS.some((group) =>
+    group.links.some((item) => isActive(item.to, pathname)),
+  );
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -27,20 +35,24 @@ export function SiteHeader() {
 
   useEffect(() => {
     setOpen(false);
+    setExploreOpen(false);
   }, [pathname]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open && !exploreOpen) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+        setExploreOpen(false);
+      }
     };
-    document.body.style.overflow = "hidden";
+    if (open) document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = "";
+      if (open) document.body.style.overflow = "";
       window.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [open, exploreOpen]);
 
   // The mobile panel is a sibling of <header>, not a child, so it is never
   // clipped by the header's own box.
@@ -68,19 +80,38 @@ export function SiteHeader() {
                 </Link>
               );
             })}
+            <button
+              type="button"
+              className={cn(
+                "mast-link gap-2",
+                (exploreOpen || exploreActive) && "bg-black text-accent",
+              )}
+              aria-expanded={exploreOpen}
+              aria-haspopup="true"
+              onClick={() => setExploreOpen((value) => !value)}
+            >
+              Explore
+              <ChevronDown
+                className={cn(
+                  "size-4 transition-transform duration-150",
+                  exploreOpen && "rotate-180",
+                )}
+                aria-hidden="true"
+              />
+            </button>
           </nav>
           <div className="flex items-center gap-2">
             <Link
-              to="/system"
-              className="btn-wipe hidden h-10 items-center gap-1.5 rounded-card border-2 border-black bg-black px-4 text-sm font-extrabold text-accent hover:text-wheat lg:inline-flex"
+              to="/request"
+              className="btn-header-cta hidden h-10 items-center gap-1.5 rounded-card border-2 border-black bg-black px-4 text-sm font-extrabold text-accent hover:text-wheat lg:inline-flex"
               style={{ backgroundImage: "linear-gradient(45deg, #161515 50%, transparent 50%)" }}
             >
-              My gear
+              Share a need
               <ArrowUpRight className="size-4" aria-hidden="true" />
             </Link>
             <button
               type="button"
-              className="group relative inline-flex size-11 flex-col items-center justify-center gap-[5px] rounded-card lg:hidden"
+              className="btn-menu group relative inline-flex size-11 flex-col items-center justify-center gap-[5px] rounded-card lg:hidden"
               aria-expanded={open}
               aria-controls="mobile-navigation"
               aria-label={open ? "Close navigation" : "Open navigation"}
@@ -101,6 +132,42 @@ export function SiteHeader() {
             </button>
           </div>
         </Container>
+        {exploreOpen ? (
+          <div
+            id="desktop-explore-menu"
+            className="absolute inset-x-0 top-full border-b-2 border-black bg-card shadow-md"
+          >
+            <Container className="grid gap-8 py-6 sm:grid-cols-2">
+              {NAV_GROUPS.map((group) => (
+                <section key={group.id} aria-labelledby={`explore-${group.id}`}>
+                  <h2
+                    id={`explore-${group.id}`}
+                    className="text-micro font-extrabold uppercase tracking-[0.14em] text-accent"
+                  >
+                    {group.label}
+                  </h2>
+                  <ul className="mt-3 grid grid-cols-2 gap-x-6">
+                    {group.links.map((item) => (
+                      <li key={item.to}>
+                        <Link
+                          to={item.to}
+                          aria-current={isActive(item.to, pathname) ? "page" : undefined}
+                          className={cn(
+                            "link-arrow flex min-h-10 items-center text-sm font-bold text-wheat",
+                            isActive(item.to, pathname) && "text-accent",
+                          )}
+                          onClick={() => setExploreOpen(false)}
+                        >
+                          {item.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </Container>
+          </div>
+        ) : null}
       </header>
       <div
         id="mobile-navigation"
@@ -146,23 +213,39 @@ export function SiteHeader() {
             </ol>
           </nav>
           <div
-            className="reveal grid grid-cols-2 gap-2 border-t-2 border-line p-3 text-sm"
+            className="reveal space-y-5 border-t-2 border-line p-4 text-sm"
             style={{ "--i": NAV.length + 1 } as React.CSSProperties}
           >
-            {SECONDARY.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className="flex min-h-11 items-center rounded-card border-2 border-line bg-black px-3 font-bold text-wheat transition-colors hover:border-accent hover:text-white"
-              >
-                {item.label}
-              </Link>
+            {NAV_GROUPS.map((group) => (
+              <section key={group.id} aria-labelledby={`mobile-${group.id}`}>
+                <h2
+                  id={`mobile-${group.id}`}
+                  className="text-micro font-extrabold uppercase tracking-[0.14em] text-accent"
+                >
+                  {group.label}
+                </h2>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {group.links.map((item) => (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      aria-current={isActive(item.to, pathname) ? "page" : undefined}
+                      className={cn(
+                        "flex min-h-11 items-center rounded-card border-2 border-line bg-black px-3 font-bold text-wheat transition-colors hover:border-accent hover:text-white",
+                        isActive(item.to, pathname) && "border-accent text-accent",
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
           <div className="reveal p-3 pt-0" style={{ "--i": NAV.length + 2 } as React.CSSProperties}>
             <Button asChild size="lg" className="w-full">
-              <Link to="/system">
-                My gear
+              <Link to="/request">
+                Share a need
                 <ArrowUpRight />
               </Link>
             </Button>
@@ -173,10 +256,4 @@ export function SiteHeader() {
   );
 }
 
-const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
-
-const SECONDARY = [
-  { label: "Share a need", to: "/request" },
-  { label: "Work board", to: "/domain" },
-  { label: "About", to: "/about" },
-] as const;
+const ROMAN = ["I", "II", "III", "IV"];

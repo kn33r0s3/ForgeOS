@@ -7,16 +7,42 @@ export const SITE = {
   url: "",
   email: "",
   location: "Starting in Nepal",
-  tagline: "A real-world System that keeps finding what is possible for you.",
+  tagline: "Discover what matters. Understand it. Act on it.",
   description:
     "Hami connects observations, research, capabilities, decisions, and outcomes in one evidence-led system. Nepal is the initial focus; global reach remains a direction, not a verified deployment. Public records do not imply verified demand, execution, or outcomes.",
 } as const;
 
 export const NAV = [
-  { label: "My System", to: "/" },
-  { label: "World", to: "/feed" },
-  { label: "Providers", to: "/providers" },
-  { label: "Research", to: "/discoveries" },
+  { label: "Home", to: "/" },
+  { label: "Discoveries", to: "/discoveries" },
+  { label: "Opportunities", to: "/opportunities" },
+  { label: "Network", to: "/feed" },
+] as const;
+
+export const NAV_GROUPS = [
+  {
+    id: "act",
+    label: "Ways to act",
+    links: [
+      { label: "Work board", to: "/domain" },
+      { label: "Verified providers", to: "/providers" },
+      { label: "Services", to: "/services" },
+      { label: "Share a need", to: "/request" },
+    ],
+  },
+  {
+    id: "about",
+    label: "About Hami",
+    links: [
+      { label: "About", to: "/about" },
+      { label: "How we work", to: "/process" },
+      { label: "Hami group", to: "/group" },
+      { label: "Businesses", to: "/group/businesses" },
+      { label: "Technology", to: "/technology" },
+      { label: "Ventures", to: "/ventures" },
+      { label: "Contact", to: "/contact" },
+    ],
+  },
 ] as const;
 
 export const providerCategories = ["All"] as const;
