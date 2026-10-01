@@ -161,7 +161,7 @@ const backendProxy = {
     },
     rewrite: (path: string) => path.replace(/^\/api/, ""),
   },
-  "/forge": { target: "http://127.0.0.1:8000", changeOrigin: true },
+  "/forge/": { target: "http://127.0.0.1:8000", changeOrigin: true },
   "/repair-shop": { target: "http://127.0.0.1:8000", changeOrigin: true },
   "/earn/offers": { target: "http://127.0.0.1:8000", changeOrigin: true },
   "/observer": { target: "http://127.0.0.1:8000", changeOrigin: true },

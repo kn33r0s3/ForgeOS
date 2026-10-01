@@ -2,9 +2,9 @@
 
 **REAL revenue: $0. REAL customers: 0. External validation: 0.**
 The current startup and human workflow instructions are in [docs/OPERATOR_GUIDE.md](docs/OPERATOR_GUIDE.md).
-Architecture map: [docs/FINAL_ARCHITECTURE.md](docs/FINAL_ARCHITECTURE.md).
-End-state blueprint: [docs/FUTURE_BLUEPRINT.md](docs/FUTURE_BLUEPRINT.md).
-Verified release results: [STATUS.md](STATUS.md) and [COMPLETION_REPORT.md](COMPLETION_REPORT.md).
+Architecture map: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Historical end-state blueprint: [docs/archive/legacy-docs/FUTURE_BLUEPRINT.md](docs/archive/legacy-docs/FUTURE_BLUEPRINT.md).
+Current status: [STATUS.md](STATUS.md). Historical release results are retained in [docs/archive/status-reports/STATUS-history.md](docs/archive/status-reports/STATUS-history.md) and [docs/archive/legacy-docs/COMPLETION_REPORT.md](docs/archive/legacy-docs/COMPLETION_REPORT.md).
 Older roadmap/readiness statements below are historical, not verified sales claims.
 Use a separate database for synthetic source inputs, plus SANDBOX labels downstream.
 
@@ -96,14 +96,17 @@ The task worker is disabled by default; enable deliberately with
 `FORGEOS_ENABLE_WORKER=true ./start.sh`. Stop that combined stack with
 `./stop.sh`.
 
-The optional Docker Compose frontend on port 3000 is the separate legacy
-Next.js dashboard; it is not the current Hami web app.
+The optional Docker Compose frontend on port 3000 is the archived legacy
+Next.js dashboard at `docs/archive/legacy-frontend/`; it is not the current
+Hami web app.
 
 ### Production frontend/API configuration
 
 The current public Forge app is the root Vite service. Its browser client uses the same-origin `/api` path, which Vercel routes to the FastAPI service declared in `vercel.json`; do not point it at `localhost` or `127.0.0.1`. The API service owns the `/api` aliases and receives the original request path.
 
-The separate `frontend/` Next.js dashboard is a legacy/local app. If it is run independently against another backend, its client may use:
+The separate `docs/archive/legacy-frontend/` Next.js dashboard is a
+legacy/local app. If it is run independently against another backend, its
+client may use:
 
 ```bash
 NEXT_PUBLIC_API_URL=https://<actual-production-backend>

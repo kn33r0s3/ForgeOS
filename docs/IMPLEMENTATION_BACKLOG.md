@@ -1,6 +1,6 @@
 # ForgeOS implementation backlog
 
-This file preserves implementation detail for the historical S5 canonical-belief work. It is not ForgeOS's architecture or a second active queue. `docs/FUTURE_BLUEPRINT.md` defines the open-ended system direction; `docs/SERIAL_PATH.md` tracks one current task and must be refreshed by a continuous capability rescan.
+This file preserves implementation detail for the historical S5 canonical-belief work. It is not ForgeOS's architecture or a second active queue. `docs/ARCHITECTURE.md` is the current architecture proposal; archived planning history is under `docs/archive/legacy-docs/`.
 Do not treat a task as DONE until the code and tests exist.
 
 Rule: one Forge. Extend the named component. Do not add a second database, API, scheduler, research engine, matching engine, outcome system, or frontend.
@@ -11,7 +11,7 @@ Rule: one Forge. Extend the named component. Do not add a second database, API, 
 storage/forge.db
   → FastAPI app.main
   → public router (/public/*) consumed by root src/
-  → forge router (/forge/*) consumed by frontend/ cockpit
+  → forge router (/forge/*) consumed by the archived Next.js cockpit
   → scripts/scheduler.py → cycle_scheduler → run_daily_cycle
        → forge_loop.run_cycle
             → pattern_engine.detect_patterns
@@ -147,7 +147,7 @@ Title: Knowledge page shows the canonical hypothesis and its evidence count.
 Status: The knowledge page lists canonical hypotheses and their signal counts. It is not blocked on TASK-001.
 
 Depends on: TASK-001.
-Existing components to reuse: `frontend/app` knowledge route, existing beliefs API, `Belief.supporting_signal_ids`.
+Existing components to reuse: archived `docs/archive/legacy-frontend/app` knowledge route, existing beliefs API, `Belief.supporting_signal_ids`.
 Goal: the cockpit lists one row per canonical belief, with signal count and the hypothesis wording, and does not render the old permutation sentences as separate knowledge.
 
 ## TASK-003

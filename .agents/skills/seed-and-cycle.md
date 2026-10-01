@@ -29,5 +29,5 @@ python -m scripts.run_daily_cycle --times 3
 ## After Running
 
 1. Check the latest log entry
-2. Update `docs/CURRENT_FOCUS.md` with the new status
+2. Update `STATUS.md` with the new status
 3. Report whether the cycle succeeded or exactly where it broke

@@ -198,9 +198,9 @@ Repository configuration and current documentation identify the root
 TanStack/Vite application as the current web surface and FastAPI under
 `backend/` as the business API. `vercel.json` routes `/api/auth/*` to the web
 service, other `/api/*` requests to FastAPI, and remaining paths to the web
-service. The separate `frontend/` Next.js application remains a legacy/local
-surface used by the Compose configuration; it is not the root Vercel web
-service.
+service. The separate Next.js application, archived at
+`docs/archive/legacy-frontend/`, remains a legacy/local surface used by the
+Compose configuration; it is not the root Vercel web service.
 
 The backend has a local SQLite path and supports a configured database URL.
 The web authentication/private-context layer has a PGLite fallback and uses a
@@ -249,17 +249,16 @@ regulatory and reputation review.
   design documents. The spec labels Forge Bot as not implemented, not enabled,
   and not authorized to contact anyone. No
   `services/forge-bot/state/schema.sql` exists in the inspected tree.
-- The commercial evidence ledger is `docs/REVENUE_LOG.md`. The inspected
-  `docs/CURRENT_FOCUS.md` reports no verified real customer, transaction, or
-  revenue; that is a dated report, not a claim about uninspected external
-  systems.
+- The commercial evidence ledger is `docs/REVENUE_LOG.md`. It currently
+  contains no commercial evidence entries; that is not a claim about
+  uninspected external systems.
 - Architecture descriptions conflict in preserved documents:
   `README.md` identifies the root Vite app as current;
-  `docs/FINAL_ARCHITECTURE.md` describes FastAPI + Next.js + SQLite as
-  current; `docs/FEATURE_INVENTORY.md` contains historical Express/in-memory
-  and restoration claims. Use Section 11 for the repository configuration
-  observed here; preserve the conflicting documents as history until a
-  separate approved documentation task reconciles them.
+  `docs/archive/legacy-docs/FINAL_ARCHITECTURE.md` describes FastAPI + Next.js
+  + SQLite as current; `docs/archive/legacy-docs/FEATURE_INVENTORY.md` contains
+  historical Express/in-memory and restoration claims. Use Section 11 for the
+  repository configuration observed here; preserve the conflicting documents
+  as history.
 - The repository documents an outcome-first, owner-run discovery gate. Section
   8 operationalizes the 30-day kill rule as one verified real paid consultancy
   outcome by day 30 after the first recorded owner-run discovery conversation;

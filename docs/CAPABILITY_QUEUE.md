@@ -1,5 +1,26 @@
 # Hami capability claim ledger (ForgeOS repository)
 
+## [RECORDED] Archive superseded documents and legacy frontend source
+
+- Owner action still required: resolve the Section 8 wording separately; identify whether the ignored exported context files may be committed; authorize any future live Oracle VM provisioning or real email delivery.
+- Action removed: reduce competing current-looking documents and preserve the Next.js dashboard and historical records under `docs/archive/`, while retaining the root `start.sh`/`stop.sh` path and preview-only `startup.sh`.
+- Current blocker / verification: `sanipops_clean/river-cinder-bamboo-otter-main/` is only copied preview tooling, not a complete application; no `opencode.jsonc.bad`, `status.sh`, or `start.ps1` exists in the current tree. The requested ignored context files are excluded by `.gitignore` and will not be added to version control without owner clearance.
+- Next removable dependency: confirm whether ignored context snapshots are safe and intended for archival in Git, then validate the archived Compose legacy surface without provisioning external infrastructure.
+
+## [DONE WITH LIMITATION] Add owner-authorized Forge Bot lead contact record
+
+- Owner action still required: decide when public intake may be activated after the five licensed-agency discovery conversations; set `FORGE_BOT_INTAKE_ENABLED`, `FORGE_BOT_CONTACT_HMAC_KEY`, and `FORGE_API_KEY` only in a protected server environment; select a time-based retention policy; authorize any outbound email or automatic follow-up separately.
+- Action removed: the owner's explicit approval removes the prior schema-approval blocker. Forge Bot can now accept consented intake into one isolated private table, deduplicate by normalized email/phone, expose a private owner summary, and support token-based opt-out/erasure without using public substrate records.
+- Current blocker / verification: `ForgeBotLeadContact` is scoped only to Forge Bot. Intake fails closed by default and also requires a stable server-only HMAC key (32+ characters) and the owner API key. The submit endpoint does not echo PII or write Signals/entities/events; public feed tests prove no lead projection. The one-time control token now has visible, separately confirmed post-submit actions for opt-out (contact/answer fields erased; HMAC suppression retained) and hard deletion (the entire row, including suppression, removed). Full backend tests pass (585 passed, 2 skipped), frontend tests pass (103), typecheck/build pass, and browser checks verified the page and closed state on desktop and 390px mobile with no horizontal overflow or console errors. The page remains unlisted/noindex and the form disabled until the runtime settings and operational gates are approved. The in-process limit of five submissions/IP/hour is not production-distributed; no SMTP, inbound-email, automatic summary, or follow-up is enabled. No real lead data was entered or sent.
+- Next removable dependency: perform owner-run discovery and obtain exact retention, deployment ingress rate-limit, persistent database, and narrowly bounded outbound-authorization decisions before enabling intake or placing a customer-facing link. The provided email is a `mailto:` contact and the booking URL is a link only; neither triggers automated external activity.
+
+## [BLOCKED: NEEDS OWNER] Oracle Always Free live worker and database evaluation
+
+- Owner action still required: provide or authorize an Oracle Cloud account/profile for a local evaluation and confirm the selected tenancy, region, resource quotas, billing safeguards, and acceptable zero-cost boundary before instance creation.
+- Action removed: none; a live instance was not created, and no worker/database reliability claim is made.
+- Current blocker / verification: repository inspection shows Compose can start the FastAPI backend and optional 30-minute worker with a shared SQLite bind mount, health dependency, and periodic backup settings; `docker compose config --quiet` passed during Step 1. This verifies local configuration syntax only. No Oracle account credentials were provided or used, no VM was provisioned, and no scheduler/database uptime or recovery behavior was measured.
+- Next removable dependency: owner-authorized Oracle credentials and an account-specific no-charge guard; then run the worker, scheduler, database, backup, restart, and recovery checks on the actual eligible instance.
+
 ## [RECORDED] Operationalize the 30-day Forge Bot v0 decision gate
 
 - Owner action still required: conduct and record real discovery only under the owner's existing authorization; this entry grants no contact or offer permission.

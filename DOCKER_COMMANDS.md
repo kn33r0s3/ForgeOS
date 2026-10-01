@@ -341,7 +341,7 @@ docker compose up --build backend
 # Watch frontend logs (Next.js auto-compiles)
 docker compose logs -f frontend
 
-# Edit file in frontend/
+# Edit file in docs/archive/legacy-frontend/
 # Save → check browser at http://localhost:3000
 ```
 
@@ -445,4 +445,3 @@ docker compose up
 ---
 
 **Need help?** Run `docker compose --help` or check `docker --help`
-

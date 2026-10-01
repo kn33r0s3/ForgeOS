@@ -6,8 +6,8 @@ Every new AI coding session on ForgeOS must begin with this sequence.
 
 1. Read these files in order:
    - `AGENTS.md`
-   - `docs/CURRENT_FOCUS.md`
-   - `docs/AGENT_WORKFLOW.md`
+   - `STATUS.md`
+   - `docs/CAPABILITY_QUEUE.md`
    - Latest 2–3 entries of `logs/daily_cycle_log.jsonl` (if present)
 
 2. Reply with exactly this structure:

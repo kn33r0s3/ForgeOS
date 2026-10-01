@@ -1,7 +1,8 @@
 # Forge Bot state mapping
 
-Status: **DESIGN ONLY — no Forge Bot lead/contact workflow is implemented.**
-Forge Bot is a feature of ForgeOS, not a separate application or state system.
+Status: **PARTIAL IMPLEMENTATION — local consent-scoped intake exists but is
+disabled by default.** Forge Bot is a feature of ForgeOS, not a separate
+application or state system.
 
 | Bot concern | Existing ForgeOS record | Boundary |
 |---|---|---|
@@ -14,23 +15,37 @@ Forge Bot is a feature of ForgeOS, not a separate application or state system.
 | Request to book an existing public service | `BookingRequest` | Use only when a real, active Forge public provider/service listing is the subject. This is not a generic bot calendar or booking table. Otherwise send an owner-approved booking link only after contact is authorized. |
 | Draft offer and approval | Existing `Product` / offer-preparation flow | Keep proposal and owner approval semantics; never treat a draft or approval as a published offer or sale. |
 | Customer-confirmed/paid outcome | Existing `/api/earn` offer state machine and `Outcome` evidence | Preserve its valid transitions and required honest outcome note. Payment remains unverified until acceptable payment evidence is recorded. |
+| Narrow private contact and consent | `ForgeBotLeadContact` | Owner-authorized exception limited to Forge Bot leads. It is isolated from public substrate records and projections; no other workflow may use it. Intake remains disabled unless its feature flag, stable HMAC key, and API key are configured. |
 
 ## Minimal contact record needed before a live channel
 
 The current anonymous demand endpoint deliberately redacts email and phone
 patterns. Do not weaken that behavior or smuggle contact details into a Signal.
-Before any lead-reply channel is exposed, add one narrowly scoped contact record
-linked to the existing entity, with only:
+The owner approved one narrowly scoped Forge Bot contact table because generic
+entity reads/projections expose attributes and are not a safe contact store.
+It records only:
 
-- channel and normalized destination;
+- email and optional phone plus normalized deduplication values;
+- destination, course, timeline, and budget range as stated by the submitter;
 - consent timestamp, purpose, and provenance;
-- permanent opt-out state and timestamp;
-- deletion/retention state needed to honor the stated policy.
+- preferred contact channel;
+- permanent opt-out state, timestamp, and HMAC-only suppression tokens;
+- deletion state and a one-time self-service control-token hash.
 
-Do not add separate lead, message, opt-out, escalation, or intervention
-architectures. Store the minimum message/event evidence needed for the existing
-Forge records to explain what occurred; do not retain message bodies by default.
-No passports, identity documents, academic records, or other sensitive ID data.
+The submit endpoint does not write a Signal, entity, event, evidence, or public
+projection. The one-time bearer code is returned only to the submitter; it is
+stored as a hash and allows opt-out or deletion. Opt-out erases the contact and
+answers but keeps keyed HMAC suppression tokens; hard deletion removes the row.
+No endpoint returns contact details except the owner summary, which requires
+the `X-API-Key` header. No contact value is emitted in the submit receipt.
+
+The owner contact email and provided Cal.com URL are public configuration
+values rendered on the unlisted `/forge-bot-intake` page. The email is a
+`mailto:` link; neither it nor the booking link triggers an automated send or
+booking action. SMTP, inbound email parsing, scheduled summaries, and follow-up
+are not connected. No time-based retention policy is configured. Do not add
+separate message, opt-out, escalation, or intervention architectures. No
+passports, identity documents, academic records, or other sensitive ID data.
 
 ## Safe transition rule
 
@@ -42,7 +57,10 @@ not a second state machine. A message may support `CONTACTED`; it does not imply
 booking evidence. A paid state requires payment evidence and the existing
 outcome-note contract.
 
-Until consent, the owner-authorized channel, factual answer set, opt-out
-enforcement, rate limits, abuse controls, and a reliable due-task runner are
-implemented and verified, all external replies, follow-ups, offers, and
-spending remain disabled. The data model is not authorization.
+Intake is disabled unless `FORGE_BOT_INTAKE_ENABLED=true`,
+`FORGE_BOT_CONTACT_HMAC_KEY` is stable and at least 32 characters, and
+`FORGE_API_KEY` is configured. The current per-process IP limiter is not
+distributed; production ingress abuse controls, a time-based retention policy,
+licensed-agency discovery, and any external-send authorization remain
+unverified. All automated replies, follow-ups, offers, and spending remain
+disabled. The data model is not authorization.

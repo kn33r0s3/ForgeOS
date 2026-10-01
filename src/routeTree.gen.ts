@@ -13,10 +13,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as ActionsRouteImport } from './routes/actions'
+import { Route as BotQualificationDemoRouteImport } from './routes/bot-qualification-demo'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DiscoveriesRouteImport } from './routes/discoveries'
 import { Route as DomainRouteImport } from './routes/domain'
 import { Route as FeedRouteImport } from './routes/feed'
+import { Route as ForgeBotIntakeRouteImport } from './routes/forge-bot-intake'
 import { Route as GroupRouteImport } from './routes/group'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OperationsRouteImport } from './routes/operations'
@@ -57,6 +59,11 @@ const ActionsRoute = ActionsRouteImport.update({
   path: '/actions',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BotQualificationDemoRoute = BotQualificationDemoRouteImport.update({
+  id: '/bot-qualification-demo',
+  path: '/bot-qualification-demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
@@ -75,6 +82,11 @@ const DomainRoute = DomainRouteImport.update({
 const FeedRoute = FeedRouteImport.update({
   id: '/feed',
   path: '/feed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgeBotIntakeRoute = ForgeBotIntakeRouteImport.update({
+  id: '/forge-bot-intake',
+  path: '/forge-bot-intake',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GroupRoute = GroupRouteImport.update({
@@ -178,10 +190,12 @@ export interface FileRoutesByFullPath {
   '/$': typeof SplatRoute
   '/about': typeof AboutRoute
   '/actions': typeof ActionsRoute
+  '/bot-qualification-demo': typeof BotQualificationDemoRoute
   '/contact': typeof ContactRoute
   '/discoveries': typeof DiscoveriesRoute
   '/domain': typeof DomainRoute
   '/feed': typeof FeedRoute
+  '/forge-bot-intake': typeof ForgeBotIntakeRoute
   '/group': typeof GroupRouteWithChildren
   '/login': typeof LoginRoute
   '/operations': typeof OperationsRoute
@@ -207,10 +221,12 @@ export interface FileRoutesByTo {
   '/$': typeof SplatRoute
   '/about': typeof AboutRoute
   '/actions': typeof ActionsRoute
+  '/bot-qualification-demo': typeof BotQualificationDemoRoute
   '/contact': typeof ContactRoute
   '/discoveries': typeof DiscoveriesRoute
   '/domain': typeof DomainRoute
   '/feed': typeof FeedRoute
+  '/forge-bot-intake': typeof ForgeBotIntakeRoute
   '/login': typeof LoginRoute
   '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
@@ -235,10 +251,12 @@ export interface FileRoutesById {
   '/$': typeof SplatRoute
   '/about': typeof AboutRoute
   '/actions': typeof ActionsRoute
+  '/bot-qualification-demo': typeof BotQualificationDemoRoute
   '/contact': typeof ContactRoute
   '/discoveries': typeof DiscoveriesRoute
   '/domain': typeof DomainRoute
   '/feed': typeof FeedRoute
+  '/forge-bot-intake': typeof ForgeBotIntakeRoute
   '/group': typeof GroupRouteWithChildren
   '/login': typeof LoginRoute
   '/operations': typeof OperationsRoute
@@ -266,10 +284,12 @@ export interface FileRouteTypes {
     | '/$'
     | '/about'
     | '/actions'
+    | '/bot-qualification-demo'
     | '/contact'
     | '/discoveries'
     | '/domain'
     | '/feed'
+    | '/forge-bot-intake'
     | '/group'
     | '/login'
     | '/operations'
@@ -295,10 +315,12 @@ export interface FileRouteTypes {
     | '/$'
     | '/about'
     | '/actions'
+    | '/bot-qualification-demo'
     | '/contact'
     | '/discoveries'
     | '/domain'
     | '/feed'
+    | '/forge-bot-intake'
     | '/login'
     | '/operations'
     | '/opportunities'
@@ -322,10 +344,12 @@ export interface FileRouteTypes {
     | '/$'
     | '/about'
     | '/actions'
+    | '/bot-qualification-demo'
     | '/contact'
     | '/discoveries'
     | '/domain'
     | '/feed'
+    | '/forge-bot-intake'
     | '/group'
     | '/login'
     | '/operations'
@@ -352,10 +376,12 @@ export interface RootRouteChildren {
   SplatRoute: typeof SplatRoute
   AboutRoute: typeof AboutRoute
   ActionsRoute: typeof ActionsRoute
+  BotQualificationDemoRoute: typeof BotQualificationDemoRoute
   ContactRoute: typeof ContactRoute
   DiscoveriesRoute: typeof DiscoveriesRoute
   DomainRoute: typeof DomainRoute
   FeedRoute: typeof FeedRoute
+  ForgeBotIntakeRoute: typeof ForgeBotIntakeRoute
   GroupRoute: typeof GroupRouteWithChildren
   LoginRoute: typeof LoginRoute
   OperationsRoute: typeof OperationsRoute
@@ -403,6 +429,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ActionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/bot-qualification-demo': {
+      id: '/bot-qualification-demo'
+      path: '/bot-qualification-demo'
+      fullPath: '/bot-qualification-demo'
+      preLoaderRoute: typeof BotQualificationDemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/contact': {
       id: '/contact'
       path: '/contact'
@@ -429,6 +462,13 @@ declare module '@tanstack/react-router' {
       path: '/feed'
       fullPath: '/feed'
       preLoaderRoute: typeof FeedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forge-bot-intake': {
+      id: '/forge-bot-intake'
+      path: '/forge-bot-intake'
+      fullPath: '/forge-bot-intake'
+      preLoaderRoute: typeof ForgeBotIntakeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/group': {
@@ -598,10 +638,12 @@ const rootRouteChildren: RootRouteChildren = {
   SplatRoute: SplatRoute,
   AboutRoute: AboutRoute,
   ActionsRoute: ActionsRoute,
+  BotQualificationDemoRoute: BotQualificationDemoRoute,
   ContactRoute: ContactRoute,
   DiscoveriesRoute: DiscoveriesRoute,
   DomainRoute: DomainRoute,
   FeedRoute: FeedRoute,
+  ForgeBotIntakeRoute: ForgeBotIntakeRoute,
   GroupRoute: GroupRouteWithChildren,
   LoginRoute: LoginRoute,
   OperationsRoute: OperationsRoute,
