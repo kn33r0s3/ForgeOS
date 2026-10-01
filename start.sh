@@ -13,7 +13,7 @@ export PATH="$FORGEOS_DEPS_DIR/bin:$PATH"
 
 mkdir -p storage logs
 if [ ! -f backend/.env ]; then cp backend/.env.example backend/.env; echo "✓ Created backend/.env"; fi
-if [ ! -f frontend/.env.local ]; then cp frontend/.env.local.example frontend/.env.local; echo "✓ Created frontend/.env.local"; fi
+if [ ! -f docs/archive/legacy-frontend/.env.local ]; then cp docs/archive/legacy-frontend/.env.local.example docs/archive/legacy-frontend/.env.local; echo "✓ Created legacy frontend environment"; fi
 
 echo "[database] canonical native SQLite URL: $DATABASE_URL"
 

@@ -1,5 +1,26 @@
 # Hami capability claim ledger (ForgeOS repository)
 
+## [RECORDED] Archive superseded documents and legacy frontend source
+
+- Owner action still required: resolve the Section 8 wording separately; identify whether the ignored exported context files may be committed; authorize any future live Oracle VM provisioning or real email delivery.
+- Action removed: reduce competing current-looking documents and preserve the Next.js dashboard and historical records under `docs/archive/`, while retaining the root `start.sh`/`stop.sh` path and preview-only `startup.sh`.
+- Current blocker / verification: `sanipops_clean/river-cinder-bamboo-otter-main/` is only copied preview tooling, not a complete application; no `opencode.jsonc.bad`, `status.sh`, or `start.ps1` exists in the current tree. The requested ignored context files are excluded by `.gitignore` and will not be added to version control without owner clearance.
+- Next removable dependency: confirm whether ignored context snapshots are safe and intended for archival in Git, then validate the archived Compose legacy surface without provisioning external infrastructure.
+
+## [BLOCKED: NEEDS OWNER] Forge Bot contact persistence and external integrations
+
+- Owner action still required: decide whether to authorize a narrowly scoped private contact/consent record despite the current “no new schema” instruction; provide a Cal.com booking URL and select/authorize an email delivery method and recipient before any real integration can be enabled.
+- Action removed by the safe demo: deterministic question sequencing can be exercised locally without sending, persisting, or projecting a real prospect's contact details.
+- Current blocker / verification: `Signal` redacts email and phone; `SubstrateEntity.attributes` are returned by substrate entity reads and are not a safe private contact store; `Customer` is repair-specific and does not store purpose/timestamped consent, permanent opt-out, and deletion state. The SPEC also states no contact flow may be exposed until those controls exist. Email inbox intake requires configured provider access; daily summary delivery requires server-side credentials and would contact a real recipient. The local-only `/bot-qualification-demo` uses reserved TEST contact values in component memory, runs no API requests, and has no durable records, email, booking, or external integrations. Four deterministic qualification tests pass; browser verification completed the fixed flow on desktop and at 390px with no horizontal overflow or page/console errors.
+- Next removable dependency: obtain owner decision on safe private contact persistence and external side-effect boundaries. Until then keep any demo non-persistent, TEST-labeled, and disconnected from real intake.
+
+## [BLOCKED: NEEDS OWNER] Oracle Always Free live worker and database evaluation
+
+- Owner action still required: provide or authorize an Oracle Cloud account/profile for a local evaluation and confirm the selected tenancy, region, resource quotas, billing safeguards, and acceptable zero-cost boundary before instance creation.
+- Action removed: none; a live instance was not created, and no worker/database reliability claim is made.
+- Current blocker / verification: repository inspection shows Compose can start the FastAPI backend and optional 30-minute worker with a shared SQLite bind mount, health dependency, and periodic backup settings; `docker compose config --quiet` passed during Step 1. This verifies local configuration syntax only. No Oracle account credentials were provided or used, no VM was provisioned, and no scheduler/database uptime or recovery behavior was measured.
+- Next removable dependency: owner-authorized Oracle credentials and an account-specific no-charge guard; then run the worker, scheduler, database, backup, restart, and recovery checks on the actual eligible instance.
+
 ## [RECORDED] Operationalize the 30-day Forge Bot v0 decision gate
 
 - Owner action still required: conduct and record real discovery only under the owner's existing authorization; this entry grants no contact or offer permission.

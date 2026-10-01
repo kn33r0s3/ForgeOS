@@ -41,7 +41,7 @@ Prerequisites: Python 3.11+ and Bun 1.3+.
 cd backend
 python3 -m pip install --target .deps -r requirements.txt
 PYTHONPATH="$PWD/.deps:$PWD" python3 -m pytest tests/ -q
-cd ../frontend
+cd ../docs/archive/legacy-frontend
 bun install --frozen-lockfile
 bun run build
 ```
@@ -239,7 +239,8 @@ bun run build
 The authoritative HTTP fixture starts with realistic SANDBOX repair-shop source
 text, then invokes actual observer/cycle/orchestrator services. It does not insert
 every intermediate stage by hand. Human responses/payments are synthetic inputs.
-See root `STATUS.md`, `COMPLETION_REPORT.md`, and `verification/` for exact evidence.
+See root `STATUS.md`, `docs/archive/status-reports/STATUS-history.md`, and
+`verification/` for dated evidence.
 
 ## 8. Known boundaries before a real pilot
 

@@ -16,6 +16,7 @@ attachments/
 /TWO_HUNDRED_*_COPILOT.txt
 /FORGEOS_*_REPO_CONTEXT.txt
 /forgeos_xray.txt
+docs/archive/legacy-docs/private-context/
 /.copilot/
 /.agent-context/
 
@@ -26,8 +27,7 @@ __pycache__/
 backend/venv/
 backend/.venv/
 backend/.deps/
-frontend/.next/
-frontend/node_modules/
+docs/archive/legacy-frontend/.next/
 *.tsbuildinfo
 .DS_Store
 dist/

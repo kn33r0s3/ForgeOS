@@ -1,7 +1,8 @@
 node_modules
 backend/venv
 backend/**/__pycache__
-frontend/node_modules
+docs/archive/legacy-frontend/node_modules
+docs/archive/legacy-frontend/.next
 services/**/node_modules
 storage
 logs

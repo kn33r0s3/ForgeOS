@@ -1,13 +1,12 @@
 # ForgeOS Overnight Engineering Report
 
 > Historical deployment report. Its Sanip Ops alias and Vercel-binding claims
-> predate the Forge deployment recorded in `TWO_HUNDRED_DAY_COPILOT.txt`.
-> This is not a work queue; see [SERIAL_PATH.md](SERIAL_PATH.md).
+> are not current deployment evidence. This is not a work queue.
 
 ## What actually improved
 - Corrected the canonical repository identity: `kn33r0s3/ForgeOS` on `main`
-- Verified the frontend Earn source in [frontend/app/earn/page.tsx](../frontend/app/earn/page.tsx) is the real ForgeOS implementation and not a stale Sanip Ops artifact
-- Verified the local Next.js frontend build succeeds in [frontend/package.json](../frontend/package.json)
+- Verified the archived frontend Earn source in [legacy-frontend/app/earn/page.tsx](archive/legacy-frontend/app/earn/page.tsx) is the real ForgeOS implementation and not a stale Sanip Ops artifact
+- Verified the local Next.js frontend build succeeds in [legacy-frontend/package.json](archive/legacy-frontend/package.json)
 - Confirmed the stale alias `https://forge-os-ebon.vercel.app` is serving Sanip Ops content instead of ForgeOS
 
 ## What is now verified

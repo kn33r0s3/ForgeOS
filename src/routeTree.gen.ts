@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as ActionsRouteImport } from './routes/actions'
+import { Route as BotQualificationDemoRouteImport } from './routes/bot-qualification-demo'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DiscoveriesRouteImport } from './routes/discoveries'
 import { Route as DomainRouteImport } from './routes/domain'
@@ -55,6 +56,11 @@ const AboutRoute = AboutRouteImport.update({
 const ActionsRoute = ActionsRouteImport.update({
   id: '/actions',
   path: '/actions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BotQualificationDemoRoute = BotQualificationDemoRouteImport.update({
+  id: '/bot-qualification-demo',
+  path: '/bot-qualification-demo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -178,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/$': typeof SplatRoute
   '/about': typeof AboutRoute
   '/actions': typeof ActionsRoute
+  '/bot-qualification-demo': typeof BotQualificationDemoRoute
   '/contact': typeof ContactRoute
   '/discoveries': typeof DiscoveriesRoute
   '/domain': typeof DomainRoute
@@ -207,6 +214,7 @@ export interface FileRoutesByTo {
   '/$': typeof SplatRoute
   '/about': typeof AboutRoute
   '/actions': typeof ActionsRoute
+  '/bot-qualification-demo': typeof BotQualificationDemoRoute
   '/contact': typeof ContactRoute
   '/discoveries': typeof DiscoveriesRoute
   '/domain': typeof DomainRoute
@@ -235,6 +243,7 @@ export interface FileRoutesById {
   '/$': typeof SplatRoute
   '/about': typeof AboutRoute
   '/actions': typeof ActionsRoute
+  '/bot-qualification-demo': typeof BotQualificationDemoRoute
   '/contact': typeof ContactRoute
   '/discoveries': typeof DiscoveriesRoute
   '/domain': typeof DomainRoute
@@ -266,6 +275,7 @@ export interface FileRouteTypes {
     | '/$'
     | '/about'
     | '/actions'
+    | '/bot-qualification-demo'
     | '/contact'
     | '/discoveries'
     | '/domain'
@@ -295,6 +305,7 @@ export interface FileRouteTypes {
     | '/$'
     | '/about'
     | '/actions'
+    | '/bot-qualification-demo'
     | '/contact'
     | '/discoveries'
     | '/domain'
@@ -322,6 +333,7 @@ export interface FileRouteTypes {
     | '/$'
     | '/about'
     | '/actions'
+    | '/bot-qualification-demo'
     | '/contact'
     | '/discoveries'
     | '/domain'
@@ -352,6 +364,7 @@ export interface RootRouteChildren {
   SplatRoute: typeof SplatRoute
   AboutRoute: typeof AboutRoute
   ActionsRoute: typeof ActionsRoute
+  BotQualificationDemoRoute: typeof BotQualificationDemoRoute
   ContactRoute: typeof ContactRoute
   DiscoveriesRoute: typeof DiscoveriesRoute
   DomainRoute: typeof DomainRoute
@@ -401,6 +414,13 @@ declare module '@tanstack/react-router' {
       path: '/actions'
       fullPath: '/actions'
       preLoaderRoute: typeof ActionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bot-qualification-demo': {
+      id: '/bot-qualification-demo'
+      path: '/bot-qualification-demo'
+      fullPath: '/bot-qualification-demo'
+      preLoaderRoute: typeof BotQualificationDemoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -598,6 +618,7 @@ const rootRouteChildren: RootRouteChildren = {
   SplatRoute: SplatRoute,
   AboutRoute: AboutRoute,
   ActionsRoute: ActionsRoute,
+  BotQualificationDemoRoute: BotQualificationDemoRoute,
   ContactRoute: ContactRoute,
   DiscoveriesRoute: DiscoveriesRoute,
   DomainRoute: DomainRoute,

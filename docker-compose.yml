@@ -90,7 +90,7 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./docs/archive/legacy-frontend
       args:
         NEXT_PUBLIC_API_URL: /api
     container_name: forgeos-frontend
