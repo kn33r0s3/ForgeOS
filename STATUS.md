@@ -12,11 +12,11 @@ state is not assumed current unless explicitly identified as a dated observation
   Real customer, transaction, and revenue counts are therefore not established
   by that ledger; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT
   MEASURABLE**.
-- Forge Bot v0 remains unauthorized for real-world contact. A developer-only,
-  in-memory TEST qualification demo now exercises the fixed question sequence;
-  it is not a real intake or an implemented durable lead workflow. The existing
-  demand intake redacts contact details; the mapped system has no general
-  private lead-contact/consent record.
+- Forge Bot v0 has a consent-scoped private lead table and unlisted inquiry
+  page, but intake is disabled by default. The form does not send messages or
+  bookings automatically. Contact and qualification fields stay outside
+  Signals, generic substrate entities, and public projections. The existing
+  anonymous demand-intake redaction behavior is unchanged.
 - The owner has identified a `paid pilots >= 1` checkpoint for 2026-10-29,
   anchored to revenue-first mode beginning 2026-09-29. No matching date or
   scoreboard text was found in the local checked-in `docs/REVENUE_LOG.md` while
@@ -56,11 +56,13 @@ state is not assumed current unless explicitly identified as a dated observation
 - Provide the accepted wording for Section 8's 30-day rule and reconcile it
   with the 2026-10-29 scoreboard checkpoint before treating that section as
   authority.
-- Resolve private contact storage without violating the instruction not to add
-  schema; the current mapped records do not provide the required general
-  consent-scoped contact record.
-- Supply Cal.com account/link details and any email delivery credentials
-  before enabling external booking or sending a daily owner summary. No real
-  email or booking request has been sent.
+- Complete five owner-run licensed-agency discovery conversations and choose
+  when to enable intake; decide the retention window and production ingress
+  rate-limit. The web route currently fails closed without the explicit flag,
+  stable 32+-character server HMAC key, and server API key.
+- The provided contact email is a `mailto:` link; the provided Cal.com URL is
+  displayed as a link. No inbound email processing, SMTP summary, automatic
+  booking, or outbound follow-up is connected or sent. Authorize any such
+  activity and supply server credentials separately.
 - Confirm Oracle Always Free account/terms and cost controls before any live
   instance evaluation.

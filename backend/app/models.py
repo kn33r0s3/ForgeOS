@@ -821,6 +821,59 @@ class WorldEvent(Base):
     occurred_at = Column(DateTime, nullable=False, default=utcnow)
 
 
+class ForgeBotLeadContact(Base):
+    """Private, consent-scoped contact details for Forge Bot inquiries only."""
+
+    __tablename__ = "forge_bot_lead_contacts"
+    __table_args__ = (
+        CheckConstraint(
+            "preferred_channel IN ('email','phone')",
+            name="ck_forge_bot_leads_preferred_channel",
+        ),
+        CheckConstraint(
+            "consent_granted = true",
+            name="ck_forge_bot_leads_consent_required",
+        ),
+        CheckConstraint(
+            "evidence_class IN ('REAL','TEST')",
+            name="ck_forge_bot_leads_evidence_class",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True)
+    public_ref = Column(String(32), nullable=False, unique=True, index=True)
+    email = Column(String(254), nullable=True)
+    normalized_email = Column(String(254), nullable=True, unique=True)
+    phone = Column(String(32), nullable=True)
+    normalized_phone = Column(String(15), nullable=True, unique=True)
+    email_suppression_hmac = Column(String(64), nullable=True, unique=True)
+    phone_suppression_hmac = Column(String(64), nullable=True, unique=True)
+    manage_token_hash = Column(String(64), nullable=True, unique=True)
+    preferred_channel = Column(String(16), nullable=False)
+    destination = Column(String(120), nullable=True)
+    course = Column(String(160), nullable=True)
+    timeline = Column(String(120), nullable=True)
+    budget_minimum = Column(Integer, nullable=True)
+    budget_maximum = Column(Integer, nullable=True)
+    stage = Column(String(32), nullable=False, default="READY_FOR_OWNER_REVIEW")
+    evidence_class = Column(String(8), nullable=False, default="REAL")
+    consent_granted = Column(Boolean, nullable=False, default=True)
+    consent_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+    consent_purpose = Column(
+        String(80), nullable=False, default="respond_to_forge_bot_inquiry"
+    )
+    consent_provenance = Column(
+        String(80), nullable=False, default="forge_bot_web_form_v1"
+    )
+    opted_out = Column(Boolean, nullable=False, default=False)
+    opted_out_at = Column(DateTime(timezone=True), nullable=True)
+    erased_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = Column(
+        DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
+    )
+
+
 class ForgeCapability(Base):
     """A reusable ability Forge proposes, builds, tests, then activates."""
 

@@ -8,6 +8,7 @@ consumers) code against.
 """
 
 from datetime import datetime
+import re
 from typing import Literal, Optional, List, Union
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
@@ -34,6 +35,58 @@ class PublicDemandRequestCreate(BaseModel):
         max_length=5000,
         description="A need submitted for interpretation; not a customer or offer.",
     )
+
+
+class ForgeBotLeadCreate(BaseModel):
+    email: Optional[str] = Field(default=None, max_length=254)
+    phone: Optional[str] = Field(default=None, max_length=64)
+    preferred_channel: Literal["email", "phone"]
+    destination: str = Field(min_length=1, max_length=120)
+    course: str = Field(min_length=1, max_length=160)
+    timeline: str = Field(min_length=1, max_length=120)
+    budget_minimum: int = Field(ge=0, le=1_000_000_000_000)
+    budget_maximum: int = Field(ge=0, le=1_000_000_000_000)
+    consent_granted: bool
+    website: str = Field(default="", max_length=200)
+
+    @field_validator("email")
+    @classmethod
+    def validate_email_address(cls, value):
+        if value is None or not value.strip():
+            return None
+        normalized = value.strip().lower()
+        if len(normalized) > 254 or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", normalized):
+            raise ValueError("enter a valid email address")
+        return normalized
+
+    @field_validator("phone")
+    @classmethod
+    def normalize_phone_number(cls, value):
+        if value is None or not value.strip():
+            return None
+        digits = re.sub(r"[^0-9]", "", value)
+        if not 7 <= len(digits) <= 15:
+            raise ValueError("enter a phone number containing 7 to 15 digits")
+        return digits
+
+    @field_validator("destination", "course", "timeline")
+    @classmethod
+    def normalize_answer(cls, value):
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("answer is required")
+        return normalized
+
+
+class ForgeBotLeadReceipt(BaseModel):
+    status: Literal["received"] = "received"
+    reference: str
+    manage_token: str
+    message: str
+
+
+class ForgeBotLeadControl(BaseModel):
+    manage_token: str = Field(min_length=32, max_length=128)
 
 
 class SignalOut(BaseModel):

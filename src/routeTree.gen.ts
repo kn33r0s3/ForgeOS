@@ -18,6 +18,7 @@ import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DiscoveriesRouteImport } from './routes/discoveries'
 import { Route as DomainRouteImport } from './routes/domain'
 import { Route as FeedRouteImport } from './routes/feed'
+import { Route as ForgeBotIntakeRouteImport } from './routes/forge-bot-intake'
 import { Route as GroupRouteImport } from './routes/group'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OperationsRouteImport } from './routes/operations'
@@ -81,6 +82,11 @@ const DomainRoute = DomainRouteImport.update({
 const FeedRoute = FeedRouteImport.update({
   id: '/feed',
   path: '/feed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgeBotIntakeRoute = ForgeBotIntakeRouteImport.update({
+  id: '/forge-bot-intake',
+  path: '/forge-bot-intake',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GroupRoute = GroupRouteImport.update({
@@ -189,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/discoveries': typeof DiscoveriesRoute
   '/domain': typeof DomainRoute
   '/feed': typeof FeedRoute
+  '/forge-bot-intake': typeof ForgeBotIntakeRoute
   '/group': typeof GroupRouteWithChildren
   '/login': typeof LoginRoute
   '/operations': typeof OperationsRoute
@@ -219,6 +226,7 @@ export interface FileRoutesByTo {
   '/discoveries': typeof DiscoveriesRoute
   '/domain': typeof DomainRoute
   '/feed': typeof FeedRoute
+  '/forge-bot-intake': typeof ForgeBotIntakeRoute
   '/login': typeof LoginRoute
   '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
@@ -248,6 +256,7 @@ export interface FileRoutesById {
   '/discoveries': typeof DiscoveriesRoute
   '/domain': typeof DomainRoute
   '/feed': typeof FeedRoute
+  '/forge-bot-intake': typeof ForgeBotIntakeRoute
   '/group': typeof GroupRouteWithChildren
   '/login': typeof LoginRoute
   '/operations': typeof OperationsRoute
@@ -280,6 +289,7 @@ export interface FileRouteTypes {
     | '/discoveries'
     | '/domain'
     | '/feed'
+    | '/forge-bot-intake'
     | '/group'
     | '/login'
     | '/operations'
@@ -310,6 +320,7 @@ export interface FileRouteTypes {
     | '/discoveries'
     | '/domain'
     | '/feed'
+    | '/forge-bot-intake'
     | '/login'
     | '/operations'
     | '/opportunities'
@@ -338,6 +349,7 @@ export interface FileRouteTypes {
     | '/discoveries'
     | '/domain'
     | '/feed'
+    | '/forge-bot-intake'
     | '/group'
     | '/login'
     | '/operations'
@@ -369,6 +381,7 @@ export interface RootRouteChildren {
   DiscoveriesRoute: typeof DiscoveriesRoute
   DomainRoute: typeof DomainRoute
   FeedRoute: typeof FeedRoute
+  ForgeBotIntakeRoute: typeof ForgeBotIntakeRoute
   GroupRoute: typeof GroupRouteWithChildren
   LoginRoute: typeof LoginRoute
   OperationsRoute: typeof OperationsRoute
@@ -449,6 +462,13 @@ declare module '@tanstack/react-router' {
       path: '/feed'
       fullPath: '/feed'
       preLoaderRoute: typeof FeedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forge-bot-intake': {
+      id: '/forge-bot-intake'
+      path: '/forge-bot-intake'
+      fullPath: '/forge-bot-intake'
+      preLoaderRoute: typeof ForgeBotIntakeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/group': {
@@ -623,6 +643,7 @@ const rootRouteChildren: RootRouteChildren = {
   DiscoveriesRoute: DiscoveriesRoute,
   DomainRoute: DomainRoute,
   FeedRoute: FeedRoute,
+  ForgeBotIntakeRoute: ForgeBotIntakeRoute,
   GroupRoute: GroupRouteWithChildren,
   LoginRoute: LoginRoute,
   OperationsRoute: OperationsRoute,

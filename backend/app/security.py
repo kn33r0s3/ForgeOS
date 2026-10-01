@@ -27,6 +27,12 @@ PUBLIC_WRITE_PATHS = {
     "/analyze",
     "/public/booking-requests",
     "/public/domain",
+    "/forge-bot/leads",
+    "/forge-bot/leads/opt-out",
+    "/forge-bot/leads/delete",
+    "/api/forge-bot/leads",
+    "/api/forge-bot/leads/opt-out",
+    "/api/forge-bot/leads/delete",
     "/signals/public-request",
     "/api/signals/public-request",
 }
@@ -34,6 +40,7 @@ PRIVATE_CONTACT_READ_PATH_PREFIXES = (
     "/products/customers",
     "/products/pipeline",
     "/repair-shop/work-items",
+    "/forge-bot/leads/summary",
 )
 
 

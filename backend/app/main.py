@@ -16,7 +16,7 @@ from sqlalchemy import text
 
 from app.config import settings
 from app.database import init_db, SessionLocal
-from app.api import signals, analyze, opportunities, observer, forge, world, workers, intelligence, rare_signals, products, lessons, orchestrator, earn, payments, repair_shop, evidence_triage, public, scheduled, substrate
+from app.api import signals, analyze, opportunities, observer, forge, world, workers, intelligence, rare_signals, products, lessons, orchestrator, earn, payments, repair_shop, evidence_triage, public, scheduled, substrate, forge_bot
 from app.services import source_manager, money_engine, autonomy_engine, scenario_engine, truth_audit
 from app.security import api_key_middleware
 
@@ -172,6 +172,7 @@ for _router in (
     evidence_triage.router,
     public.router,
     scheduled.router,
+    forge_bot.router,
 ):
     app.include_router(_router)
     # Vercel keeps the /api prefix. Same router, no second implementation.

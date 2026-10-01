@@ -110,6 +110,20 @@ class Settings(BaseSettings):
     # a real secret; set it via environment only.
     FORGE_API_KEY: str = os.getenv("FORGE_API_KEY", "")
 
+    # Forge Bot lead intake is intentionally off until public pilot activation.
+    FORGE_BOT_INTAKE_ENABLED: bool = os.getenv(
+        "FORGE_BOT_INTAKE_ENABLED", "false"
+    ).lower() in ("1", "true", "yes")
+    FORGE_BOT_CONTACT_EMAIL: str = os.getenv(
+        "FORGE_BOT_CONTACT_EMAIL", "haminp.forge@gmail.com"
+    )
+    FORGE_BOT_BOOKING_URL: str = os.getenv(
+        "FORGE_BOT_BOOKING_URL",
+        "https://cal.com/hami-forge-m9agd6/build-hami",
+    )
+    # Required for privacy-preserving permanent suppression after opt-out.
+    FORGE_BOT_CONTACT_HMAC_KEY: str = os.getenv("FORGE_BOT_CONTACT_HMAC_KEY", "")
+
     class Config:
         env_file = ".env"
 
