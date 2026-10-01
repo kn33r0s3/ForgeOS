@@ -32,6 +32,8 @@ type Receipt = {
   message: string;
 };
 
+type ControlAction = "opt-out" | "delete";
+
 const initialForm: IntakeForm = {
   email: "",
   phone: "",
@@ -63,6 +65,9 @@ function ForgeBotIntakePage() {
   const [error, setError] = useState("");
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pendingControlAction, setPendingControlAction] = useState<ControlAction | null>(null);
+  const [controlResult, setControlResult] = useState<ControlAction | null>(null);
+  const [controlError, setControlError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -141,6 +146,41 @@ function ForgeBotIntakePage() {
     }
   }
 
+  async function manageInquiry(action: ControlAction) {
+    if (!receipt?.manage_token) return;
+    setBusy(true);
+    setControlError("");
+    try {
+      const response = await fetch(`/api/forge-bot/leads/${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ manage_token: receipt.manage_token }),
+      });
+      if (!response.ok) {
+        const result: unknown = await response.json();
+        const message =
+          typeof result === "object" &&
+          result !== null &&
+          "detail" in result &&
+          typeof result.detail === "string"
+            ? result.detail
+            : `Request failed (${response.status}).`;
+        throw new Error(message);
+      }
+      setControlResult(action);
+      setPendingControlAction(null);
+      setReceipt((current) => (current ? { ...current, manage_token: "" } : current));
+    } catch (cause: unknown) {
+      setControlError(
+        cause instanceof Error
+          ? cause.message
+          : "The inquiry could not be changed. Check the private control code and try again.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <main>
       <Container className="py-12 sm:py-16">
@@ -199,37 +239,127 @@ function ForgeBotIntakePage() {
             </p>
           </section>
         ) : receipt ? (
-          <section className="mt-8 max-w-3xl border-2 border-accent/60 bg-card p-5 sm:p-7" role="status">
-            <div className="flex items-center gap-2 text-accent">
-              <ShieldCheck className="size-5" aria-hidden="true" />
-              <h2 className="text-lg font-extrabold text-ink">Request received for review</h2>
-            </div>
-            <p className="mt-3 text-sm leading-6 text-muted">
-              Reference: <span className="font-mono text-ink">{receipt.reference}</span>.
-              No automated response or booking was sent. This request is not
-              counted as a customer or revenue outcome.
-            </p>
-            <div className="mt-4 border border-line bg-paper p-4">
-              <Label htmlFor="manage-token">Private one-time control code</Label>
-              <Input id="manage-token" readOnly value={receipt.manage_token} />
-              <p className="mt-2 text-xs leading-5 text-muted">
-                Keep this code private. It can permanently opt out and erase
-                this inquiry's details. A duplicate submission may receive a
-                code that does not control an existing record. On opt-out,
-                Hami retains HMAC-only suppression tokens to prevent re-entry.
-              </p>
-            </div>
+          <section
+            className="mt-8 max-w-3xl border-2 border-accent/60 bg-card p-5 sm:p-7"
+            aria-live="polite"
+          >
+            {controlResult ? (
+              <>
+                <div className="flex items-center gap-2 text-accent">
+                  <ShieldCheck className="size-5" aria-hidden="true" />
+                  <h2 className="text-lg font-extrabold text-ink">
+                    {controlResult === "opt-out" ? "Opt-out complete" : "Inquiry deleted"}
+                  </h2>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-muted">
+                  {controlResult === "opt-out"
+                    ? "Your contact details and inquiry answers were erased. Hami keeps only keyed suppression data so this inquiry is not re-entered or contacted."
+                    : "The inquiry record was deleted. No contact details or suppression data from this record remain."}
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 text-accent">
+                  <ShieldCheck className="size-5" aria-hidden="true" />
+                  <h2 className="text-lg font-extrabold text-ink">Request received for review</h2>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-muted">
+                  Reference: <span className="font-mono text-ink">{receipt.reference}</span>.
+                  No automated response or booking was sent. This request is not
+                  counted as a customer or revenue outcome.
+                </p>
+                <div className="mt-4 border border-line bg-paper p-4">
+                  <Label htmlFor="manage-token">Private one-time control code</Label>
+                  <Input id="manage-token" readOnly value={receipt.manage_token} />
+                  <p className="mt-2 text-xs leading-5 text-muted">
+                    Keep this code private. A duplicate submission may receive
+                    a code that does not control an existing record.
+                  </p>
+                </div>
+
+                {pendingControlAction ? (
+                  <div className="mt-5 border-2 border-warning/70 bg-paper p-4">
+                    <h3 className="font-bold">
+                      {pendingControlAction === "opt-out"
+                        ? "Permanently opt out and erase inquiry details?"
+                        : "Permanently delete this inquiry?"}
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-muted">
+                      {pendingControlAction === "opt-out"
+                        ? "Contact details and answers will be erased. Keyed suppression data will remain to prevent re-entry or future contact."
+                        : "The entire inquiry record, including suppression data, will be removed. A future submission with the same contact details will not be blocked by this record."}
+                      {" "}This cannot be undone with this one-time code.
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      <Button
+                        type="button"
+                        variant="warning"
+                        disabled={busy}
+                        onClick={() => void manageInquiry(pendingControlAction)}
+                      >
+                        {busy ? "Processing…" : "Confirm permanent action"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={busy}
+                        onClick={() => {
+                          setPendingControlAction(null);
+                          setControlError("");
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={busy || !receipt.manage_token}
+                      onClick={() => {
+                        setControlError("");
+                        setPendingControlAction("opt-out");
+                      }}
+                    >
+                      Permanently opt out
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="warning"
+                      disabled={busy || !receipt.manage_token}
+                      onClick={() => {
+                        setControlError("");
+                        setPendingControlAction("delete");
+                      }}
+                    >
+                      Delete inquiry
+                    </Button>
+                  </div>
+                )}
+                {controlError ? (
+                  <p className="mt-4 text-sm font-semibold text-danger" role="alert">
+                    {controlError} The code may be invalid or may not control a
+                    record if this submission was a duplicate.
+                  </p>
+                ) : null}
+              </>
+            )}
             <Button
               className="mt-5"
               type="button"
               variant="secondary"
               onClick={() => {
                 setReceipt(null);
+                setControlResult(null);
+                setPendingControlAction(null);
+                setControlError("");
                 setForm(initialForm);
               }}
             >
-              Submit another inquiry
-              <ArrowRight aria-hidden="true" />
+              {controlResult ? "Done" : "Submit another inquiry"}
+              {!controlResult ? <ArrowRight aria-hidden="true" /> : null}
             </Button>
           </section>
         ) : (

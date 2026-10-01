@@ -38,14 +38,18 @@ Activation requires `FORGE_BOT_INTAKE_ENABLED=true`, a stable server-only
 The route is not in shared navigation.
 
 The form currently asks destination, course/field, timeline, budget range,
-preferred contact channel, and explicit inquiry-response consent. It records
-only stated answers and exposes a one-time control code to erase the record or
-permanently opt out. The opt-out path erases contact and answer fields while
-retaining HMAC-only suppression tokens. No time-based retention period is
-configured. A process-local limit is five submissions per source IP per hour;
-this is not a distributed production abuse control and does not authorize
-public activation. Email/WhatsApp channel integrations and official policy
-review are still required before enabling those channels. No mass outbound.
+preferred contact channel, and explicit inquiry-response consent. After a
+successful submission, the one-time control code can be used in the page to
+permanently opt out or delete the inquiry; both actions require a separate
+confirmation. Opt-out erases contact and answer fields while retaining
+HMAC-only suppression tokens. Deletion removes the entire row, including
+suppression tokens. A duplicate submission can receive a non-controlling code
+without disclosing whether another record exists. No time-based retention
+period is configured. A process-local limit is five submissions per source IP
+per hour; this is not a distributed production abuse control and does not
+authorize public activation. Email/WhatsApp channel integrations and official
+policy review are still required before enabling those channels. No mass
+outbound.
 
 Qualification is client-configurable, not universal. Destination, course or
 service, timeline, and budget range are candidate fields only. The client's
