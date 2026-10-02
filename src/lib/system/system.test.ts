@@ -14,7 +14,7 @@ import {
   stated,
   type SystemState,
 } from "./state.ts";
-import { derivePaths, deriveStages, relevantFeed } from "./paths.ts";
+import { derivePaths, deriveStages, relevantFeed, terms } from "./paths.ts";
 
 function memoryStorage() {
   const map = new Map<string, string>();
@@ -163,6 +163,10 @@ describe("relevance", () => {
     summary,
     epistemic_state: "observed",
     relations: [],
+  });
+
+  it("tokenizes words across Unicode scripts and numbers", () => {
+    assert.deepEqual(terms("कृषि पर्यटन café 2026"), new Set(["कृषि", "पर्यटन", "café", "2026"]));
   });
 
   it("explains relevance with shared words only", () => {

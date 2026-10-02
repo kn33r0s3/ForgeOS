@@ -17,6 +17,10 @@ export const Route = createFileRoute("/operations")({
   head: () => ({ meta: [{ title: "Operations — Hami" }] }),
 });
 
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
 function OperationsPage() {
   const [dashboard, setDashboard] = useState<MoneyDashboard | null>(null);
   const [actions, setActions] = useState<ActionItem[]>([]);
@@ -65,8 +69,8 @@ function OperationsPage() {
 
       setDashboard(dashData);
       setActions(actData);
-    } catch (err: any) {
-      setError(err.message || "Unable to query Hami data endpoints");
+    } catch (err: unknown) {
+      setError(errorMessage(err, "Unable to query Hami data endpoints"));
     } finally {
       setLoading(false);
     }
@@ -91,8 +95,8 @@ function OperationsPage() {
       const data = await res.json();
       setCycleMsg(`Cycle complete. Status: ${data.status || "status not recorded"} · Cycle ID: ${data.cycle_id ?? "—"}`);
       await loadOperatingData();
-    } catch (err: any) {
-      setCycleMsg(`Cycle error: ${err.message}`);
+    } catch (err: unknown) {
+      setCycleMsg(`Cycle error: ${errorMessage(err, "Unexpected error")}`);
     } finally {
       setRunningCycle(false);
     }
@@ -121,8 +125,8 @@ function OperationsPage() {
         `created ${(data.opportunities_created ?? 0) + (data.single_signal_opportunities_created ?? 0)} new evidence-backed opportunity(ies).`
       );
       await loadOperatingData();
-    } catch (err: any) {
-      setCycleMsg(`Discovery error: ${err.message}`);
+    } catch (err: unknown) {
+      setCycleMsg(`Discovery error: ${errorMessage(err, "Unexpected error")}`);
     } finally {
       setRunningCycle(false);
     }
@@ -147,8 +151,8 @@ function OperationsPage() {
 
       // Approval recorded — reload to reflect updated approved_at timestamp
       await loadOperatingData();
-    } catch (err: any) {
-      alert(`Approval error: ${err.message}`);
+    } catch (err: unknown) {
+      alert(`Approval error: ${errorMessage(err, "Unexpected error")}`);
     }
   }
 

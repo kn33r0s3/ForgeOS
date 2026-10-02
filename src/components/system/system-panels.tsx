@@ -222,7 +222,7 @@ const EPISTEMIC: Record<string, { label: string; tone: "neutral" | "accent" | "w
   inferred_pattern: { label: "Unverified", tone: "warn" },
 };
 
-export function relativeTime(value?: string | null, now = Date.now()): string {
+function relativeTime(value?: string | null, now = Date.now()): string {
   if (!value) return "time unknown";
   const t = new Date(value.endsWith("Z") || /[+-]\d\d:?\d\d$/.test(value) ? value : `${value}Z`).getTime();
   if (Number.isNaN(t)) return "time unknown";

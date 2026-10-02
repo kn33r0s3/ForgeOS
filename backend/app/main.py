@@ -10,6 +10,8 @@ init, and router registration. All logic lives in services/ and api/.
 
 import os
 import logging
+from contextlib import asynccontextmanager
+from collections.abc import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,10 +24,18 @@ from app.security import api_key_middleware
 
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
+    on_startup()
+    yield
+
+
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description="Hami — the ForgeOS-evolved economic intelligence system.",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -42,7 +52,6 @@ app.middleware("http")(api_key_middleware)
 CRON_SCHEDULE = "0 0 * * *"
 
 
-@app.on_event("startup")
 def on_startup():
     init_db()
     if not settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:

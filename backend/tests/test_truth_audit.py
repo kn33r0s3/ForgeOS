@@ -1,6 +1,6 @@
 """Truth-audit metrics must distinguish data volume from reality validation."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app import models
 from app.services import truth_audit
@@ -36,11 +36,11 @@ def test_snapshot_labels_raw_and_real_metrics_separately(db):
 
 def test_stale_running_cycles_are_failed_without_deletion(db):
     stale = models.CycleRun(
-        started_at=datetime.utcnow() - timedelta(hours=3),
+        started_at=datetime.now(timezone.utc) - timedelta(hours=3),
         status="RUNNING",
     )
     current = models.CycleRun(
-        started_at=datetime.utcnow(),
+        started_at=datetime.now(timezone.utc),
         status="RUNNING",
     )
     db.add_all([stale, current])

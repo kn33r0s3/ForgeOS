@@ -241,7 +241,7 @@ const STOP = new Set(
 
 export function terms(text: string): Set<string> {
   const out = new Set<string>();
-  for (const w of text.toLowerCase().split(/[^a-z0-9\u0900-\u097f]+/)) {
+  for (const w of text.toLowerCase().split(/[^\p{L}\p{M}\p{N}]+/u)) {
     if (w.length >= 3 && !STOP.has(w)) out.add(w);
   }
   return out;

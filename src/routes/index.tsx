@@ -77,7 +77,6 @@ function HomePage() {
           state={state}
           world={world}
           relevant={relevant}
-          privacyMode={mode}
         />
       ) : (
         <Welcome onStart={update} state={state} world={world} privacyMode={mode} />
@@ -155,14 +154,12 @@ function ActiveSystem({
   stages,
   world,
   relevant,
-  privacyMode,
 }: {
   state: NonNullable<ReturnType<typeof useSystemState>["state"]>;
   paths: ReturnType<typeof derivePaths>;
   stages: ReturnType<typeof deriveStages>;
   world: ReturnType<typeof useWorldFeed>;
   relevant: ReturnType<typeof relevantFeed>;
-  privacyMode: "guest" | "account";
 }) {
   const next = stages.find((s) => !s.reached && !s.evidenceGated);
   return (
