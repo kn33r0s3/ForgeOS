@@ -61,6 +61,8 @@ def test_daily_owner_summary_is_idempotent_and_omits_contact_data(db, monkeypatc
     assert "FB-TESTSUMMARY" in request["body"]
     assert "TEST" in request["body"]
     assert "READY_FOR_OWNER_REVIEW" in request["body"]
+    assert "Booking link available: https://cal.com/hami-forge-m9agd6/build-hami" in request["body"]
+    assert "BOOKED" not in request["body"]
     assert "private-lead@example.test" not in request["body"]
     assert "+12025550123" not in request["body"]
     assert "No customer reply, booking, or external contact was sent." in request["body"]

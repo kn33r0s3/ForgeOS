@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowRight, CalendarDays, Mail, ShieldCheck } from "lucide-react";
+import { ArrowRight, CalendarDays, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,6 @@ import { Container } from "@/components/layout/container";
 
 type ForgeBotConfig = {
   intake_enabled: boolean;
-  contact_email: string;
   booking_url: string;
   consent_version: string;
 };
@@ -99,7 +98,7 @@ function ForgeBotIntakePage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!config?.intake_enabled) {
-      setError("Web intake is not open yet. Please use the contact email below.");
+      setError("Web intake is not open yet.");
       return;
     }
     if (form.budgetMaximum && Number(form.budgetMaximum) < Number(form.budgetMinimum)) {
@@ -196,19 +195,7 @@ function ForgeBotIntakePage() {
           </p>
         </div>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
-          <a
-            href={config?.contact_email ? `mailto:${config.contact_email}` : undefined}
-            className="flex min-h-20 items-center gap-3 border-2 border-line bg-card p-4 text-ink hover:border-accent"
-          >
-            <Mail className="size-5 text-accent" aria-hidden="true" />
-            <span>
-              <span className="block text-xs uppercase tracking-wide text-muted">Contact email</span>
-              <span className="mt-1 block font-bold">
-                {config?.contact_email ?? "Loading contact details"}
-              </span>
-            </span>
-          </a>
+        <div className="mt-8 grid gap-4 sm:max-w-xl">
           <a
             href={config?.booking_url}
             target="_blank"
@@ -217,7 +204,7 @@ function ForgeBotIntakePage() {
           >
             <CalendarDays className="size-5 text-accent" aria-hidden="true" />
             <span>
-              <span className="block text-xs uppercase tracking-wide text-muted">Booking link</span>
+              <span className="block text-xs uppercase tracking-wide text-muted">Booking link available</span>
               <span className="mt-1 block font-bold">Choose a time with Hami</span>
             </span>
           </a>
@@ -234,8 +221,8 @@ function ForgeBotIntakePage() {
             <h2 className="text-lg font-extrabold">Online intake is not open yet</h2>
             <p className="mt-2 text-sm leading-6 text-muted">
               The form remains disabled until Hami finishes its local pilot and
-              abuse-control checks. You can use the contact email or booking
-              link above; neither action sends a message automatically.
+              abuse-control checks. The booking link above is available, but
+              opening it does not submit an inquiry or confirm an appointment.
             </p>
           </section>
         ) : receipt ? (
@@ -264,8 +251,10 @@ function ForgeBotIntakePage() {
                   <h2 className="text-lg font-extrabold text-ink">Request received for review</h2>
                 </div>
                 <p className="mt-3 text-sm leading-6 text-muted">
-                  Reference: <span className="font-mono text-ink">{receipt.reference}</span>.
-                  No automated response or booking was sent. This request is not
+                  Status: <strong>REQUESTED</strong> for owner review. Reference:{" "}
+                  <span className="font-mono text-ink">{receipt.reference}</span>.
+                  The booking link is available above, but no appointment is
+                  booked and no automated response was sent. This request is not
                   counted as a customer or revenue outcome.
                 </p>
                 <div className="mt-4 border border-line bg-paper p-4">

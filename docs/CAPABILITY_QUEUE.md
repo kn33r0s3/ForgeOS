@@ -729,6 +729,13 @@ realized revenue.
 - **OUTREACH / COMMERCIAL STATE:** outreach **NONE**; this milestone created no ACTION, response, interested party, buyer/customer, WTP evidence, order, payment, or revenue. Production counts are recorded above; all verification intake remains internal/test data, not market evidence.
 - **TARGET ARCHITECTURE:** `testable Opportunity → explicit source authorization → bounded read-only query → candidate ENTITY + discovery EVENT/EVIDENCE + relevance RELATION → potential only with relevance evidence → later qualification evidence → separately authorized outreach/response`. Do not add a CRM, infer stage promotions, or execute an ACTION because an Opportunity exists.
 
+## [DONE WITH LIMITATION] Keep Forge Bot contact private and clarify booking state
+
+- Owner action still required: choose and configure an email provider for internal owner summaries; decide the retention period and complete owner-run market discovery before any real intake; separately authorize bounded live operation.
+- Action removed: the public Forge Bot config and inquiry page no longer publish the owner's mailbox address; the page distinguishes an available booking link from a submitted request or confirmed appointment, and owner summaries carry the booking link without marking a lead booked.
+- Current blocker / verification: the local browser rendered the closed intake state and the supplied booking URL with no console errors. `backend/tests/test_forge_bot_api.py` exercises a consented TEST lead through storage, summary, and a mocked email sender while outbound sockets are blocked; the full backend suite passes (594 passed, 2 skipped), and `npm test` passes (197 script tests and 103 app tests). No production lead or email was created or sent. Production deployment and post-deploy checks are pending; `FORGE_BOT_LIVE` remains false and intake remains closed.
+- Next removable dependency: configure a protected server-side provider only after owner selection, set the existing HMAC/API/abuse-control requirements, choose retention, and grant explicit bounded authorization before enabling real intake. A booking URL is not an appointment and TEST evidence is not customer or revenue evidence.
+
 ## [DONE WITH LIMITATION] Gate legacy intelligence behind explicit configuration
 
 - Owner action still required: keep `FORGEOS_LEGACY_INTELLIGENCE_ENABLED` unset or false unless the owner explicitly authorizes re-enabling the legacy intelligence routines and their separately scoped data-source/integration permissions.

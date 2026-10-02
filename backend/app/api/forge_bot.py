@@ -99,7 +99,6 @@ def get_forge_bot_config():
     """Return only public contact settings and whether intake is currently enabled."""
     return {
         "intake_enabled": _enabled(),
-        "contact_email": settings.FORGE_BOT_CONTACT_EMAIL,
         "booking_url": settings.FORGE_BOT_BOOKING_URL,
         "consent_version": CONSENT_PROVENANCE,
     }

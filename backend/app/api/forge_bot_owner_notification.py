@@ -168,6 +168,7 @@ def _format_owner_notification_body(reference: str, lead_data: dict) -> str:
         "-" * 60,
         "Review in Forge Bot owner summary endpoint.",
         "No automated action, booking, or outreach has been sent.",
+        f"Booking link available: {settings.FORGE_BOT_BOOKING_URL}",
         "Owner approval required before any external response.",
     ]
     return "\n".join(lines)
@@ -194,6 +195,7 @@ def _format_daily_owner_summary_body(summary_date_utc: date, leads: list) -> str
         [
             "",
             "No customer reply, booking, or external contact was sent.",
+            f"Booking link available: {settings.FORGE_BOT_BOOKING_URL}",
             "Use the authenticated Forge Bot owner summary for contact details.",
         ]
     )

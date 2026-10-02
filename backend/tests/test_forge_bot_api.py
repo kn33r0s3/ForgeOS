@@ -1,3 +1,6 @@
+import socket
+from datetime import date
+
 from fastapi.testclient import TestClient
 
 from app import models
@@ -5,6 +8,8 @@ from app.config import settings
 from app.database import get_db
 from app.main import app
 from app.api import forge_bot
+from app.api import forge_bot_owner_notification
+from app.services import integration_dispatcher
 
 
 def _client(db):
@@ -58,7 +63,7 @@ def test_intake_is_disabled_without_explicit_enablement_and_suppression_key(db, 
     assert forge_bot._enabled() is False
 
 
-def test_public_config_contains_owner_supplied_email_and_booking_url(db, monkeypatch):
+def test_public_config_exposes_booking_without_publishing_owner_email(db, monkeypatch):
     _enable_intake(monkeypatch)
     client, cleanup = _client(db)
     try:
@@ -70,10 +75,10 @@ def test_public_config_contains_owner_supplied_email_and_booking_url(db, monkeyp
     assert response.status_code == 200
     assert response.json() == {
         "intake_enabled": True,
-        "contact_email": "haminp.forge@gmail.com",
         "booking_url": "https://cal.com/hami-forge-m9agd6/build-hami",
         "consent_version": "forge_bot_web_form_v1",
     }
+    assert "contact_email" not in response.json()
 
 
 def test_explicit_consent_and_channel_contact_are_server_enforced(db, monkeypatch):
@@ -151,6 +156,63 @@ def test_submitted_lead_is_private_consent_scoped_and_not_projected_publicly(db,
     assert public.status_code == 200
     assert "lead-one@example.test" not in public.text
     assert "Agriculture" not in public.text
+
+
+def test_test_lead_flow_is_offline_with_legacy_intelligence_disabled(db, monkeypatch):
+    _enable_intake(monkeypatch)
+    monkeypatch.setattr(settings, "FORGE_BOT_LIVE", False)
+    monkeypatch.setattr(settings, "FORGEOS_LEGACY_INTELLIGENCE_ENABLED", False)
+    monkeypatch.setattr(settings, "SMTP_HOST", "smtp.example.test")
+    monkeypatch.setattr(settings, "SMTP_USER", "owner@example.test")
+    monkeypatch.setattr(settings, "SMTP_PASSWORD", "test-only-password")
+    forge_bot._submissions_by_ip.clear()
+    sent = []
+
+    def reject_socket(*args, **kwargs):
+        raise AssertionError("The TEST lead flow attempted an outbound network connection.")
+
+    def mock_email_sender(to_email, subject, body):
+        sent.append((to_email, subject, body))
+        return {"status": "ACCEPTED_BY_MOCK", "message_id": "test-message"}
+
+    monkeypatch.setattr(socket, "create_connection", reject_socket)
+    monkeypatch.setattr(socket.socket, "connect", reject_socket)
+    monkeypatch.setattr(integration_dispatcher, "_send_smtp_email", mock_email_sender)
+    client, cleanup = _client(db)
+    try:
+        config = client.get("/forge-bot/config")
+        receipt_response = client.post("/forge-bot/leads", json=_payload())
+        owner_summary = client.get(
+            "/forge-bot/leads/summary",
+            headers={"X-API-Key": "test-only-owner-key"},
+        )
+        email_result = forge_bot_owner_notification.send_daily_owner_summary_notification(
+            db, date(2026, 10, 2)
+        )
+    finally:
+        client.close()
+        cleanup()
+        forge_bot._submissions_by_ip.clear()
+
+    lead = db.query(models.ForgeBotLeadContact).one()
+    assert config.status_code == 200
+    assert config.json()["booking_url"] == "https://cal.com/hami-forge-m9agd6/build-hami"
+    assert receipt_response.status_code == 202
+    assert receipt_response.json()["status"] == "received"
+    assert "No automated reply or booking was sent" in receipt_response.json()["message"]
+    assert owner_summary.status_code == 200
+    assert owner_summary.json()[0]["evidence_class"] == "TEST"
+    assert owner_summary.json()[0]["stage"] == "READY_FOR_OWNER_REVIEW"
+    assert lead.destination == "Japan"
+    assert lead.course == "Agriculture"
+    assert lead.timeline == "Next year"
+    assert lead.consent_provenance == "forge_bot_web_form_v1"
+    assert lead.consent_at is not None
+    assert email_result["status"] == "ACCEPTED_BY_SMTP"
+    assert len(sent) == 1
+    assert "Booking link available: https://cal.com/hami-forge-m9agd6/build-hami" in sent[0][2]
+    assert "TEST" in sent[0][2]
+    assert "BOOKED" not in sent[0][2]
 
 
 def test_duplicates_by_either_contact_are_deduplicated_without_existence_leak(db, monkeypatch):
