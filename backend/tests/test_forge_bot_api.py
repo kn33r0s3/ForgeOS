@@ -1,23 +1,27 @@
+import json
 import socket
 from datetime import date
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app import models
 from app.config import settings
 from app.database import get_db
 from app.main import app
-from app.api import forge_bot
-from app.api import forge_bot_owner_notification
+from app.api import forge_bot, forge_bot_owner_notification
 from app.services import integration_dispatcher
 
 
-def _client(db):
+def _client(db, *, raise_server_exceptions=True):
     def override_get_db():
         yield db
 
     app.dependency_overrides[get_db] = override_get_db
-    return TestClient(app), lambda: app.dependency_overrides.clear()
+    return (
+        TestClient(app, raise_server_exceptions=raise_server_exceptions),
+        lambda: app.dependency_overrides.clear(),
+    )
 
 
 def _payload(**changes):
@@ -31,6 +35,20 @@ def _payload(**changes):
         "budget_minimum": 100000,
         "budget_maximum": 250000,
         "consent_granted": True,
+    }
+    return {**values, **changes}
+
+
+def _response_authorization_payload(**changes):
+    values = {
+        "selected_channel": "email",
+        "channel_authorized": True,
+        "template_ref": "forge-bot.response.inquiry.v1",
+        "template_authorized": True,
+        "consent_required": True,
+        "opt_out_boundary": "permanent_suppression",
+        "escalation_boundary": "owner_confirmation_required_for_exceptions",
+        "external_send_authorized": False,
     }
     return {**values, **changes}
 
@@ -158,6 +176,385 @@ def test_submitted_lead_is_private_consent_scoped_and_not_projected_publicly(db,
     assert "Agriculture" not in public.text
 
 
+def test_response_authorization_is_owner_only_and_defaults_closed(db, monkeypatch):
+    _enable_intake(monkeypatch)
+    forge_bot._submissions_by_ip.clear()
+    client, cleanup = _client(db)
+    try:
+        lead_response = client.post("/forge-bot/leads", json=_payload())
+        reference = lead_response.json()["reference"]
+        no_key = client.get("/forge-bot/response-authorization")
+        state = client.get(
+            "/forge-bot/response-authorization",
+            headers={"X-API-Key": "test-only-owner-key"},
+        )
+        readiness = client.get(
+            f"/forge-bot/leads/{reference}/response-readiness",
+            headers={"X-API-Key": "test-only-owner-key"},
+        )
+    finally:
+        client.close()
+        cleanup()
+        forge_bot._submissions_by_ip.clear()
+
+    assert lead_response.status_code == 202
+    assert no_key.status_code == 401
+    assert state.status_code == readiness.status_code == 200
+    assert state.json()["configured"] is False
+    assert state.json()["selected_channel"] is None
+    assert state.json()["channel_authorized"] is False
+    assert state.json()["template_ref"] is None
+    assert state.json()["external_send_authorized"] is False
+    assert readiness.json()["status"] == "BLOCKED"
+    assert "owner_authorization_missing" in readiness.json()["blocking_reasons"]
+    assert "selected_channel_missing" in readiness.json()["blocking_reasons"]
+    assert readiness.json()["observed_submitter_preference"] == "email"
+    assert readiness.json()["owner_authorized_response_channel"] is None
+    assert readiness.json()["external_send_enabled"] is False
+    assert db.query(models.IntegrationDelivery).count() == 0
+
+
+def test_response_readiness_blocks_unselected_or_unauthorized_channel(db, monkeypatch):
+    _enable_intake(monkeypatch)
+    forge_bot._submissions_by_ip.clear()
+    client, cleanup = _client(db)
+    try:
+        lead = client.post("/forge-bot/leads", json=_payload())
+        reference = lead.json()["reference"]
+        no_selection = client.put(
+            "/forge-bot/response-authorization",
+            headers={"X-API-Key": "test-only-owner-key"},
+            json=_response_authorization_payload(selected_channel=None),
+        )
+        unauthorized = client.put(
+            "/forge-bot/response-authorization",
+            headers={"X-API-Key": "test-only-owner-key"},
+            json=_response_authorization_payload(channel_authorized=False),
+        )
+        readiness = client.get(
+            f"/forge-bot/leads/{reference}/response-readiness",
+            headers={"X-API-Key": "test-only-owner-key"},
+        )
+    finally:
+        client.close()
+        cleanup()
+        forge_bot._submissions_by_ip.clear()
+
+    assert no_selection.status_code == unauthorized.status_code == 200
+    assert readiness.json()["status"] == "BLOCKED"
+    assert "selected_channel_not_authorized" in readiness.json()["blocking_reasons"]
+    assert readiness.json()["owner_authorized_response_channel"] is None
+    assert db.query(models.WorldEvent).filter_by(
+        event_type="forge_bot_response_authorization_changed"
+    ).count() == 2
+
+
+@pytest.mark.parametrize(
+    ("template_ref", "template_authorized", "expected_blocker"),
+    [
+        (None, True, "permitted_template_reference_missing"),
+        ("forge-bot.response.inquiry.v1", False, "permitted_template_not_authorized"),
+    ],
+)
+def test_response_readiness_blocks_missing_or_unauthorized_template(
+    db, monkeypatch, template_ref, template_authorized, expected_blocker
+):
+    _enable_intake(monkeypatch)
+    forge_bot._submissions_by_ip.clear()
+    client, cleanup = _client(db)
+    try:
+        lead = client.post("/forge-bot/leads", json=_payload())
+        reference = lead.json()["reference"]
+        config = client.put(
+            "/forge-bot/response-authorization",
+            headers={"X-API-Key": "test-only-owner-key"},
+            json=_response_authorization_payload(
+                template_ref=template_ref,
+                template_authorized=template_authorized,
+            ),
+        )
+        readiness = client.get(
+            f"/forge-bot/leads/{reference}/response-readiness",
+            headers={"X-API-Key": "test-only-owner-key"},
+        )
+    finally:
+        client.close()
+        cleanup()
+        forge_bot._submissions_by_ip.clear()
+
+    assert config.status_code == readiness.status_code == 200
+    assert readiness.json()["status"] == "BLOCKED"
+    assert expected_blocker in readiness.json()["blocking_reasons"]
+    assert readiness.json()["external_send_enabled"] is False
+
+
+def test_response_readiness_requires_consent_and_blocks_opted_out_inquiries(db, monkeypatch):
+    _enable_intake(monkeypatch)
+    forge_bot._submissions_by_ip.clear()
+    client, cleanup = _client(db)
+    try:
+        lead_response = client.post("/forge-bot/leads", json=_payload())
+    finally:
+        client.close()
+        cleanup()
+        forge_bot._submissions_by_ip.clear()
+
+    lead = db.query(models.ForgeBotLeadContact).one()
+    authorization = models.OpForgeBotResponseAuthorization(
+        id=1,
+        **_response_authorization_payload(),
+    )
+    db.add(authorization)
+    db.flush()
+    lead.consent_granted = False
+    no_consent = forge_bot._evaluate_response_readiness(lead, authorization)
+    lead.consent_granted = True
+    lead.opted_out = True
+    opted_out = forge_bot._evaluate_response_readiness(lead, authorization)
+
+    assert lead_response.status_code == 202
+    assert no_consent["status"] == "BLOCKED"
+    assert "inquiry_response_consent_missing" in no_consent["blocking_reasons"]
+    assert opted_out["status"] == "BLOCKED"
+    assert "inquiry_opted_out_or_erased" in opted_out["blocking_reasons"]
+    assert opted_out["external_send_enabled"] is False
+
+
+def test_owner_authorized_response_is_internal_only_until_final_send_gate_opens(db, monkeypatch):
+    _enable_intake(monkeypatch)
+    monkeypatch.setattr(settings, "FORGE_BOT_RESPONSE_SEND_ENABLED", False)
+    monkeypatch.setattr(settings, "FORGE_BOT_LIVE", True)
+    monkeypatch.setattr(
+        integration_dispatcher,
+        "_send_smtp_email",
+        lambda *args, **kwargs: pytest.fail("response readiness attempted an SMTP send"),
+    )
+    monkeypatch.setattr(
+        integration_dispatcher,
+        "_send_twilio_sms",
+        lambda *args, **kwargs: pytest.fail("response readiness attempted an SMS send"),
+    )
+    forge_bot._submissions_by_ip.clear()
+    client, cleanup = _client(db)
+    try:
+        lead = client.post("/forge-bot/leads", json=_payload())
+        reference = lead.json()["reference"]
+        config = client.put(
+            "/forge-bot/response-authorization",
+            headers={"X-API-Key": "test-only-owner-key"},
+            json=_response_authorization_payload(external_send_authorized=True),
+        )
+        readiness = client.get(
+            f"/forge-bot/leads/{reference}/response-readiness",
+            headers={"X-API-Key": "test-only-owner-key"},
+        )
+        repeated_config = client.put(
+            "/forge-bot/response-authorization",
+            headers={"X-API-Key": "test-only-owner-key"},
+            json=_response_authorization_payload(external_send_authorized=True),
+        )
+    finally:
+        client.close()
+        cleanup()
+        forge_bot._submissions_by_ip.clear()
+    result = readiness.json()
+    result = readiness.json()
+    assert lead.status_code == 202
+    assert config.status_code == repeated_config.status_code == 200
+    assert result["status"] == "INTERNAL_RESPONSE_READY"
+    assert result["blocking_reasons"] == []
+    assert result["observed_submitter_preference"] == "email"
+    assert result["owner_authorized_response_channel"] == "email"
+    assert result["permitted_template_ref"] == "forge-bot.response.inquiry.v1"
+    assert result["consent_required"] is True
+    assert result["opt_out_boundary"] == "permanent_suppression"
+    assert result["escalation_boundary"] == "owner_confirmation_required_for_exceptions"
+    assert result["external_send_authorized"] is True
+    assert result["external_send_gate_open"] is False
+    assert result["external_sender_available"] is False
+    assert result["external_send_enabled"] is False
+    assert result["external_message_sent"] is False
+    assert db.query(models.IntegrationDelivery).count() == 0
+    assert db.query(models.WorldEvent).filter_by(
+        event_type="forge_bot_response_authorization_changed"
+    ).count() == 1
+    authorization_event = db.query(models.WorldEvent).filter_by(
+        event_type="forge_bot_response_authorization_changed"
+    ).one()
+    assert authorization_event.source == "forge_bot_owner_response_authorization"
+    authorization_payload = json.loads(authorization_event.payload)
+    assert authorization_payload["current"] == _response_authorization_payload(
+        external_send_authorized=True
+    )
+    assert db.query(models.TypeRegistry).filter_by(
+        category="event_type",
+        type_name="forge_bot_response_authorization_changed",
+        status="active",
+    ).one_or_none() is not None
+    assert "lead-one@example.test" not in authorization_event.payload
+    assert db.query(models.IntegrationDelivery).count() == 0
+
+
+def test_submitter_preference_cannot_silently_select_or_authorize_response_channel(
+    db, monkeypatch
+):
+    _enable_intake(monkeypatch)
+    forge_bot._submissions_by_ip.clear()
+    client, cleanup = _client(db)
+    try:
+        lead = client.post("/forge-bot/leads", json=_payload(preferred_channel="email"))
+        reference = lead.json()["reference"]
+        owner_config = client.put(
+            "/forge-bot/response-authorization",
+            headers={"X-API-Key": "test-only-owner-key"},
+            json=_response_authorization_payload(
+                selected_channel="phone",
+                channel_authorized=True,
+            ),
+        )
+        readiness = client.get(
+            f"/forge-bot/leads/{reference}/response-readiness",
+            headers={"X-API-Key": "test-only-owner-key"},
+        )
+    finally:
+        client.close()
+        cleanup()
+        forge_bot._submissions_by_ip.clear()
+
+    assert lead.status_code == 202
+    assert owner_config.status_code == 200
+    assert readiness.json()["status"] == "BLOCKED"
+    assert readiness.json()["observed_submitter_preference"] == "email"
+    assert readiness.json()["owner_authorized_response_channel"] == "phone"
+    assert (
+        "submitter_preference_does_not_match_authorized_channel"
+        in readiness.json()["blocking_reasons"]
+    )
+    assert readiness.json()["external_send_enabled"] is False
+    assert db.query(models.IntegrationDelivery).count() == 0
+
+
+def test_response_authorization_rejects_unsafe_consent_and_unknown_channel(db, monkeypatch):
+    _enable_intake(monkeypatch)
+    client, cleanup = _client(db)
+    try:
+        no_consent = client.put(
+            "/forge-bot/response-authorization",
+            headers={"X-API-Key": "test-only-owner-key"},
+            json=_response_authorization_payload(consent_required=False),
+        )
+        unknown_channel = client.put(
+            "/forge-bot/response-authorization",
+            headers={"X-API-Key": "test-only-owner-key"},
+            json=_response_authorization_payload(selected_channel="whatsapp"),
+        )
+    finally:
+        client.close()
+        cleanup()
+
+    assert no_consent.status_code == unknown_channel.status_code == 422
+    assert db.get(models.OpForgeBotResponseAuthorization, 1) is None
+    assert db.query(models.WorldEvent).filter_by(
+        event_type="forge_bot_response_authorization_changed"
+    ).count() == 0
+
+
+def test_inquiry_lifecycle_events_are_registered_minimized_and_survive_erasure(db, monkeypatch):
+    _enable_intake(monkeypatch)
+    client, cleanup = _client(db)
+    try:
+        created = client.post("/forge-bot/leads", json=_payload())
+        received_event = db.query(models.WorldEvent).one()
+        first_control = created.json()["manage_token"]
+        opted_out = client.post(
+            "/forge-bot/leads/opt-out",
+            json={"manage_token": first_control},
+        )
+
+        second = client.post(
+            "/forge-bot/leads",
+            json=_payload(
+                email="another-lead@example.test",
+                phone="12025550101",
+            ),
+        )
+        erased = client.post(
+            "/forge-bot/leads/delete",
+            json={"manage_token": second.json()["manage_token"]},
+        )
+    finally:
+        client.close()
+        cleanup()
+
+    assert created.status_code == opted_out.status_code == second.status_code == 202
+    assert erased.status_code == 204
+    events = db.query(models.WorldEvent).order_by(models.WorldEvent.id).all()
+    assert [event.event_type for event in events] == [
+        "forge_bot_inquiry_received",
+        "forge_bot_inquiry_opted_out",
+        "forge_bot_inquiry_received",
+        "forge_bot_inquiry_erased",
+    ]
+    assert received_event.source == "forge_bot_web_form"
+    registered = {
+        row.type_name: row.status
+        for row in db.query(models.TypeRegistry)
+        .filter_by(category="event_type")
+        .all()
+    }
+    assert all(registered[event.event_type] == "active" for event in events)
+    assert db.query(models.ForgeBotLeadContact).count() == 1
+    opted_out_lead = db.query(models.ForgeBotLeadContact).one()
+    assert opted_out_lead.opted_out is True
+    assert opted_out_lead.email is None and opted_out_lead.phone is None
+
+    payloads = [json.loads(event.payload) for event in events]
+    assert payloads[0] == {
+        "reference": created.json()["reference"],
+        "evidence_class": "TEST",
+        "state": "READY_FOR_OWNER_REVIEW",
+    }
+    assert payloads[1] == {
+        "reference": created.json()["reference"],
+        "evidence_class": "TEST",
+        "state": "OPTED_OUT",
+        "previous_state": "READY_FOR_OWNER_REVIEW",
+    }
+    assert payloads[3] == {
+        "reference": second.json()["reference"],
+        "evidence_class": "TEST",
+        "state": "ERASED",
+        "previous_state": "READY_FOR_OWNER_REVIEW",
+    }
+    for event, payload in zip(events, payloads):
+        assert event.idempotency_key
+        assert not {"email", "phone", "destination", "course", "timeline"} & payload.keys()
+        assert "example.test" not in event.payload
+        assert "+1" not in event.payload
+
+
+def test_inquiry_event_failure_does_not_persist_the_lead(db, monkeypatch):
+    _enable_intake(monkeypatch)
+
+    def fail_event_write(*args, **kwargs):
+        raise RuntimeError("event persistence unavailable")
+
+    monkeypatch.setattr(forge_bot.world_graph, "create_event", fail_event_write)
+    client, cleanup = _client(db, raise_server_exceptions=False)
+    try:
+        response = client.post("/forge-bot/leads", json=_payload())
+    finally:
+        client.close()
+        cleanup()
+        db.rollback()
+
+    assert response.status_code == 500
+    assert db.query(models.ForgeBotLeadContact).count() == 0
+    assert db.query(models.WorldEvent).filter(
+        models.WorldEvent.event_type.like("forge_bot_inquiry_%")
+    ).count() == 0
+
+
 def test_test_lead_flow_is_offline_with_legacy_intelligence_disabled(db, monkeypatch):
     _enable_intake(monkeypatch)
     monkeypatch.setattr(settings, "FORGE_BOT_LIVE", False)
@@ -199,7 +596,7 @@ def test_test_lead_flow_is_offline_with_legacy_intelligence_disabled(db, monkeyp
     assert config.json()["booking_url"] == "https://cal.com/hami-forge-m9agd6/build-hami"
     assert receipt_response.status_code == 202
     assert receipt_response.json()["status"] == "received"
-    assert "No automated reply or booking was sent" in receipt_response.json()["message"]
+    assert "No reply was sent through your selected contact channel" in receipt_response.json()["message"]
     assert owner_summary.status_code == 200
     assert owner_summary.json()[0]["evidence_class"] == "TEST"
     assert owner_summary.json()[0]["stage"] == "READY_FOR_OWNER_REVIEW"

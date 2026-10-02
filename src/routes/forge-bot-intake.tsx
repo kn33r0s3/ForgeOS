@@ -241,7 +241,7 @@ function ForgeBotIntakePage() {
                 <p className="mt-3 text-sm leading-6 text-muted">
                   {controlResult === "opt-out"
                     ? "Your contact details and inquiry answers were erased. Hami keeps only keyed suppression data so this inquiry is not re-entered or contacted."
-                    : "The inquiry record was deleted. No contact details or suppression data from this record remain."}
+                    : "Your contact details, answers, and suppression data were erased. Hami keeps only a minimal non-contact record that the inquiry was erased."}
                 </p>
               </>
             ) : (
@@ -254,8 +254,9 @@ function ForgeBotIntakePage() {
                   Status: <strong>REQUESTED</strong> for owner review. Reference:{" "}
                   <span className="font-mono text-ink">{receipt.reference}</span>.
                   The booking link is available above, but no appointment is
-                  booked and no automated response was sent. This request is not
-                  counted as a customer or revenue outcome.
+                  booked. This page is a receipt only; no reply was sent to your
+                  selected email or phone. This request is not counted as a
+                  customer or revenue outcome.
                 </p>
                 <div className="mt-4 border border-line bg-paper p-4">
                   <Label htmlFor="manage-token">Private one-time control code</Label>
@@ -276,7 +277,7 @@ function ForgeBotIntakePage() {
                     <p className="mt-2 text-sm leading-6 text-muted">
                       {pendingControlAction === "opt-out"
                         ? "Contact details and answers will be erased. Keyed suppression data will remain to prevent re-entry or future contact."
-                        : "The entire inquiry record, including suppression data, will be removed. A future submission with the same contact details will not be blocked by this record."}
+                        : "Contact details, answers, and suppression data will be removed. Hami will retain only a minimal non-contact erasure record. A future submission with the same contact details will not be blocked by this record."}
                       {" "}This cannot be undone with this one-time code.
                     </p>
                     <div className="mt-4 flex flex-wrap gap-3">

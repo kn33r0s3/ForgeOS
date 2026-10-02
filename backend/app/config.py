@@ -139,6 +139,11 @@ class Settings(BaseSettings):
     )
     # Required for privacy-preserving permanent suppression after opt-out.
     FORGE_BOT_CONTACT_HMAC_KEY: str = os.getenv("FORGE_BOT_CONTACT_HMAC_KEY", "")
+    # Separate final gate for any future Forge Bot customer-response sender.
+    # No such sender is wired; this must remain false until one is authorized.
+    FORGE_BOT_RESPONSE_SEND_ENABLED: bool = os.getenv(
+        "FORGE_BOT_RESPONSE_SEND_ENABLED", "false"
+    ).lower() in ("1", "true", "yes")
 
     FORGEOS_LEGACY_INTELLIGENCE_ENABLED: bool = os.getenv(
         "FORGEOS_LEGACY_INTELLIGENCE_ENABLED", "false"

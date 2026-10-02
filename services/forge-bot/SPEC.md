@@ -25,8 +25,12 @@ cadence, booking method, and pilot terms. See
 
 ## Intended lifecycle
 
-`inbound inquiry → deterministic reply → qualification → authorized follow-up
-→ booking request/link → reminder → evidence-backed status → daily owner summary`
+`inbound web inquiry → synchronous in-browser receipt → owner review and
+qualification → authorized follow-up → booking request/link → reminder →
+evidence-backed status → daily owner summary`
+
+The synchronous receipt acknowledges only the web submission. It is not a
+reply on the submitter's selected email/phone channel.
 
 The owner authorized a consent-scoped web intake record, supplied
 `haminp.forge@gmail.com` as the contact address, and supplied the booking link
@@ -49,14 +53,15 @@ preferred contact channel, and explicit inquiry-response consent. After a
 successful submission, the one-time control code can be used in the page to
 permanently opt out or delete the inquiry; both actions require a separate
 confirmation. Opt-out erases contact and answer fields while retaining
-HMAC-only suppression tokens. Deletion removes the entire row, including
-suppression tokens. A duplicate submission can receive a non-controlling code
-without disclosing whether another record exists. No time-based retention
-period is configured. A process-local limit is five submissions per source IP
-per hour; this is not a distributed production abuse control and does not
-authorize public activation. Email/WhatsApp channel integrations and official
-policy review are still required before enabling those channels. No mass
-outbound.
+HMAC-only suppression tokens. Deletion removes the contact row, including
+suppression tokens; a privacy-minimized erasure event retains only the opaque
+reference, evidence class, and state transition. A duplicate submission can
+receive a non-controlling code without disclosing whether another record
+exists. No time-based retention period is configured. A process-local limit is
+five submissions per source IP per hour; this is not a distributed production
+abuse control and does not authorize public activation. Email/WhatsApp channel
+integrations and official policy review are still required before enabling
+those channels. No mass outbound.
 
 When intake is enabled while `FORGE_BOT_LIVE=false`, the server accepts only
 synthetic TEST records (`@example.test` email or reserved `202-555-01xx`
@@ -81,9 +86,9 @@ escalation, booking, or owner-intervention system.
 
 The anonymous demand intake remains demand-understanding-only and continues to
 redact email/phone patterns. Forge Bot contact information is isolated in the
-dedicated `ForgeBotLeadContact` table rather than `Signal` or generic
-`SubstrateEntity.attributes`: generic entity reads/projections are not a
-private contact store. The table is scoped only to Forge Bot and records
+dedicated `ForgeBotLeadContact` operational table rather than `Signal` or
+generic `SubstrateEntity.attributes`: generic entity reads/projections are not
+a private contact store. The table is scoped only to Forge Bot and records
 preferred channel, consent timestamp/purpose/provenance, HMAC suppression
 tokens, deletion state, contact fields, and the four fixed answers. Lead
 details are not returned by public feed, discovery, network, or substrate APIs.

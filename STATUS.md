@@ -1,6 +1,6 @@
 # ForgeOS / Hami current status
 
-**Updated:** 2026-10-01
+**Updated:** 2026-10-03
 **Evidence boundary:** repository and CI observations below are dated; external
 state is not assumed current unless explicitly identified as a dated observation.
 
@@ -12,11 +12,19 @@ state is not assumed current unless explicitly identified as a dated observation
   Real customer, transaction, and revenue counts are therefore not established
   by that ledger; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT
   MEASURABLE**.
-- Forge Bot v0 has a consent-scoped private lead table and unlisted inquiry
-  page, but intake is disabled by default. The form does not send messages or
-  bookings automatically. Contact and qualification fields stay outside
-  Signals, generic substrate entities, and public projections. The existing
-  anonymous demand-intake redaction behavior is unchanged.
+- Forge Bot's lead input is the gated, unlisted web form at
+  `/forge-bot-intake`; intake is disabled by default. The successful response
+  is synchronous in-page receipt only, not a reply to the selected email/phone
+  channel. Contact and qualification fields stay outside Signals, generic
+  substrate entities, and public projections. The existing anonymous
+  demand-intake redaction behavior is unchanged.
+- Intake, opt-out, and erasure now emit registered, privacy-minimized
+  `WorldEvent`s atomically with the private lead-record transition. The event
+  payload keeps only an opaque reference, evidence class, and state change;
+  it excludes contact, qualification, and consent values. The hard-delete
+  path retains that non-contact erasure event while deleting the lead row.
+  This behavior is covered by TEST fixtures only; it is not a customer or
+  revenue result and does not activate intake or messaging.
 - The owner has identified a `paid pilots >= 1` checkpoint for 2026-10-29,
   anchored to revenue-first mode beginning 2026-09-29. No matching date or
   scoreboard text was found in the local checked-in `docs/REVENUE_LOG.md` while
@@ -47,8 +55,14 @@ state is not assumed current unless explicitly identified as a dated observation
 
 - CI for `50f67d873dd0387314d3a8dd8e70516c14694952` completed successfully
   on both backend and frontend jobs.
-- Local backend verification recorded in this session: **575 passed, 2
+- Local backend verification recorded on 2026-10-01: **575 passed, 2
   skipped**; the two corrected Vercel rewrite contract tests also passed.
+- Local verification on 2026-10-03: backend suite **596 passed, 2 skipped**;
+  focused Forge Bot API/notification tests **16 passed**; frontend/script tests,
+  TypeScript typecheck, lint, and production build passed. Build migration
+  step skipped because `DATABASE_URL` was unset. Browser smoke rendered the
+  closed intake page with no console errors; it confirmed the form remained
+  closed and did not exercise external messaging.
 - Tests and test fixtures are not customer, payment, or revenue evidence.
 
 ## Open owner gates
@@ -61,8 +75,10 @@ state is not assumed current unless explicitly identified as a dated observation
   rate-limit. The web route currently fails closed without the explicit flag,
   stable 32+-character server HMAC key, and server API key.
 - The provided contact email is a `mailto:` link; the provided Cal.com URL is
-  displayed as a link. No inbound email processing, SMTP summary, automatic
-  booking, or outbound follow-up is connected or sent. Authorize any such
-  activity and supply server credentials separately.
+  displayed as a link. No inbound email parsing, selected-channel reply,
+  automatic booking, or customer follow-up is implemented. The internal daily
+  owner digest uses the existing authenticated cron/outbox path but requires
+  SMTP credentials; production delivery is not established. Authorize any
+  customer-facing activity and supply server credentials separately.
 - Confirm Oracle Always Free account/terms and cost controls before any live
   instance evaluation.

@@ -41,6 +41,8 @@ PRIVATE_CONTACT_READ_PATH_PREFIXES = (
     "/products/pipeline",
     "/repair-shop/work-items",
     "/forge-bot/leads/summary",
+    "/forge-bot/response-authorization",
+    "/forge-bot/leads",
 )
 
 

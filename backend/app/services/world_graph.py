@@ -101,6 +101,10 @@ def seed_core_types(db: Session) -> int:
             "economic_validation_assessed",
             "prospect_discovery_evaluated",
             "cognitive_proposals_generated",
+            "forge_bot_inquiry_received",
+            "forge_bot_inquiry_opted_out",
+            "forge_bot_inquiry_erased",
+            "forge_bot_response_authorization_changed",
         },
         "capability_type": {"tool", "workflow", "integration", "agent", "model", "market_signal_analysis"},
     }

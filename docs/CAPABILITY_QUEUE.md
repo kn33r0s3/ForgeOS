@@ -1,5 +1,12 @@
 # Hami capability claim ledger (ForgeOS repository)
 
+## [DONE WITH LIMITATION] Preserve Forge Bot inquiry lifecycle events (2026-10-03)
+
+- Owner action still required: complete owner-run licensed-agency discovery, identify/confirm the real communication channel, and authorize any reply or follow-up. This change does not reduce those real-world decisions or authorize contact.
+- Action removed: reconstruct whether a web inquiry was received, opted out, or erased after its private lead row changes or is deleted. Each transition now leaves a registered event; this does not lower `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION`.
+- Current blocker / verification: the actual input is the gated `/forge-bot-intake` web form. A synchronous browser receipt is returned, but no message is sent through the selected email/phone channel. Production intake remains disabled by default; real lead persistence also requires `FORGE_BOT_INTAKE_ENABLED`, the server HMAC key, the API key, and the explicit LIVE setting. Event payloads contain only the opaque reference, `REAL`/`TEST` evidence class, and state transition. Tests verify registration, privacy minimization, erase-history retention, and rollback on event-write failure. On 2026-10-03, backend tests passed (596 passed, 2 skipped), frontend/script tests, typecheck, lint, and build passed; the local browser showed the closed intake state with no console errors.
+- Next removable dependency: conduct and record the owner-run discovery, then explicitly identify and authorize one legitimate zero-cost reply channel/template and its consent/opt-out limits. Only afterward evaluate a next-day `WorkerTask` flow and a permitted reliable runner; no sub-daily production worker is established.
+
 ## [RECORDED] Archive superseded documents and legacy frontend source
 
 - Owner action still required: resolve the Section 8 wording separately; identify whether the ignored exported context files may be committed; authorize any future live Oracle VM provisioning or real email delivery.

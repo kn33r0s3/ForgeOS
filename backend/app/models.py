@@ -874,6 +874,43 @@ class ForgeBotLeadContact(Base):
     )
 
 
+class OpForgeBotResponseAuthorization(Base):
+    """Singleton operational projection for owner-authorized lead responses."""
+
+    __tablename__ = "op_forge_bot_response_authorization"
+    __table_args__ = (
+        CheckConstraint(
+            "selected_channel IS NULL OR selected_channel IN ('email','phone')",
+            name="ck_forge_bot_response_selected_channel",
+        ),
+        CheckConstraint(
+            "opt_out_boundary = 'permanent_suppression'",
+            name="ck_forge_bot_response_opt_out_boundary",
+        ),
+        CheckConstraint(
+            "escalation_boundary = 'owner_confirmation_required_for_exceptions'",
+            name="ck_forge_bot_response_escalation_boundary",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True)
+    selected_channel = Column(String(16), nullable=True)
+    channel_authorized = Column(Boolean, nullable=False, default=False)
+    template_ref = Column(String(200), nullable=True)
+    template_authorized = Column(Boolean, nullable=False, default=False)
+    consent_required = Column(Boolean, nullable=False, default=True)
+    opt_out_boundary = Column(
+        String(40), nullable=False, default="permanent_suppression"
+    )
+    escalation_boundary = Column(
+        String(64),
+        nullable=False,
+        default="owner_confirmation_required_for_exceptions",
+    )
+    external_send_authorized = Column(Boolean, nullable=False, default=False)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
 class ForgeCapability(Base):
     """A reusable ability Forge proposes, builds, tests, then activates."""
 

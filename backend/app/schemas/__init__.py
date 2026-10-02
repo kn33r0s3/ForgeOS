@@ -89,6 +89,38 @@ class ForgeBotLeadControl(BaseModel):
     manage_token: str = Field(min_length=32, max_length=128)
 
 
+class ForgeBotResponseAuthorizationUpdate(BaseModel):
+    selected_channel: Optional[Literal["email", "phone"]]
+    channel_authorized: bool
+    template_ref: Optional[str] = Field(default=None, max_length=200)
+    template_authorized: bool
+    consent_required: bool
+    opt_out_boundary: Literal["permanent_suppression"]
+    escalation_boundary: Literal[
+        "owner_confirmation_required_for_exceptions"
+    ]
+    external_send_authorized: bool
+
+    @field_validator("template_ref")
+    @classmethod
+    def normalize_template_ref(cls, value):
+        if value is None:
+            return None
+        normalized = value.strip()
+        if not normalized:
+            return None
+        if any(ord(character) < 33 or ord(character) > 126 for character in normalized):
+            raise ValueError("template_ref must be a printable, non-space reference")
+        return normalized
+
+    @field_validator("consent_required")
+    @classmethod
+    def require_consent(cls, value):
+        if not value:
+            raise ValueError("Forge Bot responses must require explicit consent")
+        return value
+
+
 class SignalOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

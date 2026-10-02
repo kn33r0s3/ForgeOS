@@ -32,10 +32,14 @@ It records only:
 - permanent opt-out state, timestamp, and HMAC-only suppression tokens;
 - deletion state and a one-time self-service control-token hash.
 
-The submit endpoint does not write a Signal, entity, event, evidence, or public
-projection. The one-time bearer code is returned only to the submitter; it is
-stored as a hash and allows opt-out or deletion. Opt-out erases the contact and
-answers but keeps keyed HMAC suppression tokens; hard deletion removes the row.
+The submit endpoint does not write a Signal, entity, evidence, or public
+projection. It emits registered `WorldEvent` lifecycle events containing only
+an opaque reference, evidence class, and state transition; contact,
+qualification, and consent values remain in the private contact record. The
+one-time bearer code is returned only to the submitter; it is stored as a hash
+and allows opt-out or deletion. Opt-out erases the contact and answers but
+keeps keyed HMAC suppression tokens; hard deletion removes the row while its
+privacy-minimized erasure event remains.
 No endpoint returns contact details except the owner summary, which requires
 the `X-API-Key` header. No contact value is emitted in the submit receipt.
 

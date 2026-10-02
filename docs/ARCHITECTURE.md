@@ -248,9 +248,13 @@ regulatory and reputation review.
   this codebase. Historical ForgeOS/Sanipops names remain in code and records
   for compatibility and history.
 - `services/forge-bot/SPEC.md` and `services/forge-bot/state/MAPPING.md` are
-  design documents. The spec labels Forge Bot as not implemented, not enabled,
-  and not authorized to contact anyone. No
-  `services/forge-bot/state/schema.sql` exists in the inspected tree.
+  design/contract documents. Local code implements a gated private
+  `ForgeBotLeadContact` record, owner-only summary, internal digest path, and
+  registered privacy-minimized intake/opt-out/erasure events. Intake and
+  customer-facing messaging remain disabled by default and unimplemented,
+  respectively; code presence does not authorize outbound contact. There is no
+  standalone `services/forge-bot/state/schema.sql`; deployed settings and
+  real-world use remain unverified by repository state.
 - The commercial evidence ledger is `docs/REVENUE_LOG.md`. It currently
   contains no commercial evidence entries; that is not a claim about
   uninspected external systems.

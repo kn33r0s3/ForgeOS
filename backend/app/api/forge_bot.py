@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.config import settings
 from app.database import get_db
+from app.services import world_graph
 
 router = APIRouter(prefix="/forge-bot", tags=["forge-bot"])
 CONSENT_PURPOSE = "respond_to_forge_bot_inquiry"
@@ -52,6 +53,127 @@ def _contact_digest(kind: str, value: str | None) -> str | None:
 
 def _token_hash(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _record_inquiry_event(
+    db: Session,
+    *,
+    event_type: str,
+    reference: str,
+    evidence_class: str,
+    source: str,
+    state: str,
+    previous_state: str | None = None,
+) -> None:
+    world_graph.seed_core_types(db)
+    payload = {
+        "reference": reference,
+        "evidence_class": evidence_class,
+        "state": state,
+    }
+    if previous_state is not None:
+        payload["previous_state"] = previous_state
+    world_graph.create_event(
+        db,
+        event_type=event_type,
+        source=source,
+        payload=payload,
+        idempotency_key=f"forge-bot-inquiry:{reference}:{event_type}",
+    )
+
+
+def _authorization_values(
+    authorization: models.OpForgeBotResponseAuthorization | None,
+) -> dict:
+    if authorization is None:
+        return {
+            "configured": False,
+            "selected_channel": None,
+            "channel_authorized": False,
+            "template_ref": None,
+            "template_authorized": False,
+            "consent_required": True,
+            "opt_out_boundary": "permanent_suppression",
+            "escalation_boundary": "owner_confirmation_required_for_exceptions",
+            "external_send_authorized": False,
+            "updated_at": None,
+        }
+    return {
+        "configured": True,
+        "selected_channel": authorization.selected_channel,
+        "channel_authorized": authorization.channel_authorized,
+        "template_ref": authorization.template_ref,
+        "template_authorized": authorization.template_authorized,
+        "consent_required": authorization.consent_required,
+        "opt_out_boundary": authorization.opt_out_boundary,
+        "escalation_boundary": authorization.escalation_boundary,
+        "external_send_authorized": authorization.external_send_authorized,
+        "updated_at": authorization.updated_at,
+    }
+
+
+def _evaluate_response_readiness(
+    lead: models.ForgeBotLeadContact,
+    authorization: models.OpForgeBotResponseAuthorization | None,
+) -> dict:
+    config = _authorization_values(authorization)
+    blockers: list[str] = []
+    if not config["configured"]:
+        blockers.append("owner_authorization_missing")
+    selected_channel = config["selected_channel"]
+    if selected_channel is None:
+        blockers.append("selected_channel_missing")
+    elif not config["channel_authorized"]:
+        blockers.append("selected_channel_not_authorized")
+    if selected_channel and selected_channel != lead.preferred_channel:
+        blockers.append("submitter_preference_does_not_match_authorized_channel")
+    if not config["template_ref"]:
+        blockers.append("permitted_template_reference_missing")
+    if not config["template_authorized"]:
+        blockers.append("permitted_template_not_authorized")
+    if not config["consent_required"]:
+        blockers.append("response_consent_requirement_missing")
+    if (
+        not lead.consent_granted
+        or lead.consent_purpose != CONSENT_PURPOSE
+        or lead.consent_provenance != CONSENT_PROVENANCE
+    ):
+        blockers.append("inquiry_response_consent_missing")
+    if lead.opted_out or lead.erased_at is not None:
+        blockers.append("inquiry_opted_out_or_erased")
+    if selected_channel == "email" and not lead.email:
+        blockers.append("authorized_email_contact_missing")
+    if selected_channel == "phone" and not lead.phone:
+        blockers.append("authorized_phone_contact_missing")
+
+    status = "INTERNAL_RESPONSE_READY" if not blockers else "BLOCKED"
+    final_send_gate_open = bool(
+        status == "INTERNAL_RESPONSE_READY"
+        and lead.evidence_class == "REAL"
+        and config["external_send_authorized"]
+        and settings.FORGE_BOT_RESPONSE_SEND_ENABLED
+        and settings.FORGE_BOT_LIVE
+    )
+    return {
+        "reference": lead.public_ref,
+        "status": status,
+        "blocking_reasons": blockers,
+        "observed_submitter_preference": lead.preferred_channel,
+        "owner_authorized_response_channel": (
+            selected_channel if config["channel_authorized"] else None
+        ),
+        "permitted_template_ref": (
+            config["template_ref"] if config["template_authorized"] else None
+        ),
+        "consent_required": config["consent_required"],
+        "opt_out_boundary": config["opt_out_boundary"],
+        "escalation_boundary": config["escalation_boundary"],
+        "external_send_authorized": config["external_send_authorized"],
+        "external_send_gate_open": final_send_gate_open,
+        "external_sender_available": False,
+        "external_send_enabled": False,
+        "external_message_sent": False,
+    }
 
 
 def _allow_submission(request: Request) -> bool:
@@ -104,6 +226,85 @@ def get_forge_bot_config():
     }
 
 
+@router.get("/response-authorization")
+def get_forge_bot_response_authorization(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Return the owner-only response authorization state; absent means closed."""
+    _require_owner_key(request)
+    authorization = db.get(models.OpForgeBotResponseAuthorization, 1)
+    return _authorization_values(authorization)
+
+
+@router.put("/response-authorization")
+def set_forge_bot_response_authorization(
+    payload: schemas.ForgeBotResponseAuthorizationUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Replace the singleton response policy and record its transition."""
+    _require_owner_key(request)
+    values = payload.model_dump()
+    authorization = db.get(models.OpForgeBotResponseAuthorization, 1)
+    previous_values = (
+        {
+            key: getattr(authorization, key)
+            for key in values
+        }
+        if authorization is not None
+        else None
+    )
+    changed = previous_values is None or any(
+        previous_values[key] != value for key, value in values.items()
+    )
+    if authorization is None:
+        authorization = models.OpForgeBotResponseAuthorization(id=1, **values)
+        db.add(authorization)
+    elif changed:
+        for key, value in values.items():
+            setattr(authorization, key, value)
+        authorization.updated_at = datetime.now(timezone.utc)
+
+    if changed:
+        world_graph.seed_core_types(db)
+        world_graph.create_event(
+            db,
+            event_type="forge_bot_response_authorization_changed",
+            source="forge_bot_owner_response_authorization",
+            payload={
+                "previous": previous_values,
+                "current": values,
+            },
+        )
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    db.refresh(authorization)
+    return _authorization_values(authorization)
+
+
+@router.get("/leads/{reference}/response-readiness")
+def get_forge_bot_response_readiness(
+    reference: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Evaluate internal response readiness without creating outbound work."""
+    _require_owner_key(request)
+    lead = (
+        db.query(models.ForgeBotLeadContact)
+        .filter_by(public_ref=reference, opted_out=False, erased_at=None)
+        .one_or_none()
+    )
+    if lead is None:
+        raise HTTPException(status_code=404, detail="Active inquiry not found.")
+    authorization = db.get(models.OpForgeBotResponseAuthorization, 1)
+    return _evaluate_response_readiness(lead, authorization)
+
+
 @router.post(
     "/leads",
     response_model=schemas.ForgeBotLeadReceipt,
@@ -121,9 +322,9 @@ def create_forge_bot_lead(
         reference=reference,
         manage_token=token,
         message=(
-            "Request received for owner review. No automated reply or booking "
-            "was sent. If this was your first submission, keep this one-time "
-            "control code private."
+            "This page confirms receipt for owner review only. No reply was "
+            "sent through your selected contact channel and no booking was "
+            "made. Keep this one-time control code private."
         ),
     )
     if not _enabled():
@@ -202,6 +403,14 @@ def create_forge_bot_lead(
         consent_provenance=CONSENT_PROVENANCE,
     )
     db.add(row)
+    _record_inquiry_event(
+        db,
+        event_type="forge_bot_inquiry_received",
+        reference=reference,
+        evidence_class=evidence_class,
+        source="forge_bot_web_form",
+        state=row.stage,
+    )
     try:
         db.commit()
     except IntegrityError:
@@ -233,6 +442,9 @@ def opt_out_forge_bot_lead(
     )
     if row is None:
         raise HTTPException(status_code=404, detail="Control code not found.")
+    reference = row.public_ref
+    evidence_class = row.evidence_class
+    previous_state = row.stage
     row.opted_out = True
     row.opted_out_at = datetime.now(timezone.utc)
     row.erased_at = datetime.now(timezone.utc)
@@ -248,6 +460,15 @@ def opt_out_forge_bot_lead(
     row.manage_token_hash = None
     row.stage = "OPTED_OUT"
     row.public_ref = f"FB-SUPP-{secrets.token_hex(8).upper()}"
+    _record_inquiry_event(
+        db,
+        event_type="forge_bot_inquiry_opted_out",
+        reference=reference,
+        evidence_class=evidence_class,
+        source="forge_bot_self_service_control",
+        state=row.stage,
+        previous_state=previous_state,
+    )
     db.commit()
     return {
         "status": "opted_out",
@@ -272,6 +493,15 @@ def delete_forge_bot_lead(
     )
     if row is None:
         raise HTTPException(status_code=404, detail="Control code not found.")
+    _record_inquiry_event(
+        db,
+        event_type="forge_bot_inquiry_erased",
+        reference=row.public_ref,
+        evidence_class=row.evidence_class,
+        source="forge_bot_self_service_control",
+        state="ERASED",
+        previous_state=row.stage,
+    )
     db.delete(row)
     db.commit()
     return None
