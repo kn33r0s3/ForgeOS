@@ -29,7 +29,9 @@ current architecture.
 
 Hami is a real-world system centered on **REAL WORK, COMMUNITY, and ECONOMY**.
 It discovers and helps realize value through people, capabilities, resources,
-relationships, authorized actions, and outcomes.
+relationships, authorized actions, and outcomes. AI is a means, not the
+destination. What Hami discovers matters more than the technology used to
+discover it.
 
 AI and model-building are not Hami's core product. External models, agents,
 APIs, people, specialists, machines, and software are replaceable capabilities
