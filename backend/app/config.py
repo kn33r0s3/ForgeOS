@@ -110,10 +110,26 @@ class Settings(BaseSettings):
     # a real secret; set it via environment only.
     FORGE_API_KEY: str = os.getenv("FORGE_API_KEY", "")
 
-    # Forge Bot lead intake is intentionally off until public pilot activation.
+    # --- Forge Bot v0 (lead intake & owner notifications) ---
+    # FORGE_BOT_LIVE controls real external/customer-facing side effects.
+    # When false: synthetic/test execution is allowed, internal owner
+    # notifications are allowed, but no real lead outreach or customer
+    # messaging occurs.
+    # When true: activation is an explicit owner decision; code never
+    # silently enables it. Real external/customer-facing behavior becomes
+    # possible.
+    FORGE_BOT_LIVE: bool = os.getenv("FORGE_BOT_LIVE", "false").lower() in ("1", "true", "yes")
+
+    # FORGE_BOT_INTAKE_ENABLED controls whether the web form accepts
+    # submissions. When false, POST /forge-bot/leads returns 503.
+    # State machine:
+    #   INTAKE_ENABLED=false, LIVE=false → form disabled, no submissions
+    #   INTAKE_ENABLED=true,  LIVE=false → form enabled, test/synthetic only
+    #   INTAKE_ENABLED=true,  LIVE=true  → form enabled, real customer activity possible
     FORGE_BOT_INTAKE_ENABLED: bool = os.getenv(
         "FORGE_BOT_INTAKE_ENABLED", "false"
     ).lower() in ("1", "true", "yes")
+
     FORGE_BOT_CONTACT_EMAIL: str = os.getenv(
         "FORGE_BOT_CONTACT_EMAIL", "haminp.forge@gmail.com"
     )
