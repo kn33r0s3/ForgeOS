@@ -142,8 +142,13 @@ describe("Hami public root", () => {
     assert.match(home, /signed-in users can save it privately/);
     assert.doesNotMatch(home, /Browse or post work|to="\/domain"/);
     assert.match(work, /to: "\/domain"/);
-    assert.match(header, /My System/);
+    assert.match(header, /Edit my context/);
     assert.match(header, /to="\/system"/);
+    const system = readFileSync(join(root, "src/routes/system.tsx"), "utf8");
+    assert.match(system, /Back to System overview/);
+    assert.match(system, /to="\/"/);
+    assert.match(system, /Edit personal context/);
+    assert.match(footer, /Edit personal context/);
     assert.match(discoveries, /loadSubstrateDiscoveries/);
     assert.match(discoveries, /Opening this page does not run discovery/);
     assert.doesNotMatch(discoveries, /discovery\/runs/);

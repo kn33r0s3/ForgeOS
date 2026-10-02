@@ -153,6 +153,11 @@ def create_forge_bot_lead(
         (normalized_email and normalized_email.endswith("@example.test"))
         or is_test_phone
     ) else "REAL"
+    if evidence_class == "REAL" and not settings.FORGE_BOT_LIVE:
+        raise HTTPException(
+            status_code=403,
+            detail="Real lead intake requires FORGE_BOT_LIVE=true.",
+        )
     email_suppression_hmac = _contact_digest("email", normalized_email)
     phone_suppression_hmac = _contact_digest("phone", normalized_phone)
     match_conditions = []

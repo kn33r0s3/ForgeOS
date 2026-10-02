@@ -99,6 +99,31 @@ def test_explicit_consent_and_channel_contact_are_server_enforced(db, monkeypatc
     assert db.query(models.ForgeBotLeadContact).count() == 0
 
 
+def test_live_off_rejects_real_leads_but_allows_test_records(db, monkeypatch):
+    _enable_intake(monkeypatch)
+    monkeypatch.setattr(settings, "FORGE_BOT_LIVE", False)
+    forge_bot._submissions_by_ip.clear()
+    client, cleanup = _client(db)
+    try:
+        real_lead = client.post(
+            "/forge-bot/leads",
+            json=_payload(
+                email="owner@example.com",
+                phone="+977 9800000012",
+            ),
+        )
+        test_lead = client.post("/forge-bot/leads", json=_payload())
+    finally:
+        client.close()
+        cleanup()
+        forge_bot._submissions_by_ip.clear()
+
+    assert real_lead.status_code == 403
+    assert test_lead.status_code == 202
+    assert db.query(models.ForgeBotLeadContact).count() == 1
+    assert db.query(models.ForgeBotLeadContact).one().evidence_class == "TEST"
+
+
 def test_submitted_lead_is_private_consent_scoped_and_not_projected_publicly(db, monkeypatch):
     _enable_intake(monkeypatch)
     client, cleanup = _client(db)

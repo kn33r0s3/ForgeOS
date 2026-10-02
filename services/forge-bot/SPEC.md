@@ -51,6 +51,12 @@ authorize public activation. Email/WhatsApp channel integrations and official
 policy review are still required before enabling those channels. No mass
 outbound.
 
+When intake is enabled while `FORGE_BOT_LIVE=false`, the server accepts only
+synthetic TEST records (`@example.test` email or reserved `202-555-01xx`
+phone); a non-TEST submission is rejected with HTTP 403 before persistence.
+`FORGE_BOT_LIVE=true` is required before a REAL record can be stored and
+remains an explicit owner activation decision.
+
 Qualification is client-configurable, not universal. Destination, course or
 service, timeline, and budget range are candidate fields only. The client's
 approved factual answers are the only permitted reply source. Use deterministic

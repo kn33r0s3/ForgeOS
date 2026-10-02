@@ -10,7 +10,7 @@ import { useSystemState } from "@/lib/system/use-system";
 
 export const Route = createFileRoute("/system")({
   component: SystemPage,
-  head: () => ({ meta: [{ title: "Your System — Hami" }] }),
+  head: () => ({ meta: [{ title: "Edit personal context — Hami" }] }),
 });
 
 function SystemPage() {
@@ -33,9 +33,9 @@ function SystemPage() {
     <main>
       <Container className="py-8 sm:py-10">
         <Link to="/" className="inline-flex items-center gap-1 text-sm font-bold text-accent hover:underline">
-          <ArrowLeft className="size-4" aria-hidden="true" /> Back to your System
+          <ArrowLeft className="size-4" aria-hidden="true" /> Back to System overview
         </Link>
-        <h1 className="mt-4 text-[clamp(1.9rem,4vw,2.8rem)] font-black tracking-[-0.03em] text-ink">Personal context</h1>
+        <h1 className="mt-4 text-[clamp(1.9rem,4vw,2.8rem)] font-black tracking-[-0.03em] text-ink">Edit personal context</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
           <span className="inline-flex items-center gap-2 font-bold text-ink"><Lock className="size-4 text-accent" aria-hidden="true" />Private to you</span>
           <br />

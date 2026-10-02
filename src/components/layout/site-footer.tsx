@@ -14,7 +14,7 @@ const GROUP_LINKS = [
 ] as const;
 
 const WORK_LINKS = [
-  { label: "Map your gear", to: "/system" },
+  { label: "Edit personal context", to: "/system" },
   { label: "Share a need privately", to: "/request" },
   { label: "Work board", to: "/domain" },
   { label: "Browse provider records", to: "/providers" },

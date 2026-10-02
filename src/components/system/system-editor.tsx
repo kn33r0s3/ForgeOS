@@ -86,7 +86,7 @@ export function SystemEditor({
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-6" aria-label="Your System">
+    <form onSubmit={submit} className="grid gap-6" aria-label="Edit personal context">
       <div className={cn("grid gap-5", !compact && "md:grid-cols-2")}>
         <label className="block">
           <span className="text-sm font-extrabold text-ink">Where are you?</span>

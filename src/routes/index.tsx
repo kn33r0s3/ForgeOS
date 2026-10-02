@@ -127,7 +127,7 @@ function ActiveSystem({
             to="/system"
             className="inline-flex min-h-11 items-center gap-2 rounded-card border-2 border-accent/70 bg-black px-4 text-sm font-extrabold text-accent hover:bg-accent hover:text-black"
           >
-            Next: {next.label} <ArrowRight className="size-4" aria-hidden="true" />
+            Edit your context <ArrowRight className="size-4" aria-hidden="true" />
           </Link>
         ) : null}
       </header>
@@ -152,7 +152,7 @@ function ActiveSystem({
                 Add a capability or something you own and Hami will show what it could connect to.
               </p>
               <Link to="/system" className="link-arrow mt-3 inline-flex items-center gap-1 text-sm font-bold text-accent">
-                Map your gear <ArrowRight className="size-4" aria-hidden="true" />
+                Edit personal context <ArrowRight className="size-4" aria-hidden="true" />
               </Link>
             </div>
           )}
