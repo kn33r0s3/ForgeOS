@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowUpRight, Cog, Hourglass, ListChecks } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { Cog, Hourglass, ListChecks } from "lucide-react";
 import { Container } from "@/components/layout/container";
 import { PageHeader } from "@/components/layout/page-header";
 import { MetricTile, UnavailableState } from "@/components/ui/feedback";
@@ -49,12 +49,10 @@ function ActionsPage() {
         lede="This aggregate comes from the current runtime snapshot. A pending record is not execution, authorization, or a completed outcome."
         containerClassName="max-w-5xl"
       >
-        <Link
-          to="/operations"
-          className="link-arrow mt-7 inline-flex min-h-11 items-center gap-1.5 rounded-card border border-line bg-card/60 px-4 text-sm font-semibold text-ink transition-colors hover:border-accent/60"
-        >
-          Open the approval queue <ArrowUpRight className="size-4" aria-hidden="true" />
-        </Link>
+        <p className="mt-7 max-w-2xl border-l-2 border-accent pl-4 text-sm leading-6 text-muted">
+          Individual action records and approval controls are not linked here: the current internal
+          console does not establish an owner identity boundary.
+        </p>
       </PageHeader>
       <Container className="max-w-5xl py-10 sm:py-14">
         {!loading && error ? (

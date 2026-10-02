@@ -39,7 +39,10 @@ skipped, not reported as sent. Email inbox parsing, customer-facing email, and
 automatic booking actions are not implemented. Public web intake remains
 disabled by default. Activation requires `FORGE_BOT_INTAKE_ENABLED=true`, a
 stable server-only `FORGE_BOT_CONTACT_HMAC_KEY` of at least 32 characters, and
-`FORGE_API_KEY`. The route is not in shared navigation.
+`FORGE_API_KEY`. The route is not in the global primary navigation. The existing inquiry page is
+linked from the business information surface for context and discoverability;
+it remains `noindex` and does not publish an active offer. Online intake
+remains disabled by default.
 
 The form currently asks destination, course/field, timeline, budget range,
 preferred contact channel, and explicit inquiry-response consent. After a

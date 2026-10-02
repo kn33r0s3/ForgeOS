@@ -8,6 +8,7 @@ const GROUP_LINKS = [
   { label: "World stream", to: "/feed" },
   { label: "Opportunity hypotheses", to: "/opportunities" },
   { label: "Action state", to: "/actions" },
+  { label: "For businesses", to: "/group/businesses" },
   { label: "Verified providers", to: "/providers" },
   { label: "Public work board", to: "/domain" },
   { label: "About Hami", to: "/about" },
@@ -15,7 +16,7 @@ const GROUP_LINKS = [
 
 const WORK_LINKS = [
   { label: "Edit personal context", to: "/system" },
-  { label: "Share a need privately", to: "/request" },
+  { label: "Share a need", to: "/request" },
   { label: "Work board", to: "/domain" },
   { label: "Browse provider records", to: "/providers" },
 ] as const;

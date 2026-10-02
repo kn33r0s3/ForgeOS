@@ -40,12 +40,16 @@ No endpoint returns contact details except the owner summary, which requires
 the `X-API-Key` header. No contact value is emitted in the submit receipt.
 
 The owner contact email and provided Cal.com URL are public configuration
-values rendered on the unlisted `/forge-bot-intake` page. The email is a
-`mailto:` link; neither it nor the booking link triggers an automated send or
-booking action. SMTP, inbound email parsing, scheduled summaries, and follow-up
-are not connected. No time-based retention policy is configured. Do not add
-separate message, opt-out, escalation, or intervention architectures. No
-passports, identity documents, academic records, or other sensitive ID data.
+values rendered on the `noindex` `/forge-bot-intake` page, linked contextually
+from the business information surface. The email is a `mailto:` link; neither
+it nor the booking link triggers an automated send or booking action. The
+internal daily owner digest is implemented through the authenticated scheduled
+route and existing outbox; actual delivery requires SMTP configuration and is
+not established by code presence. Inbound email parsing and customer-facing
+follow-up are not connected. No time-based retention policy is configured. Do
+not add separate message, opt-out, escalation, or intervention architectures.
+No passports, identity documents, academic records, or other sensitive ID
+data.
 
 ## Safe transition rule
 

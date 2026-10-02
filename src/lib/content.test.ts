@@ -126,6 +126,8 @@ describe("Hami public root", () => {
     const discoveries = readFileSync(join(root, "src/routes/discoveries.tsx"), "utf8");
     const header = readFileSync(join(root, "src/components/layout/site-header.tsx"), "utf8");
     const footer = readFileSync(join(root, "src/components/layout/site-footer.tsx"), "utf8");
+    const businesses = readFileSync(join(root, "src/routes/group.businesses.tsx"), "utf8");
+    const forgeBot = readFileSync(join(root, "src/routes/forge-bot-intake.tsx"), "utf8");
     assert.match(home, /createFileRoute\("\/"\)/);
     assert.doesNotMatch(home, /Navigate to=/);
     // Home is the person's System, not a post/request board.
@@ -140,6 +142,9 @@ describe("Hami public root", () => {
     assert.match(home, /Personal context is separate from the public world/);
     assert.match(home, /Guests can keep temporary context in this tab/);
     assert.match(home, /signed-in users can save it privately/);
+    assert.match(home, /function CurrentPaths/);
+    assert.match(home, /Start with what is actually available/);
+    assert.match(home, /to="\/group\/businesses"/);
     assert.doesNotMatch(home, /Browse or post work|to="\/domain"/);
     assert.match(work, /to: "\/domain"/);
     assert.match(header, /Edit my context/);
@@ -149,6 +154,15 @@ describe("Hami public root", () => {
     assert.match(system, /to="\/"/);
     assert.match(system, /Edit personal context/);
     assert.match(footer, /Edit personal context/);
+    assert.match(footer, /For businesses/);
+    assert.match(footer, /to: "\/group\/businesses"/);
+    assert.doesNotMatch(footer, /Share a need privately/);
+    assert.match(header, /label: "For businesses", to: "\/group\/businesses"/);
+    assert.match(header, /aria-current={active \? "page" : undefined}/);
+    assert.match(businesses, /to="\/forge-bot-intake"/);
+    assert.match(businesses, /online intake is closed/i);
+    assert.match(forgeBot, /name: "robots", content: "noindex,nofollow"/);
+    assert.match(forgeBot, /Online intake is not open yet/);
     assert.match(discoveries, /loadSubstrateDiscoveries/);
     assert.match(discoveries, /Opening this page does not run discovery/);
     assert.doesNotMatch(discoveries, /discovery\/runs/);
@@ -162,6 +176,7 @@ describe("Hami public root", () => {
     assert.match(network, /Hami Network/);
     assert.match(opportunities, /createFileRoute\("\/opportunities"\)/);
     assert.match(actions, /createFileRoute\("\/actions"\)/);
+    assert.doesNotMatch(actions, /to="\/operations"|Open the approval queue/);
     assert.equal(home.includes("Sanip Ops"), false);
     assert.equal(home.includes("parent operations and infrastructure group"), false);
     assert.equal(sitemap.includes("sanipoperations.com.np"), false);

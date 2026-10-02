@@ -152,15 +152,24 @@ export function SiteHeader() {
             className="reveal grid grid-cols-2 gap-2 border-t-2 border-line p-3 text-sm"
             style={{ "--i": NAV.length + 1 } as React.CSSProperties}
           >
-            {SECONDARY.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className="flex min-h-11 items-center rounded-card border-2 border-line bg-black px-3 font-bold text-wheat transition-colors hover:border-accent hover:text-white"
-              >
-                {item.label}
-              </Link>
-            ))}
+            {SECONDARY.map((item) => {
+              const active = isActive(item.to, pathname);
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "flex min-h-11 items-center rounded-card border-2 px-3 font-bold transition-colors",
+                    active
+                      ? "border-accent bg-accent text-black"
+                      : "border-line bg-black text-wheat hover:border-accent hover:text-white",
+                  )}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </div>
           <div className="reveal p-3 pt-0" style={{ "--i": NAV.length + 2 } as React.CSSProperties}>
             <Button asChild size="lg" className="w-full">
@@ -197,5 +206,6 @@ const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
 const SECONDARY = [
   { label: "Share a need", to: "/request" },
   { label: "Work board", to: "/domain" },
+  { label: "For businesses", to: "/group/businesses" },
   { label: "About", to: "/about" },
 ] as const;

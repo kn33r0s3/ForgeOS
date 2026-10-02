@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { currentOffers, groupAreas } from "@/lib/content";
 import { Container } from "@/components/layout/container";
 import { PageHero } from "@/components/layout/page-hero";
@@ -63,6 +63,24 @@ function BusinessesPage() {
             </p>
             <div className="mt-5">
               <TextLink to="/about">See the group context</TextLink>
+            </div>
+            <div className="mt-6 max-w-3xl border-2 border-line bg-card p-5 sm:p-6">
+              <p className="font-mono text-[0.68rem] font-bold uppercase tracking-[0.14em] text-accent">
+                Existing inquiry path · segment remains a hypothesis
+              </p>
+              <h3 className="mt-2 font-display text-xl font-bold tracking-tight text-ink">
+                Forge Bot inquiry status
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-muted">
+                A consent-scoped inquiry route exists for owner review. This is not a published offer;
+                online intake is closed while the pilot and safeguards remain unverified.
+              </p>
+              <Link
+                to="/forge-bot-intake"
+                className="link-arrow mt-3 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent"
+              >
+                Read the inquiry page
+              </Link>
             </div>
           </div>
         </section>
