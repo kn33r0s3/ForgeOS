@@ -31,11 +31,15 @@ cadence, booking method, and pilot terms. See
 The owner authorized a consent-scoped web intake record, supplied
 `haminp.forge@gmail.com` as the contact address, and supplied the booking link
 `https://cal.com/hami-forge-m9agd6/build-hami`. The contact address is a
-`mailto:` link only; email inbox parsing, SMTP sends, and automatic booking
-actions are not implemented. Public web intake remains disabled by default.
-Activation requires `FORGE_BOT_INTAKE_ENABLED=true`, a stable server-only
-`FORGE_BOT_CONTACT_HMAC_KEY` of at least 32 characters, and `FORGE_API_KEY`.
-The route is not in shared navigation.
+`mailto:` link. The authenticated daily cron queues one idempotent, internal
+lead-status digest through the existing SMTP outbox when SMTP credentials are
+configured; it includes up to 100 references, evidence classes, stages, and
+creation times, but no contact details. Without SMTP credentials the digest is
+skipped, not reported as sent. Email inbox parsing, customer-facing email, and
+automatic booking actions are not implemented. Public web intake remains
+disabled by default. Activation requires `FORGE_BOT_INTAKE_ENABLED=true`, a
+stable server-only `FORGE_BOT_CONTACT_HMAC_KEY` of at least 32 characters, and
+`FORGE_API_KEY`. The route is not in shared navigation.
 
 The form currently asks destination, course/field, timeline, budget range,
 preferred contact channel, and explicit inquiry-response consent. After a
@@ -105,28 +109,33 @@ visa, admission, employment, scholarship, or unsupported fee promises. Escalate
 unknown/out-of-policy questions, complaints, legal/refund matters, and minors;
 halt outbound on integration or policy failure.
 
-Intake and consent management are implemented locally only; the route
-`GET /forge-bot/config` reports settings, `POST /forge-bot/leads` accepts a
-consented submission when enabled, `POST /forge-bot/leads/opt-out` applies
-permanent suppression, `POST /forge-bot/leads/delete` erases a submission,
-and `GET /forge-bot/leads/summary` returns up to 100 active rows only to an
-owner presenting the API key. The summary is not scheduled or emailed.
+Intake and consent management are implemented, but production intake remains
+disabled. The route `GET /forge-bot/config` reports settings,
+`POST /forge-bot/leads` accepts a consented submission when enabled,
+`POST /forge-bot/leads/opt-out` applies permanent suppression,
+`POST /forge-bot/leads/delete` erases a submission, and
+`GET /forge-bot/leads/summary` returns up to 100 active rows only to an owner
+presenting the API key. The daily digest points to this owner-only summary for
+contact details and never includes those details in email.
 
 Use `WorkerTask` idempotency, conditional claim, due time, and retry for
-follow-ups/reminders. No follow-up/reminder task or automatic owner-summary
-send is currently created. Stale `running` task recovery is not currently
-implemented; add it to this existing machinery only after each handler's
-external side effects are idempotent and safe to resume. The current deployed
-Vercel cron runs once daily on Hobby and is not a sub-daily runner; the local
-`backend/worker.py` is a separate process and is not verified as running in
-production. Do not claim timed automation until safe recovery and a
-commercially permitted production runner are proven.
+follow-ups/reminders; no follow-up/reminder task is currently created. The
+daily owner digest uses the existing authenticated Vercel cron and
+`integration_outbox` idempotency rather than creating a new task or schema.
+Stale `running` task recovery is not currently implemented; add it to this
+existing machinery only after each handler's external side effects are
+idempotent and safe to resume. The Vercel cron runs once daily on Hobby and is
+not a sub-daily runner; the local `backend/worker.py` is a separate process
+and is not verified as running in production. Do not claim timed automation
+until safe recovery and a commercially permitted production runner are
+proven.
 
 ## Not in v0
 
-No email inbox/outbound SMTP or WhatsApp integration without owner-discovery
+No customer-facing email or WhatsApp integration without owner-discovery
 justification, verified official policy, explicit send authorization, and
-tested channel controls. No
+tested channel controls. The internal owner digest is not a customer channel.
+No
 billing system, marketplace, mass outbound, full CRM, negotiation engine,
 unapproved publishing or spending, or fabricated prospect simulation.
 

@@ -31,6 +31,11 @@ def test_scheduled_cycle_requires_bearer_secret(monkeypatch):
 def test_scheduled_cycle_runs_canonical_runner(monkeypatch):
     monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
     monkeypatch.setattr(
+        scheduled,
+        "send_daily_owner_summary_notification",
+        lambda db: {"status": "ACCEPTED_BY_SMTP", "delivery_id": 1},
+    )
+    monkeypatch.setattr(
         scheduled._cycle_scheduler,
         "run_single_cycle",
         lambda **kwargs: {"forge_cycle": {"cycle_id": 27}, "autonomy_cycle": {"status": "ok"}},
@@ -48,7 +53,32 @@ def test_scheduled_cycle_runs_canonical_runner(monkeypatch):
         "cycle_id": 27,
         "forge_cycle_failed": False,
         "autonomy_cycle_failed": False,
+        "owner_summary_status": "ACCEPTED_BY_SMTP",
     }
+
+
+def test_scheduled_cycle_reports_owner_summary_skipped_without_smtp(monkeypatch):
+    secret = "test-cron-secret"
+    monkeypatch.setenv("CRON_SECRET", secret)
+    monkeypatch.setattr(
+        scheduled._cycle_scheduler,
+        "run_single_cycle",
+        lambda **kwargs: {"forge_cycle": {"cycle_id": 28}},
+    )
+    monkeypatch.setattr(
+        scheduled,
+        "send_daily_owner_summary_notification",
+        lambda db: None,
+    )
+    client = TestClient(app)
+
+    response = client.get(
+        "/scheduled/cycle",
+        headers={"Authorization": f"Bearer {secret}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["owner_summary_status"] == "SKIPPED_SMTP_NOT_CONFIGURED"
 
 
 def test_scheduled_cycle_reports_runner_failure(monkeypatch):
