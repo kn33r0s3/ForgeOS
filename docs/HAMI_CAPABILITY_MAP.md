@@ -47,8 +47,8 @@ works or that the real world has no relevant records.
 | Economic and revenue state | Existing money, offer, earn, and outcome paths include [`money_engine.py`](../backend/app/services/money_engine.py), [`payments.py`](../backend/app/api/payments.py), and [`earn.py`](../backend/app/api/earn.py). [`docs/REVENUE_LOG.md`](./REVENUE_LOG.md) is the commercial evidence record. | Only verified REAL payment/outcome evidence counts. Tests, projections, and hypotheses do not. | **PARTIAL** — no verified paid outcome is recorded in the revenue log. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE**, not zero. |
 | Public work, providers, and booking requests | [`/domain`](../src/routes/domain.tsx), [`/providers`](../src/routes/providers.tsx), and provider/service pages read or write public paths in backend [`public.py`](../backend/app/api/public.py) and [`world.py`](../backend/app/api/world.py). | Public posts are public; users are warned not to put contact details into public post text. Booking requests apply only to an existing public provider/service listing. | **IMPLEMENTED / PARTIAL** — [`test_public_services_substrate_adapter.py`](../backend/tests/test_public_services_substrate_adapter.py) covers the service projection; availability depends on actual public records, and a request is not a booking or completed transaction. |
 | Business information and project inquiry | [`/group/businesses`](../src/routes/group.businesses.tsx) shows current recorded offers and strategic directions. Project contact is a mail-client flow and may be unavailable when the general mailbox is unset. | Strategic directions are not operating subsidiaries or offers. Do not infer buyer demand or publish unapproved offers. | **PARTIAL** — current offer information is visible; general project mailbox availability is configuration-dependent. |
-| Forge Bot inquiry | [`/forge-bot-intake`](../src/routes/forge-bot-intake.tsx) displays the existing public contact and booking links and an explicit closed state; the business information page links to it contextually. | Public config contains only contact/booking settings and intake status. Lead summary is owner-key protected; lead writes also require server configuration and the LIVE gate. The page is `noindex`. | **IMPLEMENTED / BLOCKED** — intake remains disabled; no REAL lead or outreach is authorized by this navigation change. |
-| Workers and scheduler | Backend worker, authenticated scheduled routes, and the daily Forge Bot owner-digest implementation exist. | The worker is a separate process; Vercel Hobby cron is daily. Internal digest delivery requires SMTP configuration; no customer messaging is enabled. | **PARTIAL / UNVERIFIED** — code presence is not evidence of reliable continuous worker operation or successful email delivery. No Oracle VM was provisioned or tested. |
+| Forge Bot inquiry | [`/forge-bot-intake`](../src/routes/forge-bot-intake.tsx) displays the existing public contact and booking links and an explicit closed state; the business information page links to it contextually. Backend [`forge_bot.py`](../backend/app/api/forge_bot.py) implements the gated record path; [`forge_bot_owner_notification.py`](../backend/app/api/forge_bot_owner_notification.py) implements the internal digest. | Public config contains only contact/booking settings and intake status. Lead summary is owner-key protected; lead writes also require server configuration and the LIVE gate. The page is `noindex`. | **IMPLEMENTED / BLOCKED** — [`test_forge_bot_api.py`](../backend/tests/test_forge_bot_api.py) and [`test_forge_bot_owner_notification.py`](../backend/tests/test_forge_bot_owner_notification.py) cover the existing paths; intake remains disabled, and this navigation change authorizes no REAL lead or outreach. |
+| Workers and scheduler | Backend [`worker.py`](../backend/worker.py), [`workers.py`](../backend/app/api/workers.py), [`scheduled.py`](../backend/app/api/scheduled.py), and [`cycle_scheduler.py`](../backend/app/services/cycle_scheduler.py) implement separate worker/scheduled paths. | The worker is a separate process; Vercel Hobby cron is daily. Internal digest delivery requires SMTP configuration; no customer messaging is enabled. | **PARTIAL / UNVERIFIED** — [`test_scheduled_cycle.py`](../backend/tests/test_scheduled_cycle.py) covers scheduled behavior; code presence is not evidence of reliable continuous worker operation or successful email delivery. No Oracle VM was provisioned or tested. |
 
 ## Route and navigation map
 
@@ -68,6 +68,21 @@ connect existing pages rather than creating routes or changing the data model.
 Footer wording says “Share a need,” not “privately”: the request is a public
 demand signal without submitted contact details, not a private owner-context
 record.
+
+## Verification sources
+
+- [`content.test.ts`](../src/lib/content.test.ts) checks the public navigation,
+  route contracts, stated privacy boundaries, absence of fabricated public
+  claims, and the contextual business-to-inquiry link.
+- Backend public contract and projection coverage is in
+  [`test_public_contract.py`](../backend/tests/test_public_contract.py),
+  [`test_public_feed.py`](../backend/tests/test_public_feed.py), and
+  [`test_public_network.py`](../backend/tests/test_public_network.py).
+- Forge Bot tests exercise TEST/REAL gating and private owner-summary behavior;
+  they are not real inquiries and do not count as commercial evidence.
+- Browser checks of the changed navigation confirm rendered links and the
+  closed intake state; they do not verify production persistence, worker
+  uptime, email delivery, or an economic outcome.
 
 ## Orphaned or incomplete capability classes
 
