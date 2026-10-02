@@ -163,7 +163,8 @@ describe("Hami public root", () => {
     assert.match(businesses, /online intake is closed/i);
     assert.match(forgeBot, /name: "robots", content: "noindex,nofollow"/);
     assert.match(forgeBot, /Online intake is not open yet/);
-    assert.match(discoveries, /loadSubstrateDiscoveries/);
+    assert.doesNotMatch(discoveries, /loadSubstrateDiscoveries|\/api\/forge\/substrate/);
+    assert.match(discoveries, /does not request owner-authorized substrate records/);
     assert.match(discoveries, /Opening this page does not run discovery/);
     assert.doesNotMatch(discoveries, /discovery\/runs/);
     assert.match(header, /to: "\/request"/);

@@ -6,9 +6,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState, SkeletonCards, UnavailableState } from "@/components/ui/feedback";
 import {
   loadDiscoveries,
-  loadSubstrateDiscoveries,
   type PublicDiscovery,
-  type SubstrateDiscovery,
 } from "@/lib/content";
 
 export const Route = createFileRoute("/discoveries")({
@@ -18,31 +16,15 @@ export const Route = createFileRoute("/discoveries")({
 
 function DiscoveriesPage() {
   const [rows, setRows] = useState<PublicDiscovery[] | null>(null);
-  const [substrateRows, setSubstrateRows] = useState<SubstrateDiscovery[] | null>(null);
-  const [substrateError, setSubstrateError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [reloadVersion, setReloadVersion] = useState(0);
 
   useEffect(() => {
     let active = true;
     setReady(false);
-    void Promise.allSettled([
-      loadDiscoveries(50, { fresh: reloadVersion > 0 }),
-      loadSubstrateDiscoveries(50),
-    ]).then(([publicResult, substrateResult]) => {
+    void Promise.allSettled([loadDiscoveries(50, { fresh: reloadVersion > 0 })]).then(([publicResult]) => {
       if (!active) return;
       setRows(publicResult.status === "fulfilled" ? publicResult.value : null);
-      if (substrateResult.status === "fulfilled") {
-        setSubstrateRows(substrateResult.value);
-        setSubstrateError(null);
-      } else {
-        setSubstrateRows(null);
-        setSubstrateError(
-          substrateResult.reason instanceof Error
-            ? substrateResult.reason.message
-            : "The substrate discovery records could not be checked.",
-        );
-      }
       setReady(true);
     });
     return () => {
@@ -70,63 +52,13 @@ function DiscoveriesPage() {
               Persisted discoveries
             </h2>
             <p className="mt-1 text-sm leading-6 text-muted">
-              Existing discovery entities with their method, epistemic state, and recorded basis. Opening this page does not run discovery.
+              Persisted substrate findings require internal authorization and are not requested in this public browser view. Opening this page does not run discovery.
             </p>
           </div>
-          {!ready ? (
-            <SkeletonCards count={2} label="Checking persisted substrate discoveries…" className="space-y-3" />
-          ) : null}
-          {ready && substrateError ? (
-            <UnavailableState
-              title="Substrate discoveries are unavailable"
-              body={substrateError}
-              onRetry={retry}
-            />
-          ) : null}
-          {ready && substrateRows?.length === 0 ? (
-            <EmptyState
-              icon={FileSearch}
-              title="No persisted discovery findings"
-              body="There are no discovery entities in the accessible substrate right now. Discovery is never triggered by opening this page."
-            />
-          ) : null}
-          {ready && substrateRows && substrateRows.length > 0 ? (
-            <>
-              <p className="mb-3 text-micro font-extrabold uppercase tracking-[0.12em] text-dim">
-                {substrateRows.length} persisted substrate finding{substrateRows.length === 1 ? "" : "s"}
-              </p>
-              <ol className="grid gap-3">
-                {substrateRows.map((row, index) => (
-                  <li
-                    key={row.entity_id}
-                    className="card card-interactive reveal p-5"
-                    style={{ "--i": Math.min(index, 8) } as React.CSSProperties}
-                  >
-                    <article>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="status-pill status-pill-accent">{row.kind.replaceAll("_", " ")}</span>
-                        <span className="status-pill status-pill-warning">{row.epistemic_state}</span>
-                        <span className="status-pill status-pill-neutral">{row.status}</span>
-                        <span className="text-xs text-dim">Method: {row.method}</span>
-                      </div>
-                      <h3 className="mt-3 font-display text-xl leading-tight tracking-tight text-ink">
-                        {row.statement}
-                      </h3>
-                      <p className="mt-3 text-xs leading-5 text-dim">
-                        Basis: {row.basis.map((item) => `${item.kind} #${item.id}`).join(" · ")}
-                      </p>
-                      {row.next_step ? (
-                        <p className="mt-3 border-t border-line pt-3 text-sm leading-6 text-muted">
-                          <span className="font-bold text-ink">Possible next step: </span>
-                          {row.next_step}
-                        </p>
-                      ) : null}
-                    </article>
-                  </li>
-                ))}
-              </ol>
-            </>
-          ) : null}
+          <UnavailableState
+            title="Substrate discoveries are not available in this public view"
+            body="The public page does not request owner-authorized substrate records. This is an access boundary, not an empty discovery result."
+          />
         </section>
 
         <section className="mt-12" aria-labelledby="source-observations-title">
