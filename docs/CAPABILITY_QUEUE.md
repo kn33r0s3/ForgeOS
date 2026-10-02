@@ -7,6 +7,14 @@
 - Current blocker / verification: `sanipops_clean/river-cinder-bamboo-otter-main/` is only copied preview tooling, not a complete application; no `opencode.jsonc.bad`, `status.sh`, or `start.ps1` exists in the current tree. The requested ignored context files are excluded by `.gitignore` and will not be added to version control without owner clearance.
 - Next removable dependency: confirm whether ignored context snapshots are safe and intended for archival in Git, then validate the archived Compose legacy surface without provisioning external infrastructure.
 
+## [IN PROGRESS] Connect current Hami capabilities to their existing public surfaces
+
+- Owner action still required: manually direct people who need the current business or Forge Bot inquiry page to its opaque URL; complete the five owner-run licensed-agency discovery conversations, choose a retention window, and separately authorize/configure any real intake.
+- Action removed by this change: make the existing business information and Forge Bot inquiry page discoverable from the Hami home/business context and persistent navigation without opening intake or changing the backend/data model.
+- Current blocker / verification: at `b841e2b`, the route `/forge-bot-intake` is registered and renders an explicit closed state; `/group/businesses` describes current offers and has a project inquiry CTA, but neither route is in the shared `NAV` or footer. The Forge Bot backend requires the server key for the owner summary, and private substrate GET routes are protected when `FORGE_API_KEY` is configured; browser code does not send that key. No route/data expansion to owner-only records is planned. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains NOT MEASURABLE.
+- Blocking capability / authorization: production intake remains disabled; real submissions still require the existing feature flag, stable server HMAC key, API key, distributed ingress controls, retention decision, and explicit bounded owner authorization. SMTP credentials for the internal digest are absent; this navigation work does not send email or contact anyone.
+- Next removable dependency: wire the already-existing business and closed Forge Bot pages into a contextual, responsive user path, then verify the public/private and empty/unavailable behavior against the current APIs.
+
 ## [DONE WITH LIMITATION] Enforce Forge Bot LIVE gate before deployment
 
 - Owner action still required: conduct the five licensed-agency discovery conversations before real intake; choose a retention window; configure `FORGE_BOT_INTAKE_ENABLED`, `FORGE_BOT_CONTACT_HMAC_KEY`, and `FORGE_API_KEY` only in a protected server environment; set `FORGE_BOT_LIVE=true` only after explicit bounded authorization; provide protected `SMTP_HOST`, `SMTP_USER`, and `SMTP_PASSWORD` (optionally `SMTP_FROM_EMAIL`) values for daily delivery; separately authorize customer-facing email or follow-up.
