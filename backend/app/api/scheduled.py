@@ -1,4 +1,4 @@
-"""Authenticated entry point for the canonical daily Forge cycle."""
+"""Legacy-gated entry point for the canonical daily Forge cycle."""
 
 import hmac
 import logging
@@ -10,29 +10,43 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.forge_bot_owner_notification import send_daily_owner_summary_notification
+from app.config import settings
 from app.database import SessionLocal, engine
-from app.services.cycle_scheduler import CycleScheduler
 
 router = APIRouter(prefix="/scheduled", tags=["scheduled"])
 logger = logging.getLogger(__name__)
 _local_cycle_lock = Lock()
 _POSTGRES_LOCK_ID = 4_706_539_182
-_cycle_scheduler = CycleScheduler(backup_interval_seconds=None, max_run_seconds=240)
+_cycle_scheduler = None
+if settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
+    from app.services.cycle_scheduler import CycleScheduler
+
+    _cycle_scheduler = CycleScheduler(
+        backup_interval_seconds=None,
+        max_run_seconds=240,
+    )
 
 
 @router.get("/cycle")
 def run_scheduled_cycle(authorization: str | None = Header(default=None)):
     """Run one canonical cycle when invoked by the configured Vercel cron.
 
-    The endpoint fails closed if CRON_SECRET is missing or invalid. A
+    The disabled legacy cycle returns a side-effect-free no-op. When enabled,
+    the endpoint fails closed if CRON_SECRET is missing or invalid. A
     PostgreSQL advisory lock prevents two serverless instances from running
     the stateful cycle at the same time; local SQLite runs use a process lock.
     """
+    if not settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
+        logger.info("legacy cycle disabled")
+        return {"status": "disabled", "reason": "legacy cycle disabled"}
+
     secret = os.getenv("CRON_SECRET", "")
     if not secret:
         raise HTTPException(status_code=503, detail="Scheduled cycle is not configured")
     if not authorization or not hmac.compare_digest(authorization, f"Bearer {secret}"):
         raise HTTPException(status_code=401, detail="Unauthorized")
+    if _cycle_scheduler is None:
+        raise HTTPException(status_code=503, detail="Legacy cycle is not configured.")
 
     connection = None
     acquired_postgres_lock = False

@@ -9,7 +9,6 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app import models
-from app.services import research_planner
 
 OPTION_CLASSES = (
     ("validate", "Run the cheapest reversible validation experiment before building."),
@@ -80,6 +79,8 @@ def evaluate_option_space(db: Session, opportunity_id: int) -> dict[str, Any]:
             db.add(research_question)
             db.commit()
             db.refresh(research_question)
+            from app.services import research_planner
+
             research_planner.plan_tasks_for_question(db, research_question)
     return {
         "status": status,

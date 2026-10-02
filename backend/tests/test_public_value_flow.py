@@ -115,14 +115,8 @@ def test_analyze_acknowledges_before_the_collector_background_task(db, monkeypat
         planning_calls.append(question.id)
         return build_research_plan(database, question)
 
-    monkeypatch.setattr(
-        "app.api.analyze.collector_runner.execute_task",
-        record_background_collection,
-    )
-    monkeypatch.setattr(
-        "app.api.analyze.research_planner.build_research_plan",
-        record_full_planning,
-    )
+    monkeypatch.setattr(collector_runner, "execute_task", record_background_collection)
+    monkeypatch.setattr(research_planner, "build_research_plan", record_full_planning)
     background_tasks = BackgroundTasks()
     started_at = time.perf_counter()
     response = analyze_idea(

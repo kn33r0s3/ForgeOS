@@ -140,6 +140,10 @@ class Settings(BaseSettings):
     # Required for privacy-preserving permanent suppression after opt-out.
     FORGE_BOT_CONTACT_HMAC_KEY: str = os.getenv("FORGE_BOT_CONTACT_HMAC_KEY", "")
 
+    FORGEOS_LEGACY_INTELLIGENCE_ENABLED: bool = os.getenv(
+        "FORGEOS_LEGACY_INTELLIGENCE_ENABLED", "false"
+    ).lower() in ("1", "true", "yes")
+
     class Config:
         env_file = ".env"
 

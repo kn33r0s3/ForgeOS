@@ -11,10 +11,7 @@ from typing import Callable, Dict
 from sqlalchemy.orm import Session
 
 from app.models import WorkerTask, utcnow
-from app.services import collector_runner, forge_loop, opportunity_engine
-from app.services.revenue_miner import mine_revenue_proposals
-from app.services import demand_understanding
-from app.services.cognitive_worker import cognitive_handler
+from app.config import settings
 
 
 def process_worker_task_by_id(
@@ -24,6 +21,9 @@ def process_worker_task_by_id(
     worker_type: str | None = None,
 ) -> bool:
     """Atomically claim and execute one queued task, if it is eligible."""
+    if not settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
+        return False
+
     now = utcnow()
     claim = db.query(WorkerTask).filter(
         WorkerTask.id == task_id,
@@ -77,6 +77,8 @@ def process_demand_task_in_background(task_id: int) -> None:
 # ---------------------------------------------------------------------------
 
 def discovery_handler(db: Session, task: WorkerTask) -> dict:
+    from app.services import collector_runner
+
     default_results = collector_runner.run_default_collection(db)
     task_results = collector_runner.run_pending_tasks(db, limit=5)
     
@@ -94,6 +96,8 @@ def discovery_handler(db: Session, task: WorkerTask) -> dict:
 
 
 def research_handler(db: Session, task: WorkerTask) -> dict:
+    from app.services import forge_loop
+
     cycle_summary = forge_loop.run_cycle(db)
     
     output = {"cycle_summary": cycle_summary}
@@ -108,6 +112,8 @@ def research_handler(db: Session, task: WorkerTask) -> dict:
 
 
 def opportunity_handler(db: Session, task: WorkerTask) -> dict:
+    from app.services import opportunity_engine
+
     results = opportunity_engine.run_autonomous_opportunity_discovery(db)
     
     output = {"opportunity_results": results}
@@ -140,6 +146,8 @@ def qa_handler(db: Session, task: WorkerTask) -> dict:
 
 def revenue_miner_handler(db: Session, task: WorkerTask) -> dict:
     """Review recorded paid offers. Do not schedule collection, contact, or payment."""
+    from app.services.revenue_miner import mine_revenue_proposals
+
     proposals = mine_revenue_proposals(db)
     return {
         "proposals_created": len(proposals),
@@ -150,7 +158,15 @@ def revenue_miner_handler(db: Session, task: WorkerTask) -> dict:
 
 def demand_understanding_handler(db: Session, task: WorkerTask) -> dict:
     """Process demand asynchronously without contacting people or providers."""
+    from app.services import demand_understanding
+
     return demand_understanding.process_understanding_task(db, task)
+
+
+def cognitive_handler(db: Session, task: WorkerTask) -> dict:
+    from app.services.cognitive_worker import cognitive_handler as handle_task
+
+    return handle_task(db, task)
 
 
 def evolution_handler(db: Session, task: WorkerTask) -> dict:
@@ -201,6 +217,9 @@ def _schedule_retry(task: WorkerTask) -> None:
 
 
 def process_worker_tasks(db: Session) -> None:
+    if not settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
+        return
+
     now = utcnow()
     task_ids = (
         db.query(WorkerTask.id)

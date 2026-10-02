@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 os.environ["AI_PROVIDER"] = "mock"
 os.environ["FORGE_API_KEY"] = ""
+os.environ["FORGEOS_LEGACY_INTELLIGENCE_ENABLED"] = "true"
 
 
 def pytest_configure(config):

@@ -57,14 +57,13 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app import schemas, models
+from app.config import settings
 from app.services import (
-    forge_loop,
     reality_checker,
     reality_memory,
     experiment_runner,
     source_manager,
     knowledge_miner,
-    collector_runner,
     memory_layer,
     ai_engine,
     world_model,
@@ -83,11 +82,19 @@ from app.services import (
 router = APIRouter(prefix="/forge", tags=["forge"])
 
 
+def _require_legacy_intelligence() -> None:
+    if not settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
+        raise HTTPException(status_code=503, detail="Legacy intelligence is disabled.")
+
+
 @router.post("/cycle", response_model=schemas.ForgeCycleSummary)
 def run_cycle(data_scope: str = "REAL", db: Session = Depends(get_db)):
     """Run one full Forge intelligence cycle: refresh patterns, form/
     update beliefs, reality-check existing beliefs, and generate new
     research questions + tasks from any weak spots found."""
+    _require_legacy_intelligence()
+    from app.services import forge_loop
+
     return forge_loop.run_cycle(db, data_scope=data_scope)
 
 
@@ -228,6 +235,9 @@ def run_task(task_id: int, db: Session = Depends(get_db)):
     An uncleared source fails the task and does not collect. A cleared
     web task may open that page. Network errors mark the task failed
     rather than raising."""
+    _require_legacy_intelligence()
+    from app.services import collector_runner
+
     task = db.query(models.ResearchTask).filter(models.ResearchTask.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Research task not found")
@@ -237,6 +247,9 @@ def run_task(task_id: int, db: Session = Depends(get_db)):
 @router.post("/tasks/run-pending", response_model=list[schemas.TaskRunResult])
 def run_pending_tasks(limit: int = 5, db: Session = Depends(get_db)):
     """Execute a batch of currently-planned research tasks right now."""
+    _require_legacy_intelligence()
+    from app.services import collector_runner
+
     return collector_runner.run_pending_tasks(db, limit=limit)
 
 
@@ -245,6 +258,9 @@ def collect_default(db: Session = Depends(get_db)):
     """Record that the standing Reddit, GitHub, RSS, and arXiv feeds
     are skipped. None is cleared in docs/PUBLIC_SOURCES.md, so this
     route does not open those requests."""
+    _require_legacy_intelligence()
+    from app.services import collector_runner
+
     return collector_runner.run_default_collection(db)
 
 

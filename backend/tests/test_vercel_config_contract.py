@@ -59,7 +59,7 @@ def test_vercel_services_route_api_to_fastapi_and_everything_else_to_web():
     ]
 
 
-def test_vercel_cron_targets_the_authenticated_daily_cycle():
+def test_vercel_cron_targets_the_gated_daily_cycle():
     config = _config()
     assert config["crons"] == [{"path": "/api/scheduled/cycle", "schedule": "0 0 * * *"}]
     from app.main import CRON_SCHEDULE
@@ -88,7 +88,7 @@ def test_api_entrypoint_imports_and_serves_the_paths_vercel_relies_on():
     assert not _serves_get(app, "/api/public/not-a-route")
     assert not _serves_get(app, "/api/not-a-router")
 
-    # The cron path resolves to the authenticated scheduled-cycle handler.
+    # The cron path resolves to the legacy-gated scheduled-cycle handler.
     from app.api import scheduled
 
     handlers = {

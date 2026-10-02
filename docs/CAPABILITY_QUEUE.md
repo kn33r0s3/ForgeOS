@@ -728,6 +728,14 @@ realized revenue.
 - **REAL DISCOVERY:** none. The bounded registry check made no external request and found zero eligible entries; no real candidate or potential prospect was created. The result does not assert no prospects exist outside this bounded review.
 - **OUTREACH / COMMERCIAL STATE:** outreach **NONE**; this milestone created no ACTION, response, interested party, buyer/customer, WTP evidence, order, payment, or revenue. Production counts are recorded above; all verification intake remains internal/test data, not market evidence.
 - **TARGET ARCHITECTURE:** `testable Opportunity → explicit source authorization → bounded read-only query → candidate ENTITY + discovery EVENT/EVIDENCE + relevance RELATION → potential only with relevance evidence → later qualification evidence → separately authorized outreach/response`. Do not add a CRM, infer stage promotions, or execute an ACTION because an Opportunity exists.
+
+## [DONE WITH LIMITATION] Gate legacy intelligence behind explicit configuration
+
+- Owner action still required: keep `FORGEOS_LEGACY_INTELLIGENCE_ENABLED` unset or false unless the owner explicitly authorizes re-enabling the legacy intelligence routines and their separately scoped data-source/integration permissions.
+- Action removed: default startup no longer seeds or imports the legacy intelligence stack; legacy research and demand endpoints reject work, the scheduled cycle returns a disabled no-op, and the worker exits before starting when the flag is false.
+- Current blocker / verification: the flag defaults false in `backend/app/config.py`. A subprocess with the flag false ran the startup hook, created the expected application tables, and reported no legacy target modules loaded. Focused gate/scheduler/public-flow tests passed (48); full backend suite passed (594 passed, 2 skipped). Root typecheck, production build, frontend TypeScript check, auth invariant, and `npm test` passed (197 script tests and 103 app tests). Production deployment and post-deploy checks are pending.
+- Next removable dependency: deploy and verify the default-off production path; any later re-enable requires a separate explicit owner decision and existing source/integration authorization. The flag alone grants no external permission.
+
 - **FUTURE CAPABILITY — precise blocker:** a source-specific, current terms/privacy/authorization review that explicitly permits bounded business/client discovery for an economic hypothesis, plus an adapter constrained to authorized fields and query/rate boundaries. Current research/macro/news sources and provider directories do not meet that requirement. Safest next step: select one source and verify its applicable written authorization before implementing an adapter; do not query a merely accessible source or contact anyone.
 
 ### OCR source decision — 2026-09-28

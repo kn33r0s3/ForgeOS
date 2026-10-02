@@ -10,8 +10,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas
 from app.services import observer
-from app.services import demand_understanding
-from app.services import worker_manager
+from app.config import settings
 from app import security
 
 router = APIRouter(prefix="/signals", tags=["signals"])
@@ -27,6 +26,14 @@ def _record_demand_request(
     request_boundary: str,
     require_idempotency_key: bool = False,
 ):
+    if not settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
+        raise HTTPException(
+            status_code=503,
+            detail="Legacy demand-understanding is disabled.",
+        )
+
+    from app.services import demand_understanding, worker_manager
+
     content = content.strip()
     if not content:
         raise HTTPException(status_code=422, detail="content must not be blank")

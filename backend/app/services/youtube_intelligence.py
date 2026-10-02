@@ -21,7 +21,7 @@ import xml.etree.ElementTree as ET
 from sqlalchemy.orm import Session
 
 from app import models
-from app.services import evidence_graph, research_planner, intelligence_cache
+from app.services import evidence_graph, intelligence_cache
 from app.services.tool_registry import ToolCapability
 
 YOUTUBE_HOSTS = {"youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"}
@@ -120,6 +120,8 @@ def _ensure_task_for_claim(db: Session, claim: models.Claim) -> None:
     db.add(row)
     db.commit()
     db.refresh(row)
+    from app.services import research_planner
+
     research_planner.plan_tasks_for_question(db, row)
 
 

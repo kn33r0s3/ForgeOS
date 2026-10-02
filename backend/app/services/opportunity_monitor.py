@@ -9,7 +9,7 @@ import json
 from sqlalchemy.orm import Session
 
 from app import models
-from app.services import multi_judge, research_planner
+from app.services import multi_judge
 
 
 def utcnow():
@@ -85,6 +85,8 @@ def _research_for_change(db: Session, opportunity: models.Opportunity, change: s
     db.add(question)
     db.commit()
     db.refresh(question)
+    from app.services import research_planner
+
     research_planner.plan_tasks_for_question(db, question)
     return question
 

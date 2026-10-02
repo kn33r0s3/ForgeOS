@@ -14,7 +14,8 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app import schemas, models
-from app.services import pattern_engine, research_planner, collector_runner, evidence_graph
+from app.config import settings
+from app.services import pattern_engine, evidence_graph
 from app.services.observer_engine import ObserverEngine
 
 router = APIRouter(tags=["analyze"])
@@ -22,6 +23,10 @@ router = APIRouter(tags=["analyze"])
 
 def execute_research_task_in_background(task_id: int) -> None:
     """Execute one persisted, source-governed research task after acknowledgement."""
+    if not settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
+        return
+
+    from app.services import collector_runner, research_planner
     from app.database import SessionLocal
 
     with SessionLocal() as db:
@@ -53,6 +58,11 @@ def analyze_idea(
     state. One planned, source-governed ResearchTask runs after acknowledgement;
     no Opportunity is justified by the raw idea alone.
     """
+    if not settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
+        raise HTTPException(status_code=503, detail="Legacy intelligence is disabled.")
+
+    from app.services import research_planner
+
     idea = payload.idea.strip()
     observer = ObserverEngine(db)
     signal = observer.observe(content=idea, source="manual")

@@ -12,7 +12,7 @@ from typing import Any, Callable, Iterable
 from sqlalchemy.orm import Session
 
 from app import models
-from app.services import evidence_graph, research_planner
+from app.services import evidence_graph
 from app.services.tool_registry import ToolUnavailableError, default_registry
 
 
@@ -191,6 +191,8 @@ def _follow_up_question(db: Session, text: str, *, claim_id: int | None = None) 
     db.add(question)
     db.commit()
     db.refresh(question)
+    from app.services import research_planner
+
     research_planner.plan_tasks_for_question(db, question)
     return question
 

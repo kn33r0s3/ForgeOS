@@ -7,6 +7,9 @@ OWN process — separate from `uvicorn app.main:app`, so it can never
 block an incoming API request. Both processes read/write the same
 SQLite file at ../storage/forge.db.
 
+This legacy worker exits without starting unless
+FORGEOS_LEGACY_INTELLIGENCE_ENABLED=true.
+
 Each iteration ("Forge wakes up"):
   1. Autonomous collection — every network collector (Reddit, GitHub,
      RSS, arXiv) is called with NO query, so each falls back to its own
@@ -37,14 +40,27 @@ import sys
 import time
 from datetime import datetime, timezone
 
-from app.database import SessionLocal, init_db
-from app.services import forge_loop, source_manager, collector_runner, money_engine, autonomy_engine, scenario_engine
+from app.config import settings
 
 DEFAULT_INTERVAL_SECONDS = 1800  # 30 minutes — real network sources have rate limits; adjust to taste
 TASKS_PER_CYCLE = 5
 
 
 def run_forever(interval: int = DEFAULT_INTERVAL_SECONDS) -> None:
+    if not settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
+        print("[forge-worker] legacy intelligence disabled; worker will not start.")
+        return
+
+    from app.database import SessionLocal, init_db
+    from app.services import (
+        autonomy_engine,
+        collector_runner,
+        forge_loop,
+        money_engine,
+        scenario_engine,
+        source_manager,
+    )
+
     init_db()
 
     # Seed an initial discovery task if the queue is empty

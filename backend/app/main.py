@@ -9,6 +9,7 @@ init, and router registration. All logic lives in services/ and api/.
 """
 
 import os
+import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,8 +18,9 @@ from sqlalchemy import text
 from app.config import settings
 from app.database import init_db, SessionLocal
 from app.api import signals, analyze, opportunities, observer, forge, world, workers, intelligence, rare_signals, products, lessons, orchestrator, earn, payments, repair_shop, evidence_triage, public, scheduled, substrate, forge_bot
-from app.services import source_manager, money_engine, autonomy_engine, scenario_engine, truth_audit
 from app.security import api_key_middleware
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -43,6 +45,18 @@ CRON_SCHEDULE = "0 0 * * *"
 @app.on_event("startup")
 def on_startup():
     init_db()
+    if not settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
+        logger.info("Legacy intelligence startup disabled.")
+        return
+
+    from app.services import (
+        autonomy_engine,
+        money_engine,
+        scenario_engine,
+        source_manager,
+        truth_audit,
+    )
+
     # Seed default Source reliability rows. Revenue-source startup
     # withdraws payout percentages that were stored without a primary
     # terms page. It does not insert new figures.
