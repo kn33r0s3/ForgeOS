@@ -5,7 +5,7 @@ ForgeOS is local-first and ships with no auth by default so it "just works" on
 a personal Mac. For anyone who exposes it (LAN, a production box, or a shared
 host), a single env var enables a real gate: set FORGE_API_KEY and every
 state-changing request plus reads from the private substrate API must present
-it via `X-API-Key` header or `?api_key=` query param, or it's rejected 401.
+it via the `X-API-Key` header, or it's rejected 401.
 Other reads stay open so the dashboard keeps working without friction when
 auth is off.
 
@@ -56,7 +56,7 @@ def _constant_time_eq(a: str, b: str) -> bool:
 
 def _authorized(request: Request) -> bool:
     key = settings.FORGE_API_KEY
-    presented = request.headers.get("X-API-Key") or request.query_params.get("api_key") or ""
+    presented = request.headers.get("X-API-Key", "")
     return bool(presented) and _constant_time_eq(str(presented), str(key))
 
 

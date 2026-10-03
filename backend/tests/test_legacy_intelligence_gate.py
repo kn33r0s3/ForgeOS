@@ -52,17 +52,26 @@ assert not loaded
     assert "loaded legacy modules: []" in result.stdout
 
 
-def test_scheduled_cycle_is_harmless_noop_when_legacy_flag_is_disabled(
+def test_scheduled_cycle_runs_maintenance_when_legacy_flag_is_disabled(
     monkeypatch, caplog
 ):
     caplog.set_level("INFO")
     monkeypatch.setattr(settings, "FORGEOS_LEGACY_INTELLIGENCE_ENABLED", False)
+    monkeypatch.setenv("CRON_SECRET", "test-only-cron-secret")
+    from app.api import scheduled
 
-    response = run_scheduled_cycle()
+    maintenance = {
+        "inquiries_erased": 2,
+        "expired_rate_limit_buckets_purged": 3,
+    }
+    monkeypatch.setattr(scheduled, "run_daily_maintenance", lambda db: maintenance)
+
+    response = run_scheduled_cycle(authorization="Bearer test-only-cron-secret")
 
     assert response == {
         "status": "disabled",
         "reason": "legacy cycle disabled",
+        "maintenance": maintenance,
     }
     assert "legacy cycle disabled" in caplog.text
 

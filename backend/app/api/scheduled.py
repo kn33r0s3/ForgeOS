@@ -1,4 +1,4 @@
-"""Legacy-gated entry point for the canonical daily Forge cycle."""
+"""Daily privacy maintenance with an optional legacy Forge cycle."""
 
 import hmac
 import logging
@@ -9,9 +9,10 @@ from fastapi import APIRouter, Header, HTTPException
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
+from app import database
 from app.api.forge_bot_owner_notification import send_daily_owner_summary_notification
 from app.config import settings
-from app.database import SessionLocal, engine
+from app.services.forge_bot_privacy import run_daily_maintenance
 
 router = APIRouter(prefix="/scheduled", tags=["scheduled"])
 logger = logging.getLogger(__name__)
@@ -29,30 +30,37 @@ if settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
 
 @router.get("/cycle")
 def run_scheduled_cycle(authorization: str | None = Header(default=None)):
-    """Run one canonical cycle when invoked by the configured Vercel cron.
-
-    The disabled legacy cycle returns a side-effect-free no-op. When enabled,
-    the endpoint fails closed if CRON_SECRET is missing or invalid. A
-    PostgreSQL advisory lock prevents two serverless instances from running
-    the stateful cycle at the same time; local SQLite runs use a process lock.
-    """
-    if not settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
-        logger.info("legacy cycle disabled")
-        return {"status": "disabled", "reason": "legacy cycle disabled"}
-
+    """Run daily privacy maintenance and the legacy cycle only when enabled."""
     secret = os.getenv("CRON_SECRET", "")
     if not secret:
         raise HTTPException(status_code=503, detail="Scheduled cycle is not configured")
     if not authorization or not hmac.compare_digest(authorization, f"Bearer {secret}"):
         raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        with database.SessionLocal() as db:
+            maintenance = run_daily_maintenance(db)
+    except SQLAlchemyError as exc:
+        logger.error("Forge Bot daily privacy maintenance failed (%s).", type(exc).__name__)
+        raise HTTPException(
+            status_code=500,
+            detail="Daily privacy maintenance failed.",
+        ) from exc
+
+    if not settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
+        logger.info("legacy cycle disabled")
+        return {
+            "status": "disabled",
+            "reason": "legacy cycle disabled",
+            "maintenance": maintenance,
+        }
     if _cycle_scheduler is None:
         raise HTTPException(status_code=503, detail="Legacy cycle is not configured.")
 
     connection = None
     acquired_postgres_lock = False
     lock_release_deferred = False
-    if engine.dialect.name == "postgresql":
-        connection = engine.connect()
+    if database.engine.dialect.name == "postgresql":
+        connection = database.engine.connect()
         try:
             acquired_postgres_lock = bool(
                 connection.execute(
@@ -81,7 +89,7 @@ def run_scheduled_cycle(authorization: str | None = Header(default=None)):
                     connection.commit()
             finally:
                 connection.close()
-        elif engine.dialect.name != "postgresql":
+        elif database.engine.dialect.name != "postgresql":
             _local_cycle_lock.release()
 
     try:
@@ -102,7 +110,7 @@ def run_scheduled_cycle(authorization: str | None = Header(default=None)):
         raise HTTPException(status_code=500, detail="The canonical cycle reported a failure")
     cycle = record.get("forge_cycle") or {}
     try:
-        with SessionLocal() as db:
+        with database.SessionLocal() as db:
             owner_summary = send_daily_owner_summary_notification(db)
     except SQLAlchemyError as exc:
         logger.error(
@@ -128,6 +136,7 @@ def run_scheduled_cycle(authorization: str | None = Header(default=None)):
             )
     return {
         "status": "completed",
+        "maintenance": maintenance,
         "cycle_id": cycle.get("cycle_id") if isinstance(cycle, dict) else None,
         "forge_cycle_failed": bool(forge_error),
         "autonomy_cycle_failed": bool(autonomy_error),

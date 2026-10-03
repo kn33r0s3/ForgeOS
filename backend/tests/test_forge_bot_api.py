@@ -126,7 +126,6 @@ def test_explicit_consent_and_channel_contact_are_server_enforced(db, monkeypatc
 def test_live_off_rejects_real_leads_but_allows_test_records(db, monkeypatch):
     _enable_intake(monkeypatch)
     monkeypatch.setattr(settings, "FORGE_BOT_LIVE", False)
-    forge_bot._submissions_by_ip.clear()
     client, cleanup = _client(db)
     try:
         real_lead = client.post(
@@ -140,7 +139,6 @@ def test_live_off_rejects_real_leads_but_allows_test_records(db, monkeypatch):
     finally:
         client.close()
         cleanup()
-        forge_bot._submissions_by_ip.clear()
 
     assert real_lead.status_code == 403
     assert test_lead.status_code == 202
@@ -185,7 +183,6 @@ def test_submitted_lead_is_private_consent_scoped_and_not_projected_publicly(db,
 def test_real_lead_notification_failure_does_not_fail_submission(db, monkeypatch):
     _enable_intake(monkeypatch)
     monkeypatch.setattr(settings, "FORGE_BOT_LIVE", True)
-    forge_bot._submissions_by_ip.clear()
     notification_calls = []
 
     def fail_notification(session, reference, lead_data, idempotency_key):
@@ -209,7 +206,6 @@ def test_real_lead_notification_failure_does_not_fail_submission(db, monkeypatch
     finally:
         client.close()
         cleanup()
-        forge_bot._submissions_by_ip.clear()
 
     assert response.status_code == 202
     assert db.query(models.ForgeBotLeadContact).one().evidence_class == "REAL"
@@ -258,7 +254,6 @@ def test_owner_test_send_requires_owner_key_and_returns_status_only(db, monkeypa
 
 def test_response_authorization_is_owner_only_and_defaults_closed(db, monkeypatch):
     _enable_intake(monkeypatch)
-    forge_bot._submissions_by_ip.clear()
     client, cleanup = _client(db)
     try:
         lead_response = client.post("/forge-bot/leads", json=_payload())
@@ -275,7 +270,6 @@ def test_response_authorization_is_owner_only_and_defaults_closed(db, monkeypatc
     finally:
         client.close()
         cleanup()
-        forge_bot._submissions_by_ip.clear()
 
     assert lead_response.status_code == 202
     assert no_key.status_code == 401
@@ -296,7 +290,6 @@ def test_response_authorization_is_owner_only_and_defaults_closed(db, monkeypatc
 
 def test_response_readiness_blocks_unselected_or_unauthorized_channel(db, monkeypatch):
     _enable_intake(monkeypatch)
-    forge_bot._submissions_by_ip.clear()
     client, cleanup = _client(db)
     try:
         lead = client.post("/forge-bot/leads", json=_payload())
@@ -318,7 +311,6 @@ def test_response_readiness_blocks_unselected_or_unauthorized_channel(db, monkey
     finally:
         client.close()
         cleanup()
-        forge_bot._submissions_by_ip.clear()
 
     assert no_selection.status_code == unauthorized.status_code == 200
     assert readiness.json()["status"] == "BLOCKED"
@@ -340,7 +332,6 @@ def test_response_readiness_blocks_missing_or_unauthorized_template(
     db, monkeypatch, template_ref, template_authorized, expected_blocker
 ):
     _enable_intake(monkeypatch)
-    forge_bot._submissions_by_ip.clear()
     client, cleanup = _client(db)
     try:
         lead = client.post("/forge-bot/leads", json=_payload())
@@ -360,7 +351,6 @@ def test_response_readiness_blocks_missing_or_unauthorized_template(
     finally:
         client.close()
         cleanup()
-        forge_bot._submissions_by_ip.clear()
 
     assert config.status_code == readiness.status_code == 200
     assert readiness.json()["status"] == "BLOCKED"
@@ -370,14 +360,12 @@ def test_response_readiness_blocks_missing_or_unauthorized_template(
 
 def test_response_readiness_requires_consent_and_blocks_opted_out_inquiries(db, monkeypatch):
     _enable_intake(monkeypatch)
-    forge_bot._submissions_by_ip.clear()
     client, cleanup = _client(db)
     try:
         lead_response = client.post("/forge-bot/leads", json=_payload())
     finally:
         client.close()
         cleanup()
-        forge_bot._submissions_by_ip.clear()
 
     lead = db.query(models.ForgeBotLeadContact).one()
     authorization = models.OpForgeBotResponseAuthorization(
@@ -427,7 +415,6 @@ def test_owner_authorized_response_is_internal_only_until_final_send_gate_opens(
         "_send_twilio_sms",
         lambda *args, **kwargs: pytest.fail("response readiness attempted an SMS send"),
     )
-    forge_bot._submissions_by_ip.clear()
     client, cleanup = _client(db)
     try:
         lead = client.post("/forge-bot/leads", json=_payload())
@@ -449,7 +436,6 @@ def test_owner_authorized_response_is_internal_only_until_final_send_gate_opens(
     finally:
         client.close()
         cleanup()
-        forge_bot._submissions_by_ip.clear()
     result = readiness.json()
     assert lead.status_code == 202
     assert config.status_code == repeated_config.status_code == 200
@@ -493,7 +479,6 @@ def test_submitter_preference_cannot_silently_select_or_authorize_response_chann
     db, monkeypatch
 ):
     _enable_intake(monkeypatch)
-    forge_bot._submissions_by_ip.clear()
     client, cleanup = _client(db)
     try:
         lead = client.post("/forge-bot/leads", json=_payload(preferred_channel="email"))
@@ -513,7 +498,6 @@ def test_submitter_preference_cannot_silently_select_or_authorize_response_chann
     finally:
         client.close()
         cleanup()
-        forge_bot._submissions_by_ip.clear()
 
     assert lead.status_code == 202
     assert owner_config.status_code == 200
@@ -1191,7 +1175,6 @@ def test_test_lead_flow_is_offline_with_legacy_intelligence_disabled(db, monkeyp
     monkeypatch.setattr(settings, "SMTP_HOST", "smtp.example.test")
     monkeypatch.setattr(settings, "SMTP_USER", "owner@example.test")
     monkeypatch.setattr(settings, "SMTP_PASSWORD", "test-only-password")
-    forge_bot._submissions_by_ip.clear()
     sent = []
 
     def reject_socket(*args, **kwargs):
@@ -1218,7 +1201,6 @@ def test_test_lead_flow_is_offline_with_legacy_intelligence_disabled(db, monkeyp
     finally:
         client.close()
         cleanup()
-        forge_bot._submissions_by_ip.clear()
 
     lead = db.query(models.ForgeBotLeadContact).one()
     assert config.status_code == 200
@@ -1286,7 +1268,6 @@ def test_honeypot_is_acknowledged_without_storing_contact_data(db, monkeypatch):
 
 def test_rate_limiter_returns_429_without_storing_the_over_limit_request(db, monkeypatch):
     _enable_intake(monkeypatch)
-    forge_bot._submissions_by_ip.clear()
     client, cleanup = _client(db)
     try:
         responses = [
@@ -1302,11 +1283,17 @@ def test_rate_limiter_returns_429_without_storing_the_over_limit_request(db, mon
     finally:
         client.close()
         cleanup()
-        forge_bot._submissions_by_ip.clear()
 
     assert [response.status_code for response in responses[:-1]] == [202] * forge_bot.RATE_LIMIT
     assert responses[-1].status_code == 429
+    assert responses[-1].json()["detail"] == (
+        "Hourly submission limit reached: no more than 5 inquiries per visitor per hour."
+    )
     assert db.query(models.ForgeBotLeadContact).count() == forge_bot.RATE_LIMIT
+    rate_bucket = db.query(models.ForgeBotIntakeRateLimit).one()
+    assert rate_bucket.request_count == forge_bot.RATE_LIMIT + 1
+    assert len(rate_bucket.visitor_hash) == 64
+    assert "testclient" not in rate_bucket.visitor_hash
 
 
 def test_opt_out_erases_contact_and_answers_and_permanently_suppresses_resubmission(db, monkeypatch):

@@ -217,8 +217,8 @@ check provider/network/filesystem, restore a verified backup if needed, restart.
 
 Bind loopback only. `FORGE_API_KEY` is optional and protects writes, **not reads**.
 Flow accepts a session-only key and sends X-API-Key; refreshing the page clears it.
-Never store real keys in repository or ZIP. Query-string key compatibility is legacy;
-prefer headers because URLs may appear in logs. CORS permits localhost:3000 by default.
+Never store real keys in repository or ZIP. The key is accepted only in the
+X-API-Key header; query-string authentication is not supported. CORS permits localhost:3000 by default.
 This is NOT multi-user authentication, tenant isolation, encryption at rest, hosted
 billing, or a hardened public SaaS. Do not expose it publicly without those controls.
 Security-audited dependency pins were updated and regression-tested; an audit is a

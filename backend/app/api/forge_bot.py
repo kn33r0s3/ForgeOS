@@ -5,9 +5,6 @@ import hmac
 import logging
 import re
 import secrets
-import threading
-import time
-from collections import defaultdict, deque
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -19,17 +16,14 @@ from app import models, schemas
 from app.api import forge_bot_owner_notification
 from app.config import settings
 from app.database import get_db
-from app.services import forge_bot_response, world_graph
+from app.services import forge_bot_privacy, forge_bot_response, world_graph
 
 router = APIRouter(prefix="/forge-bot", tags=["forge-bot"])
 logger = logging.getLogger(__name__)
 CONSENT_PURPOSE = "respond_to_forge_bot_inquiry"
 CONSENT_PROVENANCE = "forge_bot_web_form_v1"
-RATE_LIMIT = 5
-RATE_WINDOW_SECONDS = 3600
-MAX_RATE_LIMIT_BUCKETS = 4096
-_rate_lock = threading.Lock()
-_submissions_by_ip: dict[str, deque[float]] = defaultdict(deque)
+RATE_LIMIT = forge_bot_privacy.RATE_LIMIT
+RATE_WINDOW_SECONDS = forge_bot_privacy.RATE_WINDOW_SECONDS
 
 
 def _enabled() -> bool:
@@ -137,32 +131,6 @@ def _response_readiness_output(
     ):
         result[key] = policy[key]
     return result
-
-
-def _allow_submission(request: Request) -> bool:
-    host = request.client.host if request.client else "unknown"
-    now = time.monotonic()
-    with _rate_lock:
-        recent = _submissions_by_ip.get(host)
-        if recent is None:
-            if len(_submissions_by_ip) >= MAX_RATE_LIMIT_BUCKETS:
-                stale_before = now - RATE_WINDOW_SECONDS
-                for ip in [
-                    ip
-                    for ip, events in _submissions_by_ip.items()
-                    if not events or events[-1] < stale_before
-                ]:
-                    _submissions_by_ip.pop(ip, None)
-                if len(_submissions_by_ip) >= MAX_RATE_LIMIT_BUCKETS:
-                    return False
-            recent = deque()
-            _submissions_by_ip[host] = recent
-        while recent and now - recent[0] >= RATE_WINDOW_SECONDS:
-            recent.popleft()
-        if len(recent) >= RATE_LIMIT:
-            return False
-        recent.append(now)
-        return True
 
 
 def _require_owner_key(request: Request) -> None:
@@ -302,6 +270,7 @@ def create_forge_bot_response_action(
             opted_out=False,
             erased_at=None,
         )
+        .with_for_update()
         .one_or_none()
     )
     if lead is None:
@@ -400,8 +369,15 @@ def create_forge_bot_lead(
         raise HTTPException(status_code=422, detail="Provide an email address or phone number.")
     if payload.website:
         return receipt
-    if not _allow_submission(request):
-        raise HTTPException(status_code=429, detail="Submission rate limit reached; try again later.")
+    if not forge_bot_privacy.consume_intake_submission(
+        db,
+        request,
+        hmac_key=settings.FORGE_BOT_CONTACT_HMAC_KEY,
+    ):
+        raise HTTPException(
+            status_code=429,
+            detail="Hourly submission limit reached: no more than 5 inquiries per visitor per hour.",
+        )
 
     normalized_email = payload.email.lower() if payload.email else None
     normalized_phone = _normalized_phone(payload.phone)

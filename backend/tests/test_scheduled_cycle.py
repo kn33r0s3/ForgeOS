@@ -32,6 +32,14 @@ def test_scheduled_cycle_runs_canonical_runner(monkeypatch):
     monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
     monkeypatch.setattr(
         scheduled,
+        "run_daily_maintenance",
+        lambda db: {
+            "inquiries_erased": 0,
+            "expired_rate_limit_buckets_purged": 0,
+        },
+    )
+    monkeypatch.setattr(
+        scheduled,
         "send_daily_owner_summary_notification",
         lambda db: {"status": "ACCEPTED_BY_SMTP", "delivery_id": 1},
     )
@@ -50,6 +58,10 @@ def test_scheduled_cycle_runs_canonical_runner(monkeypatch):
     assert response.status_code == 200
     assert response.json() == {
         "status": "completed",
+        "maintenance": {
+            "inquiries_erased": 0,
+            "expired_rate_limit_buckets_purged": 0,
+        },
         "cycle_id": 27,
         "forge_cycle_failed": False,
         "autonomy_cycle_failed": False,
@@ -60,6 +72,7 @@ def test_scheduled_cycle_runs_canonical_runner(monkeypatch):
 def test_scheduled_cycle_reports_owner_summary_skipped_without_smtp(monkeypatch):
     secret = "test-cron-secret"
     monkeypatch.setenv("CRON_SECRET", secret)
+    monkeypatch.setattr(scheduled, "run_daily_maintenance", lambda db: {})
     monkeypatch.setattr(
         scheduled._cycle_scheduler,
         "run_single_cycle",
@@ -83,6 +96,7 @@ def test_scheduled_cycle_reports_owner_summary_skipped_without_smtp(monkeypatch)
 
 def test_scheduled_cycle_reports_runner_failure(monkeypatch):
     monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    monkeypatch.setattr(scheduled, "run_daily_maintenance", lambda db: {})
     monkeypatch.setattr(
         scheduled._cycle_scheduler,
         "run_single_cycle",
@@ -101,6 +115,7 @@ def test_scheduled_cycle_reports_runner_failure(monkeypatch):
 
 def test_scheduled_cycle_reports_timeout_as_incomplete(monkeypatch):
     monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    monkeypatch.setattr(scheduled, "run_daily_maintenance", lambda db: {})
     monkeypatch.setattr(
         scheduled._cycle_scheduler,
         "run_single_cycle",
@@ -119,6 +134,7 @@ def test_scheduled_cycle_reports_timeout_as_incomplete(monkeypatch):
 
 def test_scheduled_cycle_holds_its_lock_until_timed_out_worker_finishes(monkeypatch):
     monkeypatch.setenv("CRON_SECRET", "audit-only-secret")
+    monkeypatch.setattr(scheduled, "run_daily_maintenance", lambda db: {})
     entered = Event()
     release = Event()
     calls = []

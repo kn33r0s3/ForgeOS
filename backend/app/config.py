@@ -108,8 +108,8 @@ class Settings(BaseSettings):
     # --- Security (opt-in) ---
     # Leave empty (default) for local-first operation with no auth. To protect
     # any state-changing API call outside localhost, set FORGE_API_KEY to a
-    # non-empty secret; clients must send it via `X-API-Key` header or
-    # `?api_key=` on POST/PUT/PATCH/DELETE (see app/security.py). Never commit
+    # non-empty secret; clients must send it via the `X-API-Key` header
+    # (see app/security.py). Never commit
     # a real secret; set it via environment only.
     FORGE_API_KEY: str = os.getenv("FORGE_API_KEY", "")
 

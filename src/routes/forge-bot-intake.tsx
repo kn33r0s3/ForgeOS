@@ -496,9 +496,12 @@ function ForgeBotIntakePage() {
               <p className="text-xs leading-5 text-muted">
                 Do not include passport numbers, identity documents, academic
                 records, or other sensitive documents. No admission, visa, or
-                employment outcome is promised. An owner reviews submissions;
-                no email or message is sent automatically. No time-based
-                retention period is configured; records remain until erased.
+                employment outcome is promised. Submissions remaining in
+                READY_FOR_OWNER_REVIEW with no recorded response ACTION are
+                deleted after 30 days. If an owner records a response ACTION,
+                the inquiry is retained until deleted with the private control
+                code. Deletion keeps only a minimal non-contact erasure record.
+                No customer message is sent automatically.
               </p>
               <Button type="submit" disabled={busy}>
                 {busy ? "Submitting…" : "Send for owner review"}

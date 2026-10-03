@@ -62,7 +62,7 @@ def test_auth_on_gates_writes_but_allows_correct_key():
     assert _decision("sec", "POST") is False          # no key -> rejected
     assert _decision("sec", "POST", header_key="wrong") is False
     assert _decision("sec", "POST", header_key="sec") is True
-    assert _decision("sec", "POST", query_key="sec") is True
+    assert _decision("sec", "POST", query_key="sec") is False
 
 
 @pytest.mark.parametrize(
@@ -95,6 +95,7 @@ def test_private_customer_reads_require_configured_api_key(path, monkeypatch):
     with TestClient(app) as client:
         assert client.get(path).status_code == 401
         assert client.get(path, headers={"X-API-Key": "wrong"}).status_code == 401
+        assert client.get(f"{path}?api_key=private-api-key").status_code == 401
         assert client.get(path, headers={"X-API-Key": "private-api-key"}).status_code == 200
         assert client.get("/public/feed").status_code == 200
 

@@ -874,6 +874,16 @@ class ForgeBotLeadContact(Base):
     )
 
 
+class ForgeBotIntakeRateLimit(Base):
+    """Privacy-preserving hourly intake counter keyed by a visitor HMAC."""
+
+    __tablename__ = "forge_bot_intake_rate_limits"
+
+    visitor_hash = Column(String(64), primary_key=True)
+    request_count = Column(Integer, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
+
+
 class OpForgeBotResponseAuthorization(Base):
     """Singleton operational projection for owner-authorized lead responses."""
 
