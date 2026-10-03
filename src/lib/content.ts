@@ -18,6 +18,7 @@ export const NAV = [
   { label: "World", to: "/feed" },
   { label: "Hypotheses", to: "/opportunities" },
   { label: "Actions", to: "/actions" },
+  { label: "For businesses", to: "/group/businesses" },
 ] as const;
 
 export const providerCategories = ["All"] as const;

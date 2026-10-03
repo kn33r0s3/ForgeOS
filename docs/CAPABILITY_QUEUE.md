@@ -40,12 +40,14 @@
   owner-run discovery before selecting a segment or pilot terms. No activation
   is authorized by this record.
 - Action removed: correct the homepage wayfinding and closed-inquiry copy,
+  add “For businesses” to primary navigation without removing other entries,
   set the public share title to Hami, minimize public health output, protect
   health diagnostics with the owner key, and document the production database
   and recovery checks without changing production records.
 - Current blocker / verification: homepage and copy changes are verified in a
-  local 390px browser view; `/privacy` is `noindex, nofollow` and is not linked
-  from navigation or consent. Local backend tests pass on SQLite and
+  local 390px browser view; the mobile menu includes “For businesses” and
+  preserves its prior items; `/privacy` is `noindex, nofollow` and is not
+  linked from navigation or consent. Local backend tests pass on SQLite and
   PostgreSQL 18, and frontend tests/typecheck/lint/build pass. The production
   database read used read-only transactions: all 69 ORM model tables and
   expected columns were present in the 75-table public schema; there were no

@@ -14,9 +14,11 @@ state is not assumed current unless explicitly identified as a dated observation
   MEASURABLE**.
 - Forge Bot's lead input is the gated, unlisted web form at
   `/forge-bot-intake`; production intake and `FORGE_BOT_LIVE` remain disabled.
-  The home page now has a direct “Share a business need” button and says,
-  “For business owners, Hami helps clarify a need and find a practical next
-  step.” The closed route is not an available submission channel. When open,
+  The primary navigation now includes “For businesses” without removing its
+  other entries. The home page has a direct “Share a business need” button
+  and says, “For business owners, Hami helps clarify a need and find a
+  practical next step.” The closed route is not an available submission
+  channel. When open,
   the successful response is synchronous in-page receipt only, not a reply to
   the selected email/phone channel. Contact and qualification fields stay outside Signals, generic
   substrate entities, and public projections. The existing anonymous

@@ -86,6 +86,7 @@ describe("Hami public content", () => {
       "/feed",
       "/opportunities",
       "/actions",
+      "/group/businesses",
     ]);
     const publicHrefs = new Set<string>(hrefs);
     for (const path of FORBIDDEN_PUBLIC_PATHS) {
