@@ -243,7 +243,7 @@ export async function loadEngineHealth(scope?: CacheScope): Promise<EngineHealth
 }
 
 function getPublicApiBase() {
-  return (import.meta.env.VITE_FORGE_API_BASE as string | undefined)?.replace(/\/$/, "") ?? "";
+  return import.meta.env?.VITE_FORGE_API_BASE?.replace(/\/$/, "") ?? "";
 }
 
 function getApiCandidates(path: string): string[] {
@@ -269,7 +269,7 @@ function getPublicApiCandidates(path: string): string[] {
 export async function submitPublicDemandRequest(
   content: string,
   idempotencyKey: string,
-): Promise<{ id: number } | null> {
+): Promise<{ id: number } | { notOpen: true } | null> {
   for (const url of getApiCandidates("/signals/public-request")) {
     try {
       const response = await fetch(url, {
@@ -281,6 +281,12 @@ export async function submitPublicDemandRequest(
         },
         body: JSON.stringify({ content }),
       });
+      if (response.status === 503) {
+        const payload = (await response.json()) as { detail?: unknown };
+        if (payload.detail === "Legacy demand-understanding is disabled.") {
+          return { notOpen: true };
+        }
+      }
       if (response.ok) {
         const signal = (await response.json()) as { id?: number };
         return typeof signal.id === "number" ? { id: signal.id } : null;

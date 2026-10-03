@@ -13,6 +13,7 @@ import {
   groupAreas,
   processSteps,
   services,
+  submitPublicDemandRequest,
   trustPoints,
 } from "./content.ts";
 
@@ -51,6 +52,23 @@ function collectCopy(): string[] {
 }
 
 describe("Hami public content", () => {
+  it("handles the closed legacy demand path without exposing its API error", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () =>
+      new Response(
+        JSON.stringify({ detail: "Legacy demand-understanding is disabled." }),
+        { status: 503, headers: { "Content-Type": "application/json" } },
+      );
+    try {
+      assert.deepEqual(
+        await submitPublicDemandRequest("TEST-only closed-path fixture", "test-key"),
+        { notOpen: true },
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it("names Hami without publishing compatibility names as product identities", () => {
     assert.equal(SITE.name, "Hami");
     assert.doesNotMatch(SITE.description, /ForgeOS|Pulse/);

@@ -954,6 +954,14 @@ realized revenue.
 - **Verification:** focused SQLite tests pass (**75 passed**) covering the five- and twenty-request thresholds, opaque stored visitor hash, 429 response, and 413 rejection for root and `/api` aliases. PostgreSQL and full-suite verification remain pending in this batch. No external messages or production writes occurred.
 - **Next removable dependency:** verify the deployed Postgres-backed path and confirm abuse visibility/alerting before considering any owner-approved public opening. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
 
+### 2026-10-03 — Explain the disabled public request path
+
+- **Owner action still required:** decide whether legacy demand understanding should ever be opened; no request was submitted to production.
+- **Action removed:** when `/signals/public-request` explicitly reports that legacy demand-understanding is disabled, the visitor now sees “Online requests are not open yet. Your note was not submitted.” rather than a generic retry message. `/request-a-project` remains a redirect to `/request`.
+- **Remaining boundary:** with the legacy flag false, the API returns 503 before storing a signal. Network failures and other unavailable responses remain a separate retryable/unknown state. No feature was enabled.
+- **Verification:** local disabled-path API test confirms HTTP 503 and zero stored signals (**11 targeted tests passed**); public-content Node tests (**8 passed**) and TypeScript typecheck pass.
+- **Next removable dependency:** owner decision on whether this public request flow is wanted after real discovery; until then the API remains closed by the legacy flag. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
 ### 2026-10-03 — Bound inquiry retention and durable intake limits
 
 - **Owner action still required:** conduct owner-run discovery, decide whether to open intake, and personally review any inquiry before a response or service commitment. No real customer interaction, payment, or revenue evidence was created here.

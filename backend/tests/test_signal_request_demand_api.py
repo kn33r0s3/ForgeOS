@@ -6,11 +6,34 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 from app import models
+from app.config import settings
 from app.database import Base, get_db
 import app.database as database
 from app.main import app
 from app.migrations import run_migrations
 from app.services import demand_understanding, world_graph
+
+
+def test_public_demand_request_is_closed_when_legacy_intelligence_is_disabled(
+    db, monkeypatch
+):
+    monkeypatch.setattr(settings, "FORGEOS_LEGACY_INTELLIGENCE_ENABLED", False)
+    client = _client_for(db)
+    try:
+        response = client.post(
+            "/signals/public-request",
+            json={"content": "TEST-only disabled-path fixture"},
+            headers={"Idempotency-Key": "disabled-path-test-001"},
+        )
+    finally:
+        client.close()
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "detail": "Legacy demand-understanding is disabled."
+    }
+    assert db.query(models.Signal).count() == 0
 
 
 def _client_for(db):

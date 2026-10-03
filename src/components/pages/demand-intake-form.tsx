@@ -22,6 +22,10 @@ export function DemandIntakeForm() {
       setMessage("The request was not confirmed. You can retry safely.");
       return;
     }
+    if ("notOpen" in result) {
+      setMessage("Online requests are not open yet. Your note was not submitted.");
+      return;
+    }
 
     setContent("");
     setAttempt(null);
