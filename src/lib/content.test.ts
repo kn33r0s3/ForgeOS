@@ -138,7 +138,7 @@ describe("Hami public content", () => {
     assert.match(closedCopy, /Online inquiries are not open yet/);
     assert.doesNotMatch(
       closedCopy,
-      /paused until a monitored mailbox is configured|Contact mailbox pending|A monitored contact address has not been configured yet/i,
+      /paused until (?:a monitored mailbox is configured|Hami has a monitored mailbox)|Contact mailbox pending|A monitored contact address has not been configured yet/i,
     );
     const form = readFileSync(join(sourceDir, "../components/pages/project-form.tsx"), "utf8");
     assert.match(form, /No personal details are collected, sent, or stored here/);
