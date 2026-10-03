@@ -49,3 +49,24 @@ These cannot be answered from a screen. Only real conversations answer them.
 - requested ≠ verified, estimated ≠ actual, test ≠ real.
 - A surprise (OBSERVED ≠ EXPECTED) is more valuable than another green test:
   record it, preserve the evidence, let it generate the next unknown.
+
+## D. Discovery-sourced unknowns (2026-10-04 deep listening)
+
+From ~30 substantive public threads (HN, Indie Hackers, Reddit-adjacent,
+trade forums, Mumsnet, Quora, Substack/Medium, LinkedIn, one Nepali MBS
+thesis n=187, Nepali business press). Evidence class: OBSERVED-at-best
+(online discourse). Not Kathmandu ground truth — Nepali voices are
+structurally thin in English forums.
+
+| # | Unknown | State | Cheapest legitimate test | What changes if answered |
+|---|---------|-------|--------------------------|--------------------------|
+| D1 | The "missing middle" gap cost — what does "too busy to answer, not busy enough to hire" cost a shop per month? | UNKNOWN | "How many inquiries did you miss last month because you couldn't respond in time?" | Sizes a pay-per-recovered-job model vs. per-seat |
+| D2 | Do owners want to be "found"? — fulfillment/admin may bind harder than demand. **Thesis-threatening:** if presence is the constraint, the "find real opportunities" wedge needs revision | UNKNOWN | "If I brought you 10 new customers tomorrow, what breaks?" — ask first in every discovery conversation | Could revise the wedge thesis before any build |
+| D3 | Trust-graph traversal vs. marketing — do first customers come only via pre-existing trust? | UNKNOWN | "How did your first 10 customers find you?" — count trust-traced ones | Hami's RELATION primitive could be the data model |
+| D4 | The unguarded surfaces map — where do Nepali kirana owners talk with the camera off? | UNKNOWN | Ask owners directly + one Nepali-language TikTok/FB session by a human | Finds where listening is even possible |
+| D5 | The unpredictability tax, quantified — hours/week of presence-demanding chaos | UNKNOWN | "Walk me through last Tuesday." | Turns anecdote into a measurable cost |
+| D6 | Accountant-as-translator: human or machine? — does the trust require a human neck to wring? | UNKNOWN | "Would you trust a tool that tells you what the accountant would say?" — listen for the flinch | Decides whether this is automatable at all |
+| D7 | Trust-capital stratification — is who gets to start a birth lottery? (family abroad = payments + credit + hiring) | UNKNOWN | ~10 owners with/without abroad connections, compare capital sources | Unmeasured; changes who Hami can serve |
+| D8 | Returnee-skill pathway — any working path from foreign-earned skills to businesses, or all dissipation? | UNKNOWN | 3 returnees who started vs. 3 who didn't | May resolve BLOCKED_BY_MISSING_ACCESS |
+| D9 | The voiceless-founder population — how many never surface for lack of network? | UNKNOWN (likely BLOCKED_BY_MISSING_ACCESS for direct contact) | "Who do you know who wanted to start but didn't, and why?" | Measures the invisible demand |
+| D10 | Reputation vs. paid acquisition by category — which categories run on reputation, and do owners know their game? | UNKNOWN (unmapped in Nepal) | "Where do your customers come from, honestly?" — category by category | Prevents selling funnels to reputation games |
