@@ -94,7 +94,11 @@ UNKNOWN → QUESTION → TEST/ACTION → NEW REALITY. Surprise
 (OBSERVED ≠ EXPECTED) generates new unknowns. The user’s stance:
 "everything is known and everyone knows" — Hami's value lies beyond the
 known, in specific, local, real-world unknowns found only through contact
-with reality.
+with reality. **Origin positioning (owner-set):** Hami is visibly
+Nepali-originated — built in Kathmandu, representing Nepal worldwide;
+Nepal-first is the identity, global intent follows from it. The product
+must *behave* Nepali (conversational, phone-first, honest about cash),
+not just look it — see `docs/ORIGIN.md`.
 
 ## Keeping this file fresh
 
