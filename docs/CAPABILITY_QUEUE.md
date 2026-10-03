@@ -1030,3 +1030,11 @@ realized revenue.
 - **Remaining boundary:** the production connection establishes that the database is hosted on Neon, but neither a SQL connection nor this local dump reveals the account plan, configured history window, or whether provider instant restore is enabled.
 - **Verification:** Neon’s official [instant restore documentation](https://neon.com/docs/postgres/backup-restore/branch-restore) describes point-in-time restore within the project's history window. Official [pricing](https://neon.com/pricing) lists a 6-hour Free history window, up to 7 days on Launch, and up to 30 days on Scale; the branching documentation says Free defaults to 6 hours and paid plans default to 1 day. The project's effective plan/window remain UNKNOWN. The local `pg_dump` drill is not provider PITR evidence.
 - **Next removable dependency:** the owner checks the project's plan and actual history-window setting before relying on any PITR recovery expectation. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
+### 2026-10-04 — Review the public Cal.com event without booking
+
+- **Owner action still required:** authorize a future non-confirming slot-selection flow only if its temporary hold behavior is acceptable; do not interpret this page review as booking evidence.
+- **Action removed:** verify the public event's name, duration, meeting mode, and displayed time zone without submitting a booking.
+- **Remaining boundary:** reaching the final booking form requires selecting a slot. Under the current no-production-writes restriction, that step was not taken because a temporary slot hold could not be ruled out. Final-form fields and any field-level privacy conflict therefore remain **UNKNOWN**.
+- **Verification:** a read-only GET/browser load showed “Hami Consultation,” 30 minutes, Cal Video, and `Asia/Kathmandu` as the displayed time zone with a timezone selector. No slot was selected by this audit; no form data was entered and no booking was submitted.
+- **Next removable dependency:** confirm whether a final-form dry run that may create a temporary hold is permitted; until then do not claim field-level privacy compatibility. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
