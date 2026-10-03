@@ -13,7 +13,7 @@ const items = [
   {
     number: "01",
     title: "One system",
-    body: "Hami is one system. Nepal is the initial focus; global markets are a longer-term direction, not separate architectures. Domains and deployments are not claimed until verified.",
+    body: "Hami is one system. Built in Kathmandu, Nepal; serving the world equally with no geographic priority. Domains and deployments are not claimed until verified.",
   },
   {
     number: "02",

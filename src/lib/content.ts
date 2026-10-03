@@ -6,10 +6,10 @@ export const SITE = {
   domain: "Domain pending verification",
   url: "",
   email: "",
-  location: "Starting in Nepal",
+  location: "Built in Kathmandu",
   tagline: "A system for observing reality and discovering what may matter.",
   description:
-    "Hami connects observations, research, capabilities, decisions, and outcomes in one evidence-led system. Nepal is the initial focus; global reach remains a direction, not a verified deployment. Public records do not imply verified demand, execution, or outcomes.",
+    "Hami connects observations, research, capabilities, decisions, and outcomes in one evidence-led system. Built in Kathmandu, Nepal; serving the world equally, with no geographic priority. Public records do not imply verified demand, execution, or outcomes.",
 } as const;
 
 export const NAV = [
