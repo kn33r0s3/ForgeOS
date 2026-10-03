@@ -1,5 +1,38 @@
 # Hami capability claim ledger (ForgeOS repository)
 
+## [PARTIAL] Batch 12B: close request-state, copy, and verification gaps (2026-10-04)
+
+- Owner action still required: define an authorized source and retrieval
+  procedure for a production database credential, and provide an already
+  authorized way to inspect owner readiness if deployed commit evidence is
+  required. Neither boundary is bypassed here.
+- Action this change removes: stale-copy test patterns are made explicit
+  absence checks; malformed intake validation is checked with TEST-marked
+  input and must not persist a lead; and the operator documentation now
+  states the production database credential-access boundary.
+- Current blocker / verification: `/request` returns the closed message with
+  no form while the request status is `enabled:false`; `/request-a-project`
+  remains a redirect to `/request`. Its route/component changes were already
+  present in commit `b774ead746d78f606bf393d305754aa2aefe9dfd`. The current
+  content test already asserted the old mailbox copy was absent; this change
+  expresses each retired phrase as a separate absence assertion. Local
+  content tests passed **10/10**. The malformed-intake test runs with
+  `FORGE_BOT_INTAKE_ENABLED=false`; Pydantic rejects its TEST-marked malformed
+  email before the route can persist a row; the response is 422, contains
+  only the `email` field and a generic message, and the lead table remains
+  empty. Affected SQLite and throwaway PostgreSQL tests are to be recorded
+  after both runs. The current source has a 16 KiB public-write cap, 5/hour
+  limits on public posts/requests and 20/hour on domain control actions, but
+  production deployment of that source is not yet established by a public
+  GET. The owner readiness endpoint is owner-key protected; without already
+  authorized access, deployed commit SHAs on both production domains are
+  BLOCKED. No production write, credential read, or production database query
+  was made.
+- Next removable dependency: owner-defined credential retrieval authorization
+  and owner-authorized readiness access; then compare the readiness endpoint's
+  deployed commit on both domains to `origin/main`. Do not test production
+  rate limits by submitting traffic.
+
 ## [PARTIAL] Align the closed demand-request UI and owner-shell contract (2026-10-04)
 
 - Owner action still required: keep Forge Bot intake and LIVE closed, review
