@@ -15,11 +15,15 @@ to explain anything — everything you need is here or in the files it points to
 
 1. **Clone (read works immediately):**
    `git clone https://github.com/kn33r0s3/ForgeOS` — the repo is public.
-2. **Write access (you don't have it yet):** ask the owner to add a deploy
-   key: repository Settings → Deploy keys → Add deploy key, allow
-   **read/write**. Give them your key's title and fingerprint. Until it is
-   added you are read-only: inspect, propose, do not push. Previous agent
-   reached GitHub over `ssh.github.com:443` when port 22 was blocked.
+2. **Write access (you don't have it yet — ask the user for it).** In your
+   very first reply, ask Bhumadevi to add a deploy key: repository
+   Settings → Deploy keys → Add deploy key, allow **read/write**. Give
+   them the key title and the public key (or fingerprint) to paste. Use
+   these exact words: "To push to main I need a deploy key with
+   read/write on kn33r0s3/ForgeOS — please add one under Settings →
+   Deploy keys and tell me when it's done." Until it is added you are
+   read-only: inspect, propose, do not push. Previous agent reached
+   GitHub over `ssh.github.com:443` when port 22 was blocked.
 3. **Verify current state — trust nothing below until you check it:**
    - `git pull` and note the actual `main` HEAD (this file was written at
      `53178f0`; reality may have moved).
