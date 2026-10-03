@@ -70,6 +70,11 @@ to explain anything — everything you need is here or in the files it points to
   authorization + consent + exact permitted action. If unobtainable, the
   result is BLOCKED_BY_MISSING_ACCESS — never invented data, never
   unauthorized contact.
+- **Research before asserting.** Before banking, asserting, or acting on
+  what you "know," research it fresh and prioritize other sources over
+  your own priors. Training knowledge is the weakest source; live
+  inspection and independent sources outrank it. A "known" is a hypothesis
+  until a source confirms it.
 
 ## THE MOST IMPORTANT PART
 
