@@ -17,6 +17,12 @@ from app import security
 router = APIRouter(prefix="/signals", tags=["signals"])
 
 
+@router.get("/public-request/config")
+def get_public_demand_request_config() -> dict[str, bool]:
+    """Expose whether the existing anonymous demand-understanding path is open."""
+    return {"enabled": settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED}
+
+
 def _record_demand_request(
     content: str,
     response: Response,

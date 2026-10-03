@@ -1,11 +1,27 @@
-import { type FormEvent, useState } from "react";
-import { submitPublicDemandRequest } from "@/lib/content";
+import { type FormEvent, useEffect, useState } from "react";
+import { getPublicDemandRequestEnabled, submitPublicDemandRequest } from "@/lib/content";
 
 export function DemandIntakeForm() {
+  const [availability, setAvailability] = useState<
+    "checking" | "open" | "closed" | "unavailable"
+  >("checking");
   const [content, setContent] = useState("");
   const [attempt, setAttempt] = useState<{ content: string; key: string } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void getPublicDemandRequestEnabled().then((enabled) => {
+      if (!active) return;
+      setAvailability(
+        enabled === null ? "unavailable" : enabled ? "open" : "closed",
+      );
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -31,6 +47,32 @@ export function DemandIntakeForm() {
     setAttempt(null);
     setMessage(
       `Request recorded as possible demand (record #${result.id}). It is not a qualified prospect, offer, or promise of follow-up.`,
+    );
+  }
+
+  if (availability !== "open") {
+    const checking = availability === "checking";
+    const unavailable = availability === "unavailable";
+    return (
+      <section
+        className="rounded-xl border border-line bg-surface p-5 sm:p-8"
+        role="status"
+      >
+        <h2 className="font-display text-2xl font-semibold tracking-tight text-fg">
+          {checking
+            ? "Checking request availability"
+            : unavailable
+              ? "The request form is temporarily unavailable."
+              : "Online inquiries are not open yet."}
+        </h2>
+        <p className="mt-3 text-sm leading-relaxed text-muted">
+          {checking
+            ? "No note has been submitted."
+            : unavailable
+              ? "Hami could not confirm that the existing request path is open. No note has been submitted."
+              : "The anonymous demand-understanding path is disabled. This page does not collect or submit a note."}
+        </p>
+      </section>
     );
   }
 

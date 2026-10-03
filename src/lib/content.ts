@@ -268,6 +268,30 @@ function getPublicApiCandidates(path: string): string[] {
   return [...new Set(candidates)];
 }
 
+export async function getPublicDemandRequestEnabled(): Promise<boolean | null> {
+  for (const url of getApiCandidates("/signals/public-request/config")) {
+    try {
+      const response = await fetch(url, {
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) continue;
+
+      const payload: unknown = await response.json();
+      if (
+        typeof payload === "object" &&
+        payload !== null &&
+        "enabled" in payload &&
+        typeof payload.enabled === "boolean"
+      ) {
+        return payload.enabled;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
 export async function submitPublicDemandRequest(
   content: string,
   idempotencyKey: string,

@@ -249,12 +249,14 @@ function OwnerConsolePage() {
       <Container className="py-8 sm:py-12">
         <div className="mx-auto max-w-5xl">
           <p className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-accent">
-            Private owner area
+            Owner tools · key-protected data
           </p>
           <h1 className="mt-2 text-title">Owner console</h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-muted">
-            This page is not linked from the public site. Your key stays in this
-            page’s memory only and is sent in the X-API-Key request header.
+            This noindex page is publicly reachable but not linked from the
+            public site. It loads no owner records until you enter the key.
+            Your key stays in this page’s memory and is sent only in the
+            X-API-Key request header; the API protects owner data and actions.
           </p>
 
           {!consoleState || !readiness ? (

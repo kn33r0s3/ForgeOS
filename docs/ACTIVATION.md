@@ -26,6 +26,22 @@ The owner console's readiness endpoint reports only operational booleans,
 timestamps, a deployed commit identifier, and aggregate counts. It does not
 prove external receipt, owner approval, or a real outcome.
 
+## Route access boundaries
+
+`/owner` is a publicly reachable, unlinked, noindex key-entry shell. It does
+not fetch or render owner data until a key is entered in the current browser
+memory. Owner data and actions remain protected by the owner-key API checks;
+the page route itself is not an authentication boundary.
+
+`/request` is a separate anonymous demand-understanding path, not Forge Bot
+lead intake. Its existing `FORGEOS_LEGACY_INTELLIGENCE_ENABLED` flag defaults
+off independently of the Forge Bot intake and LIVE flags. When the flag is
+off, `/api/signals/public-request/config` reports `{"enabled":false}` and the
+page does not render a submission form. If that status cannot be confirmed,
+the page also stays closed and reports that availability could not be
+confirmed. The POST remains server-gated and is not enabled by this status
+endpoint.
+
 ## Activate
 
 Activation is allowed only after the owner writes exactly:

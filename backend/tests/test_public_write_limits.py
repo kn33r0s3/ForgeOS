@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from fastapi import Request
 from fastapi.testclient import TestClient
@@ -5,7 +7,7 @@ from fastapi.testclient import TestClient
 from app import models
 from app.config import settings
 from app.database import get_db
-from app.main import app
+from app.main import app, invalid_input
 from app.request_limits import _is_limited_write
 from app.services.forge_bot_privacy import consume_rate_limited_request
 
@@ -116,6 +118,48 @@ def test_domain_controls_are_limited_to_twenty_per_visitor_per_hour(
     bucket = db.query(models.ForgeBotIntakeRateLimit).one()
     assert bucket.request_count == 21
     assert "198.51.100.17" not in bucket.visitor_hash
+
+
+def test_public_demand_requests_are_limited_to_five_per_visitor_per_hour(
+    client_for_db,
+    db,
+    monkeypatch,
+):
+    from app.services import worker_manager
+
+    monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_HMAC_KEY", "test-only-rate-key")
+    monkeypatch.setattr(settings, "FORGEOS_LEGACY_INTELLIGENCE_ENABLED", True)
+    monkeypatch.setattr(worker_manager, "process_demand_task_in_background", lambda _: None)
+
+    responses = [
+        client_for_db.post(
+            "/api/signals/public-request",
+            json={"content": f"TEST ONLY demand request {index}"},
+            headers={"Idempotency-Key": f"rate-limit-fixture-{index}"},
+        )
+        for index in range(6)
+    ]
+
+    assert [response.status_code for response in responses] == [202] * 5 + [429]
+    assert responses[-1].json() == {
+        "detail": "Hourly limit reached: no more than 5 requests per visitor per hour."
+    }
+    bucket = db.query(models.ForgeBotIntakeRateLimit).one()
+    assert bucket.request_count == 6
+    assert len(bucket.visitor_hash) == 64
+    assert db.query(models.Signal).filter_by(source="user_request").count() == 5
+
+
+def test_value_error_response_does_not_echo_submitted_values():
+    submitted_value = "private-value@example.test"
+
+    response = asyncio.run(
+        invalid_input(_visitor_request(), ValueError(submitted_value))
+    )
+
+    assert response.status_code == 422
+    assert response.body == b'{"detail":"Invalid request value."}'
+    assert submitted_value.encode() not in response.body
 
 
 @pytest.mark.parametrize(

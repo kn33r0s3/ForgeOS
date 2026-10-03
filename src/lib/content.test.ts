@@ -11,6 +11,7 @@ import {
   FORBIDDEN_PUBLIC_PATHS,
   getService,
   groupAreas,
+  getPublicDemandRequestEnabled,
   processSteps,
   services,
   submitPublicDemandRequest,
@@ -64,6 +65,32 @@ describe("Hami public content", () => {
         await submitPublicDemandRequest("TEST-only closed-path fixture", "test-key"),
         { notOpen: true },
       );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("reads the existing public demand gate and fails closed when unavailable", async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async (input) => {
+        assert.equal(input, "/api/signals/public-request/config");
+        return new Response(JSON.stringify({ enabled: false }), {
+          headers: { "Content-Type": "application/json" },
+        });
+      };
+      assert.equal(await getPublicDemandRequestEnabled(), false);
+
+      globalThis.fetch = async () =>
+        new Response(JSON.stringify({ enabled: true }), {
+          headers: { "Content-Type": "application/json" },
+        });
+      assert.equal(await getPublicDemandRequestEnabled(), true);
+
+      globalThis.fetch = async () => {
+        throw new Error("TEST-only unavailable request");
+      };
+      assert.equal(await getPublicDemandRequestEnabled(), null);
     } finally {
       globalThis.fetch = originalFetch;
     }
@@ -180,6 +207,11 @@ describe("Hami public root", () => {
     const businesses = readFileSync(join(root, "src/routes/group.businesses.tsx"), "utf8");
     const forgeBot = readFileSync(join(root, "src/routes/forge-bot-intake.tsx"), "utf8");
     const owner = readFileSync(join(root, "src/routes/owner.tsx"), "utf8");
+    const demandForm = readFileSync(
+      join(root, "src/components/pages/demand-intake-form.tsx"),
+      "utf8",
+    );
+    const request = readFileSync(join(root, "src/routes/request.tsx"), "utf8");
     const privacy = readFileSync(join(root, "src/routes/privacy.tsx"), "utf8");
     const vercel = readFileSync(join(root, "vercel.json"), "utf8");
     const ogSite = JSON.parse(readFileSync(join(root, "src/lib/og/site.json"), "utf8")) as {
@@ -242,6 +274,13 @@ describe("Hami public root", () => {
     assert.doesNotMatch(`${header}\n${footer}\n${forgeBot}`, /\/privacy/);
     assert.match(owner, /X-API-Key/);
     assert.doesNotMatch(owner, /localStorage|sessionStorage|dangerouslySetInnerHTML/);
+    assert.match(owner, /publicly reachable but not linked from the\s+public site/i);
+    assert.match(owner, /the API protects owner data and actions/i);
+    assert.match(demandForm, /availability !== "open"/);
+    assert.match(demandForm, /Online inquiries are not open yet/);
+    assert.match(demandForm, /This page does not collect or submit a note/);
+    assert.match(demandForm, /getPublicDemandRequestEnabled/);
+    assert.match(request, /<DemandIntakeForm \/>/);
     assert.match(vercel, /X-Robots-Tag/);
     assert.equal(sitemap.includes("/owner"), false);
     assert.equal(sitemap.includes("/privacy"), false);

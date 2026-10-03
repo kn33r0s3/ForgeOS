@@ -20,6 +20,7 @@ def test_public_demand_request_is_closed_when_legacy_intelligence_is_disabled(
     monkeypatch.setattr(settings, "FORGEOS_LEGACY_INTELLIGENCE_ENABLED", False)
     client = _client_for(db)
     try:
+        config = client.get("/api/signals/public-request/config")
         response = client.post(
             "/signals/public-request",
             json={"content": "TEST-only disabled-path fixture"},
@@ -29,10 +30,29 @@ def test_public_demand_request_is_closed_when_legacy_intelligence_is_disabled(
         client.close()
         app.dependency_overrides.clear()
 
+    assert config.status_code == 200
+    assert config.json() == {"enabled": False}
     assert response.status_code == 503
     assert response.json() == {
         "detail": "Legacy demand-understanding is disabled."
     }
+    assert db.query(models.Signal).count() == 0
+
+
+def test_public_demand_request_config_tracks_existing_legacy_gate(db, monkeypatch):
+    client = _client_for(db)
+    try:
+        monkeypatch.setattr(settings, "FORGEOS_LEGACY_INTELLIGENCE_ENABLED", False)
+        closed = client.get("/api/signals/public-request/config")
+        monkeypatch.setattr(settings, "FORGEOS_LEGACY_INTELLIGENCE_ENABLED", True)
+        open_response = client.get("/api/signals/public-request/config")
+    finally:
+        client.close()
+        app.dependency_overrides.clear()
+
+    assert closed.status_code == open_response.status_code == 200
+    assert closed.json() == {"enabled": False}
+    assert open_response.json() == {"enabled": True}
     assert db.query(models.Signal).count() == 0
 
 

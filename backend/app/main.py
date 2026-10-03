@@ -269,4 +269,7 @@ async def invalid_request(request: Request, exc: RequestValidationError):
 
 @app.exception_handler(ValueError)
 async def invalid_input(request: Request, exc: ValueError):
-    return JSONResponse(status_code=422, content={"detail": str(exc)})
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "Invalid request value."},
+    )
