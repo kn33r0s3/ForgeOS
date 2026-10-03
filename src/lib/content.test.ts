@@ -180,7 +180,11 @@ describe("Hami public root", () => {
     const forgeBot = readFileSync(join(root, "src/routes/forge-bot-intake.tsx"), "utf8");
     const owner = readFileSync(join(root, "src/routes/owner.tsx"), "utf8");
     const vercel = readFileSync(join(root, "vercel.json"), "utf8");
+    const ogSite = JSON.parse(readFileSync(join(root, "src/lib/og/site.json"), "utf8")) as {
+      title?: string;
+    };
     assert.match(home, /createFileRoute\("\/"\)/);
+    assert.equal(ogSite.title, "Hami");
     assert.doesNotMatch(home, /Navigate to=/);
     // Home is the person's System, not a post/request board.
     assert.match(home, /A system that keeps observing reality/);
