@@ -94,24 +94,34 @@ erased after 30 days by authenticated daily maintenance, which also purges
 expired rate-limit buckets. A linked response `ACTION` is exempt; the proposed
 90-day maximum for those records is not implemented and requires owner
 approval. Licensed-agency discovery, a configured response channel/template,
-and any production sender remain unavailable. The owner policy record is an explicit
-owner policy record is an explicit authorization boundary, but is absent by
-default and cannot enable sending:
+and any production sender remain unavailable. The owner policy record is an
+explicit authorization boundary, but is absent by default and cannot enable
+sending:
 the final send setting defaults false and no sender is wired. All automated
 replies, follow-ups, offers, and spending remain disabled. The data model is
 not authorization.
 
 ## Current verification boundary (2026-10-04)
 
-The full backend suite passed **681 tests with 2 skipped** using SQLite and
-**681 tests with 2 skipped** using throwaway PostgreSQL 18. Focused Forge Bot
-owner-notification/API tests passed **69/69** on PostgreSQL 18. `npm test`
-passed **197 script tests and 106 app tests**; typecheck, lint, and production
-build passed. Focused health authorization/ingress tests passed **16/16** on
-SQLite and PostgreSQL 18. Public `/api/health` returns only `status` and
-`ready`; `/api/health/details` requires `X-API-Key`. The migration step was
-skipped because `DATABASE_URL` was intentionally unset. The pre-deployment
-read-only production GETs showed health 200 and intake disabled on both
-configured domains; the attempted owner-readiness GET returned 401, so live
-authenticated owner readiness and heartbeat values remain unverified. Intake
-remains closed and no REAL lead or transaction is established by these tests.
+The current checkout (`1459eec34c0105372e2b089a92994528ac393707`, equal to
+`origin/main` at inspection) passed the full backend SQLite suite (**685
+passed, 2 skipped**) and `npm test` (**197 script tests and 107 app tests**);
+typecheck and lint passed. The full backend suite on throwaway PostgreSQL 18 was **not green** (**676
+passed, 9 failed, 2 skipped**): failures occurred in `test_experiment_service`,
+two `test_health_readiness` tests, `test_phase1_provenance_and_identity`,
+`test_research_question_relation_substrate_adapter`, and four
+`test_tool_usefulness` tests. The directly affected Forge Bot, public-write-
+limit, and signal-request test files passed **103/103** on PostgreSQL 18. Do
+not claim complete PostgreSQL parity until the remaining suite failures are
+resolved. The latest GitHub Actions run for this SHA was green. Public `/api/health` returns only `status` and `ready`;
+`/api/health/details` requires `X-API-Key`.
+
+Read-only GETs on `haminp.vercel.app` and `forge-os-ebon.vercel.app` returned
+health 200/ready and `intake_enabled=false`. On `haminp.vercel.app`, a
+390x844 browser verified `/request` and `/request-a-project` render the closed
+message with no form controls and no browser errors. These observations do
+not establish the deployed commit SHA: the owner readiness endpoint is
+protected, and no owner key was used. The database credential access
+procedure is not authorized/documented, so no production database was
+queried. Intake remains closed; no REAL lead, customer, or transaction is
+established by these tests.

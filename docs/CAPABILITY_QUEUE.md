@@ -1,5 +1,31 @@
 # Hami capability claim ledger (ForgeOS repository)
 
+## Current closure map (2026-10-04)
+
+Repository snapshot: `HEAD` and `origin/main` are both
+`1459eec34c0105372e2b089a92994528ac393707` at inspection. GitHub Actions CI
+for that SHA is green. This is the current summary; dated entries below it
+are retained as history and may be superseded by this map.
+
+| Area | Current status | Evidence and next dependency |
+| --- | --- | --- |
+| Closed `/request` experience | **DONE — locally and live-render verified** | With the demand-understanding flag closed, `/request` renders the not-open message and no form. `/request-a-project` redirects there. A 390×844 browser check on `haminp.vercel.app` observed zero forms, textareas, and submit buttons and no browser errors. |
+| Malformed intake validation | **DONE — local only** | TEST-marked malformed email returns 422 with the `email` field and generic message; no lead row is created. Do not test by submitting to production. |
+| Public write limits and body caps | **IMPLEMENTED / locally tested; deployment identity UNVERIFIED** | Source enforces keyed durable limits (5/hour for posts/requests, 20/hour for domain close/dispute/response) and 16 KiB caps. Relevant endpoint tests pass on SQLite and throwaway PostgreSQL 18. Production GETs establish current closed flags, not the deployed source SHA; owner-readiness access is required for that SHA comparison. |
+| Production flags and basic health | **OBSERVED CLOSED / healthy by GET** | At inspection, both `haminp.vercel.app` and `forge-os-ebon.vercel.app` returned `/api/health` 200 with `status=ok, ready=true` and `/api/forge-bot/config` 200 with `intake_enabled=false`. These responses do not prove authenticated readiness, database state, or which commit is deployed. |
+| Owner readiness and maintenance heartbeat | **BLOCKED / unverified** | The readiness endpoint requires the owner key. Do not retry unauthenticated calls or retrieve credentials to bypass this. Owner-authorized access is the next dependency. |
+| Production database inspection | **BLOCKED** | No authorized credential retrieval procedure is established in the current docs. The owner must define and authorize the credential source and read-only procedure; no production database or credential was accessed. |
+| Retention after response `ACTION` | **PLANNED, not implemented** | A linked response `ACTION` is exempt from the existing 30-day unactioned-inquiry purge. The proposed 90-day maximum needs owner approval before implementation. |
+| Customer-facing response | **BLOCKED** | No owner-configured response channel/template or Forge Bot sender exists; the send flag defaults false. No outbound messages are authorized or sent. |
+| Pilot segment and paid outcome | **HYPOTHESIS / owner action required** | The initial segment remains unverified until the owner reports five real discovery conversations. No real customer/revenue outcome is established; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**. |
+| Backend PostgreSQL full-suite coverage | **PARTIAL** | The affected Forge Bot/public-write/signal tests pass on throwaway PostgreSQL 18 (103 passed), but the complete local suite is not green there: 676 passed, 9 failed, 2 skipped. Failing tests are in `test_experiment_service.py`, `test_health_readiness.py` (2), `test_phase1_provenance_and_identity.py`, `test_research_question_relation_substrate_adapter.py`, and `test_tool_usefulness.py` (4). SQLite full suite passes 685, 2 skipped. Investigate these failures before claiming full-suite PostgreSQL parity. |
+
+Current npm verification: `npm test` passed 197 script and 107 app tests;
+typecheck and lint passed. The production build passed in the preceding
+verification cycle, but was not rerun for this documentation-only closure-map
+update. No production write, credential access, message, or flag change was
+performed for this inspection.
+
 ## [PARTIAL] Batch 12B: close request-state, copy, and verification gaps (2026-10-04)
 
 - Owner action still required: define an authorized source and retrieval

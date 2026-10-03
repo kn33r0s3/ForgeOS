@@ -60,11 +60,12 @@ state is not assumed current unless explicitly identified as a dated observation
   legacy surface from its archived path. The canonical local app scripts are
   `start.sh` and `stop.sh`. Root `startup.sh` is a separate preview-revive
   contract and is retained.
-- The latest pre-deployment read-only GET observations are recorded in
-  `docs/CAPABILITY_QUEUE.md`: both production domains returned health 200 and
-  `intake_enabled=false`. The attempted owner-readiness request returned 401,
-  so authenticated production readiness and the live maintenance heartbeat
-  remain unverified.
+- At the 2026-10-04 inspection, read-only GETs to both `haminp.vercel.app` and
+  `forge-os-ebon.vercel.app` returned health 200/ready and
+  `intake_enabled=false`. This does not identify the deployed source commit.
+  The owner-readiness endpoint requires the owner key, which was not used;
+  authenticated readiness and the live maintenance heartbeat remain
+  unverified.
 - `docs/HOSTING_AND_SCHEDULER.md` records the Vercel Hobby restriction and
   lack of a verified sub-daily production worker. Oracle Always Free has not
   been validated with an instance. The current batch requested an evaluation,
@@ -74,18 +75,26 @@ state is not assumed current unless explicitly identified as a dated observation
 
 ## Verification
 
-- CI for `50f67d873dd0387314d3a8dd8e70516c14694952` completed successfully
-  on both backend and frontend jobs.
-- Local verification on 2026-10-04: backend suite **681 passed, 2 skipped**
-  on SQLite and **681 passed, 2 skipped** on a throwaway PostgreSQL 18
-  database; focused Forge Bot owner-email/API tests **69 passed** on
-  PostgreSQL 18; `npm test` passed (197 script tests and 106 app tests), and
-  TypeScript typecheck, lint, and production build passed. The build migration
-  step skipped because `DATABASE_URL` was intentionally unset. A 390px
-  browser check rendered `/`, `/privacy`, `/discoveries`, and `/feed` with no
-  horizontal overflow; `/privacy` has `noindex, nofollow` and is not linked
-  from navigation or consent. The inquiry form remains closed and no external
-  message was sent.
+- At inspection, `HEAD` and `origin/main` were both
+  `1459eec34c0105372e2b089a92994528ac393707`. GitHub Actions CI for that SHA
+  completed successfully.
+- Current local verification on 2026-10-04: backend suite **685 passed, 2
+  skipped** on SQLite. The full suite on throwaway PostgreSQL 18 was **676
+  passed, 9 failed, 2 skipped**; do not claim full PostgreSQL-suite parity.
+  The directly affected Forge Bot, public-write-limit, and signal-request
+  tests passed **103/103** on PostgreSQL 18. `npm test` passed **197 script
+  tests and 107 app tests**, and typecheck and lint passed. A build passed in
+  the preceding verification cycle; it was not rerun for the current
+  documentation-only status update.
+- At 390x844 on `haminp.vercel.app`, `/request` displayed the closed message
+  with zero forms, textareas, or submit buttons; `/request-a-project`
+  redirected to `/request` and showed the same closed state. No browser errors
+  were observed. Production GETs to both configured domains returned health
+  200/ready and `intake_enabled=false`. These GETs do not establish which
+  source commit is deployed. No owner key or production database credential
+  was used, and no production database was queried.
+- `/privacy` remains `noindex, nofollow` and is not linked from navigation or
+  consent. No production message, lead submission, or flag change was made.
 - Prior focused Forge Bot/API/notification/outbox tests (**68 passed**) and
   backend suite (**640 passed, 2 skipped**) were recorded on 2026-10-03.
   Authorization/ACTION tests verify owner-key access,
@@ -100,6 +109,8 @@ state is not assumed current unless explicitly identified as a dated observation
 - Approve or reject the proposed 90-day maximum for inquiries with a response
   `ACTION`; it is not implemented. The existing 30-day no-`ACTION` purge is
   implemented and covered by tests.
+- Approve or reject the current `/privacy` draft before it can be linked from
+  intake consent; it remains unlinked pending owner approval.
 - Complete five owner-run discovery conversations before choosing a segment
   or pilot terms. Decide whether and when to enable intake; it currently fails
   closed without the explicit flag,
