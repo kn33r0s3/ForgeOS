@@ -364,6 +364,10 @@ function OwnerConsolePage() {
 
               <section className="mt-8">
                 <h2 className="text-lg font-extrabold">Inquiries</h2>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
+                  These controls record owner-reported milestones only. They do
+                  not send a reply, create a booking, or record payment or revenue.
+                </p>
                 {consoleState.leads.length === 0 ? (
                   <p className="mt-3 rounded-card border border-line bg-card p-4 text-sm text-muted">No active inquiries.</p>
                 ) : (

@@ -52,6 +52,22 @@ CLI prompt:
    activation as successful. Follow the close procedure below, redeploy, and
    verify both domains report `false`.
 
+The CLI commands for adding the values are:
+
+```sh
+vercel env rm FORGE_BOT_LIVE production
+vercel env add FORGE_BOT_LIVE production
+# Enter: true
+vercel env rm FORGE_BOT_INTAKE_ENABLED production
+vercel env add FORGE_BOT_INTAKE_ENABLED production
+# Enter: true
+vercel deploy --prod
+```
+
+Skip a corresponding `env rm` only when Vercel confirms that no value exists.
+Do not pipe or print any unrelated environment value; these two entries are
+the boolean literal `true`, not credentials.
+
 Do not send customer messages or create synthetic `REAL` inquiries as part of
 activation. Verify the deployed switch with GET only. The intake path can be
 exercised beforehand on a local PostgreSQL/mail-sink stack using reserved test
@@ -72,6 +88,19 @@ for READY, then verify by GET that `/api/forge-bot/config` reports
 `intake_enabled: false` on both production domains. The one-step safety
 response to any failed activation check is this close-and-redeploy procedure;
 do not leave one flag enabled while investigating.
+
+For the close procedure, remove any existing Production values, add each name
+again, and enter the literal `false` at each prompt:
+
+```sh
+vercel env rm FORGE_BOT_INTAKE_ENABLED production
+vercel env add FORGE_BOT_INTAKE_ENABLED production
+# Enter: false
+vercel env rm FORGE_BOT_LIVE production
+vercel env add FORGE_BOT_LIVE production
+# Enter: false
+vercel deploy --prod
+```
 
 ## Activation-day path verification without misleading evidence
 
