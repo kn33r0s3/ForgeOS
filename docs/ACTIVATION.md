@@ -19,7 +19,7 @@ unverified item is FAIL; do not infer a pass.
 | Test email sent and received within 7 days | Owner readiness endpoint has a test result/time in the last 7 days, and the owner confirms actual mailbox receipt. SMTP acceptance alone is not receipt. |
 | Backup drill within 7 days | Dated dump-and-restore evidence from a throwaway database, with matching table list and row counts. |
 | Privacy text approved in owner chat | The owner explicitly approves the exact currently deployed privacy text in chat. |
-| Health is OK | Read-only `/api/health` response reports `status: "ok"` and `readiness.ready: true`. |
+| Health is OK | Read-only `/api/health` response reports `status: "ok"` and `ready: true`. |
 | Intake still closed | Read-only `/api/forge-bot/config` on both production domains reports `intake_enabled: false`; the readiness endpoint reports both flags off. |
 
 The owner console's readiness endpoint reports only operational booleans,
