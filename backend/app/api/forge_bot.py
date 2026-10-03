@@ -179,6 +179,25 @@ def _require_owner_key(request: Request) -> None:
         raise HTTPException(status_code=401, detail="Valid X-API-Key required.")
 
 
+@router.post("/owner-notification/test-send")
+def send_owner_notification_test(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Send one fixed owner-only test email; never expose provider details."""
+    _require_owner_key(request)
+    try:
+        result = forge_bot_owner_notification.send_owner_test_notification(db)
+    except Exception as exc:
+        logger.error("Forge Bot owner test notification failed (%s).", type(exc).__name__)
+        return {"status": "failed"}
+    return {
+        "status": "sent"
+        if result is not None and result.get("status") == "ACCEPTED_BY_SMTP"
+        else "failed"
+    }
+
+
 @router.get("/config")
 def get_forge_bot_config():
     """Return only public contact settings and whether intake is currently enabled."""

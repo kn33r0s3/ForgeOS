@@ -17,6 +17,11 @@ from app import models
 from app.config import settings
 from app.services import integration_outbox, integration_dispatcher
 
+OWNER_TEST_RECIPIENT = "haminp.forge@gmail.com"
+OWNER_TEST_SUBJECT = "Forge Bot owner notification test"
+OWNER_TEST_BODY = "This is the fixed one-shot Forge Bot owner notification test."
+OWNER_TEST_IDEMPOTENCY_KEY = "forge-bot-owner-notification-test:v1"
+
 
 def send_owner_summary_notification(
     db: Session,
@@ -57,6 +62,21 @@ def send_owner_summary_notification(
         subject=subject,
         body=body,
         idempotency_key=idempotency_key,
+        smtp_timeout_seconds=_owner_email_timeout_seconds(),
+    )
+
+
+def send_owner_test_notification(db: Session) -> Optional[dict]:
+    """Send the fixed, idempotent owner-only SMTP test message."""
+    if not settings.SMTP_HOST or not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        return None
+    return _queue_owner_email(
+        db,
+        recipient=OWNER_TEST_RECIPIENT,
+        subject=OWNER_TEST_SUBJECT,
+        body=OWNER_TEST_BODY,
+        idempotency_key=OWNER_TEST_IDEMPOTENCY_KEY,
+        smtp_timeout_seconds=_owner_email_timeout_seconds(),
     )
 
 
@@ -99,6 +119,7 @@ def _queue_owner_email(
     subject: str,
     body: str,
     idempotency_key: str,
+    smtp_timeout_seconds: int | None = None,
 ) -> dict:
     try:
         delivery = integration_outbox.enqueue(
@@ -112,9 +133,16 @@ def _queue_owner_email(
             dispatched = delivery
         else:
             try:
-                dispatched = integration_dispatcher.dispatch_single_delivery(
-                    db, delivery.id
-                )
+                if smtp_timeout_seconds is None:
+                    dispatched = integration_dispatcher.dispatch_single_delivery(
+                        db, delivery.id
+                    )
+                else:
+                    dispatched = integration_dispatcher.dispatch_single_delivery(
+                        db,
+                        delivery.id,
+                        smtp_timeout_seconds=smtp_timeout_seconds,
+                    )
             except Exception:
                 dispatched = db.get(models.IntegrationDelivery, delivery.id)
                 if dispatched is None:
@@ -129,6 +157,10 @@ def _queue_owner_email(
         }
     except Exception as exc:
         return {"status": "FAILED", "error": str(exc), "delivery_id": None}
+
+
+def _owner_email_timeout_seconds() -> int:
+    return min(5, max(1, settings.FORGE_BOT_OWNER_EMAIL_TIMEOUT_SECONDS))
 
 
 def _format_owner_notification_body(reference: str, lead_data: dict) -> str:

@@ -221,6 +221,41 @@ def test_real_lead_notification_failure_does_not_fail_submission(db, monkeypatch
     assert idempotency_key == f"forge-bot-lead-owner-notification:{reference}"
 
 
+def test_owner_test_send_requires_owner_key_and_returns_status_only(db, monkeypatch):
+    _enable_intake(monkeypatch)
+    calls = []
+    monkeypatch.setattr(
+        forge_bot_owner_notification,
+        "send_owner_test_notification",
+        lambda session: calls.append(session) or {"status": "ACCEPTED_BY_SMTP"},
+    )
+    client, cleanup = _client(db)
+    try:
+        unauthorized = client.post("/forge-bot/owner-notification/test-send")
+        sent = client.post(
+            "/forge-bot/owner-notification/test-send",
+            headers={"X-API-Key": settings.FORGE_API_KEY},
+        )
+        monkeypatch.setattr(
+            forge_bot_owner_notification,
+            "send_owner_test_notification",
+            lambda session: {"status": "FAILED", "error": "private provider detail"},
+        )
+        failed = client.post(
+            "/forge-bot/owner-notification/test-send",
+            headers={"X-API-Key": settings.FORGE_API_KEY},
+        )
+    finally:
+        client.close()
+        cleanup()
+
+    assert unauthorized.status_code == 401
+    assert calls == [db]
+    assert sent.status_code == failed.status_code == 200
+    assert sent.json() == {"status": "sent"}
+    assert failed.json() == {"status": "failed"}
+
+
 def test_response_authorization_is_owner_only_and_defaults_closed(db, monkeypatch):
     _enable_intake(monkeypatch)
     forge_bot._submissions_by_ip.clear()

@@ -79,6 +79,9 @@ class Settings(BaseSettings):
     SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "")
     SMTP_USE_TLS: bool = os.getenv("SMTP_USE_TLS", "true").lower() in ("1", "true", "yes")
     SMTP_TIMEOUT_SECONDS: int = int(os.getenv("SMTP_TIMEOUT_SECONDS", "20"))
+    FORGE_BOT_OWNER_EMAIL_TIMEOUT_SECONDS: int = int(
+        os.getenv("FORGE_BOT_OWNER_EMAIL_TIMEOUT_SECONDS", "5")
+    )
 
     # --- Forge Memory Layer (embeddings/search) ---
     # Same $0-first pattern as AI_PROVIDER: "hash" needs nothing (pure

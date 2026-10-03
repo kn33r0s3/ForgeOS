@@ -95,3 +95,42 @@ def test_real_lead_owner_notification_skips_without_smtp_credentials(db, monkeyp
 
     assert result is None
     assert db.query(models.IntegrationDelivery).count() == 0
+
+
+def test_owner_notification_caps_submission_smtp_timeout_and_test_recipient(
+    db, monkeypatch
+):
+    assert settings.__class__.model_fields[
+        "FORGE_BOT_OWNER_EMAIL_TIMEOUT_SECONDS"
+    ].default == 5
+    monkeypatch.setattr(settings, "SMTP_HOST", "smtp.example.test")
+    monkeypatch.setattr(settings, "SMTP_USER", "sender@example.test")
+    monkeypatch.setattr(settings, "SMTP_PASSWORD", "test-only-password")
+    monkeypatch.setattr(settings, "FORGE_BOT_OWNER_EMAIL_TIMEOUT_SECONDS", 19)
+    dispatch_timeouts = []
+
+    def accept_by_smtp(session, delivery_id, *, smtp_timeout_seconds=None):
+        dispatch_timeouts.append(smtp_timeout_seconds)
+        delivery = session.get(models.IntegrationDelivery, delivery_id)
+        delivery.status = "ACCEPTED_BY_SMTP"
+        delivery.response_json = '{"status":"accepted"}'
+        session.commit()
+        return delivery
+
+    monkeypatch.setattr(
+        forge_bot_owner_notification.integration_dispatcher,
+        "dispatch_single_delivery",
+        accept_by_smtp,
+    )
+    result = forge_bot_owner_notification.send_owner_test_notification(db)
+
+    delivery = db.query(models.IntegrationDelivery).one()
+    request = json.loads(delivery.request_json)
+    assert result["status"] == "ACCEPTED_BY_SMTP"
+    assert dispatch_timeouts == [5]
+    assert request == {
+        "to": "haminp.forge@gmail.com",
+        "subject": "Forge Bot owner notification test",
+        "body": "This is the fixed one-shot Forge Bot owner notification test.",
+    }
+    assert delivery.idempotency_key == "forge-bot-owner-notification-test:v1"

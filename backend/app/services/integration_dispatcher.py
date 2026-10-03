@@ -82,7 +82,13 @@ def _send_twilio_sms(to_number: str, body: str) -> dict[str, Any]:
         raise TransientIntegrationError(str(e))
 
 
-def _send_smtp_email(to_email: str, subject: str, body: str) -> dict[str, Any]:
+def _send_smtp_email(
+    to_email: str,
+    subject: str,
+    body: str,
+    *,
+    timeout_seconds: int | None = None,
+) -> dict[str, Any]:
     """Send a real outbound email via standard-library SMTP over TLS/STARTTLS.
     
     Returns parsed metadata on SMTP acceptance containing message_id and status.
@@ -111,9 +117,17 @@ def _send_smtp_email(to_email: str, subject: str, body: str) -> dict[str, Any]:
 
     try:
         if settings.SMTP_PORT == 465:
-            server = smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=settings.SMTP_TIMEOUT_SECONDS)
+            server = smtplib.SMTP_SSL(
+                settings.SMTP_HOST,
+                settings.SMTP_PORT,
+                timeout=timeout_seconds or settings.SMTP_TIMEOUT_SECONDS,
+            )
         else:
-            server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=settings.SMTP_TIMEOUT_SECONDS)
+            server = smtplib.SMTP(
+                settings.SMTP_HOST,
+                settings.SMTP_PORT,
+                timeout=timeout_seconds or settings.SMTP_TIMEOUT_SECONDS,
+            )
             if settings.SMTP_USE_TLS:
                 server.ehlo()
                 server.starttls()
@@ -149,7 +163,12 @@ def _send_smtp_email(to_email: str, subject: str, body: str) -> dict[str, Any]:
         raise TransientIntegrationError(f"Unexpected SMTP failure: {e}") from e
 
 
-def dispatch_single_delivery(db: Session, delivery_id: int) -> models.IntegrationDelivery:
+def dispatch_single_delivery(
+    db: Session,
+    delivery_id: int,
+    *,
+    smtp_timeout_seconds: int | None = None,
+) -> models.IntegrationDelivery:
     """Process a single integration delivery by ID and return updated record."""
     delivery = db.get(models.IntegrationDelivery, delivery_id)
     if not delivery:
@@ -191,7 +210,15 @@ def dispatch_single_delivery(db: Session, delivery_id: int) -> models.Integratio
             body = req_data.get("body", "")
             if not to_email or not body:
                 raise PermanentIntegrationError("Missing 'to' or 'body' in email request payload")
-            resp = _send_smtp_email(to_email, subject, body)
+            if smtp_timeout_seconds is None:
+                resp = _send_smtp_email(to_email, subject, body)
+            else:
+                resp = _send_smtp_email(
+                    to_email,
+                    subject,
+                    body,
+                    timeout_seconds=smtp_timeout_seconds,
+                )
             # Explicit truthful state: ACCEPTED_BY_SMTP, never claimed as DELIVERED
             delivery = integration_outbox.mark_succeeded(db, delivery.id, resp, status="ACCEPTED_BY_SMTP")
             logger.info(f"Delivery {delivery.id} accepted by SMTP. Message-ID: {resp.get('message_id')}")
