@@ -124,9 +124,22 @@ describe("Hami public content", () => {
   it("does not present placeholder contact details as live destinations", () => {
     assert.equal(SITE.email, "");
     assert.equal(SITE.url, "");
-    const footer = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../components/layout/site-footer.tsx"), "utf8");
-    const form = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../components/pages/project-form.tsx"), "utf8");
-    assert.match(footer, /Contact mailbox pending/);
+    const sourceDir = dirname(fileURLToPath(import.meta.url));
+    const closedCopy = [
+      "../components/layout/site-footer.tsx",
+      "../components/pages/project-form.tsx",
+      "../components/pages/project-inquiry-cta.tsx",
+      "../routes/contact.tsx",
+      "../routes/forge-bot-intake.tsx",
+    ]
+      .map((path) => readFileSync(join(sourceDir, path), "utf8"))
+      .join("\n");
+    assert.match(closedCopy, /Online inquiries are not open yet/);
+    assert.doesNotMatch(
+      closedCopy,
+      /paused until a monitored mailbox is configured|Contact mailbox pending|A monitored contact address has not been configured yet/i,
+    );
+    const form = readFileSync(join(sourceDir, "../components/pages/project-form.tsx"), "utf8");
     assert.match(form, /No personal details are collected, sent, or stored here/);
   });
 });
@@ -204,7 +217,7 @@ describe("Hami public root", () => {
     assert.match(businesses, /to="\/forge-bot-intake"/);
     assert.match(businesses, /online intake is closed/i);
     assert.match(forgeBot, /name: "robots", content: "noindex,nofollow"/);
-    assert.match(forgeBot, /Online intake is not open yet/);
+    assert.match(forgeBot, /Online inquiries are not open yet/);
     assert.match(forgeBot, /Booking link available/);
     assert.match(forgeBot, /Status: <strong>REQUESTED<\/strong>/);
     assert.match(forgeBot, /permanently opt out and erase/);

@@ -33,9 +33,9 @@ function ContactPage() {
             <a href={`mailto:${SITE.email}`} className="block font-display text-2xl font-semibold tracking-tight text-fg transition-colors duration-150 hover:text-cyan sm:text-3xl">
               {SITE.email}
             </a>
-          ) : <p className="font-display text-2xl font-semibold tracking-tight text-muted sm:text-3xl">Contact mailbox pending</p>}
+          ) : <p className="font-display text-2xl font-semibold tracking-tight text-muted sm:text-3xl">Online inquiries are not open yet.</p>}
           <p className="mt-3 text-sm text-muted">
-            {SITE.email ? "A direct note before you are ready to scope work." : "A monitored contact address has not been configured yet."}
+            {SITE.email ? "A direct note before you are ready to scope work." : "Online inquiries are not open yet."}
           </p>
           <div className="my-8 h-px bg-line" />
           <Eyebrow>Location</Eyebrow>

@@ -17,7 +17,7 @@ export function ProjectInquiryCta() {
 
   return (
     <div className="mt-8 max-w-md" role="status">
-      <p className="text-sm text-muted">Project inquiries are paused until a monitored mailbox is configured.</p>
+      <p className="text-sm text-muted">Online inquiries are not open yet.</p>
       <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm">
         <Link to="/providers" className="text-cyan hover:underline">Browse verified services</Link>
         <Link to="/domain" className="text-cyan hover:underline">Post public work</Link>

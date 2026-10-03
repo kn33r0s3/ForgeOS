@@ -64,7 +64,7 @@ export function SiteFooter() {
               {SITE.email}
             </a>
           ) : (
-            <span className="text-sm text-muted">Contact mailbox pending</span>
+            <span className="text-sm text-muted">Online inquiries are not open yet.</span>
           )}
           {SITE.url ? (
             <a href={SITE.url} className={LINK}>

@@ -98,7 +98,7 @@ function ForgeBotIntakePage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!config?.intake_enabled) {
-      setError("Web intake is not open yet.");
+      setError("Online inquiries are not open yet.");
       return;
     }
     if (form.budgetMaximum && Number(form.budgetMaximum) < Number(form.budgetMinimum)) {
@@ -218,7 +218,7 @@ function ForgeBotIntakePage() {
 
         {!config?.intake_enabled ? (
           <section className="mt-8 max-w-3xl border-2 border-line bg-card p-5 sm:p-7">
-            <h2 className="text-lg font-extrabold">Online intake is not open yet</h2>
+            <h2 className="text-lg font-extrabold">Online inquiries are not open yet.</h2>
             <p className="mt-2 text-sm leading-6 text-muted">
               The form remains disabled until Hami finishes its local pilot and
               abuse-control checks. The booking link above is available, but

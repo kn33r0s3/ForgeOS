@@ -23,7 +23,7 @@ export function DemandIntakeForm() {
       return;
     }
     if ("notOpen" in result) {
-      setMessage("Online requests are not open yet. Your note was not submitted.");
+      setMessage("Online inquiries are not open yet. Your note was not submitted.");
       return;
     }
 
