@@ -172,6 +172,9 @@ describe("Hami public root", () => {
     // Home is the person's System, not a post/request board.
     assert.match(home, /A system that keeps observing reality/);
     assert.match(home, /useSystemState/);
+    assert.match(home, /<Link to="\/forge-bot-intake">/);
+    assert.match(home, /Share a business need/);
+    assert.match(home, /For business owners, Hami helps clarify a need and find a practical next step/);
     assert.match(home, /<Welcome onStart={update} state={state}/);
     assert.match(home, /<SystemEditor state={state} onSave={onStart}/);
     assert.match(home, /derivePaths/);

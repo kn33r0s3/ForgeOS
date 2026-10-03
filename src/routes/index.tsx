@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Eye, Lightbulb, Link2, ShieldCheck, Sparkles } from "lucide-react";
 import { Container } from "@/components/layout/container";
+import { Button } from "@/components/ui/button";
 import { SystemEditor } from "@/components/system/system-editor";
 import {
   PanelTitle,
@@ -268,6 +269,17 @@ function Welcome({
                 Hami follows recorded sources, evidence, relationships, questions, and capability gaps without assuming one category or workflow.
                 Personal context is separate from the public world. Guests can keep temporary context in this tab; signed-in users can save it privately. Hami never puts it in public feed or network projections, and sharing requires your authorization.
               </p>
+              <div className="mt-6 flex flex-col items-start gap-3">
+                <Button asChild size="lg">
+                  <Link to="/forge-bot-intake">
+                    Share a business need
+                    <ArrowRight className="size-4" aria-hidden="true" />
+                  </Link>
+                </Button>
+                <p className="max-w-xl text-sm leading-6 text-muted">
+                  For business owners, Hami helps clarify a need and find a practical next step.
+                </p>
+              </div>
               <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-2">
                 {LOOP.map(({ icon: Icon, title, body }) => (
                   <div key={title} className="glass flex gap-3 p-4">
