@@ -1,5 +1,58 @@
 # Hami capability claim ledger (ForgeOS repository)
 
+## [PARTIAL] Align the closed demand-request UI and owner-shell contract (2026-10-04)
+
+- Owner action still required: keep Forge Bot intake and LIVE closed, review
+  any future change that would expose either submission path, and use the
+  authorized owner-key path for protected readiness details. No credential
+  was requested or read.
+- Action this change removes: presenting an apparently usable anonymous
+  demand-request form while its existing server gate is disabled; ambiguity
+  about whether `/owner` itself is an authentication boundary; and returning
+  raw `ValueError` or `HTTPException` text from an app-wide 422 response.
+- Current blocker / verification: `/request` now checks the separate
+  `FORGEOS_LEGACY_INTELLIGENCE_ENABLED` flag and renders no form when closed
+  or when status cannot be confirmed; the POST remains server-gated.
+  `/owner` is an intentionally public, unlinked, noindex key-entry shell;
+  owner data/actions remain API-key protected. On the local 390px browser,
+  `/request` and `/request-a-project` showed the closed message with zero
+  forms, textareas, or submit buttons. The local browser used an explicit
+  `enabled:false` GET stub because the already-running backend process
+  predates the new status route; current-source TestClient coverage verifies
+  the config route and closed POST. Local `/owner` showed noindex, one key
+  field, and no owner API calls before key entry. Request-validation 422s
+  expose safe field paths with generic messages; ValueError and other HTTP
+  422s use a generic detail only. Tests cover malformed-email non-echo and
+  both ValueError/HTTPException details containing a submitted-value
+  sentinel. The
+  `/signals/public-request` boundary is tested at five allowed requests and
+  a sixth 429 with a keyed visitor hash. Full local verification: backend
+  SQLite **685 passed, 2 skipped**;
+  frontend/script tests **197 + 107 passed**; typecheck, lint, and build
+  passed. The build's database migration step skipped because `DATABASE_URL`
+  is not configured locally.
+  Read-only production checks on `haminp.vercel.app` and
+  `forge-os-ebon.vercel.app` returned health 200/ready, intake disabled, and
+  `/api/signals/public-request/config` with `enabled:false`. On the
+  `haminp.vercel.app` browser, `/request` and `/request-a-project` both
+  displayed the closed message with zero form controls; `/owner` was a
+  public noindex shell with no owner data before key entry. The unauthenticated
+  owner-readiness GET initially returned 401 on both domains. During a later
+  repeated GET-only sweep, owner-data GETs on `haminp.vercel.app` returned
+  401; the same routes on `forge-os-ebon.vercel.app` returned 429, so further
+  probes there were stopped and no owner details were returned. The failed
+  authentication limiter may count such GET attempts; no POST, PUT, PATCH,
+  DELETE, authenticated request, or intentional production data write was
+  made. Production validation/rate-limit enforcement was not tested because
+  proving it would require production POSTs; the source changes have not been
+  committed or deployed in this task. The authenticated maintenance heartbeat
+  and production database details remain BLOCKED by the owner-key/credential
+  boundary.
+- Next removable dependency: review and deploy the source change through the
+  normal authorized release path, then verify POST enforcement only against
+  local test databases; live owner-only readiness still requires an
+  already-authorized owner key.
+
 ## [DONE WITH LIMITATION] Add a private owner console and activation procedure (2026-10-04)
 
 - Owner action still required: enter the owner key in a live browser session;

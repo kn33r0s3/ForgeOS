@@ -160,7 +160,7 @@ def test_substrate_api_rejects_unattributed_passes_and_reports_verification(db):
         body = {"test_ref": TEST_REF, "command": f"pytest {TEST_REF}", "exit_code": 0, "output_excerpt": "passed"}
         unattributed = client.post(f"/forge/substrate/capabilities/{capability_id}/test", json=body)
         assert unattributed.status_code == 422
-        assert "provenance.actor" in unattributed.text
+        assert unattributed.json() == {"detail": "Invalid request value."}
 
         tested = client.post(
             f"/forge/substrate/capabilities/{capability_id}/test",

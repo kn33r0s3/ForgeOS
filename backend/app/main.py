@@ -14,7 +14,8 @@ from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -273,3 +274,14 @@ async def invalid_input(request: Request, exc: ValueError):
         status_code=422,
         content={"detail": "Invalid request value."},
     )
+
+
+@app.exception_handler(HTTPException)
+async def safe_http_exception(request: Request, exc: HTTPException):
+    if exc.status_code == 422:
+        return JSONResponse(
+            status_code=422,
+            content={"detail": "Invalid request value."},
+            headers=exc.headers,
+        )
+    return await http_exception_handler(request, exc)

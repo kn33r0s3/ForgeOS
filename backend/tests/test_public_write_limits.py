@@ -1,13 +1,13 @@
 import asyncio
 
 import pytest
-from fastapi import Request
+from fastapi import HTTPException, Request
 from fastapi.testclient import TestClient
 
 from app import models
 from app.config import settings
 from app.database import get_db
-from app.main import app, invalid_input
+from app.main import app, invalid_input, safe_http_exception
 from app.request_limits import _is_limited_write
 from app.services.forge_bot_privacy import consume_rate_limited_request
 
@@ -155,6 +155,21 @@ def test_value_error_response_does_not_echo_submitted_values():
 
     response = asyncio.run(
         invalid_input(_visitor_request(), ValueError(submitted_value))
+    )
+
+    assert response.status_code == 422
+    assert response.body == b'{"detail":"Invalid request value."}'
+    assert submitted_value.encode() not in response.body
+
+
+def test_http_422_response_does_not_echo_submitted_values():
+    submitted_value = "private-value@example.test"
+
+    response = asyncio.run(
+        safe_http_exception(
+            _visitor_request(),
+            HTTPException(status_code=422, detail=submitted_value),
+        )
     )
 
     assert response.status_code == 422
