@@ -83,6 +83,7 @@ def test_daily_maintenance_erases_only_old_unacted_review_records(db):
     assert result == {
         "inquiries_erased": 1,
         "expired_rate_limit_buckets_purged": 1,
+        "heartbeat_at": now.isoformat(),
     }
     remaining_refs = {
         lead.public_ref for lead in db.query(models.ForgeBotLeadContact).all()
@@ -100,6 +101,16 @@ def test_daily_maintenance_erases_only_old_unacted_review_records(db):
     }
     assert "example.test" not in event.payload
     assert "TEST destination" not in event.payload
+    heartbeat = db.query(models.WorldEvent).filter_by(
+        event_type="forge_bot_daily_maintenance_succeeded"
+    ).one()
+    assert heartbeat.occurred_at.replace(tzinfo=timezone.utc) == now
+    assert json.loads(heartbeat.payload) == {
+        "expired_rate_limit_buckets_purged": 1,
+        "inquiries_erased": 1,
+    }
+    assert eligible.public_ref not in heartbeat.payload
+    assert "example.test" not in heartbeat.payload
     remaining_buckets = db.query(models.ForgeBotIntakeRateLimit).all()
     assert len(remaining_buckets) == 1
     assert remaining_buckets[0].visitor_hash == "b" * 64
@@ -184,10 +195,10 @@ def test_vercel_refuses_ephemeral_privacy_storage(db, monkeypatch):
     monkeypatch.setenv("VERCEL", "1")
 
     if db.get_bind().dialect.name == "postgresql":
-        assert forge_bot_privacy.run_daily_maintenance(db) == {
-            "inquiries_erased": 0,
-            "expired_rate_limit_buckets_purged": 0,
-        }
+        result = forge_bot_privacy.run_daily_maintenance(db)
+        assert result["inquiries_erased"] == 0
+        assert result["expired_rate_limit_buckets_purged"] == 0
+        assert datetime.fromisoformat(result["heartbeat_at"]).tzinfo is not None
     else:
         with pytest.raises(HTTPException) as error:
             forge_bot_privacy.run_daily_maintenance(db)

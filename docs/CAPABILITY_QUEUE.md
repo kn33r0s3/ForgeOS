@@ -1,5 +1,26 @@
 # Hami capability claim ledger (ForgeOS repository)
 
+## [IN PROGRESS] Add a private owner console and activation procedure (2026-10-03)
+
+- Owner action still required: enter the owner key in a live browser session;
+  confirm receipt of the test message; approve the exact privacy text; and
+  make the external discovery, channel, booking, and activation decisions.
+- Action this change removes: manually inspect the private lead table and
+  delivery queue, compute readiness aggregates, and reconstruct owner-marked
+  reply/booking/completion from separate notes. The console uses the existing
+  lead-contact rows, `Action`/`WorldEvent` substrate, and delivery outbox.
+- Current blocker / verification: the stored lead stage remains
+  `READY_FOR_OWNER_REVIEW`; the console derives `REQUESTED`, `REPLIED`,
+  `BOOKED`, and `COMPLETED` from registered non-contact lifecycle events
+  instead of adding stored states or a canonical entity. Intake and LIVE stay
+  disabled; no key is persisted by the browser; the activation runbook is
+  documentation only. Implementation and local PostgreSQL/browser verification
+  remain in progress.
+- Next removable dependency: owner key entry and review of readiness evidence;
+  after that, independently complete every activation-runbook check. External
+  permission, mail receipt, and a real customer outcome remain owner/reality
+  dependencies, not capabilities supplied by this console.
+
 ## [DONE WITH LIMITATION] Enforce the Forge Bot response ACTION boundary (2026-10-03)
 
 - Owner action still required: conduct owner-run discovery, then choose and

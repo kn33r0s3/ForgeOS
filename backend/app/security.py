@@ -79,6 +79,24 @@ def can_read_private_signals(request: Request) -> bool:
     return not _enabled() or _authorized(request)
 
 
+def _forge_bot_owner_route(path: str) -> bool:
+    normalized = path.removeprefix("/api")
+    return (
+        normalized.startswith("/forge-bot/owner/")
+        or normalized in {
+            "/forge-bot/owner-notification/test-send",
+            "/forge-bot/response-authorization",
+            "/forge-bot/response-actions",
+            "/forge-bot/leads/summary",
+        }
+        or normalized.startswith("/forge-bot/response-actions/")
+        or (
+            normalized.startswith("/forge-bot/leads/")
+            and normalized.endswith("/response-readiness")
+        )
+    )
+
+
 async def api_key_middleware(request: Request, call_next):
     """Apply the optional key to writes and private contact/substrate reads.
 
@@ -95,6 +113,7 @@ async def api_key_middleware(request: Request, call_next):
             or path.startswith("/api/public/domain/")
         )
         private_substrate_read = path.startswith(("/forge/substrate/", "/api/forge/substrate/"))
+        owner_guarded_forge_bot_route = _forge_bot_owner_route(path)
         private_contact_read = method in {"GET", "HEAD"} and any(
             path == prefix
             or path.startswith(f"{prefix}/")
@@ -103,7 +122,11 @@ async def api_key_middleware(request: Request, call_next):
             for prefix in PRIVATE_CONTACT_READ_PATH_PREFIXES
         )
         state_change = method in {"POST", "PUT", "PATCH", "DELETE"} and not allowed_write
-        if (state_change or private_substrate_read or private_contact_read) and not _authorized(request):
+        if (
+            (state_change and not owner_guarded_forge_bot_route)
+            or private_substrate_read
+            or (private_contact_read and not owner_guarded_forge_bot_route)
+        ) and not _authorized(request):
             if private_substrate_read:
                 message = "Unauthorized: missing or invalid X-API-Key for substrate access."
             elif private_contact_read:

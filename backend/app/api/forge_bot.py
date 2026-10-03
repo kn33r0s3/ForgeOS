@@ -2,14 +2,16 @@
 
 import hashlib
 import hmac
+import json
 import logging
+import os
 import re
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import or_
-from sqlalchemy.exc import IntegrityError
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import inspect, or_, text
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app import models, schemas
@@ -24,6 +26,12 @@ CONSENT_PURPOSE = "respond_to_forge_bot_inquiry"
 CONSENT_PROVENANCE = "forge_bot_web_form_v1"
 RATE_LIMIT = forge_bot_privacy.RATE_LIMIT
 RATE_WINDOW_SECONDS = forge_bot_privacy.RATE_WINDOW_SECONDS
+OWNER_AUTH_FAILURE_LIMIT = 10
+OWNER_LEAD_STAGE_EVENTS = {
+    "forge_bot_lead_replied": "REPLIED",
+    "forge_bot_lead_booked": "BOOKED",
+    "forge_bot_lead_completed": "COMPLETED",
+}
 
 
 def _enabled() -> bool:
@@ -133,18 +141,256 @@ def _response_readiness_output(
     return result
 
 
-def _require_owner_key(request: Request) -> None:
+def _require_owner_key(request: Request, db: Session) -> None:
     if not settings.FORGE_API_KEY:
         raise HTTPException(
             status_code=503,
-            detail="Forge Bot owner access is unavailable until FORGE_API_KEY is configured.",
+            detail="Owner access is unavailable.",
         )
     presented = request.headers.get("X-API-Key", "")
     if not hmac.compare_digest(
         presented.encode("utf-8"),
         settings.FORGE_API_KEY.encode("utf-8"),
     ):
-        raise HTTPException(status_code=401, detail="Valid X-API-Key required.")
+        hash_key = settings.FORGE_BOT_CONTACT_HMAC_KEY or settings.FORGE_API_KEY
+        try:
+            within_limit = forge_bot_privacy.consume_rate_limited_request(
+                db,
+                request,
+                hmac_key=hash_key,
+                scope="forge-bot-owner-auth-failure",
+                limit=OWNER_AUTH_FAILURE_LIMIT,
+            )
+        except (HTTPException, SQLAlchemyError) as exc:
+            logger.error("Forge Bot owner authentication limit unavailable (%s).", type(exc).__name__)
+            raise HTTPException(
+                status_code=503,
+                detail="Owner authentication is temporarily unavailable.",
+            ) from exc
+        if not within_limit:
+            raise HTTPException(
+                status_code=429,
+                detail="Too many unsuccessful owner sign-in attempts. Try again later.",
+            )
+        raise HTTPException(status_code=401, detail="Owner authentication failed.")
+
+
+def _lead_stage(db: Session, lead: models.ForgeBotLeadContact) -> str:
+    if lead.stage == "OPTED_OUT":
+        return "OPTED_OUT"
+    current = "REQUESTED"
+    events = (
+        db.query(models.WorldEvent)
+        .filter(
+            models.WorldEvent.event_type.in_(OWNER_LEAD_STAGE_EVENTS),
+            models.WorldEvent.payload.contains(lead.public_ref),
+        )
+        .order_by(models.WorldEvent.occurred_at, models.WorldEvent.id)
+        .all()
+    )
+    for event in events:
+        try:
+            payload = json.loads(event.payload)
+        except (TypeError, json.JSONDecodeError):
+            continue
+        if payload.get("reference") == lead.public_ref:
+            current = OWNER_LEAD_STAGE_EVENTS[event.event_type]
+    return current
+
+
+def _lead_event_payload(
+    db: Session,
+    reference: str,
+) -> dict:
+    lead = (
+        db.query(models.ForgeBotLeadContact)
+        .filter_by(public_ref=reference, opted_out=False, erased_at=None)
+        .with_for_update()
+        .one_or_none()
+    )
+    if lead is None:
+        raise HTTPException(status_code=404, detail="Active inquiry not found.")
+    return {"lead": lead, "stage": _lead_stage(db, lead)}
+
+
+def _record_owner_lead_transition(
+    db: Session,
+    *,
+    lead: models.ForgeBotLeadContact,
+    event_type: str,
+    next_stage: str,
+    details: dict | None = None,
+) -> None:
+    previous_stage = _lead_stage(db, lead)
+    payload = {
+        "reference": lead.public_ref,
+        "evidence_class": lead.evidence_class,
+        "previous_state": previous_stage,
+        "state": next_stage,
+        **(details or {}),
+    }
+    world_graph.seed_core_types(db)
+    world_graph.create_event(
+        db,
+        event_type=event_type,
+        source="forge_bot_owner_console",
+        payload=payload,
+        idempotency_key=f"forge-bot-inquiry:{lead.public_ref}:{event_type}",
+        occurred_at=datetime.now(timezone.utc),
+    )
+    db.commit()
+
+
+def _iso_timestamp(value: datetime | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+    return normalized.astimezone(timezone.utc).isoformat()
+
+
+def _readiness_payload(db: Session) -> dict:
+    result = {
+        "database_ok": False,
+        "migrations_ok": False,
+        "smtp_configured": bool(
+            settings.SMTP_HOST and settings.SMTP_USER and settings.SMTP_PASSWORD
+        ),
+        "hmac_key_configured": len(settings.FORGE_BOT_CONTACT_HMAC_KEY) >= 32,
+        "intake_enabled": bool(settings.FORGE_BOT_INTAKE_ENABLED),
+        "live_enabled": bool(settings.FORGE_BOT_LIVE),
+        "last_maintenance_at": None,
+        "last_maintenance_age_seconds": None,
+        "last_test_email_at": None,
+        "last_test_email_result": "UNKNOWN",
+        "oldest_unsent_or_failed_owner_email_at": None,
+        "deployed_commit": None,
+        "lead_counts_by_stage": {
+            "REQUESTED": 0,
+            "REPLIED": 0,
+            "BOOKED": 0,
+            "COMPLETED": 0,
+        },
+        "lead_counts_by_evidence_class": {"REAL": 0, "TEST": 0},
+        "new_leads_last_24h": 0,
+    }
+    deployed_commit = (
+        os.getenv("VERCEL_GIT_COMMIT_SHA")
+        or os.getenv("GIT_COMMIT_SHA")
+        or os.getenv("COMMIT_SHA")
+        or ""
+    )
+    if re.fullmatch(r"[0-9a-fA-F]{7,40}", deployed_commit):
+        result["deployed_commit"] = deployed_commit
+
+    try:
+        db.execute(text("SELECT 1"))
+        result["database_ok"] = True
+        inspector = inspect(db.get_bind())
+        table_names = set(inspector.get_table_names())
+        from app.database import Base
+
+        owner_tables = {
+            "forge_bot_lead_contacts",
+            "forge_bot_intake_rate_limits",
+            "events",
+            "integration_deliveries",
+            "actions",
+            models.TypeRegistry.__tablename__,
+        }
+        required_tables = {
+            table.name: {column.name for column in table.columns}
+            for table in Base.metadata.tables.values()
+            if table.name in owner_tables
+        }
+        # The migration runner is additive and has no revision table; readiness
+        # therefore checks the live schema against its current ORM contract.
+        result["migrations_ok"] = all(
+            table_name in table_names
+            and expected_columns
+            <= {column["name"] for column in inspector.get_columns(table_name)}
+            for table_name, expected_columns in required_tables.items()
+        )
+        if not result["migrations_ok"]:
+            return result
+
+        now = datetime.now(timezone.utc)
+        heartbeat = (
+            db.query(models.WorldEvent)
+            .filter_by(event_type="forge_bot_daily_maintenance_succeeded")
+            .order_by(models.WorldEvent.occurred_at.desc(), models.WorldEvent.id.desc())
+            .first()
+        )
+        if heartbeat is not None:
+            result["last_maintenance_at"] = _iso_timestamp(heartbeat.occurred_at)
+            occurred_at = heartbeat.occurred_at
+            occurred_at = occurred_at.replace(tzinfo=timezone.utc) if occurred_at.tzinfo is None else occurred_at
+            result["last_maintenance_age_seconds"] = max(
+                0, int((now - occurred_at.astimezone(timezone.utc)).total_seconds())
+            )
+
+        test_delivery = (
+            db.query(models.IntegrationDelivery)
+            .filter_by(idempotency_key=forge_bot_owner_notification.OWNER_TEST_IDEMPOTENCY_KEY)
+            .one_or_none()
+        )
+        if test_delivery is not None:
+            result["last_test_email_at"] = _iso_timestamp(
+                test_delivery.updated_at or test_delivery.created_at
+            )
+            result["last_test_email_result"] = test_delivery.status
+
+        owner_recipients = {
+            recipient
+            for recipient in (
+                settings.FORGE_BOT_CONTACT_EMAIL,
+                forge_bot_owner_notification.OWNER_TEST_RECIPIENT,
+            )
+            if recipient
+        }
+        pending_email_filter = or_(
+            *(models.IntegrationDelivery.request_json.contains(recipient) for recipient in owner_recipients)
+        )
+        pending_delivery = (
+            db.query(models.IntegrationDelivery)
+            .filter(
+                models.IntegrationDelivery.integration_name == "smtp",
+                models.IntegrationDelivery.operation == "send_email",
+                models.IntegrationDelivery.status.notin_(
+                    ("ACCEPTED_BY_SMTP", "SUCCEEDED", "DELIVERED")
+                ),
+                pending_email_filter,
+            )
+            .order_by(models.IntegrationDelivery.created_at.asc())
+            .first()
+        )
+        if pending_delivery is not None:
+            result["oldest_unsent_or_failed_owner_email_at"] = _iso_timestamp(
+                pending_delivery.created_at
+            )
+
+        active_leads = (
+            db.query(models.ForgeBotLeadContact)
+            .filter(
+                models.ForgeBotLeadContact.opted_out.is_(False),
+                models.ForgeBotLeadContact.erased_at.is_(None),
+            )
+            .order_by(models.ForgeBotLeadContact.created_at.desc())
+            .all()
+        )
+        day_ago = now - timedelta(days=1)
+        for lead in active_leads:
+            result["lead_counts_by_stage"][_lead_stage(db, lead)] += 1
+            result["lead_counts_by_evidence_class"][lead.evidence_class] += 1
+            created_at = lead.created_at
+            created_at = created_at.replace(tzinfo=timezone.utc) if created_at.tzinfo is None else created_at
+            if created_at >= day_ago:
+                result["new_leads_last_24h"] += 1
+    except SQLAlchemyError as exc:
+        db.rollback()
+        logger.error("Forge Bot owner readiness query failed (%s).", type(exc).__name__)
+        result["database_ok"] = False
+        result["migrations_ok"] = False
+    return result
 
 
 @router.post("/owner-notification/test-send")
@@ -153,7 +399,7 @@ def send_owner_notification_test(
     db: Session = Depends(get_db),
 ):
     """Send one fixed owner-only test email; never expose provider details."""
-    _require_owner_key(request)
+    _require_owner_key(request, db)
     try:
         result = forge_bot_owner_notification.send_owner_test_notification(db)
     except Exception as exc:
@@ -176,13 +422,206 @@ def get_forge_bot_config():
     }
 
 
+@router.get("/owner/readiness")
+def get_owner_console_readiness(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Return operational booleans, timestamps, commit, and aggregate counts only."""
+    _require_owner_key(request, db)
+    return _readiness_payload(db)
+
+
+@router.get("/owner/leads")
+def list_owner_console_leads(
+    request: Request,
+    db: Session = Depends(get_db),
+    limit: int = Query(default=100, ge=1, le=200),
+):
+    """List references and non-contact qualification details for owner review."""
+    _require_owner_key(request, db)
+    leads = (
+        db.query(models.ForgeBotLeadContact)
+        .filter(
+            models.ForgeBotLeadContact.opted_out.is_(False),
+            models.ForgeBotLeadContact.erased_at.is_(None),
+        )
+        .order_by(models.ForgeBotLeadContact.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "reference": lead.public_ref,
+            "received_at": _iso_timestamp(lead.created_at),
+            "stage": _lead_stage(db, lead),
+            "evidence_class": lead.evidence_class,
+            "channel": lead.preferred_channel,
+            "destination": lead.destination,
+            "course": lead.course,
+        }
+        for lead in leads
+    ]
+
+
+@router.get("/owner/leads/{reference}")
+def get_owner_console_lead(
+    reference: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Return contact details only within the owner-key boundary."""
+    _require_owner_key(request, db)
+    lead = (
+        db.query(models.ForgeBotLeadContact)
+        .filter_by(public_ref=reference, opted_out=False, erased_at=None)
+        .one_or_none()
+    )
+    if lead is None:
+        raise HTTPException(status_code=404, detail="Active inquiry not found.")
+    events = (
+        db.query(models.WorldEvent)
+        .filter(
+            models.WorldEvent.event_type.in_(
+                ("forge_bot_inquiry_received", *OWNER_LEAD_STAGE_EVENTS.keys())
+            ),
+            models.WorldEvent.payload.contains(lead.public_ref),
+        )
+        .order_by(models.WorldEvent.occurred_at, models.WorldEvent.id)
+        .all()
+    )
+    history = []
+    for event in events:
+        try:
+            payload = json.loads(event.payload)
+        except (TypeError, json.JSONDecodeError):
+            continue
+        if payload.get("reference") != lead.public_ref:
+            continue
+        history.append({
+            "event": event.event_type,
+            "at": _iso_timestamp(event.occurred_at),
+            "previous_state": payload.get("previous_state"),
+            "state": payload.get("state"),
+            "evidence_reference": payload.get("evidence_reference"),
+            "outcome_note": payload.get("outcome_note"),
+        })
+    return {
+        "reference": lead.public_ref,
+        "received_at": _iso_timestamp(lead.created_at),
+        "stage": _lead_stage(db, lead),
+        "evidence_class": lead.evidence_class,
+        "channel": lead.preferred_channel,
+        "email": lead.email,
+        "phone": lead.phone,
+        "destination": lead.destination,
+        "course": lead.course,
+        "timeline": lead.timeline,
+        "budget_minimum": lead.budget_minimum,
+        "budget_maximum": lead.budget_maximum,
+        "consent_at": _iso_timestamp(lead.consent_at),
+        "history": history,
+    }
+
+
+@router.post("/owner/leads/{reference}/replied")
+def mark_owner_console_lead_replied(
+    reference: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    _require_owner_key(request, db)
+    result = _lead_event_payload(db, reference)
+    if result["stage"] != "REQUESTED":
+        raise HTTPException(status_code=409, detail="Only a requested inquiry can be marked replied.")
+    _record_owner_lead_transition(
+        db,
+        lead=result["lead"],
+        event_type="forge_bot_lead_replied",
+        next_stage="REPLIED",
+    )
+    return {"reference": reference, "stage": "REPLIED"}
+
+
+@router.post("/owner/leads/{reference}/booked")
+def mark_owner_console_lead_booked(
+    reference: str,
+    payload: schemas.ForgeBotLeadBooked,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    _require_owner_key(request, db)
+    result = _lead_event_payload(db, reference)
+    if result["stage"] != "REPLIED":
+        raise HTTPException(status_code=409, detail="Reply must be recorded before booking.")
+    _record_owner_lead_transition(
+        db,
+        lead=result["lead"],
+        event_type="forge_bot_lead_booked",
+        next_stage="BOOKED",
+        details={"evidence_reference": payload.evidence_reference},
+    )
+    return {"reference": reference, "stage": "BOOKED"}
+
+
+@router.post("/owner/leads/{reference}/completed")
+def mark_owner_console_lead_completed(
+    reference: str,
+    payload: schemas.ForgeBotLeadCompleted,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    _require_owner_key(request, db)
+    result = _lead_event_payload(db, reference)
+    if result["stage"] != "BOOKED":
+        raise HTTPException(status_code=409, detail="Booking must be recorded before completion.")
+    _record_owner_lead_transition(
+        db,
+        lead=result["lead"],
+        event_type="forge_bot_lead_completed",
+        next_stage="COMPLETED",
+        details={"outcome_note": payload.outcome_note},
+    )
+    return {"reference": reference, "stage": "COMPLETED"}
+
+
+@router.delete("/owner/leads/{reference}")
+def erase_owner_console_lead(
+    reference: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Delete private inquiry data while retaining its non-contact erasure event."""
+    _require_owner_key(request, db)
+    lead = (
+        db.query(models.ForgeBotLeadContact)
+        .filter_by(public_ref=reference, opted_out=False, erased_at=None)
+        .with_for_update()
+        .one_or_none()
+    )
+    if lead is None:
+        raise HTTPException(status_code=404, detail="Active inquiry not found.")
+    _record_inquiry_event(
+        db,
+        event_type="forge_bot_inquiry_erased",
+        reference=lead.public_ref,
+        evidence_class=lead.evidence_class,
+        source="forge_bot_owner_console",
+        state="ERASED",
+        previous_state=_lead_stage(db, lead),
+    )
+    db.delete(lead)
+    db.commit()
+    return {"reference": reference, "status": "erased"}
+
+
 @router.get("/response-authorization")
 def get_forge_bot_response_authorization(
     request: Request,
     db: Session = Depends(get_db),
 ):
     """Return the owner-only response authorization state; absent means closed."""
-    _require_owner_key(request)
+    _require_owner_key(request, db)
     authorization = db.get(models.OpForgeBotResponseAuthorization, 1)
     return _authorization_values(authorization)
 
@@ -194,7 +633,7 @@ def set_forge_bot_response_authorization(
     db: Session = Depends(get_db),
 ):
     """Replace the singleton response policy and record its transition."""
-    _require_owner_key(request)
+    _require_owner_key(request, db)
     values = payload.model_dump()
     authorization = db.get(models.OpForgeBotResponseAuthorization, 1)
     previous_values = (
@@ -243,7 +682,7 @@ def get_forge_bot_response_readiness(
     db: Session = Depends(get_db),
 ):
     """Evaluate internal response readiness without creating outbound work."""
-    _require_owner_key(request)
+    _require_owner_key(request, db)
     authorization = db.get(models.OpForgeBotResponseAuthorization, 1)
     decision = forge_bot_response.decide_response_action(
         db,
@@ -262,7 +701,7 @@ def create_forge_bot_response_action(
     db: Session = Depends(get_db),
 ):
     """Create an owner-confirmed ACTION record; this does not send a message."""
-    _require_owner_key(request)
+    _require_owner_key(request, db)
     lead = (
         db.query(models.ForgeBotLeadContact)
         .filter_by(
@@ -296,7 +735,7 @@ def approve_forge_bot_response_action(
     db: Session = Depends(get_db),
 ):
     """Record owner confirmation on one response ACTION."""
-    _require_owner_key(request)
+    _require_owner_key(request, db)
     action = forge_bot_response.approve_response_action(db, action_id=action_id)
     if action is None:
         raise HTTPException(status_code=404, detail="Forge Bot response ACTION not found.")
@@ -315,7 +754,7 @@ def execute_forge_bot_response_action(
     db: Session = Depends(get_db),
 ):
     """Run the authorization-only ACTION adapter; no customer sender is wired."""
-    _require_owner_key(request)
+    _require_owner_key(request, db)
     action = db.get(models.Action, action_id)
     if action is None or action.action_type != "forge_bot_response":
         raise HTTPException(status_code=404, detail="Forge Bot response ACTION not found.")
@@ -574,7 +1013,7 @@ def delete_forge_bot_lead(
 @router.get("/leads/summary")
 def get_owner_lead_summary(request: Request, db: Session = Depends(get_db)):
     """Return active lead rows only after mandatory owner API-key authorization."""
-    _require_owner_key(request)
+    _require_owner_key(request, db)
     rows = (
         db.query(models.ForgeBotLeadContact)
         .filter_by(opted_out=False, erased_at=None)

@@ -182,6 +182,16 @@ def run_daily_maintenance(
             .filter(models.ForgeBotIntakeRateLimit.expires_at <= timestamp)
             .delete(synchronize_session=False)
         )
+        world_graph.create_event(
+            db,
+            event_type="forge_bot_daily_maintenance_succeeded",
+            source="forge_bot_daily_maintenance",
+            payload={
+                "inquiries_erased": erased,
+                "expired_rate_limit_buckets_purged": purged,
+            },
+            occurred_at=timestamp,
+        )
         db.commit()
     except Exception:
         db.rollback()
@@ -190,4 +200,5 @@ def run_daily_maintenance(
     return {
         "inquiries_erased": erased,
         "expired_rate_limit_buckets_purged": purged,
+        "heartbeat_at": timestamp.isoformat(),
     }

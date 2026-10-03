@@ -243,7 +243,7 @@ function NetworkFeedPage() {
         </section>
 
         <div
-          className="scroll-fade-x -mx-5 mt-8 flex gap-2 overflow-x-auto px-5 pb-2 sm:mx-0 sm:px-0"
+          className="-mx-5 mt-8 flex flex-wrap gap-2 px-5 pb-2 sm:mx-0 sm:px-0"
           role="group"
           aria-label="Filter network feed"
         >
@@ -323,29 +323,29 @@ function NetworkFeedPage() {
             return (
               <li
                 key={item.id}
-                className="card card-interactive reveal p-5 sm:p-6"
+                className="card card-interactive reveal min-w-0 p-5 sm:p-6"
                 style={{ "--i": Math.min(index, 8) } as React.CSSProperties}
               >
-                <article className="flex items-start gap-4">
+                <article className="flex min-w-0 items-start gap-4">
                   <span className="icon-chip hidden sm:inline-flex" aria-hidden="true">
                     <Icon className="size-4" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="status-pill status-pill-accent">
+                      <span className="status-pill status-pill-accent max-w-full break-all">
                         <Icon className="size-3 sm:hidden" aria-hidden="true" />
                         {KIND_LABELS[item.kind] ?? item.kind.replaceAll("_", " ")}
                       </span>
-                      {item.category ? <span className="status-pill status-pill-neutral">{item.category}</span> : null}
-                      {item.status ? <span className="status-pill status-pill-neutral">{item.status.replaceAll("_", " ")}</span> : null}
+                      {item.category ? <span className="status-pill status-pill-neutral max-w-full break-all">{item.category}</span> : null}
+                      {item.status ? <span className="status-pill status-pill-neutral max-w-full break-all">{item.status.replaceAll("_", " ")}</span> : null}
                     </div>
-                    <h2 className="mt-3 font-display text-2xl leading-tight tracking-tight text-ink">{item.title}</h2>
-                    <p className="mt-2 whitespace-pre-line text-sm leading-6 text-muted">{item.summary}</p>
+                    <h2 className="mt-3 break-words font-display text-2xl leading-tight tracking-tight text-ink">{item.title}</h2>
+                    <p className="mt-2 break-words whitespace-pre-line text-sm leading-6 text-muted">{item.summary}</p>
                     <dl className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-dim">
-                      <div><dt className="sr-only">Source</dt><dd>{sourceLabel(item.source)}</dd></div>
-                      <div><dt className="sr-only">Evidence state</dt><dd>{item.epistemic_state.replaceAll("_", " ")}</dd></div>
+                      <div className="min-w-0"><dt className="sr-only">Source</dt><dd className="break-all">{sourceLabel(item.source)}</dd></div>
+                      <div className="min-w-0"><dt className="sr-only">Evidence state</dt><dd className="break-all">{item.epistemic_state.replaceAll("_", " ")}</dd></div>
                       <div><dt className="sr-only">Updated</dt><dd><time dateTime={item.updated_at || item.occurred_at || undefined}>{dateLabel(item.updated_at || item.occurred_at)}</time></dd></div>
-                      {item.location ? <div><dt className="sr-only">Location</dt><dd>{item.location}</dd></div> : null}
+                      {item.location ? <div className="min-w-0"><dt className="sr-only">Location</dt><dd className="break-all">{item.location}</dd></div> : null}
                     </dl>
                     {visibleRelations.length > 0 ? (
                       <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">

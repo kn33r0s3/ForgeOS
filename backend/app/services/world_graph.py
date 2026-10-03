@@ -108,6 +108,8 @@ def seed_core_types(db: Session) -> int:
             "forge_bot_response_action_proposed",
             "forge_bot_response_action_owner_approved",
             "forge_bot_response_action_authorization_decided",
+            "forge_bot_daily_maintenance_succeeded", "forge_bot_lead_replied",
+            "forge_bot_lead_booked", "forge_bot_lead_completed",
         },
         "capability_type": {"tool", "workflow", "integration", "agent", "model", "market_signal_analysis"},
     }

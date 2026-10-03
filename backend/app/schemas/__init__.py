@@ -89,6 +89,30 @@ class ForgeBotLeadControl(BaseModel):
     manage_token: str = Field(min_length=32, max_length=128)
 
 
+class ForgeBotLeadBooked(BaseModel):
+    evidence_reference: str = Field(min_length=2, max_length=100)
+
+    @field_validator("evidence_reference")
+    @classmethod
+    def validate_evidence_reference(cls, value):
+        normalized = value.strip()
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/#-]{1,99}", normalized):
+            raise ValueError("Use a short non-contact evidence reference.")
+        return normalized
+
+
+class ForgeBotLeadCompleted(BaseModel):
+    outcome_note: str = Field(min_length=2, max_length=240)
+
+    @field_validator("outcome_note")
+    @classmethod
+    def normalize_outcome_note(cls, value):
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("An outcome note is required.")
+        return normalized
+
+
 class ForgeBotResponseAuthorizationUpdate(BaseModel):
     selected_channel: Optional[Literal["email", "phone"]]
     channel_authorized: bool

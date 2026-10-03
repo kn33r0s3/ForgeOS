@@ -1388,3 +1388,180 @@ def test_owner_summary_requires_configured_header_api_key(db, monkeypatch):
     assert query_key.status_code == 401
     assert with_key.status_code == 200
     assert with_key.json() == []
+
+
+def test_owner_console_readiness_is_keyed_and_aggregate_only(db, monkeypatch):
+    _enable_intake(monkeypatch)
+    monkeypatch.setattr(settings, "SMTP_HOST", "")
+    monkeypatch.setattr(settings, "SMTP_USER", "")
+    monkeypatch.setattr(settings, "SMTP_PASSWORD", "")
+    client, cleanup = _client(db)
+    try:
+        lead = client.post("/forge-bot/leads", json=_payload())
+        unauthorized = client.get("/forge-bot/owner/readiness")
+        response = client.get(
+            "/forge-bot/owner/readiness",
+            headers={"X-API-Key": settings.FORGE_API_KEY},
+        )
+    finally:
+        client.close()
+        cleanup()
+
+    assert lead.status_code == 202
+    assert unauthorized.status_code == 401
+    assert unauthorized.json() == {"detail": "Owner authentication failed."}
+    readiness = response.json()
+    assert response.status_code == 200
+    assert readiness["database_ok"] is True
+    assert readiness["migrations_ok"] is True
+    assert readiness["smtp_configured"] is False
+    assert readiness["hmac_key_configured"] is True
+    assert readiness["intake_enabled"] is True
+    assert readiness["live_enabled"] is False
+    assert readiness["lead_counts_by_stage"] == {
+        "REQUESTED": 1,
+        "REPLIED": 0,
+        "BOOKED": 0,
+        "COMPLETED": 0,
+    }
+    assert readiness["lead_counts_by_evidence_class"] == {"REAL": 0, "TEST": 1}
+    assert readiness["new_leads_last_24h"] == 1
+    assert settings.FORGE_API_KEY not in response.text
+    assert "lead-one@example.test" not in response.text
+
+
+def test_owner_console_enforces_lifecycle_and_erases_only_contact_record(db, monkeypatch):
+    _enable_intake(monkeypatch)
+    owner_headers = {"X-API-Key": settings.FORGE_API_KEY}
+    html_course = "<img src=x onerror=alert(1)>"
+    html_destination = "<script>alert('text')</script>"
+    client, cleanup = _client(db)
+    try:
+        submitted = client.post(
+            "/forge-bot/leads",
+            json=_payload(
+                email="script-payload@example.test",
+                destination=html_destination,
+                course=html_course,
+            ),
+        )
+        reference = submitted.json()["reference"]
+        public_list = client.get("/forge-bot/owner/leads", headers=owner_headers)
+        detail = client.get(
+            f"/forge-bot/owner/leads/{reference}",
+            headers=owner_headers,
+        )
+        early_booking = client.post(
+            f"/forge-bot/owner/leads/{reference}/booked",
+            headers=owner_headers,
+            json={"evidence_reference": "booking-001"},
+        )
+        replied = client.post(
+            f"/forge-bot/owner/leads/{reference}/replied",
+            headers=owner_headers,
+        )
+        invalid_booking = client.post(
+            f"/forge-bot/owner/leads/{reference}/booked",
+            headers=owner_headers,
+            json={"evidence_reference": "x"},
+        )
+        booked = client.post(
+            f"/forge-bot/owner/leads/{reference}/booked",
+            headers=owner_headers,
+            json={"evidence_reference": "local-booking-001"},
+        )
+        completed = client.post(
+            f"/forge-bot/owner/leads/{reference}/completed",
+            headers=owner_headers,
+            json={"outcome_note": "TEST consultation delivered; no payment recorded"},
+        )
+        erased = client.delete(
+            f"/forge-bot/owner/leads/{reference}",
+            headers=owner_headers,
+        )
+    finally:
+        client.close()
+        cleanup()
+
+    assert submitted.status_code == 202
+    assert public_list.status_code == 200
+    assert public_list.json()[0]["stage"] == "REQUESTED"
+    assert "script-payload@example.test" not in public_list.text
+    assert "email" not in public_list.json()[0]
+    assert detail.status_code == 200
+    assert detail.json()["email"] == "script-payload@example.test"
+    assert detail.json()["course"] == html_course
+    assert detail.json()["destination"] == html_destination
+    assert early_booking.status_code == 409
+    assert replied.json()["stage"] == "REPLIED"
+    assert invalid_booking.status_code == 422
+    assert "x" not in invalid_booking.text
+    assert booked.json()["stage"] == "BOOKED"
+    assert completed.json()["stage"] == "COMPLETED"
+    assert erased.status_code == 200
+    assert erased.json()["status"] == "erased"
+    assert db.query(models.ForgeBotLeadContact).count() == 0
+    transitions = (
+        db.query(models.WorldEvent)
+        .filter(models.WorldEvent.event_type.in_(
+            (
+                "forge_bot_lead_replied",
+                "forge_bot_lead_booked",
+                "forge_bot_lead_completed",
+                "forge_bot_inquiry_erased",
+            )
+        ))
+        .order_by(models.WorldEvent.id)
+        .all()
+    )
+    assert [event.event_type for event in transitions] == [
+        "forge_bot_lead_replied",
+        "forge_bot_lead_booked",
+        "forge_bot_lead_completed",
+        "forge_bot_inquiry_erased",
+    ]
+    assert all(json.loads(event.payload)["evidence_class"] == "TEST" for event in transitions)
+    erased_payload = json.loads(transitions[-1].payload)
+    assert erased_payload == {
+        "evidence_class": "TEST",
+        "previous_state": "COMPLETED",
+        "reference": reference,
+        "state": "ERASED",
+    }
+    assert "script-payload@example.test" not in transitions[-1].payload
+    assert html_course not in transitions[-1].payload
+
+
+def test_owner_console_failed_authentication_is_rate_limited(db, monkeypatch):
+    _enable_intake(monkeypatch)
+    owner_headers = {"X-API-Key": settings.FORGE_API_KEY}
+    client, cleanup = _client(db)
+    try:
+        submitted = client.post("/forge-bot/leads", json=_payload())
+        reference = submitted.json()["reference"]
+        failures = [
+            client.post(f"/forge-bot/owner/leads/{reference}/replied")
+            for _ in range(forge_bot.OWNER_AUTH_FAILURE_LIMIT)
+        ]
+        limited = client.post(f"/forge-bot/owner/leads/{reference}/replied")
+        authorized = client.post(
+            f"/forge-bot/owner/leads/{reference}/replied",
+            headers=owner_headers,
+        )
+    finally:
+        client.close()
+        cleanup()
+
+    assert submitted.status_code == 202
+    assert [response.status_code for response in failures] == [401] * forge_bot.OWNER_AUTH_FAILURE_LIMIT
+    assert all(response.json() == {"detail": "Owner authentication failed."} for response in failures)
+    assert limited.status_code == 429
+    assert "test-only-owner-key" not in limited.text
+    assert authorized.status_code == 200
+    buckets = (
+        db.query(models.ForgeBotIntakeRateLimit)
+        .filter_by(request_count=forge_bot.OWNER_AUTH_FAILURE_LIMIT + 1)
+        .all()
+    )
+    assert len(buckets) == 1
+    assert "127.0.0.1" not in buckets[0].visitor_hash

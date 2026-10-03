@@ -3,6 +3,7 @@ import {
   HeadContent,
   Outlet,
   Scripts,
+  useRouterState,
 } from "@tanstack/react-router";
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
@@ -49,6 +50,10 @@ export const Route = createRootRoute({
 });
 
 function RootDocument() {
+  const isOwnerConsole = useRouterState({
+    select: (state) => state.location.pathname === "/owner",
+  });
+
   return (
     <html lang="en" className="antialiased" suppressHydrationWarning>
       <head>
@@ -60,11 +65,11 @@ function RootDocument() {
           Skip to content
         </a>
         <AuthProvider>
-          <SiteHeader />
+          {!isOwnerConsole ? <SiteHeader /> : null}
           <div id="main" className="flex flex-1 flex-col">
             <Outlet />
           </div>
-          <SiteFooter />
+          {!isOwnerConsole ? <SiteFooter /> : null}
         </AuthProvider>
         <script
           type="application/ld+json"

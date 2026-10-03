@@ -136,9 +136,10 @@ describe("Hami public root", () => {
 
   it("sets baseline security headers without enforcing the report-only CSP", () => {
     const config = JSON.parse(readFileSync(join(root, "vercel.json"), "utf8")) as {
-      headers?: Array<{ headers?: Array<{ key: string; value: string }> }>;
+      headers?: Array<{ source?: string; headers?: Array<{ key: string; value: string }> }>;
     };
-    const headers = config.headers?.[0]?.headers ?? [];
+    const headers =
+      config.headers?.find(({ source }) => source === "/(.*)")?.headers ?? [];
     const values = new Map(headers.map(({ key, value }) => [key, value]));
     assert.equal(values.get("X-Content-Type-Options"), "nosniff");
     assert.equal(values.get("Referrer-Policy"), "strict-origin-when-cross-origin");
@@ -164,6 +165,8 @@ describe("Hami public root", () => {
     const footer = readFileSync(join(root, "src/components/layout/site-footer.tsx"), "utf8");
     const businesses = readFileSync(join(root, "src/routes/group.businesses.tsx"), "utf8");
     const forgeBot = readFileSync(join(root, "src/routes/forge-bot-intake.tsx"), "utf8");
+    const owner = readFileSync(join(root, "src/routes/owner.tsx"), "utf8");
+    const vercel = readFileSync(join(root, "vercel.json"), "utf8");
     assert.match(home, /createFileRoute\("\/"\)/);
     assert.doesNotMatch(home, /Navigate to=/);
     // Home is the person's System, not a post/request board.
@@ -203,6 +206,12 @@ describe("Hami public root", () => {
     assert.match(forgeBot, /Status: <strong>REQUESTED<\/strong>/);
     assert.match(forgeBot, /permanently opt out and erase/);
     assert.doesNotMatch(forgeBot, /contact_email|haminp\.forge@gmail\.com/i);
+    assert.match(owner, /createFileRoute\("\/owner"\)/);
+    assert.match(owner, /name: "robots", content: "noindex, nofollow, noarchive"/);
+    assert.match(owner, /X-API-Key/);
+    assert.doesNotMatch(owner, /localStorage|sessionStorage|dangerouslySetInnerHTML/);
+    assert.match(vercel, /X-Robots-Tag/);
+    assert.equal(sitemap.includes("/owner"), false);
     assert.doesNotMatch(discoveries, /loadSubstrateDiscoveries|\/api\/forge\/substrate/);
     assert.match(discoveries, /does not request owner-authorized substrate records/);
     assert.match(discoveries, /Opening this page does not run discovery/);

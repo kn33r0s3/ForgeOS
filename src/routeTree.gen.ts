@@ -23,6 +23,7 @@ import { Route as GroupRouteImport } from './routes/group'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OperationsRouteImport } from './routes/operations'
 import { Route as OpportunitiesRouteImport } from './routes/opportunities'
+import { Route as OwnerRouteImport } from './routes/owner'
 import { Route as ProcessRouteImport } from './routes/process'
 import { Route as ProvidersRouteImport } from './routes/providers'
 import { Route as RequestRouteImport } from './routes/request'
@@ -107,6 +108,11 @@ const OperationsRoute = OperationsRouteImport.update({
 const OpportunitiesRoute = OpportunitiesRouteImport.update({
   id: '/opportunities',
   path: '/opportunities',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OwnerRoute = OwnerRouteImport.update({
+  id: '/owner',
+  path: '/owner',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProcessRoute = ProcessRouteImport.update({
@@ -200,6 +206,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
+  '/owner': typeof OwnerRoute
   '/process': typeof ProcessRoute
   '/providers': typeof ProvidersRoute
   '/request': typeof RequestRoute
@@ -230,6 +237,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
+  '/owner': typeof OwnerRoute
   '/process': typeof ProcessRoute
   '/providers': typeof ProvidersRoute
   '/request': typeof RequestRoute
@@ -261,6 +269,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
+  '/owner': typeof OwnerRoute
   '/process': typeof ProcessRoute
   '/providers': typeof ProvidersRoute
   '/request': typeof RequestRoute
@@ -294,6 +303,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/operations'
     | '/opportunities'
+    | '/owner'
     | '/process'
     | '/providers'
     | '/request'
@@ -324,6 +334,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/operations'
     | '/opportunities'
+    | '/owner'
     | '/process'
     | '/providers'
     | '/request'
@@ -354,6 +365,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/operations'
     | '/opportunities'
+    | '/owner'
     | '/process'
     | '/providers'
     | '/request'
@@ -386,6 +398,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   OperationsRoute: typeof OperationsRoute
   OpportunitiesRoute: typeof OpportunitiesRoute
+  OwnerRoute: typeof OwnerRoute
   ProcessRoute: typeof ProcessRoute
   ProvidersRoute: typeof ProvidersRoute
   RequestRoute: typeof RequestRoute
@@ -497,6 +510,13 @@ declare module '@tanstack/react-router' {
       path: '/opportunities'
       fullPath: '/opportunities'
       preLoaderRoute: typeof OpportunitiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/owner': {
+      id: '/owner'
+      path: '/owner'
+      fullPath: '/owner'
+      preLoaderRoute: typeof OwnerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/process': {
@@ -648,6 +668,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   OperationsRoute: OperationsRoute,
   OpportunitiesRoute: OpportunitiesRoute,
+  OwnerRoute: OwnerRoute,
   ProcessRoute: ProcessRoute,
   ProvidersRoute: ProvidersRoute,
   RequestRoute: RequestRoute,
