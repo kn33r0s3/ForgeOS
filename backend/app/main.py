@@ -13,8 +13,10 @@ import logging
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from app.config import settings
@@ -231,7 +233,26 @@ def _alias_app_routes_under_api() -> None:
 _alias_app_routes_under_api()
 
 
+@app.exception_handler(RequestValidationError)
+async def invalid_request(request: Request, exc: RequestValidationError):
+    errors = []
+    for error in exc.errors():
+        location = error.get("loc", ())
+        field = ".".join(str(part) for part in location if part != "body") or "request"
+        errors.append({
+            "field": field,
+            "message": (
+                "A value is required."
+                if error.get("type") == "missing"
+                else "Invalid value."
+            ),
+        })
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "Request validation failed.", "errors": errors},
+    )
+
+
 @app.exception_handler(ValueError)
-async def invalid_input(request, exc):
-    from fastapi.responses import JSONResponse
+async def invalid_input(request: Request, exc: ValueError):
     return JSONResponse(status_code=422, content={"detail": str(exc)})

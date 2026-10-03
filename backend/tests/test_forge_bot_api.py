@@ -123,6 +123,29 @@ def test_explicit_consent_and_channel_contact_are_server_enforced(db, monkeypatc
     assert db.query(models.ForgeBotLeadContact).count() == 0
 
 
+def test_invalid_email_validation_does_not_echo_submitted_value(db, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "FORGE_BOT_INTAKE_ENABLED", False)
+    submitted_value = "private-malformed-contact-value"
+    client, cleanup = _client(db)
+    try:
+        response = client.post(
+            "/forge-bot/leads",
+            json=_payload(email=submitted_value),
+        )
+    finally:
+        client.close()
+        cleanup()
+
+    assert response.status_code == 422
+    assert submitted_value not in response.text
+    assert response.json()["detail"] == "Request validation failed."
+    assert response.json()["errors"] == [
+        {"field": "email", "message": "Invalid value."}
+    ]
+
+
 def test_live_off_rejects_real_leads_but_allows_test_records(db, monkeypatch):
     _enable_intake(monkeypatch)
     monkeypatch.setattr(settings, "FORGE_BOT_LIVE", False)
