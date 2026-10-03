@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.config import settings
 from app.database import get_db
-from app.services import world_graph
+from app.services import forge_bot_response, world_graph
 
 router = APIRouter(prefix="/forge-bot", tags=["forge-bot"])
 CONSENT_PURPOSE = "respond_to_forge_bot_inquiry"
@@ -112,68 +112,28 @@ def _authorization_values(
     }
 
 
-def _evaluate_response_readiness(
-    lead: models.ForgeBotLeadContact,
+def _response_readiness_output(
+    decision: forge_bot_response.ResponseActionDecision,
     authorization: models.OpForgeBotResponseAuthorization | None,
 ) -> dict:
-    config = _authorization_values(authorization)
-    blockers: list[str] = []
-    if not config["configured"]:
-        blockers.append("owner_authorization_missing")
-    selected_channel = config["selected_channel"]
-    if selected_channel is None:
-        blockers.append("selected_channel_missing")
-    elif not config["channel_authorized"]:
-        blockers.append("selected_channel_not_authorized")
-    if selected_channel and selected_channel != lead.preferred_channel:
-        blockers.append("submitter_preference_does_not_match_authorized_channel")
-    if not config["template_ref"]:
-        blockers.append("permitted_template_reference_missing")
-    if not config["template_authorized"]:
-        blockers.append("permitted_template_not_authorized")
-    if not config["consent_required"]:
-        blockers.append("response_consent_requirement_missing")
-    if (
-        not lead.consent_granted
-        or lead.consent_purpose != CONSENT_PURPOSE
-        or lead.consent_provenance != CONSENT_PROVENANCE
+    result = decision.as_dict()
+    result["status"] = decision.decision
+    result["blocking_reasons"] = list(decision.reason_codes)
+    result["owner_authorized_response_channel"] = decision.owner_authorized_channel
+    result["permitted_template_ref"] = decision.approved_template_reference
+    result["external_send_gate_open"] = decision.allowed
+    result["external_send_enabled"] = decision.allowed
+    result["external_sender_available"] = False
+    result["external_message_sent"] = False
+    policy = _authorization_values(authorization)
+    for key in (
+        "consent_required",
+        "opt_out_boundary",
+        "escalation_boundary",
+        "external_send_authorized",
     ):
-        blockers.append("inquiry_response_consent_missing")
-    if lead.opted_out or lead.erased_at is not None:
-        blockers.append("inquiry_opted_out_or_erased")
-    if selected_channel == "email" and not lead.email:
-        blockers.append("authorized_email_contact_missing")
-    if selected_channel == "phone" and not lead.phone:
-        blockers.append("authorized_phone_contact_missing")
-
-    status = "INTERNAL_RESPONSE_READY" if not blockers else "BLOCKED"
-    final_send_gate_open = bool(
-        status == "INTERNAL_RESPONSE_READY"
-        and lead.evidence_class == "REAL"
-        and config["external_send_authorized"]
-        and settings.FORGE_BOT_RESPONSE_SEND_ENABLED
-        and settings.FORGE_BOT_LIVE
-    )
-    return {
-        "reference": lead.public_ref,
-        "status": status,
-        "blocking_reasons": blockers,
-        "observed_submitter_preference": lead.preferred_channel,
-        "owner_authorized_response_channel": (
-            selected_channel if config["channel_authorized"] else None
-        ),
-        "permitted_template_ref": (
-            config["template_ref"] if config["template_authorized"] else None
-        ),
-        "consent_required": config["consent_required"],
-        "opt_out_boundary": config["opt_out_boundary"],
-        "escalation_boundary": config["escalation_boundary"],
-        "external_send_authorized": config["external_send_authorized"],
-        "external_send_gate_open": final_send_gate_open,
-        "external_sender_available": False,
-        "external_send_enabled": False,
-        "external_message_sent": False,
-    }
+        result[key] = policy[key]
+    return result
 
 
 def _allow_submission(request: Request) -> bool:
@@ -294,15 +254,92 @@ def get_forge_bot_response_readiness(
 ):
     """Evaluate internal response readiness without creating outbound work."""
     _require_owner_key(request)
+    authorization = db.get(models.OpForgeBotResponseAuthorization, 1)
+    decision = forge_bot_response.decide_response_action(
+        db,
+        inquiry_reference=reference,
+        action=None,
+        requested_channel=authorization.selected_channel if authorization else None,
+        requested_template_ref=authorization.template_ref if authorization else None,
+    )
+    return _response_readiness_output(decision, authorization)
+
+
+@router.post("/response-actions", status_code=202)
+def create_forge_bot_response_action(
+    payload: schemas.ForgeBotResponseActionCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Create an owner-confirmed ACTION record; this does not send a message."""
+    _require_owner_key(request)
     lead = (
         db.query(models.ForgeBotLeadContact)
-        .filter_by(public_ref=reference, opted_out=False, erased_at=None)
+        .filter_by(
+            public_ref=payload.inquiry_reference,
+            opted_out=False,
+            erased_at=None,
+        )
         .one_or_none()
     )
     if lead is None:
         raise HTTPException(status_code=404, detail="Active inquiry not found.")
-    authorization = db.get(models.OpForgeBotResponseAuthorization, 1)
-    return _evaluate_response_readiness(lead, authorization)
+    action = forge_bot_response.propose_response_action(
+        db,
+        inquiry_reference=payload.inquiry_reference,
+        channel=payload.channel,
+        template_ref=payload.template_ref,
+    )
+    return {
+        "action_id": action.id,
+        "status": action.status,
+        "decision": "PENDING_OWNER_CONFIRMATION",
+        "external_message_sent": False,
+    }
+
+
+@router.post("/response-actions/{action_id}/approve")
+def approve_forge_bot_response_action(
+    action_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Record owner confirmation on one response ACTION."""
+    _require_owner_key(request)
+    action = forge_bot_response.approve_response_action(db, action_id=action_id)
+    if action is None:
+        raise HTTPException(status_code=404, detail="Forge Bot response ACTION not found.")
+    return {
+        "action_id": action.id,
+        "status": action.status,
+        "approved_at": action.approved_at,
+        "external_message_sent": False,
+    }
+
+
+@router.post("/response-actions/{action_id}/execute")
+def execute_forge_bot_response_action(
+    action_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Run the authorization-only ACTION adapter; no customer sender is wired."""
+    _require_owner_key(request)
+    action = db.get(models.Action, action_id)
+    if action is None or action.action_type != "forge_bot_response":
+        raise HTTPException(status_code=404, detail="Forge Bot response ACTION not found.")
+    from app.services import action_engine
+
+    executed = action_engine.start_and_execute_action(db, action_id)
+    if executed is None:
+        raise HTTPException(status_code=404, detail="Forge Bot response ACTION not found.")
+    return {
+        "action_id": executed.id,
+        "status": executed.status,
+        "execution_error": executed.execution_error,
+        "verification_state": executed.verification_state,
+        "external_message_sent": False,
+    }
 
 
 @router.post(

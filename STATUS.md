@@ -25,6 +25,15 @@ state is not assumed current unless explicitly identified as a dated observation
   path retains that non-contact erasure event while deleting the lead row.
   This behavior is covered by TEST fixtures only; it is not a customer or
   revenue result and does not activate intake or messaging.
+- Forge Bot customer-response ACTIONs use the existing `Action` primitive
+  through an owner-only creation/approval path. A canonical decision service
+  evaluates policy, inquiry, owner confirmation, and safety gates. Its
+  decision is rechecked before outbox creation and immediately before generic
+  provider dispatch; generic SMTP/Twilio requests matching a lead or retained
+  suppression HMAC are blocked. Proposal, approval, and authorization-decision
+  transitions emit registered `WorldEvent`s. No channel/template is
+  configured; the full response ACTION decision remains `BLOCKED` because the
+  send gate is false and no Forge Bot sender exists.
 - The owner has identified a `paid pilots >= 1` checkpoint for 2026-10-29,
   anchored to revenue-first mode beginning 2026-09-29. No matching date or
   scoreboard text was found in the local checked-in `docs/REVENUE_LOG.md` while
@@ -57,12 +66,17 @@ state is not assumed current unless explicitly identified as a dated observation
   on both backend and frontend jobs.
 - Local backend verification recorded on 2026-10-01: **575 passed, 2
   skipped**; the two corrected Vercel rewrite contract tests also passed.
-- Local verification on 2026-10-03: backend suite **596 passed, 2 skipped**;
-  focused Forge Bot API/notification tests **16 passed**; frontend/script tests,
-  TypeScript typecheck, lint, and production build passed. Build migration
-  step skipped because `DATABASE_URL` was unset. Browser smoke rendered the
-  closed intake page with no console errors; it confirmed the form remained
-  closed and did not exercise external messaging.
+- Local verification on 2026-10-03: backend suite **640 passed, 2 skipped**;
+  focused Forge Bot/API/notification/outbox tests **68 passed**; `npm test` passed
+  (197 script tests and 104 app tests), and TypeScript typecheck, lint, and
+  production build passed. Build migration step skipped because
+  `DATABASE_URL` was unset. Browser smoke rendered the closed intake page with
+  no console errors; it confirmed the form remained closed and did not exercise
+  external messaging. Authorization/ACTION tests verify owner-key access,
+  default-closed state, blocked reasons, PII-free decisions/events,
+  submitter-preference separation, audit events and rollback, generic
+  SMTP/Twilio rejection, dispatch-time checks, and no provider call or delivery
+  row for blocked Forge Bot activity.
 - Tests and test fixtures are not customer, payment, or revenue evidence.
 
 ## Open owner gates
@@ -76,9 +90,18 @@ state is not assumed current unless explicitly identified as a dated observation
   stable 32+-character server HMAC key, and server API key.
 - The provided contact email is a `mailto:` link; the provided Cal.com URL is
   displayed as a link. No inbound email parsing, selected-channel reply,
-  automatic booking, or customer follow-up is implemented. The internal daily
-  owner digest uses the existing authenticated cron/outbox path but requires
-  SMTP credentials; production delivery is not established. Authorize any
-  customer-facing activity and supply server credentials separately.
+  automatic booking, customer follow-up, or Forge Bot sender is implemented.
+  An owner-only response-authorization object records the selected existing
+  `email`/`phone` channel, exact template reference, consent and
+  opt-out/escalation boundaries separately from observed submitter preference.
+  No channel or template is configured. The canonical ACTION decision remains
+  `BLOCKED`: `FORGE_BOT_RESPONSE_SEND_ENABLED` defaults false and no sender is
+  wired. To move the policy from CLOSED, the owner must provide one complete
+  authenticated configuration object selecting and explicitly authorizing the
+  channel and template. A response ACTION still requires owner approval and a
+  separately implemented sender path; configuration alone does not enable or
+  execute an external send.
+  The internal daily owner digest uses the existing authenticated cron/outbox
+  path but requires SMTP credentials; production delivery is not established.
 - Confirm Oracle Always Free account/terms and cost controls before any live
   instance evaluation.

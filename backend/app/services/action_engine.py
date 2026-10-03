@@ -140,6 +140,24 @@ class SMTPEmailActionAdapter(ActionAdapter):
         }
 
 
+class ForgeBotResponseActionAdapter(ActionAdapter):
+    """Authorization-only boundary for Forge Bot responses; never sends."""
+
+    name = "forge_bot_response"
+
+    def execute(
+        self,
+        action: models.Action,
+        params: dict,
+        db: Optional[Session] = None,
+    ) -> dict:
+        if db is None:
+            return _failed("A database session is required for Forge Bot response authorization")
+        from app.services import forge_bot_response
+
+        return forge_bot_response.execute_response_action(db, action=action)
+
+
 class GitHubBountyActionAdapter(ActionAdapter):
     """Executes or verifies GitHub bounty actions.
     
@@ -368,6 +386,7 @@ ADAPTERS: dict[str, ActionAdapter] = {
     "provider_publish": ProviderNetworkAdapter(),
     "email": SMTPEmailActionAdapter(),
     "smtp_email": SMTPEmailActionAdapter(),
+    "forge_bot_response": ForgeBotResponseActionAdapter(),
     "github_bounty_claim": GitHubBountyActionAdapter(),
     "github_bounty_verify": GitHubBountyActionAdapter(),
 }
@@ -394,6 +413,10 @@ def propose_action(
     risk_score: float = 20.0,
 ) -> models.Action:
     """Create action, evaluate policy, set PROPOSED / APPROVAL_REQUIRED / BLOCKED."""
+    if action_type == "forge_bot_response":
+        raise ValueError(
+            "Use forge_bot_response.propose_response_action for owner-gated response ACTIONs"
+        )
     # Reuse autonomy policy evaluation shape via a lightweight probe on Experiment
     # path when available; otherwise simple rules.
     policy_result = "ALLOW"

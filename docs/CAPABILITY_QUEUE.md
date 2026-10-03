@@ -1,5 +1,37 @@
 # Hami capability claim ledger (ForgeOS repository)
 
+## [DONE WITH LIMITATION] Enforce the Forge Bot response ACTION boundary (2026-10-03)
+
+- Owner action still required: conduct owner-run discovery, then choose and
+  authorize an exact existing response channel and template reference with
+  consent, opt-out, escalation, and send boundaries. Do not infer a channel
+  from submitter preference.
+- Action removed: prevent generic `smtp/send_email` and `twilio/send_sms`
+  paths from serving Forge Bot leads without the canonical decision. An
+  owner-only proposal/approval path uses the existing `Action` primitive; the
+  same decision is enforced by the ACTION adapter, before outbox creation, and
+  immediately before provider dispatch. Proposal, approval, and decision
+  transitions emit registered `WorldEvent`s.
+- Current blocker / verification: no owner channel/template is configured,
+  `FORGE_BOT_RESPONSE_SEND_ENABLED` defaults false, and no Forge Bot sender
+  exists. The full ACTION decision is `BLOCKED`; a separate policy subdecision
+  may be `ALLOWED` when a TEST inquiry matches policy, but that does not
+  authorize execution. Tests cover required blockers, PII-free decision/event
+  payloads, generic SMTP/Twilio rejection before queueing, dispatch-time
+  checks, audit persistence failure, and zero provider calls/deliveries.
+  Local verification on 2026-10-03: focused Forge Bot/API/notification/outbox
+  tests **68 passed**; backend suite **640 passed, 2 skipped**; `npm test`
+  passed (197 script and 104 app tests), typecheck, lint, build, and
+  `git diff --check` passed. Build migration skipped because `DATABASE_URL`
+  was unset. No real external message was sent or queued.
+- Next removable dependency: the owner must supply one authenticated
+  authorization object selecting an existing channel and exact template
+  reference. Any later sender implementation must resolve template content
+  and sender capability, retain the send flag default false until separately
+  authorized, and pass the canonical decision before ACTION and dispatch. Do
+  not create a next-day `WorkerTask` until these gates and a production runner
+  are verified.
+
 ## [DONE WITH LIMITATION] Preserve Forge Bot inquiry lifecycle events (2026-10-03)
 
 - Owner action still required: complete owner-run licensed-agency discovery, identify/confirm the real communication channel, and authorize any reply or follow-up. This change does not reduce those real-world decisions or authorize contact.

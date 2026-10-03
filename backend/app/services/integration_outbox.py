@@ -28,8 +28,19 @@ def enqueue(
     operation: str,
     idempotency_key: str,
     request: dict[str, Any] | None = None,
+    _forge_bot_decision: Any = None,
 ) -> models.IntegrationDelivery:
     """Persist an external intent exactly once before any network call."""
+    request_data = request or {}
+    from app.services import forge_bot_response
+
+    forge_bot_response.enforce_delivery_boundary(
+        db,
+        integration_name=integration_name,
+        operation=operation,
+        request=request_data,
+        action_decision=_forge_bot_decision,
+    )
     existing = db.query(models.IntegrationDelivery).filter_by(idempotency_key=idempotency_key).first()
     if existing:
         return existing
@@ -37,7 +48,7 @@ def enqueue(
         integration_name=integration_name,
         operation=operation,
         idempotency_key=idempotency_key,
-        request_json=json.dumps(request or {}, sort_keys=True, default=str),
+        request_json=json.dumps(request_data, sort_keys=True, default=str),
         status="QUEUED",
         attempts=0,
         next_attempt_at=_now(),

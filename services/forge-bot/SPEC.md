@@ -32,6 +32,25 @@ evidence-backed status → daily owner summary`
 The synchronous receipt acknowledges only the web submission. It is not a
 reply on the submitter's selected email/phone channel.
 
+The response authorization boundary is implemented as owner-only
+`GET/PUT /forge-bot/response-authorization` endpoints backed by the singleton
+`op_forge_bot_response_authorization` operational projection. An absent
+configuration is SAFE/CLOSED. The owner must explicitly select and authorize
+one existing `email` or `phone` channel, authorize a non-contact template
+reference, retain the consent requirement, and set the opt-out and
+owner-confirmation boundaries. Each changed policy emits a registered
+`WorldEvent`; the submitter's observed preference remains separate and must
+match the owner-selected channel. A response ACTION uses the existing `Action`
+primitive, requires explicit owner approval, and emits registered events for
+proposal, approval, and its canonical authorization decision. The dedicated
+`forge_bot_response` adapter is authorization-only and never sends. The
+canonical decision is rechecked before outbox creation and provider dispatch;
+generic SMTP/Twilio requests matching a lead or its suppression HMAC are
+blocked. `GET /forge-bot/leads/{reference}/response-readiness` uses the same
+decision and remains `BLOCKED` while the ACTION, final send gate, or sender is
+missing. The response-send setting defaults false and no Forge Bot sender is
+available, so no external response is possible.
+
 The owner authorized a consent-scoped web intake record, supplied
 `haminp.forge@gmail.com` as the contact address, and supplied the booking link
 `https://cal.com/hami-forge-m9agd6/build-hami`. The contact address is a
@@ -124,7 +143,11 @@ disabled. The route `GET /forge-bot/config` reports settings,
 `POST /forge-bot/leads/delete` erases a submission, and
 `GET /forge-bot/leads/summary` returns up to 100 active rows only to an owner
 presenting the API key. The daily digest points to this owner-only summary for
-contact details and never includes those details in email.
+contact details and never includes those details in email. The response
+authorization, readiness, and ACTION endpoints also require the owner API key.
+Readiness checks the owner-authorized channel against the observed submitter
+preference, explicit consent, opt-out/erasure state, and authorized template
+reference without sending or queueing a message.
 
 Use `WorkerTask` idempotency, conditional claim, due time, and retry for
 follow-ups/reminders; no follow-up/reminder task is currently created. The
@@ -140,9 +163,11 @@ proven.
 
 ## Not in v0
 
-No customer-facing email or WhatsApp integration without owner-discovery
-justification, verified official policy, explicit send authorization, and
-tested channel controls. The internal owner digest is not a customer channel.
+No customer-facing email or WhatsApp sending path is implemented. The
+owner-only authorization record is not a sender or standing approval to
+contact anyone; external sending still requires a separately enabled final
+gate and a verified, zero-cost sender path. The internal owner digest is not a
+customer channel.
 No
 billing system, marketplace, mass outbound, full CRM, negotiation engine,
 unapproved publishing or spending, or fabricated prospect simulation.

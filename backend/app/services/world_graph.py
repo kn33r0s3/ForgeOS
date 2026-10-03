@@ -105,6 +105,9 @@ def seed_core_types(db: Session) -> int:
             "forge_bot_inquiry_opted_out",
             "forge_bot_inquiry_erased",
             "forge_bot_response_authorization_changed",
+            "forge_bot_response_action_proposed",
+            "forge_bot_response_action_owner_approved",
+            "forge_bot_response_action_authorization_decided",
         },
         "capability_type": {"tool", "workflow", "integration", "agent", "model", "market_signal_analysis"},
     }

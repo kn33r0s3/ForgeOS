@@ -109,8 +109,11 @@ class ForgeBotResponseAuthorizationUpdate(BaseModel):
         normalized = value.strip()
         if not normalized:
             return None
-        if any(ord(character) < 33 or ord(character) > 126 for character in normalized):
-            raise ValueError("template_ref must be a printable, non-space reference")
+        if not re.fullmatch(
+            r"(?=.*[A-Za-z])[A-Za-z0-9][A-Za-z0-9._:/#-]{0,199}",
+            normalized,
+        ):
+            raise ValueError("template_ref must be a non-contact reference identifier")
         return normalized
 
     @field_validator("consent_required")
@@ -118,6 +121,30 @@ class ForgeBotResponseAuthorizationUpdate(BaseModel):
     def require_consent(cls, value):
         if not value:
             raise ValueError("Forge Bot responses must require explicit consent")
+        return value
+
+
+class ForgeBotResponseActionCreate(BaseModel):
+    inquiry_reference: str = Field(min_length=1, max_length=32)
+    channel: Literal["email", "phone"]
+    template_ref: str = Field(min_length=1, max_length=200)
+
+    @field_validator("inquiry_reference", "template_ref")
+    @classmethod
+    def normalize_action_reference(cls, value):
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("reference is required")
+        return normalized
+
+    @field_validator("template_ref")
+    @classmethod
+    def validate_action_template_ref(cls, value):
+        if not re.fullmatch(
+            r"(?=.*[A-Za-z])[A-Za-z0-9][A-Za-z0-9._:/#-]{0,199}",
+            value,
+        ):
+            raise ValueError("template_ref must be a non-contact reference identifier")
         return value
 
 

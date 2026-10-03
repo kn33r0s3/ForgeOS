@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.config import settings
-from app.services import integration_outbox
+from app.services import forge_bot_response, integration_outbox
 
 logger = logging.getLogger(__name__)
 
@@ -157,8 +157,25 @@ def dispatch_single_delivery(db: Session, delivery_id: int) -> models.Integratio
 
     logger.info(f"Dispatching delivery {delivery.id} ({delivery.integration_name}/{delivery.operation})")
     try:
+        request_data = json.loads(delivery.request_json)
+        if not isinstance(request_data, dict):
+            raise PermanentIntegrationError("Integration request must be an object")
+        try:
+            marked_decision = forge_bot_response.decision_for_marked_delivery(
+                db, request_data
+            )
+            forge_bot_response.enforce_delivery_boundary(
+                db,
+                integration_name=delivery.integration_name,
+                operation=delivery.operation,
+                request=request_data,
+                action_decision=marked_decision,
+            )
+        except forge_bot_response.ForgeBotResponseBlocked as exc:
+            raise PermanentIntegrationError(str(exc)) from exc
+
         if delivery.integration_name == "twilio" and delivery.operation == "send_sms":
-            req_data = json.loads(delivery.request_json)
+            req_data = request_data
             to_number = req_data.get("to")
             body = req_data.get("body")
             if not to_number or not body:
@@ -168,7 +185,7 @@ def dispatch_single_delivery(db: Session, delivery_id: int) -> models.Integratio
             logger.info(f"Delivery {delivery.id} succeeded. Provider ID: {resp.get('sid')}")
 
         elif delivery.integration_name == "smtp" and delivery.operation == "send_email":
-            req_data = json.loads(delivery.request_json)
+            req_data = request_data
             to_email = req_data.get("to") or req_data.get("recipient")
             subject = req_data.get("subject", "")
             body = req_data.get("body", "")

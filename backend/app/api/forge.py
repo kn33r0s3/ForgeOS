@@ -52,7 +52,7 @@ Source reliability tracking.
     GET  /forge/scenarios                                                    -> Phase 1 2036 Scenario Engine overview (secondary domain)
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -1092,6 +1092,11 @@ def create_action(
 ):
     import json
     from app.services import action_engine
+    if action_type == "forge_bot_response":
+        raise HTTPException(
+            403,
+            "Create Forge Bot response ACTIONs through the owner-only Forge Bot route.",
+        )
     parsed = None
     if parameters:
         try:
@@ -1119,7 +1124,12 @@ def create_action(
 
 
 @router.post("/actions/{action_id}/approve")
-def approve_action(action_id: int, db: Session = Depends(get_db)):
+def approve_action(action_id: int, request: Request, db: Session = Depends(get_db)):
+    action = db.get(models.Action, action_id)
+    if action and action.action_type == "forge_bot_response":
+        from app.api.forge_bot import _require_owner_key
+
+        _require_owner_key(request)
     from app.services import action_engine
     a = action_engine.approve_action(db, action_id)
     if not a:
@@ -1128,7 +1138,12 @@ def approve_action(action_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/actions/{action_id}/execute")
-def execute_action(action_id: int, db: Session = Depends(get_db)):
+def execute_action(action_id: int, request: Request, db: Session = Depends(get_db)):
+    action = db.get(models.Action, action_id)
+    if action and action.action_type == "forge_bot_response":
+        from app.api.forge_bot import _require_owner_key
+
+        _require_owner_key(request)
     from app.services import action_engine
     a = action_engine.start_and_execute_action(db, action_id)
     if not a:

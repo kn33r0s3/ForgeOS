@@ -11,6 +11,8 @@ application or state system.
 | State changes and message/booking/opt-out events | `WorldEvent` | Record only observed events with provenance; an event is not proof of customer or payment status by itself. |
 | Consent, message delivery, booking, fulfillment, payment | `Evidence` and existing evidence relationships | Retain source, purpose, timestamp, and evidence scope. A conversation cannot establish payment. |
 | Existing capability/channel | `SubstrateCapability` and current integrations | Reuse only an active, authorized capability. Do not add a channel just to complete the design. |
+| Owner response policy | `OpForgeBotResponseAuthorization` | Singleton `op_` projection only; absent means closed. Changed policy emits a registered `WorldEvent`; observed preference is not authorization. The projection is read by the canonical ACTION decision, not a sender. |
+| Customer-response ACTION and approval | Existing `Action` plus registered `WorldEvent`s | Owner-only proposal and approval; the dedicated adapter records the canonical decision but does not send. Generic provider paths recheck the decision and block matching Forge Bot contacts. |
 | Delayed follow-up/reminder work | `WorkerTask` | Reuse idempotency, due time (`next_run_at`), conditional claim, and retry. Stale `running` task recovery is not implemented; do not assume a timed-out task is safe to requeue until handler side effects are idempotent. Production scheduling is not currently sub-daily. |
 | Request to book an existing public service | `BookingRequest` | Use only when a real, active Forge public provider/service listing is the subject. This is not a generic bot calendar or booking table. Otherwise send an owner-approved booking link only after contact is authorized. |
 | Draft offer and approval | Existing `Product` / offer-preparation flow | Keep proposal and owner approval semantics; never treat a draft or approval as a published offer or sale. |
@@ -47,13 +49,23 @@ The owner contact email and provided Cal.com URL are public configuration
 values rendered on the `noindex` `/forge-bot-intake` page, linked contextually
 from the business information surface. The email is a `mailto:` link; neither
 it nor the booking link triggers an automated send or booking action. The
-internal daily owner digest is implemented through the authenticated scheduled
-route and existing outbox; actual delivery requires SMTP configuration and is
-not established by code presence. Inbound email parsing and customer-facing
-follow-up are not connected. No time-based retention policy is configured. Do
-not add separate message, opt-out, escalation, or intervention architectures.
-No passports, identity documents, academic records, or other sensitive ID
-data.
+owner-only `GET/PUT /forge-bot/response-authorization` endpoints record the
+selected existing `email`/`phone` channel, explicit channel and template
+authorization, mandatory consent, permanent opt-out boundary,
+owner-confirmation boundary, and separate external-send authorization. An
+absent setting is closed; policy changes emit `WorldEvent`. The per-inquiry
+readiness endpoint returns internal readiness only and distinguishes observed
+submitter preference from the owner-selected channel. No channel or template
+has been owner-configured, `FORGE_BOT_RESPONSE_SEND_ENABLED` defaults false,
+and no Forge Bot sender exists. The canonical decision therefore remains
+`BLOCKED`; blocked Forge Bot ACTIONs create no outbox delivery. The internal
+daily owner digest is implemented through the authenticated scheduled route
+and existing outbox; actual delivery requires SMTP configuration and is not
+established by code presence.
+Inbound email parsing and customer-facing follow-up are not connected. No
+time-based retention policy is configured. Do not add separate message,
+opt-out, escalation, or intervention architectures. No passports, identity
+documents, academic records, or other sensitive ID data.
 
 ## Safe transition rule
 
@@ -69,6 +81,9 @@ Intake is disabled unless `FORGE_BOT_INTAKE_ENABLED=true`,
 `FORGE_BOT_CONTACT_HMAC_KEY` is stable and at least 32 characters, and
 `FORGE_API_KEY` is configured. The current per-process IP limiter is not
 distributed; production ingress abuse controls, a time-based retention policy,
-licensed-agency discovery, and any external-send authorization remain
-unverified. All automated replies, follow-ups, offers, and spending remain
-disabled. The data model is not authorization.
+licensed-agency discovery, a configured response channel/template, and any
+production sender remain unavailable. The owner policy record is an explicit
+authorization boundary, but is absent by default and cannot enable sending:
+the final send setting defaults false and no sender is wired. All automated
+replies, follow-ups, offers, and spending remain disabled. The data model is
+not authorization.
