@@ -2,10 +2,13 @@
 
 ## Current closure map (2026-10-04)
 
-Repository snapshot: `HEAD` and `origin/main` are both
-`1459eec34c0105372e2b089a92994528ac393707` at inspection. GitHub Actions CI
-for that SHA is green. This is the current summary; dated entries below it
-are retained as history and may be superseded by this map.
+At the start of the latest verification, `HEAD` and `origin/main` matched
+`f5ca8d82749d82723fa18806fe472bb913a995db`. The local PostgreSQL parity test
+fix is committed but not pushed; `origin/main` has since advanced to
+`30e337c2354fb15e397861780b906f2108e40d74`. CI is green for the original base
+and that current upstream SHA, but was not run for the local parity commit.
+This is the current summary; dated entries below it are retained as history
+and may be superseded by this map.
 
 | Area | Current status | Evidence and next dependency |
 | --- | --- | --- |
@@ -18,13 +21,13 @@ are retained as history and may be superseded by this map.
 | Retention after response `ACTION` | **PLANNED, not implemented** | A linked response `ACTION` is exempt from the existing 30-day unactioned-inquiry purge. The proposed 90-day maximum needs owner approval before implementation. |
 | Customer-facing response | **BLOCKED** | No owner-configured response channel/template or Forge Bot sender exists; the send flag defaults false. No outbound messages are authorized or sent. |
 | Pilot segment and paid outcome | **HYPOTHESIS / owner action required** | The initial segment remains unverified until the owner reports five real discovery conversations. No real customer/revenue outcome is established; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**. |
-| Backend PostgreSQL full-suite coverage | **PARTIAL** | The affected Forge Bot/public-write/signal tests pass on throwaway PostgreSQL 18 (103 passed), but the complete local suite is not green there: 676 passed, 9 failed, 2 skipped. Failing tests are in `test_experiment_service.py`, `test_health_readiness.py` (2), `test_phase1_provenance_and_identity.py`, `test_research_question_relation_substrate_adapter.py`, and `test_tool_usefulness.py` (4). SQLite full suite passes 685, 2 skipped. Investigate these failures before claiming full-suite PostgreSQL parity. |
+| Backend PostgreSQL full-suite coverage | **DONE — local SQLite/PostgreSQL parity verified** | The complete backend suite passed 686 tests, 2 skipped on SQLite and throwaway PostgreSQL 18. The five previously failing modules passed all 37 tests on each dialect. Their causes were invalid test-fixture foreign keys and SQLite-specific driver/path expectations, not production-code failures. The focused Forge Bot/owner-notification/privacy/public-write/signal tests passed 112/112 on each dialect. This local evidence does not establish production database behavior or the deployed source SHA. |
 
-Current npm verification: `npm test` passed 197 script and 107 app tests;
-typecheck and lint passed. The production build passed in the preceding
-verification cycle, but was not rerun for this documentation-only closure-map
-update. No production write, credential access, message, or flag change was
-performed for this inspection.
+Current npm verification: `npm test`, typecheck, lint, and production build
+passed. The build was run with `DATABASE_URL` unset, so its migration step
+skipped. Read-only production GETs and browser verification are recorded in
+`STATUS.md`; no production write, credential access, message, database query,
+or flag change was performed for this verification.
 
 ## [PARTIAL] Batch 12B: close request-state, copy, and verification gaps (2026-10-04)
 

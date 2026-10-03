@@ -103,25 +103,29 @@ not authorization.
 
 ## Current verification boundary (2026-10-04)
 
-The current checkout (`1459eec34c0105372e2b089a92994528ac393707`, equal to
-`origin/main` at inspection) passed the full backend SQLite suite (**685
-passed, 2 skipped**) and `npm test` (**197 script tests and 107 app tests**);
-typecheck and lint passed. The full backend suite on throwaway PostgreSQL 18 was **not green** (**676
-passed, 9 failed, 2 skipped**): failures occurred in `test_experiment_service`,
-two `test_health_readiness` tests, `test_phase1_provenance_and_identity`,
-`test_research_question_relation_substrate_adapter`, and four
-`test_tool_usefulness` tests. The directly affected Forge Bot, public-write-
-limit, and signal-request test files passed **103/103** on PostgreSQL 18. Do
-not claim complete PostgreSQL parity until the remaining suite failures are
-resolved. The latest GitHub Actions run for this SHA was green. Public `/api/health` returns only `status` and `ready`;
-`/api/health/details` requires `X-API-Key`.
+At the start of this run, the local base and `origin/main` both matched
+`f5ca8d82749d82723fa18806fe472bb913a995db`. The local test-only PostgreSQL
+parity fix is committed but not pushed; `origin/main` later advanced to
+`30e337c2354fb15e397861780b906f2108e40d74`. CI succeeded for the original
+base and current upstream SHA, but no CI run exists for the local parity
+commit.
+
+On 2026-10-04, the full backend suite passed **686 tests, 2 skipped** on both
+SQLite and throwaway PostgreSQL 18. The five formerly failing test modules
+passed **37 tests** across the two dialects. The root causes were invalid
+fixture foreign keys and tests that assumed SQLite regardless of the active
+database. The focused Forge Bot, owner-notification/privacy, public-write,
+and signal-request tests passed **112/112** on each dialect. `npm test`,
+typecheck, lint, and `npm run build` passed; the build ran with `DATABASE_URL`
+unset, so migrations skipped. Public `/api/health` returns only `status` and
+`ready`; `/api/health/details` requires `X-API-Key`.
 
 Read-only GETs on `haminp.vercel.app` and `forge-os-ebon.vercel.app` returned
-health 200/ready and `intake_enabled=false`. On `haminp.vercel.app`, a
-390x844 browser verified `/request` and `/request-a-project` render the closed
-message with no form controls and no browser errors. These observations do
-not establish the deployed commit SHA: the owner readiness endpoint is
-protected, and no owner key was used. The database credential access
-procedure is not authorized/documented, so no production database was
-queried. Intake remains closed; no REAL lead, customer, or transaction is
-established by these tests.
+health 200/ready, `intake_enabled=false`, `/request` 200 with the not-open
+message and no form, and `/request-a-project` 307 to `/request`. A production
+browser reload of `/request` found zero forms, textareas, or submit buttons,
+and no browser/page errors. These observations do not establish the deployed
+commit SHA: the owner readiness endpoint is protected, and no owner key was
+used. The database credential access procedure is not authorized/documented,
+so no production database was queried. Intake remains closed; no REAL lead,
+customer, or transaction is established by these tests.

@@ -75,24 +75,36 @@ state is not assumed current unless explicitly identified as a dated observation
 
 ## Verification
 
-- At inspection, `HEAD` and `origin/main` were both
-  `1459eec34c0105372e2b089a92994528ac393707`. GitHub Actions CI for that SHA
-  completed successfully.
-- Current local verification on 2026-10-04: backend suite **685 passed, 2
-  skipped** on SQLite. The full suite on throwaway PostgreSQL 18 was **676
-  passed, 9 failed, 2 skipped**; do not claim full PostgreSQL-suite parity.
-  The directly affected Forge Bot, public-write-limit, and signal-request
-  tests passed **103/103** on PostgreSQL 18. `npm test` passed **197 script
-  tests and 107 app tests**, and typecheck and lint passed. A build passed in
-  the preceding verification cycle; it was not rerun for the current
-  documentation-only status update.
+- At the start of the PostgreSQL parity run, local `HEAD` and `origin/main`
+  both matched `f5ca8d82749d82723fa18806fe472bb913a995db`. A test-only parity
+  commit was then created locally. `origin/main` subsequently advanced to
+  `30e337c2354fb15e397861780b906f2108e40d74`; CI succeeded for both that
+  upstream SHA and the original base, but not for the local parity commit.
+  The parity change has not been pushed or deployed.
+- Current local verification on 2026-10-04: the complete backend suite passed
+  **686 tests, 2 skipped** on SQLite and **686 tests, 2 skipped** on throwaway
+  PostgreSQL 18. The five formerly failing modules pass **37 tests** on each
+  dialect. Failures were test-fixture portability problems: fabricated
+  foreign-key references and assertions that assumed the active database was
+  SQLite. Test data now uses real TEST-scoped referenced rows; the adapter's
+  missing-source branch is covered without inserting an FK-invalid row; and
+  health/database-isolation checks follow the selected dialect. No
+  production implementation or schema was changed.
+- The focused Forge Bot, owner-notification/privacy, public-write-limit, and
+  signal-request tests passed **112/112** on both SQLite and throwaway
+  PostgreSQL 18. `npm test`, typecheck, lint, and `npm run build` passed. The
+  build was run with `DATABASE_URL` explicitly unset, so the deploy-time
+  migrator skipped instead of connecting to or writing any database.
 - At 390x844 on `haminp.vercel.app`, `/request` displayed the closed message
   with zero forms, textareas, or submit buttons; `/request-a-project`
   redirected to `/request` and showed the same closed state. No browser errors
   were observed. Production GETs to both configured domains returned health
-  200/ready and `intake_enabled=false`. These GETs do not establish which
-  source commit is deployed. No owner key or production database credential
-  was used, and no production database was queried.
+  200/ready, `intake_enabled=false`, `/request` 200 with the not-open message
+  and no form, and `/request-a-project` 307 to `/request`. A browser reload of
+  the production `/request` page found the closed message, zero forms,
+  textareas, or submit buttons, and no console/page errors. These GETs do not
+  establish which source commit is deployed. No owner key or production
+  database credential was used, and no production database was queried.
 - `/privacy` remains `noindex, nofollow` and is not linked from navigation or
   consent. No production message, lead submission, or flag change was made.
 - Prior focused Forge Bot/API/notification/outbox tests (**68 passed**) and
