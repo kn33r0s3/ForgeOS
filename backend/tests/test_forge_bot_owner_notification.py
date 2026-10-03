@@ -79,3 +79,19 @@ def test_daily_owner_summary_skips_without_smtp_credentials(db, monkeypatch):
 
     assert result is None
     assert db.query(models.IntegrationDelivery).count() == 0
+
+
+def test_real_lead_owner_notification_skips_without_smtp_credentials(db, monkeypatch):
+    monkeypatch.setattr(settings, "SMTP_HOST", "")
+    monkeypatch.setattr(settings, "SMTP_USER", "")
+    monkeypatch.setattr(settings, "SMTP_PASSWORD", "")
+
+    result = forge_bot_owner_notification.send_owner_summary_notification(
+        db,
+        "FB-TESTNOSMTP",
+        {"evidence_class": "REAL", "stage": "READY_FOR_OWNER_REVIEW"},
+        "forge-bot-lead-owner-notification:FB-TESTNOSMTP",
+    )
+
+    assert result is None
+    assert db.query(models.IntegrationDelivery).count() == 0

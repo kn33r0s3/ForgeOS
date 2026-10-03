@@ -2,6 +2,7 @@
 
 import hashlib
 import hmac
+import logging
 import re
 import secrets
 import threading
@@ -15,11 +16,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import models, schemas
+from app.api import forge_bot_owner_notification
 from app.config import settings
 from app.database import get_db
 from app.services import forge_bot_response, world_graph
 
 router = APIRouter(prefix="/forge-bot", tags=["forge-bot"])
+logger = logging.getLogger(__name__)
 CONSENT_PURPOSE = "respond_to_forge_bot_inquiry"
 CONSENT_PROVENANCE = "forge_bot_web_form_v1"
 RATE_LIMIT = 5
@@ -462,6 +465,35 @@ def create_forge_bot_lead(
         if duplicate is not None:
             return receipt
         raise
+    if evidence_class == "REAL":
+        try:
+            forge_bot_owner_notification.send_owner_summary_notification(
+                db,
+                reference,
+                {
+                    "evidence_class": row.evidence_class,
+                    "stage": row.stage,
+                    "preferred_channel": row.preferred_channel,
+                    "email": row.email,
+                    "phone": row.phone,
+                    "destination": row.destination,
+                    "course": row.course,
+                    "timeline": row.timeline,
+                    "budget_minimum": row.budget_minimum,
+                    "budget_maximum": row.budget_maximum,
+                    "consent_granted": row.consent_granted,
+                    "consent_at": row.consent_at.isoformat(),
+                    "consent_purpose": row.consent_purpose,
+                    "consent_provenance": row.consent_provenance,
+                },
+                idempotency_key=f"forge-bot-lead-owner-notification:{reference}",
+            )
+        except Exception as exc:
+            logger.error(
+                "Forge Bot owner notification failed for %s (%s).",
+                reference,
+                type(exc).__name__,
+            )
     return receipt
 
 

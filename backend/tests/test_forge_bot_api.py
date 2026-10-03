@@ -150,6 +150,11 @@ def test_live_off_rejects_real_leads_but_allows_test_records(db, monkeypatch):
 
 def test_submitted_lead_is_private_consent_scoped_and_not_projected_publicly(db, monkeypatch):
     _enable_intake(monkeypatch)
+    monkeypatch.setattr(
+        forge_bot_owner_notification,
+        "send_owner_summary_notification",
+        lambda *args, **kwargs: pytest.fail("TEST inquiry must not notify the owner"),
+    )
     client, cleanup = _client(db)
     try:
         response = client.post("/forge-bot/leads", json=_payload())
@@ -175,6 +180,45 @@ def test_submitted_lead_is_private_consent_scoped_and_not_projected_publicly(db,
     assert public.status_code == 200
     assert "lead-one@example.test" not in public.text
     assert "Agriculture" not in public.text
+
+
+def test_real_lead_notification_failure_does_not_fail_submission(db, monkeypatch):
+    _enable_intake(monkeypatch)
+    monkeypatch.setattr(settings, "FORGE_BOT_LIVE", True)
+    forge_bot._submissions_by_ip.clear()
+    notification_calls = []
+
+    def fail_notification(session, reference, lead_data, idempotency_key):
+        assert session.query(models.ForgeBotLeadContact).filter_by(
+            public_ref=reference
+        ).one()
+        notification_calls.append((reference, lead_data, idempotency_key))
+        raise OSError("simulated SMTP outage")
+
+    monkeypatch.setattr(
+        forge_bot_owner_notification,
+        "send_owner_summary_notification",
+        fail_notification,
+    )
+    client, cleanup = _client(db)
+    try:
+        response = client.post(
+            "/forge-bot/leads",
+            json=_payload(email="real.lead@example.com", phone="+977 9800000012"),
+        )
+    finally:
+        client.close()
+        cleanup()
+        forge_bot._submissions_by_ip.clear()
+
+    assert response.status_code == 202
+    assert db.query(models.ForgeBotLeadContact).one().evidence_class == "REAL"
+    assert len(notification_calls) == 1
+    reference, lead_data, idempotency_key = notification_calls[0]
+    assert reference == response.json()["reference"]
+    assert lead_data["evidence_class"] == "REAL"
+    assert lead_data["stage"] == "READY_FOR_OWNER_REVIEW"
+    assert idempotency_key == f"forge-bot-lead-owner-notification:{reference}"
 
 
 def test_response_authorization_is_owner_only_and_defaults_closed(db, monkeypatch):
