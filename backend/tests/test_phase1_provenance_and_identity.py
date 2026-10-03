@@ -137,7 +137,12 @@ def test_test_db_is_not_real_forge_db(db):
     bind = db.get_bind()
     url = str(bind.url)
     assert "forge.db" not in url.lower()
-    assert ":memory:" in url.lower() or "tmp" in url.lower()
+    if bind.dialect.name == "sqlite":
+        assert ":memory:" in url.lower() or "tmp" in url.lower()
+    else:
+        assert bind.dialect.name == "postgresql"
+        assert bind.url.host in {"127.0.0.1", "localhost", "::1"}
+        assert bind.url.database in {"forgeos_test", "forgeos_test_db"}
 
 
 def test_collector_normalized_output_contains_url_source_retrieved_at():

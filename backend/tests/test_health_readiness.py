@@ -50,12 +50,14 @@ def test_health_details_requires_owner_key_and_preserves_diagnostics(db, monkeyp
     assert denied.status_code == 401
     assert allowed.status_code == 200
     payload = allowed.json()
-    assert payload["database"]["driver"] == "sqlite"
+    from app import database
+
+    assert payload["database"]["driver"] == database.engine.dialect.name
     assert payload["database"]["available"] is True
     assert payload["readiness"] == {"ready": True, "blockers": []}
 
 
-def test_vercel_health_reports_ephemeral_database_and_missing_cron_secret(db, monkeypatch):
+def test_vercel_health_reports_database_and_missing_cron_secret(db, monkeypatch):
     monkeypatch.setenv("VERCEL", "1")
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("CRON_SECRET", raising=False)
@@ -74,16 +76,21 @@ def test_vercel_health_reports_ephemeral_database_and_missing_cron_secret(db, mo
     )
     assert details.status_code == 200
     payload = details.json()
-    assert payload["database"]["driver"] == "sqlite"
-    assert payload["database"]["durability"] == "ephemeral"
+    from app import database
+
+    driver = database.engine.dialect.name
+    assert payload["database"]["driver"] == driver
+    expected_blockers = ["cron_secret_not_configured"]
+    if driver == "sqlite":
+        assert payload["database"]["durability"] == "ephemeral"
+        expected_blockers.insert(0, "durable_database_not_configured")
+    else:
+        assert payload["database"]["durability"] == "configured"
     assert payload["scheduler"]["cron_secret_configured"] is False
     assert payload["scheduler"]["cron_schedule"] == "0 0 * * *"
     assert payload["readiness"] == {
         "ready": False,
-        "blockers": [
-            "durable_database_not_configured",
-            "cron_secret_not_configured",
-        ],
+        "blockers": expected_blockers,
     }
 
 

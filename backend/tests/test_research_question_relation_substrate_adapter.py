@@ -84,19 +84,42 @@ def test_text_similarity_never_creates_source_relations(db):
     assert db.query(models.WorldRelation).count() == 0
 
 
-def test_missing_source_and_deprecated_relation_type_stay_unresolved(db):
-    missing = models.ResearchQuestion(
-        question="What is the missing source?",
-        source_pattern_id=999999,
-    )
-    valid_pattern = models.Pattern(title="Source exists", description="A source pattern.")
-    db.add(valid_pattern)
+def test_missing_source_stays_unresolved(db, monkeypatch):
+    pattern = models.Pattern(title="Source exists", description="A source pattern.")
+    db.add(pattern)
     db.flush()
-    gated = models.ResearchQuestion(
-        question="What follows from this pattern?",
-        source_pattern_id=valid_pattern.id,
+    question = models.ResearchQuestion(
+        question="What is the missing source?",
+        source_pattern_id=pattern.id,
     )
-    db.add_all([missing, gated])
+    db.add(question)
+    db.commit()
+
+    original_get = db.get
+
+    def get_with_missing_pattern(model, identity, **kwargs):
+        if model is models.Pattern and identity == pattern.id:
+            return None
+        return original_get(model, identity, **kwargs)
+
+    monkeypatch.setattr(db, "get", get_with_missing_pattern)
+    result = adapter.sync_research_question_sources(db)
+
+    assert result["questions_seen"] == 1
+    assert result["relations_created"] == 0
+    assert result["unresolved_links"] == 1
+    assert db.query(models.WorldRelation).count() == 0
+
+
+def test_deprecated_relation_type_stays_unresolved(db):
+    pattern = models.Pattern(title="Source exists", description="A source pattern.")
+    db.add(pattern)
+    db.flush()
+    question = models.ResearchQuestion(
+        question="What follows from this pattern?",
+        source_pattern_id=pattern.id,
+    )
+    db.add(question)
     db.commit()
     world_graph.seed_core_types(db)
     relation_type = db.query(models.TypeRegistry).filter_by(
@@ -113,9 +136,9 @@ def test_missing_source_and_deprecated_relation_type_stay_unresolved(db):
 
     result = adapter.sync_research_question_sources(db)
 
-    assert result["questions_seen"] == 2
+    assert result["questions_seen"] == 1
     assert result["relations_created"] == 0
-    assert result["unresolved_links"] == 2
+    assert result["unresolved_links"] == 1
     assert db.query(models.WorldRelation).count() == 0
 
 

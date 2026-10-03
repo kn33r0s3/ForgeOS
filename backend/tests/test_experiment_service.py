@@ -4,10 +4,16 @@ from app.services import experiment_service
 
 
 def test_proposed_experiment_is_research_first_and_requires_approval(db):
+    signal = models.Signal(source="test", content="TEST: customers report onboarding confusion")
+    question = models.ResearchQuestion(
+        question="TEST: does onboarding confusion affect retention?"
+    )
+    db.add_all([signal, question])
+    db.flush()
     payload = ExperimentProposalCreate(
         source_analyze_id=7,
-        source_signal_id=11,
-        source_research_question_id=13,
+        source_signal_id=signal.id,
+        source_research_question_id=question.id,
         source_research_task_ids=[101, 102],
         problem_statement="Customers churn when onboarding is unclear",
         hypothesis="Short onboarding explains churn",
@@ -22,6 +28,8 @@ def test_proposed_experiment_is_research_first_and_requires_approval(db):
 
     assert created.opportunity_id is None
     assert created.source_analyze_id == 7
+    assert created.source_signal_id == signal.id
+    assert created.source_research_question_id == question.id
     assert created.authorization_status == "require_approval"
     assert created.execution_status == "proposed"
     assert created.response_received == "none"
