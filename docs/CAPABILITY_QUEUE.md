@@ -16,18 +16,22 @@
   present in commit `b774ead746d78f606bf393d305754aa2aefe9dfd`. The current
   content test already asserted the old mailbox copy was absent; this change
   expresses each retired phrase as a separate absence assertion. Local
-  content tests passed **10/10**. The malformed-intake test runs with
+  content tests passed **10/10**. At 390x844, local browser checks used an
+  explicit GET stub of `enabled:false`; both `/request` and
+  `/request-a-project` showed the closed message and zero forms, textareas,
+  or submit buttons, with no horizontal overflow or browser errors. No
+  submission was made. The malformed-intake test runs with
   `FORGE_BOT_INTAKE_ENABLED=false`; Pydantic rejects its TEST-marked malformed
   email before the route can persist a row; the response is 422, contains
   only the `email` field and a generic message, and the lead table remains
-  empty. Affected SQLite and throwaway PostgreSQL tests are to be recorded
-  after both runs. The current source has a 16 KiB public-write cap, 5/hour
-  limits on public posts/requests and 20/hour on domain control actions, but
-  production deployment of that source is not yet established by a public
-  GET. The owner readiness endpoint is owner-key protected; without already
-  authorized access, deployed commit SHAs on both production domains are
-  BLOCKED. No production write, credential read, or production database query
-  was made.
+  empty. The three affected backend files passed **103 tests on SQLite** and
+  **103 tests on throwaway loopback PostgreSQL 18**. The current source has a
+  16 KiB public-write cap, 5/hour limits on public posts/requests and
+  20/hour on domain control actions. Production deployment of that source is
+  not established by a public GET. The owner readiness endpoint is owner-key
+  protected; without already authorized access, deployed commit SHAs on both
+  production domains are BLOCKED. No production write, credential read, or
+  production database query was made.
 - Next removable dependency: owner-defined credential retrieval authorization
   and owner-authorized readiness access; then compare the readiness endpoint's
   deployed commit on both domains to `origin/main`. Do not test production
