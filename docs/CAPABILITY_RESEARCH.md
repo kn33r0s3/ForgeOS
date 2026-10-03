@@ -9,7 +9,7 @@ Promote to build only when a real pilot or a concrete builder need requires it.
 Hami's discovery loop — REALITY → OBSERVATION → EVIDENCE → UNDERSTANDING →
 UNKNOWN → QUESTION → TEST/ACTION → NEW REALITY — run as a first-class
 capability instead of a one-off activity. The rounds run in October 2026
-(round 1: broad forum listening; round 2: Nepal-first surfaces) are the
+(round 1: broad forum listening; round 2: Nepal-focused surfaces) are the
 reference implementation of the protocol, executed by the builder's agent.
 This spec defines what it would mean for *Hami itself* to hold the capability.
 

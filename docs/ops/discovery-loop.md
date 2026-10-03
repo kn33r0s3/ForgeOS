@@ -5,7 +5,7 @@ the operator agent has. Each run is an agent task, not a script.
 
 ## Context the worker needs
 
-Hami is a pre-revenue project, Nepal-first: value lies in specific, local,
+Hami is a pre-revenue project, Nepali-originated and world-facing: value lies in specific, local,
 real-world unknowns found only through contact with reality. Loop:
 REALITY → OBSERVATION → EVIDENCE → UNDERSTANDING → UNKNOWN → QUESTION →
 TEST/ACTION → NEW REALITY. Never manufacture evidence. Evidence classes:

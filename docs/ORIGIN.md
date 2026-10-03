@@ -1,9 +1,11 @@
 # Origin positioning: Nepali-originated, world-facing
 
-Standing product principle (owner-set, 2026-10-04): Hami must look and be
-Nepali-originated — built in Kathmandu, representing Nepal worldwide.
-Nepal-first is not a stepping stone; it is the identity. Global intent
-follows from it, not instead of it.
+Standing product principle (owner-set, 2026-10-04): Hami is
+Nepali-originated — built in Kathmandu, representing Nepal worldwide —
+and serves everywhere equally. Origin is identity, not priority: Hami
+does not discriminate or prioritize by geography. A merchant in Butwal
+and a merchant in Berlin meet the same system. Building and piloting
+where the builder stands (Kathmandu) is circumstance, not privilege.
 
 ## Why this is strategy, not decoration
 
@@ -42,6 +44,9 @@ San Francisco tool — and that difference is the moat.
 - Costume branding: Nepali visuals over foreign-shaped product behavior.
 - Claiming to represent Nepal before the product has served a single real
   Nepali merchant — the flag is earned by reality, not asserted.
+- Treating Nepal as a priority market or a test market — origin is
+  identity, not privilege. No geographic discrimination, no priority
+  lane.
 - Diluting origin to look "global": global reach, Nepali roots. Never the
   reverse.
 - Speaking for Nepal in marketing before merchants speak for Hami in

@@ -81,10 +81,11 @@ online discourse may ever be presented as a substitute for a real voice.
 
 ## What Hami is
 
-A universal economic intelligence and action system — Nepal-first, global
-in intent. Not a SaaS product, not a marketplace, chatbot, lead-gen bot, or
-"just a feed." Economic infrastructure that lives where economic life
-happens.
+A universal economic intelligence and action system — Nepali-originated,
+world-facing. Not a SaaS product, not a marketplace, chatbot, lead-gen bot,
+or "just a feed." Economic infrastructure that lives where economic life
+happens. No geographic priority or discrimination: origin is identity, not
+privilege.
 Exactly six primitives: ENTITY, RELATION, EVENT, EVIDENCE, CAPABILITY,
 ACTION. `op_` tables are projections, not source of truth. Meaningful
 transitions emit events. `type_registry` is authoritative. Truth:
@@ -96,11 +97,11 @@ UNKNOWN → QUESTION → TEST/ACTION → NEW REALITY. Surprise
 (OBSERVED ≠ EXPECTED) generates new unknowns. The user’s stance:
 "everything is known and everyone knows" — Hami's value lies beyond the
 known, in specific, local, real-world unknowns found only through contact
-with reality. **Origin positioning (owner-set):** Hami is visibly
-Nepali-originated — built in Kathmandu, representing Nepal worldwide;
-Nepal-first is the identity, global intent follows from it. The product
-must *behave* Nepali (conversational, phone-first, honest about cash),
-not just look it — see `docs/ORIGIN.md`.
+with reality. **Origin positioning (owner-set):** Hami is visibly Nepali-originated —
+built in Kathmandu, representing Nepal worldwide — and serves everywhere
+equally. Origin is identity, not priority: no geographic discrimination,
+no priority lane. The product must *behave* Nepali (conversational,
+phone-first, honest about cash), not just look it — see `docs/ORIGIN.md`.
 
 ## Keeping this file fresh
 
