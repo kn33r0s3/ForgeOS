@@ -970,6 +970,14 @@ realized revenue.
 - **Verification:** SQLite regression confirms a SANDBOX TEST alert is excluded and the generated board event is labeled DERIVED. Production inspection used GET only and printed no alert text.
 - **Next removable dependency:** establish explicit evidence scope at public Work-record creation and verify the four existing records against stored provenance before any are represented as REAL. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
 
+### 2026-10-03 — Add baseline browser security headers
+
+- **Owner action still required:** review CSP reports after deployment before deciding whether any policy can safely be enforced.
+- **Action removed:** browsers now receive `nosniff`, strict-origin referrer behavior, frame denial, and disabled camera/microphone/geolocation. A CSP is report-only and does not block current app or booking behavior.
+- **Remaining boundary:** the report-only policy has not been observed in production and is not an enforcement control. The configured Cal.com booking URL remains the canonical URL; no booking was started.
+- **Verification:** config regression asserts all requested header values and confirms no enforced `Content-Security-Policy` is present. The Forge Bot config test confirms the booking href.
+- **Next removable dependency:** collect CSP reports and review browser behavior before tightening the policy; keep the booking flow separate from intake activation. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
 ### 2026-10-03 — Bound inquiry retention and durable intake limits
 
 - **Owner action still required:** conduct owner-run discovery, decide whether to open intake, and personally review any inquiry before a response or service commitment. No real customer interaction, payment, or revenue evidence was created here.

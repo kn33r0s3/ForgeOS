@@ -134,6 +134,23 @@ describe("Hami public content", () => {
 describe("Hami public root", () => {
   const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
+  it("sets baseline security headers without enforcing the report-only CSP", () => {
+    const config = JSON.parse(readFileSync(join(root, "vercel.json"), "utf8")) as {
+      headers?: Array<{ headers?: Array<{ key: string; value: string }> }>;
+    };
+    const headers = config.headers?.[0]?.headers ?? [];
+    const values = new Map(headers.map(({ key, value }) => [key, value]));
+    assert.equal(values.get("X-Content-Type-Options"), "nosniff");
+    assert.equal(values.get("Referrer-Policy"), "strict-origin-when-cross-origin");
+    assert.equal(values.get("X-Frame-Options"), "DENY");
+    assert.equal(
+      values.get("Permissions-Policy"),
+      "camera=(), microphone=(), geolocation=()",
+    );
+    assert.match(values.get("Content-Security-Policy-Report-Only") ?? "", /frame-src https:\/\/cal\.com/);
+    assert.equal(values.has("Content-Security-Policy"), false);
+  });
+
   it("serves a real Hami home distinct from Network and does not publish the Sanip site", () => {
     const home = readFileSync(join(root, "src/routes/index.tsx"), "utf8");
     const network = readFileSync(join(root, "src/routes/feed.tsx"), "utf8");
