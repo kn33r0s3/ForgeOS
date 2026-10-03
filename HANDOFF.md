@@ -137,6 +137,13 @@ than a few days old, re-verify before trusting the details.
 - **Intake: CLOSED. `FORGE_BOT_LIVE`: CLOSED.** No real external message
   has ever been sent. Opening intake or enabling outbound needs explicit
   owner approval. Never flip these flags casually.
+- **Launch readiness:** `docs/LAUNCH_READINESS.md` (written 2026-10-04
+  overnight run) tracks every launch requirement as READY / BLOCKED_ON_OWNER
+  / NEXT with evidence. Backend suite 686 passed/0 failed; frontend 107/107.
+  Site copy cleaned of Nepal-first/priority language ("Built in Kathmandu,
+  serving the world equally, with no geographic priority"). Everything
+  remaining is an owner decision: lead channel, response path, canonical
+  domain, company registration, payment credentials, activation phrase.
 - **Open blockers:** (B) no real lead channel selected — one channel must
   be owner-chosen; (C) no zero-cost response path established; the five
   discovery conversations need a real human (delegate kit at
