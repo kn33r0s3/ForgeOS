@@ -259,7 +259,7 @@ function Welcome({
           <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,30rem)] lg:gap-14">
             <div>
               <p className="flex items-center gap-2 font-mono text-[0.72rem] font-bold uppercase tracking-[0.18em] text-accent">
-                <Sparkles className="size-4" aria-hidden="true" /> Hami · Nepal first
+                <Sparkles className="size-4" aria-hidden="true" /> Hami · हामी
               </p>
               <h1 className="mt-5 max-w-3xl text-[clamp(2.6rem,5.8vw,5rem)] font-black leading-[0.98] tracking-[-0.045em] text-ink">
                 A system that keeps observing reality
