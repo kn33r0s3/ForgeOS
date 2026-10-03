@@ -89,10 +89,29 @@ Intake is disabled unless `FORGE_BOT_INTAKE_ENABLED=true`,
 `FORGE_BOT_CONTACT_HMAC_KEY` is stable and at least 32 characters, and
 `FORGE_API_KEY` is configured. Durable HMAC-keyed request limits and a 16 KiB
 body cap are implemented for the scoped public write endpoints and covered by
-SQLite/PostgreSQL tests. Licensed-agency discovery, a configured response
-channel/template, and any production sender remain unavailable. The owner
-policy record is an explicit
-authorization boundary, but is absent by default and cannot enable sending:
+SQLite/PostgreSQL tests. Unactioned inquiries in `READY_FOR_OWNER_REVIEW` are
+erased after 30 days by authenticated daily maintenance, which also purges
+expired rate-limit buckets. A linked response `ACTION` is exempt; the proposed
+90-day maximum for those records is not implemented and requires owner
+approval. Licensed-agency discovery, a configured response channel/template,
+and any production sender remain unavailable. The owner policy record is an explicit
+owner policy record is an explicit authorization boundary, but is absent by
+default and cannot enable sending:
 the final send setting defaults false and no sender is wired. All automated
 replies, follow-ups, offers, and spending remain disabled. The data model is
 not authorization.
+
+## Current verification boundary (2026-10-04)
+
+The full backend suite passed **681 tests with 2 skipped** using SQLite and
+**681 tests with 2 skipped** using throwaway PostgreSQL 18. Focused Forge Bot
+owner-notification/API tests passed **69/69** on PostgreSQL 18. `npm test`
+passed **197 script tests and 106 app tests**; typecheck, lint, and production
+build passed. Focused health authorization/ingress tests passed **16/16** on
+SQLite and PostgreSQL 18. Public `/api/health` returns only `status` and
+`ready`; `/api/health/details` requires `X-API-Key`. The migration step was
+skipped because `DATABASE_URL` was intentionally unset. The pre-deployment
+read-only production GETs showed health 200 and intake disabled on both
+configured domains; the attempted owner-readiness GET returned 401, so live
+authenticated owner readiness and heartbeat values remain unverified. Intake
+remains closed and no REAL lead or transaction is established by these tests.

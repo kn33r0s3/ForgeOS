@@ -213,9 +213,24 @@ unapproved publishing or spending, or fabricated prospect simulation.
 Before activation, prove with labeled `TEST` records that consent gates,
 deduplication, rate/abuse limits at the deployed ingress, approved-answer-only
 behavior, STOP permanence, deletion, failure halt, delayed-task recovery, and
-status provenance work. Also choose a time-based retention policy and verify a
-stable production database and private owner access. Local API tests do not
-establish production activation.
+status provenance work. The implemented retention rule erases unactioned
+`READY_FOR_OWNER_REVIEW` inquiries after 30 days and purges expired
+rate-limit buckets during daily maintenance. A proposed 90-day maximum for
+inquiries with a response `ACTION` is not implemented and requires owner
+approval. Verify stable production database and private owner access;
+unauthenticated production checks do not establish either.
+
+Local verification on 2026-10-04: the full backend suite passed with 681
+passed and 2 skipped on SQLite and on throwaway PostgreSQL 18. The focused
+Forge Bot owner-notification/API tests passed 69/69 on PostgreSQL 18.
+The public `/api/health` response contains only `status` and `ready`; health
+diagnostics require the owner key at `/api/health/details`. Focused health
+authorization and ingress tests passed 16/16 on SQLite and PostgreSQL 18.
+`npm test` passed 197 script tests and 106 app tests; typecheck, lint, and
+production build passed. The build migration step was skipped because
+`DATABASE_URL` was intentionally unset. Production intake remains disabled;
+these tests and build do not authorize activation or establish a real lead,
+customer, payment, or outcome.
 Then require owner authorization before any `REAL` contact. Report actual
 owner interventions and time only from real activity; if no real transaction
 exists, `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE**.

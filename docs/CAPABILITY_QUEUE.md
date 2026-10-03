@@ -1,25 +1,66 @@
 # Hami capability claim ledger (ForgeOS repository)
 
-## [IN PROGRESS] Add a private owner console and activation procedure (2026-10-03)
+## [DONE WITH LIMITATION] Add a private owner console and activation procedure (2026-10-04)
 
 - Owner action still required: enter the owner key in a live browser session;
   confirm receipt of the test message; approve the exact privacy text; and
   make the external discovery, channel, booking, and activation decisions.
 - Action this change removes: manually inspect the private lead table and
   delivery queue, compute readiness aggregates, and reconstruct owner-marked
-  reply/booking/completion from separate notes. The console uses the existing
+  reply/booking/completion from separate notes. Public health now exposes only
+  `status` and `ready`; its existing diagnostics are behind
+  `/api/health/details` and the required owner key. The console uses the existing
   lead-contact rows, `Action`/`WorldEvent` substrate, and delivery outbox.
 - Current blocker / verification: the stored lead stage remains
   `READY_FOR_OWNER_REVIEW`; the console derives `REQUESTED`, `REPLIED`,
   `BOOKED`, and `COMPLETED` from registered non-contact lifecycle events
   instead of adding stored states or a canonical entity. Intake and LIVE stay
   disabled; no key is persisted by the browser; the activation runbook is
-  documentation only. Implementation and local PostgreSQL/browser verification
-  remain in progress.
-- Next removable dependency: owner key entry and review of readiness evidence;
-  after that, independently complete every activation-runbook check. External
-  permission, mail receipt, and a real customer outcome remain owner/reality
-  dependencies, not capabilities supplied by this console.
+  documentation only. Local PostgreSQL and browser verification are complete.
+  The full backend suite passed **681 passed, 2 skipped** on SQLite and on
+  throwaway PostgreSQL 18; focused Forge Bot owner-notification/API tests
+  passed **69/69** on PostgreSQL 18; focused health authorization/ingress
+  tests passed **16/16** on both databases. `npm test` passed (197 script and
+  106 app tests), and typecheck, lint, and production build passed. The
+  pre-deployment public health/config GETs succeeded on both production
+  domains and intake remained disabled.
+  The attempted production owner-readiness GET returned 401, so authenticated
+  production readiness and the live maintenance heartbeat remain unverified.
+- Next removable dependency: verify owner-key access and readiness evidence;
+  then independently complete every activation-runbook check. Owner-confirmed
+  receipt of the one-shot test email and approval of the privacy text remain
+  unverified in this workflow. External permission and a real customer
+  outcome remain owner/reality dependencies, not capabilities supplied by
+  this console.
+
+## [RECORDED] Batch 12 close-out evidence (2026-10-04)
+
+- Owner action still required: approve or reject the unlinked privacy draft and
+  the proposed 90-day maximum retention after a response `ACTION`; complete
+  owner-run discovery before selecting a segment or pilot terms. No activation
+  is authorized by this record.
+- Action removed: correct the homepage wayfinding and closed-inquiry copy,
+  set the public share title to Hami, minimize public health output, protect
+  health diagnostics with the owner key, and document the production database
+  and recovery checks without changing production records.
+- Current blocker / verification: homepage and copy changes are verified in a
+  local 390px browser view; `/privacy` is `noindex, nofollow` and is not linked
+  from navigation or consent. Local backend tests pass on SQLite and
+  PostgreSQL 18, and frontend tests/typecheck/lint/build pass. The production
+  database read used read-only transactions: all 69 ORM model tables and
+  expected columns were present in the 75-table public schema; there were no
+  `REAL` Forge Bot leads. One mode-600 backup was restored to a disposable
+  PostgreSQL 18 container and all 75 table names and row counts matched. The
+  backup remains outside the repository at
+  `~/Downloads/hami-backups/hami-production-2026-10-04.dump`; do not commit it.
+  The pre-deployment read-only GETs returned health 200 and
+  `intake_enabled=false` on both production domains. Production owner
+  readiness returned 401; live heartbeat and authenticated readiness are not
+  verified. Cal.com was only loaded read-only; no slot was selected, so the
+  final booking form fields remain unknown.
+- Next removable dependency: obtain owner approval and independently verify
+  each readiness item in `docs/ACTIVATION.md`. Keep the privacy draft
+  unlinked until approval, and keep intake and `FORGE_BOT_LIVE` closed.
 
 ## [DONE WITH LIMITATION] Enforce the Forge Bot response ACTION boundary (2026-10-03)
 
