@@ -42,14 +42,17 @@ one-time bearer code is returned only to the submitter; it is stored as a hash
 and allows opt-out or deletion. Opt-out erases the contact and answers but
 keeps keyed HMAC suppression tokens; hard deletion removes the row while its
 privacy-minimized erasure event remains.
-No endpoint returns contact details except the owner summary, which requires
-the `X-API-Key` header. No contact value is emitted in the submit receipt.
+No endpoint returns contact details except owner-authenticated lead summary
+and detail routes, which require the `X-API-Key` header. No contact value is
+emitted in the public submit receipt.
 
-The owner contact email and provided Cal.com URL are public configuration
-values rendered on the `noindex` `/forge-bot-intake` page, linked contextually
-from the business information surface. The email is a `mailto:` link; neither
-it nor the booking link triggers an automated send or booking action. The
-owner-only `GET/PUT /forge-bot/response-authorization` endpoints record the
+The provided Cal.com URL is public configuration rendered on the `noindex`
+`/forge-bot-intake` page, linked contextually from the business information
+surface. The optional owner contact email is environment-only and is not
+rendered publicly. When an internal owner notification is enabled, its SMTP
+provider can process contact and inquiry details; this is not a
+customer-facing reply. The booking link itself does not book an appointment.
+The owner-only `GET/PUT /forge-bot/response-authorization` endpoints record the
 selected existing `email`/`phone` channel, explicit channel and template
 authorization, mandatory consent, permanent opt-out boundary,
 owner-confirmation boundary, and separate external-send authorization. An
@@ -62,10 +65,15 @@ and no Forge Bot sender exists. The canonical decision therefore remains
 daily owner digest is implemented through the authenticated scheduled route
 and existing outbox; actual delivery requires SMTP configuration and is not
 established by code presence.
-Inbound email parsing and customer-facing follow-up are not connected. No
-time-based retention policy is configured. Do not add separate message,
-opt-out, escalation, or intervention architectures. No passports, identity
-documents, academic records, or other sensitive ID data.
+Inbound email parsing and customer-facing follow-up are not connected.
+Authenticated daily maintenance erases inquiries at least 30 days old when
+they remain in `READY_FOR_OWNER_REVIEW` and have no linked Forge Bot response
+`ACTION`; the privacy-minimized erasure event is retained. A linked response
+`ACTION` is currently exempt from automatic erasure. The proposed 90-day
+maximum after a response `ACTION` is not implemented and requires owner
+approval. Do not add separate message, opt-out, escalation, or intervention
+architectures. No passports, identity documents, academic records, or other
+sensitive ID data.
 
 ## Safe transition rule
 
@@ -79,10 +87,11 @@ outcome-note contract.
 
 Intake is disabled unless `FORGE_BOT_INTAKE_ENABLED=true`,
 `FORGE_BOT_CONTACT_HMAC_KEY` is stable and at least 32 characters, and
-`FORGE_API_KEY` is configured. The current per-process IP limiter is not
-distributed; production ingress abuse controls, a time-based retention policy,
-licensed-agency discovery, a configured response channel/template, and any
-production sender remain unavailable. The owner policy record is an explicit
+`FORGE_API_KEY` is configured. Durable HMAC-keyed request limits and a 16 KiB
+body cap are implemented for the scoped public write endpoints and covered by
+SQLite/PostgreSQL tests. Licensed-agency discovery, a configured response
+channel/template, and any production sender remain unavailable. The owner
+policy record is an explicit
 authorization boundary, but is absent by default and cannot enable sending:
 the final send setting defaults false and no sender is wired. All automated
 replies, follow-ups, offers, and spending remain disabled. The data model is

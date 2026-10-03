@@ -51,36 +51,50 @@ decision and remains `BLOCKED` while the ACTION, final send gate, or sender is
 missing. The response-send setting defaults false and no Forge Bot sender is
 available, so no external response is possible.
 
-The owner authorized a consent-scoped web intake record, supplied
-`haminp.forge@gmail.com` as the contact address, and supplied the booking link
-`https://cal.com/hami-forge-m9agd6/build-hami`. The contact address is a
-`mailto:` link. The authenticated daily cron queues one idempotent, internal
-lead-status digest through the existing SMTP outbox when SMTP credentials are
-configured; it includes up to 100 references, evidence classes, stages, and
-creation times, but no contact details. Without SMTP credentials the digest is
-skipped, not reported as sent. Email inbox parsing, customer-facing email, and
-automatic booking actions are not implemented. Public web intake remains
-disabled by default. Activation requires `FORGE_BOT_INTAKE_ENABLED=true`, a
-stable server-only `FORGE_BOT_CONTACT_HMAC_KEY` of at least 32 characters, and
-`FORGE_API_KEY`. The route is not in the global primary navigation. The existing inquiry page is
-linked from the business information surface for context and discoverability;
-it remains `noindex` and does not publish an active offer. Online intake
-remains disabled by default.
+The booking link
+`https://cal.com/hami-forge-m9agd6/build-hami` is public configuration. The
+optional owner contact address is environment-only and is not rendered on the
+public site or returned by the public config endpoint. When SMTP credentials
+and that address are configured, an internal owner notification may include
+the inquiry's contact and answer fields; the email provider therefore processes
+those details. The daily digest includes up to 100 references, evidence
+classes, stages, and creation times, but no contact details. Without SMTP
+credentials or an owner address, delivery is skipped, not reported as sent.
+Email inbox parsing, customer-facing email, and automatic booking actions are
+not implemented. Public web intake remains disabled by default. Activation
+requires `FORGE_BOT_INTAKE_ENABLED=true`, a stable server-only
+`FORGE_BOT_CONTACT_HMAC_KEY` of at least 32 characters, and `FORGE_API_KEY`.
+The route is not in the global primary navigation. The inquiry page is linked
+from the business information surface for context; it remains `noindex` and
+does not publish an active offer.
 
-The form currently asks destination, course/field, timeline, budget range,
-preferred contact channel, and explicit inquiry-response consent. After a
-successful submission, the one-time control code can be used in the page to
-permanently opt out or delete the inquiry; both actions require a separate
-confirmation. Opt-out erases contact and answer fields while retaining
-HMAC-only suppression tokens. Deletion removes the contact row, including
-suppression tokens; a privacy-minimized erasure event retains only the opaque
-reference, evidence class, and state transition. A duplicate submission can
-receive a non-controlling code without disclosing whether another record
-exists. No time-based retention period is configured. A process-local limit is
-five submissions per source IP per hour; this is not a distributed production
-abuse control and does not authorize public activation. Email/WhatsApp channel
-integrations and official policy review are still required before enabling
-those channels. No mass outbound.
+The form asks for an email address or phone number, destination, course/field,
+timeline, budget range, preferred contact channel, and explicit
+inquiry-response consent. After a successful submission, the one-time control
+code can be used to permanently opt out or delete the inquiry; both actions
+require a separate confirmation. Opt-out erases contact and answer fields
+while retaining HMAC-only suppression tokens. Deletion removes the contact
+row, including suppression tokens; a privacy-minimized erasure event retains
+only the opaque reference, evidence class, and state transition. A duplicate
+submission can receive a non-controlling code without disclosing whether
+another record exists.
+
+The authenticated daily maintenance erases inquiries at least 30 days old
+only when they remain in `READY_FOR_OWNER_REVIEW`, are not opted out or
+previously erased, and have no linked Forge Bot response `ACTION`. It retains
+the privacy-minimized erasure event and purges expired rate-limit buckets in
+the same successful maintenance run. A linked response `ACTION` currently
+exempts the inquiry from automatic erasure; see the proposed, unimplemented
+maximum in “Proposed retention after a response ACTION.”
+
+Public write routes use durable counters keyed by a server-side HMAC of the
+visitor identifier, not a raw IP value in the counter table. Limits are five
+requests per visitor per hour for public posts/requests and 20 per visitor per
+hour for public domain close/dispute/response operations. Public write bodies
+are capped at 16 KiB. Tests cover the counter and size-limit boundaries on
+SQLite and PostgreSQL. These safeguards do not authorize public activation.
+Email/WhatsApp customer-facing channels and official policy review are still
+required before enabling those channels. No mass outbound.
 
 When intake is enabled while `FORGE_BOT_LIVE=false`, the server accepts only
 synthetic TEST records (`@example.test` email or reserved `202-555-01xx`
@@ -111,9 +125,9 @@ a private contact store. The table is scoped only to Forge Bot and records
 preferred channel, consent timestamp/purpose/provenance, HMAC suppression
 tokens, deletion state, contact fields, and the four fixed answers. Lead
 details are not returned by public feed, discovery, network, or substrate APIs.
-The owner summary endpoint requires `X-API-Key`; public submit responses never
-echo contact values. Do not store passports, sensitive ID documents, or
-academic records.
+All owner lead-summary and lead-detail endpoints require `X-API-Key`; public
+submit responses never echo contact values. Do not store passports, sensitive
+ID documents, or academic records.
 `BookingRequest` is for a request against an existing public provider/service
 listing, not a general-purpose appointment calendar. Elsewhere use only an
 owner-approved booking link or existing scheduling integration.
