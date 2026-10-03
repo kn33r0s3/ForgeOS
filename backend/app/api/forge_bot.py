@@ -32,6 +32,7 @@ OWNER_LEAD_STAGE_EVENTS = {
     "forge_bot_lead_booked": "BOOKED",
     "forge_bot_lead_completed": "COMPLETED",
 }
+OWNER_LEAD_STAGES = frozenset({"REQUESTED", "REPLIED", "BOOKED", "COMPLETED"})
 
 
 def _enabled() -> bool:
@@ -182,7 +183,10 @@ def _lead_stage(db: Session, lead: models.ForgeBotLeadContact) -> str:
     events = (
         db.query(models.WorldEvent)
         .filter(
-            models.WorldEvent.event_type.in_(OWNER_LEAD_STAGE_EVENTS),
+            or_(
+                models.WorldEvent.event_type == "state_changed",
+                models.WorldEvent.event_type.in_(OWNER_LEAD_STAGE_EVENTS),
+            ),
             models.WorldEvent.payload.contains(lead.public_ref),
         )
         .order_by(models.WorldEvent.occurred_at, models.WorldEvent.id)
@@ -194,7 +198,11 @@ def _lead_stage(db: Session, lead: models.ForgeBotLeadContact) -> str:
         except (TypeError, json.JSONDecodeError):
             continue
         if payload.get("reference") == lead.public_ref:
-            current = OWNER_LEAD_STAGE_EVENTS[event.event_type]
+            if event.event_type == "state_changed" and event.source == "forge_bot_owner_console":
+                if payload.get("state") in OWNER_LEAD_STAGES:
+                    current = payload["state"]
+            elif event.event_type in OWNER_LEAD_STAGE_EVENTS:
+                current = OWNER_LEAD_STAGE_EVENTS[event.event_type]
     return current
 
 
@@ -227,12 +235,13 @@ def _record_owner_lead_transition(
         "evidence_class": lead.evidence_class,
         "previous_state": previous_stage,
         "state": next_stage,
+        "transition": next_stage,
         **(details or {}),
     }
     world_graph.seed_core_types(db)
     world_graph.create_event(
         db,
-        event_type=event_type,
+        event_type="state_changed",
         source="forge_bot_owner_console",
         payload=payload,
         idempotency_key=f"forge-bot-inquiry:{lead.public_ref}:{event_type}",
@@ -316,7 +325,7 @@ def _readiness_payload(db: Session) -> dict:
         now = datetime.now(timezone.utc)
         heartbeat = (
             db.query(models.WorldEvent)
-            .filter_by(event_type="forge_bot_daily_maintenance_succeeded")
+            .filter_by(event_type="state_changed", source="forge_bot_daily_maintenance")
             .order_by(models.WorldEvent.occurred_at.desc(), models.WorldEvent.id.desc())
             .first()
         )
@@ -482,8 +491,11 @@ def get_owner_console_lead(
     events = (
         db.query(models.WorldEvent)
         .filter(
-            models.WorldEvent.event_type.in_(
-                ("forge_bot_inquiry_received", *OWNER_LEAD_STAGE_EVENTS.keys())
+            or_(
+                models.WorldEvent.event_type.in_(
+                    ("forge_bot_inquiry_received", "forge_bot_inquiry_erased")
+                ),
+                models.WorldEvent.event_type == "state_changed",
             ),
             models.WorldEvent.payload.contains(lead.public_ref),
         )
@@ -499,7 +511,7 @@ def get_owner_console_lead(
         if payload.get("reference") != lead.public_ref:
             continue
         history.append({
-            "event": event.event_type,
+            "event": payload.get("transition", event.event_type),
             "at": _iso_timestamp(event.occurred_at),
             "previous_state": payload.get("previous_state"),
             "state": payload.get("state"),

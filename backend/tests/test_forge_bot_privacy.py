@@ -102,10 +102,12 @@ def test_daily_maintenance_erases_only_old_unacted_review_records(db):
     assert "example.test" not in event.payload
     assert "TEST destination" not in event.payload
     heartbeat = db.query(models.WorldEvent).filter_by(
-        event_type="forge_bot_daily_maintenance_succeeded"
+        event_type="state_changed",
+        source="forge_bot_daily_maintenance",
     ).one()
     assert heartbeat.occurred_at.replace(tzinfo=timezone.utc) == now
     assert json.loads(heartbeat.payload) == {
+        "state": "SUCCEEDED",
         "expired_rate_limit_buckets_purged": 1,
         "inquiries_erased": 1,
     }

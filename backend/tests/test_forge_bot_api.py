@@ -1503,23 +1503,19 @@ def test_owner_console_enforces_lifecycle_and_erases_only_contact_record(db, mon
     assert db.query(models.ForgeBotLeadContact).count() == 0
     transitions = (
         db.query(models.WorldEvent)
-        .filter(models.WorldEvent.event_type.in_(
-            (
-                "forge_bot_lead_replied",
-                "forge_bot_lead_booked",
-                "forge_bot_lead_completed",
-                "forge_bot_inquiry_erased",
-            )
-        ))
+        .filter(
+            models.WorldEvent.payload.contains(reference),
+            models.WorldEvent.source == "forge_bot_owner_console",
+        )
         .order_by(models.WorldEvent.id)
         .all()
     )
-    assert [event.event_type for event in transitions] == [
-        "forge_bot_lead_replied",
-        "forge_bot_lead_booked",
-        "forge_bot_lead_completed",
-        "forge_bot_inquiry_erased",
+    assert [json.loads(event.payload)["transition"] for event in transitions[:-1]] == [
+        "REPLIED",
+        "BOOKED",
+        "COMPLETED",
     ]
+    assert transitions[-1].event_type == "forge_bot_inquiry_erased"
     assert all(json.loads(event.payload)["evidence_class"] == "TEST" for event in transitions)
     erased_payload = json.loads(transitions[-1].payload)
     assert erased_payload == {

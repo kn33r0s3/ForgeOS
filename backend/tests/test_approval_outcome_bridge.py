@@ -145,7 +145,7 @@ def test_human_result_refuses_a_revenue_amount(db):
 def httpdb(monkeypatch):
     from app import security
 
-    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine)()
@@ -160,6 +160,7 @@ def httpdb(monkeypatch):
 
     app.dependency_overrides[get_db] = dependency
     client = TestClient(app, raise_server_exceptions=False)
+    client.headers.update({"X-API-Key": "test-owner-key"})
     yield client, session
     client.close()
     app.dependency_overrides.clear()

@@ -137,20 +137,21 @@ def test_money_and_execution_reads_require_owner_key(db, monkeypatch):
         "/forge/execution/actions/1",
         "/forge/execution/actions/1/package",
     )
+    client = TestClient(app)
     try:
-        with TestClient(app) as client:
-            for path in paths:
-                assert client.get(path).status_code == 401
-                assert client.get(path, headers={"X-API-Key": "wrong"}).status_code == 401
-            assert client.get(
-                "/forge/money/dashboard",
-                headers={"X-API-Key": "test-owner-key"},
-            ).status_code == 200
-            assert client.get(
-                "/forge/execution/actions",
-                headers={"X-API-Key": "test-owner-key"},
-            ).status_code == 200
+        for path in paths:
+            assert client.get(path).status_code == 401
+            assert client.get(path, headers={"X-API-Key": "wrong"}).status_code == 401
+        assert client.get(
+            "/forge/money/dashboard",
+            headers={"X-API-Key": "test-owner-key"},
+        ).status_code == 200
+        assert client.get(
+            "/forge/execution/actions",
+            headers={"X-API-Key": "test-owner-key"},
+        ).status_code == 200
     finally:
+        client.close()
         app.dependency_overrides.pop(get_db, None)
 
 
