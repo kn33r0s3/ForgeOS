@@ -179,6 +179,7 @@ describe("Hami public root", () => {
     const businesses = readFileSync(join(root, "src/routes/group.businesses.tsx"), "utf8");
     const forgeBot = readFileSync(join(root, "src/routes/forge-bot-intake.tsx"), "utf8");
     const owner = readFileSync(join(root, "src/routes/owner.tsx"), "utf8");
+    const privacy = readFileSync(join(root, "src/routes/privacy.tsx"), "utf8");
     const vercel = readFileSync(join(root, "vercel.json"), "utf8");
     const ogSite = JSON.parse(readFileSync(join(root, "src/lib/og/site.json"), "utf8")) as {
       title?: string;
@@ -228,10 +229,16 @@ describe("Hami public root", () => {
     assert.doesNotMatch(forgeBot, /contact_email|haminp\.forge@gmail\.com/i);
     assert.match(owner, /createFileRoute\("\/owner"\)/);
     assert.match(owner, /name: "robots", content: "noindex, nofollow, noarchive"/);
+    assert.match(privacy, /createFileRoute\("\/privacy"\)/);
+    assert.match(privacy, /name: "robots", content: "noindex, nofollow"/);
+    assert.match(privacy, /automatically\s+erased 30 days/);
+    assert.match(privacy, /Vercel hosts the website, Neon provides the database/);
+    assert.doesNotMatch(`${header}\n${footer}\n${forgeBot}`, /\/privacy/);
     assert.match(owner, /X-API-Key/);
     assert.doesNotMatch(owner, /localStorage|sessionStorage|dangerouslySetInnerHTML/);
     assert.match(vercel, /X-Robots-Tag/);
     assert.equal(sitemap.includes("/owner"), false);
+    assert.equal(sitemap.includes("/privacy"), false);
     assert.doesNotMatch(discoveries, /loadSubstrateDiscoveries|\/api\/forge\/substrate/);
     assert.match(discoveries, /does not request owner-authorized substrate records/);
     assert.match(discoveries, /Opening this page does not run discovery/);
