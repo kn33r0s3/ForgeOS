@@ -70,7 +70,10 @@ function OperationsPage() {
       setDashboard(dashData);
       setActions(actData);
     } catch (err: unknown) {
-      setError(errorMessage(err, "Unable to query Hami data endpoints"));
+      const message = errorMessage(err, "Unable to query Hami data endpoints");
+      setError(message.includes("HTTP 401") || message.includes("HTTP 403")
+        ? "Owner only: this operational data requires the owner API key."
+        : message);
     } finally {
       setLoading(false);
     }

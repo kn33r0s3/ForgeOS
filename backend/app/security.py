@@ -18,7 +18,7 @@ Design:
 
 import hmac
 
-from fastapi import Request
+from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from app.config import settings
@@ -58,6 +58,17 @@ def _authorized(request: Request) -> bool:
     key = settings.FORGE_API_KEY
     presented = request.headers.get("X-API-Key", "")
     return bool(presented) and _constant_time_eq(str(presented), str(key))
+
+
+def require_owner_api_key(request: Request) -> None:
+    """Require the owner key even when the optional global gate is disabled."""
+    if not _enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="Owner access is unavailable until FORGE_API_KEY is configured.",
+        )
+    if not _authorized(request):
+        raise HTTPException(status_code=401, detail="Valid X-API-Key required.")
 
 
 def can_read_private_signals(request: Request) -> bool:

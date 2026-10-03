@@ -118,6 +118,42 @@ def test_private_customer_reads_remain_open_when_api_key_is_disabled(monkeypatch
         assert client.get("/products/customers").status_code == 200
 
 
+def test_money_and_execution_reads_require_owner_key(db, monkeypatch):
+    from fastapi.testclient import TestClient
+    from app import security
+    from app.database import get_db
+    from app.main import app
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
+
+    def override_get_db():
+        yield db
+
+    app.dependency_overrides[get_db] = override_get_db
+    paths = (
+        "/forge/money/dashboard",
+        "/forge/execution/actions",
+        "/forge/execution/actions/blocked",
+        "/forge/execution/actions/1",
+        "/forge/execution/actions/1/package",
+    )
+    try:
+        with TestClient(app) as client:
+            for path in paths:
+                assert client.get(path).status_code == 401
+                assert client.get(path, headers={"X-API-Key": "wrong"}).status_code == 401
+            assert client.get(
+                "/forge/money/dashboard",
+                headers={"X-API-Key": "test-owner-key"},
+            ).status_code == 200
+            assert client.get(
+                "/forge/execution/actions",
+                headers={"X-API-Key": "test-owner-key"},
+            ).status_code == 200
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
 # ---------------------------------------------------------------------------
 # Backup (safe snapshot + retention)
 # ---------------------------------------------------------------------------

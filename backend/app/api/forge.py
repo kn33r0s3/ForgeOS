@@ -52,12 +52,13 @@ Source reliability tracking.
     GET  /forge/scenarios                                                    -> Phase 1 2036 Scenario Engine overview (secondary domain)
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app import schemas, models
 from app.config import settings
+from app.security import require_owner_api_key
 from app.services import (
     reality_checker,
     reality_memory,
@@ -544,7 +545,7 @@ def get_owner_ranked_opportunities(limit: int = 10, db: Session = Depends(get_db
 
 
 @router.get("/money/dashboard", response_model=schemas.MoneyDashboard)
-def get_money_dashboard(db: Session = Depends(get_db)):
+def get_money_dashboard(request: Request, db: Session = Depends(get_db)):
     """
     One consolidated read for the owner: best opportunities (both
     ranking modes), fastest path to revenue, highest 30-day estimate,
@@ -552,6 +553,7 @@ def get_money_dashboard(db: Session = Depends(get_db)):
     revenue experiments, total real revenue recorded, conversion rate,
     and which offers won vs. failed.
     """
+    require_owner_api_key(request)
     dashboard = money_engine.get_money_dashboard(db)
 
     def to_ranked(items):
@@ -653,8 +655,13 @@ def create_execution_action(payload: schemas.ExecutionActionCreate, db: Session 
 
 
 @router.get("/execution/actions", response_model=list[schemas.ExperimentOut])
-def list_execution_actions(opportunity_id: Optional[int] = None, db: Session = Depends(get_db)):
+def list_execution_actions(
+    request: Request,
+    opportunity_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
     """List execution actions, optionally filtered to one opportunity."""
+    require_owner_api_key(request)
     query = db.query(models.Experiment).filter(models.Experiment.action_type.isnot(None))
     if opportunity_id is not None:
         query = query.filter(models.Experiment.opportunity_id == opportunity_id)
@@ -662,8 +669,9 @@ def list_execution_actions(opportunity_id: Optional[int] = None, db: Session = D
 
 
 @router.get("/execution/actions/blocked", response_model=list[schemas.ExperimentOut])
-def list_blocked_actions(db: Session = Depends(get_db)):
+def list_blocked_actions(request: Request, db: Session = Depends(get_db)):
     """Every action Forge proposed that policy blocked outright."""
+    require_owner_api_key(request)
     return (
         db.query(models.Experiment)
         .filter(models.Experiment.status == "blocked")
@@ -673,8 +681,9 @@ def list_blocked_actions(db: Session = Depends(get_db)):
 
 
 @router.get("/execution/actions/{action_id}", response_model=schemas.ExperimentOut)
-def get_execution_action(action_id: int, db: Session = Depends(get_db)):
+def get_execution_action(action_id: int, request: Request, db: Session = Depends(get_db)):
     """One execution action's full current state."""
+    require_owner_api_key(request)
     action = db.query(models.Experiment).filter(models.Experiment.id == action_id).first()
     if not action or action.action_type is None:
         raise HTTPException(status_code=404, detail="Execution action not found")
@@ -747,8 +756,13 @@ def record_execution_action_result(
 
 
 @router.get("/execution/actions/{action_id}/package", response_model=schemas.ActionPackageOut)
-def get_execution_action_package(action_id: int, db: Session = Depends(get_db)):
+def get_execution_action_package(
+    action_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+):
     """Evidence already stored for a require_approval action. Writes nothing."""
+    require_owner_api_key(request)
     package = approval_outcome_bridge.build_action_package(db, action_id)
     if package is None:
         raise HTTPException(status_code=404, detail="No require_approval action")
