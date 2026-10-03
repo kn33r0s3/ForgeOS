@@ -127,7 +127,7 @@ def test_invalid_email_validation_does_not_echo_submitted_value(db, monkeypatch)
     from app.config import settings
 
     monkeypatch.setattr(settings, "FORGE_BOT_INTAKE_ENABLED", False)
-    submitted_value = "private-malformed-contact-value"
+    submitted_value = "TEST-private-malformed-contact-value"
     client, cleanup = _client(db)
     try:
         response = client.post(
@@ -144,6 +144,7 @@ def test_invalid_email_validation_does_not_echo_submitted_value(db, monkeypatch)
     assert response.json()["errors"] == [
         {"field": "email", "message": "Invalid value."}
     ]
+    assert db.query(models.ForgeBotLeadContact).count() == 0
 
 
 def test_live_off_rejects_real_leads_but_allows_test_records(db, monkeypatch):

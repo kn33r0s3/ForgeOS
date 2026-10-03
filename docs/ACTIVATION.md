@@ -26,6 +26,18 @@ The owner console's readiness endpoint reports only operational booleans,
 timestamps, a deployed commit identifier, and aggregate counts. It does not
 prove external receipt, owner approval, or a real outcome.
 
+## Read-only production database verification boundary
+
+No authorized procedure for retrieving the production database credential is
+currently documented. Do not pull it from a deployment platform, inspect local
+environment files, or query production until the owner defines and authorizes
+the credential source and retrieval procedure. Once authorized, document the
+procedure without recording the credential value; use it only for an
+explicitly authorized read-only transaction, keep any temporary credential
+file outside the repository with owner-approved restrictive permissions, and
+remove that temporary file when the check is complete. This section grants no
+credential access or database access by itself.
+
 ## Route access boundaries
 
 `/owner` is a publicly reachable, unlinked, noindex key-entry shell. It does

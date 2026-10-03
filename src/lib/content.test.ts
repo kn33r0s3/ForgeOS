@@ -163,10 +163,19 @@ describe("Hami public content", () => {
       .map((path) => readFileSync(join(sourceDir, path), "utf8"))
       .join("\n");
     assert.match(closedCopy, /Online inquiries are not open yet/);
-    assert.doesNotMatch(
-      closedCopy,
-      /paused until (?:a monitored mailbox is configured|Hami has a monitored mailbox)|Contact mailbox pending|A monitored contact address has not been configured yet/i,
-    );
+    const staleContactCopy = [
+      "Contact mailbox pending",
+      "paused until a monitored mailbox is configured",
+      "paused until Hami has a monitored mailbox",
+      "A monitored contact address has not been configured yet",
+    ];
+    for (const staleCopy of staleContactCopy) {
+      assert.equal(
+        closedCopy.toLowerCase().includes(staleCopy.toLowerCase()),
+        false,
+        `obsolete contact copy remains: ${staleCopy}`,
+      );
+    }
     const form = readFileSync(join(sourceDir, "../components/pages/project-form.tsx"), "utf8");
     assert.match(form, /No personal details are collected, sent, or stored here/);
   });
