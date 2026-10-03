@@ -81,11 +81,14 @@ online discourse may ever be presented as a substitute for a real voice.
 
 ## What Hami is
 
-A universal economic intelligence and action system — Nepali-originated,
-world-facing. Not a SaaS product, not a marketplace, chatbot, lead-gen bot,
-or "just a feed." Economic infrastructure that lives where economic life
-happens. No geographic priority or discrimination: origin is identity, not
-privilege.
+A living system for understanding and acting upon the real world —
+Nepali-originated, world-facing. It continuously builds knowledge of
+people, places, needs, opportunities, capabilities, resources,
+relationships, and outcomes, and turns that understanding into authorized
+action and real-world value. AI is one of its workers; software is one of
+its instruments; humans are participants and partners. Not a SaaS product,
+not a marketplace, chatbot, lead-gen bot, or "just a feed." No geographic
+priority or discrimination: origin is identity, not privilege.
 Exactly six primitives: ENTITY, RELATION, EVENT, EVIDENCE, CAPABILITY,
 ACTION. `op_` tables are projections, not source of truth. Meaningful
 transitions emit events. `type_registry` is authoritative. Truth:
