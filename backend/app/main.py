@@ -12,6 +12,7 @@ import os
 import logging
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,7 +23,7 @@ from sqlalchemy import text
 from app.config import settings
 from app.database import init_db, SessionLocal
 from app.api import signals, analyze, opportunities, observer, forge, world, workers, intelligence, rare_signals, products, lessons, orchestrator, earn, payments, repair_shop, evidence_triage, public, scheduled, substrate, forge_bot
-from app.security import api_key_middleware
+from app.security import api_key_middleware, require_owner_api_key
 from app.request_limits import PublicWriteSizeLimitMiddleware
 
 logger = logging.getLogger(__name__)
@@ -97,8 +98,7 @@ def root():
     }
 
 
-@app.get("/health")
-def health():
+def _health_details() -> dict[str, Any]:
     cycle = None
     database_error = None
     from app import database, models
@@ -157,6 +157,18 @@ def health():
             "blockers": blockers,
         },
     }
+
+
+@app.get("/health")
+def health():
+    details = _health_details()
+    return {"status": details["status"], "ready": details["readiness"]["ready"]}
+
+
+@app.get("/health/details")
+def health_details(request: Request):
+    require_owner_api_key(request)
+    return _health_details()
 
 
 @app.get("/ai/status")

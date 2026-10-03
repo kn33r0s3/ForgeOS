@@ -22,7 +22,23 @@ def test_root_routes_are_reachable_under_the_api_prefix(db):
     mirrored = client.get("/api/health")
 
     assert mirrored.status_code == 200
-    assert mirrored.json()["status"] == "ok"
+    assert mirrored.json() == {"status": "ok", "ready": True}
+
+
+def test_health_details_alias_requires_the_owner_key(db, monkeypatch):
+    from app import security
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "health-owner-key")
+    client = _client()
+
+    assert client.get("/api/health/details").status_code == 401
+    details = client.get(
+        "/api/health/details",
+        headers={"X-API-Key": "health-owner-key"},
+    )
+
+    assert details.status_code == 200
+    assert details.json()["readiness"]["ready"] is True
 
 
 def test_openapi_contract_is_reachable_under_the_api_prefix(db):

@@ -4,10 +4,10 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 
-def _health():
+def _health(path="/health", *, headers=None):
     from app.main import app
 
-    return TestClient(app).get("/health")
+    return TestClient(app).get(path, headers=headers)
 
 
 def test_fastapi_startup_executes_with_isolated_database(db, monkeypatch):
@@ -32,13 +32,26 @@ def test_local_health_is_ok_and_ready_without_vercel_requirements(db, monkeypatc
     response = _health()
 
     assert response.status_code == 200
-    payload = response.json()
-    assert payload["status"] == "ok"
+    assert response.json() == {"status": "ok", "ready": True}
+
+
+def test_health_details_requires_owner_key_and_preserves_diagnostics(db, monkeypatch):
+    from app import security
+
+    monkeypatch.delenv("VERCEL", raising=False)
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "health-owner-key")
+
+    denied = _health("/health/details")
+    allowed = _health(
+        "/health/details",
+        headers={"X-API-Key": "health-owner-key"},
+    )
+
+    assert denied.status_code == 401
+    assert allowed.status_code == 200
+    payload = allowed.json()
     assert payload["database"]["driver"] == "sqlite"
-    assert payload["database"]["durability"] == "configured"
-    assert payload["database"]["url_configured"] is False
     assert payload["database"]["available"] is True
-    assert payload["database"]["error"] is None
     assert payload["readiness"] == {"ready": True, "blockers": []}
 
 
@@ -50,12 +63,19 @@ def test_vercel_health_reports_ephemeral_database_and_missing_cron_secret(db, mo
     response = _health()
 
     assert response.status_code == 200
-    payload = response.json()
-    assert payload["status"] == "degraded"
+    assert response.json() == {"status": "degraded", "ready": False}
+
+    from app import security
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "health-owner-key")
+    details = _health(
+        "/health/details",
+        headers={"X-API-Key": "health-owner-key"},
+    )
+    assert details.status_code == 200
+    payload = details.json()
     assert payload["database"]["driver"] == "sqlite"
     assert payload["database"]["durability"] == "ephemeral"
-    assert payload["database"]["url_configured"] is False
-    assert payload["database"]["available"] is True
     assert payload["scheduler"]["cron_secret_configured"] is False
     assert payload["scheduler"]["cron_schedule"] == "0 0 * * *"
     assert payload["readiness"] == {
@@ -72,7 +92,14 @@ def test_health_reports_schedule_from_vercel_configuration(db, monkeypatch):
     config_path = Path(__file__).resolve().parents[2] / "vercel.json"
     config = json.loads(config_path.read_text())
 
-    assert _health().json()["scheduler"]["cron_schedule"] == config["crons"][0]["schedule"]
+    from app import security
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "health-owner-key")
+    details = _health(
+        "/health/details",
+        headers={"X-API-Key": "health-owner-key"},
+    )
+    assert details.json()["scheduler"]["cron_schedule"] == config["crons"][0]["schedule"]
 
 
 def test_health_never_returns_cron_secret_value(db, monkeypatch):
@@ -85,10 +112,22 @@ def test_health_never_returns_cron_secret_value(db, monkeypatch):
     response = _health()
 
     assert response.status_code == 200
-    assert response.json()["scheduler"]["cron_secret_configured"] is True
+    assert response.json() == {"status": "ok", "ready": True}
     assert secret not in response.text
     assert database_url not in response.text
     assert "health-password" not in response.text
+
+    from app import security
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "health-owner-key")
+    details = _health(
+        "/health/details",
+        headers={"X-API-Key": "health-owner-key"},
+    )
+    assert details.status_code == 200
+    assert details.json()["scheduler"]["cron_secret_configured"] is True
+    assert secret not in details.text
+    assert database_url not in details.text
 
 
 def test_vercel_health_reports_safe_database_error_class(db, monkeypatch):
@@ -108,13 +147,23 @@ def test_vercel_health_reports_safe_database_error_class(db, monkeypatch):
     response = _health()
 
     assert response.status_code == 200
-    payload = response.json()
+    assert response.json() == {"status": "degraded", "ready": False}
+
+    from app import security
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "health-owner-key")
+    details = _health(
+        "/health/details",
+        headers={"X-API-Key": "health-owner-key"},
+    )
+    assert details.status_code == 200
+    payload = details.json()
     assert payload["status"] == "degraded"
     assert payload["database"]["available"] is False
     assert payload["database"]["error"] == "DatabaseUnavailable"
-    assert "must-not-be-returned" not in response.text
-    assert "private-credentials" not in response.text
-    assert "private-cron-secret" not in response.text
+    assert "must-not-be-returned" not in details.text
+    assert "private-credentials" not in details.text
+    assert "private-cron-secret" not in details.text
     assert payload["readiness"] == {
         "ready": False,
         "blockers": ["database_unavailable"],

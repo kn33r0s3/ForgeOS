@@ -115,7 +115,7 @@ def test_api_health_and_public_feed_answer_under_the_api_prefix(db, monkeypatch)
         client = TestClient(app)
         health = client.get("/api/health")
         assert health.status_code == 200, health.text
-        assert health.json()["scheduler"]["cron_schedule"] == _config()["crons"][0]["schedule"]
+        assert health.json() == {"status": "ok", "ready": True}
         feed = client.get("/api/public/feed")
         assert feed.status_code == 200, feed.text
     finally:
