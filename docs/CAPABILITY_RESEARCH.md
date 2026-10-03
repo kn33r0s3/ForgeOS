@@ -74,6 +74,38 @@ beyond the scheduler and the log. If a round needs a paid source, a login,
 or human access, that is BLOCKED_BY_MISSING_ACCESS — recorded, not worked
 around.
 
+## Gradual path: from fuel to engine (owner-directed, 2026-10-04)
+
+The operator's rounds are the fuel; Forge gradually internalizes the
+capability until it runs the same rounds itself — then better. Stages;
+each is built only when its trigger fires:
+
+- **Stage 0 — Fuel (now).** The operator agent runs rounds externally.
+  Outputs stay structured and ingestible: D-numbered unknowns,
+  evidence-class labels, discovery log entries, committed to the repo.
+  Nothing is lost; everything is shaped so Forge can import it later.
+- **Stage 1 — Loop as definition.** The round protocol lives in the repo
+  as a portable spec (`docs/ops/discovery-loop.md`). Any runtime — this
+  agent, a successor, Forge's own scheduler — can execute it. The
+  capability is defined, not yet self-running.
+- **Stage 2 — Self-running rounds.** Forge executes rounds through its own
+  process layer: observations banked as EVIDENCE entities, unknowns as
+  first-class records, questions feeding the capability queue. Markdown
+  becomes primitives. *Trigger:* a real pilot needs the model to update
+  itself between runs without the builder in the loop.
+- **Stage 3 — Better than the fuel.** Compounding kicks in: cross-round
+  contradiction detection, question generation from the unknowns graph,
+  angle selection driven by the model itself rather than a log file. The
+  system doesn't just replicate the reference rounds — it improves on
+  them. *Trigger:* stage 2 running reliably with evidence it can
+  self-direct without degrading quality.
+
+Rules across stages: listening-only holds until a pilot authorizes more;
+no stage manufactures evidence; each stage must prove it moves reality,
+revenue, capability, or evidence before the next is built. The operator's
+standing commitment: every round stays structured, labeled, and
+ingestible — nothing wasted when Forge starts consuming its own fuel.
+
 ## What promotes this to build
 
 1. A real pilot where Hami's model of a domain must update itself between

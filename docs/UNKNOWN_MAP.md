@@ -10,6 +10,11 @@ An unknown belongs here only if there is a real reason Hami does not know it.
 We do not invent questions to populate a list. When reality contradicts an
 expectation, that surprise becomes a NEW_UNKNOWN or a HYPOTHESIS_REVISION.
 
+**The power of unknown:** known things are commodities — everything known
+is known by everyone. The unknowns are the asset: each one is a question
+reality hasn't answered yet, and questions are what pull the system
+forward. This map is the fuel inventory.
+
 ## A. Reality questions (cheap checks nobody has run)
 
 | # | Unknown | State | Cheapest legitimate test | What changes if answered |
