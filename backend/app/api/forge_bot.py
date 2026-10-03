@@ -10,7 +10,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from sqlalchemy import inspect, or_, text
+from sqlalchemy import false, inspect, or_, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -350,14 +350,12 @@ def _readiness_payload(db: Session) -> dict:
 
         owner_recipients = {
             recipient
-            for recipient in (
-                settings.FORGE_BOT_CONTACT_EMAIL,
-                forge_bot_owner_notification.OWNER_TEST_RECIPIENT,
-            )
+            for recipient in (settings.FORGE_BOT_CONTACT_EMAIL,)
             if recipient
         }
         pending_email_filter = or_(
-            *(models.IntegrationDelivery.request_json.contains(recipient) for recipient in owner_recipients)
+            false(),
+            *(models.IntegrationDelivery.request_json.contains(recipient) for recipient in owner_recipients),
         )
         pending_delivery = (
             db.query(models.IntegrationDelivery)

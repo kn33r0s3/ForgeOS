@@ -134,7 +134,7 @@ class Settings(BaseSettings):
     ).lower() in ("1", "true", "yes")
 
     FORGE_BOT_CONTACT_EMAIL: str = os.getenv(
-        "FORGE_BOT_CONTACT_EMAIL", "haminp.forge@gmail.com"
+        "FORGE_BOT_CONTACT_EMAIL", ""
     )
     FORGE_BOT_BOOKING_URL: str = os.getenv(
         "FORGE_BOT_BOOKING_URL",

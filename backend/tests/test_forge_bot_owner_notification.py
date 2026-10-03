@@ -10,6 +10,7 @@ def test_daily_owner_summary_is_idempotent_and_omits_contact_data(db, monkeypatc
     monkeypatch.setattr(settings, "SMTP_HOST", "smtp.example.test")
     monkeypatch.setattr(settings, "SMTP_USER", "sender@example.test")
     monkeypatch.setattr(settings, "SMTP_PASSWORD", "test-only-password")
+    monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_EMAIL", "owner@example.test")
     lead = models.ForgeBotLeadContact(
         public_ref="FB-TESTSUMMARY",
         email="private-lead@example.test",
@@ -97,7 +98,7 @@ def test_real_lead_owner_notification_skips_without_smtp_credentials(db, monkeyp
     assert db.query(models.IntegrationDelivery).count() == 0
 
 
-def test_owner_notification_caps_submission_smtp_timeout_and_test_recipient(
+def test_owner_notification_caps_submission_smtp_timeout_and_uses_configured_recipient(
     db, monkeypatch
 ):
     assert settings.__class__.model_fields[
@@ -106,6 +107,7 @@ def test_owner_notification_caps_submission_smtp_timeout_and_test_recipient(
     monkeypatch.setattr(settings, "SMTP_HOST", "smtp.example.test")
     monkeypatch.setattr(settings, "SMTP_USER", "sender@example.test")
     monkeypatch.setattr(settings, "SMTP_PASSWORD", "test-only-password")
+    monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_EMAIL", "owner@example.test")
     monkeypatch.setattr(settings, "FORGE_BOT_OWNER_EMAIL_TIMEOUT_SECONDS", 19)
     dispatch_timeouts = []
 
@@ -129,8 +131,20 @@ def test_owner_notification_caps_submission_smtp_timeout_and_test_recipient(
     assert result["status"] == "ACCEPTED_BY_SMTP"
     assert dispatch_timeouts == [5]
     assert request == {
-        "to": "haminp.forge@gmail.com",
+        "to": "owner@example.test",
         "subject": "Forge Bot owner notification test",
         "body": "This is the fixed one-shot Forge Bot owner notification test.",
     }
     assert delivery.idempotency_key == "forge-bot-owner-notification-test:v1"
+
+
+def test_owner_test_email_fails_closed_without_configured_recipient(db, monkeypatch):
+    monkeypatch.setattr(settings, "SMTP_HOST", "smtp.example.test")
+    monkeypatch.setattr(settings, "SMTP_USER", "sender@example.test")
+    monkeypatch.setattr(settings, "SMTP_PASSWORD", "test-only-password")
+    monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_EMAIL", "")
+
+    result = forge_bot_owner_notification.send_owner_test_notification(db)
+
+    assert result is None
+    assert db.query(models.IntegrationDelivery).count() == 0

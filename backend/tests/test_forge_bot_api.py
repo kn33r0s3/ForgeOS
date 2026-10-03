@@ -1198,6 +1198,7 @@ def test_test_lead_flow_is_offline_with_legacy_intelligence_disabled(db, monkeyp
     monkeypatch.setattr(settings, "SMTP_HOST", "smtp.example.test")
     monkeypatch.setattr(settings, "SMTP_USER", "owner@example.test")
     monkeypatch.setattr(settings, "SMTP_PASSWORD", "test-only-password")
+    monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_EMAIL", "owner@example.test")
     sent = []
 
     def reject_socket(*args, **kwargs):

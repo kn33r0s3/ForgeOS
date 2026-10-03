@@ -17,7 +17,6 @@ from app import models
 from app.config import settings
 from app.services import integration_outbox, integration_dispatcher
 
-OWNER_TEST_RECIPIENT = "haminp.forge@gmail.com"
 OWNER_TEST_SUBJECT = "Forge Bot owner notification test"
 OWNER_TEST_BODY = "This is the fixed one-shot Forge Bot owner notification test."
 OWNER_TEST_IDEMPOTENCY_KEY = "forge-bot-owner-notification-test:v1"
@@ -70,9 +69,12 @@ def send_owner_test_notification(db: Session) -> Optional[dict]:
     """Send the fixed, idempotent owner-only SMTP test message."""
     if not settings.SMTP_HOST or not settings.SMTP_USER or not settings.SMTP_PASSWORD:
         return None
+    owner_email = settings.FORGE_BOT_CONTACT_EMAIL
+    if not owner_email or "@" not in owner_email:
+        return None
     return _queue_owner_email(
         db,
-        recipient=OWNER_TEST_RECIPIENT,
+        recipient=owner_email,
         subject=OWNER_TEST_SUBJECT,
         body=OWNER_TEST_BODY,
         idempotency_key=OWNER_TEST_IDEMPOTENCY_KEY,
