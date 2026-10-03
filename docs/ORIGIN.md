@@ -17,10 +17,14 @@ San Francisco tool — and that difference is the moat.
 
 ## Expressions (in order of importance)
 
-1. **Behavior.** The product must work the way Nepali merchants work:
-   conversational, phone-first, tolerant of informality, honest about
-   cash. If it behaves like a San Francisco SaaS with a Nepali flag on
-   top, it is costume — and merchants will smell it instantly.
+1. **Behavior.** Hami is not a SaaS product — not a subscription tool
+   merchants log into. It is economic infrastructure: an intelligence and
+   action system that lives where economic life already happens
+   (conversational, phone-first, tolerant of informality, honest about
+   cash). If it behaves like a San Francisco SaaS with a Nepali flag on
+   top, it is costume — and merchants will smell it instantly. The
+   wedge experiments (like Forge Bot) are capabilities inside the system,
+   not the product.
 2. **Name.** Hami (हामी — "we/us") already flies the flag. Keep it
    central; Devanagari belongs in the wordmark, not as decoration.
 3. **Language.** Nepali-first where merchants read; English where the

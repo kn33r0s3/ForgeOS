@@ -82,7 +82,9 @@ online discourse may ever be presented as a substitute for a real voice.
 ## What Hami is
 
 A universal economic intelligence and action system — Nepal-first, global
-in intent. Not a marketplace, chatbot, lead-gen bot, or "just a feed."
+in intent. Not a SaaS product, not a marketplace, chatbot, lead-gen bot, or
+"just a feed." Economic infrastructure that lives where economic life
+happens.
 Exactly six primitives: ENTITY, RELATION, EVENT, EVIDENCE, CAPABILITY,
 ACTION. `op_` tables are projections, not source of truth. Meaningful
 transitions emit events. `type_registry` is authoritative. Truth:
