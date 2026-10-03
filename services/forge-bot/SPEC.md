@@ -161,6 +161,28 @@ and is not verified as running in production. Do not claim timed automation
 until safe recovery and a commercially permitted production runner are
 proven.
 
+## Proposed retention after a response ACTION
+
+The current daily purge deletes inquiries older than 30 days only when no
+Forge Bot response `ACTION` is linked. A linked response `ACTION` exempts the
+contact record from that purge, and there is currently no later automatic
+maximum. This section is a proposal only; it does not change retention
+behavior.
+
+Proposed maximum: erase the lead's contact and answer fields no later than
+90 days after its original submission, whether or not an `ACTION` was
+recorded. Later status events do not restart that clock. If work is still
+active at the deadline, the owner must either close and erase the inquiry, or
+move only the minimum necessary facts into existing customer/outcome records
+under a separately verified purpose and consent before erasing the lead
+contact. Any legal hold must have a documented reason, scope, and review date.
+Keep only the existing privacy-minimized non-contact erasure event.
+
+The owner must approve this proposal and its handling of suppression data
+before implementation. Until then, the implemented 30-day no-`ACTION` purge
+remains unchanged, and inquiries with a linked response `ACTION` have no
+automatic maximum retention.
+
 ## Not in v0
 
 No customer-facing email or WhatsApp sending path is implemented. The
