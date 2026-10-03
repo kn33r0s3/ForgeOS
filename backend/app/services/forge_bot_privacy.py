@@ -2,7 +2,6 @@
 
 import hashlib
 import hmac
-import json
 import os
 from datetime import datetime, timedelta, timezone
 
@@ -128,25 +127,20 @@ def run_daily_maintenance(
                 continue
             reference = lead.public_ref
             evidence_class = lead.evidence_class
-            db.add(
-                models.WorldEvent(
-                    event_type="forge_bot_inquiry_erased",
-                    source="forge_bot_retention_30_day",
-                    payload=json.dumps(
-                        {
-                            "reference": reference,
-                            "evidence_class": evidence_class,
-                            "state": "ERASED",
-                            "previous_state": "READY_FOR_OWNER_REVIEW",
-                        },
-                        sort_keys=True,
-                        separators=(",", ":"),
-                    ),
-                    idempotency_key=(
-                        f"forge-bot-inquiry:{reference}:forge_bot_inquiry_erased"
-                    ),
-                    occurred_at=timestamp,
-                )
+            world_graph.create_event(
+                db,
+                event_type="forge_bot_inquiry_erased",
+                source="forge_bot_retention_30_day",
+                payload={
+                    "reference": reference,
+                    "evidence_class": evidence_class,
+                    "state": "ERASED",
+                    "previous_state": "READY_FOR_OWNER_REVIEW",
+                },
+                idempotency_key=(
+                    f"forge-bot-inquiry:{reference}:forge_bot_inquiry_erased"
+                ),
+                occurred_at=timestamp,
             )
             db.delete(lead)
             erased += 1
