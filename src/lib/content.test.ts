@@ -218,7 +218,12 @@ describe("Hami public root", () => {
     assert.match(footer, /For businesses/);
     assert.match(footer, /to: "\/group\/businesses"/);
     assert.doesNotMatch(footer, /Share a need privately/);
-    assert.match(header, /label: "For businesses", to: "\/group\/businesses"/);
+    assert.ok(NAV.some((item) => item.label === "For businesses" && item.to === "/group/businesses"));
+    assert.doesNotMatch(
+      header,
+      /const SECONDARY = \[[\s\S]*?For businesses/,
+      "For businesses belongs in the primary navigation, not duplicated in mobile quick links",
+    );
     assert.match(header, /aria-current={active \? "page" : undefined}/);
     assert.match(businesses, /to="\/forge-bot-intake"/);
     assert.match(businesses, /online intake is closed/i);

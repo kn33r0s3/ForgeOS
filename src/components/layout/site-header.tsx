@@ -206,6 +206,5 @@ const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
 const SECONDARY = [
   { label: "Share a need", to: "/request" },
   { label: "Work board", to: "/domain" },
-  { label: "For businesses", to: "/group/businesses" },
   { label: "About", to: "/about" },
 ] as const;

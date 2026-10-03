@@ -40,26 +40,33 @@
   owner-run discovery before selecting a segment or pilot terms. No activation
   is authorized by this record.
 - Action removed: correct the homepage wayfinding and closed-inquiry copy,
-  add “For businesses” to primary navigation without removing other entries,
-  set the public share title to Hami, minimize public health output, protect
-  health diagnostics with the owner key, and document the production database
-  and recovery checks without changing production records.
-- Current blocker / verification: homepage and copy changes are verified in a
-  local 390px browser view; the mobile menu includes “For businesses” and
-  preserves its prior items; `/privacy` is `noindex, nofollow` and is not
-  linked from navigation or consent. Local backend tests pass on SQLite and
-  PostgreSQL 18, and frontend tests/typecheck/lint/build pass. The production
-  database read used read-only transactions: all 69 ORM model tables and
-  expected columns were present in the 75-table public schema; there were no
-  `REAL` Forge Bot leads. One mode-600 backup was restored to a disposable
-  PostgreSQL 18 container and all 75 table names and row counts matched. The
-  backup remains outside the repository at
-  `~/Downloads/hami-backups/hami-production-2026-10-04.dump`; do not commit it.
-  The pre-deployment read-only GETs returned health 200 and
-  `intake_enabled=false` on both production domains. Production owner
-  readiness returned 401; live heartbeat and authenticated readiness are not
-  verified. Cal.com was only loaded read-only; no slot was selected, so the
-  final booking form fields remain unknown.
+  add “For businesses” once to the primary mobile/desktop navigation without
+  removing other entries, set the public share title to Hami, minimize public
+  health output, protect health diagnostics with the owner key, and document
+  the production database and recovery checks without changing production
+  records.
+- Current blocker / verification: latest pushed commit
+  `80f757f9b0d6b2d2ae4e5e2e4c608e1caa358f5b` passed GitHub Actions frontend
+  and backend jobs; Vercel reported a successful deployment. Read-only GETs
+  against both `haminp.vercel.app` and `forge-os-ebon.vercel.app` returned
+  health 200 with `{"status":"ok","ready":true}` and
+  `intake_enabled=false`; unauthenticated health-details and owner-readiness
+  returned 401. Both domains return Report-Only CSP, `nosniff`, strict-origin
+  referrer policy, `X-Frame-Options: DENY`, and the minimal Permissions-Policy.
+  The 390px production browser showed the business link in the mobile menu,
+  Hami share/apple titles, and no overflow on `/discoveries` or `/feed`.
+  `/privacy` remains `noindex, nofollow` and unlinked from navigation or
+  consent. Local backend tests pass on SQLite and PostgreSQL 18, and frontend
+  tests/typecheck/lint/build pass. The production database read used
+  read-only transactions: all 69 ORM model tables and expected columns were
+  present in the 75-table public schema; there were no `REAL` Forge Bot leads.
+  One mode-600 backup was restored to a disposable PostgreSQL 18 container and
+  all 75 table names and row counts matched. The backup remains outside the
+  repository at `~/Downloads/hami-backups/hami-production-2026-10-04.dump`; do
+  not commit it. Production owner readiness returned 401; live heartbeat and
+  authenticated readiness are not verified. Cal.com was only loaded
+  read-only; no slot was selected, so the final booking form fields remain
+  unknown.
 - Next removable dependency: obtain owner approval and independently verify
   each readiness item in `docs/ACTIVATION.md`. Keep the privacy draft
   unlinked until approval, and keep intake and `FORGE_BOT_LIVE` closed.
