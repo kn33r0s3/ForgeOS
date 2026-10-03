@@ -151,10 +151,14 @@ than a few days old, re-verify before trusting the details.
   onboarding blocked — owner has personal PAN only. Do not invent company
   or merchant info.
 - **Discovery:** hourly research loop (recreate from `docs/ops/`); rounds
-  1–2 banked unknowns D1–D18 in `docs/UNKNOWN_MAP.md`. Sharpest current
+  1–3 banked unknowns D1–D21 in `docs/UNKNOWN_MAP.md`. Sharpest current
   question (D2/D11): "If I brought you 10 new customers tomorrow, what
   breaks?" — the binding constraint splits by segment (social sellers bind
-  on presence, retail shutters bind on rent/density).
+  on presence, retail shutters bind on rent/density). Round 3 added a
+  counter-level verification question (D19/D20): "When a customer pays by
+  QR, who at your shop checks it — and what do you look at before handing
+  over the goods?" (fake "Success" screens are an active Kathmandu scam;
+  FoneBiz's 2.73 rating + single-session model broke staff checking).
 
 ## How you work with the user
 
