@@ -1486,6 +1486,7 @@ class PublicAlertOut(BaseModel):
     id: int
     source: str
     text: str
+    classification: Literal["DERIVED"] = "DERIVED"
     created_at: Optional[datetime] = None
 
 

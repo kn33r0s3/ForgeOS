@@ -427,7 +427,10 @@ function DomainPage() {
             <h2 id="recorded-changes" className="flex items-center gap-2 font-display text-2xl tracking-tight text-ink"><Radio className="size-4 text-accent" aria-hidden="true" /> Recorded changes</h2>
             <div className="mt-3 space-y-2">
               {isLoading ? <p className="text-sm text-muted">Checking recorded changes…</p> : !apiUnavailable && alerts.length === 0 ? <p className="text-sm text-muted">No recorded change yet.</p> : alerts.map((alert) => (
-                <p key={alert.id} className="border-l-2 border-accent/40 pl-3 text-sm text-muted">{alert.text}</p>
+              <p key={alert.id} className="border-l-2 border-accent/40 pl-3 text-sm text-muted">
+                <span className="font-semibold text-accent">Derived activity, not a verified outcome. </span>
+                {alert.text}
+              </p>
               ))}
             </div>
           </section>

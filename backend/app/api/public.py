@@ -606,6 +606,7 @@ def list_public_alerts(limit: int = Query(default=20, ge=1, le=50), db: Session 
     rows = (
         db.query(models.Outcome)
         .filter(models.Outcome.source.in_(["domain_record", "booking_request", "network_connection"]))
+        .filter(models.Outcome.data_scope == "REAL")
         .order_by(models.Outcome.id.desc())
         .limit(limit)
         .all()
@@ -615,6 +616,7 @@ def list_public_alerts(limit: int = Query(default=20, ge=1, le=50), db: Session 
             id=row.id,
             source=row.source,
             text=row.qualitative_result or "",
+            classification="DERIVED",
             created_at=row.observed_at,
         )
         for row in rows

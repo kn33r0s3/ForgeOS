@@ -783,12 +783,20 @@ def test_public_alerts_are_only_recorded_changes(client_with_db, db):
         qualitative_result="Operator-only note with phone 9800000001",
         data_scope="REAL",
     ))
+    db.add(models.Outcome(
+        outcome_type="QUALITATIVE",
+        source="domain_record",
+        qualitative_result="TEST-only alert fixture must stay private",
+        data_scope="SANDBOX",
+    ))
     db.commit()
     alerts = client_with_db.get("/public/alerts")
     assert alerts.status_code == 200
     body = alerts.json()
     assert len(body) == 1
+    assert body[0]["classification"] == "DERIVED"
     assert "Spare filter" in body[0]["text"]
+    assert "TEST-only alert fixture" not in alerts.text
     assert "9800000001" not in alerts.text
     assert "close_token" not in alerts.text
 

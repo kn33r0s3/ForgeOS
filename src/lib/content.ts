@@ -190,6 +190,7 @@ export type PublicAlert = {
   id: number;
   source: string;
   text: string;
+  classification: "DERIVED";
   created_at?: string | null;
 };
 

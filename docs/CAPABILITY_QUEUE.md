@@ -962,6 +962,14 @@ realized revenue.
 - **Verification:** local disabled-path API test confirms HTTP 503 and zero stored signals (**11 targeted tests passed**); public-content Node tests (**8 passed**) and TypeScript typecheck pass.
 - **Next removable dependency:** owner decision on whether this public request flow is wanted after real discovery; until then the API remains closed by the legacy flag. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
 
+### 2026-10-03 — Keep TEST outcomes out of public Work alerts
+
+- **Owner action still required:** keep the Work board open only with the approved request limits and continue to review any real claims before treating them as evidence. No public post was created during this change.
+- **Action removed:** public alerts now omit outcomes explicitly marked `SANDBOX` and label the remaining board/status-derived records `DERIVED`; the Work board UI says they are not verified outcomes.
+- **Remaining boundary:** the current production public alert read returned four `domain_record`-sourced items. The public response does not expose evidence scope, so an exact REAL-vs-TEST classification requires the authorized read-only database audit; no monetary or completed-transaction inference is made from these derived records.
+- **Verification:** SQLite regression confirms a SANDBOX TEST alert is excluded and the generated board event is labeled DERIVED. Production inspection used GET only and printed no alert text.
+- **Next removable dependency:** establish explicit evidence scope at public Work-record creation and verify the four existing records against stored provenance before any are represented as REAL. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
 ### 2026-10-03 — Bound inquiry retention and durable intake limits
 
 - **Owner action still required:** conduct owner-run discovery, decide whether to open intake, and personally review any inquiry before a response or service commitment. No real customer interaction, payment, or revenue evidence was created here.
