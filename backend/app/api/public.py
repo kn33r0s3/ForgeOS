@@ -5,13 +5,15 @@ import os
 import secrets
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.database import get_db
 from app.services import public_epistemics
+from app.config import settings
+from app.services import forge_bot_privacy
 
 router = APIRouter(prefix="/public", tags=["public"])
 
@@ -204,6 +206,25 @@ def list_public_discoveries(limit: int = Query(default=20, ge=1, le=50), db: Ses
 
 
 _MATCH_STOP = {"the", "and", "for", "with", "that", "this", "from", "into", "your", "need", "someone"}
+
+
+def _consume_public_write_limit(
+    db: Session,
+    request: Request,
+    scope: str,
+    limit: int,
+) -> None:
+    if not forge_bot_privacy.consume_rate_limited_request(
+        db,
+        request,
+        hmac_key=settings.FORGE_BOT_CONTACT_HMAC_KEY,
+        scope=scope,
+        limit=limit,
+    ):
+        raise HTTPException(
+            status_code=429,
+            detail=f"Hourly limit reached: no more than {limit} requests per visitor per hour.",
+        )
 
 
 def _match_tokens(text: str) -> set[str]:
@@ -430,8 +451,10 @@ def record_public_connection_response(
     record_id: int,
     connection_id: int,
     body: schemas.PublicConnectionResponseCreate,
+    request: Request,
     db: Session = Depends(get_db),
 ):
+    _consume_public_write_limit(db, request, "public-domain-control", 20)
     row = db.query(models.DomainRecord).filter_by(id=record_id).first()
     if row is None:
         raise HTTPException(404, "record not found")
@@ -669,7 +692,12 @@ def list_domain_records(
 
 
 @router.post("/domain", response_model=schemas.DomainRecordCreated)
-def create_domain_record(body: schemas.DomainRecordCreate, db: Session = Depends(get_db)):
+def create_domain_record(
+    body: schemas.DomainRecordCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    _consume_public_write_limit(db, request, "public-domain-post", 5)
     token = secrets.token_urlsafe(24)
     row = models.DomainRecord(
         kind=body.kind,
@@ -699,7 +727,13 @@ def create_domain_record(body: schemas.DomainRecordCreate, db: Session = Depends
 
 
 @router.post("/domain/{record_id}/close", response_model=schemas.DomainRecordOut)
-def close_domain_record(record_id: int, body: schemas.DomainRecordClose, db: Session = Depends(get_db)):
+def close_domain_record(
+    record_id: int,
+    body: schemas.DomainRecordClose,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    _consume_public_write_limit(db, request, "public-domain-control", 20)
     row = db.query(models.DomainRecord).filter_by(id=record_id).first()
     if row is None:
         raise HTTPException(404, "record not found")
@@ -776,7 +810,13 @@ def domain_record_events(record_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/domain/{record_id}/dispute", response_model=schemas.DomainRecordEventsOut)
-def dispute_domain_record(record_id: int, body: schemas.DomainDisputeCreate, db: Session = Depends(get_db)):
+def dispute_domain_record(
+    record_id: int,
+    body: schemas.DomainDisputeCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    _consume_public_write_limit(db, request, "public-domain-control", 20)
     row = db.query(models.DomainRecord).filter_by(id=record_id).first()
     if row is None:
         raise HTTPException(404, "record not found")
@@ -797,7 +837,12 @@ def dispute_domain_record(record_id: int, body: schemas.DomainDisputeCreate, db:
 
 
 @router.post("/booking-requests", response_model=schemas.BookingRequestOut)
-def create_booking_request(body: schemas.BookingRequestCreate, db: Session = Depends(get_db)):
+def create_booking_request(
+    body: schemas.BookingRequestCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    _consume_public_write_limit(db, request, "public-booking-request", 5)
     provider = (
         _public_provider_query(db)
         .filter(models.Provider.id == body.provider_id)

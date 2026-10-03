@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas
 from app.services import observer
+from app.services import forge_bot_privacy
 from app.config import settings
 from app import security
 
@@ -25,6 +26,7 @@ def _record_demand_request(
     *,
     request_boundary: str,
     require_idempotency_key: bool = False,
+    request: Request | None = None,
 ):
     if not settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
         raise HTTPException(
@@ -43,6 +45,20 @@ def _record_demand_request(
         raise HTTPException(status_code=400, detail="Idempotency-Key header is required")
     if idempotency_key is not None and not 1 <= len(idempotency_key.strip()) <= 128:
         raise HTTPException(status_code=422, detail="Idempotency-Key must contain 1-128 characters")
+    if require_idempotency_key:
+        if request is None:
+            raise RuntimeError("public demand request is missing its request context")
+        if not forge_bot_privacy.consume_rate_limited_request(
+            db,
+            request,
+            hmac_key=settings.FORGE_BOT_CONTACT_HMAC_KEY,
+            scope="public-demand-request",
+            limit=5,
+        ):
+            raise HTTPException(
+                status_code=429,
+                detail="Hourly limit reached: no more than 5 requests per visitor per hour.",
+            )
 
     request_key = idempotency_key.strip() if idempotency_key else secrets.token_urlsafe(24)
     request_key_digest = hashlib.sha256(request_key.encode("utf-8")).hexdigest()
@@ -122,6 +138,7 @@ def create_public_demand_request(
     payload: schemas.PublicDemandRequestCreate,
     response: Response,
     background_tasks: BackgroundTasks,
+    request: Request,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     db: Session = Depends(get_db),
 ):
@@ -134,6 +151,7 @@ def create_public_demand_request(
         db,
         request_boundary="POST /signals/public-request",
         require_idempotency_key=True,
+        request=request,
     )
 
 

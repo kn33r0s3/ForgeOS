@@ -19,14 +19,19 @@ RATE_WINDOW_SECONDS = 3600
 RETENTION_DAYS = 30
 
 
-def _visitor_hash(request: Request, key: str) -> str:
+def _visitor_hash(
+    request: Request,
+    key: str,
+    *,
+    scope: str = "forge-bot-intake-rate-limit",
+) -> str:
     if os.getenv("VERCEL") and request.headers.get("x-vercel-forwarded-for"):
         identifier = request.headers["x-vercel-forwarded-for"].split(",", 1)[0].strip()
     else:
         identifier = request.client.host if request.client else "unknown"
     if not identifier:
         identifier = "unknown"
-    message = f"forge-bot-intake-rate-limit:{identifier}".encode("utf-8")
+    message = f"{scope}:{identifier}".encode("utf-8")
     return hmac.new(key.encode("utf-8"), message, hashlib.sha256).hexdigest()
 
 
@@ -46,10 +51,37 @@ def consume_intake_submission(
     now: datetime | None = None,
 ) -> bool:
     """Atomically consume one hourly slot without persisting the visitor identifier."""
+    return consume_rate_limited_request(
+        db,
+        request,
+        hmac_key=hmac_key,
+        scope="forge-bot-intake-rate-limit",
+        limit=RATE_LIMIT,
+        now=now,
+    )
+
+
+def consume_rate_limited_request(
+    db: Session,
+    request: Request,
+    *,
+    hmac_key: str,
+    scope: str,
+    limit: int,
+    now: datetime | None = None,
+) -> bool:
+    """Atomically consume a scoped hourly slot using only a visitor HMAC."""
+    if not hmac_key:
+        raise HTTPException(
+            status_code=503,
+            detail="Privacy-preserving request limiting is not configured.",
+        )
+    if not scope or limit < 1:
+        raise ValueError("rate-limit scope and a positive limit are required")
     _require_durable_database(db)
     timestamp = now or datetime.now(timezone.utc)
     expires_at = timestamp + timedelta(seconds=RATE_WINDOW_SECONDS)
-    visitor_hash = _visitor_hash(request, hmac_key)
+    visitor_hash = _visitor_hash(request, hmac_key, scope=scope)
     dialect = db.get_bind().dialect.name
     if dialect == "postgresql":
         insert = postgres_insert(models.ForgeBotIntakeRateLimit)
@@ -61,8 +93,8 @@ def consume_intake_submission(
     expired = models.ForgeBotIntakeRateLimit.expires_at <= timestamp
     current_count = models.ForgeBotIntakeRateLimit.request_count
     capped_count = case(
-        (current_count < RATE_LIMIT + 1, current_count + 1),
-        else_=RATE_LIMIT + 1,
+        (current_count < limit + 1, current_count + 1),
+        else_=limit + 1,
     )
     statement = (
         insert.values(
@@ -84,7 +116,7 @@ def consume_intake_submission(
     )
     request_count = db.execute(statement).scalar_one()
     db.commit()
-    return request_count <= RATE_LIMIT
+    return request_count <= limit
 
 
 def _has_response_action(db: Session, reference: str) -> bool:

@@ -946,6 +946,14 @@ realized revenue.
 - **Verification:** regression tests assert the five-second cap, default, fixed recipient/content, one-shot idempotency, owner-key gate, status-only responses, and no outbound call from tests. No production request or email was made.
 - **Next removable dependency:** only the owner can configure SMTP and decide whether to invoke the test route; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
 
+### 2026-10-03 — Bound public writes by visitor and request size
+
+- **Owner action still required:** decide whether to open each public submission surface and review resulting requests before making any commitment. No route was opened and no production request was made.
+- **Action removed:** the owner no longer needs to manually throttle repeat anonymous posts or reject oversized bodies for the selected public domain, booking-request, demand-request, and analyze endpoints. These writes now share an atomic one-hour database counter keyed by a visitor HMAC, and selected POST bodies are capped at 16 KiB before route execution. Domain posts and simple requests allow five per visitor per hour; close/dispute/response controls allow twenty.
+- **Remaining boundary:** the visitor IP is not persisted, only the keyed hash, count, and expiry. Vercel requires PostgreSQL for the rate-limit operation and fails closed otherwise; production database readiness and deployed behavior have not yet been reverified. The feature gates, owner review, external consent, and authorized follow-up remain unchanged.
+- **Verification:** focused SQLite tests pass (**75 passed**) covering the five- and twenty-request thresholds, opaque stored visitor hash, 429 response, and 413 rejection for root and `/api` aliases. PostgreSQL and full-suite verification remain pending in this batch. No external messages or production writes occurred.
+- **Next removable dependency:** verify the deployed Postgres-backed path and confirm abuse visibility/alerting before considering any owner-approved public opening. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
 ### 2026-10-03 — Bound inquiry retention and durable intake limits
 
 - **Owner action still required:** conduct owner-run discovery, decide whether to open intake, and personally review any inquiry before a response or service commitment. No real customer interaction, payment, or revenue evidence was created here.

@@ -23,6 +23,7 @@ from app.config import settings
 from app.database import init_db, SessionLocal
 from app.api import signals, analyze, opportunities, observer, forge, world, workers, intelligence, rare_signals, products, lessons, orchestrator, earn, payments, repair_shop, evidence_triage, public, scheduled, substrate, forge_bot
 from app.security import api_key_middleware
+from app.request_limits import PublicWriteSizeLimitMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,7 @@ app.add_middleware(
 # Optional API-key gate (only enforced on POST/PUT/PATCH/DELETE when
 # FORGE_API_KEY is set). Silent pass-through otherwise — local-first by default.
 app.middleware("http")(api_key_middleware)
+app.add_middleware(PublicWriteSizeLimitMiddleware)
 
 CRON_SCHEDULE = "0 0 * * *"
 

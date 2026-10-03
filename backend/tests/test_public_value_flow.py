@@ -3,7 +3,7 @@ import sqlite3
 import time
 
 import pytest
-from fastapi import BackgroundTasks
+from fastapi import BackgroundTasks, Request
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 
@@ -14,6 +14,22 @@ from app.main import app
 from app.migrations import run_migrations
 from app.services import collector_runner, research_planner, research_task_engine
 from app.services.collectors.base import SourceCollector
+
+
+def _test_request():
+    return Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "scheme": "http",
+            "path": "/analyze",
+            "raw_path": b"/analyze",
+            "query_string": b"",
+            "headers": [],
+            "client": ("198.51.100.42", 12345),
+            "server": ("testserver", 80),
+        }
+    )
 
 
 @pytest.fixture
@@ -124,6 +140,7 @@ def test_analyze_acknowledges_before_the_collector_background_task(db, monkeypat
             idea="Developer timing fixture only: synthetic problem for background handoff."
         ),
         background_tasks,
+        _test_request(),
         db,
     )
     acknowledgement_ms = (time.perf_counter() - started_at) * 1000
@@ -162,8 +179,8 @@ def test_analyze_reuses_the_same_durable_task_for_a_duplicate_request(db):
     first_handoff = BackgroundTasks()
     second_handoff = BackgroundTasks()
 
-    first = analyze_idea(payload, first_handoff, db)
-    second = analyze_idea(payload, second_handoff, db)
+    first = analyze_idea(payload, first_handoff, _test_request(), db)
+    second = analyze_idea(payload, second_handoff, _test_request(), db)
 
     assert first.research_question_id == second.research_question_id
     assert first.research_task_ids == second.research_task_ids
@@ -218,6 +235,7 @@ def test_analyze_does_not_report_completed_for_mixed_empty_task_results(
             idea="What independent evidence could confirm or disconfirm this proposed service need?"
         ),
         BackgroundTasks(),
+        _test_request(),
         db,
     )
 
@@ -248,6 +266,7 @@ def test_analyze_requires_persisted_evidence_before_source_collection_can_comple
             idea="Could an unfamiliar question reveal a recurring unmet need?"
         ),
         BackgroundTasks(),
+        _test_request(),
         db,
     )
 

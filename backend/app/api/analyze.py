@@ -9,7 +9,7 @@ API routes that drive Forge's core analysis loop:
   GET  /stats           -> dashboard totals
 """
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -17,6 +17,7 @@ from app import schemas, models
 from app.config import settings
 from app.services import pattern_engine, evidence_graph
 from app.services.observer_engine import ObserverEngine
+from app.services import forge_bot_privacy
 
 router = APIRouter(tags=["analyze"])
 
@@ -48,6 +49,7 @@ def execute_research_task_in_background(task_id: int) -> None:
 def analyze_idea(
     payload: schemas.AnalyzeRequest,
     background_tasks: BackgroundTasks,
+    request: Request,
     db: Session = Depends(get_db),
 ):
     """Start the real research pipeline for a user-submitted problem.
@@ -60,6 +62,17 @@ def analyze_idea(
     """
     if not settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
         raise HTTPException(status_code=503, detail="Legacy intelligence is disabled.")
+    if not forge_bot_privacy.consume_rate_limited_request(
+        db,
+        request,
+        hmac_key=settings.FORGE_BOT_CONTACT_HMAC_KEY,
+        scope="public-analyze",
+        limit=5,
+    ):
+        raise HTTPException(
+            status_code=429,
+            detail="Hourly limit reached: no more than 5 requests per visitor per hour.",
+        )
 
     from app.services import research_planner
 

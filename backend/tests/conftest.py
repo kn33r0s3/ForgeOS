@@ -26,6 +26,7 @@ else:
     os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 os.environ["AI_PROVIDER"] = "mock"
 os.environ["FORGE_API_KEY"] = ""
+os.environ["FORGE_BOT_CONTACT_HMAC_KEY"] = "test-only-visitor-hmac-key"
 os.environ["FORGEOS_LEGACY_INTELLIGENCE_ENABLED"] = "true"
 
 

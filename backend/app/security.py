@@ -25,8 +25,11 @@ from app.config import settings
 
 PUBLIC_WRITE_PATHS = {
     "/analyze",
+    "/api/analyze",
     "/public/booking-requests",
+    "/api/public/booking-requests",
     "/public/domain",
+    "/api/public/domain",
     "/forge-bot/leads",
     "/forge-bot/leads/opt-out",
     "/forge-bot/leads/delete",
@@ -86,7 +89,11 @@ async def api_key_middleware(request: Request, call_next):
     if _enabled():
         method = request.method.upper()
         path = request.url.path
-        allowed_write = path in PUBLIC_WRITE_PATHS or path.startswith("/public/domain/")
+        allowed_write = (
+            path in PUBLIC_WRITE_PATHS
+            or path.startswith("/public/domain/")
+            or path.startswith("/api/public/domain/")
+        )
         private_substrate_read = path.startswith(("/forge/substrate/", "/api/forge/substrate/"))
         private_contact_read = method in {"GET", "HEAD"} and any(
             path == prefix
