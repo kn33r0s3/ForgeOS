@@ -43,10 +43,13 @@
   probes there were stopped and no owner details were returned. The failed
   authentication limiter may count such GET attempts; no POST, PUT, PATCH,
   DELETE, authenticated request, or intentional production data write was
-  made. Production validation/rate-limit enforcement was not tested because
-  proving it would require production POSTs; the source changes have not been
-  committed or deployed in this task. The authenticated maintenance heartbeat
-  and production database details remain BLOCKED by the owner-key/credential
+  made. The source changes are in commits `b774ead746d78f606bf393d305754aa2aefe9dfd`
+  and `84b040315aeaecf22a1d37bbbbf61aa04dae1688`; `origin/main` matches the
+  latter. No deployment was explicitly initiated in this task, and the live
+  GET evidence does not establish which commit is deployed. Production
+  validation/rate-limit enforcement was not tested because proving it would
+  require production POSTs. The authenticated maintenance heartbeat and
+  production database details remain BLOCKED by the owner-key/credential
   boundary.
 - Next removable dependency: review and deploy the source change through the
   normal authorized release path, then verify POST enforcement only against
