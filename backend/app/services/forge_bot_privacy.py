@@ -184,9 +184,10 @@ def run_daily_maintenance(
         )
         world_graph.create_event(
             db,
-            event_type="forge_bot_daily_maintenance_succeeded",
+            event_type="state_changed",
             source="forge_bot_daily_maintenance",
             payload={
+                "state": "SUCCEEDED",
                 "inquiries_erased": erased,
                 "expired_rate_limit_buckets_purged": purged,
             },
