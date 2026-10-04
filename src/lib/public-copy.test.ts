@@ -169,6 +169,12 @@ describe("homepage contract", () => {
     );
   });
 
+  it("keeps the inbox prototype out of primary navigation and labels its footer link TEST-only", () => {
+    assert.doesNotMatch(header(), /Inbox tool|\/prototype\/inbox/);
+    assert.match(footer(), /Inbox prototype \(TEST only\)/);
+    assert.match(footer(), /to: "\/prototype\/inbox"/);
+  });
+
   it("6. does not position Hami as an inbox, reply service, seller business, or fixed vertical", () => {
     const src = home();
     const primarySystemCopy = src.slice(0, src.indexOf("function CurrentActivity"));
@@ -177,7 +183,12 @@ describe("homepage contract", () => {
     assert.doesNotMatch(headline, /slow reply|inbox|seller|shop|business|customer support|sale/i);
     assert.doesNotMatch(
       primarySystemCopy,
-      /inbox|customer support|lead[- ]generation|for online sellers|for businesses|commerce platform|seller reply service/i,
+      /inbox|seller|shop|business(?:es)?|software|services?|customer support|lead[- ]generation|commerce|for online sellers|for businesses|commerce platform|seller reply service/i,
+    );
+    assert.doesNotMatch(
+      primarySystemCopy,
+      /Hami\s+(?:is designed|exists|operates|works)\s+for\s+\w+/i,
+      "Hami must not be described as serving one fixed vertical or customer type",
     );
     const reductions = [
       /Hami is a (tool|inbox|saas|chatbot|calculator|reply service)\b/i,

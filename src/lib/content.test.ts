@@ -102,10 +102,8 @@ describe("Hami public content", () => {
 
   it("exposes public-first primary destinations", () => {
     const hrefs = NAV.map((item) => item.to);
-    // Hami, the inbox tool, what we've learned. No Contact: there is no
-    // real contact route, so it stays unlinked. Old routes stay live but
-    // unlinked.
-    assert.deepEqual(hrefs, ["/", "/prototype/inbox", "/what-we-learned"]);
+    // The primary navigation describes Hami and its public record, not a prototype or one investigation.
+    assert.deepEqual(hrefs, ["/", "/about", "/discoveries"]);
     const publicHrefs = new Set<string>(hrefs);
     for (const path of FORBIDDEN_PUBLIC_PATHS) {
       assert.equal(publicHrefs.has(path), false, `nav leaked ${path}`);
@@ -229,9 +227,10 @@ describe("Hami prototype honesty", () => {
     assert.match(route, /No inquiries yet/);
     assert.match(route, /honest empty state/);
     assert.match(route, /createFileRoute\("\/prototype\/inbox"\)/);
-    // The inbox tool is a primary nav destination (owner-ordered) and the
-    // homepage's one real CTA — but it stays out of the sitemap.
-    assert.ok(NAV.some((item) => (item.to as string) === "/prototype/inbox"));
+    // The prototype is not primary navigation and is explicitly TEST-labeled in the footer.
+    const footer = readFileSync(join(sourceDir, "../components/layout/site-footer.tsx"), "utf8");
+    assert.match(footer, /Inbox prototype \(TEST only\)/);
+    assert.match(footer, /to: "\/prototype\/inbox"/);
     const root = join(sourceDir, "../..");
     const sitemap = readFileSync(join(root, "public/sitemap.xml"), "utf8");
     assert.equal(sitemap.includes("/prototype/inbox"), false);
@@ -331,7 +330,7 @@ describe("Hami public root", () => {
     assert.match(home, /Experiment 1/);
     assert.match(home, /Currently exploring/);
     assert.match(home, /One proposed investigation · not started/);
-    assert.match(home, /not Hami's identity or a live offer/);
+    assert.match(home.replace(/\s+/g, " "), /not Hami's identity or a live offer/);
     assert.match(home, /to="\/needs"/);
     assert.doesNotMatch(home, /to="\/prototype\/inbox"|Try the free inbox tool/);
     assert.match(
@@ -340,7 +339,7 @@ describe("Hami public root", () => {
     );
     assert.match(home, /Honest status/i);
     assert.match(home, /pre-revenue/i);
-    assert.match(home, /no participants or results to report/);
+    assert.match(home.replace(/\s+/g, " "), /no participants or results to report/);
     // The wedge is never the headline.
     const h1 = home.replace(/\s+/g, " ").match(/<h1[^>]*>(.*?)<\/h1>/)?.[1] ?? "";
     assert.match(h1, /Hami is a living system/);
@@ -376,10 +375,11 @@ describe("Hami public root", () => {
     assert.doesNotMatch(footer, /Share a need/);
     assert.doesNotMatch(footer, /Work board/);
     assert.match(footer, /Built in Kathmandu/);
-    assert.ok(NAV.some((item) => item.label === "Inbox tool" && item.to === "/prototype/inbox"));
-    assert.ok(
-      NAV.some((item) => item.label === "What we've learned" && item.to === "/what-we-learned"),
-    );
+    assert.ok(NAV.some((item) => item.label === "The system" && item.to === "/about"));
+    assert.ok(NAV.some((item) => item.label === "Public record" && item.to === "/discoveries"));
+    assert.doesNotMatch(header, /Inbox tool|\/prototype\/inbox/);
+    assert.match(footer, /Inbox prototype \(TEST only\)/);
+    assert.match(footer, /Experiment 1 \(not started\)/);
     assert.ok(
       !NAV.some((item) => (item.label as string) === "Contact"),
       "Contact is in the nav without a real contact route",

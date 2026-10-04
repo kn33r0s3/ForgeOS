@@ -44,8 +44,20 @@ or flag change was performed for this verification.
   there are no participants or results. The homepage's public record uses
   existing source-observation data only; it does not request restricted
   substrate records or claim that a source observation is verified.
-- Verification: pending focused regression tests, production build, and
-  rendered desktop/mobile perception checks. Backend, engine, database, API
+- Verification: the homepage/content contracts passed **38/38**; full
+  `npm test` passed **363/363**; `npm run typecheck`, `npm run lint`, and
+  `env -u DATABASE_URL npm run build` passed (database migrations skipped
+  because `DATABASE_URL` was unset). At desktop width **1280px** and mobile
+  width **390px**, the homepage had no horizontal overflow. Visual inspection
+  confirmed the Hami identity is the first-glance message, the broader
+  reality/evidence section and public record precede the small, explicitly
+  not-started Experiment 1 note, and primary navigation no longer names the
+  inbox prototype. The mobile menu lists Hami, The system, and Public record.
+  `/prototype/inbox` remains directly available (HTTP 200) and labeled TEST.
+  The public observations API returned HTTP 502 locally because the backend
+  was not running; the homepage displayed an explicit unavailable state
+  rather than implying no data or inventing observations. No browser
+  JavaScript page errors occurred. Backend, engine, database, API
   implementation, substrate, research logic, payment, and auth architecture
   remain untouched.
 - Next removable dependency: owner-run discovery and an explicitly

@@ -2,15 +2,19 @@ import { Link } from "@tanstack/react-router";
 import { SITE } from "@/lib/content";
 import { Container } from "./container";
 
-const GROUP_LINKS = [
+const SYSTEM_LINKS = [
   { label: "Hami home", to: "/" },
-  { label: "Inbox tool", to: "/prototype/inbox" },
-  { label: "What we've learned", to: "/what-we-learned" },
   { label: "About Hami", to: "/about" },
 ] as const;
 
-const WORK_LINKS = [
-  { label: "The offer being tested", to: "/needs" },
+const RECORD_LINKS = [
+  { label: "Public observations", to: "/discoveries" },
+  { label: "Open questions", to: "/unknowns" },
+] as const;
+
+const CURRENT_LINKS = [
+  { label: "Experiment 1 (not started)", to: "/needs" },
+  { label: "Inbox prototype (TEST only)", to: "/prototype/inbox" },
 ] as const;
 
 const LINK =
@@ -33,15 +37,22 @@ export function SiteFooter() {
             Hami is one system. Built in Kathmandu, serving everywhere equally.
           </p>
         </div>
-        <FooterColumn title="Explore">
-          {GROUP_LINKS.map((item) => (
+        <FooterColumn title="The system">
+          {SYSTEM_LINKS.map((item) => (
             <Link key={item.to} to={item.to} className={LINK}>
               {item.label}
             </Link>
           ))}
         </FooterColumn>
-        <FooterColumn title="Quick links">
-          {WORK_LINKS.map((item) => (
+        <FooterColumn title="Public record">
+          {RECORD_LINKS.map((item) => (
+            <Link key={item.to} to={item.to} className={LINK}>
+              {item.label}
+            </Link>
+          ))}
+        </FooterColumn>
+        <FooterColumn title="Current activity & prototype">
+          {CURRENT_LINKS.map((item) => (
             <Link key={item.to} to={item.to} className={LINK}>
               {item.label}
             </Link>
