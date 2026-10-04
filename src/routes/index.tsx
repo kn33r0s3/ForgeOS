@@ -3,6 +3,8 @@ import { Link } from "@tanstack/react-router";
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { Container } from "@/components/layout/container";
+import { Button } from "@/components/ui/button";
+import { Eyebrow } from "@/components/layout/eyebrow";
 import {
   loadDiscoveries,
   loadUnknownsSummary,
@@ -196,12 +198,7 @@ function Hero() {
       <Container className="py-12 sm:py-16 lg:py-20">
         <div className="grid items-center gap-10 lg:grid-cols-2">
           <div>
-            <p
-              className="font-mono text-[0.68rem] font-bold uppercase tracking-[0.22em]"
-              style={{ color: C.amber }}
-            >
-              Hami · हामी
-            </p>
+            <Eyebrow tone="amber">Hami · हामी</Eyebrow>
             <h1
               className="mt-5 text-[clamp(2.4rem,5.5vw,4.5rem)] font-extrabold leading-[1.05] tracking-tight"
               style={{ fontFamily: "Archivo, sans-serif", color: C.text }}
@@ -351,13 +348,11 @@ function PowerOfUnknown() {
               ))}
             </dl>
           )}
-          <Link
-            to="/unknowns"
-            className="mt-6 inline-flex min-h-10 items-center gap-1 text-sm font-bold"
-            style={{ color: C.amber }}
-          >
-            Open the unknowns <ArrowRight className="size-4" aria-hidden="true" />
-          </Link>
+          <Button asChild variant="primary" className="mt-6">
+            <Link to="/unknowns">
+              Open the unknowns <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+          </Button>
         </div>
       </Container>
     </section>
@@ -421,13 +416,11 @@ function VeryBigVerySmall() {
                         {s.body}
                       </p>
                       {"link" in s && s.link && (
-                        <Link
-                          to={s.link.to}
-                          className="mt-2 inline-flex min-h-10 items-center gap-1 text-sm font-bold"
-                          style={{ color: C.amber }}
-                        >
-                          {s.link.label} <ArrowRight className="size-4" aria-hidden="true" />
-                        </Link>
+                        <Button asChild variant="secondary" size="sm" className="mt-3">
+                          <Link to={s.link.to}>
+                            {s.link.label} <ArrowRight className="size-4" aria-hidden="true" />
+                          </Link>
+                        </Button>
                       )}
                     </>
                   ) : (
@@ -548,13 +541,11 @@ function WhatWeHaveLearned() {
               })}
             </ul>
           )}
-          <Link
-            to="/discoveries"
-            className="mt-6 inline-flex min-h-10 items-center gap-1 text-sm font-bold"
-            style={{ color: C.amber }}
-          >
-            View all research <ArrowRight className="size-4" aria-hidden="true" />
-          </Link>
+          <Button asChild variant="primary" className="mt-6">
+            <Link to="/discoveries">
+              View all research <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+          </Button>
         </div>
       </Container>
     </section>
