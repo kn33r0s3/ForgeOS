@@ -17,22 +17,13 @@ import {
   submitPublicDemandRequest,
   trustPoints,
 } from "./content.ts";
-import {
-  candidateNeeds,
-  needsCount,
-  needsRounds,
-} from "./needs.ts";
+import { candidateNeeds, needsCount, needsRounds } from "./needs.ts";
 
 const FORBIDDEN_CLAIM_RE =
   /\b(fortune\s*500|testimonial|our clients include|\d+\+|\$\d+\s*(million|billion)|unicorn|award-winning|market leader)\b/i;
 
 function collectCopy(): string[] {
-  const blobs: string[] = [
-    SITE.name,
-    SITE.domain,
-    SITE.tagline,
-    SITE.description,
-  ];
+  const blobs: string[] = [SITE.name, SITE.domain, SITE.tagline, SITE.description];
   for (const item of NAV) blobs.push(item.label, item.to);
   for (const service of services) {
     blobs.push(
@@ -61,10 +52,10 @@ describe("Hami public content", () => {
   it("handles the closed legacy demand path without exposing its API error", async () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = async () =>
-      new Response(
-        JSON.stringify({ detail: "Legacy demand-understanding is disabled." }),
-        { status: 503, headers: { "Content-Type": "application/json" } },
-      );
+      new Response(JSON.stringify({ detail: "Legacy demand-understanding is disabled." }), {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      });
     try {
       assert.deepEqual(
         await submitPublicDemandRequest("TEST-only closed-path fixture", "test-key"),
@@ -114,11 +105,7 @@ describe("Hami public content", () => {
     // Hami, the inbox tool, what we've learned. No Contact: there is no
     // real contact route, so it stays unlinked. Old routes stay live but
     // unlinked.
-    assert.deepEqual(hrefs, [
-      "/",
-      "/prototype/inbox",
-      "/what-we-learned",
-    ]);
+    assert.deepEqual(hrefs, ["/", "/prototype/inbox", "/what-we-learned"]);
     const publicHrefs = new Set<string>(hrefs);
     for (const path of FORBIDDEN_PUBLIC_PATHS) {
       assert.equal(publicHrefs.has(path), false, `nav leaked ${path}`);
@@ -132,10 +119,7 @@ describe("Hami public content", () => {
     const kinds = new Set(capabilities.map((item) => item.kind));
     assert.ok(kinds.has("commercial"));
     assert.ok(kinds.has("prototype"));
-    assert.equal(
-      capabilities.filter((item) => item.kind === "prototype").length,
-      1,
-    );
+    assert.equal(capabilities.filter((item) => item.kind === "prototype").length, 1);
   });
 
   it("labels group areas as strategic directions, not subsidiaries", () => {
@@ -143,7 +127,10 @@ describe("Hami public content", () => {
     for (const area of groupAreas) {
       assert.equal(area.status, "strategic direction");
     }
-    assert.equal(processSteps.map((step) => step.title).join(" → "), "Understand → Build → Operate → Improve");
+    assert.equal(
+      processSteps.map((step) => step.title).join(" → "),
+      "Understand → Build → Operate → Improve",
+    );
   });
 
   it("does not ship fake metrics, testimonials, or phantom clients", () => {
@@ -202,7 +189,10 @@ describe("Hami candidate needs", () => {
       assert.ok(need.sources.length >= 1, `${need.id}: no sources`);
       assert.ok(need.round.length > 0);
       assert.ok(need.question.length > 10, `${need.id}: no sharp question`);
-      assert.ok(["high", "medium", "low"].includes(need.confidence), `${need.id}: no confidence grade`);
+      assert.ok(
+        ["high", "medium", "low"].includes(need.confidence),
+        `${need.id}: no confidence grade`,
+      );
       assert.ok(need.weakestLink.length > 20, `${need.id}: no weakest link`);
       // No manufactured voices: needs describe observations, never quote people.
       assert.doesNotMatch(need.observed, /“[^”]{80,}”/, `${need.id}: long quote looks invented`);
@@ -254,10 +244,7 @@ describe("Hami forge console", () => {
     // No public /forge route exists.
     assert.equal(existsSync(join(sourceDir, "../routes/forge.tsx")), false);
     const owner = readFileSync(join(sourceDir, "../routes/owner.tsx"), "utf8");
-    const widget = readFileSync(
-      join(sourceDir, "../components/forge/forge-console.tsx"),
-      "utf8",
-    );
+    const widget = readFileSync(join(sourceDir, "../components/forge/forge-console.tsx"), "utf8");
     // The widgets exercise the real engine, not a mock.
     assert.match(widget, /verifyRound/);
     assert.match(widget, /ripenessQueue/);
@@ -272,7 +259,10 @@ describe("Hami forge console", () => {
     assert.equal(unlocked.includes("<ForgeConsoleWidgets />"), true);
     // The owner page stays unindexed and unlinked from the nav.
     assert.match(owner, /noindex/);
-    assert.equal(NAV.some((item) => (item.to as string) === "/owner"), false);
+    assert.equal(
+      NAV.some((item) => (item.to as string) === "/owner"),
+      false,
+    );
   });
 });
 
@@ -283,17 +273,16 @@ describe("Hami public root", () => {
     const config = JSON.parse(readFileSync(join(root, "vercel.json"), "utf8")) as {
       headers?: Array<{ source?: string; headers?: Array<{ key: string; value: string }> }>;
     };
-    const headers =
-      config.headers?.find(({ source }) => source === "/(.*)")?.headers ?? [];
+    const headers = config.headers?.find(({ source }) => source === "/(.*)")?.headers ?? [];
     const values = new Map(headers.map(({ key, value }) => [key, value]));
     assert.equal(values.get("X-Content-Type-Options"), "nosniff");
     assert.equal(values.get("Referrer-Policy"), "strict-origin-when-cross-origin");
     assert.equal(values.get("X-Frame-Options"), "DENY");
-    assert.equal(
-      values.get("Permissions-Policy"),
-      "camera=(), microphone=(), geolocation=()",
+    assert.equal(values.get("Permissions-Policy"), "camera=(), microphone=(), geolocation=()");
+    assert.match(
+      values.get("Content-Security-Policy-Report-Only") ?? "",
+      /frame-src https:\/\/cal\.com/,
     );
-    assert.match(values.get("Content-Security-Policy-Report-Only") ?? "", /frame-src https:\/\/cal\.com/);
     assert.equal(values.has("Content-Security-Policy"), false);
   });
 
@@ -324,22 +313,43 @@ describe("Hami public root", () => {
     assert.match(home, /createFileRoute\("\/"\)/);
     assert.equal(ogSite.title, "Hami");
     assert.doesNotMatch(home, /Navigate to=/);
-    // Home is honest: Hami identity headline, four lines, Experiment 1, engine findings, status.
+    // Home presents the living system and recorded public observations before its one small investigation.
     assert.match(home, /Hami is a living system that understands what people need/);
     assert.match(home, /Built in Kathmandu\. Serving everywhere equally/);
     assert.match(home, /Observes/);
     assert.match(home, /Keeps evidence and uncertainty/);
     assert.match(home, /Acts only when authorized/);
     assert.match(home, /Learns from outcomes/);
+    assert.match(home, /Reality is not pre-sorted/);
+    assert.match(home, /unused capability/);
+    assert.match(home, /problems worth solving/);
+    assert.match(home, /no fixed sequence[\s\S]*single product defines the system/);
+    assert.match(home, /What is actually recorded/);
+    assert.match(home, /loadDiscoveries/);
+    assert.match(home, /Nothing is recorded in this public observation record yet/);
+    assert.match(home, /The public record is unavailable right now/);
     assert.match(home, /Experiment 1/);
-    assert.match(home, /One current experiment inside Hami/);
-    assert.match(home, /to="\/prototype\/inbox"/);
-    assert.match(home, /No signup/);
+    assert.match(home, /Currently exploring/);
+    assert.match(home, /One proposed investigation · not started/);
+    assert.match(home, /not Hami's identity or a live offer/);
+    assert.match(home, /to="\/needs"/);
+    assert.doesNotMatch(home, /to="\/prototype\/inbox"|Try the free inbox tool/);
+    assert.match(
+      home,
+      /<Identity \/>[\s\S]*<FourLines \/>[\s\S]*<SystemScope \/>[\s\S]*<RecordedObservations \/>[\s\S]*<CurrentActivity \/>[\s\S]*<HonestStatus \/>/,
+    );
     assert.match(home, /Honest status/i);
     assert.match(home, /pre-revenue/i);
-    assert.match(home, /has not yet served a seller/i);
+    assert.match(home, /no participants or results to report/);
     // The wedge is never the headline.
-    assert.doesNotMatch(home, /<h1[^>]*>[^<]*slow reply/i);
+    const h1 = home.replace(/\s+/g, " ").match(/<h1[^>]*>(.*?)<\/h1>/)?.[1] ?? "";
+    assert.match(h1, /Hami is a living system/);
+    assert.doesNotMatch(h1, /slow reply|inbox|seller|business|customer support|sale/i);
+    const primarySystem = home.slice(0, home.indexOf("function CurrentActivity"));
+    assert.doesNotMatch(
+      primarySystem,
+      /inbox|customer support|lead[- ]generation|for online sellers|for businesses|commerce platform|seller reply service/i,
+    );
     // No grand unproven claims, no toy form, no keyword-salad feed.
     assert.doesNotMatch(home, /Finds what people need/);
     assert.doesNotMatch(home, /Share a business need/);
@@ -350,7 +360,7 @@ describe("Hami public root", () => {
     // Old homepage sections are gone; old routes stay live but unlinked.
     assert.doesNotMatch(home, /function CurrentPaths/);
     assert.doesNotMatch(home, /to="\/group\/businesses"/);
-    assert.doesNotMatch(home, /to="\/discoveries"/);
+    assert.match(home, /to="\/discoveries"/);
     assert.doesNotMatch(home, /to="\/opportunities"/);
     assert.doesNotMatch(home, /to="\/actions"/);
     // Header: no context form, no closed-intake links, no Sign in.
@@ -367,7 +377,9 @@ describe("Hami public root", () => {
     assert.doesNotMatch(footer, /Work board/);
     assert.match(footer, /Built in Kathmandu/);
     assert.ok(NAV.some((item) => item.label === "Inbox tool" && item.to === "/prototype/inbox"));
-    assert.ok(NAV.some((item) => item.label === "What we've learned" && item.to === "/what-we-learned"));
+    assert.ok(
+      NAV.some((item) => item.label === "What we've learned" && item.to === "/what-we-learned"),
+    );
     assert.ok(
       !NAV.some((item) => (item.label as string) === "Contact"),
       "Contact is in the nav without a real contact route",

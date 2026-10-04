@@ -30,6 +30,28 @@ skipped. Read-only production GETs and browser verification are recorded in
 `STATUS.md`; no production write, credential access, message, database query,
 or flag change was performed for this verification.
 
+## [PARTIAL] Restore system-first homepage perception (2026-10-04)
+
+- Owner action still required: conduct owner-run discovery and explicitly
+  authorize any first contact; any seller must separately authorize the exact
+  pilot access and operating scope before messages are handled.
+- Action this change removes: a visitor no longer has to distinguish Hami's
+  identity from a prominent seller-reply offer or an inbox-tool CTA. The
+  homepage describes Hami's open-ended relationship with reality, evidence,
+  capabilities, authorization, and actual outcomes before showing one small
+  proposed investigation.
+- Remaining blocker: Experiment 1 has not started, no seller has agreed, and
+  there are no participants or results. The homepage's public record uses
+  existing source-observation data only; it does not request restricted
+  substrate records or claim that a source observation is verified.
+- Verification: pending focused regression tests, production build, and
+  rendered desktop/mobile perception checks. Backend, engine, database, API
+  implementation, substrate, research logic, payment, and auth architecture
+  remain untouched.
+- Next removable dependency: owner-run discovery and an explicitly
+  authorized first contact; the page cannot provide seller participation,
+  external permission, or pilot access.
+
 ## [PARTIAL] Batch 12B: close request-state, copy, and verification gaps (2026-10-04)
 
 - Owner action still required: define an authorized source and retrieval

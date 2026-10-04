@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { Container } from "@/components/layout/container";
-import { Button } from "@/components/ui/button";
-import { fetchUnknowns, type ApiUnknown } from "@/lib/unknowns-api";
+import { loadDiscoveries, type PublicDiscovery } from "@/lib/content";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -51,8 +50,9 @@ function HomePage() {
     <main>
       <Identity />
       <FourLines />
-      <ExperimentOne />
-      <EngineFindings />
+      <SystemScope />
+      <RecordedObservations />
+      <CurrentActivity />
       <HonestStatus />
     </main>
   );
@@ -71,12 +71,12 @@ function Identity() {
             Hami · हामी
           </p>
           <h1 className="mt-5 text-[clamp(2.2rem,5vw,4.2rem)] font-black leading-[1.02] tracking-[-0.04em] text-ink">
-            Hami is a living system that understands what people need and turns
-            understanding into real value.
+            Hami is a living system that understands what people need and turns understanding into
+            real value.
           </h1>
           <p className="mt-4 max-w-2xl text-lg leading-8 text-muted sm:text-xl">
-            हामी एउटा जीवित प्रणाली हो जसले मानिसहरूलाई के चाहिन्छ भन्ने बुझ्छ
-            र बुझाइलाई वास्तविक मूल्यमा बदल्छ।
+            हामी एउटा जीवित प्रणाली हो जसले मानिसहरूलाई के चाहिन्छ भन्ने बुझ्छ र बुझाइलाई वास्तविक
+            मूल्यमा बदल्छ।
           </p>
           <p className="mt-6 max-w-2xl text-base font-bold leading-7 text-ink">
             Built in Kathmandu. Serving everywhere equally.
@@ -113,143 +113,147 @@ function FourLines() {
   );
 }
 
-/* 3. Running now — Experiment 1 */
+/* 3. An open-ended system, not a fixed sequence */
 
-function ExperimentOne() {
+function SystemScope() {
   return (
-    <section aria-labelledby="running-now-title" className="border-b-2 border-black py-10 sm:py-14">
+    <section
+      aria-labelledby="system-scope-title"
+      className="border-b-2 border-black py-10 sm:py-14"
+    >
       <Container>
-        <div className="max-w-3xl">
+        <div className="max-w-4xl">
           <p className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.16em] text-accent">
-            Running now
+            In contact with reality
           </p>
-          <h2 id="running-now-title" className="mt-2 font-display text-3xl font-black tracking-tight text-ink">
-            Experiment 1
+          <h2
+            id="system-scope-title"
+            className="mt-2 font-display text-3xl font-black tracking-tight text-ink"
+          >
+            Reality is not pre-sorted.
           </h2>
-          <p className="mt-3 text-sm leading-6 text-muted">
-            One current experiment inside Hami — not Hami itself.
+          <p className="mt-4 max-w-3xl text-base leading-7 text-muted sm:text-lg sm:leading-8">
+            Needs, unused capability, opportunities, mismatches, constraints, relationships,
+            resources, and problems worth solving meet in many different ways. Hami looks for what
+            matters in those real situations and what might lead to a useful outcome. These are
+            things the system can investigate, not discoveries claimed here.
           </p>
-          <div className="card mt-6 p-6">
-            <h3 className="font-display text-xl font-bold text-ink">
-              The slow-reply experiment
-            </h3>
-            <p className="mt-3 max-w-2xl text-base leading-7 text-muted">
-              When a customer messages a shop and nobody replies fast, a sale
-              can be lost quietly. For one week, a person handles replies
-              within minutes; payment is tied to sales that actually come back
-              because of the faster replies.
-            </p>
-            <p className="mt-3 max-w-2xl text-base leading-7 text-muted">
-              जब ग्राहकले सन्देश पठाउँदा छिटो जवाफ आउँदैन, बिक्री खेर जान
-              सक्छ। एक हप्ता एक व्यक्तिले केही मिनेटभित्र जवाफहरू सम्हाल्छ;
-              छिटो जवाफका कारण फर्केका बिक्रीमा मात्र शुल्क लाग्छ।
-            </p>
-            <div className="mt-5 flex flex-col items-start gap-2">
-              <Button asChild size="lg">
-                <Link to="/prototype/inbox">
-                  Try the free inbox tool
-                  <ArrowRight className="size-4" aria-hidden="true" />
-                </Link>
-              </Button>
-              <p className="text-sm text-muted">No signup.</p>
-            </div>
-          </div>
+          <p className="mt-4 max-w-3xl text-base leading-7 text-muted sm:text-lg sm:leading-8">
+            Hami can prepare different ways to help as its understanding and capabilities grow. It
+            keeps evidence alongside uncertainty, acts externally only when authorized, and learns
+            from actual outcomes. These capacities can inform one another; no fixed sequence or
+            single product defines the system.
+          </p>
         </div>
       </Container>
     </section>
   );
 }
 
-/* 4. What the engine has found — API-backed only */
+/* 4. Public observations shown only when present in the existing record */
 
-function EngineFindings() {
-  const [items, setItems] = useState<ApiUnknown[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+function RecordedObservations() {
+  const [items, setItems] = useState<PublicDiscovery[] | null>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let live = true;
-    fetchUnknowns()
+    void loadDiscoveries(4)
       .then((data) => {
-        if (live) setItems(data);
+        if (live) {
+          setItems(data);
+          setReady(true);
+        }
       })
-      .catch((e: unknown) => {
-        if (live) setError(e instanceof Error ? e.message : "unavailable");
+      .catch(() => {
+        if (live) {
+          setItems(null);
+          setReady(true);
+        }
       });
     return () => {
       live = false;
     };
   }, []);
 
-  const shown = (items ?? []).slice(0, 4);
-
   return (
-    <section aria-labelledby="engine-found-title" className="border-b-2 border-black bg-card py-10 sm:py-14">
+    <section
+      aria-labelledby="recorded-observations-title"
+      className="border-b-2 border-black bg-card py-10 sm:py-14"
+    >
       <Container>
         <div className="max-w-4xl">
           <p className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.16em] text-accent">
-            From the engine
+            From the public record
           </p>
-          <h2 id="engine-found-title" className="mt-2 font-display text-3xl font-black tracking-tight text-ink">
-            What the engine has found
+          <h2
+            id="recorded-observations-title"
+            className="mt-2 font-display text-3xl font-black tracking-tight text-ink"
+          >
+            What is actually recorded
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
-            Only what the engine has recorded — each finding with its truth
-            state and source. Nothing here was written for this page.
+            Only stored public observations appear here, with their source and recorded state. A
+            sourced observation is not automatically a verified claim.
           </p>
 
-          {error !== null && (
-            <div className="card mt-6 p-5" role="alert">
-              <p className="font-bold text-ink">The engine did not answer.</p>
+          {!ready && (
+            <div className="mt-6 border-t border-line py-5" aria-busy="true">
+              <p className="text-sm text-muted">Checking the public record…</p>
+            </div>
+          )}
+          {ready && items === null && (
+            <div className="mt-6 border-t border-line py-5" role="status">
+              <p className="font-bold text-ink">The public record is unavailable right now.</p>
               <p className="mt-1 text-sm text-muted">
-                Findings are unavailable right now ({error}). This section will
-                not invent them.
+                Hami could not check for observations, so their presence or absence cannot be
+                confirmed.
               </p>
             </div>
           )}
-          {error === null && items === null && (
-            <div className="card mt-6 p-5" aria-busy="true">
-              <p className="text-sm text-muted">Loading recorded findings…</p>
-            </div>
-          )}
-          {error === null && items !== null && items.length === 0 && (
-            <div className="card mt-6 p-5">
-              <p className="font-bold text-ink">Nothing recorded yet.</p>
-              <p className="mt-1 text-sm text-muted">
-                The engine has not banked any findings. When it does, they
-                appear here with their truth state and source.
+          {ready && items?.length === 0 && (
+            <div className="mt-6 border-t border-line py-5">
+              <p className="font-bold text-ink">
+                Nothing is recorded in this public observation record yet.
               </p>
             </div>
           )}
-          {error === null && items !== null && items.length > 0 && (
-            <>
-              <div className="mt-6 grid gap-4 md:grid-cols-2">
-                {shown.map((u) => (
-                  <article key={u.id} className="card p-5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-bold text-accent">{u.row_id}</span>
-                      <span className="rounded-full border border-line bg-background px-2 py-0.5 text-xs font-semibold text-muted">
-                        {u.epistemic_state}
-                      </span>
+          {ready && items && items.length > 0 && (
+            <ol className="mt-6 divide-y divide-line border-y border-line">
+              {items.map((item) => (
+                <li key={item.id} className="py-5">
+                  <article>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-dim">
+                      <span>{item.source}</span>
+                      <span>{item.epistemic_state}</span>
+                      <span>{item.freshness || "freshness unknown"}</span>
                     </div>
-                    <h3 className="mt-2 font-display text-base font-bold leading-6 text-ink">
-                      {u.question}
+                    <h3 className="mt-2 font-display text-lg font-bold leading-6 text-ink">
+                      {item.title || "Untitled observation"}
                     </h3>
-                    {u.provenance && (
-                      <p className="mt-2 text-xs leading-5 text-dim">
-                        Source: {u.provenance.split(". Cheapest test:")[0]}
-                      </p>
+                    <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">{item.excerpt}</p>
+                    {item.canonical_url && (
+                      <a
+                        href={item.canonical_url}
+                        className="link-arrow mt-3 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent"
+                      >
+                        View source
+                        <ArrowUpRight className="size-4" aria-hidden="true" />
+                      </a>
                     )}
                   </article>
-                ))}
-              </div>
-              <Link
-                to="/what-we-learned"
-                className="link-arrow mt-5 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent"
-              >
-                See everything the engine has recorded
-                <ArrowRight className="size-4" aria-hidden="true" />
-              </Link>
-            </>
+                </li>
+              ))}
+            </ol>
+          )}
+          {ready && items && items.length > 0 && (
+            <Link
+              to="/discoveries"
+              className="link-arrow mt-4 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent"
+            >
+              Open the public record
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
           )}
         </div>
       </Container>
@@ -257,15 +261,46 @@ function EngineFindings() {
   );
 }
 
-/* 5. Honest status */
+/* 5. One small investigation, subordinate to the system and its record */
+
+function CurrentActivity() {
+  return (
+    <section aria-labelledby="current-activity-title" className="border-b border-line py-6 sm:py-8">
+      <Container>
+        <div className="max-w-3xl">
+          <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.16em] text-dim">
+            One proposed investigation · not started
+          </p>
+          <h2 id="current-activity-title" className="mt-2 font-display text-xl font-bold text-ink">
+            Currently exploring
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            Experiment 1 asks whether faster replies could recover sales for one seller. No seller
+            has agreed and no messages have been handled; it is one small investigation, not Hami's
+            identity or a live offer.
+          </p>
+          <Link
+            to="/needs"
+            className="link-arrow mt-2 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent"
+          >
+            Read its scope
+            <ArrowRight className="size-4" aria-hidden="true" />
+          </Link>
+        </div>
+      </Container>
+    </section>
+  );
+}
+
+/* 6. Honest current state */
 
 function HonestStatus() {
   return (
-    <section aria-label="Status" className="py-10 sm:py-12">
+    <section aria-label="Status" className="py-8 sm:py-10">
       <Container>
         <p className="max-w-2xl border-l-4 border-accent pl-4 text-sm font-bold leading-6 text-ink">
-          Honest status: Hami is pre-revenue and has not yet served a seller.
-          Experiment 1 starts with one seller, for one week.
+          Honest status: Hami is pre-revenue. Experiment 1 remains proposed; there are no
+          participants or results to report.
         </p>
       </Container>
     </section>
