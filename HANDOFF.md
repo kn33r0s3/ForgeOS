@@ -129,7 +129,8 @@ than a few days old, re-verify before trusting the details.
 
 ## Current state (verified 2026-10-04 — re-verify on takeover)
 
-- **Repo:** `kn33r0s3/ForgeOS`, `main` at `53178f0` when this was written.
+- **Repo:** `kn33r0s3/ForgeOS`, `main` at `7f140e4` (freshness check
+  2026-10-04 06:23; was `53178f0` when this file was written).
 - **Production:** `https://haminp.vercel.app` (recommended canonical —
   owner has not formally confirmed) and `https://forge-os-ebon.vercel.app`
   (alias/legacy). Both `/api/health` returned ok; both
@@ -158,7 +159,9 @@ than a few days old, re-verify before trusting the details.
   onboarding blocked — owner has personal PAN only. Do not invent company
   or merchant info.
 - **Discovery:** hourly research loop (recreate from `docs/ops/`); rounds
-  1–3 banked unknowns D1–D21 in `docs/UNKNOWN_MAP.md`. Sharpest current
+  1–5 banked unknowns D1–D30 in `docs/UNKNOWN_MAP.md` (round 4: Kathmandu
+  kirana economics + udharo credit layer; round 5: mobile repair bench —
+  bench cannot be delegated). Sharpest current
   question (D2/D11): "If I brought you 10 new customers tomorrow, what
   breaks?" — the binding constraint splits by segment (social sellers bind
   on presence, retail shutters bind on rent/density). Round 3 added a
@@ -166,6 +169,8 @@ than a few days old, re-verify before trusting the details.
   QR, who at your shop checks it — and what do you look at before handing
   over the goods?" (fake "Success" screens are an active Kathmandu scam;
   FoneBiz's 2.73 rating + single-session model broke staff checking).
+  Research-capability spec: `docs/CAPABILITY_RESEARCH.md` (spec, not built;
+  code stays frozen).
 
 ## How you work with the user
 
