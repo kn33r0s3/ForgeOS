@@ -206,14 +206,21 @@ export function loadGuestState(
   } catch {
     legacy = null;
   }
-  try {
-    localStorage?.removeItem(LEGACY_STORAGE_KEY);
-  } catch {
-    // Storage may be unavailable; the legacy value is never uploaded here.
+  const dropLegacy = () => {
+    try {
+      localStorage?.removeItem(LEGACY_STORAGE_KEY);
+    } catch {
+      // Storage may be unavailable; the legacy value is never uploaded here.
+    }
+  };
+  if (temporary) {
+    dropLegacy();
+    return temporary;
   }
-  if (temporary) return temporary;
   if (!legacy) return null;
-  saveState(sessionStorage, legacy);
+  // Only retire the legacy value once it is safely held in tab storage;
+  // a failed write must not destroy the only copy.
+  if (saveState(sessionStorage, legacy)) dropLegacy();
   return legacy;
 }
 

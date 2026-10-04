@@ -112,6 +112,30 @@ describe("system state", () => {
     assert.equal(session.getItem(STORAGE_KEY), null);
     assert.equal(local.getItem(LEGACY_STORAGE_KEY), null);
   });
+
+  it("does not destroy the legacy value when tab storage cannot hold it", () => {
+    const session = memoryStorage();
+    session.setItem = () => {
+      throw new Error("tab storage unavailable");
+    };
+    const local = memoryStorage();
+    local.setItem(LEGACY_STORAGE_KEY, JSON.stringify(withState({ location: stated("legacy") })));
+
+    const loaded = loadGuestState(session, local);
+    assert.equal(loaded?.location?.value, "legacy");
+    assert.equal(local.getItem(LEGACY_STORAGE_KEY) !== null, true);
+  });
+
+  it("still retires legacy when a temporary tab state already exists", () => {
+    const session = memoryStorage();
+    const local = memoryStorage();
+    session.setItem(STORAGE_KEY, JSON.stringify(withState({ location: stated("temporary") })));
+    local.setItem(LEGACY_STORAGE_KEY, JSON.stringify(withState({ location: stated("legacy") })));
+
+    const loaded = loadGuestState(session, local);
+    assert.equal(loaded?.location?.value, "temporary");
+    assert.equal(local.getItem(LEGACY_STORAGE_KEY), null);
+  });
 });
 
 describe("possibility paths", () => {
