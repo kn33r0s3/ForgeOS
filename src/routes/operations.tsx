@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Container } from "@/components/layout/container";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState, MetricTile, SkeletonCards, Skeleton } from "@/components/ui/feedback";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { RefreshCw, Play, Shield, CheckCircle, AlertTriangle, Activity, TrendingUp, Layers, WifiOff, Lightbulb, Wallet, FlaskConical, X } from "lucide-react";
 import {
   loadExecutionActions,
@@ -22,9 +23,10 @@ function errorMessage(error: unknown, fallback: string): string {
 }
 
 function OperationsPage() {
+  const [ownerKey, setOwnerKey] = useState("");
   const [dashboard, setDashboard] = useState<MoneyDashboard | null>(null);
   const [actions, setActions] = useState<ActionItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // ── Change 4: Backend health state ──────────────────────────────────────
@@ -47,9 +49,11 @@ function OperationsPage() {
   // Read-only data loader (never auto-triggers cycles). This surface shows
   // pending approvals, so every read bypasses the short read cache: an action
   // approved moments ago must never be hidden behind a stale snapshot.
-  const loadOperatingData = useCallback(async () => {
+  const loadOperatingData = useCallback(async (apiKey: string) => {
     setLoading(true);
     setError(null);
+    setDashboard(null);
+    setActions([]);
 
     // Health probe first — distinguishes "backend offline" from "API error"
     const online = await checkBackendHealth();
@@ -63,8 +67,8 @@ function OperationsPage() {
 
     try {
       const [dashData, actData] = await Promise.all([
-        loadMoneyDashboard({ fresh: true }),
-        loadExecutionActions({ fresh: true }),
+        loadMoneyDashboard(apiKey, { fresh: true }),
+        loadExecutionActions(apiKey, { fresh: true }),
       ]);
 
       setDashboard(dashData);
@@ -93,11 +97,14 @@ function OperationsPage() {
     setRunningCycle(true);
     setCycleMsg(null);
     try {
-      const res = await fetch("/api/forge/cycle", { method: "POST" });
+      const res = await fetch("/api/forge/cycle", {
+        method: "POST",
+        headers: { "X-API-Key": ownerKey },
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setCycleMsg(`Cycle complete. Status: ${data.status || "status not recorded"} · Cycle ID: ${data.cycle_id ?? "—"}`);
-      await loadOperatingData();
+      await loadOperatingData(ownerKey);
     } catch (err: unknown) {
       setCycleMsg(`Cycle error: ${errorMessage(err, "Unexpected error")}`);
     } finally {
@@ -120,14 +127,17 @@ function OperationsPage() {
     setRunningCycle(true);
     setCycleMsg(null);
     try {
-      const res = await fetch("/api/forge/economic/discover", { method: "POST" });
+      const res = await fetch("/api/forge/economic/discover", {
+        method: "POST",
+        headers: { "X-API-Key": ownerKey },
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setCycleMsg(
         `Discovery complete: reviewed ${data.patterns_reviewed ?? "?"} pattern(s), ` +
         `created ${(data.opportunities_created ?? 0) + (data.single_signal_opportunities_created ?? 0)} new evidence-backed opportunity(ies).`
       );
-      await loadOperatingData();
+      await loadOperatingData(ownerKey);
     } catch (err: unknown) {
       setCycleMsg(`Discovery error: ${errorMessage(err, "Unexpected error")}`);
     } finally {
@@ -138,7 +148,10 @@ function OperationsPage() {
   // ── Change 3: Null-safe approval handler ─────────────────────────────────
   async function handleApproveAction(id: number) {
     try {
-      const res = await fetch(`/api/forge/execution/actions/${id}/approve`, { method: "POST" });
+      const res = await fetch(`/api/forge/execution/actions/${id}/approve`, {
+        method: "POST",
+        headers: { "X-API-Key": ownerKey },
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       // Backend returns null when the action is blocked (policy_decision = BLOCKED)
@@ -153,15 +166,11 @@ function OperationsPage() {
       }
 
       // Approval recorded — reload to reflect updated approved_at timestamp
-      await loadOperatingData();
+      await loadOperatingData(ownerKey);
     } catch (err: unknown) {
       alert(`Approval error: ${errorMessage(err, "Unexpected error")}`);
     }
   }
-
-  useEffect(() => {
-    void loadOperatingData();
-  }, [loadOperatingData]);
 
   return (
     <main>
@@ -181,7 +190,7 @@ function OperationsPage() {
           </>
         }
         lede="Hami operating window. It shows stored evidence, recorded opportunities, and actions that still need approval. A missing amount stays unknown. Figures come from the existing system data."
-        aside={
+        aside={dashboard ? (
           <>
             <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">Manual controls</p>
             <p className="mt-2 text-xs leading-5 text-muted">
@@ -209,7 +218,7 @@ function OperationsPage() {
               </Button>
             </div>
           </>
-        }
+        ) : null}
       >
         {cycleMsg && (
           <div
@@ -227,6 +236,42 @@ function OperationsPage() {
           </div>
         )}
       </PageHeader>
+
+      <section className="border-b border-line py-5">
+        <Container>
+          <form
+            aria-label="Owner access"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void loadOperatingData(ownerKey);
+            }}
+            className="card grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+          >
+            <label htmlFor="operations-owner-key" className="grid gap-1.5 text-sm font-bold text-ink">
+              Owner API key
+              <Input
+                id="operations-owner-key"
+                type="password"
+                value={ownerKey}
+                onChange={(event) => {
+                  setOwnerKey(event.currentTarget.value);
+                  setDashboard(null);
+                  setActions([]);
+                  setError(null);
+                  setBackendOnline(null);
+                }}
+                autoComplete="off"
+                spellCheck={false}
+                required
+              />
+            </label>
+            <Button type="submit" disabled={loading || !ownerKey.trim()} className="gap-2">
+              <Shield className="size-4" aria-hidden="true" />
+              {loading ? "Checking key…" : dashboard ? "Refresh dashboard" : "Load dashboard"}
+            </Button>
+          </form>
+        </Container>
+      </section>
 
       {/* Main Dashboard Content */}
       <section className="py-12 lg:py-16">
@@ -263,7 +308,7 @@ function OperationsPage() {
                 <br />
                 or: <span className="text-accent">cd backend &amp;&amp; uvicorn app.main:app --port 8000</span>
               </p>
-              <Button onClick={loadOperatingData} variant="secondary" size="sm" className="mt-5 gap-2">
+              <Button onClick={() => void loadOperatingData(ownerKey)} variant="secondary" size="sm" className="mt-5 gap-2">
                 <RefreshCw className="size-4" /> Retry Connection
               </Button>
             </div>
@@ -276,7 +321,7 @@ function OperationsPage() {
               <p className="mx-auto mt-3 max-w-md text-sm text-muted">
                 Hami backend is reachable but returned an error: {error}
               </p>
-              <Button onClick={loadOperatingData} variant="secondary" size="sm" className="mt-5 gap-2">
+              <Button onClick={() => void loadOperatingData(ownerKey)} variant="secondary" size="sm" className="mt-5 gap-2">
                 <RefreshCw className="size-4" /> Retry
               </Button>
             </div>

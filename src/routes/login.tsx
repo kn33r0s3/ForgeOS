@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Container } from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ function LoginPage() {
   const navigate = useNavigate();
   const { googleConfigured, termsConfigured, termsUrl } = Route.useLoaderData();
   const { user, isPending } = useCurrentUserState();
+  const [hydrated, setHydrated] = useState(false);
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -26,6 +27,10 @@ function LoginPage() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -85,7 +90,7 @@ function LoginPage() {
     <main>
       <Container className="grid min-h-[65dvh] place-items-center py-12">
         <section className="card w-full max-w-lg p-6 sm:p-8" aria-labelledby="login-title">
-          {isPending ? (
+          {!hydrated || isPending ? (
             <p className="text-sm text-dim" role="status">Checking your account…</p>
           ) : user ? (
             <>

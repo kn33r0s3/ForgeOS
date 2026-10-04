@@ -129,8 +129,9 @@ than a few days old, re-verify before trusting the details.
 
 ## Current state (verified 2026-10-04 — re-verify on takeover)
 
-- **Repo:** `kn33r0s3/ForgeOS`, `main` at `4830f82` (homepage visual
-  restoration, 2026-10-04 ~18:15 NPT).
+- **Repo:** `kn33r0s3/ForgeOS`; `main` and `origin/main` matched at
+  `eb88332138ff3a4343d0744e7caa1b655d1daf7d` when this review began. This is
+  the starting revision, not a claim about the deployed source SHA.
 - **Production:** `https://haminp.vercel.app` (**canonical**) and
   `https://forge-os-ebon.vercel.app` (alias) — both serve the `4830f82`
   build (bundle `index-BN48xYVh.js`, verified live 2026-10-04).
@@ -149,6 +150,23 @@ than a few days old, re-verify before trusting the details.
   there) and `https://forge-os-ebon.vercel.app` (alias/legacy). Both
   `/api/health` returned ok; both `/api/forge-bot/config` report
   `intake_enabled:false`.
+- **Signup:** `ACTIVE_TERMS` is configured at version `1.0`; email/password
+  signup and the one-time 18+ / terms permit are present in source. Read-only
+  GETs to `/login` and `/api/auth/get-session` returned 200 on both production
+  domains. No signup request or account creation was attempted; deployed
+  provider/configuration readiness remains unverified.
+- **Owner operations:** the backend requires `FORGE_API_KEY` for money and
+  execution-action reads. The operations UI now accepts the key without
+  persisting it and attaches it to protected reads and explicit mutations.
+  Full local tests, typecheck, lint, build, and browser checks pass; the focused
+  backend owner-key test also passes on Python 3.11. Production key
+  configuration and authenticated dashboard access remain unverified. The key
+  does not authorize external contact, spend, or automatic execution.
+- **Signup render:** a local hydration mismatch on `/login` is fixed by keeping
+  the server and first client render aligned until session resolution. The
+  signup form exposes DOB and current-terms consent; no test account was
+  created. Full local tests/typecheck/lint/build pass. Production account
+  creation remains unverified.
 - **Intake: CLOSED. `FORGE_BOT_LIVE`: CLOSED.** Owner-delegated decision
   2026-10-04: intake stays closed — ACTIVATION.md readiness checklist still
   has owner-side FAILs (test email received, privacy text approved, deployed

@@ -2,13 +2,10 @@
 
 ## Current closure map (2026-10-04)
 
-At the start of the latest verification, `HEAD` and `origin/main` matched
-`f5ca8d82749d82723fa18806fe472bb913a995db`. The local PostgreSQL parity test
-fix is committed but not pushed; `origin/main` has since advanced to
-`30e337c2354fb15e397861780b906f2108e40d74`. CI is green for the original base
-and that current upstream SHA, but was not run for the local parity commit.
-This is the current summary; dated entries below it are retained as history
-and may be superseded by this map.
+At the start of this review, `HEAD` and `origin/main` matched
+`eb88332138ff3a4343d0744e7caa1b655d1daf7d`. This review's local changes are
+recorded below; public health does not establish the deployed source SHA.
+Dated entries below are retained as history and may be superseded by this map.
 
 | Area | Current status | Evidence and next dependency |
 | --- | --- | --- |
@@ -16,6 +13,8 @@ and may be superseded by this map.
 | Malformed intake validation | **DONE — local only** | TEST-marked malformed email returns 422 with the `email` field and generic message; no lead row is created. Do not test by submitting to production. |
 | Public write limits and body caps | **IMPLEMENTED / locally tested; deployment identity UNVERIFIED** | Source enforces keyed durable limits (5/hour for posts/requests, 20/hour for domain close/dispute/response) and 16 KiB caps. Relevant endpoint tests pass on SQLite and throwaway PostgreSQL 18. Production GETs establish current closed flags, not the deployed source SHA; owner-readiness access is required for that SHA comparison. |
 | Production flags and basic health | **OBSERVED CLOSED / healthy by GET** | At inspection, both `haminp.vercel.app` and `forge-os-ebon.vercel.app` returned `/api/health` 200 with `status=ok, ready=true` and `/api/forge-bot/config` 200 with `intake_enabled=false`. These responses do not prove authenticated readiness, database state, or which commit is deployed. |
+| Operations dashboard owner-key flow | **IMPLEMENTED / production access UNVERIFIED** | `GET /forge/money/dashboard` and `GET /forge/execution/actions` require `FORGE_API_KEY`; backend tests verify 401 without it. The `/operations` UI now asks for the key in a password field, holds it only in component memory, and sends it on protected reads and explicit writes. Owner action still required: enter an already-authorized key. Missing backend configuration fails closed with 503; a wrong key returns 401. Next dependency: authorized confirmation that the production key is configured, then owner verification through the UI. No production key was accessed. |
+| Signup session hydration | **FIXED / local browser verified; production account flow UNVERIFIED** | `ACTIVE_TERMS` is version `1.0`; signup requires an 18+ check and server-issued one-time terms permit. `/login` now keeps the server and first client render aligned while the session resolves. Fresh local reload had no page errors; the create-account form showed DOB and terms acceptance. No account was created. Production configuration and a real signup remain unverified. |
 | Owner readiness and maintenance heartbeat | **BLOCKED / unverified** | The readiness endpoint requires the owner key. Do not retry unauthenticated calls or retrieve credentials to bypass this. Owner-authorized access is the next dependency. |
 | Production database inspection | **BLOCKED** | No authorized credential retrieval procedure is established in the current docs. The owner must define and authorize the credential source and read-only procedure; no production database or credential was accessed. |
 | Retention after response `ACTION` | **PLANNED, not implemented** | A linked response `ACTION` is exempt from the existing 30-day unactioned-inquiry purge. The proposed 90-day maximum needs owner approval before implementation. |
@@ -24,11 +23,52 @@ and may be superseded by this map.
 | ForgeBot v0 — operator's assistant | **IMPLEMENTED / locally tested** | `src/lib/forge/assistant.ts`: `verifyRound()` gates round findings through the evidence gate before banking (rejected findings are never banked); `ripenessQueue()` ranks open unknowns (desk-doable first, oldest first); `isAngleTried()` refuses repeated angles against 14 tried angles parsed from the discovery log. `docs/ROUND_PROTOCOL.md` specifies the loop precisely. 12 assistant tests pass. Per-change analysis: (1) owner action still required: none for the assistant itself — the five real conversations still need a human; (2) action removed: manual angle-picking and manual gate-checking from operator rounds; (3) remains/blocked: ForgeBot running rounds itself (v1) needs the round protocol wired to its tool access — no new permission, just the build; (4) next removable dependency: operator-planned angles → assistant-suggested angles. The operator console lives inside `/owner` behind the owner key only (no public route): gate tester, angle checker, ripeness list — all running the real engine code. |
 | Backend PostgreSQL full-suite coverage | **DONE — local SQLite/PostgreSQL parity verified** | The complete backend suite passed 686 tests, 2 skipped on SQLite and throwaway PostgreSQL 18. The five previously failing modules passed all 37 tests on each dialect. Their causes were invalid test-fixture foreign keys and SQLite-specific driver/path expectations, not production-code failures. The focused Forge Bot/owner-notification/privacy/public-write/signal tests passed 112/112 on each dialect. This local evidence does not establish production database behavior or the deployed source SHA. |
 
-Current npm verification: `npm test`, typecheck, lint, and production build
-passed. The build was run with `DATABASE_URL` unset, so its migration step
-skipped. Read-only production GETs and browser verification are recorded in
-`STATUS.md`; no production write, credential access, message, database query,
-or flag change was performed for this verification.
+Latest local verification after source edits: the full frontend/script suite
+passed **364/364** with `FORCE_COLOR=0 NO_COLOR=1`; typecheck, lint, and the
+production build passed. The build ran with `DATABASE_URL` unset and skipped
+migrations. The focused owner-header test passed; the backend owner-key guard
+test passed on Python 3.11. Browser checks at 1280px and 390px found no
+horizontal overflow or page/console errors, and no protected operations read
+occurred before key submission. Read-only production GETs to `/login` and
+`/api/auth/get-session` returned 200 on both domains. No account, production
+write, credential access, message, database query, or flag change was made.
+
+## [PARTIAL] Connect owner operations UI to its existing API-key boundary (2026-10-04)
+
+- Owner action still required: provide an authorized `FORGE_API_KEY` in the
+  operations page; the production key configuration has not been inspected.
+- Action removed: `/operations` previously requested protected money/action
+  reads and sent cycle, discovery, and approval writes without the required
+  `X-API-Key`, leaving its controls disconnected from the backend boundary.
+- Remaining blocker: the backend must have its owner key configured; absent
+  configuration returns 503 and a wrong key returns 401. Entering a key does
+  not run a cycle, approve an action, authorize contact, or spend money.
+- Next removable dependency: owner verifies the configured key in the UI;
+  production access remains unverified until then.
+- Verification: focused API-header test passed; backend
+  `test_money_and_execution_reads_require_owner_key` passed on Python 3.11;
+  full frontend/script suite passed 364/364; typecheck, lint, and build passed.
+  Browser verification at 1280px and 390px showed the key form,
+  no horizontal overflow, no page/console errors, and no protected reads before
+  unlock. Backend tests in `backend/tests/test_commercial_ops.py` assert the
+  protected GET behavior. No production key or write was used.
+
+## [DONE WITH LIMITATION] Keep signup's first render hydration-safe (2026-10-04)
+
+- Owner action still required: each registrant must be at least 18 and accept
+  current Terms 1.0; no production signup was attempted.
+- Action removed: the login page no longer renders different session branches
+  during server render and the first client hydration when the session resolves
+  quickly.
+- Remaining blocker: deployed auth/provider configuration and successful
+  production account creation are not established by public GET checks.
+- Next removable dependency: verify deployment readiness through an already
+  authorized path; do not create a production test account.
+- Verification: full frontend/script suite passed 364/364; typecheck, lint,
+  and production build passed. A fresh local `/login` reload had no
+  hydration/page errors; the signup toggle exposed name, DOB, Terms link, and
+  consent checkbox.
+  No credentials were entered and no account was created.
 
 ## [PARTIAL] Restore system-first homepage perception (2026-10-04)
 
