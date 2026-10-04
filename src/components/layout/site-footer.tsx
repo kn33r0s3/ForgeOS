@@ -5,7 +5,7 @@ import { Container } from "./container";
 const GROUP_LINKS = [
   { label: "Hami home", to: "/" },
   { label: "Inbox tool", to: "/prototype/inbox" },
-  { label: "What we've learned", to: "/unknowns" },
+  { label: "What we've learned", to: "/what-we-learned" },
   { label: "About Hami", to: "/about" },
 ] as const;
 

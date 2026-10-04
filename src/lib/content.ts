@@ -15,7 +15,7 @@ export const SITE = {
 export const NAV = [
   { label: "Hami", to: "/" },
   { label: "Inbox tool", to: "/prototype/inbox" },
-  { label: "What we've learned", to: "/unknowns" },
+  { label: "What we've learned", to: "/what-we-learned" },
   { label: "Contact", to: "/contact" },
 ] as const;
 

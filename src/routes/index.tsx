@@ -54,8 +54,8 @@ function HomePage() {
               मात्र शुल्क लाग्छ।
             </p>
             <p className="mt-6 max-w-2xl border-l-4 border-accent pl-4 text-sm font-bold leading-6 text-ink">
-              Honest status: Hami is pre-revenue. No sellers served yet — the
-              first sprint starts when one seller is named.
+              Honest status: no customers yet. One seller, one week — and no
+              signups until then.
             </p>
             <div className="mt-6 flex flex-col items-start gap-2">
               <Button asChild size="lg">

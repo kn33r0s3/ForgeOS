@@ -116,7 +116,7 @@ describe("Hami public content", () => {
     assert.deepEqual(hrefs, [
       "/",
       "/prototype/inbox",
-      "/unknowns",
+      "/what-we-learned",
       "/contact",
     ]);
     const publicHrefs = new Set<string>(hrefs);
@@ -359,7 +359,7 @@ describe("Hami public root", () => {
     assert.doesNotMatch(footer, /Work board/);
     assert.match(footer, /Built in Kathmandu/);
     assert.ok(NAV.some((item) => item.label === "Inbox tool" && item.to === "/prototype/inbox"));
-    assert.ok(NAV.some((item) => item.label === "What we've learned" && item.to === "/unknowns"));
+    assert.ok(NAV.some((item) => item.label === "What we've learned" && item.to === "/what-we-learned"));
     assert.ok(NAV.some((item) => item.label === "Contact" && item.to === "/contact"));
     assert.match(header, /aria-current={active \? "page" : undefined}/);
     assert.match(businesses, /to="\/forge-bot-intake"/);

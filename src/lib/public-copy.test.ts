@@ -97,7 +97,8 @@ describe("homepage contract", () => {
   it("carries one honest status line and one real CTA", () => {
     const src = home();
     assert.match(src, /Honest status/i);
-    assert.match(src, /pre-revenue/i);
+    assert.match(src, /no customers yet/i);
+    assert.match(src, /One seller, one week/i);
     assert.match(src, /\/prototype\/inbox/);
     assert.match(src, /No signup/i);
   });
@@ -111,25 +112,49 @@ describe("homepage contract", () => {
       "Edit my context",
       "Share a need",
       "candidate notebook",
+      "Nepal-first",
+      "Submit a need",
+      "mailbox pending",
+      "pending verification",
+      "verification pending",
     ];
     for (const phrase of banned) {
       assert.ok(
-        !blob.includes(phrase),
+        !blob.toLowerCase().includes(phrase.toLowerCase()),
         `banned placeholder reappeared: ${phrase}`,
       );
     }
+  });
+
+  it("homepage titles never carry Forge", () => {
+    const src = home();
+    assert.ok(!/title[^"']*["'][^>]*Forge/i.test(src), "Forge in a homepage title");
+    assert.ok(!/og:title/i.test(src) || /content:\s*"Hami"/.test(src), "og:title must say Hami");
   });
 
   it("main nav is exactly Hami, Inbox tool, What we've learned, Contact", () => {
     const src = read("src/lib/content.ts");
     assert.match(src, /\{\s*label:\s*"Hami",\s*to:\s*"\/"/);
     assert.match(src, /\{\s*label:\s*"Inbox tool",\s*to:\s*"\/prototype\/inbox"/);
-    assert.match(src, /\{\s*label:\s*"What we've learned",\s*to:\s*"\/unknowns"/);
+    assert.match(src, /\{\s*label:\s*"What we've learned",\s*to:\s*"\/what-we-learned"/);
     assert.match(src, /\{\s*label:\s*"Contact",\s*to:\s*"\/contact"/);
     const navBlock = src.slice(src.indexOf("export const NAV"), src.indexOf("] as const;"));
     for (const old of ["Discoveries", "World", "Hypotheses", "Actions", "For businesses"]) {
       assert.ok(!navBlock.includes(`"${old}"`), `old nav item reappeared: ${old}`);
     }
+  });
+
+  it("what-we-learned renders engine data through the API module, nothing hand-written", () => {
+    const src = read("src/routes/what-we-learned.tsx");
+    assert.ok(
+      src.includes("@/lib/unknowns-api"),
+      "what-we-learned must import the engine API module",
+    );
+    assert.match(src, /fetchUnknowns/);
+    // Honest states: failure and empty are shown, not filled in.
+    assert.match(src, /unavailable right now/i);
+    assert.match(src, /Nothing recorded yet/);
+    assert.match(src, /will not invent findings/i);
   });
 
   it("metadata titles all say Hami", () => {

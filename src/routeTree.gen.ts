@@ -35,6 +35,7 @@ import { Route as SystemRouteImport } from './routes/system'
 import { Route as TechnologyRouteImport } from './routes/technology'
 import { Route as UnknownsRouteImport } from './routes/unknowns'
 import { Route as VenturesRouteImport } from './routes/ventures'
+import { Route as WhatWeLearnedRouteImport } from './routes/what-we-learned'
 import { Route as WorkRouteImport } from './routes/work'
 import { Route as GroupIndexRouteImport } from './routes/group.index'
 import { Route as GroupBusinessesRouteImport } from './routes/group.businesses'
@@ -174,6 +175,11 @@ const VenturesRoute = VenturesRouteImport.update({
   path: '/ventures',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WhatWeLearnedRoute = WhatWeLearnedRouteImport.update({
+  id: '/what-we-learned',
+  path: '/what-we-learned',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkRoute = WorkRouteImport.update({
   id: '/work',
   path: '/work',
@@ -242,6 +248,7 @@ export interface FileRoutesByFullPath {
   '/technology': typeof TechnologyRoute
   '/unknowns': typeof UnknownsRoute
   '/ventures': typeof VenturesRoute
+  '/what-we-learned': typeof WhatWeLearnedRoute
   '/work': typeof WorkRoute
   '/group/businesses': typeof GroupBusinessesRoute
   '/prototype/inbox': typeof PrototypeInboxRoute
@@ -276,6 +283,7 @@ export interface FileRoutesByTo {
   '/technology': typeof TechnologyRoute
   '/unknowns': typeof UnknownsRoute
   '/ventures': typeof VenturesRoute
+  '/what-we-learned': typeof WhatWeLearnedRoute
   '/work': typeof WorkRoute
   '/group/businesses': typeof GroupBusinessesRoute
   '/prototype/inbox': typeof PrototypeInboxRoute
@@ -313,6 +321,7 @@ export interface FileRoutesById {
   '/technology': typeof TechnologyRoute
   '/unknowns': typeof UnknownsRoute
   '/ventures': typeof VenturesRoute
+  '/what-we-learned': typeof WhatWeLearnedRoute
   '/work': typeof WorkRoute
   '/group/businesses': typeof GroupBusinessesRoute
   '/prototype/inbox': typeof PrototypeInboxRoute
@@ -351,6 +360,7 @@ export interface FileRouteTypes {
     | '/technology'
     | '/unknowns'
     | '/ventures'
+    | '/what-we-learned'
     | '/work'
     | '/group/businesses'
     | '/prototype/inbox'
@@ -385,6 +395,7 @@ export interface FileRouteTypes {
     | '/technology'
     | '/unknowns'
     | '/ventures'
+    | '/what-we-learned'
     | '/work'
     | '/group/businesses'
     | '/prototype/inbox'
@@ -421,6 +432,7 @@ export interface FileRouteTypes {
     | '/technology'
     | '/unknowns'
     | '/ventures'
+    | '/what-we-learned'
     | '/work'
     | '/group/businesses'
     | '/prototype/inbox'
@@ -458,6 +470,7 @@ export interface RootRouteChildren {
   TechnologyRoute: typeof TechnologyRoute
   UnknownsRoute: typeof UnknownsRoute
   VenturesRoute: typeof VenturesRoute
+  WhatWeLearnedRoute: typeof WhatWeLearnedRoute
   WorkRoute: typeof WorkRoute
   PrototypeInboxRoute: typeof PrototypeInboxRoute
   RequestsIdRoute: typeof RequestsIdRoute
@@ -648,6 +661,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VenturesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/what-we-learned': {
+      id: '/what-we-learned'
+      path: '/what-we-learned'
+      fullPath: '/what-we-learned'
+      preLoaderRoute: typeof WhatWeLearnedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/work': {
       id: '/work'
       path: '/work'
@@ -760,6 +780,7 @@ const rootRouteChildren: RootRouteChildren = {
   TechnologyRoute: TechnologyRoute,
   UnknownsRoute: UnknownsRoute,
   VenturesRoute: VenturesRoute,
+  WhatWeLearnedRoute: WhatWeLearnedRoute,
   WorkRoute: WorkRoute,
   PrototypeInboxRoute: PrototypeInboxRoute,
   RequestsIdRoute: RequestsIdRoute,
