@@ -37,6 +37,7 @@ import { Route as VenturesRouteImport } from './routes/ventures'
 import { Route as WorkRouteImport } from './routes/work'
 import { Route as GroupIndexRouteImport } from './routes/group.index'
 import { Route as GroupBusinessesRouteImport } from './routes/group.businesses'
+import { Route as PrototypeInboxRouteImport } from './routes/prototype.inbox'
 import { Route as RequestsIdRouteImport } from './routes/requests.$id'
 import { Route as ServicesIndexRouteImport } from './routes/services.index'
 import { Route as ServicesSlugRouteImport } from './routes/services.$slug'
@@ -182,6 +183,11 @@ const GroupBusinessesRoute = GroupBusinessesRouteImport.update({
   path: '/businesses',
   getParentRoute: () => GroupRoute,
 } as any)
+const PrototypeInboxRoute = PrototypeInboxRouteImport.update({
+  id: '/prototype/inbox',
+  path: '/prototype/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RequestsIdRoute = RequestsIdRouteImport.update({
   id: '/requests/$id',
   path: '/requests/$id',
@@ -231,6 +237,7 @@ export interface FileRoutesByFullPath {
   '/ventures': typeof VenturesRoute
   '/work': typeof WorkRoute
   '/group/businesses': typeof GroupBusinessesRoute
+  '/prototype/inbox': typeof PrototypeInboxRoute
   '/requests/$id': typeof RequestsIdRoute
   '/services/$slug': typeof ServicesSlugRoute
   '/group/': typeof GroupIndexRoute
@@ -263,6 +270,7 @@ export interface FileRoutesByTo {
   '/ventures': typeof VenturesRoute
   '/work': typeof WorkRoute
   '/group/businesses': typeof GroupBusinessesRoute
+  '/prototype/inbox': typeof PrototypeInboxRoute
   '/requests/$id': typeof RequestsIdRoute
   '/services/$slug': typeof ServicesSlugRoute
   '/group': typeof GroupIndexRoute
@@ -298,6 +306,7 @@ export interface FileRoutesById {
   '/ventures': typeof VenturesRoute
   '/work': typeof WorkRoute
   '/group/businesses': typeof GroupBusinessesRoute
+  '/prototype/inbox': typeof PrototypeInboxRoute
   '/requests/$id': typeof RequestsIdRoute
   '/services/$slug': typeof ServicesSlugRoute
   '/group/': typeof GroupIndexRoute
@@ -334,6 +343,7 @@ export interface FileRouteTypes {
     | '/ventures'
     | '/work'
     | '/group/businesses'
+    | '/prototype/inbox'
     | '/requests/$id'
     | '/services/$slug'
     | '/group/'
@@ -366,6 +376,7 @@ export interface FileRouteTypes {
     | '/ventures'
     | '/work'
     | '/group/businesses'
+    | '/prototype/inbox'
     | '/requests/$id'
     | '/services/$slug'
     | '/group'
@@ -400,6 +411,7 @@ export interface FileRouteTypes {
     | '/ventures'
     | '/work'
     | '/group/businesses'
+    | '/prototype/inbox'
     | '/requests/$id'
     | '/services/$slug'
     | '/group/'
@@ -434,6 +446,7 @@ export interface RootRouteChildren {
   TechnologyRoute: typeof TechnologyRoute
   VenturesRoute: typeof VenturesRoute
   WorkRoute: typeof WorkRoute
+  PrototypeInboxRoute: typeof PrototypeInboxRoute
   RequestsIdRoute: typeof RequestsIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
@@ -636,6 +649,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GroupBusinessesRouteImport
       parentRoute: typeof GroupRoute
     }
+    '/prototype/inbox': {
+      id: '/prototype/inbox'
+      path: '/prototype/inbox'
+      fullPath: '/prototype/inbox'
+      preLoaderRoute: typeof PrototypeInboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/requests/$id': {
       id: '/requests/$id'
       path: '/requests/$id'
@@ -720,6 +740,7 @@ const rootRouteChildren: RootRouteChildren = {
   TechnologyRoute: TechnologyRoute,
   VenturesRoute: VenturesRoute,
   WorkRoute: WorkRoute,
+  PrototypeInboxRoute: PrototypeInboxRoute,
   RequestsIdRoute: RequestsIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }

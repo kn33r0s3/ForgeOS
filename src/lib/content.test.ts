@@ -222,6 +222,23 @@ describe("Hami candidate needs", () => {
   });
 });
 
+describe("Hami prototype honesty", () => {
+  it("labels the inbox prototype as a prototype with no fake data", () => {
+    const sourceDir = dirname(fileURLToPath(import.meta.url));
+    const route = readFileSync(join(sourceDir, "../routes/prototype.inbox.tsx"), "utf8");
+    assert.match(route, /Prototype/);
+    assert.match(route, /not a live product/i);
+    assert.match(route, /No inquiries yet/);
+    assert.match(route, /honest empty state/);
+    assert.match(route, /createFileRoute\("\/prototype\/inbox"\)/);
+    // Prototypes stay out of the primary nav and the sitemap.
+    assert.equal(NAV.some((item) => item.to === "/prototype/inbox"), false);
+    const root = join(sourceDir, "../..");
+    const sitemap = readFileSync(join(root, "public/sitemap.xml"), "utf8");
+    assert.equal(sitemap.includes("/prototype/inbox"), false);
+  });
+});
+
 describe("Hami public root", () => {
   const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
