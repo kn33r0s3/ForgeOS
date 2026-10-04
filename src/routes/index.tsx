@@ -47,7 +47,7 @@ const FOUR_LINES = [
 
 function HomePage() {
   return (
-    <main>
+    <main className="bg-night text-ink">
       <Identity />
       <FourLines />
       <SystemScope />
@@ -58,51 +58,73 @@ function HomePage() {
   );
 }
 
-/* 1. Hami identity — the headline */
+/* 1. Hami identity — the headline, in the original dark/gold voice */
 
 function Identity() {
   return (
-    <section className="relative isolate overflow-hidden border-b-2 border-black">
+    <section className="relative isolate overflow-hidden bg-night">
       <div className="hero-glow -z-10" aria-hidden="true" />
       <div className="hero-grain -z-10" aria-hidden="true" />
-      <Container className="py-12 sm:py-16 lg:py-20">
-        <div className="max-w-3xl">
-          <p className="font-mono text-[0.72rem] font-bold uppercase tracking-[0.18em] text-accent">
-            Hami · हामी
-          </p>
-          <h1 className="mt-5 text-[clamp(2.2rem,5vw,4.2rem)] font-black leading-[1.02] tracking-[-0.04em] text-ink">
-            Hami is a living system that understands what people need and turns understanding into
-            real value.
-          </h1>
-          <p className="mt-4 max-w-2xl text-lg leading-8 text-muted sm:text-xl">
-            हामी एउटा जीवित प्रणाली हो जसले मानिसहरूलाई के चाहिन्छ भन्ने बुझ्छ र बुझाइलाई वास्तविक
-            मूल्यमा बदल्छ।
-          </p>
-          <p className="mt-6 max-w-2xl text-base font-bold leading-7 text-ink">
-            Built in Kathmandu. Serving everywhere equally.
-          </p>
-          <p className="mt-1 max-w-2xl text-base leading-7 text-muted">
-            काठमाडौंमा बनेको। सबैका लागि समान रूपमा सेवा।
-          </p>
+      <Container className="py-10 sm:py-14 lg:py-16">
+        {/* Ornate gold frame, as the original */}
+        <div className="relative border-2 border-accent/70 px-6 py-10 sm:px-10 sm:py-14 lg:px-16">
+          <div
+            className="pointer-events-none absolute inset-2 border border-accent/30"
+            aria-hidden="true"
+          />
+          <div className="relative mx-auto max-w-4xl text-center">
+            <p className="inline-block border border-accent/50 px-3 py-1 font-mono text-[0.68rem] font-bold uppercase tracking-[0.22em] text-accent">
+              Hami · Living System
+            </p>
+            <h1 className="mt-6 font-gothic text-[clamp(2rem,5.2vw,4.4rem)] leading-[1.08] text-paper">
+              Hami is a living system that understands what people need and turns understanding into
+              real value.
+            </h1>
+            <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-paper/70">
+              हामी एउटा जीवित प्रणाली हो जसले मानिसहरूलाई के चाहिन्छ भन्ने बुझ्छ र बुझाइलाई वास्तविक
+              मूल्यमा बदल्छ।
+            </p>
+            <p className="mt-6 text-sm font-bold uppercase tracking-[0.18em] text-accent">
+              Built in Kathmandu. Serving everywhere equally.
+            </p>
+            <p className="mt-1 text-sm text-paper/60">काठमाडौंमा बनेको। सबैका लागि समान रूपमा सेवा।</p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <Link
+                to="/about"
+                className="inline-flex min-h-12 items-center gap-2 rounded-card border-2 border-black bg-accent px-6 font-extrabold text-black transition-colors hover:bg-paper"
+              >
+                Explore the system <ArrowRight className="size-4" aria-hidden="true" />
+              </Link>
+              <Link
+                to="/discoveries"
+                className="inline-flex min-h-12 items-center gap-2 rounded-card border-2 border-paper/40 bg-transparent px-6 font-bold text-paper transition-colors hover:border-accent hover:text-accent"
+              >
+                Public record
+              </Link>
+            </div>
+          </div>
         </div>
       </Container>
     </section>
   );
 }
 
-/* 2. Four plain lines */
+/* 2. Four plain lines, in the dark voice */
 
 function FourLines() {
   return (
-    <section aria-label="What Hami does" className="border-b-2 border-black bg-card py-10 sm:py-14">
+    <section aria-label="What Hami does" className="border-t border-accent/20 bg-night py-10 sm:py-14">
       <Container>
-        <ul className="grid max-w-4xl gap-4 sm:grid-cols-2">
+        <ul className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-2">
           {FOUR_LINES.map(({ en, ne }) => (
-            <li key={en[0]} className="card p-5">
-              <p className="text-base font-extrabold leading-7 text-ink">
-                {en[0]} <span className="font-normal text-muted">— {en[1]}</span>
+            <li
+              key={en[0]}
+              className="border border-accent/25 bg-black/40 p-5 transition-colors hover:border-accent/60"
+            >
+              <p className="text-base font-extrabold leading-7 text-paper">
+                {en[0]} <span className="font-normal text-paper/60">— {en[1]}</span>
               </p>
-              <p className="mt-2 text-sm leading-6 text-muted">
+              <p className="mt-2 text-sm leading-6 text-paper/50">
                 {ne[0]} — {ne[1]}
               </p>
             </li>
@@ -119,26 +141,26 @@ function SystemScope() {
   return (
     <section
       aria-labelledby="system-scope-title"
-      className="border-b-2 border-black py-10 sm:py-14"
+      className="border-t border-accent/20 bg-night py-10 sm:py-14"
     >
       <Container>
-        <div className="max-w-4xl">
-          <p className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.16em] text-accent">
+        <div className="mx-auto max-w-4xl">
+          <p className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.22em] text-accent">
             In contact with reality
           </p>
           <h2
             id="system-scope-title"
-            className="mt-2 font-display text-3xl font-black tracking-tight text-ink"
+            className="mt-3 font-gothic text-3xl leading-tight text-paper sm:text-4xl"
           >
             Reality is not pre-sorted.
           </h2>
-          <p className="mt-4 max-w-3xl text-base leading-7 text-muted sm:text-lg sm:leading-8">
+          <p className="mt-4 max-w-3xl text-base leading-7 text-paper/70 sm:text-lg sm:leading-8">
             Needs, unused capability, opportunities, mismatches, constraints, relationships,
             resources, and problems worth solving meet in many different ways. Hami looks for what
             matters in those real situations and what might lead to a useful outcome. These are
             things the system can investigate, not discoveries claimed here.
           </p>
-          <p className="mt-4 max-w-3xl text-base leading-7 text-muted sm:text-lg sm:leading-8">
+          <p className="mt-4 max-w-3xl text-base leading-7 text-paper/70 sm:text-lg sm:leading-8">
             Hami can prepare different ways to help as its understanding and capabilities grow. It
             keeps evidence alongside uncertainty, acts externally only when authorized, and learns
             from actual outcomes. These capacities can inform one another; no fixed sequence or
@@ -179,63 +201,63 @@ function RecordedObservations() {
   return (
     <section
       aria-labelledby="recorded-observations-title"
-      className="border-b-2 border-black bg-card py-10 sm:py-14"
+      className="border-t border-accent/20 bg-night py-10 sm:py-14"
     >
       <Container>
-        <div className="max-w-4xl">
-          <p className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.16em] text-accent">
+        <div className="mx-auto max-w-4xl">
+          <p className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.22em] text-accent">
             From the public record
           </p>
           <h2
             id="recorded-observations-title"
-            className="mt-2 font-display text-3xl font-black tracking-tight text-ink"
+            className="mt-3 font-gothic text-3xl leading-tight text-paper sm:text-4xl"
           >
             What is actually recorded
           </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-paper/60">
             Only stored public observations appear here, with their source and recorded state. A
             sourced observation is not automatically a verified claim.
           </p>
 
           {!ready && (
-            <div className="mt-6 border-t border-line py-5" aria-busy="true">
-              <p className="text-sm text-muted">Checking the public record…</p>
+            <div className="mt-6 border-t border-accent/20 py-5" aria-busy="true">
+              <p className="text-sm text-paper/60">Checking the public record…</p>
             </div>
           )}
           {ready && items === null && (
-            <div className="mt-6 border-t border-line py-5" role="status">
-              <p className="font-bold text-ink">The public record is unavailable right now.</p>
-              <p className="mt-1 text-sm text-muted">
+            <div className="mt-6 border-t border-accent/20 py-5" role="status">
+              <p className="font-bold text-paper">The public record is unavailable right now.</p>
+              <p className="mt-1 text-sm text-paper/60">
                 Hami could not check for observations, so their presence or absence cannot be
                 confirmed.
               </p>
             </div>
           )}
           {ready && items?.length === 0 && (
-            <div className="mt-6 border-t border-line py-5">
-              <p className="font-bold text-ink">
+            <div className="mt-6 border-t border-accent/20 py-5">
+              <p className="font-bold text-paper">
                 Nothing is recorded in this public observation record yet.
               </p>
             </div>
           )}
           {ready && items && items.length > 0 && (
-            <ol className="mt-6 divide-y divide-line border-y border-line">
+            <ol className="mt-6 divide-y divide-accent/20 border-y border-accent/20">
               {items.map((item) => (
                 <li key={item.id} className="py-5">
                   <article>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-dim">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-paper/50">
                       <span>{item.source}</span>
                       <span>{item.epistemic_state}</span>
                       <span>{item.freshness || "freshness unknown"}</span>
                     </div>
-                    <h3 className="mt-2 font-display text-lg font-bold leading-6 text-ink">
+                    <h3 className="mt-2 font-display text-lg font-bold leading-6 text-paper">
                       {item.title || "Untitled observation"}
                     </h3>
-                    <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">{item.excerpt}</p>
+                    <p className="mt-2 max-w-3xl text-sm leading-6 text-paper/60">{item.excerpt}</p>
                     {item.canonical_url && (
                       <a
                         href={item.canonical_url}
-                        className="link-arrow mt-3 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent"
+                        className="mt-3 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent hover:text-paper"
                       >
                         View source
                         <ArrowUpRight className="size-4" aria-hidden="true" />
@@ -249,7 +271,7 @@ function RecordedObservations() {
           {ready && items && items.length > 0 && (
             <Link
               to="/discoveries"
-              className="link-arrow mt-4 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent"
+              className="mt-4 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent hover:text-paper"
             >
               Open the public record
               <ArrowRight className="size-4" aria-hidden="true" />
@@ -265,23 +287,26 @@ function RecordedObservations() {
 
 function CurrentActivity() {
   return (
-    <section aria-labelledby="current-activity-title" className="border-b border-line py-6 sm:py-8">
+    <section
+      aria-labelledby="current-activity-title"
+      className="border-t border-accent/20 bg-night py-6 sm:py-8"
+    >
       <Container>
-        <div className="max-w-3xl">
-          <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.16em] text-dim">
+        <div className="mx-auto max-w-3xl border border-accent/25 bg-black/40 p-5">
+          <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.18em] text-paper/50">
             One proposed investigation · not started
           </p>
-          <h2 id="current-activity-title" className="mt-2 font-display text-xl font-bold text-ink">
+          <h2 id="current-activity-title" className="mt-2 font-display text-xl font-bold text-paper">
             Currently exploring
           </h2>
-          <p className="mt-2 text-sm leading-6 text-muted">
+          <p className="mt-2 text-sm leading-6 text-paper/60">
             Experiment 1 asks whether faster replies could recover sales for one seller. No seller
             has agreed and no messages have been handled; it is one small investigation, not Hami's
             identity or a live offer.
           </p>
           <Link
             to="/needs"
-            className="link-arrow mt-2 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent"
+            className="mt-2 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent hover:text-paper"
           >
             Read its scope
             <ArrowRight className="size-4" aria-hidden="true" />
@@ -296,9 +321,9 @@ function CurrentActivity() {
 
 function HonestStatus() {
   return (
-    <section aria-label="Status" className="py-8 sm:py-10">
+    <section aria-label="Status" className="border-t border-accent/20 bg-night py-8 sm:py-10">
       <Container>
-        <p className="max-w-2xl border-l-4 border-accent pl-4 text-sm font-bold leading-6 text-ink">
+        <p className="mx-auto max-w-2xl border-l-4 border-accent pl-4 text-sm font-bold leading-6 text-paper">
           Honest status: Hami is pre-revenue. Experiment 1 remains proposed; there are no
           participants or results to report.
         </p>
