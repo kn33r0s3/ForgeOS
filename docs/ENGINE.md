@@ -31,6 +31,26 @@ grows toward it.
 - No mock, no demo that pretends, no page that implies a capability the
   engine doesn't have. If it isn't built, it isn't shown.
 
+## Value is the method (owner-directed, 2026-10-04)
+
+**What value is:** what a real person will give something up for — money,
+time, trust, attention, a change in behavior. Nothing is valuable in
+itself; value is always *valued-by-someone*. Money changing hands is the
+observable proof. The revenue ladder (₨1 → ₨10,000 → ₨100,000 →
+recurring) is the ground truth the engine optimizes toward.
+
+**More valuable:** close to survival (money in/out), scarce alternatives,
+urgent pain, measurable gain, trusted source, low friction, recurring need.
+**Less valuable** is the mirror: far from money, commodity, someday-pain,
+unmeasurable, distrusted, high friction, one-off.
+
+**The method:** every unknown is scored on value-density — *who gives up
+what for the answer, and when?* — in `src/lib/forge/value.ts` (the rubric)
+and `src/lib/forge/value-tiers.ts` (the scores). The ripeness queue ranks
+by value tier first, doability second, age third. Effort-ordering without
+value-ordering is just motion. A round that chases a tier-1 unknown while
+a tier-3 sits open is a wasted round, no matter how rigorous.
+
 This document is the engine's contract. The engine is not a page. It is
 the loop Hami runs on everything it claims to know.
 

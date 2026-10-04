@@ -64,17 +64,39 @@ describe("forge assistant — ripenessQueue", () => {
     }
   });
 
-  it("puts desk-doable work before human-gated work, oldest first", () => {
+  it("ranks by value tier first, then doability, then age", () => {
     const queue = ripenessQueue(64);
-    const firstHuman = queue.findIndex((i) => i.ripeness === "needs-human");
-    const lastNow = queue
-      .map((i, idx) => (i.ripeness === "now" ? idx : -1))
-      .reduce((a, b) => Math.max(a, b), -1);
-    assert.ok(lastNow < firstHuman || firstHuman === -1);
-    const nowItems = queue.filter((i) => i.ripeness === "now");
-    for (let k = 1; k < nowItems.length; k++) {
-      assert.ok(nowItems[k].round >= nowItems[k - 1].round);
+    for (let k = 1; k < queue.length; k++) {
+      const prev = queue[k - 1];
+      const cur = queue[k];
+      assert.ok(
+        cur.valueTier <= prev.valueTier,
+        `${cur.id} (tier ${cur.valueTier}) before ${prev.id} (tier ${prev.valueTier})`,
+      );
+      if (cur.valueTier === prev.valueTier) {
+        const order = (r: string) => (r === "now" ? 0 : 1);
+        assert.ok(order(cur.ripeness) >= order(prev.ripeness));
+        if (cur.ripeness === prev.ripeness) {
+          assert.ok(cur.round >= prev.round);
+        }
+      }
     }
+  });
+
+  it("every open unknown carries a value tier and a reason", () => {
+    const queue = ripenessQueue(64);
+    for (const item of queue) {
+      assert.ok([1, 2, 3].includes(item.valueTier), `${item.id}: no tier`);
+      assert.ok(item.valueWhy.length > 10, `${item.id}: no value reason`);
+    }
+  });
+
+  it("money-close unknowns lead the queue", () => {
+    const queue = ripenessQueue(10);
+    assert.ok(
+      queue.every((i) => i.valueTier === 3),
+      `top 10 should all be tier 3, got ${queue.map((i) => `${i.id}:t${i.valueTier}`).join(", ")}`,
+    );
   });
 
   it("respects the limit", () => {

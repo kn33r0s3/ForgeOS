@@ -15,6 +15,8 @@
 import { EvidenceGateError, verifyClaim, type Claim } from "../evidence.ts";
 import { discoveryUnknowns } from "../unknowns.ts";
 import { triedAngles } from "./tried-angles.ts";
+import { valueOf, valueTier } from "./value-tiers.ts";
+import type { ValueTier } from "./value.ts";
 
 export interface RoundFinding extends Claim {
   /** Unknowns this finding addresses, or would create. */
@@ -64,14 +66,18 @@ export interface RipeAngle {
   stakes: string;
   round: number;
   ripeness: Ripeness;
+  valueTier: ValueTier;
+  valueWhy: string;
 }
 
 const HUMAN_GATED = /five conversations|ask [a-z]+ owners|ask \d+|a human|in person/i;
 
 /**
- * What's ripest to investigate next: open unknowns, desk-doable now
- * before human-gated ones, oldest first within each group. The unknowns
- * that have waited longest get first attention.
+ * What's ripest to investigate next: value first, then doability.
+ * Open unknowns ranked by value tier (money-close before enablers before
+ * understanding), desk-doable now before human-gated ones, oldest first
+ * within each group. Value is the method — effort-ordering without
+ * value-ordering is just motion.
  */
 export function ripenessQueue(limit = 10): RipeAngle[] {
   const open = discoveryUnknowns.filter((u) => u.state === "unknown");
@@ -82,8 +88,11 @@ export function ripenessQueue(limit = 10): RipeAngle[] {
     stakes: u.stakes,
     round: u.round,
     ripeness: HUMAN_GATED.test(u.cheapestTest) ? "needs-human" : "now",
+    valueTier: valueTier(u.id),
+    valueWhy: valueOf(u.id).why,
   }));
   ranked.sort((a, b) => {
+    if (a.valueTier !== b.valueTier) return b.valueTier - a.valueTier;
     if (a.ripeness !== b.ripeness) return a.ripeness === "now" ? -1 : 1;
     return a.round - b.round;
   });

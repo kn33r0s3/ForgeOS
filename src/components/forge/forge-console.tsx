@@ -7,6 +7,7 @@ import {
   verifyRound,
   type RoundFinding,
 } from "@/lib/forge/assistant";
+import { tierLabel } from "@/lib/forge/value";
 import type { Confidence, EvidenceClass } from "@/lib/evidence";
 
 const CLASSES: EvidenceClass[] = ["actual", "observed", "reported", "inferred", "estimated", "unknown"];
@@ -142,13 +143,23 @@ function RipenessList() {
         What's ripest
       </h2>
       <p className="mt-1 text-sm text-muted">
-        Open unknowns, desk-doable first, oldest first — live from the engine's fuel.
+        Open unknowns ranked by value — money-close first, then doable now,
+        oldest first. Live from the engine's fuel.
       </p>
       <div className="mt-4 grid gap-3">
         {queue.map((item) => (
           <div key={item.id} className="rounded-lg border border-line bg-background/60 p-3">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-accent">{item.id}</span>
+              <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                item.valueTier === 3
+                  ? "border-accent/40 bg-accent/10 text-accent"
+                  : item.valueTier === 2
+                    ? "border-sky-500/30 bg-sky-500/10 text-sky-200"
+                    : "border-line bg-background text-muted"
+              }`} title={item.valueWhy}>
+                {tierLabel(item.valueTier)}
+              </span>
               <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${
                 item.ripeness === "now"
                   ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
@@ -159,6 +170,7 @@ function RipenessList() {
               <span className="ml-auto text-xs text-muted">round {item.round}</span>
             </div>
             <p className="mt-1 text-sm leading-6 text-muted">{item.question}</p>
+            <p className="mt-1 text-xs italic text-muted/80">{item.valueWhy}</p>
           </div>
         ))}
       </div>
