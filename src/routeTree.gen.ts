@@ -14,9 +14,11 @@ import { Route as SplatRouteImport } from './routes/$'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as ActionsRouteImport } from './routes/actions'
 import { Route as BotQualificationDemoRouteImport } from './routes/bot-qualification-demo'
+import { Route as ClimbRouteImport } from './routes/climb'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DiscoveriesRouteImport } from './routes/discoveries'
 import { Route as DomainRouteImport } from './routes/domain'
+import { Route as ExperimentsRouteImport } from './routes/experiments'
 import { Route as FeedRouteImport } from './routes/feed'
 import { Route as ForgeBotIntakeRouteImport } from './routes/forge-bot-intake'
 import { Route as GroupRouteImport } from './routes/group'
@@ -71,6 +73,11 @@ const BotQualificationDemoRoute = BotQualificationDemoRouteImport.update({
   path: '/bot-qualification-demo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClimbRoute = ClimbRouteImport.update({
+  id: '/climb',
+  path: '/climb',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
@@ -84,6 +91,11 @@ const DiscoveriesRoute = DiscoveriesRouteImport.update({
 const DomainRoute = DomainRouteImport.update({
   id: '/domain',
   path: '/domain',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExperimentsRoute = ExperimentsRouteImport.update({
+  id: '/experiments',
+  path: '/experiments',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FeedRoute = FeedRouteImport.update({
@@ -233,9 +245,11 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/actions': typeof ActionsRoute
   '/bot-qualification-demo': typeof BotQualificationDemoRoute
+  '/climb': typeof ClimbRoute
   '/contact': typeof ContactRoute
   '/discoveries': typeof DiscoveriesRoute
   '/domain': typeof DomainRoute
+  '/experiments': typeof ExperimentsRoute
   '/feed': typeof FeedRoute
   '/forge-bot-intake': typeof ForgeBotIntakeRoute
   '/group': typeof GroupRouteWithChildren
@@ -271,9 +285,11 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/actions': typeof ActionsRoute
   '/bot-qualification-demo': typeof BotQualificationDemoRoute
+  '/climb': typeof ClimbRoute
   '/contact': typeof ContactRoute
   '/discoveries': typeof DiscoveriesRoute
   '/domain': typeof DomainRoute
+  '/experiments': typeof ExperimentsRoute
   '/feed': typeof FeedRoute
   '/forge-bot-intake': typeof ForgeBotIntakeRoute
   '/login': typeof LoginRoute
@@ -308,9 +324,11 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/actions': typeof ActionsRoute
   '/bot-qualification-demo': typeof BotQualificationDemoRoute
+  '/climb': typeof ClimbRoute
   '/contact': typeof ContactRoute
   '/discoveries': typeof DiscoveriesRoute
   '/domain': typeof DomainRoute
+  '/experiments': typeof ExperimentsRoute
   '/feed': typeof FeedRoute
   '/forge-bot-intake': typeof ForgeBotIntakeRoute
   '/group': typeof GroupRouteWithChildren
@@ -348,9 +366,11 @@ export interface FileRouteTypes {
     | '/about'
     | '/actions'
     | '/bot-qualification-demo'
+    | '/climb'
     | '/contact'
     | '/discoveries'
     | '/domain'
+    | '/experiments'
     | '/feed'
     | '/forge-bot-intake'
     | '/group'
@@ -386,9 +406,11 @@ export interface FileRouteTypes {
     | '/about'
     | '/actions'
     | '/bot-qualification-demo'
+    | '/climb'
     | '/contact'
     | '/discoveries'
     | '/domain'
+    | '/experiments'
     | '/feed'
     | '/forge-bot-intake'
     | '/login'
@@ -422,9 +444,11 @@ export interface FileRouteTypes {
     | '/about'
     | '/actions'
     | '/bot-qualification-demo'
+    | '/climb'
     | '/contact'
     | '/discoveries'
     | '/domain'
+    | '/experiments'
     | '/feed'
     | '/forge-bot-intake'
     | '/group'
@@ -461,9 +485,11 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   ActionsRoute: typeof ActionsRoute
   BotQualificationDemoRoute: typeof BotQualificationDemoRoute
+  ClimbRoute: typeof ClimbRoute
   ContactRoute: typeof ContactRoute
   DiscoveriesRoute: typeof DiscoveriesRoute
   DomainRoute: typeof DomainRoute
+  ExperimentsRoute: typeof ExperimentsRoute
   FeedRoute: typeof FeedRoute
   ForgeBotIntakeRoute: typeof ForgeBotIntakeRoute
   GroupRoute: typeof GroupRouteWithChildren
@@ -527,6 +553,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BotQualificationDemoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/climb': {
+      id: '/climb'
+      path: '/climb'
+      fullPath: '/climb'
+      preLoaderRoute: typeof ClimbRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/contact': {
       id: '/contact'
       path: '/contact'
@@ -546,6 +579,13 @@ declare module '@tanstack/react-router' {
       path: '/domain'
       fullPath: '/domain'
       preLoaderRoute: typeof DomainRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/experiments': {
+      id: '/experiments'
+      path: '/experiments'
+      fullPath: '/experiments'
+      preLoaderRoute: typeof ExperimentsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/feed': {
@@ -779,9 +819,11 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   ActionsRoute: ActionsRoute,
   BotQualificationDemoRoute: BotQualificationDemoRoute,
+  ClimbRoute: ClimbRoute,
   ContactRoute: ContactRoute,
   DiscoveriesRoute: DiscoveriesRoute,
   DomainRoute: DomainRoute,
+  ExperimentsRoute: ExperimentsRoute,
   FeedRoute: FeedRoute,
   ForgeBotIntakeRoute: ForgeBotIntakeRoute,
   GroupRoute: GroupRouteWithChildren,
