@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, CalendarDays, CheckCircle2, Circle, Clock3, MessageSquare, SearchX } from "lucide-react";
 import { Container } from "@/components/layout/container";
 import { PageHeader } from "@/components/layout/page-header";
-import { EmptyState, Skeleton } from "@/components/ui/feedback";
+import { EmptyState, Skeleton, UnavailableState } from "@/components/ui/feedback";
 import { getBookingRequestStatus, type BookingStatus } from "@/lib/content";
 
 export const Route = createFileRoute("/requests/$id")({
@@ -13,24 +13,34 @@ export const Route = createFileRoute("/requests/$id")({
 function RequestStatusPage() {
   const { id } = Route.useParams();
   const [record, setRecord] = useState<BookingStatus | null>(null);
-  const [missing, setMissing] = useState(false);
+  // invalidId: the URL segment cannot be a request number (nothing to fetch).
+  // loadFailed: the fetch returned nothing. getBookingRequestStatus conflates
+  // "no such request" (404) with "network failed", so nothing is inferred and
+  // the requester can retry instead of being told "not on record" wrongly.
+  const [invalidId, setInvalidId] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     const bookingId = Number(id);
     if (!Number.isInteger(bookingId) || bookingId <= 0) {
-      setMissing(true);
+      setInvalidId(true);
+      setLoadFailed(false);
       return;
     }
+    setInvalidId(false);
+    setLoadFailed(false);
+    setRecord(null);
     let active = true;
     void getBookingRequestStatus(bookingId).then((loaded) => {
       if (!active) return;
-      if (!loaded) setMissing(true);
+      if (!loaded) setLoadFailed(true);
       else setRecord(loaded);
     });
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, retryKey]);
 
   const steps = record
     ? [
@@ -56,7 +66,7 @@ function RequestStatusPage() {
         containerClassName="max-w-3xl"
       />
       <Container className="max-w-3xl py-10 sm:py-14">
-        {missing ? (
+        {invalidId ? (
           <EmptyState
             icon={SearchX}
             title="No request found"
@@ -66,6 +76,19 @@ function RequestStatusPage() {
               <ArrowLeft className="size-4" aria-hidden="true" /> Back to providers
             </Link>
           </EmptyState>
+        ) : loadFailed ? (
+          <>
+            <UnavailableState
+              title="The request could not be loaded"
+              body="Either request number is not on record, or the connection failed — nothing has been inferred. Try again to check."
+              onRetry={() => setRetryKey((key) => key + 1)}
+            />
+            <div className="mt-6 text-center">
+              <Link to="/providers" className="link-arrow inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent">
+                <ArrowLeft className="size-4" aria-hidden="true" /> Back to providers
+              </Link>
+            </div>
+          </>
         ) : !record ? (
           <div role="status" className="card p-6">
             <span className="sr-only">Checking the recorded status…</span>
