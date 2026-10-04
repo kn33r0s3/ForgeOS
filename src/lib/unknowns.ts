@@ -1,4 +1,4 @@
-// Discovery unknowns D1–D54 as structured engine data.
+// Discovery unknowns D1–D59 as structured engine data.
 // Generated from docs/UNKNOWN_MAP.md — the doc is the source of truth;
 // this file is the machine-readable projection the engine reasons over.
 // Regenerate (don't hand-edit) if the map changes.
@@ -501,6 +501,51 @@ export const discoveryUnknowns: DiscoveryUnknown[] = [
     cheapestTest: "Ask 2 jewelers: \"who makes your pieces, and what happens when they're not here?\" + watch for karigar wage mentions in trade press",
     stakes: "The making capacity of the whole trade sits in another country's citizens — a labor-supply single point of failure no round had named",
     round: 11,
+  },
+  {
+    id: "D55",
+    question: "What share of a counter's net margin does rent actually consume, across trades? (round 12: kirana ~4% of turnover, clothing ~4.6%; with 5–10% net margins ⇒ roughly half the net margin; needs real ledgers, not asks)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "In the five conversations: \"When the month ends and the till is short, who gets paid first — the landlord, the supplier, or the bank?\"",
+    stakes: "If rent ≈ half the net margin, the landlord is the counter's largest single cost of *existence* — and Hami's \"thin wallet\" persona thesis gets a concrete ceiling",
+    round: 12,
+  },
+  {
+    id: "D56",
+    question: "Is advance rent (अग्रिम भाडा) a de facto entry fee — and is it ever returned? (round 12: lease samples show quarterly-in-advance + 3 months at signing; tenants borrow to pay it)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Ask 3 tenants: \"how much advance did you pay, and when you left, what came back?\" + check Civil Code deposit rules in practice",
+    stakes: "Advance rent is the merchant's first loan — to the landlord. The scale of the entry cost decides how high the failure threshold is",
+    round: 12,
+  },
+  {
+    id: "D57",
+    question: "Is the shutter-churn re-pricing cycle measurable — do re-let rents actually exceed the failed tenant's rent? (round 12: onlinepana Sept 2026 reports the freed shutter is re-let \"at a higher price\")",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Two-point asks on a shutter lane: current ask vs. previous tenant's rent (via brokers/associations)",
+    stakes: "If every vacancy is an upward repricing, the shutter market has a built-in ratchet that selects for failure — a structural filter no round had named",
+    round: 12,
+  },
+  {
+    id: "D58",
+    question: "What share of shutter closures convert to foreign migration vs. reopening elsewhere? (round 12: 2023 Baneshwor snapshot — 25–30% closures, ~50% of those migrated; needs a 2026 refresh)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Manpower-agency intake data + association closure counts; ask: \"when the shop closed, where did you go?\"",
+    stakes: "The conveyor shutter→migration→remittance→next shop closes the loop between the landlord economy, the manpower economy, and round 8's remittance-funded demand",
+    round: 12,
+  },
+  {
+    id: "D59",
+    question: "Does KMC's mandatory rental-property registration (FY 2083/84) and 10% commercial rent tax get passed through to tenants? (round 12: the landlord is being papered now, decades after the tenant)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Watch KMC rental registration uptake + ask landlords if rent moved after registration",
+    stakes: "The formalization wave meets the other side of the counter — whether paperwork lands on the tenant decides if round 2's wall is about to get a second floor",
+    round: 12,
   },
 ];
 
