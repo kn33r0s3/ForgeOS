@@ -78,7 +78,7 @@ export function SiteHeader() {
             <AuthControl />
             <Link
               to="/login"
-              className="hidden min-h-10 items-center rounded-card border-2 px-4 text-sm font-extrabold transition-colors sm:inline-flex"
+              className="hidden min-h-12 items-center rounded-card border-2 px-4 text-sm font-extrabold transition-colors sm:inline-flex"
               style={{
                 borderColor: "#F2A33A",
                 background: "#F2A33A",
