@@ -43,7 +43,7 @@ const CLAIM_PATTERNS: RegExp[] = [
 const API_BACKED: Array<{ file: string; apiModule: string }> = [
   { file: "src/routes/unknowns.tsx", apiModule: "loadPublicUnknowns" },
   { file: "src/routes/discoveries.tsx", apiModule: "loadDiscoveries" },
-  { file: "src/routes/index.tsx", apiModule: "loadUnknownsSummary" },
+  { file: "src/routes/index.tsx", apiModule: "loadPublicUnknowns" },
 ];
 
 function read(file: string): string {
@@ -116,28 +116,16 @@ describe("homepage contract", () => {
   });
 
   it("3. shows the six primitives with one-line definitions", () => {
-    const src = home();
+    const src = read("src/routes/about.tsx");
     for (const p of ["Entity", "Relation", "Event", "Evidence", "Capability", "Action"]) {
       assert.ok(src.includes(p), `missing primitive: ${p}`);
     }
   });
 
-  it("4. power of the unknown uses engine states from the API", () => {
+  it("4. homepage has no power-of-unknown section (previews only per IA)", () => {
     const src = home();
-    assert.match(src, /The power of the unknown/);
-    assert.match(src, /loadUnknownsSummary/);
-    for (const s of [
-      "UNKNOWN",
-      "HYPOTHESIZED",
-      "TESTED",
-      "SUPPORTED",
-      "CONTRADICTED",
-      "BLOCKED_BY_MISSING_ACCESS",
-    ]) {
-      assert.ok(src.includes(s), `missing state: ${s}`);
-    }
-    // Never ship bracketed placeholders
-    assert.doesNotMatch(src, /\\[count from API\\]/);
+    assert.doesNotMatch(src, /The power of the unknown/);
+    assert.doesNotMatch(src, /loadUnknownsSummary/);
   });
 
   it("keeps the inbox prototype out of primary navigation and labels its footer link TEST-only", () => {
@@ -195,19 +183,15 @@ describe("homepage contract", () => {
     assert.ok(!blob.includes('"/feed"'), "/feed is linked from a public surface");
   });
 
-  it("8. what we have learned loads from the API with honest empty states", () => {
+  it("8. findings preview loads from the API with honest empty states", () => {
     const src = read("src/routes/index.tsx").replace(/\\s+/g, " ");
     assert.ok(
       src.includes("loadDiscoveries"),
       "homepage must use the existing observations API loader",
     );
-    assert.match(src, /What we have learned/);
+    assert.match(src, /Findings/);
     assert.match(src, /Nothing recorded yet/);
-    assert.match(src, /Findings unavailable right now/);
-    assert.match(src, /item\\.source/);
-    assert.match(src, /item\\.canonical_url/);
-    assert.match(src, /Observed/);
-    assert.match(src, /Hypothesis/);
+    assert.match(src, /FindingCard/);
     assert.match(src, /Supported/);
   });
 
@@ -238,16 +222,10 @@ describe("homepage contract", () => {
     assert.match(footer(), /Built in Kathmandu/);
   });
 
-  it("what-we-learned renders engine data through the API module, nothing hand-written", () => {
+  it("what-we-learned redirects to discoveries (archived per IA)", () => {
     const src = read("src/routes/what-we-learned.tsx");
-    assert.ok(
-      src.includes("@/lib/unknowns-api"),
-      "what-we-learned must import the engine API module",
-    );
-    assert.match(src, /fetchUnknowns/);
-    assert.match(src, /unavailable right now/i);
-    assert.match(src, /Nothing recorded yet/);
-    assert.match(src, /will not invent findings/i);
+    assert.match(src, /redirect/);
+    assert.match(src, /\/discoveries/);
   });
   it("5. very big very small: Experiment 1 is step 1, rest when earned", () => {
     const src = read("src/routes/about.tsx");
@@ -256,9 +234,10 @@ describe("homepage contract", () => {
     assert.match(src, /Experiment 1/);
     assert.match(src, /No seller has agreed/);
     assert.match(src, /when earned/);
-    assert.match(src, /Try the free inbox tool/);
-    assert.match(src, /\/prototype\/inbox/);
     assert.doesNotMatch(src, /\[when earned\]/);
+    // Inbox tool link lives on /experiments per IA
+    const exp = read("src/routes/experiments.tsx");
+    assert.match(exp, /Try the free inbox tool/);
   });
 
 });

@@ -103,9 +103,9 @@ describe("Hami public content", () => {
   it("exposes public-first primary destinations", () => {
     const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
     const hrefs = NAV.map((item) => item.to);
-    // The primary navigation connects Hami's key pages: identity, system, record, findings.
+    // The primary navigation: Home, Findings, Unknowns, Experiments, About.
     // Join Hami is a separate header button, not a nav menu item.
-    assert.deepEqual(hrefs, ["/", "/about", "/discoveries", "/what-we-learned"]);
+    assert.deepEqual(hrefs, ["/", "/discoveries", "/unknowns", "/experiments", "/about"]);
     const publicHrefs = new Set<string>(hrefs);
     for (const path of FORBIDDEN_PUBLIC_PATHS) {
       assert.equal(publicHrefs.has(path), false, `nav leaked ${path}`);
@@ -325,14 +325,19 @@ describe("Hami public root", () => {
     assert.match(home, /Built in Kathmandu/);
     assert.match(home, /Serving everywhere equally/);
     assert.match(home, /RealityLoop/);
-    assert.match(home, /The power of the unknown/);
-    assert.match(home, /loadUnknownsSummary/);
-    assert.match(home, /Very big, very small/);
-    assert.match(home, /One seller, one week/);
-    assert.match(home, /when earned/);
-    assert.match(home, /What we have learned/);
+    // Per IA: homepage = previews only, no own content
+    assert.doesNotMatch(home, /The power of the unknown/);
+    assert.doesNotMatch(home, /Very big, very small/);
+    assert.doesNotMatch(home, /What we have learned/);
+    // Previews use same components/API as pages
+    assert.match(home, /FindingsPreview/);
+    assert.match(home, /UnknownsPreview/);
+    assert.match(home, /ExperimentsPreview/);
     assert.match(home, /loadDiscoveries/);
-    assert.match(home, /Experiment 1/);
+    assert.match(home, /loadPublicUnknowns/);
+    assert.match(home, /See all findings/);
+    assert.match(home, /See all unknowns/);
+    assert.match(home, /See all experiments/);
     assert.doesNotMatch(home, /to="\/prototype\/inbox"|Try the free inbox tool/);
     assert.match(
       home,

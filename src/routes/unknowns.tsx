@@ -27,15 +27,6 @@ export const Route = createFileRoute("/unknowns")({
 
 type StateFilter = "all" | UnknownState;
 
-const STATE_STYLE: Record<string, string> = {
-  UNKNOWN: "border-amber-500/30 bg-amber-500/10 text-amber-200",
-  BLOCKED_BY_MISSING_ACCESS: "border-red-500/30 bg-red-500/10 text-red-200",
-  TESTED: "border-sky-500/30 bg-sky-500/10 text-sky-200",
-  SUPPORTED: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
-  HYPOTHESIZED: "border-violet-500/30 bg-violet-500/10 text-violet-200",
-  CONTRADICTED: "border-orange-500/30 bg-orange-500/10 text-orange-200",
-};
-
 function UnknownsPage() {
   const [items, setItems] = useState<PublicUnknown[] | null>(null);
   const [unavailable, setUnavailable] = useState(false);
