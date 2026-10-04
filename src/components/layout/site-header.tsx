@@ -151,14 +151,7 @@ function AuthControl() {
     return <span className="h-9 w-16 animate-pulse rounded-card bg-black/10" aria-label="Checking account" />;
   }
   if (user && !user.isDevFallback) return <UserButton />;
-  return (
-    <Link
-      to="/login"
-      className="inline-flex min-h-10 items-center rounded-card border-2 border-black px-3 text-sm font-extrabold text-black hover:bg-black hover:text-accent"
-    >
-      Sign in
-    </Link>
-  );
+  return null;
 }
 
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];

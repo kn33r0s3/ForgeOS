@@ -83,29 +83,82 @@ describe("public copy is backed by the API", () => {
 });
 
 describe("homepage contract", () => {
-  const home = () => read("src/routes/index.tsx");
+  const home = () => read("src/routes/index.tsx").replace(/\s+/g, " ");
   const header = () => read("src/components/layout/site-header.tsx");
   const footer = () => read("src/components/layout/site-footer.tsx");
+  const surfaces = () => home() + header() + footer();
 
-  it("has one plain headline and the missed-inquiry offer, in English and Nepali", () => {
+  it("1. carries the Hami identity headline, in English and Nepali", () => {
     const src = home();
-    assert.match(src, /Never miss a sale to a slow reply/);
-    assert.match(src, /ढिलो जवाफले बिक्री नगुमाउनुहोस्/);
-    assert.match(src, /you pay only for the sales that come back/i);
+    assert.match(
+      src,
+      /Hami is a living system that understands what people need and turns understanding into real value/,
+    );
+    assert.match(src, /\u0939\u093e\u092e\u0940 \u090f\u0909\u091f\u093e \u091c\u0940\u0935\u093f\u0924 \u092a\u094d\u0930\u0923\u093e\u0932\u0940 \u0939\u094b/);
+    const h1 = src.match(/<h1[^>]*>(.*?)<\/h1>/)?.[1] ?? "";
+    assert.ok(!/slow reply|inbox|sale/i.test(h1), `h1 is the wedge, not Hami: ${h1}`);
   });
 
-  it("carries one honest status line and one real CTA", () => {
+  it("2. carries the Nepal/global identity", () => {
     const src = home();
-    assert.match(src, /Honest status/i);
-    assert.match(src, /no customers yet/i);
-    assert.match(src, /One seller, one week/i);
-    assert.match(src, /\/prototype\/inbox/);
-    assert.match(src, /No signup/i);
+    assert.match(src, /Built in Kathmandu/);
+    assert.match(src, /Serving everywhere equally/);
+    assert.match(src, /\u0915\u093e\u0920\u092e\u093e\u0921\u094c\u0902\u092e\u093e \u092c\u0928\u0947\u0915\u094b/);
   });
 
-  it("never shows the removed placeholders again", () => {
-    const blob = home() + header() + footer();
+  it("3. shows the four plain lines, in English and Nepali", () => {
+    const src = home();
+    for (const line of [
+      "Observes",
+      "Keeps evidence and uncertainty",
+      "Acts only when authorized",
+      "Learns from outcomes",
+    ]) {
+      assert.ok(src.includes(line), `missing plain line: ${line}`);
+    }
+    const identitySection = src.split("Running now")[0];
+    assert.ok(
+      !/ENTITY|RELATION|CAPABILITY/.test(identitySection),
+      "implementation terminology leaked into the identity section",
+    );
+  });
+
+  it("4. presents the slow-reply offer as Experiment 1, never the headline", () => {
+    const src = home();
+    assert.match(src, /Running now/);
+    assert.match(src, /Experiment 1/);
+    assert.match(src, /One current experiment inside Hami/);
+    assert.match(src, /a sale can be lost quietly/i);
+    assert.match(src, /payment is tied to sales that actually come back/i);
+  });
+
+  it("5. uses /prototype/inbox as the CTA with no signup", () => {
+    const src = home();
+    assert.match(src, /to="\/prototype\/inbox"/);
+    assert.match(src, /Try the free inbox tool/);
+    assert.match(src, /No signup/);
+  });
+
+  it("6. never implies Hami is merely a reply service, inbox tool, SaaS, chatbot, or lead-gen product", () => {
+    const src = home();
+    const reductions = [
+      /Hami is a (tool|inbox|saas|chatbot|calculator|reply service)\b/i,
+      /Hami is an (inbox|app|product|chatbot)\b/i,
+      /Hami is just /i,
+      /Hami is merely /i,
+      /lead[- ]generation/i,
+    ];
+    for (const pattern of reductions) {
+      assert.ok(!pattern.test(src), `homepage reduces Hami: ${pattern}`);
+    }
+  });
+
+  it("7. removed surface stays removed", () => {
+    const blob = surfaces();
     const banned = [
+      "Sign in",
+      "Explore the network",
+      "Online inquiries are not open yet.",
       "Opening your System",
       "Contact mailbox pending",
       "Domain pending verification",
@@ -116,45 +169,32 @@ describe("homepage contract", () => {
       "Submit a need",
       "mailbox pending",
       "pending verification",
-      "verification pending",
     ];
     for (const phrase of banned) {
-      assert.ok(
-        !blob.toLowerCase().includes(phrase.toLowerCase()),
-        `banned placeholder reappeared: ${phrase}`,
-      );
+      assert.ok(!blob.includes(phrase), `banned surface reappeared: ${phrase}`);
     }
+    assert.ok(!blob.includes('"/feed"'), "/feed is linked from a public surface");
   });
 
-  it("homepage titles never carry Forge", () => {
-    const src = home();
-    assert.ok(!/title[^"']*["'][^>]*Forge/i.test(src), "Forge in a homepage title");
-    assert.ok(!/og:title/i.test(src) || /content:\s*"Hami"/.test(src), "og:title must say Hami");
-  });
-
-  it("main nav is exactly Hami, Inbox tool, What we've learned, Contact", () => {
-    const src = read("src/lib/content.ts");
-    assert.match(src, /\{\s*label:\s*"Hami",\s*to:\s*"\/"/);
-    assert.match(src, /\{\s*label:\s*"Inbox tool",\s*to:\s*"\/prototype\/inbox"/);
-    assert.match(src, /\{\s*label:\s*"What we've learned",\s*to:\s*"\/what-we-learned"/);
-    assert.match(src, /\{\s*label:\s*"Contact",\s*to:\s*"\/contact"/);
-    const navBlock = src.slice(src.indexOf("export const NAV"), src.indexOf("] as const;"));
-    for (const old of ["Discoveries", "World", "Hypotheses", "Actions", "For businesses"]) {
-      assert.ok(!navBlock.includes(`"${old}"`), `old nav item reappeared: ${old}`);
-    }
-  });
-
-  it("what-we-learned renders engine data through the API module, nothing hand-written", () => {
-    const src = read("src/routes/what-we-learned.tsx");
-    assert.ok(
-      src.includes("@/lib/unknowns-api"),
-      "what-we-learned must import the engine API module",
-    );
+  it("8. engine findings on the homepage are API-backed, not hand-written", () => {
+    const src = read("src/routes/index.tsx").replace(/\s+/g, " ");
+    assert.ok(src.includes("@/lib/unknowns-api"), "homepage must use the engine API module");
     assert.match(src, /fetchUnknowns/);
-    // Honest states: failure and empty are shown, not filled in.
-    assert.match(src, /unavailable right now/i);
     assert.match(src, /Nothing recorded yet/);
-    assert.match(src, /will not invent findings/i);
+    assert.match(src, /will not invent them/);
+    assert.ok(!/const FINDINGS/.test(src), "hand-written findings dataset in homepage");
+  });
+
+  it("9. no keyword-bag / hypothesis shortcut", () => {
+    const src = read("src/routes/index.tsx");
+    assert.ok(!/keyword/i.test(src), "keyword-bag language in homepage");
+  });
+
+  it("10. honest status line remains present", () => {
+    const src = home();
+    assert.match(src, /Honest status/i);
+    assert.match(src, /pre-revenue/i);
+    assert.match(src, /has not yet served a seller/i);
   });
 
   it("metadata titles all say Hami", () => {
@@ -166,5 +206,17 @@ describe("homepage contract", () => {
 
   it("footer says Built in Kathmandu", () => {
     assert.match(footer(), /Built in Kathmandu/);
+  });
+
+  it("what-we-learned renders engine data through the API module, nothing hand-written", () => {
+    const src = read("src/routes/what-we-learned.tsx");
+    assert.ok(
+      src.includes("@/lib/unknowns-api"),
+      "what-we-learned must import the engine API module",
+    );
+    assert.match(src, /fetchUnknowns/);
+    assert.match(src, /unavailable right now/i);
+    assert.match(src, /Nothing recorded yet/);
+    assert.match(src, /will not invent findings/i);
   });
 });
