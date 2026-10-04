@@ -312,12 +312,12 @@ describe("Hami public root", () => {
     assert.equal(home.includes("parent operations and infrastructure group"), false);
     assert.equal(sitemap.includes("sanipoperations.com.np"), false);
     assert.equal(sitemap.includes("Sanip"), false);
-    assert.match(sitemap, /https:\/\/forge-os-ebon\.vercel\.app\/providers/);
-    assert.match(sitemap, /https:\/\/forge-os-ebon\.vercel\.app\/feed/);
-    assert.match(sitemap, /https:\/\/forge-os-ebon\.vercel\.app\/domain/);
-    assert.match(sitemap, /https:\/\/forge-os-ebon\.vercel\.app\/discoveries/);
+    assert.match(sitemap, /https:\/\/haminp.vercel.app\/providers/);
+    assert.match(sitemap, /https:\/\/haminp.vercel.app\/feed/);
+    assert.match(sitemap, /https:\/\/haminp.vercel.app\/domain/);
+    assert.match(sitemap, /https:\/\/haminp.vercel.app\/discoveries/);
     assert.equal(robots.includes("sanipoperations.com.np"), false);
-    assert.match(robots, /Sitemap: https:\/\/forge-os-ebon\.vercel\.app\/sitemap\.xml/);
+    assert.match(robots, /Sitemap: https:\/\/haminp.vercel.app\/sitemap\.xml/);
     assert.match(work, /to: "\/domain"/);
   });
 });
