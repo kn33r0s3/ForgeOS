@@ -90,8 +90,9 @@ function OpportunitiesPage() {
             }
           />
         ) : null}
-        <ol className="grid gap-3 md:grid-cols-2">
-          {opportunities.map((item, index) => (
+        {!loading && items !== null && opportunities.length > 0 ? (
+          <ol className="grid gap-3 md:grid-cols-2">
+            {opportunities.map((item, index) => (
             <li key={item.id} className="card card-interactive reveal flex flex-col p-5 sm:p-6" style={{ "--i": Math.min(index, 8) } as React.CSSProperties}>
               <article className="flex flex-1 flex-col">
                 <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -122,7 +123,8 @@ function OpportunitiesPage() {
               </article>
             </li>
           ))}
-        </ol>
+          </ol>
+        ) : null}
       </Container>
     </main>
   );
