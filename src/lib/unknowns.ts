@@ -1,4 +1,4 @@
-// Discovery unknowns D1–D46 as structured engine data.
+// Discovery unknowns D1–D49 as structured engine data.
 // Generated from docs/UNKNOWN_MAP.md — the doc is the source of truth;
 // this file is the machine-readable projection the engine reasons over.
 // Regenerate (don't hand-edit) if the map changes.
@@ -429,6 +429,33 @@ export const discoveryUnknowns: DiscoveryUnknown[] = [
     cheapestTest: "Watch NCRA enforcement reports for de-registration counts; ask owners: \"do you know if your सहकारी is registered with the new authority?\"",
     stakes: "If the sector is padded with shells, \"member-based\" stops meaning safe — and any Hami interaction with cooperative infrastructure needs a legitimacy check first",
     round: 9,
+  },
+  {
+    id: "D47",
+    question: "Is IME Group's Sastodeal relaunch actually live and transacting as of 2026, or a parked brand? (round 10: bought 70% Jul 2024 from Dolma's 60% stake at reportedly Rs 30cr, founder kept 10%; relaunch promised)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Check sastodeal.com live + Play Store reviews/traffic signals",
+    stakes: "Decides whether conglomerate-rescue of a dead platform works, or is just asset-parking",
+    round: 10,
+  },
+  {
+    id: "D48",
+    question: "What share of Daraz Nepal sellers are profitable vs. running the platform for inventory movement/cash flow? (round 10: 2026 seller analysis claims stacked platform fees — commission, returns, failed-delivery, vouchers, SLA penalties — can exceed the seller's own product margin)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Ask 5 sellers for one product's unit economics; cross-read seller complaints",
+    stakes: "If sellers are a churning conveyor rather than a stable base, any marketplace-dependent wedge is built on sand",
+    round: 10,
+  },
+  {
+    id: "D49",
+    question: "Gyapu under BG Holdings — alive, parked, or wound down? Does a zero-commission promise survive a conglomerate acquisition? (round 10: acquired Oct 2022 at ~700 orders/day, 3,500 vendors, zero commission + free Valley delivery; founder exited; now quiet)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Check gyapu.com live; vendor-listing freshness",
+    stakes: "Tests whether the \"honest brokerage\" playbook is even acquirable in Nepal — or whether every buyer kills it",
+    round: 10,
   },
 ];
 
