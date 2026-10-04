@@ -395,9 +395,9 @@ function VeryBigVerySmall() {
             The big aim and the small aim are the same aim at different scales. Each step is
             earned by the one before it — nothing is claimed in advance.
           </p>
-          <ol className="mt-8 space-y-0">
+          <div className="mt-8">
             {CLIMB_STEPS.map((s) => (
-              <li
+              <div
                 key={s.n}
                 className="flex gap-5 border-t py-5"
                 style={{ borderColor: C.line, opacity: s.earned ? 1 : 0.45 }}
@@ -436,9 +436,9 @@ function VeryBigVerySmall() {
                     </p>
                   )}
                 </div>
-              </li>
+              </div>
             ))}
-          </ol>
+          </div>
         </div>
       </Container>
     </section>
