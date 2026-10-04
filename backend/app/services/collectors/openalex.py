@@ -116,8 +116,6 @@ def fetch_openalex_works(
         "per_page": max_records,
         "select": SELECT_FIELDS,
     }
-    if "search" in query_parameters and "search.semantic" in query_parameters:
-        raise RuntimeError("OpenAlex request cannot combine keyword and semantic search parameters")
     params = urllib.parse.urlencode(query_parameters)
     request_url = f"{API_URL}?{params}"
     request = urllib.request.Request(

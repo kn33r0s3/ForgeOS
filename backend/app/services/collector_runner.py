@@ -64,7 +64,6 @@ _WEB_CLEARANCES = tuple(
     if entry.collector == "web"
 )
 CLEARED_WEB_URLS = frozenset(entry.url for entry in _WEB_CLEARANCES)
-CLEARED_WEB_REVIEW_DATE = _WEB_CLEARANCES[0].reviewed_on
 
 
 def _web_clearance_error(value: str, *, today: date | None = None) -> str | None:
