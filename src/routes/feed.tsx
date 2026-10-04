@@ -189,14 +189,12 @@ function NetworkFeedPage() {
     };
   }, [items]);
   const titleByReference = useMemo(() => {
+    // Every record is labeled with its own title only. A relation target that
+    // is not among the loaded items falls back to its generic entity label in
+    // the render below — never to the referring record's title.
     const titles = new Map<string, string>();
     for (const item of items) {
       titles.set(`${item.entity_type}:${item.entity_id}`, item.title);
-      for (const relation of item.relations) {
-        if (relation.entity_type === "signal") {
-          titles.set(`${relation.entity_type}:${relation.entity_id}`, item.title);
-        }
-      }
     }
     return titles;
   }, [items]);
