@@ -4,13 +4,9 @@ import { Container } from "./container";
 
 const GROUP_LINKS = [
   { label: "Hami home", to: "/" },
-  { label: "Persisted discoveries", to: "/discoveries" },
-  { label: "World stream", to: "/feed" },
-  { label: "Opportunity hypotheses", to: "/opportunities" },
-  { label: "Action state", to: "/actions" },
+  { label: "Needs being worked", to: "/needs" },
+  { label: "Open unknowns", to: "/unknowns" },
   { label: "For businesses", to: "/group/businesses" },
-  { label: "Verified providers", to: "/providers" },
-  { label: "Public work board", to: "/domain" },
   { label: "About Hami", to: "/about" },
 ] as const;
 

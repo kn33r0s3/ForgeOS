@@ -15,10 +15,7 @@ export const SITE = {
 export const NAV = [
   { label: "Hami", to: "/" },
   { label: "Needs", to: "/needs" },
-  { label: "Discoveries", to: "/discoveries" },
-  { label: "World", to: "/feed" },
-  { label: "Hypotheses", to: "/opportunities" },
-  { label: "Actions", to: "/actions" },
+  { label: "Unknowns", to: "/unknowns" },
   { label: "For businesses", to: "/group/businesses" },
 ] as const;
 

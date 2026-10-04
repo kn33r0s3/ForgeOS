@@ -115,10 +115,7 @@ describe("Hami public content", () => {
     assert.deepEqual(hrefs, [
       "/",
       "/needs",
-      "/discoveries",
-      "/feed",
-      "/opportunities",
-      "/actions",
+      "/unknowns",
       "/group/businesses",
     ]);
     const publicHrefs = new Set<string>(hrefs);

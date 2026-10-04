@@ -71,6 +71,12 @@ const TIERS: Record<string, ValueScore> = {
   D62: { tier: 3, why: "Rural COD settlement — does the cash ever arrive." },
   D63: { tier: 2, why: "Informal rider volume — the shadow logistics layer." },
   D64: { tier: 2, why: "Physical risk of COD cash — the unpriced failure mode." },
+  D65: { tier: 3, why: "Receipt-vs-cash gap is the migration lane's money truth." },
+  D66: { tier: 2, why: "Locates the actual fee collection point regulation misses." },
+  D67: { tier: 3, why: "Worker-borne cost of the lane's shocks — the fragility number." },
+  D68: { tier: 3, why: "The debt product, not the fee, is the real trap." },
+  D69: { tier: 2, why: "Decides whether the Malaysia corridor re-concentrates." },
+  D70: { tier: 3, why: "Fee harvest without departures is the next trust poison." },
 };
 
 export function valueOf(id: string): ValueScore {

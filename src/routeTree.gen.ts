@@ -33,6 +33,7 @@ import { Route as RequestAProjectRouteImport } from './routes/request-a-project'
 import { Route as ServicesRouteImport } from './routes/services'
 import { Route as SystemRouteImport } from './routes/system'
 import { Route as TechnologyRouteImport } from './routes/technology'
+import { Route as UnknownsRouteImport } from './routes/unknowns'
 import { Route as VenturesRouteImport } from './routes/ventures'
 import { Route as WorkRouteImport } from './routes/work'
 import { Route as GroupIndexRouteImport } from './routes/group.index'
@@ -163,6 +164,11 @@ const TechnologyRoute = TechnologyRouteImport.update({
   path: '/technology',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UnknownsRoute = UnknownsRouteImport.update({
+  id: '/unknowns',
+  path: '/unknowns',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VenturesRoute = VenturesRouteImport.update({
   id: '/ventures',
   path: '/ventures',
@@ -234,6 +240,7 @@ export interface FileRoutesByFullPath {
   '/services': typeof ServicesRouteWithChildren
   '/system': typeof SystemRoute
   '/technology': typeof TechnologyRoute
+  '/unknowns': typeof UnknownsRoute
   '/ventures': typeof VenturesRoute
   '/work': typeof WorkRoute
   '/group/businesses': typeof GroupBusinessesRoute
@@ -267,6 +274,7 @@ export interface FileRoutesByTo {
   '/request-a-project': typeof RequestAProjectRoute
   '/system': typeof SystemRoute
   '/technology': typeof TechnologyRoute
+  '/unknowns': typeof UnknownsRoute
   '/ventures': typeof VenturesRoute
   '/work': typeof WorkRoute
   '/group/businesses': typeof GroupBusinessesRoute
@@ -303,6 +311,7 @@ export interface FileRoutesById {
   '/services': typeof ServicesRouteWithChildren
   '/system': typeof SystemRoute
   '/technology': typeof TechnologyRoute
+  '/unknowns': typeof UnknownsRoute
   '/ventures': typeof VenturesRoute
   '/work': typeof WorkRoute
   '/group/businesses': typeof GroupBusinessesRoute
@@ -340,6 +349,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/system'
     | '/technology'
+    | '/unknowns'
     | '/ventures'
     | '/work'
     | '/group/businesses'
@@ -373,6 +383,7 @@ export interface FileRouteTypes {
     | '/request-a-project'
     | '/system'
     | '/technology'
+    | '/unknowns'
     | '/ventures'
     | '/work'
     | '/group/businesses'
@@ -408,6 +419,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/system'
     | '/technology'
+    | '/unknowns'
     | '/ventures'
     | '/work'
     | '/group/businesses'
@@ -444,6 +456,7 @@ export interface RootRouteChildren {
   ServicesRoute: typeof ServicesRouteWithChildren
   SystemRoute: typeof SystemRoute
   TechnologyRoute: typeof TechnologyRoute
+  UnknownsRoute: typeof UnknownsRoute
   VenturesRoute: typeof VenturesRoute
   WorkRoute: typeof WorkRoute
   PrototypeInboxRoute: typeof PrototypeInboxRoute
@@ -621,6 +634,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TechnologyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/unknowns': {
+      id: '/unknowns'
+      path: '/unknowns'
+      fullPath: '/unknowns'
+      preLoaderRoute: typeof UnknownsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ventures': {
       id: '/ventures'
       path: '/ventures'
@@ -738,6 +758,7 @@ const rootRouteChildren: RootRouteChildren = {
   ServicesRoute: ServicesRouteWithChildren,
   SystemRoute: SystemRoute,
   TechnologyRoute: TechnologyRoute,
+  UnknownsRoute: UnknownsRoute,
   VenturesRoute: VenturesRoute,
   WorkRoute: WorkRoute,
   PrototypeInboxRoute: PrototypeInboxRoute,
