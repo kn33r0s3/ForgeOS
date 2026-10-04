@@ -1,12 +1,19 @@
 // Browser QA for the Hami System home. Usage: node scripts/qa-system.mjs [baseUrl]
 // Drives the real flow and writes screenshots to screenshots/qa-*.png.
 import { chromium } from "playwright";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { checkedOutputPath, checkedUrl } from "./browser-guard.mjs";
 
-const base = process.argv[2] ?? "http://127.0.0.1:8080";
-const out = (n) => `screenshots/qa-${n}.png`;
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const SCREENSHOTS_DIR = join(ROOT, "screenshots");
+const base = checkedUrl(process.argv[2] ?? "http://127.0.0.1:8080");
+const out = (n) =>
+  checkedOutputPath(join(SCREENSHOTS_DIR, `qa-${n}.png`), [SCREENSHOTS_DIR]);
 const errors = [];
 
 const browser = await chromium.launch();
+try {
 for (const [label, viewport] of [
   ["desktop", { width: 1440, height: 1000 }],
   ["mobile", { width: 390, height: 844 }],
@@ -14,6 +21,15 @@ for (const [label, viewport] of [
   const page = await browser.newPage({ viewport });
   page.on("pageerror", (e) => errors.push(`${label} pageerror: ${e.message}`));
   page.on("console", (m) => m.type() === "error" && errors.push(`${label} console: ${m.text()}`));
+
+  // Privacy: System state must never be sent to the server. Registered before
+  // the first navigation so the whole flow — including the form submission —
+  // is observed, not just the /system page at the end.
+  const leaked = [];
+  page.on("request", (r) => {
+    const body = r.postData() ?? "";
+    if (/shop shutter|electrical wiring/i.test(body + r.url())) leaked.push(r.url());
+  });
 
   await page.goto(base, { waitUntil: "networkidle" });
   await page.getByText("A System around you").waitFor({ timeout: 20000 });
@@ -39,12 +55,6 @@ for (const [label, viewport] of [
   await page.reload({ waitUntil: "networkidle" });
   await page.getByText("System active").waitFor({ timeout: 10000 });
 
-  // Privacy: System state must never be sent to the server.
-  const leaked = [];
-  page.on("request", (r) => {
-    const body = r.postData() ?? "";
-    if (/shop shutter|electrical wiring/i.test(body + r.url())) leaked.push(r.url());
-  });
   await page.goto(`${base}/system`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Your gear" }).waitFor();
   await page.screenshot({ path: out(`${label}-3-gear`), fullPage: true });
@@ -57,7 +67,9 @@ for (const [label, viewport] of [
   await page.getByText("A System around you").waitFor();
   await page.close();
 }
-await browser.close();
+} finally {
+  await browser.close();
+}
 
 // Ignore expected network failures when the public API isn't running locally.
 const real = errors.filter((e) => !/Failed to load resource|ERR_CONNECTION|404|502|503/.test(e));
