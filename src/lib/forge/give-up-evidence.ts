@@ -14,9 +14,17 @@
 // stated-interest. WTP stays a hypothesis until it lands here.
 
 import type { GiveUpEvidence } from "./value";
+import { evidenceRank } from "./value.ts";
 
 export const GIVE_UP_EVIDENCE: GiveUpEvidence[] = [];
 
 export function evidenceFor(unknownId: string): GiveUpEvidence | null {
-  return GIVE_UP_EVIDENCE.find((e) => e.unknownId === unknownId) ?? null;
+  // Strongest first: a later verified-payment must outweigh an earlier
+  // stated-interest for the same unknown — never the first-recorded entry.
+  let best: GiveUpEvidence | null = null;
+  for (const e of GIVE_UP_EVIDENCE) {
+    if (e.unknownId !== unknownId) continue;
+    if (!best || evidenceRank(e) > evidenceRank(best)) best = e;
+  }
+  return best;
 }

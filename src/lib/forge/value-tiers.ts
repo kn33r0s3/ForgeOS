@@ -6,7 +6,7 @@
 // and never leave the engine. A tier is earned by recorded give-up
 // evidence (see ./value.ts + ./give-up-evidence.ts) or the unknown is
 // "unscored". Willingness-to-pay stays a hypothesis until evidence.
-// Value tiers for the discovery unknowns (D1–D64).
+// Value tiers for the discovery unknowns (D1–D70).
 // Scored 2026-10-04 on value-density: who gives up what for the answer, and when.
 //   3 = money-close: the answer is directly tied to money changing hands or survival
 //   2 = enabler: unlocks a tier-3 answer or removes a blocker to value
