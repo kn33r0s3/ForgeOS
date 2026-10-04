@@ -57,9 +57,12 @@ or flag change was performed for this verification.
   The public observations API returned HTTP 502 locally because the backend
   was not running; the homepage displayed an explicit unavailable state
   rather than implying no data or inventing observations. No browser
-  JavaScript page errors occurred. Backend, engine, database, API
-  implementation, substrate, research logic, payment, and auth architecture
-  remain untouched.
+  JavaScript page errors occurred. PR #5 frontend and Vercel checks passed;
+  the backend workflow failed on the unchanged
+  `tests/test_import_unknowns.py::test_parses_all_sections` assertion
+  (expected 86, parsed 93; 696 passed, 1 failed, 2 skipped). Backend, engine,
+  database, API implementation, substrate, research logic, payment, and auth
+  architecture remain untouched.
 - Next removable dependency: owner-run discovery and an explicitly
   authorized first contact; the page cannot provide seller participation,
   external permission, or pilot access.
