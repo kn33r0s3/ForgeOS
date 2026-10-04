@@ -1216,6 +1216,7 @@ class AutonomousCycleSummary(BaseModel):
 class EconomicDiscoverySummary(BaseModel):
     patterns_reviewed: int
     opportunities_created: int
+    single_signal_opportunities_created: int = 0
     patterns_without_sufficient_evidence: int
 
 

@@ -103,7 +103,16 @@ function OperationsPage() {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setCycleMsg(`Cycle complete. Status: ${data.status || "status not recorded"} · Cycle ID: ${data.cycle_id ?? "—"}`);
+      // ForgeCycleSummary carries no `status`/`cycle_id` fields — report the
+      // fields it actually returns (scenario.status + the counted outcomes).
+      const scenarioStatus = data?.scenario?.status;
+      setCycleMsg(
+        `Cycle complete${scenarioStatus ? ` (scenario: ${scenarioStatus})` : ""} — ` +
+          `${data.signals_processed ?? "?"} signal(s) processed, ` +
+          `${data.patterns_found ?? "?"} pattern(s) found, ` +
+          `${data.beliefs_updated ?? "?"} belief(s) updated, ` +
+          `${data.opportunities_discovered ?? "?"} opportunity(ies) discovered.`
+      );
       await loadOperatingData(ownerKey);
     } catch (err: unknown) {
       setCycleMsg(`Cycle error: ${errorMessage(err, "Unexpected error")}`);
