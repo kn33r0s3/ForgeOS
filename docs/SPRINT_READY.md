@@ -77,7 +77,10 @@ earns a tier instead of "unscored."
 4. Price talk → first rupee or honest zero.
 5. Report back: one page, exactly as it happened.
 
-**The legal note (D72):** prefer a seller already registered under the
-E-commerce Act 2025, or help them register. The sprint does not touch
-unregistered sellers' compliance status beyond this preference — the
-real legal read comes with company registration.
+**The legal note (D72):** work ONLY with a seller already registered
+under the reported e-commerce registration law (act name and compliance
+figures are REPORTED, not verified against the Department's own notice).
+Helping sellers register is a scope jump — regulatory education Hami
+will not pioneer. The real legal read (including whether Hami-as-platform
+needs registration when it takes a cut) comes with company registration,
+not from the agent.

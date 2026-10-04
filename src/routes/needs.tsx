@@ -1,5 +1,5 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
-import { Inbox, ScrollText } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { Handshake, ScrollText } from "lucide-react";
 import { Container } from "@/components/layout/container";
 import { PageHeader } from "@/components/layout/page-header";
 
@@ -14,26 +14,26 @@ function NeedsPage() {
       <PageHeader
         eyebrow="Hami · the wedge"
         title="The missed inquiry"
-        lede="Many small sellers run their whole shop through chat apps. When a customer writes and nobody answers fast, the sale dies quietly. Hami's wedge is simple: answer fast for one week, count the sales that come back, and take a cut only of what was recovered. No recovery, no charge — the thesis dies honestly."
+        lede="Many small sellers run their whole shop through chat apps. When a customer writes and nobody answers fast, the sale dies quietly. Hami's wedge is simple: for one week, a human handles the seller's replies fast, the recovered sales are counted, and Hami takes a cut only of what came back. No recovery, no charge — the thesis dies honestly."
         containerClassName="max-w-4xl"
       />
       <Container className="max-w-4xl py-10 sm:py-14">
-        <section aria-label="Free inbox tool" className="card p-6">
+        <section aria-label="The offer" className="card p-6">
           <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-            <Inbox className="h-5 w-5 text-accent" aria-hidden="true" />
-            The free inbox tool
+            <Handshake className="h-5 w-5 text-accent" aria-hidden="true" />
+            The offer being tested
           </h2>
           <p className="mt-2 text-sm leading-6 text-muted">
-            A reply timer for inquiries: see how fast you answer, mark what was
-            recovered and what was lost, and get a week summary. No signup, no
-            account — your data stays in your browser.
+            One seller, one week. A person answers their customers within 15
+            minutes, 9am to 9pm, and every sale that comes back because of the
+            fast reply is counted. The seller pays a cut only of those
+            recovered sales. Hami is not a tool the seller operates — it is
+            the work being done for them, measured in rupees recovered.
           </p>
-          <Link
-            to="/prototype/inbox"
-            className="mt-4 inline-flex min-h-10 items-center rounded-full bg-accent px-5 text-sm font-bold text-black"
-          >
-            Open the inbox tool
-          </Link>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            This is a hypothesis, not an established offer. It stands or falls on
+            the first real week.
+          </p>
         </section>
 
         <section aria-label="Week log" className="mt-6 card p-6">
