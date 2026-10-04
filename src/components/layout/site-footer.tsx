@@ -5,6 +5,8 @@ import { Container } from "./container";
 const SYSTEM_LINKS = [
   { label: "Hami home", to: "/" },
   { label: "About Hami", to: "/about" },
+  { label: "Services", to: "/services" },
+  { label: "The group", to: "/group" },
 ] as const;
 
 const RECORD_LINKS = [
