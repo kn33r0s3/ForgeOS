@@ -5,6 +5,20 @@ we make hami's engine the same as what u did, how u did, with assurity,
 verifications, tests, 0 failures or downfalls." And: research exists to
 drive and develop Hami, not to decorate the website.
 
+## The greatest goal (prime directive)
+
+**Hami Systems'** greatest goal: a living system for understanding and
+acting upon the real world — continuously building knowledge of people,
+places, needs, opportunities, resources, relationships, capabilities,
+and outcomes, then turning that knowledge into authorized action and
+real-world value. AI is one worker; software is one instrument; humans
+are participants and partners.
+
+Everything the engine does ladders to this. The big aim and one real
+rupee are the same aim at different scales. Discovery — including
+*hidden* unknowns, the ones nobody thought to ask — is how the system
+grows toward it.
+
 This document is the engine's contract. The engine is not a page. It is
 the loop Hami runs on everything it claims to know.
 

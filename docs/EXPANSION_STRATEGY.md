@@ -11,18 +11,25 @@ where the research points**. Free code doesn't excuse random code.
 
 ## The map (from 12 rounds of research)
 
-- **Taken:** ledgers (Karobar — 500k+ installs, profitable, 35 people),
-  payments (Fonepay / eSewa / Khalti). Stay out.
-- **Open:** response capacity, payment verification. Nobody there.
-- **Price:** outcome-based, or ~Rs 2,000/yr (Karobar proved it). Thin
+Factual market context — studied for implementation lessons, not as
+targets:
+
+- **Served:** ledgers (a Nepali khata app holds 500k+ installs profitably
+  with ~Rs 2,000/yr pricing and Bikram Sambat localization — the lesson:
+  small, paid, and local beats big, free, and foreign), payments
+  (Fonepay / eSewa / Khalti rails exist — the lesson: build on rails,
+  don't lay new ones).
+- **Unserved:** response capacity (no tool sells it), adversarial payment
+  verification (no tool solves it). These are the open corners — not
+  because rivals are weak, but because nobody has built there yet.
+- **Price:** outcome-based, or ~Rs 2,000/yr (proven in-market). Thin
   wallets can't do per-seat.
 - **Distribution:** trust networks + creators. Not app stores, not ads —
   owners distrust vendors and learn from peers.
 - **Moat:** Nepali localization (Bikram Sambat calendar), the needs
   data asset, the trust graph itself.
 
-"Less competition" is true in the open corners, false in the taken ones.
-We expand only through open corners.
+We build where needs are unserved, full stop — not "against" anyone.
 
 ## Phases
 
