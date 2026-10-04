@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowUpRight, Clock3, FileSearch } from "lucide-react";
+import { FileSearch } from "lucide-react";
 import { Container } from "@/components/layout/container";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState, SkeletonCards, UnavailableState } from "@/components/ui/feedback";
