@@ -87,9 +87,9 @@
 
 /*
  * ForgeOS visual system v3: "night masthead".
- * Taken from the look of kneerose.vercel.app: ink-navy page, a solid
- * safety-orange masthead with black type, blackletter titles on a hard
- * 45deg black/orange split plate, grey-to-black 45deg sheens, orange-ringed
+ * Taken from the look of kneerose.vercel.app: ink-navy page, a dark
+ * near-black masthead with an orange rule and orange type, blackletter
+ * titles on a hard 45deg black/orange split plate, grey-to-black 45deg sheens, orange-ringed
  * medallions, pale slab callouts, wheat footer type, 2px borders, 6px radii
  * and hard drop shadows. Motion is short and mechanical (wipes, stamps),
  * never floaty.
@@ -186,7 +186,7 @@
     cursor: not-allowed;
   }
 
-  /* Orange ring with a black gap reads on navy, charcoal and on the orange masthead. */
+  /* Orange ring with a black gap reads on navy, charcoal and on the dark masthead. */
   :where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
     outline: 2px solid var(--focus);
     outline-offset: 3px;

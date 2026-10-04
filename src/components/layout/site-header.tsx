@@ -18,6 +18,9 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [scrolled, setScrolled] = useState(false);
+  const { user, isPending } = useCurrentUserState();
+  // Dev fallback is not a real sign-in: those visitors still see the CTA.
+  const signedIn = !!user && !user.isDevFallback;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -75,18 +78,27 @@ export function SiteHeader() {
             })}
           </nav>
           <div className="flex items-center gap-2">
-            <AuthControl />
-            <Link
-              to="/login"
-              className="hidden min-h-12 items-center rounded-card border-2 px-4 text-sm font-extrabold transition-colors sm:inline-flex"
-              style={{
-                borderColor: "#F2A33A",
-                background: "#F2A33A",
-                color: "#0C0B0A",
-              }}
-            >
-              Join Hami
-            </Link>
+            {isPending ? (
+              <span
+                role="status"
+                aria-label="Checking account"
+                className="h-9 w-16 animate-pulse rounded-card bg-black/10"
+              />
+            ) : signedIn ? (
+              <UserButton />
+            ) : (
+              <Link
+                to="/login"
+                className="hidden min-h-12 items-center rounded-card border-2 px-4 text-sm font-extrabold transition-colors sm:inline-flex"
+                style={{
+                  borderColor: "#F2A33A",
+                  background: "#F2A33A",
+                  color: "#0C0B0A",
+                }}
+              >
+                Join Hami
+              </Link>
+            )}
             <button
               type="button"
               className="group relative inline-flex size-11 flex-col items-center justify-center gap-[5px] rounded-card lg:hidden"
@@ -155,33 +167,26 @@ export function SiteHeader() {
               })}
             </ol>
           </nav>
-          <div className="p-4 sm:hidden">
-            <Link
-              to="/login"
-              onClick={() => setOpen(false)}
-              className="flex min-h-12 items-center justify-center rounded-card border-2 px-4 text-base font-extrabold transition-colors"
-              style={{
-                borderColor: "#F2A33A",
-                background: "#F2A33A",
-                color: "#0C0B0A",
-              }}
-            >
-              Join Hami
-            </Link>
-          </div>
+          {!signedIn && (
+            <div className="p-4 sm:hidden">
+              <Link
+                to="/login"
+                onClick={() => setOpen(false)}
+                className="flex min-h-12 items-center justify-center rounded-card border-2 px-4 text-base font-extrabold transition-colors"
+                style={{
+                  borderColor: "#F2A33A",
+                  background: "#F2A33A",
+                  color: "#0C0B0A",
+                }}
+              >
+                Join Hami
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </>
   );
-}
-
-function AuthControl() {
-  const { user, isPending } = useCurrentUserState();
-  if (isPending) {
-    return <span className="h-9 w-16 animate-pulse rounded-card bg-black/10" aria-label="Checking account" />;
-  }
-  if (user && !user.isDevFallback) return <UserButton />;
-  return null;
 }
 
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];

@@ -3,8 +3,9 @@ import { cn } from "@/lib/utils";
 
 /**
  * Stacked masthead mark: the Hami icon above a blackletter wordmark.
- * `tone="dark"` is for the orange masthead (black type); `"light"` for
- * dark surfaces such as the footer (orange type).
+ * `tone="dark"` (black type) is for light/orange surfaces; `"light"` (orange
+ * type) for dark surfaces such as the current night masthead and footer.
+ * Only "light" is used today.
  */
 export function BrandMark({
   className,
