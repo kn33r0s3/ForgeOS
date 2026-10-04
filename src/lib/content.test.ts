@@ -378,7 +378,7 @@ describe("Hami public root", () => {
       "/about",
       "/discoveries",
       "/opportunities",
-      "/feed",
+      "/providers",
       "/actions",
       "/what-we-learned",
     ]) {

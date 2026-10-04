@@ -69,10 +69,10 @@ const SYSTEM_FLOW = [
   },
   {
     stage: "CAPABILITIES",
-    title: "Public capability records",
-    description: "Shown only for verified providers with active public service listings.",
-    to: "/feed",
-    action: "Explore the network",
+    title: "Verified public capabilities",
+    description: "Only active public capabilities attached to verified providers appear here.",
+    to: "/providers",
+    action: "View verified providers",
   },
   {
     stage: "ACTION",

@@ -147,9 +147,11 @@ than a few days old, re-verify before trusting the details.
   link, not primary nav). `public-copy.test.ts` enforces the contract.
 - **Homepage operating map:** the page now connects SYSTEM → WORLD →
   OPPORTUNITIES → CAPABILITIES → ACTION → OUTCOMES to existing public views
-  (`/about`, `/discoveries`, `/opportunities`, `/feed`, `/actions`, and
+  (`/about`, `/discoveries`, `/opportunities`, `/providers`, `/actions`, and
   `/what-we-learned`). It is explicitly an open map, not a claim that each
   stage happened; the linked pages retain their own evidence and access states.
+  A read-only production request to `/api/public/discoveries?limit=4` returned
+  four records in `observed` state. The local FastAPI service was not started.
 - **Production:** `https://haminp.vercel.app` (**canonical — decided** by
   owner-delegated authority 2026-10-04; sitemap/robots/SITE.domain point
   there) and `https://forge-os-ebon.vercel.app` (alias/legacy). Both
