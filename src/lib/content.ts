@@ -70,23 +70,6 @@ export type PublicDiscovery = {
   freshness?: string;
 };
 
-export type SubstrateDiscoveryBasis = {
-  kind: string;
-  id: number;
-};
-
-export type SubstrateDiscovery = {
-  entity_id: number;
-  kind: string;
-  status: string;
-  identity_state: string;
-  statement: string;
-  method: string;
-  epistemic_state: "possible" | "hypothesized";
-  basis: SubstrateDiscoveryBasis[];
-  next_step?: string | null;
-};
-
 export type PublicFeedRelation = {
   entity_type: string;
   entity_id: number;
@@ -371,53 +354,6 @@ export async function loadDiscoveries(limit = 20, scope?: CacheScope): Promise<P
   return Array.isArray(payload) ? payload : null;
 }
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isSubstrateDiscoveryBasis(value: unknown): value is SubstrateDiscoveryBasis {
-  return isObject(value) && typeof value.kind === "string" && typeof value.id === "number";
-}
-
-function isSubstrateDiscovery(value: unknown): value is SubstrateDiscovery {
-  return (
-    isObject(value) &&
-    typeof value.entity_id === "number" &&
-    typeof value.kind === "string" &&
-    typeof value.status === "string" &&
-    typeof value.identity_state === "string" &&
-    typeof value.statement === "string" &&
-    typeof value.method === "string" &&
-    (value.epistemic_state === "possible" || value.epistemic_state === "hypothesized") &&
-    Array.isArray(value.basis) &&
-    value.basis.every(isSubstrateDiscoveryBasis) &&
-    (value.next_step === undefined || value.next_step === null || typeof value.next_step === "string")
-  );
-}
-
-export async function loadSubstrateDiscoveries(limit = 50): Promise<SubstrateDiscovery[]> {
-  const path = `/forge/substrate/discovery/findings?limit=${encodeURIComponent(String(limit))}`;
-  const [url] = getApiCandidates(path);
-  if (!url) throw new Error("No backend route is configured for substrate discoveries.");
-
-  const response = await fetch(url, {
-    headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!response.ok) {
-    const detail = response.status === 401
-      ? "Substrate access is protected; no backend key was sent from the browser."
-      : `The backend returned HTTP ${response.status}.`;
-    throw new Error(`Persisted substrate discoveries could not be read. ${detail}`);
-  }
-
-  const payload: unknown = await response.json();
-  if (!Array.isArray(payload) || !payload.every(isSubstrateDiscovery)) {
-    throw new Error("The substrate discoveries endpoint returned an unexpected response shape.");
-  }
-  return payload;
-}
-
 export async function loadPublicFeed(
   limit = 50,
   entityType?: string,
@@ -525,13 +461,17 @@ export async function createPublicDomainRecord(input: {
   stated_price?: string | null;
 }): Promise<(PublicDomainRecord & { close_token: string }) | null> {
   for (const url of getPublicApiCandidates("/domain")) {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify(input),
-    });
-    if (response.ok) {
-      return (await response.json()) as PublicDomainRecord & { close_token: string };
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(input),
+      });
+      if (response.ok) {
+        return (await response.json()) as PublicDomainRecord & { close_token: string };
+      }
+    } catch {
+      continue;
     }
   }
   return null;
@@ -671,32 +611,36 @@ export async function createBookingRequest(input: {
   const candidateUrls = getPublicApiCandidates("/booking-requests");
 
   for (const url of candidateUrls) {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(input),
-    });
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(input),
+      });
 
-    if (!response.ok) {
+      if (!response.ok) {
+        continue;
+      }
+
+      const payload = (await response.json()) as {
+        id?: number;
+        status?: string;
+        provider_response?: string | null;
+        requested_service?: string;
+      };
+
+      return {
+        id: payload.id ?? 0,
+        status: payload.status ?? "pending",
+        provider_response: payload.provider_response ?? null,
+        requested_service: payload.requested_service ?? input.requested_service,
+      };
+    } catch {
       continue;
     }
-
-    const payload = (await response.json()) as {
-      id?: number;
-      status?: string;
-      provider_response?: string | null;
-      requested_service?: string;
-    };
-
-    return {
-      id: payload.id ?? 0,
-      status: payload.status ?? "pending",
-      provider_response: payload.provider_response ?? null,
-      requested_service: payload.requested_service ?? input.requested_service,
-    };
   }
 
   return null;
@@ -717,13 +661,14 @@ export async function getBookingRequestStatus(id: number): Promise<BookingStatus
   const candidateUrls = getPublicApiCandidates(`/booking-requests/${id}`);
 
   for (const url of candidateUrls) {
-    const response = await fetch(url, {
-      headers: { Accept: "application/json" },
-    });
+    try {
+      const response = await fetch(url, {
+        headers: { Accept: "application/json" },
+      });
 
-    if (!response.ok) {
-      continue;
-    }
+      if (!response.ok) {
+        continue;
+      }
 
     const payload = (await response.json()) as {
       id?: number;
@@ -746,6 +691,9 @@ export async function getBookingRequestStatus(id: number): Promise<BookingStatus
       requested_time: payload.requested_time ?? null,
       provider_response: payload.provider_response ?? null,
     };
+    } catch {
+      continue;
+    }
   }
 
   return null;
