@@ -19,15 +19,15 @@ a checklist, not authorization — activation still needs the exact phrase in
 |---|-------------|--------|----------------------------|
 | 1 | `/request` closed-state | **READY** | `DemandIntakeForm` gates on `getPublicDemandRequestEnabled()`; when the flag is off it renders "Online inquiries are not open yet." with no form (`src/components/pages/demand-intake-form.tsx`). Both production domains report `{"enabled":false}` on `/api/signals/public-request/config` (probed 2026-10-04 ~04:05 NPT). Frontend test "reads the existing public demand gate and fails closed when unavailable" passes. |
 | 2 | `/owner` contract | **READY** | Key-entry shell: publicly reachable, unlinked, `noindex,nofollow,noarchive`; loads zero owner data until the key is entered in page memory; key sent only in `X-API-Key` header (`src/routes/owner.tsx`). Readiness signals, lead controls, and the daily routine are all present. The owner key itself is owner-held — nothing to configure here. |
-| 3 | Real lead channel selected | **BLOCKED_ON_OWNER** | Decision needed: name exactly one real, authorized, zero-cost lead channel (source/consent/format documented). |
-| 4 | Zero-cost response path | **BLOCKED_ON_OWNER** | Decision needed: establish one safe $0 response path on the same channel before any intake opens. |
+| 3 | Real lead channel selected | **DECIDED** | Owner-delegated decision 2026-10-04: **channel 1 — owner-run conversations** confirmed as the pilot lead channel (`docs/PILOT_LEAD_CHANNEL.md`). Channel 2 (web intake) remains the built, tested stage-2 path. Execution needs a human holding the conversations (delegate kit ready, no delegate named). |
+| 4 | Zero-cost response path | **DECIDED** | Owner-delegated decision 2026-10-04: the response path **is the conversation itself** — direct human reply on the same channel, $0, no new infrastructure before the first real outcome. Protocol documented in `docs/PILOT_LEAD_CHANNEL.md`. |
 | 5 | Limit/422 verification | **READY** | Backend suite 2026-10-04: **686 passed, 2 skipped, 0 failed** (local, 4m29s), including `test_public_write_limits.py` (8 tests: 5/hour visitor-HMAC write limits, 16 KiB request caps, 422 paths). Frontend suite: **107/107 pass** (2026-10-04). |
-| 6 | Domain/docs reconciliation | **BLOCKED_ON_OWNER** | Decision needed: confirm the canonical domain — `haminp.vercel.app` (recommended) vs `forge-os-ebon.vercel.app` (current sitemap/robots). After the decision: update `public/sitemap.xml`, `public/robots.txt`, `SITE.domain` (currently renders "Domain pending verification" in the footer). |
+| 6 | Domain/docs reconciliation | **DECIDED + DONE** | Owner-delegated decision 2026-10-04: **canonical domain = `haminp.vercel.app`**; `forge-os-ebon.vercel.app` is the alias/legacy domain. Executed: `public/sitemap.xml`, `public/robots.txt`, `SITE.domain` now point at haminp; `content.test.ts` 10/10 pass; pushed, both production health endpoints green. `SITE.url` deliberately left empty per the honesty guardrail. |
 | 7 | Company registration | **BLOCKED_ON_OWNER** | Hami Systems (हामी सिस्टम्स) registration IN PROGRESS (Private → Sole Ownership; CAMIS name availability subject to review). Owner-side; nothing executable here. |
 | 8 | `hamisystems.com.np` | **NEXT** | After registration certificate: register domain, then point/verify. |
 | 9 | Payment/merchant onboarding | **BLOCKED_ON_OWNER** | Blocked on business credentials (owner holds personal PAN only). No merchant onboarding attempted or faked. |
 | 10 | Pilot readiness review | **NEXT** | After 3, 4, 6, 7 resolve: full ACTIVATION.md checklist pass with the owner. |
-| 11 | Opening intake | **BLOCKED_ON_OWNER** | Requires the owner writing exactly `ACTIVATE FORGE BOT LIVE` after every readiness check passes. Not given. Flags verified closed (see below). |
+| 11 | Opening intake | **DECIDED: STAYS CLOSED** | Owner-delegated decision 2026-10-04: intake does **not** open today. The ACTIVATION.md readiness checklist still has owner-side FAILs — test email sent+received (needs owner mailbox), privacy text approved in owner chat (needs owner), deployed commit = origin/main (needs owner key), maintenance heartbeat <26h (needs owner endpoint). Opening intake with those unverified would violate the safety structure. Flip conditions: those four checks PASS, then the activation phrase. Flags verified closed (see below). |
 
 ## Activation flags (verified closed, untouched)
 
@@ -92,9 +92,10 @@ pre-existing SQLAlchemy table-sort notices, no errors.
 
 ## The one-line summary
 
-Hami is **as ready as it can be without the owner**: the site is up, intake is
-verifiably closed on both domains, the test suites are green, and the last
-Nepal-first copy is out. Everything remaining is a human decision — lead
-channel, response path, canonical domain, company registration, payment
-credentials, and the activation phrase. None of it can be worked around from
-here.
+Hami is **as ready as it can be without the owner's body, identity, or
+money**: the site is up, intake is verifiably closed on both domains, the
+test suites are green, the last Nepal-first copy is out, and four of the
+six launch decisions are now taken (lead channel, response path, canonical
+domain, intake-stays-closed). What remains needs a human, not more work —
+the five conversations, company registration, payment credentials, and the
+four owner-side readiness checks.

@@ -1,9 +1,13 @@
 # Pilot lead channel — decision record
 
 **Date:** 2026-10-04
-**Status:** PROPOSED — owner decision required before any intake opens
-**Evidence boundary:** this document records options and a recommendation. It
-authorizes nothing. Intake stays closed until the owner confirms a channel.
+**Status:** DECIDED — by owner-delegated authority (musa), 2026-10-04.
+Channel 1 confirmed as the pilot lead channel. Channel 2 remains the
+built, tested stage-2 path, to be opened only when the five conversations
+reveal a pattern worth systematizing.
+**Evidence boundary:** this document records the decision. It authorizes
+nothing beyond the decision itself. Intake stays closed until the
+activation prerequisites are met.
 
 ## The question
 
@@ -77,7 +81,23 @@ hypotheses and the smallest real test for each.
 
 ## Decision required from the owner
 
-- [ ] Confirm channel 1 (owner-run conversations) as the pilot lead channel,
-      or select a different channel from the candidates above.
-- [ ] Only after channel confirmation: establish the zero-cost response path
-      on the same channel before opening any intake.
+- [x] ~~Confirm channel 1 (owner-run conversations) as the pilot lead channel,
+      or select a different channel from the candidates above.~~
+      **DECIDED 2026-10-04 (owner-delegated): channel 1 confirmed.**
+- [x] ~~Only after channel confirmation: establish the zero-cost response path
+      on the same channel before opening any intake.~~
+      **DECIDED 2026-10-04 (owner-delegated): the response path is the
+      conversation itself — direct human reply on the same channel, $0,
+      no new infrastructure before the first real outcome.** Protocol: the
+      person who holds the conversation replies in that conversation;
+      anything worth keeping is entered into the console as observed
+      demand with the surprise-log four lines. For channel 2 (when opened):
+      owner manual reply from the console; any automated sender needs a
+      separately authorized sender path, which does not exist yet.
+
+## Execution note
+
+Channel 1 needs a human to hold the conversations — the delegate kit
+(`docs/DELEGATE_KIT.md`) is ready; no delegate named yet. The decision is
+made; the conversations themselves are human work and cannot be delegated
+to software.
