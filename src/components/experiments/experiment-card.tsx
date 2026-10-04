@@ -41,7 +41,7 @@ export function ExperimentCard({ experiment }: { experiment: Experiment }) {
       {experiment.log.length > 0 ? (
         <ul className="mt-3 space-y-2 border-t border-line pt-3">
           {experiment.log.map((entry, i) => (
-            <li key={i} className="text-xs leading-5">
+            <li key={`${entry.date}-${i}`} className="text-xs leading-5">
               <span className="font-mono text-muted">{entry.date}</span>{" "}
               <span className="text-ink">{entry.entry}</span>
             </li>
@@ -49,7 +49,9 @@ export function ExperimentCard({ experiment }: { experiment: Experiment }) {
         </ul>
       ) : (
         <p className="mt-3 text-xs italic text-muted">
-          No log entries yet — the experiment has not started.
+          {experiment.status === "proposed"
+            ? "No log entries yet — the experiment has not started."
+            : "No log entries recorded."}
         </p>
       )}
       {experiment.toolLink && (
