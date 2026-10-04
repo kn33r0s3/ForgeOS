@@ -8,6 +8,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const md = readFileSync(join(root, "docs/UNKNOWN_MAP.md"), "utf8");
 
+function stripMd(s) {
+  return s.replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1");
+}
+
 const STATES = ["UNKNOWN","HYPOTHESIZED","TESTED","SUPPORTED","CONTRADICTED","BLOCKED_BY_MISSING_ACCESS"];
 const unknowns = [];
 let inTable = false;
@@ -22,10 +26,10 @@ for (const line of md.split("\n")) {
         unknowns.push({
           id: parts[1],
           category: parts[1][0],
-          question: parts[2],
+          question: stripMd(parts[2]),
           state: m[1],
-          cheapest_test: parts[4],
-          stake: parts[5],
+          cheapest_test: stripMd(parts[4]),
+          stake: stripMd(parts[5]),
         });
       }
     }

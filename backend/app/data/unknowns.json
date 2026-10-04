@@ -3,7 +3,7 @@
   {
    "id": "A1",
    "category": "A",
-   "question": "Does production owner email actually deliver? (SMTP accept ≠ receipt)",
+   "question": "Does production owner email actually deliver? (SMTP accept \u2260 receipt)",
    "state": "BLOCKED_BY_MISSING_ACCESS",
    "cheapest_test": "Owner sends test via DAILY CHECK, confirms real mailbox receipt",
    "stake": "Establishes whether the owner-notice path is real or theater"
@@ -78,7 +78,7 @@
    "question": "What do five business owners actually struggle with, in their words?",
    "state": "UNKNOWN",
    "cheapest_test": "Five owner-run conversations, open questions, no pitching",
-   "stake": "This is the pilot's raw material — everything downstream depends on it"
+   "stake": "This is the pilot's raw material \u2014 everything downstream depends on it"
   },
   {
    "id": "B2",
@@ -131,7 +131,7 @@
   {
    "id": "D1",
    "category": "D",
-   "question": "The \"missing middle\" gap cost — what does \"too busy to answer, not busy enough to hire\" cost a shop per month?",
+   "question": "The \"missing middle\" gap cost \u2014 what does \"too busy to answer, not busy enough to hire\" cost a shop per month?",
    "state": "UNKNOWN",
    "cheapest_test": "\"How many inquiries did you miss last month because you couldn't respond in time?\"",
    "stake": "Sizes a pay-per-recovered-job model vs. per-seat"
@@ -139,23 +139,23 @@
   {
    "id": "D2",
    "category": "D",
-   "question": "Do owners want to be \"found\"? — fulfillment/admin may bind harder than demand. **Thesis-threatening:** if presence is the constraint, the \"find real opportunities\" wedge needs revision",
+   "question": "Do owners want to be \"found\"? \u2014 fulfillment/admin may bind harder than demand. Thesis-threatening: if presence is the constraint, the \"find real opportunities\" wedge needs revision",
    "state": "UNKNOWN",
-   "cheapest_test": "\"If I brought you 10 new customers tomorrow, what breaks?\" — ask first in every discovery conversation",
+   "cheapest_test": "\"If I brought you 10 new customers tomorrow, what breaks?\" \u2014 ask first in every discovery conversation",
    "stake": "Could revise the wedge thesis before any build"
   },
   {
    "id": "D3",
    "category": "D",
-   "question": "Trust-graph traversal vs. marketing — do first customers come only via pre-existing trust?",
+   "question": "Trust-graph traversal vs. marketing \u2014 do first customers come only via pre-existing trust?",
    "state": "UNKNOWN",
-   "cheapest_test": "\"How did your first 10 customers find you?\" — count trust-traced ones",
+   "cheapest_test": "\"How did your first 10 customers find you?\" \u2014 count trust-traced ones",
    "stake": "Hami's RELATION primitive could be the data model"
   },
   {
    "id": "D4",
    "category": "D",
-   "question": "The unguarded surfaces map — where do Nepali kirana owners talk with the camera off?",
+   "question": "The unguarded surfaces map \u2014 where do Nepali kirana owners talk with the camera off?",
    "state": "UNKNOWN",
    "cheapest_test": "Ask owners directly + one Nepali-language TikTok/FB session by a human",
    "stake": "Finds where listening is even possible"
@@ -163,7 +163,7 @@
   {
    "id": "D5",
    "category": "D",
-   "question": "The unpredictability tax, quantified — hours/week of presence-demanding chaos",
+   "question": "The unpredictability tax, quantified \u2014 hours/week of presence-demanding chaos",
    "state": "UNKNOWN",
    "cheapest_test": "\"Walk me through last Tuesday.\"",
    "stake": "Turns anecdote into a measurable cost"
@@ -171,15 +171,15 @@
   {
    "id": "D6",
    "category": "D",
-   "question": "Accountant-as-translator: human or machine? — does the trust require a human neck to wring?",
+   "question": "Accountant-as-translator: human or machine? \u2014 does the trust require a human neck to wring?",
    "state": "UNKNOWN",
-   "cheapest_test": "\"Would you trust a tool that tells you what the accountant would say?\" — listen for the flinch",
+   "cheapest_test": "\"Would you trust a tool that tells you what the accountant would say?\" \u2014 listen for the flinch",
    "stake": "Decides whether this is automatable at all"
   },
   {
    "id": "D7",
    "category": "D",
-   "question": "Trust-capital stratification — is who gets to start a birth lottery? (family abroad = payments + credit + hiring)",
+   "question": "Trust-capital stratification \u2014 is who gets to start a birth lottery? (family abroad = payments + credit + hiring)",
    "state": "UNKNOWN",
    "cheapest_test": "~10 owners with/without abroad connections, compare capital sources",
    "stake": "Unmeasured; changes who Hami can serve"
@@ -187,7 +187,7 @@
   {
    "id": "D8",
    "category": "D",
-   "question": "Returnee-skill pathway — any working path from foreign-earned skills to businesses, or all dissipation?",
+   "question": "Returnee-skill pathway \u2014 any working path from foreign-earned skills to businesses, or all dissipation?",
    "state": "UNKNOWN",
    "cheapest_test": "3 returnees who started vs. 3 who didn't",
    "stake": "May resolve BLOCKED_BY_MISSING_ACCESS"
@@ -195,7 +195,7 @@
   {
    "id": "D9",
    "category": "D",
-   "question": "The voiceless-founder population — how many never surface for lack of network?",
+   "question": "The voiceless-founder population \u2014 how many never surface for lack of network?",
    "state": "UNKNOWN",
    "cheapest_test": "\"Who do you know who wanted to start but didn't, and why?\"",
    "stake": "Measures the invisible demand"
@@ -203,42 +203,42 @@
   {
    "id": "D10",
    "category": "D",
-   "question": "Reputation vs. paid acquisition by category — which categories run on reputation, and do owners know their game?",
+   "question": "Reputation vs. paid acquisition by category \u2014 which categories run on reputation, and do owners know their game?",
    "state": "UNKNOWN",
-   "cheapest_test": "\"Where do your customers come from, honestly?\" — category by category",
+   "cheapest_test": "\"Where do your customers come from, honestly?\" \u2014 category by category",
    "stake": "Prevents selling funnels to reputation games"
   },
   {
    "id": "D11",
    "category": "D",
-   "question": "Rent-vs-presence split by segment — which merchant classes bind on demand (shutter-density retail) vs. presence (social sellers)?",
+   "question": "Rent-vs-presence split by segment \u2014 which merchant classes bind on demand (shutter-density retail) vs. presence (social sellers)?",
    "state": "UNKNOWN",
    "cheapest_test": "In the five conversations, stratify by channel; ask \"which bill scares you most?\" + \"what breaks with 10 new customers?\"",
-   "stake": "Decides whether Hami's wedge is demand or response-capacity, per segment — the wedge can't be one thing for both"
+   "stake": "Decides whether Hami's wedge is demand or response-capacity, per segment \u2014 the wedge can't be one thing for both"
   },
   {
    "id": "D12",
    "category": "D",
-   "question": "Reply-latency revenue leak on social commerce — how many inquiries die unanswered per week?",
+   "question": "Reply-latency revenue leak on social commerce \u2014 how many inquiries die unanswered per week?",
    "state": "UNKNOWN",
    "cheapest_test": "5 consenting sellers, 1 week of inquiry-vs-reply timestamp logging (Nepali-speaking human, pure observation); or 1 merchant's 7-day tally of calls/WhatsApps received vs answered vs converted",
-   "stake": "Decides \"find opportunities\" vs \"catch what you're already dropping\" — Kitab Kiro's own \"can't keep up\" points at the latter"
+   "stake": "Decides \"find opportunities\" vs \"catch what you're already dropping\" \u2014 Kitab Kiro's own \"can't keep up\" points at the latter"
   },
   {
    "id": "D13",
    "category": "D",
-   "question": "Where does the sale actually close — comment, DM, WhatsApp, or voice call?",
+   "question": "Where does the sale actually close \u2014 comment, DM, WhatsApp, or voice call?",
    "state": "UNKNOWN",
-   "cheapest_test": "In the five conversations: \"walk me through your last 5 sales, step by step — how did each one actually close?\"",
-   "stake": "If voice is the closer, any text assistant is a bridge not a destination — Hami hands off to calls, not replaces them"
+   "cheapest_test": "In the five conversations: \"walk me through your last 5 sales, step by step \u2014 how did each one actually close?\"",
+   "stake": "If voice is the closer, any text assistant is a bridge not a destination \u2014 Hami hands off to calls, not replaces them"
   },
   {
    "id": "D14",
    "category": "D",
-   "question": "What do informal merchants actually use to accept digital money — personal QR (illegal) or formalization just for payments?",
+   "question": "What do informal merchants actually use to accept digital money \u2014 personal QR (illegal) or formalization just for payments?",
    "state": "UNKNOWN",
-   "cheapest_test": "Sample public Nepali creator walkthroughs (\"पसलमा QR कसरी राख्ने\") + grievance portals for personal-QR-for-business mentions; observation only",
-   "stake": "Decides whether the pilot merchant persona is papered or unpapered — which determines whether any QR-based wedge is even legal for them"
+   "cheapest_test": "Sample public Nepali creator walkthroughs (\"\u092a\u0938\u0932\u092e\u093e QR \u0915\u0938\u0930\u0940 \u0930\u093e\u0916\u094d\u0928\u0947\") + grievance portals for personal-QR-for-business mentions; observation only",
+   "stake": "Decides whether the pilot merchant persona is papered or unpapered \u2014 which determines whether any QR-based wedge is even legal for them"
   },
   {
    "id": "D15",
@@ -246,7 +246,7 @@
    "question": "Sub-merchant/aggregator tier: is a legal informal-merchant tier coming (India's UPI P2PM equivalent), or is the paperwork wall structural?",
    "state": "UNKNOWN",
    "cheapest_test": "Read NRB Payment System Department unified directives for \"sub-merchant\"/\"agent aggregator\" language; track Fonepay/eSewa public roadmap (eSewa hints sub-merchant support coming)",
-   "stake": "Redraws Hami's entire merchant-addressable map — a legal tier bridges the wall without each kirana getting PAN"
+   "stake": "Redraws Hami's entire merchant-addressable map \u2014 a legal tier bridges the wall without each kirana getting PAN"
   },
   {
    "id": "D16",
@@ -254,20 +254,20 @@
    "question": "Is the E-Commerce Act 2025 pushing micro-sellers off formal surfaces onto informal ones?",
    "state": "UNKNOWN",
    "cheapest_test": "Quarterly: Daraz's claimed seller count (press/interviews) vs HamroBazaar active listing volume vs TikTok-seller caption density; watch for enforcement-action press",
-   "stake": "If formalization fragments the seller base toward informal surfaces, the wedge targets the informal surface — where the \"one real channel\" actually lives"
+   "stake": "If formalization fragments the seller base toward informal surfaces, the wedge targets the informal surface \u2014 where the \"one real channel\" actually lives"
   },
   {
    "id": "D17",
    "category": "D",
-   "question": "The price-withholding funnel — do Nepali sellers omit prices to force \"inbox\" comments, and does it convert?",
+   "question": "The price-withholding funnel \u2014 do Nepali sellers omit prices to force \"inbox\" comments, and does it convert?",
    "state": "UNKNOWN",
    "cheapest_test": "Manual audit of 50 posts across 10 seller pages (price present/absent, comment counts) + ask 3 sellers about conversion; no scraping, no accounts",
-   "stake": "If withholding is deliberate lead-capture, Hami \"helping\" via price transparency would fight the seller's own strategy — work with the funnel, not against it"
+   "stake": "If withholding is deliberate lead-capture, Hami \"helping\" via price transparency would fight the seller's own strategy \u2014 work with the funnel, not against it"
   },
   {
    "id": "D18",
    "category": "D",
-   "question": "Settlement delays: T+1 bank failures or wallet→bank transfer friction — and do they push merchants back to cash?",
+   "question": "Settlement delays: T+1 bank failures or wallet\u2192bank transfer friction \u2014 and do they push merchants back to cash?",
    "state": "UNKNOWN",
    "cheapest_test": "Cross-read NRB monthly payment indicators against delay reports; mine Fonepay Business/eSewa Play Store reviews for \"settlement\" complaints; one shopkeeper narrates one failure end-to-end",
    "stake": "If failures are behavioral, payment confirmation becomes first-class in Hami's evidence layer (receipt-level truth, not policy-level truth); if not, deprioritize entirely"
@@ -275,18 +275,18 @@
   {
    "id": "D19",
    "category": "D",
-   "question": "Fake-confirmation scams: how often do Kathmandu merchants get shown fake \"Success\" screens, and what is the coping check? (round 3: @thepaisamaster warns पसलहरू against the QR scam; cyber-fraud coverage lists fake QR/eSewa/Khalti screens as common cases)",
+   "question": "Fake-confirmation scams: how often do Kathmandu merchants get shown fake \"Success\" screens, and what is the coping check? (round 3: @thepaisamaster warns \u092a\u0938\u0932\u0939\u0930\u0942 against the QR scam; cyber-fraud coverage lists fake QR/eSewa/Khalti screens as common cases)",
    "state": "UNKNOWN",
    "cheapest_test": "In the five conversations: \"Has anyone ever shown you a fake payment screen? What do you check before handing over the goods?\"",
-   "stake": "If merchants need adversarial-proof receipt confirmation, Hami's EVIDENCE layer must treat \"paid\" as receipt-level truth on the merchant's own device — and any verification aid must survive a fake green tick"
+   "stake": "If merchants need adversarial-proof receipt confirmation, Hami's EVIDENCE layer must treat \"paid\" as receipt-level truth on the merchant's own device \u2014 and any verification aid must survive a fake green tick"
   },
   {
    "id": "D20",
    "category": "D",
    "question": "Multi-person counter: who at the shop checks QR payments, how do they share visibility without sharing credentials? (round 3: FoneBiz 2.73/5 from 1,917 ratings, 610k downloads; two named shop owners say the post-update single-session model broke their staff-checking workflow)",
    "state": "UNKNOWN",
-   "cheapest_test": "Ask: \"Who checks the phone when a QR payment comes in — and do they all use the same login?\"",
-   "stake": "The merchant persona isn't the owner alone; staff at the counter are presence-constrained workers too — changes who the verification feature is designed for"
+   "cheapest_test": "Ask: \"Who checks the phone when a QR payment comes in \u2014 and do they all use the same login?\"",
+   "stake": "The merchant persona isn't the owner alone; staff at the counter are presence-constrained workers too \u2014 changes who the verification feature is designed for"
   },
   {
    "id": "D21",
@@ -294,54 +294,54 @@
    "question": "Does the dominant merchant QR app's 2.73 rating push merchants toward cash or personal-QR workarounds?",
    "state": "UNKNOWN",
    "cheapest_test": "Ask: \"Which app do you actually use to confirm QR payments, and why?\" + track FoneBiz rating over quarters",
-   "stake": "If the formal rail is unusable at the counter, D14 (informal QR use) gets answered behaviorally — merchants vote with their devices"
+   "stake": "If the formal rail is unusable at the counter, D14 (informal QR use) gets answered behaviorally \u2014 merchants vote with their devices"
   },
   {
    "id": "D22",
    "category": "D",
-   "question": "What does a Kathmandu kirana actually net per month — cash taken home, not turnover? (round 4: TikTok business-for-sale listings give turnover+rent for ~6 shops: 10–30k/day, rents 12–32.5k/mo; Samriddhi study: ~5% net on 20 lakh/yr → ~8.3k/mo)",
+   "question": "What does a Kathmandu kirana actually net per month \u2014 cash taken home, not turnover? (round 4: TikTok business-for-sale listings give turnover+rent for ~6 shops: 10\u201330k/day, rents 12\u201332.5k/mo; Samriddhi study: ~5% net on 20 lakh/yr \u2192 ~8.3k/mo)",
    "state": "UNKNOWN",
-   "cheapest_test": "In the five conversations: \"After rent, stock, and the month's udharo that never came back — what lands in your pocket in a normal month?\"",
-   "stake": "Sizes the merchant's wallet — a kirana netting ~20k/mo cannot buy per-seat tools; any wedge value capture must be outcome-based and tiny, or monetize elsewhere"
+   "cheapest_test": "In the five conversations: \"After rent, stock, and the month's udharo that never came back \u2014 what lands in your pocket in a normal month?\"",
+   "stake": "Sizes the merchant's wallet \u2014 a kirana netting ~20k/mo cannot buy per-seat tools; any wedge value capture must be outcome-based and tiny, or monetize elsewhere"
   },
   {
    "id": "D23",
    "category": "D",
-   "question": "Does formal supply-side credit (Unilever Shikhar app / channel financing with banks) actually reach small independent kirana, or stop at papered dealers/distributors? (round 4: Unilever Nepal extends credit + training + channel financing; Samriddhi shop advised by landlord *not* to register)",
+   "question": "Does formal supply-side credit (Unilever Shikhar app / channel financing with banks) actually reach small independent kirana, or stop at papered dealers/distributors? (round 4: Unilever Nepal extends credit + training + channel financing; Samriddhi shop advised by landlord not to register)",
    "state": "UNKNOWN",
    "cheapest_test": "Ask distributors' route salesmen (observation) + ask 3 papered vs 3 unpapered shops: \"Do you get stock on credit from your supplier? From whom, on what terms?\"",
-   "stake": "If formal channel credit stops at the paperwork wall, D14's papered/unpapered persona split is confirmed on the supply side too — cash-for-stock is the norm for the informal majority"
+   "stake": "If formal channel credit stops at the paperwork wall, D14's papered/unpapered persona split is confirmed on the supply side too \u2014 cash-for-stock is the norm for the informal majority"
   },
   {
    "id": "D24",
    "category": "D",
-   "question": "Udharo out vs. udharo in — do shops that extend customer credit also get stock credit from suppliers, and which side breaks first? (round 4: Chamber of Commerce drafted a Commercial Credit Recovery Bill — recovery committees, fast-track courts, bad-debt tax deduction; @pasal.sathi: \"the day you ask for the money, the relationship changes\")",
+   "question": "Udharo out vs. udharo in \u2014 do shops that extend customer credit also get stock credit from suppliers, and which side breaks first? (round 4: Chamber of Commerce drafted a Commercial Credit Recovery Bill \u2014 recovery committees, fast-track courts, bad-debt tax deduction; @pasal.sathi: \"the day you ask for the money, the relationship changes\")",
    "state": "UNKNOWN",
-   "cheapest_test": "In the five conversations: \"Who owes you money right now? And who do you owe?\" — map both ledgers",
-   "stake": "If the shop is squeezed on both sides (trust-based udharo out, cash-only stock in), the binding constraint is cash float — not presence, not demand"
+   "cheapest_test": "In the five conversations: \"Who owes you money right now? And who do you owe?\" \u2014 map both ledgers",
+   "stake": "If the shop is squeezed on both sides (trust-based udharo out, cash-only stock in), the binding constraint is cash float \u2014 not presence, not demand"
   },
   {
    "id": "D25",
    "category": "D",
-   "question": "Did Nepal's own ledger apps (\"मेरो कारोबार\", Mero Karobar — Nepali-language khata app, 2020, Gotagaun/Morang, offline+online, NPR 1–2k/yr) survive/scale?",
+   "question": "Did Nepal's own ledger apps (\"\u092e\u0947\u0930\u094b \u0915\u093e\u0930\u094b\u092c\u093e\u0930\", Mero Karobar \u2014 Nepali-language khata app, 2020, Gotagaun/Morang, offline+online, NPR 1\u20132k/yr) survive/scale?",
    "state": "SUPPORTED",
    "cheapest_test": "Done 2026-10-04: androidrank Play data + New Business Age + BRAC report",
-   "stake": "Don't rebuild it — the udharo-ledger corner is taken by a profitable 35-person Nepali company. Its feature list (record/inventory/invoice) defines the open wedge: money-trust and response-capacity."
+   "stake": "Don't rebuild it \u2014 the udharo-ledger corner is taken by a profitable 35-person Nepali company. Its feature list (record/inventory/invoice) defines the open wedge: money-trust and response-capacity."
   },
   {
    "id": "D31",
    "category": "D",
-   "question": "What is Karobar's actual paying-user conversion and ARPU? (founder claims 300k Nepal + 50k Bangladesh downloads, >Rs 10M/yr revenue; launch pricing Rs 1,000/6mo, Rs 2,000/yr — current pricing unverified)",
+   "question": "What is Karobar's actual paying-user conversion and ARPU? (founder claims 300k Nepal + 50k Bangladesh downloads, >Rs 10M/yr revenue; launch pricing Rs 1,000/6mo, Rs 2,000/yr \u2014 current pricing unverified)",
    "state": "UNKNOWN",
    "cheapest_test": "Play Store current pricing tiers + subscription upsell flow; ask 3 paying users what plan they're on",
-   "stake": "Sizes the real price ceiling for Nepali merchant software — the first proven in-market number"
+   "stake": "Sizes the real price ceiling for Nepali merchant software \u2014 the first proven in-market number"
   },
   {
    "id": "D32",
    "category": "D",
-   "question": "What does Karobar still NOT do that merchants need? (feature list: bookkeeping, inventory, invoicing, payment reminders, multi-staff — no payment rail, no receipt verification, no inquiry handling, no demand)",
+   "question": "What does Karobar still NOT do that merchants need? (feature list: bookkeeping, inventory, invoicing, payment reminders, multi-staff \u2014 no payment rail, no receipt verification, no inquiry handling, no demand)",
    "state": "UNKNOWN",
-   "cheapest_test": "In the five conversations: ask Karobar users \"what do you still do outside the app?\" — especially the payment-verification moment (D19) and reply-latency handling (D12)",
+   "cheapest_test": "In the five conversations: ask Karobar users \"what do you still do outside the app?\" \u2014 especially the payment-verification moment (D19) and reply-latency handling (D12)",
    "stake": "The ledger's blind spots are the candidate wedge; confirm them in real voices before building near them"
   },
   {
@@ -355,18 +355,18 @@
   {
    "id": "D34",
    "category": "D",
-   "question": "Why did the free Indian khata giants fail to monetize while Karobar charges from day one? (Khatabook: $186.5M raised, 50M+ downloads, FY25 revenue only ₹1.4 Cr, no funding since 2021; Karobar: Rs 10M+/yr, no reported external funding)",
+   "question": "Why did the free Indian khata giants fail to monetize while Karobar charges from day one? (Khatabook: $186.5M raised, 50M+ downloads, FY25 revenue only \u20b91.4 Cr, no funding since 2021; Karobar: Rs 10M+/yr, no reported external funding)",
    "state": "HYPOTHESIZED",
-   "cheapest_test": "Compare churn/retention signals across the apps' review histories; read Khatabook's FY23–FY25 filings if public",
-   "stake": "Tests whether \"small, paid, local\" beats \"big, free, foreign\" in merchant software — a pricing thesis for Hami's own first rupee"
+   "cheapest_test": "Compare churn/retention signals across the apps' review histories; read Khatabook's FY23\u2013FY25 filings if public",
+   "stake": "Tests whether \"small, paid, local\" beats \"big, free, foreign\" in merchant software \u2014 a pricing thesis for Hami's own first rupee"
   },
   {
    "id": "D26",
    "category": "D",
-   "question": "How liquid is the kirana resale market, and do sellers exit on economics (thin margins) or time (busyness)? (round 4: one Chabahil listing explicitly says selling \"व्यस्तताको कारणले\" — because of busyness)",
+   "question": "How liquid is the kirana resale market, and do sellers exit on economics (thin margins) or time (busyness)? (round 4: one Chabahil listing explicitly says selling \"\u0935\u094d\u092f\u0938\u094d\u0924\u0924\u093e\u0915\u094b \u0915\u093e\u0930\u0923\u0932\u0947\" \u2014 because of busyness)",
    "state": "UNKNOWN",
    "cheapest_test": "Track sewamandufree listings over quarters (asking price vs. daily sales ratios, time-to-sold) + ask 2 sellers why they sold",
-   "stake": "If exit is time-driven, it corroborates D2 (presence binds) from the *seller* side — the shop itself is worth more to a new pair of hands than to the owner"
+   "stake": "If exit is time-driven, it corroborates D2 (presence binds) from the seller side \u2014 the shop itself is worth more to a new pair of hands than to the owner"
   },
   {
    "id": "D27",
@@ -374,7 +374,7 @@
    "question": "The repair-trade survival paradox: is the \"20% net, 80% close within 2 years\" claim real on the ground, and is cash-flow (rent + parts stock) the actual killer? (round 5: Kathmandu repair-training institute page; highest-margin trade studied, least survivable)",
    "state": "UNKNOWN",
    "cheapest_test": "In the five conversations, include 2 repair-bench owners; ask \"what killed the shop that was here before you?\" + observe shutter lineage in one repair lane",
-   "stake": "If margin ≠ survival holds, the wedge can't be margin-based pricing at all — outcome/cash-flow framing only"
+   "stake": "If margin \u2260 survival holds, the wedge can't be margin-based pricing at all \u2014 outcome/cash-flow framing only"
   },
   {
    "id": "D28",
@@ -387,17 +387,17 @@
   {
    "id": "D29",
    "category": "D",
-   "question": "Hands-bound skill monopoly: can repair-bench owners delegate the actual repair, or is the trade strictly one body? (round 5: Dadeldhura owner replies to a \"hire a helper\" comment that he *is* the helper)",
+   "question": "Hands-bound skill monopoly: can repair-bench owners delegate the actual repair, or is the trade strictly one body? (round 5: Dadeldhura owner replies to a \"hire a helper\" comment that he is the helper)",
    "state": "UNKNOWN",
    "cheapest_test": "Ask repair owners: \"who else in this lane can do what you do, and what would you pay them?\" + ask \"what happens to the shop the week you're sick?\"",
-   "stake": "Strictest possible D2: if the repair cannot be delegated, any capacity tool must amplify the owner's own hands — not redistribute work"
+   "stake": "Strictest possible D2: if the repair cannot be delegated, any capacity tool must amplify the owner's own hands \u2014 not redistribute work"
   },
   {
    "id": "D30",
    "category": "D",
-   "question": "Hands-bound trust: how do customers pick a repair shop (recommendation vs. proximity), and what does the shop do to be worthy of an unlocked device? (round 5: repair promos on FB center on \"विश्वास, गुणस्तर र सेवा\" — trust, quality, service)",
+   "question": "Hands-bound trust: how do customers pick a repair shop (recommendation vs. proximity), and what does the shop do to be worthy of an unlocked device? (round 5: repair promos on FB center on \"\u0935\u093f\u0936\u094d\u0935\u093e\u0938, \u0917\u0941\u0923\u0938\u094d\u0924\u0930 \u0930 \u0938\u0947\u0935\u093e\" \u2014 trust, quality, service)",
    "state": "UNKNOWN",
-   "cheapest_test": "In the five conversations: \"when you handed a stranger your broken phone, why that shop?\" — from both sides of the counter if possible",
+   "cheapest_test": "In the five conversations: \"when you handed a stranger your broken phone, why that shop?\" \u2014 from both sides of the counter if possible",
    "stake": "If choice is trust-traced (D3 family), the RELATION primitive gets a concrete first use-case: trust-graph traversal for the bench"
   },
   {
@@ -406,15 +406,15 @@
    "question": "Did the Patan High Court-ordered ride-sharing regulation ever get written? (round 7: 2019 court ordered government to regulate Tootle/Pathao; 2020 DoTM notices still cited the 1993 Act)",
    "state": "UNKNOWN",
    "cheapest_test": "Read the current Motor Vehicles and Transport Management Act / ride-sharing guidelines (if any exist) as of 2026; check whether Pathao/InDrive operate under a specific license or continued gray area",
-   "stake": "If the regulation never materialized, the \"regulatory space\" Tootle fought for was vapor — pioneers can win the court order and still lose the market"
+   "stake": "If the regulation never materialized, the \"regulatory space\" Tootle fought for was vapor \u2014 pioneers can win the court order and still lose the market"
   },
   {
    "id": "D36",
    "category": "D",
-   "question": "What did Tootle's end actually cost — the Rs 34M tax demand, the bans, the founder dispute — and did any investor capital return?",
+   "question": "What did Tootle's end actually cost \u2014 the Rs 34M tax demand, the bans, the founder dispute \u2014 and did any investor capital return?",
    "state": "UNKNOWN",
    "cheapest_test": "Court/filing records if accessible; Bhatta or Zapp-side accounts; watch the criminal case outcome",
-   "stake": "Names the real tail risk for Nepali startups: cap-table disputes can become criminal cases — Hami's own founder/partner agreements need this priced in"
+   "stake": "Names the real tail risk for Nepali startups: cap-table disputes can become criminal cases \u2014 Hami's own founder/partner agreements need this priced in"
   },
   {
    "id": "D37",
@@ -427,74 +427,74 @@
   {
    "id": "D38",
    "category": "D",
-   "question": "Is Tootle's double-bind — declared illegal by one agency, taxed by another, defined by neither — a general Nepali pattern?",
+   "question": "Is Tootle's double-bind \u2014 declared illegal by one agency, taxed by another, defined by neither \u2014 a general Nepali pattern?",
    "state": "UNKNOWN",
    "cheapest_test": "Survey other Nepali startups/founders' accounts for \"taxed but not legalized\" cases (e.g., early eSewa/Khalti years, social-commerce sellers under the E-Commerce Act)",
-   "stake": "If structural, Hami's risk ledger must treat \"operating in an undefined category\" as simultaneously a tax exposure and an illegality exposure — not one or the other"
+   "stake": "If structural, Hami's risk ledger must treat \"operating in an undefined category\" as simultaneously a tax exposure and an illegality exposure \u2014 not one or the other"
   },
   {
    "id": "D39",
    "category": "D",
-   "question": "How do merchants finance the Dashain stock-up — supplier credit, savings, or borrowing — and what happens to unsold festival stock when a shock kills the season? (round 8: 2026's Gen-Z-protest shock cut Dashain sales 40–45% vs last year; merchants pre-commit cash to inventory months ahead; ~30–35% of annual consumption in ~2 months)",
+   "question": "How do merchants finance the Dashain stock-up \u2014 supplier credit, savings, or borrowing \u2014 and what happens to unsold festival stock when a shock kills the season? (round 8: 2026's Gen-Z-protest shock cut Dashain sales 40\u201345% vs last year; merchants pre-commit cash to inventory months ahead; ~30\u201335% of annual consumption in ~2 months)",
    "state": "UNKNOWN",
-   "cheapest_test": "In the five conversations: \"What did you buy for Dashain in advance, and if the customers don't come, who eats that stock?\" — plus ask wholesalers about post-season return terms",
+   "cheapest_test": "In the five conversations: \"What did you buy for Dashain in advance, and if the customers don't come, who eats that stock?\" \u2014 plus ask wholesalers about post-season return terms",
    "stake": "Reveals the merchant's real annual risk posture: pre-commitment + concentrated exposure is the business model, and no round has asked who absorbs the miss"
   },
   {
    "id": "D40",
    "category": "D",
-   "question": "Does the Dashain cash pulse (NRB: ~Rs 76B leaves banks; cash circulation 6.20T → 6.96T) displace QR/digital payments at the counter — is festival season the worst quarter for digital payment adoption at the merchant counter?",
+   "question": "Does the Dashain cash pulse (NRB: ~Rs 76B leaves banks; cash circulation 6.20T \u2192 6.96T) displace QR/digital payments at the counter \u2014 is festival season the worst quarter for digital payment adoption at the merchant counter?",
    "state": "UNKNOWN",
-   "cheapest_test": "Cross-read NRB monthly digital-payment indicators for the Dashain months (Asoj–Kartik) vs. adjacent months, 3+ years",
+   "cheapest_test": "Cross-read NRB monthly digital-payment indicators for the Dashain months (Asoj\u2013Kartik) vs. adjacent months, 3+ years",
    "stake": "If the cash flood reverses digitalization seasonally, a QR-based wedge must be designed to survive (and not depend on) the annual cash deluge"
   },
   {
    "id": "D41",
    "category": "D",
-   "question": "Who bears unsold-stock risk in the wholesale-retail chain when a season fails — the retailer or the distributor? (round 8: Himalayan crossings — Rasuwagadhi halted, Tatopani shut, Korala clearing 2–3 cargo vehicles/day — strand festival inventory upstream)",
+   "question": "Who bears unsold-stock risk in the wholesale-retail chain when a season fails \u2014 the retailer or the distributor? (round 8: Himalayan crossings \u2014 Rasuwagadhi halted, Tatopani shut, Korala clearing 2\u20133 cargo vehicles/day \u2014 strand festival inventory upstream)",
    "state": "UNKNOWN",
-   "cheapest_test": "Ask 3 retailers + 2 wholesalers: \"After a bad Dashain, what happens to the stock that didn't move — returns, discounts, or your loss?\"",
-   "stake": "Determines whether the retailer truly pre-commits capital or has an implicit option — changes the economics of any demand-creation wedge"
+   "cheapest_test": "Ask 3 retailers + 2 wholesalers: \"After a bad Dashain, what happens to the stock that didn't move \u2014 returns, discounts, or your loss?\"",
+   "stake": "Determines whether the retailer truly pre-commits capital or has an implicit option \u2014 changes the economics of any demand-creation wedge"
   },
   {
    "id": "D42",
    "category": "D",
-   "question": "Is the dhukuti (rotating savings circle) still the household's festival-credit rail, or have bank loans and digital credit displaced it? (round 8: kharchapatra Sept 2026 prices a Rs 1 lakh Dashain borrow across loan vs credit card vs dhukuti; Labour Act 2074 Sec 37 festival bonus is one month's basic salary — small vs festival spend)",
+   "question": "Is the dhukuti (rotating savings circle) still the household's festival-credit rail, or have bank loans and digital credit displaced it? (round 8: kharchapatra Sept 2026 prices a Rs 1 lakh Dashain borrow across loan vs credit card vs dhukuti; Labour Act 2074 Sec 37 festival bonus is one month's basic salary \u2014 small vs festival spend)",
    "state": "UNKNOWN",
    "cheapest_test": "Ask owners directly: \"When Dashain costs more than the bonus, where does the extra come from?\" + watch for dhukuti mentions in Nepali press/creator content",
-   "stake": "Maps the fourth credit layer (under udharo-out / supplier-credit / bank-microfinance) — the household's own rotating savings — and whether formalization is reaching it"
+   "stake": "Maps the fourth credit layer (under udharo-out / supplier-credit / bank-microfinance) \u2014 the household's own rotating savings \u2014 and whether formalization is reaching it"
   },
   {
    "id": "D43",
    "category": "D",
-   "question": "Do unpapered merchants actually borrow from savings-and-credit cooperatives for stock, and at what terms in practice? (round 9: co-ops lend Rs 5–30k for \"starting small shop\" per Sirjana Women SACC, microenterprise Rs 150–300k / SME Rs 200–500k at 16% per Sampanna, Kathmandu slum SACCs charging 18% at 100% recovery; membership-by-share-capital substitutes for bank paperwork)",
+   "question": "Do unpapered merchants actually borrow from savings-and-credit cooperatives for stock, and at what terms in practice? (round 9: co-ops lend Rs 5\u201330k for \"starting small shop\" per Sirjana Women SACC, microenterprise Rs 150\u2013300k / SME Rs 200\u2013500k at 16% per Sampanna, Kathmandu slum SACCs charging 18% at 100% recovery; membership-by-share-capital substitutes for bank paperwork)",
    "state": "UNKNOWN",
-   "cheapest_test": "In the five conversations: \"When the shop needs money for stock, do you go to the bank, the सहकारी, or someone's door?\"",
-   "stake": "Determines whether the cooperative is the merchant persona's real financial institution — which decides whether Hami's finance wedge lives above or outside the sahakari"
+   "cheapest_test": "In the five conversations: \"When the shop needs money for stock, do you go to the bank, the \u0938\u0939\u0915\u093e\u0930\u0940, or someone's door?\"",
+   "stake": "Determines whether the cooperative is the merchant persona's real financial institution \u2014 which decides whether Hami's finance wedge lives above or outside the sahakari"
   },
   {
    "id": "D44",
    "category": "D",
-   "question": "Did the cooperative fraud wave (parliamentary probe 2024: ~Rs 87.89B across 40+ co-ops; ~76,000 depositors owed ~Rs 46B) push merchants back to cash-hoarding/dhukuti or into banks — and what replaces the सहकारी as the merchant float?",
+   "question": "Did the cooperative fraud wave (parliamentary probe 2024: ~Rs 87.89B across 40+ co-ops; ~76,000 depositors owed ~Rs 46B) push merchants back to cash-hoarding/dhukuti or into banks \u2014 and what replaces the \u0938\u0939\u0915\u093e\u0930\u0940 as the merchant float?",
    "state": "UNKNOWN",
    "cheapest_test": "In the five conversations: \"After the co-op scandals, where do you keep the savings now?\" + watch for co-op mentions in owner-voice content",
-   "stake": "If the fraud burned the paperless segment's money-home, merchant finance is in a gap moment — trust in *institutions* is the unknown, not just trust in tools"
+   "stake": "If the fraud burned the paperless segment's money-home, merchant finance is in a gap moment \u2014 trust in institutions is the unknown, not just trust in tools"
   },
   {
    "id": "D45",
    "category": "D",
-   "question": "Will NRB's new cooperative directive (Jan 2026 draft: deposits ≤15x primary capital, per-member caps Rs 1M/2.5M/5M, source-of-funds disclosure >Rs 1M) shrink credit availability for small merchants, or only discipline the fraud-prone large co-ops?",
+   "question": "Will NRB's new cooperative directive (Jan 2026 draft: deposits \u226415x primary capital, per-member caps Rs 1M/2.5M/5M, source-of-funds disclosure >Rs 1M) shrink credit availability for small merchants, or only discipline the fraud-prone large co-ops?",
    "state": "UNKNOWN",
    "cheapest_test": "Track NCRA registration compliance (only 18,899 of 32,965 co-ops in COPOMIS; S&C co-ops \"reluctant to register\" per aarthiknews Feb 2026) + ask co-op managers if lending terms tightened",
-   "stake": "Decides whether the formalizing-of-trust (N4) closes the easy-loan door for the very merchants who need it — the wedge can't assume the sahakari stays as it was"
+   "stake": "Decides whether the formalizing-of-trust (N4) closes the easy-loan door for the very merchants who need it \u2014 the wedge can't assume the sahakari stays as it was"
   },
   {
    "id": "D46",
    "category": "D",
-   "question": "What share of Nepal's ~30,000+ registered cooperatives are active and compliant vs. shells/ghosts — and how can a merchant tell the difference? (round 9: huge registration count, low COPOMIS integration, fake audits found in the fraud probe)",
+   "question": "What share of Nepal's ~30,000+ registered cooperatives are active and compliant vs. shells/ghosts \u2014 and how can a merchant tell the difference? (round 9: huge registration count, low COPOMIS integration, fake audits found in the fraud probe)",
    "state": "UNKNOWN",
-   "cheapest_test": "Watch NCRA enforcement reports for de-registration counts; ask owners: \"do you know if your सहकारी is registered with the new authority?\"",
-   "stake": "If the sector is padded with shells, \"member-based\" stops meaning safe — and any Hami interaction with cooperative infrastructure needs a legitimacy check first"
+   "cheapest_test": "Watch NCRA enforcement reports for de-registration counts; ask owners: \"do you know if your \u0938\u0939\u0915\u093e\u0930\u0940 is registered with the new authority?\"",
+   "stake": "If the sector is padded with shells, \"member-based\" stops meaning safe \u2014 and any Hami interaction with cooperative infrastructure needs a legitimacy check first"
   },
   {
    "id": "D47",
@@ -507,7 +507,7 @@
   {
    "id": "D48",
    "category": "D",
-   "question": "What share of Daraz Nepal sellers are profitable vs. running the platform for inventory movement/cash flow? (round 10: 2026 seller analysis claims stacked platform fees — commission, returns, failed-delivery, vouchers, SLA penalties — can exceed the seller's own product margin)",
+   "question": "What share of Daraz Nepal sellers are profitable vs. running the platform for inventory movement/cash flow? (round 10: 2026 seller analysis claims stacked platform fees \u2014 commission, returns, failed-delivery, vouchers, SLA penalties \u2014 can exceed the seller's own product margin)",
    "state": "UNKNOWN",
    "cheapest_test": "Ask 5 sellers for one product's unit economics; cross-read seller complaints",
    "stake": "If sellers are a churning conveyor rather than a stable base, any marketplace-dependent wedge is built on sand"
@@ -515,10 +515,10 @@
   {
    "id": "D49",
    "category": "D",
-   "question": "Gyapu under BG Holdings — alive, parked, or wound down? Does a zero-commission promise survive a conglomerate acquisition? (round 10: acquired Oct 2022 at ~700 orders/day, 3,500 vendors, zero commission + free Valley delivery; founder exited; now quiet)",
+   "question": "Gyapu under BG Holdings \u2014 alive, parked, or wound down? Does a zero-commission promise survive a conglomerate acquisition? (round 10: acquired Oct 2022 at ~700 orders/day, 3,500 vendors, zero commission + free Valley delivery; founder exited; now quiet)",
    "state": "UNKNOWN",
    "cheapest_test": "Check gyapu.com live; vendor-listing freshness",
-   "stake": "Tests whether the \"honest brokerage\" playbook is even acquirable in Nepal — or whether every buyer kills it"
+   "stake": "Tests whether the \"honest brokerage\" playbook is even acquirable in Nepal \u2014 or whether every buyer kills it"
   },
   {
    "id": "D50",
@@ -526,71 +526,71 @@
    "question": "Does the Sept 2026 skill-development-fee procedure (monthly statements even with zero transactions, stamped challans for gold movement, PAN'd craftsmen, customer ID + proof-of-purchase on old-gold buys) push small jewelers toward consolidation or toward non-invoiced dealing? (round 11)",
    "state": "UNKNOWN",
    "cheapest_test": "Watch Fenegosida reports for member closures; ask 3 small jewelers: \"do you invoice every sale?\"",
-   "stake": "The formalization wave (N2) is live at the highest-value counter — whether paperwork grows the formal sector or the shadow one is the D15/D46 question answered in real time"
+   "stake": "The formalization wave (N2) is live at the highest-value counter \u2014 whether paperwork grows the formal sector or the shadow one is the D15/D46 question answered in real time"
   },
   {
    "id": "D51",
    "category": "D",
-   "question": "Buyback economics of the two-way counter: what margin does a sunchaandi shop make on new sales vs. the old-gold buyback spread? Is the pawn function the actual profit engine, not the sale? (round 11: \"buy when they have money, sell when they need cash — generations\")",
+   "question": "Buyback economics of the two-way counter: what margin does a sunchaandi shop make on new sales vs. the old-gold buyback spread? Is the pawn function the actual profit engine, not the sale? (round 11: \"buy when they have money, sell when they need cash \u2014 generations\")",
    "state": "UNKNOWN",
-   "cheapest_test": "In the five conversations, include 1 jeweler; ask: \"which side of the counter pays the rent — the selling or the buying?\"",
-   "stake": "If the buyback spread is the engine, the shop is a liquidity provider first and a retailer second — a different business than its storefront suggests"
+   "cheapest_test": "In the five conversations, include 1 jeweler; ask: \"which side of the counter pays the rent \u2014 the selling or the buying?\"",
+   "stake": "If the buyback spread is the engine, the shop is a liquidity provider first and a retailer second \u2014 a different business than its storefront suggests"
   },
   {
    "id": "D52",
    "category": "D",
    "question": "What share of a small jeweler's raw material arrives through unofficial channels, and how does it interact with the new paper-trail regime? (round 11: former Fenegosida head admits \"partial demand is met by such illegally trafficked gold\"; customs loses Rs 520,000/kilo; ~15 kg/day official import limit)",
    "state": "UNKNOWN",
-   "cheapest_test": "Ask jewelers where they source; impossible to verify directly — triangulate via seizure frequency vs. declared import volumes",
-   "stake": "The state's demand for counter-level paperwork (D50) meets an upstream the jeweler cannot document — the compliance gap is structural, not behavioral"
+   "cheapest_test": "Ask jewelers where they source; impossible to verify directly \u2014 triangulate via seizure frequency vs. declared import volumes",
+   "stake": "The state's demand for counter-level paperwork (D50) meets an upstream the jeweler cannot document \u2014 the compliance gap is structural, not behavioral"
   },
   {
    "id": "D53",
    "category": "D",
-   "question": "Is organized retail actually displacing family sunchaandi shops in the Valley, or is the \"consolidation\" narrative ahead of reality? (round 11: indexbox 2026 claims hallmarking/AML costs are \"accelerating consolidation\"; branded showrooms take 15–35% markups with buyback guarantees — productizing the informal counter's trust assets)",
+   "question": "Is organized retail actually displacing family sunchaandi shops in the Valley, or is the \"consolidation\" narrative ahead of reality? (round 11: indexbox 2026 claims hallmarking/AML costs are \"accelerating consolidation\"; branded showrooms take 15\u201335% markups with buyback guarantees \u2014 productizing the informal counter's trust assets)",
    "state": "UNKNOWN",
    "cheapest_test": "Shutter counts on a jewelry lane over 2 years; ask 3 family jewelers if a branded showroom opened near them and what changed",
-   "stake": "Decides whether the family shop's moat (community trust, thin margins) holds against certified-purity + guaranteed-buyback — or whether trust-as-a-product wins"
+   "stake": "Decides whether the family shop's moat (community trust, thin margins) holds against certified-purity + guaranteed-buyback \u2014 or whether trust-as-a-product wins"
   },
   {
    "id": "D54",
    "category": "D",
-   "question": "Does the >80% Indian-karigar labor dependence give goldsmiths bargaining power at festival peaks, and what happens to small shops if the flow shifts? (round 11: 2015 quake precedent — 75% fled, shops couldn't make jewelry)",
+   "question": "Does the >80% Indian-karigar labor dependence give goldsmiths bargaining power at festival peaks, and what happens to small shops if the flow shifts? (round 11: 2015 quake precedent \u2014 75% fled, shops couldn't make jewelry)",
    "state": "UNKNOWN",
    "cheapest_test": "Ask 2 jewelers: \"who makes your pieces, and what happens when they're not here?\" + watch for karigar wage mentions in trade press",
-   "stake": "The making capacity of the whole trade sits in another country's citizens — a labor-supply single point of failure no round had named"
+   "stake": "The making capacity of the whole trade sits in another country's citizens \u2014 a labor-supply single point of failure no round had named"
   },
   {
    "id": "D55",
    "category": "D",
-   "question": "What share of a counter's net margin does rent actually consume, across trades? (round 12: kirana ~4% of turnover, clothing ~4.6%; with 5–10% net margins ⇒ roughly half the net margin; needs real ledgers, not asks)",
+   "question": "What share of a counter's net margin does rent actually consume, across trades? (round 12: kirana ~4% of turnover, clothing ~4.6%; with 5\u201310% net margins \u21d2 roughly half the net margin; needs real ledgers, not asks)",
    "state": "UNKNOWN",
-   "cheapest_test": "In the five conversations: \"When the month ends and the till is short, who gets paid first — the landlord, the supplier, or the bank?\"",
-   "stake": "If rent ≈ half the net margin, the landlord is the counter's largest single cost of *existence* — and Hami's \"thin wallet\" persona thesis gets a concrete ceiling"
+   "cheapest_test": "In the five conversations: \"When the month ends and the till is short, who gets paid first \u2014 the landlord, the supplier, or the bank?\"",
+   "stake": "If rent \u2248 half the net margin, the landlord is the counter's largest single cost of existence \u2014 and Hami's \"thin wallet\" persona thesis gets a concrete ceiling"
   },
   {
    "id": "D56",
    "category": "D",
-   "question": "Is advance rent (अग्रिम भाडा) a de facto entry fee — and is it ever returned? (round 12: lease samples show quarterly-in-advance + 3 months at signing; tenants borrow to pay it)",
+   "question": "Is advance rent (\u0905\u0917\u094d\u0930\u093f\u092e \u092d\u093e\u0921\u093e) a de facto entry fee \u2014 and is it ever returned? (round 12: lease samples show quarterly-in-advance + 3 months at signing; tenants borrow to pay it)",
    "state": "UNKNOWN",
    "cheapest_test": "Ask 3 tenants: \"how much advance did you pay, and when you left, what came back?\" + check Civil Code deposit rules in practice",
-   "stake": "Advance rent is the merchant's first loan — to the landlord. The scale of the entry cost decides how high the failure threshold is"
+   "stake": "Advance rent is the merchant's first loan \u2014 to the landlord. The scale of the entry cost decides how high the failure threshold is"
   },
   {
    "id": "D57",
    "category": "D",
-   "question": "Is the shutter-churn re-pricing cycle measurable — do re-let rents actually exceed the failed tenant's rent? (round 12: onlinepana Sept 2026 reports the freed shutter is re-let \"at a higher price\")",
+   "question": "Is the shutter-churn re-pricing cycle measurable \u2014 do re-let rents actually exceed the failed tenant's rent? (round 12: onlinepana Sept 2026 reports the freed shutter is re-let \"at a higher price\")",
    "state": "UNKNOWN",
    "cheapest_test": "Two-point asks on a shutter lane: current ask vs. previous tenant's rent (via brokers/associations)",
-   "stake": "If every vacancy is an upward repricing, the shutter market has a built-in ratchet that selects for failure — a structural filter no round had named"
+   "stake": "If every vacancy is an upward repricing, the shutter market has a built-in ratchet that selects for failure \u2014 a structural filter no round had named"
   },
   {
    "id": "D58",
    "category": "D",
-   "question": "What share of shutter closures convert to foreign migration vs. reopening elsewhere? (round 12: 2023 Baneshwor snapshot — 25–30% closures, ~50% of those migrated; needs a 2026 refresh)",
+   "question": "What share of shutter closures convert to foreign migration vs. reopening elsewhere? (round 12: 2023 Baneshwor snapshot \u2014 25\u201330% closures, ~50% of those migrated; needs a 2026 refresh)",
    "state": "UNKNOWN",
    "cheapest_test": "Manpower-agency intake data + association closure counts; ask: \"when the shop closed, where did you go?\"",
-   "stake": "The conveyor shutter→migration→remittance→next shop closes the loop between the landlord economy, the manpower economy, and round 8's remittance-funded demand"
+   "stake": "The conveyor shutter\u2192migration\u2192remittance\u2192next shop closes the loop between the landlord economy, the manpower economy, and round 8's remittance-funded demand"
   },
   {
    "id": "D59",
@@ -598,31 +598,31 @@
    "question": "Does KMC's mandatory rental-property registration (FY 2083/84) and 10% commercial rent tax get passed through to tenants? (round 12: the landlord is being papered now, decades after the tenant)",
    "state": "UNKNOWN",
    "cheapest_test": "Watch KMC rental registration uptake + ask landlords if rent moved after registration",
-   "stake": "The formalization wave meets the other side of the counter — whether paperwork lands on the tenant decides if round 2's wall is about to get a second floor"
+   "stake": "The formalization wave meets the other side of the counter \u2014 whether paperwork lands on the tenant decides if round 2's wall is about to get a second floor"
   },
   {
    "id": "D60",
    "category": "D",
-   "question": "What is the actual COD remittance window across Nepali couriers — claimed (Pathao 48h, Hello Service same-day by 22:15) vs. actual — and do sellers price the float? (round 13: the courier is the payment path; shipped-but-unpaid is the normal state)",
+   "question": "What is the actual COD remittance window across Nepali couriers \u2014 claimed (Pathao 48h, Hello Service same-day by 22:15) vs. actual \u2014 and do sellers price the float? (round 13: the courier is the payment path; shipped-but-unpaid is the normal state)",
    "state": "UNKNOWN",
    "cheapest_test": "Ask 5 online sellers: \"how many days from delivery to money in hand, and does it vary by courier?\"",
-   "stake": "Names the real T+ of Nepali online commerce — the cash-float (D24) in its online shape"
+   "stake": "Names the real T+ of Nepali online commerce \u2014 the cash-float (D24) in its online shape"
   },
   {
    "id": "D61",
    "category": "D",
-   "question": "What share of COD orders end in refusal/RTO, and who absorbs the double freight? (round 13: seller meme \"COD = Cancel on Delivery\"; fake COD orders; door refusal when photo ≠ reality)",
+   "question": "What share of COD orders end in refusal/RTO, and who absorbs the double freight? (round 13: seller meme \"COD = Cancel on Delivery\"; fake COD orders; door refusal when photo \u2260 reality)",
    "state": "UNKNOWN",
    "cheapest_test": "Ask 3 courier companies for RTO rates; ask sellers: \"of 100 COD orders, how many come back, and what did the round trip cost you?\"",
-   "stake": "Refused-at-door is a failed *payment*, not a failed delivery — if the refusal rate is high, COD commerce is a lower-margin game than order counts suggest"
+   "stake": "Refused-at-door is a failed payment, not a failed delivery \u2014 if the refusal rate is high, COD commerce is a lower-margin game than order counts suggest"
   },
   {
    "id": "D62",
    "category": "D",
-   "question": "Does same-day COD settlement hold outside the Valley — does rural COD cash ever reliably reach the seller? (round 13: competing couriers promise auto settlement; rural digital penetration is low per NCN Delivery)",
+   "question": "Does same-day COD settlement hold outside the Valley \u2014 does rural COD cash ever reliably reach the seller? (round 13: competing couriers promise auto settlement; rural digital penetration is low per NCN Delivery)",
    "state": "UNKNOWN",
    "cheapest_test": "Compare one Kathmandu seller vs. one Terai/hill seller on remittance timing; watch for rural-seller grievances",
-   "stake": "If rural settlement fails, the trust deficit that keeps COD dominant also keeps the cash from coming back — the rail serves the cities it promises"
+   "stake": "If rural settlement fails, the trust deficit that keeps COD dominant also keeps the cash from coming back \u2014 the rail serves the cities it promises"
   },
   {
    "id": "D63",
@@ -630,30 +630,30 @@
    "question": "How much Nepali parcel volume moves through informal rider handoff (inDrive-style, personal rider) vs. branded couriers, and how do losses get resolved when the carrier is the problem? (round 13: two parcel-loss grievances; driver took goods, went unreachable; no resolution path)",
    "state": "UNKNOWN",
    "cheapest_test": "Ask 10 online sellers: \"when the parcel isn't with a big courier, who carries it?\" + collect loss-resolution stories",
-   "stake": "If a large share of parcels move on trust with no resolution path, the carrier layer has the same money-trust gap as the payment layer (D19) — Hami's EVIDENCE discipline must cover \"who has the goods\" not just \"who got paid\""
+   "stake": "If a large share of parcels move on trust with no resolution path, the carrier layer has the same money-trust gap as the payment layer (D19) \u2014 Hami's EVIDENCE discipline must cover \"who has the goods\" not just \"who got paid\""
   },
   {
    "id": "D64",
    "category": "D",
-   "question": "Who carries the physical risk of the COD cash — is there rider insurance, robbery exposure, or published theft stats? (round 13: NCN Delivery's own piece names cash-theft risk; Pathao riders now pay Rs 49/day subscription to work)",
+   "question": "Who carries the physical risk of the COD cash \u2014 is there rider insurance, robbery exposure, or published theft stats? (round 13: NCN Delivery's own piece names cash-theft risk; Pathao riders now pay Rs 49/day subscription to work)",
    "state": "UNKNOWN",
    "cheapest_test": "Ask 2 courier companies about rider cash limits/insurance; search police records for delivery-rider cash robberies in the Valley",
-   "stake": "If riders carry lakhs uninsured daily, the rail's failure mode is physical, not technical — a risk nobody in the loop has priced"
+   "stake": "If riders carry lakhs uninsured daily, the rail's failure mode is physical, not technical \u2014 a risk nobody in the loop has priced"
   },
   {
    "id": "D65",
    "category": "D",
-   "question": "How much of the migration fee is actually bank-transacted vs still cash after DoFE's May 2026 no-cash mandate — do workers get receipts for what they pay? (round 14: legal fee Rs 10,000, actual up to Rs 300,000, passport held as collateral)",
+   "question": "How much of the migration fee is actually bank-transacted vs still cash after DoFE's May 2026 no-cash mandate \u2014 do workers get receipts for what they pay? (round 14: legal fee Rs 10,000, actual up to Rs 300,000, passport held as collateral)",
    "state": "UNKNOWN",
    "cheapest_test": "In the five conversations: \"how much was the receipt for, and how much did you actually hand over?\" + ask 3 returnees for their receipts",
-   "stake": "If the mandate is paper only, the state's trust instrument (bank trail) doesn't reach the lane that needs it most — and D18's settlement-trust question gets its migration-shaped twin"
+   "stake": "If the mandate is paper only, the state's trust instrument (bank trail) doesn't reach the lane that needs it most \u2014 and D18's settlement-trust question gets its migration-shaped twin"
   },
   {
    "id": "D66",
    "category": "D",
-   "question": "How much of the Gulf/Malaysia pipeline runs through dalals (sub-agents) vs. licensed agencies directly — and does the dalal take a cut of the 10k or of the overcharge? (round 14: social feed names the whole lane \"dalal\"; licensed counter number 1,300+)",
+   "question": "How much of the Gulf/Malaysia pipeline runs through dalals (sub-agents) vs. licensed agencies directly \u2014 and does the dalal take a cut of the 10k or of the overcharge? (round 14: social feed names the whole lane \"dalal\"; licensed counter number 1,300+)",
    "state": "UNKNOWN",
-   "cheapest_test": "Ask 3 returnees: \"who took your money first — the office, or the man who brought you to the office?\"",
+   "cheapest_test": "Ask 3 returnees: \"who took your money first \u2014 the office, or the man who brought you to the office?\"",
    "stake": "If the fee harvest sits in the unlicensed layer, regulating the licensed layer (771 disciplined agencies) never touches the actual collection point"
   },
   {
@@ -662,60 +662,60 @@
    "question": "Did the Aug 2026 NAFEA self-halt end, and what did it cost the workers stuck mid-process? (round 14: agencies stopped institutional approvals after a 15-day ultimatum; ~20,500 already stuck from the March permit suspension)",
    "state": "UNKNOWN",
    "cheapest_test": "Watch DoFE notices for resumption; ask 2 stranded workers what the halt cost them in loans/interest",
-   "stake": "The lane's own sellers can close the gate — if worker-borne costs of the two 2026 shocks are measured, the conveyor's fragility gets a number"
+   "stake": "The lane's own sellers can close the gate \u2014 if worker-borne costs of the two 2026 shocks are measured, the conveyor's fragility gets a number"
   },
   {
    "id": "D68",
    "category": "D",
-   "question": "When an agency refunds under Section 20 (full amount + 25%/yr), does the worker's private loan (up to 60%/yr per Amnesty) get serviced — or does the debt outlive the refund? (round 14: the worker loses on the carry even when the law works)",
+   "question": "When an agency refunds under Section 20 (full amount + 25%/yr), does the worker's private loan (up to 60%/yr per Amnesty) get serviced \u2014 or does the debt outlive the refund? (round 14: the worker loses on the carry even when the law works)",
    "state": "UNKNOWN",
    "cheapest_test": "Ask 1 worker who got a refund: \"what did you owe the lender the day the refund arrived?\"",
-   "stake": "If the refund doesn't clear the loan, the legal remedy is a partial fix — the debt product, not the fee, is the real trap, and any worker-protection design must start at the loan"
+   "stake": "If the refund doesn't clear the loan, the legal remedy is a partial fix \u2014 the debt product, not the fee, is the real trap, and any worker-protection design must start at the loan"
   },
   {
    "id": "D69",
    "category": "D",
-   "question": "Malaysia FWCMS outcome — did Nepal win the syndicate fight (25 principal + 250 associated agencies rejected Sept 2026), or did the 25 keep the corridor? (round 14: Nepal suspended pre-labour approvals for the 250 pending investigation)",
+   "question": "Malaysia FWCMS outcome \u2014 did Nepal win the syndicate fight (25 principal + 250 associated agencies rejected Sept 2026), or did the 25 keep the corridor? (round 14: Nepal suspended pre-labour approvals for the 250 pending investigation)",
    "state": "UNKNOWN",
    "cheapest_test": "Watch DoFE/MoLESS statements + departure volumes to Malaysia in the following quarters",
-   "stake": "Decides whether a destination state can re-concentrate Nepal's recruitment channel — and whether the \"syndicate\" risk (Tootle's lesson: the pioneer educates, the cartel harvests) materializes here"
+   "stake": "Decides whether a destination state can re-concentrate Nepal's recruitment channel \u2014 and whether the \"syndicate\" risk (Tootle's lesson: the pioneer educates, the cartel harvests) materializes here"
   },
   {
    "id": "D70",
    "category": "D",
-   "question": "Do Europe-route consultancies (Cyprus/Croatia/Bulgaria reels promising €800–1,000) actually place workers, or is the Europe dream the new fee-harvest — what is the departure rate on Europe demand? (round 14: copy-paste lead funnels, no placement evidence surfaced)",
+   "question": "Do Europe-route consultancies (Cyprus/Croatia/Bulgaria reels promising \u20ac800\u20131,000) actually place workers, or is the Europe dream the new fee-harvest \u2014 what is the departure rate on Europe demand? (round 14: copy-paste lead funnels, no placement evidence surfaced)",
    "state": "UNKNOWN",
    "cheapest_test": "Track 3 consultancies' ad-to-placement claims over 6 months; ask DoFE for Europe labour-approval volumes",
-   "stake": "If the Europe funnel harvests fees without departures, it is the next Sastodeal-shape trust poison (round 10 N3) — and Hami's trust-fraud lens gets a new test case"
+   "stake": "If the Europe funnel harvests fees without departures, it is the next Sastodeal-shape trust poison (round 10 N3) \u2014 and Hami's trust-fraud lens gets a new test case"
   },
   {
    "id": "D71",
    "category": "D",
-   "question": "What do unified-inbox tools (Kathmandu Post, Aug 2026: platform combining Facebook/Instagram/TikTok APIs) fail to do for a Nepali social seller — and is the gap software or human?",
+   "question": "What do unified-inbox tools (Kathmandu Post, Aug 2026: platform combining Facebook/Instagram/TikTok APIs) fail to do for a Nepali social seller \u2014 and is the gap software or human?",
    "state": "UNKNOWN",
    "cheapest_test": "Test in the sprint: the tool answers, Hami's human answers fast + gets paid only on recovered sales. Ask the seller: \"what did the inbox tool not do for you?\"",
-   "stake": "If the tools solve routing but not the reply itself, Hami's edge is the human + the pay-on-recovery model, not software — the wedge is labor, not code"
+   "stake": "If the tools solve routing but not the reply itself, Hami's edge is the human + the pay-on-recovery model, not software \u2014 the wedge is labor, not code"
   },
   {
    "id": "D72",
    "category": "D",
-   "question": "Does the reported e-commerce registration law (REPORTED: \"E-commerce Act 2025\", in force 2025-04-15; mandatory registration for ALL online sellers incl. FB/IG/TikTok/WhatsApp; fine up to Rs200,000; REPORTED ~950 registered by 2025-07-18 deadline; REPORTED E-Commerce Directive 2082 adds NRB-gateway-only payments + e-invoicing — act name and 950 figure NOT verified against the Department's own notice) constrain the sprint — and does Hami-as-platform need registration if it takes a cut of recovered sales?",
+   "question": "Does the reported e-commerce registration law (REPORTED: \"E-commerce Act 2025\", in force 2025-04-15; mandatory registration for ALL online sellers incl. FB/IG/TikTok/WhatsApp; fine up to Rs200,000; REPORTED ~950 registered by 2025-07-18 deadline; REPORTED E-Commerce Directive 2082 adds NRB-gateway-only payments + e-invoicing \u2014 act name and 950 figure NOT verified against the Department's own notice) constrain the sprint \u2014 and does Hami-as-platform need registration if it takes a cut of recovered sales?",
    "state": "UNKNOWN",
-   "cheapest_test": "Legal read alongside company registration: (1) is Hami a \"platform\" under the Act when it takes a revenue share but sells nothing itself? (2) sprint works ONLY with already-registered sellers (registration help is a scope jump — regulatory education Hami will not pioneer; separate unknown for later). NOT legal advice from the agent — needs a real read",
-   "stake": "Most social sellers operate unregistered = illegally. The sprint can't ignore this: it filters to already-registered sellers. Registration help is out of scope for the sprint. The law is also a possible value angle — but only with a real legal read"
+   "cheapest_test": "Legal read alongside company registration: (1) is Hami a \"platform\" under the Act when it takes a revenue share but sells nothing itself? (2) sprint works ONLY with already-registered sellers (registration help is a scope jump \u2014 regulatory education Hami will not pioneer; separate unknown for later). NOT legal advice from the agent \u2014 needs a real read",
+   "stake": "Most social sellers operate unregistered = illegally. The sprint can't ignore this: it filters to already-registered sellers. Registration help is out of scope for the sprint. The law is also a possible value angle \u2014 but only with a real legal read"
   },
   {
    "id": "D73",
    "category": "D",
-   "question": "Did the Aug 2026 re-drive move the registration count — how many social sellers are now listed on the DoCSCP portal? (round 15: DoCSCP issued a fresh urgent mandatory-listing notice 06/083-84 on ~2026-08-17 after the July 2025 deadline drew only ~950)",
+   "question": "Did the Aug 2026 re-drive move the registration count \u2014 how many social sellers are now listed on the DoCSCP portal? (round 15: DoCSCP issued a fresh urgent mandatory-listing notice 06/083-84 on ~2026-08-17 after the July 2025 deadline drew only ~950)",
    "state": "UNKNOWN",
    "cheapest_test": "Watch DoCSCP announcements/press for an updated listed-business count; check the portal's public listing",
-   "stake": "Measures whether re-noticing changes behavior or is ignored like the first deadline — the compliance rate is the law's real status"
+   "stake": "Measures whether re-noticing changes behavior or is ignored like the first deadline \u2014 the compliance rate is the law's real status"
   },
   {
    "id": "D74",
    "category": "D",
-   "question": "Has any online seller actually been fined or shut down under the Act or Directive 2082 — or is enforcement still paper? (round 15: Directive 2082 sets Rs 10–50k for unregistered operation, up to Rs 500k + imprisonment for misleading ads/privacy breaches; no named online-seller fine surfaced in press or social by Oct 2026)",
+   "question": "Has any online seller actually been fined or shut down under the Act or Directive 2082 \u2014 or is enforcement still paper? (round 15: Directive 2082 sets Rs 10\u201350k for unregistered operation, up to Rs 500k + imprisonment for misleading ads/privacy breaches; no named online-seller fine surfaced in press or social by Oct 2026)",
    "state": "UNKNOWN",
    "cheapest_test": "Watch DoCSCP enforcement press + inspection reports; ask sellers if anyone they know was fined",
    "stake": "Paper law vs enforced law decides whether the sprint's seller pool must be registered-today or can sequence registration into the offer"
@@ -723,10 +723,10 @@
   {
    "id": "D75",
    "category": "D",
-   "question": "Is the Directive 2082 registration burden (PAN + company cert + domain ownership + hosting agreement + privacy policy + cybersecurity test report + e-invoicing) actually affordable/feasible for a home-based FB seller — and does anyone sell \"registration as a service\"? (round 15: the doc list reads enterprise-grade; compliance vendors are advertising)",
+   "question": "Is the Directive 2082 registration burden (PAN + company cert + domain ownership + hosting agreement + privacy policy + cybersecurity test report + e-invoicing) actually affordable/feasible for a home-based FB seller \u2014 and does anyone sell \"registration as a service\"? (round 15: the doc list reads enterprise-grade; compliance vendors are advertising)",
    "state": "UNKNOWN",
-   "cheapest_test": "Price the registration cost: PAN (free-ish) + domain + hosting + SSL + cybersecurity test — who quotes it; ask 3 small sellers what registration would cost them",
-   "stake": "If compliance costs Rs 20–50k all-in, the law itself is the barrier — and registration help could be Hami's cheapest sprint wedge, or a prohibitive filter"
+   "cheapest_test": "Price the registration cost: PAN (free-ish) + domain + hosting + SSL + cybersecurity test \u2014 who quotes it; ask 3 small sellers what registration would cost them",
+   "stake": "If compliance costs Rs 20\u201350k all-in, the law itself is the barrier \u2014 and registration help could be Hami's cheapest sprint wedge, or a prohibitive filter"
   },
   {
    "id": "D76",
@@ -734,15 +734,15 @@
    "question": "Does the emerging compliance-vendor layer (Sajhapolicy, Support Tax & Finance, Kardata ad campaigns targeting online sellers with PAN/registration help, seen Sept 2026) actually reach small informal sellers, or only formal businesses? (round 15)",
    "state": "UNKNOWN",
    "cheapest_test": "Watch vendor campaign growth + ask 3 sellers if they've seen/hired such a service",
-   "stake": "If vendors serve only the formal, the unregistered majority has no bridge — the compliance gap is a distribution problem, not an awareness one"
+   "stake": "If vendors serve only the formal, the unregistered majority has no bridge \u2014 the compliance gap is a distribution problem, not an awareness one"
   },
   {
    "id": "D77",
    "category": "D",
-   "question": "Do social sellers keep selling unchanged through the notice waves — is the second deadline being ignored like the first? (round 15: notice posted in FB groups Aug 18; commenters ask \"how do I register?\" while others keep selling)",
+   "question": "Do social sellers keep selling unchanged through the notice waves \u2014 is the second deadline being ignored like the first? (round 15: notice posted in FB groups Aug 18; commenters ask \"how do I register?\" while others keep selling)",
    "state": "UNKNOWN",
    "cheapest_test": "Sample 10 active FB/TikTok sellers in 3 months: still posting \"inbox\" sales vs. showing listing numbers",
-   "stake": "If behavior doesn't change, the law's equilibrium is mass non-compliance + selective enforcement — Hami must plan for a permanently informal seller base"
+   "stake": "If behavior doesn't change, the law's equilibrium is mass non-compliance + selective enforcement \u2014 Hami must plan for a permanently informal seller base"
   }
  ],
  "last_loop": "2026-10-04"

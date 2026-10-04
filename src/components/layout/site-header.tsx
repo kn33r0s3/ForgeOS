@@ -68,7 +68,7 @@ export function SiteHeader() {
         style={{ background: "#0C0B0A", borderBottom: "1px solid #3A2E1A" }}
       >
         <Container className="relative flex h-full items-stretch justify-between gap-4">
-          <BrandMark tone="dark" className="self-center" />
+          <BrandMark tone="light" className="self-center" />
           <nav className="hidden h-full items-stretch lg:flex" aria-label="Main navigation">
             {NAV.map((item) => {
               const active = isActive(item.to, pathname);
