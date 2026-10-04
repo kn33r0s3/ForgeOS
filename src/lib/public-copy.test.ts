@@ -250,7 +250,7 @@ describe("homepage contract", () => {
     assert.match(src, /will not invent findings/i);
   });
   it("5. very big very small: Experiment 1 is step 1, rest when earned", () => {
-    const src = home();
+    const src = read("src/routes/about.tsx");
     assert.match(src, /Very big, very small/);
     assert.match(src, /One seller, one week/);
     assert.match(src, /Experiment 1/);
@@ -265,7 +265,7 @@ describe("homepage contract", () => {
 
 describe("information architecture", () => {
   const home = () => read("src/routes/index.tsx");
-  const navRoutes = ["/discoveries", "/unknowns", "/experiments", "/about"];
+  const navRoutes = ["/", "/discoveries", "/unknowns", "/experiments", "/about"];
 
   it("every homepage preview section links to a real nav route", () => {
     const src = home();

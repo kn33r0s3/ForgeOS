@@ -395,6 +395,7 @@ describe("Hami public root", () => {
     assert.doesNotMatch(footer, /Share a need/);
     assert.doesNotMatch(footer, /Work board/);
     assert.match(footer, /Built in Kathmandu/);
+    assert.ok(NAV.some((item) => item.label === "Home" && item.to === "/"));
     assert.ok(NAV.some((item) => item.label === "About" && item.to === "/about"));
     assert.ok(NAV.some((item) => item.label === "Findings" && item.to === "/discoveries"));
     assert.ok(NAV.some((item) => item.label === "Unknowns" && item.to === "/unknowns"));

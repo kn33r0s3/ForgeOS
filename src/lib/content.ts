@@ -13,6 +13,7 @@ export const SITE = {
 } as const;
 
 export const NAV = [
+  { label: "Home", to: "/" },
   { label: "Findings", to: "/discoveries" },
   { label: "Unknowns", to: "/unknowns" },
   { label: "Experiments", to: "/experiments" },
