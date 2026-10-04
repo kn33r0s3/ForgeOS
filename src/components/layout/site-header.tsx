@@ -78,7 +78,7 @@ export function SiteHeader() {
             <AuthControl />
             <Link
               to="/login"
-              className="hidden min-h-12 items-center rounded-card border-2 px-4 text-sm font-extrabold transition-colors sm:inline-flex"
+              className="inline-flex min-h-12 items-center rounded-card border-2 px-3 text-sm font-extrabold transition-colors sm:px-4"
               style={{
                 borderColor: "#F2A33A",
                 background: "#F2A33A",
@@ -100,11 +100,12 @@ export function SiteHeader() {
                   key={bar}
                   aria-hidden="true"
                   className={cn(
-                    "block h-[3px] w-[26px] bg-black transition-transform duration-200 ease-[var(--ease-snap)]",
+                    "block h-[3px] w-[26px] transition-transform duration-200 ease-[var(--ease-snap)]",
                     open && bar === 0 && "translate-y-2 rotate-45",
                     open && bar === 1 && "scale-x-0",
                     open && bar === 2 && "-translate-y-2 -rotate-45",
                   )}
+                  style={{ background: "#F2A33A" }}
                 />
               ))}
             </button>
