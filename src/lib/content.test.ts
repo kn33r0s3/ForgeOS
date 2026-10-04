@@ -395,8 +395,10 @@ describe("Hami public root", () => {
     assert.doesNotMatch(footer, /Share a need/);
     assert.doesNotMatch(footer, /Work board/);
     assert.match(footer, /Built in Kathmandu/);
-    assert.ok(NAV.some((item) => item.label === "The system" && item.to === "/about"));
-    assert.ok(NAV.some((item) => item.label === "Public record" && item.to === "/discoveries"));
+    assert.ok(NAV.some((item) => item.label === "About" && item.to === "/about"));
+    assert.ok(NAV.some((item) => item.label === "Findings" && item.to === "/discoveries"));
+    assert.ok(NAV.some((item) => item.label === "Unknowns" && item.to === "/unknowns"));
+    assert.ok(NAV.some((item) => item.label === "Experiments" && item.to === "/experiments"));
     assert.doesNotMatch(header, /Inbox tool|\/prototype\/inbox/);
     assert.match(footer, /Inbox prototype \(TEST only\)/);
     assert.match(footer, /Experiment 1 \(not started\)/);
