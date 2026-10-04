@@ -15,8 +15,9 @@
 import { EvidenceGateError, verifyClaim, type Claim } from "../evidence.ts";
 import { discoveryUnknowns } from "../unknowns.ts";
 import { triedAngles } from "./tried-angles.ts";
-import { valueOf, valueTier } from "./value-tiers.ts";
-import type { ValueTier } from "./value.ts";
+import { hypothesizedValueOf } from "./value-tiers.ts";
+import { tierFromEvidence, type EvidenceTier } from "./value.ts";
+import { evidenceFor } from "./give-up-evidence.ts";
 
 export interface RoundFinding extends Claim {
   /** Unknowns this finding addresses, or would create. */
@@ -66,33 +67,45 @@ export interface RipeAngle {
   stakes: string;
   round: number;
   ripeness: Ripeness;
-  valueTier: ValueTier;
+  /** Evidence tier: earned or "unscored". The only tier the engine shows. */
+  valueTier: EvidenceTier;
+  /** WTP hypothesis — internal tiebreaker only, never displayed as a tier. */
+  valueHypothesis: 1 | 2 | 3;
   valueWhy: string;
 }
 
 const HUMAN_GATED = /five conversations|ask [a-z]+ owners|ask \d+|a human|in person/i;
 
 /**
- * What's ripest to investigate next: value first, then doability.
- * Open unknowns ranked by value tier (money-close before enablers before
- * understanding), desk-doable now before human-gated ones, oldest first
- * within each group. Value is the method — effort-ordering without
- * value-ordering is just motion.
+ * What's ripest to investigate next: evidence first, then hypothesis.
+ * Open unknowns ranked by evidence tier (earned value before unscored),
+ * WTP hypothesis as the tiebreaker (never displayed as a tier),
+ * desk-doable now before human-gated ones, oldest first within each
+ * group. Value is the method — effort-ordering without value-ordering
+ * is just motion.
  */
 export function ripenessQueue(limit = 10): RipeAngle[] {
   const open = discoveryUnknowns.filter((u) => u.state === "unknown");
-  const ranked: RipeAngle[] = open.map((u) => ({
-    id: u.id,
-    question: u.question,
-    cheapestTest: u.cheapestTest,
-    stakes: u.stakes,
-    round: u.round,
-    ripeness: HUMAN_GATED.test(u.cheapestTest) ? "needs-human" : "now",
-    valueTier: valueTier(u.id),
-    valueWhy: valueOf(u.id).why,
-  }));
+  const ranked: RipeAngle[] = open.map((u) => {
+    const hyp = hypothesizedValueOf(u.id);
+    return {
+      id: u.id,
+      question: u.question,
+      cheapestTest: u.cheapestTest,
+      stakes: u.stakes,
+      round: u.round,
+      ripeness: HUMAN_GATED.test(u.cheapestTest) ? "needs-human" : "now",
+      valueTier: tierFromEvidence(evidenceFor(u.id)),
+      valueHypothesis: hyp.hypothesis,
+      valueWhy: hyp.why,
+    };
+  });
+  const tierRank = (t: EvidenceTier) => (t === "unscored" ? 0 : t);
   ranked.sort((a, b) => {
-    if (a.valueTier !== b.valueTier) return b.valueTier - a.valueTier;
+    if (tierRank(a.valueTier) !== tierRank(b.valueTier))
+      return tierRank(b.valueTier) - tierRank(a.valueTier);
+    if (a.valueHypothesis !== b.valueHypothesis)
+      return b.valueHypothesis - a.valueHypothesis;
     if (a.ripeness !== b.ripeness) return a.ripeness === "now" ? -1 : 1;
     return a.round - b.round;
   });

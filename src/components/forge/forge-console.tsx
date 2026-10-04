@@ -143,8 +143,9 @@ function RipenessList() {
         What's ripest
       </h2>
       <p className="mt-1 text-sm text-muted">
-        Open unknowns ranked by value — money-close first, then doable now,
-        oldest first. Live from the engine's fuel.
+        Open unknowns ranked by earned value — evidence tier first, then the
+        WTP hypothesis as tiebreaker, doable now before needs-a-human. Live
+        from the engine's fuel.
       </p>
       <div className="mt-4 grid gap-3">
         {queue.map((item) => (
@@ -157,7 +158,7 @@ function RipenessList() {
                   : item.valueTier === 2
                     ? "border-sky-500/30 bg-sky-500/10 text-sky-200"
                     : "border-line bg-background text-muted"
-              }`} title={item.valueWhy}>
+              }`} title={item.valueTier === "unscored" ? "No give-up evidence recorded — tier unearned, not low" : item.valueWhy}>
                 {tierLabel(item.valueTier)}
               </span>
               <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${
@@ -170,7 +171,9 @@ function RipenessList() {
               <span className="ml-auto text-xs text-muted">round {item.round}</span>
             </div>
             <p className="mt-1 text-sm leading-6 text-muted">{item.question}</p>
-            <p className="mt-1 text-xs italic text-muted/80">{item.valueWhy}</p>
+            <p className="mt-1 text-xs italic text-muted/80">
+              hypothesis (not a tier): {item.valueWhy}
+            </p>
           </div>
         ))}
       </div>

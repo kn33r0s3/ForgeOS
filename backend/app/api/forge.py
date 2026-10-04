@@ -1,3 +1,4 @@
+import re
 from typing import Optional
 """
 API routes for Forge's intelligence layer: the cycle orchestrator,
@@ -8,6 +9,7 @@ Source reliability tracking.
     GET  /forge/questions                    -> what Forge currently wants to learn
     GET  /forge/tasks                         -> planned research tasks
     GET  /forge/beliefs                        -> current beliefs, highest confidence first
+    GET  /forge/unknowns                       -> discovery unknowns from Claim primitives
     POST /forge/beliefs/{id}/check              -> re-score one belief against current signals
     POST /forge/beliefs/{id}/experiments          -> plan a real-world test of a belief
     POST /forge/experiments/{id}/result            -> record what actually happened
@@ -150,6 +152,37 @@ def get_beliefs(db: Session = Depends(get_db)):
         .all()
     )
     return [row for row in rows if is_presentable_belief(row)]
+
+
+_UNKNOWN_ROW_RE = re.compile(r"row (D\d+)", re.IGNORECASE)
+
+
+def _unknown_from_claim(row: models.Claim) -> schemas.UnknownOut:
+    provenance = row.provenance or ""
+    match = _UNKNOWN_ROW_RE.search(provenance)
+    row_id = match.group(1).upper() if match else f"C{row.id}"
+    cheapest_test = ""
+    if "Cheapest test:" in provenance:
+        cheapest_test = provenance.split("Cheapest test:", 1)[1].strip()
+    return schemas.UnknownOut(
+        id=row.id,
+        row_id=row_id,
+        question=row.statement,
+        epistemic_state=row.epistemic_state,
+        cheapest_test=cheapest_test,
+        provenance=provenance or None,
+    )
+
+
+@router.get("/unknowns", response_model=list[schemas.UnknownOut])
+def get_unknowns(db: Session = Depends(get_db)):
+    """Public projection of the discovery unknowns, parsed from stored
+    Claim primitives. Every item carries its truth label
+    (epistemic_state) and its source (provenance) — the page displays
+    this and nothing hand-written."""
+    _require_legacy_intelligence()
+    rows = db.query(models.Claim).order_by(models.Claim.id.asc()).all()
+    return [_unknown_from_claim(row) for row in rows]
 
 
 @router.post("/beliefs/{belief_id}/check", response_model=schemas.BeliefCheckResponse)

@@ -64,39 +64,54 @@ describe("forge assistant — ripenessQueue", () => {
     }
   });
 
-  it("ranks by value tier first, then doability, then age", () => {
+  it("ranks by evidence tier, then hypothesis, then doability, then age", () => {
     const queue = ripenessQueue(64);
+    const rank = (t: string | number) => (t === "unscored" ? 0 : (t as number));
     for (let k = 1; k < queue.length; k++) {
       const prev = queue[k - 1];
       const cur = queue[k];
       assert.ok(
-        cur.valueTier <= prev.valueTier,
+        rank(cur.valueTier) <= rank(prev.valueTier),
         `${cur.id} (tier ${cur.valueTier}) before ${prev.id} (tier ${prev.valueTier})`,
       );
-      if (cur.valueTier === prev.valueTier) {
-        const order = (r: string) => (r === "now" ? 0 : 1);
-        assert.ok(order(cur.ripeness) >= order(prev.ripeness));
-        if (cur.ripeness === prev.ripeness) {
-          assert.ok(cur.round >= prev.round);
+      if (rank(cur.valueTier) === rank(prev.valueTier)) {
+        assert.ok(
+          cur.valueHypothesis <= prev.valueHypothesis,
+          `${cur.id} (hyp ${cur.valueHypothesis}) before ${prev.id} (hyp ${prev.valueHypothesis})`,
+        );
+        if (cur.valueHypothesis === prev.valueHypothesis) {
+          const order = (r: string) => (r === "now" ? 0 : 1);
+          assert.ok(order(cur.ripeness) >= order(prev.ripeness));
+          if (cur.ripeness === prev.ripeness) {
+            assert.ok(cur.round >= prev.round);
+          }
         }
       }
     }
   });
 
-  it("every open unknown carries a value tier and a reason", () => {
+  it("no unknown claims an earned tier without give-up evidence", () => {
     const queue = ripenessQueue(64);
     for (const item of queue) {
-      assert.ok([1, 2, 3].includes(item.valueTier), `${item.id}: no tier`);
-      assert.ok(item.valueWhy.length > 10, `${item.id}: no value reason`);
+      assert.equal(
+        item.valueTier,
+        "unscored",
+        `${item.id}: tier ${item.valueTier} with no recorded give-up`,
+      );
+      assert.ok(item.valueWhy.length > 10, `${item.id}: no hypothesis reason`);
     }
   });
 
-  it("money-close unknowns lead the queue", () => {
+  it("hypothesis leads the queue only as a tiebreaker, never as a tier", () => {
     const queue = ripenessQueue(10);
     assert.ok(
-      queue.every((i) => i.valueTier === 3),
-      `top 10 should all be tier 3, got ${queue.map((i) => `${i.id}:t${i.valueTier}`).join(", ")}`,
+      queue.every((i) => i.valueTier === "unscored"),
+      `top 10 must all be unscored, got ${queue.map((i) => `${i.id}:${i.valueTier}`).join(", ")}`,
     );
+    // Within unscored, the WTP hypothesis orders the queue.
+    for (let k = 1; k < queue.length; k++) {
+      assert.ok(queue[k].valueHypothesis <= queue[k - 1].valueHypothesis);
+    }
   });
 
   it("respects the limit", () => {

@@ -1,140 +1,66 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { CircleHelp, Eye, EyeOff, Scale } from "lucide-react";
+import { Link, createFileRoute } from "@tanstack/react-router";
+import { Inbox, ScrollText } from "lucide-react";
 import { Container } from "@/components/layout/container";
 import { PageHeader } from "@/components/layout/page-header";
-import {
-  candidateNeeds,
-  KNOWN_LABEL,
-  needsCount,
-  needsRounds,
-  type Confidence,
-  type KnownToThem,
-} from "@/lib/needs";
 
 export const Route = createFileRoute("/needs")({
   component: NeedsPage,
-  head: () => ({ meta: [{ title: "Needs Hami has found — Hami" }] }),
+  head: () => ({ meta: [{ title: "What Hami is doing — Hami" }] }),
 });
-
-const KNOWN_STYLE: Record<KnownToThem, string> = {
-  known: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
-  unknown: "border-amber-500/30 bg-amber-500/10 text-amber-200",
-  partially: "border-sky-500/30 bg-sky-500/10 text-sky-200",
-};
-
-const CONFIDENCE_STYLE: Record<Confidence, string> = {
-  high: "text-emerald-300",
-  medium: "text-amber-300",
-  low: "text-red-300",
-};
-
-const KNOWN_ICON: Record<KnownToThem, typeof Eye> = {
-  known: Eye,
-  unknown: EyeOff,
-  partially: Scale,
-};
 
 function NeedsPage() {
   return (
     <main>
       <PageHeader
-        eyebrow="Hami · candidate needs"
-        title="Needs Hami has found"
-        lede="Finding what people need — the needs they name and the ones they don't — is the work. These were observed in public sources: reviews, forums, press, app data. They are not yet verified with the people themselves. Each is a candidate until a real conversation confirms or kills it."
+        eyebrow="Hami · the wedge"
+        title="The missed inquiry"
+        lede="Many small sellers run their whole shop through chat apps. When a customer writes and nobody answers fast, the sale dies quietly. Hami's wedge is simple: answer fast for one week, count the sales that come back, and take a cut only of what was recovered. No recovery, no charge — the thesis dies honestly."
         containerClassName="max-w-4xl"
       />
       <Container className="max-w-4xl py-10 sm:py-14">
-        <section aria-label="How to read this page" className="mb-10 rounded-xl border border-line bg-surface p-5">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <p className="flex items-center gap-2 text-sm font-bold text-ink">
-                <Eye className="h-4 w-4 text-emerald-300" /> Known needs
-              </p>
-              <p className="mt-1 text-sm leading-6 text-muted">
-                They feel it and name it. It hurts out loud.
-              </p>
-            </div>
-            <div>
-              <p className="flex items-center gap-2 text-sm font-bold text-ink">
-                <EyeOff className="h-4 w-4 text-amber-300" /> Unknown needs
-              </p>
-              <p className="mt-1 text-sm leading-6 text-muted">
-                They don't name it — it shows up in behavior. The higher-value find.
-              </p>
-            </div>
-            <div>
-              <p className="flex items-center gap-2 text-sm font-bold text-ink">
-                <Scale className="h-4 w-4 text-sky-300" /> Half-seen
-              </p>
-              <p className="mt-1 text-sm leading-6 text-muted">
-                Felt in one segment, invisible in another.
-              </p>
-            </div>
+        <section aria-label="Free inbox tool" className="card p-6">
+          <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
+            <Inbox className="h-5 w-5 text-accent" aria-hidden="true" />
+            The free inbox tool
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            A reply timer for inquiries: see how fast you answer, mark what was
+            recovered and what was lost, and get a week summary. No signup, no
+            account — your data stays in your browser.
+          </p>
+          <Link
+            to="/prototype/inbox"
+            className="mt-4 inline-flex min-h-10 items-center rounded-full bg-accent px-5 text-sm font-bold text-black"
+          >
+            Open the inbox tool
+          </Link>
+        </section>
+
+        <section aria-label="Week log" className="mt-6 card p-6">
+          <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
+            <ScrollText className="h-5 w-5 text-accent" aria-hidden="true" />
+            The week log
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            When a sprint week runs with a real seller, the numbers go here:
+            inquiries seen, sales recovered, rupees. Not signups — rupees
+            recovered, a seller who comes back, a seller who would be upset if
+            it stopped.
+          </p>
+          <div className="mt-4 rounded-lg border border-line bg-background/60 p-4">
+            <p className="font-bold text-ink">No week has run yet.</p>
+            <p className="mt-1 text-sm text-muted">
+              The first sprint starts when one seller and one human are named.
+              Until then this log stays empty — it will not be filled with
+              projections.
+            </p>
           </div>
-          <p className="mt-4 border-t border-line pt-4 text-sm leading-6 text-muted">
-            Every need below shows its <strong className="text-ink">confidence</strong> and
-            its <strong className="text-ink">weakest link</strong> — the claim most
-            likely to be wrong, and what would change our mind. "Mostly accurate"
-            is not the bar. {needsCount} needs from {needsRounds} rounds of
-            listening. Reality gets the final vote.
-          </p>
         </section>
 
-        <section aria-label="Candidate needs" className="grid gap-5">
-          {candidateNeeds.map((need) => {
-            const Icon = KNOWN_ICON[need.knownToThem];
-            return (
-              <article
-                key={need.id}
-                className="rounded-xl border border-line bg-surface p-5 sm:p-6"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${KNOWN_STYLE[need.knownToThem]}`}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    {KNOWN_LABEL[need.knownToThem]}
-                  </span>
-                  <span className="text-xs font-medium uppercase tracking-wider text-muted">
-                    {need.segment}
-                  </span>
-                  <span className="ml-auto text-xs text-muted">{need.round}</span>
-                </div>
-                <h2 className="mt-3 font-display text-xl tracking-tight text-ink">
-                  {need.title}
-                </h2>
-                <p className="mt-1 text-sm font-semibold leading-6 text-ink/90">
-                  {need.need}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-muted">{need.observed}</p>
-                <p className="mt-3 text-xs leading-5 text-muted">
-                  Seen in: {need.sources.join(" · ")}
-                </p>
-                <p className="mt-2 text-xs leading-5 text-muted">
-                  <span className={`font-bold uppercase tracking-wider ${CONFIDENCE_STYLE[need.confidence]}`}>
-                    Confidence: {need.confidence}
-                  </span>
-                  <span className="text-muted"> · Weakest link: {need.weakestLink}</span>
-                </p>
-                <p className="mt-3 flex gap-2 rounded-lg border border-line bg-background/60 p-3 text-sm leading-6 text-muted">
-                  <CircleHelp className="mt-1 h-4 w-4 shrink-0 text-accent" />
-                  <span>
-                    <strong className="text-ink">The question it raises: </strong>
-                    {need.question}
-                  </span>
-                </p>
-              </article>
-            );
-          })}
-        </section>
-
-        <section aria-label="What happens next" className="mt-10 rounded-xl border border-line p-5">
-          <p className="text-sm leading-6 text-muted">
-            These are Hami's best current guesses, published so reality can correct them.
-            The five conversations with real business owners will verify or kill each one —
-            a need nobody confirms is a need Hami drops.
-          </p>
-        </section>
+        <p className="mt-8 border-t border-line pt-4 text-xs leading-5 text-dim">
+          Hami is pre-revenue: no merchants served yet, no intake open. This
+          page describes the work being attempted, not results achieved.
+        </p>
       </Container>
     </main>
   );

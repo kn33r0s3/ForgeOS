@@ -628,6 +628,22 @@ class ClaimOut(BaseModel):
     updated_at: datetime
 
 
+class UnknownOut(BaseModel):
+    """Public projection of a discovery unknown, parsed from its Claim row.
+
+    Every field comes from the engine's stored primitives — the page
+    displays this and nothing hand-written. epistemic_state is the truth
+    label; provenance is the source.
+    """
+
+    id: int
+    row_id: str  # D-number, e.g. "D60"
+    question: str
+    epistemic_state: str
+    cheapest_test: str
+    provenance: Optional[str]
+
+
 class EvidenceRelationshipOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

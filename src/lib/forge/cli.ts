@@ -33,7 +33,10 @@ if (command === "angles") {
     .map((a) => ({
       id: a.id,
       question: a.question,
+      // Evidence tier: earned or "unscored". valueHypothesis is the WTP
+      // hypothesis (internal tiebreaker, never displayed as a tier).
       valueTier: a.valueTier,
+      valueHypothesis: a.valueHypothesis,
       valueWhy: a.valueWhy,
       cheapestTest: a.cheapestTest,
       ripeness: a.ripeness,

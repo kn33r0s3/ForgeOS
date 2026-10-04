@@ -208,13 +208,20 @@ describe("Hami candidate needs", () => {
     }
   });
 
-  it("keeps the needs route honest about its evidence class", () => {
+  it("keeps the needs route honest: wedge, free tool, empty week log", () => {
     const sourceDir = dirname(fileURLToPath(import.meta.url));
     const route = readFileSync(join(sourceDir, "../routes/needs.tsx"), "utf8");
-    assert.match(route, /candidate/);
-    assert.match(route, /not yet verified/i);
-    assert.match(route, /Weakest link/);
-    assert.match(route, /Confidence/);
+    // The internal backlog is gone from the public surface.
+    assert.doesNotMatch(route, /candidateNeeds/);
+    assert.doesNotMatch(route, /@\/lib\/needs/);
+    // The page states the honest position and the empty week log.
+    assert.match(route, /pre-revenue/i);
+    assert.match(route, /no merchants served yet/i);
+    assert.match(route, /No week has run yet/);
+    assert.match(route, /will not be filled with\s*\n?\s*projections/);
+    // It offers the free tool with no signup.
+    assert.match(route, /\/prototype\/inbox/);
+    assert.match(route, /No signup/i);
     assert.match(route, /createFileRoute\("\/needs"\)/);
   });
 });
