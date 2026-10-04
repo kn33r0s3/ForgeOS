@@ -1,4 +1,4 @@
-// Discovery unknowns D1–D59 as structured engine data.
+// Discovery unknowns D1–D64 as structured engine data.
 // Generated from docs/UNKNOWN_MAP.md — the doc is the source of truth;
 // this file is the machine-readable projection the engine reasons over.
 // Regenerate (don't hand-edit) if the map changes.
@@ -546,6 +546,51 @@ export const discoveryUnknowns: DiscoveryUnknown[] = [
     cheapestTest: "Watch KMC rental registration uptake + ask landlords if rent moved after registration",
     stakes: "The formalization wave meets the other side of the counter — whether paperwork lands on the tenant decides if round 2's wall is about to get a second floor",
     round: 12,
+  },
+  {
+    id: "D60",
+    question: "What is the actual COD remittance window across Nepali couriers — claimed (Pathao 48h, Hello Service same-day by 22:15) vs. actual — and do sellers price the float? (round 13: the courier is the payment path; shipped-but-unpaid is the normal state)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Ask 5 online sellers: \"how many days from delivery to money in hand, and does it vary by courier?\"",
+    stakes: "Names the real T+ of Nepali online commerce — the cash-float (D24) in its online shape",
+    round: 13,
+  },
+  {
+    id: "D61",
+    question: "What share of COD orders end in refusal/RTO, and who absorbs the double freight? (round 13: seller meme \"COD = Cancel on Delivery\"; fake COD orders; door refusal when photo ≠ reality)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Ask 3 courier companies for RTO rates; ask sellers: \"of 100 COD orders, how many come back, and what did the round trip cost you?\"",
+    stakes: "Refused-at-door is a failed payment, not a failed delivery — if the refusal rate is high, COD commerce is a lower-margin game than order counts suggest",
+    round: 13,
+  },
+  {
+    id: "D62",
+    question: "Does same-day COD settlement hold outside the Valley — does rural COD cash ever reliably reach the seller? (round 13: competing couriers promise auto settlement; rural digital penetration is low per NCN Delivery)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Compare one Kathmandu seller vs. one Terai/hill seller on remittance timing; watch for rural-seller grievances",
+    stakes: "If rural settlement fails, the trust deficit that keeps COD dominant also keeps the cash from coming back — the rail serves the cities it promises",
+    round: 13,
+  },
+  {
+    id: "D63",
+    question: "How much Nepali parcel volume moves through informal rider handoff (inDrive-style, personal rider) vs. branded couriers, and how do losses get resolved when the carrier is the problem? (round 13: two parcel-loss grievances; driver took goods, went unreachable; no resolution path)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Ask 10 online sellers: \"when the parcel isn't with a big courier, who carries it?\" + collect loss-resolution stories",
+    stakes: "If a large share of parcels move on trust with no resolution path, the carrier layer has the same money-trust gap as the payment layer (D19) — Hami's EVIDENCE discipline must cover \"who has the goods\" not just \"who got paid\"",
+    round: 13,
+  },
+  {
+    id: "D64",
+    question: "Who carries the physical risk of the COD cash — is there rider insurance, robbery exposure, or published theft stats? (round 13: NCN Delivery's own piece names cash-theft risk; Pathao riders now pay Rs 49/day subscription to work)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Ask 2 courier companies about rider cash limits/insurance; search police records for delivery-rider cash robberies in the Valley",
+    stakes: "If riders carry lakhs uninsured daily, the rail's failure mode is physical, not technical — a risk nobody in the loop has priced",
+    round: 13,
   },
 ];
 
