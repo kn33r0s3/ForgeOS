@@ -73,6 +73,10 @@ export function createReadCache({
     generations.set(key, generation);
     const request = load()
       .then((value) => {
+        // A request that finished after an invalidate() (or a newer
+        // generation) must not repopulate the cache with data the caller
+        // already dropped: the newest generation owns the entry.
+        if (generations.get(key) !== generation) return value;
         // Even a `fresh: true` read refreshes the shared entry, so the next
         // page visit starts from what this caller just observed.
         entries.set(key, { at: now(), value });
@@ -88,12 +92,20 @@ export function createReadCache({
   }
 
   function invalidate(prefix?: string) {
-    if (!prefix) {
-      entries.clear();
-      return;
-    }
-    for (const key of [...entries.keys()]) {
-      if (key.startsWith(prefix)) entries.delete(key);
+    const keys = new Set<string>([
+      ...entries.keys(),
+      ...inFlight.keys(),
+      ...generations.keys(),
+    ]);
+    for (const key of keys) {
+      if (prefix && !key.startsWith(prefix)) continue;
+      entries.delete(key);
+      inFlight.delete(key);
+      // Bump the generation so a request that started before this
+      // invalidation cannot write its (now stale) result back into the cache
+      // when it settles. The awaiting caller still receives the data it
+      // asked for — only the shared entry is withheld.
+      generations.set(key, (generations.get(key) ?? 0) + 1);
     }
   }
 

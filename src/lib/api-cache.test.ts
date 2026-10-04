@@ -117,6 +117,36 @@ describe("read cache", () => {
     assert.equal(calls, 2, "an exception stays a live signal");
   });
 
+  it("an in-flight read cannot repopulate the cache after invalidation", async () => {
+    const cache = createReadCache();
+    let resolve!: (value: unknown) => void;
+    const load = () => new Promise<unknown>((r) => (resolve = r));
+
+    const pending = cache.read("runtime", load);
+    cache.invalidate("runtime");
+    resolve({ version: 1 });
+    assert.deepEqual(await pending, { version: 1 }, "the awaiting caller still gets its data");
+
+    const source = counter({ version: 2 });
+    await cache.read("runtime", source.load);
+    assert.equal(source.calls, 1, "invalidation must force the next read to the network");
+  });
+
+  it("invalidates everything without a prefix", async () => {
+    const cache = createReadCache();
+    const publicFeed = counter(["row"]);
+    const runtime = counter({ pending: 0 });
+
+    await cache.read("public:/feed?limit=40", publicFeed.load);
+    await cache.read("/api/forge/runtime", runtime.load);
+
+    cache.invalidate();
+    await cache.read("public:/feed?limit=40", publicFeed.load);
+    await cache.read("/api/forge/runtime", runtime.load);
+    assert.equal(publicFeed.calls, 2);
+    assert.equal(runtime.calls, 2);
+  });
+
   it("invalidates by prefix, and everything without one", async () => {
     const cache = createReadCache();
     const publicFeed = counter(["row"]);

@@ -13,7 +13,6 @@
 
 export type KnownToThem = "known" | "unknown" | "partially";
 
-export type { Confidence } from "./evidence.ts";
 import type { Confidence } from "./evidence.ts";
 
 export interface CandidateNeed {
@@ -213,4 +212,8 @@ export const candidateNeeds: CandidateNeed[] = [
 ];
 
 export const needsCount = candidateNeeds.length;
-export const needsRounds = 9;
+// Derived from the `round` strings (e.g. "Rounds 4, 9", "Rounds 1–2") so the
+// count can never drift when a new round's findings land.
+export const needsRounds = Math.max(
+  ...candidateNeeds.flatMap((need) => need.round.match(/\d+/g)?.map(Number) ?? []),
+);
