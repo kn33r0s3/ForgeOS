@@ -6,7 +6,7 @@ import { CtaBand } from "@/components/layout/cta-band";
 import { Container } from "@/components/layout/container";
 import { Eyebrow } from "@/components/layout/eyebrow";
 
-export function AreaView({ name }: { name: "Technology" | "Operations" | "Ventures" }) {
+export function AreaView({ name }: { name: "Technology" | "Ventures" }) {
   const area = getGroupArea(name);
   return (
     <>

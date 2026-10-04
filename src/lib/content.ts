@@ -902,7 +902,7 @@ export type GroupArea = {
   name: GroupAreaName;
   status: "strategic direction";
   description: string;
-  href?: "/technology" | "/operations" | "/ventures";
+  href?: "/technology" | "/ventures";
 };
 
 export const groupAreas: GroupArea[] = [
