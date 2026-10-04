@@ -30,6 +30,43 @@ skipped. Read-only production GETs and browser verification are recorded in
 `STATUS.md`; no production write, credential access, message, database query,
 or flag change was performed for this verification.
 
+## [PARTIAL] Restore system-first homepage perception (2026-10-04)
+
+- Owner action still required: conduct owner-run discovery and explicitly
+  authorize any first contact; any seller must separately authorize the exact
+  pilot access and operating scope before messages are handled.
+- Action this change removes: a visitor no longer has to distinguish Hami's
+  identity from a prominent seller-reply offer or an inbox-tool CTA. The
+  homepage describes Hami's open-ended relationship with reality, evidence,
+  capabilities, authorization, and actual outcomes before showing one small
+  proposed investigation.
+- Remaining blocker: Experiment 1 has not started, no seller has agreed, and
+  there are no participants or results. The homepage's public record uses
+  existing source-observation data only; it does not request restricted
+  substrate records or claim that a source observation is verified.
+- Verification: the homepage/content contracts passed **38/38**; full
+  `npm test` passed **363/363**; `npm run typecheck`, `npm run lint`, and
+  `env -u DATABASE_URL npm run build` passed (database migrations skipped
+  because `DATABASE_URL` was unset). At desktop width **1280px** and mobile
+  width **390px**, the homepage had no horizontal overflow. Visual inspection
+  confirmed the Hami identity is the first-glance message, the broader
+  reality/evidence section and public record precede the small, explicitly
+  not-started Experiment 1 note, and primary navigation no longer names the
+  inbox prototype. The mobile menu lists Hami, The system, and Public record.
+  `/prototype/inbox` remains directly available (HTTP 200) and labeled TEST.
+  The public observations API returned HTTP 502 locally because the backend
+  was not running; the homepage displayed an explicit unavailable state
+  rather than implying no data or inventing observations. No browser
+  JavaScript page errors occurred. PR #5 frontend and Vercel checks passed;
+  the backend workflow failed on the unchanged
+  `tests/test_import_unknowns.py::test_parses_all_sections` assertion
+  (expected 86, parsed 93; 696 passed, 1 failed, 2 skipped). Backend, engine,
+  database, API implementation, substrate, research logic, payment, and auth
+  architecture remain untouched.
+- Next removable dependency: owner-run discovery and an explicitly
+  authorized first contact; the page cannot provide seller participation,
+  external permission, or pilot access.
+
 ## [PARTIAL] Batch 12B: close request-state, copy, and verification gaps (2026-10-04)
 
 - Owner action still required: define an authorized source and retrieval
