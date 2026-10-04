@@ -141,6 +141,14 @@ than a few days old, re-verify before trusting the details.
   has owner-side FAILs (test email received, privacy text approved, deployed
   SHA = origin/main, heartbeat <26h). No real external message has ever been
   sent. Never flip these flags casually.
+- **First-rupee sprint: PENDING_REAL_WORLD_AUTHORIZATION (2026-10-04).**
+  Package prepared in `docs/SPRINT_READY.md`: offer text, payment path
+  (first rupee via owner's personal eSewa/Khalti — no business rails yet),
+  evidence-capture events (inquiry.logged → reply.sent → sale.recovered →
+  payment.received → week.reported). The single human action: **the owner
+  names one social seller they can reach personally and authorizes the
+  first contact.** No agent can take this step. Until then the sprint waits
+  — pending, not blocked-by-process.
 - **Six launch decisions (owner-delegated, 2026-10-04 — standing authority
   continues):** (1) lead channel = owner-run conversations; (2) response path
   = the conversation itself, $0; (3) canonical domain = haminp.vercel.app
