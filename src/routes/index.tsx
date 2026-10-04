@@ -378,6 +378,7 @@ function AboutLink() {
 }
 
 function HomeFooter() {
+  const year = new Date().getFullYear();
   return (
     <footer style={{ background: C.panel }}>
       <Container className="py-8">
@@ -386,7 +387,7 @@ function HomeFooter() {
           participants or results to report.
         </p>
         <p className="mt-2 text-xs" style={{ color: C.muted }}>
-          © 2026 Hami · Built in Kathmandu, serving everywhere equally.
+          © {year} Hami · Built in Kathmandu, serving everywhere equally.
         </p>
       </Container>
     </footer>
