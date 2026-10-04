@@ -129,8 +129,20 @@ than a few days old, re-verify before trusting the details.
 
 ## Current state (verified 2026-10-04 — re-verify on takeover)
 
-- **Repo:** `kn33r0s3/ForgeOS`, `main` at `de6f8a6` (launch commit
-  2026-10-04 ~10:30 NPT; this file was written at `53178f0`).
+- **Repo:** `kn33r0s3/ForgeOS`, `main` at `5fde03f` (homepage rebuild,
+  2026-10-04 ~16:30 NPT; this file was written at `53178f0`).
+- **Production:** `https://haminp.vercel.app` (**canonical**) and
+  `https://forge-os-ebon.vercel.app` (alias) — both serve the `5fde03f`
+  build (bundle `index-D5u1urxH.js`, verified live 2026-10-04).
+- **Homepage (owner-ordered, 2026-10-04):** nav = Hami / Inbox tool /
+  What we've learned / Contact. Hero: "Never miss a sale to a slow
+  reply." + two sentences EN + NE. Honest status line (pre-revenue, no
+  sellers served yet). One CTA: free inbox tool at /prototype/inbox (no
+  signup). No context form, no closed-intake links, no placeholders.
+  Title/og/apple titles all "Hami". Footer: "Built in Kathmandu."
+  Old routes (/discoveries, /world, /opportunities, /actions, /system,
+  /request, /domain, /providers) stay live but unlinked.
+  `public-copy.test.ts` fails if banned strings reappear.
 - **Production:** `https://haminp.vercel.app` (**canonical — decided** by
   owner-delegated authority 2026-10-04; sitemap/robots/SITE.domain point
   there) and `https://forge-os-ebon.vercel.app` (alias/legacy). Both
