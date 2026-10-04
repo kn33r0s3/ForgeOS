@@ -4,6 +4,7 @@ import { ArrowUpRight, Clock3, FileSearch } from "lucide-react";
 import { Container } from "@/components/layout/container";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState, SkeletonCards, UnavailableState } from "@/components/ui/feedback";
+import { FindingCard } from "@/components/findings/finding-card";
 import {
   loadDiscoveries,
   type PublicDiscovery,
@@ -96,39 +97,9 @@ function DiscoveriesPage() {
             </p>
           ) : null}
           <ol className="grid gap-3 md:grid-cols-2">
-            {rows?.map((row, index) => {
-              const stale = row.freshness === "stale";
-              return (
-                <li
-                  key={row.id}
-                  className="card card-interactive reveal flex min-w-0 flex-col p-5"
-                  style={{ "--i": Math.min(index, 8) } as React.CSSProperties}
-                >
-                  <article className="flex flex-1 flex-col">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="status-pill status-pill-accent max-w-full break-all">{row.source}</span>
-                      <span className="status-pill status-pill-neutral max-w-full break-all">{row.epistemic_state}</span>
-                      <span className={`status-pill ${stale ? "status-pill-warning" : "status-pill-success"}`}>
-                        <Clock3 className="size-3" aria-hidden="true" /> {row.freshness || "unknown"}
-                      </span>
-                    </div>
-                    <h3 className="mt-3 break-words font-display text-2xl leading-tight tracking-tight text-ink">
-                      {row.title || "Untitled observation"}
-                    </h3>
-                    <p className="mt-2 min-w-0 flex-1 break-words text-sm leading-6 text-muted">{row.excerpt}</p>
-                    {row.canonical_url ? (
-                      <a
-                        href={row.canonical_url}
-                        className="link-arrow mt-4 inline-flex min-h-10 min-w-0 max-w-full items-center gap-1 border-t border-line pt-3 text-sm text-accent"
-                      >
-                        <span className="min-w-0 break-all">{row.canonical_url}</span>
-                        <ArrowUpRight className="size-4 shrink-0" aria-hidden="true" />
-                      </a>
-                    ) : null}
-                  </article>
-                </li>
-              );
-            })}
+            {rows?.map((row, index) => (
+              <FindingCard key={row.id} finding={row} index={index} />
+            ))}
           </ol>
         </section>
       </Container>

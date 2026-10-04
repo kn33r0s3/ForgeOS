@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { FlaskConical } from "lucide-react";
 import { Container } from "@/components/layout/container";
+import { UnknownCard } from "@/components/unknowns/unknown-card";
 import { PageHeader } from "@/components/layout/page-header";
 import {
   loadPublicUnknowns,
@@ -122,40 +123,7 @@ function UnknownsPage() {
 
             <div className="mt-6 grid gap-4">
               {filtered.map((u) => (
-                <article key={u.id} className="card p-5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-bold text-accent">{u.id}</span>
-                    <span
-                      className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${STATE_STYLE[u.state] ?? "border-line bg-background text-muted"}`}
-                      title="Engine state: what is actually known about this question"
-                    >
-                      {UNKNOWN_STATE_LABELS[u.state]}
-                    </span>
-                    <span
-                      className="rounded-full border border-line bg-background px-2 py-0.5 text-xs text-muted"
-                      title="No give-up evidence recorded — the tier is unearned, not low"
-                    >
-                      unscored
-                    </span>
-                  </div>
-                  <h2 className="mt-2 font-display text-base font-bold leading-6 text-ink">
-                    {u.question}
-                  </h2>
-                  {u.cheapest_test && (
-                    <p className="mt-3 text-sm leading-6 text-muted">
-                      <FlaskConical
-                        className="mr-1.5 inline size-4 text-accent"
-                        aria-hidden="true"
-                      />
-                      <strong className="text-ink">Cheapest test:</strong> {u.cheapest_test}
-                    </p>
-                  )}
-                  {u.stake && (
-                    <p className="mt-2 text-xs leading-5 text-dim">
-                      <strong>Stake:</strong> {u.stake}
-                    </p>
-                  )}
-                </article>
+                <UnknownCard key={u.id} unknown={u} />
               ))}
             </div>
           </>

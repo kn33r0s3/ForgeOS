@@ -262,3 +262,46 @@ describe("homepage contract", () => {
   });
 
 });
+
+describe("information architecture", () => {
+  const home = () => read("src/routes/index.tsx");
+  const navRoutes = ["/discoveries", "/unknowns", "/experiments", "/about"];
+
+  it("every homepage preview section links to a real nav route", () => {
+    const src = home();
+    for (const route of ["/discoveries", "/unknowns", "/experiments"]) {
+      assert.ok(
+        src.includes(`to="${route}"`),
+        `homepage preview missing link to ${route}`,
+      );
+    }
+    assert.ok(src.includes('to="/about"'), "homepage missing link to /about");
+    // All preview links must be in NAV
+    const nav = read("src/lib/content.ts");
+    for (const route of navRoutes) {
+      assert.ok(nav.includes(`to: "${route}"`), `NAV missing ${route}`);
+    }
+  });
+
+  it("homepage has no content of its own — only previews", () => {
+    const src = home();
+    // Primitives strip moved to /about
+    assert.doesNotMatch(src, /Six primitives|PRIMITIVES/);
+    // Climb moved to /about
+    assert.doesNotMatch(src, /Very big, very small|CLIMB_STEPS/);
+    // No power-of-unknown counts (not a preview)
+    assert.doesNotMatch(src, /The power of the unknown|loadUnknownsSummary/);
+  });
+
+  it("no homepage data string not served by that page's API", () => {
+    const src = home();
+    // Findings preview uses loadDiscoveries (same as /discoveries)
+    assert.match(src, /loadDiscoveries/);
+    // Unknowns preview uses loadPublicUnknowns (same as /unknowns)
+    assert.match(src, /loadPublicUnknowns/);
+    // Experiments uses the shared EXPERIMENTS data
+    assert.match(src, /EXPERIMENTS/);
+    // No hardcoded finding/unknown text on homepage
+    assert.doesNotMatch(src, /const FINDINGS|const UNKNOWNS/);
+  });
+});
