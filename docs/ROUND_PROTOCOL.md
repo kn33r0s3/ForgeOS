@@ -80,12 +80,15 @@ assistant) enforces it; later ForgeBot runs it.
 
 ## Stages (from `docs/CAPABILITY_RESEARCH.md` + `docs/ENGINE.md`)
 
-- **v0 — assistant (now):** the operator runs rounds; the assistant
-  gates findings (`verifyRound`), ranks ripeness (`ripenessQueue`), and
-  refuses repeats (`isAngleTried`). Used by the operator every round.
-- **v1 — competitor:** ForgeBot executes the protocol itself —
-  plans the angle, researches with its tools, grades, gates, banks.
-  The operator reviews and grades its rounds.
+- **v0 — assistant (shipped):** the operator ran rounds; the assistant
+  gated findings (`verifyRound`), ranked ripeness (`ripenessQueue`), and
+  refused repeats (`isAngleTried`).
+- **v1 — competitor (ACTIVE):** ForgeBot runs the round itself. The
+  scheduled worker IS ForgeBot: it takes its angle from `forge angles`
+  (`src/lib/forge/cli.ts`), checks novelty with `forge tried`,
+  researches with its tools, gates its own findings with `forge gate`,
+  and banks only what passes. The operator grades the banked round —
+  ForgeBot does the work, musa checks it.
 - **v2 — better:** cross-round contradiction detection, question
   generation from the unknowns graph, self-directed angle selection.
   The trainee outperforms the fuel.
