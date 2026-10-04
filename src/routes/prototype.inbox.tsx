@@ -7,7 +7,12 @@ import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/prototype/inbox")({
   component: InboxPrototype,
-  head: () => ({ meta: [{ title: "Inbox prototype — Hami" }] }),
+  head: () => ({
+    meta: [
+      { title: "TEST inbox prototype — Hami" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
 });
 
 type Outcome = "open" | "recovered" | "lost" | "browsing";
@@ -123,10 +128,10 @@ function InboxPrototype() {
         <div className="mb-8 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
           <FlaskConical className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden="true" />
           <p className="text-sm leading-6 text-muted">
-            <strong className="text-ink">Prototype.</strong> Built for the delegate
-            running the first-rupee sprint week — to demo to a seller and to log
-            the week's inquiries. Starts empty, because no real week has run yet.
-            No data leaves this browser.
+            <strong className="text-ink">TEST only — not a live product or evidence.</strong>{" "}
+            This local prototype does not connect to a seller, and its entries
+            never count as real inquiries, recovered sales, customers, or
+            revenue. No data leaves this browser.
           </p>
         </div>
 
@@ -134,8 +139,8 @@ function InboxPrototype() {
           {[
             { label: "Inquiries", value: String(items.length) },
             { label: "Avg reply time", value: avgLatency !== null ? fmtLatency(avgLatency) : "—" },
-            { label: "Recovered", value: String(recovered.length) },
-            { label: "Recovered value", value: recoveredValue > 0 ? `₨${recoveredValue.toLocaleString()}` : "₨0" },
+            { label: "TEST-reported recovered", value: String(recovered.length) },
+            { label: "TEST-reported value", value: recoveredValue > 0 ? `₨${recoveredValue.toLocaleString()}` : "₨0" },
           ].map((s) => (
             <div key={s.label} className="rounded-xl border border-line bg-surface p-4">
               <p className="text-xs font-medium uppercase tracking-wider text-muted">{s.label}</p>

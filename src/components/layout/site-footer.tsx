@@ -2,15 +2,26 @@ import { Link } from "@tanstack/react-router";
 import { SITE } from "@/lib/content";
 import { Container } from "./container";
 
-const GROUP_LINKS = [
-  { label: "Hami home", to: "/" },
-  { label: "Inbox tool", to: "/prototype/inbox" },
-  { label: "What we've learned", to: "/what-we-learned" },
-  { label: "About Hami", to: "/about" },
+const SYSTEM_LINKS = [
+  { label: "Hami overview", to: "/" },
+  { label: "One system", to: "/about" },
+  { label: "How Hami works", to: "/process" },
+  { label: "Group directions", to: "/group" },
+] as const;
+
+const RECORD_LINKS = [
+  { label: "Published observations", to: "/discoveries" },
+  { label: "Open questions", to: "/unknowns" },
+  { label: "Opportunity hypotheses", to: "/opportunities" },
+  { label: "Public network records", to: "/feed" },
 ] as const;
 
 const WORK_LINKS = [
-  { label: "The offer being tested", to: "/needs" },
+  { label: "Experiment 1", to: "/needs" },
+  { label: "Public work board", to: "/domain" },
+  { label: "Verified services", to: "/providers" },
+  { label: "Hami services", to: "/services" },
+  { label: "Contact", to: "/contact" },
 ] as const;
 
 const LINK =
@@ -33,28 +44,26 @@ export function SiteFooter() {
             Hami is one system. Built in Kathmandu, serving everywhere equally.
           </p>
         </div>
-        <FooterColumn title="Explore">
-          {GROUP_LINKS.map((item) => (
+        <FooterColumn title="The system">
+          {SYSTEM_LINKS.map((item) => (
             <Link key={item.to} to={item.to} className={LINK}>
               {item.label}
             </Link>
           ))}
         </FooterColumn>
-        <FooterColumn title="Quick links">
+        <FooterColumn title="Public record">
+          {RECORD_LINKS.map((item) => (
+            <Link key={item.to} to={item.to} className={LINK}>
+              {item.label}
+            </Link>
+          ))}
+        </FooterColumn>
+        <FooterColumn title="Work & contact">
           {WORK_LINKS.map((item) => (
             <Link key={item.to} to={item.to} className={LINK}>
               {item.label}
             </Link>
           ))}
-        </FooterColumn>
-        <FooterColumn title="Connect">
-          {SITE.url ? (
-            <a href={SITE.url} className={LINK}>
-              {SITE.domain}
-            </a>
-          ) : (
-            <span className="text-sm text-muted">{SITE.domain}</span>
-          )}
         </FooterColumn>
       </Container>
       <div className="border-t-2 border-white/10 bg-black">

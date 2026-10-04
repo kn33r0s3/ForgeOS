@@ -482,6 +482,41 @@ enforcement layer when claims overlap.
 - Current blocker: no repository source clearance or executable catalog adapter is authorized for capability-catalog discovery. No external catalog was queried and no candidate can truthfully be reported.
 - Next removable dependency: obtain owner review of a real, documented capability-catalog source and its exact access terms; then add only a source-specific clearance and adapter if authorized.
 
+## [PARTIAL] Align the public frontend around one Hami system (2026-10-04)
+
+- Owner action still required: complete owner-run discovery, identify a real
+  seller and appropriate named contact, and explicitly authorize any first
+  contact. A seller must separately authorize the exact pilot access and
+  operating scope before messages are handled.
+- Action this change removes: visitors no longer have to infer whether a
+  local inbox prototype is Hami's product or whether the Experiment 1 week is
+  already running. Main navigation points to Hami's system, its public record,
+  and the bounded experiment; open questions are labeled as questions rather
+  than findings.
+- Remaining / blocker: `docs/SPRINT_READY.md` records the seller experiment as
+  pending real-world authorization, and `docs/REVENUE_LOG.md` has no commercial
+  evidence entries. There is no agreed seller, active week, verified sale, or
+  revenue. The frontend does not provide seller consent, outreach permission,
+  eligibility/legal verification, or message-channel capability. The
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` metric remains **NOT MEASURABLE**.
+- Verification: source and test updates are limited to frontend routes,
+  navigation, metadata, and public-copy assertions; no engine, backend,
+  database, or API implementation is changed. The focused frontend tests
+  passed **44/44**; full `npm test`, `npm run typecheck`, `npm run lint`, and
+  `env -u DATABASE_URL npm run build` passed (the build skipped migrations).
+  At 390×844, all 13 public destinations checked returned visible page
+  headings with no horizontal overflow; `/what-we-learned` resolved to
+  `/unknowns`. The mobile navigation opened with `aria-expanded=true`, focused
+  its first link, and Escape closed it and returned focus to the toggle.
+  Browser page errors were absent. Engine-backed requests returned HTTP 502
+  because the local backend is not running; the affected page displayed its
+  explicit unavailable state and did not invent records. This expected local
+  API failure remains visible in the browser console; no production data or
+  credentials were used.
+- Next removable dependency: owner-run discovery and an explicitly
+  authorized first contact, followed by separately documented seller
+  permission and a mutually agreed experiment scope.
+
 ## [DONE WITH LIMITATION] Rank and persist evidence-backed research capability routes
 
 - Agent: Copilot, current user-directed task

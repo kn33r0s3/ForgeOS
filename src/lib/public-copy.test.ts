@@ -18,6 +18,8 @@ const PUBLIC_ROUTES: Array<{ path: string; file: string }> = [
   { path: "/needs", file: "src/routes/needs.tsx" },
   { path: "/unknowns", file: "src/routes/unknowns.tsx" },
   { path: "/about", file: "src/routes/about.tsx" },
+  { path: "/discoveries", file: "src/routes/discoveries.tsx" },
+  { path: "/opportunities", file: "src/routes/opportunities.tsx" },
 ];
 
 // Hand-written data modules: findings baked into the bundle. Public
@@ -116,27 +118,27 @@ describe("homepage contract", () => {
     ]) {
       assert.ok(src.includes(line), `missing plain line: ${line}`);
     }
-    const identitySection = src.split("Running now")[0];
+    const identitySection = src.split("One bounded experiment")[0];
     assert.ok(
       !/ENTITY|RELATION|CAPABILITY/.test(identitySection),
       "implementation terminology leaked into the identity section",
     );
   });
 
-  it("4. presents the slow-reply offer as Experiment 1, never the headline", () => {
+  it("4. presents Experiment 1 as a subordinate hypothesis that has not started", () => {
     const src = home();
-    assert.match(src, /Running now/);
     assert.match(src, /Experiment 1/);
-    assert.match(src, /One current experiment inside Hami/);
-    assert.match(src, /a sale can be lost quietly/i);
-    assert.match(src, /payment is tied to sales that actually come back/i);
+    assert.match(src, /A hypothesis inside Hami/);
+    assert.match(src, /No seller has agreed to participate/);
+    assert.match(src, /no experiment week has run/i);
+    assert.match(src, /no upfront[\s\S]*attribute/i);
   });
 
-  it("5. uses /prototype/inbox as the CTA with no signup", () => {
+  it("5. links to the experiment scope, not the local prototype", () => {
     const src = home();
-    assert.match(src, /to="\/prototype\/inbox"/);
-    assert.match(src, /Try the free inbox tool/);
-    assert.match(src, /No signup/);
+    assert.match(src, /to="\/needs"/);
+    assert.match(src, /Read the Experiment 1 scope/);
+    assert.doesNotMatch(src, /\/prototype\/inbox|free inbox tool/i);
   });
 
   it("6. never implies Hami is merely a reply service, inbox tool, SaaS, chatbot, or lead-gen product", () => {
@@ -158,7 +160,6 @@ describe("homepage contract", () => {
     const banned = [
       "Sign in",
       "Explore the network",
-      "Online inquiries are not open yet.",
       "Opening your System",
       "Contact mailbox pending",
       "Domain pending verification",
@@ -173,16 +174,19 @@ describe("homepage contract", () => {
     for (const phrase of banned) {
       assert.ok(!blob.includes(phrase), `banned surface reappeared: ${phrase}`);
     }
-    assert.ok(!blob.includes('"/feed"'), "/feed is linked from a public surface");
+    assert.ok(!blob.includes('"/prototype/inbox"'), "local prototype is linked from a primary public surface");
+    assert.ok(!blob.includes("Inbox tool"), "Hami is not labelled as an inbox tool");
   });
 
-  it("8. engine findings on the homepage are API-backed, not hand-written", () => {
+  it("8. open questions on the homepage are API-backed, not hand-written findings", () => {
     const src = read("src/routes/index.tsx").replace(/\s+/g, " ");
     assert.ok(src.includes("@/lib/unknowns-api"), "homepage must use the engine API module");
     assert.match(src, /fetchUnknowns/);
-    assert.match(src, /Nothing recorded yet/);
+    assert.match(src, /No open questions are recorded yet/);
+    assert.match(src, /These are questions, not findings or answers/);
     assert.match(src, /will not invent them/);
     assert.ok(!/const FINDINGS/.test(src), "hand-written findings dataset in homepage");
+    assert.match(src, /to="\/unknowns"/);
   });
 
   it("9. no keyword-bag / hypothesis shortcut", () => {
@@ -190,11 +194,12 @@ describe("homepage contract", () => {
     assert.ok(!/keyword/i.test(src), "keyword-bag language in homepage");
   });
 
-  it("10. honest status line remains present", () => {
+  it("10. honest status line says the experiment has not started", () => {
     const src = home();
     assert.match(src, /Honest status/i);
     assert.match(src, /pre-revenue/i);
-    assert.match(src, /has not yet served a seller/i);
+    assert.match(src, /no seller has agreed to participate/i);
+    assert.match(src, /Experiment 1 has not started/i);
   });
 
   it("metadata titles all say Hami", () => {
@@ -208,15 +213,40 @@ describe("homepage contract", () => {
     assert.match(footer(), /Built in Kathmandu/);
   });
 
-  it("what-we-learned renders engine data through the API module, nothing hand-written", () => {
+  it("keeps the legacy learning URL as a redirect to the canonical open-questions route", () => {
     const src = read("src/routes/what-we-learned.tsx");
-    assert.ok(
-      src.includes("@/lib/unknowns-api"),
-      "what-we-learned must import the engine API module",
-    );
-    assert.match(src, /fetchUnknowns/);
-    assert.match(src, /unavailable right now/i);
-    assert.match(src, /Nothing recorded yet/);
-    assert.match(src, /will not invent findings/i);
+    assert.match(src, /redirect\(\{ to: "\/unknowns" \}\)/);
+    assert.doesNotMatch(src, /fetchUnknowns|What we've learned/);
+  });
+
+  it("keeps the prototype explicitly TEST-only and out of search indexing", () => {
+    const prototype = read("src/routes/prototype.inbox.tsx").replace(/\s+/g, " ");
+    assert.match(prototype, /name: "robots", content: "noindex, nofollow"/);
+    assert.match(prototype, /TEST only — not a live product or evidence/);
+    assert.match(prototype, /never count as real inquiries, recovered sales, customers, or revenue/);
+  });
+
+  it("does not claim Hami serves only Nepal in structured metadata", () => {
+    assert.doesNotMatch(read("src/routes/__root.tsx"), /areaServed:\s*"NP"/);
+  });
+
+  it("exposes the system, evidence, and experiment—not a product prototype—in main navigation", () => {
+    const content = read("src/lib/content.ts");
+    assert.match(content, /label: "The system", to: "\/about"/);
+    assert.match(content, /label: "Public record", to: "\/discoveries"/);
+    assert.match(content, /label: "Experiment 1", to: "\/needs"/);
+    assert.doesNotMatch(content, /label: "Inbox tool"|to: "\/prototype\/inbox"/);
+    assert.match(header(), /aria-expanded=\{open\}/);
+    assert.match(header(), /aria-controls="mobile-navigation"/);
+  });
+
+  it("does not publish unagreed operating terms for Experiment 1", () => {
+    const needs = read("src/routes/needs.tsx").replace(/\s+/g, " ");
+    for (const unagreedTerm of ["15 minutes", "9am", "9pm", "10%"]) {
+      assert.ok(!needs.includes(unagreedTerm), `unagreed term surfaced: ${unagreedTerm}`);
+    }
+    assert.match(needs, /No seller has agreed to participate/);
+    assert.match(needs, /No sign-up or live intake is available/);
+    assert.match(needs, /fee terms must be agreed/);
   });
 });

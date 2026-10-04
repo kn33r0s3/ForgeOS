@@ -113,45 +113,56 @@ function FourLines() {
   );
 }
 
-/* 3. Running now — Experiment 1 */
+/* 3. One bounded experiment — not the Hami system */
 
 function ExperimentOne() {
   return (
-    <section aria-labelledby="running-now-title" className="border-b-2 border-black py-10 sm:py-14">
+    <section aria-labelledby="experiment-one-title" className="border-b-2 border-black py-10 sm:py-14">
       <Container>
         <div className="max-w-3xl">
           <p className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.16em] text-accent">
-            Running now
+            One bounded experiment
           </p>
-          <h2 id="running-now-title" className="mt-2 font-display text-3xl font-black tracking-tight text-ink">
+          <h2 id="experiment-one-title" className="mt-2 font-display text-3xl font-black tracking-tight text-ink">
             Experiment 1
           </h2>
           <p className="mt-3 text-sm leading-6 text-muted">
-            One current experiment inside Hami — not Hami itself.
+            A hypothesis inside Hami — not Hami itself, and not yet underway.
           </p>
           <div className="card mt-6 p-6">
             <h3 className="font-display text-xl font-bold text-ink">
-              The slow-reply experiment
+              Faster replies for one seller
             </h3>
             <p className="mt-3 max-w-2xl text-base leading-7 text-muted">
-              When a customer messages a shop and nobody replies fast, a sale
-              can be lost quietly. For one week, a person handles replies
-              within minutes; payment is tied to sales that actually come back
-              because of the faster replies.
+              The hypothesis: faster replies may recover sales that would
+              otherwise disappear. If a seller agrees, a person would help
+              handle incoming messages for one agreed week. There is no upfront
+              payment; any fee would be tied only to sales both sides attribute
+              to faster replies.
             </p>
             <p className="mt-3 max-w-2xl text-base leading-7 text-muted">
-              जब ग्राहकले सन्देश पठाउँदा छिटो जवाफ आउँदैन, बिक्री खेर जान
-              सक्छ। एक हप्ता एक व्यक्तिले केही मिनेटभित्र जवाफहरू सम्हाल्छ;
-              छिटो जवाफका कारण फर्केका बिक्रीमा मात्र शुल्क लाग्छ।
+              छिटो जवाफले हराउन सक्ने बिक्री फर्काउन मद्दत गर्छ कि गर्दैन भन्ने
+              यो एउटा परिकल्पना हो। कुनै विक्रेता सहमत भएमा, एक व्यक्तिले
+              सहमत भएको एक हप्तासम्म आएका सन्देश सम्हाल्न मद्दत गर्नेछ। अग्रिम
+              भुक्तानी हुँदैन; छिटो जवाफका कारण फर्किएको दुवै पक्षले मानेको
+              बिक्रीमा मात्र शुल्क लाग्नेछ।
             </p>
-            <div className="mt-5 flex flex-col items-start gap-2">
-              <Button asChild size="lg">
-                <Link to="/prototype/inbox">
-                  Try the free inbox tool
+            <p className="mt-4 border-l-4 border-accent pl-4 text-sm font-bold leading-6 text-ink">
+              No seller has agreed to participate, and no experiment week has
+              run. This page does not accept sign-ups or authorize message
+              handling.
+            </p>
+            <p className="mt-2 pl-4 text-sm leading-6 text-muted">
+              अहिलेसम्म कुनै विक्रेता सहभागी हुन सहमत भएको छैन, र कुनै
+              परीक्षण हप्ता चलेको छैन।
+            </p>
+            <div className="mt-5">
+              <Button asChild size="lg" variant="secondary">
+                <Link to="/needs">
+                  Read the Experiment 1 scope
                   <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
               </Button>
-              <p className="text-sm text-muted">No signup.</p>
             </div>
           </div>
         </div>
@@ -160,7 +171,7 @@ function ExperimentOne() {
   );
 }
 
-/* 4. What the engine has found — API-backed only */
+/* 4. Open questions recorded by the engine — API-backed only */
 
 function EngineFindings() {
   const [items, setItems] = useState<ApiUnknown[] | null>(null);
@@ -183,40 +194,41 @@ function EngineFindings() {
   const shown = (items ?? []).slice(0, 4);
 
   return (
-    <section aria-labelledby="engine-found-title" className="border-b-2 border-black bg-card py-10 sm:py-14">
+    <section aria-labelledby="recorded-questions-title" className="border-b-2 border-black bg-card py-10 sm:py-14">
       <Container>
         <div className="max-w-4xl">
           <p className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.16em] text-accent">
             From the engine
           </p>
-          <h2 id="engine-found-title" className="mt-2 font-display text-3xl font-black tracking-tight text-ink">
-            What the engine has found
+          <h2 id="recorded-questions-title" className="mt-2 font-display text-3xl font-black tracking-tight text-ink">
+            Open questions recorded by Hami
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
-            Only what the engine has recorded — each finding with its truth
-            state and source. Nothing here was written for this page.
+            These are questions, not findings or answers. Each item comes from
+            the current API record with its state and provenance; no sample
+            questions are substituted.
           </p>
 
           {error !== null && (
             <div className="card mt-6 p-5" role="alert">
-              <p className="font-bold text-ink">The engine did not answer.</p>
+              <p className="font-bold text-ink">The questions service did not answer.</p>
               <p className="mt-1 text-sm text-muted">
-                Findings are unavailable right now ({error}). This section will
+                Open questions are unavailable right now ({error}). This section will
                 not invent them.
               </p>
             </div>
           )}
           {error === null && items === null && (
             <div className="card mt-6 p-5" aria-busy="true">
-              <p className="text-sm text-muted">Loading recorded findings…</p>
+              <p className="text-sm text-muted">Loading recorded questions…</p>
             </div>
           )}
           {error === null && items !== null && items.length === 0 && (
             <div className="card mt-6 p-5">
-              <p className="font-bold text-ink">Nothing recorded yet.</p>
+              <p className="font-bold text-ink">No open questions are recorded yet.</p>
               <p className="mt-1 text-sm text-muted">
-                The engine has not banked any findings. When it does, they
-                appear here with their truth state and source.
+                If the API records open questions, they will appear here with
+                their current state and provenance.
               </p>
             </div>
           )}
@@ -243,10 +255,10 @@ function EngineFindings() {
                 ))}
               </div>
               <Link
-                to="/what-we-learned"
+                to="/unknowns"
                 className="link-arrow mt-5 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent"
               >
-                See everything the engine has recorded
+                Review all open questions
                 <ArrowRight className="size-4" aria-hidden="true" />
               </Link>
             </>
@@ -265,7 +277,7 @@ function HonestStatus() {
       <Container>
         <p className="max-w-2xl border-l-4 border-accent pl-4 text-sm font-bold leading-6 text-ink">
           Honest status: Hami is pre-revenue and has not yet served a seller.
-          Experiment 1 starts with one seller, for one week.
+          Experiment 1 has not started: no seller has agreed to participate.
         </p>
       </Container>
     </section>

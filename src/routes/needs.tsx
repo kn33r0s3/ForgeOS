@@ -1,66 +1,73 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Handshake, ScrollText } from "lucide-react";
+import { CalendarClock, CircleAlert, ShieldCheck } from "lucide-react";
 import { Container } from "@/components/layout/container";
 import { PageHeader } from "@/components/layout/page-header";
 
 export const Route = createFileRoute("/needs")({
   component: NeedsPage,
-  head: () => ({ meta: [{ title: "What Hami is doing — Hami" }] }),
+  head: () => ({
+    meta: [
+      { title: "Experiment 1 — Hami" },
+      {
+        name: "description",
+        content:
+          "The scope and current status of Hami's proposed one-week faster-reply experiment. No seller has agreed and no week has run.",
+      },
+    ],
+  }),
 });
 
 function NeedsPage() {
   return (
     <main>
       <PageHeader
-        eyebrow="Hami · the wedge"
-        title="The missed inquiry"
-        lede="Many small sellers run their whole shop through chat apps. When a customer writes and nobody answers fast, the sale dies quietly. Hami's wedge is simple: for one week, a human handles the seller's replies fast, the recovered sales are counted, and Hami takes a cut only of what came back. No recovery, no charge — the thesis dies honestly."
+        eyebrow="Hami · one bounded experiment"
+        title="Experiment 1: faster replies for one seller"
+        lede="The hypothesis is that faster replies may recover sales that would otherwise disappear. If a seller agrees, a person would help handle incoming customer messages for one explicitly agreed week. There is no upfront payment; any fee would be tied only to sales both sides attribute to faster replies. This is not a performance guarantee."
         containerClassName="max-w-4xl"
       />
       <Container className="max-w-4xl py-10 sm:py-14">
-        <section aria-label="The offer" className="card p-6">
+        <section aria-labelledby="experiment-status" className="card border-accent p-6">
           <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-            <Handshake className="h-5 w-5 text-accent" aria-hidden="true" />
-            The offer being tested
+            <CircleAlert className="h-5 w-5 text-accent" aria-hidden="true" />
+            <span id="experiment-status">Current status</span>
           </h2>
           <p className="mt-2 text-sm leading-6 text-muted">
-            One seller, one week. A person answers their customers within 15
-            minutes, 9am to 9pm, and every sale that comes back because of the
-            fast reply is counted. The seller pays a cut only of those
-            recovered sales. Hami is not a tool the seller operates — it is
-            the work being done for them, measured in rupees recovered.
+            No seller has agreed to participate. No customer messages have
+            been handled, and no experiment week has run. No sign-up or live
+            intake is available on this page.
           </p>
           <p className="mt-2 text-sm leading-6 text-muted">
-            This is a hypothesis, not an established offer. It stands or falls on
-            the first real week.
+            The segment, participant eligibility, exact operating period,
+            response expectations, attribution rules, and fee terms must be
+            agreed and verified before any work begins.
           </p>
         </section>
 
-        <section aria-label="Week log" className="mt-6 card p-6">
+        <section aria-labelledby="scope-title" className="mt-6 card p-6">
           <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-            <ScrollText className="h-5 w-5 text-accent" aria-hidden="true" />
-            The week log
+            <ShieldCheck className="h-5 w-5 text-accent" aria-hidden="true" />
+            <span id="scope-title">Boundaries to agree before starting</span>
           </h2>
-          <p className="mt-2 text-sm leading-6 text-muted">
-            When a sprint week runs with a real seller, the numbers go here:
-            inquiries seen, sales recovered, rupees. Not signups — rupees
-            recovered, a seller who comes back, a seller who would be upset if
-            it stopped.
-          </p>
-          <div className="mt-4 rounded-lg border border-line bg-background/60 p-4">
-            <p className="font-bold text-ink">No week has run yet.</p>
-            <p className="mt-1 text-sm text-muted">
-              The first sprint starts when one seller and one human are named.
-              Until then this log stays empty — it will not be filled with
-              projections.
-            </p>
-          </div>
+          <ul className="mt-4 grid gap-3 text-sm leading-6 text-muted sm:grid-cols-2">
+            <li className="border-l-2 border-line pl-3">Named seller and contact; the contact's role must not be assumed.</li>
+            <li className="border-l-2 border-line pl-3">Seller's explicit permission for the exact channels, messages, and access.</li>
+            <li className="border-l-2 border-line pl-3">Agreed dates, hours, response expectations, and who handles exceptions.</li>
+            <li className="border-l-2 border-line pl-3">A baseline and shared definitions for a reply and an attributable sale.</li>
+            <li className="border-l-2 border-line pl-3">Fee terms agreed before work; payment only for attributable real sales.</li>
+            <li className="border-l-2 border-line pl-3">Eligibility, legal review, privacy boundaries, and evidence location.</li>
+          </ul>
         </section>
 
-        <p className="mt-8 border-t border-line pt-4 text-xs leading-5 text-dim">
-          Hami is pre-revenue: no merchants served yet, no intake open. This
-          page describes the work being attempted, not results achieved.
-        </p>
+        <section aria-label="Next dependency" className="mt-6 flex items-start gap-3 border-t border-line pt-5">
+          <CalendarClock className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
+          <p className="text-sm leading-6 text-muted">
+            The next dependency is owner-run discovery and an explicitly
+            authorized first contact. This page does not send messages or
+            authorize access. Hami remains pre-revenue; no seller has been
+            served, and the experiment has not started.
+          </p>
+        </section>
       </Container>
     </main>
   );

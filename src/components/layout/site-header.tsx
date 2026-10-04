@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { NAV } from "@/lib/content";
@@ -9,13 +9,17 @@ import { BrandMark } from "./brand-mark";
 import { Container } from "./container";
 
 function isActive(href: string, pathname: string) {
-  if (href === "/group") return pathname === "/group";
-  if (href === "/services") return pathname === "/services" || pathname.startsWith("/services/");
+  if (href === "/about") return pathname === "/about" || pathname === "/process";
+  if (href === "/discoveries") {
+    return ["/discoveries", "/unknowns", "/opportunities", "/feed"].includes(pathname);
+  }
   return pathname === href;
 }
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
+  const toggleButtonRef = useRef<HTMLButtonElement>(null);
+  const firstMobileLinkRef = useRef<HTMLAnchorElement>(null);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [scrolled, setScrolled] = useState(false);
 
@@ -32,15 +36,25 @@ export function SiteHeader() {
 
   useEffect(() => {
     if (!open) return;
+    const previousOverflow = document.body.style.overflow;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+        toggleButtonRef.current?.focus();
+      }
     };
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKey);
     };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const frame = window.requestAnimationFrame(() => firstMobileLinkRef.current?.focus());
+    return () => window.cancelAnimationFrame(frame);
   }, [open]);
 
   // The mobile panel is a sibling of <header>, not a child, so it is never
@@ -73,6 +87,7 @@ export function SiteHeader() {
           <div className="flex items-center gap-2">
             <AuthControl />
             <button
+              ref={toggleButtonRef}
               type="button"
               className="group relative inline-flex size-11 flex-col items-center justify-center gap-[5px] rounded-card lg:hidden"
               aria-expanded={open}
@@ -104,7 +119,10 @@ export function SiteHeader() {
           open ? "block" : "hidden",
         )}
         onClick={(event) => {
-          if (event.target === event.currentTarget) setOpen(false);
+          if (event.target === event.currentTarget) {
+            setOpen(false);
+            toggleButtonRef.current?.focus();
+          }
         }}
       >
         <div className="reveal mx-2 mt-2 rounded-card border-2 border-line-strong bg-card shadow-md">
@@ -119,8 +137,13 @@ export function SiteHeader() {
                     style={{ "--i": index + 1 } as React.CSSProperties}
                   >
                     <Link
+                      ref={index === 0 ? firstMobileLinkRef : undefined}
                       to={item.to}
                       aria-current={active ? "page" : undefined}
+                      onClick={() => {
+                        setOpen(false);
+                        toggleButtonRef.current?.focus();
+                      }}
                       className={cn(
                         "flex min-h-14 items-center gap-4 px-4 text-lg font-extrabold transition-colors",
                         active
