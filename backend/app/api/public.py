@@ -1016,12 +1016,18 @@ def _parse_unknowns():
 def _last_loop_timestamp():
     """Best-effort last discovery loop completion time.
 
-    Reads the discovery log's most recent entry date if available.
-    Returns ISO string or None.
+    Reads from the JSON snapshot (preferred) or the markdown Date header.
+    Returns ISO string or None — never invented.
     """
-    log_path = Path(__file__).resolve().parents[3] / "docs" / "UNKNOWN_MAP.md"
+    if _UNKNOWN_JSON_PATH.exists():
+        try:
+            data = json.loads(_UNKNOWN_JSON_PATH.read_text(encoding="utf-8"))
+            if data.get("last_loop"):
+                return data["last_loop"]
+        except Exception:
+            pass
+    log_path = _UNKNOWN_MAP_PATH
     if log_path.exists():
-        # The map's Date header records the last update
         text = log_path.read_text(encoding="utf-8")
         m = re.search(r"\*\*Date:\*\*\s*(\d{4}-\d{2}-\d{2})", text)
         if m:
