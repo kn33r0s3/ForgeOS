@@ -128,6 +128,7 @@ class BeliefEngine:
             pattern_id=pattern_id,
             supporting_signal_ids=",".join(str(i) for i in supporting_signal_ids),
             confidence_score=round(max(0.0, min(100.0, initial_confidence)), 1),
+            label="observation",  # keyword-bag output starts as an observation
         )
         self.db.add(belief)
         self.db.commit()
@@ -244,7 +245,7 @@ class BeliefEngine:
 
 
 def repair_historical_beliefs(db: Session) -> int:
-    """Converge legacy belief rows onto the canonical hypothesis form.
+    """Converge legacy belief rows onto the canonical observation form.
 
     Merged rows are retained as historical records and point at their
     canonical row through ``merged_into_id``. Evidence and signal
@@ -327,17 +328,65 @@ def _canonical_statement_for_belief(db: Session, belief: models.Belief) -> str:
         keywords = _keywords_from_legacy_statement(belief.statement)
     canonical = ", ".join(sorted(keywords))
     return (
-        f'Uncorroborated keyword hypothesis: "{canonical}". '
-        "This is not a verified business problem, demand claim, or price."
+        f'Observed keyword cluster: "{canonical}". '
+        "An observation, not a hypothesis — no actor, need, give-up, or evidence attached."
     )
+
+
+def qualifies_as_hypothesis(belief: models.Belief) -> bool:
+    """The strict gate. A record may be called a hypothesis only if it
+    carries all four: an actor/segment, a stated need or pain, what that
+    actor would give up (money/time/behavior), and >=1 evidence
+    reference. Everything else is an observation — stored, never
+    deleted, but never surfaced publicly as a hypothesis."""
+    if belief.merged_into_id is not None:
+        return False
+    has_actor = bool((belief.actor_segment or "").strip())
+    has_need = bool((belief.need_pain or "").strip())
+    has_give_up = bool((belief.give_up or "").strip())
+    signal_ids = [s for s in (belief.supporting_signal_ids or "").split(",") if s.strip()]
+    return has_actor and has_need and has_give_up and len(signal_ids) >= 1
+
+
+def relabel_keyword_bags_as_observations(db: Session) -> int:
+    """Archive pass: any belief still wearing the old 'Uncorroborated
+    keyword hypothesis' label becomes an observation with the reason
+    recorded. Rows are never deleted; merged rows are left alone."""
+    rows = (
+        db.query(models.Belief)
+        .filter(models.Belief.statement.like("Uncorroborated keyword hypothesis%"))
+        .filter(models.Belief.merged_into_id.is_(None))
+        .all()
+    )
+    count = 0
+    for row in rows:
+        old = row.statement
+        row.statement = old.replace(
+            "Uncorroborated keyword hypothesis", "Observed keyword cluster", 1
+        ).replace(
+            "This is not a verified business problem, demand claim, or price.",
+            "An observation, not a hypothesis — no actor, need, give-up, or evidence attached.",
+        )
+        row.label = "observation"
+        row.relabel_reason = (
+            "2026-10-04: keyword-bag output re-labeled from hypothesis to "
+            "observation — it names no actor, need, give-up, or evidence. "
+            "Archived with reason; row retained."
+        )
+        count += 1
+    if count:
+        db.commit()
+    return count
 
 
 MAX_HYPOTHESIS_KEYWORDS = 12
 
 
 def is_presentable_belief(belief: models.Belief) -> bool:
-    """An oversized keyword list is not one claim. The row stays stored."""
-    if belief.merged_into_id is not None:
+    """Public-surface gate: only a qualifying hypothesis may be surfaced.
+    An oversized keyword list is not one claim, and a keyword bag without
+    actor/need/give-up/evidence is an observation. The row stays stored."""
+    if not qualifies_as_hypothesis(belief):
         return False
     return len(_keywords_from_canonical_statement(belief.statement)) <= MAX_HYPOTHESIS_KEYWORDS
 
@@ -400,11 +449,11 @@ def _merge_belief_provenance(
 
 
 def _pattern_to_belief_statement(pattern: models.Pattern) -> str:
-    """A keyword cluster is an uncorroborated hypothesis, not a business fact."""
+    """A keyword cluster is an observation, never a hypothesis."""
     keywords = pattern.title.replace("Recurring theme:", "").strip()
     parts = sorted(part.strip() for part in keywords.split(",") if part.strip())
     canonical = ", ".join(parts)
     return (
-        f'Uncorroborated keyword hypothesis: "{canonical}". '
-        "This is not a verified business problem, demand claim, or price."
+        f'Observed keyword cluster: "{canonical}". '
+        "An observation, not a hypothesis — no actor, need, give-up, or evidence attached."
     )

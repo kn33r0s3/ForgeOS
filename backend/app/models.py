@@ -380,7 +380,13 @@ class Experiment(Base):
 
 class Belief(Base):
     """A hypothesis about how reality works, formed from one or more
-    Patterns and updated over time as new evidence appears."""
+    Patterns and updated over time as new evidence appears.
+
+    A record may be called a hypothesis only when it carries all four
+    qualifying fields: actor_segment, need_pain, give_up, and at least
+    one supporting signal. Anything else is an observation — stored,
+    never deleted, but never surfaced publicly as a hypothesis.
+    """
 
     __tablename__ = "beliefs"
 
@@ -392,6 +398,14 @@ class Belief(Base):
     confidence_score = Column(Float, nullable=False, default=50.0, index=True)  # 0-100
     created_at = Column(DateTime, default=utcnow)
     last_updated = Column(DateTime, default=utcnow)
+    # Hypothesis qualification (additive, 2026-10-04): a keyword bag is an
+    # observation until someone records who it is about, what they need,
+    # what they would give up, and points at evidence.
+    label = Column(String(32), nullable=False, default="observation", index=True)
+    actor_segment = Column(Text, nullable=True)  # who: the actor/segment this is about
+    need_pain = Column(Text, nullable=True)  # the stated need or pain
+    give_up = Column(Text, nullable=True)  # what the actor would give up: money/time/behavior
+    relabel_reason = Column(Text, nullable=True)  # why the label changed; archive trail, never deleted
 
     pattern = relationship("Pattern", back_populates="beliefs")
 

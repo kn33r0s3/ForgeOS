@@ -450,6 +450,10 @@ class BeliefOut(BaseModel):
     confidence_score: float
     created_at: datetime
     last_updated: datetime
+    label: str = "observation"
+    actor_segment: Optional[str] = None
+    need_pain: Optional[str] = None
+    give_up: Optional[str] = None
 
 
 class BeliefCheckResponse(BaseModel):
