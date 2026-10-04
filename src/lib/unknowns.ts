@@ -1,4 +1,4 @@
-// Discovery unknowns D1–D49 as structured engine data.
+// Discovery unknowns D1–D54 as structured engine data.
 // Generated from docs/UNKNOWN_MAP.md — the doc is the source of truth;
 // this file is the machine-readable projection the engine reasons over.
 // Regenerate (don't hand-edit) if the map changes.
@@ -456,6 +456,51 @@ export const discoveryUnknowns: DiscoveryUnknown[] = [
     cheapestTest: "Check gyapu.com live; vendor-listing freshness",
     stakes: "Tests whether the \"honest brokerage\" playbook is even acquirable in Nepal — or whether every buyer kills it",
     round: 10,
+  },
+  {
+    id: "D50",
+    question: "Does the Sept 2026 skill-development-fee procedure (monthly statements even with zero transactions, stamped challans for gold movement, PAN'd craftsmen, customer ID + proof-of-purchase on old-gold buys) push small jewelers toward consolidation or toward non-invoiced dealing? (round 11)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Watch Fenegosida reports for member closures; ask 3 small jewelers: \"do you invoice every sale?\"",
+    stakes: "The formalization wave (N2) is live at the highest-value counter — whether paperwork grows the formal sector or the shadow one is the D15/D46 question answered in real time",
+    round: 11,
+  },
+  {
+    id: "D51",
+    question: "Buyback economics of the two-way counter: what margin does a sunchaandi shop make on new sales vs. the old-gold buyback spread? Is the pawn function the actual profit engine, not the sale? (round 11: \"buy when they have money, sell when they need cash — generations\")",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "In the five conversations, include 1 jeweler; ask: \"which side of the counter pays the rent — the selling or the buying?\"",
+    stakes: "If the buyback spread is the engine, the shop is a liquidity provider first and a retailer second — a different business than its storefront suggests",
+    round: 11,
+  },
+  {
+    id: "D52",
+    question: "What share of a small jeweler's raw material arrives through unofficial channels, and how does it interact with the new paper-trail regime? (round 11: former Fenegosida head admits \"partial demand is met by such illegally trafficked gold\"; customs loses Rs 520,000/kilo; ~15 kg/day official import limit)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Ask jewelers where they source; impossible to verify directly — triangulate via seizure frequency vs. declared import volumes",
+    stakes: "The state's demand for counter-level paperwork (D50) meets an upstream the jeweler cannot document — the compliance gap is structural, not behavioral",
+    round: 11,
+  },
+  {
+    id: "D53",
+    question: "Is organized retail actually displacing family sunchaandi shops in the Valley, or is the \"consolidation\" narrative ahead of reality? (round 11: indexbox 2026 claims hallmarking/AML costs are \"accelerating consolidation\"; branded showrooms take 15–35% markups with buyback guarantees — productizing the informal counter's trust assets)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Shutter counts on a jewelry lane over 2 years; ask 3 family jewelers if a branded showroom opened near them and what changed",
+    stakes: "Decides whether the family shop's moat (community trust, thin margins) holds against certified-purity + guaranteed-buyback — or whether trust-as-a-product wins",
+    round: 11,
+  },
+  {
+    id: "D54",
+    question: "Does the >80% Indian-karigar labor dependence give goldsmiths bargaining power at festival peaks, and what happens to small shops if the flow shifts? (round 11: 2015 quake precedent — 75% fled, shops couldn't make jewelry)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Ask 2 jewelers: \"who makes your pieces, and what happens when they're not here?\" + watch for karigar wage mentions in trade press",
+    stakes: "The making capacity of the whole trade sits in another country's citizens — a labor-supply single point of failure no round had named",
+    round: 11,
   },
 ];
 
