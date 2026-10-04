@@ -38,7 +38,7 @@ export function SiteFooter() {
             {SITE.name}
           </p>
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
-            Hami is one system. Services are one recorded path through it when public listings and contact routes are available. Nepal is where that path starts.
+            Hami is one system. Built in Kathmandu, serving everywhere equally.
           </p>
         </div>
         <FooterColumn title="Explore">

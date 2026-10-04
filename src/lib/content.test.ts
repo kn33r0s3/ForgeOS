@@ -105,8 +105,8 @@ describe("Hami public content", () => {
     assert.equal(SITE.name, "Hami");
     assert.doesNotMatch(SITE.description, /ForgeOS|Pulse/);
     assert.equal(/service marketplace|trusted service network/i.test(SITE.description), false);
-    assert.match(SITE.description, /one evidence-led system/);
-    assert.match(SITE.description, /Nepal/);
+    assert.match(SITE.description, /being built in Kathmandu/);
+    assert.match(SITE.description, /Pre-revenue/);
   });
 
   it("exposes public-first primary destinations", () => {
@@ -315,21 +315,20 @@ describe("Hami public root", () => {
     assert.match(home, /createFileRoute\("\/"\)/);
     assert.equal(ogSite.title, "Hami");
     assert.doesNotMatch(home, /Navigate to=/);
-    // Home is the needs-finder: known and unknown needs, not a generic observer.
-    assert.match(home, /Finds what people need/);
-    assert.match(home, /useSystemState/);
-    assert.match(home, /<Link to="\/forge-bot-intake">/);
-    assert.match(home, /Share a business need/);
-    assert.match(home, /For business owners, Hami helps clarify a need and find a practical next step/);
-    assert.match(home, /<Welcome onStart={update} state={state}/);
-    assert.match(home, /<SystemEditor state={state} onSave={onStart}/);
-    assert.match(home, /derivePaths/);
-    assert.match(home, /relevantFeed/);
-    assert.match(home, /loadPublicFeed/);
-    assert.match(home, /Paths are possibilities, not promises/);
-    assert.match(home, /Personal context is separate from the public world/);
-    assert.match(home, /Guests can keep temporary context in this tab/);
-    assert.match(home, /signed-in users can save it privately/);
+    // Home is honest: what Hami is building, what exists, what doesn't.
+    assert.match(home, /Understanding what people need/);
+    assert.match(home, /no merchants served yet, no intake open/);
+    assert.match(home, /See the needs being worked/);
+    assert.match(home, /to="\/needs"/);
+    assert.match(home, /<Welcome \/>/);
+    // No grand unproven claims, no toy form, no keyword-salad feed.
+    assert.doesNotMatch(home, /living system for understanding the real world/);
+    assert.doesNotMatch(home, /Finds what people need/);
+    assert.doesNotMatch(home, /Share a business need/);
+    assert.doesNotMatch(home, /SystemEditor/);
+    assert.doesNotMatch(home, /loadPublicFeed/);
+    assert.doesNotMatch(home, /useSystemState/);
+    assert.doesNotMatch(home, /WorldStream/);
     assert.match(home, /function CurrentPaths/);
     assert.match(home, /Start with what is actually available/);
     assert.match(home, /to="\/group\/businesses"/);

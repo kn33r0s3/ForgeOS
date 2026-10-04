@@ -7,9 +7,9 @@ export const SITE = {
   url: "",
   email: "",
   location: "Built in Kathmandu",
-  tagline: "Finds what people need — the needs they name, and the ones they don't.",
+  tagline: "Understanding what people need — with evidence.",
   description:
-    "Hami finds what people need — known and unknown — and connects observations, evidence, capabilities, decisions, and outcomes in one evidence-led system. Built in Kathmandu, Nepal; serving the world equally, with no geographic priority. Published needs are candidates, not verified demand.",
+    "Hami is being built in Kathmandu: a system for finding real needs, building evidence for them, and turning understanding into action with humans as partners. Pre-revenue; no merchants served yet; intake closed.",
 } as const;
 
 export const NAV = [
