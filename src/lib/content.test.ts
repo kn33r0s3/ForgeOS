@@ -239,6 +239,21 @@ describe("Hami prototype honesty", () => {
   });
 });
 
+describe("Hami forge console", () => {
+  it("exercises the real engine, not a mock", () => {
+    const sourceDir = dirname(fileURLToPath(import.meta.url));
+    const route = readFileSync(join(sourceDir, "../routes/forge.tsx"), "utf8");
+    assert.match(route, /createFileRoute\("\/forge"\)/);
+    assert.match(route, /verifyRound/);
+    assert.match(route, /ripenessQueue/);
+    assert.match(route, /isAngleTried/);
+    assert.match(route, /@\/lib\/forge\/assistant/);
+    assert.match(route, /Working console, not a product/);
+    // Kept out of the primary nav like other working surfaces.
+    assert.equal(NAV.some((item) => item.to === "/forge"), false);
+  });
+});
+
 describe("Hami public root", () => {
   const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
