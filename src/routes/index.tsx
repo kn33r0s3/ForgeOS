@@ -76,28 +76,28 @@ function Identity() {
             <p className="inline-block border border-accent/50 px-3 py-1 font-mono text-[0.68rem] font-bold uppercase tracking-[0.22em] text-accent">
               Hami · Living System
             </p>
-            <h1 className="mt-6 font-gothic text-[clamp(2rem,5.2vw,4.4rem)] leading-[1.08] text-paper">
+            <h1 className="mt-6 font-gothic text-[clamp(2rem,5.2vw,4.4rem)] leading-[1.08] text-ink">
               Hami is a living system that understands what people need and turns understanding into
               real value.
             </h1>
-            <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-paper/70">
+            <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-ink/70">
               हामी एउटा जीवित प्रणाली हो जसले मानिसहरूलाई के चाहिन्छ भन्ने बुझ्छ र बुझाइलाई वास्तविक
               मूल्यमा बदल्छ।
             </p>
             <p className="mt-6 text-sm font-bold uppercase tracking-[0.18em] text-accent">
               Built in Kathmandu. Serving everywhere equally.
             </p>
-            <p className="mt-1 text-sm text-paper/60">काठमाडौंमा बनेको। सबैका लागि समान रूपमा सेवा।</p>
+            <p className="mt-1 text-sm text-ink/60">काठमाडौंमा बनेको। सबैका लागि समान रूपमा सेवा।</p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link
                 to="/about"
-                className="inline-flex min-h-12 items-center gap-2 rounded-card border-2 border-black bg-accent px-6 font-extrabold text-black transition-colors hover:bg-paper"
+                className="inline-flex min-h-12 items-center gap-2 rounded-card border-2 border-black bg-accent px-6 font-extrabold text-black transition-colors hover:bg-warning"
               >
                 Explore the system <ArrowRight className="size-4" aria-hidden="true" />
               </Link>
               <Link
                 to="/discoveries"
-                className="inline-flex min-h-12 items-center gap-2 rounded-card border-2 border-paper/40 bg-transparent px-6 font-bold text-paper transition-colors hover:border-accent hover:text-accent"
+                className="inline-flex min-h-12 items-center gap-2 rounded-card border-2 border-ink/40 bg-transparent px-6 font-bold text-ink transition-colors hover:border-accent hover:text-accent"
               >
                 Public record
               </Link>
@@ -121,10 +121,10 @@ function FourLines() {
               key={en[0]}
               className="border border-accent/25 bg-black/40 p-5 transition-colors hover:border-accent/60"
             >
-              <p className="text-base font-extrabold leading-7 text-paper">
-                {en[0]} <span className="font-normal text-paper/60">— {en[1]}</span>
+              <p className="text-base font-extrabold leading-7 text-ink">
+                {en[0]} <span className="font-normal text-ink/60">— {en[1]}</span>
               </p>
-              <p className="mt-2 text-sm leading-6 text-paper/50">
+              <p className="mt-2 text-sm leading-6 text-ink/50">
                 {ne[0]} — {ne[1]}
               </p>
             </li>
@@ -150,17 +150,17 @@ function SystemScope() {
           </p>
           <h2
             id="system-scope-title"
-            className="mt-3 font-gothic text-3xl leading-tight text-paper sm:text-4xl"
+            className="mt-3 font-gothic text-3xl leading-tight text-ink sm:text-4xl"
           >
             Reality is not pre-sorted.
           </h2>
-          <p className="mt-4 max-w-3xl text-base leading-7 text-paper/70 sm:text-lg sm:leading-8">
+          <p className="mt-4 max-w-3xl text-base leading-7 text-ink/70 sm:text-lg sm:leading-8">
             Needs, unused capability, opportunities, mismatches, constraints, relationships,
             resources, and problems worth solving meet in many different ways. Hami looks for what
             matters in those real situations and what might lead to a useful outcome. These are
             things the system can investigate, not discoveries claimed here.
           </p>
-          <p className="mt-4 max-w-3xl text-base leading-7 text-paper/70 sm:text-lg sm:leading-8">
+          <p className="mt-4 max-w-3xl text-base leading-7 text-ink/70 sm:text-lg sm:leading-8">
             Hami can prepare different ways to help as its understanding and capabilities grow. It
             keeps evidence alongside uncertainty, acts externally only when authorized, and learns
             from actual outcomes. These capacities can inform one another; no fixed sequence or
@@ -210,24 +210,24 @@ function RecordedObservations() {
           </p>
           <h2
             id="recorded-observations-title"
-            className="mt-3 font-gothic text-3xl leading-tight text-paper sm:text-4xl"
+            className="mt-3 font-gothic text-3xl leading-tight text-ink sm:text-4xl"
           >
             What is actually recorded
           </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-paper/60">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-ink/60">
             Only stored public observations appear here, with their source and recorded state. A
             sourced observation is not automatically a verified claim.
           </p>
 
           {!ready && (
             <div className="mt-6 border-t border-accent/20 py-5" aria-busy="true">
-              <p className="text-sm text-paper/60">Checking the public record…</p>
+              <p className="text-sm text-ink/60">Checking the public record…</p>
             </div>
           )}
           {ready && items === null && (
             <div className="mt-6 border-t border-accent/20 py-5" role="status">
-              <p className="font-bold text-paper">The public record is unavailable right now.</p>
-              <p className="mt-1 text-sm text-paper/60">
+              <p className="font-bold text-ink">The public record is unavailable right now.</p>
+              <p className="mt-1 text-sm text-ink/60">
                 Hami could not check for observations, so their presence or absence cannot be
                 confirmed.
               </p>
@@ -235,7 +235,7 @@ function RecordedObservations() {
           )}
           {ready && items?.length === 0 && (
             <div className="mt-6 border-t border-accent/20 py-5">
-              <p className="font-bold text-paper">
+              <p className="font-bold text-ink">
                 Nothing is recorded in this public observation record yet.
               </p>
             </div>
@@ -245,19 +245,19 @@ function RecordedObservations() {
               {items.map((item) => (
                 <li key={item.id} className="py-5">
                   <article>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-paper/50">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-ink/50">
                       <span>{item.source}</span>
                       <span>{item.epistemic_state}</span>
                       <span>{item.freshness || "freshness unknown"}</span>
                     </div>
-                    <h3 className="mt-2 font-display text-lg font-bold leading-6 text-paper">
+                    <h3 className="mt-2 font-display text-lg font-bold leading-6 text-ink">
                       {item.title || "Untitled observation"}
                     </h3>
-                    <p className="mt-2 max-w-3xl text-sm leading-6 text-paper/60">{item.excerpt}</p>
+                    <p className="mt-2 max-w-3xl text-sm leading-6 text-ink/60">{item.excerpt}</p>
                     {item.canonical_url && (
                       <a
                         href={item.canonical_url}
-                        className="mt-3 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent hover:text-paper"
+                        className="mt-3 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent hover:text-ink"
                       >
                         View source
                         <ArrowUpRight className="size-4" aria-hidden="true" />
@@ -271,7 +271,7 @@ function RecordedObservations() {
           {ready && items && items.length > 0 && (
             <Link
               to="/discoveries"
-              className="mt-4 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent hover:text-paper"
+              className="mt-4 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent hover:text-ink"
             >
               Open the public record
               <ArrowRight className="size-4" aria-hidden="true" />
@@ -293,20 +293,20 @@ function CurrentActivity() {
     >
       <Container>
         <div className="mx-auto max-w-3xl border border-accent/25 bg-black/40 p-5">
-          <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.18em] text-paper/50">
+          <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.18em] text-ink/50">
             One proposed investigation · not started
           </p>
-          <h2 id="current-activity-title" className="mt-2 font-display text-xl font-bold text-paper">
+          <h2 id="current-activity-title" className="mt-2 font-display text-xl font-bold text-ink">
             Currently exploring
           </h2>
-          <p className="mt-2 text-sm leading-6 text-paper/60">
+          <p className="mt-2 text-sm leading-6 text-ink/60">
             Experiment 1 asks whether faster replies could recover sales for one seller. No seller
             has agreed and no messages have been handled; it is one small investigation, not Hami's
             identity or a live offer.
           </p>
           <Link
             to="/needs"
-            className="mt-2 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent hover:text-paper"
+            className="mt-2 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent hover:text-ink"
           >
             Read its scope
             <ArrowRight className="size-4" aria-hidden="true" />
@@ -323,7 +323,7 @@ function HonestStatus() {
   return (
     <section aria-label="Status" className="border-t border-accent/20 bg-night py-8 sm:py-10">
       <Container>
-        <p className="mx-auto max-w-2xl border-l-4 border-accent pl-4 text-sm font-bold leading-6 text-paper">
+        <p className="mx-auto max-w-2xl border-l-4 border-accent pl-4 text-sm font-bold leading-6 text-ink">
           Honest status: Hami is pre-revenue. Experiment 1 remains proposed; there are no
           participants or results to report.
         </p>
