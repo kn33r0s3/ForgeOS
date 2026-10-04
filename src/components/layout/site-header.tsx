@@ -72,6 +72,12 @@ export function SiteHeader() {
           </nav>
           <div className="flex items-center gap-2">
             <AuthControl />
+            <Link
+              to="/login"
+              className="hidden min-h-10 items-center rounded-card border-2 border-black bg-accent px-4 text-sm font-extrabold text-black transition-colors hover:bg-warning sm:inline-flex"
+            >
+              Join Hami
+            </Link>
             <button
               type="button"
               className="group relative inline-flex size-11 flex-col items-center justify-center gap-[5px] rounded-card lg:hidden"

@@ -101,13 +101,19 @@ describe("Hami public content", () => {
   });
 
   it("exposes public-first primary destinations", () => {
+    const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
     const hrefs = NAV.map((item) => item.to);
-    // The primary navigation connects Hami's key pages: identity, system, record, findings, account.
-    assert.deepEqual(hrefs, ["/", "/about", "/discoveries", "/what-we-learned", "/login"]);
+    // The primary navigation connects Hami's key pages: identity, system, record, findings.
+    // Join Hami is a separate header button, not a nav menu item.
+    assert.deepEqual(hrefs, ["/", "/about", "/discoveries", "/what-we-learned"]);
     const publicHrefs = new Set<string>(hrefs);
     for (const path of FORBIDDEN_PUBLIC_PATHS) {
       assert.equal(publicHrefs.has(path), false, `nav leaked ${path}`);
     }
+    // Join Hami button exists in the header, separate from nav.
+    const header = readFileSync(join(root, "src/components/layout/site-header.tsx"), "utf8");
+    assert.match(header, /Join Hami/);
+    assert.match(header, /to="\/login"/);
   });
 
   it("keeps commercial services separate from prototype capabilities", () => {
