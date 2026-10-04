@@ -130,6 +130,17 @@ def test_historical_evidence_maps_in_bounded_batches_without_changing_raw_rows(d
     assert db.query(models.Evidence).count() == 4
 
 
+def test_evidence_id_scope_projects_only_selected_legacy_rows(db):
+    _signal, _belief, _prediction, _opportunity, rows = _legacy_evidence_rows(db)
+
+    result = adapter.sync_legacy_evidence(db, evidence_ids={rows[1].id})
+
+    assert result["records_seen"] == result["records_mapped"] == 1
+    assert result["unresolved_records"] == 0
+    assert rows[1].subject_kind == "entity"
+    assert all(row.subject_kind is None for index, row in enumerate(rows) if index != 1)
+
+
 def test_ambiguous_or_incomplete_legacy_evidence_stays_unmapped(db):
     signal, belief, _prediction, opportunity, _rows = _legacy_evidence_rows(db)
     ambiguous = models.Evidence(

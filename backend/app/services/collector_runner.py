@@ -325,6 +325,32 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
                 if claim:
                     evidence_graph.link_evidence(db, evidence, claim=claim, relation_type=relation)
 
+    retrieval_observation = None
+    if not raw_items:
+        retrieved_at = datetime.now(timezone.utc).isoformat()
+        source_registry_id = (
+            authorization.entry.registry_id
+            if authorization is not None
+            else next(
+                (
+                    entry.registry_id
+                    for entry in source_clearance_registry.source_clearances()
+                    if entry.collector == task.source
+                ),
+                None,
+            )
+        )
+        retrieval_observation = {
+            "source": task.source,
+            "source_registry_id": source_registry_id,
+            "source_accessed": True,
+            "query": task.query,
+            "retrieved_at": retrieved_at,
+            "source_records_returned": 0,
+            "outcome": "valid_empty_retrieval",
+            "claim_effect": "none",
+        }
+
     if task.source == "openalex" and not raw_items:
         task_context = task.results if isinstance(task.results, dict) else {}
         search_mode = OpenAlexCollector.validate_search_mode(
@@ -339,7 +365,7 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
         unresolved = task_context.get("unresolved_dimensions")
         observation_provenance = {
             "source_type": "openalex",
-            "source_registry_id": authorization.entry.registry_id if authorization else None,
+            "source_registry_id": retrieval_observation["source_registry_id"],
             "metadata_only": True,
             "traceable": True,
             "observation_type": "valid_empty_retrieval",
@@ -356,7 +382,15 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
             "claim_effect": "none",
             "external_pdf_fetched": False,
             "publisher_page_fetched": False,
+            "source_accessed": True,
         }
+        observation_provenance["retrieved_at"] = retrieval_observation["retrieved_at"]
+        retrieval_observation.update(
+            {
+                "search_mode": search_mode,
+                "returned_works": 0,
+            }
+        )
         empty_signal = observer.observe(
             f"0 scholarly works found in OpenAlex for query: {task.query}",
             source="openalex",
@@ -366,8 +400,8 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
                 "canonical_url": OPENALEX_API_URL,
                 "external_id": observation_id,
                 "identity_key": f"openalex:empty:{observation_id}",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "retrieved_at": datetime.now(timezone.utc).isoformat(),
+                "timestamp": retrieval_observation["retrieved_at"],
+                "retrieved_at": retrieval_observation["retrieved_at"],
                 "collection_status": "valid_empty_retrieval",
                 "provenance": observation_provenance,
             },
@@ -389,18 +423,7 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
         task,
         signal_ids=created_signal_ids,
         evidence_ids=evidence_ids,
-        retrieval_observation=(
-            {
-                "source": "openalex",
-                "query": task.query,
-                "search_mode": (task.results or {}).get("search_mode", "keyword"),
-                "returned_works": 0,
-                "outcome": "valid_empty_retrieval",
-                "claim_effect": "none",
-            }
-            if task.source == "openalex" and not raw_items
-            else None
-        ),
+        retrieval_observation=retrieval_observation,
     )
     final_task.results = {
         **(final_task.results or {}),
@@ -446,8 +469,8 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
         corroborated_evidence_count=verified_count, contradicted_claim_count=contradicted_count,
         freshness=100.0 if created_signal_ids else None,
         latency_ms=(monotonic() - started) * 1000,
-        success=task.source == "openalex" or bool(raw_items),
-        failure_kind=None if task.source == "openalex" or raw_items else "empty_result",
+        success=True,
+        failure_kind=None,
         result_ids=evidence_ids,
     )
     return {

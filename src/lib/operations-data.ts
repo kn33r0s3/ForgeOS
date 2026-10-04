@@ -86,9 +86,12 @@ export interface RuntimeSnapshot {
   };
 }
 
-async function fetchApiJson<T>(path: string): Promise<T> {
+async function fetchApiJson<T>(path: string, ownerKey?: string): Promise<T> {
   const response = await fetch(path, {
-    headers: { Accept: "application/json" },
+    headers: {
+      Accept: "application/json",
+      ...(ownerKey ? { "X-API-Key": ownerKey } : {}),
+    },
     signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) {
@@ -110,18 +113,18 @@ export function loadRuntimeSnapshot(scope?: CacheScope) {
   return cachedRead("/api/forge/runtime", () => fetchApiJson<RuntimeSnapshot>("/api/forge/runtime"), scope);
 }
 
-export function loadMoneyDashboard(scope?: CacheScope) {
+export function loadMoneyDashboard(ownerKey: string, scope?: CacheScope) {
   return cachedRead(
     "/api/forge/money/dashboard",
-    () => fetchApiJson<MoneyDashboard>("/api/forge/money/dashboard"),
+    () => fetchApiJson<MoneyDashboard>("/api/forge/money/dashboard", ownerKey),
     scope,
   );
 }
 
-export function loadExecutionActions(scope?: CacheScope) {
+export function loadExecutionActions(ownerKey: string, scope?: CacheScope) {
   return cachedRead(
     "/api/forge/execution/actions",
-    () => fetchApiJson<ActionRecord[]>("/api/forge/execution/actions"),
+    () => fetchApiJson<ActionRecord[]>("/api/forge/execution/actions", ownerKey),
     scope,
   );
 }

@@ -129,8 +129,9 @@ than a few days old, re-verify before trusting the details.
 
 ## Current state (verified 2026-10-04 — re-verify on takeover)
 
-- **Repo:** `kn33r0s3/ForgeOS`, `main` at `4830f82` (homepage visual
-  restoration, 2026-10-04 ~18:15 NPT).
+- **Repo:** `kn33r0s3/ForgeOS`; `main` and `origin/main` matched at
+  `eb88332138ff3a4343d0744e7caa1b655d1daf7d` when this review began. This is
+  the starting revision, not a claim about the deployed source SHA.
 - **Production:** `https://haminp.vercel.app` (**canonical**) and
   `https://forge-os-ebon.vercel.app` (alias) — both serve the `4830f82`
   build (bundle `index-BN48xYVh.js`, verified live 2026-10-04).
@@ -144,11 +145,39 @@ than a few days old, re-verify before trusting the details.
   Hami's identity), honest pre-revenue status. Nav = Hami / The system /
   Public record. Inbox prototype at /prototype/inbox (TEST-only footer
   link, not primary nav). `public-copy.test.ts` enforces the contract.
+- **Homepage operating map:** the page now connects SYSTEM → WORLD →
+  OPPORTUNITIES → CAPABILITIES → ACTION → OUTCOMES to existing public views
+  (`/about`, `/discoveries`, `/opportunities`, `/providers`, `/actions`, and
+  `/what-we-learned`). It is explicitly an open map, not a claim that each
+  stage happened; the linked pages retain their own evidence and access states.
+  A read-only production request to `/api/public/discoveries?limit=4` returned
+  four records in `observed` state. The local FastAPI service was not started.
 - **Production:** `https://haminp.vercel.app` (**canonical — decided** by
   owner-delegated authority 2026-10-04; sitemap/robots/SITE.domain point
   there) and `https://forge-os-ebon.vercel.app` (alias/legacy). Both
   `/api/health` returned ok; both `/api/forge-bot/config` report
   `intake_enabled:false`.
+- **Signup:** `ACTIVE_TERMS` is configured at version `1.0`; email/password
+  signup and the one-time 18+ / terms permit are present in source. Read-only
+  GETs to `/login` and `/api/auth/get-session` returned 200 on both production
+  domains. No signup request or account creation was attempted; deployed
+  provider/configuration readiness remains unverified.
+- **Owner operations:** the backend requires `FORGE_API_KEY` for money and
+  execution-action reads. The operations UI now accepts the key without
+  persisting it and attaches it to protected reads and explicit mutations.
+  Full local tests, typecheck, lint, build, and browser checks pass; the focused
+  backend owner-key test also passes on Python 3.11. Production key
+  configuration and authenticated dashboard access remain unverified. The key
+  does not authorize external contact, spend, or automatic execution.
+- **Signup render:** a local hydration mismatch on `/login` is fixed by keeping
+  the server and first client render aligned until session resolution. The
+  signup form exposes DOB and current-terms consent; no test account was
+  created. Full local tests/typecheck/lint/build pass. Production account
+  creation remains unverified.
+- **CI follow-up:** GitHub checks for the first pushed commit `6714314` showed
+  frontend success and backend failure from the stale unknown-map count
+  (expected 86, parsed 93). The test now covers D77; the full local backend
+  suite passed 697 with 2 skipped, and both GitHub checks passed on `8d6d24e`.
 - **Intake: CLOSED. `FORGE_BOT_LIVE`: CLOSED.** Owner-delegated decision
   2026-10-04: intake stays closed — ACTIVATION.md readiness checklist still
   has owner-side FAILs (test email received, privacy text approved, deployed
@@ -196,8 +225,9 @@ than a few days old, re-verify before trusting the details.
   lives inside `/owner` behind the owner key ONLY — the public
   `/forge` route was removed on owner correction. 133/133 tests green.
 - **Launch readiness:** `docs/LAUNCH_READINESS.md` tracks every launch
-  requirement (rows updated 2026-10-04 for the 6 decisions). Backend suite
-  686 passed/0 failed; frontend 107/107. Everything remaining needs a human
+  requirement (rows updated 2026-10-04 for the 6 decisions). Latest local
+  Python 3.11 backend suite: 697 passed, 2 skipped; frontend/script suite:
+  364 passed. Everything remaining needs a human
   body, identity, or money: the five conversations, company registration,
   payment credentials, four owner-side readiness checks.
 - **Open blockers:** the five discovery conversations need a real human

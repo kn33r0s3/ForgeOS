@@ -2,13 +2,10 @@
 
 ## Current closure map (2026-10-04)
 
-At the start of the latest verification, `HEAD` and `origin/main` matched
-`f5ca8d82749d82723fa18806fe472bb913a995db`. The local PostgreSQL parity test
-fix is committed but not pushed; `origin/main` has since advanced to
-`30e337c2354fb15e397861780b906f2108e40d74`. CI is green for the original base
-and that current upstream SHA, but was not run for the local parity commit.
-This is the current summary; dated entries below it are retained as history
-and may be superseded by this map.
+At the start of this review, `HEAD` and `origin/main` matched
+`eb88332138ff3a4343d0744e7caa1b655d1daf7d`. This review's local changes are
+recorded below; public health does not establish the deployed source SHA.
+Dated entries below are retained as history and may be superseded by this map.
 
 | Area | Current status | Evidence and next dependency |
 | --- | --- | --- |
@@ -16,19 +13,100 @@ and may be superseded by this map.
 | Malformed intake validation | **DONE — local only** | TEST-marked malformed email returns 422 with the `email` field and generic message; no lead row is created. Do not test by submitting to production. |
 | Public write limits and body caps | **IMPLEMENTED / locally tested; deployment identity UNVERIFIED** | Source enforces keyed durable limits (5/hour for posts/requests, 20/hour for domain close/dispute/response) and 16 KiB caps. Relevant endpoint tests pass on SQLite and throwaway PostgreSQL 18. Production GETs establish current closed flags, not the deployed source SHA; owner-readiness access is required for that SHA comparison. |
 | Production flags and basic health | **OBSERVED CLOSED / healthy by GET** | At inspection, both `haminp.vercel.app` and `forge-os-ebon.vercel.app` returned `/api/health` 200 with `status=ok, ready=true` and `/api/forge-bot/config` 200 with `intake_enabled=false`. These responses do not prove authenticated readiness, database state, or which commit is deployed. |
+| Operations dashboard owner-key flow | **IMPLEMENTED / production access UNVERIFIED** | `GET /forge/money/dashboard` and `GET /forge/execution/actions` require `FORGE_API_KEY`; backend tests verify 401 without it. The `/operations` UI now asks for the key in a password field, holds it only in component memory, and sends it on protected reads and explicit writes. Owner action still required: enter an already-authorized key. Missing backend configuration fails closed with 503; a wrong key returns 401. Next dependency: authorized confirmation that the production key is configured, then owner verification through the UI. No production key was accessed. |
+| Homepage operating map | **IMPLEMENTED / local browser verified** | Home links SYSTEM → WORLD → OPPORTUNITIES → CAPABILITIES → ACTION → OUTCOMES to the existing `/about`, `/discoveries`, `/opportunities`, `/providers`, `/actions`, and `/what-we-learned` views. Production `GET /api/public/discoveries?limit=4` returned 200 with four `observed` records. Owner action still required: name a reachable seller and authorize the exact first contact. Action removed: visitors no longer need footer navigation or a guessed URL to follow these public surfaces. Remaining: each page's actual empty, unavailable, evidence, and authorization states still govern; the map does not imply a stage happened. Next dependency: the named-seller decision remains unchanged. |
+| Signup session hydration | **FIXED / local browser verified; production account flow UNVERIFIED** | `ACTIVE_TERMS` is version `1.0`; signup requires an 18+ check and server-issued one-time terms permit. `/login` now keeps the server and first client render aligned while the session resolves. Fresh local reload had no page errors; the create-account form showed DOB and terms acceptance. No account was created. Production configuration and a real signup remain unverified. |
 | Owner readiness and maintenance heartbeat | **BLOCKED / unverified** | The readiness endpoint requires the owner key. Do not retry unauthenticated calls or retrieve credentials to bypass this. Owner-authorized access is the next dependency. |
 | Production database inspection | **BLOCKED** | No authorized credential retrieval procedure is established in the current docs. The owner must define and authorize the credential source and read-only procedure; no production database or credential was accessed. |
 | Retention after response `ACTION` | **PLANNED, not implemented** | A linked response `ACTION` is exempt from the existing 30-day unactioned-inquiry purge. The proposed 90-day maximum needs owner approval before implementation. |
 | Customer-facing response | **BLOCKED** | No owner-configured response channel/template or Forge Bot sender exists; the send flag defaults false. No outbound messages are authorized or sent. |
 | Pilot segment and paid outcome | **HYPOTHESIS / owner action required** | The initial segment remains unverified until the owner reports five real discovery conversations. No real customer/revenue outcome is established; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**. |
 | ForgeBot v0 — operator's assistant | **IMPLEMENTED / locally tested** | `src/lib/forge/assistant.ts`: `verifyRound()` gates round findings through the evidence gate before banking (rejected findings are never banked); `ripenessQueue()` ranks open unknowns (desk-doable first, oldest first); `isAngleTried()` refuses repeated angles against 14 tried angles parsed from the discovery log. `docs/ROUND_PROTOCOL.md` specifies the loop precisely. 12 assistant tests pass. Per-change analysis: (1) owner action still required: none for the assistant itself — the five real conversations still need a human; (2) action removed: manual angle-picking and manual gate-checking from operator rounds; (3) remains/blocked: ForgeBot running rounds itself (v1) needs the round protocol wired to its tool access — no new permission, just the build; (4) next removable dependency: operator-planned angles → assistant-suggested angles. The operator console lives inside `/owner` behind the owner key only (no public route): gate tester, angle checker, ripeness list — all running the real engine code. |
-| Backend PostgreSQL full-suite coverage | **DONE — local SQLite/PostgreSQL parity verified** | The complete backend suite passed 686 tests, 2 skipped on SQLite and throwaway PostgreSQL 18. The five previously failing modules passed all 37 tests on each dialect. Their causes were invalid test-fixture foreign keys and SQLite-specific driver/path expectations, not production-code failures. The focused Forge Bot/owner-notification/privacy/public-write/signal tests passed 112/112 on each dialect. This local evidence does not establish production database behavior or the deployed source SHA. |
+| Backend PostgreSQL full-suite coverage | **DONE — prior SQLite/PostgreSQL parity verified** | The complete backend suite previously passed 686 tests, 2 skipped on SQLite and throwaway PostgreSQL 18. The focused Forge Bot/owner-notification/privacy/public-write/signal tests passed 112/112 on both dialects. The latest Python 3.11 SQLite run passed 697 tests, 2 skipped after refreshing the D77 parser expectation. PostgreSQL was not rerun for this test-only change; none of this establishes production database behavior or the deployed source SHA. |
+| Unknown-map importer test count | **DONE — current D1-D77 inventory covered** | `docs/UNKNOWN_MAP.md` contains 9 A, 4 B, 3 C, and 77 D entries (93 total). `backend/tests/test_import_unknowns.py` now asserts the D77 endpoint as well as the expected count; the focused test and full Python 3.11 backend suite pass. GitHub `backend` and `frontend` checks passed on `8d6d24e`. This corrects test coverage only; owner action still required for the seller pilot. |
+| Cleared-source empty retrieval semantics | **FIXED / focused tests pass; live run pending** | A normal empty GDELT response is now recorded as `source_accessed=true`, `valid_empty_retrieval`, zero source records, and no claim effect. The task remains `needs_research` with no Evidence or Opportunity; source usage counts the successful access rather than a provider failure. GDELT remains cleared for media metadata only, not prospect identification. Owner action remains naming/authorizing a seller and a separate exact business-prospect source clearance. |
 
-Current npm verification: `npm test`, typecheck, lint, and production build
-passed. The build was run with `DATABASE_URL` unset, so its migration step
-skipped. Read-only production GETs and browser verification are recorded in
-`STATUS.md`; no production write, credential access, message, database query,
-or flag change was performed for this verification.
+Latest local verification after source edits: the full frontend/script suite
+passed **364/364** with `FORCE_COLOR=0 NO_COLOR=1`; typecheck, lint, and the
+production build passed. The build ran with `DATABASE_URL` unset and skipped
+migrations. The full backend suite passed **697**, **2 skipped** on Python
+3.11; the focused owner-key guard test also passed. Browser checks at 1280px and 390px found no
+horizontal overflow or page/console errors, and no protected operations read
+occurred before key submission. Read-only production GETs to `/login` and
+`/api/auth/get-session` returned 200 on both domains. No account, production
+write, credential access, message, database query, or flag change was made.
+GitHub checks for the first pushed commit `6714314` reported frontend success
+and backend failure on the stale D70 parser expectation. Both GitHub checks
+passed on follow-up commit `8d6d24e`, which updates the test to D77.
+
+## [PARTIAL] Connect owner operations UI to its existing API-key boundary (2026-10-04)
+
+- Owner action still required: provide an authorized `FORGE_API_KEY` in the
+  operations page; the production key configuration has not been inspected.
+- Action removed: `/operations` previously requested protected money/action
+  reads and sent cycle, discovery, and approval writes without the required
+  `X-API-Key`, leaving its controls disconnected from the backend boundary.
+- Remaining blocker: the backend must have its owner key configured; absent
+  configuration returns 503 and a wrong key returns 401. Entering a key does
+  not run a cycle, approve an action, authorize contact, or spend money.
+- Next removable dependency: owner verifies the configured key in the UI;
+  production access remains unverified until then.
+- Verification: focused API-header test passed; backend
+  `test_money_and_execution_reads_require_owner_key` passed on Python 3.11;
+  full frontend/script suite passed 364/364; typecheck, lint, and build passed.
+  Browser verification at 1280px and 390px showed the key form,
+  no horizontal overflow, no page/console errors, and no protected reads before
+  unlock. Backend tests in `backend/tests/test_commercial_ops.py` assert the
+  protected GET behavior. No production key or write was used.
+
+## [PARTIAL] Connect existing public system surfaces from the homepage (2026-10-04)
+
+- Owner action still required: name one seller and explicitly authorize the
+  exact first contact; homepage navigation does not replace that decision.
+- Action removed: a visitor can now move from Hami's identity to its existing
+  public observations, opportunity hypotheses, capability graph, action
+  aggregate, and recorded learning directly from the homepage.
+- Remaining blocker: the map is an index of existing views, not evidence that
+  all stages occurred. Local FastAPI was offline and the page displayed its
+  explicit unavailable state; production's public discoveries endpoint
+  returned HTTP 200 with four `observed` rows.
+- Next removable dependency: the seller remains the next real-world blocker;
+  no new API, workflow, permission, or data model was added.
+- Verification: the focused homepage content test passed 14/14; typecheck
+  passed. At 1280px and 390px, all six links rendered in order with no
+  horizontal overflow or page errors. No customer, action, outcome, or revenue
+  claim was added.
+
+## [DONE WITH LIMITATION] Keep signup's first render hydration-safe (2026-10-04)
+
+- Owner action still required: each registrant must be at least 18 and accept
+  current Terms 1.0; no production signup was attempted.
+- Action removed: the login page no longer renders different session branches
+  during server render and the first client hydration when the session resolves
+  quickly.
+- Remaining blocker: deployed auth/provider configuration and successful
+  production account creation are not established by public GET checks.
+- Next removable dependency: verify deployment readiness through an already
+  authorized path; do not create a production test account.
+- Verification: full frontend/script suite passed 364/364; typecheck, lint,
+  and production build passed. A fresh local `/login` reload had no
+  hydration/page errors; the signup toggle exposed name, DOB, Terms link, and
+  consent checkbox.
+  No credentials were entered and no account was created.
+
+## [DONE WITH LIMITATION] Align unknown-map importer test with current inventory (2026-10-04)
+
+- Owner action still required: name one seller and authorize the exact first
+  contact; parser coverage does not move that real-world decision.
+- Action removed: the backend suite no longer expects the obsolete 86-entry
+  map after the repository grew from D70 to D77.
+- Remaining blocker: this test-only repair provides no seller, customer, or
+  revenue evidence; the owner-named-seller decision remains outstanding.
+- Next removable dependency: the owner names one reachable seller and
+  authorizes the exact first contact.
+- Verification: source inspection confirmed D70 and D77 are present and the
+  parser returned 93 entries. The focused parser test passed and the full
+  Python 3.11 backend suite passed 697 tests with 2 skipped.
 
 ## [PARTIAL] Restore system-first homepage perception (2026-10-04)
 

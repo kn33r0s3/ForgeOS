@@ -299,6 +299,85 @@ def test_gdelt_retries_429_with_exponential_backoff(db, monkeypatch):
     assert sleeps == [5, 10]
 
 
+def test_gdelt_empty_success_records_access_without_resolving_research(db, monkeypatch):
+    entry, _authorization, requests = _mock_gdelt(
+        monkeypatch,
+        db,
+        payload={"articles": []},
+    )
+    question, task = _create_gdelt_task(db, "What recent media coverage is indexed?")
+
+    result = collector_runner.execute_task(db, task)
+    db.refresh(task)
+    db.refresh(question)
+
+    assert len(requests) == 1
+    assert result["status"] == "needs_research"
+    assert task.status == "needs_research"
+    observation = task.results["retrieval_observation"]
+    assert observation["source"] == "gdelt_doc"
+    assert observation["source_registry_id"] == entry.registry_id
+    assert observation["source_accessed"] is True
+    assert observation["outcome"] == "valid_empty_retrieval"
+    assert observation["source_records_returned"] == 0
+    assert observation["claim_effect"] == "none"
+    assert datetime.fromisoformat(observation["retrieved_at"])
+
+    usage = db.query(models.SourceUsageEvent).filter_by(research_task_id=task.id).one()
+    assert usage.success is True
+    assert usage.failure_kind is None
+    assert usage.result_count == 0
+    assert db.query(models.Signal).filter_by(source="gdelt_doc").count() == 0
+    assert db.query(models.Evidence).filter_by(source="gdelt_doc").count() == 0
+    assert db.query(models.Opportunity).count() == 0
+    assert db.query(models.Customer).count() == 0
+    execute_event = db.query(models.ResearchTaskEvent).filter_by(
+        task_id=task.id,
+        event_type="step_completed",
+        step_name="execute",
+    ).one()
+    assert execute_event.details["retrieval_observation"] == observation
+    assert db.query(models.ResearchTaskEvent).filter_by(
+        task_id=task.id,
+        event_type="remaining_question",
+    ).count() == 1
+
+
+def test_gdelt_source_failure_is_not_recorded_as_empty_success(db, monkeypatch):
+    _mock_gdelt(monkeypatch, db)
+
+    class _UnavailableOpener:
+        def open(self, request, timeout):
+            raise urllib.error.HTTPError(
+                request.full_url,
+                503,
+                "Service Unavailable",
+                {},
+                None,
+            )
+
+    monkeypatch.setattr(
+        gdelt.urllib.request,
+        "build_opener",
+        lambda *_handlers: _UnavailableOpener(),
+    )
+    _question, task = _create_gdelt_task(db, "GDELT source failure boundary")
+
+    result = collector_runner.execute_task(db, task)
+    db.refresh(task)
+
+    assert result["status"] == task.status == "failed"
+    assert "retrieval_observation" not in task.results
+    assert "HTTP 503" in task.errors[-1]["error"]
+    usage = db.query(models.SourceUsageEvent).filter_by(research_task_id=task.id).one()
+    assert usage.success is False
+    assert usage.failure_kind == "collection_failure"
+    assert db.query(models.Signal).filter_by(source="gdelt_doc").count() == 0
+    assert db.query(models.Evidence).filter_by(source="gdelt_doc").count() == 0
+    assert db.query(models.Opportunity).count() == 0
+    assert db.query(models.Customer).count() == 0
+
+
 def test_gdelt_epistemic_requirements_bound_velocity_and_reject_commercial_claims():
     provenance = {
         "source_registry_id": "gdelt-doc-api-v2",

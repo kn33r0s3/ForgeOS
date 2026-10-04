@@ -21,7 +21,12 @@ def _event_key(event_id: int) -> str:
     return f"{_KEY_PREFIX}{event_id}{_KEY_SUFFIX}"
 
 
-def sync_research_task_events(db: Session, *, limit: int = 250) -> dict[str, int]:
+def sync_research_task_events(
+    db: Session,
+    *,
+    limit: int = 250,
+    task_id: int | None = None,
+) -> dict[str, int]:
     """Project only lifecycle metadata; source details remain in the task log."""
     world_graph.seed_core_types(db)
     result = {
@@ -37,13 +42,10 @@ def sync_research_task_events(db: Session, *, limit: int = 250) -> dict[str, int
     already_projected = exists().where(
         models.WorldEvent.idempotency_key == event_key
     )
-    rows = (
-        db.query(models.ResearchTaskEvent)
-        .filter(~already_projected)
-        .order_by(models.ResearchTaskEvent.id.asc())
-        .limit(max(1, int(limit)))
-        .all()
-    )
+    query = db.query(models.ResearchTaskEvent).filter(~already_projected)
+    if task_id is not None:
+        query = query.filter(models.ResearchTaskEvent.task_id == task_id)
+    rows = query.order_by(models.ResearchTaskEvent.id.asc()).limit(max(1, int(limit))).all()
 
     for source_event in rows:
         result["events_seen"] += 1

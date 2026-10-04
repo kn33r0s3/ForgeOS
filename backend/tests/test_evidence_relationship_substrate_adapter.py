@@ -116,6 +116,18 @@ def test_unregistered_or_ambiguous_evidence_links_remain_unprojected(db):
     assert db.query(models.WorldRelation).count() == 0
 
 
+def test_evidence_id_scope_projects_only_selected_relationships(db):
+    _evidence, _claim, selected, _decision = _evidence_claim_link(db)
+    _other_evidence, _other_claim, other, _other_decision = _evidence_claim_link(db)
+
+    result = adapter.sync_evidence_relationships(db, evidence_ids={selected.evidence_id})
+
+    assert result["records_seen"] == result["relations_created"] == 1
+    assert result["unresolved_records"] == 0
+    assert selected.substrate_relation_id is not None
+    assert other.substrate_relation_id is None
+
+
 def test_evidence_relationship_projection_survives_restart(tmp_path):
     path = tmp_path / "evidence_relationship.sqlite"
     engine = create_engine(f"sqlite:///{path}")

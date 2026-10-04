@@ -357,12 +357,31 @@ describe("Hami public root", () => {
     assert.doesNotMatch(home, /loadPublicFeed/);
     assert.doesNotMatch(home, /useSystemState/);
     assert.doesNotMatch(home, /WorldStream/);
-    // Old homepage sections are gone; old routes stay live but unlinked.
+    // The homepage maps existing public views without implying they have all run.
     assert.doesNotMatch(home, /function CurrentPaths/);
     assert.doesNotMatch(home, /to="\/group\/businesses"/);
     assert.match(home, /to="\/discoveries"/);
-    assert.doesNotMatch(home, /to="\/opportunities"/);
-    assert.doesNotMatch(home, /to="\/actions"/);
+    const flow = home.slice(home.indexOf("const SYSTEM_FLOW"), home.indexOf("function HomePage"));
+    const flowStages = ["SYSTEM", "WORLD", "OPPORTUNITIES", "CAPABILITIES", "ACTION", "OUTCOMES"];
+    let previousFlowPosition = -1;
+    for (const stage of flowStages) {
+      const stagePosition = flow.indexOf(`stage: "${stage}"`, previousFlowPosition + 1);
+      assert.ok(stagePosition > previousFlowPosition, `${stage} must appear in system-flow order`);
+      previousFlowPosition = stagePosition;
+    }
+    for (const destination of [
+      "/about",
+      "/discoveries",
+      "/opportunities",
+      "/providers",
+      "/actions",
+      "/what-we-learned",
+    ]) {
+      assert.ok(flow.includes(`to: "${destination}"`), `system flow should link to ${destination}`);
+    }
+    assert.match(home, /An open map, not a fixed funnel/);
+    assert.match(home, /every stage has happened/);
+    assert.doesNotMatch(home, /to="\/operations"/);
     // Header: no context form, no closed-intake links, no Sign in.
     assert.doesNotMatch(header, /Sign in/);
     assert.doesNotMatch(header, /Edit my context/);
