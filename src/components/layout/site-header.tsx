@@ -155,7 +155,7 @@ export function SiteHeader() {
               })}
             </ol>
           </nav>
-          <div className="p-4">
+          <div className="p-4 sm:hidden">
             <Link
               to="/login"
               onClick={() => setOpen(false)}
