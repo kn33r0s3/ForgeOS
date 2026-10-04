@@ -755,3 +755,29 @@ These targets are not certified p95/p99 SLAs. Only the individual runs and five-
 ### TARGET ARCHITECTURE / FUTURE CAPABILITY
 
 The implemented slice is: persisted user report → immediate truthful acknowledgement → one bounded existing background task → persisted status/evidence read by polling. A sufficiently understood Need may use the existing capability search; the flow still does not infer one from an ambiguous report. Future work includes making the existing frontend consume the status URLs, adding a transaction-safe reduction for the measured core-type seed query fan-out, and extending the same evidence-backed status pattern to capability/economic decision stages. Do not claim full real-time completion, external-demand discovery, or economic validation from this slice.
+
+---
+
+## 2026-10-04 ~16:40 NPT — Homepage replacement per owner order (commit caa7ca3)
+
+**HEAD:** `caa7ca3` · **Deployed bundle:** `index-BcTtJE1L.js` (matches local build from HEAD) · **Deployed SHA == HEAD: YES** (bundle-hash verified; HANDOFF-only commits do not change the bundle)
+
+**CI:** npm test 197+159 pass, typecheck clean, lint clean, build clean.
+
+**Changes:**
+- Homepage: one headline ("Never miss a sale to a slow reply."), two sentences EN+NE, status line ("no customers yet. One seller, one week — and no signups until then."), one CTA (/prototype/inbox, no signup).
+- NAV: Hami / Inbox tool / What we've learned / Contact. Header/footer cleaned of context-form and closed-intake links.
+- New /what-we-learned: engine-recorded findings only (via /forge/unknowns API), source-labeled, honest empty/failure states.
+- Tests: banned strings (Nepal-first, Submit a need, mailbox pending, pending verification, Opening your System, Forge in titles), homepage contract, what-we-learned engine-data contract.
+
+**Fetch 1 — https://haminp.vercel.app/?v=1791110198 (cache-busted canonical):**
+Title: `Hami` · bundle: `/assets/index-BcTtJE1L.js`
+> Hami Skip to content Hami Hami Inbox tool What we've learned Contact I Hami II Inbox tool III What we've learned IV Contact Hami · हामी Never miss a sale to a slow reply. ढिलो जवाफले बिक्री नगुमाउनुहोस्। When a customer messages your shop and nobody replies fast, the sale dies quietly. For one week, a person handles your replies within minutes — you pay only for the sales that come back because of the fast replies. जब ग्राहकले सन्देश पठाउँदा छिटो जवाफ आउँदैन, बिक्री खेर जान्छ। एक हप्ता हामी तपाईंका जवाफहरू छिटो सम्हाल्छौं — फर्केका बिक्रीमा मात्र शुल्क लाग्छ। Honest status: no customers yet. One seller, one week — and no signups until then. Try the free inbox tool No signup. Your data stays in your browser. © Hami Hami is one system. Built in Kathmandu, serving everywhere equally. Explore Hami home Inbox tool What we've learned About Hami Quick links The offer being tested Contact Connect Explore the network Online inquiries are not open yet. haminp.vercel.app © 2026 Hami Hami · haminp.vercel.app Built in Kathmandu
+
+**Fetch 2 — https://forge-os-ebon.vercel.app/ (alias, same deployment):**
+Title: `Hami` · bundle: `/assets/index-BcTtJE1L.js` · visible text identical to fetch 1.
+
+**Note:** Vercel's internal deployment URL (project-<hash>.vercel.app) is not exposed in public headers or HTML; without dashboard access it cannot be named. The alias domain is the second independent URL serving the same deployment. Both fetches returned the new build.
+
+**Fetch 3 — https://haminp.vercel.app/what-we-learned:**
+Title: `What we've learned — Hami` · honest loading state ("Loading what the engine has recorded…"), data loads from the engine API client-side with failure/empty states.
