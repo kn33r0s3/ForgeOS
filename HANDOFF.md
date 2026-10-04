@@ -167,11 +167,10 @@ than a few days old, re-verify before trusting the details.
   signup form exposes DOB and current-terms consent; no test account was
   created. Full local tests/typecheck/lint/build pass. Production account
   creation remains unverified.
-- **CI follow-up:** GitHub checks for the first pushed commit `6714314` show
+- **CI follow-up:** GitHub checks for the first pushed commit `6714314` showed
   frontend success and backend failure from the stale unknown-map count
-  (expected 86, parsed 93). The test now covers D77, and the full local backend
-  suite passes 697 with 2 skipped; the follow-up remote backend status is
-  pending.
+  (expected 86, parsed 93). The test now covers D77; the full local backend
+  suite passed 697 with 2 skipped, and both GitHub checks passed on `8d6d24e`.
 - **Intake: CLOSED. `FORGE_BOT_LIVE`: CLOSED.** Owner-delegated decision
   2026-10-04: intake stays closed — ACTIVATION.md readiness checklist still
   has owner-side FAILs (test email received, privacy text approved, deployed

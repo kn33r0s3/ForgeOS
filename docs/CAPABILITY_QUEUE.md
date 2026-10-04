@@ -22,7 +22,7 @@ Dated entries below are retained as history and may be superseded by this map.
 | Pilot segment and paid outcome | **HYPOTHESIS / owner action required** | The initial segment remains unverified until the owner reports five real discovery conversations. No real customer/revenue outcome is established; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**. |
 | ForgeBot v0 — operator's assistant | **IMPLEMENTED / locally tested** | `src/lib/forge/assistant.ts`: `verifyRound()` gates round findings through the evidence gate before banking (rejected findings are never banked); `ripenessQueue()` ranks open unknowns (desk-doable first, oldest first); `isAngleTried()` refuses repeated angles against 14 tried angles parsed from the discovery log. `docs/ROUND_PROTOCOL.md` specifies the loop precisely. 12 assistant tests pass. Per-change analysis: (1) owner action still required: none for the assistant itself — the five real conversations still need a human; (2) action removed: manual angle-picking and manual gate-checking from operator rounds; (3) remains/blocked: ForgeBot running rounds itself (v1) needs the round protocol wired to its tool access — no new permission, just the build; (4) next removable dependency: operator-planned angles → assistant-suggested angles. The operator console lives inside `/owner` behind the owner key only (no public route): gate tester, angle checker, ripeness list — all running the real engine code. |
 | Backend PostgreSQL full-suite coverage | **DONE — prior SQLite/PostgreSQL parity verified** | The complete backend suite previously passed 686 tests, 2 skipped on SQLite and throwaway PostgreSQL 18. The focused Forge Bot/owner-notification/privacy/public-write/signal tests passed 112/112 on both dialects. The latest Python 3.11 SQLite run passed 697 tests, 2 skipped after refreshing the D77 parser expectation. PostgreSQL was not rerun for this test-only change; none of this establishes production database behavior or the deployed source SHA. |
-| Unknown-map importer test count | **DONE — current D1-D77 inventory covered** | `docs/UNKNOWN_MAP.md` contains 9 A, 4 B, 3 C, and 77 D entries (93 total). `backend/tests/test_import_unknowns.py` now asserts the D77 endpoint as well as the expected count; the focused test and full Python 3.11 backend suite pass. This corrects test coverage only; owner action still required for the seller pilot. |
+| Unknown-map importer test count | **DONE — current D1-D77 inventory covered** | `docs/UNKNOWN_MAP.md` contains 9 A, 4 B, 3 C, and 77 D entries (93 total). `backend/tests/test_import_unknowns.py` now asserts the D77 endpoint as well as the expected count; the focused test and full Python 3.11 backend suite pass. GitHub `backend` and `frontend` checks passed on `8d6d24e`. This corrects test coverage only; owner action still required for the seller pilot. |
 
 Latest local verification after source edits: the full frontend/script suite
 passed **364/364** with `FORCE_COLOR=0 NO_COLOR=1`; typecheck, lint, and the
@@ -34,8 +34,8 @@ occurred before key submission. Read-only production GETs to `/login` and
 `/api/auth/get-session` returned 200 on both domains. No account, production
 write, credential access, message, database query, or flag change was made.
 GitHub checks for the first pushed commit `6714314` reported frontend success
-and backend failure on the stale D70 parser expectation; the follow-up test fix
-is local and its remote backend status is pending.
+and backend failure on the stale D70 parser expectation. Both GitHub checks
+passed on follow-up commit `8d6d24e`, which updates the test to D77.
 
 ## [PARTIAL] Connect owner operations UI to its existing API-key boundary (2026-10-04)
 
@@ -80,10 +80,10 @@ is local and its remote backend status is pending.
   contact; parser coverage does not move that real-world decision.
 - Action removed: the backend suite no longer expects the obsolete 86-entry
   map after the repository grew from D70 to D77.
-- Remaining blocker: the required remote backend status for the follow-up
-  commit must be observed; a local pass is not production evidence.
-- Next removable dependency: verify the remote required backend status on the
-  follow-up commit; the owner-named-seller decision remains separate.
+- Remaining blocker: this test-only repair provides no seller, customer, or
+  revenue evidence; the owner-named-seller decision remains outstanding.
+- Next removable dependency: the owner names one reachable seller and
+  authorizes the exact first contact.
 - Verification: source inspection confirmed D70 and D77 are present and the
   parser returned 93 entries. The focused parser test passed and the full
   Python 3.11 backend suite passed 697 tests with 2 skipped.
