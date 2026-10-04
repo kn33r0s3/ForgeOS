@@ -129,31 +129,45 @@ than a few days old, re-verify before trusting the details.
 
 ## Current state (verified 2026-10-04 — re-verify on takeover)
 
-- **Repo:** `kn33r0s3/ForgeOS`, `main` at `7f140e4` (freshness check
-  2026-10-04 06:23; was `53178f0` when this file was written).
-- **Production:** `https://haminp.vercel.app` (recommended canonical —
-  owner has not formally confirmed) and `https://forge-os-ebon.vercel.app`
-  (alias/legacy). Both `/api/health` returned ok; both
-  `/api/forge-bot/config` report `intake_enabled:false`.
-- **Intake: CLOSED. `FORGE_BOT_LIVE`: CLOSED.** No real external message
-  has ever been sent. Opening intake or enabling outbound needs explicit
-  owner approval. Never flip these flags casually.
-- **Launch readiness:** `docs/LAUNCH_READINESS.md` (written 2026-10-04
-  overnight run) tracks every launch requirement as READY / BLOCKED_ON_OWNER
-  / NEXT with evidence. Backend suite 686 passed/0 failed; frontend 107/107.
-  Site copy cleaned of Nepal-first/priority language ("Built in Kathmandu,
-  serving the world equally, with no geographic priority"). Everything
-  remaining is an owner decision: lead channel, response path, canonical
-  domain, company registration, payment credentials, activation phrase.
-- **Open blockers:** (B) no real lead channel selected — one channel must
-  be owner-chosen; (C) no zero-cost response path established; the five
-  discovery conversations need a real human (delegate kit at
-  `docs/DELEGATE_KIT.md`, no delegate named — do not nag the user about
-  it); production DB read-only check blocked (no documented credential
-  path — do not hunt for credentials); owner-key heartbeat unverified;
-  full public-history secret/PII audit incomplete (a code/config pattern
-  scan found nothing; docs and full history were excluded — do not retell
-  it as complete); Vercel plan / commercial-use status unverified.
+- **Repo:** `kn33r0s3/ForgeOS`, `main` at `de6f8a6` (launch commit
+  2026-10-04 ~10:30 NPT; this file was written at `53178f0`).
+- **Production:** `https://haminp.vercel.app` (**canonical — decided** by
+  owner-delegated authority 2026-10-04; sitemap/robots/SITE.domain point
+  there) and `https://forge-os-ebon.vercel.app` (alias/legacy). Both
+  `/api/health` returned ok; both `/api/forge-bot/config` report
+  `intake_enabled:false`.
+- **Intake: CLOSED. `FORGE_BOT_LIVE`: CLOSED.** Owner-delegated decision
+  2026-10-04: intake stays closed — ACTIVATION.md readiness checklist still
+  has owner-side FAILs (test email received, privacy text approved, deployed
+  SHA = origin/main, heartbeat <26h). No real external message has ever been
+  sent. Never flip these flags casually.
+- **Six launch decisions (owner-delegated, 2026-10-04 — standing authority
+  continues):** (1) lead channel = owner-run conversations; (2) response path
+  = the conversation itself, $0; (3) canonical domain = haminp.vercel.app
+  (executed); (4) company registration = CANNOT (owner's legal identity);
+  (5) payment credentials = CANNOT (owner's identity/PAN/bank);
+  (6) intake STAYS CLOSED (decided, not dodged). Recorded in
+  `docs/PILOT_LEAD_CHANNEL.md` + `docs/LAUNCH_READINESS.md`.
+- **Launch shipped 2026-10-04:** Hami's public face is now needs-finding —
+  new `/needs` route (12 candidate needs from 9 discovery rounds, each
+  labeled known/unknown/half-seen, evidence OBSERVED, status candidate);
+  homepage hero reframed ("Finds what people need — the needs they name, and
+  the ones they don't"); Needs in primary nav + sitemap. Tests 12/12, vite
+  build green, `/needs` live (200). Owner's correction that drove it:
+  "finding unknown or known needs of people isnt that good
+  enterpreneruship too" — the unknowns map is fuel, needs are the product.
+- **Launch readiness:** `docs/LAUNCH_READINESS.md` tracks every launch
+  requirement (rows updated 2026-10-04 for the 6 decisions). Backend suite
+  686 passed/0 failed; frontend 107/107. Everything remaining needs a human
+  body, identity, or money: the five conversations, company registration,
+  payment credentials, four owner-side readiness checks.
+- **Open blockers:** the five discovery conversations need a real human
+  (delegate kit at `docs/DELEGATE_KIT.md`, no delegate named — do not nag
+  the user about it); production DB read-only check blocked (no documented
+  credential path — do not hunt for credentials); owner-key heartbeat
+  unverified; full public-history secret/PII audit incomplete (a code/config
+  pattern scan found nothing; docs and full history were excluded — do not
+  retell it as complete); Vercel plan / commercial-use status unverified.
 - **Company:** Hami Systems registration IN PROGRESS (Private → Sole
   Ownership; CAMIS said the name is available, subject to review). Payment
   onboarding blocked — owner has personal PAN only. Do not invent company
