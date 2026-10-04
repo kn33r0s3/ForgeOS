@@ -9,7 +9,25 @@ Ollama) only means touching this file plus the relevant service.
 
 import os
 from pathlib import Path
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _int_env(name: str, default: int) -> int:
+    """Parse an integer env var with a clear error instead of a bare ValueError.
+
+    A non-numeric value used to crash the whole app at import time with an
+    opaque ``ValueError: invalid literal for int()``; name the variable so the
+    operator knows what to fix.
+    """
+    raw = os.getenv(name)
+    if raw is None or raw == "":
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        raise RuntimeError(
+            f"Environment variable {name} must be an integer, got {raw!r}."
+        ) from None
 
 
 class Settings(BaseSettings):
@@ -73,14 +91,14 @@ class Settings(BaseSettings):
 
     # --- Outbound Email (Standard Library SMTP over TLS) ---
     SMTP_HOST: str = os.getenv("SMTP_HOST", "")
-    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+    SMTP_PORT: int = _int_env("SMTP_PORT", 587)
     SMTP_USER: str = os.getenv("SMTP_USER", "")
     SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
     SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "")
     SMTP_USE_TLS: bool = os.getenv("SMTP_USE_TLS", "true").lower() in ("1", "true", "yes")
-    SMTP_TIMEOUT_SECONDS: int = int(os.getenv("SMTP_TIMEOUT_SECONDS", "20"))
-    FORGE_BOT_OWNER_EMAIL_TIMEOUT_SECONDS: int = int(
-        os.getenv("FORGE_BOT_OWNER_EMAIL_TIMEOUT_SECONDS", "5")
+    SMTP_TIMEOUT_SECONDS: int = _int_env("SMTP_TIMEOUT_SECONDS", 20)
+    FORGE_BOT_OWNER_EMAIL_TIMEOUT_SECONDS: int = _int_env(
+        "FORGE_BOT_OWNER_EMAIL_TIMEOUT_SECONDS", 5
     )
 
     # --- Forge Memory Layer (embeddings/search) ---
@@ -94,7 +112,7 @@ class Settings(BaseSettings):
     # embeddings, it just stops comparing against them until re-synced.
     EMBEDDING_PROVIDER: str = os.getenv("EMBEDDING_PROVIDER", "hash")  # "hash" | "ollama"
     OLLAMA_EMBEDDING_MODEL: str = os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
-    HASH_EMBEDDING_DIM: int = int(os.getenv("HASH_EMBEDDING_DIM", "128"))
+    HASH_EMBEDDING_DIM: int = _int_env("HASH_EMBEDDING_DIM", 128)
 
     # --- CORS ---
     # The frontend runs locally on 127.0.0.1:3002 in this environment, and
@@ -152,8 +170,7 @@ class Settings(BaseSettings):
         "FORGEOS_LEGACY_INTELLIGENCE_ENABLED", "false"
     ).lower() in ("1", "true", "yes")
 
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(env_file=".env")
 
 
 settings = Settings()

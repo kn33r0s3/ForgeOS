@@ -95,7 +95,7 @@ def root():
         "version": settings.APP_VERSION,
         "status": "running",
         "ai_provider": settings.AI_PROVIDER,
-        "focus": "Personal AI Opportunity Intelligence Engine",
+        "focus": "Living system for understanding and acting upon the real world",
     }
 
 
