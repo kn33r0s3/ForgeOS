@@ -42,7 +42,13 @@ function Button({
     asChild?: boolean;
   }) {
   const Comp = asChild ? Slot : "button";
-  return <Comp className={cn(buttonVariants({ variant, size, className }))} {...props} />;
+  // A native <button> without type defaults to type="submit" and will submit any
+  // enclosing form on click. Default to "button" for real buttons; an explicit
+  // type from the caller still wins, and asChild (usually a link) is untouched.
+  const typeProps = asChild ? {} : { type: props.type ?? "button" };
+  return (
+    <Comp className={cn(buttonVariants({ variant, size, className }))} {...typeProps} {...props} />
+  );
 }
 
 export { Button };
