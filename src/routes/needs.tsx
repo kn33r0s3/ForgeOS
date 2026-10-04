@@ -7,6 +7,7 @@ import {
   KNOWN_LABEL,
   needsCount,
   needsRounds,
+  type Confidence,
   type KnownToThem,
 } from "@/lib/needs";
 
@@ -19,6 +20,12 @@ const KNOWN_STYLE: Record<KnownToThem, string> = {
   known: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
   unknown: "border-amber-500/30 bg-amber-500/10 text-amber-200",
   partially: "border-sky-500/30 bg-sky-500/10 text-sky-200",
+};
+
+const CONFIDENCE_STYLE: Record<Confidence, string> = {
+  high: "text-emerald-300",
+  medium: "text-amber-300",
+  low: "text-red-300",
 };
 
 const KNOWN_ICON: Record<KnownToThem, typeof Eye> = {
@@ -65,10 +72,11 @@ function NeedsPage() {
             </div>
           </div>
           <p className="mt-4 border-t border-line pt-4 text-sm leading-6 text-muted">
-            Evidence class for every entry: <strong className="text-ink">OBSERVED</strong> —
-            seen in public sources, paraphrased, never invented. Status:{" "}
-            <strong className="text-ink">candidate</strong>. {needsCount} needs from {needsRounds}{" "}
-            rounds of listening. Reality gets the final vote.
+            Every need below shows its <strong className="text-ink">confidence</strong> and
+            its <strong className="text-ink">weakest link</strong> — the claim most
+            likely to be wrong, and what would change our mind. "Mostly accurate"
+            is not the bar. {needsCount} needs from {needsRounds} rounds of
+            listening. Reality gets the final vote.
           </p>
         </section>
 
@@ -101,6 +109,12 @@ function NeedsPage() {
                 <p className="mt-2 text-sm leading-6 text-muted">{need.observed}</p>
                 <p className="mt-3 text-xs leading-5 text-muted">
                   Seen in: {need.sources.join(" · ")}
+                </p>
+                <p className="mt-2 text-xs leading-5 text-muted">
+                  <span className={`font-bold uppercase tracking-wider ${CONFIDENCE_STYLE[need.confidence]}`}>
+                    Confidence: {need.confidence}
+                  </span>
+                  <span className="text-muted"> · Weakest link: {need.weakestLink}</span>
                 </p>
                 <p className="mt-3 flex gap-2 rounded-lg border border-line bg-background/60 p-3 text-sm leading-6 text-muted">
                   <CircleHelp className="mt-1 h-4 w-4 shrink-0 text-accent" />

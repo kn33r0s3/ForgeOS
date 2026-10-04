@@ -13,6 +13,8 @@
 
 export type KnownToThem = "known" | "unknown" | "partially";
 
+export type Confidence = "high" | "medium" | "low";
+
 export interface CandidateNeed {
   id: string;
   title: string;
@@ -23,6 +25,8 @@ export interface CandidateNeed {
   sources: string[];
   round: string;
   question: string;
+  confidence: Confidence;
+  weakestLink: string;
 }
 
 export const KNOWN_LABEL: Record<KnownToThem, string> = {
@@ -44,6 +48,8 @@ export const candidateNeeds: CandidateNeed[] = [
     round: "Round 2",
     question:
       "When a customer messages at 9pm, how long until they hear back — and how many never wait?",
+    confidence: "high",
+    weakestLink: "Revenue figures (NPR 50k+/day) are single-outlet press reports; the commerce-shape observations are multi-source.",
   },
   {
     id: "need-response-capacity",
@@ -56,6 +62,8 @@ export const candidateNeeds: CandidateNeed[] = [
     sources: ["Owner interviews in Nepali press", "forum listening"],
     round: "Rounds 1–2",
     question: "If I brought you 10 new customers tomorrow, what breaks?",
+    confidence: "medium",
+    weakestLink: "The core claim is our inference from observations, not a surveyed fact — corroborated in two Nepali press cases, not proven.",
   },
   {
     id: "need-paid-proof",
@@ -69,6 +77,8 @@ export const candidateNeeds: CandidateNeed[] = [
     round: "Round 3",
     question:
       "When a customer shows you a payment screen, what do you trust — the screen, the bank SMS, or your eyes?",
+    confidence: "medium",
+    weakestLink: "Fake-screen evidence converges across creator warnings and fraud coverage, but no merchant survey exists.",
   },
   {
     id: "need-shared-counter",
@@ -82,6 +92,8 @@ export const candidateNeeds: CandidateNeed[] = [
     round: "Round 3",
     question:
       "When it's busy, who at your shop checks the payment — and what slows them down?",
+    confidence: "high",
+    weakestLink: "App telemetry (1,917 ratings) plus named reviews converge; ratings snapshot is dated 2026.",
   },
   {
     id: "need-stock-credit",
@@ -94,6 +106,8 @@ export const candidateNeeds: CandidateNeed[] = [
     sources: ["Brand channel-financing material", "cooperative credit docs", "NRB draft directive"],
     round: "Rounds 4, 9",
     question: "When the shop needs money for stock — bank, सहकारी, or someone's door?",
+    confidence: "medium",
+    weakestLink: "“The paperless merchant’s bank” is our framing; the loan documents and the NRB directive are the solid parts.",
   },
   {
     id: "need-udharo",
@@ -107,6 +121,8 @@ export const candidateNeeds: CandidateNeed[] = [
     round: "Round 4",
     question:
       "After rent, stock, and the month's udharo that never came back — what lands in your pocket?",
+    confidence: "medium",
+    weakestLink: "The recovery bill is drafted, not passed; creator voices are real but few.",
   },
   {
     id: "need-own-calendar",
@@ -119,6 +135,8 @@ export const candidateNeeds: CandidateNeed[] = [
     sources: ["App telemetry", "founder interviews", "Bangladeshi user interview"],
     round: "Round 6",
     question: "What detail in your tools feels foreign — and what did you work around?",
+    confidence: "medium",
+    weakestLink: "Install telemetry is solid; the Rs 10M revenue figure is a single-source founder claim via one outlet.",
   },
   {
     id: "need-season-risk",
@@ -132,6 +150,8 @@ export const candidateNeeds: CandidateNeed[] = [
     round: "Round 8",
     question:
       "What did you buy in advance for the season — and if the customers don't come, who eats that stock?",
+    confidence: "medium",
+    weakestLink: "NRB's Rs 76B cash figure (spokesperson) is the strongest datum; the 30–35% consumption share is an estimate.",
   },
   {
     id: "need-cashflow",
@@ -144,6 +164,8 @@ export const candidateNeeds: CandidateNeed[] = [
     sources: ["Kathmandu Valley kirana study", "repair-training institute data"],
     round: "Rounds 4–5",
     question: "When sales go up, does your cash go up too — or does it disappear into stock?",
+    confidence: "low",
+    weakestLink: "The 80% closure figure is single-source: a training institute's marketing page. Treat as rumor until corroborated.",
   },
   {
     id: "need-money-home",
@@ -156,6 +178,8 @@ export const candidateNeeds: CandidateNeed[] = [
     sources: ["Parliamentary probe coverage", "Nepali business press", "NRB"],
     round: "Round 9",
     question: "After the scandals, where do you keep the savings now?",
+    confidence: "medium",
+    weakestLink: "Probe figures via multiple outlets, but all press-reported; no primary probe document was checked.",
   },
   {
     id: "need-shutter-cycle",
@@ -168,6 +192,8 @@ export const candidateNeeds: CandidateNeed[] = [
     sources: ["Nepali press", "shop-for-sale listings"],
     round: "Rounds 2, 5",
     question: "What would have to be true for this shutter to still be yours in three years?",
+    confidence: "medium",
+    weakestLink: "“Rent is the #1 complaint” is press framing; the churn mechanics come from a single outlet.",
   },
   {
     id: "need-teach-me",
@@ -180,6 +206,8 @@ export const candidateNeeds: CandidateNeed[] = [
     sources: ["Nepali creator programs", "forum listening"],
     round: "Rounds 1–2",
     question: "The last time someone tried to sell you growth — what made you say no?",
+    confidence: "medium",
+    weakestLink: "“900+ trained” is the program’s self-reported number; corroborated only by the general distrust pattern.",
   },
 ];
 

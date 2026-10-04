@@ -204,6 +204,8 @@ describe("Hami candidate needs", () => {
       assert.ok(need.sources.length >= 1, `${need.id}: no sources`);
       assert.ok(need.round.length > 0);
       assert.ok(need.question.length > 10, `${need.id}: no sharp question`);
+      assert.ok(["high", "medium", "low"].includes(need.confidence), `${need.id}: no confidence grade`);
+      assert.ok(need.weakestLink.length > 20, `${need.id}: no weakest link`);
       // No manufactured voices: needs describe observations, never quote people.
       assert.doesNotMatch(need.observed, /“[^”]{80,}”/, `${need.id}: long quote looks invented`);
     }
@@ -212,9 +214,10 @@ describe("Hami candidate needs", () => {
   it("keeps the needs route honest about its evidence class", () => {
     const sourceDir = dirname(fileURLToPath(import.meta.url));
     const route = readFileSync(join(sourceDir, "../routes/needs.tsx"), "utf8");
-    assert.match(route, /OBSERVED/);
     assert.match(route, /candidate/);
     assert.match(route, /not yet verified/i);
+    assert.match(route, /Weakest link/);
+    assert.match(route, /Confidence/);
     assert.match(route, /createFileRoute\("\/needs"\)/);
   });
 });
