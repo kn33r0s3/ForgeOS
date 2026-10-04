@@ -95,7 +95,7 @@ function ServicePage() {
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted">{service.next}</p>
                 <div className="mt-4">
-                  <TextLink to="/contact">Contact details</TextLink>
+                  <span className="text-muted">Contact via owner console</span>
                 </div>
               </div>
             </article>

@@ -12,9 +12,6 @@ const SYSTEM_LINKS = [
 const RECORD_LINKS = [
   { label: "Public observations", to: "/discoveries" },
   { label: "Open questions", to: "/unknowns" },
-  { label: "What we've learned", to: "/what-we-learned" },
-  { label: "Opportunities", to: "/opportunities" },
-  { label: "Actions", to: "/actions" },
 ] as const;
 
 const CURRENT_LINKS = [

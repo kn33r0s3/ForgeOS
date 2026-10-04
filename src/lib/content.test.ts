@@ -110,10 +110,10 @@ describe("Hami public content", () => {
     for (const path of FORBIDDEN_PUBLIC_PATHS) {
       assert.equal(publicHrefs.has(path), false, `nav leaked ${path}`);
     }
-    // No Sign in / Join Hami in the public header nav (owner console link only).
+    // Join Hami button exists in the header, separate from nav.
     const header = readFileSync(join(root, "src/components/layout/site-header.tsx"), "utf8");
-    assert.doesNotMatch(header, /Join Hami/);
-    assert.doesNotMatch(header, /to="\/login"/);
+    assert.match(header, /Join Hami/);
+    assert.match(header, /to="\/login"/);
   });
 
   it("keeps commercial services separate from prototype capabilities", () => {

@@ -28,7 +28,7 @@ function BusinessesPage() {
       >
         <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
           <ProjectInquiryCta />
-          <TextLink to="/contact">Contact details</TextLink>
+          <span className="text-muted">Contact via owner console</span>
         </div>
       </PageHero>
       <Container className="py-16 sm:py-20">

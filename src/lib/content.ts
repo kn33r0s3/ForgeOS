@@ -14,9 +14,9 @@ export const SITE = {
 
 export const NAV = [
   { label: "Hami", to: "/" },
-  { label: "The system", to: "/about" },
-  { label: "Public record", to: "/discoveries" },
-  { label: "What we've learned", to: "/what-we-learned" },
+  { label: "Unknowns", to: "/unknowns" },
+  { label: "Research", to: "/discoveries" },
+  { label: "The climb", to: "/climb" },
 ] as const;
 
 export const providerCategories = ["All"] as const;

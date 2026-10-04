@@ -548,6 +548,13 @@ function WhatWeHaveLearned() {
               })}
             </ul>
           )}
+          <Link
+            to="/discoveries"
+            className="mt-6 inline-flex min-h-10 items-center gap-1 text-sm font-bold"
+            style={{ color: C.amber }}
+          >
+            View all research <ArrowRight className="size-4" aria-hidden="true" />
+          </Link>
         </div>
       </Container>
     </section>
