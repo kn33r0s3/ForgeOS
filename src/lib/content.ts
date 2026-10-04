@@ -16,6 +16,8 @@ export const NAV = [
   { label: "Hami", to: "/" },
   { label: "The system", to: "/about" },
   { label: "Public record", to: "/discoveries" },
+  { label: "What we've learned", to: "/what-we-learned" },
+  { label: "Sign in", to: "/login" },
 ] as const;
 
 export const providerCategories = ["All"] as const;

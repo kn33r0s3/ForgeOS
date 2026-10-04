@@ -102,8 +102,8 @@ describe("Hami public content", () => {
 
   it("exposes public-first primary destinations", () => {
     const hrefs = NAV.map((item) => item.to);
-    // The primary navigation describes Hami and its public record, not a prototype or one investigation.
-    assert.deepEqual(hrefs, ["/", "/about", "/discoveries"]);
+    // The primary navigation connects Hami's key pages: identity, system, record, findings, account.
+    assert.deepEqual(hrefs, ["/", "/about", "/discoveries", "/what-we-learned", "/login"]);
     const publicHrefs = new Set<string>(hrefs);
     for (const path of FORBIDDEN_PUBLIC_PATHS) {
       assert.equal(publicHrefs.has(path), false, `nav leaked ${path}`);
