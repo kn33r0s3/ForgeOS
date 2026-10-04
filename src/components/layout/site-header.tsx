@@ -53,7 +53,7 @@ export function SiteHeader() {
           scrolled || open ? "shadow-[0_4px_0_0_#000]" : "",
         )}
         style={{
-          background: "#0C0B0A",
+          background: "linear-gradient(180deg, #1C1813 0%, #0C0B0A 100%)",
           borderBottom: "2px solid #F2A33A",
         }}
       >
@@ -78,7 +78,7 @@ export function SiteHeader() {
             <AuthControl />
             <Link
               to="/login"
-              className="inline-flex min-h-12 items-center rounded-card border-2 px-3 text-sm font-extrabold transition-colors sm:px-4"
+              className="hidden min-h-12 items-center rounded-card border-2 px-4 text-sm font-extrabold transition-colors sm:inline-flex"
               style={{
                 borderColor: "#F2A33A",
                 background: "#F2A33A",
@@ -155,6 +155,20 @@ export function SiteHeader() {
               })}
             </ol>
           </nav>
+          <div className="p-4">
+            <Link
+              to="/login"
+              onClick={() => setOpen(false)}
+              className="flex min-h-12 items-center justify-center rounded-card border-2 px-4 text-base font-extrabold transition-colors"
+              style={{
+                borderColor: "#F2A33A",
+                background: "#F2A33A",
+                color: "#0C0B0A",
+              }}
+            >
+              Join Hami
+            </Link>
+          </div>
         </div>
       </div>
     </>
