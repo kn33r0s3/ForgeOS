@@ -11,7 +11,6 @@ const GROUP_LINKS = [
 
 const WORK_LINKS = [
   { label: "The offer being tested", to: "/needs" },
-  { label: "Contact", to: "/contact" },
 ] as const;
 
 const LINK =
@@ -49,16 +48,6 @@ export function SiteFooter() {
           ))}
         </FooterColumn>
         <FooterColumn title="Connect">
-          <Link to="/feed" className={LINK}>
-            Explore the network
-          </Link>
-          {SITE.email ? (
-            <a href={`mailto:${SITE.email}`} className={LINK}>
-              {SITE.email}
-            </a>
-          ) : (
-            <span className="text-sm text-muted">Online inquiries are not open yet.</span>
-          )}
           {SITE.url ? (
             <a href={SITE.url} className={LINK}>
               {SITE.domain}

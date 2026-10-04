@@ -111,13 +111,13 @@ describe("Hami public content", () => {
 
   it("exposes public-first primary destinations", () => {
     const hrefs = NAV.map((item) => item.to);
-    // Hami, the inbox tool, what we've learned, contact. Old routes stay
-    // live but unlinked.
+    // Hami, the inbox tool, what we've learned. No Contact: there is no
+    // real contact route, so it stays unlinked. Old routes stay live but
+    // unlinked.
     assert.deepEqual(hrefs, [
       "/",
       "/prototype/inbox",
       "/what-we-learned",
-      "/contact",
     ]);
     const publicHrefs = new Set<string>(hrefs);
     for (const path of FORBIDDEN_PUBLIC_PATHS) {
@@ -324,15 +324,23 @@ describe("Hami public root", () => {
     assert.match(home, /createFileRoute\("\/"\)/);
     assert.equal(ogSite.title, "Hami");
     assert.doesNotMatch(home, /Navigate to=/);
-    // Home is honest: one headline, the missed-inquiry offer, status, one CTA.
-    assert.match(home, /Never miss a sale to a slow reply/);
-    assert.match(home, /you pay only for the sales that come back/i);
+    // Home is honest: Hami identity headline, four lines, Experiment 1, engine findings, status.
+    assert.match(home, /Hami is a living system that understands what people need/);
+    assert.match(home, /Built in Kathmandu\. Serving everywhere equally/);
+    assert.match(home, /Observes/);
+    assert.match(home, /Keeps evidence and uncertainty/);
+    assert.match(home, /Acts only when authorized/);
+    assert.match(home, /Learns from outcomes/);
+    assert.match(home, /Experiment 1/);
+    assert.match(home, /One current experiment inside Hami/);
+    assert.match(home, /to="\/prototype\/inbox"/);
+    assert.match(home, /No signup/);
     assert.match(home, /Honest status/i);
     assert.match(home, /pre-revenue/i);
-    assert.match(home, /to="\/prototype\/inbox"/);
-    assert.match(home, /No signup/i);
+    assert.match(home, /has not yet served a seller/i);
+    // The wedge is never the headline.
+    assert.doesNotMatch(home, /<h1[^>]*>[^<]*slow reply/i);
     // No grand unproven claims, no toy form, no keyword-salad feed.
-    assert.doesNotMatch(home, /living system for understanding the real world/);
     assert.doesNotMatch(home, /Finds what people need/);
     assert.doesNotMatch(home, /Share a business need/);
     assert.doesNotMatch(home, /SystemEditor/);
@@ -345,8 +353,8 @@ describe("Hami public root", () => {
     assert.doesNotMatch(home, /to="\/discoveries"/);
     assert.doesNotMatch(home, /to="\/opportunities"/);
     assert.doesNotMatch(home, /to="\/actions"/);
-    assert.doesNotMatch(home, /Understanding what people need/);
-    // Header: no context form, no closed-intake links.
+    // Header: no context form, no closed-intake links, no Sign in.
+    assert.doesNotMatch(header, /Sign in/);
     assert.doesNotMatch(header, /Edit my context/);
     assert.doesNotMatch(header, /to="\/system"/);
     assert.doesNotMatch(header, /Share a need/);
@@ -360,7 +368,10 @@ describe("Hami public root", () => {
     assert.match(footer, /Built in Kathmandu/);
     assert.ok(NAV.some((item) => item.label === "Inbox tool" && item.to === "/prototype/inbox"));
     assert.ok(NAV.some((item) => item.label === "What we've learned" && item.to === "/what-we-learned"));
-    assert.ok(NAV.some((item) => item.label === "Contact" && item.to === "/contact"));
+    assert.ok(
+      !NAV.some((item) => (item.label as string) === "Contact"),
+      "Contact is in the nav without a real contact route",
+    );
     assert.match(header, /aria-current={active \? "page" : undefined}/);
     assert.match(businesses, /to="\/forge-bot-intake"/);
     assert.match(businesses, /online intake is closed/i);
@@ -397,6 +408,9 @@ describe("Hami public root", () => {
     assert.doesNotMatch(header, /to: "\/request"/);
     assert.doesNotMatch(header, /Review actions|to="\/operations"|to="\/actions"/);
     assert.doesNotMatch(footer, /Service categories|to="\/services"/);
+    assert.doesNotMatch(footer, /Explore the network/);
+    assert.doesNotMatch(footer, /"\/feed"/);
+    assert.doesNotMatch(footer, /Online inquiries are not open yet/);
     const domain = readFileSync(join(root, "src/routes/domain.tsx"), "utf8");
     assert.match(domain, /This post will be public/);
     assert.match(domain, /Do not include phone numbers, email/);
