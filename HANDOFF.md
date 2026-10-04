@@ -150,12 +150,21 @@ than a few days old, re-verify before trusting the details.
   `docs/PILOT_LEAD_CHANNEL.md` + `docs/LAUNCH_READINESS.md`.
 - **Launch shipped 2026-10-04:** Hami's public face is now needs-finding —
   new `/needs` route (12 candidate needs from 9 discovery rounds, each
-  labeled known/unknown/half-seen, evidence OBSERVED, status candidate);
-  homepage hero reframed ("Finds what people need — the needs they name, and
-  the ones they don't"); Needs in primary nav + sitemap. Tests 12/12, vite
-  build green, `/needs` live (200). Owner's correction that drove it:
-  "finding unknown or known needs of people isnt that good
-  enterpreneruship too" — the unknowns map is fuel, needs are the product.
+  labeled known/unknown/half-seen, evidence-graded with confidence +
+  weakest link); homepage hero reframed ("Finds what people need — the
+  needs they name, and the ones they don't"); Needs in primary nav +
+  sitemap. Owner's correction that drove it: "finding unknown or known
+  needs of people isnt that good enterpreneruship too" — the unknowns map
+  is fuel, needs are the product.
+- **Engine v0 shipped 2026-10-04 (~11:00 NPT):** owner-directed — "make
+  hami's engine the same as what u did... with assurity, verifications,
+  tests, 0 failures." `src/lib/evidence.ts` (evidence classes, Claim,
+  verifyClaim gate — fails closed), `src/lib/unknowns.ts` (D1–D46
+  structured: 43 unknown w/ cheapest tests, 2 hypothesized, 1 supported),
+  `src/lib/evidence.test.ts` (12 tests), `docs/ENGINE.md` (the loop, the
+  money road candidate→verified→served→paid, ForgeBot trajectory).
+  Full frontend suite 121/121 green. This is the substrate ForgeBot
+  inherits when it starts running rounds itself.
 - **Launch readiness:** `docs/LAUNCH_READINESS.md` tracks every launch
   requirement (rows updated 2026-10-04 for the 6 decisions). Backend suite
   686 passed/0 failed; frontend 107/107. Everything remaining needs a human
