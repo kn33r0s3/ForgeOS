@@ -113,3 +113,8 @@ def init_db():
         seed_core_types(db)
         db.commit()
         repair_historical_beliefs(db)
+        # Live discovery pipeline: production self-syncs the unknowns map
+        # into Claim primitives (idempotent, additive-only).
+        from app.services.unknowns_sync import sync_unknowns_from_map
+
+        sync_unknowns_from_map(db)

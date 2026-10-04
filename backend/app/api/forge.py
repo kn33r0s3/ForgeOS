@@ -184,7 +184,12 @@ def get_unknowns(db: Session = Depends(get_db)):
     Not gated by the legacy-intelligence flag: this is the live
     discovery pipeline (rounds -> map -> importer -> Claim), not the
     retired pattern/belief/curiosity loop."""
-    rows = db.query(models.Claim).order_by(models.Claim.id.asc()).all()
+    rows = (
+        db.query(models.Claim)
+        .filter(models.Claim.provenance.like("%UNKNOWN_MAP.md%"))
+        .order_by(models.Claim.id.asc())
+        .all()
+    )
     return [_unknown_from_claim(row) for row in rows]
 
 

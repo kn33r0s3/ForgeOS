@@ -42,16 +42,16 @@ def test_unknowns_come_from_claim_primitives_with_truth_label_and_source(db):
 
     assert resp.status_code == 200
     items = resp.json()
-    assert len(items) == 2
+    # Only discovery rows (UNKNOWN_MAP.md provenance) are projected;
+    # legacy collector output stays out of the public view.
+    assert len(items) == 1
 
-    d60 = next(i for i in items if i["row_id"] == "D60")
+    d60 = items[0]
+    assert d60["row_id"] == "D60"
     assert d60["question"] == "What is the actual COD remittance window?"
     assert d60["epistemic_state"] == "unknown"  # the truth label
     assert "Ask 5 sellers" in d60["cheapest_test"]
     assert "UNKNOWN_MAP.md" in (d60["provenance"] or "")  # the source
-
-    legacy = next(i for i in items if i["row_id"] != "D60")
-    assert legacy["epistemic_state"] == "blocked"
 
 
 def test_unknowns_empty_state_is_honest(db):
