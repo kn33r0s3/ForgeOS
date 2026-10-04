@@ -25,10 +25,11 @@ def test_state_mapping():
 def test_parses_all_sections():
     unknowns = parse_unknown_map(read_map())
     ids = [u.row_id for u in unknowns]
-    # A1–A9, B1–B4, C1–C3, D1–D70
-    assert len(unknowns) == 9 + 4 + 3 + 70, f"got {len(unknowns)}"
+    # A1–A9, B1–B4, C1–C3, D1–D77
+    assert len(unknowns) == 9 + 4 + 3 + 77, f"got {len(unknowns)}"
     assert ids[0] == "A1"
     assert "D70" in ids
+    assert "D77" in ids
     sections = {u.row_id: u.section for u in unknowns}
     assert sections["A1"] == "A"
     assert sections["B2"] == "B"

@@ -167,6 +167,11 @@ than a few days old, re-verify before trusting the details.
   signup form exposes DOB and current-terms consent; no test account was
   created. Full local tests/typecheck/lint/build pass. Production account
   creation remains unverified.
+- **CI follow-up:** GitHub checks for the first pushed commit `6714314` show
+  frontend success and backend failure from the stale unknown-map count
+  (expected 86, parsed 93). The test now covers D77, and the full local backend
+  suite passes 697 with 2 skipped; the follow-up remote backend status is
+  pending.
 - **Intake: CLOSED. `FORGE_BOT_LIVE`: CLOSED.** Owner-delegated decision
   2026-10-04: intake stays closed — ACTIVATION.md readiness checklist still
   has owner-side FAILs (test email received, privacy text approved, deployed
@@ -214,8 +219,9 @@ than a few days old, re-verify before trusting the details.
   lives inside `/owner` behind the owner key ONLY — the public
   `/forge` route was removed on owner correction. 133/133 tests green.
 - **Launch readiness:** `docs/LAUNCH_READINESS.md` tracks every launch
-  requirement (rows updated 2026-10-04 for the 6 decisions). Backend suite
-  686 passed/0 failed; frontend 107/107. Everything remaining needs a human
+  requirement (rows updated 2026-10-04 for the 6 decisions). Latest local
+  Python 3.11 backend suite: 697 passed, 2 skipped; frontend/script suite:
+  364 passed. Everything remaining needs a human
   body, identity, or money: the five conversations, company registration,
   payment credentials, four owner-side readiness checks.
 - **Open blockers:** the five discovery conversations need a real human
