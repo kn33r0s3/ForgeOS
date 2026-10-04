@@ -41,8 +41,9 @@ const CLAIM_PATTERNS: RegExp[] = [
 // Routes that render engine data must import the API module carrying
 // source + truth label.
 const API_BACKED: Array<{ file: string; apiModule: string }> = [
-  { file: "src/routes/unknowns.tsx", apiModule: "@/lib/unknowns-api" },
+  { file: "src/routes/unknowns.tsx", apiModule: "loadPublicUnknowns" },
   { file: "src/routes/discoveries.tsx", apiModule: "loadDiscoveries" },
+  { file: "src/routes/index.tsx", apiModule: "loadUnknownsSummary" },
 ];
 
 function read(file: string): string {
@@ -89,8 +90,11 @@ describe("homepage contract", () => {
   const footer = () => read("src/components/layout/site-footer.tsx");
   const surfaces = () => home() + header() + footer();
 
-  it("1. carries the Hami identity headline, in English and Nepali", () => {
+  it("1. hero carries the design headline and Hami identity, in English and Nepali", () => {
     const src = home();
+    assert.match(src, /Discover what matters/);
+    assert.match(src, /Understand it/);
+    assert.match(src, /Act on it/);
     assert.match(
       src,
       /Hami is a living system that understands what people need and turns understanding into real value/,
@@ -99,74 +103,41 @@ describe("homepage contract", () => {
       src,
       /\u0939\u093e\u092e\u0940 \u090f\u0909\u091f\u093e \u091c\u0940\u0935\u093f\u0924 \u092a\u094d\u0930\u0923\u093e\u0932\u0940 \u0939\u094b/,
     );
-    const h1 = src.match(/<h1[^>]*>(.*?)<\/h1>/)?.[1] ?? "";
-    assert.ok(!/slow reply|inbox|sale/i.test(h1), `h1 is the wedge, not Hami: ${h1}`);
+    // Reality loop SVG present
+    assert.match(src, /RealityLoop/);
+    assert.match(src, /New reality/);
   });
 
-  it("2. carries the Nepal/global identity", () => {
+  it("2. carries the Kathmandu/global identity without Nepal-first framing", () => {
     const src = home();
     assert.match(src, /Built in Kathmandu/);
     assert.match(src, /Serving everywhere equally/);
-    assert.match(
-      src,
-      /\u0915\u093e\u0920\u092e\u093e\u0921\u094c\u0902\u092e\u093e \u092c\u0928\u0947\u0915\u094b/,
-    );
+    assert.doesNotMatch(src, /Nepal-first|Nepal first/i);
   });
 
-  it("3. shows the four plain lines, in English and Nepali", () => {
+  it("3. shows the six primitives with one-line definitions", () => {
     const src = home();
-    for (const line of [
-      "Observes",
-      "Keeps evidence and uncertainty",
-      "Acts only when authorized",
-      "Learns from outcomes",
-    ]) {
-      assert.ok(src.includes(line), `missing plain line: ${line}`);
+    for (const p of ["Entity", "Relation", "Event", "Evidence", "Capability", "Action"]) {
+      assert.ok(src.includes(p), `missing primitive: ${p}`);
     }
-    assert.match(src, /These capacities can inform one another/);
-    assert.match(src, /no fixed sequence/);
   });
 
-  it("4. explains Hami's open-ended relationship with reality", () => {
+  it("4. power of the unknown uses engine states from the API", () => {
     const src = home();
-    for (const concept of [
-      "real situations",
-      "Needs",
-      "unused capability",
-      "opportunities",
-      "mismatches",
-      "constraints",
-      "relationships",
-      "resources",
-      "problems worth solving",
-      "useful outcome",
-      "evidence",
-      "uncertainty",
-      "authorized",
-      "actual outcomes",
+    assert.match(src, /The power of the unknown/);
+    assert.match(src, /loadUnknownsSummary/);
+    for (const s of [
+      "UNKNOWN",
+      "HYPOTHESIZED",
+      "TESTED",
+      "SUPPORTED",
+      "CONTRADICTED",
+      "BLOCKED_BY_MISSING_ACCESS",
     ]) {
-      assert.ok(src.includes(concept), `missing system concept: ${concept}`);
+      assert.ok(src.includes(s), `missing state: ${s}`);
     }
-    assert.match(src, /not discoveries claimed here/);
-  });
-
-  it("5. keeps Experiment 1 as one small, not-started current investigation", () => {
-    const src = home();
-    const currentActivityStart = src.indexOf("function CurrentActivity");
-    const currentActivityEnd = src.indexOf("function HonestStatus", currentActivityStart);
-    assert.ok(currentActivityStart >= 0 && currentActivityEnd > currentActivityStart);
-    const currentActivity = src.slice(currentActivityStart, currentActivityEnd);
-    assert.match(currentActivity, /Currently exploring/);
-    assert.match(currentActivity, /One proposed investigation · not started/);
-    assert.match(currentActivity, /Experiment 1/);
-    assert.match(currentActivity, /No seller has agreed/);
-    assert.match(currentActivity, /not Hami's identity or a live offer/);
-    assert.match(currentActivity, /to="\/needs"/);
-    assert.doesNotMatch(currentActivity, /<h1|<Button|\/prototype\/inbox|Try the free inbox tool/);
-    assert.match(
-      src,
-      /<Identity \/> <FourLines \/> <SystemScope \/> <RecordedObservations \/> <CurrentActivity \/> <HonestStatus \/>/,
-    );
+    // Never ship bracketed placeholders
+    assert.doesNotMatch(src, /\\[count from API\\]/);
   });
 
   it("keeps the inbox prototype out of primary navigation and labels its footer link TEST-only", () => {
@@ -177,18 +148,17 @@ describe("homepage contract", () => {
 
   it("6. does not position Hami as an inbox, reply service, seller business, or fixed vertical", () => {
     const src = home();
-    const primarySystemCopy = src.slice(0, src.indexOf("function CurrentActivity"));
-    const headline = primarySystemCopy.match(/<h1[^>]*>(.*?)<\/h1>/)?.[1] ?? "";
-    assert.match(headline, /Hami is a living system/);
+    // Identity sentence present (in hero body, per design)
+    assert.match(src, /Hami is a living system that understands what people need/);
+    // H1 is the design headline, not the wedge
+    const headline = src.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)?.[1] ?? "";
     assert.doesNotMatch(headline, /slow reply|inbox|seller|shop|business|customer support|sale/i);
+    // No vertical-specific positioning in hero
+    const heroEnd = src.indexOf("function PrimitivesStrip");
+    const hero = src.slice(0, heroEnd > 0 ? heroEnd : src.length);
     assert.doesNotMatch(
-      primarySystemCopy,
-      /inbox|seller|shop|business(?:es)?|software|services?|customer support|lead[- ]generation|commerce|for online sellers|for businesses|commerce platform|seller reply service/i,
-    );
-    assert.doesNotMatch(
-      primarySystemCopy,
-      /Hami\s+(?:is designed|exists|operates|works)\s+for\s+\w+/i,
-      "Hami must not be described as serving one fixed vertical or customer type",
+      hero,
+      /for online sellers|for businesses|commerce platform|seller reply service|lead[- ]generation/i,
     );
     const reductions = [
       /Hami is a (tool|inbox|saas|chatbot|calculator|reply service)\b/i,
@@ -200,8 +170,8 @@ describe("homepage contract", () => {
     for (const pattern of reductions) {
       assert.ok(!pattern.test(src), `homepage reduces Hami: ${pattern}`);
     }
-    assert.match(primarySystemCopy, /no fixed sequence or single product defines the system/);
   });
+
 
   it("7. removed surface stays removed", () => {
     const blob = surfaces();
@@ -225,36 +195,37 @@ describe("homepage contract", () => {
     assert.ok(!blob.includes('"/feed"'), "/feed is linked from a public surface");
   });
 
-  it("8. public observations on the homepage are loaded from recorded API data", () => {
-    const src = read("src/routes/index.tsx").replace(/\s+/g, " ");
+  it("8. what we have learned loads from the API with honest empty states", () => {
+    const src = read("src/routes/index.tsx").replace(/\\s+/g, " ");
     assert.ok(
       src.includes("loadDiscoveries"),
       "homepage must use the existing observations API loader",
     );
-    assert.match(src, /Nothing is recorded in this public observation record yet/);
-    assert.match(src, /The public record is unavailable right now/);
-    assert.match(src, /item\.source/);
-    assert.match(src, /item\.epistemic_state/);
-    assert.match(src, /item\.canonical_url/);
-    assert.ok(
-      !/const FINDINGS|fetchUnknowns|u\.question/.test(src),
-      "homepage must not substitute questions as findings",
-    );
+    assert.match(src, /What we have learned/);
+    assert.match(src, /Nothing recorded yet/);
+    assert.match(src, /Findings unavailable right now/);
+    assert.match(src, /item\\.source/);
+    assert.match(src, /item\\.canonical_url/);
+    assert.match(src, /Observed/);
+    assert.match(src, /Hypothesis/);
+    assert.match(src, /Supported/);
   });
+
 
   it("9. no keyword-bag / hypothesis shortcut", () => {
     const src = read("src/routes/index.tsx");
     assert.ok(!/keyword/i.test(src), "keyword-bag language in homepage");
   });
 
-  it("10. honest status line remains present without seller-first framing", () => {
+  it("10. footer carries honest status without seller-first framing", () => {
     const src = home();
     assert.match(src, /Honest status/i);
     assert.match(src, /pre-revenue/i);
     assert.match(src, /Experiment 1 remains proposed/);
     assert.match(src, /no participants or results to report/);
-    assert.doesNotMatch(src.slice(src.indexOf("function HonestStatus")), /seller|shop|inbox/i);
+    assert.doesNotMatch(src, /mailto:|tel:/);
   });
+
 
   it("metadata titles all say Hami", () => {
     const src = home();
@@ -278,4 +249,16 @@ describe("homepage contract", () => {
     assert.match(src, /Nothing recorded yet/);
     assert.match(src, /will not invent findings/i);
   });
+  it("5. very big very small: Experiment 1 is step 1, rest when earned", () => {
+    const src = home();
+    assert.match(src, /Very big, very small/);
+    assert.match(src, /One seller, one week/);
+    assert.match(src, /Experiment 1/);
+    assert.match(src, /No seller has agreed/);
+    assert.match(src, /when earned/);
+    assert.match(src, /Try the free inbox tool/);
+    assert.match(src, /\/prototype\/inbox/);
+    assert.doesNotMatch(src, /\[when earned\]/);
+  });
+
 });

@@ -1087,3 +1087,62 @@ export function getGroupArea(name: string): GroupArea | undefined {
 }
 
 export const FORBIDDEN_PUBLIC_PATHS = ["/tools", "/tools/company-registration-fee", "/tools/pan-vat-guide"] as const;
+
+/* ------------------------------------------------------------------ */
+/* Unknowns surface — parsed from docs/UNKNOWN_MAP.md via the public API.
+   World unknowns (categories B, D) only. Internal (A, C) stay owner-side. */
+
+export type UnknownState =
+  | "UNKNOWN"
+  | "HYPOTHESIZED"
+  | "TESTED"
+  | "SUPPORTED"
+  | "CONTRADICTED"
+  | "BLOCKED_BY_MISSING_ACCESS";
+
+export interface PublicUnknown {
+  id: string;
+  category: string;
+  question: string;
+  state: UnknownState;
+  cheapest_test: string;
+  stake: string;
+}
+
+export interface UnknownsSummary {
+  counts: Record<UnknownState, number>;
+  total: number;
+  last_loop: string | null;
+}
+
+/** Display labels for the engine's real unknown states. */
+export const UNKNOWN_STATE_LABELS: Record<UnknownState, string> = {
+  UNKNOWN: "Unknown",
+  HYPOTHESIZED: "Hypothesized",
+  TESTED: "Tested",
+  SUPPORTED: "Supported",
+  CONTRADICTED: "Contradicted",
+  BLOCKED_BY_MISSING_ACCESS: "Blocked",
+};
+
+export async function loadUnknownsSummary(
+  scope?: CacheScope,
+): Promise<UnknownsSummary | null> {
+  const payload = await fetchJsonFromCandidates<UnknownsSummary>(
+    `/unknowns/summary`,
+    scope,
+  );
+  if (!payload || typeof payload !== "object") return null;
+  return payload as UnknownsSummary;
+}
+
+export async function loadPublicUnknowns(
+  limit = 50,
+  scope?: CacheScope,
+): Promise<PublicUnknown[] | null> {
+  const payload = await fetchJsonFromCandidates<PublicUnknown[]>(
+    `/unknowns?limit=${encodeURIComponent(String(limit))}`,
+    scope,
+  );
+  return Array.isArray(payload) ? payload : null;
+}

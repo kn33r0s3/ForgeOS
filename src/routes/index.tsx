@@ -3,7 +3,14 @@ import { Link } from "@tanstack/react-router";
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { Container } from "@/components/layout/container";
-import { loadDiscoveries, type PublicDiscovery } from "@/lib/content";
+import {
+  loadDiscoveries,
+  loadUnknownsSummary,
+  UNKNOWN_STATE_LABELS,
+  type PublicDiscovery,
+  type UnknownsSummary,
+  type UnknownState,
+} from "@/lib/content";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -18,180 +25,166 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "Hami" },
       {
         property: "og:description",
-        content:
-          "Hami is a living system that understands what people need and turns understanding into real value.",
+        content: "Discover what matters. Understand it. Act on it.",
       },
       { name: "apple-mobile-web-app-title", content: "Hami" },
     ],
   }),
 });
 
-const FOUR_LINES = [
-  {
-    en: ["Observes", "sees what is happening in the real world."],
-    ne: ["अवलोकन", "वास्तविक संसारमा के भइरहेको छ भनेर हेर्छ।"],
-  },
-  {
-    en: ["Keeps evidence and uncertainty", "separates what is known from what is not."],
-    ne: ["प्रमाण र अनिश्चितता राख्छ", "के थाहा छ र के थाहा छैन भनेर छुट्याउँछ।"],
-  },
-  {
-    en: ["Acts only when authorized", "no external action without permission."],
-    ne: ["अनुमति पाएपछि मात्र काम गर्छ", "बिना अनुमति बाह्य कार्य गर्दैन।"],
-  },
-  {
-    en: ["Learns from outcomes", "what actually happens changes what Hami knows and can do next."],
-    ne: ["परिणामबाट सिक्छ", "वास्तवमा के हुन्छ त्यसले हामीको ज्ञान र क्षमता बदल्छ।"],
-  },
+/* Design tokens for the unknowns surface */
+const C = {
+  ground: "#0C0B0A",
+  panel: "#15130F",
+  line: "#3A2E1A",
+  amber: "#F2A33A",
+  text: "#F4EFE6",
+  muted: "#BDB29F",
+} as const;
+
+/* Reality loop nodes, in order */
+const LOOP_NODES = [
+  "Reality",
+  "Observation",
+  "Evidence",
+  "Understanding",
+  "Unknown",
+  "Question",
+  "Test or act",
+  "New reality",
+] as const;
+
+/* Six primitives with one-line definitions */
+const PRIMITIVES = [
+  { name: "Entity", def: "An identifiable thing in the world." },
+  { name: "Relation", def: "A typed connection between things." },
+  { name: "Event", def: "Something observed or changed." },
+  { name: "Evidence", def: "The sourced basis for a claim." },
+  { name: "Capability", def: "What can actually be done." },
+  { name: "Action", def: "An operation within authorization." },
 ] as const;
 
 function HomePage() {
   return (
-    <main className="bg-night text-ink">
-      <Identity />
-      <FourLines />
-      <SystemScope />
-      <RecordedObservations />
-      <CurrentActivity />
-      <HonestStatus />
+    <main style={{ background: C.ground, color: C.text }}>
+      <Hero />
+      <PrimitivesStrip />
+      <PowerOfUnknown />
+      <VeryBigVerySmall />
+      <WhatWeHaveLearned />
+      <HomeFooter />
     </main>
   );
 }
 
-/* 1. Hami identity — the headline, in the original dark/gold voice */
+/* 1. Hero with SVG reality loop */
 
-function Identity() {
+function RealityLoop() {
+  const size = 320;
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = 118;
   return (
-    <section className="relative isolate overflow-hidden bg-night">
-      <div className="hero-glow -z-10" aria-hidden="true" />
-      <div className="hero-grain -z-10" aria-hidden="true" />
-      <Container className="py-10 sm:py-14 lg:py-16">
-        {/* Ornate gold frame, as the original */}
-        <div className="relative border-2 border-accent/70 px-6 py-10 sm:px-10 sm:py-14 lg:px-16">
-          <div
-            className="pointer-events-none absolute inset-2 border border-accent/30"
-            aria-hidden="true"
-          />
-          <div className="relative mx-auto max-w-4xl text-center">
-            <p className="inline-block border border-accent/50 px-3 py-1 font-mono text-[0.68rem] font-bold uppercase tracking-[0.22em] text-accent">
-              Hami · Living System
-            </p>
-            <h1 className="mt-6 font-gothic text-[clamp(2rem,5.2vw,4.4rem)] leading-[1.08] text-ink">
-              Hami is a living system that understands what people need and turns understanding into
-              real value.
-            </h1>
-            <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-ink/70">
-              हामी एउटा जीवित प्रणाली हो जसले मानिसहरूलाई के चाहिन्छ भन्ने बुझ्छ र बुझाइलाई वास्तविक
-              मूल्यमा बदल्छ।
-            </p>
-            <p className="mt-6 text-sm font-bold uppercase tracking-[0.18em] text-accent">
-              Built in Kathmandu. Serving everywhere equally.
-            </p>
-            <p className="mt-1 text-sm text-ink/60">काठमाडौंमा बनेको। सबैका लागि समान रूपमा सेवा।</p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Link
-                to="/about"
-                className="inline-flex min-h-12 items-center gap-2 rounded-card border-2 border-black bg-accent px-6 font-extrabold text-black transition-colors hover:bg-warning"
-              >
-                Explore the system <ArrowRight className="size-4" aria-hidden="true" />
-              </Link>
-              <Link
-                to="/discoveries"
-                className="inline-flex min-h-12 items-center gap-2 rounded-card border-2 border-ink/40 bg-transparent px-6 font-bold text-ink transition-colors hover:border-accent hover:text-accent"
-              >
-                Public record
-              </Link>
-            </div>
-          </div>
-        </div>
-      </Container>
-    </section>
-  );
-}
-
-/* 2. Four plain lines, in the dark voice */
-
-function FourLines() {
-  return (
-    <section aria-label="What Hami does" className="border-t border-accent/20 bg-night py-10 sm:py-14">
-      <Container>
-        <ul className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-2">
-          {FOUR_LINES.map(({ en, ne }) => (
-            <li
-              key={en[0]}
-              className="border border-accent/25 bg-black/40 p-5 transition-colors hover:border-accent/60"
-            >
-              <p className="text-base font-extrabold leading-7 text-ink">
-                {en[0]} <span className="font-normal text-ink/60">— {en[1]}</span>
-              </p>
-              <p className="mt-2 text-sm leading-6 text-ink/50">
-                {ne[0]} — {ne[1]}
-              </p>
-            </li>
-          ))}
-        </ul>
-      </Container>
-    </section>
-  );
-}
-
-/* 3. An open-ended system, not a fixed sequence */
-
-function SystemScope() {
-  return (
-    <section
-      aria-labelledby="system-scope-title"
-      className="border-t border-accent/20 bg-night py-10 sm:py-14"
+    <svg
+      viewBox={`0 0 ${size} ${size}`}
+      className="mx-auto h-auto w-full max-w-[320px]"
+      role="img"
+      aria-label="Reality loop: Reality, Observation, Evidence, Understanding, Unknown, Question, Test or act, New reality"
     >
-      <Container>
-        <div className="mx-auto max-w-4xl">
-          <p className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.22em] text-accent">
-            In contact with reality
-          </p>
-          <h2
-            id="system-scope-title"
-            className="mt-3 font-gothic text-3xl leading-tight text-ink sm:text-4xl"
+      {/* circle guide */}
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={C.line} strokeWidth="1.5" />
+      {/* arrows between nodes */}
+      {LOOP_NODES.map((_, i) => {
+        const a1 = (i / LOOP_NODES.length) * Math.PI * 2 - Math.PI / 2;
+        const a2 = ((i + 1) / LOOP_NODES.length) * Math.PI * 2 - Math.PI / 2;
+        const am = (a1 + a2) / 2;
+        const x = cx + Math.cos(am) * r;
+        const y = cy + Math.sin(am) * r;
+        return (
+          <text
+            key={i}
+            x={x}
+            y={y}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill={C.amber}
+            fontSize="11"
           >
-            Reality is not pre-sorted.
-          </h2>
-          <p className="mt-4 max-w-3xl text-base leading-7 text-ink/70 sm:text-lg sm:leading-8">
-            Needs, unused capability, opportunities, mismatches, constraints, relationships,
-            resources, and problems worth solving meet in many different ways. Hami looks for what
-            matters in those real situations and what might lead to a useful outcome. These are
-            things the system can investigate, not discoveries claimed here.
-          </p>
-          <p className="mt-4 max-w-3xl text-base leading-7 text-ink/70 sm:text-lg sm:leading-8">
-            Hami can prepare different ways to help as its understanding and capabilities grow. It
-            keeps evidence alongside uncertainty, acts externally only when authorized, and learns
-            from actual outcomes. These capacities can inform one another; no fixed sequence or
-            single product defines the system.
-          </p>
-        </div>
-      </Container>
-    </section>
+            ›
+          </text>
+        );
+      })}
+      {/* nodes */}
+      {LOOP_NODES.map((label, i) => {
+        const a = (i / LOOP_NODES.length) * Math.PI * 2 - Math.PI / 2;
+        const x = cx + Math.cos(a) * r;
+        const y = cy + Math.sin(a) * r;
+        const highlighted = label === "Unknown";
+        return (
+          <g key={label}>
+            <circle
+              cx={x}
+              cy={y}
+              r="30"
+              fill={highlighted ? C.amber : C.panel}
+              stroke={highlighted ? C.amber : C.line}
+              strokeWidth={highlighted ? 2.5 : 1.5}
+            />
+            <text
+              x={x}
+              y={y}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fill={highlighted ? "#0C0B0A" : C.text}
+              fontSize="8.5"
+              fontWeight={highlighted ? 700 : 500}
+              fontFamily="Archivo, sans-serif"
+            >
+              {label}
+            </text>
+          </g>
+        );
+      })}
+      {/* center */}
+      <text
+        x={cx}
+        y={cy - 10}
+        textAnchor="middle"
+        fill={C.text}
+        fontSize="26"
+        fontFamily="UnifrakturCook, serif"
+      >
+        Hami
+      </text>
+      <text
+        x={cx}
+        y={cy + 16}
+        textAnchor="middle"
+        fill={C.muted}
+        fontSize="14"
+        fontFamily="'Noto Sans Devanagari', sans-serif"
+      >
+        हामी
+      </text>
+    </svg>
   );
 }
 
-/* 4. Public observations shown only when present in the existing record */
-
-function RecordedObservations() {
-  const [items, setItems] = useState<PublicDiscovery[] | null>(null);
-  const [ready, setReady] = useState(false);
+function Hero() {
+  const [summary, setSummary] = useState<UnknownsSummary | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
 
   useEffect(() => {
     let live = true;
-    void loadDiscoveries(4)
-      .then((data) => {
+    loadUnknownsSummary()
+      .then((d) => {
         if (live) {
-          setItems(data);
-          setReady(true);
+          if (d === null) setUnavailable(true);
+          else setSummary(d);
         }
       })
       .catch(() => {
-        if (live) {
-          setItems(null);
-          setReady(true);
-        }
+        if (live) setUnavailable(true);
       });
     return () => {
       live = false;
@@ -199,117 +192,171 @@ function RecordedObservations() {
   }, []);
 
   return (
-    <section
-      aria-labelledby="recorded-observations-title"
-      className="border-t border-accent/20 bg-night py-10 sm:py-14"
-    >
-      <Container>
-        <div className="mx-auto max-w-4xl">
-          <p className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.22em] text-accent">
-            From the public record
-          </p>
-          <h2
-            id="recorded-observations-title"
-            className="mt-3 font-gothic text-3xl leading-tight text-ink sm:text-4xl"
-          >
-            What is actually recorded
-          </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-ink/60">
-            Only stored public observations appear here, with their source and recorded state. A
-            sourced observation is not automatically a verified claim.
-          </p>
-
-          {!ready && (
-            <div className="mt-6 border-t border-accent/20 py-5" aria-busy="true">
-              <p className="text-sm text-ink/60">Checking the public record…</p>
-            </div>
-          )}
-          {ready && items === null && (
-            <div className="mt-6 border-t border-accent/20 py-5" role="status">
-              <p className="font-bold text-ink">The public record is unavailable right now.</p>
-              <p className="mt-1 text-sm text-ink/60">
-                Hami could not check for observations, so their presence or absence cannot be
-                confirmed.
-              </p>
-            </div>
-          )}
-          {ready && items?.length === 0 && (
-            <div className="mt-6 border-t border-accent/20 py-5">
-              <p className="font-bold text-ink">
-                Nothing is recorded in this public observation record yet.
-              </p>
-            </div>
-          )}
-          {ready && items && items.length > 0 && (
-            <ol className="mt-6 divide-y divide-accent/20 border-y border-accent/20">
-              {items.map((item) => (
-                <li key={item.id} className="py-5">
-                  <article>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-ink/50">
-                      <span>{item.source}</span>
-                      <span>{item.epistemic_state}</span>
-                      <span>{item.freshness || "freshness unknown"}</span>
-                    </div>
-                    <h3 className="mt-2 font-display text-lg font-bold leading-6 text-ink">
-                      {item.title || "Untitled observation"}
-                    </h3>
-                    <p className="mt-2 max-w-3xl text-sm leading-6 text-ink/60">{item.excerpt}</p>
-                    {item.canonical_url && (
-                      <a
-                        href={item.canonical_url}
-                        className="mt-3 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent hover:text-ink"
-                      >
-                        View source
-                        <ArrowUpRight className="size-4" aria-hidden="true" />
-                      </a>
-                    )}
-                  </article>
-                </li>
-              ))}
-            </ol>
-          )}
-          {ready && items && items.length > 0 && (
-            <Link
-              to="/discoveries"
-              className="mt-4 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent hover:text-ink"
+    <section style={{ borderBottom: `1px solid ${C.line}` }}>
+      <Container className="py-12 sm:py-16 lg:py-20">
+        <div className="grid items-center gap-10 lg:grid-cols-2">
+          <div>
+            <p
+              className="font-mono text-[0.68rem] font-bold uppercase tracking-[0.22em]"
+              style={{ color: C.amber }}
             >
-              Open the public record
-              <ArrowRight className="size-4" aria-hidden="true" />
-            </Link>
-          )}
+              Hami · हामी
+            </p>
+            <h1
+              className="mt-5 text-[clamp(2.4rem,5.5vw,4.5rem)] font-extrabold leading-[1.05] tracking-tight"
+              style={{ fontFamily: "Archivo, sans-serif", color: C.text }}
+            >
+              Discover what matters.
+              <br />
+              Understand it.{" "}
+              <span style={{ color: C.amber }}>Act on it.</span>
+            </h1>
+            <p
+              className="mt-6 max-w-xl text-lg leading-8"
+              style={{ fontFamily: "'Source Sans 3', sans-serif", color: C.text }}
+            >
+              Hami is a living system that understands what people need and turns understanding
+              into real value.
+            </p>
+            <p
+              className="mt-2 max-w-xl text-base leading-7"
+              style={{ fontFamily: "'Noto Sans Devanagari', sans-serif", color: C.muted }}
+            >
+              हामी एउटा जीवित प्रणाली हो जसले मानिसहरूलाई के चाहिन्छ भन्ने बुझ्छ र बुझाइलाई
+              वास्तविक मूल्यमा बदल्छ।
+            </p>
+            <p
+              className="mt-5 text-sm font-bold uppercase tracking-[0.18em]"
+              style={{ color: C.amber }}
+            >
+              Built in Kathmandu. Serving everywhere equally.
+            </p>
+          </div>
+          <div className="text-center">
+            <RealityLoop />
+            <p className="mt-4 text-xs" style={{ color: C.muted }}>
+              Last loop completed:{" "}
+              {unavailable ? (
+                <span>unavailable</span>
+              ) : summary?.last_loop ? (
+                <span style={{ color: C.text }}>{summary.last_loop}</span>
+              ) : (
+                <span>checking…</span>
+              )}
+            </p>
+          </div>
         </div>
       </Container>
     </section>
   );
 }
 
-/* 5. One small investigation, subordinate to the system and its record */
+/* 2. Six primitives strip */
 
-function CurrentActivity() {
+function PrimitivesStrip() {
   return (
-    <section
-      aria-labelledby="current-activity-title"
-      className="border-t border-accent/20 bg-night py-6 sm:py-8"
-    >
-      <Container>
-        <div className="mx-auto max-w-3xl border border-accent/25 bg-black/40 p-5">
-          <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.18em] text-ink/50">
-            One proposed investigation · not started
-          </p>
-          <h2 id="current-activity-title" className="mt-2 font-display text-xl font-bold text-ink">
-            Currently exploring
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-ink/60">
-            Experiment 1 asks whether faster replies could recover sales for one seller. No seller
-            has agreed and no messages have been handled; it is one small investigation, not Hami's
-            identity or a live offer.
-          </p>
-          <Link
-            to="/needs"
-            className="mt-2 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent hover:text-ink"
+    <section style={{ borderBottom: `1px solid ${C.line}`, background: C.panel }}>
+      <Container className="py-8 sm:py-10">
+        <div className="grid grid-cols-2 gap-px sm:grid-cols-3 lg:grid-cols-6" style={{ background: C.line }}>
+          {PRIMITIVES.map((p) => (
+            <div key={p.name} className="p-4" style={{ background: C.panel }}>
+              <h3
+                className="text-sm font-bold uppercase tracking-[0.12em]"
+                style={{ fontFamily: "Archivo, sans-serif", color: C.amber }}
+              >
+                {p.name}
+              </h3>
+              <p className="mt-1.5 text-xs leading-5" style={{ color: C.muted }}>
+                {p.def}
+              </p>
+            </div>
+          ))}
+        </div>
+      </Container>
+    </section>
+  );
+}
+
+/* 3. The power of the unknown — counts by state from the API */
+
+const STATE_ORDER: UnknownState[] = [
+  "UNKNOWN",
+  "HYPOTHESIZED",
+  "TESTED",
+  "SUPPORTED",
+  "CONTRADICTED",
+  "BLOCKED_BY_MISSING_ACCESS",
+];
+
+function PowerOfUnknown() {
+  const [summary, setSummary] = useState<UnknownsSummary | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    loadUnknownsSummary()
+      .then((d) => {
+        if (live) {
+          if (d === null) setUnavailable(true);
+          else setSummary(d);
+        }
+      })
+      .catch(() => {
+        if (live) setUnavailable(true);
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  return (
+    <section style={{ borderBottom: `1px solid ${C.line}` }}>
+      <Container className="py-10 sm:py-14">
+        <div className="max-w-4xl">
+          <h2
+            className="text-3xl font-extrabold tracking-tight sm:text-4xl"
+            style={{ fontFamily: "Archivo, sans-serif", color: C.text }}
           >
-            Read its scope
-            <ArrowRight className="size-4" aria-hidden="true" />
+            The power of the unknown.
+          </h2>
+          <p className="mt-3 max-w-2xl text-base leading-7" style={{ color: C.muted }}>
+            Known things are commodities — everything known is known by everyone. The unknowns are
+            the asset: questions reality hasn&apos;t answered yet.
+          </p>
+          {unavailable ? (
+            <p className="mt-6 text-sm" style={{ color: C.muted }}>
+              Unknown counts unavailable right now.
+            </p>
+          ) : !summary ? (
+            <p className="mt-6 text-sm" style={{ color: C.muted }}>
+              Counting recorded unknowns…
+            </p>
+          ) : (
+            <dl className="mt-8 grid grid-cols-2 gap-px sm:grid-cols-3" style={{ background: C.line }}>
+              {STATE_ORDER.map((s) => (
+                <div key={s} className="p-5" style={{ background: C.panel }}>
+                  <dt
+                    className="text-xs font-bold uppercase tracking-[0.14em]"
+                    style={{ color: C.muted }}
+                  >
+                    {UNKNOWN_STATE_LABELS[s]}
+                  </dt>
+                  <dd
+                    className="mt-1 text-4xl font-extrabold"
+                    style={{ fontFamily: "Archivo, sans-serif", color: C.text }}
+                  >
+                    {summary.counts[s] ?? 0}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          <Link
+            to="/unknowns"
+            className="mt-6 inline-flex min-h-10 items-center gap-1 text-sm font-bold"
+            style={{ color: C.amber }}
+          >
+            Open the unknowns <ArrowRight className="size-4" aria-hidden="true" />
           </Link>
         </div>
       </Container>
@@ -317,17 +364,210 @@ function CurrentActivity() {
   );
 }
 
-/* 6. Honest current state */
+/* 4. Very big, very small — the climb */
 
-function HonestStatus() {
+const CLIMB_STEPS = [
+  {
+    n: 1,
+    title: "One seller, one week",
+    body: "Experiment 1: can faster replies recover real sales for one seller? No seller has agreed yet — it remains proposed.",
+    link: { to: "/prototype/inbox" as const, label: "Try the free inbox tool" },
+    earned: true,
+  },
+  { n: 2, title: "Ten sellers", body: "[when earned]", earned: false },
+  { n: 3, title: "A repeatable week", body: "[when earned]", earned: false },
+  { n: 4, title: "A local playbook", body: "[when earned]", earned: false },
+  { n: 5, title: "Everywhere", body: "[when earned]", earned: false },
+] as const;
+
+function VeryBigVerySmall() {
   return (
-    <section aria-label="Status" className="border-t border-accent/20 bg-night py-8 sm:py-10">
-      <Container>
-        <p className="mx-auto max-w-2xl border-l-4 border-accent pl-4 text-sm font-bold leading-6 text-ink">
+    <section style={{ borderBottom: `1px solid ${C.line}`, background: C.panel }}>
+      <Container className="py-10 sm:py-14">
+        <div className="max-w-4xl">
+          <h2
+            className="text-3xl font-extrabold tracking-tight sm:text-4xl"
+            style={{ fontFamily: "Archivo, sans-serif", color: C.text }}
+          >
+            Very big, very small.
+          </h2>
+          <p className="mt-3 max-w-2xl text-base leading-7" style={{ color: C.muted }}>
+            The big aim and the small aim are the same aim at different scales. Each step is
+            earned by the one before it — nothing is claimed in advance.
+          </p>
+          <ol className="mt-8 space-y-0">
+            {CLIMB_STEPS.map((s) => (
+              <li
+                key={s.n}
+                className="flex gap-5 border-t py-5"
+                style={{ borderColor: C.line, opacity: s.earned ? 1 : 0.45 }}
+              >
+                <span
+                  className="font-mono text-sm font-bold"
+                  style={{ color: s.earned ? C.amber : C.muted }}
+                >
+                  {String(s.n).padStart(2, "0")}
+                </span>
+                <div>
+                  <h3
+                    className="font-bold"
+                    style={{ fontFamily: "Archivo, sans-serif", color: C.text }}
+                  >
+                    {s.title}
+                  </h3>
+                  {s.earned ? (
+                    <>
+                      <p className="mt-1 max-w-2xl text-sm leading-6" style={{ color: C.muted }}>
+                        {s.body}
+                      </p>
+                      {"link" in s && s.link && (
+                        <Link
+                          to={s.link.to}
+                          className="mt-2 inline-flex min-h-10 items-center gap-1 text-sm font-bold"
+                          style={{ color: C.amber }}
+                        >
+                          {s.link.label} <ArrowRight className="size-4" aria-hidden="true" />
+                        </Link>
+                      )}
+                    </>
+                  ) : (
+                    <p className="mt-1 text-sm italic" style={{ color: C.muted }}>
+                      when earned
+                    </p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </Container>
+    </section>
+  );
+}
+
+/* 5. What we have learned — findings from the API only */
+
+function chipFor(epistemic: string): { label: string; color: string } {
+  const e = epistemic.toLowerCase();
+  if (e.includes("support")) return { label: "Supported", color: "#72d38f" };
+  if (e.includes("hypothes")) return { label: "Hypothesis", color: "#c4b5fd" };
+  return { label: "Observed", color: C.amber };
+}
+
+function WhatWeHaveLearned() {
+  const [items, setItems] = useState<PublicDiscovery[] | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    loadDiscoveries(4)
+      .then((d) => {
+        if (live) {
+          if (d === null) setUnavailable(true);
+          else setItems(d);
+        }
+      })
+      .catch(() => {
+        if (live) setUnavailable(true);
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  return (
+    <section style={{ borderBottom: `1px solid ${C.line}` }}>
+      <Container className="py-10 sm:py-14">
+        <div className="max-w-4xl">
+          <h2
+            className="text-3xl font-extrabold tracking-tight sm:text-4xl"
+            style={{ fontFamily: "Archivo, sans-serif", color: C.text }}
+          >
+            What we have learned.
+          </h2>
+          <p className="mt-3 max-w-2xl text-base leading-7" style={{ color: C.muted }}>
+            Only what the record actually holds — with source and date. A sourced observation is
+            not automatically a verified claim.
+          </p>
+          {unavailable ? (
+            <p className="mt-6 text-sm" style={{ color: C.muted }}>
+              Findings unavailable right now.
+            </p>
+          ) : !items ? (
+            <p className="mt-6 text-sm" style={{ color: C.muted }}>
+              Checking the record…
+            </p>
+          ) : items.length === 0 ? (
+            <p className="mt-6 text-sm font-bold" style={{ color: C.text }}>
+              Nothing recorded yet.
+            </p>
+          ) : (
+            <ul className="mt-8 space-y-4">
+              {items.map((item) => {
+                const chip = chipFor(item.epistemic_state || "");
+                return (
+                  <li
+                    key={item.id}
+                    className="border p-5"
+                    style={{ borderColor: C.line, background: C.panel }}
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className="rounded-full border px-2 py-0.5 text-xs font-semibold"
+                        style={{ borderColor: chip.color, color: chip.color }}
+                      >
+                        {chip.label}
+                      </span>
+                      <span className="text-xs" style={{ color: C.muted }}>
+                        {item.source}
+                        {item.retrieved_at
+                          ? ` · ${new Date(item.retrieved_at).toISOString().slice(0, 10)}`
+                          : ""}
+                      </span>
+                    </div>
+                    <h3
+                      className="mt-2 font-bold leading-6"
+                      style={{ fontFamily: "Archivo, sans-serif", color: C.text }}
+                    >
+                      {item.title || "Untitled observation"}
+                    </h3>
+                    <p className="mt-1.5 max-w-3xl text-sm leading-6" style={{ color: C.muted }}>
+                      {item.excerpt}
+                    </p>
+                    {item.canonical_url && (
+                      <a
+                        href={item.canonical_url}
+                        className="mt-2 inline-flex min-h-10 items-center gap-1 text-sm font-bold"
+                        style={{ color: C.amber }}
+                      >
+                        View source <ArrowUpRight className="size-4" aria-hidden="true" />
+                      </a>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </Container>
+    </section>
+  );
+}
+
+/* 6. Footer — honest status, contact only if real */
+
+function HomeFooter() {
+  return (
+    <footer style={{ background: C.panel }}>
+      <Container className="py-8">
+        <p className="max-w-2xl text-sm font-bold leading-6" style={{ color: C.text }}>
           Honest status: Hami is pre-revenue. Experiment 1 remains proposed; there are no
           participants or results to report.
         </p>
+        <p className="mt-2 text-xs" style={{ color: C.muted }}>
+          © 2026 Hami · Built in Kathmandu, serving everywhere equally.
+        </p>
       </Container>
-    </section>
+    </footer>
   );
 }

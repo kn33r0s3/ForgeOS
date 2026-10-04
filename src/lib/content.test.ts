@@ -110,10 +110,10 @@ describe("Hami public content", () => {
     for (const path of FORBIDDEN_PUBLIC_PATHS) {
       assert.equal(publicHrefs.has(path), false, `nav leaked ${path}`);
     }
-    // Join Hami button exists in the header, separate from nav.
+    // No Sign in / Join Hami in the public header nav (owner console link only).
     const header = readFileSync(join(root, "src/components/layout/site-header.tsx"), "utf8");
-    assert.match(header, /Join Hami/);
-    assert.match(header, /to="\/login"/);
+    assert.doesNotMatch(header, /Join Hami/);
+    assert.doesNotMatch(header, /to="\/login"/);
   });
 
   it("keeps commercial services separate from prototype capabilities", () => {
@@ -318,26 +318,21 @@ describe("Hami public root", () => {
     assert.match(home, /createFileRoute\("\/"\)/);
     assert.equal(ogSite.title, "Hami");
     assert.doesNotMatch(home, /Navigate to=/);
-    // Home presents the living system and recorded public observations before its one small investigation.
+    // Home per the unknowns-surface design: hero, primitives, unknown counts, climb, findings.
+    assert.match(home, /Discover what matters/);
+    assert.match(home, /Act on it/);
     assert.match(home, /Hami is a living system that understands what people need/);
-    assert.match(home, /Built in Kathmandu\. Serving everywhere equally/);
-    assert.match(home, /Observes/);
-    assert.match(home, /Keeps evidence and uncertainty/);
-    assert.match(home, /Acts only when authorized/);
-    assert.match(home, /Learns from outcomes/);
-    assert.match(home, /Reality is not pre-sorted/);
-    assert.match(home, /unused capability/);
-    assert.match(home, /problems worth solving/);
-    assert.match(home, /no fixed sequence[\s\S]*single product defines the system/);
-    assert.match(home, /What is actually recorded/);
+    assert.match(home, /Built in Kathmandu/);
+    assert.match(home, /Serving everywhere equally/);
+    assert.match(home, /RealityLoop/);
+    assert.match(home, /The power of the unknown/);
+    assert.match(home, /loadUnknownsSummary/);
+    assert.match(home, /Very big, very small/);
+    assert.match(home, /One seller, one week/);
+    assert.match(home, /when earned/);
+    assert.match(home, /What we have learned/);
     assert.match(home, /loadDiscoveries/);
-    assert.match(home, /Nothing is recorded in this public observation record yet/);
-    assert.match(home, /The public record is unavailable right now/);
     assert.match(home, /Experiment 1/);
-    assert.match(home, /Currently exploring/);
-    assert.match(home, /One proposed investigation · not started/);
-    assert.match(home.replace(/\s+/g, " "), /not Hami's identity or a live offer/);
-    assert.match(home, /to="\/needs"/);
     assert.doesNotMatch(home, /to="\/prototype\/inbox"|Try the free inbox tool/);
     assert.match(
       home,

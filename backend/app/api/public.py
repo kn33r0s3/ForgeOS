@@ -5,6 +5,7 @@ import os
 import secrets
 from datetime import datetime, timezone
 
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -912,3 +913,148 @@ def get_booking_request(booking_id: int, db: Session = Depends(get_db)):
         updated_at=row.updated_at,
         accepted_at=row.accepted_at,
     )
+
+
+
+class PublicUnknownOut(BaseModel):
+    id: str
+    category: str
+    question: str
+    state: str
+    cheapest_test: str
+    stake: str
+
+
+class UnknownsSummaryOut(BaseModel):
+    counts: dict[str, int]
+    total: int
+    last_loop: str | None
+
+
+# ---------------------------------------------------------------------------
+# Unknowns surface (read-only)
+# Parses docs/UNKNOWN_MAP.md — does not touch the six-primitive substrate.
+# Public unknowns (world): categories B (people) and D (discovery-sourced).
+# Internal unknowns (A: reality/ops, C: system/meta) are owner-console only.
+# ---------------------------------------------------------------------------
+
+import re
+from pathlib import Path
+
+_UNKNOWN_MAP_PATH = Path(__file__).resolve().parents[3] / "docs" / "UNKNOWN_MAP.md"
+
+# Categories visible on public pages (world unknowns)
+PUBLIC_UNKNOWN_CATEGORIES = ("B", "D")
+# Categories reserved for owner console (internal/business/backlog)
+INTERNAL_UNKNOWN_CATEGORIES = ("A", "C")
+
+_UNKNOWN_STATES = (
+    "UNKNOWN",
+    "HYPOTHESIZED",
+    "TESTED",
+    "SUPPORTED",
+    "CONTRADICTED",
+    "BLOCKED_BY_MISSING_ACCESS",
+)
+
+
+def _parse_unknowns():
+    """Parse UNKNOWN_MAP.md tables into structured unknowns.
+
+    Returns (unknowns, last_modified_iso) where unknowns is a list of dicts
+    with: id, category, question, state, cheapest_test, stake.
+    """
+    if not _UNKNOWN_MAP_PATH.exists():
+        return [], None
+    text = _UNKNOWN_MAP_PATH.read_text(encoding="utf-8")
+    last_modified = datetime.fromtimestamp(
+        _UNKNOWN_MAP_PATH.stat().st_mtime, tz=timezone.utc
+    ).isoformat()
+
+    unknowns = []
+    in_table = False
+    for line in text.split("\n"):
+        if line.startswith("| # |"):
+            in_table = True
+            continue
+        if line.startswith("|---"):
+            continue
+        if in_table and line.startswith("|"):
+            parts = [p.strip() for p in line.split("|")]
+            # | # | Unknown | State | Cheapest test | What changes |
+            if len(parts) >= 6 and re.match(r"^[A-Z]\d+$", parts[1]):
+                uid = parts[1]
+                category = uid[0]
+                state_m = re.match(
+                    r"(UNKNOWN|HYPOTHESIZED|TESTED|SUPPORTED|CONTRADICTED|BLOCKED_BY_MISSING_ACCESS)",
+                    parts[3],
+                )
+                if state_m:
+                    unknowns.append(
+                        {
+                            "id": uid,
+                            "category": category,
+                            "question": parts[2],
+                            "state": state_m.group(1),
+                            "cheapest_test": parts[4],
+                            "stake": parts[5],
+                        }
+                    )
+        elif in_table and line.strip() and not line.startswith("|"):
+            in_table = False
+    return unknowns, last_modified
+
+
+def _last_loop_timestamp():
+    """Best-effort last discovery loop completion time.
+
+    Reads the discovery log's most recent entry date if available.
+    Returns ISO string or None.
+    """
+    log_path = Path(__file__).resolve().parents[3] / "docs" / "UNKNOWN_MAP.md"
+    if log_path.exists():
+        # The map's Date header records the last update
+        text = log_path.read_text(encoding="utf-8")
+        m = re.search(r"\*\*Date:\*\*\s*(\d{4}-\d{2}-\d{2})", text)
+        if m:
+            return m.group(1)
+    return None
+
+
+@router.get("/unknowns/summary", response_model=UnknownsSummaryOut)
+def get_unknowns_summary():
+    """Public unknown counts by state + last-loop timestamp.
+
+    Only world unknowns (categories B, D) are counted. Internal unknowns
+    (A, C) are excluded from public surfaces.
+    """
+    unknowns, _ = _parse_unknowns()
+    public = [u for u in unknowns if u["category"] in PUBLIC_UNKNOWN_CATEGORIES]
+    counts = {s: 0 for s in _UNKNOWN_STATES}
+    for u in public:
+        counts[u["state"]] += 1
+    return {
+        "counts": counts,
+        "total": len(public),
+        "last_loop": _last_loop_timestamp(),
+    }
+
+
+@router.get("/unknowns", response_model=list[PublicUnknownOut])
+def list_public_unknowns(
+    state: str = Query(default=None),
+    limit: int = Query(default=50, le=200),
+):
+    """List public world unknowns with state, cheapest test, and stake.
+
+    No hand-written entries — parsed from docs/UNKNOWN_MAP.md.
+    Optional ?state= filter. Honest empty list (not filler) when none match.
+    """
+    unknowns, _ = _parse_unknowns()
+    public = [u for u in unknowns if u["category"] in PUBLIC_UNKNOWN_CATEGORIES]
+    if state:
+        su = state.upper()
+        if su not in _UNKNOWN_STATES:
+            raise HTTPException(400, f"unknown state: {state}")
+        public = [u for u in public if u["state"] == su]
+    return public[:limit]
