@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -240,17 +240,30 @@ describe("Hami prototype honesty", () => {
 });
 
 describe("Hami forge console", () => {
-  it("exercises the real engine, not a mock", () => {
+  it("lives only behind the owner key — no public route", () => {
     const sourceDir = dirname(fileURLToPath(import.meta.url));
-    const route = readFileSync(join(sourceDir, "../routes/forge.tsx"), "utf8");
-    assert.match(route, /createFileRoute\("\/forge"\)/);
-    assert.match(route, /verifyRound/);
-    assert.match(route, /ripenessQueue/);
-    assert.match(route, /isAngleTried/);
-    assert.match(route, /@\/lib\/forge\/assistant/);
-    assert.match(route, /Working console, not a product/);
-    // Kept out of the primary nav like other working surfaces.
-    assert.equal(NAV.some((item) => item.to === "/forge"), false);
+    // No public /forge route exists.
+    assert.equal(existsSync(join(sourceDir, "../routes/forge.tsx")), false);
+    const owner = readFileSync(join(sourceDir, "../routes/owner.tsx"), "utf8");
+    const widget = readFileSync(
+      join(sourceDir, "../components/forge/forge-console.tsx"),
+      "utf8",
+    );
+    // The widgets exercise the real engine, not a mock.
+    assert.match(widget, /verifyRound/);
+    assert.match(widget, /ripenessQueue/);
+    assert.match(widget, /isAngleTried/);
+    assert.match(widget, /@\/lib\/forge\/assistant/);
+    // Rendered only after unlock: the import lives at the top, but the
+    // widget JSX appears only in the unlocked branch.
+    const marker = "{!consoleState || !readiness ? (";
+    assert.ok(owner.includes(marker));
+    const [locked, unlocked] = owner.split(marker);
+    assert.equal(locked.includes("<ForgeConsoleWidgets />"), false);
+    assert.equal(unlocked.includes("<ForgeConsoleWidgets />"), true);
+    // The owner page stays unindexed and unlinked from the nav.
+    assert.match(owner, /noindex/);
+    assert.equal(NAV.some((item) => item.to === "/owner"), false);
   });
 });
 

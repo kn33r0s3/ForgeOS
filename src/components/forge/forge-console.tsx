@@ -1,8 +1,5 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
 import { Bot, CheckCircle2, FlaskConical, Search, ShieldCheck, XCircle } from "lucide-react";
-import { Container } from "@/components/layout/container";
-import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import {
   isAngleTried,
@@ -11,11 +8,6 @@ import {
   type RoundFinding,
 } from "@/lib/forge/assistant";
 import type { Confidence, EvidenceClass } from "@/lib/evidence";
-
-export const Route = createFileRoute("/forge")({
-  component: ForgeConsole,
-  head: () => ({ meta: [{ title: "ForgeBot console — Hami" }] }),
-});
 
 const CLASSES: EvidenceClass[] = ["actual", "observed", "reported", "inferred", "estimated", "unknown"];
 const CONFIDENCES: Confidence[] = ["high", "medium", "low"];
@@ -177,30 +169,23 @@ function RipenessList() {
   );
 }
 
-function ForgeConsole() {
+export function ForgeConsoleWidgets() {
   return (
-    <main>
-      <PageHeader
-        eyebrow="Hami · ForgeBot console"
-        title="ForgeBot v0 — the assistant"
-        lede="The assistant's working console. Everything here runs the real engine code — the same gate, the same unknowns, the same angle guard the rounds use."
-        containerClassName="max-w-4xl"
-      />
-      <Container className="max-w-4xl py-10 sm:py-14">
-        <div className="mb-8 flex items-start gap-3 rounded-xl border border-line bg-surface p-4">
-          <FlaskConical className="mt-0.5 h-5 w-5 shrink-0 text-accent" aria-hidden="true" />
-          <p className="text-sm leading-6 text-muted">
-            <strong className="text-ink">Working console, not a product.</strong>{" "}
-            This is where the operator tests ForgeBot's capabilities as they're
-            built — assistant today, competitor next.
-          </p>
-        </div>
-        <div className="grid gap-5">
-          <GateTester />
-          <AngleChecker />
-          <RipenessList />
-        </div>
-      </Container>
-    </main>
+    <div>
+      <div className="mb-5 flex items-start gap-3 rounded-card border-2 border-line bg-card p-4">
+        <FlaskConical className="mt-0.5 h-5 w-5 shrink-0 text-accent" aria-hidden="true" />
+        <p className="text-sm leading-6 text-muted">
+          <strong className="text-ink">ForgeBot v0 — the assistant.</strong>{" "}
+          The operator's working console: gate findings, check angles, see
+          what's ripest. Everything here runs the real engine code — the
+          same gate, unknowns, and guard the rounds use.
+        </p>
+      </div>
+      <div className="grid gap-5">
+        <GateTester />
+        <AngleChecker />
+        <RipenessList />
+      </div>
+    </div>
   );
 }

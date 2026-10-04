@@ -165,6 +165,15 @@ than a few days old, re-verify before trusting the details.
   money road candidate→verified→served→paid, ForgeBot trajectory).
   Full frontend suite 121/121 green. This is the substrate ForgeBot
   inherits when it starts running rounds itself.
+- **ForgeBot v0 (pushed 2026-10-04, commits 15ea70b + c8ba590):**
+  the assistant — `verifyRound()` gates round findings through the
+  evidence gate before banking, `ripenessQueue()` ranks open unknowns
+  (desk-doable first, oldest first), `isAngleTried()` refuses repeated
+  angles against 14 tried angles; `docs/ROUND_PROTOCOL.md` is the
+  executable spec including the hidden-unknown hunt; `docs/ENGINE.md`
+  carries the greatest goal as prime directive. The operator console
+  lives inside `/owner` behind the owner key ONLY — the public
+  `/forge` route was removed on owner correction. 133/133 tests green.
 - **Launch readiness:** `docs/LAUNCH_READINESS.md` tracks every launch
   requirement (rows updated 2026-10-04 for the 6 decisions). Backend suite
   686 passed/0 failed; frontend 107/107. Everything remaining needs a human

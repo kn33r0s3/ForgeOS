@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Container } from "@/components/layout/container";
+import { ForgeConsoleWidgets } from "@/components/forge/forge-console";
 
 type LeadStage = "REQUESTED" | "REPLIED" | "BOOKED" | "COMPLETED";
 type Readiness = {
@@ -465,6 +466,18 @@ function OwnerConsolePage() {
                 </section>
               ) : null}
             </div>
+
+            <section className="mt-10 border-t-2 border-line pt-5" aria-label="ForgeBot">
+              <h2 className="text-xl font-extrabold">ForgeBot</h2>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
+                The operator's console. Key-protected like everything else
+                here — the gate, the angle guard, and the ripeness queue run
+                the real engine code.
+              </p>
+              <div className="mt-4">
+                <ForgeConsoleWidgets />
+              </div>
+            </section>
           )}
 
           {error ? <p role="alert" className="mt-5 rounded-card border-2 border-danger/70 bg-danger/10 p-4 text-sm">{error}</p> : null}
