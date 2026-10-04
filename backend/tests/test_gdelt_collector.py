@@ -299,6 +299,50 @@ def test_gdelt_retries_429_with_exponential_backoff(db, monkeypatch):
     assert sleeps == [5, 10]
 
 
+def test_gdelt_empty_success_records_access_without_resolving_research(db, monkeypatch):
+    entry, _authorization, requests = _mock_gdelt(
+        monkeypatch,
+        db,
+        payload={"articles": []},
+    )
+    question, task = _create_gdelt_task(db, "What recent media coverage is indexed?")
+
+    result = collector_runner.execute_task(db, task)
+    db.refresh(task)
+    db.refresh(question)
+
+    assert len(requests) == 1
+    assert result["status"] == "needs_research"
+    assert task.status == "needs_research"
+    observation = task.results["retrieval_observation"]
+    assert observation["source"] == "gdelt_doc"
+    assert observation["source_registry_id"] == entry.registry_id
+    assert observation["source_accessed"] is True
+    assert observation["outcome"] == "valid_empty_retrieval"
+    assert observation["source_records_returned"] == 0
+    assert observation["claim_effect"] == "none"
+    assert datetime.fromisoformat(observation["retrieved_at"])
+
+    usage = db.query(models.SourceUsageEvent).filter_by(research_task_id=task.id).one()
+    assert usage.success is True
+    assert usage.failure_kind is None
+    assert usage.result_count == 0
+    assert db.query(models.Signal).filter_by(source="gdelt_doc").count() == 0
+    assert db.query(models.Evidence).filter_by(source="gdelt_doc").count() == 0
+    assert db.query(models.Opportunity).count() == 0
+    assert db.query(models.Customer).count() == 0
+    execute_event = db.query(models.ResearchTaskEvent).filter_by(
+        task_id=task.id,
+        event_type="step_completed",
+        step_name="execute",
+    ).one()
+    assert execute_event.details["retrieval_observation"] == observation
+    assert db.query(models.ResearchTaskEvent).filter_by(
+        task_id=task.id,
+        event_type="remaining_question",
+    ).count() == 1
+
+
 def test_gdelt_epistemic_requirements_bound_velocity_and_reject_commercial_claims():
     provenance = {
         "source_registry_id": "gdelt-doc-api-v2",

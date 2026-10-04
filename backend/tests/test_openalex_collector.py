@@ -663,14 +663,17 @@ def test_openalex_empty_result_is_recorded_without_advancing_claim_or_requiremen
     db.refresh(task)
 
     assert result["status"] == "needs_research", result
-    assert task.results["retrieval_observation"] == {
-        "source": "openalex",
-        "query": task.query,
-        "search_mode": "keyword",
-        "returned_works": 0,
-        "outcome": "valid_empty_retrieval",
-        "claim_effect": "none",
-    }
+    observation = task.results["retrieval_observation"]
+    assert observation["source"] == "openalex"
+    assert observation["source_registry_id"] == "openalex-public-works-cc0"
+    assert observation["source_accessed"] is True
+    assert observation["query"] == task.query
+    assert observation["search_mode"] == "keyword"
+    assert observation["source_records_returned"] == 0
+    assert observation["returned_works"] == 0
+    assert observation["outcome"] == "valid_empty_retrieval"
+    assert observation["claim_effect"] == "none"
+    assert isinstance(observation["retrieved_at"], str)
     observation_signal = (
         db.query(models.Signal)
         .filter_by(source="openalex", collection_status="valid_empty_retrieval")
