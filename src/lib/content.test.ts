@@ -232,7 +232,7 @@ describe("Hami prototype honesty", () => {
     assert.match(route, /honest empty state/);
     assert.match(route, /createFileRoute\("\/prototype\/inbox"\)/);
     // Prototypes stay out of the primary nav and the sitemap.
-    assert.equal(NAV.some((item) => item.to === "/prototype/inbox"), false);
+    assert.equal(NAV.some((item) => (item.to as string) === "/prototype/inbox"), false);
     const root = join(sourceDir, "../..");
     const sitemap = readFileSync(join(root, "public/sitemap.xml"), "utf8");
     assert.equal(sitemap.includes("/prototype/inbox"), false);
@@ -263,7 +263,7 @@ describe("Hami forge console", () => {
     assert.equal(unlocked.includes("<ForgeConsoleWidgets />"), true);
     // The owner page stays unindexed and unlinked from the nav.
     assert.match(owner, /noindex/);
-    assert.equal(NAV.some((item) => item.to === "/owner"), false);
+    assert.equal(NAV.some((item) => (item.to as string) === "/owner"), false);
   });
 });
 
