@@ -109,8 +109,9 @@ function signalFor(
     amber: "border-warning/70 bg-warning/10",
     red: "border-danger/70 bg-danger/10",
   } as const;
+  // Called as a plain function (not a component or list), so no key is needed.
   return (
-    <article key={title} className={`rounded-card border-2 p-4 ${colors[state]}`}>
+    <article className={`rounded-card border-2 p-4 ${colors[state]}`}>
       <h3 className="font-extrabold">{title}</h3>
       <p className="mt-1 break-words text-sm font-semibold">{value}</p>
       <p className="mt-2 text-sm leading-5 text-muted">Next: {nextStep}</p>
@@ -171,26 +172,39 @@ function OwnerConsolePage() {
     successMessage = "Inquiry updated.",
   ) {
     if (!selected) return;
+    const reference = selected.reference;
     setBusy(true);
     setError("");
     setNotice("");
     try {
       await ownerFetch(
-        `owner/leads/${encodeURIComponent(selected.reference)}${path}`,
+        `owner/leads/${encodeURIComponent(reference)}${path}`,
         key,
         { method, ...(body ? { body: JSON.stringify(body) } : {}) },
       );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "The inquiry could not be updated.");
+      setBusy(false);
+      return;
+    }
+    // The milestone is recorded at this point: server-side transitions are
+    // stage-guarded (409 on mismatch), so retrying this step is safe. From
+    // here on, a failure only means the view could not refresh — it never
+    // means the record failed, and the message must not say so.
+    try {
       await refresh();
       if (method === "DELETE") {
         setSelected(null);
       } else {
-        await loadLead(selected.reference);
+        await loadLead(reference);
       }
       setEvidenceReference("");
       setOutcomeNote("");
       setNotice(successMessage);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "The inquiry could not be updated.");
+    } catch {
+      setNotice(
+        `${successMessage} The console could not refresh — reload to see the latest state.`,
+      );
     } finally {
       setBusy(false);
     }
