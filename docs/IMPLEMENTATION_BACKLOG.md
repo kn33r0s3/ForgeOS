@@ -12,7 +12,7 @@ storage/forge.db
   → FastAPI app.main
   → public router (/public/*) consumed by root src/
   → forge router (/forge/*) consumed by the archived Next.js cockpit
-  → scripts/scheduler.py → cycle_scheduler → run_daily_cycle
+  → backend/scripts/scheduler.py (`cd backend && python -m scripts.scheduler`) → cycle_scheduler → run_daily_cycle
        → forge_loop.run_cycle
             → pattern_engine.detect_patterns
             → belief_engine.form_belief_from_pattern

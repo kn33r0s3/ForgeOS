@@ -21,6 +21,7 @@ const routesDir = join(root, "src/routes");
 // Routes that are intentionally not linked
 const INTENTIONALLY_UNLINKED = new Set([
   "/owner", // owner-only console
+  "/operations", // internal engine dashboard; X-Robots-Tag noindex in vercel.json
 ]);
 
 function getRoutePath(filename) {
