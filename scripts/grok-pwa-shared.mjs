@@ -10,7 +10,7 @@ export const DEFAULT_APP_NAME = "Grok App";
 export const OG_SERVICE_URL_DEFAULT = "https://og.grok.me";
 export const OG_SITE_REL_PATH = "src/lib/og/site.json";
 /** Page background (ink navy); keep in sync with SITE.themeColor and --background in src/styles.css. */
-export const APP_THEME_COLOR = "#04021f";
+export const APP_THEME_COLOR = "#0C0B0A";
 
 const SHARE_META_KEYS = new Set([
   "og:title",

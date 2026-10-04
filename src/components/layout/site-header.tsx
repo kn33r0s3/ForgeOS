@@ -47,11 +47,25 @@ export function SiteHeader() {
   // clipped by the header's own box.
   return (
     <>
+      {/* Amber top bar with H mark — design system */}
+      <div
+        className="flex h-8 items-center justify-center"
+        style={{ background: "#F2A33A" }}
+        aria-hidden="true"
+      >
+        <span
+          className="text-sm font-bold leading-none"
+          style={{ color: "#0C0B0A", fontFamily: "UnifrakturCook, serif" }}
+        >
+          H
+        </span>
+      </div>
       <header
         className={cn(
           "masthead sticky top-0 z-50 h-[var(--header-h)] transition-shadow duration-150",
           scrolled || open ? "shadow-[0_4px_0_0_#000]" : "",
         )}
+        style={{ background: "#0C0B0A", borderBottom: "1px solid #3A2E1A" }}
       >
         <Container className="relative flex h-full items-stretch justify-between gap-4">
           <BrandMark tone="dark" className="self-center" />

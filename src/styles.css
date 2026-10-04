@@ -41,12 +41,14 @@
   --color-amber: var(--warning);
   --color-amber-dim: color-mix(in srgb, var(--warning) 14%, transparent);
 
-  --font-sans: "Roboto", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Roboto Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  /* Section and card headings: heavy Roboto. */
-  --font-display: "Roboto", ui-sans-serif, system-ui, sans-serif;
-  /* Mastheads, page titles, brand and numerals only. */
+  /* Section and card headings: Archivo. */
+  --font-display: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  /* Hami wordmark and reality-loop center only. */
   --font-gothic: "UnifrakturCook", "Old English Text MT", Georgia, serif;
+  /* Nepali text. */
+  --font-nepali: "Noto Sans Devanagari", "Source Sans 3", sans-serif;
 
   --text-display: clamp(2.9rem, 8vw, 6rem);
   --text-display--line-height: 1.02;
@@ -93,23 +95,23 @@
  * never floaty.
  */
 :root {
-  --background: #04021f;
-  --surface: #161515;
-  --surface-elevated: #1f1d20;
-  --foreground: #fdfbf7;
-  --muted: #b3aec2;
-  --border: #3a3848;
-  --primary: #ff9b04;
-  --primary-foreground: #000000;
-  --secondary: #26242d;
+  --background: #0c0b0a;
+  --surface: #15130f;
+  --surface-elevated: #1e1a14;
+  --foreground: #f4efe6;
+  --muted: #bdb29f;
+  --border: #3a2e1a;
+  --primary: #f2a33a;
+  --primary-foreground: #0c0b0a;
+  --secondary: #262019;
   --success: #72d38f;
-  --warning: #ffc54d;
+  --warning: #f2a33a;
   --danger: #ff6f6f;
   --info: #9ec5ff;
-  --focus: #ff9b04;
+  --focus: #f2a33a;
   --wheat: #f5deb3;
   --slab: #d1cfcf;
-  --plate-edge: #5c5b5b;
+  --plate-edge: #3a2e1a;
 }
 
 @layer base {

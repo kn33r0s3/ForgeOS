@@ -34,7 +34,10 @@ const LINK =
 export function SiteFooter() {
   const year = new Date().getFullYear();
   return (
-    <footer className="mt-auto border-t-2 border-white/20 bg-card">
+    <footer
+      className="mt-auto"
+      style={{ borderTop: "1px solid #3A2E1A", background: "#15130F" }}
+    >
       <div className="band-rule" aria-hidden="true" />
       <Container className="grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr_1fr_1fr]">
         <div className="sm:col-span-2 lg:col-span-1">
