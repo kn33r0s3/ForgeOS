@@ -19,6 +19,18 @@ rupee are the same aim at different scales. Discovery — including
 *hidden* unknowns, the ones nobody thought to ask — is how the system
 grows toward it.
 
+## The legitimacy rule (owner's standing rule, 2026-10-04)
+
+"We not building show off or simulation for public, our engine must be
+100% legit and as promised." Concretely:
+
+- Public surfaces show only what is real. Operator tooling lives behind
+  the owner key on `/owner` — never on public routes.
+- Every claimed capability runs the real engine code. A console that
+  exercises a capability imports the real module; a test proves it does.
+- No mock, no demo that pretends, no page that implies a capability the
+  engine doesn't have. If it isn't built, it isn't shown.
+
 This document is the engine's contract. The engine is not a page. It is
 the loop Hami runs on everything it claims to know.
 
