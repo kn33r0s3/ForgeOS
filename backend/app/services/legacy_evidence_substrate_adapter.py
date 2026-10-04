@@ -18,7 +18,12 @@ from app import models
 from app.services import world_graph
 
 
-def sync_legacy_evidence(db: Session, *, limit: int = 500) -> dict[str, int]:
+def sync_legacy_evidence(
+    db: Session,
+    *,
+    limit: int = 500,
+    evidence_ids: set[int] | None = None,
+) -> dict[str, int]:
     """Map a bounded batch of unprojected evidence rows without creating rows."""
     world_graph.seed_core_types(db)
     result = {
@@ -28,13 +33,12 @@ def sync_legacy_evidence(db: Session, *, limit: int = 500) -> dict[str, int]:
         "unresolved_records": 0,
         "events_created": 0,
     }
-    rows = (
-        db.query(models.Evidence)
-        .filter(models.Evidence.subject_kind.is_(None))
-        .order_by(models.Evidence.id.asc())
-        .limit(max(1, int(limit)))
-        .all()
-    )
+    query = db.query(models.Evidence).filter(models.Evidence.subject_kind.is_(None))
+    if evidence_ids is not None:
+        if not evidence_ids:
+            return result
+        query = query.filter(models.Evidence.id.in_(evidence_ids))
+    rows = query.order_by(models.Evidence.id.asc()).limit(max(1, int(limit))).all()
     entity_cache: dict[tuple[str, int], models.SubstrateEntity] = {}
 
     for evidence in rows:

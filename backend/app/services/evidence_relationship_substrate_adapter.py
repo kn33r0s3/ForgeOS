@@ -24,7 +24,12 @@ _EXPLICIT_TARGET_FIELDS = (
 )
 
 
-def sync_evidence_relationships(db: Session, *, limit: int = 250) -> dict[str, int]:
+def sync_evidence_relationships(
+    db: Session,
+    *,
+    limit: int = 250,
+    evidence_ids: set[int] | None = None,
+) -> dict[str, int]:
     """Map bounded, explicit Evidence → Claim links; never infer from relation_key."""
     world_graph.seed_core_types(db)
     result = {
@@ -33,13 +38,14 @@ def sync_evidence_relationships(db: Session, *, limit: int = 250) -> dict[str, i
         "entities_created": 0,
         "unresolved_records": 0,
     }
-    rows = (
-        db.query(models.EvidenceRelationship)
-        .filter(models.EvidenceRelationship.substrate_relation_id.is_(None))
-        .order_by(models.EvidenceRelationship.id.asc())
-        .limit(max(1, int(limit)))
-        .all()
+    query = db.query(models.EvidenceRelationship).filter(
+        models.EvidenceRelationship.substrate_relation_id.is_(None)
     )
+    if evidence_ids is not None:
+        if not evidence_ids:
+            return result
+        query = query.filter(models.EvidenceRelationship.evidence_id.in_(evidence_ids))
+    rows = query.order_by(models.EvidenceRelationship.id.asc()).limit(max(1, int(limit))).all()
     entity_cache: dict[tuple[str, int], models.SubstrateEntity] = {}
 
     for source in rows:

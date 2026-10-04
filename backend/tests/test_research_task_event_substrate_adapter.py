@@ -10,9 +10,12 @@ from app.services import (
 )
 
 
-def _failed_research_task(db):
+def _failed_research_task(db, *, question_suffix=""):
     question = models.ResearchQuestion(
-        question="What public evidence addresses this bounded research objective?"
+        question=(
+            "What public evidence addresses this bounded research objective?"
+            f"{question_suffix}"
+        )
     )
     db.add(question)
     db.commit()
@@ -150,6 +153,30 @@ def test_event_projection_is_bounded_and_retries_without_starvation(db):
         for event_id in source_event_ids
     )
     assert len(source_event_ids) == total
+
+
+def test_task_id_scope_projects_only_selected_research_lifecycle(db):
+    _question, selected_task = _failed_research_task(db)
+    _other_question, other_task = _failed_research_task(
+        db,
+        question_suffix=" Another test-only research question.",
+    )
+    other_event_ids = {
+        row.id
+        for row in db.query(models.ResearchTaskEvent).filter_by(task_id=other_task.id).all()
+    }
+
+    result = adapter.sync_research_task_events(db, task_id=selected_task.id)
+
+    assert result["events_seen"] > 0
+    assert result["events_projected"] == result["events_seen"]
+    assert result["unresolved_events"] == 0
+    assert all(
+        db.query(models.WorldEvent).filter_by(
+            idempotency_key=f"research-task-event:{event_id}:state-changed-v1"
+        ).count() == 0
+        for event_id in other_event_ids
+    )
 
 
 def test_inactive_event_type_stays_unresolved(db):
