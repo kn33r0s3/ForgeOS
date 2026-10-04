@@ -51,6 +51,8 @@ These cannot be answered from a screen. Only real conversations answer them.
 ## Rules
 
 - blocked ≠ completed. A blocked item stays listed as blocked.
+- Nothing is waste: dry wells, blocked items, reverts, and dormant code are
+  raw material. See docs/RAW_MATERIAL.md for the trash inventory.
 - requested ≠ verified, estimated ≠ actual, test ≠ real.
 - A surprise (OBSERVED ≠ EXPECTED) is more valuable than another green test:
   record it, preserve the evidence, let it generate the next unknown.
