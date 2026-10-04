@@ -13,7 +13,8 @@
 
 export type KnownToThem = "known" | "unknown" | "partially";
 
-export type Confidence = "high" | "medium" | "low";
+export type { Confidence } from "./evidence.ts";
+import type { Confidence } from "./evidence.ts";
 
 export interface CandidateNeed {
   id: string;
