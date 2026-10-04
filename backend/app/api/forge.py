@@ -179,8 +179,11 @@ def get_unknowns(db: Session = Depends(get_db)):
     """Public projection of the discovery unknowns, parsed from stored
     Claim primitives. Every item carries its truth label
     (epistemic_state) and its source (provenance) — the page displays
-    this and nothing hand-written."""
-    _require_legacy_intelligence()
+    this and nothing hand-written.
+
+    Not gated by the legacy-intelligence flag: this is the live
+    discovery pipeline (rounds -> map -> importer -> Claim), not the
+    retired pattern/belief/curiosity loop."""
     rows = db.query(models.Claim).order_by(models.Claim.id.asc()).all()
     return [_unknown_from_claim(row) for row in rows]
 

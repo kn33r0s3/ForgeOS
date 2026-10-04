@@ -6,7 +6,6 @@ label (epistemic_state) and source (provenance) — nothing hand-written.
 from fastapi.testclient import TestClient
 
 from app import models
-from app.config import settings
 from app.database import get_db
 from app.main import app
 
@@ -22,7 +21,6 @@ def _client(db):
 
 
 def test_unknowns_come_from_claim_primitives_with_truth_label_and_source(db):
-    settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED = True
     db.add(models.Claim(
         statement="What is the actual COD remittance window?",
         normalized_statement="what is the actual cod remittance window?",
@@ -57,7 +55,6 @@ def test_unknowns_come_from_claim_primitives_with_truth_label_and_source(db):
 
 
 def test_unknowns_empty_state_is_honest(db):
-    settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED = True
     for client in _client(db):
         resp = client.get("/forge/unknowns")
     assert resp.status_code == 200
