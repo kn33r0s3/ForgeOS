@@ -81,3 +81,65 @@ describe("public copy is backed by the API", () => {
     });
   }
 });
+
+describe("homepage contract", () => {
+  const home = () => read("src/routes/index.tsx");
+  const header = () => read("src/components/layout/site-header.tsx");
+  const footer = () => read("src/components/layout/site-footer.tsx");
+
+  it("has one plain headline and the missed-inquiry offer, in English and Nepali", () => {
+    const src = home();
+    assert.match(src, /Never miss a sale to a slow reply/);
+    assert.match(src, /ढिलो जवाफले बिक्री नगुमाउनुहोस्/);
+    assert.match(src, /you pay only for the sales that come back/i);
+  });
+
+  it("carries one honest status line and one real CTA", () => {
+    const src = home();
+    assert.match(src, /Honest status/i);
+    assert.match(src, /pre-revenue/i);
+    assert.match(src, /\/prototype\/inbox/);
+    assert.match(src, /No signup/i);
+  });
+
+  it("never shows the removed placeholders again", () => {
+    const blob = home() + header() + footer();
+    const banned = [
+      "Opening your System",
+      "Contact mailbox pending",
+      "Domain pending verification",
+      "Edit my context",
+      "Share a need",
+      "candidate notebook",
+    ];
+    for (const phrase of banned) {
+      assert.ok(
+        !blob.includes(phrase),
+        `banned placeholder reappeared: ${phrase}`,
+      );
+    }
+  });
+
+  it("main nav is exactly Hami, Inbox tool, What we've learned, Contact", () => {
+    const src = read("src/lib/content.ts");
+    assert.match(src, /\{\s*label:\s*"Hami",\s*to:\s*"\/"/);
+    assert.match(src, /\{\s*label:\s*"Inbox tool",\s*to:\s*"\/prototype\/inbox"/);
+    assert.match(src, /\{\s*label:\s*"What we've learned",\s*to:\s*"\/unknowns"/);
+    assert.match(src, /\{\s*label:\s*"Contact",\s*to:\s*"\/contact"/);
+    const navBlock = src.slice(src.indexOf("export const NAV"), src.indexOf("] as const;"));
+    for (const old of ["Discoveries", "World", "Hypotheses", "Actions", "For businesses"]) {
+      assert.ok(!navBlock.includes(`"${old}"`), `old nav item reappeared: ${old}`);
+    }
+  });
+
+  it("metadata titles all say Hami", () => {
+    const src = home();
+    assert.match(src, /\{\s*title:\s*"Hami"\s*\}/);
+    assert.match(src, /"og:title",\s*content:\s*"Hami"/);
+    assert.match(src, /"apple-mobile-web-app-title",\s*content:\s*"Hami"/);
+  });
+
+  it("footer says Built in Kathmandu", () => {
+    assert.match(footer(), /Built in Kathmandu/);
+  });
+});

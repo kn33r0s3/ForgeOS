@@ -3,7 +3,6 @@ import { ArrowUpRight } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { NAV } from "@/lib/content";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { BrandMark } from "./brand-mark";
@@ -73,14 +72,6 @@ export function SiteHeader() {
           </nav>
           <div className="flex items-center gap-2">
             <AuthControl />
-            <Link
-              to="/system"
-              className="btn-wipe hidden h-10 items-center gap-1.5 rounded-card border-2 border-black bg-black px-4 text-sm font-extrabold text-accent hover:text-wheat lg:inline-flex"
-              style={{ backgroundImage: "linear-gradient(45deg, #161515 50%, transparent 50%)" }}
-            >
-              Edit my context
-              <ArrowUpRight className="size-4" aria-hidden="true" />
-            </Link>
             <button
               type="button"
               className="group relative inline-flex size-11 flex-col items-center justify-center gap-[5px] rounded-card lg:hidden"
@@ -148,37 +139,6 @@ export function SiteHeader() {
               })}
             </ol>
           </nav>
-          <div
-            className="reveal grid grid-cols-2 gap-2 border-t-2 border-line p-3 text-sm"
-            style={{ "--i": NAV.length + 1 } as React.CSSProperties}
-          >
-            {SECONDARY.map((item) => {
-              const active = isActive(item.to, pathname);
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "flex min-h-11 items-center rounded-card border-2 px-3 font-bold transition-colors",
-                    active
-                      ? "border-accent bg-accent text-black"
-                      : "border-line bg-black text-wheat hover:border-accent hover:text-white",
-                  )}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
-          <div className="reveal p-3 pt-0" style={{ "--i": NAV.length + 2 } as React.CSSProperties}>
-            <Button asChild size="lg" className="w-full">
-              <Link to="/system">
-                Edit my context
-                <ArrowUpRight />
-              </Link>
-            </Button>
-          </div>
         </div>
       </div>
     </>
@@ -202,9 +162,3 @@ function AuthControl() {
 }
 
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
-
-const SECONDARY = [
-  { label: "Share a need", to: "/request" },
-  { label: "Work board", to: "/domain" },
-  { label: "About", to: "/about" },
-] as const;

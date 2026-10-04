@@ -111,12 +111,13 @@ describe("Hami public content", () => {
 
   it("exposes public-first primary destinations", () => {
     const hrefs = NAV.map((item) => item.to);
-    // Broad system surfaces lead; the work board remains a secondary mechanism.
+    // Hami, the inbox tool, what we've learned, contact. Old routes stay
+    // live but unlinked.
     assert.deepEqual(hrefs, [
       "/",
-      "/needs",
+      "/prototype/inbox",
       "/unknowns",
-      "/group/businesses",
+      "/contact",
     ]);
     const publicHrefs = new Set<string>(hrefs);
     for (const path of FORBIDDEN_PUBLIC_PATHS) {
@@ -238,8 +239,9 @@ describe("Hami prototype honesty", () => {
     assert.match(route, /No inquiries yet/);
     assert.match(route, /honest empty state/);
     assert.match(route, /createFileRoute\("\/prototype\/inbox"\)/);
-    // Prototypes stay out of the primary nav and the sitemap.
-    assert.equal(NAV.some((item) => (item.to as string) === "/prototype/inbox"), false);
+    // The inbox tool is a primary nav destination (owner-ordered) and the
+    // homepage's one real CTA — but it stays out of the sitemap.
+    assert.ok(NAV.some((item) => (item.to as string) === "/prototype/inbox"));
     const root = join(sourceDir, "../..");
     const sitemap = readFileSync(join(root, "public/sitemap.xml"), "utf8");
     assert.equal(sitemap.includes("/prototype/inbox"), false);
@@ -322,12 +324,13 @@ describe("Hami public root", () => {
     assert.match(home, /createFileRoute\("\/"\)/);
     assert.equal(ogSite.title, "Hami");
     assert.doesNotMatch(home, /Navigate to=/);
-    // Home is honest: what Hami is building, what exists, what doesn't.
-    assert.match(home, /Understanding what people need/);
-    assert.match(home, /no merchants served yet, no intake open/);
-    assert.match(home, /See the needs being worked/);
-    assert.match(home, /to="\/needs"/);
-    assert.match(home, /<Welcome \/>/);
+    // Home is honest: one headline, the missed-inquiry offer, status, one CTA.
+    assert.match(home, /Never miss a sale to a slow reply/);
+    assert.match(home, /you pay only for the sales that come back/i);
+    assert.match(home, /Honest status/i);
+    assert.match(home, /pre-revenue/i);
+    assert.match(home, /to="\/prototype\/inbox"/);
+    assert.match(home, /No signup/i);
     // No grand unproven claims, no toy form, no keyword-salad feed.
     assert.doesNotMatch(home, /living system for understanding the real world/);
     assert.doesNotMatch(home, /Finds what people need/);
@@ -336,27 +339,28 @@ describe("Hami public root", () => {
     assert.doesNotMatch(home, /loadPublicFeed/);
     assert.doesNotMatch(home, /useSystemState/);
     assert.doesNotMatch(home, /WorldStream/);
-    assert.match(home, /function CurrentPaths/);
-    assert.match(home, /Start with what is actually available/);
-    assert.match(home, /to="\/group\/businesses"/);
-    assert.doesNotMatch(home, /Browse or post work|to="\/domain"/);
-    assert.match(work, /to: "\/domain"/);
-    assert.match(header, /Edit my context/);
-    assert.match(header, /to="\/system"/);
+    // Old homepage sections are gone; old routes stay live but unlinked.
+    assert.doesNotMatch(home, /function CurrentPaths/);
+    assert.doesNotMatch(home, /to="\/group\/businesses"/);
+    assert.doesNotMatch(home, /to="\/discoveries"/);
+    assert.doesNotMatch(home, /to="\/opportunities"/);
+    assert.doesNotMatch(home, /to="\/actions"/);
+    assert.doesNotMatch(home, /Understanding what people need/);
+    // Header: no context form, no closed-intake links.
+    assert.doesNotMatch(header, /Edit my context/);
+    assert.doesNotMatch(header, /to="\/system"/);
+    assert.doesNotMatch(header, /Share a need/);
     const system = readFileSync(join(root, "src/routes/system.tsx"), "utf8");
     assert.match(system, /Back to System overview/);
     assert.match(system, /to="\/"/);
-    assert.match(system, /Edit personal context/);
-    assert.match(footer, /Edit personal context/);
-    assert.match(footer, /For businesses/);
-    assert.match(footer, /to: "\/group\/businesses"/);
-    assert.doesNotMatch(footer, /Share a need privately/);
-    assert.ok(NAV.some((item) => item.label === "For businesses" && item.to === "/group/businesses"));
-    assert.doesNotMatch(
-      header,
-      /const SECONDARY = \[[\s\S]*?For businesses/,
-      "For businesses belongs in the primary navigation, not duplicated in mobile quick links",
-    );
+    // Footer: new link groups, old ones unlinked.
+    assert.doesNotMatch(footer, /Edit personal context/);
+    assert.doesNotMatch(footer, /Share a need/);
+    assert.doesNotMatch(footer, /Work board/);
+    assert.match(footer, /Built in Kathmandu/);
+    assert.ok(NAV.some((item) => item.label === "Inbox tool" && item.to === "/prototype/inbox"));
+    assert.ok(NAV.some((item) => item.label === "What we've learned" && item.to === "/unknowns"));
+    assert.ok(NAV.some((item) => item.label === "Contact" && item.to === "/contact"));
     assert.match(header, /aria-current={active \? "page" : undefined}/);
     assert.match(businesses, /to="\/forge-bot-intake"/);
     assert.match(businesses, /online intake is closed/i);
@@ -389,9 +393,10 @@ describe("Hami public root", () => {
     assert.match(discoveries, /does not request owner-authorized substrate records/);
     assert.match(discoveries, /Opening this page does not run discovery/);
     assert.doesNotMatch(discoveries, /discovery\/runs/);
-    assert.match(header, /to: "\/request"/);
+    // The closed-intake link is gone from the header entirely.
+    assert.doesNotMatch(header, /to: "\/request"/);
     assert.doesNotMatch(header, /Review actions|to="\/operations"|to="\/actions"/);
-    assert.doesNotMatch(footer, /Service categories|to="\/services"|to="\/contact"/);
+    assert.doesNotMatch(footer, /Service categories|to="\/services"/);
     const domain = readFileSync(join(root, "src/routes/domain.tsx"), "utf8");
     assert.match(domain, /This post will be public/);
     assert.match(domain, /Do not include phone numbers, email/);

@@ -4,17 +4,14 @@ import { Container } from "./container";
 
 const GROUP_LINKS = [
   { label: "Hami home", to: "/" },
-  { label: "Needs being worked", to: "/needs" },
-  { label: "Open unknowns", to: "/unknowns" },
-  { label: "For businesses", to: "/group/businesses" },
+  { label: "Inbox tool", to: "/prototype/inbox" },
+  { label: "What we've learned", to: "/unknowns" },
   { label: "About Hami", to: "/about" },
 ] as const;
 
 const WORK_LINKS = [
-  { label: "Edit personal context", to: "/system" },
-  { label: "Share a need", to: "/request" },
-  { label: "Work board", to: "/domain" },
-  { label: "Browse provider records", to: "/providers" },
+  { label: "The offer being tested", to: "/needs" },
+  { label: "Contact", to: "/contact" },
 ] as const;
 
 const LINK =
