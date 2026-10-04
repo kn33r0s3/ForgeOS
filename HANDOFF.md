@@ -129,20 +129,21 @@ than a few days old, re-verify before trusting the details.
 
 ## Current state (verified 2026-10-04 — re-verify on takeover)
 
-- **Repo:** `kn33r0s3/ForgeOS`, `main` at `5fde03f` (homepage rebuild,
-  2026-10-04 ~16:30 NPT; this file was written at `53178f0`).
+- **Repo:** `kn33r0s3/ForgeOS`, `main` at `4830f82` (homepage visual
+  restoration, 2026-10-04 ~18:15 NPT).
 - **Production:** `https://haminp.vercel.app` (**canonical**) and
-  `https://forge-os-ebon.vercel.app` (alias) — both serve the `5fde03f`
-  build (bundle `index-D5u1urxH.js`, verified live 2026-10-04).
-- **Homepage (owner-ordered, 2026-10-04):** nav = Hami / Inbox tool /
-  What we've learned / Contact. Hero: "Never miss a sale to a slow
-  reply." + two sentences EN + NE. Honest status line (pre-revenue, no
-  sellers served yet). One CTA: free inbox tool at /prototype/inbox (no
-  signup). No context form, no closed-intake links, no placeholders.
-  Title/og/apple titles all "Hami". Footer: "Built in Kathmandu."
-  Old routes (/discoveries, /world, /opportunities, /actions, /system,
-  /request, /domain, /providers) stay live but unlinked.
-  `public-copy.test.ts` fails if banned strings reappear.
+  `https://forge-os-ebon.vercel.app` (alias) — both serve the `4830f82`
+  build (bundle `index-BN48xYVh.js`, verified live 2026-10-04).
+- **Homepage (2026-10-04):** restored original dark/gold visual identity
+  (dark hero, ornate gold frame, gothic headline, dark sections) carrying
+  the system-positioning content: H1 "Hami is a living system that
+  understands what people need and turns understanding into real value."
+  (+ Nepali), four behavioral lines (EN+NE), "Reality is not pre-sorted"
+  system scope, engine-backed "What is actually recorded" observations,
+  subordinate "Currently exploring" Experiment 1 (not started, not
+  Hami's identity), honest pre-revenue status. Nav = Hami / The system /
+  Public record. Inbox prototype at /prototype/inbox (TEST-only footer
+  link, not primary nav). `public-copy.test.ts` enforces the contract.
 - **Production:** `https://haminp.vercel.app` (**canonical — decided** by
   owner-delegated authority 2026-10-04; sitemap/robots/SITE.domain point
   there) and `https://forge-os-ebon.vercel.app` (alias/legacy). Both
