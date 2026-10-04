@@ -942,6 +942,7 @@ import re
 from pathlib import Path
 
 _UNKNOWN_MAP_PATH = Path(__file__).resolve().parents[3] / "docs" / "UNKNOWN_MAP.md"
+_UNKNOWN_JSON_PATH = Path(__file__).resolve().parent.parent / "data" / "unknowns.json"
 
 # Categories visible on public pages (world unknowns)
 PUBLIC_UNKNOWN_CATEGORIES = ("B", "D")
@@ -959,11 +960,18 @@ _UNKNOWN_STATES = (
 
 
 def _parse_unknowns():
-    """Parse UNKNOWN_MAP.md tables into structured unknowns.
+    """Load unknowns from the JSON snapshot (preferred) or parse UNKNOWN_MAP.md.
 
     Returns (unknowns, last_modified_iso) where unknowns is a list of dicts
     with: id, category, question, state, cheapest_test, stake.
     """
+    # Prefer the JSON snapshot (deployed with the backend); fall back to markdown
+    if _UNKNOWN_JSON_PATH.exists():
+        try:
+            data = json.loads(_UNKNOWN_JSON_PATH.read_text(encoding="utf-8"))
+            return data.get("unknowns", []), data.get("last_loop")
+        except Exception:
+            pass
     if not _UNKNOWN_MAP_PATH.exists():
         return [], None
     text = _UNKNOWN_MAP_PATH.read_text(encoding="utf-8")
