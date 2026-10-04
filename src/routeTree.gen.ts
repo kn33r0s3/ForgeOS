@@ -33,6 +33,7 @@ import { Route as RequestAProjectRouteImport } from './routes/request-a-project'
 import { Route as ServicesRouteImport } from './routes/services'
 import { Route as SystemRouteImport } from './routes/system'
 import { Route as TechnologyRouteImport } from './routes/technology'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as UnknownsRouteImport } from './routes/unknowns'
 import { Route as VenturesRouteImport } from './routes/ventures'
 import { Route as WhatWeLearnedRouteImport } from './routes/what-we-learned'
@@ -165,6 +166,11 @@ const TechnologyRoute = TechnologyRouteImport.update({
   path: '/technology',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UnknownsRoute = UnknownsRouteImport.update({
   id: '/unknowns',
   path: '/unknowns',
@@ -246,6 +252,7 @@ export interface FileRoutesByFullPath {
   '/services': typeof ServicesRouteWithChildren
   '/system': typeof SystemRoute
   '/technology': typeof TechnologyRoute
+  '/terms': typeof TermsRoute
   '/unknowns': typeof UnknownsRoute
   '/ventures': typeof VenturesRoute
   '/what-we-learned': typeof WhatWeLearnedRoute
@@ -281,6 +288,7 @@ export interface FileRoutesByTo {
   '/request-a-project': typeof RequestAProjectRoute
   '/system': typeof SystemRoute
   '/technology': typeof TechnologyRoute
+  '/terms': typeof TermsRoute
   '/unknowns': typeof UnknownsRoute
   '/ventures': typeof VenturesRoute
   '/what-we-learned': typeof WhatWeLearnedRoute
@@ -319,6 +327,7 @@ export interface FileRoutesById {
   '/services': typeof ServicesRouteWithChildren
   '/system': typeof SystemRoute
   '/technology': typeof TechnologyRoute
+  '/terms': typeof TermsRoute
   '/unknowns': typeof UnknownsRoute
   '/ventures': typeof VenturesRoute
   '/what-we-learned': typeof WhatWeLearnedRoute
@@ -358,6 +367,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/system'
     | '/technology'
+    | '/terms'
     | '/unknowns'
     | '/ventures'
     | '/what-we-learned'
@@ -393,6 +403,7 @@ export interface FileRouteTypes {
     | '/request-a-project'
     | '/system'
     | '/technology'
+    | '/terms'
     | '/unknowns'
     | '/ventures'
     | '/what-we-learned'
@@ -430,6 +441,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/system'
     | '/technology'
+    | '/terms'
     | '/unknowns'
     | '/ventures'
     | '/what-we-learned'
@@ -468,6 +480,7 @@ export interface RootRouteChildren {
   ServicesRoute: typeof ServicesRouteWithChildren
   SystemRoute: typeof SystemRoute
   TechnologyRoute: typeof TechnologyRoute
+  TermsRoute: typeof TermsRoute
   UnknownsRoute: typeof UnknownsRoute
   VenturesRoute: typeof VenturesRoute
   WhatWeLearnedRoute: typeof WhatWeLearnedRoute
@@ -647,6 +660,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TechnologyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/unknowns': {
       id: '/unknowns'
       path: '/unknowns'
@@ -778,6 +798,7 @@ const rootRouteChildren: RootRouteChildren = {
   ServicesRoute: ServicesRouteWithChildren,
   SystemRoute: SystemRoute,
   TechnologyRoute: TechnologyRoute,
+  TermsRoute: TermsRoute,
   UnknownsRoute: UnknownsRoute,
   VenturesRoute: VenturesRoute,
   WhatWeLearnedRoute: WhatWeLearnedRoute,

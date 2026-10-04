@@ -17,6 +17,12 @@ const CURRENT_LINKS = [
   { label: "Inbox prototype (TEST only)", to: "/prototype/inbox" },
 ] as const;
 
+const LEGAL_LINKS = [
+  { label: "Terms of Service", to: "/terms" },
+  { label: "Privacy information", to: "/privacy" },
+  { label: "Sign in / Sign up", to: "/login" },
+] as const;
+
 const LINK =
   "link-arrow w-fit text-sm font-bold text-wheat transition-colors duration-150 hover:text-white";
 
@@ -25,7 +31,7 @@ export function SiteFooter() {
   return (
     <footer className="mt-auto border-t-2 border-white/20 bg-card">
       <div className="band-rule" aria-hidden="true" />
-      <Container className="grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr]">
+      <Container className="grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr_1fr_1fr]">
         <div className="sm:col-span-2 lg:col-span-1">
           <p className="font-gothic text-3xl text-accent">
             <span className="font-sans text-2xl font-normal text-wheat" aria-hidden="true">
@@ -53,6 +59,13 @@ export function SiteFooter() {
         </FooterColumn>
         <FooterColumn title="Current activity & prototype">
           {CURRENT_LINKS.map((item) => (
+            <Link key={item.to} to={item.to} className={LINK}>
+              {item.label}
+            </Link>
+          ))}
+        </FooterColumn>
+        <FooterColumn title="Legal & account">
+          {LEGAL_LINKS.map((item) => (
             <Link key={item.to} to={item.to} className={LINK}>
               {item.label}
             </Link>

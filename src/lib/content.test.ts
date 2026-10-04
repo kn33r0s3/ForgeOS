@@ -399,7 +399,11 @@ describe("Hami public root", () => {
     assert.match(privacy, /name: "robots", content: "noindex, nofollow"/);
     assert.match(privacy, /automatically\s+erased 30 days/);
     assert.match(privacy, /Vercel hosts the website, Neon provides the database/);
-    assert.doesNotMatch(`${header}\n${footer}\n${forgeBot}`, /\/privacy/);
+    // Signup is active: terms and privacy must be reachable from the footer.
+    assert.match(footer, /\/terms/);
+    assert.match(footer, /\/privacy/);
+    assert.match(footer, /\/login/);
+    assert.doesNotMatch(`${header}\n${forgeBot}`, /\/privacy/);
     assert.match(owner, /X-API-Key/);
     assert.doesNotMatch(owner, /localStorage|sessionStorage|dangerouslySetInnerHTML/);
     assert.match(owner, /publicly reachable but not linked from the\s+public site/i);

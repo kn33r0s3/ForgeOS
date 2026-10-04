@@ -206,7 +206,6 @@ describe("homepage contract", () => {
   it("7. removed surface stays removed", () => {
     const blob = surfaces();
     const banned = [
-      "Sign in",
       "Explore the network",
       "Online inquiries are not open yet.",
       "Opening your System",
