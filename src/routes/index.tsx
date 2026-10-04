@@ -45,6 +45,51 @@ const FOUR_LINES = [
   },
 ] as const;
 
+const SYSTEM_FLOW = [
+  {
+    stage: "SYSTEM",
+    title: "Purpose and boundaries",
+    description: "One shared system; recorded information does not authorize action.",
+    to: "/about",
+    action: "About Hami",
+  },
+  {
+    stage: "WORLD",
+    title: "Public observations",
+    description: "Source observations stay separate from verified claims.",
+    to: "/discoveries",
+    action: "View discoveries",
+  },
+  {
+    stage: "OPPORTUNITIES",
+    title: "Evidence-gated hypotheses",
+    description: "A possibility is not validated demand or a buyer.",
+    to: "/opportunities",
+    action: "Explore opportunities",
+  },
+  {
+    stage: "CAPABILITIES",
+    title: "Public capability records",
+    description: "Shown only for verified providers with active public service listings.",
+    to: "/feed",
+    action: "Explore the network",
+  },
+  {
+    stage: "ACTION",
+    title: "Recorded action state",
+    description: "Aggregate status is not authorization or execution.",
+    to: "/actions",
+    action: "View action state",
+  },
+  {
+    stage: "OUTCOMES",
+    title: "Findings with sources",
+    description: "Recorded findings keep their truth state; no result is assumed.",
+    to: "/what-we-learned",
+    action: "Read what is recorded",
+  },
+] as const;
+
 function HomePage() {
   return (
     <main className="bg-night text-ink">
@@ -167,6 +212,46 @@ function SystemScope() {
             single product defines the system.
           </p>
         </div>
+        <section aria-labelledby="operating-map-title" className="mx-auto mt-8 max-w-6xl">
+          <div className="flex flex-col gap-3 border-y border-accent/25 py-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="font-mono text-[0.68rem] font-bold uppercase tracking-[0.2em] text-accent">
+                One way to follow the system
+              </p>
+              <h3 id="operating-map-title" className="mt-2 font-gothic text-2xl leading-tight text-ink sm:text-3xl">
+                From reality to recorded learning
+              </h3>
+            </div>
+            <p className="max-w-xl text-sm leading-6 text-ink/60">
+              An open map, not a fixed funnel. These links show where each view lives, not that
+              every stage has happened.
+            </p>
+          </div>
+          <ol aria-label="System, world, opportunities, capabilities, action, and outcomes" className="grid gap-x-8 sm:grid-cols-2 xl:grid-cols-3">
+            {SYSTEM_FLOW.map((step, index) => (
+              <li key={step.stage} className="border-t border-accent/25">
+                <Link to={step.to} className="group flex min-h-44 flex-col py-4 sm:py-5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-ink/45">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.12em] text-accent">
+                      {step.stage}
+                    </span>
+                    <ArrowUpRight className="ml-auto size-4 text-ink/40 transition-colors group-hover:text-accent" aria-hidden="true" />
+                  </div>
+                  <h4 className="mt-3 font-display text-lg font-bold leading-6 text-ink group-hover:text-accent">
+                    {step.title}
+                  </h4>
+                  <p className="mt-2 flex-1 text-sm leading-6 text-ink/60">{step.description}</p>
+                  <span className="mt-3 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent">
+                    {step.action} <ArrowRight className="size-4" aria-hidden="true" />
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ol>
+        </section>
       </Container>
     </section>
   );

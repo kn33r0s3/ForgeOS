@@ -14,6 +14,7 @@ Dated entries below are retained as history and may be superseded by this map.
 | Public write limits and body caps | **IMPLEMENTED / locally tested; deployment identity UNVERIFIED** | Source enforces keyed durable limits (5/hour for posts/requests, 20/hour for domain close/dispute/response) and 16 KiB caps. Relevant endpoint tests pass on SQLite and throwaway PostgreSQL 18. Production GETs establish current closed flags, not the deployed source SHA; owner-readiness access is required for that SHA comparison. |
 | Production flags and basic health | **OBSERVED CLOSED / healthy by GET** | At inspection, both `haminp.vercel.app` and `forge-os-ebon.vercel.app` returned `/api/health` 200 with `status=ok, ready=true` and `/api/forge-bot/config` 200 with `intake_enabled=false`. These responses do not prove authenticated readiness, database state, or which commit is deployed. |
 | Operations dashboard owner-key flow | **IMPLEMENTED / production access UNVERIFIED** | `GET /forge/money/dashboard` and `GET /forge/execution/actions` require `FORGE_API_KEY`; backend tests verify 401 without it. The `/operations` UI now asks for the key in a password field, holds it only in component memory, and sends it on protected reads and explicit writes. Owner action still required: enter an already-authorized key. Missing backend configuration fails closed with 503; a wrong key returns 401. Next dependency: authorized confirmation that the production key is configured, then owner verification through the UI. No production key was accessed. |
+| Homepage operating map | **IMPLEMENTED / local browser verified** | Home links SYSTEM → WORLD → OPPORTUNITIES → CAPABILITIES → ACTION → OUTCOMES to the existing `/about`, `/discoveries`, `/opportunities`, `/feed`, `/actions`, and `/what-we-learned` views. Owner action still required: name a reachable seller and authorize the exact first contact. Action removed: visitors no longer need footer navigation or a guessed URL to follow these public surfaces. Remaining: each page's actual empty, unavailable, evidence, and authorization states still govern; the map does not imply a stage happened. Next dependency: the named-seller decision remains unchanged. |
 | Signup session hydration | **FIXED / local browser verified; production account flow UNVERIFIED** | `ACTIVE_TERMS` is version `1.0`; signup requires an 18+ check and server-issued one-time terms permit. `/login` now keeps the server and first client render aligned while the session resolves. Fresh local reload had no page errors; the create-account form showed DOB and terms acceptance. No account was created. Production configuration and a real signup remain unverified. |
 | Owner readiness and maintenance heartbeat | **BLOCKED / unverified** | The readiness endpoint requires the owner key. Do not retry unauthenticated calls or retrieve credentials to bypass this. Owner-authorized access is the next dependency. |
 | Production database inspection | **BLOCKED** | No authorized credential retrieval procedure is established in the current docs. The owner must define and authorize the credential source and read-only procedure; no production database or credential was accessed. |
@@ -56,6 +57,23 @@ passed on follow-up commit `8d6d24e`, which updates the test to D77.
   no horizontal overflow, no page/console errors, and no protected reads before
   unlock. Backend tests in `backend/tests/test_commercial_ops.py` assert the
   protected GET behavior. No production key or write was used.
+
+## [PARTIAL] Connect existing public system surfaces from the homepage (2026-10-04)
+
+- Owner action still required: name one seller and explicitly authorize the
+  exact first contact; homepage navigation does not replace that decision.
+- Action removed: a visitor can now move from Hami's identity to its existing
+  public observations, opportunity hypotheses, capability graph, action
+  aggregate, and recorded learning directly from the homepage.
+- Remaining blocker: the map is an index of existing views, not evidence that
+  all stages occurred. The local observations API returned 502 while FastAPI
+  was offline, and the page displayed its explicit unavailable state.
+- Next removable dependency: the seller remains the next real-world blocker;
+  no new API, workflow, permission, or data model was added.
+- Verification: the focused homepage content test passed 14/14; typecheck
+  passed. At 1280px and 390px, all six links rendered in order with no
+  horizontal overflow or page errors. No customer, action, outcome, or revenue
+  claim was added.
 
 ## [DONE WITH LIMITATION] Keep signup's first render hydration-safe (2026-10-04)
 
