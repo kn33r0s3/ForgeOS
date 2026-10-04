@@ -17,6 +17,11 @@ import {
   submitPublicDemandRequest,
   trustPoints,
 } from "./content.ts";
+import {
+  candidateNeeds,
+  needsCount,
+  needsRounds,
+} from "./needs.ts";
 
 const FORBIDDEN_CLAIM_RE =
   /\b(fortune\s*500|testimonial|our clients include|\d+\+|\$\d+\s*(million|billion)|unicorn|award-winning|market leader)\b/i;
@@ -109,6 +114,7 @@ describe("Hami public content", () => {
     // Broad system surfaces lead; the work board remains a secondary mechanism.
     assert.deepEqual(hrefs, [
       "/",
+      "/needs",
       "/discoveries",
       "/feed",
       "/opportunities",
@@ -181,6 +187,38 @@ describe("Hami public content", () => {
   });
 });
 
+describe("Hami candidate needs", () => {
+  it("publishes grounded, honestly-labeled needs and nothing else", () => {
+    assert.equal(candidateNeeds.length, needsCount);
+    assert.ok(needsCount >= 10, "the needs surface must carry real findings");
+    assert.ok(needsRounds >= 1);
+    const ids = new Set<string>();
+    for (const need of candidateNeeds) {
+      assert.ok(need.id && !ids.has(need.id), `duplicate or empty id: ${need.id}`);
+      ids.add(need.id);
+      assert.ok(need.title.length > 0);
+      assert.ok(need.segment.length > 0);
+      assert.ok(["known", "unknown", "partially"].includes(need.knownToThem));
+      assert.ok(need.need.length > 20, `${need.id}: need statement too thin`);
+      assert.ok(need.observed.length > 60, `${need.id}: observed evidence too thin`);
+      assert.ok(need.sources.length >= 1, `${need.id}: no sources`);
+      assert.ok(need.round.length > 0);
+      assert.ok(need.question.length > 10, `${need.id}: no sharp question`);
+      // No manufactured voices: needs describe observations, never quote people.
+      assert.doesNotMatch(need.observed, /“[^”]{80,}”/, `${need.id}: long quote looks invented`);
+    }
+  });
+
+  it("keeps the needs route honest about its evidence class", () => {
+    const sourceDir = dirname(fileURLToPath(import.meta.url));
+    const route = readFileSync(join(sourceDir, "../routes/needs.tsx"), "utf8");
+    assert.match(route, /OBSERVED/);
+    assert.match(route, /candidate/);
+    assert.match(route, /not yet verified/i);
+    assert.match(route, /createFileRoute\("\/needs"\)/);
+  });
+});
+
 describe("Hami public root", () => {
   const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -229,8 +267,8 @@ describe("Hami public root", () => {
     assert.match(home, /createFileRoute\("\/"\)/);
     assert.equal(ogSite.title, "Hami");
     assert.doesNotMatch(home, /Navigate to=/);
-    // Home is the person's System, not a post/request board.
-    assert.match(home, /A system that keeps observing reality/);
+    // Home is the needs-finder: known and unknown needs, not a generic observer.
+    assert.match(home, /Finds what people need/);
     assert.match(home, /useSystemState/);
     assert.match(home, /<Link to="\/forge-bot-intake">/);
     assert.match(home, /Share a business need/);

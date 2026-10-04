@@ -262,11 +262,11 @@ function Welcome({
                 <Sparkles className="size-4" aria-hidden="true" /> Hami · हामी
               </p>
               <h1 className="mt-5 max-w-3xl text-[clamp(2.6rem,5.8vw,5rem)] font-black leading-[0.98] tracking-[-0.045em] text-ink">
-                A system that keeps observing reality
-                <span className="mt-2 block text-muted">and noticing what may matter.</span>
+                Finds what people need
+                <span className="mt-2 block text-muted">— the needs they name, and the ones they don't.</span>
               </h1>
               <p className="mt-6 max-w-2xl text-base leading-7 text-muted sm:text-lg sm:leading-8">
-                Hami follows recorded sources, evidence, relationships, questions, and capability gaps without assuming one category or workflow.
+                Hami is a living system for understanding the real world and acting on it. It finds needs — known and unknown — builds evidence for them, and turns understanding into action, with humans as partners. Built in Kathmandu, serving everywhere equally.
                 Personal context is separate from the public world. Guests can keep temporary context in this tab; signed-in users can save it privately. Hami never puts it in public feed or network projections, and sharing requires your authorization.
               </p>
               <div className="mt-6 flex flex-col items-start gap-3">
@@ -279,6 +279,13 @@ function Welcome({
                 <p className="max-w-xl text-sm leading-6 text-muted">
                   For business owners, Hami helps clarify a need and find a practical next step.
                 </p>
+                <Link
+                  to="/needs"
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline"
+                >
+                  See the needs Hami has found so far
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </Link>
               </div>
               <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-2">
                 {LOOP.map(({ icon: Icon, title, body }) => (

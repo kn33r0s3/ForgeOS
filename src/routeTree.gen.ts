@@ -21,6 +21,7 @@ import { Route as FeedRouteImport } from './routes/feed'
 import { Route as ForgeBotIntakeRouteImport } from './routes/forge-bot-intake'
 import { Route as GroupRouteImport } from './routes/group'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as NeedsRouteImport } from './routes/needs'
 import { Route as OperationsRouteImport } from './routes/operations'
 import { Route as OpportunitiesRouteImport } from './routes/opportunities'
 import { Route as OwnerRouteImport } from './routes/owner'
@@ -99,6 +100,11 @@ const GroupRoute = GroupRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NeedsRoute = NeedsRouteImport.update({
+  id: '/needs',
+  path: '/needs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OperationsRoute = OperationsRouteImport.update({
@@ -210,6 +216,7 @@ export interface FileRoutesByFullPath {
   '/forge-bot-intake': typeof ForgeBotIntakeRoute
   '/group': typeof GroupRouteWithChildren
   '/login': typeof LoginRoute
+  '/needs': typeof NeedsRoute
   '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
   '/owner': typeof OwnerRoute
@@ -242,6 +249,7 @@ export interface FileRoutesByTo {
   '/feed': typeof FeedRoute
   '/forge-bot-intake': typeof ForgeBotIntakeRoute
   '/login': typeof LoginRoute
+  '/needs': typeof NeedsRoute
   '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
   '/owner': typeof OwnerRoute
@@ -275,6 +283,7 @@ export interface FileRoutesById {
   '/forge-bot-intake': typeof ForgeBotIntakeRoute
   '/group': typeof GroupRouteWithChildren
   '/login': typeof LoginRoute
+  '/needs': typeof NeedsRoute
   '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
   '/owner': typeof OwnerRoute
@@ -310,6 +319,7 @@ export interface FileRouteTypes {
     | '/forge-bot-intake'
     | '/group'
     | '/login'
+    | '/needs'
     | '/operations'
     | '/opportunities'
     | '/owner'
@@ -342,6 +352,7 @@ export interface FileRouteTypes {
     | '/feed'
     | '/forge-bot-intake'
     | '/login'
+    | '/needs'
     | '/operations'
     | '/opportunities'
     | '/owner'
@@ -374,6 +385,7 @@ export interface FileRouteTypes {
     | '/forge-bot-intake'
     | '/group'
     | '/login'
+    | '/needs'
     | '/operations'
     | '/opportunities'
     | '/owner'
@@ -408,6 +420,7 @@ export interface RootRouteChildren {
   ForgeBotIntakeRoute: typeof ForgeBotIntakeRoute
   GroupRoute: typeof GroupRouteWithChildren
   LoginRoute: typeof LoginRoute
+  NeedsRoute: typeof NeedsRoute
   OperationsRoute: typeof OperationsRoute
   OpportunitiesRoute: typeof OpportunitiesRoute
   OwnerRoute: typeof OwnerRoute
@@ -509,6 +522,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/needs': {
+      id: '/needs'
+      path: '/needs'
+      fullPath: '/needs'
+      preLoaderRoute: typeof NeedsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/operations': {
@@ -686,6 +706,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForgeBotIntakeRoute: ForgeBotIntakeRoute,
   GroupRoute: GroupRouteWithChildren,
   LoginRoute: LoginRoute,
+  NeedsRoute: NeedsRoute,
   OperationsRoute: OperationsRoute,
   OpportunitiesRoute: OpportunitiesRoute,
   OwnerRoute: OwnerRoute,
