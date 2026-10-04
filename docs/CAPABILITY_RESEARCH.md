@@ -76,7 +76,15 @@ around.
 
 ## Gradual path: from fuel to engine (owner-directed, 2026-10-04)
 
-The operator's rounds are the fuel; Forge gradually internalizes the
+**End state:** ForgeBot must become like the operator agent or better —
+performing all discovery findings itself: researching, questioning,
+banking evidence, updating its model of reality, driving work. The
+operator's rounds are the training fuel; ForgeBot is the trainee. This
+expands ForgeBot beyond its origin as an intake wedge — it graduates to
+Hami's reasoning agent. (Hami still must not collapse into a lead-gen
+bot; the reasoning capability is the point, not the intake form.)
+
+The operator's rounds are the fuel; ForgeBot gradually internalizes the
 capability until it runs the same rounds itself — then better. Stages;
 each is built only when its trigger fires:
 
@@ -88,17 +96,17 @@ each is built only when its trigger fires:
   as a portable spec (`docs/ops/discovery-loop.md`). Any runtime — this
   agent, a successor, Forge's own scheduler — can execute it. The
   capability is defined, not yet self-running.
-- **Stage 2 — Self-running rounds.** Forge executes rounds through its own
-  process layer: observations banked as EVIDENCE entities, unknowns as
-  first-class records, questions feeding the capability queue. Markdown
+- **Stage 2 — Self-running rounds.** ForgeBot executes rounds through
+  Hami's process layer: observations banked as EVIDENCE entities, unknowns
+  as first-class records, questions feeding the capability queue. Markdown
   becomes primitives. *Trigger:* a real pilot needs the model to update
   itself between runs without the builder in the loop.
-- **Stage 3 — Better than the fuel.** Compounding kicks in: cross-round
-  contradiction detection, question generation from the unknowns graph,
-  angle selection driven by the model itself rather than a log file. The
-  system doesn't just replicate the reference rounds — it improves on
-  them. *Trigger:* stage 2 running reliably with evidence it can
-  self-direct without degrading quality.
+- **Stage 3 — Better than the fuel.** Compounding kicks in: ForgeBot
+  cross-checks rounds against each other, detects contradictions,
+  generates questions from the unknowns graph, selects angles driven by
+  the model itself rather than a log file. It doesn't just replicate the
+  reference rounds — it improves on them. *Trigger:* stage 2 running
+  reliably with evidence it can self-direct without degrading quality.
 
 Rules across stages: listening-only holds until a pilot authorizes more;
 no stage manufactures evidence; each stage must prove it moves reality,
