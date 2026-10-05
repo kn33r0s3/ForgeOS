@@ -75,12 +75,13 @@ def record_signal(
 ) -> models.Evidence:
     """Record one observable signal as Evidence on a candidate."""
     ev = models.Evidence(
-        subject_kind=CANDIDATE_ENTITY_TYPE,
+        subject_kind="entity",
         subject_id=entity_id,
         claim=f"{signal_type}: {detail}",
         content=detail,
         source="scout",
         provenance="public observation",
+        support_level="possible",
         substrate_confidence=confidence,
         recorded_at=utcnow(),
     )
@@ -96,7 +97,7 @@ def score_candidate(db: Session, entity_id: int) -> Optional[float]:
     signals = (
         db.query(models.Evidence)
         .filter(
-            models.Evidence.subject_kind == CANDIDATE_ENTITY_TYPE,
+            models.Evidence.subject_kind == "entity",
             models.Evidence.subject_id == entity_id,
         )
         .all()

@@ -82,6 +82,7 @@ def seed_core_types(db: Session) -> int:
             "booking_request", "decision", "experiment", "scenario_prediction",
             "evidence_record", "product",
             "repair_work_item", "need",
+            "bet", "scout_candidate",
         },
         "relation_type": {
             "derived_from", "supports", "possible_match", "co_occurs_with", "informs", "informed_by",
@@ -108,6 +109,8 @@ def seed_core_types(db: Session) -> int:
             "forge_bot_response_action_proposed",
             "forge_bot_response_action_owner_approved",
             "forge_bot_response_action_authorization_decided",
+            "outreach.sent",
+            "outreach.reply",
         },
         "capability_type": {"tool", "workflow", "integration", "agent", "model", "market_signal_analysis"},
     }

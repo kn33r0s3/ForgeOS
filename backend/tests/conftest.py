@@ -75,6 +75,8 @@ def db():
             )
     session = database.SessionLocal()
     source_manager.seed_default_sources(session)
+    from app.services import world_graph
+    world_graph.seed_core_types(session)
     yield session
     session.close()
     engine.dispose()
