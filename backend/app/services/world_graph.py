@@ -1253,6 +1253,51 @@ def activate_capability(db: Session, capability: models.ForgeCapability) -> mode
     return capability
 
 
+def record_capability_verification(
+    db: Session, capability: models.ForgeCapability, event_id: int, evidence_id: int
+) -> models.ForgeCapability:
+    """Record real-world verification for a capability (recovered from v2).
+
+    v2 invariant: "Record a capability ONLY from a verified outcome
+    (Event + Evidence). Never from prose."
+
+    This does NOT change the implementation lifecycle (proposed → building →
+    testing → active proves the code works). It adds a separate real-world
+    verification marker: the capability has produced a verified outcome for
+    a real person, backed by a real WorldEvent and real Evidence.
+
+    With zero real outcomes in the system, this will raise — honestly.
+    """
+    from app import models as _models
+
+    event = db.get(_models.WorldEvent, event_id)
+    if not event:
+        raise SubstrateError(
+            "Event not found — real-world verification requires a real recorded event."
+        )
+    evidence = db.get(_models.Evidence, evidence_id)
+    if not evidence:
+        raise SubstrateError(
+            "Evidence not found — real-world verification requires real recorded evidence."
+        )
+    attrs = dict(capability.attributes or {})
+    verifications = list(attrs.get("real_world_verifications") or [])
+    verifications.append(
+        {
+            "event_id": event_id,
+            "evidence_id": evidence_id,
+            "verified_at": utcnow().isoformat(),
+            "verified_by": "owner",
+        }
+    )
+    attrs["real_world_verifications"] = verifications
+    capability.attributes = attrs
+    db.add(capability)
+    db.commit()
+    db.refresh(capability)
+    return capability
+
+
 def capability_activation_record(
     db: Session, capability: models.ForgeCapability
 ) -> dict[str, Any] | None:

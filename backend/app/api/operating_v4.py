@@ -40,6 +40,18 @@ class BetDecisionIn(BaseModel):
     notes: Optional[str] = None
 
 
+class ProbeIn(BaseModel):
+    assumption_id: int
+    probe_type: str
+    affordable_loss: str
+    kill_criterion: str
+
+
+class ProbeDecisionIn(BaseModel):
+    decision: str
+    result: Optional[str] = None
+
+
 class ProofIn(BaseModel):
     level: int
     source_type: Optional[str] = None
@@ -159,6 +171,92 @@ def decide_bet(bet_id: int, payload: BetDecisionIn, request: Request, db: Sessio
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     return {"id": bet_id, "decision": payload.decision}
+
+
+@router.get("/probes")
+def list_probes(request: Request, db: Session = Depends(get_db)):
+    _owner(request)
+    probes = db.query(models.SubstrateEntity).filter(
+        models.SubstrateEntity.entity_type == operating_v4.PROBE_ENTITY_TYPE
+    ).order_by(models.SubstrateEntity.id.desc()).all()
+    return {"probes": [{"id": p.id, "display_name": p.display_name, "attributes": p.attributes} for p in probes]}
+
+
+@router.post("/probes")
+def create_probe(payload: ProbeIn, request: Request, db: Session = Depends(get_db)):
+    _owner(request)
+    try:
+        p = operating_v4.record_probe(
+            db,
+            assumption_id=payload.assumption_id,
+            probe_type=payload.probe_type,
+            affordable_loss=payload.affordable_loss,
+            kill_criterion=payload.kill_criterion,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return {"id": p.id}
+
+
+@router.post("/probes/{probe_id}/decide")
+def decide_probe(probe_id: int, payload: ProbeDecisionIn, request: Request, db: Session = Depends(get_db)):
+    _owner(request)
+    try:
+        operating_v4.decide_probe(db, probe_id, payload.decision, payload.result)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return {"id": probe_id, "decision": payload.decision}
+
+
+class GateResultIn(BaseModel):
+    result: str
+
+
+@router.post("/gates/{day}/result")
+def record_gate_result(day: int, payload: GateResultIn, request: Request, db: Session = Depends(get_db)):
+    _owner(request)
+    try:
+        g = operating_v4.record_gate_result(db, day, payload.result)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return {"day": g.day, "result": g.result}
+
+
+@router.get("/proof-violations")
+def get_proof_violations(request: Request, db: Session = Depends(get_db)):
+    _owner(request)
+    return {"violations": operating_v4.flag_proof_violations(db)}
+
+
+class CapabilityVerificationIn(BaseModel):
+    event_id: int
+    evidence_id: int
+
+
+@router.post("/capabilities/{capability_id}/verify-real-world")
+def verify_capability_real_world(
+    capability_id: int, payload: CapabilityVerificationIn, request: Request, db: Session = Depends(get_db)
+):
+    """Record real-world verification for a capability (v2 invariant).
+
+    Requires a real WorldEvent and real Evidence. Will fail honestly
+    until the first real outcome exists.
+    """
+    from app.services import world_graph
+    from app.services.type_validation import SubstrateError
+
+    _owner(request)
+    capability = db.get(models.ForgeCapability, capability_id)
+    if not capability:
+        raise HTTPException(status_code=404, detail="Capability not found.")
+    try:
+        world_graph.record_capability_verification(
+            db, capability, payload.event_id, payload.evidence_id
+        )
+    except SubstrateError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return {"id": capability_id, "real_world_verified": True}
+
 
 
 @router.post("/evidence/{evidence_id}/proof")
