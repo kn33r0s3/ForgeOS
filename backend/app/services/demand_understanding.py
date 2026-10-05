@@ -313,10 +313,26 @@ def normalized_identity_key(identity: str) -> str:
     return _key("observation-identity-v1", identity)
 
 
+_DATE_LIKE = re.compile(r"^\d{4}-\d{1,2}-\d{1,2}$")
+
+
+def _redact_phone_match(match: re.Match[str]) -> str:
+    """Redact a phone-shaped match unless it is clearly not a phone number.
+
+    ISO dates (2026-10-05) and spaced ranges ("1500 - 5000") match the loose
+    phone pattern; redacting them destroys the dates/prices that demand
+    understanding is meant to preserve as evidence.
+    """
+    text = match.group(0)
+    if _DATE_LIKE.match(text) or " - " in text:
+        return text
+    return "[redacted-phone]"
+
+
 def _normalize_observation_content(content: str) -> str:
     normalized = " ".join((content or "").split())
     normalized = _EMAIL.sub("[redacted-email]", normalized)
-    return _PHONE.sub("[redacted-phone]", normalized)
+    return _PHONE.sub(_redact_phone_match, normalized)
 
 
 def _minimize_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
@@ -523,7 +539,12 @@ def _ensure_need(
     questions: tuple[str, ...],
 ) -> models.SubstrateEntity:
     identity = f"demand-need:{_key(object_text.casefold(), outcome_text.casefold(), *ids)}"
-    existing = db.query(models.SubstrateEntity).filter_by(identity_key=identity).one_or_none()
+    # create_entity stores identity_key as "source:<kind>:<source_system>:<source_id>",
+    # so the pre-lookup must use the same full key or it never hits. A hit here
+    # also avoids create_entity raising on case-variant object text ("X" vs "x"
+    # shares the casefolded hash but would differ in the stored display name).
+    identity_key = f"source:need:demand_understanding:{identity}"
+    existing = db.query(models.SubstrateEntity).filter_by(identity_key=identity_key).one_or_none()
     if existing is not None:
         return existing
     need = world_graph.create_entity(
