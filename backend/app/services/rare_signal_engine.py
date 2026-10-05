@@ -137,7 +137,6 @@ def _score_cluster(signals: list[models.Signal], now: datetime) -> dict:
     source_types = {_source_type(signal.source) for signal in current}
     source_diversity = round(min(100.0, len(sources) * 25.0 + max(0, len(source_types) - 1) * 15.0), 1)
     first_seen = min((_as_utc(signal.timestamp or now) for signal in current), default=now)
-    previous_assessments = []
     novelty = 100.0 if first_seen >= recent_cutoff else 35.0
     specificity = round(sum(min(100.0, len(_tokens(signal)) * 10.0) for signal in current) / max(1, len(current)), 1)
     pain = _pain_score(current)

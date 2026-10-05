@@ -1,9 +1,10 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.security import require_owner_api_key
 from app.services.rare_signal_engine import detect_rare_signals, trigger_research_for_rare_signals
 
 router = APIRouter(prefix="/intelligence/rare-signals", tags=["rare-signals"])
@@ -43,7 +44,8 @@ def serialize(assessment):
 
 
 @router.post("/detect")
-def detect(min_score: float = 35.0, db: Session = Depends(get_db)):
+def detect(request: Request, min_score: float = 35.0, db: Session = Depends(get_db)):
+    require_owner_api_key(request)
     assessments = detect_rare_signals(db, min_score=min_score)
     trigger_research_for_rare_signals(db, assessments)
     return [serialize(assessment) for assessment in assessments]
