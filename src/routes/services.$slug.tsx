@@ -1,9 +1,8 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { Check } from "lucide-react";
-import { getService } from "@/lib/content";
+import { getService, services } from "@/lib/content";
 import { Container } from "@/components/layout/container";
 import { Eyebrow } from "@/components/layout/eyebrow";
-import { TextLink } from "@/components/layout/text-link";
 import { CtaBand } from "@/components/layout/cta-band";
 import { ProjectInquiryCta } from "@/components/pages/project-inquiry-cta";
 
@@ -49,7 +48,7 @@ function ServicePage() {
           </div>
           <div className="flex min-h-48 flex-col justify-between rounded-xl bg-foreground p-6 text-background shadow-md">
             <span className="text-micro font-extrabold uppercase tracking-[0.12em] opacity-60">
-              01—06
+              01—{String(services.length).padStart(2, "0")}
             </span>
             <strong className="font-display text-2xl font-semibold tracking-tight">
               Focused work.
@@ -95,7 +94,9 @@ function ServicePage() {
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted">{service.next}</p>
                 <div className="mt-4">
-                  <span className="text-muted">Contact via owner console</span>
+                  <Link to="/contact" className="text-cyan hover:underline">
+                    Contact Hami
+                  </Link>
                 </div>
               </div>
             </article>
