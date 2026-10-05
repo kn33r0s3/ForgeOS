@@ -352,6 +352,13 @@ class Experiment(Base):
     execution_allowed = Column(Boolean, nullable=False, default=False)  # fail-closed default
     data_scope = Column(String, nullable=False, default="REAL", index=True)  # REAL | SANDBOX; sandbox results never count as business traction
 
+    # --- Experiments registry (2026-10-05) ---
+    # OBSERVATION: may run in parallel, no human contact.
+    # CONVERSATION: batches of 5, owner approval required per batch.
+    # INTERVENTION: at most ONE active at a time (see intervention_gate).
+    experiment_kind = Column(String, nullable=True, index=True)
+    five_fields_json = Column(Text, nullable=True)  # JSON: reality, possibility, constraint, constraint_state, intervention, outcome
+
     opportunity = relationship("Opportunity", back_populates="experiments")
 
 
@@ -406,6 +413,9 @@ class Belief(Base):
     need_pain = Column(Text, nullable=True)  # the stated need or pain
     give_up = Column(Text, nullable=True)  # what the actor would give up: money/time/behavior
     relabel_reason = Column(Text, nullable=True)  # why the label changed; archive trail, never deleted
+    # Perspective (2026-10-05): whose side this hypothesis speaks from.
+    # All hypotheses recorded before 2026-10-05 are SELLER-side.
+    perspective = Column(String, nullable=False, default="SELLER", index=True)
 
     pattern = relationship("Pattern", back_populates="beliefs")
 
@@ -661,6 +671,11 @@ class Evidence(Base):
     # rescaled or overwritten during substrate migration.
     substrate_source = Column(String, nullable=True)
     substrate_confidence = Column(Float, nullable=True)
+    # Perspective (2026-10-05): whose side of reality this observation was
+    # recorded from. SELLER = the seller's side; BUYER = the buyer's own
+    # account; CIRCLE = the private discussion around a purchase
+    # (family, friends) that sellers never see. NULL = unrecorded (legacy).
+    perspective = Column(String, nullable=True, index=True)
     substrate_provenance = Column(Text, nullable=True)
 
     signal = relationship("Signal")
@@ -2080,3 +2095,29 @@ class CycleRun(Base):
     status = Column(String, nullable=False, default="RUNNING")  # RUNNING | COMPLETED | FAILED
     summary_json = Column(Text, nullable=True)  # stage counts + per-stage errors
     error = Column(Text, nullable=True)
+
+
+# ---------------------------------------------------------------------
+# Residue engine (2026-10-05)
+#
+# "Residue" = observations whose perspective differs from every recorded
+# hypothesis. All hypotheses recorded before 2026-10-05 are SELLER-side,
+# so the first BUYER or CIRCLE observation is residue by definition —
+# it describes a side of reality no hypothesis covers.
+# ---------------------------------------------------------------------
+
+
+class ResidueFlag(Base):
+    """One observation that no current hypothesis speaks for."""
+
+    __tablename__ = "residue_flags"
+
+    id = Column(Integer, primary_key=True, index=True)
+    evidence_id = Column(Integer, ForeignKey("evidence.id"), nullable=False, index=True)
+    observation_perspective = Column(String, nullable=False)  # BUYER | CIRCLE | SELLER
+    hypothesis_perspectives = Column(Text, nullable=False, default="[]")  # JSON list
+    flagged_at = Column(DateTime, default=utcnow)
+    reviewed = Column(Boolean, nullable=False, default=False)
+    review_notes = Column(Text, nullable=True)
+
+    evidence = relationship("Evidence", foreign_keys=[evidence_id])
