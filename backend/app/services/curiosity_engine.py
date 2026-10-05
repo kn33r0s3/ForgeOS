@@ -69,10 +69,12 @@ this behaves exactly as it did before Goal Engine existed.
 
 from sqlalchemy.orm import Session
 
+import re
+from typing import Optional
+
 from app import models
 from app.services import goal_engine, belief_stability, causal_engine, money_engine
 from app.services.pattern_engine import tokenize
-from typing import Optional
 
 # Standing questions for the world Forge is responsible for. Each one asks
 # for current public evidence. None of them states a price, a valuation,
@@ -123,11 +125,28 @@ class CuriosityEngine:
         patterns = self.db.query(models.Pattern).all()
         beliefs = [belief for belief in self.db.query(models.Belief).all() if is_presentable_belief(belief)]
         belief_text = " ".join(b.statement.lower() for b in beliefs)
+        belief_tokens = set()
+        for b in beliefs:
+            belief_tokens |= tokenize(b.statement)
 
         unexplored = []
         for pattern in patterns:
             top_keyword = pattern.title.replace("Recurring theme:", "").split(",")[0].strip().lower()
-            if top_keyword and top_keyword not in belief_text:
+            if not top_keyword:
+                continue
+            # Keyword matching is word-boundary-aware, not a raw
+            # substring check: a belief mentioning "taxes" must not
+            # mark a "tax"-keyword pattern as explored, and "ai"
+            # must not match inside "said". tokenize() strips
+            # stopwords and sub-3-letter words, so short keywords
+            # (or all-stopword keywords) fall back to an explicit
+            # word-boundary regex on the raw keyword.
+            keyword_tokens = tokenize(top_keyword)
+            if keyword_tokens:
+                explored = keyword_tokens <= belief_tokens
+            else:
+                explored = re.search(r"\b" + re.escape(top_keyword) + r"\b", belief_text) is not None
+            if not explored:
                 unexplored.append(pattern)
         return unexplored
 
@@ -442,7 +461,7 @@ class CuriosityEngine:
         for strategy in self.find_low_confidence_strategies():
             linked_belief_id = None
             if strategy.supporting_belief_ids:
-                first_id = strategy.supporting_belief_ids.split(",")[0]
+                first_id = strategy.supporting_belief_ids.split(",")[0].strip()
                 if first_id.isdigit():
                     linked_belief_id = int(first_id)
             priority = round(min(95.0, 50.0 + (100.0 - strategy.confidence) * 0.45), 1)

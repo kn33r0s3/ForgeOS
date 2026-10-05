@@ -67,7 +67,7 @@ def score_breakdown(content: str) -> dict:
     urgency_score = min(URGENCY_CAP, urgency_matches * URGENCY_WEIGHT)
 
     raw_total = BASE_SCORE + pain_score + business_score + urgency_score
-    total = round(max(0.0, min(100.0, raw_total)), 1)
+    total = round(min(100.0, raw_total), 1)
 
     return {
         "score": total,
