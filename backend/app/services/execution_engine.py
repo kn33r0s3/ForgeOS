@@ -570,7 +570,7 @@ def run_autonomous_action_cycle(db: Session) -> dict:
     if not policy:
         return {"proposed": 0, "allowed": 0, "blocked": 0, "require_approval": 0, "reason": "no active policy"}
 
-    allowed_types = [t for t in (policy.allowed_action_types or "").split(",") if t]
+    allowed_types = autonomy_engine.parse_allowed_action_types(policy)
     if not allowed_types:
         return {"proposed": 0, "allowed": 0, "blocked": 0, "require_approval": 0, "reason": "policy allows no action types"}
 

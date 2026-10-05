@@ -60,11 +60,11 @@ economic outcome.
 """
 
 from datetime import datetime, timezone
+from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
 from app import models
-from typing import Optional
 
 # Conservative seed — "do not create unlimited real-world authority
 # without safeguards" enforced by what this actually seeds to, not
@@ -113,6 +113,24 @@ def seed_default_policy(db: Session) -> None:
         return
     db.add(models.AutonomyPolicy(**DEFAULT_POLICY))
     db.commit()
+
+
+def parse_allowed_action_types(policy: models.AutonomyPolicy) -> List[str]:
+    """Canonical parse of the policy's comma-separated action-type list.
+
+    The PATCH /autonomy/policy endpoint stores the owner's text verbatim,
+    so a natural edit like ``"customer_interview, validate_pricing"`` (note
+    the space) arrives with whitespace intact. Stripping here — at the single
+    read site both the evaluator and the proposer share — means the owner's
+    written boundary is honored exactly as written, instead of silently
+    blocking a type whose only crime was a space after the comma.
+    """
+    seen: List[str] = []
+    for raw in (policy.allowed_action_types or "").split(","):
+        token = raw.strip()
+        if token and token not in seen:
+            seen.append(token)
+    return seen
 
 
 def get_active_policy(db: Session) -> Optional[models.AutonomyPolicy]:
@@ -220,7 +238,7 @@ def evaluate_action(
             elif decision == "allow":
                 decision = "require_approval"
 
-    allowed_types = set((policy.allowed_action_types or "").split(",")) - {""}
+    allowed_types = set(parse_allowed_action_types(policy))
     if action_type not in allowed_types:
         escalate("block", f'Action type "{action_type}" is not in the currently allowed set ({sorted(allowed_types) or "none"}).')
 
