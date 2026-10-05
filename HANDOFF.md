@@ -127,14 +127,34 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
-## Current state (verified 2026-10-05 — re-verify on takeover)
+## Current state (verified 2026-10-05 ~15:45 NPT — re-verify on takeover)
 
-- **Repo:** `kn33r0s3/ForgeOS`; `main` and `origin/main` matched at
-  `eb88332138ff3a4343d0744e7caa1b655d1daf7d` when this review began. This is
-  the starting revision, not a claim about the deployed source SHA.
+- **Repo:** `kn33r0s3/ForgeOS`; `main` == `origin/main` at `c46da61`
+  ("CI green" push). Working tree clean.
+- **CI is GREEN (full sequence, 2026-10-05):** `npm test` 198/198 + 186/186,
+  `npm run typecheck` clean, `npm run lint` 0 errors (1 pre-existing
+  react-refresh warning), `npm run build` clean, backend
+  `pytest tests` **717 passed / 2 skipped**. Fixed to get here: 3 stale
+  frontend IA assertions (homepage was rebuilt previews-only in 02ccd84 but
+  tests still checked the old composition), 1 orphaned-route gate failure
+  (/actions was sitemap-indexed with zero real inbound links — now linked
+  from the footer; the gate had been passing on a test-file string literal),
+  1 unused import (lint), 6 backend issues (truth_audit honest-None average,
+  capability adapter "invalid" key, cognitive_worker failure-record commit,
+  economic_validation empty test key).
 - **Production:** `https://haminp.vercel.app` (**canonical**) and
-  `https://forge-os-ebon.vercel.app` (alias) — both serve the `4830f82`
-  build (bundle `index-BN48xYVh.js`, verified live 2026-10-04).
+  `https://forge-os-ebon.vercel.app` (alias). Verified 2026-10-05: homepage
+  serves the Hami app correctly; `/forge` returns the 404 page on both
+  domains (public console removal holding); `/api/health` returns HTTP 200
+  with body `{"status":"degraded","ready":false}` — standing state, not an
+  outage (Vercel has no durable DATABASE_URL and no CRON_SECRET; blockers
+  are environmental); `/api/health/details` correctly 401s without the
+  owner key. Exact deployed bundle hash for `c46da61` not proven via text
+  fetch (Vercel auto-deploys `main`; push landed ~10 min before the check).
+- **Homepage (current IA):** previews-only — Hero ("Discover what matters.
+  Understand it. Act on it."), Findings/Unknowns/Experiments previews with
+  honest empty states, About link, honest pre-revenue footer. H1 is the
+  brand headline; the wedge is never the headline (test-enforced).
 - **Homepage (2026-10-04):** restored original dark/gold visual identity
   (dark hero, ornate gold frame, gothic headline, dark sections) carrying
   the system-positioning content: H1 "Hami is a living system that
