@@ -1266,32 +1266,98 @@ def record_capability_verification(
     verification marker: the capability has produced a verified outcome for
     a real person, backed by a real WorldEvent and real Evidence.
 
+    Gates (all must pass):
+    - Event exists and evidence_class == 'REAL' (rejects TEST, nonexistent)
+    - Evidence exists and source_type is not synthetic/agent-written/mock
+    - Event and Evidence are related: evidence.subject_id == event.entity_id
+      (same real-world subject — rejects arbitrary ID pairs)
+    - Evidence has provenance (provenance/substrate_provenance/source_identity)
+    - Not a duplicate (idempotent on event_id + evidence_id)
+
     With zero real outcomes in the system, this will raise — honestly.
     """
     from app import models as _models
 
+    # --- Event gate: must exist and not be from a test/synthetic source ---
     event = db.get(_models.WorldEvent, event_id)
     if not event:
         raise SubstrateError(
             "Event not found — real-world verification requires a real recorded event."
         )
+    # WorldEvent has no evidence_class column; the REAL authority is the source.
+    # Test/synthetic sources cannot establish real-world outcomes.
+    blocked_event_sources = {"test", "synthetic", "mock", "test-fixture"}
+    if (event.source or "").lower() in blocked_event_sources:
+        raise SubstrateError(
+            f"Event {event_id} has source='{event.source}' — "
+            "real-world verification requires a real-world source, not TEST."
+        )
+
+    # --- Evidence gate: must exist and not be synthetic ---
     evidence = db.get(_models.Evidence, evidence_id)
     if not evidence:
         raise SubstrateError(
             "Evidence not found — real-world verification requires real recorded evidence."
         )
-    attrs = dict(capability.attributes or {})
+    blocked_sources = {"agent_written", "synthetic", "mock", "hypothesis", "test"}
+    if (evidence.source_type or "").lower() in blocked_sources:
+        raise SubstrateError(
+            f"Evidence {evidence_id} has source_type='{evidence.source_type}' — "
+            "real-world verification requires firsthand/secondhand/sensor/third_party, "
+            "not synthetic or mock evidence."
+        )
+
+    # --- Relatedness gate: event and evidence must share a subject ---
+    # Rejects arbitrary ID pairs that happen to exist but describe different things.
+    event_subject = getattr(event, "entity_id", None)
+    evidence_subject = getattr(evidence, "subject_id", None)
+    if not event_subject or not evidence_subject or event_subject != evidence_subject:
+        raise SubstrateError(
+            f"Event {event_id} and Evidence {evidence_id} are unrelated — "
+            "real-world verification requires an Event + Evidence chain about "
+            "the same real-world subject."
+        )
+
+    # --- Provenance gate: evidence must carry its origin ---
+    if not any(
+        [
+            getattr(evidence, "provenance", None),
+            getattr(evidence, "substrate_provenance", None),
+            getattr(evidence, "source_identity", None),
+        ]
+    ):
+        raise SubstrateError(
+            f"Evidence {evidence_id} lacks provenance — real-world verification "
+            "requires recorded origin (provenance, substrate_provenance, or source_identity)."
+        )
+
+    # --- JSON decode using existing helper; preserve all attributes ---
+    attrs = _parse_json(capability.attributes)
+    if not isinstance(attrs, dict):
+        # Malformed attributes: start fresh rather than corrupting.
+        attrs = {}
     verifications = list(attrs.get("real_world_verifications") or [])
+
+    # --- Idempotency: reject duplicates ---
+    for v in verifications:
+        if v.get("event_id") == event_id and v.get("evidence_id") == evidence_id:
+            raise SubstrateError(
+                f"Capability {capability.id} already has real-world verification "
+                f"for event {event_id} + evidence {evidence_id}."
+            )
+
     verifications.append(
         {
             "event_id": event_id,
             "evidence_id": evidence_id,
-            "verified_at": utcnow().isoformat(),
+            "subject_id": event_subject,
+            "verified_at": _models.utcnow().isoformat(),
             "verified_by": "owner",
         }
     )
     attrs["real_world_verifications"] = verifications
-    capability.attributes = attrs
+    capability.attributes = _dump_json(attrs, "attributes")
+    # Lifecycle status unchanged — this is an additional marker, not a transition.
     db.add(capability)
     db.commit()
     db.refresh(capability)
