@@ -7,8 +7,8 @@ on Forge's long-term architecture. A Goal is a target Forge is trying
 to make progress toward — nothing more. Reasoning about HOW to reach a
 goal (which questions to prioritize, which experiments to run, which
 opportunities to pursue) is Strategy Engine's and Decision Engine's
-future job; neither exists yet, so this module deliberately stays a
-target store + a few integration points, not a planner:
+job; this module deliberately stays a target store + a few integration
+points, not a planner:
 
   1. Opportunities can optionally link to the goal they serve
      (link_opportunity()).

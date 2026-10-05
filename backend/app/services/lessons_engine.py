@@ -40,6 +40,29 @@ THEME_WORDS = [
 ]
 
 
+def _theme_word_pattern(word: str) -> "re.Pattern[str]":
+    """Match a theme word as a real word, not a substring of another word.
+
+    Substring matching manufactured false themes: "ad" fired inside
+    "deadlines"/"read"/"spread", "ads" inside "leads", "eps" inside "steps",
+    "pay" inside "repayment". Word-boundary matching keeps plurals
+    ("leads" -> "lead", "prices" -> "price") and lets hyphenated words
+    match across hyphen/space ("response rate" -> "response-rate").
+    """
+    body = re.escape(word).replace(r"\-", r"[\- ]")
+    return re.compile(r"\b" + body + r"s?\b", re.IGNORECASE)
+
+
+_THEME_WORD_PATTERNS: list[tuple[str, "re.Pattern[str]"]] = [
+    (word, _theme_word_pattern(word)) for word in THEME_WORDS
+]
+
+
+def _theme_words_in(text: str) -> list[str]:
+    """Theme words genuinely present in `text`, in THEME_WORDS order."""
+    return [word for word, pattern in _THEME_WORD_PATTERNS if pattern.search(text)]
+
+
 def utcnow():
     return datetime.now(timezone.utc)
 
@@ -58,15 +81,14 @@ def _theme_key_from(event: models.LearningEvent, lesson_text: str,
     one page. Deterministic and cheap — no model call.
     """
     text = f"{lesson_text} {event.prediction or ''} {event.actual or ''}".lower()
-    found = [w for w in THEME_WORDS if w in text]
+    found = _theme_words_in(text)
     # opportunity context sharpens the theme
     opp_word = ""
     if opportunity:
         hint = f"{opportunity.target_customer or ''} {opportunity.problem or ''}".lower()
-        for w in THEME_WORDS:
-            if w and w in hint:
-                opp_word = w
-                break
+        hint_words = _theme_words_in(hint)
+        if hint_words:
+            opp_word = hint_words[0]
         else:
             # fall back to a content word from the problem if any
             m = re.findall(r"[a-z]{5,}", hint)
@@ -201,12 +223,14 @@ def recall_lessons(db: Session, *, opportunity_id: Optional[int] = None,
         opp = db.query(models.Opportunity).filter_by(id=opportunity_id).first()
         all_lessons = q.order_by(models.Lesson.last_seen.desc()).limit(80).all()
         same = [l for l in all_lessons if l.opportunity_id == opportunity_id]
-        # theme-match via the opportunity's own words
+        # theme-match via the opportunity's own words (exact theme-word
+        # comparison — the key's base is itself a theme word)
         hint = f"{opp.target_customer or ''} {opp.problem or ''}".lower() if opp else ""
+        hint_words = set(_theme_words_in(hint))
         themed = [
             l for l in all_lessons
             if l.id not in {s.id for s in same}
-            and any(w in l.theme_key for w in THEME_WORDS if w and w in hint)
+            and l.theme_key.split(":")[0] in hint_words
         ]
         ranked = (same + themed + [l for l in all_lessons if l.id not in {
             s.id for s in same + themed
