@@ -4,23 +4,12 @@ import { FlaskConical, Plus, Timer, Trash2 } from "lucide-react";
 import { Container } from "@/components/layout/container";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
+import { isInquiry, parseOrderValue, type Inquiry, type Outcome } from "@/lib/prototype-inbox";
 
 export const Route = createFileRoute("/prototype/inbox")({
   component: InboxPrototype,
   head: () => ({ meta: [{ title: "Inbox prototype — Hami" }] }),
 });
-
-type Outcome = "open" | "recovered" | "lost" | "browsing";
-
-interface Inquiry {
-  id: string;
-  timeIn: number;
-  customer: string;
-  want: string;
-  replyAt: number | null;
-  outcome: Outcome;
-  orderValue: number | null;
-}
 
 const STORAGE_KEY = "hami-prototype-inbox-v1";
 
@@ -28,8 +17,8 @@ function load(): Inquiry[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw) as Inquiry[];
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(isInquiry) : [];
   } catch {
     return [];
   }
@@ -215,8 +204,7 @@ function InboxPrototype() {
                           if (o === "recovered") {
                             const v = window.prompt("Order value in ₨?", String(i.orderValue ?? ""));
                             if (v === null) return;
-                            const n = Number(v.replace(/[^0-9]/g, ""));
-                            setOutcome(i.id, o, Number.isFinite(n) ? n : 0);
+                            setOutcome(i.id, o, parseOrderValue(v));
                           } else {
                             setOutcome(i.id, o);
                           }
