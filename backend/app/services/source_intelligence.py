@@ -86,6 +86,16 @@ def extract_claims(db: Session, document_id: int) -> list[models.WorldClaim]:
     found: list[models.WorldClaim] = []
     seen = set()
 
+    # Re-running extraction on an already-processed document (e.g. a second
+    # POST /world/ingest of the same text, which returns the existing doc)
+    # must not duplicate rows — skip claim texts already stored.
+    existing_texts = {
+        row[0]
+        for row in db.query(models.WorldClaim.claim_text)
+        .filter_by(document_id=doc.id)
+        .all()
+    }
+
     # Sentence-ish split
     parts = re.split(r"(?<=[.!?])\s+|\n+", text)
     for part in parts:
@@ -103,10 +113,14 @@ def extract_claims(db: Session, document_id: int) -> list[models.WorldClaim]:
             part,
         ):
             continue
-        key = part.lower()[:120]
+        # Full-text dedupe key (was truncated at 120 chars, which dropped
+        # distinct long sentences sharing a 120-char prefix).
+        key = part.lower()
         if key in seen:
             continue
         seen.add(key)
+        if part in existing_texts:
+            continue
         domain = "trading" if re.search(
             r"(?i)\b(buy|sell|trade|rsi|momentum|stock|market|forex|market)\b", part
         ) else ("business" if re.search(r"(?i)\b(customer|saas|price|business|revenue)\b", part) else "other")
@@ -135,28 +149,40 @@ def extract_ideas_from_claims(db: Session, document_id: int) -> list[models.Worl
         .filter_by(document_id=document_id)
         .all()
     )
+    # Re-running on an already-processed document must not duplicate ideas.
+    existing_idea_claim_ids = {
+        row[0]
+        for row in db.query(models.WorldIdea.claim_ids)
+        .filter_by(document_id=document_id)
+        .all()
+    }
     ideas = []
     for c in claims:
+        claim_ids = str(c.id)
+        if claim_ids in existing_idea_claim_ids:
+            continue
         if c.claim_type in ("market_rule", "performance") and c.domain == "trading":
             idea = models.WorldIdea(
                 document_id=document_id,
-                claim_ids=str(c.id),
+                claim_ids=claim_ids,
                 idea_text=f"Test as trading hypothesis: {c.claim_text}",
                 domain="trading",
                 status="EXTRACTED",
             )
             db.add(idea)
             ideas.append(idea)
+            existing_idea_claim_ids.add(claim_ids)
         elif c.claim_type in ("demand", "pricing") and c.domain == "business":
             idea = models.WorldIdea(
                 document_id=document_id,
-                claim_ids=str(c.id),
+                claim_ids=claim_ids,
                 idea_text=f"Investigate business claim (do not trust): {c.claim_text}",
                 domain="business",
                 status="EXTRACTED",
             )
             db.add(idea)
             ideas.append(idea)
+            existing_idea_claim_ids.add(claim_ids)
     db.commit()
     for i in ideas:
         db.refresh(i)

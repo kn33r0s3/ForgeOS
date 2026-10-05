@@ -1,12 +1,13 @@
 """World / Source Intelligence API — permitted text only, claims unverified."""
 
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app import models
+from app.security import require_owner_api_key
 from app.services.source_intelligence import process_permitted_text
 
 router = APIRouter(prefix="/world", tags=["world-intelligence"])
@@ -22,7 +23,11 @@ class IngestBody(BaseModel):
 
 
 @router.post("/ingest")
-def api_ingest(body: IngestBody, db: Session = Depends(get_db)):
+def api_ingest(body: IngestBody, request: Request, db: Session = Depends(get_db)):
+    # Owner-only: this writes user-provided documents, claims and ideas into
+    # the production database. Unauthenticated writes must not be possible
+    # (cycle-37/47/53/61/62/64 guard pattern).
+    require_owner_api_key(request)
     return process_permitted_text(
         db,
         body.content_text,
@@ -35,7 +40,9 @@ def api_ingest(body: IngestBody, db: Session = Depends(get_db)):
 
 
 @router.get("/claims")
-def list_claims(limit: int = 50, db: Session = Depends(get_db)):
+def list_claims(request: Request, limit: int = Query(50, ge=1, le=500), db: Session = Depends(get_db)):
+    # Owner-only: claims are user-provided text that may contain pasted PII.
+    require_owner_api_key(request)
     rows = db.query(models.WorldClaim).order_by(models.WorldClaim.id.desc()).limit(limit).all()
     return [
         {
@@ -50,7 +57,9 @@ def list_claims(limit: int = 50, db: Session = Depends(get_db)):
 
 
 @router.get("/ideas")
-def list_ideas(limit: int = 50, db: Session = Depends(get_db)):
+def list_ideas(request: Request, limit: int = Query(50, ge=1, le=500), db: Session = Depends(get_db)):
+    # Owner-only: ideas derive from user-provided text.
+    require_owner_api_key(request)
     rows = db.query(models.WorldIdea).order_by(models.WorldIdea.id.desc()).limit(limit).all()
     return [
         {
