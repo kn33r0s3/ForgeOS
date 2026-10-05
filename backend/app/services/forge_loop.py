@@ -23,7 +23,19 @@ Ties every engine together into one runnable cycle:
                                       research questions
     7. Research Planner            -> turn open questions into concrete,
                                         source-tagged research tasks
-    8. Money Engine                  -> classify monetization models and
+    8. Rare Signal Engine             -> persist explainable weak-signal
+                                       assessments and route high-scoring
+                                       ones into the research planner
+    9. Opportunity Engine              -> review patterns with no Opportunity
+                                          yet against real economic evidence
+                                          and create opportunities that earn
+                                          them (v1.8)
+    9.1 Opportunity claim links        -> opportunity evidence -> source-linked
+                                          claim -> research question
+    9.5 Substrate adapters             -> refresh additive projections from
+                                          source-of-truth tables (entities,
+                                          relations, events, capabilities)
+    10. Money Engine                   -> classify monetization models and
                                           flag opportunities needing
                                           revenue validation (v1.2).
                                           Identification only — never
@@ -31,6 +43,34 @@ Ties every engine together into one runnable cycle:
                                           contacts anyone, or spends
                                           anything. See
                                           money_engine.run_money_cycle().
+    11. Execution Engine               -> propose (never execute) low-risk
+                                          actions against the owner's
+                                          AutonomyPolicy
+    11.5 Decision Engine               -> propose validation decisions for
+                                          high-value unvalidated
+                                          opportunities
+    11.6 Lessons Engine               -> consolidate LearningEvents into
+                                         durable Lessons and recall them for
+                                         the top opportunity (v2.10)
+    11.7 Orchestrator                 -> advance top unvalidated
+                                         opportunities through accepted
+                                         decision -> validation Experiment +
+                                         human-executable task (v2.11)
+    12. Scenario Engine               -> SECONDARY domain: scan signals for
+                                         robotics/compute relevance against
+                                         the 2036-scenario indicators.
+                                         Non-blocking by construction — a
+                                         failure here never 500s the cycle.
+    13. Action proposal                -> propose actions from recent
+                                          accepted decisions (policy-gated)
+    14. Revenue miner                  -> review recorded paid offers; never
+                                          contacts anyone or moves money
+
+A fatal failure in stages 1-14 marks the whole CycleRun FAILED honestly
+and re-raises; several stages capture their own errors independently
+(opportunity_claim_questions, substrate_adapters, decision_proposal,
+lessons_memory, orchestration, action_proposal, revenue_miner) so one
+bad stage doesn't poison the rest of the run.
 
 This is the single orchestrator for the whole loop — there is
 deliberately no separate "reality_engine.py"; that would just be a
@@ -69,7 +109,7 @@ from typing import Optional
 
 
 def run_cycle(db: Session, data_scope: str = "REAL") -> dict:
-    """Recover the request session and mark fatal stage failures honestly."""
+    """Mark the cycle FAILED honestly on fatal stage failure, then re-raise."""
     if data_scope not in {"REAL", "SANDBOX"}:
         raise ValueError("Invalid data_scope")
     try:
@@ -130,7 +170,12 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
     # observations become explicitly observed claims only when a canonical
     # source URL and existing Evidence row are present. Candidate connections
     # stay private and unapproved until a person advances them.
-    claim_limit = max(0, min(int(os.environ.get("FORGEOS_CLAIM_LINK_LIMIT", "20")), 100))
+    # Operator-set env limits must never fail the whole cycle on a typo:
+    # garbage falls back to the default instead of a bare ValueError.
+    try:
+        claim_limit = max(0, min(int(os.environ.get("FORGEOS_CLAIM_LINK_LIMIT", "20")), 100))
+    except (TypeError, ValueError):
+        claim_limit = 20
     source_addresses_restored = evidence_graph.restore_source_addresses(db, limit=claim_limit)
     linked_claim_ids = evidence_graph.link_unclaimed_observations(db, limit=claim_limit)
     connection_rows = network_connections.scan_candidates(db, limit=50)
@@ -450,9 +495,8 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
     #     scenario_engine.run_scenario_engine_cycle()'s docstring.
     #
     #     NON-BLOCKING BY CONSTRUCTION: everything above this point
-    #     (Revenue Intelligence, steps 1-10) has already committed to
-    #     the database individually, step by step — a failure here
-    #     must never turn that real, already-saved work into a 500
+    #     (Revenue Intelligence, steps 1-11.7) has already run — a failure
+    #     here must never turn that real, already-saved work into a 500
     #     response from POST /forge/cycle, nor prevent worker.py from
     #     logging a cycle summary. Same try/except-around-one-unit
     #     pattern collector_runner.py already uses for each individual
