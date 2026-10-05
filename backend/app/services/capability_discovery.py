@@ -259,6 +259,16 @@ def ensure_capability_gap(
         "research_question_id": question.id,
         "requirement_id": requirement_id,
         "required_scope": _scope_for(question, requirement),
+        # Candidate lifecycle survives re-searches: a fresh registry search must
+        # not wipe the bounded proposal state recorded by discover_candidates.
+        "candidate_discovery_status": existing_data.get(
+            "candidate_discovery_status", "not_started"
+        ),
+        "candidate_ids": list(existing_data.get("candidate_ids") or []),
+        "discovery_depth": int(existing_data.get("discovery_depth", 0) or 0),
+        # discovery_limits is written by discover_candidates on the first pass;
+        # keep the previously recorded limits across re-searches too.
+        "discovery_limits": existing_data.get("discovery_limits"),
         "why_insufficient": reason,
         "search_result": {
             "searched_at": searched_at,
@@ -275,10 +285,7 @@ def ensure_capability_gap(
             "candidate_capabilities_found": [],
             "insufficiency_reason": reason,
         },
-        "candidate_discovery_status": "not_started",
         "clearance_status": "not_cleared",
-        "candidate_ids": [],
-        "discovery_depth": 0,
         "external_discovery": external_discovery,
         "provenance": {
             "kind": "research_plan_requirement",
@@ -368,7 +375,9 @@ def ensure_capability_gap(
                     "discovery_status": status,
                     "blocker": external_discovery["blocker"],
                     "clearance_requirement_id": "capability_catalog_discovery",
-                    "source_registry_ids_eligible": [],
+                    "source_registry_ids_eligible": list(
+                        external_discovery.get("source_registry_ids_eligible") or []
+                    ),
                     "external_catalogs_queried": [],
                     "external_requests_made": 0,
                     "candidate_count": 0,
