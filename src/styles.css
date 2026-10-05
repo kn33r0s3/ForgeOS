@@ -438,7 +438,8 @@
     box-shadow: 0 0 0 3px var(--primary);
   }
 
-  /* Masthead link: hover and current page drop into a charcoal block with wheat type. */
+  /* Masthead link: hover drops into a charcoal block with orange type; the
+     current page shows orange type with a triangle marker beneath. */
   .mast-link {
     position: relative;
     display: inline-flex;
