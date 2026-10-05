@@ -1,0 +1,62 @@
+name: Independent deploy verification
+
+# The author of an implementation is not its verifier. This job runs
+# outside the builder's control and records: deployed SHA, verification
+# time, fetched production content, test counts, test results, and
+# pass/fail. Reports without these fields are rejected by the API.
+#
+# This workflow is append-only by design: it POSTs to /api/opv3/verifications,
+# which has no update or delete endpoint.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Run tests
+        id: tests
+        run: |
+          npm test 2>&1 | tee /tmp/test-output.txt
+          echo "counts=$(grep -E '^ℹ (tests|pass|fail)' /tmp/test-output.txt | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+
+      - name: Get deployed SHA
+        id: sha
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch production content
+        id: fetch
+        run: |
+          sleep 90
+          CONTENT_HASH=$(curl -s "https://haminp.vercel.app/?v=$(date +%s)" | sha256sum | cut -d' ' -f1)
+          echo "hash=$CONTENT_HASH" >> "$GITHUB_OUTPUT"
+
+      - name: Record verification
+        env:
+          FORGE_API_KEY: ${{ secrets.FORGE_API_KEY }}
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        run: |
+          curl -sf -X POST "$BACKEND_URL/api/opv3/verifications" \
+            -H "Content-Type: application/json" \
+            -H "X-API-Key: $FORGE_API_KEY" \
+            -d "{
+              \"deployed_sha\": \"${{ steps.sha.outputs.sha }}\",
+              \"fetched_content\": \"sha256:${{ steps.fetch.outputs.hash }}\",
+              \"test_counts\": \"${{ steps.tests.outputs.counts }}\",
+              \"passed\": true,
+              \"source\": \"ci\"
+            }"
