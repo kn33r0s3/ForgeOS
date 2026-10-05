@@ -33,7 +33,11 @@ def _test_request():
 
 
 @pytest.fixture
-def client_with_db(db):
+def client_with_db(db, monkeypatch):
+    from app import security
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
+
     def override_get_db():
         try:
             yield db
@@ -42,9 +46,55 @@ def client_with_db(db):
 
     app.dependency_overrides[get_db] = override_get_db
     client = TestClient(app, raise_server_exceptions=True)
+    client.headers.update({"X-API-Key": "test-owner-key"})
     yield client
     app.dependency_overrides.clear()
     client.close()
+
+
+def test_forge_connections_endpoints_require_owner_key(client_with_db, db, monkeypatch):
+    from app import security
+
+    row = models.NetworkConnection(
+        left_kind="domain_record",
+        left_id=1,
+        right_kind="provider",
+        right_id=1,
+        relation_type="possible_match",
+        direction="directed",
+        epistemic_state="hypothesized",
+        state="candidate",
+        reason="Guard fixture.",
+        agreement_gap="No agreement is implied by this relation.",
+    )
+    db.add(row)
+    db.commit()
+
+    paths = [
+        ("get", "/forge/connections"),
+        ("post", "/forge/connections/scan"),
+        ("post", f"/forge/connections/{row.id}/advance", {"next_state": "viable"}),
+        ("post", f"/forge/connections/{row.id}/confirm-payment"),
+        ("post", f"/forge/connections/{row.id}/dispute-payment", {"note": "x"}),
+        ("post", f"/forge/connections/{row.id}/settle-payment", {"note": "x", "amount_npr": 1}),
+        ("post", f"/forge/connections/{row.id}/response", {"note": "x"}),
+        ("post", f"/forge/connections/{row.id}/publish"),
+    ]
+    # Key unset: owner endpoints refuse with 503.
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    for method, path, *rest in paths:
+        params = rest[0] if rest else {}
+        response = client_with_db.request(method, path, params=params)
+        assert response.status_code == 503, (path, response.status_code, response.text)
+    # Key set but not presented: 401, and nothing was written.
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
+    headerless = TestClient(app, raise_server_exceptions=True)
+    for method, path, *rest in paths:
+        params = rest[0] if rest else {}
+        response = headerless.request(method, path, params=params)
+        assert response.status_code == 401, (path, response.status_code, response.text)
+    headerless.close()
+    assert db.query(models.NetworkConnection).count() == 1
 
 
 def test_public_problem_submission_starts_real_research_and_defers_opportunity(

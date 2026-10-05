@@ -107,8 +107,12 @@ def _public_claim(db, *, opportunity=None):
     return signal, claim
 
 
-def test_network_reads_substrate_relation_after_projection_and_keeps_workflow_authority(db):
+def test_network_reads_substrate_relation_after_projection_and_keeps_workflow_authority(db, monkeypatch):
+    from app import security
     from app.services import network_substrate_adapter, world_graph
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
+    owner_headers = {"X-API-Key": "test-owner-key"}
 
     need = models.DomainRecord(
         kind="job",
@@ -154,7 +158,7 @@ def test_network_reads_substrate_relation_after_projection_and_keeps_workflow_au
         public_response = client.get("/public/connections")
         assert public_response.status_code == 200, public_response.text
         item = next(row for row in public_response.json() if row["id"] == connection.id)
-        operator_response = client.get("/forge/connections")
+        operator_response = client.get("/forge/connections", headers=owner_headers)
         assert operator_response.status_code == 200, operator_response.text
         operator_item = next(row for row in operator_response.json() if row["id"] == connection.id)
         feed_response = client.get("/public/feed", params={"kind": "connection"})

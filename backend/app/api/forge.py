@@ -1508,7 +1508,8 @@ def _seconds_to_recorded_payment(db: Session, row: models.NetworkConnection) -> 
 
 
 @router.get("/connections")
-def list_network_connections(db: Session = Depends(get_db)):
+def list_network_connections(request: Request, db: Session = Depends(get_db)):
+    require_owner_api_key(request)
     from app.services import network_connections
     from app.services.network_substrate_adapter import relation_read_model
 
@@ -1547,7 +1548,8 @@ def list_network_connections(db: Session = Depends(get_db)):
 
 
 @router.post("/connections/scan")
-def scan_network_connections(limit: int = 50, db: Session = Depends(get_db)):
+def scan_network_connections(request: Request, limit: int = 50, db: Session = Depends(get_db)):
+    require_owner_api_key(request)
     from app.services import network_connections
     rows = network_connections.scan_candidates(db, limit=limit)
     return [{"id": row.id, "state": row.state, "public_visible": row.public_visible} for row in rows]
@@ -1555,6 +1557,7 @@ def scan_network_connections(limit: int = 50, db: Session = Depends(get_db)):
 
 @router.post("/connections/{connection_id}/advance")
 def advance_network_connection(
+    request: Request,
     connection_id: int,
     next_state: str,
     amount_npr: Optional[int] = None,
@@ -1563,6 +1566,7 @@ def advance_network_connection(
     note: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
+    require_owner_api_key(request)
     from app.services import action_engine, network_connections
     row = db.query(models.NetworkConnection).filter_by(id=connection_id).first()
     if row is None:
@@ -1649,7 +1653,8 @@ def advance_network_connection(
 
 
 @router.post("/connections/{connection_id}/confirm-payment")
-def confirm_network_payment(connection_id: int, db: Session = Depends(get_db)):
+def confirm_network_payment(request: Request, connection_id: int, db: Session = Depends(get_db)):
+    require_owner_api_key(request)
     row = db.query(models.NetworkConnection).filter_by(id=connection_id).first()
     if row is None or row.state != "paid":
         raise HTTPException(409, "only a recorded paid connection can be confirmed")
@@ -1688,7 +1693,8 @@ def _payment_lesson(db: Session, connection_id: int, prediction: str, actual: st
 
 
 @router.post("/connections/{connection_id}/dispute-payment")
-def dispute_network_payment(connection_id: int, note: str, db: Session = Depends(get_db)):
+def dispute_network_payment(request: Request, connection_id: int, note: str, db: Session = Depends(get_db)):
+    require_owner_api_key(request)
     row = db.query(models.NetworkConnection).filter_by(id=connection_id).first()
     outcome = _paid_outcome(db, connection_id)
     if row is None or row.state != "paid" or outcome is None:
@@ -1709,7 +1715,8 @@ def dispute_network_payment(connection_id: int, note: str, db: Session = Depends
 
 
 @router.post("/connections/{connection_id}/settle-payment")
-def settle_network_payment(connection_id: int, note: str, amount_npr: int, db: Session = Depends(get_db)):
+def settle_network_payment(request: Request, connection_id: int, note: str, amount_npr: int, db: Session = Depends(get_db)):
+    require_owner_api_key(request)
     row = db.query(models.NetworkConnection).filter_by(id=connection_id).first()
     outcome = _paid_outcome(db, connection_id)
     if row is None or outcome is None or outcome.verification_state != "DISPUTED":
@@ -1732,8 +1739,9 @@ def settle_network_payment(connection_id: int, note: str, amount_npr: int, db: S
 
 
 @router.post("/connections/{connection_id}/response")
-def record_connection_response(connection_id: int, note: str, db: Session = Depends(get_db)):
+def record_connection_response(request: Request, connection_id: int, note: str, db: Session = Depends(get_db)):
     """A reply is a recorded response. It does not accept, fulfill, or pay."""
+    require_owner_api_key(request)
     from app.services import network_connections
     row = db.query(models.NetworkConnection).filter_by(id=connection_id).first()
     if row is None:
@@ -1748,7 +1756,8 @@ def record_connection_response(connection_id: int, note: str, db: Session = Depe
 
 
 @router.post("/connections/{connection_id}/publish")
-def publish_network_connection(connection_id: int, db: Session = Depends(get_db)):
+def publish_network_connection(request: Request, connection_id: int, db: Session = Depends(get_db)):
+    require_owner_api_key(request)
     from app.services import network_connections
     row = db.query(models.NetworkConnection).filter_by(id=connection_id).first()
     if row is None:
