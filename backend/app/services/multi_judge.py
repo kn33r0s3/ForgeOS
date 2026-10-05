@@ -47,16 +47,28 @@ def _judgment_key(spec: JudgeSpec, question: str, evidence_ids: Iterable[int]) -
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
+# Word-boundary regexes (not substrings): the substring version mislabeled
+# "unlikely" as positive ("likely" matched inside it) and "eyes"/"nobody"
+# via bare "yes"/"no". Negations are checked before affirmations.
+_LABEL_UNCERTAIN = re.compile(
+    r"\b(?:insufficient evidence|cannot determine|unknown|unclear|uncertain)\b"
+)
+_LABEL_NEGATIVE = re.compile(
+    r"\b(?:will not pay|unlikely|rejected|no|not supported|does not establish)\b"
+)
+_LABEL_POSITIVE = re.compile(r"\b(?:will pay|likely|supported|yes)\b")
+
+
 def _infer_label(text: str | None) -> str:
     if not text:
         return "unknown"
     lowered = text.casefold()
-    if any(phrase in lowered for phrase in ("insufficient evidence", "cannot determine", "unknown", "unclear")):
+    if _LABEL_UNCERTAIN.search(lowered):
         return "uncertain"
-    if any(phrase in lowered for phrase in ("will pay", "likely", "supported", "yes")):
-        return "positive"
-    if any(phrase in lowered for phrase in ("will not pay", "unlikely", "rejected", "no")):
+    if _LABEL_NEGATIVE.search(lowered):
         return "negative"
+    if _LABEL_POSITIVE.search(lowered):
+        return "positive"
     return "unknown"
 
 

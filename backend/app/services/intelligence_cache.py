@@ -43,9 +43,13 @@ def get(
         return None, False
     now = utcnow()
     expires = _as_utc(entry.expires_at)
-    if expires and expires <= now:
-        entry.status = "stale"
-        db.commit()
+    stale_since = _as_utc(entry.stale_at)
+    if (expires and expires <= now) or (stale_since and stale_since <= now):
+        # stale_at was previously write-only (put stored it, get never read
+        # it); it now drives the stale transition exactly like expires_at.
+        if entry.status != "stale":
+            entry.status = "stale"
+            db.commit()
     if entry.status == "invalidated" or (entry.status == "stale" and not allow_stale):
         return entry, False
     return entry, True
