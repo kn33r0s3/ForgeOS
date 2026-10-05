@@ -71,8 +71,14 @@ class ObserverEngine:
     ) -> models.Signal:
         """Process one piece of raw text end-to-end and persist it as a
         fully-scored Signal. This is the one method every observer
-        source — manual or collector-driven — should call."""
+        source — manual or collector-driven — should call.
+
+        Blank (whitespace-only) content raises ValueError — the schema
+        min_length=1 guard lets "   " through, and an empty Signal row
+        would pollute the pool the Pattern Engine reads from."""
         content = content.strip()
+        if not content:
+            raise ValueError("content must not be empty")
         metadata = metadata or {}
         canonical_url = _normalize_url(metadata.get("canonical_url") or metadata.get("url") or metadata.get("link"))
         external_id = metadata.get("external_id")
