@@ -30,7 +30,14 @@ const PREVIEW_URL = `http://127.0.0.1:${PREVIEW_PORT}/`;
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PID_FILE = join(ROOT, ".grok/preview.pid");
 const LOG_FILE = join(ROOT, ".grok/preview.log");
-const READY_TIMEOUT_MS = Number(process.env.PREVIEW_READY_TIMEOUT_MS || 60000);
+const DEFAULT_READY_TIMEOUT_MS = 60000;
+const READY_TIMEOUT_MS = (() => {
+  const parsed = Number(process.env.PREVIEW_READY_TIMEOUT_MS);
+  // A non-numeric/zero/negative override would make the readiness deadline
+  // NaN-or-past and fail every restart with a misleading "nothing answered"
+  // message — fall back to the default instead.
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_READY_TIMEOUT_MS;
+})();
 const GRACE_MS = 3000;
 const POLL_MS = 100;
 
@@ -45,7 +52,11 @@ export function parsePreviewArgs(argv) {
 }
 
 export function parsePid(text) {
-  const pid = Number.parseInt(String(text ?? "").trim(), 10);
+  const trimmed = String(text ?? "").trim();
+  // Number.parseInt would accept a numeric prefix ("12abc" → 12), so require
+  // the whole line to be digits first.
+  if (!/^\d+$/.test(trimmed)) return null;
+  const pid = Number.parseInt(trimmed, 10);
   // pid 1 is the sandbox init — never the preview, and dangerous to signal.
   return Number.isInteger(pid) && pid > 1 ? pid : null;
 }

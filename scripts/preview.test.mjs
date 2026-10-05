@@ -30,6 +30,10 @@ test("parsePid reads a pidfile and rejects junk", () => {
   assert.equal(parsePid(""), null);
   assert.equal(parsePid("not-a-pid"), null);
   assert.equal(parsePid("-7"), null);
+  // parseInt used to accept a numeric prefix — the whole line must be digits.
+  assert.equal(parsePid("12abc"), null);
+  assert.equal(parsePid("4.5"), null);
+  assert.equal(parsePid("0x10"), null);
   // pid 1 is the sandbox init, never a preview server.
   assert.equal(parsePid("1"), null);
 });
@@ -43,7 +47,10 @@ test("parsePgid reads the pgrp field past a comm containing spaces", () => {
   assert.equal(parsePgid(undefined), null);
 });
 
-// One /proc/net/tcp row; the socket inode is column 10.
+// Real /proc/net/tcp row shape: tx_queue:rx_queue and tr:tm->when are each ONE
+// whitespace-delimited field, and the socket inode is the 10th field (index 9).
+// The kernel header lists "tx_queue rx_queue tr tm->when" as separate words,
+// which does not match the data rows — this fixture uses the data shape.
 const tcpRow = (sl, local, state, inode) =>
   [
     `  ${sl}:`,
@@ -52,13 +59,17 @@ const tcpRow = (sl, local, state, inode) =>
     state,
     "00000000:00000000",
     "00:00000000",
-    "00000000",
+    "00",
     "1000",
     "0",
     inode,
     "1",
-    "0000",
+    "0000000000000000",
     "100",
+    "0",
+    "0",
+    "10",
+    "0",
   ].join(" ");
 
 const PROC_NET_TCP = [
