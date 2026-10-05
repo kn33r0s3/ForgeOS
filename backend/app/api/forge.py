@@ -54,7 +54,7 @@ Source reliability tracking.
     GET  /forge/scenarios                                                    -> Phase 1 2036 Scenario Engine overview (secondary domain)
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -1032,12 +1032,14 @@ def get_scenario_overview(db: Session = Depends(get_db)):
 
 @router.post("/decisions")
 def create_decision(
+    request: Request,
     title: str,
     rationale: str,
     opportunity_id: Optional[int] = None,
     expected_outcome: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
+    require_owner_api_key(request)
     from app.services import decision_engine
     d = decision_engine.propose_decision(
         db,
@@ -1057,7 +1059,8 @@ def create_decision(
 
 
 @router.get("/decisions")
-def list_decisions(limit: int = 50, db: Session = Depends(get_db)):
+def list_decisions(request: Request, limit: int = 50, db: Session = Depends(get_db)):
+    require_owner_api_key(request)
     from app.services import decision_engine
     rows = decision_engine.list_decisions(db, limit=limit)
     return [
@@ -1075,7 +1078,8 @@ def list_decisions(limit: int = 50, db: Session = Depends(get_db)):
 
 
 @router.post("/decisions/{decision_id}/accept")
-def accept_decision(decision_id: int, db: Session = Depends(get_db)):
+def accept_decision(decision_id: int, request: Request, db: Session = Depends(get_db)):
+    require_owner_api_key(request)
     from app.services import decision_engine
     d = decision_engine.accept_decision(db, decision_id)
     if not d:

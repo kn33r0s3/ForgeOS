@@ -115,7 +115,6 @@ def suggest_next_experiment_decision(
     except Exception:
         # Recall is advisory; a failure must not block decision proposal.
         db.rollback()
-        raise
 
     price_lessons = [l for l in recalled if "Price sensitivity" in (l.summary or "")]
     recommendation = "Validate demand before building: interview/outreach"
