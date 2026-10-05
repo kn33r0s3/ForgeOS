@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import schemas, models
 from app.config import settings
+from app.security import require_owner_api_key
 from app.services import pattern_engine, evidence_graph
 from app.services.observer_engine import ObserverEngine
 from app.services import forge_bot_privacy
@@ -369,15 +370,24 @@ def get_analyze_status(question_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/patterns/run", response_model=schemas.PatternRunResponse)
-def run_patterns(db: Session = Depends(get_db)):
-    """Re-scan all stored signals and detect repeated-problem patterns."""
+def run_patterns(request: Request, db: Session = Depends(get_db)):
+    """Re-scan all stored signals and detect repeated-problem patterns.
+
+    Owner-only: full signal-table scan plus Pattern row writes.
+    """
+    require_owner_api_key(request)
     patterns = pattern_engine.run_pattern_detection(db)
     return schemas.PatternRunResponse(patterns_found=len(patterns), patterns=patterns)
 
 
 @router.get("/patterns", response_model=list[schemas.PatternOut])
-def get_patterns(db: Session = Depends(get_db)):
-    """List currently detected patterns, strongest confidence first."""
+def get_patterns(request: Request, db: Session = Depends(get_db)):
+    """List currently detected patterns, strongest confidence first.
+
+    Owner-only: exposes the internal pattern ledger (titles, confidence,
+    origin signal ids).
+    """
+    require_owner_api_key(request)
     return (
         db.query(models.Pattern)
         .order_by(models.Pattern.confidence_score.desc())
@@ -386,8 +396,14 @@ def get_patterns(db: Session = Depends(get_db)):
 
 
 @router.post("/patterns/{pattern_id}/opportunity", response_model=schemas.OpportunityOut)
-def create_opportunity_from_pattern(pattern_id: int, db: Session = Depends(get_db)):
-    """Generate (and persist) a full business Opportunity from a specific detected pattern."""
+def create_opportunity_from_pattern(
+    pattern_id: int, request: Request, db: Session = Depends(get_db)
+):
+    """Generate (and persist) a full business Opportunity from a specific detected pattern.
+
+    Owner-only: persists Opportunity rows.
+    """
+    require_owner_api_key(request)
     pattern = db.query(models.Pattern).filter(models.Pattern.id == pattern_id).first()
     if not pattern:
         raise HTTPException(status_code=404, detail="Pattern not found")

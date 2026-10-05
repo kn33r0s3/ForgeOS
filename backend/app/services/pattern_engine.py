@@ -11,9 +11,12 @@ frequency + co-occurrence clustering:
   2. Count how many DISTINCT signals each keyword appears in.
   3. Keywords appearing in >= MIN_SIGNAL_SUPPORT signals are treated as
      "themes".
-  4. Group signals sharing a theme keyword into a cluster.
-  5. Merge overlapping clusters (signals sharing >=2 theme keywords)
-     into a single pattern.
+  4. Merge theme pairs whose signal sets overlap heavily (Jaccard >= 0.5)
+     via union-find, then merge keyword clusters that are near-identical
+     (Jaccard >= 0.8) — so "slow", "reply", "response" become one pattern
+     instead of three near-duplicates.
+  5. Drop clusters with fewer than 4 theme keywords — a two-word fragment
+     is not a separate concept.
   6. Build a human-readable title/description and a confidence score
      from cluster size vs. total signal count, and record the exact
      supporting Signal ids as the pattern's origin (origin_signal_ids)
@@ -109,6 +112,12 @@ def run_pattern_detection(db: Session) -> list[models.Pattern]:
     confidently seeding a Pattern/Belief/Opportunity chain built on
     noise. Signals observed before v1.4 have quality_score = NULL and
     are treated as acceptable (not penalized for predating the check).
+
+    Clusters with fewer than 4 theme keywords are skipped silently —
+    note this means a previously recorded pattern whose cluster decays
+    below that floor keeps its last recorded state (no last_seen bump,
+    no confidence refresh); retiring stale rows is a separate policy
+    decision, not done here.
     """
     signals = (
         db.query(models.Signal)
@@ -124,7 +133,6 @@ def run_pattern_detection(db: Session) -> list[models.Pattern]:
 
     # keyword -> set of signal ids containing it
     keyword_to_signals: dict[str, set[int]] = defaultdict(set)
-    signal_keywords: dict[int, set[str]] = {}
 
     for sig in signals:
         kws = _tokenize(sig.content)
@@ -134,7 +142,6 @@ def run_pattern_detection(db: Session) -> list[models.Pattern]:
         # differs — this is the Observer -> Pattern Engine connection.
         if sig.tags:
             kws |= {t.strip().lower() for t in sig.tags.split(",") if t.strip()}
-        signal_keywords[sig.id] = kws
         for kw in kws:
             keyword_to_signals[kw].add(sig.id)
 
