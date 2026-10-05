@@ -478,12 +478,14 @@ def get_goal_graph(goal_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/money/opportunities", response_model=list[schemas.RankedOpportunity])
-def get_ranked_opportunities(goal_id: Optional[int] = None, limit: int = 10, db: Session = Depends(get_db)):
+def get_ranked_opportunities(request: Request, goal_id: Optional[int] = None, limit: int = 10, db: Session = Depends(get_db)):
     """
     Every opportunity, scored live by money_score and ranked highest
     first — never a fabricated number, see money_engine.py's module
-    docstring. Filter with ?goal_id=.
+    docstring. Filter with ?goal_id=. Owner-only: this exposes the
+    owner's internal price projections and revenue estimates.
     """
+    require_owner_api_key(request)
     ranked = money_engine.rank_opportunities(db, goal_id=goal_id, limit=limit)
     return [
         schemas.RankedOpportunity(
@@ -494,13 +496,14 @@ def get_ranked_opportunities(goal_id: Optional[int] = None, limit: int = 10, db:
 
 
 @router.get("/money/opportunities/{opportunity_id}", response_model=schemas.OpportunityMoneyGraph)
-def get_opportunity_money_graph(opportunity_id: int, db: Session = Depends(get_db)):
+def get_opportunity_money_graph(opportunity_id: int, request: Request, db: Session = Depends(get_db)):
     """
     Full monetization view of one opportunity: live money_score with
     the complete numerical breakdown, every revenue experiment ever
     recorded against it (immutable history), total real revenue
-    recorded, and any strategies sharing its goal.
+    recorded, and any strategies sharing its goal. Owner-only.
     """
+    require_owner_api_key(request)
     graph = world_model.get_opportunity_money_graph(db, opportunity_id)
     if not graph:
         raise HTTPException(status_code=404, detail="Opportunity not found")
@@ -508,13 +511,14 @@ def get_opportunity_money_graph(opportunity_id: int, db: Session = Depends(get_d
 
 
 @router.get("/money/recommend", response_model=schemas.MoneyRecommendation)
-def get_money_recommendation(db: Session = Depends(get_db)):
+def get_money_recommendation(request: Request, db: Session = Depends(get_db)):
     """
     "What should I pursue today to make money?" — the single highest-
     money_score opportunity across everything Forge knows, with a
     plain-text explanation of why and a concrete next step. Both are
-    rule-based, not an LLM judgment call.
+    rule-based, not an LLM judgment call. Owner-only.
     """
+    require_owner_api_key(request)
     recommendation = money_engine.recommend_next_action(db)
     if not recommendation:
         raise HTTPException(status_code=404, detail="No opportunities exist yet")
@@ -557,13 +561,15 @@ def record_revenue_experiment_result(
 
 
 @router.get("/money/opportunities/{opportunity_id}/evidence", response_model=schemas.EvidenceStatus)
-def get_opportunity_evidence_status(opportunity_id: int, db: Session = Depends(get_db)):
+def get_opportunity_evidence_status(opportunity_id: int, request: Request, db: Session = Depends(get_db)):
     """
     "Prediction ≠ Revenue, Belief ≠ Customer, Interest ≠ Payment" made
     concrete: every money-relevant field on this opportunity, labeled
     "observed" | "inferred" | "estimated" | "unknown" — never letting a
     populated number silently imply more certainty than it has earned.
+    Owner-only.
     """
+    require_owner_api_key(request)
     opportunity = db.query(models.Opportunity).filter(models.Opportunity.id == opportunity_id).first()
     if not opportunity:
         raise HTTPException(status_code=404, detail="Opportunity not found")
@@ -571,13 +577,15 @@ def get_opportunity_evidence_status(opportunity_id: int, db: Session = Depends(g
 
 
 @router.get("/money/opportunities/owner-ranked", response_model=list[schemas.OwnerRankedOpportunity])
-def get_owner_ranked_opportunities(limit: int = 10, db: Session = Depends(get_db)):
+def get_owner_ranked_opportunities(request: Request, limit: int = 10, db: Session = Depends(get_db)):
     """
     Owner-first ranking: explicitly rewards speed to first revenue over
     theoretical size — a $500 opportunity validated this week can
     outrank a hypothetical $10M idea needing six months. Distinct from
     GET /forge/money/opportunities, which ranks by pure money_score.
+    Owner-only.
     """
+    require_owner_api_key(request)
     ranked = money_engine.rank_opportunities_for_owner(db, limit=limit)
     return [
         schemas.OwnerRankedOpportunity(
@@ -647,12 +655,14 @@ def get_revenue_sources(db: Session = Depends(get_db)):
 
 
 @router.get("/money/opportunities/{opportunity_id}/suggested-sources", response_model=list[schemas.RevenueSourceOut])
-def get_suggested_revenue_sources(opportunity_id: int, db: Session = Depends(get_db)):
+def get_suggested_revenue_sources(opportunity_id: int, request: Request, db: Session = Depends(get_db)):
     """
     Candidate RevenueSources for this opportunity, based on its
     already-inferred monetization_model — a SUGGESTION only. Nothing
     is linked automatically; use POST .../revenue-source to confirm one.
+    Owner-only.
     """
+    require_owner_api_key(request)
     opportunity = db.query(models.Opportunity).filter(models.Opportunity.id == opportunity_id).first()
     if not opportunity:
         raise HTTPException(status_code=404, detail="Opportunity not found")
@@ -945,13 +955,14 @@ def preview_policy_evaluation(
 
 
 @router.get("/money/revenue-breakdown", response_model=schemas.RevenueBreakdown)
-def get_revenue_breakdown(db: Session = Depends(get_db)):
+def get_revenue_breakdown(request: Request, db: Session = Depends(get_db)):
     """
     POTENTIAL (the owner's own stated projections — estimates, never
     facts) vs. EXPECTED (probability-weighted, from real evidence) vs.
     REALIZED (actual recorded revenue) — never displayed as one
-    conflated number.
+    conflated number. Owner-only.
     """
+    require_owner_api_key(request)
     return execution_engine.get_revenue_breakdown(db)
 
 

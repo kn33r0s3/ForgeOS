@@ -135,15 +135,17 @@ def revenue_miner_public_summary(db: Session) -> dict:
         .filter(models.EarningOffer.status == "paid")
         .count()
     )
-    notes = db.query(models.Action).filter(models.Action.action_type == "manual_note")
-    repeatability = notes.filter(
-        models.Action.parameters_json.contains('"proposal_kind": "repeatability_review"')
-    ).count()
-    ownership = (
-        db.query(models.Action)
-        .filter(models.Action.action_type == "manual_note")
-        .filter(models.Action.parameters_json.contains('"proposal_kind": "ownership_review"'))
-        .count()
+    # Exact decoded comparison, not substring matching: the dedup path
+    # above fixed this class of bug once already (offer 1 vs 10), and a
+    # public counter must not inflate if the literal phrase ever lands
+    # in a free-text parameters field.
+    repeatability = sum(
+        1 for params in _proposal_params(db, "repeatability_review")
+        if params.get("proposal_kind") == "repeatability_review"
+    )
+    ownership = sum(
+        1 for params in _proposal_params(db, "ownership_review")
+        if params.get("proposal_kind") == "ownership_review"
     )
     return {
         "paid_offers_recorded": paid,

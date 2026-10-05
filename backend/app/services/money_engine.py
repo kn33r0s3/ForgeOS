@@ -117,8 +117,14 @@ MONETIZATION_MODELS = [
 ]
 MONETIZATION_MODEL_KEYWORDS: dict[str, list[str]] = {
     "subscription": ["subscription", "monthly", "/mo", "recurring"],
-    "saas": ["saas", "software as a service", "platform"],
-    "lead_generation": ["lead gen", "referral fee", "commission per lead", "leads to"],
+    # NOTE: plain "platform" was dropped from saas and "leads to" from
+    # lead_generation — both are ordinary English ("sell on a gig
+    # platform", "outreach leads to calls") and produced confident wrong
+    # labels. run_money_cycle() writes the label permanently (never
+    # reclassified), so per this module's own rule a wrong confident
+    # label is worse than an honest unknown.
+    "saas": ["saas", "software as a service"],
+    "lead_generation": ["lead gen", "referral fee", "commission per lead"],
     "affiliate": ["affiliate", "revenue share", "rev share"],
     "marketplace": ["marketplace", "two-sided", "buyers and sellers"],
     "consulting": ["consult", "advisory", "audit"],
@@ -166,22 +172,41 @@ def _evidence_strength(comma_ids: Optional[str]) -> float:
     return round(min(100.0, len(distinct) * 25.0), 1)
 
 
-def score_opportunity(db: Session, opportunity: models.Opportunity) -> dict:
+def _willingness_id_sort_key(value: str) -> tuple[int, object]:
+    """Sort key for comma-separated willingness evidence ids that never
+    raises. Ids are ints in practice (see models.py), but a non-numeric
+    token in a legacy row used to blow up the whole
+    record_revenue_result() path with a ValueError — rolled back and
+    the real revenue record lost. Same tolerant pattern as
+    belief_engine._signal_id_sort_key."""
+    text = value.strip()
+    if text.lstrip("+-").isdigit():
+        return (0, int(text))
+    return (1, text)
+
+
+def score_opportunity(db: Session, opportunity: models.Opportunity, goal_priorities: Optional[dict] = None) -> dict:
     """
     Transparent, deterministic 0-100 monetization score, computed LIVE
     from the opportunity's CURRENT persisted evidence fields — never
     fabricated, never frozen onto the row. Returns a full breakdown so
     every factor is inspectable, not just the final number ("Opportunity
     X is ranked first because...").
+
+    goal_priorities: optional {goal_id: priority} map so batch callers
+    (rank_opportunities) can skip one Goal query per opportunity.
     """
     problem_evidence = _evidence_strength(opportunity.problem_evidence_signal_ids)
     willingness_evidence = _evidence_strength(opportunity.willingness_evidence_ids)
 
     goal_priority = 50.0
     if opportunity.goal_id is not None:
-        goal = db.query(models.Goal).filter(models.Goal.id == opportunity.goal_id).first()
-        if goal:
-            goal_priority = goal.priority
+        if goal_priorities is not None:
+            goal_priority = goal_priorities.get(opportunity.goal_id, 50.0)
+        else:
+            goal = db.query(models.Goal).filter(models.Goal.id == opportunity.goal_id).first()
+            if goal:
+                goal_priority = goal.priority
 
     ease_implementation = 100.0 - (opportunity.implementation_difficulty or DEFAULT_DIFFICULTY)
     ease_acquisition = 100.0 - (opportunity.acquisition_difficulty or DEFAULT_DIFFICULTY)
@@ -287,8 +312,12 @@ def rank_opportunities(db: Session, goal_id: Optional[int] = None, limit: int = 
         query = query.filter(models.Opportunity.goal_id == goal_id)
 
     scored = []
+    # One batched priority lookup for the whole pass instead of one
+    # Goal query per opportunity (score_opportunity still supports the
+    # per-row query for its single-opportunity callers).
+    goal_priorities = {goal.id: goal.priority for goal in db.query(models.Goal).all()}
     for opportunity in query.all():
-        breakdown = score_opportunity(db, opportunity)
+        breakdown = score_opportunity(db, opportunity, goal_priorities=goal_priorities)
         scored.append({"opportunity": opportunity, **breakdown})
 
     scored.sort(key=lambda item: item["money_score"], reverse=True)
@@ -409,7 +438,7 @@ def record_revenue_result(db: Session, experiment_id, result, revenue=None, conv
             if success:
                 ids = set(filter(None, (opportunity.willingness_evidence_ids or "").split(",")))
                 ids.add(str(experiment.id))
-                opportunity.willingness_evidence_ids = ",".join(sorted(ids, key=int))
+                opportunity.willingness_evidence_ids = ",".join(sorted(ids, key=_willingness_id_sort_key))
             opportunity.updated_at = utcnow()
         if commit:
             db.commit()
