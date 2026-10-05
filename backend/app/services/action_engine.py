@@ -109,7 +109,10 @@ class SMTPEmailActionAdapter(ActionAdapter):
         try:
             dispatched = integration_dispatcher.dispatch_single_delivery(db, delivery.id)
         except Exception as exc:
-            integration_outbox.mark_failed(db, delivery.id, f"dispatch failed: {exc}", permanent=False)
+            # dispatch_single_delivery records the failure on the delivery row
+            # itself (permanent, or transient with backoff) before any exception
+            # can escape; re-marking here would double-count attempts and could
+            # flip a permanent failure back to QUEUED with a fresh backoff.
             return {
                 "status": "FAILED",
                 "execution_result": None,
