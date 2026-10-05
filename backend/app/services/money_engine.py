@@ -162,8 +162,8 @@ def _evidence_strength(comma_ids: Optional[str]) -> float:
     CausalKnowledge-specific version."""
     if not comma_ids:
         return 0.0
-    count = len([part for part in comma_ids.split(",") if part.strip()])
-    return round(min(100.0, count * 25.0), 1)
+    distinct = {part.strip() for part in comma_ids.split(",") if part.strip()}
+    return round(min(100.0, len(distinct) * 25.0), 1)
 
 
 def score_opportunity(db: Session, opportunity: models.Opportunity) -> dict:
@@ -252,7 +252,20 @@ def _build_reasoning(opportunity: models.Opportunity, breakdown: dict) -> str:
     if breakdown.get("revenue_source_grounded"):
         parts.append("A payout figure is stored with an https citation.")
     if breakdown["expected_value"] is not None:
-        parts.append(f"Expected value: ${breakdown['expected_value']:.2f} (from real recorded evidence).")
+        # The dollar figure is only as real as its basis: estimated_price
+        # is an explicit projection, estimated_revenue a recorded figure.
+        # The confidence multiplier comes from real recorded experiments,
+        # but the base number must be labeled for what it actually is —
+        # "Prediction ≠ Revenue" applies inside this sentence too.
+        basis = (
+            "a recorded revenue figure"
+            if opportunity.estimated_revenue is not None
+            else "a stated price projection"
+        )
+        parts.append(
+            f"Expected value: ${breakdown['expected_value']:.2f} ({basis}, "
+            "scaled by real recorded confidence)."
+        )
     else:
         parts.append("Expected value: unknown — no revenue has been recorded yet.")
     parts.append(
@@ -306,8 +319,10 @@ def recommend_next_action(db: Session) -> Optional[dict]:
     pending = [e for e in experiments if e.result is None]
 
     if pending:
-        first = pending[0]
-        label = first.hypothesis or first.action or "the pending experiment"
+        # experiments were ordered newest-first; pending[0] is the latest
+        # pending experiment, not the earliest.
+        latest = pending[0]
+        label = latest.hypothesis or latest.action or "the pending experiment"
         next_step = f'Complete the pending revenue experiment: "{label}".'
     elif not experiments:
         next_step = "Run a first revenue experiment to test willingness to pay — nothing has been tested yet."

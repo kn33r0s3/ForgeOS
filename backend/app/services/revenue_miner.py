@@ -5,10 +5,39 @@ messages, places orders, moves money, or treats a stated price as verified
 revenue.
 """
 
+import json
+
 from sqlalchemy.orm import Session
 
 from app import models
 from app.services import action_engine
+
+
+def _proposal_params(db: Session, proposal_kind: str) -> list[dict]:
+    """Decode parameters_json for every existing proposal of one kind.
+
+    Deduplication compares decoded values, never substrings. The old
+    `.contains(f'"source_earning_offer_id": {offer.id}')` check treated
+    offer 1 as "already proposed" whenever offer 10, 11, or 100 had a
+    row, because `"source_earning_offer_id": 1` is a prefix-substring of
+    `"source_earning_offer_id": 10` — so real paid offers were silently
+    never reviewed.
+    """
+    rows = (
+        db.query(models.Action.parameters_json)
+        .filter(models.Action.action_type == "manual_note")
+        .filter(models.Action.parameters_json.contains(f'"proposal_kind": "{proposal_kind}"'))
+        .all()
+    )
+    parsed = []
+    for (raw,) in rows:
+        try:
+            data = json.loads(raw or "{}")
+        except (ValueError, TypeError):
+            continue
+        if isinstance(data, dict):
+            parsed.append(data)
+    return parsed
 
 
 def mine_revenue_proposals(db: Session, *, limit: int = 20) -> list[models.Action]:
@@ -16,6 +45,12 @@ def mine_revenue_proposals(db: Session, *, limit: int = 20) -> list[models.Actio
 
     Each source offer produces at most one proposal. A human must review the
     proposal and record new evidence before any further action is considered.
+
+    The limit caps how many NEW proposals one run creates. Pathway
+    repeatability counts are always computed over every paid offer, never
+    over the capped query — otherwise the miner's picture of the data would
+    be an artifact of the cap, and older offers would starve under a small
+    limit.
     """
     if limit < 1:
         raise ValueError("limit must be positive")
@@ -24,20 +59,20 @@ def mine_revenue_proposals(db: Session, *, limit: int = 20) -> list[models.Actio
         db.query(models.EarningOffer)
         .filter(models.EarningOffer.status == "paid")
         .order_by(models.EarningOffer.updated_at.desc())
-        .limit(limit)
         .all()
     )
+
+    reviewed_offer_ids = {
+        params.get("source_earning_offer_id")
+        for params in _proposal_params(db, "repeatability_review")
+    }
+
     proposals: list[models.Action] = []
     for offer in offers:
-        marker = f'"source_earning_offer_id": {offer.id}'
-        existing = (
-            db.query(models.Action)
-            .filter(models.Action.action_type == "manual_note")
-            .filter(models.Action.parameters_json.contains(marker))
-            .first()
-        )
-        if existing:
+        if offer.id in reviewed_offer_ids:
             continue
+        if len(proposals) >= limit:
+            break
 
         proposal = action_engine.propose_action(
             db,
@@ -57,22 +92,21 @@ def mine_revenue_proposals(db: Session, *, limit: int = 20) -> list[models.Actio
             risk_score=10.0,
         )
         proposals.append(proposal)
+        reviewed_offer_ids.add(offer.id)
 
     counts: dict[str, int] = {}
     for offer in offers:
         counts[offer.pathway] = counts.get(offer.pathway, 0) + 1
+
+    reviewed_pathways = {
+        params.get("ownership_pathway")
+        for params in _proposal_params(db, "ownership_review")
+    }
     for pathway, count in counts.items():
-        if count < 2:
+        if count < 2 or pathway in reviewed_pathways:
             continue
-        marker = f'"ownership_pathway": "{pathway}"'
-        existing = (
-            db.query(models.Action)
-            .filter(models.Action.action_type == "manual_note")
-            .filter(models.Action.parameters_json.contains(marker))
-            .first()
-        )
-        if existing:
-            continue
+        if len(proposals) >= limit:
+            break
         proposal = action_engine.propose_action(
             db,
             objective=(
@@ -90,6 +124,7 @@ def mine_revenue_proposals(db: Session, *, limit: int = 20) -> list[models.Actio
             risk_score=10.0,
         )
         proposals.append(proposal)
+        reviewed_pathways.add(pathway)
     return proposals
 
 
