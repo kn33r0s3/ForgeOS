@@ -10,6 +10,7 @@ import { ProjectInquiryCta } from "@/components/pages/project-inquiry-cta";
 
 export const Route = createFileRoute("/group/businesses")({
   component: BusinessesPage,
+  head: () => ({ meta: [{ title: "Businesses — Hami" }] }),
 });
 
 function BusinessesPage() {
@@ -28,7 +29,9 @@ function BusinessesPage() {
       >
         <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
           <ProjectInquiryCta />
-          <span className="text-muted">Contact via owner console</span>
+          <Link to="/contact" className="text-cyan hover:underline">
+            Contact Hami
+          </Link>
         </div>
       </PageHero>
       <Container className="py-16 sm:py-20">
@@ -95,16 +98,31 @@ function BusinessesPage() {
               operating businesses.
             </p>
             <div className="mt-8 grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2">
-              {groupAreas.map((area) => (
-                <div key={area.name} className="bg-surface p-5">
-                  <strong className="font-display text-base font-semibold tracking-tight text-fg">
-                    {area.name}
-                  </strong>
-                  <p className="mt-2 text-xs leading-relaxed text-muted">
-                    {area.description}
-                  </p>
-                </div>
-              ))}
+              {groupAreas.map((area) => {
+                const inner = (
+                  <>
+                    <strong className="font-display text-base font-semibold tracking-tight text-fg">
+                      {area.name}
+                    </strong>
+                    <p className="mt-2 text-xs leading-relaxed text-muted">
+                      {area.description}
+                    </p>
+                  </>
+                );
+                return area.href ? (
+                  <Link
+                    key={area.name}
+                    to={area.href}
+                    className="bg-surface p-5 transition-colors duration-150 hover:bg-cyan-dim"
+                  >
+                    {inner}
+                  </Link>
+                ) : (
+                  <div key={area.name} className="bg-surface p-5">
+                    {inner}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>

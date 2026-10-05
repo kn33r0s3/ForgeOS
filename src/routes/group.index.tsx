@@ -7,7 +7,10 @@ import { StatusPill } from "@/components/layout/status-pill";
 import { TextLink } from "@/components/layout/text-link";
 import { CtaBand } from "@/components/layout/cta-band";
 
-export const Route = createFileRoute("/group/")({ component: GroupPage });
+export const Route = createFileRoute("/group/")({
+  component: GroupPage,
+  head: () => ({ meta: [{ title: "The group — Hami" }] }),
+});
 
 function GroupPage() {
   return (
