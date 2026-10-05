@@ -260,11 +260,14 @@ def get_evidence(belief_id: Optional[int] = None, db: Session = Depends(get_db))
 
 
 @router.post("/knowledge/mine", response_model=schemas.KnowledgeMineResponse)
-def mine_knowledge(payload: schemas.KnowledgeMineRequest, db: Session = Depends(get_db)):
+def mine_knowledge(request: Request, payload: schemas.KnowledgeMineRequest, db: Session = Depends(get_db)):
     """Knowledge Mining Engine: extract strategy/behavior insights from
     a long piece of text (a book excerpt, paper, story, etc.) and store
     each as a Signal — they flow through the normal Observer -> Pattern
-    -> Belief pipeline from there, exactly like any other signal."""
+    -> Belief pipeline from there, exactly like any other signal.
+
+    Owner-only: this writes arbitrary Signal rows into the DB."""
+    require_owner_api_key(request)
     signal_ids = knowledge_miner.mine_document(db, payload.content, source_label=payload.source_label)
     return schemas.KnowledgeMineResponse(
         source_label=payload.source_label,
@@ -310,10 +313,12 @@ def collect_default(db: Session = Depends(get_db)):
 
 
 @router.get("/knowledge", response_model=list[schemas.KnowledgeSearchResult])
-def search_knowledge(query: str, top_k: int = 5, source_type: Optional[str] = None, db: Session = Depends(get_db)):
+def search_knowledge(request: Request, query: str, top_k: int = 5, source_type: Optional[str] = None, db: Session = Depends(get_db)):
     """Semantic search over Forge's permanent Knowledge memory (synced
     from Beliefs/Patterns). This is the same retrieval mechanism
-    POST /forge/ask uses internally, exposed directly for inspection."""
+    POST /forge/ask uses internally, exposed directly for inspection.
+    Owner-only: this reads the owner's internal belief/pattern memory."""
+    require_owner_api_key(request)
     matches = memory_layer.search_knowledge(db, query, top_k=top_k, source_type=source_type)
     return [
         schemas.KnowledgeSearchResult(knowledge=knowledge, similarity=round(similarity, 4))
@@ -322,14 +327,15 @@ def search_knowledge(query: str, top_k: int = 5, source_type: Optional[str] = No
 
 
 @router.get("/knowledge/list", response_model=list[schemas.KnowledgeOut])
-def list_knowledge(source_type: Optional[str] = None, limit: int = 100, db: Session = Depends(get_db)):
+def list_knowledge(request: Request, source_type: Optional[str] = None, limit: int = 100, db: Session = Depends(get_db)):
     """Browse Knowledge entries without a search query, most recently
-    updated first."""
+    updated first. Owner-only: internal memory."""
+    require_owner_api_key(request)
     return memory_layer.list_knowledge(db, source_type=source_type, limit=limit)
 
 
 @router.post("/ask", response_model=schemas.AskResponse)
-def ask_forge(payload: schemas.AskRequest, db: Session = Depends(get_db)):
+def ask_forge(request: Request, payload: schemas.AskRequest, db: Session = Depends(get_db)):
     """
     Ask Forge a question. Forge is not a chatbot — it retrieves
     relevant memories from its own Knowledge base FIRST (beliefs and
@@ -337,7 +343,11 @@ def ask_forge(payload: schemas.AskRequest, db: Session = Depends(get_db)):
     grounded in only that, via whichever AI provider is configured
     (free mock, free local Ollama, or optional paid OpenAI). If nothing
     relevant exists yet, it says so rather than guessing.
-    """
+
+    Owner-only: an unauthenticated caller could trigger AI provider
+    calls (paid OpenAI path, or local Ollama compute) at the owner's
+    expense, and read internal memory through the answers."""
+    require_owner_api_key(request)
     result = ai_engine.answer_question(payload.question, db)
     matches = memory_layer.search_knowledge(db, payload.question, top_k=5)
     memories_used = [knowledge for knowledge, _similarity in matches]
