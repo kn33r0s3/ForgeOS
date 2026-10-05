@@ -39,8 +39,10 @@ be fine:
                        it's the same evidence counted twice.
   4. Signal type strength - an "observation"/"problem" (something that
                              happened) is stronger evidence than a
-                             "demand" (someone wants something) — reuses
-                             signal_processor.py's existing classifier,
+                             "demand" (someone wants something) — the
+                             signal_type is passed in by the caller
+                             (observer_engine.py classifies with
+                             signal_processor.py first), this module
                              doesn't reclassify.
   5. Length sanity   - too short to contain real content, or
                         implausibly long for one observation.
@@ -222,13 +224,19 @@ def assess_quality(db: Session, content: str, signal_type: Optional[str], reliab
 
     type_strength = _signal_type_strength(signal_type)
 
+    # None check, not `or`: a genuine 0.0 reliability must stay 0.0.
+    # get_reliability() promises a float, but a Source row written outside
+    # the ORM could carry NULL — and a TypeError here would abort the whole
+    # observation, not just the quality assessment.
+    reliability = 50.0 if reliability_score is None else reliability_score
+
     weighted = (
         concreteness * 0.30
         + coherence * 0.25
         + duplicate_score * 0.20
         + type_strength * 0.10
         + length * 0.10
-        + reliability_score * 0.05
+        + reliability * 0.05
     )
 
     quality_score = weighted

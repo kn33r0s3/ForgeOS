@@ -40,9 +40,10 @@ PAIN_WORDS = [
 
 
 def normalize_text(text: str) -> str:
-    """Lowercase, collapse whitespace, strip stray punctuation at the
-    edges. Keeps the text readable (unlike a full tokenizer) since it's
-    used for both display and keyword matching."""
+    """Lowercase, collapse whitespace, strip leading/trailing
+    whitespace. Keeps the text readable (unlike a full tokenizer) since
+    it's used for both display and keyword matching. (It does NOT strip
+    punctuation — only whitespace is touched.)"""
     text = text.strip()
     text = re.sub(r"\s+", " ", text)
     return text.lower()
@@ -62,14 +63,22 @@ def extract_basic_tags(text: str) -> list[str]:
 
 def _guess_signal_type(normalized_text: str) -> str:
     """Very small heuristic classifier:
-    - "demand"      : someone explicitly wants/is looking for something
     - "problem"      : pain/friction language is present
+    - "demand"      : someone explicitly wants/is looking for something
     - "observation"   : neither — a neutral note/fact
+
+    Pain is checked FIRST: a signal that contains both want-language and
+    pain-language ("I want to stop losing money") is evidence that
+    something real is going wrong, and downstream engines treat
+    "problem" as stronger evidence than "demand" (signal_quality.py gives
+    problem 90 vs demand 60; reality_checker.py counts signal_type ==
+    "problem" as belief support). Classifying the mixed case as demand
+    would systematically undersell the richest signals.
     """
-    if any(word in normalized_text for word in DEMAND_WORDS):
-        return "demand"
     if any(word in normalized_text for word in PAIN_WORDS):
         return "problem"
+    if any(word in normalized_text for word in DEMAND_WORDS):
+        return "demand"
     return "observation"
 
 

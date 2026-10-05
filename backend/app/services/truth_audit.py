@@ -107,10 +107,19 @@ def snapshot(db: Session) -> dict:
             "canonical_distribution": [
                 {"score": score, "count": count} for score, count in quality_rows
             ],
-            "canonical_average": round(
-                sum((score or 0.0) * count for score, count in quality_rows) / canonical_signals,
-                2,
-            ) if canonical_signals else None,
+            # NULL quality_score means "not yet assessed" (models.py), not
+            # zero quality: unassessed signals are excluded from the average
+            # rather than dragging it toward 0. The distribution above keeps
+            # the NULL bucket visible so the unassessed share is inspectable.
+            "canonical_average": (
+                round(
+                    sum(score * count for score, count in quality_rows if score is not None)
+                    / sum(count for score, count in quality_rows if score is not None),
+                    2,
+                )
+                if any(score is not None for score, _ in quality_rows)
+                else None
+            ),
         },
         "operations": {
             "completed_cycles": completed_cycles,
