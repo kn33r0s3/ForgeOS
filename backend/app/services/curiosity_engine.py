@@ -7,7 +7,7 @@ reality better?" — instead of collecting information blindly, it looks
 at what it already knows, finds the weak spots, and turns those into
 concrete research questions.
 
-Six kinds of weak spots (per spec):
+Eight kinds of weak spots (per spec):
 
   1. Low-confidence beliefs   -> a hypothesis Forge isn't sure about yet
   2. Unexplored patterns      -> repeated signals with no belief formed
@@ -225,18 +225,22 @@ class CuriosityEngine:
             .all()
         )
 
-    def find_unvalidated_opportunities(self) -> list[models.Opportunity]:
+    def find_unvalidated_opportunities(self) -> list[tuple[models.Opportunity, float]]:
         """Opportunities that look plausible on paper (money_score
         above a floor — not every idea deserves a question) but have
         zero revenue evidence — revenue_confidence still at its
         untouched starting value of 0.0. "Looks promising" and "worth
         pursuing" are different claims; this is what keeps Forge from
-        treating the first as the second (v1.2 spec)."""
+        treating the first as the second (v1.2 spec).
+
+        Returns (opportunity, money_score) pairs so callers don't have
+        to re-run money_engine.score_opportunity() just to compute a
+        priority — one scoring pass per opportunity, not two."""
         unvalidated = []
         for opportunity in self.db.query(models.Opportunity).filter(models.Opportunity.revenue_confidence == 0.0).all():
             breakdown = money_engine.score_opportunity(self.db, opportunity)
             if breakdown["money_score"] >= UNVALIDATED_OPPORTUNITY_MIN_SCORE:
-                unvalidated.append(opportunity)
+                unvalidated.append((opportunity, breakdown["money_score"]))
         return unvalidated
 
     def find_ungrounded_opportunities(self) -> list[models.Opportunity]:
@@ -451,9 +455,8 @@ class CuriosityEngine:
         # than a marginal one. Linked back via the opportunity's
         # pattern_id, reusing ResearchQuestion's existing
         # source_pattern_id column rather than adding a new one.
-        for opportunity in self.find_unvalidated_opportunities():
-            breakdown = money_engine.score_opportunity(self.db, opportunity)
-            priority = round(min(95.0, 50.0 + breakdown["money_score"] * 0.4), 1)
+        for opportunity, money_score in self.find_unvalidated_opportunities():
+            priority = round(min(95.0, 50.0 + money_score * 0.4), 1)
             for text in self.generate_questions_for_unvalidated_opportunity(opportunity):
                 created.append(
                     self._store_question(text, priority=priority, pattern_id=opportunity.pattern_id)
