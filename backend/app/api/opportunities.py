@@ -1,12 +1,13 @@
 """API routes for listing generated opportunities and logging experiments."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 
 from app.database import get_db
 from app import schemas, models
+from app.security import require_owner_api_key
 from app.services import opportunity_engine
 from app.services import evidence_graph
 from app.services import multi_judge
@@ -63,8 +64,12 @@ def get_opportunities(limit: int = 200, db: Session = Depends(get_db)):
 def assess_need_economic_validation(
     need_id: int,
     payload: NeedEconomicAssessmentBody,
+    request: Request,
     db: Session = Depends(get_db),
 ):
+    """OWNER-ONLY: assess_need_economics writes Opportunity rows and
+    world-graph entities/events — it must not run anonymously."""
+    require_owner_api_key(request)
     try:
         return economic_validation.assess_need_economics(
             db,

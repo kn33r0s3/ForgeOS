@@ -210,12 +210,16 @@ def assess_need_economics(
         }
 
     opportunity = None
-    for prior_event in (
+    # Bounded batches: this scan walks every economic_validation_assessed
+    # event ever recorded (there is no need_id column to filter on), so
+    # stream it instead of materializing the whole table per assessment.
+    prior_events = (
         db.query(models.OpportunityEvent)
         .filter_by(event_type="economic_validation_assessed")
         .order_by(models.OpportunityEvent.id.asc())
-        .all()
-    ):
+        .yield_per(500)
+    )
+    for prior_event in prior_events:
         try:
             prior_details = json.loads(prior_event.details or "{}")
         except (TypeError, json.JSONDecodeError):

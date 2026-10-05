@@ -89,7 +89,7 @@ CUSTOMER_TYPE_NOUNS = [
     "childcare", "daycare", "veterinarian", "veterinarians", "vet clinic", "vet clinics",
     "warehouse", "warehouses", "manufacturer", "manufacturers", "factory", "factories",
     "logistics", "courier", "couriers", "delivery driver", "delivery drivers",
-    "coach", "coaches", "instructor", "instructors", "tutor", "tutors", "agency", "agencies",
+    "coach", "coaches", "instructor", "instructors", "tutor", "tutors",
 ]
 
 # Structured fallback for real-world mentions the curated noun list misses:
@@ -127,8 +127,6 @@ COUNT_PATTERN = re.compile(
     r"customers|clients)\b",
     re.I,
 )
-
-CONTESTED_LOW, CONTESTED_HIGH = 35.0, 65.0  # unused here, kept for cross-reference with causal_engine.py's identical convention
 
 
 def _find_any(text: str, phrases: list[str]) -> Optional[str]:
@@ -274,8 +272,8 @@ def is_economically_meaningful(extraction: dict, scores: dict) -> bool:
     signal are required — a customer type mentioned with no pain
     attached, or a generic pain phrase with no identifiable customer,
     isn't enough. Verified against the spec's own 3 GOOD / 4 BAD
-    examples (see README's v1.8 section) — all seven classify
-    correctly."""
+    examples (the v1.8 spec notes live in this module's docstring above)
+    — all seven classify correctly."""
     if scores["evidence_strength"] < MIN_EVIDENCE_STRENGTH:
         return False
     return (
@@ -294,7 +292,7 @@ def is_economically_meaningful(extraction: dict, scores: dict) -> bool:
 # pain signal AND at least one of a dollar figure / urgency / willingness-to-
 # pay. This is deliberately strict so a solitary signal never floods the
 # pipeline the way a corroborated pattern legitimately can; it targets the
-# CURRENT_FOCUS.md case: "clear evidence of a problem + identifiable customer
+# focused case: "clear evidence of a problem + identifiable customer
 # + some willingness-to-pay signal."
 def is_economically_strong(extraction: dict, scores: dict) -> bool:
     if scores["evidence_strength"] < MIN_EVIDENCE_STRENGTH:
@@ -334,7 +332,6 @@ def compute_corroboration(db: Session, pattern: models.Pattern) -> dict:
     if not pattern.origin_signal_ids:
         return {"unique_sources": 0, "independent_observations": 0, "corroboration_count": 0}
 
-    import re as _re
     signal_ids = [int(i) for i in pattern.origin_signal_ids.split(",") if i.strip().isdigit()]
     signals = db.query(models.Signal).filter(models.Signal.id.in_(signal_ids)).all()
 
@@ -347,7 +344,7 @@ def compute_corroboration(db: Session, pattern: models.Pattern) -> dict:
     def _content_id(s):
         if getattr(s, "content_fingerprint", None):
             return ("fp", s.content_fingerprint)
-        return ("txt", _re.sub(r"\s+", " ", (s.content or "").strip().lower())[:300])
+        return ("txt", re.sub(r"\s+", " ", (s.content or "").strip().lower())[:300])
 
     seen_content = set()
     independent = 0

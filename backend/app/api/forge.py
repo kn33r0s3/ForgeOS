@@ -982,7 +982,7 @@ def run_autonomy_cycle_now(db: Session = Depends(get_db)):
 
 
 @router.post("/economic/discover", response_model=schemas.EconomicDiscoverySummary)
-def run_economic_discovery_now(db: Session = Depends(get_db)):
+def run_economic_discovery_now(request: Request, db: Session = Depends(get_db)):
     """
     Manually trigger one pass of autonomous, evidence-gated opportunity
     discovery (the same one worker.py runs on every Forge cycle) — the
@@ -990,7 +990,10 @@ def run_economic_discovery_now(db: Session = Depends(get_db)):
     emerging. Reviews every Pattern with no Opportunity yet against
     real economic evidence; only creates one where the evidence clears
     the bar (see economic_intelligence.py / opportunity_engine.py).
+
+    OWNER-ONLY: this writes Opportunity rows to the database.
     """
+    require_owner_api_key(request)
     return opportunity_engine.run_autonomous_opportunity_discovery(db)
 
 

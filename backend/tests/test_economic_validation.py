@@ -253,6 +253,10 @@ def test_need_assessment_api_uses_existing_opportunity_surface(db):
                 "experiment_definition": "Present an explicitly hypothetical price to one consenting participant.",
                 "experiment_tests_willingness_to_pay": True,
             },
+            # POST /needs/{id}/economic-validation is owner-guarded (it
+            # writes Opportunity + world-graph rows); the module key is
+            # set at import below the imports above.
+            headers={"X-API-Key": security.settings.FORGE_API_KEY},
         )
     finally:
         client.close()
