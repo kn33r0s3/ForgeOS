@@ -513,7 +513,6 @@ function OwnerConsolePage() {
                 </p>
                 <div className="mt-4">
                   <ScoutQueue apiKey={key} />
->>>>>>> origin/main
                 </div>
               </section>
             </div>

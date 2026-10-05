@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 async function v4Fetch<T>(path: string, key: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(`/api/opv3/${path}`, {
+  const response = await fetch(`/api/opv4/${path}`, {
     ...init,
     headers: {
       ...(init.body ? { "Content-Type": "application/json" } : {}),

@@ -5,7 +5,7 @@ name: Independent deploy verification
 # time, fetched production content, test counts, test results, and
 # pass/fail. Reports without these fields are rejected by the API.
 #
-# This workflow is append-only by design: it POSTs to /api/opv3/verifications,
+# This workflow is append-only by design: it POSTs to /api/opv4/verifications,
 # which has no update or delete endpoint.
 
 on:
@@ -50,7 +50,7 @@ jobs:
           FORGE_API_KEY: ${{ secrets.FORGE_API_KEY }}
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
         run: |
-          curl -sf -X POST "$BACKEND_URL/api/opv3/verifications" \
+          curl -sf -X POST "$BACKEND_URL/api/opv4/verifications" \
             -H "Content-Type: application/json" \
             -H "X-API-Key: $FORGE_API_KEY" \
             -d "{
