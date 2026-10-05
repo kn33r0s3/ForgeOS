@@ -520,10 +520,11 @@ def get_money_recommendation(db: Session = Depends(get_db)):
 
 @router.post("/opportunities/{opportunity_id}/revenue-experiments", response_model=schemas.ExperimentOut)
 def create_revenue_experiment(
-    opportunity_id: int, payload: schemas.RevenueExperimentCreate, db: Session = Depends(get_db)
+    opportunity_id: int, payload: schemas.RevenueExperimentCreate, request: Request, db: Session = Depends(get_db)
 ):
     """Plan a real-world revenue test against an opportunity — created
     as pending (result=None) until POST .../result completes it."""
+    require_owner_api_key(request)
     experiment = money_engine.record_revenue_experiment(
         db, opportunity_id, payload.hypothesis, payload.action, expected_result=payload.expected_result
     )
@@ -534,14 +535,16 @@ def create_revenue_experiment(
 
 @router.post("/revenue-experiments/{experiment_id}/result", response_model=schemas.ExperimentOut)
 def record_revenue_experiment_result(
-    experiment_id: int, payload: schemas.RevenueExperimentResult, db: Session = Depends(get_db)
+    experiment_id: int, payload: schemas.RevenueExperimentResult, request: Request, db: Session = Depends(get_db)
 ):
     """
     Record what actually happened. Immutable once completed — calling
-    this again on an already-completed experiment returns it unchanged
-    rather than overwriting its result; plan a new revenue experiment
-    for a genuinely new test instead.
+    this again on an already-completed experiment raises (via the
+    ValueError handler) on conflicting data and returns the unchanged
+    row on identical data; plan a new revenue experiment for a
+    genuinely new test instead.
     """
+    require_owner_api_key(request)
     experiment = money_engine.record_revenue_result(
         db, experiment_id, payload.result, revenue=payload.revenue, conversions=payload.conversions, data_scope=payload.data_scope
     )

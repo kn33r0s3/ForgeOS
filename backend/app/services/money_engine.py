@@ -28,10 +28,11 @@ records the outcomes of real-world revenue tests.
 Revenue experiments reuse the EXISTING Experiment table (the one
 already linked to Opportunity — see models.py's docstring on why) —
 hypothesis/expected_result/revenue/conversions/confidence_change are
-new columns on that same table, not a parallel one. record_revenue_
-result() refuses to edit a completed experiment; a changed test
-creates a new Experiment row instead, so the history of what was
-actually tried is never silently rewritten.
+new columns on that same table, not a parallel one. record_revenue_result()
+never silently rewrites a completed experiment: re-recording
+identical data returns the row unchanged, re-recording conflicting
+data raises (a genuinely new test plans a new Experiment row instead),
+so the history of what was actually tried is never rewritten.
 
 CRITICAL, and worth stating plainly: this module NEVER invents a
 price, a revenue figure, or a confidence number. Every money-related
@@ -207,11 +208,15 @@ def score_opportunity(db: Session, opportunity: models.Opportunity) -> dict:
         penalized += REVENUE_SOURCE_GROUNDING_BONUS
     money_score = round(max(0.0, min(100.0, penalized)), 1)
 
-    # expected_value: NEVER computed from a guess. Requires BOTH a real
-    # recorded price/revenue figure AND nonzero revenue_confidence
-    # (meaning at least one real experiment produced evidence). Either
-    # missing -> None, reported honestly as unknown rather than
-    # invented.
+    # expected_value: NEVER computed from a guess. Requires BOTH a
+    # recorded figure (estimated_revenue, or estimated_price as an
+    # explicit projection) AND nonzero revenue_confidence (meaning at
+    # least one real experiment produced evidence). Either missing ->
+    # None, reported honestly as unknown rather than invented. NOTE:
+    # when only an estimated_price is present, expected_value is a
+    # projection scaled by confidence, not an observed revenue figure —
+    # and estimated_revenue is currently never populated by
+    # record_revenue_result() (design gap, see classify_evidence).
     expected_value = None
     price_estimate = opportunity.estimated_revenue or opportunity.estimated_price
     if price_estimate is not None and opportunity.revenue_confidence > 0:
@@ -301,7 +306,9 @@ def recommend_next_action(db: Session) -> Optional[dict]:
     pending = [e for e in experiments if e.result is None]
 
     if pending:
-        next_step = f'Complete the pending revenue experiment: "{pending[0].hypothesis or pending[0].action}".'
+        first = pending[0]
+        label = first.hypothesis or first.action or "the pending experiment"
+        next_step = f'Complete the pending revenue experiment: "{label}".'
     elif not experiments:
         next_step = "Run a first revenue experiment to test willingness to pay — nothing has been tested yet."
     elif opportunity.revenue_confidence >= 60.0:
@@ -344,7 +351,7 @@ def record_revenue_experiment(
     return experiment
 
 
-def record_revenue_result(db, experiment_id, result, revenue=None, conversions=None, *, data_scope=None, commit=True):
+def record_revenue_result(db: Session, experiment_id, result, revenue=None, conversions=None, *, data_scope=None, commit=True):
     """Atomic explicit result, cash ledger and learning. SANDBOX never trains REAL confidence."""
     import math
     from app.services import action_engine, learning_engine
@@ -454,9 +461,13 @@ def classify_evidence(opportunity: models.Opportunity) -> dict:
             "value": opportunity.revenue_source_id,
         },
         "estimated_revenue": {
-            # Only ever set from a REAL recorded Experiment.revenue —
-            # see record_revenue_result() — so its presence at all
-            # already means "observed," not merely "estimated."
+            # Stated status is "estimated": the model comment intends
+            # this field to be updated only from REAL recorded
+            # Experiment.revenue, but nothing currently writes it —
+            # record_revenue_result() updates confidence/uncertainty/
+            # willingness evidence only. Until a writer exists, treat
+            # any value here as a manually entered estimate, not an
+            # observation (design gap, not yet resolved).
             "status": "estimated" if opportunity.estimated_revenue is not None else "unknown",
             "value": opportunity.estimated_revenue,
         },
@@ -513,7 +524,7 @@ def rank_opportunities_for_owner(db: Session, goal_id: Optional[int] = None, lim
     theoretical size, unlike rank_opportunities()'s pure money_score. A
     $500 opportunity validated this week can outrank a hypothetical
     $10M idea needing six months — that's the literal behavior this
-    function is verified against (see the README's dry-run table).
+    function implements.
     """
     scored = rank_opportunities(db, goal_id=goal_id, limit=1000)
     for item in scored:
