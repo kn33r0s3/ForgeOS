@@ -493,6 +493,9 @@ def approve_action(db: Session, action_id: int) -> Optional[models.Action]:
         return None
     if action.policy_result == "BLOCK":
         return action  # cannot approve blocked
+    from app.services import intervention_gate
+
+    intervention_gate.assert_single_active_intervention(db, action)
     action.status = "APPROVED"
     action.approved_at = utcnow()
     db.commit()
@@ -516,6 +519,9 @@ def start_and_execute_action(db: Session, action_id: int) -> Optional[models.Act
         db.commit()
         return action
 
+    from app.services import intervention_gate
+
+    intervention_gate.assert_single_active_intervention(db, action)
     action.status = "RUNNING"
     action.started_at = utcnow()
     db.commit()

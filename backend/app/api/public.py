@@ -201,6 +201,9 @@ def list_public_discoveries(limit: int = Query(default=20, ge=1, le=50), db: Ses
                 epistemic_state=label["epistemic_state"],
                 stale=label["stale"],
                 freshness="stale" if label["stale"] else "fresh",
+                has_consequence=bool(
+                    claim.decision_id or claim.experiment_id or claim.outcome_id
+                ),
             )
         )
     return discoveries

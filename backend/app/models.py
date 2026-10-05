@@ -352,6 +352,13 @@ class Experiment(Base):
     execution_allowed = Column(Boolean, nullable=False, default=False)  # fail-closed default
     data_scope = Column(String, nullable=False, default="REAL", index=True)  # REAL | SANDBOX; sandbox results never count as business traction
 
+    # --- Experiments registry (2026-10-05) ---
+    # OBSERVATION: may run in parallel, no human contact.
+    # CONVERSATION: batches of 5, owner approval required per batch.
+    # INTERVENTION: at most ONE active at a time (see intervention_gate).
+    experiment_kind = Column(String, nullable=True, index=True)
+    five_fields_json = Column(Text, nullable=True)  # JSON: reality, possibility, constraint, constraint_state, intervention, outcome
+
     opportunity = relationship("Opportunity", back_populates="experiments")
 
 
@@ -2183,4 +2190,76 @@ class Gate(Base):
     result = Column(Text, nullable=True)
     decided_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+# Scout + Draft + Approval Queue (2026-10-05)
+#
+# Candidate registry for potential sellers/businesses. Built ON the six
+# primitives: candidates are SubstrateEntity rows (entity_type=
+# "scout_candidate"), observations are Evidence rows, sends are
+# WorldEvent + Action rows. These three tables hold only the
+# outreach-specific workflow state that the primitives don't cover.
+#
+# HARD RULE: nothing here sends a message. Drafts are prepared;
+# the OWNER sends from their own account and marks SENT. No autonomous
+# sending exists anywhere in this codebase.
+# ---------------------------------------------------------------------
+
+
+class OutreachDraft(Base):
+    """A prepared first-contact message for one scout candidate.
+
+    Status flow: DRAFT -> APPROVED -> SENT, or DRAFT -> SKIPPED.
+    The owner edits the text, approves, sends from their own account,
+    then marks SENT (logging the send as an Event/Action). Replies and
+    outcomes are recorded here — never invented.
+    """
+
+    __tablename__ = "outreach_drafts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    candidate_entity_id = Column(Integer, ForeignKey("entities.id"), nullable=False, index=True)
+    # The specific observed fact that prompted contact (e.g. "3 unanswered
+    # inquiry comments on your Facebook page on 2026-10-01").
+    observed_fact = Column(Text, nullable=False)
+    message_en = Column(Text, nullable=False)
+    message_ne = Column(Text, nullable=False)
+    status = Column(String, nullable=False, default="DRAFT", index=True)
+    # DRAFT | APPROVED | SKIPPED | SENT
+    approved_at = Column(DateTime, nullable=True)
+    approved_by = Column(String, nullable=True)  # "owner"
+    sent_at = Column(DateTime, nullable=True)
+    sent_by = Column(String, nullable=True)  # owner account identifier
+    send_channel = Column(String, nullable=True)  # e.g. "facebook", "viber", "whatsapp"
+    reply_received = Column(Boolean, nullable=False, default=False)
+    reply_at = Column(DateTime, nullable=True)
+    reply_summary = Column(Text, nullable=True)
+    outcome_notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    candidate = relationship("SubstrateEntity", foreign_keys=[candidate_entity_id])
+
+
+class DoNotContact(Base):
+    """Businesses/people that must never be contacted. Checked before any
+    draft is created or approved."""
+
+    __tablename__ = "do_not_contact"
+
+    id = Column(Integer, primary_key=True, index=True)
+    candidate_entity_id = Column(Integer, ForeignKey("entities.id"), nullable=False, unique=True, index=True)
+    reason = Column(Text, nullable=False)
+    added_at = Column(DateTime, default=utcnow)
+    added_by = Column(String, nullable=False, default="owner")
+
+
+class OutreachConfig(Base):
+    """Singleton outreach workflow configuration."""
+
+    __tablename__ = "outreach_config"
+
+    id = Column(Integer, primary_key=True)
+    daily_cap = Column(Integer, nullable=False, default=5)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
