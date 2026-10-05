@@ -482,3 +482,54 @@ def seed_frontier_gates(db: Session) -> list:
         created.append(g)
     db.commit()
     return created
+
+
+# ---------------------------------------------------------------------
+# Gate enforcement (recovered from v3 a5ed491)
+#
+# Kill criterion must exist BEFORE a gate result can be recorded, and the
+# criterion cannot be silently changed once a result exists. The v4 Gate
+# model docstring already claims this; these functions enforce it.
+# ---------------------------------------------------------------------
+
+GATE_DAYS = (14, 30, 60, 90)
+
+
+def upsert_gate(
+    db: Session, day: int, title: str, kill_criterion: Optional[str] = None
+) -> models.Gate:
+    from app.models import Gate  # local import to avoid cycles
+
+    if day not in GATE_DAYS:
+        raise ValueError(f"Gate day must be one of {GATE_DAYS}")
+    gate = db.query(Gate).filter(Gate.day == day).first()
+    if not gate:
+        gate = Gate(day=day, title=title)
+        db.add(gate)
+    else:
+        gate.title = title
+    if kill_criterion is not None:
+        if gate.result is not None:
+            raise ValueError(
+                "Kill criterion cannot be changed after a result is recorded."
+            )
+        gate.kill_criterion = kill_criterion
+    gate.updated_at = utcnow()
+    db.commit()
+    db.refresh(gate)
+    return gate
+
+
+def record_gate_result(db: Session, day: int, result: str) -> models.Gate:
+    from app.models import Gate  # local import to avoid cycles
+
+    gate = db.query(Gate).filter(Gate.day == day).first()
+    if not gate:
+        raise ValueError("Gate not found.")
+    if not gate.kill_criterion:
+        raise ValueError("Kill criterion must be stored BEFORE any result.")
+    gate.result = result
+    gate.decided_at = utcnow()
+    db.commit()
+    db.refresh(gate)
+    return gate

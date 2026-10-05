@@ -202,3 +202,60 @@ def test_scoreboard_readonly_shape(db):
         assert field in board, f"scoreboard missing {field}"
     assert board["starved"] is True
     assert board["verified_rupees"] == 0.0
+
+
+def test_gate_result_requires_kill_criterion(db):
+    operating_v4.upsert_gate(db, 14, "Day 14: contact check")
+    with pytest.raises(ValueError, match="BEFORE any result"):
+        operating_v4.record_gate_result(db, 14, "pass")
+    operating_v4.upsert_gate(
+        db, 14, "Day 14: contact check", kill_criterion="No contact => review"
+    )
+    gate = operating_v4.record_gate_result(db, 14, "pass")
+    assert gate.result == "pass"
+    assert gate.decided_at is not None
+
+
+def test_gate_criterion_immutable_after_result(db):
+    operating_v4.upsert_gate(
+        db, 30, "Day 30: frontier review", kill_criterion="Zero L3+ => challenged"
+    )
+    operating_v4.record_gate_result(db, 30, "challenged")
+    with pytest.raises(ValueError, match="cannot be changed after a result"):
+        operating_v4.upsert_gate(
+            db, 30, "Day 30: frontier review", kill_criterion="New criterion"
+        )
+    # Title update without touching the criterion still works.
+    gate = operating_v4.upsert_gate(db, 30, "Day 30: revised title")
+    assert gate.title == "Day 30: revised title"
+    assert gate.kill_criterion == "Zero L3+ => challenged"
+    assert gate.result == "challenged"
+
+
+def test_gate_invalid_day_rejected(db):
+    with pytest.raises(ValueError, match="must be one of"):
+        operating_v4.upsert_gate(db, 45, "Not a gate day")
+    with pytest.raises(ValueError, match="not found"):
+        operating_v4.record_gate_result(db, 45, "pass")
+
+
+def test_seeded_gates_carry_kill_criteria(db):
+    created = operating_v4.seed_frontier_gates(db)
+    assert len(created) == 4
+    # Seeded gates already carry kill criteria, so results record cleanly.
+    for day in (14, 30, 60, 90):
+        gate = operating_v4.record_gate_result(db, day, "reviewed")
+        assert gate.kill_criterion
+        assert gate.result == "reviewed"
+    # Idempotent: second seed creates nothing.
+    assert operating_v4.seed_frontier_gates(db) == []
+
+
+def test_no_duplicate_gate_model(db):
+    # One Gate model, one gate service seam, no v3 remnants.
+    assert hasattr(models, "Gate")
+    assert not hasattr(models, "GateV3")
+    assert hasattr(operating_v4, "upsert_gate")
+    assert hasattr(operating_v4, "record_gate_result")
+    assert hasattr(operating_v4, "seed_frontier_gates")
+    assert not hasattr(operating_v4, "operating_v3")
