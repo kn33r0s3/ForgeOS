@@ -109,3 +109,14 @@ def test_cache_identity_hit_changed_input_stale_and_persistence(db):
     db.expunge_all()
     restored = db.get(models.IntelligenceCacheEntry, entry.id)
     assert restored.status == "invalidated"
+
+
+def test_cache_identity_case_sensitive_strings():
+    # YouTube video IDs are case-sensitive; casefolding identity would let two
+    # distinct videos share one cache row (the second put overwrites the
+    # first). Case is preserved; identical inputs still hash identically.
+    key_a, _ = intelligence_cache.cache_identity("youtube_metadata", "dQw4w9WgXcQ")
+    key_b, _ = intelligence_cache.cache_identity("youtube_metadata", "dqw4w9wgxcq")
+    key_a2, _ = intelligence_cache.cache_identity("youtube_metadata", "dQw4w9WgXcQ")
+    assert key_a != key_b
+    assert key_a == key_a2

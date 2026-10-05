@@ -18,7 +18,9 @@ def utcnow():
 
 def fingerprint(value: Any) -> str:
     if isinstance(value, str):
-        normalized = " ".join(value.split()).casefold()
+        # Whitespace-normalized only: identifiers (e.g. YouTube video IDs)
+        # are case-SENSITIVE, so casefolding would collapse distinct keys.
+        normalized = " ".join(value.split())
     else:
         normalized = json.dumps(value, sort_keys=True, default=str)
     return hashlib.sha256(normalized.encode()).hexdigest()
