@@ -113,14 +113,20 @@ def _belief_relevance_to_goal(db: Session, belief: models.Belief, goal: models.G
 # --- scoring factors ---
 
 
+def _experiment_id_count(supporting_experiment_ids: Optional[str]) -> int:
+    """How many experiment ids a comma-separated id list actually names.
+    Filters empty tokens so a trailing or double comma ("1,2,", "1,,2")
+    doesn't inflate the count."""
+    if not supporting_experiment_ids:
+        return 0
+    return len([t for t in supporting_experiment_ids.split(",") if t.strip()])
+
+
 def _evidence_strength(causal: models.CausalKnowledge) -> float:
     """0-100, from how many experiments support this causal fact. More
     supporting experiments = stronger evidence a repeated relationship
     actually holds, not a one-off result."""
-    if not causal.supporting_experiment_ids:
-        return 0.0
-    count = len(causal.supporting_experiment_ids.split(","))
-    return round(min(100.0, count * 25.0), 1)
+    return round(min(100.0, _experiment_id_count(causal.supporting_experiment_ids) * 25.0), 1)
 
 
 def _uncertainty(evidence_strength: float, causal_confidence: float) -> float:
@@ -213,9 +219,7 @@ def generate_strategies(db: Session, goal: models.Goal) -> list[models.Strategy]
         belief_confidence = belief.confidence_score if belief else 50.0
 
         evidence_strength = _evidence_strength(causal)
-        support_count = (
-            len(causal.supporting_experiment_ids.split(",")) if causal.supporting_experiment_ids else 0
-        )
+        support_count = _experiment_id_count(causal.supporting_experiment_ids)
         expected_impact = round((goal.priority + causal.confidence) / 2, 1)
         uncertainty = _uncertainty(evidence_strength, causal.confidence)
         confidence = _score_strategy(
@@ -311,8 +315,8 @@ def compare_strategies(db: Session, strategy_id_a: int, strategy_id_b: int) -> O
 
 
 def find_relevant_beliefs_for_goal(db: Session, goal: models.Goal, min_relevance: float = 10.0) -> list[models.Belief]:
-    """Every belief with nonzero relevance to THIS specific goal — used
-    by world_model.get_goal_graph()."""
+    """Beliefs with at least min_relevance relevance to THIS specific
+    goal — used by world_model.get_goal_graph()."""
     return [
         belief
         for belief in db.query(models.Belief).all()
@@ -323,8 +327,8 @@ def find_relevant_beliefs_for_goal(db: Session, goal: models.Goal, min_relevance
 def find_relevant_causal_knowledge_for_goal(
     db: Session, goal: models.Goal, min_relevance: float = 10.0
 ) -> list[models.CausalKnowledge]:
-    """Every causal fact with nonzero relevance to THIS specific goal —
-    used by world_model.get_goal_graph()."""
+    """Causal facts with at least min_relevance relevance to THIS
+    specific goal — used by world_model.get_goal_graph()."""
     return [
         causal
         for causal in db.query(models.CausalKnowledge).all()
