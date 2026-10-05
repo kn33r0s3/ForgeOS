@@ -45,9 +45,13 @@ def snapshot(db: Session) -> dict:
     """Return a truthful operator-facing snapshot, never a success claim."""
     raw_signals = _count(db, models.Signal)
     collected_signals = _count(db, models.Signal, models.Signal.collection_status == "collected")
-    observed_signals = _count(db, models.Signal, models.Signal.collection_status == "observed")
+    observed_signals = _count(db, models.Signal, models.Signal.collection_status != "collected")
     duplicate_signals = _count(db, models.Signal, models.Signal.is_duplicate_of.isnot(None))
-    verified_claims = _count(db, models.Claim) if hasattr(models, "Claim") else 0
+    verified_claims = (
+        _count(db, models.Claim, models.Claim.epistemic_state == "verified")
+        if hasattr(models, "Claim")
+        else 0
+    )
     human_validated = _count(db, models.Opportunity, models.Opportunity.status == "validated")
     real_experiments = _count(db, models.Experiment, models.Experiment.data_scope == "REAL")
     real_outcomes = _count(db, models.Outcome, models.Outcome.data_scope == "REAL")
@@ -93,7 +97,7 @@ def snapshot(db: Session) -> dict:
             "signal_sources": {source or "unknown": count for source, count in source_rows},
             "collection_status": {
                 "collected": collected_signals,
-                "observed": observed_signals,
+                "historical_or_observed": observed_signals,
             },
             "canonical_signals": canonical_signals,
             "evidence_with_provenance": evidence_with_provenance,
