@@ -9,6 +9,13 @@ export interface Experiment {
   description: string;
   log: Array<{ date: string; entry: string }>;
   toolLink?: { to: string; label: string };
+  /** The five questions. Constraint stays "hypothesis" until evidence supports it. */
+  reality: string;
+  possibility: string;
+  constraint: string;
+  constraintState: "hypothesis" | "supported";
+  intervention: string;
+  outcome: string;
 }
 
 /**
@@ -61,7 +68,39 @@ export function ExperimentCard({ experiment }: { experiment: Experiment }) {
           </Link>
         </Button>
       )}
+      <dl className="mt-4 space-y-3 border-t border-line pt-4">
+        <FiveField label="Reality" value={experiment.reality} />
+        <FiveField label="Possibility" value={experiment.possibility} />
+        <div>
+          <dt className="flex items-center gap-2 text-micro font-extrabold uppercase tracking-[0.12em] text-accent">
+            Constraint
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[10px] font-bold normal-case tracking-normal ${
+                experiment.constraintState === "supported"
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                  : "border-amber-500/30 bg-amber-500/10 text-amber-200"
+              }`}
+            >
+              {experiment.constraintState === "supported" ? "Supported" : "Hypothesis"}
+            </span>
+          </dt>
+          <dd className="mt-1 text-sm leading-6 text-muted">{experiment.constraint}</dd>
+        </div>
+        <FiveField label="Intervention" value={experiment.intervention} />
+        <FiveField label="Outcome" value={experiment.outcome} />
+      </dl>
     </article>
+  );
+}
+
+function FiveField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">
+        {label}
+      </dt>
+      <dd className="mt-1 text-sm leading-6 text-muted">{value}</dd>
+    </div>
   );
 }
 
@@ -75,5 +114,15 @@ export const EXPERIMENTS: Experiment[] = [
       "Can faster replies recover real sales for one seller? One seller, one week. No seller has agreed yet — it remains proposed.",
     log: [],
     toolLink: { to: "/prototype/inbox", label: "Try the free inbox tool" },
+    reality:
+      "Social sellers in Kathmandu receive inquiries across Viber, WhatsApp, and Facebook, but replies are often slow because the seller is busy with fulfillment. No seller has agreed to participate yet.",
+    possibility:
+      "If inquiries were answered within minutes, some currently-lost sales might be recovered — measurable within one week.",
+    constraint:
+      "The binding constraint is response presence, not demand: sellers already get inquiries but lose them to slow replies.",
+    constraintState: "hypothesis",
+    intervention:
+      "One seller, one week: a human answers inquiries fast; recovered versus lost sales are counted; Hami takes a cut of recovered sales.",
+    outcome: "not started",
   },
 ];

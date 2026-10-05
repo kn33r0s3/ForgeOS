@@ -23,7 +23,6 @@ const CURRENT_LINKS = [
 const LEGAL_LINKS = [
   { label: "Terms of Service", to: "/terms" },
   { label: "Privacy information", to: "/privacy" },
-  { label: "Sign in / Sign up", to: "/login" },
 ] as const;
 
 const LINK =

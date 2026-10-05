@@ -47,8 +47,30 @@ const RULES = [
   },
 ] as const;
 
-const CLIMB = [
+const FIVE_QUESTIONS = [
   {
+    q: "1. Reality",
+    plain: "What actually exists, or what actually happened? Not what we hope — what we can show.",
+  },
+  {
+    q: "2. Possibility",
+    plain: "What could become true here? What valuable outcome is within reach?",
+  },
+  {
+    q: "3. Constraint",
+    plain: "Why isn't it true yet? Treated as a hypothesis until evidence supports it — never asserted as fact.",
+  },
+  {
+    q: "4. Intervention",
+    plain: "What can legitimately be done to move reality toward it — with the right authorization?",
+  },
+  {
+    q: "5. Outcome",
+    plain: "Did reality actually change? If not, the loop starts again with better questions.",
+  },
+] as const;
+
+const CLIMB = [  {
     n: 1,
     title: "One seller, one week",
     body: "Experiment 1: can faster replies recover real sales for one seller? No seller has agreed yet — it remains proposed.",
@@ -80,6 +102,26 @@ function AboutPage() {
             Test or act → New reality. The loop never stops. Each turn produces new
             understanding or new questions.
           </p>
+        </section>
+
+        {/* Five questions */}
+        <section className="border-b border-line py-10">
+          <h2 className="font-display text-3xl font-extrabold tracking-tight text-ink">
+            Five questions
+          </h2>
+          <p className="mt-3 max-w-2xl text-base leading-7 text-muted">
+            Before Hami does anything serious, it tries to answer these — in
+            plain words, honestly, with evidence where it exists and honesty
+            where it doesn't.
+          </p>
+          <ol className="mt-6 space-y-4">
+            {FIVE_QUESTIONS.map((q) => (
+              <li key={q.q} className="card p-5">
+                <h3 className="font-display font-bold text-ink">{q.q}</h3>
+                <p className="mt-1 text-sm leading-6 text-muted">{q.plain}</p>
+              </li>
+            ))}
+          </ol>
         </section>
 
         {/* Six primitives */}
