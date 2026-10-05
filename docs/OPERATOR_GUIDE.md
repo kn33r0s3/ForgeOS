@@ -16,7 +16,7 @@ loudly instead of creating a second database.
 ### Docker Compose (preferred deployment baseline)
 
 ```sh
-cp backend/.env.example backend/.env   # optional settings; do not put DATABASE_URL here
+# backend/.env is not committed; create it for optional settings only — do not put DATABASE_URL here
 docker compose build
 docker compose --profile verify run --rm backend-tests
 docker compose build frontend

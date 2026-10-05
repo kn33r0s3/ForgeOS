@@ -52,6 +52,10 @@ if [ -z "$down" ]; then
     echo 0 > "$STATE_FILE"
   fi
   silent "both production domains healthy" '{"domains":["haminp.vercel.app","forge-os-ebon.vercel.app"]}'
+  # Healthy poll is done: stop here. Without this exit, execution fell
+  # through to the failure counter below and woke the operator after two
+  # *healthy* polls — a false "production health check failing" alert.
+  exit 0
 fi
 
 failures=$((failures + 1))
