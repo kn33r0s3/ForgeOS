@@ -413,6 +413,9 @@ class Belief(Base):
     need_pain = Column(Text, nullable=True)  # the stated need or pain
     give_up = Column(Text, nullable=True)  # what the actor would give up: money/time/behavior
     relabel_reason = Column(Text, nullable=True)  # why the label changed; archive trail, never deleted
+    # Perspective (2026-10-05): whose side this hypothesis speaks from.
+    # All hypotheses recorded before 2026-10-05 are SELLER-side.
+    perspective = Column(String, nullable=False, default="SELLER", index=True)
 
     pattern = relationship("Pattern", back_populates="beliefs")
 
@@ -2269,3 +2272,19 @@ class OutreachConfig(Base):
     id = Column(Integer, primary_key=True)
     daily_cap = Column(Integer, nullable=False, default=5)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class ResidueFlag(Base):
+    """One observation that no current hypothesis speaks for."""
+
+    __tablename__ = "residue_flags"
+
+    id = Column(Integer, primary_key=True, index=True)
+    evidence_id = Column(Integer, ForeignKey("evidence.id"), nullable=False, index=True)
+    observation_perspective = Column(String, nullable=False)  # BUYER | CIRCLE | SELLER
+    hypothesis_perspectives = Column(Text, nullable=False, default="[]")  # JSON list
+    flagged_at = Column(DateTime, default=utcnow)
+    reviewed = Column(Boolean, nullable=False, default=False)
+    review_notes = Column(Text, nullable=True)
+
+    evidence = relationship("Evidence", foreign_keys=[evidence_id])

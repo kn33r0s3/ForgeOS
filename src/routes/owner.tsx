@@ -4,6 +4,7 @@ import { Container } from "@/components/layout/container";
 import { ForgeConsoleWidgets } from "@/components/forge/forge-console";
 import { OperatingV4 } from "@/components/owner/operating-v4";
 import { ScoutQueue } from "@/components/owner/scout-queue";
+import { PurchaseJourney } from "@/components/owner/purchase-journey";
 
 type LeadStage = "REQUESTED" | "REPLIED" | "BOOKED" | "COMPLETED";
 type Readiness = {
@@ -513,6 +514,19 @@ function OwnerConsolePage() {
                 </p>
                 <div className="mt-4">
                   <ScoutQueue apiKey={key} />
+                </div>
+              </section>
+
+              <section className="mt-10 border-t-2 border-line pt-5" aria-label="Buyer-side purchase journeys">
+                <h2 className="text-xl font-extrabold">Buyer-side purchase journeys</h2>
+                <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
+                  Where is the sale decided? Record first-person purchase accounts —
+                  consent-gated, your own words only, never anyone else's private messages.
+                </p>
+                <div className="mt-4">
+                  <PurchaseJourney apiKey={key} />
+                </div>
+              </section>
                 </div>
               </section>
             </div>

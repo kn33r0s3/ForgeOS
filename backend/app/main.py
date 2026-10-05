@@ -23,7 +23,7 @@ from sqlalchemy import text
 
 from app.config import settings
 from app.database import init_db, SessionLocal
-from app.api import signals, analyze, opportunities, observer, forge, world, workers, intelligence, rare_signals, products, lessons, orchestrator, earn, payments, repair_shop, evidence_triage, public, scheduled, substrate, forge_bot, operating_v4, scout
+from app.api import signals, analyze, opportunities, observer, forge, world, workers, intelligence, rare_signals, products, lessons, orchestrator, earn, payments, repair_shop, evidence_triage, public, scheduled, substrate, forge_bot, operating_v4, scout, residue
 from app.security import api_key_middleware, require_owner_api_key
 from app.request_limits import PublicWriteSizeLimitMiddleware
 
@@ -201,6 +201,7 @@ for _router in (
     observer.router,
     operating_v4.router,
     scout.router,
+    residue.router,
     forge.router,
     substrate.router,
     world.router,
