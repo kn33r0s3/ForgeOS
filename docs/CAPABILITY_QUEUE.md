@@ -1326,3 +1326,11 @@ realized revenue.
 - **Remaining boundary:** reaching the final booking form requires selecting a slot. Under the current no-production-writes restriction, that step was not taken because a temporary slot hold could not be ruled out. Final-form fields and any field-level privacy conflict therefore remain **UNKNOWN**.
 - **Verification:** a read-only GET/browser load showed “Hami Consultation,” 30 minutes, Cal Video, and `Asia/Kathmandu` as the displayed time zone with a timezone selector. No slot was selected by this audit; no form data was entered and no booking was submitted.
 - **Next removable dependency:** confirm whether a final-form dry run that may create a temporary hold is permitted; until then do not claim field-level privacy compatibility. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
+### 2026-10-05 — Align /analyze plan-status check to the planner's vocabulary
+
+- **Owner action still required:** none — this was an internal defect, not an owner-facing capability.
+- **Action removed:** the dead `research_complete` plan-status branch in both `/analyze` handlers no longer misreports a fully satisfied research plan as "research_needs_evidence" / phase "awaiting_evidence".
+- **Remaining boundary:** the planner's terminal vocabulary is `research_completed`; the API-level status remains `research_complete` and is now reachable. `experiment_service.build_experiment_from_analyze`'s grounded-experiment gate (all requirements `satisfied`) is unblocked; its all-requirements-satisfied condition is unchanged and still test-enforced.
+- **Verification:** planner writes `research_completed` (research_planner.py:2165, pinned by test_multi_source_orchestration.py:1262 and the negative pin in test_grounded_research_loop.py); both handlers now compare against it (analyze.py:155,305); `py_compile` clean; pushed 7c1d48d; `/api/health` 200 post-push. Full backend suite not re-run (pytest unavailable in this env); no test asserts the removed dead behavior (grep-verified).
+- **Next removable dependency:** none; the loop's remaining unstudied areas are ~15 backend services files + schemas rest + data/ + docs rest.
