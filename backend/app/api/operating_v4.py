@@ -60,6 +60,14 @@ class FrontierIn(BaseModel):
     verdict: Optional[str] = None
 
 
+class AssumptionStatusIn(BaseModel):
+    status: str
+
+
+class EvidenceLinkIn(BaseModel):
+    evidence_ref: str
+
+
 @router.get("/bets")
 def list_bets(request: Request, db: Session = Depends(get_db)):
     _owner(request)
@@ -220,3 +228,51 @@ def list_gates(request: Request, db: Session = Depends(get_db)):
         }
         for g in db.query(models.Gate).order_by(models.Gate.day.asc()).all()
     ]
+
+
+@router.get("/assumptions")
+def list_assumptions(request: Request, db: Session = Depends(get_db)):
+    _owner(request)
+    import json
+
+    return [
+        {"id": a.id, **json.loads(a.attributes or "{}")}
+        for a in operating_v4.rank_assumptions(db)
+    ]
+
+
+@router.post("/assumptions/seed")
+def seed_assumptions(request: Request, db: Session = Depends(get_db)):
+    _owner(request)
+    created = operating_v4.seed_assumptions(db)
+    return {"seeded": len(created)}
+
+
+@router.post("/assumptions/{assumption_id}/status")
+def set_assumption_status(
+    assumption_id: int, payload: AssumptionStatusIn,
+    request: Request, db: Session = Depends(get_db),
+):
+    _owner(request)
+    import json
+
+    try:
+        a = operating_v4.set_assumption_status(db, assumption_id, payload.status)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return {"id": a.id, **json.loads(a.attributes or "{}")}
+
+
+@router.post("/assumptions/{assumption_id}/evidence-links")
+def add_evidence_link(
+    assumption_id: int, payload: EvidenceLinkIn,
+    request: Request, db: Session = Depends(get_db),
+):
+    _owner(request)
+    import json
+
+    try:
+        a = operating_v4.add_evidence_link(db, assumption_id, payload.evidence_ref)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return {"id": a.id, **json.loads(a.attributes or "{}")}

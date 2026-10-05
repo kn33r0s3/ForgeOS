@@ -122,6 +122,186 @@ def decide_bet(db: Session, bet_id: int, decision: str, notes: Optional[str] = N
 
 
 # ---------------------------------------------------------------------
+# Assumptions as projections over SubstrateEntity
+# ---------------------------------------------------------------------
+# Recovered from v2 5a3a484 (operating_model.py). v2's dedicated Assumption
+# table is obsolete and NOT restored. An assumption is a SubstrateEntity with
+# entity_type="assumption" — the same projection pattern as Bet and Probe.
+# Status values (untested|supported|contradicted) are the projection's own
+# decision field, not a new primitive. Supported requires linked evidence;
+# links are references, never proof by themselves (proof stays governed by
+# set_proof_level()).
+
+ASSUMPTION_ENTITY_TYPE = "assumption"
+ASSUMPTION_STATUSES = ("untested", "supported", "contradicted")
+
+# The six load-bearing assumptions, preserved verbatim from v2. No later
+# canonical Hami source corrects any statement (checked docs/ORIGIN.md,
+# docs/OPERATING_MODEL.md 2026-10-05).
+SEED_ASSUMPTIONS = [
+    {
+        "statement": "Slow replies cost online sellers real sales.",
+        "deal_killer": True,
+        "cost_to_test": "Rs 0",
+        "cheapest_test": "Reply-visibility sampling: count unanswered public inquiry comments across 10 seller pages.",
+        "milestone": "Rs 1",
+        "source_note": "Doctrine v1.0 (ORIGIN.md); slow-reply constraint from discovery rounds D1-D10.",
+    },
+    {
+        "statement": "Sellers will pay for sales recovered from slow replies.",
+        "deal_killer": True,
+        "cost_to_test": "1 week of human time",
+        "cheapest_test": "First Rupee Sprint: one seller, one week, human answers fast; ask for a cut of recovered sales.",
+        "milestone": "Rs 1",
+        "source_note": "Revenue milestone ladder (MEMORY.md); FIRST_RUPEE_SPRINT.md.",
+    },
+    {
+        "statement": "Faster replies recover lost sales (the intervention works).",
+        "deal_killer": True,
+        "cost_to_test": "1 week of human time",
+        "cheapest_test": "Experiment 1: one seller, one week; count recovered vs lost with fast replies.",
+        "milestone": "Rs 1",
+        "source_note": "Experiment 1 five-field template; intervention_gate single-active rule.",
+    },
+    {
+        "statement": "Sales may be decided in private buyer-side talk that sellers never see.",
+        "deal_killer": False,
+        "cost_to_test": "Rs 0",
+        "cheapest_test": "Collect 10 buyer-side purchase journey accounts (consent-gated); compare decision points to seller-visible signals.",
+        "milestone": "Rs 10,000",
+        "source_note": "Buyer-perspective work 2026-10-05; 'Where is the sale decided?' experiment.",
+    },
+    {
+        "statement": "Response capacity and verification are the open gap (ledgers and payments are taken).",
+        "deal_killer": False,
+        "cost_to_test": "Rs 0 (research)",
+        "cheapest_test": "Map which seller tools already cover response vs ledger vs payments; confirm no incumbent owns fast-reply recovery.",
+        "milestone": "Rs 10,000",
+        "source_note": "EXPANSION_STRATEGY.md 2026-10-04: ledgers (Karobar) and payments (Fonepay/eSewa) taken.",
+    },
+    {
+        "statement": "One seller, one week is enough to prove or kill the value thesis.",
+        "deal_killer": False,
+        "cost_to_test": "1 week of human time",
+        "cheapest_test": "Run the First Rupee Sprint exactly as specified; if no sales recovered, the thesis dies honestly.",
+        "milestone": "Rs 1",
+        "source_note": "SPRINT_BRIEF.md 2026-10-04; 'if no sales are recovered the thesis dies honestly'.",
+    },
+]
+
+
+def _assumption_attributes(a: models.SubstrateEntity) -> dict:
+    return json.loads(a.attributes or "{}")
+
+
+def list_assumptions(db: Session) -> list:
+    return (
+        db.query(models.SubstrateEntity)
+        .filter(models.SubstrateEntity.entity_type == ASSUMPTION_ENTITY_TYPE)
+        .order_by(models.SubstrateEntity.id.asc())
+        .all()
+    )
+
+
+def seed_assumptions(db: Session) -> list:
+    """Seed the six assumptions. Idempotent: skips statements already present."""
+    from app.services import world_graph  # local import to avoid cycles
+
+    existing_statements = {
+        _assumption_attributes(a).get("statement") for a in list_assumptions(db)
+    }
+    created = []
+    for spec in SEED_ASSUMPTIONS:
+        if spec["statement"] in existing_statements:
+            continue
+        a = world_graph.create_entity(
+            db,
+            entity_type=ASSUMPTION_ENTITY_TYPE,
+            display_name=f"Assumption: {spec['statement'][:60]}",
+            attributes={
+                "statement": spec["statement"],
+                "status": "untested",
+                "deal_killer": spec["deal_killer"],
+                "cost_to_test": spec["cost_to_test"],
+                "cheapest_test": spec["cheapest_test"],
+                "milestone": spec["milestone"],
+                "source_note": spec["source_note"],
+                "evidence_links": [],
+            },
+            created_by="owner",
+        )
+        created.append(a)
+    db.commit()
+    return created
+
+
+def rank_assumptions(db: Session) -> list:
+    """Deal-killer first, then cheapest to test. Cost ordering is heuristic:
+    Rs 0 < research < 1 week. Deterministic tie-break on entity id."""
+
+    def cost_rank(attrs: dict) -> int:
+        cost = (attrs.get("cost_to_test") or "").lower()
+        if "rs 0" in cost:
+            return 0
+        if "research" in cost:
+            return 1
+        return 2
+
+    assumptions = list_assumptions(db)
+    assumptions.sort(
+        key=lambda a: (
+            not _assumption_attributes(a).get("deal_killer"),
+            cost_rank(_assumption_attributes(a)),
+            a.id,
+        )
+    )
+    return assumptions
+
+
+def _get_assumption(db: Session, assumption_id: int) -> models.SubstrateEntity:
+    a = db.get(models.SubstrateEntity, assumption_id)
+    if not a or a.entity_type != ASSUMPTION_ENTITY_TYPE:
+        raise ValueError("Assumption not found.")
+    return a
+
+
+def set_assumption_status(
+    db: Session, assumption_id: int, status: str
+) -> models.SubstrateEntity:
+    if status not in ASSUMPTION_STATUSES:
+        raise ValueError(f"status must be one of {ASSUMPTION_STATUSES}")
+    a = _get_assumption(db, assumption_id)
+    attrs = _assumption_attributes(a)
+    if status == "supported" and not attrs.get("evidence_links"):
+        raise ValueError(
+            "Cannot mark 'supported' without linked evidence. "
+            "Attach evidence references first."
+        )
+    attrs["status"] = status
+    a.attributes = json.dumps(attrs)
+    db.commit()
+    db.refresh(a)
+    return a
+
+
+def add_evidence_link(
+    db: Session, assumption_id: int, evidence_ref: str
+) -> models.SubstrateEntity:
+    """Attach an evidence reference to an assumption. Idempotent.
+    The link is a reference only — it does not set any proof level."""
+    a = _get_assumption(db, assumption_id)
+    attrs = _assumption_attributes(a)
+    links = attrs.get("evidence_links") or []
+    if evidence_ref not in links:
+        links.append(evidence_ref)
+    attrs["evidence_links"] = links
+    a.attributes = json.dumps(attrs)
+    db.commit()
+    db.refresh(a)
+    return a
+
+
+# ---------------------------------------------------------------------
 # Probes as projections over SubstrateEntity
 # ---------------------------------------------------------------------
 # Recovered from v2 5a3a484 (operating_model.py). v2's dedicated Probe and
@@ -134,7 +314,6 @@ def decide_bet(db: Session, bet_id: int, decision: str, notes: Optional[str] = N
 # the probe actually happened. Probes are not a seventh primitive.
 
 PROBE_ENTITY_TYPE = "probe"
-ASSUMPTION_ENTITY_TYPE = "assumption"
 PROBE_TYPES = ("observation", "conversation", "intervention")
 PROBE_DECISIONS = ("AMPLIFY", "DAMPEN", "KILL")
 MAX_ACTIVE_INTERVENTIONS = 1

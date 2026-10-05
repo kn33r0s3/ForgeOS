@@ -1,5 +1,7 @@
 """Operating Model v4: substrate bets, provenance, dormancy, verifier, frontier."""
 
+import json
+
 import pytest
 
 from app import models
@@ -262,17 +264,9 @@ def test_no_duplicate_gate_model(db):
 
 
 def _assumption(db):
-    a = models.SubstrateEntity(
-        entity_type="assumption",
-        display_name="Slow replies cost sellers sales",
-        attributes="{}",
-        identity_state="candidate",
-        created_by="owner",
-    )
-    db.add(a)
-    db.commit()
-    db.refresh(a)
-    return a
+    created = operating_v4.seed_assumptions(db)
+    assert len(created) == 6
+    return created[0]
 
 
 def _probe(db, assumption_id, probe_type="observation"):
@@ -390,3 +384,109 @@ def test_probe_creation_uses_canonical_substrate_write(db):
     assert evt is not None
     payload = evt.payload if isinstance(evt.payload, dict) else {}
     assert payload.get("entity_type") == "probe" or "probe" in str(evt.payload)
+
+
+def test_seed_assumptions_six(db):
+    created = operating_v4.seed_assumptions(db)
+    assert len(created) == 6
+    for a in created:
+        assert isinstance(a, models.SubstrateEntity)
+        assert a.entity_type == "assumption"
+        assert a.identity_state == "candidate"
+        attrs = json.loads(a.attributes)
+        assert attrs["status"] == "untested"
+        assert attrs["evidence_links"] == []
+        for field in (
+            "statement", "deal_killer", "cost_to_test", "cheapest_test",
+            "milestone", "source_note",
+        ):
+            assert field in attrs, f"missing {field}"
+
+
+def test_seed_assumptions_idempotent(db):
+    first = operating_v4.seed_assumptions(db)
+    assert len(first) == 6
+    second = operating_v4.seed_assumptions(db)
+    assert second == []
+    assert len(operating_v4.list_assumptions(db)) == 6
+
+
+def test_seed_assumptions_emits_events(db):
+    operating_v4.seed_assumptions(db)
+    count = (
+        db.query(models.WorldEvent)
+        .filter(models.WorldEvent.event_type == "entity_created")
+        .count()
+    )
+    assert count >= 6
+
+
+def test_no_assumption_model(db):
+    assert not hasattr(models, "Assumption")
+    assert hasattr(operating_v4, "seed_assumptions")
+    assert hasattr(operating_v4, "rank_assumptions")
+    assert hasattr(operating_v4, "set_assumption_status")
+    assert hasattr(operating_v4, "add_evidence_link")
+
+
+def test_rank_assumptions_deal_killer_first(db):
+    operating_v4.seed_assumptions(db)
+    ranked = operating_v4.rank_assumptions(db)
+    assert len(ranked) == 6
+    attrs = [json.loads(a.attributes) for a in ranked]
+    # First three are deal-killers.
+    assert all(a["deal_killer"] for a in attrs[:3])
+    assert not any(a["deal_killer"] for a in attrs[3:])
+    # Within deal-killers: Rs 0 cheapest first.
+    assert attrs[0]["cost_to_test"] == "Rs 0"
+    # Deterministic: same order on repeat.
+    reranked = operating_v4.rank_assumptions(db)
+    assert [a.id for a in ranked] == [a.id for a in reranked]
+
+
+def test_set_assumption_status_rejects_bad_id(db):
+    operating_v4.seed_assumptions(db)
+    with pytest.raises(ValueError, match="not found"):
+        operating_v4.set_assumption_status(db, 999999, "supported")
+
+
+def test_set_assumption_status_rejects_bad_value(db):
+    a = operating_v4.seed_assumptions(db)[0]
+    with pytest.raises(ValueError, match="must be one of"):
+        operating_v4.set_assumption_status(db, a.id, "proven")
+
+
+def test_supported_requires_evidence_links(db):
+    a = operating_v4.seed_assumptions(db)[0]
+    with pytest.raises(ValueError, match="without linked evidence"):
+        operating_v4.set_assumption_status(db, a.id, "supported")
+    operating_v4.add_evidence_link(db, a.id, "evidence:42")
+    updated = operating_v4.set_assumption_status(db, a.id, "supported")
+    assert json.loads(updated.attributes)["status"] == "supported"
+
+
+def test_contradicted_and_untested(db):
+    a = operating_v4.seed_assumptions(db)[0]
+    updated = operating_v4.set_assumption_status(db, a.id, "contradicted")
+    assert json.loads(updated.attributes)["status"] == "contradicted"
+    updated = operating_v4.set_assumption_status(db, a.id, "untested")
+    assert json.loads(updated.attributes)["status"] == "untested"
+
+
+def test_add_evidence_link_idempotent(db):
+    a = operating_v4.seed_assumptions(db)[0]
+    operating_v4.add_evidence_link(db, a.id, "evidence:42")
+    operating_v4.add_evidence_link(db, a.id, "evidence:42")
+    operating_v4.add_evidence_link(db, a.id, "evidence:43")
+    attrs = json.loads(db.get(models.SubstrateEntity, a.id).attributes)
+    assert attrs["evidence_links"] == ["evidence:42", "evidence:43"]
+    with pytest.raises(ValueError, match="not found"):
+        operating_v4.add_evidence_link(db, 999999, "evidence:42")
+
+
+def test_evidence_link_distinct_from_proof_level(db):
+    # Linking evidence does not change any proof level anywhere.
+    a = operating_v4.seed_assumptions(db)[0]
+    operating_v4.add_evidence_link(db, a.id, "evidence:42")
+    operating_v4.set_assumption_status(db, a.id, "supported")
+    assert db.query(models.Evidence).count() == 0

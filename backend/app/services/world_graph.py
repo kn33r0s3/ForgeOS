@@ -69,9 +69,43 @@ def _schema_for_canonical_ref() -> dict[str, Any]:
     }
 
 
+def _schema_for_assumption() -> dict[str, Any]:
+    """Attribute schema for the assumption projection (entity_type=assumption).
+    Recovered from v2's Assumption fields; enforced by the substrate write
+    contract on every assumption write."""
+    return {
+        "type": "object",
+        "properties": {
+            "statement": {"type": "string", "minLength": 1},
+            "status": {
+                "type": "string",
+                "enum": ["untested", "supported", "contradicted"],
+            },
+            "deal_killer": {"type": "boolean"},
+            "cost_to_test": {"type": "string"},
+            "cheapest_test": {"type": "string"},
+            "milestone": {"type": "string"},
+            "source_note": {"type": "string"},
+            "evidence_links": {"type": "array", "items": {"type": "string"}},
+        },
+        "required": [
+            "statement",
+            "status",
+            "deal_killer",
+            "cost_to_test",
+            "cheapest_test",
+            "milestone",
+            "source_note",
+            "evidence_links",
+        ],
+        "additionalProperties": False,
+    }
+
+
 def seed_core_types(db: Session) -> int:
     """Install the stable substrate vocabulary as registry rows, idempotently."""
     canonical_schema = json.dumps(_schema_for_canonical_ref(), sort_keys=True, separators=(",", ":"))
+    assumption_schema = json.dumps(_schema_for_assumption(), sort_keys=True, separators=(",", ":"))
     open_schema = '{"type":"object"}'
     types = {
         "entity_type": {
@@ -135,12 +169,17 @@ def seed_core_types(db: Session) -> int:
                             "reference": "forge-system-seed-v1",
                         }], "status_evidence")
                     continue
-                schema_json = canonical_schema if category == "entity_type" and name in {
+                if category == "entity_type" and name == "assumption":
+                    schema_json = assumption_schema
+                elif category == "entity_type" and name in {
                     "signal", "pattern", "belief", "claim", "research_question", "opportunity",
                     "provider", "service_listing", "domain_record", "outcome", "customer",
                     "relation", "action", "learning_event", "booking_request", "decision",
                     "experiment", "scenario_prediction", "evidence_record", "product", "repair_work_item",
-                } else open_schema
+                }:
+                    schema_json = canonical_schema
+                else:
+                    schema_json = open_schema
                 db.add(models.TypeRegistry(
                     category=category,
                     type_name=name,
