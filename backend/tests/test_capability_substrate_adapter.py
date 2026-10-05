@@ -49,8 +49,8 @@ def test_runtime_tools_project_as_proposed_and_repeat_without_execution(db):
     capability = db.query(models.ForgeCapability).filter_by(
         name="runtime-tool:evidence-reader"
     ).one()
-    assert first == {"created": 1, "refreshed": 0, "unchanged": 0, "events_created": 1}
-    assert second == {"created": 0, "refreshed": 0, "unchanged": 1, "events_created": 0}
+    assert first == {"created": 1, "refreshed": 0, "unchanged": 0, "events_created": 1, "invalid": 0}
+    assert second == {"created": 0, "refreshed": 0, "unchanged": 1, "events_created": 0, "invalid": 0}
     assert capability.capability_type == "tool"
     assert capability.status == "proposed"
     assert capability.spec_ref == "tool_registry:evidence-reader"
@@ -87,7 +87,7 @@ def test_metadata_refresh_preserves_canonical_capability_lifecycle(db):
     result = adapter.sync_runtime_tool_capabilities(db, changed_registry)
 
     db.refresh(capability)
-    assert result == {"created": 0, "refreshed": 1, "unchanged": 0, "events_created": 1}
+    assert result == {"created": 0, "refreshed": 1, "unchanged": 0, "events_created": 1, "invalid": 0}
     assert capability.status == "active"
     assert capability.test_ref == "backend/tests/test_capability_substrate_adapter.py"
     assert json.loads(capability.attributes)["reliability"] == 0.7
@@ -116,7 +116,7 @@ def test_runtime_capability_projection_survives_restart(tmp_path):
     result = adapter.sync_runtime_tool_capabilities(restarted, registry)
     restarted.commit()
 
-    assert result == {"created": 0, "refreshed": 0, "unchanged": 1, "events_created": 0}
+    assert result == {"created": 0, "refreshed": 0, "unchanged": 1, "events_created": 0, "invalid": 0}
     capability = restarted.query(models.ForgeCapability).one()
     assert capability.name == "runtime-tool:evidence-reader"
     assert capability.status == "proposed"

@@ -16,6 +16,7 @@ const RECORD_LINKS = [
 
 const CURRENT_LINKS = [
   { label: "Experiment 1 (not started)", to: "/needs" },
+  { label: "Action state", to: "/actions" },
   { label: "Inbox prototype (TEST only)", to: "/prototype/inbox" },
 ] as const;
 

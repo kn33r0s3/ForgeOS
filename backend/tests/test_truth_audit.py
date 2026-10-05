@@ -29,7 +29,15 @@ def test_snapshot_labels_raw_and_real_metrics_separately(db):
     assert labels["actual_revenue"] == 0.0
     assert metrics["interpretation"]["evidence_is_not_verified_truth"] is True
     assert metrics["provenance"]["canonical_signals"] == 2
-    assert metrics["signal_quality"]["canonical_average"] is not None
+    # NULL quality_score means "not yet assessed" (models.py), not zero
+    # quality: with nothing assessed the honest average is None, not 0.0.
+    assert metrics["signal_quality"]["canonical_average"] is None
+
+    # Once assessed, the average covers assessed canonical signals only.
+    for signal in db.query(models.Signal).filter(models.Signal.is_duplicate_of.is_(None)):
+        signal.quality_score = 80.0
+    db.commit()
+    assert truth_audit.snapshot(db)["signal_quality"]["canonical_average"] == 80.0
     assert metrics["operations"]["running_cycles"] == 0
     assert metrics["operations"]["pending_actions"] == 0
 

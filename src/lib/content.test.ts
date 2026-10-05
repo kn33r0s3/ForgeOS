@@ -341,16 +341,16 @@ describe("Hami public root", () => {
     assert.doesNotMatch(home, /to="\/prototype\/inbox"|Try the free inbox tool/);
     assert.match(
       home,
-      /<Identity \/>[\s\S]*<FourLines \/>[\s\S]*<SystemScope \/>[\s\S]*<RecordedObservations \/>[\s\S]*<CurrentActivity \/>[\s\S]*<HonestStatus \/>/,
+      /<Hero \/>[\s\S]*<FindingsPreview \/>[\s\S]*<UnknownsPreview \/>[\s\S]*<ExperimentsPreview \/>[\s\S]*<AboutLink \/>[\s\S]*<HomeFooter \/>/,
     );
     assert.match(home, /Honest status/i);
     assert.match(home, /pre-revenue/i);
     assert.match(home.replace(/\s+/g, " "), /no participants or results to report/);
     // The wedge is never the headline.
     const h1 = home.replace(/\s+/g, " ").match(/<h1[^>]*>(.*?)<\/h1>/)?.[1] ?? "";
-    assert.match(h1, /Hami is a living system/);
+    assert.match(h1, /Discover what matters/);
     assert.doesNotMatch(h1, /slow reply|inbox|seller|business|customer support|sale/i);
-    const primarySystem = home.slice(0, home.indexOf("function CurrentActivity"));
+    const primarySystem = home.slice(0, home.indexOf("function FindingsPreview"));
     assert.doesNotMatch(
       primarySystem,
       /inbox|customer support|lead[- ]generation|for online sellers|for businesses|commerce platform|seller reply service/i,
@@ -366,26 +366,18 @@ describe("Hami public root", () => {
     assert.doesNotMatch(home, /function CurrentPaths/);
     assert.doesNotMatch(home, /to="\/group\/businesses"/);
     assert.match(home, /to="\/discoveries"/);
-    const flow = home.slice(home.indexOf("const SYSTEM_FLOW"), home.indexOf("function HomePage"));
-    const flowStages = ["SYSTEM", "WORLD", "OPPORTUNITIES", "CAPABILITIES", "ACTION", "OUTCOMES"];
-    let previousFlowPosition = -1;
-    for (const stage of flowStages) {
-      const stagePosition = flow.indexOf(`stage: "${stage}"`, previousFlowPosition + 1);
-      assert.ok(stagePosition > previousFlowPosition, `${stage} must appear in system-flow order`);
-      previousFlowPosition = stagePosition;
-    }
-    for (const destination of [
-      "/about",
-      "/discoveries",
-      "/opportunities",
-      "/providers",
-      "/actions",
-      "/what-we-learned",
+    // The homepage maps existing public views without implying they have all run:
+    // each preview links to its page and carries an honest empty state.
+    for (const empty of [
+      "Nothing recorded yet.",
+      "No unknowns recorded yet.",
+      "No experiments yet.",
     ]) {
-      assert.ok(flow.includes(`to: "${destination}"`), `system flow should link to ${destination}`);
+      assert.ok(home.includes(empty), `homepage missing honest empty state: ${empty}`);
     }
-    assert.match(home, /An open map, not a fixed funnel/);
-    assert.match(home, /every stage has happened/);
+    for (const label of ["See all findings", "See all unknowns", "See all experiments"]) {
+      assert.ok(home.includes(label), `homepage missing preview link: ${label}`);
+    }
     assert.doesNotMatch(home, /to="\/operations"/);
     // Header: no context form, no closed-intake links, no Sign in.
     assert.doesNotMatch(header, /Sign in/);
@@ -393,7 +385,7 @@ describe("Hami public root", () => {
     assert.doesNotMatch(header, /to="\/system"/);
     assert.doesNotMatch(header, /Share a need/);
     const system = readFileSync(join(root, "src/routes/system.tsx"), "utf8");
-    assert.match(system, /Back to System overview/);
+    assert.match(system, /Back to home/);
     assert.match(system, /to="\/"/);
     // Footer: new link groups, old ones unlinked.
     assert.doesNotMatch(footer, /Edit personal context/);

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { FlaskConical } from "lucide-react";
 import { Container } from "@/components/layout/container";
 import { UnknownCard } from "@/components/unknowns/unknown-card";
 import { PageHeader } from "@/components/layout/page-header";

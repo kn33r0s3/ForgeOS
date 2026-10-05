@@ -238,7 +238,11 @@ def test_need_assessment_api_uses_existing_opportunity_surface(db):
     understanding = _need(db)
     _search(db, understanding)
     from app import security
-    security.settings.FORGE_API_KEY = ""
+    # This endpoint is owner-guarded: present a real test key. The conftest
+    # clears FORGE_API_KEY so tests run keyless by default; restore it after
+    # so other tests keep the keyless default.
+    previous_key = security.settings.FORGE_API_KEY
+    security.settings.FORGE_API_KEY = "test-owner-key"
 
     def override_db():
         yield db
@@ -254,13 +258,13 @@ def test_need_assessment_api_uses_existing_opportunity_surface(db):
                 "experiment_tests_willingness_to_pay": True,
             },
             # POST /needs/{id}/economic-validation is owner-guarded (it
-            # writes Opportunity + world-graph rows); the module key is
-            # set at import below the imports above.
+            # writes Opportunity + world-graph rows).
             headers={"X-API-Key": security.settings.FORGE_API_KEY},
         )
     finally:
         client.close()
         app.dependency_overrides.pop(get_db, None)
+        security.settings.FORGE_API_KEY = previous_key
 
     assert response.status_code == 200, response.text
     body = response.json()

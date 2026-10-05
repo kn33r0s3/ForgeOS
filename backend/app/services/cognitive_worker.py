@@ -184,6 +184,11 @@ def _record_failure(
             "error_code": error_code,
         },
     )
+    # The worker manager rolls back the handler transaction when the handler
+    # raises. A failure record that dies with that rollback is not a record:
+    # commit it here so the fail-closed trace survives by design. The failure
+    # paths raise immediately after, so no other handler writes are affected.
+    db.commit()
 
 
 def run_cognitive_task(

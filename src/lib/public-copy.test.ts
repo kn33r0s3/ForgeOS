@@ -192,7 +192,13 @@ describe("homepage contract", () => {
     assert.match(src, /Findings/);
     assert.match(src, /Nothing recorded yet/);
     assert.match(src, /FindingCard/);
-    assert.match(src, /Supported/);
+    // "Supported" is the engine's SUPPORTED-state label, rendered on the
+    // homepage by UnknownCard via UNKNOWN_STATE_LABELS — not a literal in
+    // the route file. Assert the chain instead of grepping the wrong file.
+    assert.match(src, /UnknownCard/);
+    const unknownCard = read("src/components/unknowns/unknown-card.tsx");
+    assert.match(unknownCard, /UNKNOWN_STATE_LABELS/);
+    assert.match(read("src/lib/content.ts"), /SUPPORTED: "Supported"/);
   });
 
 
@@ -235,9 +241,14 @@ describe("homepage contract", () => {
     assert.match(src, /No seller has agreed/);
     assert.match(src, /when earned/);
     assert.doesNotMatch(src, /\[when earned\]/);
-    // Inbox tool link lives on /experiments per IA
+    // Inbox tool link lives on /experiments per IA — rendered by
+    // ExperimentCard (the route maps EXPERIMENTS through it), so assert the
+    // chain instead of grepping the route file for the card's literal.
     const exp = read("src/routes/experiments.tsx");
-    assert.match(exp, /Try the free inbox tool/);
+    assert.match(exp, /ExperimentCard/);
+    const expCard = read("src/components/experiments/experiment-card.tsx");
+    assert.match(expCard, /Try the free inbox tool/);
+    assert.match(expCard, /\/prototype\/inbox/);
   });
 
 });
