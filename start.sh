@@ -12,8 +12,12 @@ export PYTHONPATH="$FORGEOS_DEPS_DIR:$PWD/backend${PYTHONPATH:+:$PYTHONPATH}"
 export PATH="$FORGEOS_DEPS_DIR/bin:$PATH"
 
 mkdir -p storage logs
-if [ ! -f backend/.env ]; then cp backend/.env.example backend/.env; echo "✓ Created backend/.env"; fi
-if [ ! -f docs/archive/legacy-frontend/.env.local ]; then cp docs/archive/legacy-frontend/.env.local.example docs/archive/legacy-frontend/.env.local; echo "✓ Created legacy frontend environment"; fi
+if [ ! -f backend/.env ]; then
+  if [ -f backend/.env.example ]; then cp backend/.env.example backend/.env; echo "✓ Created backend/.env"; else echo "⚠ backend/.env.example not found — create backend/.env manually if the backend needs env vars"; fi
+fi
+if [ ! -f docs/archive/legacy-frontend/.env.local ]; then
+  if [ -f docs/archive/legacy-frontend/.env.local.example ]; then cp docs/archive/legacy-frontend/.env.local.example docs/archive/legacy-frontend/.env.local; echo "✓ Created legacy frontend environment"; else echo "⚠ legacy-frontend .env.local.example not found — skipping"; fi
+fi
 
 echo "[database] canonical native SQLite URL: $DATABASE_URL"
 
