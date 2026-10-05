@@ -248,7 +248,9 @@ function FindingsPreview() {
     let live = true;
     loadDiscoveries(3)
       .then((d) => {
-        if (live) setItems(d);
+        // Homepage shows only findings with a recorded consequence
+        // (linked to a decision, experiment, or outcome).
+        if (live) setItems((d ?? []).filter((f) => f.has_consequence));
       })
       .catch(() => {
         if (live) setItems([]);
@@ -271,7 +273,8 @@ function FindingsPreview() {
         </p>
       ) : items.length === 0 ? (
         <p className="text-sm font-bold" style={{ color: C.text }}>
-          Nothing recorded yet.
+          No findings with recorded consequences yet. Findings appear here once they change a
+          decision, experiment, or outcome.
         </p>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

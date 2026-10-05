@@ -86,19 +86,7 @@ export function SiteHeader() {
               />
             ) : signedIn ? (
               <UserButton />
-            ) : (
-              <Link
-                to="/login"
-                className="hidden min-h-12 items-center rounded-card border-2 px-4 text-sm font-extrabold transition-colors sm:inline-flex"
-                style={{
-                  borderColor: "#F2A33A",
-                  background: "#F2A33A",
-                  color: "#0C0B0A",
-                }}
-              >
-                Join Hami
-              </Link>
-            )}
+            ) : null}
             <button
               type="button"
               className="group relative inline-flex size-11 flex-col items-center justify-center gap-[5px] rounded-card lg:hidden"
@@ -167,22 +155,6 @@ export function SiteHeader() {
               })}
             </ol>
           </nav>
-          {!signedIn && (
-            <div className="p-4 sm:hidden">
-              <Link
-                to="/login"
-                onClick={() => setOpen(false)}
-                className="flex min-h-12 items-center justify-center rounded-card border-2 px-4 text-base font-extrabold transition-colors"
-                style={{
-                  borderColor: "#F2A33A",
-                  background: "#F2A33A",
-                  color: "#0C0B0A",
-                }}
-              >
-                Join Hami
-              </Link>
-            </div>
-          )}
         </div>
       </div>
     </>
