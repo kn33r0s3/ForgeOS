@@ -110,10 +110,13 @@ describe("Hami public content", () => {
     for (const path of FORBIDDEN_PUBLIC_PATHS) {
       assert.equal(publicHrefs.has(path), false, `nav leaked ${path}`);
     }
-    // Join Hami button exists in the header, separate from nav.
+    // Join Hami is NOT in the public nav — owner login only, no public signup.
+    // The /login route still exists but is unlinked (owner knows the URL).
     const header = readFileSync(join(root, "src/components/layout/site-header.tsx"), "utf8");
-    assert.match(header, /Join Hami/);
-    assert.match(header, /to="\/login"/);
+    assert.doesNotMatch(header, /Join Hami/);
+    assert.doesNotMatch(header, /to="\/login"/);
+    const footer = readFileSync(join(root, "src/components/layout/site-footer.tsx"), "utf8");
+    assert.doesNotMatch(footer, /Sign in \/ Sign up/);
   });
 
   it("keeps commercial services separate from prototype capabilities", () => {
@@ -369,7 +372,7 @@ describe("Hami public root", () => {
     // The homepage maps existing public views without implying they have all run:
     // each preview links to its page and carries an honest empty state.
     for (const empty of [
-      "Nothing recorded yet.",
+      "No findings with recorded consequences yet.",
       "No unknowns recorded yet.",
       "No experiments yet.",
     ]) {
@@ -419,10 +422,11 @@ describe("Hami public root", () => {
     assert.match(privacy, /name: "robots", content: "noindex, nofollow"/);
     assert.match(privacy, /automatically\s+erased 30 days/);
     assert.match(privacy, /Vercel hosts the website, Neon provides the database/);
-    // Signup is active: terms and privacy must be reachable from the footer.
+    // No public signup: terms and privacy are reachable from the footer,
+    // but /login is deliberately unlinked (owner login only).
     assert.match(footer, /\/terms/);
     assert.match(footer, /\/privacy/);
-    assert.match(footer, /\/login/);
+    assert.doesNotMatch(footer, /\/login/);
     assert.doesNotMatch(`${header}\n${forgeBot}`, /\/privacy/);
     assert.match(owner, /X-API-Key/);
     assert.doesNotMatch(owner, /localStorage|sessionStorage|dangerouslySetInnerHTML/);

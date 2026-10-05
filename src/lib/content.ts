@@ -68,6 +68,7 @@ export type PublicDiscovery = {
   retrieved_at?: string | null;
   epistemic_state: string;
   freshness?: string;
+  has_consequence?: boolean;
 };
 
 export type PublicFeedRelation = {

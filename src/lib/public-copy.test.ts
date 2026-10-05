@@ -190,7 +190,8 @@ describe("homepage contract", () => {
       "homepage must use the existing observations API loader",
     );
     assert.match(src, /Findings/);
-    assert.match(src, /Nothing recorded yet/);
+    assert.match(src, /No findings with recorded consequences yet/);
+    assert.match(src, /has_consequence/);
     assert.match(src, /FindingCard/);
     // "Supported" is the engine's SUPPORTED-state label, rendered on the
     // homepage by UnknownCard via UNKNOWN_STATE_LABELS — not a literal in

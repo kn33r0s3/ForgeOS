@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowUpRight, Home } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { NAV } from "@/lib/content";
 import { cn } from "@/lib/utils";
@@ -78,19 +78,6 @@ export function SiteHeader() {
             })}
           </nav>
           <div className="flex items-center gap-2">
-            {/* Quick action: one-tap Home, always visible. */}
-            <Link
-              to="/"
-              aria-label="Home"
-              aria-current={pathname === "/" ? "page" : undefined}
-              title="Home"
-              className={cn(
-                "btn-wipe inline-flex size-11 items-center justify-center rounded-card border-2 border-black/70 bg-accent text-black hover:-translate-y-0.5 hover:text-accent hover:shadow-[0_6px_0_#000] focus-visible:-translate-y-0.5 focus-visible:text-accent focus-visible:shadow-[0_6px_0_#000] [&_svg]:size-5",
-                pathname === "/" && "shadow-[0_4px_0_#000]",
-              )}
-            >
-              <Home aria-hidden="true" />
-            </Link>
             {isPending ? (
               <span
                 role="status"
@@ -99,19 +86,7 @@ export function SiteHeader() {
               />
             ) : signedIn ? (
               <UserButton />
-            ) : (
-              <Link
-                to="/login"
-                className="btn-wipe hidden min-h-12 items-center rounded-card border-2 px-4 text-sm font-extrabold transition-colors hover:-translate-y-0.5 hover:shadow-[0_6px_0_#000] sm:inline-flex"
-                style={{
-                  borderColor: "#E2A04B",
-                  background: "#E2A04B",
-                  color: "#171310",
-                }}
-              >
-                Join Hami
-              </Link>
-            )}
+            ) : null}
             <button
               type="button"
               className="group relative inline-flex size-11 flex-col items-center justify-center gap-[5px] rounded-card lg:hidden"
@@ -180,22 +155,6 @@ export function SiteHeader() {
               })}
             </ol>
           </nav>
-          {!signedIn && (
-            <div className="p-4 sm:hidden">
-              <Link
-                to="/login"
-                onClick={() => setOpen(false)}
-                className="btn-wipe flex min-h-12 items-center justify-center rounded-card border-2 px-4 text-base font-extrabold transition-colors hover:-translate-y-0.5 hover:shadow-[0_6px_0_#000]"
-                style={{
-                  borderColor: "#E2A04B",
-                  background: "#E2A04B",
-                  color: "#171310",
-                }}
-              >
-                Join Hami
-              </Link>
-            </div>
-          )}
         </div>
       </div>
     </>

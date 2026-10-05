@@ -1369,6 +1369,7 @@ class PublicDiscoveryOut(BaseModel):
     epistemic_state: str = "observation"
     freshness: str = "unknown"
     stale: bool = False
+    has_consequence: bool = False  # linked to a decision, experiment, or outcome
 
 
 class PublicFeedRelation(BaseModel):
