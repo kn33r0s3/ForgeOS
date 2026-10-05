@@ -24,6 +24,9 @@ def _activated_test_capability(db, *, name, description, test_ref):
         description=description,
         owner_agent="test",
     )
+    # Non-starved: lifecycle tests verify mechanics, not operating discipline.
+    world_graph.create_event(db, event_type="outreach.sent", source="test", payload={})
+    db.commit()
     world_graph.begin_capability_build(db, capability)
     world_graph.mark_capability_tested(
         db,
