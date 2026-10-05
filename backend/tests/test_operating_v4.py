@@ -745,3 +745,50 @@ def test_no_horizon_domain_model(db):
     assert hasattr(operating_v4, "park_domain")
     assert hasattr(operating_v4, "unpark_domain")
     assert hasattr(operating_v4, "list_horizon_domains")
+
+
+def test_no_duplicate_bet_model(db):
+    assert not hasattr(models, "Bet")
+    assert hasattr(operating_v4, "create_bet")
+    assert hasattr(operating_v4, "decide_bet")
+    assert hasattr(operating_v4, "live_bets")
+
+
+def test_bet_uses_canonical_substrate_write(db):
+    b = _bet(db, assumption_ids=[1, 2])
+    assert isinstance(b, models.SubstrateEntity)
+    assert b.entity_type == "bet"
+    assert b.identity_state == "candidate"
+    attrs = json.loads(b.attributes)
+    # All existing semantics preserved.
+    assert attrs["claim"] == "Fast replies recover sales"
+    assert attrs["constraint"] == "Response presence"
+    assert attrs["test"] == "One seller, one week"
+    assert attrs["kill_criterion"] == "No recovery"
+    assert attrs["decision_rule"] == "Recover >= 1 sale"
+    assert attrs["skeptic_case"] == "Sellers don't care"
+    assert attrs["status"] == "live"
+    assert attrs["assumption_ids"] == [1, 2]
+    assert attrs["horizon_domain_id"] is None
+    assert attrs["affordable_loss"]["owner_time"] is None
+    # entity_created emitted specifically for this Bet.
+    evt = (
+        db.query(models.WorldEvent)
+        .filter(models.WorldEvent.event_type == "entity_created")
+        .order_by(models.WorldEvent.id.desc())
+        .first()
+    )
+    assert evt is not None
+    assert "bet" in str(evt.payload)
+
+
+def test_bet_canonical_write_preserves_guards(db):
+    # MAX_LIVE_BETS still enforced through the canonical path.
+    bets = [_bet(db, claim=f"c{i}") for i in range(3)]
+    with pytest.raises(ValueError, match="WIP limit"):
+        _bet(db, claim="c3")
+    # Free a slot, then parked-domain rejection still works.
+    operating_v4.decide_bet(db, bets[0].id, "dampened")
+    h = operating_v4.park_domain(db, "Dropshipping", "Out of scope")
+    with pytest.raises(ValueError, match="parked on the Horizon register"):
+        _bet(db, horizon_domain_id=h.id)

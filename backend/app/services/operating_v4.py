@@ -100,14 +100,17 @@ def create_bet(
         "assumption_ids": assumption_ids or [],
         "horizon_domain_id": horizon_domain_id,
     }
-    bet = models.SubstrateEntity(
+    # Canonical substrate write: validates the registered type, validates
+    # attributes, sets candidate identity, and emits entity_created.
+    from app.services import world_graph  # local import to avoid cycles
+
+    bet = world_graph.create_entity(
+        db,
         entity_type=BET_ENTITY_TYPE,
         display_name=f"Bet: {claim[:80]}",
-        attributes=json.dumps(attributes),
-        identity_state="candidate",
+        attributes=attributes,
         created_by="owner",
     )
-    db.add(bet)
     db.commit()
     db.refresh(bet)
     return bet
