@@ -50,7 +50,7 @@ function SystemPage() {
               This is temporary context for this tab only. It is not sent to Hami’s server.
             </p>
             {state ? (
-              <Link to="/login" className="link-arrow mt-2 inline-flex min-h-10 items-center text-sm font-bold text-accent">
+              <Link to="/login" search={{ mode: "sign-in" }} className="link-arrow mt-2 inline-flex min-h-10 items-center text-sm font-bold text-accent">
                 Sign in to choose what to save privately
               </Link>
             ) : null}

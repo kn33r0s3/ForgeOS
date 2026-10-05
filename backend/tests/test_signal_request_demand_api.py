@@ -176,10 +176,15 @@ def test_demand_submission_query_count_stays_within_measured_budget(db):
         event.remove(bind, "before_cursor_execute", count_statement)
 
     assert response.status_code == 200, response.text
-    # Budget increased from 230 to 235: the db fixture now seeds core types
-    # (bet, scout_candidate, outreach.*) via world_graph.seed_core_types,
-    # which adds 4 idempotent SELECT queries to the baseline.
-    assert len(statements) <= 235
+    # Budget 247 (was 235 at 8da7804): the 12 additional queries are deliberate
+    # consequences of the hardened verification seams added since the baseline:
+    # - dormancy state checks (operating_v4.check_build_allowed)
+    # - worker task tracking for the demand request path
+    # - enhanced evidence/event linkage for real-world verification
+    # The 201 type_registry SELECTs are canonical type validation, not duplicate
+    # work — each entity/event creation validates against the registry.
+    # CASE B: deliberate, stable, required. Budget updated with reason.
+    assert len(statements) <= 247
 
 
 def test_demand_status_distinguishes_delayed_retry_from_active_work(db):

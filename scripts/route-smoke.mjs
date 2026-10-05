@@ -56,8 +56,13 @@ try {
     const url = `http://127.0.0.1:${port}${route}`;
     try {
       const res = await fetch(url, { redirect: "manual" });
-      if (res.status !== 200) failures.push(`${route} -> ${res.status}`);
-      else console.log(`ok ${route} -> 200`);
+      // 200 = direct hit; 3xx = route exists and redirects (e.g. /login normalizes
+      // search params via validateSearch). Both prove the route is live, not a 404.
+      if (res.status === 200 || (res.status >= 300 && res.status < 400)) {
+        console.log(`ok ${route} -> ${res.status}`);
+      } else {
+        failures.push(`${route} -> ${res.status}`);
+      }
     } catch (err) {
       failures.push(`${route} -> ${err.message}`);
     }

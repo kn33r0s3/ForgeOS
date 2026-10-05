@@ -66,7 +66,7 @@ export function SignInGate({
 export function SignInButtons() {
   return (
     <div className="flex w-full max-w-sm flex-col gap-2">
-      <Link to="/login" className="btn-secondary w-full text-center">
+      <Link to="/login" search={{ mode: "sign-in" }} className="btn-secondary w-full text-center">
         Sign in to Hami
       </Link>
     </div>

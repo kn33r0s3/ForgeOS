@@ -529,7 +529,7 @@ function StatusRecord() {
           <div className="flex flex-wrap items-center gap-4">
             <span className="status-pill status-pill-warning">
               <span className="live-dot live-dot-idle" aria-hidden="true" />
-              Record · Pre-revenue
+              Honest status · Pre-revenue
             </span>
             <span className="tag tag-muted">Ledger entry</span>
           </div>
@@ -560,14 +560,15 @@ function StatusRecord() {
                 Proposed
               </p>
               <p className="mt-1 text-sm text-muted">
-                Awaiting a participant from reality.
+                Experiment 1 remains proposed. Awaiting a participant from reality.
               </p>
             </div>
           </div>
           <p className="mt-6 max-w-2xl text-sm leading-6 text-muted">
             This is a record, not an apology. Hami reports what reality has
-            supplied — currently nothing — rather than manufacturing progress.
-            The first real rupee will appear here the moment it exists.
+            supplied — currently no participants or results to report — rather
+            than manufacturing progress. The first real rupee will appear here
+            the moment it exists.
           </p>
         </div>
       </Container>

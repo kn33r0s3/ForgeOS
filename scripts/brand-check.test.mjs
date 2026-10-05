@@ -305,10 +305,12 @@ test("cli: a non-game with a compliant card passes", () => {
 
 const readDoc = (rel) => readFileSync(join(TEMPLATE_ROOT, rel), "utf8");
 
-test("SKILL.md and AGENTS.md name the marker path and bound this script uses", () => {
+test("SKILL.md names the marker path and bound this script uses", () => {
   // Prose wraps, so the minute count may straddle a line break.
   const bound = new RegExp(`${OG_PENDING_MAX_AGE_MS / 60_000}\\s+minutes`);
-  for (const rel of [".grok/skills/og/SKILL.md", "AGENTS.md"]) {
+  // AGENTS.md removed the foreign "App Builder Workspace" block (a18165a).
+  // Only the OG skill owns the brand-task contract now.
+  for (const rel of [".grok/skills/og/SKILL.md"]) {
     const doc = readDoc(rel);
     assert.ok(doc.includes(`/workspace/${OG_PENDING_REL_PATH}`), `${rel}: marker path`);
     assert.ok(bound.test(doc), `${rel}: staleness bound`);
@@ -325,12 +327,7 @@ const PROHIBITION_SECTIONS = [
     from: "## Brand-asset pass:",
     until: /\n## /,
   },
-  {
-    rel: "AGENTS.md",
-    label: "execution loop step 6",
-    from: "6. **Brand-asset pass",
-    until: /\n7\. /,
-  },
+  // AGENTS.md prohibition section removed with the foreign block (a18165a).
 ];
 
 function prohibitionSection({ rel, label, from, until }) {

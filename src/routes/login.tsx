@@ -23,7 +23,7 @@ function LoginPage() {
   const { mode: initialMode } = Route.useSearch();
   const { user, isPending } = useCurrentUserState();
   const [hydrated, setHydrated] = useState(false);
-  const [mode, setMode] = useState<"sign-in" | "sign-up">(initialMode);
+  const [mode, setMode] = useState<"sign-in" | "sign-up">(initialMode as "sign-in" | "sign-up");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

@@ -229,6 +229,15 @@ def test_event_and_capability_api_enforce_lifecycle_and_idempotency(substrate_cl
 
     premature = substrate_client.post(f"/forge/substrate/capabilities/{capability_id}/activate")
     assert premature.status_code == 422
+    # TEST fixture: establish non-starved state so STARVED does not block the build.
+    # Production STARVED enforcement is correct; this test verifies API mechanics.
+    world_graph.create_event(
+        db,
+        event_type="outreach.sent",
+        source="test",
+        payload={"note": "substrate API test contact"},
+    )
+    db.commit()
     building = substrate_client.post(f"/forge/substrate/capabilities/{capability_id}/build")
     assert building.status_code == 200
     tested = substrate_client.post(f"/forge/substrate/capabilities/{capability_id}/test", json={

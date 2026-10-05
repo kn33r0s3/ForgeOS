@@ -31,8 +31,17 @@ jobs:
       - name: Run tests
         id: tests
         run: |
+          set -o pipefail
           npm test 2>&1 | tee /tmp/test-output.txt
+          TEST_EXIT=${PIPESTATUS[0]}
+          echo "exit_code=$TEST_EXIT" >> "$GITHUB_OUTPUT"
           echo "counts=$(grep -E '^ℹ (tests|pass|fail)' /tmp/test-output.txt | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+          if [ "$TEST_EXIT" -eq 0 ]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+          fi
+          # Do not fail the job here; the verification record must capture the actual result
 
       - name: Get deployed SHA
         id: sha
@@ -45,18 +54,44 @@ jobs:
           CONTENT_HASH=$(curl -s "https://haminp.vercel.app/?v=$(date +%s)" | sha256sum | cut -d' ' -f1)
           echo "hash=$CONTENT_HASH" >> "$GITHUB_OUTPUT"
 
+      - name: Check verifier preconditions
+        run: |
+          if [ -z "$BACKEND_URL" ]; then
+            echo "::error::BACKEND_URL secret is missing or empty. Cannot record verification."
+            exit 1
+          fi
+          if [ -z "$FORGE_API_KEY" ]; then
+            echo "::error::FORGE_API_KEY secret is missing or empty. Cannot record verification."
+            exit 1
+          fi
+        env:
+          FORGE_API_KEY: ${{ secrets.FORGE_API_KEY }}
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+
       - name: Record verification
         env:
           FORGE_API_KEY: ${{ secrets.FORGE_API_KEY }}
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
         run: |
-          curl -sf -X POST "$BACKEND_URL/api/opv4/verifications" \
+          # Capture HTTP status and body separately; never print FORGE_API_KEY
+          HTTP_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$BACKEND_URL/api/opv4/verifications" \
             -H "Content-Type: application/json" \
             -H "X-API-Key: $FORGE_API_KEY" \
             -d "{
               \"deployed_sha\": \"${{ steps.sha.outputs.sha }}\",
               \"fetched_content\": \"sha256:${{ steps.fetch.outputs.hash }}\",
               \"test_counts\": \"${{ steps.tests.outputs.counts }}\",
-              \"passed\": true,
+              \"passed\": ${{ steps.tests.outputs.passed }},
               \"source\": \"ci\"
-            }"
+            }")
+          HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n1)
+          HTTP_BODY=$(echo "$HTTP_RESPONSE" | sed '$d')
+          echo "Verification POST returned HTTP $HTTP_CODE"
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "Verification recorded successfully."
+          else
+            echo "::error::Verification POST failed with HTTP $HTTP_CODE"
+            # Sanitize: strip anything that looks like a key/token before printing
+            echo "$HTTP_BODY" | sed -E 's/(api[_-]?key|token|secret)["'\'']?\s*[:=]\s*["'\'']?[^"'\''&,} ]+/\\1=[REDACTED]/gi'
+            exit 1
+          fi
