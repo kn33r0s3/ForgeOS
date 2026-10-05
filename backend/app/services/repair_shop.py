@@ -2,7 +2,9 @@
 
 This module adds only customer/work-item context. Decisions, experiments/actions,
 evidence, outcomes, learning, and product revenue remain existing ForgeOS records.
-No external customer contact or payment is performed here.
+No external customer contact or payment is performed here directly;
+approve_customer_status only enqueues an SMS delivery in the integration outbox
+(dispatched by a separate worker, never implicitly).
 """
 
 from __future__ import annotations
@@ -374,7 +376,7 @@ def record_work_outcome(
         prediction="The approved repair-shop workflow would deliver the expected customer/status outcome.",
         actual=actual.strip(),
         lesson="Compare the expected workflow value with the recorded repair-shop outcome before changing the next decision.",
-        error_type="confirmed" if success else "qualitative_miss",
+        error_type="confirmed" if success is True else ("qualitative_miss" if success is False else "unassessed"),
         data_scope=item.data_scope,
     )
     db.add(learning)
@@ -400,7 +402,7 @@ def get_work_item_detail(db: Session, work_item_id: int) -> dict:
         "evidence": evidence,
         "decision": db.get(models.Decision, item.decision_id) if item.decision_id else None,
         "experiment": db.get(models.Experiment, item.experiment_id) if item.experiment_id else None,
-        "outcomes": db.query(models.Outcome).filter(models.Outcome.action_id == item.action_id).order_by(models.Outcome.id.asc()).all() if item.action_id else [],
+        "outcomes": db.query(models.Outcome).filter(models.Outcome.experiment_id == item.experiment_id).order_by(models.Outcome.id.asc()).all() if item.experiment_id else [],
         "learning_events": db.query(models.LearningEvent).filter(models.LearningEvent.experiment_id == item.experiment_id).order_by(models.LearningEvent.id.asc()).all() if item.experiment_id else [],
     }
 
