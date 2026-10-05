@@ -68,6 +68,80 @@ def test_l5_requires_verifier(db):
     assert db.get(models.Evidence, ev.id).proof_level == 5
 
 
+def test_l0_l4_unchanged(db):
+    # Firsthand evidence can still sit at L0-L4 without a verifier.
+    for level in (0, 2, 3, 4):
+        ev = _evidence(db, "firsthand")
+        operating_v4.set_proof_level(db, ev.id, level)
+        assert db.get(models.Evidence, ev.id).proof_level == level
+
+
+def test_found_wording_requires_l5(db):
+    ev = _evidence(db, "firsthand")
+    operating_v4.set_proof_level(db, ev.id, 4)
+    with pytest.raises(ValueError, match="requires proof level >= L5"):
+        operating_v4.check_found_wording(db, ev.id)
+    operating_v4.set_proof_level(
+        db, ev.id, 5, verifier="counterparty: seller confirmed"
+    )
+    # No raise at L5.
+    operating_v4.check_found_wording(db, ev.id)
+    with pytest.raises(ValueError, match="not found"):
+        operating_v4.check_found_wording(db, 999999)
+
+
+def test_plan_change_requires_l3(db):
+    low = _evidence(db, "firsthand")
+    operating_v4.set_proof_level(db, low.id, 2)
+    with pytest.raises(ValueError, match="require proof >= L3"):
+        operating_v4.check_plan_change(db, [low.id])
+    ok = _evidence(db, "firsthand")
+    operating_v4.set_proof_level(db, ok.id, 3)
+    # No raise at L3+.
+    operating_v4.check_plan_change(db, [ok.id])
+    operating_v4.check_plan_change(db, [ok.id, ok.id])
+    with pytest.raises(ValueError, match="not found"):
+        operating_v4.check_plan_change(db, [999999])
+
+
+def test_plan_change_rejects_non_evidence_ids(db):
+    # A bet's assumption_ids are not evidence IDs — passing one must fail
+    # as "not found", never silently pass or be reinterpreted.
+    bet = operating_v4.create_bet(
+        db,
+        claim="c", constraint="x", test="t",
+        kill_criterion="k", decision_rule="r", skeptic_case="s",
+        assumption_ids=[12345],
+    )
+    attrs = bet.attributes
+    assert "12345" in attrs  # the assumption id is stored on the bet
+    with pytest.raises(ValueError, match="not found"):
+        operating_v4.check_plan_change(db, [12345])
+
+
+def test_flag_proof_violations(db):
+    clean = _evidence(db, "firsthand")
+    clean.claim = "We found that sellers reply faster"
+    db.commit()
+    operating_v4.set_proof_level(
+        db, clean.id, 5, verifier="counterparty: seller confirmed"
+    )
+    viol = _evidence(db, "firsthand")
+    viol.claim = "We found that buyers haggle"
+    db.commit()
+    operating_v4.set_proof_level(db, viol.id, 2)
+    neutral = _evidence(db, "firsthand")
+    neutral.claim = "Observed slow replies"
+    db.commit()
+    operating_v4.set_proof_level(db, neutral.id, 2)
+    flags = operating_v4.flag_proof_violations(db)
+    flagged_ids = [f["evidence_id"] for f in flags]
+    assert viol.id in flagged_ids
+    assert clean.id not in flagged_ids
+    assert neutral.id not in flagged_ids
+    assert flags[0]["proof_level"] == 2
+
+
 def test_starved_blocks_builds_except_obligations(db):
     assert operating_v4.is_starved(db) is True
     with pytest.raises(ValueError, match="STARVED"):

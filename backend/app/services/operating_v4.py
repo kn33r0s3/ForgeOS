@@ -163,6 +163,76 @@ def set_proof_level(
 
 
 # ---------------------------------------------------------------------
+# Proof guards (recovered from v3 a5ed491; adapted to v4 semantics)
+#
+# v4's L0-L7 ladder and external-anchoring rules remain authoritative.
+# These guards enforce wording/discipline on top of the ladder — they do
+# not redefine it. set_proof_level() above is unchanged in responsibility.
+# ---------------------------------------------------------------------
+
+def check_found_wording(db: Session, evidence_id: int) -> None:
+    """Public 'found' wording requires proof >= L5.
+
+    Call before publishing a 'found' claim about this evidence.
+    Raises ValueError if the evidence is below L5.
+    """
+    ev = db.get(models.Evidence, evidence_id)
+    if not ev:
+        raise ValueError("Evidence not found.")
+    if (ev.proof_level or 0) < 5:
+        raise ValueError(
+            f"Public 'found' wording requires proof level >= L5; "
+            f"evidence #{evidence_id} is L{ev.proof_level}."
+        )
+
+
+def check_plan_change(db: Session, evidence_ids: list) -> None:
+    """Plan/priority changes require supporting evidence >= L3.
+
+    Takes real Evidence IDs — never assumption IDs, never bet IDs.
+    Raises ValueError if any listed evidence is missing or below L3.
+
+    INTEGRATION BOUNDARY: no existing v4 caller represents a plan/priority
+    change (decide_bet() takes no evidence input), so this is a helper for
+    future wiring, not wired into any current path.
+    """
+    for eid in evidence_ids:
+        ev = db.get(models.Evidence, eid)
+        if not ev:
+            raise ValueError(f"Evidence #{eid} not found.")
+        if (ev.proof_level or 0) < 3:
+            raise ValueError(
+                f"Plan/priority changes require proof >= L3; "
+                f"evidence #{eid} is L{ev.proof_level}."
+            )
+
+
+def flag_proof_violations(db: Session) -> list:
+    """Heuristic audit: evidence whose claim wording asserts a 'found'
+    finding while sitting below L5.
+
+    This is an audit helper, not authoritative publication validation:
+    there is no proof-gated publication path in v4 (public_feed.py does not
+    filter by proof level, and Evidence has no public-wording field), so a
+    'found' in claim text is treated as a candidate violation for owner
+    review — not as proof of publication.
+    Returns [{"evidence_id", "proof_level", "claim_excerpt"}].
+    """
+    violations = []
+    for ev in db.query(models.Evidence).all():
+        claim = ev.claim or ""
+        if "found" in claim.lower() and (ev.proof_level or 0) < 5:
+            violations.append(
+                {
+                    "evidence_id": ev.id,
+                    "proof_level": ev.proof_level,
+                    "claim_excerpt": claim[:120],
+                }
+            )
+    return violations
+
+
+# ---------------------------------------------------------------------
 # Contact clock, STARVED, scoreboard
 # ---------------------------------------------------------------------
 
