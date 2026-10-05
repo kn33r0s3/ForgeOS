@@ -35,6 +35,21 @@ The repository itself is the memory of Hami.
 
 ---
 
+## HARD MECHANICAL RULE: NEW FILES
+
+For every new file, the agent must first identify the existing file/function/model
+that carries the same meaning and explain why modification is insufficient.
+No explanation = no new file.
+
+Before creating ANY new file, the agent must demonstrate in the commit message or PR description:
+1. EXISTING SEAM INSPECTED: <file:function/component/model>
+2. WHY IT CANNOT BE MODIFIED: <specific technical reason>
+3. WHAT GENUINELY NEW CAPABILITY REQUIRES THE FILE: <specific capability>
+
+If this cannot be proven, do not create the file. Modify existing code instead.
+
+---
+
 # FORGEOS TOP RULE — DRIVE OWNER DEPENDENCY TO ZERO
 
 This is Hami's first substantive project rule: prefer fewer owner actions per
