@@ -21,6 +21,15 @@ import {
 export const GROK_OG_IDENTITY_ID = "virtual:grok-og-identity";
 
 const INSTALL_PAGE_PATH = join(dirname(fileURLToPath(import.meta.url)), "install-page.html");
+// The install tutorial template is static for the process lifetime; read it
+// once instead of synchronously on every ?install=1&platform=ios request.
+let installPageTemplate = null;
+function loadInstallPageTemplate() {
+  if (installPageTemplate === null) {
+    installPageTemplate = readFileSync(INSTALL_PAGE_PATH, "utf8");
+  }
+  return installPageTemplate;
+}
 
 function requestHost(req) {
   const forwarded = req.headers["x-forwarded-host"];
@@ -29,7 +38,7 @@ function requestHost(req) {
 }
 
 export function renderInstallPage(hostHeader, url = "/") {
-  const template = readFileSync(INSTALL_PAGE_PATH, "utf8");
+  const template = loadInstallPageTemplate();
   return renderInstallPageHtml(template, { host: hostHeader, url });
 }
 

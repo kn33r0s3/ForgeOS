@@ -41,6 +41,8 @@ export function pendingMigrations(paths, applied) {
   return [...paths]
     .filter(isMigrationFile)
     .map((path) => ({ name: migrationName(path), path }))
-    .sort((a, b) => a.name.localeCompare(b.name))
+    // Numeric-aware: "2_x.sql" must apply before "10_x.sql". Zero-padded
+    // names (the repo convention) sort identically either way.
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
     .filter(({ name }) => !done.has(name));
 }

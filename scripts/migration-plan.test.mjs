@@ -56,6 +56,16 @@ test("non-.sql entries are dropped (readdir also yields the auth/ directory)", (
   assert.deepEqual(pendingMigrations(["auth", "README.md"], []), []);
 });
 
+test("non-zero-padded names still sort numerically (2 before 10)", () => {
+  assert.deepEqual(
+    pendingMigrations(["/migrations/10_ten.sql", "/migrations/2_two.sql"], []),
+    [
+      { name: "2_two.sql", path: "/migrations/2_two.sql" },
+      { name: "10_ten.sql", path: "/migrations/10_ten.sql" },
+    ],
+  );
+});
+
 test("the auth schema is copied into the applied migrations", () => {
   const migrationsDir = join(projectRoot(), "migrations");
   assert.deepEqual(
