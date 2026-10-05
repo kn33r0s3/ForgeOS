@@ -630,7 +630,6 @@ def get_revenue_breakdown(db: Session) -> dict:
         if breakdown["expected_value"] is not None:
             expected_total += breakdown["expected_value"]
 
-    completed = db.query(models.Experiment).filter(models.Experiment.completed_at.isnot(None), models.Experiment.data_scope == "REAL").all()
     realized = sum(o.actual_value or 0 for o in db.query(models.Outcome).filter_by(outcome_type="ACTUAL_REVENUE", data_scope="REAL").all())
 
     return {

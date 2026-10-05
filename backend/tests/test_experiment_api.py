@@ -1,5 +1,3 @@
-import os
-
 from fastapi.testclient import TestClient
 
 from app import models, security
@@ -7,13 +5,15 @@ from app.database import get_db
 from app.main import app
 
 
+_TEST_API_KEY = "test-experiment-api-key"
+
+
 def _api_headers():
-    api_key = os.getenv("FORGE_API_KEY", "")
-    return {"X-API-Key": api_key} if api_key else {}
+    return {"X-API-Key": _TEST_API_KEY}
 
 
 def _client_for(db):
-    security.settings.FORGE_API_KEY = ""
+    security.settings.FORGE_API_KEY = _TEST_API_KEY
 
     def override_get_db():
         try:
@@ -207,3 +207,51 @@ def test_revenue_invariants_enforce_real_money_rules(db):
 
     app.dependency_overrides.clear()
     client.close()
+
+
+def test_experiment_write_endpoints_reject_anonymous_writes(db):
+    """Cycle 64: the /experiments write surface is owner-guarded; an
+    anonymous caller must fail closed with 401 even when FORGE_API_KEY
+    is configured, and must never create a row."""
+    client = _client_for(db)  # sets FORGE_API_KEY; no X-API-Key header sent
+    body = {
+        "problem_statement": "Anonymous write attempt.",
+        "hypothesis": "Anonymous callers can create experiments.",
+        "evidence_summary": "Negative-control test.",
+        "action_type": "research",
+    }
+    resp = client.post("/experiments/proposed", json=body)
+    assert resp.status_code == 401, resp.text
+    assert db.query(models.Experiment).count() == 0
+    app.dependency_overrides.clear()
+    client.close()
+
+
+def test_experiment_write_endpoints_unavailable_when_key_unset(db):
+    """Cycle 64: require_owner_api_key fails closed with 503 (not open
+    writes) when FORGE_API_KEY is not configured at all."""
+    security.settings.FORGE_API_KEY = ""
+    client = TestClient(app, raise_server_exceptions=False)
+
+    def override_get_db():
+        try:
+            yield db
+        finally:
+            db.rollback()
+
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        resp = client.post(
+            "/experiments/proposed",
+            json={
+                "problem_statement": "Key-unset write attempt.",
+                "hypothesis": "No key means open writes.",
+                "evidence_summary": "Negative-control test.",
+                "action_type": "research",
+            },
+        )
+        assert resp.status_code == 503, resp.text
+        assert db.query(models.Experiment).count() == 0
+    finally:
+        app.dependency_overrides.clear()
+        client.close()

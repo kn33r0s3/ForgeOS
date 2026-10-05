@@ -92,9 +92,11 @@ def assess_need_economic_validation(
 def evaluate_prospect_discovery_readiness(
     opportunity_id: int,
     payload: ProspectDiscoveryReadinessBody,
+    request: Request,
     db: Session = Depends(get_db),
 ):
     """Record a bounded source-clearance audit; this endpoint does not query a source."""
+    require_owner_api_key(request)
     try:
         return prospect_discovery.evaluate_prospect_discovery_readiness(
             db,
@@ -112,7 +114,9 @@ def evaluate_prospect_discovery_readiness(
 
 
 @router.post("/opportunities/{opportunity_id}/monitor")
-def monitor_opportunity(opportunity_id: int, db: Session = Depends(get_db)):
+def monitor_opportunity(opportunity_id: int, request: Request, db: Session = Depends(get_db)):
+    """OWNER-ONLY: monitor writes snapshots and may flip opportunity status."""
+    require_owner_api_key(request)
     result = opportunity_monitor.monitor_opportunity(db, opportunity_id)
     if result.get("status") == "not_found":
         raise HTTPException(status_code=404, detail="Opportunity not found")
@@ -125,7 +129,9 @@ def get_opportunity_options(opportunity_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/opportunities/{opportunity_id}/options/decision")
-def create_option_decision(opportunity_id: int, db: Session = Depends(get_db)):
+def create_option_decision(opportunity_id: int, request: Request, db: Session = Depends(get_db)):
+    """OWNER-ONLY: creates Decision rows from the evaluated option space."""
+    require_owner_api_key(request)
     return option_space.create_decision_from_options(db, opportunity_id)
 
 
@@ -141,8 +147,11 @@ def get_opportunity_evidence_graph(opportunity_id: int, db: Session = Depends(ge
 def create_opportunity_claim(
     opportunity_id: int,
     payload: schemas.ClaimCreate,
+    request: Request,
     db: Session = Depends(get_db),
 ):
+    """OWNER-ONLY: writes to the claim ledger (claim + evidence links)."""
+    require_owner_api_key(request)
     opportunity = db.query(models.Opportunity).filter_by(id=opportunity_id).first()
     if not opportunity:
         raise HTTPException(status_code=404, detail="Opportunity not found")
@@ -172,8 +181,11 @@ def create_opportunity_claim(
 def judge_opportunity(
     opportunity_id: int,
     payload: schemas.JudgeRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ):
+    """OWNER-ONLY: runs judges and may auto-create research questions + plans."""
+    require_owner_api_key(request)
     opportunity = db.query(models.Opportunity).filter_by(id=opportunity_id).first()
     if not opportunity:
         raise HTTPException(status_code=404, detail="Opportunity not found")
@@ -195,8 +207,9 @@ def judge_opportunity(
 
 
 @router.post("/experiments/proposed", response_model=schemas.ExperimentRead)
-def create_proposed_experiment(payload: ExperimentProposalCreate, db: Session = Depends(get_db)):
-    """Create a research-first Experiment without requiring an Opportunity row."""
+def create_proposed_experiment(payload: ExperimentProposalCreate, request: Request, db: Session = Depends(get_db)):
+    """Create a research-first Experiment without requiring an Opportunity row. OWNER-ONLY."""
+    require_owner_api_key(request)
     try:
         return experiment_service.create_proposed(db, payload)
     except ValueError as exc:
@@ -204,8 +217,9 @@ def create_proposed_experiment(payload: ExperimentProposalCreate, db: Session = 
 
 
 @router.post("/experiments/{experiment_id}/authorize", response_model=schemas.ExperimentRead)
-def authorize_experiment(experiment_id: int, payload: ExperimentAuthorize, db: Session = Depends(get_db)):
-    """Approve or reject a research-first Experiment before execution can proceed."""
+def authorize_experiment(experiment_id: int, payload: ExperimentAuthorize, request: Request, db: Session = Depends(get_db)):
+    """Approve or reject a research-first Experiment before execution can proceed. OWNER-ONLY."""
+    require_owner_api_key(request)
     try:
         return experiment_service.authorize_experiment(db, experiment_id, payload)
     except ValueError as exc:
@@ -213,8 +227,9 @@ def authorize_experiment(experiment_id: int, payload: ExperimentAuthorize, db: S
 
 
 @router.post("/experiments/{experiment_id}/execute", response_model=schemas.ExperimentRead)
-def execute_experiment(experiment_id: int, db: Session = Depends(get_db)):
-    """Fail-closed: only an explicitly approved Experiment may be executed."""
+def execute_experiment(experiment_id: int, request: Request, db: Session = Depends(get_db)):
+    """Fail-closed: only an explicitly approved Experiment may be executed. OWNER-ONLY."""
+    require_owner_api_key(request)
     try:
         return experiment_service.execute_experiment(db, experiment_id)
     except ValueError as exc:
@@ -222,8 +237,9 @@ def execute_experiment(experiment_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/experiments/{experiment_id}/outcome", response_model=schemas.ExperimentRead)
-def record_experiment_outcome(experiment_id: int, payload: ExperimentOutcomeCreate, db: Session = Depends(get_db)):
-    """Record a real rejection, interest, or payment outcome. Revenue is only valid for payment outcomes."""
+def record_experiment_outcome(experiment_id: int, payload: ExperimentOutcomeCreate, request: Request, db: Session = Depends(get_db)):
+    """Record a real rejection, interest, or payment outcome. Revenue is only valid for payment outcomes. OWNER-ONLY."""
+    require_owner_api_key(request)
     try:
         return experiment_service.record_outcome(db, experiment_id, payload)
     except ValueError as exc:
@@ -231,7 +247,9 @@ def record_experiment_outcome(experiment_id: int, payload: ExperimentOutcomeCrea
 
 
 @router.post("/experiments/{experiment_id}/action", response_model=schemas.ExperimentActionRead)
-def propose_experiment_action(experiment_id: int, db: Session = Depends(get_db)):
+def propose_experiment_action(experiment_id: int, request: Request, db: Session = Depends(get_db)):
+    """OWNER-ONLY: proposes a real-world action against an experiment."""
+    require_owner_api_key(request)
     try:
         return experiment_action_service.propose_action(db, experiment_id)
     except ValueError as exc:
@@ -239,7 +257,9 @@ def propose_experiment_action(experiment_id: int, db: Session = Depends(get_db))
 
 
 @router.post("/experiments/{experiment_id}/action/approve", response_model=schemas.ExperimentActionRead)
-def approve_experiment_action(experiment_id: int, db: Session = Depends(get_db)):
+def approve_experiment_action(experiment_id: int, request: Request, db: Session = Depends(get_db)):
+    """OWNER-ONLY: approves a proposed experiment action (approval semantics)."""
+    require_owner_api_key(request)
     try:
         return experiment_action_service.approve_action(db, experiment_id)
     except ValueError as exc:
@@ -247,7 +267,9 @@ def approve_experiment_action(experiment_id: int, db: Session = Depends(get_db))
 
 
 @router.post("/experiments/{experiment_id}/action/execute", response_model=schemas.ExperimentActionRead)
-def execute_experiment_action(experiment_id: int, db: Session = Depends(get_db)):
+def execute_experiment_action(experiment_id: int, request: Request, db: Session = Depends(get_db)):
+    """OWNER-ONLY: executes an approved experiment action."""
+    require_owner_api_key(request)
     try:
         return experiment_action_service.execute_action(db, experiment_id)
     except ValueError as exc:
@@ -258,8 +280,11 @@ def execute_experiment_action(experiment_id: int, db: Session = Depends(get_db))
 def record_experiment_action_outcome(
     experiment_id: int,
     payload: schemas.ExperimentActionOutcomeCreate,
+    request: Request,
     db: Session = Depends(get_db),
 ):
+    """OWNER-ONLY: records the actual response to an experiment action."""
+    require_owner_api_key(request)
     try:
         return experiment_action_service.record_actual_response(
             db,
@@ -271,8 +296,9 @@ def record_experiment_action_outcome(
 
 
 @router.post("/experiments", response_model=schemas.ExperimentOut)
-def create_experiment(payload: schemas.ExperimentCreate, db: Session = Depends(get_db)):
-    """Log a real-world test/action taken against an opportunity, and what was learned."""
+def create_experiment(payload: schemas.ExperimentCreate, request: Request, db: Session = Depends(get_db)):
+    """Log a real-world test/action taken against an opportunity, and what was learned. OWNER-ONLY."""
+    require_owner_api_key(request)
     opp = db.query(models.Opportunity).filter(models.Opportunity.id == payload.opportunity_id).first()
     if not opp:
         raise HTTPException(status_code=404, detail="Opportunity not found")
@@ -300,8 +326,10 @@ def get_experiments(opportunity_id: Optional[int] = None, db: Session = Depends(
 
 @router.post("/experiments/{experiment_id}/actual-outcome")
 def record_actual_outcome(
-    experiment_id: int, payload: ExperimentOutcomeBody, db: Session = Depends(get_db)
+    experiment_id: int, payload: ExperimentOutcomeBody, request: Request, db: Session = Depends(get_db)
 ):
+    """OWNER-ONLY: records the actual outcome of an experiment."""
+    require_owner_api_key(request)
     try:
         return outcome_learning.record_experiment_outcome(
             db,

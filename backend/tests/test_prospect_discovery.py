@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
 
-from app import models
+from app import models, security
 from app.database import Base, get_db
 from app.main import app
 from app.migrations import run_migrations
@@ -190,8 +190,10 @@ def test_requested_uncleared_source_fails_closed_without_records(db):
     ).count() == 0
 
 
-def test_readiness_route_records_audit_and_rejects_uncleared_source(db):
+def test_readiness_route_records_audit_and_rejects_uncleared_source(db, monkeypatch):
     opportunity_id, _ = _testable_opportunity(db)
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-prospect-key")
+    headers = {"X-API-Key": "test-prospect-key"}
 
     def override_db():
         yield db
@@ -205,10 +207,11 @@ def test_readiness_route_records_audit_and_rejects_uncleared_source(db):
             "geographic_scope": "Kathmandu Valley",
             "max_candidates": 5,
         }
-        response = client.post(path, json=body)
+        response = client.post(path, json=body, headers=headers)
         denied = client.post(
             path,
             json={**body, "requested_source_registry_ids": ["gdelt-doc-api-v2"]},
+            headers=headers,
         )
     finally:
         client.close()
