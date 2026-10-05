@@ -46,6 +46,11 @@ PRIVATE_CONTACT_READ_PATH_PREFIXES = (
     "/forge-bot/leads/summary",
     "/forge-bot/response-authorization",
     "/forge-bot/leads",
+    # /orchestrate/flow embeds customer_events rows with contact_name and
+    # contact_identifier (orchestrator._row dumps every column), so the
+    # public /orchestrate/flow* reads carry the same contact PII as
+    # /products/customers and must be key-gated in production.
+    "/orchestrate/flow",
 )
 
 
