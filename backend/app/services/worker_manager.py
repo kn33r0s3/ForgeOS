@@ -53,6 +53,17 @@ def process_worker_task_by_id(
             task.outputs = handler(db, task)
             task.status = "completed"
         except Exception as exc:  # pylint: disable=broad-except
+            # A handler that fails mid-flush leaves the session's transaction
+            # in a must-rollback state (Postgres raises on any further use).
+            # Without an explicit rollback the commit below raises, the retry
+            # scheduling never lands, and the task is wedged in "running"
+            # forever. Roll back first: the claim commit above is already
+            # durable, so the row survives; only the handler's partial writes
+            # are discarded.
+            db.rollback()
+            task = db.get(WorkerTask, task_id)
+            if task is None:
+                return False
             task.error = str(exc)
             _schedule_retry(task)
     task.updated_at = utcnow()
@@ -73,7 +84,10 @@ def process_demand_task_in_background(task_id: int) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Handlers – in a real system these would import the actual worker modules.
+# Handlers – deferred imports keep the legacy-intelligence gate honest:
+# importing this module must not pull the collectors/cycle/ML stack at
+# startup when FORGEOS_LEGACY_INTELLIGENCE_ENABLED=false (see
+# test_legacy_intelligence_gate.py).
 # ---------------------------------------------------------------------------
 
 def discovery_handler(db: Session, task: WorkerTask) -> dict:
