@@ -661,6 +661,12 @@ class Evidence(Base):
     # rescaled or overwritten during substrate migration.
     substrate_source = Column(String, nullable=True)
     substrate_confidence = Column(Float, nullable=True)
+    # Proof ladder L0-L7 (2026-10-05, Operating Model v3).
+    # L0 agent-written/secondhand unverified; L1 secondhand sourced;
+    # L2 firsthand uncorroborated; L3 corroborated 2+; L4 tested;
+    # L5 verified outcome; L6 replicated; L7 decisive (moved money/decision).
+    proof_level = Column(Integer, nullable=False, default=0, index=True)
+    proof_capped_reason = Column(Text, nullable=True)
     substrate_provenance = Column(Text, nullable=True)
 
     signal = relationship("Signal")
@@ -2080,3 +2086,101 @@ class CycleRun(Base):
     status = Column(String, nullable=False, default="RUNNING")  # RUNNING | COMPLETED | FAILED
     summary_json = Column(Text, nullable=True)  # stage counts + per-stage errors
     error = Column(Text, nullable=True)
+
+
+# ---------------------------------------------------------------------
+# Operating Model v3 (2026-10-05)
+#
+# Bet -> Proof ladder -> WIP limits -> Pulse -> Tripwires ->
+# Sensor circle -> Horizon -> Gates.
+#
+# Archive, never delete: every object carries a status; nothing is
+# removed. Bets map existing unknowns/experiments/probes as views.
+# ---------------------------------------------------------------------
+
+
+class Assumption(Base):
+    """One load-bearing assumption. Status can only become 'supported'
+    with linked evidence — never by assertion."""
+
+    __tablename__ = "assumptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    statement = Column(Text, nullable=False, unique=True)
+    status = Column(String, nullable=False, default="untested", index=True)
+    # untested | supported | contradicted
+    deal_killer = Column(Boolean, nullable=False, default=False, index=True)
+    cost_to_test = Column(String, nullable=True)
+    cheapest_test = Column(Text, nullable=True)
+    evidence_links = Column(Text, nullable=False, default="[]")  # JSON list
+    milestone = Column(String, nullable=True)
+    source_note = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class Bet(Base):
+    """A bet: a claim with a test, affordable loss, deadline, kill
+    criterion, and decision rule. Status: live | amplified | dampened |
+    killed. Archived, never deleted."""
+
+    __tablename__ = "bets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    claim = Column(Text, nullable=False)
+    test = Column(Text, nullable=False)
+    affordable_loss_time = Column(Text, nullable=True)
+    affordable_loss_money = Column(Text, nullable=True)
+    affordable_loss_trust = Column(Text, nullable=True)
+    deadline = Column(DateTime, nullable=True)
+    kill_criterion = Column(Text, nullable=False)
+    decision_rule = Column(Text, nullable=False)
+    status = Column(String, nullable=False, default="live", index=True)
+    # live | amplified | dampened | killed
+    assumption_ids = Column(Text, nullable=False, default="[]")  # JSON list
+    decided_at = Column(DateTime, nullable=True)
+    decision_notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class SensorContributor(Base):
+    """A named sensor-circle contributor. Observations are only accepted
+    with recorded consent."""
+
+    __tablename__ = "sensor_contributors"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(Text, nullable=False)
+    consent_given = Column(Boolean, nullable=False, default=False)
+    consent_at = Column(DateTime, nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+
+
+class HorizonDomain(Base):
+    """A parked domain. No tasks, bets, or probes may reference it."""
+
+    __tablename__ = "horizon_domains"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(Text, nullable=False, unique=True)
+    reason_parked = Column(Text, nullable=False)
+    parked_at = Column(DateTime, default=utcnow)
+    unparked_at = Column(DateTime, nullable=True)  # set when reactivated; history kept
+
+
+class Gate(Base):
+    """An owner-editable milestone gate (Day 14/30/60/90). Kill criteria
+    must be stored BEFORE any result — enforced."""
+
+    __tablename__ = "gates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    day = Column(Integer, nullable=False, index=True)  # 14 | 30 | 60 | 90
+    title = Column(Text, nullable=False)
+    kill_criterion = Column(Text, nullable=True)
+    result = Column(Text, nullable=True)
+    decided_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Container } from "@/components/layout/container";
 import { ForgeConsoleWidgets } from "@/components/forge/forge-console";
+import { OperatingV3 } from "@/components/owner/operating-v3";
 
 type LeadStage = "REQUESTED" | "REPLIED" | "BOOKED" | "COMPLETED";
 type Readiness = {
@@ -489,6 +490,16 @@ function OwnerConsolePage() {
                 </p>
                 <div className="mt-4">
                   <ForgeConsoleWidgets />
+                </div>
+              </section>
+
+              <section className="mt-10 border-t-2 border-line pt-5" aria-label="Operating model v3">
+                <h2 className="text-xl font-extrabold">Operating model v3</h2>
+                <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
+                  Bets, proof ladder, pulse, tripwires, and gates.
+                </p>
+                <div className="mt-4">
+                  <OperatingV3 apiKey={key} />
                 </div>
               </section>
             </div>
