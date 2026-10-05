@@ -93,6 +93,14 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
                 collector=task.source,
                 db=db,
             )
+        except source_clearance_registry.SourceRateLimitError as exc:
+            research_task_engine.defer_task(db, task, str(exc))
+            return {
+                "task_id": task.id,
+                "status": "planned",
+                "deferred": True,
+                "reason": str(exc),
+            }
         except Exception as exc:
             research_task_engine.fail_task(db, task, str(exc))
             return {"task_id": task.id, "status": "failed", "reason": str(exc)}
