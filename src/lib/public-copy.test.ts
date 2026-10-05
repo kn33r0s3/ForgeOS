@@ -252,6 +252,27 @@ describe("homepage contract", () => {
     assert.match(expCard, /\/prototype\/inbox/);
   });
 
+  it("experiment card carries the five questions with honest EXP-1 values", () => {
+    const expCard = read("src/components/experiments/experiment-card.tsx");
+    for (const field of ["reality", "possibility", "constraint", "intervention", "outcome"]) {
+      assert.match(expCard, new RegExp(`\\b${field}\\b`), `experiment missing field: ${field}`);
+    }
+    // Constraint is labelled hypothesis until evidence supports it.
+    assert.match(expCard, /constraintState/);
+    assert.match(expCard, /Hypothesis/);
+    // EXP-1 honest values: outcome not started, no seller agreed.
+    assert.match(expCard, /outcome: "not started"/);
+    assert.match(expCard, /No seller has agreed/);
+  });
+
+  it("about page shows the five questions in plain words", () => {
+    const about = read("src/routes/about.tsx");
+    assert.match(about, /Five questions/);
+    for (const q of ["Reality", "Possibility", "Constraint", "Intervention", "Outcome"]) {
+      assert.match(about, new RegExp(q), `about page missing question: ${q}`);
+    }
+  });
+
 });
 
 describe("information architecture", () => {

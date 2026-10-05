@@ -39,11 +39,11 @@ export const Route = createFileRoute("/")({
 });
 
 const C = {
-  ground: "#0C0B0A",
-  panel: "#15130F",
+  ground: "#171310",
+  panel: "#1E1A15",
   line: "#3A2E1A",
-  amber: "#F2A33A",
-  text: "#F4EFE6",
+  amber: "#E2A04B",
+  text: "#EDE6D6",
   muted: "#BDB29F",
 } as const;
 
@@ -124,7 +124,7 @@ function RealityLoop() {
               y={y}
               textAnchor="middle"
               dominantBaseline="central"
-              fill={highlighted ? "#0C0B0A" : C.text}
+              fill={highlighted ? "#171310" : C.text}
               fontSize="8.5"
               fontWeight={highlighted ? 700 : 500}
               fontFamily="Archivo, sans-serif"
