@@ -175,12 +175,31 @@ def _schema_for_constraint_diagnosis() -> dict[str, Any]:
     }
 
 
+def _schema_for_horizon_domain() -> dict[str, Any]:
+    """Attribute schema for the horizon-domain projection
+    (entity_type=horizon_domain). Recovered from v3's HorizonDomain;
+    parked domains stay visible, never deleted."""
+    return {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string", "minLength": 1},
+            "reason_parked": {"type": "string", "minLength": 1},
+            "status": {"type": "string", "enum": ["parked", "unparked"]},
+            "parked_at": {"type": "string"},
+            "unparked_at": {"type": ["string", "null"]},
+        },
+        "required": ["name", "reason_parked", "status", "parked_at", "unparked_at"],
+        "additionalProperties": False,
+    }
+
+
 def seed_core_types(db: Session) -> int:
     """Install the stable substrate vocabulary as registry rows, idempotently."""
     canonical_schema = json.dumps(_schema_for_canonical_ref(), sort_keys=True, separators=(",", ":"))
     assumption_schema = json.dumps(_schema_for_assumption(), sort_keys=True, separators=(",", ":"))
     orientation_schema = json.dumps(_schema_for_orientation(), sort_keys=True, separators=(",", ":"))
     diagnosis_schema = json.dumps(_schema_for_constraint_diagnosis(), sort_keys=True, separators=(",", ":"))
+    horizon_schema = json.dumps(_schema_for_horizon_domain(), sort_keys=True, separators=(",", ":"))
     open_schema = '{"type":"object"}'
     types = {
         "entity_type": {
@@ -194,6 +213,7 @@ def seed_core_types(db: Session) -> int:
             "bet", "scout_candidate",
             "probe", "assumption",
             "orientation", "constraint_diagnosis",
+            "horizon_domain",
         },
         "relation_type": {
             "derived_from", "supports", "possible_match", "co_occurs_with", "informs", "informed_by",
@@ -251,6 +271,8 @@ def seed_core_types(db: Session) -> int:
                     schema_json = orientation_schema
                 elif category == "entity_type" and name == "constraint_diagnosis":
                     schema_json = diagnosis_schema
+                elif category == "entity_type" and name == "horizon_domain":
+                    schema_json = horizon_schema
                 elif category == "entity_type" and name in {
                     "signal", "pattern", "belief", "claim", "research_question", "opportunity",
                     "provider", "service_listing", "domain_record", "outcome", "customer",

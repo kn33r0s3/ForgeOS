@@ -628,3 +628,120 @@ def test_no_dedicated_orientation_diagnosis_models(db):
     assert not hasattr(models, "DiagnosisNode")
     assert hasattr(operating_v4, "record_orientation")
     assert hasattr(operating_v4, "diagnose_constraints")
+
+
+def test_contributor_consent_defaults_false(db):
+    c = operating_v4.add_contributor(db, "Seller A", notes="Kathmandu")
+    assert c.consent_given is False
+    assert c.consent_at is None
+
+
+def test_consent_explicitly_recorded(db):
+    c = operating_v4.add_contributor(db, "Seller B")
+    c = operating_v4.record_consent(db, c.id)
+    assert c.consent_given is True
+    assert c.consent_at is not None
+    with pytest.raises(ValueError, match="not found"):
+        operating_v4.record_consent(db, 999999)
+
+
+def test_observation_requires_consent(db):
+    c = operating_v4.add_contributor(db, "Seller C")
+    with pytest.raises(ValueError, match="Consent required"):
+        operating_v4.record_sensor_observation(db, c.id, "claim", "content")
+    with pytest.raises(ValueError, match="not found"):
+        operating_v4.record_sensor_observation(db, 999999, "claim", "content")
+
+
+def test_consented_observation_persisted_with_provenance(db):
+    c = operating_v4.add_contributor(db, "Seller D")
+    operating_v4.record_consent(db, c.id)
+    ev = operating_v4.record_sensor_observation(db, c.id, "Buyers haggle", "observed")
+    assert ev.source == "sensor-circle:Seller D"
+    assert ev.source_type == "sensor"
+    assert ev.provenance == "consent-based contributor observation"
+    # Low proof under v4 semantics — never promoted by this path.
+    assert ev.proof_level == 1
+
+
+def test_silent_contributor_in_who_not_heard_from(db):
+    c = operating_v4.add_contributor(db, "Silent Seller")
+    operating_v4.record_consent(db, c.id)
+    # No observations recorded → appears in silence list.
+    assert "Silent Seller" in operating_v4.who_not_heard_from(db)
+    # After an observation, no longer silent.
+    operating_v4.record_sensor_observation(db, c.id, "claim", "content")
+    assert "Silent Seller" not in operating_v4.who_not_heard_from(db)
+
+
+def test_no_duplicate_sensor_model(db):
+    assert hasattr(models, "SensorContributor")
+    assert hasattr(operating_v4, "add_contributor")
+    assert hasattr(operating_v4, "record_consent")
+    assert hasattr(operating_v4, "record_sensor_observation")
+
+
+def test_park_domain(db):
+    h = operating_v4.park_domain(db, "Livestream selling", "No capacity to verify")
+    assert h.entity_type == "horizon_domain"
+    assert h.identity_state == "candidate"
+    attrs = json.loads(h.attributes)
+    assert attrs["name"] == "Livestream selling"
+    assert attrs["reason_parked"] == "No capacity to verify"
+    assert attrs["status"] == "parked"
+    assert attrs["parked_at"]
+    assert attrs["unparked_at"] is None
+
+
+def test_duplicate_park_rejected(db):
+    operating_v4.park_domain(db, "Wholesale", "Too early")
+    with pytest.raises(ValueError, match="already parked"):
+        operating_v4.park_domain(db, "Wholesale", "Different reason")
+
+
+def test_unpark_preserves_history(db):
+    h = operating_v4.park_domain(db, "Exports", "No license")
+    h = operating_v4.unpark_domain(db, h.id)
+    attrs = json.loads(h.attributes)
+    assert attrs["status"] == "unparked"
+    assert attrs["unparked_at"]
+    assert attrs["parked_at"]  # original park record retained
+    assert attrs["reason_parked"] == "No license"
+    with pytest.raises(ValueError, match="not found"):
+        operating_v4.unpark_domain(db, 999999)
+
+
+def _bet(db, **kw):
+    params = {
+        "claim": "Fast replies recover sales",
+        "constraint": "Response presence",
+        "test": "One seller, one week",
+        "kill_criterion": "No recovery",
+        "decision_rule": "Recover >= 1 sale",
+        "skeptic_case": "Sellers don't care",
+    }
+    params.update(kw)
+    return operating_v4.create_bet(db, **params)
+
+
+def test_parked_domain_blocks_bet(db):
+    h = operating_v4.park_domain(db, "Dropshipping", "Out of scope")
+    with pytest.raises(ValueError, match="parked on the Horizon register"):
+        _bet(db, horizon_domain_id=h.id)
+    # Unparked domain allows the bet.
+    operating_v4.unpark_domain(db, h.id)
+    b = _bet(db, horizon_domain_id=h.id)
+    assert json.loads(b.attributes)["horizon_domain_id"] == h.id
+    # Bets without a horizon reference still work.
+    b2 = _bet(db)
+    assert json.loads(b2.attributes)["horizon_domain_id"] is None
+    # Invalid domain reference rejected.
+    with pytest.raises(ValueError, match="not found"):
+        _bet(db, horizon_domain_id=999999)
+
+
+def test_no_horizon_domain_model(db):
+    assert not hasattr(models, "HorizonDomain")
+    assert hasattr(operating_v4, "park_domain")
+    assert hasattr(operating_v4, "unpark_domain")
+    assert hasattr(operating_v4, "list_horizon_domains")

@@ -32,6 +32,7 @@ class BetIn(BaseModel):
     trust_at_risk: Optional[str] = None
     deadline: Optional[datetime] = None
     assumption_ids: Optional[list[int]] = None
+    horizon_domain_id: Optional[int] = None
 
 
 class BetDecisionIn(BaseModel):
@@ -92,6 +93,21 @@ class DiagnosisIn(BaseModel):
     nodes: list[DiagnosisNodeIn]
 
 
+class ContributorIn(BaseModel):
+    name: str
+    notes: Optional[str] = None
+
+
+class ObservationIn(BaseModel):
+    claim: str
+    content: str
+
+
+class ParkDomainIn(BaseModel):
+    name: str
+    reason: str
+
+
 @router.get("/bets")
 def list_bets(request: Request, db: Session = Depends(get_db)):
     _owner(request)
@@ -128,6 +144,7 @@ def create_bet(payload: BetIn, request: Request, db: Session = Depends(get_db)):
             trust_at_risk=payload.trust_at_risk,
             deadline=payload.deadline,
             assumption_ids=payload.assumption_ids,
+            horizon_domain_id=payload.horizon_domain_id,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
@@ -361,3 +378,72 @@ def create_diagnosis(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     return {"id": d.id, **json.loads(d.attributes or "{}")}
+
+
+@router.post("/sensors/contributors")
+def add_contributor(
+    payload: ContributorIn, request: Request, db: Session = Depends(get_db)
+):
+    _owner(request)
+    c = operating_v4.add_contributor(db, payload.name, payload.notes)
+    return {"id": c.id, "name": c.name, "consent_given": c.consent_given}
+
+
+@router.post("/sensors/contributors/{contributor_id}/consent")
+def record_consent(contributor_id: int, request: Request, db: Session = Depends(get_db)):
+    _owner(request)
+    try:
+        c = operating_v4.record_consent(db, contributor_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return {"id": c.id, "name": c.name, "consent_given": c.consent_given}
+
+
+@router.post("/sensors/contributors/{contributor_id}/observations")
+def record_observation(
+    contributor_id: int, payload: ObservationIn,
+    request: Request, db: Session = Depends(get_db),
+):
+    _owner(request)
+    try:
+        ev = operating_v4.record_sensor_observation(
+            db, contributor_id, payload.claim, payload.content
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return {"id": ev.id, "proof_level": ev.proof_level}
+
+
+@router.get("/horizon")
+def list_horizon(request: Request, db: Session = Depends(get_db)):
+    _owner(request)
+    import json
+
+    return [
+        {"id": h.id, **json.loads(h.attributes or "{}")}
+        for h in operating_v4.list_horizon_domains(db)
+    ]
+
+
+@router.post("/horizon/park")
+def park_domain(payload: ParkDomainIn, request: Request, db: Session = Depends(get_db)):
+    _owner(request)
+    import json
+
+    try:
+        h = operating_v4.park_domain(db, payload.name, payload.reason)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return {"id": h.id, **json.loads(h.attributes or "{}")}
+
+
+@router.post("/horizon/{domain_id}/unpark")
+def unpark_domain(domain_id: int, request: Request, db: Session = Depends(get_db)):
+    _owner(request)
+    import json
+
+    try:
+        h = operating_v4.unpark_domain(db, domain_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return {"id": h.id, **json.loads(h.attributes or "{}")}

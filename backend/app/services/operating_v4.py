@@ -6,7 +6,7 @@ primitive. All v4 rules enforced here.
 
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -68,9 +68,19 @@ def create_bet(
     trust_at_risk: Optional[str] = None,
     deadline: Optional[datetime] = None,
     assumption_ids: Optional[list] = None,
+    horizon_domain_id: Optional[int] = None,
 ) -> models.SubstrateEntity:
     if len(live_bets(db)) >= MAX_LIVE_BETS:
         raise ValueError(f"WIP limit: at most {MAX_LIVE_BETS} live Bets.")
+    # Parked-domain enforcement: a Bet may not target a parked horizon domain.
+    # Explicit reference (not v3's fragile name match).
+    if horizon_domain_id is not None:
+        domain = db.get(models.SubstrateEntity, horizon_domain_id)
+        if not domain or domain.entity_type != HORIZON_DOMAIN_ENTITY_TYPE:
+            raise ValueError("Horizon domain not found.")
+        if is_domain_parked(db, horizon_domain_id):
+            name = _horizon_attributes(domain).get("name")
+            raise ValueError(f"Domain '{name}' is parked on the Horizon register.")
     attributes = {
         "claim": claim,
         "constraint": constraint,
@@ -88,6 +98,7 @@ def create_bet(
         "decision_rule": decision_rule,
         "status": "live",
         "assumption_ids": assumption_ids or [],
+        "horizon_domain_id": horizon_domain_id,
     }
     bet = models.SubstrateEntity(
         entity_type=BET_ENTITY_TYPE,
@@ -452,6 +463,133 @@ def diagnose_constraints(
 
 
 # ---------------------------------------------------------------------
+# Sensor circle (recovered from v3 a5ed491)
+# ---------------------------------------------------------------------
+# Uses the existing models.SensorContributor — no duplicate infrastructure.
+# Observations are Evidence rows with contributor provenance; proof stays
+# governed by set_proof_level() (sensor observations start low, never
+# promoted by this path).
+
+def add_contributor(
+    db: Session, name: str, notes: Optional[str] = None
+) -> models.SensorContributor:
+    c = models.SensorContributor(name=name, notes=notes, consent_given=False)
+    db.add(c)
+    db.commit()
+    db.refresh(c)
+    return c
+
+
+def record_consent(db: Session, contributor_id: int) -> models.SensorContributor:
+    c = db.get(models.SensorContributor, contributor_id)
+    if not c:
+        raise ValueError("Contributor not found.")
+    c.consent_given = True
+    c.consent_at = utcnow()
+    db.commit()
+    db.refresh(c)
+    return c
+
+
+def record_sensor_observation(
+    db: Session, contributor_id: int, claim: str, content: str
+) -> models.Evidence:
+    c = db.get(models.SensorContributor, contributor_id)
+    if not c:
+        raise ValueError("Contributor not found.")
+    if not c.consent_given:
+        raise ValueError("Consent required before accepting a sensor observation.")
+    ev = models.Evidence(
+        claim=claim,
+        content=content,
+        source=f"sensor-circle:{c.name}",
+        source_type="sensor",
+        provenance="consent-based contributor observation",
+        recorded_at=utcnow(),
+    )
+    db.add(ev)
+    db.commit()
+    db.refresh(ev)
+    # Canonical proof path: sensor observations start low (L1). They are
+    # never promoted by this path — only set_proof_level() with real
+    # verification can raise them.
+    return set_proof_level(db, ev.id, 1, source_type="sensor")
+
+
+# ---------------------------------------------------------------------
+# Horizon register as a projection over SubstrateEntity
+# ---------------------------------------------------------------------
+# Recovered from v3 a5ed491. v3's dedicated HorizonDomain table is obsolete
+# and NOT restored. A horizon domain is a SubstrateEntity with
+# entity_type="horizon_domain". Parked domains stay visible; unparking
+# changes state without deleting history. A parked domain cannot become a
+# new live Bet (enforced via explicit horizon_domain_id reference on Bet).
+
+HORIZON_DOMAIN_ENTITY_TYPE = "horizon_domain"
+
+
+def _horizon_attributes(h: models.SubstrateEntity) -> dict:
+    return json.loads(h.attributes or "{}")
+
+
+def list_horizon_domains(db: Session) -> list:
+    return (
+        db.query(models.SubstrateEntity)
+        .filter(models.SubstrateEntity.entity_type == HORIZON_DOMAIN_ENTITY_TYPE)
+        .order_by(models.SubstrateEntity.id.asc())
+        .all()
+    )
+
+
+def _get_horizon_domain(db: Session, domain_id: int) -> models.SubstrateEntity:
+    h = db.get(models.SubstrateEntity, domain_id)
+    if not h or h.entity_type != HORIZON_DOMAIN_ENTITY_TYPE:
+        raise ValueError("Horizon domain not found.")
+    return h
+
+
+def is_domain_parked(db: Session, domain_id: int) -> bool:
+    h = _get_horizon_domain(db, domain_id)
+    return _horizon_attributes(h).get("status") == "parked"
+
+
+def park_domain(db: Session, name: str, reason: str) -> models.SubstrateEntity:
+    from app.services import world_graph  # local import to avoid cycles
+
+    for h in list_horizon_domains(db):
+        attrs = _horizon_attributes(h)
+        if attrs.get("name") == name and attrs.get("status") == "parked":
+            raise ValueError(f"Domain '{name}' is already parked.")
+    h = world_graph.create_entity(
+        db,
+        entity_type=HORIZON_DOMAIN_ENTITY_TYPE,
+        display_name=f"Horizon: {name[:60]}",
+        attributes={
+            "name": name,
+            "reason_parked": reason,
+            "status": "parked",
+            "parked_at": utcnow().isoformat(),
+            "unparked_at": None,
+        },
+        created_by="owner",
+    )
+    db.commit()
+    db.refresh(h)
+    return h
+
+
+def unpark_domain(db: Session, domain_id: int) -> models.SubstrateEntity:
+    h = _get_horizon_domain(db, domain_id)
+    attrs = _horizon_attributes(h)
+    attrs["status"] = "unparked"
+    attrs["unparked_at"] = utcnow().isoformat()
+    h.attributes = json.dumps(attrs)
+    db.commit()
+    db.refresh(h)
+    return h
+
+
+# ---------------------------------------------------------------------
 # Probes as projections over SubstrateEntity
 # ---------------------------------------------------------------------
 # Recovered from v2 5a3a484 (operating_model.py). v2's dedicated Probe and
@@ -719,7 +857,14 @@ def who_not_heard_from(db: Session) -> list:
             .order_by(models.Evidence.id.desc())
             .first()
         )
-        if not latest or (latest.recorded_at and latest.recorded_at < cutoff):
+        if not latest:
+            silent.append(c.name)
+            continue
+        recorded = latest.recorded_at
+        if recorded is not None and recorded.tzinfo is None:
+            # SQLite returns naive datetimes; treat as UTC.
+            recorded = recorded.replace(tzinfo=timezone.utc)
+        if recorded is None or recorded < cutoff:
             silent.append(c.name)
     return silent
 
