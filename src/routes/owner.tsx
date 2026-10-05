@@ -527,8 +527,6 @@ function OwnerConsolePage() {
                   <PurchaseJourney apiKey={key} />
                 </div>
               </section>
-                </div>
-              </section>
             </div>
           )}
 

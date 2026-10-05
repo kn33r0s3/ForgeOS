@@ -151,8 +151,6 @@ function UnknownsPage() {
           </>
         )}
 
-        )}
-
         <p className="mt-8 border-t border-line pt-4 text-xs leading-5 text-dim">
           Unknowns are banked by the discovery rounds from real observations. World unknowns (about
           markets, sellers, behavior) appear here. Unknowns about Hami&apos;s own systems and
