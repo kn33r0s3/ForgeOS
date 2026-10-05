@@ -25,15 +25,25 @@ def sync_runtime_tool_capabilities(
     """Idempotently mirror declared tool metadata; never check availability or execute."""
     world_graph.seed_core_types(db)
     source_registry = registry or tool_registry.default_registry()
-    result = {"created": 0, "refreshed": 0, "unchanged": 0, "events_created": 0}
+    result = {"created": 0, "refreshed": 0, "unchanged": 0, "events_created": 0, "invalid": 0}
 
     for declared in source_registry.list_capabilities():
         name = (declared.name or "").strip()
         if not name:
+            result["invalid"] += 1
             continue
-        reliability = float(declared.reliability)
+        try:
+            reliability = float(declared.reliability)
+        except (TypeError, ValueError):
+            result["invalid"] += 1
+            continue
         if not math.isfinite(reliability) or reliability < 0 or reliability > 1:
-            raise ValueError(f"tool registry reliability must be between 0 and 1: {name}")
+            # One misdeclared tool must not abort the whole substrate
+            # projection stage: forge_loop catches any exception here and
+            # rolls back every adapter's work for the cycle. Skip the bad
+            # declaration and keep the count observable instead.
+            result["invalid"] += 1
+            continue
         attributes: dict[str, Any] = {
             "source_registry": "runtime_tool_registry",
             "source_name": name,

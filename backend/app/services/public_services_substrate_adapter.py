@@ -38,6 +38,13 @@ def sync_public_services(db: Session, *, limit: int = 500) -> dict[str, int]:
     except type_validation.SubstrateError:
         result["unactivated_types"] += 1
         return result
+    # resolve_type is a pure type_registry read; the relation type cannot
+    # change mid-loop, so resolve once instead of once per listing.
+    try:
+        type_validation.resolve_type(db, "relation_type", "offered_by")
+        offered_by_active = True
+    except type_validation.SubstrateError:
+        offered_by_active = False
 
     providers = (
         db.query(models.Provider)
@@ -76,9 +83,7 @@ def sync_public_services(db: Session, *, limit: int = 500) -> dict[str, int]:
             result["unresolved_service_listings"] += 1
             continue
 
-        try:
-            type_validation.resolve_type(db, "relation_type", "offered_by")
-        except type_validation.SubstrateError:
+        if not offered_by_active:
             result["unactivated_types"] += 1
             continue
 

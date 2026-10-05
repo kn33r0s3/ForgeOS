@@ -96,7 +96,7 @@ def sync_market_signal_signals(db: Session, *, limit: int = 250) -> dict[str, in
             market_signal_entity = world_graph.create_entity(
                 db,
                 entity_type="market_signal",
-                display_name=(signal.title or f"Market signal #{signal.id}").strip()[:240],
+                display_name=((signal.title or "").strip() or f"Market signal #{signal.id}")[:240],
                 attributes={
                     "signal_id": signal.id,
                     "source": signal.source or "manual",
