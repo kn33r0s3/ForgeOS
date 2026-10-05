@@ -113,7 +113,6 @@ export const EXPERIMENTS: Experiment[] = [
     description:
       "Can faster replies recover real sales for one seller? One seller, one week. No seller has agreed yet — it remains proposed.",
     log: [],
-    toolLink: { to: "/prototype/inbox", label: "Try the free inbox tool" },
     reality:
       "Social sellers in Kathmandu receive inquiries across Viber, WhatsApp, and Facebook, but replies are often slow because the seller is busy with fulfillment. No seller has agreed to participate yet.",
     possibility:

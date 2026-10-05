@@ -128,10 +128,12 @@ describe("homepage contract", () => {
     assert.doesNotMatch(src, /loadUnknownsSummary/);
   });
 
-  it("keeps the inbox prototype out of primary navigation and labels its footer link TEST-only", () => {
+  it("keeps the inbox prototype out of public navigation and footer entirely", () => {
+    // Per HAMI CONTINUITY LAW: the inbox is historical experimental material,
+    // not Hami's public identity. It must not appear in nav or footer.
     assert.doesNotMatch(header(), /Inbox tool|\/prototype\/inbox/);
-    assert.match(footer(), /Inbox prototype \(TEST only\)/);
-    assert.match(footer(), /to: "\/prototype\/inbox"/);
+    assert.doesNotMatch(footer(), /Inbox prototype/);
+    assert.doesNotMatch(footer(), /\/prototype\/inbox/);
   });
 
   it("6. does not position Hami as an inbox, reply service, seller business, or fixed vertical", () => {
@@ -242,14 +244,12 @@ describe("homepage contract", () => {
     assert.match(src, /No seller has agreed/);
     assert.match(src, /when earned/);
     assert.doesNotMatch(src, /\[when earned\]/);
-    // Inbox tool link lives on /experiments per IA — rendered by
-    // ExperimentCard (the route maps EXPERIMENTS through it), so assert the
-    // chain instead of grepping the route file for the card's literal.
-    const exp = read("src/routes/experiments.tsx");
-    assert.match(exp, /ExperimentCard/);
+    // Inbox prototype is historical material, NOT Hami's public identity.
+    // Per HAMI CONTINUITY LAW: no subordinate experiment may dominate Hami's
+    // public representation. The /prototype/inbox route exists but is unlinked.
     const expCard = read("src/components/experiments/experiment-card.tsx");
-    assert.match(expCard, /Try the free inbox tool/);
-    assert.match(expCard, /\/prototype\/inbox/);
+    assert.doesNotMatch(expCard, /Try the free inbox tool/);
+    assert.doesNotMatch(expCard, /\/prototype\/inbox/);
   });
 
   it("experiment card carries the five questions with honest EXP-1 values", () => {

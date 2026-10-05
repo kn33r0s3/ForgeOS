@@ -1,3 +1,40 @@
+# HAMI CONTINUITY LAW
+
+There is only one Hami.
+
+Hami begins at commit 07baf91a1900cf3e27ce0bae9fead126801da3b3 (tagged `hami-origin`).
+All later work is an in-place evolution of that same system.
+
+Never create a second Hami, parallel architecture, replacement subsystem,
+versioned duplicate, or competing canonical implementation merely because
+the requested capability is new.
+
+Before coding:
+1. Find the existing seam that already carries the requested meaning.
+2. Trace its history with git (`git log --follow`, `git blame`, `git log -S`).
+3. Modify that seam in place when possible.
+4. Reuse existing primitives, events, evidence, authorization, state,
+   routes, components, services, and tests.
+5. Treat new files as exceptional and justify why an existing seam cannot
+   carry the behavior.
+
+A request is not permission to add architecture.
+
+Tests are contracts and evidence, not targets.
+Do not alter production behavior solely to satisfy stale tests.
+
+When historical implementations conflict:
+recover the valuable behavior and integrate it into the existing Hami
+lineage rather than selecting or creating another version.
+
+Never delete history, reset to a convenient version, force-push,
+delete recovery branches, or discard reachable historical work during
+recovery.
+
+The repository itself is the memory of Hami.
+
+---
+
 # FORGEOS TOP RULE — DRIVE OWNER DEPENDENCY TO ZERO
 
 This is Hami's first substantive project rule: prefer fewer owner actions per

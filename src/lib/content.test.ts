@@ -236,10 +236,11 @@ describe("Hami prototype honesty", () => {
     assert.match(route, /No inquiries yet/);
     assert.match(route, /honest empty state/);
     assert.match(route, /createFileRoute\("\/prototype\/inbox"\)/);
-    // The prototype is not primary navigation and is explicitly TEST-labeled in the footer.
+    // The prototype is historical material, not public identity.
+    // Per HAMI CONTINUITY LAW: it must not appear in footer or nav.
     const footer = readFileSync(join(sourceDir, "../components/layout/site-footer.tsx"), "utf8");
-    assert.match(footer, /Inbox prototype \(TEST only\)/);
-    assert.match(footer, /to: "\/prototype\/inbox"/);
+    assert.doesNotMatch(footer, /Inbox prototype/);
+    assert.doesNotMatch(footer, /\/prototype\/inbox/);
     const root = join(sourceDir, "../..");
     const sitemap = readFileSync(join(root, "public/sitemap.xml"), "utf8");
     assert.equal(sitemap.includes("/prototype/inbox"), false);
@@ -401,7 +402,9 @@ describe("Hami public root", () => {
     assert.ok(NAV.some((item) => item.label === "Unknowns" && item.to === "/unknowns"));
     assert.ok(NAV.some((item) => item.label === "Experiments" && item.to === "/experiments"));
     assert.doesNotMatch(header, /Inbox tool|\/prototype\/inbox/);
-    assert.match(footer, /Inbox prototype \(TEST only\)/);
+    // Per HAMI CONTINUITY LAW: inbox is historical material, not public identity.
+    assert.doesNotMatch(footer, /Inbox prototype/);
+    assert.doesNotMatch(footer, /\/prototype\/inbox/);
     assert.match(footer, /Experiment 1 \(not started\)/);
     assert.ok(
       !NAV.some((item) => (item.label as string) === "Contact"),
