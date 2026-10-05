@@ -1,11 +1,12 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app import models
 from app.database import get_db
+from app.security import require_owner_api_key
 from app.services.youtube_intelligence import analyze_youtube
 from app.services import tool_usefulness
 
@@ -17,7 +18,12 @@ class YouTubeRequest(BaseModel):
 
 
 @router.post("/youtube")
-def analyze_youtube_url(payload: YouTubeRequest, db: Session = Depends(get_db)):
+def analyze_youtube_url(payload: YouTubeRequest, request: Request, db: Session = Depends(get_db)):
+    # Owner-only: this triggers external network fetches plus database writes
+    # (MediaAnalysis, up to 30 Claim/Evidence/ResearchQuestion rows and a
+    # research plan per claim). Unauthenticated calls must not be possible
+    # (cycle-37/47/53/61/62/64/66/67/69 guard pattern).
+    require_owner_api_key(request)
     try:
         result = analyze_youtube(db, payload.url)
     except ValueError as exc:

@@ -89,8 +89,11 @@ def extract_claims(db: Session, document_id: int) -> list[models.WorldClaim]:
     # Re-running extraction on an already-processed document (e.g. a second
     # POST /world/ingest of the same text, which returns the existing doc)
     # must not duplicate rows — skip claim texts already stored.
+    # Stored claim texts are compared case-insensitively to match the
+    # in-batch `seen` key below (a case-variant re-run of a stored claim
+    # must not insert a duplicate row).
     existing_texts = {
-        row[0]
+        (row[0] or "").lower()
         for row in db.query(models.WorldClaim.claim_text)
         .filter_by(document_id=doc.id)
         .all()
@@ -119,7 +122,7 @@ def extract_claims(db: Session, document_id: int) -> list[models.WorldClaim]:
         if key in seen:
             continue
         seen.add(key)
-        if part in existing_texts:
+        if key in existing_texts:
             continue
         domain = "trading" if re.search(
             r"(?i)\b(buy|sell|trade|rsi|momentum|stock|market|forex|market)\b", part
@@ -150,12 +153,20 @@ def extract_ideas_from_claims(db: Session, document_id: int) -> list[models.Worl
         .all()
     )
     # Re-running on an already-processed document must not duplicate ideas.
-    existing_idea_claim_ids = {
-        row[0]
-        for row in db.query(models.WorldIdea.claim_ids)
+    # WorldIdea.claim_ids is a CSV column that may hold several claim ids
+    # (written by other extractors), so membership is checked token-wise —
+    # comparing the raw column string would miss every multi-id row and
+    # re-create ideas for already-linked claims.
+    existing_idea_claim_ids = set()
+    for row in (
+        db.query(models.WorldIdea.claim_ids)
         .filter_by(document_id=document_id)
         .all()
-    }
+    ):
+        for token in str(row[0] or "").split(","):
+            token = token.strip()
+            if token:
+                existing_idea_claim_ids.add(token)
     ideas = []
     for c in claims:
         claim_ids = str(c.id)

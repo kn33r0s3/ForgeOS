@@ -85,7 +85,11 @@ def fetch_transcript(video_id: str, fetch: Callable[[str], bytes] | None = None)
     """Fetch public timed-text XML; absence is a real unavailable result."""
     url = f"https://www.youtube.com/api/timedtext?lang=en&v={quote(video_id)}"
     try:
-        raw = fetch(url) if fetch else urlopen(Request(url, headers={"User-Agent": "ForgeOS/1.0"}), timeout=15).read()
+        if fetch:
+            raw = fetch(url)
+        else:
+            with urlopen(Request(url, headers={"User-Agent": "ForgeOS/1.0"}), timeout=15) as response:
+                raw = response.read()
         root = ET.fromstring(raw)
     except Exception as exc:
         return {"available": False, "source": "youtube_timedtext", "error": str(exc), "segments": []}
