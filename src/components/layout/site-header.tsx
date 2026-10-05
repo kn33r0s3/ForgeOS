@@ -53,11 +53,11 @@ export function SiteHeader() {
       <header
         className={cn(
           "masthead sticky top-0 z-50 h-[var(--header-h)] transition-shadow duration-150",
-          scrolled || open ? "shadow-[0_4px_0_0_#000]" : "",
+          scrolled || open ? "shadow-[0_4px_0_0_rgb(0_0_0/0.45)]" : "",
         )}
         style={{
-          background: "linear-gradient(180deg, #1C1813 0%, #0C0B0A 100%)",
-          borderBottom: "2px solid #F2A33A",
+          background: "linear-gradient(180deg, #241d16 0%, #171310 100%)",
+          borderBottom: "2px solid #E2A04B",
         }}
       >
         <Container className="relative flex h-full items-stretch justify-between gap-4">
@@ -91,9 +91,9 @@ export function SiteHeader() {
                 to="/login"
                 className="hidden min-h-12 items-center rounded-card border-2 px-4 text-sm font-extrabold transition-colors sm:inline-flex"
                 style={{
-                  borderColor: "#F2A33A",
-                  background: "#F2A33A",
-                  color: "#0C0B0A",
+                  borderColor: "#E2A04B",
+                  background: "#E2A04B",
+                  color: "#171310",
                 }}
               >
                 Join Hami
@@ -117,7 +117,7 @@ export function SiteHeader() {
                     open && bar === 1 && "scale-x-0",
                     open && bar === 2 && "-translate-y-2 -rotate-45",
                   )}
-                  style={{ background: "#F2A33A" }}
+                  style={{ background: "#E2A04B" }}
                 />
               ))}
             </button>
@@ -174,9 +174,9 @@ export function SiteHeader() {
                 onClick={() => setOpen(false)}
                 className="flex min-h-12 items-center justify-center rounded-card border-2 px-4 text-base font-extrabold transition-colors"
                 style={{
-                  borderColor: "#F2A33A",
-                  background: "#F2A33A",
-                  color: "#0C0B0A",
+                  borderColor: "#E2A04B",
+                  background: "#E2A04B",
+                  color: "#171310",
                 }}
               >
                 Join Hami
