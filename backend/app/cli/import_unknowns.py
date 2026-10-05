@@ -23,6 +23,7 @@ import argparse
 import re
 import sys
 from dataclasses import dataclass, field
+from datetime import date
 
 STATE_MAP = {
     "UNKNOWN": "unknown",
@@ -52,9 +53,12 @@ class ParsedUnknown:
 
     @property
     def provenance(self) -> str:
+        # Stamped with the import run date, not a hardcoded one: a stale
+        # hardcoded date would claim every future import happened on
+        # 2026-10-04.
         return (
             f"UNKNOWN_MAP.md §{self.section} row {self.row_id} "
-            f"(banked 2026-10-04). Cheapest test: {self.cheapest_test}"
+            f"(imported {date.today().isoformat()}). Cheapest test: {self.cheapest_test}"
         )
 
 

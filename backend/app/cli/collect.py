@@ -5,7 +5,7 @@ LIVE COLLECTION SMOKE CLI COMMAND
 Gated CLI tool for running live research collection against external sources.
 
 Usage:
-    python -m app.cli.collect [--sources github,rss] [--query "search term"] [--limit 5] [--dry-run | --apply]
+    python -m app.cli.collect [--sources web] [--query "search term"] [--limit 5] [--dry-run | --apply]
 
 Defaults to --dry-run (no database writes).
 --apply must be explicitly passed to insert signals into forge.db.
@@ -133,8 +133,10 @@ def main():
     parser.add_argument(
         "--sources",
         type=str,
-        default="github,rss",
-        help="Comma-separated sources to fetch (github, reddit, rss, arxiv, web)",
+        default="web",
+        help="Comma-separated sources to fetch. NOTE: only 'web' is currently "
+        "cleared for collection (test-enforced); other sources report a "
+        "'not cleared' error entry.",
     )
     parser.add_argument("--query", type=str, default=None, help="Search query parameter")
     parser.add_argument("--limit", type=int, default=5, help="Limit items per source")
