@@ -83,6 +83,7 @@ def seed_core_types(db: Session) -> int:
             "evidence_record", "product",
             "repair_work_item", "need",
             "bet", "scout_candidate",
+            "probe", "assumption",
         },
         "relation_type": {
             "derived_from", "supports", "possible_match", "co_occurs_with", "informs", "informed_by",

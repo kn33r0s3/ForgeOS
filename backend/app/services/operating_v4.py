@@ -122,6 +122,114 @@ def decide_bet(db: Session, bet_id: int, decision: str, notes: Optional[str] = N
 
 
 # ---------------------------------------------------------------------
+# Probes as projections over SubstrateEntity
+# ---------------------------------------------------------------------
+# Recovered from v2 5a3a484 (operating_model.py). v2's dedicated Probe and
+# Assumption tables are obsolete and NOT restored. A probe is a
+# SubstrateEntity with entity_type="probe" — the same projection pattern as
+# Bet. Assumption references resolve to SubstrateEntity rows with
+# entity_type="assumption" (seeded by the assumption projection).
+#
+# A probe is an operational experiment record. Recording one does NOT mean
+# the probe actually happened. Probes are not a seventh primitive.
+
+PROBE_ENTITY_TYPE = "probe"
+ASSUMPTION_ENTITY_TYPE = "assumption"
+PROBE_TYPES = ("observation", "conversation", "intervention")
+PROBE_DECISIONS = ("AMPLIFY", "DAMPEN", "KILL")
+MAX_ACTIVE_INTERVENTIONS = 1
+MAX_ACTIVE_CONVERSATIONS = 5
+
+
+def _probe_attributes(probe: models.SubstrateEntity) -> dict:
+    return json.loads(probe.attributes or "{}")
+
+
+def active_probes(db: Session, probe_type: Optional[str] = None) -> list:
+    probes = (
+        db.query(models.SubstrateEntity)
+        .filter(
+            models.SubstrateEntity.entity_type == PROBE_ENTITY_TYPE,
+            models.SubstrateEntity.status == "active",
+        )
+        .all()
+    )
+    active = [p for p in probes if _probe_attributes(p).get("status") == "active"]
+    if probe_type:
+        active = [
+            p for p in active if _probe_attributes(p).get("probe_type") == probe_type
+        ]
+    return active
+
+
+def record_probe(
+    db: Session,
+    assumption_id: int,
+    probe_type: str,
+    affordable_loss: str,
+    kill_criterion: str,
+) -> models.SubstrateEntity:
+    if probe_type not in PROBE_TYPES:
+        raise ValueError(f"probe_type must be one of {PROBE_TYPES}")
+    if not affordable_loss:
+        raise ValueError("affordable_loss is required.")
+    if not kill_criterion:
+        raise ValueError("kill_criterion is required.")
+    assumption = db.get(models.SubstrateEntity, assumption_id)
+    if not assumption or assumption.entity_type != ASSUMPTION_ENTITY_TYPE:
+        raise ValueError("Assumption not found.")
+    if probe_type == "intervention" and (
+        len(active_probes(db, "intervention")) >= MAX_ACTIVE_INTERVENTIONS
+    ):
+        raise ValueError("Only one active intervention at a time.")
+    if probe_type == "conversation" and (
+        len(active_probes(db, "conversation")) >= MAX_ACTIVE_CONVERSATIONS
+    ):
+        raise ValueError(
+            "Conversation probes run in batches of 5 — "
+            "close or decide existing ones first."
+        )
+    attributes = {
+        "probe_type": probe_type,
+        "affordable_loss": affordable_loss,
+        "kill_criterion": kill_criterion,
+        "assumption_id": assumption_id,
+        "status": "active",
+    }
+    probe = models.SubstrateEntity(
+        entity_type=PROBE_ENTITY_TYPE,
+        display_name=f"Probe ({probe_type}): {assumption.display_name[:60]}",
+        attributes=json.dumps(attributes),
+        identity_state="candidate",
+        created_by="owner",
+    )
+    db.add(probe)
+    db.commit()
+    db.refresh(probe)
+    return probe
+
+
+def decide_probe(
+    db: Session, probe_id: int, decision: str, result: Optional[str] = None
+) -> models.SubstrateEntity:
+    if decision not in PROBE_DECISIONS:
+        raise ValueError(f"decision must be one of {PROBE_DECISIONS}")
+    probe = db.get(models.SubstrateEntity, probe_id)
+    if not probe or probe.entity_type != PROBE_ENTITY_TYPE:
+        raise ValueError("Probe not found.")
+    attrs = _probe_attributes(probe)
+    attrs["status"] = "decided"
+    attrs["decision"] = decision
+    if result is not None:
+        attrs["result"] = result
+    attrs["decided_at"] = utcnow().isoformat()
+    probe.attributes = json.dumps(attrs)
+    db.commit()
+    db.refresh(probe)
+    return probe
+
+
+# ---------------------------------------------------------------------
 # Proof ladder with provenance rules
 # ---------------------------------------------------------------------
 

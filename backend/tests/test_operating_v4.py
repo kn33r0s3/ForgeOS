@@ -259,3 +259,115 @@ def test_no_duplicate_gate_model(db):
     assert hasattr(operating_v4, "record_gate_result")
     assert hasattr(operating_v4, "seed_frontier_gates")
     assert not hasattr(operating_v4, "operating_v3")
+
+
+def _assumption(db):
+    a = models.SubstrateEntity(
+        entity_type="assumption",
+        display_name="Slow replies cost sellers sales",
+        attributes="{}",
+        identity_state="candidate",
+        created_by="owner",
+    )
+    db.add(a)
+    db.commit()
+    db.refresh(a)
+    return a
+
+
+def _probe(db, assumption_id, probe_type="observation"):
+    return operating_v4.record_probe(
+        db,
+        assumption_id=assumption_id,
+        probe_type=probe_type,
+        affordable_loss="Rs 0",
+        kill_criterion="No signal in 7 days",
+    )
+
+
+def test_probe_types_accepted(db):
+    a = _assumption(db)
+    for pt in ("observation", "conversation", "intervention"):
+        p = _probe(db, a.id, pt)
+        assert p.entity_type == "probe"
+        assert isinstance(p, models.SubstrateEntity)
+
+
+def test_probe_invalid_type_rejected(db):
+    a = _assumption(db)
+    with pytest.raises(ValueError, match="must be one of"):
+        _probe(db, a.id, "survey")
+
+
+def test_probe_requires_affordable_loss(db):
+    a = _assumption(db)
+    with pytest.raises(ValueError, match="affordable_loss is required"):
+        operating_v4.record_probe(
+            db, assumption_id=a.id, probe_type="observation",
+            affordable_loss="", kill_criterion="k",
+        )
+
+
+def test_probe_requires_kill_criterion(db):
+    a = _assumption(db)
+    with pytest.raises(ValueError, match="kill_criterion is required"):
+        operating_v4.record_probe(
+            db, assumption_id=a.id, probe_type="observation",
+            affordable_loss="Rs 0", kill_criterion="",
+        )
+
+
+def test_probe_assumption_must_resolve(db):
+    with pytest.raises(ValueError, match="Assumption not found"):
+        _probe(db, 999999)
+    # A bet is a real entity but not an assumption — still rejected.
+    bet = operating_v4.create_bet(
+        db, claim="c", constraint="x", test="t",
+        kill_criterion="k", decision_rule="r", skeptic_case="s",
+    )
+    with pytest.raises(ValueError, match="Assumption not found"):
+        _probe(db, bet.id)
+
+
+def test_one_active_intervention(db):
+    a = _assumption(db)
+    first = _probe(db, a.id, "intervention")
+    assert len(operating_v4.active_probes(db, "intervention")) == 1
+    with pytest.raises(ValueError, match="Only one active intervention"):
+        _probe(db, a.id, "intervention")
+    # Deciding the first permits another.
+    operating_v4.decide_probe(db, first.id, "KILL", result="No effect")
+    assert len(operating_v4.active_probes(db, "intervention")) == 0
+    second = _probe(db, a.id, "intervention")
+    assert second.id != first.id
+
+
+def test_conversation_batch_of_five(db):
+    a = _assumption(db)
+    probes = [_probe(db, a.id, "conversation") for _ in range(5)]
+    assert len(operating_v4.active_probes(db, "conversation")) == 5
+    with pytest.raises(ValueError, match="batches of 5"):
+        _probe(db, a.id, "conversation")
+    # Deciding one frees a slot.
+    operating_v4.decide_probe(db, probes[0].id, "AMPLIFY")
+    assert len(operating_v4.active_probes(db, "conversation")) == 4
+    sixth = _probe(db, a.id, "conversation")
+    assert sixth.id not in [p.id for p in probes]
+
+
+def test_decide_probe_invalid_decision(db):
+    a = _assumption(db)
+    p = _probe(db, a.id, "observation")
+    with pytest.raises(ValueError, match="must be one of"):
+        operating_v4.decide_probe(db, p.id, "MAYBE")
+    with pytest.raises(ValueError, match="not found"):
+        operating_v4.decide_probe(db, 999999, "KILL")
+
+
+def test_no_duplicate_probe_model(db):
+    assert not hasattr(models, "Probe")
+    assert not hasattr(models, "Assumption")
+    assert hasattr(operating_v4, "record_probe")
+    assert hasattr(operating_v4, "decide_probe")
+    assert hasattr(operating_v4, "active_probes")
+    assert not hasattr(operating_v4, "operating_model")
