@@ -156,6 +156,42 @@ function AboutPage() {
             </Link>
           </Button>
         </section>
+
+        <section className="border-t border-line py-10">
+          <h2 className="font-display text-3xl font-extrabold tracking-tight text-ink">
+            How we work
+          </h2>
+          <div className="mt-4 max-w-2xl space-y-4 text-base leading-7 text-muted">
+            <p>
+              We keep a list of our load-bearing assumptions — the things that must be
+              true for any of this to work. Each one says how it could be shown wrong,
+              what the cheapest test is, and whether it would kill the whole idea if
+              false. Nothing gets marked true without evidence attached.
+            </p>
+            <p>
+              Before acting, we write down where we're standing: who is observing,
+              from where, with what means, and what we already believe. Every belief
+              points at the assumption it rests on, so a wrong assumption can't hide
+              inside a confident plan.
+            </p>
+            <p>
+              When something is stuck, we diagnose the constraint like a decision tree:
+              each possible bottleneck gets its evidence, and exactly one is named the
+              most binding — the others are marked not binding now, or maybe later.
+            </p>
+            <p>
+              Then we probe. Small tests, each tied to one assumption, each with a
+              pre-written kill criterion and a limit on what we're willing to lose.
+              Quiet observation runs in parallel; conversations go in small batches;
+              only one real intervention runs at a time. Every probe ends in a
+              decision: amplify, dampen, or kill.
+            </p>
+            <p>
+              What we claim we can do — our capability map — comes only from verified
+              outcomes: a real event plus real evidence. Never from a paragraph we wrote.
+            </p>
+          </div>
+        </section>
       </Container>
     </main>
   );

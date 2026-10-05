@@ -2080,3 +2080,127 @@ class CycleRun(Base):
     status = Column(String, nullable=False, default="RUNNING")  # RUNNING | COMPLETED | FAILED
     summary_json = Column(Text, nullable=True)  # stage counts + per-stage errors
     error = Column(Text, nullable=True)
+
+
+# ---------------------------------------------------------------------
+# Operating Model v2 (2026-10-05)
+#
+# Assumption register -> Orientation -> Constraint diagnosis ->
+# Probe portfolio -> Capability map. Capabilities come only from
+# verified outcomes (Event + Evidence), never from prose.
+# ---------------------------------------------------------------------
+
+
+class Assumption(Base):
+    """One load-bearing assumption. Status can only become 'supported'
+    with linked evidence — never by assertion."""
+
+    __tablename__ = "assumptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    statement = Column(Text, nullable=False, unique=True)
+    status = Column(String, nullable=False, default="untested", index=True)
+    # untested | supported | contradicted
+    deal_killer = Column(Boolean, nullable=False, default=False, index=True)
+    cost_to_test = Column(String, nullable=True)  # e.g. "Rs 0", "1 week"
+    cheapest_test = Column(Text, nullable=True)
+    evidence_links = Column(Text, nullable=False, default="[]")  # JSON list
+    milestone = Column(String, nullable=True)  # e.g. "Rs 1", "Rs 10,000"
+    source_note = Column(Text, nullable=True)  # where the assumption came from
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class Orientation(Base):
+    """Versioned orientation record: who is observing, from where,
+    with what means and local knowledge. Each version supersedes the last;
+    history is never deleted."""
+
+    __tablename__ = "orientations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    version = Column(Integer, nullable=False, unique=True)
+    observer_who = Column(Text, nullable=False)
+    observer_from_where = Column(Text, nullable=False)
+    means = Column(Text, nullable=False)
+    local_knowledge = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+
+class OrientationBelief(Base):
+    """One current belief in an orientation version, linked to an assumption."""
+
+    __tablename__ = "orientation_beliefs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    orientation_id = Column(Integer, ForeignKey("orientations.id"), nullable=False, index=True)
+    belief_text = Column(Text, nullable=False)
+    assumption_id = Column(Integer, ForeignKey("assumptions.id"), nullable=True, index=True)
+
+    orientation = relationship("Orientation", foreign_keys=[orientation_id])
+    assumption = relationship("Assumption", foreign_keys=[assumption_id])
+
+
+class ConstraintDiagnosis(Base):
+    """Constraint diagnosis for one situation: decision-tree nodes with
+    evidence per node. Exactly one node is the most binding hypothesis."""
+
+    __tablename__ = "constraint_diagnoses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    situation = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+
+class DiagnosisNode(Base):
+    """One node in a constraint diagnosis decision tree."""
+
+    __tablename__ = "diagnosis_nodes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    diagnosis_id = Column(Integer, ForeignKey("constraint_diagnoses.id"), nullable=False, index=True)
+    node_text = Column(Text, nullable=False)
+    evidence = Column(Text, nullable=True)
+    binding_status = Column(String, nullable=False, default="not_binding_now", index=True)
+    # most_binding_hypothesis | not_binding_now | may_bind_later
+
+    diagnosis = relationship("ConstraintDiagnosis", foreign_keys=[diagnosis_id])
+
+
+class Probe(Base):
+    """One probe against an assumption. Observation probes run in parallel;
+    conversation probes in batches of 5; one intervention at a time."""
+
+    __tablename__ = "probes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    assumption_id = Column(Integer, ForeignKey("assumptions.id"), nullable=False, index=True)
+    probe_type = Column(String, nullable=False, index=True)
+    # observation | conversation | intervention
+    affordable_loss = Column(Text, nullable=False)
+    kill_criterion = Column(Text, nullable=False)
+    started_at = Column(DateTime, nullable=True)
+    ended_at = Column(DateTime, nullable=True)
+    result = Column(Text, nullable=True)
+    decision = Column(String, nullable=True, index=True)
+    # AMPLIFY | DAMPEN | KILL | None (undecided)
+
+    assumption = relationship("Assumption", foreign_keys=[assumption_id])
+
+
+class Capability(Base):
+    """A verified capability. Entries come ONLY from verified outcomes
+    (Event + Evidence references) — never from prose claims."""
+
+    __tablename__ = "verified_capabilities"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(Text, nullable=False, unique=True)
+    description = Column(Text, nullable=True)
+    event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
+    evidence_id = Column(Integer, ForeignKey("evidence.id"), nullable=False)
+    verified_at = Column(DateTime, default=utcnow)
+    verified_by = Column(String, nullable=False, default="owner")
+
+    event = relationship("WorldEvent", foreign_keys=[event_id])
+    evidence = relationship("Evidence", foreign_keys=[evidence_id])
