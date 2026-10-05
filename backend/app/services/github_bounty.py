@@ -27,22 +27,22 @@ from typing import Any, Optional
 from sqlalchemy.orm import Session
 
 from app import models
-from app.config import settings
-from app.services import integration_outbox
 
 logger = logging.getLogger(__name__)
 
 USER_AGENT = "ForgeOS/2.3 (bounty-adapter)"
 TIMEOUT_SECONDS = 15
 
-# Regex patterns for detecting bounty amounts in issue titles and bodies
+# Regex patterns for detecting bounty amounts in issue titles and bodies.
+# The amount group accepts thousands separators: "$5,000" parses as 5000.0.
+_BOUNTY_AMOUNT = r"((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{2})?)"
 BOUNTY_PATTERNS = [
-    re.compile(r"bounty:\s*\$?(\d+(?:\.\d{2})?)", re.IGNORECASE),
-    re.compile(r"/bounty\s+\$?(\d+(?:\.\d{2})?)", re.IGNORECASE),
-    re.compile(r"@opire-dev\s+create\s+\$?(\d+(?:\.\d{2})?)", re.IGNORECASE),
-    re.compile(r"\[bounty\]\s*\[?\$?(\d+(?:\.\d{2})?)\]?", re.IGNORECASE),
-    re.compile(r"\$(\d+(?:\.\d{2})?)\s+(?:bounty|reward)", re.IGNORECASE),
-    re.compile(r"(?:bounty|reward)\s+of\s+\$?(\d+(?:\.\d{2})?)", re.IGNORECASE),
+    re.compile(r"bounty:\s*\$?" + _BOUNTY_AMOUNT, re.IGNORECASE),
+    re.compile(r"/bounty\s+\$?" + _BOUNTY_AMOUNT, re.IGNORECASE),
+    re.compile(r"@opire-dev\s+create\s+\$?" + _BOUNTY_AMOUNT, re.IGNORECASE),
+    re.compile(r"\[bounty\]\s*\[?\$?" + _BOUNTY_AMOUNT + r"\]?", re.IGNORECASE),
+    re.compile(r"\$" + _BOUNTY_AMOUNT + r"\s+(?:bounty|reward)", re.IGNORECASE),
+    re.compile(r"(?:bounty|reward)\s+of\s+\$?" + _BOUNTY_AMOUNT, re.IGNORECASE),
 ]
 
 
@@ -54,7 +54,7 @@ def extract_bounty_amount(text: str) -> Optional[float]:
         match = pattern.search(text)
         if match:
             try:
-                val = float(match.group(1))
+                val = float(match.group(1).replace(",", ""))
                 if val > 0:
                     return val
             except ValueError:
@@ -69,7 +69,7 @@ def detect_bounty_platform(text: str, labels: list[str]) -> str:
         return "Opire"
     if "algora" in combined:
         return "Algora"
-    if "polar.sh" in combined or "polar" in combined:
+    if "polar" in combined:
         return "Polar"
     return "GitHub Bounty"
 

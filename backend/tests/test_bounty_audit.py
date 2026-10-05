@@ -11,7 +11,9 @@ Explicit verification of Phase 8 audit gates:
 6. PR merge verification remains strictly distinct from payment verification.
 """
 
+import io
 import logging
+import urllib.error
 from app import models
 from app.services import action_engine, github_bounty
 
@@ -32,7 +34,16 @@ def test_no_secrets_logged(caplog, monkeypatch):
     test_secret = "ghp_secret_token_12345_should_never_be_logged"
     monkeypatch.setenv("GITHUB_TOKEN", test_secret)
 
-    # Calling verify_pr_merge_status on non-existent repo to trigger network error/logging
+    # Trigger the network-error logging path WITHOUT a real network call:
+    # the pytest suite must stay hermetic (no internet dependency, no 15s
+    # timeout on offline CI).
+    def fake_urlopen(req, timeout=None):
+        raise urllib.error.HTTPError(
+            req.full_url, 404, "Not Found", {},
+            io.BytesIO(b'{"message": "Not Found"}'),
+        )
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
     github_bounty.verify_pr_merge_status("nonexistent-owner-abc", "nonexistent-repo-xyz", 999999)
 
     for record in caplog.records:

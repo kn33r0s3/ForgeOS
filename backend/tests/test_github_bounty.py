@@ -17,6 +17,9 @@ def test_extract_bounty_amount():
     assert github_bounty.extract_bounty_amount("Issue with /bounty 50.00") == 50.0
     assert github_bounty.extract_bounty_amount("@opire-dev create $250") == 250.0
     assert github_bounty.extract_bounty_amount("Bounty: $75 on completion") == 75.0
+    # Thousands separators must not truncate the amount ("$5,000" was parsed as 5.0)
+    assert github_bounty.extract_bounty_amount("$5,000 bounty") == 5000.0
+    assert github_bounty.extract_bounty_amount("bounty: $12,500.00 for the fix") == 12500.0
     assert github_bounty.extract_bounty_amount("Regular issue without reward") is None
 
 
