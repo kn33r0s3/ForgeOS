@@ -128,7 +128,13 @@ class SMTPEmailActionAdapter(ActionAdapter):
                 "verification_state": "FAILED",
             }
 
-        payload = json.loads(dispatched.response_json or "{}") if dispatched.response_json else {}
+        try:
+            payload = json.loads(dispatched.response_json) if dispatched.response_json else {}
+        except (ValueError, TypeError):
+            # The delivery was already accepted and recorded by the
+            # dispatcher; a malformed provider payload must not flip the
+            # action record to FAILED after a real send.
+            payload = {}
         message_id = payload.get("message_id") or payload.get("sid") or "unknown"
         action.external_ref = str(dispatched.id)
         db.flush()
@@ -466,14 +472,13 @@ def propose_action(
         action_type=action_type,
         objective=objective,
         parameters_json=json.dumps(parameters or {}),
-        status=status if policy_result != "BLOCK" else "CANCELLED",
+        status=status,
         policy_result=policy_result,
         policy_reason=policy_reason,
         adapter_name=get_adapter(action_type).name,
         verification_state="UNVERIFIED",
     )
     if policy_result == "BLOCK":
-        action.status = "CANCELLED"
         action.execution_error = policy_reason
 
     db.add(action)
@@ -499,15 +504,11 @@ def start_and_execute_action(db: Session, action_id: int) -> Optional[models.Act
     action = db.query(models.Action).filter_by(id=action_id).first()
     if not action:
         return None
-    if action.status not in ("PROPOSED", "APPROVED", "APPROVAL_REQUIRED"):
-        if action.status == "APPROVAL_REQUIRED":
-            action.execution_error = "Requires approval before execution"
-            db.commit()
-            return action
-        return action
     if action.status == "APPROVAL_REQUIRED":
         action.execution_error = "Requires owner approval before start"
         db.commit()
+        return action
+    if action.status not in ("PROPOSED", "APPROVED"):
         return action
     if action.policy_result == "BLOCK":
         action.status = "CANCELLED"

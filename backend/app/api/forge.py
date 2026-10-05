@@ -738,12 +738,13 @@ def get_execution_action(action_id: int, request: Request, db: Session = Depends
 
 
 @router.post("/execution/actions/{action_id}/approve", response_model=schemas.ExperimentOut)
-def approve_execution_action(action_id: int, db: Session = Depends(get_db)):
+def approve_execution_action(action_id: int, request: Request, db: Session = Depends(get_db)):
     """
     Explicit owner approval — the only way an approval-required action
     (spending or commitment involved) can ever move to 'ready'. No
     automatic approval path exists anywhere in this codebase.
     """
+    require_owner_api_key(request)
     action = execution_engine.approve_action(db, action_id)
     if not action:
         raise HTTPException(status_code=404, detail="Execution action not found")
@@ -751,12 +752,13 @@ def approve_execution_action(action_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/execution/actions/{action_id}/start", response_model=schemas.ExperimentOut)
-def start_execution_action(action_id: int, db: Session = Depends(get_db)):
+def start_execution_action(action_id: int, request: Request, db: Session = Depends(get_db)):
     """
     Mark an action as actually being carried out. Refuses (404) if an
     approval-required action hasn't been approved yet — call
     POST .../approve first.
     """
+    require_owner_api_key(request)
     action = execution_engine.start_action(db, action_id)
     if not action:
         raise HTTPException(
@@ -768,7 +770,7 @@ def start_execution_action(action_id: int, db: Session = Depends(get_db)):
 
 @router.post("/execution/actions/{action_id}/result", response_model=schemas.ExperimentOut)
 def record_execution_action_result(
-    action_id: int, payload: schemas.ExecutionActionResult, db: Session = Depends(get_db)
+    action_id: int, payload: schemas.ExecutionActionResult, request: Request, db: Session = Depends(get_db)
 ):
     """
     Record what actually happened. Delegates the confidence-update
@@ -779,6 +781,7 @@ def record_execution_action_result(
     A require_approval action cannot attach revenue here. Its result
     is the human outcome, and money is a separate verified payment.
     """
+    require_owner_api_key(request)
     existing = db.get(models.Experiment, action_id)
     if existing is not None and existing.policy_decision == "require_approval":
         if payload.revenue is not None or payload.conversions is not None or payload.costs is not None:
@@ -818,9 +821,10 @@ def get_execution_action_package(
 
 @router.post("/execution/actions/{action_id}/human-result", response_model=schemas.ActionPackageOut)
 def record_execution_human_result(
-    action_id: int, payload: schemas.HumanResultIn, db: Session = Depends(get_db)
+    action_id: int, payload: schemas.HumanResultIn, request: Request, db: Session = Depends(get_db)
 ):
     """Record the human outcome. Revenue stays empty."""
+    require_owner_api_key(request)
     try:
         return approval_outcome_bridge.record_human_result(db, action_id, payload.result)
     except ValueError as exc:
@@ -829,9 +833,10 @@ def record_execution_human_result(
 
 @router.post("/execution/actions/{action_id}/verified-revenue", response_model=schemas.ActionPackageOut)
 def record_execution_verified_revenue(
-    action_id: int, payload: schemas.VerifiedRevenueIn, db: Session = Depends(get_db)
+    action_id: int, payload: schemas.VerifiedRevenueIn, request: Request, db: Session = Depends(get_db)
 ):
     """Record revenue only after a human outcome and a verified payment reference."""
+    require_owner_api_key(request)
     try:
         approval_outcome_bridge.record_verified_revenue_evidence(
             db,
