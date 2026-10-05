@@ -20,7 +20,10 @@ def _db_path() -> Path:
     raw = settings.DATABASE_URL
     if raw.startswith("sqlite:///"):
         return Path(raw.replace("sqlite:///", "", 1))
-    return _DEFAULT_STORAGE / "forge.db"
+    # Fail loud: silently returning the default sqlite path for a non-sqlite
+    # URL would back up a stale/absent forge.db while the live data lives
+    # elsewhere. safe_backup must never pretend it captured the real database.
+    raise ValueError(f"safe_backup only supports sqlite DATABASE_URL, got: {raw!r}")
 
 
 def _validate_keep(keep: int) -> int:
@@ -33,12 +36,33 @@ def _validate_keep(keep: int) -> int:
     return keep
 
 
+def _sweep_stale_tmp_files() -> None:
+    """Remove orphaned ``*.db.tmp`` files from crashed backup runs.
+
+    ``_prune`` only manages finished ``*.db.gz`` snapshots, so an interrupted
+    run's plain-DB temp file would otherwise sit in BACKUPS_DIR forever. Only
+    files older than an hour are touched: a concurrent backup's in-progress
+    temp file always carries a different microsecond stamp and is seconds old.
+    """
+    try:
+        now_ns = datetime.now(timezone.utc).timestamp() * 1e9
+        for stale in BACKUPS_DIR.glob("forge_*.db.tmp"):
+            try:
+                if now_ns - stale.stat().st_mtime_ns > 3_600_000_000_000:
+                    stale.unlink(missing_ok=True)
+            except OSError:
+                log.warning("Could not remove stale backup temp file %s", stale, exc_info=True)
+    except OSError:
+        log.warning("Could not sweep stale backup temp files", exc_info=True)
+
+
 def safe_backup(db_path: Path | None = None, keep: int = 10) -> Path | str:
     keep = _validate_keep(keep)
     src = (db_path or _db_path()).resolve()
     if not src.exists():
         return f"no database at {src} to back up"
     BACKUPS_DIR.mkdir(parents=True, exist_ok=True)
+    _sweep_stale_tmp_files()
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     tmp_plain = BACKUPS_DIR / f"forge_{stamp}.db.tmp"
     final_gz = BACKUPS_DIR / f"forge_{stamp}.db.gz"
@@ -120,8 +144,9 @@ def archive_legacy_snapshots(keep: int = 2) -> dict[str, list[str]]:
     }
 
 def append_scheduler_log(event: str, status: str, record: dict, duration_ms: int) -> None:
+    forge_cycle = record.get("forge_cycle") or {}
     line = {"ts": datetime.now(timezone.utc).isoformat(), "event": event, "status": status,
-            "duration_ms": duration_ms, "detail": record.get("forge_cycle", {}).get("cycle_id")}
+            "duration_ms": duration_ms, "detail": forge_cycle.get("cycle_id")}
     if os.getenv("VERCEL"):
         log.info("Scheduler event: %s", json.dumps(line, default=str))
         return
