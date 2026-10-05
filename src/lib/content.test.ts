@@ -111,9 +111,11 @@ describe("Hami public content", () => {
       assert.equal(publicHrefs.has(path), false, `nav leaked ${path}`);
     }
     // Join Hami IS in the header as a CTA button for signed-out visitors.
-    // Owner reversed the "no public signup" rule — the button links to /login.
+    // Join leads to signup mode, Login is a separate link to sign-in mode.
     const header = readFileSync(join(root, "src/components/layout/site-header.tsx"), "utf8");
     assert.match(header, /Join Hami/);
+    assert.match(header, /to="\/login\?mode=sign-up"/);
+    assert.match(header, /Login/);
     assert.match(header, /to="\/login"/);
     const footer = readFileSync(join(root, "src/components/layout/site-footer.tsx"), "utf8");
     assert.doesNotMatch(footer, /Sign in \/ Sign up/);

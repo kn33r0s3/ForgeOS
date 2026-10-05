@@ -12,14 +12,18 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
   loader: () => getAuthAvailability(),
   head: () => ({ meta: [{ title: "Sign in — Hami" }] }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    mode: search.mode === "sign-up" ? "sign-up" : "sign-in",
+  }),
 });
 
 function LoginPage() {
   const navigate = useNavigate();
   const { googleConfigured, termsConfigured, termsUrl } = Route.useLoaderData();
+  const { mode: initialMode } = Route.useSearch();
   const { user, isPending } = useCurrentUserState();
   const [hydrated, setHydrated] = useState(false);
-  const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
+  const [mode, setMode] = useState<"sign-in" | "sign-up">(initialMode);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

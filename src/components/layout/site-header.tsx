@@ -87,17 +87,26 @@ export function SiteHeader() {
             ) : signedIn ? (
               <UserButton />
             ) : (
-              <Link
-                to="/login"
-                className="hidden min-h-12 items-center rounded-card border-2 px-4 text-sm font-extrabold transition-colors sm:inline-flex"
-                style={{
-                  borderColor: "#F2A33A",
-                  background: "#F2A33A",
-                  color: "#0C0B0A",
-                }}
-              >
-                Join Hami
-              </Link>
+              <>
+                <Link
+                  to="/login"
+                  className="hidden min-h-12 items-center rounded-card px-3 text-sm font-bold transition-colors sm:inline-flex"
+                  style={{ color: "#F2A33A" }}
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/login?mode=sign-up"
+                  className="hidden min-h-12 items-center rounded-card border-2 px-4 text-sm font-extrabold transition-colors sm:inline-flex"
+                  style={{
+                    borderColor: "#F2A33A",
+                    background: "#F2A33A",
+                    color: "#0C0B0A",
+                  }}
+                >
+                  Join Hami
+                </Link>
+              </>
             )}
             <button
               type="button"
