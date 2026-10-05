@@ -24,6 +24,15 @@ def process_worker_task_by_id(
     if not settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
         return False
 
+    # Dormancy guard: agent runs are stopped while dormant.
+    # Wire check_agent_run_allowed into the single worker-task choke point.
+    from app.services import operating_v4 as _opv4
+
+    try:
+        _opv4.check_agent_run_allowed(db)
+    except ValueError:
+        return False
+
     now = utcnow()
     claim = db.query(WorkerTask).filter(
         WorkerTask.id == task_id,
