@@ -661,6 +661,24 @@ class Evidence(Base):
     # rescaled or overwritten during substrate migration.
     substrate_source = Column(String, nullable=True)
     substrate_confidence = Column(Float, nullable=True)
+    # Proof ladder L0-L7 (Operating Model v4, docs/OPERATING_MODEL.md).
+    proof_level = Column(Integer, nullable=False, default=0, index=True)
+    proof_capped_reason = Column(Text, nullable=True)
+    # Perspective: SELLER | BUYER | CIRCLE (whose side the observation is from).
+    perspective = Column(String, nullable=True, index=True)
+    # Evidence provenance (v4).
+    source_type = Column(String, nullable=True, index=True)
+    # firsthand | secondhand | agent_written | sensor | third_party
+    source_identity = Column(Text, nullable=True)
+    # named source, or anonymous_sensor_id for sensor-circle contributors
+    consent_status = Column(String, nullable=True)
+    # granted | not_required | pending | denied
+    observed_at = Column(DateTime, nullable=True)
+    directness = Column(String, nullable=True)
+    # direct | indirect
+    linked_bet_id = Column(Integer, ForeignKey("entities.id"), nullable=True, index=True)
+    verifier = Column(Text, nullable=True)
+    # counterparty confirmation or third-party timestamp reference (L5+)
     substrate_provenance = Column(Text, nullable=True)
 
     signal = relationship("Signal")
@@ -2080,3 +2098,95 @@ class CycleRun(Base):
     status = Column(String, nullable=False, default="RUNNING")  # RUNNING | COMPLETED | FAILED
     summary_json = Column(Text, nullable=True)  # stage counts + per-stage errors
     error = Column(Text, nullable=True)
+
+
+# ---------------------------------------------------------------------
+# Operating Model v4 (2026-10-05) — see docs/OPERATING_MODEL.md
+#
+# Bet is a PROJECTION over SubstrateEntity (entity_type="bet"), not a
+# new primitive. Verification records are append-only and not editable
+# by the builder. Dormancy freezes agent runs.
+# ---------------------------------------------------------------------
+
+
+class DeployVerification(Base):
+    """Independent verifier output. Append-only: the API exposes INSERT
+    only — no update, no delete. Written by CI, not by the builder."""
+
+    __tablename__ = "deploy_verifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    deployed_sha = Column(String, nullable=False)
+    fetched_content = Column(Text, nullable=False)  # hash or excerpt of fetched bytes
+    test_counts = Column(String, nullable=False)  # e.g. "198/198 + 186/186"
+    passed = Column(Boolean, nullable=False)
+    recorded_at = Column(DateTime, default=utcnow)
+    source = Column(String, nullable=False, default="ci")  # ci | external_monitor
+
+
+class DormancyState(Base):
+    """Singleton dormancy flag. When dormant: freeze state, stop agent
+    runs. Resume only from docs/RUN_STATE.md."""
+
+    __tablename__ = "dormancy_state"
+
+    id = Column(Integer, primary_key=True)
+    is_dormant = Column(Boolean, nullable=False, default=False)
+    frozen_at = Column(DateTime, nullable=True)
+    frozen_by = Column(String, nullable=True)
+    resume_note = Column(Text, nullable=True)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class FrontierChallenge(Base):
+    """Monthly frontier challenge record: the best alternative frontier
+    and the comparison. The frontier earns its place every month."""
+
+    __tablename__ = "frontier_challenges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    month = Column(String, nullable=False, unique=True)  # YYYY-MM
+    alternative_frontier = Column(Text, nullable=False)
+    comparison = Column(Text, nullable=False)
+    verdict = Column(Text, nullable=True)  # keep | change | under_review
+    recorded_at = Column(DateTime, default=utcnow)
+
+
+class SensorContributor(Base):
+    """A named sensor-circle contributor. Observations only with consent."""
+
+    __tablename__ = "sensor_contributors"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(Text, nullable=False)
+    consent_given = Column(Boolean, nullable=False, default=False)
+    consent_at = Column(DateTime, nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+
+
+class OwnerBudget(Base):
+    """Singleton owner time/energy budget. Exceeding it forces scope reduction."""
+
+    __tablename__ = "owner_budget"
+
+    id = Column(Integer, primary_key=True)
+    hours_used = Column(String, nullable=False, default="unknown")
+    hours_remaining = Column(String, nullable=False, default="unknown")
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class Gate(Base):
+    """An owner-editable milestone gate (Day 14/30/60/90). Kill criteria
+    must be stored BEFORE any result — enforced."""
+
+    __tablename__ = "gates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    day = Column(Integer, nullable=False, index=True)  # 14 | 30 | 60 | 90
+    title = Column(Text, nullable=False)
+    kill_criterion = Column(Text, nullable=True)
+    result = Column(Text, nullable=True)
+    decided_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
