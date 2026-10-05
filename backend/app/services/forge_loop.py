@@ -159,9 +159,12 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
     #    time as new, unrelated signals accumulate too). Evidence is
     #    persisted to Reality Memory, and Knowledge re-synced, inside
     #    check_belief() / adjust_confidence().
+    from app import models  # local import, matching this module's style
+
     existing_beliefs = be.list_beliefs(limit=200)
+    all_signals = db.query(models.Signal).all()  # loaded once: check_belief must not re-scan per belief
     for belief in existing_beliefs:
-        reality_checker.check_belief(db, belief)
+        reality_checker.check_belief(db, belief, signals=all_signals)
 
     # 5a. Resolve any pending predictions whose belief was just re-checked.
     #     This is where source reliability actually moves.
