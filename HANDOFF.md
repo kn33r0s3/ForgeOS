@@ -127,7 +127,7 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
-## Current state (verified 2026-10-04 — re-verify on takeover)
+## Current state (verified 2026-10-05 — re-verify on takeover)
 
 - **Repo:** `kn33r0s3/ForgeOS`; `main` and `origin/main` matched at
   `eb88332138ff3a4343d0744e7caa1b655d1daf7d` when this review began. This is
@@ -230,6 +230,23 @@ than a few days old, re-verify before trusting the details.
   364 passed. Everything remaining needs a human
   body, identity, or money: the five conversations, company registration,
   payment credentials, four owner-side readiness checks.
+- **Repo deep-study loop concluded (2026-10-05):** 10h window
+  (2026-10-04T20:22Z → 2026-10-05T06:24Z), 92 study cycles, 181 safe fixes
+  landed on main (83 fix commits; 90 commits total in the window). 5 HIGH
+  findings — mostly unguarded backend API endpoints, all owner-gated, zero
+  consumers. Findings log `~/workspace/research/repo-study-mistakes.md`
+  (~2,048 lines); unstudied remainder recorded in
+  `~/workspace/research/repo-study-progress.md` (ai_engine, causal_engine,
+  learning_engine, product_engine, prospect_discovery; schemas/ rest; data/;
+  docs rest). Loop ended per its own 10h stop rule — no new study window
+  without a fresh decision. **Owner-held:** `GET /api/payments/esewa/callback`
+  requires the owner API key, which the payer's browser cannot carry in the
+  live eSewa v2 redirect flow — the eSewa leg of the revenue path is
+  functionally incomplete until the owner rules on the guard (removal is an
+  authorization-semantics change).
+- **Live re-verification 2026-10-05:** repo HEAD `c18aa0f`; both production
+  `/api/health` return ok; `intake_enabled:false` (unchanged); 77 banked
+  unknowns in the D-ledger.
 - **Open blockers:** the five discovery conversations need a real human
   (delegate kit at `docs/DELEGATE_KIT.md`, no delegate named — do not nag
   the user about it); production DB read-only check blocked (no documented
@@ -241,8 +258,10 @@ than a few days old, re-verify before trusting the details.
   Ownership; CAMIS said the name is available, subject to review). Payment
   onboarding blocked — owner has personal PAN only. Do not invent company
   or merchant info.
-- **Discovery:** hourly research loop (recreate from `docs/ops/`); rounds
-  1–5 banked unknowns D1–D30 in `docs/UNKNOWN_MAP.md` (round 4: Kathmandu
+- **Discovery:** hourly research loop (recreate from `docs/ops/`); the
+  `hami-discovery-round` cron is explicitly DISABLED under the named-seller
+  execution gate (2026-10-04) — no further rounds until a seller is named.
+  Rounds 1–5 banked unknowns D1–D30 in `docs/UNKNOWN_MAP.md` (round 4: Kathmandu
   kirana economics + udharo credit layer; round 5: mobile repair bench —
   bench cannot be delegated). Sharpest current
   question (D2/D11): "If I brought you 10 new customers tomorrow, what
