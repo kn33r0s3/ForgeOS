@@ -66,6 +66,8 @@ class ExperimentRunner:
         )
         if not experiment:
             return None
+        if experiment.status == "completed":
+            raise ValueError("Experiment result has already been recorded")
 
         experiment.result = result
         experiment.confidence_change = confidence_change

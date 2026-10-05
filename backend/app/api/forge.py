@@ -223,9 +223,12 @@ def record_experiment_result(
 ):
     """Record what actually happened and push the resulting confidence
     change into the linked belief."""
-    experiment = experiment_runner.ExperimentRunner(db).record_result(
-        experiment_id, payload.result, payload.confidence_change
-    )
+    try:
+        experiment = experiment_runner.ExperimentRunner(db).record_result(
+            experiment_id, payload.result, payload.confidence_change
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     if not experiment:
         raise HTTPException(status_code=404, detail="Experiment not found")
     return experiment
