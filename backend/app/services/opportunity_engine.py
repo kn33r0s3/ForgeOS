@@ -58,9 +58,14 @@ def _estimate_difficulty(problem_text: str) -> str:
     """Very simple heuristic: longer/more technical-sounding problems
     are assumed harder. This is a placeholder scoring rule that can be
     replaced with a model-based estimate later."""
-    hard_signals = ["regulat", "hardware", "medical", "bank", "compliance", "legal", "government"]
+    hard_signals = ["regulat", "hardware", "medical", "compliance", "legal", "government"]
     text = problem_text.lower()
     if any(h in text for h in hard_signals):
+        return "high"
+    # "bank" alone is a substring trap — "riverbank"/"embankment" are not
+    # banking problems — so it gets the word-boundary treatment the other
+    # signals don't need (audited: no common false positives for them).
+    if re.search(r"\bbank\w*", text):
         return "high"
     if len(text.split()) > 40:
         return "medium"
@@ -145,7 +150,6 @@ def _derive_target_customer(problem: str, fallback: str | None = None) -> str | 
     return (
         extraction.get("customer_type")
         or extraction.get("affected_customer")
-        or fallback
         or fallback
     )
 
@@ -739,11 +743,18 @@ def run_autonomous_opportunity_discovery(db: Session) -> dict:
         signal_query = signal_query.filter(models.Signal.id.notin_(list(attached_signal_ids)))
     signal_scan = signal_query.order_by(models.Signal.id.desc()).limit(400).all()
     single_signals_created = 0
+    # Track genuinely NEW opportunities: generate_opportunity_from_signal_if_strong()
+    # returns the existing opportunity (non-None) when it merely linked evidence
+    # to an already-known problem. Counting those as creations inflated
+    # single_signal_opportunities_created AND let 3 relinks exhaust the per-cycle
+    # cap, starving genuinely new strong signals later in the scan.
+    known_opportunity_ids = {row[0] for row in db.query(models.Opportunity.id).all()}
     for signal in signal_scan:
         # Only consider it a candidate for the STRONG single-signal bar once.
         # idempotent by identity_key inside the helper, so repeats are safe.
         result = generate_opportunity_from_signal_if_strong(db, signal)
-        if result:
+        if result and result.id not in known_opportunity_ids:
+            known_opportunity_ids.add(result.id)
             single_signals_created += 1
             # cap per cycle: surface at most a few lone signals so a burst
             # of complaints doesn't flood the pipeline in one pass.
