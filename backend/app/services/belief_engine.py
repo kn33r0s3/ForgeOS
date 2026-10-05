@@ -91,7 +91,7 @@ class BeliefEngine:
         )
         if existing:
             existing_ids = (
-                set(existing.supporting_signal_ids.split(","))
+                set(x.strip() for x in existing.supporting_signal_ids.split(",") if x.strip())
                 if existing.supporting_signal_ids
                 else set()
             )
@@ -437,7 +437,22 @@ def _merge_belief_provenance(
     canonical.supporting_signal_ids = ",".join(
         sorted(existing_ids | duplicate_ids, key=lambda value: int(value))
     ) or None
-    canonical.confidence_score = min(canonical.confidence_score, duplicate.confidence_score)
+    # The repair's "most conservative confidence" write is a real
+    # confidence change, so it belongs in the append-only trail — the
+    # same invariant _record_confidence_event() enforces everywhere
+    # else. No commit here: repair_historical_beliefs() commits once
+    # it has processed all merges.
+    if duplicate.confidence_score < canonical.confidence_score:
+        db.add(
+            models.ConfidenceEvent(
+                belief_id=canonical.id,
+                previous_confidence=canonical.confidence_score,
+                new_confidence=duplicate.confidence_score,
+                delta=round(duplicate.confidence_score - canonical.confidence_score, 1),
+                reason="merge_conservative",
+            )
+        )
+        canonical.confidence_score = duplicate.confidence_score
     if canonical.pattern_id is None:
         canonical.pattern_id = duplicate.pattern_id
     db.query(models.Evidence).filter(models.Evidence.belief_id == duplicate.id).update(
