@@ -112,11 +112,13 @@ describe("Hami public content", () => {
     }
     // Join Hami IS in the header as a CTA button for signed-out visitors.
     // Join leads to signup mode, Login is a separate link to sign-in mode.
+    // TanStack Router uses structured search params, not query strings.
     const header = readFileSync(join(root, "src/components/layout/site-header.tsx"), "utf8");
     assert.match(header, /Join Hami/);
-    assert.match(header, /to="\/login\?mode=sign-up"/);
-    assert.match(header, /Login/);
     assert.match(header, /to="\/login"/);
+    assert.match(header, /search=\{\{\s*mode:\s*"sign-up"\s*\}\}/);
+    assert.match(header, /Login/);
+    assert.match(header, /search=\{\{\s*mode:\s*"sign-in"\s*\}\}/);
     const footer = readFileSync(join(root, "src/components/layout/site-footer.tsx"), "utf8");
     assert.doesNotMatch(footer, /Sign in \/ Sign up/);
   });
