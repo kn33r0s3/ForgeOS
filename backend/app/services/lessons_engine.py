@@ -57,6 +57,25 @@ _THEME_WORD_PATTERNS: list[tuple[str, "re.Pattern[str]"]] = [
     (word, _theme_word_pattern(word)) for word in THEME_WORDS
 ]
 
+# Common non-discriminating words. When the opportunity text has no theme
+# word, the fallback content word must still be worth naming — otherwise two
+# unrelated opportunities ("small shops lose customers", "small restaurants
+# waste food") would collapse into one lesson ("pricing:small"), silently
+# merging unrelated markets into a single "learned" page.
+_STOPWORDS = frozenset(
+    "their there these those about which where while other would could should "
+    "often every since under being doing small local large first final other "
+    "thing things makes made using used".split()
+)
+
+
+def _content_word(hint: str) -> str:
+    """First 5+ char content word in `hint` that is not a stopword."""
+    for word in re.findall(r"[a-z]{5,}", hint):
+        if word not in _STOPWORDS:
+            return word
+    return ""
+
 
 def _theme_words_in(text: str) -> list[str]:
     """Theme words genuinely present in `text`, in THEME_WORDS order."""
@@ -90,10 +109,10 @@ def _theme_key_from(event: models.LearningEvent, lesson_text: str,
         if hint_words:
             opp_word = hint_words[0]
         else:
-            # fall back to a content word from the problem if any
-            m = re.findall(r"[a-z]{5,}", hint)
-            if m:
-                opp_word = m[0]
+            # fall back to a content word from the problem if any —
+            # stopword-filtered so generic adjectives don't merge
+            # unrelated opportunities into one lesson
+            opp_word = _content_word(hint)
     if found:
         base = found[0]
     elif opp_word:
