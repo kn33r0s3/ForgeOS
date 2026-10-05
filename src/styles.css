@@ -75,8 +75,8 @@
   --header-h: 4rem;
 
   /* Hard, printed shadows rather than soft glows. */
-  --shadow-sm: 2px 2px 2px 1px rgb(0 0 0 / 0.55);
-  --shadow-md: 2px 5px 5px 1px rgb(0 0 0 / 0.5);
+  --shadow-sm: 2px 2px 2px 1px #000;
+  --shadow-md: 2px 5px 5px 1px rgb(0 0 0 / 0.75);
   --shadow-border: 0 0 0 1px var(--border);
   --shadow-border-hover: 0 0 0 1px color-mix(in srgb, var(--primary) 50%, transparent);
   --shadow-glow: 0 0 0 3px color-mix(in srgb, var(--focus) 30%, transparent);
@@ -95,20 +95,20 @@
  * never floaty.
  */
 :root {
-  --background: #171310;
-  --surface: #1e1a15;
-  --surface-elevated: #27211a;
-  --foreground: #ede6d6;
+  --background: #0c0b0a;
+  --surface: #15130f;
+  --surface-elevated: #1e1a14;
+  --foreground: #f4efe6;
   --muted: #bdb29f;
   --border: #3a2e1a;
-  --primary: #e2a04b;
-  --primary-foreground: #171310;
+  --primary: #f2a33a;
+  --primary-foreground: #0c0b0a;
   --secondary: #262019;
   --success: #72d38f;
-  --warning: #e2a04b;
+  --warning: #f2a33a;
   --danger: #ff6f6f;
   --info: #9ec5ff;
-  --focus: #e2a04b;
+  --focus: #f2a33a;
   --wheat: #f5deb3;
   --slab: #d1cfcf;
   --plate-edge: #3a2e1a;

@@ -42,7 +42,7 @@ const C = {
   ground: "#171310",
   panel: "#1E1A15",
   line: "#3A2E1A",
-  amber: "#E2A04B",
+  amber: "#F2A33A",
   text: "#EDE6D6",
   muted: "#BDB29F",
 } as const;

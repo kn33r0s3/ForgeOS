@@ -57,7 +57,7 @@ export function SiteHeader() {
         )}
         style={{
           background: "linear-gradient(180deg, #241d16 0%, #171310 100%)",
-          borderBottom: "2px solid #E2A04B",
+          borderBottom: "2px solid #F2A33A",
         }}
       >
         <Container className="relative flex h-full items-stretch justify-between gap-4">
@@ -117,7 +117,7 @@ export function SiteHeader() {
                     open && bar === 1 && "scale-x-0",
                     open && bar === 2 && "-translate-y-2 -rotate-45",
                   )}
-                  style={{ background: "#E2A04B" }}
+                  style={{ background: "#F2A33A" }}
                 />
               ))}
             </button>
