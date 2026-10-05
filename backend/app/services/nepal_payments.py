@@ -87,7 +87,7 @@ def verify_esewa_response(encoded_data: str) -> dict[str, Any]:
         fields = payload["signed_field_names"].split(",")
         signed = ",".join(f"{field}={payload[field]}" for field in fields)
         expected = base64.b64encode(hmac.new(secret.encode(), signed.encode(), hashlib.sha256).digest()).decode()
-    except (ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
+    except (ValueError, KeyError, TypeError, AttributeError) as exc:
         raise ValueError("invalid eSewa callback payload") from exc
     if not hmac.compare_digest(expected, str(payload.get("signature", ""))):
         raise ValueError("eSewa callback signature mismatch")

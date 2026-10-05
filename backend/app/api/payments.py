@@ -1,8 +1,9 @@
 from __future__ import annotations
 from decimal import Decimal
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field, AnyHttpUrl
 
+from app.security import require_owner_api_key
 from app.services import nepal_payments
 
 router = APIRouter(prefix="/payments", tags=["payments"])
@@ -34,14 +35,16 @@ def _provider_error(exc: Exception) -> HTTPException:
     return HTTPException(status_code=status, detail=message[:500])
 
 @router.post("/esewa/checkout")
-def esewa_checkout(body: EsewaCheckoutRequest):
+def esewa_checkout(request: Request, body: EsewaCheckoutRequest):
+    require_owner_api_key(request)
     try:
         return nepal_payments.esewa_checkout(**body.model_dump())
     except Exception as exc:
         raise _provider_error(exc) from exc
 
 @router.post("/esewa/lookup")
-def esewa_lookup(body: EsewaLookupRequest):
+def esewa_lookup(request: Request, body: EsewaLookupRequest):
+    require_owner_api_key(request)
     try:
         result = nepal_payments.esewa_lookup(**body.model_dump())
         return {"provider": "esewa", "verified": result.get("status") == "COMPLETE", "response": result}
@@ -49,7 +52,8 @@ def esewa_lookup(body: EsewaLookupRequest):
         raise _provider_error(exc) from exc
 
 @router.get("/esewa/callback")
-def esewa_callback(data: str = Query(min_length=20)):
+def esewa_callback(request: Request, data: str = Query(min_length=20)):
+    require_owner_api_key(request)
     try:
         payload = nepal_payments.verify_esewa_response(data)
         return {"provider": "esewa", "verified": payload.get("status") == "COMPLETE", "response": payload}
@@ -57,14 +61,16 @@ def esewa_callback(data: str = Query(min_length=20)):
         raise _provider_error(exc) from exc
 
 @router.post("/khalti/initiate")
-def khalti_initiate(body: KhaltiInitiateRequest):
+def khalti_initiate(request: Request, body: KhaltiInitiateRequest):
+    require_owner_api_key(request)
     try:
         return {"provider": "khalti", **nepal_payments.khalti_initiate(**body.model_dump())}
     except Exception as exc:
         raise _provider_error(exc) from exc
 
 @router.post("/khalti/lookup")
-def khalti_lookup(body: KhaltiLookupRequest):
+def khalti_lookup(request: Request, body: KhaltiLookupRequest):
+    require_owner_api_key(request)
     try:
         result = nepal_payments.khalti_lookup(**body.model_dump())
         return {"provider": "khalti", "verified": result.get("status") == "Completed", "response": result}
