@@ -149,3 +149,58 @@ def test_smtp_email_action_uses_real_outbox(db):
     assert len(delivery_rows) == 1
     assert delivery_rows[0].status == "ACCEPTED_BY_SMTP"
     assert "msg-123" in (delivery_rows[0].response_json or "")
+
+
+def test_twilio_429_rate_limit_retries(db, monkeypatch):
+    """HTTP 429 from Twilio is transient (retried), not a permanent failure."""
+    monkeypatch.setattr(settings, "TWILIO_ACCOUNT_SID", "AC_FAKE")
+    monkeypatch.setattr(settings, "TWILIO_AUTH_TOKEN", "FAKE_TOKEN")
+    monkeypatch.setattr(settings, "TWILIO_FROM_NUMBER", "+19999999999")
+
+    delivery = integration_outbox.enqueue(
+        db,
+        integration_name="twilio",
+        operation="send_sms",
+        idempotency_key="test_twilio_429",
+        request={"to": "+1234567890", "body": "Test message"}
+    )
+
+    mock_error = urllib.error.HTTPError(
+        url="", code=429, msg="Too Many Requests", hdrs={}, fp=None
+    )
+    mock_error.read = MagicMock(return_value=b'{"message": "Rate limit exceeded"}')
+
+    with patch("urllib.request.urlopen", side_effect=mock_error):
+        integration_dispatcher.dispatch_pending_deliveries(db, limit=1)
+
+    db.refresh(delivery)
+    assert delivery.status == "QUEUED"  # retried, not FAILED
+    assert delivery.attempts == 1
+    assert delivery.next_attempt_at is not None
+    assert "HTTP 429" in delivery.last_error
+
+
+def test_corrupt_request_json_fails_permanent(db, monkeypatch):
+    """Corrupt request_json can never succeed; fail closed on attempt 1."""
+    monkeypatch.setattr(settings, "TWILIO_ACCOUNT_SID", "AC_FAKE")
+    monkeypatch.setattr(settings, "TWILIO_AUTH_TOKEN", "FAKE_TOKEN")
+    monkeypatch.setattr(settings, "TWILIO_FROM_NUMBER", "+19999999999")
+
+    delivery = IntegrationDelivery(
+        integration_name="twilio",
+        operation="send_sms",
+        idempotency_key="test_twilio_corrupt_json",
+        request_json="{not valid json",
+        status="QUEUED",
+        attempts=0,
+    )
+    db.add(delivery)
+    db.commit()
+    db.refresh(delivery)
+
+    integration_dispatcher.dispatch_pending_deliveries(db, limit=1)
+
+    db.refresh(delivery)
+    assert delivery.status == "FAILED"  # permanent, no pointless retries
+    assert delivery.attempts == 1
+    assert "not valid JSON" in delivery.last_error

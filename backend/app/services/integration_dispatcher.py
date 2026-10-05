@@ -71,6 +71,9 @@ def _send_twilio_sms(to_number: str, body: str) -> dict[str, Any]:
             return resp_data
     except urllib.error.HTTPError as e:
         err_body = e.read().decode("utf-8")
+        if e.code == 429:
+            # Rate limited: retryable, never a permanent failure.
+            raise TransientIntegrationError(f"HTTP 429 (rate limited): {err_body}")
         if 400 <= e.code < 500:
             raise PermanentIntegrationError(f"HTTP {e.code}: {err_body}")
         raise TransientIntegrationError(f"HTTP {e.code}: {err_body}")
@@ -176,7 +179,12 @@ def dispatch_single_delivery(
 
     logger.info(f"Dispatching delivery {delivery.id} ({delivery.integration_name}/{delivery.operation})")
     try:
-        request_data = json.loads(delivery.request_json)
+        try:
+            request_data = json.loads(delivery.request_json)
+        except json.JSONDecodeError as e:
+            # Corrupt payload can never succeed on retry; fail closed immediately
+            # instead of burning all MAX_ATTEMPTS on backoff.
+            raise PermanentIntegrationError(f"Integration request is not valid JSON: {e}") from e
         if not isinstance(request_data, dict):
             raise PermanentIntegrationError("Integration request must be an object")
         try:
