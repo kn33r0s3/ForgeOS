@@ -10,6 +10,7 @@ import json
 import logging
 
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 from app import models
 from app.services import autonomy_engine, execution_engine, opportunity_engine
@@ -31,7 +32,9 @@ def record_paid_triage(db: Session, request_body: dict, triage_body: dict) -> di
     fulfillment_id = triage_body.get("fulfillment_id")
     reliability = request_body.get("source_reliability")
     metadata = {
-        "source_type": "external",
+        # Observer requires canonical_url for source_type external. Paid triage
+        # has no URL; store it as a manual observation with the fulfillment id.
+        "source_type": "manual",
         "external_id": str(fulfillment_id) if fulfillment_id else None,
         "provenance": {
             "kind": "paid_evidence_triage",
@@ -44,9 +47,6 @@ def record_paid_triage(db: Session, request_body: dict, triage_body: dict) -> di
             "eligibility": triage_body.get("eligibility"),
         },
     }
-    # Observer requires canonical_url for source_type external. Paid triage
-    # has no URL; store it as a manual observation with the fulfillment id.
-    metadata["source_type"] = "manual"
     signal = ObserverEngine(db).observe(text.strip(), source=SOURCE, metadata=metadata)
 
     discovery = opportunity_engine.run_autonomous_opportunity_discovery(db)
@@ -82,13 +82,25 @@ def record_paid_triage(db: Session, request_body: dict, triage_body: dict) -> di
 
 
 def _opportunity_for_signal(db: Session, signal_id: int):
+    # Match on comma boundaries only: the column holds comma-joined ids
+    # (written by opportunity_engine._append_signal_id), so LIKE '1,%' must
+    # not match id 10 or 21. needle is str(int) — digits only, no LIKE
+    # wildcards. A DB-side filter replaces the old full-table Python scan.
     needle = str(signal_id)
-    for opportunity in db.query(models.Opportunity).all():
-        raw = opportunity.problem_evidence_signal_ids or ""
-        ids = {part.strip() for part in raw.split(",") if part.strip()}
-        if needle in ids:
-            return opportunity
-    return None
+    column = models.Opportunity.problem_evidence_signal_ids
+    return (
+        db.query(models.Opportunity)
+        .filter(
+            or_(
+                column == needle,
+                column.like(f"{needle},%"),
+                column.like(f"%,{needle},%"),
+                column.like(f"%,{needle}"),
+            )
+        )
+        .order_by(models.Opportunity.id.asc())
+        .first()
+    )
 
 
 def safe_record_paid_triage(db: Session, raw_request: bytes, raw_response: bytes, status_code: int) -> None:
