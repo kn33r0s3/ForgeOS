@@ -1267,14 +1267,25 @@ def record_capability_verification(
     a real person, backed by a real WorldEvent and real Evidence.
 
     Gates (all must pass):
-    - Event exists and evidence_class == 'REAL' (rejects TEST, nonexistent)
+    - Event exists and source is real-world (rejects test/synthetic/mock sources)
     - Evidence exists and source_type is not synthetic/agent-written/mock
     - Event and Evidence are related: evidence.subject_id == event.entity_id
       (same real-world subject — rejects arbitrary ID pairs)
     - Evidence has provenance (provenance/substrate_provenance/source_identity)
     - Not a duplicate (idempotent on event_id + evidence_id)
 
-    With zero real outcomes in the system, this will raise — honestly.
+    STATUS (2026-10-06) — carried as truth, not as aspiration:
+    - Implementation capability: test-proven
+    - Verification mechanism: implemented, reachable, hardened
+    - Actual real-world verification: 0
+    - Independent external anchoring: intentionally absent
+    - Fabrication resistance: improved, but not absolute against deliberate
+      internal assertion. Hami's own recording of an event/evidence pair is
+      not independent verification of a real-world outcome.
+
+    No further scaffolding will be added to close the anchoring gap. The
+    first genuine real-world transaction determines what evidence, outcome,
+    and external anchoring actually need to exist.
     """
     from app import models as _models
 
