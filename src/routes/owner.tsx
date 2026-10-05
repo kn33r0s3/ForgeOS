@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Container } from "@/components/layout/container";
 import { ForgeConsoleWidgets } from "@/components/forge/forge-console";
 import { OperatingV4 } from "@/components/owner/operating-v4";
+import { ScoutQueue } from "@/components/owner/scout-queue";
 
 type LeadStage = "REQUESTED" | "REPLIED" | "BOOKED" | "COMPLETED";
 type Readiness = {
@@ -501,6 +502,18 @@ function OwnerConsolePage() {
                 </p>
                 <div className="mt-4">
                   <OperatingV4 apiKey={key} />
+                </div>
+              </section>
+
+              <section className="mt-10 border-t-2 border-line pt-5" aria-label="Scout and outreach">
+                <h2 className="text-xl font-extrabold">Scout &amp; outreach</h2>
+                <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
+                  Candidate sellers, draft messages, and your approval queue. Nothing here
+                  sends anything — you send from your own account.
+                </p>
+                <div className="mt-4">
+                  <ScoutQueue apiKey={key} />
+>>>>>>> origin/main
                 </div>
               </section>
             </div>

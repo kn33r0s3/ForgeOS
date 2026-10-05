@@ -39,11 +39,11 @@ export const Route = createFileRoute("/")({
 });
 
 const C = {
-  ground: "#0C0B0A",
-  panel: "#15130F",
+  ground: "#171310",
+  panel: "#1E1A15",
   line: "#3A2E1A",
-  amber: "#F2A33A",
-  text: "#F4EFE6",
+  amber: "#E2A04B",
+  text: "#EDE6D6",
   muted: "#BDB29F",
 } as const;
 
@@ -124,7 +124,7 @@ function RealityLoop() {
               y={y}
               textAnchor="middle"
               dominantBaseline="central"
-              fill={highlighted ? "#0C0B0A" : C.text}
+              fill={highlighted ? "#171310" : C.text}
               fontSize="8.5"
               fontWeight={highlighted ? 700 : 500}
               fontFamily="Archivo, sans-serif"
@@ -248,7 +248,9 @@ function FindingsPreview() {
     let live = true;
     loadDiscoveries(3)
       .then((d) => {
-        if (live) setItems(d);
+        // Homepage shows only findings with a recorded consequence
+        // (linked to a decision, experiment, or outcome).
+        if (live) setItems((d ?? []).filter((f) => f.has_consequence));
       })
       .catch(() => {
         if (live) setItems([]);
@@ -271,7 +273,8 @@ function FindingsPreview() {
         </p>
       ) : items.length === 0 ? (
         <p className="text-sm font-bold" style={{ color: C.text }}>
-          Nothing recorded yet.
+          No findings with recorded consequences yet. Findings appear here once they change a
+          decision, experiment, or outcome.
         </p>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
