@@ -195,20 +195,22 @@ function ForgeBotIntakePage() {
           </p>
         </div>
 
-        <div className="mt-8 grid gap-4 sm:max-w-xl">
-          <a
-            href={config?.booking_url}
-            target="_blank"
-            rel="noreferrer"
-            className="flex min-h-20 items-center gap-3 border-2 border-line bg-card p-4 text-ink hover:border-accent"
-          >
-            <CalendarDays className="size-5 text-accent" aria-hidden="true" />
-            <span>
-              <span className="block text-xs uppercase tracking-wide text-muted">Booking link available</span>
-              <span className="mt-1 block font-bold">Choose a time with Hami</span>
-            </span>
-          </a>
-        </div>
+        {config?.booking_url ? (
+          <div className="mt-8 grid gap-4 sm:max-w-xl">
+            <a
+              href={config.booking_url}
+              target="_blank"
+              rel="noreferrer"
+              className="flex min-h-20 items-center gap-3 border-2 border-line bg-card p-4 text-ink hover:border-accent"
+            >
+              <CalendarDays className="size-5 text-accent" aria-hidden="true" />
+              <span>
+                <span className="block text-xs uppercase tracking-wide text-muted">Booking link available</span>
+                <span className="mt-1 block font-bold">Choose a time with Hami</span>
+              </span>
+            </a>
+          </div>
+        ) : null}
 
         {configError ? (
           <p className="mt-6 border border-danger/50 bg-card p-4 text-sm text-danger" role="alert">

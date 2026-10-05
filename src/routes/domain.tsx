@@ -57,7 +57,7 @@ function DomainPage() {
   const [requestedService, setRequestedService] = useState("");
   const navigate = useNavigate();
 
-  async function load(scope?: CacheScope) {
+  async function load(scope?: CacheScope, isActive: () => boolean = () => true) {
     setIsLoading(true);
     setEvents(null);
     setTrust(null);
@@ -67,6 +67,7 @@ function DomainPage() {
       loadPublicAlerts(undefined, scope),
       loadPublicConnections(scope),
     ]);
+    if (!isActive()) return;
     setApiUnavailable(domain === null || matched === null || changes === null || linked === null);
     setRows(domain ?? []);
     setMatches(matched ?? []);
@@ -76,12 +77,17 @@ function DomainPage() {
     if (latest) {
       setEvents(await loadPublicDomainEvents(latest.id, scope));
       setTrust(await loadPublicTrust("domain_record", latest.id, scope));
+      if (!isActive()) return;
     }
     setIsLoading(false);
   }
 
   useEffect(() => {
-    void load();
+    let active = true;
+    void load(undefined, () => active);
+    return () => {
+      active = false;
+    };
   }, []);
 
   async function postRecord(event: React.FormEvent) {
