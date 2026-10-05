@@ -823,6 +823,20 @@ def _numeric_divergence(ctx: DiscoveryContext, *, ratio_threshold: float = 2.0) 
 _IGNORED_VALUES = {"true", "false", "none", "null", "yes", "no", "unknown", "active", "open", "closed"}
 
 
+def _non_engine_relation_pairs(db: Session) -> set[tuple[int, int]]:
+    """Endpoint pairs of all recorded non-engine relations, orientation-normalized.
+
+    One query up front so callers like ``_disconnection`` do not issue one
+    relation lookup per candidate pair (N+1 on large substrates).
+    """
+    pairs: set[tuple[int, int]] = set()
+    for start, end in db.query(models.WorldRelation.from_entity_id, models.WorldRelation.to_entity_id).filter(
+        models.WorldRelation.created_by != ENGINE_ACTOR
+    ).all():
+        pairs.add((start, end) if start <= end else (end, start))
+    return pairs
+
+
 def _disconnection(ctx: DiscoveryContext, *, max_holders: int = 4) -> Iterable[Finding]:
     db = ctx.db
     holders: dict[str, dict[int, tuple[models.SubstrateEntity, str]]] = defaultdict(dict)
@@ -835,6 +849,7 @@ def _disconnection(ctx: DiscoveryContext, *, max_holders: int = 4) -> Iterable[F
                     or normalized.replace(".", "").isdigit():
                 continue
             holders[normalized].setdefault(row.id, (row, key))
+    linked_pairs = _non_engine_relation_pairs(db)
     for value, members in sorted(holders.items()):
         if not 2 <= len(members) <= max_holders:
             continue
@@ -845,12 +860,8 @@ def _disconnection(ctx: DiscoveryContext, *, max_holders: int = 4) -> Iterable[F
             for right, right_key in ordered[index + 1:]:
                 if left.entity_type == right.entity_type:
                     continue
-                linked = db.query(models.WorldRelation).filter(
-                    models.WorldRelation.created_by != ENGINE_ACTOR,
-                    ((models.WorldRelation.from_entity_id == left.id) & (models.WorldRelation.to_entity_id == right.id))
-                    | ((models.WorldRelation.from_entity_id == right.id) & (models.WorldRelation.to_entity_id == left.id)),
-                ).first()
-                if linked is not None:
+                pair = (left.id, right.id) if left.id <= right.id else (right.id, left.id)
+                if pair in linked_pairs:
                     continue
                 yield Finding(
                     kind="hypothesis",
