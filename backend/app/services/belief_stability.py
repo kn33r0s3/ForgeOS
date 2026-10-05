@@ -163,13 +163,11 @@ def instability_boost(db: Session, belief: models.Belief) -> float:
     Additive research-question priority boost (0 to
     MAX_INSTABILITY_BOOST) for a belief that's unstable — weighted up
     when it's also goal-relevant ("unstable important beliefs should
-    create more investigation"). A stable belief always returns 0.0,
-    regardless of importance — settled knowledge doesn't need more
-    investigation just because it matters. An unstable-but-currently-
-    unimportant belief still gets a small nonzero boost (a 0.3 floor
-    on the weight) rather than being ignored entirely — instability is
-    somewhat worth investigating on its own, importance just amplifies
-    it.
+    create more investigation"). Only a belief with zero instability
+    (stability_score exactly 100) returns 0.0 — below that, even a
+    mildly unsettled belief gets a small nonzero boost scaled by the
+    0.3 importance floor, because instability is somewhat worth
+    investigating on its own; importance just amplifies it.
     """
     stability = get_belief_stability(db, belief.id)["stability_score"]
     instability = 100.0 - stability

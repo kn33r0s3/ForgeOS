@@ -247,3 +247,37 @@ def test_relabel_archives_keyword_bags_with_reason_and_deletes_nothing(db):
 
     # Second run is a no-op.
     assert relabel_keyword_bags_as_observations(db) == 0
+
+
+def test_merge_path_tolerates_legacy_non_numeric_signal_tokens(db):
+    # A legacy row whose supporting_signal_ids carries a non-numeric
+    # token must not crash the merge path (int() on it used to raise
+    # ValueError); numeric ids still sort numerically.
+    from app.services.belief_engine import _signal_id_sort_key
+
+    sig = _signal("sort-key regression signal")
+    db.add(sig)
+    db.commit()
+    legacy = models.Belief(
+        statement="legacy token sort check",
+        supporting_signal_ids="10,legacy-token,2",
+        confidence_score=50,
+    )
+    db.add(legacy)
+    db.commit()
+
+    merged = BeliefEngine(db).form_or_update_belief(
+        "legacy token sort check", [sig.id], initial_confidence=60
+    )
+    assert merged.id == legacy.id  # merged into the existing row, not duplicated
+    ids = merged.supporting_signal_ids.split(",")
+    assert "legacy-token" in ids  # retained, not dropped
+    numeric = [i for i in ids if i != "legacy-token"]
+    assert numeric == sorted(numeric, key=int)  # numeric ids still sort numerically
+
+    # Unit-level: the sort key itself never raises.
+    assert sorted(["10", "legacy-token", "2"], key=_signal_id_sort_key) == [
+        "2",
+        "10",
+        "legacy-token",
+    ]

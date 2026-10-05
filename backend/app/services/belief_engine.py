@@ -62,6 +62,18 @@ def utcnow():
     return datetime.now(timezone.utc)
 
 
+def _signal_id_sort_key(value: str) -> tuple[int, object]:
+    """Sort key for comma-separated signal-id lists that never raises.
+
+    Signal ids are ints in practice, but legacy rows under repair may
+    carry non-numeric tokens; int() on one of those used to blow up the
+    whole merge/repair path with a ValueError."""
+    text = value.strip()
+    if text.lstrip("+-").isdigit():
+        return (0, int(text))
+    return (1, text)
+
+
 class BeliefEngine:
     def __init__(self, db: Session):
         self.db = db
@@ -98,7 +110,7 @@ class BeliefEngine:
             new_ids = {str(i) for i in supporting_signal_ids}
             newly_added_ids = new_ids - existing_ids
             existing_ids |= new_ids
-            existing.supporting_signal_ids = ",".join(sorted(existing_ids, key=lambda x: int(x)))
+            existing.supporting_signal_ids = ",".join(sorted(existing_ids, key=_signal_id_sort_key))
             if existing.pattern_id is None and pattern_id is not None:
                 existing.pattern_id = pattern_id
             # Nudge toward the new reading rather than snapping to it —
@@ -368,10 +380,12 @@ def relabel_keyword_bags_as_observations(db: Session) -> int:
             "An observation, not a hypothesis — no actor, need, give-up, or evidence attached.",
         )
         row.label = "observation"
+        # The date is the run date, not a fixed constant — a future run
+        # must not claim it happened on 2026-10-04.
         row.relabel_reason = (
-            "2026-10-04: keyword-bag output re-labeled from hypothesis to "
-            "observation — it names no actor, need, give-up, or evidence. "
-            "Archived with reason; row retained."
+            f"{utcnow().date().isoformat()}: keyword-bag output re-labeled from "
+            "hypothesis to observation — it names no actor, need, give-up, or "
+            "evidence. Archived with reason; row retained."
         )
         count += 1
     if count:
@@ -435,7 +449,7 @@ def _merge_belief_provenance(
     existing_ids = {item for item in (canonical.supporting_signal_ids or "").split(",") if item}
     duplicate_ids = {item for item in (duplicate.supporting_signal_ids or "").split(",") if item}
     canonical.supporting_signal_ids = ",".join(
-        sorted(existing_ids | duplicate_ids, key=lambda value: int(value))
+        sorted(existing_ids | duplicate_ids, key=_signal_id_sort_key)
     ) or None
     # The repair's "most conservative confidence" write is a real
     # confidence change, so it belongs in the append-only trail — the
