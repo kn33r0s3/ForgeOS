@@ -34,6 +34,19 @@ def _proposed(db, name="lifecycle-contract-capability"):
     )
 
 
+def _non_starved(db):
+    """Establish recent real-world contact so STARVED does not block builds.
+    Lifecycle tests verify mechanics, not operating discipline."""
+    world_graph.seed_core_types(db)
+    world_graph.create_event(
+        db,
+        event_type="outreach.sent",
+        source="test",
+        payload={"note": "lifecycle test contact"},
+    )
+    db.commit()
+
+
 def test_capabilities_cannot_be_born_active_or_pre_tested(db):
     world_graph.seed_core_types(db)
     db.add(models.ForgeCapability(
@@ -66,6 +79,7 @@ def test_status_and_test_ref_assignment_cannot_bypass_the_lifecycle(db):
     with pytest.raises(world_graph.SubstrateError, match="lifecycle services"):
         db.flush()
     db.rollback()
+    _non_starved(db)
     world_graph.begin_capability_build(db, capability)
     capability.status = "tested"
     with pytest.raises(world_graph.SubstrateError, match="lifecycle services"):
@@ -74,6 +88,7 @@ def test_status_and_test_ref_assignment_cannot_bypass_the_lifecycle(db):
 
 def test_a_pass_requires_actor_revision_and_a_command_that_runs_the_test(db):
     capability = _proposed(db)
+    _non_starved(db)
     world_graph.begin_capability_build(db, capability)
     for provenance, command, message in (
         ({}, f"pytest {TEST_REF}", "provenance.actor"),
@@ -101,6 +116,7 @@ def test_a_pass_requires_actor_revision_and_a_command_that_runs_the_test(db):
 def test_attributable_pass_activates_and_is_reported_as_the_activation_record(db):
     capability = _proposed(db)
     assert world_graph.capability_activation_record(db, capability) is None
+    _non_starved(db)
     world_graph.begin_capability_build(db, capability)
     world_graph.mark_capability_tested(
         db, capability, test_ref=TEST_REF, command=f"python -m pytest {TEST_REF} -q",
@@ -146,6 +162,7 @@ def test_substrate_api_rejects_unattributed_passes_and_reports_verification(db):
         client = TestClient(app)
         world_graph.seed_core_types(db)
         db.commit()
+        _non_starved(db)
         created = client.post("/forge/substrate/capabilities", json={
             "capability_type": "workflow",
             "name": "api-lifecycle-contract",
@@ -177,3 +194,33 @@ def test_substrate_api_rejects_unattributed_passes_and_reports_verification(db):
         assert [row["activation"]["verified"] for row in listed] == [True]
     finally:
         app.dependency_overrides.clear()
+
+
+def test_starved_blocks_capability_build(db):
+    """STARVED freeze is authoritative over begin_capability_build."""
+    from app.services import operating_v4
+
+    capability = _proposed(db)
+    assert operating_v4.is_starved(db) is True
+    with pytest.raises(world_graph.SubstrateError, match="STARVED"):
+        world_graph.begin_capability_build(db, capability)
+    db.rollback()
+    assert capability.status == "proposed"
+
+
+def test_system_obligation_bypasses_starved(db):
+    """System Obligations are exempt from the STARVED freeze."""
+    capability = _proposed(db)
+    world_graph.begin_capability_build(db, capability, is_system_obligation=True)
+    assert capability.status == "building"
+
+
+def test_non_starved_allows_build(db):
+    """Recent contact lifts the STARVED freeze."""
+    from app.services import operating_v4
+
+    capability = _proposed(db)
+    _non_starved(db)
+    assert operating_v4.is_starved(db) is False
+    world_graph.begin_capability_build(db, capability)
+    assert capability.status == "building"

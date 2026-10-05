@@ -174,6 +174,14 @@ def test_cleared_active_candidate_becomes_plannable_and_evidence_keeps_provenanc
     )
     db.add(question)
     db.commit()
+    # Non-starved: discovery tests verify mechanics, not operating discipline.
+    from app.services import world_graph
+
+    world_graph.seed_core_types(db)
+    world_graph.create_event(
+        db, event_type="outreach.sent", source="test", payload={},
+    )
+    db.commit()
     plan = research_planner.build_research_plan(db, question)
     requirement = next(
         row for row in plan["requirements"] if row["id"] == "problem_incidence"

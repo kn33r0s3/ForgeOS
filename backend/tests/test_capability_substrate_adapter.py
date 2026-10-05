@@ -70,6 +70,11 @@ def test_metadata_refresh_preserves_canonical_capability_lifecycle(db):
     capability = db.query(models.ForgeCapability).filter_by(
         name="runtime-tool:evidence-reader"
     ).one()
+    # Non-starved: lifecycle tests verify mechanics, not operating discipline.
+    world_graph.create_event(
+        db, event_type="outreach.sent", source="test", payload={},
+    )
+    db.commit()
     world_graph.begin_capability_build(db, capability)
     world_graph.mark_capability_tested(
         db,

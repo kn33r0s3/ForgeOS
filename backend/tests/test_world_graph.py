@@ -578,6 +578,11 @@ def test_capability_lifecycle_requires_a_passing_test_reference(db):
         description="A tested capability lifecycle fixture.",
         owner_agent="test",
     )
+    # Non-starved: lifecycle tests verify mechanics, not operating discipline.
+    world_graph.create_event(
+        db, event_type="outreach.sent", source="test", payload={},
+    )
+    db.commit()
     world_graph.begin_capability_build(db, capability)
     failed = world_graph.mark_capability_tested(
         db, capability,

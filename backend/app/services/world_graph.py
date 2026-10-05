@@ -1221,9 +1221,23 @@ def mark_capability_tested(
     return capability
 
 
-def begin_capability_build(db: Session, capability: models.ForgeCapability) -> models.ForgeCapability:
+def begin_capability_build(
+    db: Session,
+    capability: models.ForgeCapability,
+    *,
+    is_system_obligation: bool = False,
+) -> models.ForgeCapability:
     if capability.status != "proposed":
         raise SubstrateError(f"cannot begin build from {capability.status}")
+    # STARVED freeze: no capability builds without real-world contact in
+    # 14+ days, unless a System Obligation. Single enforcement point —
+    # all build pathways flow through here.
+    from app.services import operating_v4  # local import to avoid cycles
+
+    try:
+        operating_v4.check_build_allowed(db, is_system_obligation=is_system_obligation)
+    except ValueError as exc:
+        raise SubstrateError(str(exc)) from exc
     _set_capability_lifecycle(db, capability, "building")
     return capability
 

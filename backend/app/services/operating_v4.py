@@ -838,7 +838,11 @@ def days_since_last_contact(db: Session) -> Optional[int]:
     )
     if not latest or not latest.occurred_at:
         return None
-    return (utcnow() - latest.occurred_at).days
+    occurred = latest.occurred_at
+    if occurred.tzinfo is None:
+        # SQLite returns naive datetimes; treat as UTC.
+        occurred = occurred.replace(tzinfo=timezone.utc)
+    return (utcnow() - occurred).days
 
 
 def is_starved(db: Session) -> bool:
