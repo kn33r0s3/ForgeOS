@@ -152,7 +152,7 @@ def analyze_idea(
     research_plan = question.research_plan or research_planner.acknowledgement_plan(
         question, tasks
     )
-    if research_plan.get("status") == "research_complete":
+    if research_plan.get("status") == "research_completed":
         research_status = "research_complete"
     elif research_plan.get("status") == "research_terminal_unresolved":
         research_status = "research_terminal_unresolved"
@@ -302,7 +302,7 @@ def get_analyze_status(question_id: int, db: Session = Depends(get_db)):
     states = {task.status for task in tasks}
     has_pending_tasks = bool(states & {"planned", "running"})
     has_unresolved_tasks = bool(states & {"failed", "needs_research"})
-    if research_plan.get("status") == "research_complete":
+    if research_plan.get("status") == "research_completed":
         research_status = "research_complete"
     elif research_plan.get("status") == "research_terminal_unresolved":
         research_status = "research_terminal_unresolved"
