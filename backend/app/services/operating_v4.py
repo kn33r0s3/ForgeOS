@@ -128,8 +128,16 @@ def decide_bet(db: Session, bet_id: int, decision: str, notes: Optional[str] = N
     attrs["decision_notes"] = notes
     bet.attributes = json.dumps(attrs)
     if decision == "killed":
-        # Archive, never delete: keep the record, mark archived.
-        bet.status = "archived"
+        # Canonical archival: never assign archived status directly; the
+        # substrate contract requires archive_entity() with actor + rationale.
+        from app.services import world_graph  # local import to avoid cycles
+
+        rationale = (
+            notes
+            or attrs.get("kill_criterion")
+            or "Bet killed by owner decision"
+        )
+        world_graph.archive_entity(db, bet, actor="owner", rationale=rationale)
     db.commit()
     db.refresh(bet)
     return bet

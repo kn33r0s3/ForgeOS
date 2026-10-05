@@ -792,3 +792,85 @@ def test_bet_canonical_write_preserves_guards(db):
     h = operating_v4.park_domain(db, "Dropshipping", "Out of scope")
     with pytest.raises(ValueError, match="parked on the Horizon register"):
         _bet(db, horizon_domain_id=h.id)
+
+
+def test_decide_bet_killed_uses_canonical_archival(db):
+    b = _bet(db)
+    assert b.status == "active"
+    decided = operating_v4.decide_bet(db, b.id, "killed", notes="No sales recovered")
+    # Archived through the canonical seam, not direct assignment.
+    assert decided.status == "archived"
+    attrs = json.loads(decided.attributes)
+    assert attrs["status"] == "killed"
+    assert attrs["decision_notes"] == "No sales recovered"
+    assert attrs["decided_at"]
+    # Canonical entity_archived event recorded.
+    evt = (
+        db.query(models.WorldEvent)
+        .filter(models.WorldEvent.event_type == "entity_archived")
+        .order_by(models.WorldEvent.id.desc())
+        .first()
+    )
+    assert evt is not None
+    assert "archive" in str(evt.payload).lower() or "killed" in str(evt.payload).lower() or str(b.id) in str(evt.payload)
+
+
+def test_decide_bet_killed_uses_kill_criterion_as_rationale(db):
+    b = _bet(db)
+    decided = operating_v4.decide_bet(db, b.id, "killed")
+    assert decided.status == "archived"
+    evt = (
+        db.query(models.WorldEvent)
+        .filter(models.WorldEvent.event_type == "entity_archived")
+        .order_by(models.WorldEvent.id.desc())
+        .first()
+    )
+    assert evt is not None
+    # Rationale falls back to the bet's kill criterion when no notes given.
+    assert "No recovery" in str(evt.payload)
+
+
+def test_decide_bet_non_kill_unchanged(db):
+    b = _bet(db)
+    decided = operating_v4.decide_bet(db, b.id, "amplified", notes="Working")
+    assert decided.status == "active"  # entity stays active
+    attrs = json.loads(decided.attributes)
+    assert attrs["status"] == "amplified"
+    assert attrs["decision_notes"] == "Working"
+    # No archival event for non-kill.
+    count = (
+        db.query(models.WorldEvent)
+        .filter(models.WorldEvent.event_type == "entity_archived")
+        .count()
+    )
+    assert count == 0
+
+
+def test_killed_bet_frees_wip_slot(db):
+    bets = [_bet(db, claim=f"c{i}") for i in range(3)]
+    with pytest.raises(ValueError, match="WIP limit"):
+        _bet(db, claim="c3")
+    operating_v4.decide_bet(db, bets[0].id, "killed")
+    # Killed bet is archived; live count drops; new bet allowed.
+    assert len(operating_v4.live_bets(db)) == 2
+    new_bet = _bet(db, claim="c3")
+    assert new_bet.id not in [b.id for b in bets]
+
+
+def test_archival_authorization_preserved(db):
+    # Direct archival without the canonical seam is still rejected.
+    from app.services import world_graph
+
+    b = _bet(db)
+    b.status = "archived"
+    with pytest.raises(Exception):
+        db.commit()
+    db.rollback()
+    # Canonical path with empty actor/rationale is rejected.
+    with pytest.raises(Exception, match="actor and rationale"):
+        world_graph.archive_entity(db, b, actor="", rationale="")
+    db.rollback()
+    with pytest.raises(Exception, match="actor and rationale"):
+        world_graph.archive_entity(db, b, actor="owner", rationale="")
+    db.rollback()
+    assert db.get(models.SubstrateEntity, b.id).status == "active"
