@@ -110,11 +110,11 @@ describe("Hami public content", () => {
     for (const path of FORBIDDEN_PUBLIC_PATHS) {
       assert.equal(publicHrefs.has(path), false, `nav leaked ${path}`);
     }
-    // Join Hami is NOT in the public nav — owner login only, no public signup.
-    // The /login route still exists but is unlinked (owner knows the URL).
+    // Join Hami IS in the header as a CTA button for signed-out visitors.
+    // Owner reversed the "no public signup" rule — the button links to /login.
     const header = readFileSync(join(root, "src/components/layout/site-header.tsx"), "utf8");
-    assert.doesNotMatch(header, /Join Hami/);
-    assert.doesNotMatch(header, /to="\/login"/);
+    assert.match(header, /Join Hami/);
+    assert.match(header, /to="\/login"/);
     const footer = readFileSync(join(root, "src/components/layout/site-footer.tsx"), "utf8");
     assert.doesNotMatch(footer, /Sign in \/ Sign up/);
   });
