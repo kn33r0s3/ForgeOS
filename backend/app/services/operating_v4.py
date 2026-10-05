@@ -196,14 +196,17 @@ def record_probe(
         "assumption_id": assumption_id,
         "status": "active",
     }
-    probe = models.SubstrateEntity(
+    # Canonical substrate write: validates the registered type, validates
+    # attributes, and emits the entity_created event. Never db.add() raw.
+    from app.services import world_graph  # local import to avoid cycles
+
+    probe = world_graph.create_entity(
+        db,
         entity_type=PROBE_ENTITY_TYPE,
         display_name=f"Probe ({probe_type}): {assumption.display_name[:60]}",
-        attributes=json.dumps(attributes),
-        identity_state="candidate",
+        attributes=attributes,
         created_by="owner",
     )
-    db.add(probe)
     db.commit()
     db.refresh(probe)
     return probe

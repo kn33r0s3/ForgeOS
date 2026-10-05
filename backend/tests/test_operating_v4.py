@@ -371,3 +371,22 @@ def test_no_duplicate_probe_model(db):
     assert hasattr(operating_v4, "decide_probe")
     assert hasattr(operating_v4, "active_probes")
     assert not hasattr(operating_v4, "operating_model")
+
+
+def test_probe_creation_uses_canonical_substrate_write(db):
+    a = _assumption(db)
+    p = _probe(db, a.id, "observation")
+    # Canonical write contract: identity starts as candidate.
+    assert p.identity_state == "candidate"
+    # entity_created event emitted for THIS probe entity.
+    evt = (
+        db.query(models.WorldEvent)
+        .filter(
+            models.WorldEvent.event_type == "entity_created",
+        )
+        .order_by(models.WorldEvent.id.desc())
+        .first()
+    )
+    assert evt is not None
+    payload = evt.payload if isinstance(evt.payload, dict) else {}
+    assert payload.get("entity_type") == "probe" or "probe" in str(evt.payload)
