@@ -173,13 +173,15 @@ def health_details(request: Request):
 
 
 @app.get("/ai/status")
-def ai_status():
+def ai_status(request: Request):
+    require_owner_api_key(request)
     from app.services.ai_engine import get_provider_status
     return get_provider_status()
 
 
 @app.get("/ai/tools")
-def ai_tools():
+def ai_tools(request: Request):
+    require_owner_api_key(request)
     from app.services.tool_registry import default_registry
 
     registry = default_registry()
