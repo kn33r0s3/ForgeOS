@@ -136,7 +136,9 @@ def create_option_decision(opportunity_id: int, request: Request, db: Session = 
 
 
 @router.get("/opportunities/{opportunity_id}/evidence-graph", response_model=schemas.OpportunityEvidenceGraph)
-def get_opportunity_evidence_graph(opportunity_id: int, db: Session = Depends(get_db)):
+def get_opportunity_evidence_graph(opportunity_id: int, request: Request, db: Session = Depends(get_db)):
+    """OWNER-ONLY: exposes the internal claim/evidence/judgment ledger."""
+    require_owner_api_key(request)
     graph = evidence_graph.trace_opportunity(db, opportunity_id)
     if not graph:
         raise HTTPException(status_code=404, detail="Opportunity not found")

@@ -134,10 +134,19 @@ def create_or_get_claim(
     if not normalized:
         raise ValueError("claim statement required")
     query = db.query(models.Claim).filter_by(normalized_statement=normalized)
-    if opportunity_id is not None:
-        query = query.filter_by(opportunity_id=opportunity_id)
-    else:
-        query = query.filter(models.Claim.opportunity_id.is_(None))
+    # Identity covers the full scope: a statement scoped to a different
+    # decision/experiment/outcome is a different claim. Matching on the
+    # statement alone used to silently drop the caller's scope fields.
+    for column, value in (
+        (models.Claim.opportunity_id, opportunity_id),
+        (models.Claim.decision_id, decision_id),
+        (models.Claim.experiment_id, experiment_id),
+        (models.Claim.outcome_id, outcome_id),
+    ):
+        if value is not None:
+            query = query.filter(column == value)
+        else:
+            query = query.filter(column.is_(None))
     claim = query.first()
     if claim:
         if claim.epistemic_state == "observed" and epistemic_state != "observed":

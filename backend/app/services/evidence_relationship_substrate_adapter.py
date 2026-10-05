@@ -45,7 +45,11 @@ def sync_evidence_relationships(
         if not evidence_ids:
             return result
         query = query.filter(models.EvidenceRelationship.evidence_id.in_(evidence_ids))
-    rows = query.order_by(models.EvidenceRelationship.id.asc()).limit(max(1, int(limit))).all()
+    try:
+        limit = max(1, int(limit))
+    except (TypeError, ValueError):
+        limit = 250
+    rows = query.order_by(models.EvidenceRelationship.id.asc()).limit(limit).all()
     entity_cache: dict[tuple[str, int], models.SubstrateEntity] = {}
 
     for source in rows:
