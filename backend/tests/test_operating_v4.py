@@ -490,3 +490,141 @@ def test_evidence_link_distinct_from_proof_level(db):
     operating_v4.add_evidence_link(db, a.id, "evidence:42")
     operating_v4.set_assumption_status(db, a.id, "supported")
     assert db.query(models.Evidence).count() == 0
+
+
+def _orientation(db, beliefs=None, **kw):
+    params = {
+        "observer_who": "Niroj",
+        "observer_from_where": "Kathmandu",
+        "means": "direct conversation",
+        "local_knowledge": "sellers answer DMs slowly",
+        "beliefs": beliefs if beliefs is not None else [],
+    }
+    params.update(kw)
+    return operating_v4.record_orientation(db, **params)
+
+
+def test_orientation_created_as_projection(db):
+    o = _orientation(db)
+    assert isinstance(o, models.SubstrateEntity)
+    assert o.entity_type == "orientation"
+    assert o.identity_state == "candidate"
+
+
+def test_orientation_emits_event(db):
+    o = _orientation(db)
+    evt = (
+        db.query(models.WorldEvent)
+        .filter(models.WorldEvent.event_type == "entity_created")
+        .order_by(models.WorldEvent.id.desc())
+        .first()
+    )
+    assert evt is not None
+    assert "orientation" in str(evt.payload)
+
+
+def test_orientation_version_monotonic(db):
+    first = _orientation(db)
+    second = _orientation(db)
+    third = _orientation(db)
+    assert json.loads(first.attributes)["version"] == 1
+    assert json.loads(second.attributes)["version"] == 2
+    assert json.loads(third.attributes)["version"] == 3
+
+
+def test_orientation_beliefs_preserved(db):
+    a = operating_v4.seed_assumptions(db)[0]
+    o = _orientation(
+        db,
+        beliefs=[
+            {"belief_text": "Speed matters", "assumption_id": a.id},
+            {"belief_text": "Unlinked hunch", "assumption_id": None},
+        ],
+    )
+    beliefs = json.loads(o.attributes)["beliefs"]
+    assert beliefs[0] == {"belief_text": "Speed matters", "assumption_id": a.id}
+    assert beliefs[1] == {"belief_text": "Unlinked hunch", "assumption_id": None}
+
+
+def test_orientation_rejects_bad_assumption(db):
+    with pytest.raises(ValueError, match="not found"):
+        _orientation(db, beliefs=[{"belief_text": "x", "assumption_id": 999999}])
+
+
+def test_orientation_schema_enforced(db):
+    o = _orientation(db)
+    attrs = json.loads(o.attributes)
+    for field in (
+        "version", "observer_who", "observer_from_where",
+        "means", "local_knowledge", "beliefs",
+    ):
+        assert field in attrs
+
+
+def _diagnosis(db, nodes=None, situation="Slow replies"):
+    if nodes is None:
+        nodes = [
+            {"node_text": "Sellers are offline", "evidence": "obs:12",
+             "binding_status": "most_binding_hypothesis"},
+            {"node_text": "Buyers use other apps", "evidence": "obs:13",
+             "binding_status": "not_binding_now"},
+        ]
+    return operating_v4.diagnose_constraints(db, situation=situation, nodes=nodes)
+
+
+def test_diagnosis_created_as_projection(db):
+    d = _diagnosis(db)
+    assert isinstance(d, models.SubstrateEntity)
+    assert d.entity_type == "constraint_diagnosis"
+    assert d.identity_state == "candidate"
+
+
+def test_diagnosis_emits_event(db):
+    _diagnosis(db)
+    evt = (
+        db.query(models.WorldEvent)
+        .filter(models.WorldEvent.event_type == "entity_created")
+        .order_by(models.WorldEvent.id.desc())
+        .first()
+    )
+    assert evt is not None
+    assert "constraint_diagnosis" in str(evt.payload)
+
+
+def test_diagnosis_requires_exactly_one_binding(db):
+    with pytest.raises(ValueError, match="Exactly one"):
+        _diagnosis(db, nodes=[
+            {"node_text": "a", "evidence": "", "binding_status": "not_binding_now"},
+            {"node_text": "b", "evidence": "", "binding_status": "may_bind_later"},
+        ])
+    with pytest.raises(ValueError, match="Exactly one"):
+        _diagnosis(db, nodes=[
+            {"node_text": "a", "evidence": "",
+             "binding_status": "most_binding_hypothesis"},
+            {"node_text": "b", "evidence": "",
+             "binding_status": "most_binding_hypothesis"},
+        ])
+
+
+def test_diagnosis_rejects_bad_status(db):
+    with pytest.raises(ValueError, match="must be one of"):
+        _diagnosis(db, nodes=[
+            {"node_text": "a", "evidence": "", "binding_status": "proven_fact"},
+        ])
+
+
+def test_diagnosis_evidence_stays_reference(db):
+    d = _diagnosis(db)
+    nodes = json.loads(d.attributes)["nodes"]
+    assert nodes[0]["evidence"] == "obs:12"
+    # No Evidence rows created, no proof levels touched.
+    assert db.query(models.Evidence).count() == 0
+
+
+def test_no_dedicated_orientation_diagnosis_models(db):
+    assert not hasattr(models, "Orientation")
+    assert not hasattr(models, "OrientationBelief")
+    assert not hasattr(models, "ConstraintDiagnosis")
+    assert not hasattr(models, "DiagnosisNode")
+    assert hasattr(operating_v4, "record_orientation")
+    assert hasattr(operating_v4, "diagnose_constraints")

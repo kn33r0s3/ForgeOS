@@ -68,6 +68,30 @@ class EvidenceLinkIn(BaseModel):
     evidence_ref: str
 
 
+class BeliefIn(BaseModel):
+    belief_text: str
+    assumption_id: Optional[int] = None
+
+
+class OrientationIn(BaseModel):
+    observer_who: str
+    observer_from_where: str
+    means: str
+    local_knowledge: str
+    beliefs: list[BeliefIn] = []
+
+
+class DiagnosisNodeIn(BaseModel):
+    node_text: str
+    evidence: str = ""
+    binding_status: str
+
+
+class DiagnosisIn(BaseModel):
+    situation: str
+    nodes: list[DiagnosisNodeIn]
+
+
 @router.get("/bets")
 def list_bets(request: Request, db: Session = Depends(get_db)):
     _owner(request)
@@ -276,3 +300,64 @@ def add_evidence_link(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     return {"id": a.id, **json.loads(a.attributes or "{}")}
+
+
+@router.get("/orientations")
+def list_orientations(request: Request, db: Session = Depends(get_db)):
+    _owner(request)
+    import json
+
+    return [
+        {"id": o.id, **json.loads(o.attributes or "{}")}
+        for o in operating_v4.list_orientations(db)
+    ]
+
+
+@router.post("/orientations")
+def create_orientation(
+    payload: OrientationIn, request: Request, db: Session = Depends(get_db)
+):
+    _owner(request)
+    import json
+
+    try:
+        o = operating_v4.record_orientation(
+            db,
+            observer_who=payload.observer_who,
+            observer_from_where=payload.observer_from_where,
+            means=payload.means,
+            local_knowledge=payload.local_knowledge,
+            beliefs=[b.model_dump() for b in payload.beliefs],
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return {"id": o.id, **json.loads(o.attributes or "{}")}
+
+
+@router.get("/diagnoses")
+def list_diagnoses(request: Request, db: Session = Depends(get_db)):
+    _owner(request)
+    import json
+
+    return [
+        {"id": d.id, **json.loads(d.attributes or "{}")}
+        for d in operating_v4.list_diagnoses(db)
+    ]
+
+
+@router.post("/diagnoses")
+def create_diagnosis(
+    payload: DiagnosisIn, request: Request, db: Session = Depends(get_db)
+):
+    _owner(request)
+    import json
+
+    try:
+        d = operating_v4.diagnose_constraints(
+            db,
+            situation=payload.situation,
+            nodes=[n.model_dump() for n in payload.nodes],
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return {"id": d.id, **json.loads(d.attributes or "{}")}

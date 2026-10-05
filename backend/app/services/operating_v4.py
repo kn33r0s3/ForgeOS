@@ -302,6 +302,156 @@ def add_evidence_link(
 
 
 # ---------------------------------------------------------------------
+# Orientation as a projection over SubstrateEntity
+# ---------------------------------------------------------------------
+# Recovered from v2 5a3a484 (operating_model.py). v2's dedicated Orientation
+# and OrientationBelief tables are obsolete and NOT restored. An orientation
+# is a SubstrateEntity with entity_type="orientation"; beliefs are embedded
+# as structured attributes. Versions increase monotonically from the latest
+# recorded orientation — never inferred from timestamps.
+
+ORIENTATION_ENTITY_TYPE = "orientation"
+
+
+def _orientation_attributes(o: models.SubstrateEntity) -> dict:
+    return json.loads(o.attributes or "{}")
+
+
+def list_orientations(db: Session) -> list:
+    return (
+        db.query(models.SubstrateEntity)
+        .filter(models.SubstrateEntity.entity_type == ORIENTATION_ENTITY_TYPE)
+        .order_by(models.SubstrateEntity.id.asc())
+        .all()
+    )
+
+
+def record_orientation(
+    db: Session,
+    observer_who: str,
+    observer_from_where: str,
+    means: str,
+    local_knowledge: str,
+    beliefs: list,
+) -> models.SubstrateEntity:
+    """Record a new versioned orientation. Beliefs are dicts with
+    belief_text and assumption_id (nullable). Assumption references must
+    resolve to an existing assumption projection."""
+    from app.services import world_graph  # local import to avoid cycles
+
+    latest = list_orientations(db)
+    version = (
+        max(_orientation_attributes(o).get("version", 0) for o in latest) + 1
+        if latest
+        else 1
+    )
+    normalized_beliefs = []
+    for b in beliefs:
+        belief_text = b.get("belief_text") if isinstance(b, dict) else None
+        assumption_id = b.get("assumption_id") if isinstance(b, dict) else None
+        if not belief_text:
+            raise ValueError("Each belief requires belief_text.")
+        if assumption_id is not None:
+            assumption = db.get(models.SubstrateEntity, assumption_id)
+            if not assumption or assumption.entity_type != ASSUMPTION_ENTITY_TYPE:
+                raise ValueError(f"Assumption {assumption_id} not found.")
+        normalized_beliefs.append(
+            {"belief_text": belief_text, "assumption_id": assumption_id}
+        )
+    o = world_graph.create_entity(
+        db,
+        entity_type=ORIENTATION_ENTITY_TYPE,
+        display_name=f"Orientation v{version}: {observer_who[:60]}",
+        attributes={
+            "version": version,
+            "observer_who": observer_who,
+            "observer_from_where": observer_from_where,
+            "means": means,
+            "local_knowledge": local_knowledge,
+            "beliefs": normalized_beliefs,
+        },
+        created_by="owner",
+    )
+    db.commit()
+    db.refresh(o)
+    return o
+
+
+# ---------------------------------------------------------------------
+# Constraint diagnosis as a projection over SubstrateEntity
+# ---------------------------------------------------------------------
+# Recovered from v2 5a3a484 (operating_model.py). v2's dedicated
+# ConstraintDiagnosis and DiagnosisNode tables are obsolete and NOT restored.
+# A diagnosis is a SubstrateEntity with entity_type="constraint_diagnosis";
+# nodes are embedded as structured attributes. Exactly one node must be the
+# most_binding_hypothesis — a hypothesis, not an established fact. Node
+# evidence is a reference/context field, never a proof promotion.
+
+DIAGNOSIS_ENTITY_TYPE = "constraint_diagnosis"
+BINDING_STATUSES = (
+    "most_binding_hypothesis",
+    "not_binding_now",
+    "may_bind_later",
+)
+
+
+def _diagnosis_attributes(d: models.SubstrateEntity) -> dict:
+    return json.loads(d.attributes or "{}")
+
+
+def list_diagnoses(db: Session) -> list:
+    return (
+        db.query(models.SubstrateEntity)
+        .filter(models.SubstrateEntity.entity_type == DIAGNOSIS_ENTITY_TYPE)
+        .order_by(models.SubstrateEntity.id.asc())
+        .all()
+    )
+
+
+def diagnose_constraints(
+    db: Session, situation: str, nodes: list
+) -> models.SubstrateEntity:
+    """Record a constraint diagnosis. Nodes are dicts with node_text,
+    evidence (reference/context only), and binding_status. Exactly one node
+    must be 'most_binding_hypothesis'."""
+    from app.services import world_graph  # local import to avoid cycles
+
+    normalized_nodes = []
+    for n in nodes:
+        node_text = n.get("node_text") if isinstance(n, dict) else None
+        evidence = n.get("evidence") if isinstance(n, dict) else ""
+        binding_status = n.get("binding_status") if isinstance(n, dict) else None
+        if not node_text:
+            raise ValueError("Each node requires node_text.")
+        if binding_status not in BINDING_STATUSES:
+            raise ValueError(f"binding_status must be one of {BINDING_STATUSES}")
+        normalized_nodes.append(
+            {
+                "node_text": node_text,
+                "evidence": evidence or "",
+                "binding_status": binding_status,
+            }
+        )
+    binding = [
+        n for n in normalized_nodes if n["binding_status"] == "most_binding_hypothesis"
+    ]
+    if len(binding) != 1:
+        raise ValueError(
+            f"Exactly one node must be 'most_binding_hypothesis', got {len(binding)}."
+        )
+    d = world_graph.create_entity(
+        db,
+        entity_type=DIAGNOSIS_ENTITY_TYPE,
+        display_name=f"Diagnosis: {situation[:60]}",
+        attributes={"situation": situation, "nodes": normalized_nodes},
+        created_by="owner",
+    )
+    db.commit()
+    db.refresh(d)
+    return d
+
+
+# ---------------------------------------------------------------------
 # Probes as projections over SubstrateEntity
 # ---------------------------------------------------------------------
 # Recovered from v2 5a3a484 (operating_model.py). v2's dedicated Probe and

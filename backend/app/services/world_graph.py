@@ -102,10 +102,85 @@ def _schema_for_assumption() -> dict[str, Any]:
     }
 
 
+def _schema_for_orientation() -> dict[str, Any]:
+    """Attribute schema for the orientation projection (entity_type=orientation).
+    Recovered from v2's Orientation + OrientationBelief; beliefs are embedded
+    as structured attributes, not a separate table."""
+    return {
+        "type": "object",
+        "properties": {
+            "version": {"type": "integer", "minimum": 1},
+            "observer_who": {"type": "string", "minLength": 1},
+            "observer_from_where": {"type": "string", "minLength": 1},
+            "means": {"type": "string", "minLength": 1},
+            "local_knowledge": {"type": "string"},
+            "beliefs": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "belief_text": {"type": "string", "minLength": 1},
+                        "assumption_id": {"type": ["integer", "null"], "minimum": 1},
+                    },
+                    "required": ["belief_text", "assumption_id"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+        "required": [
+            "version",
+            "observer_who",
+            "observer_from_where",
+            "means",
+            "local_knowledge",
+            "beliefs",
+        ],
+        "additionalProperties": False,
+    }
+
+
+def _schema_for_constraint_diagnosis() -> dict[str, Any]:
+    """Attribute schema for the constraint-diagnosis projection
+    (entity_type=constraint_diagnosis). Recovered from v2's ConstraintDiagnosis
+    + DiagnosisNode; nodes are embedded as structured attributes. The
+    most_binding_hypothesis is a hypothesis, not an established fact."""
+    return {
+        "type": "object",
+        "properties": {
+            "situation": {"type": "string", "minLength": 1},
+            "nodes": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "node_text": {"type": "string", "minLength": 1},
+                        "evidence": {"type": "string"},
+                        "binding_status": {
+                            "type": "string",
+                            "enum": [
+                                "most_binding_hypothesis",
+                                "not_binding_now",
+                                "may_bind_later",
+                            ],
+                        },
+                    },
+                    "required": ["node_text", "evidence", "binding_status"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+        "required": ["situation", "nodes"],
+        "additionalProperties": False,
+    }
+
+
 def seed_core_types(db: Session) -> int:
     """Install the stable substrate vocabulary as registry rows, idempotently."""
     canonical_schema = json.dumps(_schema_for_canonical_ref(), sort_keys=True, separators=(",", ":"))
     assumption_schema = json.dumps(_schema_for_assumption(), sort_keys=True, separators=(",", ":"))
+    orientation_schema = json.dumps(_schema_for_orientation(), sort_keys=True, separators=(",", ":"))
+    diagnosis_schema = json.dumps(_schema_for_constraint_diagnosis(), sort_keys=True, separators=(",", ":"))
     open_schema = '{"type":"object"}'
     types = {
         "entity_type": {
@@ -118,6 +193,7 @@ def seed_core_types(db: Session) -> int:
             "repair_work_item", "need",
             "bet", "scout_candidate",
             "probe", "assumption",
+            "orientation", "constraint_diagnosis",
         },
         "relation_type": {
             "derived_from", "supports", "possible_match", "co_occurs_with", "informs", "informed_by",
@@ -171,6 +247,10 @@ def seed_core_types(db: Session) -> int:
                     continue
                 if category == "entity_type" and name == "assumption":
                     schema_json = assumption_schema
+                elif category == "entity_type" and name == "orientation":
+                    schema_json = orientation_schema
+                elif category == "entity_type" and name == "constraint_diagnosis":
+                    schema_json = diagnosis_schema
                 elif category == "entity_type" and name in {
                     "signal", "pattern", "belief", "claim", "research_question", "opportunity",
                     "provider", "service_listing", "domain_record", "outcome", "customer",
