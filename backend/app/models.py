@@ -431,8 +431,9 @@ class ResearchQuestion(Base):
 
 class ResearchTask(Base):
     """A concrete task derived from a ResearchQuestion by the Research
-    Planner. Not executed yet in v0.1 — future source collectors
-    (GitHub, Reddit, News, Web) will pick these up and run them."""
+    Planner, executed by collector_runner (begin/run/finish state machine).
+    Idempotent per (question_id, source, query) with a backfilled unique
+    idempotency key (uq_research_tasks_idempotency_key)."""
 
     __tablename__ = "research_tasks"
 

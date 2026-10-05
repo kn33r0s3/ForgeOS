@@ -41,7 +41,6 @@ def create_task(
     )
     if existing:
         return existing
-    existing = None
     if not supplied_identity:
         existing = (
             db.query(models.ResearchTask)
