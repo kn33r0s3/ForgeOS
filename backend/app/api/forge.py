@@ -1034,7 +1034,7 @@ def get_pattern_corroboration(pattern_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/scenarios", response_model=schemas.ScenarioOverview)
-def get_scenario_overview(db: Session = Depends(get_db)):
+def get_scenario_overview(request: Request, db: Session = Depends(get_db)):
     """
     Phase 1 of the 2036 Civilization Scenario Engine (v1.9) — a
     SECONDARY, parallel domain to Revenue Intelligence. Returns every
@@ -1044,11 +1044,16 @@ def get_scenario_overview(db: Session = Depends(get_db)):
     ScenarioPrediction (both forecaster-attributed claims and Forge's
     own tracked indicators) with its evidence count.
 
+    Owner-only: this exposes the full internal scenario/forecaster/
+    prediction ledger and evidence counts. No frontend/script consumer
+    reads it (verified repo-wide, 2026-10-05).
+
     Nothing here is asserted as true — see each ScenarioPrediction's
     status ("open" until resolved), probability/confidence (separate
     numbers, both nullable), and interpretation_note (explicit where
     Forge's claim text is a paraphrase rather than a verbatim quote).
     """
+    require_owner_api_key(request)
     overview = scenario_engine.get_scenario_overview(db)
     return schemas.ScenarioOverview(
         scenarios=overview["scenarios"],

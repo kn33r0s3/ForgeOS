@@ -54,8 +54,6 @@ building all 16 now would mean building 14 empty dashboards. See the
 README's v1.9 section for the full reasoning and continuation plan.
 """
 
-from datetime import datetime, timezone
-
 from sqlalchemy.orm import Session
 
 from app import models
@@ -109,10 +107,6 @@ DEFAULT_SCENARIOS = [
 # Phase 1's only two classified domains — see module docstring.
 ROBOTICS_KEYWORDS = ["robot", "robots", "robotics", "humanoid", "optimus", "automat"]
 COMPUTE_KEYWORDS = ["compute", "gpu", "gpus", "inference cost", "training cost", "chip", "chips", "data center", "datacenter"]
-
-
-def utcnow():
-    return datetime.now(timezone.utc)
 
 
 def classify_signal_domain(text: str) -> Optional[str]:
@@ -344,20 +338,33 @@ def run_scenario_engine_cycle(db: Session) -> dict:
     source_manager.py/money_engine.py/autonomy_engine.py) and does NOT
     touch Belief, Opportunity, Strategy, Experiment, or any Revenue
     Intelligence table — reads Signal, writes Evidence only.
+
+    HONESTY NOTE: a domain keyword hit is relevance, not support. The
+    Evidence rows written here use direction="relevant" — claiming
+    "supports" for a keyword match would manufacture support the
+    classifier cannot assess (a signal can be robotics-relevant while
+    contradicting the indicator claim). The cycle function does not
+    judge support or contradiction; nothing downstream aggregates
+    scenario evidence by direction (only evidence counts are read).
     """
     recent_signals = db.query(models.Signal).order_by(models.Signal.timestamp.desc()).limit(200).all()
     classified = 0
+
+    # Indicators are fixed per run (robotics/compute seeded once at
+    # startup); resolve both once rather than re-querying per signal.
+    indicators = {
+        p.domain: p
+        for p in db.query(models.ScenarioPrediction)
+        .filter(models.ScenarioPrediction.forecaster_id.is_(None), models.ScenarioPrediction.domain.in_(["robotics", "compute"]))
+        .all()
+    }
 
     for signal in recent_signals:
         domain = classify_signal_domain(signal.content)
         if domain is None:
             continue
 
-        indicator = (
-            db.query(models.ScenarioPrediction)
-            .filter(models.ScenarioPrediction.forecaster_id.is_(None), models.ScenarioPrediction.domain == domain)
-            .first()
-        )
+        indicator = indicators.get(domain)
         if not indicator:
             continue
 
@@ -376,7 +383,7 @@ def run_scenario_engine_cycle(db: Session) -> dict:
                 signal_id=signal.id,
                 source=signal.source,
                 content=signal.content,
-                direction="supports",
+                direction="relevant",
                 confidence=0.0,
                 idempotency_key=f"scenario-prediction-signal:{indicator.id}:{signal.id}",
             )
