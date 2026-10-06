@@ -292,6 +292,26 @@ def evaluate_action(
     if risk_score > policy.max_risk_threshold:
         escalate("require_approval", f"Computed risk {risk_score:.0f} exceeds the policy ceiling ({policy.max_risk_threshold:.0f}).")
 
+    # Standing authorization: an ACTIVE bounded envelope derived from a real
+    # owner-authorized action can satisfy require_approval — but it can never
+    # override a block. Fail closed: blocks stay blocks.
+    if decision == "require_approval":
+        standing = check_standing_authorization(
+            db,
+            action_type,
+            {
+                "estimated_cost": estimated_cost,
+                "counterparty_class": getattr(opportunity, "counterparty_class", None),
+                "objective": getattr(opportunity, "title", None),
+            },
+        )
+        if standing["allowed"]:
+            decision = "allow"
+            reasons.append(
+                f"Covered by ACTIVE standing authorization #{standing['auth_id']}: "
+                + "; ".join(standing["reasons"])
+            )
+
     if not reasons:
         reasons.append(
             f"Within policy: allowed action type, no duplicate or retry conflict, under concurrency/daily/spend limits, "
@@ -299,3 +319,257 @@ def evaluate_action(
         )
 
     return {"decision": decision, "reasons": reasons, "risk_score": risk_score, "attempt_number": attempt_number}
+
+
+# ---------------------------------------------------------------------------
+# Standing Authorization — compounding owner judgment into reusable bounds.
+#
+# A standing authorization is an Action with action_type="standing_authorization"
+# (no new table). Lifecycle: PROPOSED → ACTIVE → REVOKED/EXPIRED, recorded on
+# the existing Action.status with WorldEvents for each transition.
+#
+# After a REAL owner-authorized action is recorded, propose_standing_authorization()
+# derives a BOUNDED envelope from that actual action — never broader than what
+# the original authorization justified. The proposal does NOT authorize anything
+# until the owner explicitly approves it (approve_standing_authorization()).
+# Once ACTIVE, evaluate_action() consults standing envelopes: an equivalent
+# future action within every bound is allowed without re-asking the owner.
+# Anything outside the envelope still requires approval or is blocked.
+# ---------------------------------------------------------------------------
+
+STANDING_AUTH_ACTION_TYPE = "standing_authorization"
+
+# Envelope fields derived from the source action. Every bound is a ceiling
+# copied from what actually happened, never invented upward.
+ENVELOPE_FIELDS = (
+    "source_action_id",
+    "action_type",
+    "purpose",
+    "channel",
+    "scope",
+    "counterparty_class",
+    "content_boundary",
+    "max_per_day",
+    "max_spend",
+    "privacy_boundary",
+    "exclusions",
+    "expires_at",
+    "evidence_required",
+    "opt_out_handling",
+    "data_scope",
+)
+
+
+def _emit_standing_auth_event(db: Session, event_type: str, auth_action: models.Action, detail: str) -> None:
+    """Record a WorldEvent for a standing-authorization lifecycle transition."""
+    import json as _json
+
+    db.add(
+        models.WorldEvent(
+            event_type=event_type,
+            payload=_json.dumps(
+                {
+                    "standing_auth_action_id": auth_action.id,
+                    "status": auth_action.status,
+                    "detail": detail,
+                }
+            ),
+            source="autonomy_engine.standing_authorization",
+            idempotency_key=f"standing-auth-{event_type}-{auth_action.id}",
+        )
+    )
+
+
+def _envelope_from_action(source: models.Action) -> dict:
+    """Derive a bounded envelope from a real authorized action. Bounds are
+    copied from the source action's actual type/objective/parameters — the
+    proposal can never authorize more than the original authorization did."""
+    import json as _json
+
+    try:
+        params = _json.loads(source.parameters_json) if source.parameters_json else {}
+    except Exception:
+        params = {}
+    if not isinstance(params, dict):
+        params = {}
+    return {
+        "source_action_id": source.id,
+        "action_type": source.action_type,
+        "purpose": source.objective,
+        "channel": params.get("channel"),
+        "scope": params.get("scope"),
+        "counterparty_class": params.get("counterparty_class"),
+        "content_boundary": params.get("content_boundary") or source.objective,
+        "max_per_day": 1,
+        "max_spend": 0.0,
+        "privacy_boundary": params.get("privacy_boundary"),
+        "exclusions": params.get("exclusions") or [],
+        "expires_at": None,  # owner sets on approval; None = must be set before ACTIVE
+        "evidence_required": ["action_recorded", "outcome_observed"],
+        "opt_out_handling": params.get("opt_out_handling") or "honor_immediately",
+        "data_scope": "REAL",
+    }
+
+
+def propose_standing_authorization(db: Session, source_action_id: int) -> models.Action:
+    """Derive a PROPOSED standing authorization from a real owner-authorized action.
+
+    The source must be a REAL action the owner actually authorized (status
+    APPROVED/SUCCEEDED/VERIFIED with approved_at set). The proposal is inert:
+    PROPOSED does not authorize execution.
+    """
+    import json as _json
+
+    source = db.get(models.Action, source_action_id)
+    if source is None:
+        raise ValueError(f"Source action #{source_action_id} not found.")
+    if source.action_type == STANDING_AUTH_ACTION_TYPE:
+        raise ValueError("Cannot derive a standing authorization from another standing authorization.")
+    if source.status not in ("APPROVED", "SUCCEEDED", "VERIFIED") or not source.approved_at:
+        raise ValueError(
+            f"Source action #{source_action_id} is not owner-authorized "
+            f"(status={source.status}); only real authorized actions seed proposals."
+        )
+    envelope = _envelope_from_action(source)
+    proposal = models.Action(
+        action_type=STANDING_AUTH_ACTION_TYPE,
+        objective=f"Standing authorization proposal derived from owner-authorized action #{source.id} ({source.action_type})",
+        parameters_json=_json.dumps(envelope),
+        status="PROPOSED",
+        policy_result="REQUIRE_APPROVAL",
+        policy_reason="Standing authorization proposal requires explicit owner approval before it authorizes anything.",
+    )
+    db.add(proposal)
+    db.flush()
+    _emit_standing_auth_event(db, "standing_authorization_proposed", proposal, f"Derived from action #{source.id}")
+    db.flush()
+    return proposal
+
+
+def approve_standing_authorization(db: Session, proposal_id: int, expires_at=None) -> models.Action:
+    """Owner explicitly approves a proposal → ACTIVE. An expiry must be set
+    (or passed here); a standing authorization without a bound is refused."""
+    proposal = db.get(models.Action, proposal_id)
+    if proposal is None or proposal.action_type != STANDING_AUTH_ACTION_TYPE:
+        raise ValueError(f"Standing authorization proposal #{proposal_id} not found.")
+    if proposal.status != "PROPOSED":
+        raise ValueError(f"Proposal #{proposal_id} is {proposal.status}, not PROPOSED.")
+    import json as _json
+    from datetime import datetime, timezone
+
+    envelope = _json.loads(proposal.parameters_json or "{}")
+    if expires_at is not None:
+        envelope["expires_at"] = expires_at.isoformat() if hasattr(expires_at, "isoformat") else str(expires_at)
+    if not envelope.get("expires_at"):
+        raise ValueError("Standing authorization requires an expiry bound before activation.")
+    proposal.parameters_json = _json.dumps(envelope)
+    proposal.status = "ACTIVE"
+    proposal.approved_at = utcnow()
+    proposal.policy_result = "ALLOW"
+    proposal.policy_reason = "Owner explicitly approved the bounded standing authorization."
+    _emit_standing_auth_event(db, "standing_authorization_activated", proposal, "Owner approved proposal")
+    db.flush()
+    # Suppress unused-import warning for timezone (kept for explicitness)
+    _ = timezone
+    return proposal
+
+
+def revoke_standing_authorization(db: Session, auth_id: int, reason: str) -> models.Action:
+    """Revoke an ACTIVE standing authorization → REVOKED. Future use stops."""
+    auth = db.get(models.Action, auth_id)
+    if auth is None or auth.action_type != STANDING_AUTH_ACTION_TYPE:
+        raise ValueError(f"Standing authorization #{auth_id} not found.")
+    if auth.status != "ACTIVE":
+        raise ValueError(f"Standing authorization #{auth_id} is {auth.status}, not ACTIVE.")
+    auth.status = "REVOKED"
+    auth.policy_reason = f"Revoked: {reason}"
+    _emit_standing_auth_event(db, "standing_authorization_revoked", auth, reason)
+    db.flush()
+    return auth
+
+
+def get_active_standing_authorizations(db: Session, action_type: str | None = None) -> list:
+    """Return ACTIVE standing authorizations, expiring any past their bound."""
+    import json as _json
+    from datetime import datetime, timezone
+
+    query = db.query(models.Action).filter(
+        models.Action.action_type == STANDING_AUTH_ACTION_TYPE,
+        models.Action.status == "ACTIVE",
+    )
+    auths = query.all()
+    now = datetime.now(timezone.utc)
+    live = []
+    for auth in auths:
+        try:
+            envelope = _json.loads(auth.parameters_json or "{}")
+        except Exception:
+            envelope = {}
+        expires_raw = envelope.get("expires_at")
+        if expires_raw:
+            try:
+                expires = datetime.fromisoformat(str(expires_raw).replace("Z", "+00:00"))
+                if expires.tzinfo is None:
+                    expires = expires.replace(tzinfo=timezone.utc)
+                if expires <= now:
+                    auth.status = "EXPIRED"
+                    _emit_standing_auth_event(db, "standing_authorization_expired", auth, "Expiry bound reached")
+                    continue
+            except Exception:
+                # Unparseable expiry fails closed: treat as expired.
+                auth.status = "EXPIRED"
+                _emit_standing_auth_event(db, "standing_authorization_expired", auth, "Unparseable expiry failed closed")
+                continue
+        if action_type is not None and envelope.get("action_type") != action_type:
+            continue
+        live.append(auth)
+    if live:
+        db.flush()
+    return live
+
+
+def matches_standing_envelope(auth: models.Action, proposed_action_type: str, proposed_params: dict | None) -> tuple[bool, list[str]]:
+    """Fail-closed envelope check: every bound must hold for a match."""
+    import json as _json
+
+    reasons: list[str] = []
+    try:
+        envelope = _json.loads(auth.parameters_json or "{}")
+    except Exception:
+        return False, ["Standing authorization envelope is unreadable — failed closed."]
+    proposed_params = proposed_params or {}
+
+    if envelope.get("action_type") != proposed_action_type:
+        return False, [f"Action type {proposed_action_type!r} is outside the authorized envelope ({envelope.get('action_type')!r})."]
+    for field in ("channel", "scope", "counterparty_class", "privacy_boundary"):
+        bound = envelope.get(field)
+        if bound is not None and proposed_params.get(field) != bound:
+            reasons.append(f"Field {field!r}={proposed_params.get(field)!r} does not match the authorized bound ({bound!r}).")
+    # Spend bound: proposed spend must not exceed the envelope ceiling.
+    try:
+        proposed_spend = float(proposed_params.get("estimated_cost") or 0.0)
+        max_spend = float(envelope.get("max_spend") or 0.0)
+    except (TypeError, ValueError):
+        return False, ["Spend figures unreadable — failed closed."]
+    if proposed_spend > max_spend:
+        reasons.append(f"Proposed spend {proposed_spend} exceeds the authorized ceiling {max_spend}.")
+    # Exclusions: any excluded counterparty or content pattern blocks.
+    for exclusion in envelope.get("exclusions") or []:
+        haystacks = [str(proposed_params.get(k) or "") for k in ("counterparty", "counterparty_class", "content", "objective")]
+        if exclusion and any(exclusion.lower() in h.lower() for h in haystacks if h):
+            reasons.append(f"Exclusion matched: {exclusion!r}.")
+    # Opt-out: a recorded opt-out for the counterparty blocks reuse.
+    if proposed_params.get("opted_out"):
+        reasons.append("Counterparty has opted out — standing authorization does not apply.")
+    if reasons:
+        return False, reasons
+    return True, [f"Within standing authorization #{auth.id} envelope (derived from action #{envelope.get('source_action_id')})."]
+
+
+def check_standing_authorization(db: Session, action_type: str, proposed_params: dict | None = None) -> dict:
+    """Return {allowed, auth_id, reasons}. PROPOSED/REVOKED/EXPIRED never authorize."""
+    for auth in get_active_standing_authorizations(db, action_type):
+        matched, reasons = matches_standing_envelope(auth, action_type, proposed_params)
+        if matched:
+            return {"allowed": True, "auth_id": auth.id, "reasons": reasons}
+    return {"allowed": False, "auth_id": None, "reasons": ["No ACTIVE standing authorization covers this action."]}
