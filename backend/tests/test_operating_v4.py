@@ -155,6 +155,12 @@ def test_starved_blocks_builds_except_obligations(db):
 def test_verification_rejects_incomplete(db):
     with pytest.raises(ValueError, match="rejected"):
         operating_v4.record_verification(db, "", "content", "1/1", True)
+    # Regression: run 37442162237 sent empty test_counts (grep found no matches
+    # on GitHub Actions), causing HTTP 422. The backend must reject it.
+    with pytest.raises(ValueError, match="rejected"):
+        operating_v4.record_verification(db, "abc123", "fetched", "", True)
+    with pytest.raises(ValueError, match="rejected"):
+        operating_v4.record_verification(db, "abc123", "", "198/198", True)
     rec = operating_v4.record_verification(db, "abc123", "fetched", "198/198", True)
     assert rec.passed is True
 
