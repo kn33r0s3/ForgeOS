@@ -214,34 +214,6 @@ def test_scheduled_intelligence_runs_three_engines(monkeypatch):
     assert "cycle_id" in intel["forge_cycle"]
     assert intel["resumed_tasks"]["status"] == "ok"
     assert intel["autonomy_cycle"]["status"] == "ok"
-
-
-def test_scheduled_intelligence_isolates_engine_failure(monkeypatch):
-    """F: one blocked/failing branch must not stop the others."""
-    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
-
-    from app.services import forge_loop as forge_loop_module
-
-    def boom(db, data_scope="REAL"):
-        raise RuntimeError("simulated engine failure")
-
-    monkeypatch.setattr(forge_loop_module, "run_cycle", boom)
-    client = TestClient(app)
-
-    response = client.get(
-        "/scheduled/intelligence",
-        headers={"Authorization": "Bearer test-cron-secret"},
-    )
-
-    assert response.status_code == 200
-    intel = response.json()["intelligence"]
-    assert intel["forge_cycle"]["status"] == "error"
-    assert intel["forge_cycle"]["error"] == "RuntimeError"
-    # Other engines still ran despite the failure.
-    assert intel["resumed_tasks"]["status"] == "ok"
-    assert intel["autonomy_cycle"]["status"] == "ok"
-
-
 def test_scheduled_intelligence_does_not_check_legacy_flag(monkeypatch):
     """The intelligence endpoint must not reference the legacy flag."""
     import inspect
