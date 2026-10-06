@@ -447,7 +447,7 @@ def test_standing_auth_evaluate_action_integration(db):
 
     seed_default_policy(db)
     opp = models.Opportunity(
-        title="Test opp", revenue_confidence=80.0,
+        problem="Test problem", revenue_confidence=80.0,
     )
     db.add(opp)
     db.flush()
@@ -468,4 +468,4 @@ def test_standing_auth_evaluate_action_integration(db):
     # so it stays require_approval (fail-closed on channel mismatch) —
     # proving the envelope is actually consulted, not bypassed.
     after = evaluate_action(db, opp, "outreach", 0.0)
-    assert after["decision"] in ("require_approval", "block", "allow")
+    assert after["decision"] == "require_approval"
