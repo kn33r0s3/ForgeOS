@@ -31,17 +31,21 @@ jobs:
       - name: Run tests
         id: tests
         run: |
+          # Disable set -e: we must capture the test result, not fail the step.
+          set +e
           set -o pipefail
           npm test 2>&1 | tee /tmp/test-output.txt
           TEST_EXIT=${PIPESTATUS[0]}
           echo "exit_code=$TEST_EXIT" >> "$GITHUB_OUTPUT"
-          echo "counts=$(grep -E '^ℹ (tests|pass|fail)' /tmp/test-output.txt | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+          # grep may find no matches; do not let that fail the step.
+          COUNTS=$(grep -E '^ℹ (tests|pass|fail)' /tmp/test-output.txt | tr '\n' ' ' || true)
+          echo "counts=$COUNTS" >> "$GITHUB_OUTPUT"
           if [ "$TEST_EXIT" -eq 0 ]; then
             echo "passed=true" >> "$GITHUB_OUTPUT"
           else
             echo "passed=false" >> "$GITHUB_OUTPUT"
           fi
-          # Do not fail the job here; the verification record must capture the actual result
+          # Intentionally no exit: the verification record must capture the actual result.
 
       - name: Get deployed SHA
         id: sha
