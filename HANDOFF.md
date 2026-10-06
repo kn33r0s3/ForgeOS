@@ -127,22 +127,19 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
-## Current state (verified 2026-10-06 ~06:24 NPT — re-verify on takeover)
+## Current state (verified 2026-10-06 ~13:30 NPT — re-verify on takeover)
 
-- **Repo:** `kn33r0s3/ForgeOS`; `main` == `origin/main` at `3a123d0`
-  ("Fix content.test.ts: expect TanStack structured search params for
-  /login" push). Working tree clean.
-- **CI is GREEN (full sequence, 2026-10-05):** `npm test` 198/198 + 186/186,
-  `npm run typecheck` clean, `npm run lint` 0 errors (1 pre-existing
-  react-refresh warning), `npm run build` clean, backend
-  `pytest tests` **717 passed / 2 skipped**. Fixed to get here: 3 stale
-  frontend IA assertions (homepage was rebuilt previews-only in 02ccd84 but
-  tests still checked the old composition), 1 orphaned-route gate failure
-  (/actions was sitemap-indexed with zero real inbound links — now linked
-  from the footer; the gate had been passing on a test-file string literal),
-  1 unused import (lint), 6 backend issues (truth_audit honest-None average,
-  capability adapter "invalid" key, cognitive_worker failure-record commit,
-  economic_validation empty test key).
+- **Repo:** `kn33r0s3/ForgeOS`; `main` == `origin/main` at `c268638`
+  ("Repair verifier Run tests step: disable set -e, guard grep"). Working tree clean.
+- **CI is GREEN (2026-10-06):** ForgeOS CI #369 SUCCESS on `c268638`.
+  Local: `npm test` 191 passed, 0 failed; `npm run typecheck` 0 errors;
+  `npm run lint` 0 errors (1 warning); `npm run build` clean;
+  `npm run smoke` 13/13 routes; backend `pytest tests` **822 passed / 2 skipped**.
+- **Independent verifier:** #38 FAILURE at "Record verification" step (not "Run tests" —
+  the step fix works). The POST to `/api/opv4/verifications` fails: secrets exist
+  (precondition passed), but backend recording endpoint is unreachable/misconfigured.
+  This is an environment/infrastructure blocker, not a code defect. The workflow
+  now fails explicitly with HTTP diagnostics instead of opaque curl 22.
 - **Production:** `https://haminp.vercel.app` (**canonical**) and
   `https://forge-os-ebon.vercel.app` (alias). Verified 2026-10-05: homepage
   serves the Hami app correctly; `/forge` returns the 404 page on both
