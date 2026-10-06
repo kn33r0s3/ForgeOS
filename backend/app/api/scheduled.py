@@ -162,7 +162,7 @@ def run_scheduled_intelligence(authorization: str | None = Header(default=None))
     one engine failing is recorded and the others still run.
 
     This endpoint is separate from /scheduled/cycle (privacy-only contract)
-    and does not check FORGEOS_LEGACY_INTELLIGENCE_ENABLED.
+    and is not gated by the legacy intelligence flag.
     """
     secret = os.getenv("CRON_SECRET", "")
     if not secret:
