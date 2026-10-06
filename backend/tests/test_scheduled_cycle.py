@@ -173,7 +173,7 @@ def test_scheduled_cycle_holds_its_lock_until_timed_out_worker_finishes(monkeypa
 # ---------------------------------------------------------------------------
 
 
-def _disabled_test_scheduled_intelligence_fails_closed_without_secret(monkeypatch):
+def test_scheduled_intelligence_fails_closed_without_secret(monkeypatch):
     monkeypatch.delenv("CRON_SECRET", raising=False)
     client = TestClient(app)
 
@@ -185,7 +185,7 @@ def _disabled_test_scheduled_intelligence_fails_closed_without_secret(monkeypatc
     assert response.json() == {"detail": "Scheduled intelligence is not configured"}
 
 
-def _disabled_test_scheduled_intelligence_requires_bearer_secret(monkeypatch):
+def test_scheduled_intelligence_requires_bearer_secret(monkeypatch):
     monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
     client = TestClient(app)
 
