@@ -1,6 +1,6 @@
-# Hami Event-Driven Architecture (2026-10-06)
+# Hami Event-Driven Architecture (2026-10-07)
 
-## Status: Legacy OFF, Hatch-Driven Continuity Active
+## Status: Legacy OFF, Production Intelligence Seam Active
 
 **FORGEOS_LEGACY_INTELLIGENCE_ENABLED remains OFF** (default `false`, not set in production).
 The legacy WorkerTask queue, legacy API endpoints, and legacy scheduled cycle are disabled by design.
@@ -11,7 +11,14 @@ The legacy WorkerTask queue, legacy API endpoints, and legacy scheduled cycle ar
 1. Privacy maintenance (`run_daily_maintenance`) — erases old inquiries, always runs
 2. Returns `{"status": "disabled", "reason": "legacy cycle disabled"}` — no work generation
 
-**Production does NOT generate work automatically.** This is intentional.
+**Production Vercel cron** (daily 06:00 UTC) → `/api/scheduled/intelligence` (NEW 2026-10-07):
+1. `forge_loop.run_cycle` — DB reasoning: signals → patterns → beliefs → questions → tasks
+2. `research_task_engine.resume_running_tasks` — requeues stale running tasks
+3. `execution_engine.run_autonomous_action_cycle` — proposes (never executes) actions
+4. Returns `{"status": "completed", "intelligence": {...}}` with per-engine results
+
+**Production now generates non-legacy work automatically** via the intelligence seam.
+This uses existing engines only — no legacy flag, no WorkerTask, no new scheduler.
 
 ## What Triggers Work via Hatch (External Continuity)
 
@@ -66,7 +73,12 @@ These engines exist and are NOT gated by the legacy flag:
 
 ## How Downstream Work Is Generated
 
-**In production**: Not generated automatically (legacy OFF).
+**In production**: The daily intelligence cron runs the three engines. Each run:
+- Reads current DB state (signals, questions, tasks, opportunities)
+- Generates new questions/tasks/proposals via forge_loop
+- Requeues stale tasks via resume_running_tasks
+- Proposes actions via autonomy cycle
+- Next day's run builds on the new state (idempotent re-planning)
 
 **Via Hatch**: 
 - Weekly discovery banks unknowns → next weekly run may pick them up
@@ -95,15 +107,21 @@ These engines exist and are NOT gated by the legacy flag:
 - **C3** (what breaks on real lead): Requires authorized pilot transaction
 - **First Rupee Sprint**: Blocked on owner naming seller
 
-## Architectural Decision (2026-10-06)
+## Architectural Decision (2026-10-07)
 
-An attempt was made to add `run_nervous_system()` to `/api/scheduled/cycle` to recover event-driven behavior without the legacy flag. It was reverted because:
+An attempt was made on 2026-10-06 to add `run_nervous_system()` to `/api/scheduled/cycle`
+to recover event-driven behavior without the legacy flag. It was reverted because it
+changed the privacy endpoint's contract and broke CI.
 
-1. The production endpoint's test suite is complex; the change broke CI
-2. The Hatch cron already provides the continuity mechanism (external to production)
-3. Modifying production to bypass the intentional gate risks violating the "do not revive legacy" constraint
+On 2026-10-07, the correct seam was implemented: a separate `GET /scheduled/intelligence`
+endpoint in the existing scheduled router, triggered by a second Vercel cron entry.
+This preserves the privacy endpoint's contract, uses the existing scheduled boundary
+(Vercel cron), calls existing non-legacy engines directly (no new abstraction), and
+keeps the legacy flag OFF.
 
-**Conclusion**: Hami's continuity lives in Hatch infrastructure (weekly discovery, daily handoff), not in production. Production remains a privacy-maintenance system with disabled intelligence, by design. This is truthful and intentional.
+**Conclusion**: Hami's production now has a real work-generation seam. The intelligence
+cron runs daily, generating questions/tasks/proposals from current state. Hatch
+provides weekly discovery continuity; production provides daily reasoning continuity.
 
 ## The Continuous Loop (Hatch)
 
