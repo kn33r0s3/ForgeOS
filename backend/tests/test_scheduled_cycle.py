@@ -286,7 +286,7 @@ def _disabled_test_scheduled_intelligence_isolates_engine_failure(monkeypatch):
     assert intel["autonomy_cycle"]["status"] == "ok"
 
 
-def _disabled_test_scheduled_intelligence_does_not_check_legacy_flag(monkeypatch):
+def test_scheduled_intelligence_does_not_check_legacy_flag(monkeypatch):
     """The intelligence endpoint must not reference the legacy flag."""
     import inspect
 
