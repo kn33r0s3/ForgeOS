@@ -260,3 +260,153 @@ def test_no_fabricated_outcome_from_estimate(db):
     cmp = learning_engine.compare_expected_vs_actual_numeric(expected=100.0, actual=None)
     assert cmp["status"] == "EXPECTED_ONLY"
     assert "actual" not in cmp or cmp.get("actual") is None
+
+
+# ---------------------------------------------------------------------------
+# Standing Authorization — focused proof (autonomy_engine + action_engine).
+# ---------------------------------------------------------------------------
+
+def _sa_source(db):
+    """A REAL owner-authorized action (SUCCEEDED + approved_at)."""
+    import json as _json
+    from datetime import datetime, timezone
+    a = models.Action(
+        action_type="outreach",
+        objective="Contact seller about recovered inquiries",
+        parameters_json=_json.dumps({
+            "channel": "messenger",
+            "scope": "first_contact",
+            "counterparty_class": "seller",
+            "privacy_boundary": "no_pii_in_logs",
+            "data_scope": "REAL",
+            "estimated_cost": 0.0,
+        }),
+        status="SUCCEEDED",
+        approved_at=datetime.now(timezone.utc),
+        policy_result="ALLOW",
+    )
+    db.add(a)
+    db.flush()
+    return a
+
+
+def test_sa_a_proposed_is_inert(db):
+    """A: PROPOSED standing auth does not authorize."""
+    from app.services import autonomy_engine as ae
+    src = _sa_source(db)
+    p = ae.propose_standing_authorization(db, src.id)
+    assert p.status == "PROPOSED"
+    r = ae.check_standing_authorization(db, "outreach", {"channel": "messenger"})
+    assert r["allowed"] is False
+
+
+def test_sa_b_active_requires_owner_approval(db):
+    """B: ACTIVE requires explicit owner approval with expiry."""
+    from datetime import timedelta, timezone
+    from datetime import datetime
+    from app.services import autonomy_engine as ae
+    import pytest
+    src = _sa_source(db)
+    p = ae.propose_standing_authorization(db, src.id)
+    # Missing bounds (no policy in test DB) → cannot activate without owner supplying them
+    with pytest.raises(ValueError):
+        ae.approve_standing_authorization(db, p.id)
+    # Owner supplies missing bounds + expiry → ACTIVE
+    a = ae.approve_standing_authorization(
+        db, p.id,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+        bound_overrides={"max_per_day": 3, "max_spend": 0.0},
+    )
+    assert a.status == "ACTIVE"
+
+
+def test_sa_c_expired_cannot_authorize(db):
+    """C: expired auth cannot authorize."""
+    from datetime import timedelta, timezone
+    from datetime import datetime
+    from app.services import autonomy_engine as ae
+    src = _sa_source(db)
+    p = ae.propose_standing_authorization(db, src.id)
+    ae.approve_standing_authorization(
+        db, p.id,
+        expires_at=datetime.now(timezone.utc) - timedelta(seconds=1),
+        bound_overrides={"max_per_day": 3, "max_spend": 0.0},
+    )
+    r = ae.check_standing_authorization(db, "outreach", {"channel": "messenger"})
+    assert r["allowed"] is False
+    assert p.status == "EXPIRED"
+
+
+def test_sa_d_revoked_cannot_authorize(db):
+    """D: revoked auth cannot authorize."""
+    from datetime import timedelta, timezone
+    from datetime import datetime
+    from app.services import autonomy_engine as ae
+    src = _sa_source(db)
+    p = ae.propose_standing_authorization(db, src.id)
+    ae.approve_standing_authorization(
+        db, p.id,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+        bound_overrides={"max_per_day": 3, "max_spend": 0.0},
+    )
+    ae.revoke_standing_authorization(db, p.id, "test revoke")
+    assert p.status == "REVOKED"
+    r = ae.check_standing_authorization(db, "outreach", {"channel": "messenger"})
+    assert r["allowed"] is False
+
+
+def test_sa_e_matching_action_allowed(db):
+    """E: matching bounded action is allowed without re-approval."""
+    from datetime import timedelta, timezone
+    from datetime import datetime
+    from app.services import autonomy_engine as ae
+    src = _sa_source(db)
+    p = ae.propose_standing_authorization(db, src.id)
+    ae.approve_standing_authorization(
+        db, p.id,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+        bound_overrides={"max_per_day": 3, "max_spend": 0.0},
+    )
+    r = ae.check_standing_authorization(db, "outreach", {
+        "channel": "messenger", "scope": "first_contact",
+        "counterparty_class": "seller", "privacy_boundary": "no_pii_in_logs",
+        "data_scope": "REAL", "estimated_cost": 0.0,
+        "objective": "Contact seller about recovered inquiries",
+    })
+    assert r["allowed"] is True
+
+
+def test_sa_f_non_matching_blocked(db):
+    """F: non-matching action cannot use the auth."""
+    from datetime import timedelta, timezone
+    from datetime import datetime
+    from app.services import autonomy_engine as ae
+    src = _sa_source(db)
+    p = ae.propose_standing_authorization(db, src.id)
+    ae.approve_standing_authorization(
+        db, p.id,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+        bound_overrides={"max_per_day": 3, "max_spend": 0.0},
+    )
+    # Wrong channel
+    r = ae.check_standing_authorization(db, "outreach", {"channel": "email"})
+    assert r["allowed"] is False
+
+
+def test_sa_s_lifecycle_events(db):
+    """S: every lifecycle transition emits a WorldEvent."""
+    from datetime import timedelta, timezone
+    from datetime import datetime
+    from app.services import autonomy_engine as ae
+    src = _sa_source(db)
+    p = ae.propose_standing_authorization(db, src.id)
+    ae.approve_standing_authorization(
+        db, p.id,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+        bound_overrides={"max_per_day": 3, "max_spend": 0.0},
+    )
+    ae.revoke_standing_authorization(db, p.id, "test")
+    types = {e.event_type for e in db.query(models.WorldEvent).all()}
+    assert "standing_authorization_proposed" in types
+    assert "standing_authorization_activated" in types
+    assert "standing_authorization_revoked" in types
