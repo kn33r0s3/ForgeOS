@@ -359,7 +359,8 @@ def test_standing_auth_equivalent_action_allowed(db):
     result = autonomy_engine.check_standing_authorization(
         db, "outreach",
         {"channel": "messenger", "scope": "first_contact",
-         "counterparty_class": "seller", "estimated_cost": 0.0},
+         "counterparty_class": "seller", "privacy_boundary": "no_pii_in_logs",
+         "estimated_cost": 0.0},
     )
     assert result["allowed"] is True
     assert result["auth_id"] == proposal.id
@@ -381,7 +382,10 @@ def test_standing_auth_out_of_scope_blocked(db):
     assert r2["allowed"] is False
     # Spend over ceiling (envelope max_spend=0.0)
     r3 = autonomy_engine.check_standing_authorization(
-        db, "outreach", {"channel": "messenger", "estimated_cost": 10.0}
+        db, "outreach",
+        {"channel": "messenger", "scope": "first_contact",
+         "counterparty_class": "seller", "privacy_boundary": "no_pii_in_logs",
+         "estimated_cost": 10.0}
     )
     assert r3["allowed"] is False
     # Opt-out blocks
