@@ -194,40 +194,10 @@ def test_scheduled_intelligence_requires_bearer_secret(monkeypatch):
     assert response.status_code == 401
 
 
-def _disabled_test_scheduled_intelligence_runs_three_engines(monkeypatch):
-    """A: state → work. The endpoint must invoke all three non-legacy engines."""
+def test_scheduled_intelligence_runs_three_engines(monkeypatch):
+    """A+B: state → work → execution. The endpoint runs all three engines
+    for real (they are safe: no network, no spending, no contact)."""
     monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
-    calls = []
-
-    import app.services.forge_loop as forge_loop
-    import app.services.research_task_engine as research_task_engine
-    import app.services.execution_engine as execution_engine
-
-    monkeypatch.setattr(
-        forge_loop,
-        "run_cycle",
-        lambda db, data_scope="REAL": (
-            calls.append("forge_loop"),
-            {
-                "cycle_id": 99,
-                "signals_processed": 3,
-                "stage_errors": {},
-            },
-        )[1],
-    )
-    monkeypatch.setattr(
-        research_task_engine,
-        "resume_running_tasks",
-        lambda db, limit=10: (calls.append("resume"), [7, 8]),
-    )
-    monkeypatch.setattr(
-        execution_engine,
-        "run_autonomous_action_cycle",
-        lambda db: (
-            calls.append("autonomy"),
-            {"proposed": 1, "allowed": 1, "blocked": 0, "require_approval": 0},
-        )[1],
-    )
     client = TestClient(app)
 
     response = client.get(
@@ -239,37 +209,23 @@ def _disabled_test_scheduled_intelligence_runs_three_engines(monkeypatch):
     body = response.json()
     assert body["status"] == "completed"
     intel = body["intelligence"]
-    # B: work executes — all three engines ran.
-    assert calls == ["forge_loop", "resume", "autonomy"]
-    # C: results recorded per engine.
+    # All three engines executed and reported.
     assert intel["forge_cycle"]["status"] == "ok"
-    assert intel["forge_cycle"]["cycle_id"] == 99
-    assert intel["resumed_tasks"] == {"status": "ok", "count": 2}
-    assert intel["autonomy_cycle"]["proposed"] == 1
+    assert "cycle_id" in intel["forge_cycle"]
+    assert intel["resumed_tasks"]["status"] == "ok"
+    assert intel["autonomy_cycle"]["status"] == "ok"
 
 
-def _disabled_test_scheduled_intelligence_isolates_engine_failure(monkeypatch):
+def test_scheduled_intelligence_isolates_engine_failure(monkeypatch):
     """F: one blocked/failing branch must not stop the others."""
     monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
 
-    import app.services.forge_loop as forge_loop
-    import app.services.research_task_engine as research_task_engine
-    import app.services.execution_engine as execution_engine
+    from app.services import forge_loop as forge_loop_module
 
     def boom(db, data_scope="REAL"):
         raise RuntimeError("simulated engine failure")
 
-    monkeypatch.setattr(forge_loop, "run_cycle", boom)
-    monkeypatch.setattr(
-        research_task_engine,
-        "resume_running_tasks",
-        lambda db, limit=10: [],
-    )
-    monkeypatch.setattr(
-        execution_engine,
-        "run_autonomous_action_cycle",
-        lambda db: {"proposed": 0, "allowed": 0, "blocked": 0, "require_approval": 0},
-    )
+    monkeypatch.setattr(forge_loop_module, "run_cycle", boom)
     client = TestClient(app)
 
     response = client.get(
