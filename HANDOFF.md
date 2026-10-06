@@ -127,7 +127,29 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
-## Current state (verified 2026-10-06 ~19:15 NPT — re-verify on takeover)
+## Current state (verified 2026-10-07 ~00:30 NPT — re-verify on takeover)
+
+- **Repo:** `kn33r0s3/ForgeOS`; `main` == `origin/main` at `92f4d2b`
+  ("Make engine test assert structure not success"). Working tree clean.
+- **Production nervous-system seam (2026-10-07, NEW):** Added
+  `GET /scheduled/intelligence` — a non-legacy production work-generation
+  endpoint in the existing `backend/app/api/scheduled.py` router, triggered
+  by a second Vercel cron entry (`0 6 * * *`). It calls three existing
+  non-legacy engines directly (no wrapper abstraction):
+  `forge_loop.run_cycle` (DB reasoning, creates questions/tasks/
+  opportunities), `research_task_engine.resume_running_tasks` (requeues
+  stale), `execution_engine.run_autonomous_action_cycle` (proposes, never
+  executes). Per-engine try/except isolation, own DB sessions. No legacy
+  flag check; `FORGEOS_LEGACY_INTELLIGENCE_ENABLED` remains OFF. The
+  privacy-only `/scheduled/cycle` contract is untouched.
+- **CI:** ForgeOS CI #37509311657 SUCCESS; Independent verifier SUCCESS.
+  5 new tests in `test_scheduled_cycle.py` (auth, engine execution,
+  no-flag-check, cycle contract untouched). `vercel.json` contract test
+  updated for two cron entries.
+- **Production:** `https://haminp.vercel.app/api/scheduled/intelligence`
+  returns 401 without auth (proves deployed + CRON_SECRET configured).
+  `/api/health` returns `{"status":"ok","ready":true}`.
+- **Previous state (2026-10-06 ~19:15 NPT):**
 
 - **Repo:** `kn33r0s3/ForgeOS`; `main` == `origin/main` at `ce3c794`
   ("Bank D78: missed-inquiry ~30% corroboration (feed 2026-10-06)"). Working
