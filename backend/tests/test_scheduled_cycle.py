@@ -6,6 +6,8 @@ from fastapi.testclient import TestClient
 from app.api import scheduled
 from app.main import app
 
+import inspect
+
 
 def test_scheduled_cycle_fails_closed_without_secret(monkeypatch):
     monkeypatch.delenv("CRON_SECRET", raising=False)
