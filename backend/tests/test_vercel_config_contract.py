@@ -61,7 +61,10 @@ def test_vercel_services_route_api_to_fastapi_and_everything_else_to_web():
 
 def test_vercel_cron_targets_the_gated_daily_cycle():
     config = _config()
-    assert config["crons"] == [{"path": "/api/scheduled/cycle", "schedule": "0 0 * * *"}]
+    assert config["crons"] == [
+        {"path": "/api/scheduled/cycle", "schedule": "0 0 * * *"},
+        {"path": "/api/scheduled/intelligence", "schedule": "0 6 * * *"},
+    ]
     from app.main import CRON_SCHEDULE
 
     assert CRON_SCHEDULE == config["crons"][0]["schedule"]
@@ -88,7 +91,8 @@ def test_api_entrypoint_imports_and_serves_the_paths_vercel_relies_on():
     assert not _serves_get(app, "/api/public/not-a-route")
     assert not _serves_get(app, "/api/not-a-router")
 
-    # The cron path resolves to the legacy-gated scheduled-cycle handler.
+    # The cron paths resolve to their handlers: the legacy-gated
+    # scheduled-cycle handler and the non-legacy intelligence handler.
     from app.api import scheduled
 
     handlers = {
@@ -98,6 +102,7 @@ def test_api_entrypoint_imports_and_serves_the_paths_vercel_relies_on():
         for method in route.methods
     }
     assert handlers[("/scheduled/cycle", "GET")] == "run_scheduled_cycle"
+    assert handlers[("/scheduled/intelligence", "GET")] == "run_scheduled_intelligence"
 
 
 def test_api_health_and_public_feed_answer_under_the_api_prefix(db, monkeypatch):

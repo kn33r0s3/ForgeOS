@@ -142,3 +142,79 @@ def run_scheduled_cycle(authorization: str | None = Header(default=None)):
         "autonomy_cycle_failed": bool(autonomy_error),
         "owner_summary_status": owner_summary_status,
     }
+
+
+@router.get("/intelligence")
+def run_scheduled_intelligence(authorization: str | None = Header(default=None)):
+    """Run Hami's non-legacy intelligence cycle (current lineage, no legacy flag).
+
+    Uses only existing non-legacy engines, called directly (no wrapper):
+    - forge_loop.run_cycle: state → patterns → beliefs → questions → tasks.
+      Pure DB reasoning; creates plans/proposals, executes nothing.
+    - research_task_engine.resume_running_tasks: requeue stale running tasks.
+    - execution_engine.run_autonomous_action_cycle: propose (never execute)
+      actions via the owner's AutonomyPolicy gate.
+
+    Safety: no network calls, no spending, no human contact, no external
+    commitments. Idempotent: re-running with unchanged state creates minimal
+    new work (engines skip already-tasked questions, duplicate actions, etc.).
+    Each engine runs in its own DB session with per-engine failure isolation:
+    one engine failing is recorded and the others still run.
+
+    This endpoint is separate from /scheduled/cycle (privacy-only contract)
+    and does not check FORGEOS_LEGACY_INTELLIGENCE_ENABLED.
+    """
+    secret = os.getenv("CRON_SECRET", "")
+    if not secret:
+        raise HTTPException(status_code=503, detail="Scheduled intelligence is not configured")
+    if not authorization or not hmac.compare_digest(authorization, f"Bearer {secret}"):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    intelligence: dict = {}
+
+    # Stage 1: reasoning cycle — plans questions/tasks/opportunities/proposals.
+    try:
+        with database.SessionLocal() as db:
+            from app.services import forge_loop
+
+            summary = forge_loop.run_cycle(db)
+            intelligence["forge_cycle"] = {
+                "status": "ok",
+                "cycle_id": summary.get("cycle_id"),
+                "signals_processed": summary.get("signals_processed", 0),
+                "stage_errors": summary.get("stage_errors", {}),
+            }
+    except Exception as exc:
+        logger.warning("scheduled intelligence: forge_cycle failed (%s)", type(exc).__name__)
+        intelligence["forge_cycle"] = {"status": "error", "error": type(exc).__name__}
+
+    # Stage 2: requeue stale research tasks so eligible work is not stuck.
+    try:
+        with database.SessionLocal() as db:
+            from app.services import research_task_engine
+
+            resumed = research_task_engine.resume_running_tasks(db, limit=10)
+            intelligence["resumed_tasks"] = {"status": "ok", "count": len(resumed)}
+    except Exception as exc:
+        logger.warning("scheduled intelligence: resume_tasks failed (%s)", type(exc).__name__)
+        intelligence["resumed_tasks"] = {"status": "error", "error": type(exc).__name__}
+
+    # Stage 3: propose (never execute) actions for opportunities via policy.
+    try:
+        with database.SessionLocal() as db:
+            from app.services import execution_engine
+
+            autonomy = execution_engine.run_autonomous_action_cycle(db)
+            counts = autonomy.__dict__ if hasattr(autonomy, "__dict__") else autonomy
+            intelligence["autonomy_cycle"] = {
+                "status": "ok",
+                "proposed": counts.get("proposed", 0),
+                "allowed": counts.get("allowed", 0),
+                "blocked": counts.get("blocked", 0),
+                "require_approval": counts.get("require_approval", 0),
+            }
+    except Exception as exc:
+        logger.warning("scheduled intelligence: autonomy_cycle failed (%s)", type(exc).__name__)
+        intelligence["autonomy_cycle"] = {"status": "error", "error": type(exc).__name__}
+
+    return {"status": "completed", "intelligence": intelligence}

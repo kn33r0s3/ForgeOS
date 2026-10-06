@@ -17,6 +17,10 @@
     {
       "path": "/api/scheduled/cycle",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/scheduled/intelligence",
+      "schedule": "0 6 * * *"
     }
   ],
   "headers": [
