@@ -127,10 +127,11 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
-## Current state (verified 2026-10-05 ~15:45 NPT — re-verify on takeover)
+## Current state (verified 2026-10-06 ~06:24 NPT — re-verify on takeover)
 
-- **Repo:** `kn33r0s3/ForgeOS`; `main` == `origin/main` at `c46da61`
-  ("CI green" push). Working tree clean.
+- **Repo:** `kn33r0s3/ForgeOS`; `main` == `origin/main` at `3a123d0`
+  ("Fix content.test.ts: expect TanStack structured search params for
+  /login" push). Working tree clean.
 - **CI is GREEN (full sequence, 2026-10-05):** `npm test` 198/198 + 186/186,
   `npm run typecheck` clean, `npm run lint` 0 errors (1 pre-existing
   react-refresh warning), `npm run build` clean, backend
@@ -146,9 +147,9 @@ than a few days old, re-verify before trusting the details.
   `https://forge-os-ebon.vercel.app` (alias). Verified 2026-10-05: homepage
   serves the Hami app correctly; `/forge` returns the 404 page on both
   domains (public console removal holding); `/api/health` returns HTTP 200
-  with body `{"status":"degraded","ready":false}` — standing state, not an
-  outage (Vercel has no durable DATABASE_URL and no CRON_SECRET; blockers
-  are environmental); `/api/health/details` correctly 401s without the
+  with body `{"status":"ok","ready":true}` on both domains (verified
+  2026-10-06 — the earlier "degraded" standing state was environmental:
+  Vercel had no durable DATABASE_URL and no CRON_SECRET); `/api/health/details` correctly 401s without the
   owner key. Exact deployed bundle hash for `c46da61` not proven via text
   fetch (Vercel auto-deploys `main`; push landed ~10 min before the check).
 - **Homepage (current IA):** previews-only — Hero ("Discover what matters.
@@ -267,6 +268,10 @@ than a few days old, re-verify before trusting the details.
 - **Live re-verification 2026-10-05:** repo HEAD `c18aa0f`; both production
   `/api/health` return ok; `intake_enabled:false` (unchanged); 77 banked
   unknowns in the D-ledger.
+- **Live re-verification 2026-10-06:** repo HEAD `3a123d0`; both production
+  `/api/health` return ok (`{"status":"ok","ready":true}`);
+  `intake_enabled:false` (unchanged); 77 banked unknowns in the D-ledger
+  (unchanged).
 - **Open blockers:** the five discovery conversations need a real human
   (delegate kit at `docs/DELEGATE_KIT.md`, no delegate named — do not nag
   the user about it); production DB read-only check blocked (no documented
