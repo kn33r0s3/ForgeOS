@@ -294,7 +294,7 @@ def test_scheduled_intelligence_does_not_check_legacy_flag(monkeypatch):
     assert "FORGEOS_LEGACY_INTELLIGENCE_ENABLED" not in source
 
 
-def _disabled_test_scheduled_intelligence_leaves_cycle_contract_untouched(monkeypatch):
+def test_scheduled_intelligence_leaves_cycle_contract_untouched(monkeypatch):
     """E: the privacy endpoint contract is unchanged by the new route."""
     monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
     monkeypatch.setattr(scheduled, "run_daily_maintenance", lambda db: {"ok": True})
