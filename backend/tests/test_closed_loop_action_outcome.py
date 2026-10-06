@@ -290,7 +290,7 @@ def _sa_source(db):
     return a
 
 
-def _disabled_test_sa_a_proposed_is_inert(db):
+def test_sa_a_proposed_is_inert(db):
     """A: PROPOSED standing auth does not authorize."""
     from app.services import autonomy_engine as ae
     src = _sa_source(db)
