@@ -37,8 +37,17 @@ jobs:
           npm test 2>&1 | tee /tmp/test-output.txt
           TEST_EXIT=${PIPESTATUS[0]}
           echo "exit_code=$TEST_EXIT" >> "$GITHUB_OUTPUT"
-          # grep may find no matches; do not let that fail the step.
-          COUNTS=$(grep -E '^ℹ (tests|pass|fail)' /tmp/test-output.txt | tr '\n' ' ' || true)
+          # Extract test counts. The backend rejects empty test_counts with 422,
+          # so we must never send an empty string. Try the structured format
+          # first, fall back to a simple pass/fail summary.
+          COUNTS=$(grep -E '(tests|pass|fail)' /tmp/test-output.txt | tr '\n' ' ' | sed 's/[^a-zA-Z0-9 :]/ /g' | tr -s ' ' || true)
+          if [ -z "$COUNTS" ]; then
+            if [ "$TEST_EXIT" -eq 0 ]; then
+              COUNTS="tests passed (exit 0)"
+            else
+              COUNTS="tests failed (exit $TEST_EXIT)"
+            fi
+          fi
           echo "counts=$COUNTS" >> "$GITHUB_OUTPUT"
           if [ "$TEST_EXIT" -eq 0 ]; then
             echo "passed=true" >> "$GITHUB_OUTPUT"
