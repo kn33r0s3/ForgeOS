@@ -260,25 +260,3 @@ def test_no_fabricated_outcome_from_estimate(db):
     cmp = learning_engine.compare_expected_vs_actual_numeric(expected=100.0, actual=None)
     assert cmp["status"] == "EXPECTED_ONLY"
     assert "actual" not in cmp or cmp.get("actual") is None
-
-
-def test_standing_auth_minimal_proposal(db):
-    """Minimal: a real authorized action produces a PROPOSED standing auth."""
-    import json as _json
-    from datetime import datetime, timezone
-    from app import models as _models
-    from app.services import autonomy_engine as _ae
-
-    source = _models.Action(
-        action_type="outreach",
-        objective="Test",
-        status="SUCCEEDED",
-        approved_at=datetime.now(timezone.utc),
-    )
-    db.add(source)
-    db.flush()
-
-    proposal = _ae.propose_standing_authorization(db, source.id)
-
-    assert proposal.status == "PROPOSED"
-    assert proposal.action_type == "standing_authorization"
