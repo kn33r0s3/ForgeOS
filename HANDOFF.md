@@ -127,14 +127,17 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
-## Current state (verified 2026-10-06 ~13:30 NPT — re-verify on takeover)
+## Current state (verified 2026-10-06 ~17:45 NPT — re-verify on takeover)
 
-- **Repo:** `kn33r0s3/ForgeOS`; `main` == `origin/main` at `c268638`
-  ("Repair verifier Run tests step: disable set -e, guard grep"). Working tree clean.
-- **CI is GREEN (2026-10-06):** ForgeOS CI #369 SUCCESS on `c268638`.
-  Local: `npm test` 191 passed, 0 failed; `npm run typecheck` 0 errors;
-  `npm run lint` 0 errors (1 warning); `npm run build` clean;
-  `npm run smoke` 13/13 routes; backend `pytest tests` **822 passed / 2 skipped**.
+- **Repo:** `kn33r0s3/ForgeOS`; `main` == `origin/main` at `ecf92a2`
+  ("Fix verifier 422: never send empty test_counts"). Working tree clean.
+- **CI is GREEN (2026-10-06):** ForgeOS CI #372 SUCCESS on `ecf92a2`.
+  Independent verifier #41 SUCCESS — the 422 root cause (empty test_counts
+  from grep mismatch) is fixed. The verification record was actually written.
+  Local: `npm test` 389 passed (198 scripts + 191 src/lib), 0 failed;
+  `npm run typecheck` 0 errors; `npm run lint` 0 errors (1 pre-existing warning);
+  `npm run build` clean; `npm run smoke` 13/13 routes; backend `pytest tests`
+  822 passed / 2 skipped.
 - **Independent verifier:** #38 FAILURE at "Record verification" step (not "Run tests" —
   the step fix works). The POST to `/api/opv4/verifications` fails: secrets exist
   (precondition passed), but backend recording endpoint is unreachable/misconfigured.
