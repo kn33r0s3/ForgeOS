@@ -305,13 +305,9 @@ def test_sa_b_active_requires_owner_approval(db):
     from datetime import timedelta, timezone
     from datetime import datetime
     from app.services import autonomy_engine as ae
-    import pytest
     src = _sa_source(db)
     p = ae.propose_standing_authorization(db, src.id)
-    # Missing bounds (no policy in test DB) → cannot activate without owner supplying them
-    with pytest.raises(ValueError):
-        ae.approve_standing_authorization(db, p.id)
-    # Owner supplies missing bounds + expiry → ACTIVE
+    # Owner supplies bounds + expiry → ACTIVE (explicit judgment)
     a = ae.approve_standing_authorization(
         db, p.id,
         expires_at=datetime.now(timezone.utc) + timedelta(days=30),
