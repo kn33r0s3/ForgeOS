@@ -63,7 +63,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app import models
-from app.services import money_engine, autonomy_engine
+from app.services import action_engine, money_engine, autonomy_engine
 from typing import Optional
 
 # Action types the owner listed. Kept to this small set on purpose —
@@ -175,7 +175,7 @@ def create_action(
         action=description,
         expected_result=expected_result,
         action_type=action_type,
-        status=status,
+        status="authorizing",
         execution_mode=ACTION_TYPE_EXECUTION_MODE.get(action_type, "requires_owner_action"),
         requires_owner_approval=requires_approval,
         required_inputs=required_inputs,
@@ -188,6 +188,54 @@ def create_action(
         execution_allowed=execution_allowed,
     )
     db.add(action)
+    db.flush()
+
+    # Route execution authorization through the canonical Action seam so
+    # standing authorization is applied at the same policy boundary used by
+    # action_engine.propose_action(). Do not copy Action-only risk/attempt
+    # fields onto the Experiment; those remain sourced from evaluate_action().
+    proposed_action = action_engine.propose_action(
+        db,
+        objective=description,
+        action_type=action_type,
+        opportunity_id=opportunity_id,
+        estimated_cost=(estimated_cost if estimated_cost is not None else 0.0),
+        experiment_id=action.id,
+    )
+
+    if proposed_action is None:
+        action.status = "blocked"
+        action.requires_owner_approval = True
+        action.execution_allowed = False
+        action.policy_decision = "BLOCK"
+        action.policy_reason = "Canonical Action proposal failed closed."
+    else:
+        decision = proposed_action.policy_result or "REQUIRE_APPROVAL"
+        reason = proposed_action.policy_reason or ""
+
+        # Preserve the execution engine's independent market/order hard stop.
+        if is_blocked_or_order:
+            decision = "block".upper()
+            reason = (reason + " " if reason else "") + (
+                "High-risk execution domain/action blocked by default policy."
+            )
+
+        action.policy_decision = decision.lower()
+        action.policy_reason = reason
+
+        if decision == "BLOCK":
+            action.status = "blocked"
+            action.requires_owner_approval = True
+            action.execution_allowed = False
+        elif decision == "ALLOW":
+            action.status = "ready"
+            action.requires_owner_approval = False
+            action.execution_allowed = False
+        else:
+            action.status = "planned"
+            action.requires_owner_approval = True
+            action.execution_allowed = False
+
     db.commit()
     db.refresh(action)
     return action

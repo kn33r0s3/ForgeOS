@@ -176,7 +176,7 @@ def test_demand_submission_query_count_stays_within_measured_budget(db):
         event.remove(bind, "before_cursor_execute", count_statement)
 
     assert response.status_code == 200, response.text
-    # Budget 247 (was 235 at 8da7804): the 12 additional queries are deliberate
+    # Budget 255 (was 247): the 8 additional queries are the deliberate cost of routing authorization through the canonical Action seam
     # consequences of the hardened verification seams added since the baseline:
     # - dormancy state checks (operating_v4.check_build_allowed)
     # - worker task tracking for the demand request path
@@ -184,7 +184,7 @@ def test_demand_submission_query_count_stays_within_measured_budget(db):
     # The 201 type_registry SELECTs are canonical type validation, not duplicate
     # work — each entity/event creation validates against the registry.
     # CASE B: deliberate, stable, required. Budget updated with reason.
-    assert len(statements) <= 247
+    assert len(statements) <= 255
 
 
 def test_demand_status_distinguishes_delayed_retry_from_active_work(db):

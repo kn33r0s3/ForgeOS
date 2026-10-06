@@ -438,7 +438,7 @@ def propose_standing_authorization(db: Session, source_action_id: int) -> models
         policy_reason=(
             "Standing authorization proposal requires explicit owner approval. "
             + (f"Missing bounds that must be set: {', '.join(missing)}. " if missing else "")
-            + "PROPOSED does not authorize execution.",
+            + "PROPOSED does not authorize execution."
         ),
     )
     db.add(proposal)
@@ -701,6 +701,11 @@ def apply_standing_authorization_to_action(db: Session, action: models.Action) -
         params = {}
     params["estimated_cost"] = params.get("estimated_cost", 0.0)
     params["objective"] = action.objective
+    params["channel"] = params.get("channel")
+    params["scope"] = params.get("scope")
+    params["counterparty_class"] = params.get("counterparty_class")
+    params["privacy_boundary"] = params.get("privacy_boundary")
+    params["data_scope"] = params.get("data_scope") or "REAL"
     result = check_standing_authorization(db, action.action_type, params)
     if result["allowed"]:
         action.policy_result = "ALLOW"

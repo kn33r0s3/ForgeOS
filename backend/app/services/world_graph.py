@@ -242,6 +242,10 @@ def seed_core_types(db: Session) -> int:
             "forge_bot_response_action_authorization_decided",
             "outreach.sent",
             "outreach.reply",
+            "standing_authorization_proposed",
+            "standing_authorization_activated",
+            "standing_authorization_revoked",
+            "standing_authorization_expired",
         },
         "capability_type": {"tool", "workflow", "integration", "agent", "model", "market_signal_analysis"},
     }
