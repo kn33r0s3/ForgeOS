@@ -127,22 +127,35 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
-## Current state (verified 2026-10-06 ~17:45 NPT — re-verify on takeover)
+## Current state (verified 2026-10-06 ~19:15 NPT — re-verify on takeover)
 
-- **Repo:** `kn33r0s3/ForgeOS`; `main` == `origin/main` at `ecf92a2`
-  ("Fix verifier 422: never send empty test_counts"). Working tree clean.
-- **CI is GREEN (2026-10-06):** ForgeOS CI #372 SUCCESS on `ecf92a2`.
-  Independent verifier #41 SUCCESS — the 422 root cause (empty test_counts
-  from grep mismatch) is fixed. The verification record was actually written.
+- **Repo:** `kn33r0s3/ForgeOS`; `main` == `origin/main` at `ce3c794`
+  ("Bank D78: missed-inquiry ~30% corroboration (feed 2026-10-06)"). Working
+  tree has one uncommitted leftover from a prior session:
+  `backend/tests/test_operating_v4.py` gains regression tests for the 422
+  empty-test_counts fix (refs run 37442162237) — left untouched on purpose;
+  commit or discard deliberately.
+- **CI repair (2026-10-06 ~19:15 NPT):** ForgeOS CI #374 FAILED on the
+  docs-only D78 commit `ce3c794` — `test_import_unknowns.py::test_parses_all_sections`
+  asserted a hardcoded 93-row count (9+4+3+77); the new D78 row made it 94.
+  Diagnosed by local reproduction (`assert 94 == 93`), repaired to
+  9+4+3+78. Full local gate before push: backend `pytest tests` 822 passed /
+  2 skipped; `npm test` 0 failed; `npm run typecheck` 0 errors; `npm run
+  lint` 0 errors (1 pre-existing react-refresh warning); `npm run build`
+  clean.
+- **Independent verifier:** #41, #42, #43 all SUCCESS — the 422 root cause
+  (empty test_counts from grep mismatch, fixed in `ecf92a2`) is resolved.
+  The earlier "secret mismatch" diagnosis was retracted as an unsupported
+  leap: the actual failure on run 37442162237 was HTTP 422, not 401. No
+  owner log-read needed.
   Local: `npm test` 389 passed (198 scripts + 191 src/lib), 0 failed;
   `npm run typecheck` 0 errors; `npm run lint` 0 errors (1 pre-existing warning);
   `npm run build` clean; `npm run smoke` 13/13 routes; backend `pytest tests`
   822 passed / 2 skipped.
-- **Independent verifier:** #38 FAILURE at "Record verification" step (not "Run tests" —
-  the step fix works). The POST to `/api/opv4/verifications` fails: secrets exist
-  (precondition passed), but backend recording endpoint is unreachable/misconfigured.
-  This is an environment/infrastructure blocker, not a code defect. The workflow
-  now fails explicitly with HTTP diagnostics instead of opaque curl 22.
+- **Independent verifier (superseded):** the #38 FAILURE note below is stale —
+  #41, #42, #43 are all SUCCESS; see the verifier bullet above. (Kept for
+  history: #38 failed at "Record verification" because the workflow POSTed
+  empty test_counts → HTTP 422; fixed in `ecf92a2`.)
 - **Production:** `https://haminp.vercel.app` (**canonical**) and
   `https://forge-os-ebon.vercel.app` (alias). Verified 2026-10-05: homepage
   serves the Hami app correctly; `/forge` returns the 404 page on both
