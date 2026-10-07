@@ -44,6 +44,9 @@ def test_local_health_is_ok_and_ready_without_vercel_requirements(db, monkeypatc
 
     assert response.status_code == 200
     _assert_health_contract(response.json(), status="ok", ready=True)
+
+
+def test_health_details_requires_owner_key_and_preserves_diagnostics(db, monkeypatch):
     from app import security
 
     monkeypatch.delenv("VERCEL", raising=False)
