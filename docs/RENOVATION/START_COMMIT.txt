@@ -1,0 +1,10 @@
+7008111 Doctrine: EARNING is the gate to consequential real-world action
+59cda5a Seed architect-approved founding evidence Bets (A/B/C) via existing Bet seam
+3ae4ec5 Fix: Join Hami and Login reachable on mobile navigation
+90b6b62 docs: discovery round 16 — D14 personal-QR acceptance rail; bank D79-D83 (fine-rumor, formalization toll, manual-QR workaround)
+c43f474 Close canonical bounded execution gate
+7186659 Handoff freshness: HEAD 92f4d2b->09749c3, unknowns 77->78, both health ok, intake closed (verified 2026-10-07 ~06:30 NPT)
+09749c3 Complete standing authorization execution seam
+1cbda5d Update ledger: standing auth v2 honest status
+3ed816e Clean test file: remove unverifiable sa tests
+9abee34 Re-enable test_sa_a only
