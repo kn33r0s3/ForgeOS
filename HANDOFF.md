@@ -127,10 +127,15 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
-## Current state (verified 2026-10-07 ~00:30 NPT — re-verify on takeover)
+## Current state (verified 2026-10-07 ~06:30 NPT — re-verify on takeover)
 
-- **Repo:** `kn33r0s3/ForgeOS`; `main` == `origin/main` at `92f4d2b`
-  ("Make engine test assert structure not success"). Working tree clean.
+- **Repo:** `kn33r0s3/ForgeOS`; `main` == `origin/main` at `09749c3`
+  ("Complete standing authorization execution seam" — execution_engine
+  .create_action() now routes authorization through
+  action_engine.propose_action() with the experiment_id FK: one
+  standing-auth implementation, hard-bound enforcement preserved; 19-test
+  authorization matrix; production activation still OFF). Working tree
+  clean.
 - **Production nervous-system seam (2026-10-07, NEW):** Added
   `GET /scheduled/intelligence` — a non-legacy production work-generation
   endpoint in the existing `backend/app/api/scheduled.py` router, triggered
@@ -307,6 +312,11 @@ than a few days old, re-verify before trusting the details.
   `/api/health` return ok (`{"status":"ok","ready":true}`);
   `intake_enabled:false` (unchanged); 77 banked unknowns in the D-ledger
   (unchanged).
+- **Live re-verification 2026-10-07 (~06:30 NPT):** repo HEAD `09749c3`;
+  both production `/api/health` return ok (`{"status":"ok","ready":true}`)
+  on `haminp.vercel.app` and `forge-os-ebon.vercel.app`;
+  `intake_enabled:false` (unchanged); **78** banked unknowns in the
+  D-ledger (+1 since 2026-10-06 — D78 row present).
 - **Open blockers:** the five discovery conversations need a real human
   (delegate kit at `docs/DELEGATE_KIT.md`, no delegate named — do not nag
   the user about it); production DB read-only check blocked (no documented
