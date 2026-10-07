@@ -1,0 +1,56 @@
+........................................................................ [  8%]
+........................................................................ [ 16%]
+........................................................................ [ 24%]
+........................................................................ [ 32%]
+.......................................s................................ [ 40%]
+........................................................................ [ 48%]
+....................................s................................... [ 56%]
+........................................................................ [ 65%]
+........................................................................ [ 73%]
+........................................................................ [ 81%]
+........................................................................ [ 89%]
+........................................................................ [ 97%]
+.....................                                                    [100%]
+=============================== warnings summary ===============================
+../../ForgeOS/backend/.deps/fastapi/testclient.py:1
+  /home/hatch/workspace/repos/ForgeOS/backend/.deps/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+../../ForgeOS/backend/.deps/starlette/testclient.py:53
+  /home/hatch/workspace/repos/ForgeOS/backend/.deps/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+../../ForgeOS/backend/.deps/pydantic/_internal/_config.py:291
+  /home/hatch/workspace/repos/ForgeOS/backend/.deps/pydantic/_internal/_config.py:291: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.9/migration/
+    warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+
+app/migrations.py:76: 1 warning
+tests/test_capability_discovery.py: 1 warning
+tests/test_commercial_ops.py: 2 warnings
+tests/test_demand_understanding.py: 1 warning
+tests/test_demand_worker.py: 2 warnings
+tests/test_economic_validation.py: 1 warning
+tests/test_evidence_relationship_substrate_adapter.py: 2 warnings
+tests/test_experiment_lifecycle.py: 2 warnings
+tests/test_health_readiness.py: 1 warning
+tests/test_legacy_evidence_substrate_adapter.py: 1 warning
+tests/test_multi_source_orchestration.py: 3 warnings
+tests/test_openalex_collector.py: 2 warnings
+tests/test_operational_substrate_adapter.py: 1 warning
+tests/test_phase1_provenance_and_identity.py: 1 warning
+tests/test_prospect_discovery.py: 1 warning
+tests/test_public_value_flow.py: 1 warning
+tests/test_research_task_engine.py: 1 warning
+tests/test_signal_request_demand_api.py: 1 warning
+tests/test_world_graph.py: 2 warnings
+  /home/hatch/workspace/repos/ForgeOS-renovation/backend/tests/../app/migrations.py:76: SAWarning: Cannot correctly sort tables; there are unresolvable cycles between tables "actions, claims, decisions, experiments, learning_events, options, outcomes, rare_signal_assessments, research_questions", which is usually caused by mutually dependent foreign key constraints.  Foreign key constraints involving these tables will not be considered; this warning may raise an error in a future release.
+    for table in Base.metadata.sorted_tables:
+
+tests/test_scout.py::test_approve_skip_sent_flow
+tests/test_scout.py::test_daily_cap_blocks
+tests/test_scout.py::test_daily_cap_blocks
+  /home/hatch/workspace/repos/ForgeOS-renovation/backend/tests/../app/services/scout.py:150: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+883 passed, 2 skipped, 33 warnings in 374.29s (0:06:14)
