@@ -178,6 +178,33 @@ export function SiteHeader() {
               })}
             </ol>
           </nav>
+          {/* Account actions: Join Hami and Login must remain reachable on mobile.
+              The header buttons are hidden below sm: breakpoint, so the mobile
+              drawer must expose them. */}
+          {!signedIn && (
+            <div className="flex flex-col gap-2 border-t-2 border-line-strong p-4">
+              <Link
+                to="/login"
+                search={{ mode: "sign-up" }}
+                className="flex min-h-12 items-center justify-center rounded-card border-2 px-4 text-base font-extrabold transition-colors"
+                style={{
+                  borderColor: "#F2A33A",
+                  background: "#F2A33A",
+                  color: "#0C0B0A",
+                }}
+              >
+                Join Hami
+              </Link>
+              <Link
+                to="/login"
+                search={{ mode: "sign-in" }}
+                className="flex min-h-12 items-center justify-center rounded-card px-4 text-base font-bold transition-colors"
+                style={{ color: "#F2A33A" }}
+              >
+                Login
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </>
