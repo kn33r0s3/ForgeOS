@@ -361,6 +361,8 @@ PROBE
   ↓
 VERIFY
   ↓
+EARNING
+  ↓
 AMPLIFY / DAMPEN / KILL
   ↓
 MAP
@@ -371,6 +373,40 @@ ORIENT AGAIN
 The orientation changes because the evidence changed.
 
 The decision changes because reality changed.
+
+---
+
+## The EARNING gate (owner-set, 2026-10-08)
+
+VERIFY establishes that a signal is real. EARNING establishes that the
+signal can become a transaction someone pays for. The two are not the
+same, and the cycle must not assume the second follows the first.
+
+**No earning → no expensive real-world intervention.**
+
+Concretely:
+
+* A verified mechanism with no credible earning path remains knowledge.
+  It is mapped, not acted on.
+* Crossing into consequential real-world action — spending owner money
+  or significant owner time, committing to counterparties, operating at
+  any real scale — requires a named earning path: who pays, for what
+  verified outcome, and how Hami captures part of the recovered or
+  created value.
+* Earning here means the first verified rupee of external revenue on
+  the path the Bet defined — not profit yet (see the revenue milestone
+  ladder: ₨1 verified external revenue → ₨1 contribution profit →
+  repeatable positive economics), but a real transaction, not a plan
+  to transact. Owner time is tracked as a real cost from the start.
+* AMPLIFY / DAMPEN / KILL is then decided on actual economic results,
+  not on how convincing the verified mechanism sounded.
+
+The hunting question this gate strengthens:
+
+> Where does value disappear — and can Hami capture some of that
+> recovered value?
+
+A discovery that cannot plausibly reach earning stays in the horizon.
 
 ---
 
