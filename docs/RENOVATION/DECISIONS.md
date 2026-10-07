@@ -34,3 +34,43 @@ model or score. Tests never count as customer evidence.
 - 2026-10-08: The playbook's "TEN STOP SIGNS" are not present in the
   provided source, so docs/RENOVATION/HAMI_RULES.md is not created from
   them. The four rules above plus the standing doctrine serve instead.
+
+## Phase 2 notes (2026-10-08)
+
+- Skipped `docs/RENOVATION/HAMI_RULES.md`: the playbook step says to copy
+  "the TEN STOP SIGNS from the top of this playbook", but they are not
+  present in the provided source. Per safety rule 6 the copy step is
+  skipped rather than inventing ten rules. The four AGENTS.md rules above
+  serve as the working rules.
+- Skipped `archive/` + `git mv opencode.jsonc.bad`: the file does not
+  exist in this repo (verified). Nothing to archive; nothing deleted.
+- Skipped `git rm --cached logs screenshots`: neither directory exists.
+  Skipped `attachments/` handling: directory does not exist.
+- Skipped `frontend/LEGACY.md`: `frontend/` does not exist (legacy
+  dashboard is `docs/archive/legacy-frontend/` per README).
+- `.env.example` created from 52 env names found by code grep; values
+  absent (verified by grep). `.nvmrc` = 22, `.python-version` = 3.12.
+- `scripts/check_all.sh` runs typecheck → lint → build → backend tests,
+  stops at first failure; backend deps fall back to the main checkout's
+  `.deps` (identical requirements.txt) when the worktree has none.
+- App start test: backend healthy on :8000 (`/docs` 200,
+  `/api/health` ok). `start.sh` exited 1 because its ~10s readiness probe
+  is shorter than backend startup on this machine; backend became healthy
+  right after. Web frontend (:8080) not verified this run. `./stop.sh`
+  exits 0 and frees the port.
+
+## Phase 3 notes (2026-10-08)
+
+- Skipped creating `.github/workflows/check.yml`: the existing
+  `.github/workflows/forgeos-ci.yml` already runs the identical matrix
+  (Node 22: npm ci, test, typecheck, lint, build, smoke; Python 3.12:
+  pip install, pytest) on push/PR. A second workflow would be a parallel
+  structure doing the same job, forbidden by the continuity law. Verified
+  by reading forgeos-ci.yml (not assumed).
+- Error-shape step adapted: the playbook wants
+  `{"error": {"code", "message", "request_id"}}`, but the repo's live
+  contract is `{"detail": ...}`, asserted by existing tests (7 test files).
+  Changing the shape would break contracts; changing the tests to match
+  would be altering tests to satisfy the playbook. Instead: keep `detail`,
+  ADD `request_id` to error responses. Uniformity + traceability without
+  breaking the contract.

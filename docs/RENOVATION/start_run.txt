@@ -1,0 +1,11 @@
+⚠ backend/.env.example not found — create backend/.env manually if the backend needs env vars
+⚠ legacy-frontend .env.local.example not found — skipping
+[database] canonical native SQLite URL: sqlite:////home/hatch/workspace/repos/ForgeOS-renovation/storage/forge.db
+Starting backend on :8000 ...
+❌ Backend failed health check:
+[database] resolved SQLite path: /home/hatch/workspace/repos/ForgeOS-renovation/storage/forge.db
+INFO:     Started server process [8509]
+INFO:     Waiting for application startup.
+/home/hatch/workspace/repos/ForgeOS-renovation/backend/app/migrations.py:76: SAWarning: Cannot correctly sort tables; there are unresolvable cycles between tables "actions, claims, decisions, experiments, learning_events, options, outcomes, rare_signal_assessments, research_questions", which is usually caused by mutually dependent foreign key constraints.  Foreign key constraints involving these tables will not be considered; this warning may raise an error in a future release.
+  for table in Base.metadata.sorted_tables:
+start.sh exit: 1
