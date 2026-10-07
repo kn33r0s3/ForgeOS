@@ -351,6 +351,7 @@ class Experiment(Base):
     domain = Column(String, nullable=False, default="revenue", index=True)  # "revenue" | "scenario" | "other"
     execution_allowed = Column(Boolean, nullable=False, default=False)  # fail-closed default
     data_scope = Column(String, nullable=False, default="REAL", index=True)  # REAL | SANDBOX; sandbox results never count as business traction
+    source_kind = Column(String, nullable=False, default="MOCK", index=True)  # REAL | TEST | MOCK | HYPOTHESIS (see evidence_source.py); old rows migrate to MOCK — public numbers count REAL only
 
     # --- Experiments registry (2026-10-05) ---
     # OBSERVATION: may run in parallel, no human contact.
@@ -690,6 +691,8 @@ class Evidence(Base):
     verifier = Column(Text, nullable=True)
     # counterparty confirmation or third-party timestamp reference (L5+)
     substrate_provenance = Column(Text, nullable=True)
+
+    source_kind = Column(String, nullable=False, default="MOCK", index=True)  # REAL | TEST | MOCK | HYPOTHESIS (see evidence_source.py); old rows migrate to MOCK — public numbers count REAL only
 
     signal = relationship("Signal")
     opportunity = relationship("Opportunity", back_populates="evidence_items")
@@ -1684,6 +1687,7 @@ class Outcome(Base):
     # REPORTED | VERIFIED | DISPUTED
     notes = Column(Text, nullable=True)
     data_scope = Column(String, nullable=False, default="REAL", index=True)  # REAL | SANDBOX; only REAL outcomes roll into business metrics
+    source_kind = Column(String, nullable=False, default="MOCK", index=True)  # REAL | TEST | MOCK | HYPOTHESIS (see evidence_source.py); old rows migrate to MOCK — public numbers count REAL only
 
 
 class Provider(Base):
@@ -1917,6 +1921,7 @@ class CustomerEvent(Base):
     occurred_at = Column(DateTime, default=utcnow)
     created_at = Column(DateTime, default=utcnow)
     data_scope = Column(String, nullable=False, default="REAL", index=True)  # SANDBOX contacts are excluded from real customer counts
+    source_kind = Column(String, nullable=False, default="MOCK", index=True)  # REAL | TEST | MOCK | HYPOTHESIS (see evidence_source.py); old rows migrate to MOCK — public numbers count REAL only
 
     product = relationship("Product", back_populates="customer_events")
     channel = relationship("DistributionChannel", back_populates="customer_events")

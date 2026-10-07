@@ -125,6 +125,7 @@ def record_verified_revenue_evidence(
         verification_state="VERIFIED",
         notes=(notes or f"Provider reference: {reference.strip()}"),
         data_scope=action.data_scope,
+        source_kind="REAL",  # this seam demands proof (source + reference); genuinely real
     )
     db.add(outcome)
     action.revenue = float(amount)

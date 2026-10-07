@@ -21,7 +21,7 @@ from typing import Any, Optional
 from sqlalchemy.orm import Session
 
 from app import models
-from app.services import autonomy_engine, learning_engine
+from app.services import autonomy_engine
 
 
 def utcnow():
@@ -578,15 +578,26 @@ def record_outcome(
     success: Optional[bool] = None,
     notes: Optional[str] = None,
     data_scope: str = "REAL",
+    source_kind: str = "MOCK",
+    verification_state: str = "REPORTED",
     idempotency_key: Optional[str] = None,
     commit: bool = True,
 ) -> models.Outcome:
     """Append an explicit outcome and product learning atomically; never estimate cash."""
     import math
+    from app import evidence_source
     from app.services import lessons_engine
     data_scope = data_scope.strip().upper()
     if data_scope not in {"REAL", "SANDBOX"}:
         raise ValueError("Invalid data scope")
+    source_kind = evidence_source.validate(source_kind)
+    verification_state = verification_state.strip().upper()
+    if verification_state not in {"REPORTED", "VERIFIED", "DISPUTED"}:
+        raise ValueError("Invalid verification state")
+    if evidence_source.is_real(source_kind) and verification_state != "VERIFIED":
+        raise ValueError(
+            "REAL outcomes require VERIFIED proof; refusing to label unverified data REAL"
+        )
     if outcome_type not in {"ACTUAL_REVENUE", "ACTUAL_COST", "ACTUAL_RESPONSE", "ACTUAL_CUSTOMERS", "ACTUAL_CONVERSION", "QUALITATIVE", "OTHER"}:
         raise ValueError("Invalid outcome type")
     if actual_value is not None and (not math.isfinite(actual_value) or actual_value < 0):
@@ -621,8 +632,8 @@ def record_outcome(
         outcome = models.Outcome(action_id=action_id, experiment_id=experiment_id,
             decision_id=decision_id, product_id=product_id, outcome_type=outcome_type,
             actual_value=actual_value, unit=unit, qualitative_result=qualitative_result,
-            source=source, success=success, verification_state="REPORTED",
-            notes=marker or notes, data_scope=data_scope)
+            source=source, success=success, verification_state=verification_state,
+            notes=marker or notes, data_scope=data_scope, source_kind=source_kind)
         db.add(outcome)
         db.flush()
         if action_id and success is not None:
