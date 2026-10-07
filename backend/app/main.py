@@ -10,8 +10,12 @@ init, and router registration. All logic lives in services/ and api/.
 
 import os
 import logging
+import re
+import time
+import uuid
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
@@ -22,12 +26,48 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from app.config import settings
+from app.settings import check_required_env
 from app.database import init_db, SessionLocal
 from app.api import signals, analyze, opportunities, observer, forge, world, workers, intelligence, rare_signals, products, lessons, orchestrator, earn, payments, repair_shop, evidence_triage, public, scheduled, substrate, forge_bot, operating_v4, scout, residue
 from app.security import api_key_middleware, require_owner_api_key
 from app.request_limits import PublicWriteSizeLimitMiddleware
 
 logger = logging.getLogger(__name__)
+
+
+class PIIMaskFilter(logging.Filter):
+    """Mask phone numbers and emails in log records (renovation, Phase 3).
+
+    Nepali mobiles: 10 digits starting with 97/98, optional +977 prefix.
+    Emails: anything shaped like name@domain. Values never reach the logs.
+    """
+
+    PHONE_RE = re.compile(r"(?:\+977[-\s]?)?(?:97|98)\d{8}")
+    EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        msg = self.PHONE_RE.sub("[phone]", msg)
+        msg = self.EMAIL_RE.sub("[email]", msg)
+        record.msg = msg
+        record.args = ()
+        return True
+
+
+# Attach to every handler present at startup (uvicorn configures its own
+# handlers before lifespan runs). Note: logger-level filters do NOT apply
+# to propagated records in CPython, so handler-level attachment is the
+# correct stdlib mechanism.
+def _install_pii_filter() -> None:
+    filt = PIIMaskFilter()
+    loggers = [logging.getLogger()]
+    for obj in logging.root.manager.loggerDict.values():
+        if isinstance(obj, logging.Logger):
+            loggers.append(obj)
+    for lg in loggers:
+        for h in lg.handlers:
+            if not any(isinstance(f, PIIMaskFilter) for f in h.filters):
+                h.addFilter(filt)
 
 
 @asynccontextmanager
@@ -55,10 +95,49 @@ app.add_middleware(
 app.middleware("http")(api_key_middleware)
 app.add_middleware(PublicWriteSizeLimitMiddleware)
 
+
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next):
+    """Attach a request id: honor X-Request-ID if sent, else mint one.
+
+    Returned in the X-Request-ID response header and included in the
+    per-request log line (method, path, status, ms, request_id).
+    Registered last so it runs outermost — the id exists for every
+    handler, including error handlers.
+    """
+    request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:16]
+    request.state.request_id = request_id
+    start = time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception:
+        elapsed_ms = int((time.perf_counter() - start) * 1000)
+        logger.info(
+            "%s %s -> exception (%dms) request_id=%s",
+            request.method,
+            request.url.path,
+            elapsed_ms,
+            request_id,
+        )
+        raise
+    elapsed_ms = int((time.perf_counter() - start) * 1000)
+    response.headers["X-Request-ID"] = request_id
+    logger.info(
+        "%s %s -> %s (%dms) request_id=%s",
+        request.method,
+        request.url.path,
+        response.status_code,
+        elapsed_ms,
+        request_id,
+    )
+    return response
+
 CRON_SCHEDULE = "0 0 * * *"
 
 
 def on_startup():
+    check_required_env()
+    _install_pii_filter()
     init_db()
     if not settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
         logger.info("Legacy intelligence startup disabled.")
@@ -163,7 +242,23 @@ def _health_details() -> dict[str, Any]:
 @app.get("/health")
 def health():
     details = _health_details()
-    return {"status": details["status"], "ready": details["readiness"]["ready"]}
+    db_info = details["database"]
+    if not db_info["url_configured"] and db_info["durability"] == "ephemeral":
+        db_state = "not_configured"
+    elif db_info["available"]:
+        db_state = "up"
+    else:
+        db_state = "down"
+    return {
+        "status": details["status"],
+        "ready": details["readiness"]["ready"],
+        # Renovation: the four contract keys. Existing status/ready kept
+        # for current consumers (e.g. the production health check).
+        "ok": details["status"] == "ok",
+        "version": settings.APP_VERSION,
+        "time": datetime.now(timezone.utc).isoformat(),
+        "db": db_state,
+    }
 
 
 @app.get("/health/details")

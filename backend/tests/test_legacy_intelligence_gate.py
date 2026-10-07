@@ -3,11 +3,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-from fastapi.testclient import TestClient
 
 from app.api.scheduled import run_scheduled_cycle
 from app.config import settings
-from app.main import app
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 

@@ -11,11 +11,10 @@ Defaults to --dry-run (no database writes).
 --apply must be explicitly passed to insert signals into forge.db.
 """
 
-import sys
 import json
 import argparse
 import hashlib
-from typing import List, Dict
+from typing import List
 
 from sqlalchemy.orm import Session
 from app.database import SessionLocal, init_db

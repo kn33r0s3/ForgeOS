@@ -5,7 +5,7 @@ It reads queued :class:`WorkerTask` rows from the database, dispatches them
 to concrete handler functions and updates their status.
 """
 
-from datetime import datetime, timezone, timedelta
+from datetime import timedelta
 from typing import Callable, Dict
 
 from sqlalchemy.orm import Session

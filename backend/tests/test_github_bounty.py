@@ -4,8 +4,7 @@ Tests for GitHub Bounty Adapter and Action Integration
 """
 
 import json
-import urllib.error
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from app import models

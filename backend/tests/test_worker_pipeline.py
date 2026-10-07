@@ -1,4 +1,3 @@
-import pytest
 from sqlalchemy.orm import Session
 from app import models
 from app.services.worker_manager import process_worker_tasks

@@ -54,8 +54,6 @@ def run_forever(interval: int = DEFAULT_INTERVAL_SECONDS) -> None:
     from app.database import SessionLocal, init_db
     from app.services import (
         autonomy_engine,
-        collector_runner,
-        forge_loop,
         money_engine,
         scenario_engine,
         source_manager,

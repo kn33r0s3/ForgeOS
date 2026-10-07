@@ -6,7 +6,6 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
-import re
 from typing import Iterable
 
 from sqlalchemy.orm import Session

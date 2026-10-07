@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from jsonschema import Draft202012Validator
-from jsonschema.exceptions import SchemaError, ValidationError
+from jsonschema.exceptions import SchemaError
 from sqlalchemy.orm import Session
 
 from app import models

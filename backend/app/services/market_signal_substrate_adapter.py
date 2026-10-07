@@ -9,7 +9,6 @@ records without creating a second domain table.
 from __future__ import annotations
 
 import json
-from typing import Any
 
 from sqlalchemy import cast, String
 from sqlalchemy.orm import Session

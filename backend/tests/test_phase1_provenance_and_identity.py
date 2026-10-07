@@ -20,11 +20,10 @@ Validates:
 """
 
 import pytest
-from datetime import datetime, timezone
 from app import models
 from app.services import opportunity_engine, observer_engine
 from app.services.collectors.github import GithubCollector
-from app.cli.merge_duplicates import run_merge, find_duplicate_clusters
+from app.cli.merge_duplicates import run_merge
 from app.cli.collect import run_collection_smoke
 
 
@@ -211,7 +210,8 @@ def test_apply_flag_required_before_merge_can_modify_records(db):
 
 
 def test_migration_backfill_on_temporary_db():
-    import tempfile, sqlite3
+    import tempfile
+    import sqlite3
     from sqlalchemy import create_engine
     from app.migrations import run_migrations
     

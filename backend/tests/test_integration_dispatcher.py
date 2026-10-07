@@ -2,7 +2,6 @@ import json
 import urllib.error
 from unittest.mock import patch, MagicMock
 
-import pytest
 
 from app.config import settings
 from app.services import integration_outbox, integration_dispatcher

@@ -22,7 +22,11 @@ def test_root_routes_are_reachable_under_the_api_prefix(db):
     mirrored = client.get("/api/health")
 
     assert mirrored.status_code == 200
-    assert mirrored.json() == {"status": "ok", "ready": True}
+    payload = mirrored.json()
+    assert payload["status"] == "ok" and payload["ready"] is True
+    assert payload["ok"] is True
+    assert payload["version"] and payload["time"]
+    assert payload["db"] in ("up", "down", "not_configured")
 
 
 def test_health_details_alias_requires_the_owner_key(db, monkeypatch):

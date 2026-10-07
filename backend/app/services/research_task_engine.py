@@ -277,7 +277,6 @@ def evaluate_claim_after_research(
     """Re-run P3 against all evidence currently linked to this claim."""
     if task.claim_id is None or not evidence_ids:
         return None
-    from app.services.research_evidence_assessment import explicit_contradiction_edges
 
     requested_evidence_ids = sorted(set(evidence_ids))
     evidence_rows = (

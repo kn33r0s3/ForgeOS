@@ -1,6 +1,5 @@
 from datetime import date
 from urllib.request import Request
-from unittest.mock import patch
 
 import pytest
 

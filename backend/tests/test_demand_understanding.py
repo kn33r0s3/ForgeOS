@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from app import models
 from app.database import Base
 from app.migrations import run_migrations
-from app.services import demand_understanding, source_clearance_registry, world_graph
+from app.services import demand_understanding, source_clearance_registry
 
 
 def _observation(db, text, key):

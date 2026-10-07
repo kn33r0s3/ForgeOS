@@ -50,7 +50,7 @@ import json
 import re
 
 from app import models
-from app.services import ai_engine, economic_intelligence, public_epistemics
+from app.services import ai_engine, economic_intelligence, public_epistemics  # noqa: F401 — ai_engine kept for monkeypatching in tests
 from typing import Optional
 
 

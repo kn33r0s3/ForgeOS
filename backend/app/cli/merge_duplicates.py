@@ -12,7 +12,6 @@ Default behavior is ALWAYS --dry-run.
 --apply must be passed explicitly to mutate the database.
 """
 
-import sys
 import json
 import argparse
 from typing import Dict, List
@@ -20,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.database import SessionLocal, init_db
 from app import models
-from app.services.opportunity_engine import _identity_key, normalize_problem_text, _append_signal_id
+from app.services.opportunity_engine import _identity_key, _append_signal_id
 
 
 def find_duplicate_clusters(db: Session) -> Dict[str, List[models.Opportunity]]:

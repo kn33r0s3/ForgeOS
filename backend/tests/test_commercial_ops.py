@@ -16,7 +16,6 @@ os.environ["EMBEDDING_PROVIDER"] = "hash"
 
 import pytest
 from app import models
-from pathlib import Path
 
 
 # ---------------------------------------------------------------------------
@@ -362,7 +361,6 @@ from app.services import lessons_engine
 
 def _mk_event(db, *, lesson_text, prediction="x", actual="y", error_type=None,
               pred_err=None, opportunity_id=None, belief_id=None):
-    from app.services import learning_engine
     # build a LearningEvent directly (DB-backed)
     ev = models.LearningEvent(
         prediction=prediction, actual=actual, lesson=lesson_text,
@@ -407,7 +405,6 @@ def test_repeated_similar_events_merge_same_lesson(db):
 
 def test_recall_surfaces_lesson_for_opportunity(db):
     """Recall finds a lesson tagged to an opportunity."""
-    from app.services import opportunity_engine
     opp = models.Opportunity(
         problem="repair shops lose hours to no-shows",
         target_customer="independent repair shops",

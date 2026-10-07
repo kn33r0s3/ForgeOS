@@ -13,16 +13,13 @@ in-memory schema — the shortest honest path through the whole loop:
     OPPORTUNITY -> DECISION -> EXPERIMENT -> APPROVAL -> OUTCOME
     -> LEARNING -> LESSON -> RECALL -> PRODUCT GATE
 """
-import os
 
-import pytest
 
 from app import models
 from app.services import (
     orchestrator,
     execution_engine,
     decision_engine,
-    lessons_engine,
 )
 
 X = 10       # 10 interviews targeted

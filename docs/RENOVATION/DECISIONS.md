@@ -74,3 +74,92 @@ model or score. Tests never count as customer evidence.
   would be altering tests to satisfy the playbook. Instead: keep `detail`,
   ADD `request_id` to error responses. Uniformity + traceability without
   breaking the contract.
+
+## Phase 3 notes continued (2026-10-08)
+
+- Ruff `--fix` is NOT fully safe: it removed `ai_engine` from an import in
+  `opportunity_engine.py` because the name looked unused, but
+  `test_opportunity_quality.py` monkeypatches
+  `opportunity_engine.ai_engine`. One test failed; the import was restored
+  with a `# noqa: F401` comment explaining why. Lesson: auto-fix output
+  must always be followed by the full suite, which is what caught it.
+- Error-shape step: kept the established `{"detail": ...}` contract
+  (asserted by 7 test files) and added traceability via the `X-Request-ID`
+  response header (honored if sent, minted otherwise) plus the request id
+  in every access log line. Changing bodies would have broken contracts;
+  changing tests to match would have been altering tests for the playbook.
+- `settings.py` REQUIRED list is honestly empty: the app starts on its
+  SQLite fallback with zero env vars, so nothing is genuinely required.
+  The gate mechanism (clear `Missing setting: NAME` line + refuse to
+  start, never printing values) is real and tested with a test-only name.
+- `/health` keeps its existing `status`/`ready` keys (production health
+  check depends on them) and adds the four contract keys
+  `ok`/`version`/`time`/`db`.
+- PII log masking: CPython logger-level filters do NOT apply to
+  propagated records, so the filter attaches at handler level via
+  `_install_pii_filter()` at startup. The test unit-tests the filter
+  object directly (deterministic).
+
+## Phase 4 notes (2026-10-08)
+
+### Existing labels found (read before touching)
+- models.py already has `data_scope` (REAL | SANDBOX) on experiments,
+  outcomes, learning events, lessons, products, customer events. That is an
+  ENVIRONMENT axis, not an epistemic one — it cannot say TEST vs MOCK vs
+  HYPOTHESIS. The playbook's `source_kind` is a different axis; both stay.
+- AGENTS.md's bootstrap rule names REAL/TEST/MOCK/HYPOTHESIS but defines
+  them nowhere in code; AGENTS.md also already mandates
+  OWNER_INTERVENTIONS_PER_REAL_TRANSACTION with NOT MEASURABLE semantics —
+  Phase 4 implements exactly that rule.
+- The migrations framework (migrations.py) is ADDITIVE ONLY and
+  metadata-driven: adding the column to models.py auto-migrates old SQLite
+  DBs. ALTER DDL renders `DEFAULT 'MOCK'` from the Python-side default, so
+  old rows backfill to MOCK (fail-closed: public numbers count REAL only).
+  NOT NULL is enforced on fresh create_all DBs; migrated old DBs get the
+  DEFAULT backfill (framework never rewrites constraints). Idempotency is
+  proven by test (run twice, second run adds nothing).
+- The four-value rule (REAL|TEST|MOCK|HYPOTHESIS) is enforced in
+  application code (evidence_source.validate + record_outcome), not via a
+  DB CHECK constraint — the additive framework cannot add constraints to
+  existing tables, and split enforcement would be worse.
+
+### Scope decision
+source_kind added to the four tables public_stats reads or that hold
+evidence: Outcome, Experiment, CustomerEvent, Evidence. Signal (raw
+observations) deliberately left out — its epistemic label is the existing
+source_type/source reliability machinery; expanding there is future work,
+not this phase.
+
+### New-file justifications (repo AGENTS.md hard rule)
+1. backend/app/evidence_source.py — SEAM INSPECTED: models.py data_scope
+   (wrong axis), AGENTS.md bootstrap rule (names only, no code).
+   WHY INSUFFICIENT: no module defines the four labels; stuffing them into
+   config.py mixes deploy config with epistemics. NEW CAPABILITY: the
+   single canonical REAL/TEST/MOCK/HYPOTHESIS definition + validation.
+2. backend/app/services/public_stats.py — SEAM INSPECTED: orchestrator.py
+   internal rollups, economic_validation.py, revenue miner.
+   WHY INSUFFICIENT: none answers "what may we show the public"; the
+   existing rollups mix scopes. NEW CAPABILITY: REAL+proof-only public
+   aggregates + the NOT MEASURABLE intervention metric.
+3. src/lib/sandbox-banner.ts — SEAM INSPECTED: src/components/* (React
+   components, not covered by npm test's src/lib glob).
+   WHY INSUFFICIENT: no existing banner; a component couldn't be unit
+   tested under the repo's node --test setup. NEW CAPABILITY:
+   framework-free reusable SANDBOX banner markup with a passing test.
+
+### Enforcement seams (modified in place, per continuity law)
+- action_engine.record_outcome: new source_kind param (default MOCK) +
+  verification_state param (default REPORTED); REAL without VERIFIED is
+  refused with a clear ValueError. Existing callers unchanged (MOCK default).
+- approval_outcome_bridge verified-revenue path: labels its outcome REAL —
+  that function already demands proof (source + reference + prior human
+  outcome), so the label is honest.
+
+### Synthetic DB
+- No FORGEOS_SYNTHETIC_DB or synthetic-DB routing exists anywhere in code;
+  only FORGEOS_TEST_DATABASE_URL. README's "separate database for synthetic
+  source inputs" is aspirational. Per the playbook, the env NAME is now
+  reserved in .env.example with a comment saying routing is not wired.
+  Downstream SANDBOX labeling is proven through the existing seam:
+  record_outcome(data_scope="SANDBOX") → outcome + LearningEvent both stay
+  SANDBOX (test).

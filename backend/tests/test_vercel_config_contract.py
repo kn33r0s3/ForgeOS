@@ -120,7 +120,11 @@ def test_api_health_and_public_feed_answer_under_the_api_prefix(db, monkeypatch)
         client = TestClient(app)
         health = client.get("/api/health")
         assert health.status_code == 200, health.text
-        assert health.json() == {"status": "ok", "ready": True}
+        payload = health.json()
+        assert payload["status"] == "ok" and payload["ready"] is True
+        assert payload["ok"] is True
+        assert payload["version"] and payload["time"]
+        assert payload["db"] in ("up", "down", "not_configured")
         feed = client.get("/api/public/feed")
         assert feed.status_code == 200, feed.text
     finally:

@@ -1,6 +1,6 @@
 import os
 import requests
-from typing import Dict, Any, Optional
+from typing import Optional
 from pydantic import BaseModel, Field
 
 class QwenWorkerRequest(BaseModel):

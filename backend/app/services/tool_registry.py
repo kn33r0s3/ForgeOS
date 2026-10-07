@@ -7,8 +7,8 @@ Optional tools may be unavailable without making the registry unusable.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Callable, Iterable, Mapping, Protocol
+from dataclasses import dataclass
+from typing import Any, Callable, Iterable, Protocol
 import hashlib
 
 

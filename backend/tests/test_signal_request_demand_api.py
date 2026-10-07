@@ -11,7 +11,7 @@ from app.database import Base, get_db
 import app.database as database
 from app.main import app
 from app.migrations import run_migrations
-from app.services import demand_understanding, world_graph
+from app.services import demand_understanding
 
 
 def test_public_demand_request_is_closed_when_legacy_intelligence_is_disabled(

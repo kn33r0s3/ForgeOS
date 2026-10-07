@@ -17,7 +17,6 @@ only from real ACTUAL_* Outcome rows, never fabricated by this system.
     POST   /products/customers       -> log a real customer/lead (global)
 """
 
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session

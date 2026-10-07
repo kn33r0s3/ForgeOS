@@ -1,0 +1,566 @@
+==> typecheck
+
+> typecheck
+> tsc --noEmit
+
+==> lint
+
+> lint
+> eslint .
+
+
+/home/hatch/workspace/repos/ForgeOS-renovation/src/components/experiments/experiment-card.tsx
+  108:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+✖ 1 problem (0 errors, 1 warning)
+
+==> build
+
+> build
+> node scripts/with-app-env.mjs vite build && npm run db:migrate
+
+[nitro:vercel] ℹ Using nodejs24.x runtime.
+[nitro:vercel] ℹ Using web entry format.
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 2021 modules transformed.
+rendering chunks...
+computing gzip size...
+.vercel/output/static/assets/styles-DSo3pPbA.css                  95.17 kB │ gzip:  16.88 kB
+.vercel/output/static/assets/_-jTB3ONL3.js                         0.07 kB │ gzip:   0.08 kB
+.vercel/output/static/assets/not-found-i5RsCZif.js                 0.11 kB │ gzip:   0.11 kB
+.vercel/output/static/assets/check-BRhUYykn.js                     0.12 kB │ gzip:   0.14 kB
+.vercel/output/static/assets/group-dakXl0Wv.js                     0.14 kB │ gzip:   0.13 kB
+.vercel/output/static/assets/services-dakXl0Wv.js                  0.14 kB │ gzip:   0.13 kB
+.vercel/output/static/assets/x-Dct7-ddQ.js                         0.15 kB │ gzip:   0.15 kB
+.vercel/output/static/assets/arrow-right-B2ELhZIV.js               0.16 kB │ gzip:   0.16 kB
+.vercel/output/static/assets/arrow-up-right-CqO4Y8S2.js            0.16 kB │ gzip:   0.16 kB
+.vercel/output/static/assets/search-B5O_44ZA.js                    0.17 kB │ gzip:   0.17 kB
+.vercel/output/static/assets/circle-check-CMubErON.js              0.17 kB │ gzip:   0.17 kB
+.vercel/output/static/assets/useRouter-Tlq4ymmd.js                 0.18 kB │ gzip:   0.16 kB
+.vercel/output/static/assets/ventures-BAxFQIib.js                  0.18 kB │ gzip:   0.16 kB
+.vercel/output/static/assets/technology-PvByGPDP.js                0.18 kB │ gzip:   0.17 kB
+.vercel/output/static/assets/clock-3-C2fACuR5.js                   0.18 kB │ gzip:   0.17 kB
+.vercel/output/static/assets/matchContext-CKhXGkS-.js              0.19 kB │ gzip:   0.16 kB
+.vercel/output/static/assets/circle-lT-sqfE4.js                    0.24 kB │ gzip:   0.20 kB
+.vercel/output/static/assets/link-2-D3OaGhIX.js                    0.24 kB │ gzip:   0.21 kB
+.vercel/output/static/assets/compass-33fdaP1S.js                   0.25 kB │ gzip:   0.20 kB
+.vercel/output/static/assets/eyebrow-p9YSG2L6.js                   0.25 kB │ gzip:   0.20 kB
+.vercel/output/static/assets/map-pin-CN7qeR5V.js                   0.25 kB │ gzip:   0.22 kB
+.vercel/output/static/assets/useNavigate-Zxaj4t3F.js               0.26 kB │ gzip:   0.21 kB
+.vercel/output/static/assets/status-pill-si5ITLId.js               0.27 kB │ gzip:   0.21 kB
+.vercel/output/static/assets/lightbulb-DtY04gHY.js                 0.28 kB │ gzip:   0.22 kB
+.vercel/output/static/assets/flask-conical-CXzS8Jqb.js             0.30 kB │ gzip:   0.23 kB
+.vercel/output/static/assets/shield-check-BEiUVIMO.js              0.32 kB │ gzip:   0.25 kB
+.vercel/output/static/assets/trash-2-BEPGB133.js                   0.35 kB │ gzip:   0.25 kB
+.vercel/output/static/assets/radio-f4ra7geJ.js                     0.36 kB │ gzip:   0.25 kB
+.vercel/output/static/assets/section-marker-D86KlvNi.js            0.40 kB │ gzip:   0.28 kB
+.vercel/output/static/assets/jsx-runtime-NZYk81nU.js               0.43 kB │ gzip:   0.30 kB
+.vercel/output/static/assets/handshake-BXAp39eh.js                 0.44 kB │ gzip:   0.28 kB
+.vercel/output/static/assets/text-link-nvavpPD9.js                 0.47 kB │ gzip:   0.32 kB
+.vercel/output/static/assets/calendar-days-CWHWAH3y.js             0.49 kB │ gzip:   0.26 kB
+.vercel/output/static/assets/input-CR3xaqJA.js                     0.53 kB │ gzip:   0.36 kB
+.vercel/output/static/assets/operations-data-C_PrpHqE.js           0.55 kB │ gzip:   0.32 kB
+.vercel/output/static/assets/bot-qualification-demo-Du3TZiMx.js    0.64 kB │ gzip:   0.37 kB
+.vercel/output/static/assets/rolldown-runtime-hePW80VL.js          0.71 kB │ gzip:   0.42 kB
+.vercel/output/static/assets/api-cache-EqBAakas.js                 0.81 kB │ gzip:   0.45 kB
+.vercel/output/static/assets/project-inquiry-cta-BwnS09nt.js       0.84 kB │ gzip:   0.45 kB
+.vercel/output/static/assets/experiments-BORfYAlx.js               0.91 kB │ gzip:   0.50 kB
+.vercel/output/static/assets/page-hero-Bhj0Nequ.js                 0.91 kB │ gzip:   0.45 kB
+.vercel/output/static/assets/login-BdCbKOzm.js                     1.08 kB │ gzip:   0.64 kB
+.vercel/output/static/assets/page-header-DrHUepIu.js               1.19 kB │ gzip:   0.55 kB
+.vercel/output/static/assets/createLucideIcon-CgwYIURT.js          1.21 kB │ gzip:   0.70 kB
+.vercel/output/static/assets/process-WTL_vkMs.js                   1.24 kB │ gzip:   0.63 kB
+.vercel/output/static/assets/cta-band-DXTYtNty.js                  1.26 kB │ gzip:   0.65 kB
+.vercel/output/static/assets/finding-card-DrE3111f.js              1.49 kB │ gzip:   0.66 kB
+.vercel/output/static/assets/area-view-Cq2DZ-Sf.js                 1.51 kB │ gzip:   0.75 kB
+.vercel/output/static/assets/preload-helper-CW0tP7wg.js            1.63 kB │ gzip:   0.87 kB
+.vercel/output/static/assets/services.index-DJoS6-KR.js            1.67 kB │ gzip:   0.80 kB
+.vercel/output/static/assets/unknown-card-DkEx4d5J.js              1.72 kB │ gzip:   0.77 kB
+.vercel/output/static/assets/contact-DkmzAZV4.js                   1.97 kB │ gzip:   0.81 kB
+.vercel/output/static/assets/useSelector-DbljtoXe.js               2.17 kB │ gzip:   0.95 kB
+.vercel/output/static/assets/needs-VHR4-Mlu.js                     3.11 kB │ gzip:   1.36 kB
+.vercel/output/static/assets/services._slug-BryM_Bkk.js            3.12 kB │ gzip:   1.17 kB
+.vercel/output/static/assets/experiment-card-BB8PuHxY.js           3.66 kB │ gzip:   1.39 kB
+.vercel/output/static/assets/discoveries-Dq5Gw7fR.js               3.67 kB │ gzip:   1.55 kB
+.vercel/output/static/assets/privacy-_7fb6uOG.js                   4.05 kB │ gzip:   1.44 kB
+.vercel/output/static/assets/feedback-D4kC54rU.js                  4.12 kB │ gzip:   1.53 kB
+.vercel/output/static/assets/lazyRouteComponent-ydqUyFXX.js        4.18 kB │ gzip:   1.55 kB
+.vercel/output/static/assets/opportunities-BY3fVnwk.js             4.70 kB │ gzip:   1.97 kB
+.vercel/output/static/assets/request-BZMzF69P.js                   4.82 kB │ gzip:   2.06 kB
+.vercel/output/static/assets/actions-BfJAivdQ.js                   4.90 kB │ gzip:   1.98 kB
+.vercel/output/static/assets/button-BiOGFUCC.js                    5.03 kB │ gzip:   2.12 kB
+.vercel/output/static/assets/requests._id-9tlHZWPu.js              5.43 kB │ gzip:   1.99 kB
+.vercel/output/static/assets/group.index-DvWwZDHQ.js               5.44 kB │ gzip:   1.73 kB
+.vercel/output/static/assets/terms-DQSuGZAF.js                     5.54 kB │ gzip:   1.70 kB
+.vercel/output/static/assets/group.businesses-BiFi_8j2.js          5.60 kB │ gzip:   1.77 kB
+.vercel/output/static/assets/about-fOOM5hFC.js                     5.97 kB │ gzip:   2.09 kB
+.vercel/output/static/assets/login-LWlYx6tF.js                     6.47 kB │ gzip:   2.36 kB
+.vercel/output/static/assets/unknowns-ZDRadE_O.js                  7.24 kB │ gzip:   2.85 kB
+.vercel/output/static/assets/prototype.inbox-D2b72fRj.js           7.36 kB │ gzip:   2.81 kB
+.vercel/output/static/assets/react-CwJFpaho.js                     7.53 kB │ gzip:   2.88 kB
+.vercel/output/static/assets/link-rIh0P7bT.js                      9.34 kB │ gzip:   4.30 kB
+.vercel/output/static/assets/forge-bot-intake-DXKekR67.js         12.78 kB │ gzip:   4.03 kB
+.vercel/output/static/assets/routes-CZGleNUH.js                   14.10 kB │ gzip:   3.93 kB
+.vercel/output/static/assets/providers-m_fVzNLd.js                14.97 kB │ gzip:   4.24 kB
+.vercel/output/static/assets/feed-DOKtzk6P.js                     15.08 kB │ gzip:   4.88 kB
+.vercel/output/static/assets/content-Un1GFdll.js                  16.07 kB │ gzip:   5.74 kB
+.vercel/output/static/assets/operations-C87Z5cVn.js               17.10 kB │ gzip:   5.75 kB
+.vercel/output/static/assets/system-CETY4jv0.js                   17.73 kB │ gzip:   6.22 kB
+.vercel/output/static/assets/domain-C-nOvwRe.js                   21.70 kB │ gzip:   5.34 kB
+.vercel/output/static/assets/container-BlojgONh.js                28.50 kB │ gzip:   9.12 kB
+.vercel/output/static/assets/client-B7c39BMk.js                   32.00 kB │ gzip:  12.03 kB
+.vercel/output/static/assets/createServerFn-Bm6SGva_.js           37.94 kB │ gzip:  12.31 kB
+.vercel/output/static/assets/owner-BeVbAtAu.js                    92.76 kB │ gzip:  29.13 kB
+.vercel/output/static/assets/index-BxqQ4iq6.js                   364.90 kB │ gzip: 113.72 kB
+
+✓ built in 4.07s
+[33m[PLUGIN_TIMINGS] [0mPlugin hooks ran for 3.6s of this 4.1s build (89%).
+The slowest hooks, timed inside each callback (the wait before a callback starts is excluded, the time it awaits is included):
+  - tanstack-router:code-splitter:compile-reference-file transform (34%, 1.4s, 40 calls)
+Additional hook time came from the hooks below and from hooks under 1s.
+2 hooks are listed without a time. Their calls overlapped, so the time inside one call includes work from other calls. To find their cost, profile the build with `node --cpu-prof`:
+  - tanstack-start-core:import-protection resolveId (5944 calls)
+  - tanstack-start-core::server-fn:client transform (18 calls)
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+vite v8.2.2 building ssr environment for production...
+transforming...
+✓ 414 modules transformed.
+rendering chunks...
+computing gzip size...
+node_modules/.nitro/vite/services/ssr/assets/styles-DSo3pPbA.css                      95.17 kB │ gzip: 16.88 kB
+node_modules/.nitro/vite/services/ssr/assets/kysely-adapter-Cj_QZw5p.js                0.05 kB │ gzip:  0.07 kB
+node_modules/.nitro/vite/services/ssr/assets/start-5Z2QO8AU.js                         0.14 kB │ gzip:  0.13 kB
+node_modules/.nitro/vite/services/ssr/assets/_-CjW-G2Ai.js                             0.19 kB │ gzip:  0.15 kB
+node_modules/.nitro/vite/services/ssr/assets/empty-plugin-adapters-D9UWiqvJ.js         0.22 kB │ gzip:  0.16 kB
+node_modules/.nitro/vite/services/ssr/assets/group-mkwTDTwn.js                         0.25 kB │ gzip:  0.19 kB
+node_modules/.nitro/vite/services/ssr/assets/services-C5swur1F.js                      0.25 kB │ gzip:  0.19 kB
+node_modules/.nitro/vite/services/ssr/assets/terms-policy-bIG0Hbaf.js                  0.29 kB │ gzip:  0.24 kB
+node_modules/.nitro/vite/services/ssr/assets/ventures-DG4cHJ8Y.js                      0.32 kB │ gzip:  0.23 kB
+node_modules/.nitro/vite/services/ssr/assets/technology-pSt-Yte-.js                    0.33 kB │ gzip:  0.23 kB
+node_modules/.nitro/vite/services/ssr/assets/requests._id-D8KIqOmU.js                  0.34 kB │ gzip:  0.22 kB
+node_modules/.nitro/vite/services/ssr/assets/createServerRpc-CN-evIEF.js               0.38 kB │ gzip:  0.26 kB
+node_modules/.nitro/vite/services/ssr/assets/status-pill-DHlMzlRZ.js                   0.39 kB │ gzip:  0.27 kB
+node_modules/.nitro/vite/services/ssr/assets/eyebrow-4dIwfNWW.js                       0.42 kB │ gzip:  0.30 kB
+node_modules/.nitro/vite/services/ssr/assets/section-marker-CCYUwniI.js                0.57 kB │ gzip:  0.35 kB
+node_modules/.nitro/vite/services/ssr/assets/input-bzFG7x1p.js                         0.57 kB │ gzip:  0.39 kB
+node_modules/.nitro/vite/services/ssr/assets/text-link-DiZtIufh.js                     0.63 kB │ gzip:  0.40 kB
+node_modules/.nitro/vite/services/ssr/assets/services._slug-DAMpSjMo.js                0.67 kB │ gzip:  0.39 kB
+node_modules/.nitro/vite/services/ssr/assets/providers-iz0l-FWI.js                     0.69 kB │ gzip:  0.37 kB
+node_modules/.nitro/vite/services/ssr/assets/feed-Q8eSNydM.js                          0.75 kB │ gzip:  0.41 kB
+node_modules/.nitro/vite/services/ssr/assets/signup-gate-DC_GelM4.js                   0.81 kB │ gzip:  0.41 kB
+node_modules/.nitro/vite/services/ssr/assets/login-RXm6P-_6.js                         0.83 kB │ gzip:  0.47 kB
+node_modules/.nitro/vite/services/ssr/assets/container-DiVVmyRP.js                     0.92 kB │ gzip:  0.54 kB
+node_modules/.nitro/vite/services/ssr/assets/availability-y9nAK4EL.js                  0.93 kB │ gzip:  0.47 kB
+node_modules/.nitro/vite/services/ssr/assets/bot-qualification-demo-D882rMff.js        1.06 kB │ gzip:  0.54 kB
+node_modules/.nitro/vite/services/ssr/assets/project-inquiry-cta-CKKcUcxx.js           1.21 kB │ gzip:  0.56 kB
+node_modules/.nitro/vite/services/ssr/assets/experiments-BRrhefpc.js                   1.32 kB │ gzip:  0.63 kB
+node_modules/.nitro/vite/services/ssr/assets/operations-data-JUx0BNTG.js               1.40 kB │ gzip:  0.68 kB
+node_modules/.nitro/vite/services/ssr/assets/not-found-CSO4-qLC.js                     1.42 kB │ gzip:  0.63 kB
+node_modules/.nitro/vite/services/ssr/assets/page-hero-KA1FJYue.js                     1.44 kB │ gzip:  0.62 kB
+node_modules/.nitro/vite/services/ssr/assets/signup-gate.server-Bc1WNhUk.js            1.66 kB │ gzip:  0.85 kB
+node_modules/.nitro/vite/services/ssr/assets/cta-band-Bn_Y93nF.js                      1.74 kB │ gzip:  0.79 kB
+node_modules/.nitro/vite/services/ssr/assets/process-jLcXAE_Z.js                       1.83 kB │ gzip:  0.79 kB
+node_modules/.nitro/vite/services/ssr/assets/button-DphQxs5J.js                        1.96 kB │ gzip:  0.83 kB
+node_modules/.nitro/vite/services/ssr/assets/isolation.server-zhygvfhn.js              2.02 kB │ gzip:  1.06 kB
+node_modules/.nitro/vite/services/ssr/assets/page-header-B2uxuPWW.js                   2.02 kB │ gzip:  0.81 kB
+node_modules/.nitro/vite/services/ssr/assets/area-view-DHoyUuLP.js                     2.17 kB │ gzip:  0.94 kB
+node_modules/.nitro/vite/services/ssr/assets/finding-card-DI1uSgWC.js                  2.30 kB │ gzip:  0.90 kB
+node_modules/.nitro/vite/services/ssr/assets/api-cache-CcL-_g5Q.js                     2.34 kB │ gzip:  1.00 kB
+node_modules/.nitro/vite/services/ssr/assets/services.index-Br05yHkR.js                2.39 kB │ gzip:  0.98 kB
+node_modules/.nitro/vite/services/ssr/assets/createSsrRpc-DUTET4vp.js                  2.41 kB │ gzip:  1.13 kB
+node_modules/.nitro/vite/services/ssr/assets/unknown-card-BrTVinrw.js                  2.53 kB │ gzip:  0.99 kB
+node_modules/.nitro/vite/services/ssr/assets/age-policy-CViFmtph.js                    2.66 kB │ gzip:  1.04 kB
+node_modules/.nitro/vite/services/ssr/assets/contact-BFRvOvcv.js                       2.84 kB │ gzip:  1.00 kB
+node_modules/.nitro/vite/services/ssr/assets/needs-ClJ3Sl4B.js                         3.50 kB │ gzip:  1.34 kB
+node_modules/.nitro/vite/services/ssr/assets/verify.server-10Vs9NLX.js                 3.51 kB │ gzip:  1.55 kB
+node_modules/.nitro/vite/services/ssr/assets/personal-context-BdXrRnyq.js              3.65 kB │ gzip:  1.21 kB
+node_modules/.nitro/vite/services/ssr/assets/server-ghjUZYyh.js                        3.93 kB │ gzip:  1.39 kB
+node_modules/.nitro/vite/services/ssr/assets/services._slug-BHmBh2sP.js                4.53 kB │ gzip:  1.46 kB
+node_modules/.nitro/vite/services/ssr/assets/discoveries-BjUP4Tp8.js                   4.78 kB │ gzip:  1.68 kB
+node_modules/.nitro/vite/services/ssr/assets/privacy-BvkoXRmp.js                       5.01 kB │ gzip:  1.59 kB
+node_modules/.nitro/vite/services/ssr/assets/experiment-card-17WeSlnI.js               5.35 kB │ gzip:  1.79 kB
+node_modules/.nitro/vite/services/ssr/assets/actions-Bpsx4vnl.js                       5.44 kB │ gzip:  1.82 kB
+node_modules/.nitro/vite/services/ssr/assets/feedback-CXx-dRe0.js                      5.86 kB │ gzip:  1.87 kB
+node_modules/.nitro/vite/services/ssr/assets/opportunities-BcXjrJ_R.js                 6.45 kB │ gzip:  2.14 kB
+node_modules/.nitro/vite/services/ssr/assets/state-DgmMg2vj.js                         6.63 kB │ gzip:  2.62 kB
+node_modules/.nitro/vite/services/ssr/assets/request-BTkW_aoI.js                       6.82 kB │ gzip:  2.46 kB
+node_modules/.nitro/vite/services/ssr/assets/terms-C6p7FWBg.js                         7.38 kB │ gzip:  1.89 kB
+node_modules/.nitro/vite/services/ssr/assets/requests._id-CdvKbvbF.js                  7.56 kB │ gzip:  2.23 kB
+node_modules/.nitro/vite/services/ssr/assets/group.index-CJoLK48_.js                   7.80 kB │ gzip:  2.06 kB
+node_modules/.nitro/vite/services/ssr/assets/about-QsCapAvo.js                         7.95 kB │ gzip:  2.41 kB
+node_modules/.nitro/vite/services/ssr/assets/group.businesses-DOOTViPw.js              8.05 kB │ gzip:  2.14 kB
+node_modules/.nitro/vite/services/ssr/assets/unknowns-B9oZ6iLk.js                      9.55 kB │ gzip:  3.24 kB
+node_modules/.nitro/vite/services/ssr/assets/login-Chr5Qhny.js                        10.13 kB │ gzip:  2.92 kB
+node_modules/.nitro/vite/services/ssr/assets/prototype.inbox-DJ4N8HoF.js              11.06 kB │ gzip:  3.58 kB
+node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-B_acc-9F.js   11.26 kB │ gzip:  2.18 kB
+node_modules/.nitro/vite/services/ssr/assets/db-BzIbyLnS.js                           11.43 kB │ gzip:  4.24 kB
+node_modules/.nitro/vite/services/ssr/assets/url-Dj5TGTcl.js                          14.85 kB │ gzip:  4.57 kB
+node_modules/.nitro/vite/services/ssr/assets/forge-bot-intake-CRwFmVXO.js             19.58 kB │ gzip:  4.81 kB
+node_modules/.nitro/vite/services/ssr/assets/feed-Bg7aM_ZT.js                         20.97 kB │ gzip:  5.20 kB
+node_modules/.nitro/vite/services/ssr/assets/routes-BPrOvKG5.js                       21.23 kB │ gzip:  4.81 kB
+node_modules/.nitro/vite/services/ssr/assets/content-CheBO_5u.js                      21.99 kB │ gzip:  6.68 kB
+node_modules/.nitro/vite/services/ssr/assets/providers-xJCtWi3s.js                    22.11 kB │ gzip:  4.93 kB
+node_modules/.nitro/vite/services/ssr/assets/system-DAvELJaG.js                       22.18 kB │ gzip:  6.30 kB
+node_modules/.nitro/vite/services/ssr/assets/operations-BYyQYaPu.js                   23.08 kB │ gzip:  5.94 kB
+node_modules/.nitro/vite/services/ssr/assets/domain-KVAVciyA.js                       31.79 kB │ gzip:  6.24 kB
+node_modules/.nitro/vite/services/ssr/assets/client-B2JPMsgg.js                       37.67 kB │ gzip: 11.51 kB
+node_modules/.nitro/vite/services/ssr/assets/router-kn2JBSxq.js                       44.42 kB │ gzip: 11.46 kB
+node_modules/.nitro/vite/services/ssr/index.js                                        74.02 kB │ gzip: 19.07 kB
+node_modules/.nitro/vite/services/ssr/assets/owner-D2uxeghB.js                       122.33 kB │ gzip: 33.01 kB
+node_modules/.nitro/vite/services/ssr/assets/server-DpzK35xY.js                      322.19 kB │ gzip: 75.46 kB
+
+✓ built in 3.02s
+
+[nitro] ◐ Building [Nitro] (preset: vercel, compatibility: 2026-10-07)
+[nitro] ✔ Generated public .vercel/output/static
+vite v8.2.2 building nitro environment for production...
+transforming...
+✓ 2481 modules transformed.
+rendering chunks...
+computing gzip size...
+.vercel/output/functions/__server.func/_libs/_.mjs                                     0.08 kB │ gzip:   0.08 kB
+.vercel/output/functions/__server.func/_ssr/start-5Z2QO8AU.mjs                         0.14 kB │ gzip:   0.13 kB
+.vercel/output/functions/__server.func/_ssr/kysely-adapter-Cj_QZw5p.mjs                0.15 kB │ gzip:   0.12 kB
+.vercel/output/functions/__server.func/_-CjW-G2Ai.mjs                                  0.22 kB │ gzip:   0.17 kB
+.vercel/output/functions/__server.func/_ssr/empty-plugin-adapters-D9UWiqvJ.mjs         0.23 kB │ gzip:   0.16 kB
+.vercel/output/functions/__server.func/_chunks/core.mjs                                0.25 kB │ gzip:   0.18 kB
+.vercel/output/functions/__server.func/_ssr/terms-policy-bIG0Hbaf.mjs                  0.33 kB │ gzip:   0.27 kB
+.vercel/output/functions/__server.func/_ssr/group-mkwTDTwn.mjs                         0.35 kB │ gzip:   0.25 kB
+.vercel/output/functions/__server.func/_ssr/services-C5swur1F.mjs                      0.36 kB │ gzip:   0.25 kB
+.vercel/output/functions/__server.func/_libs/zod.mjs                                   0.36 kB │ gzip:   0.22 kB
+.vercel/output/functions/__server.func/_ssr/createServerRpc-CN-evIEF.mjs               0.38 kB │ gzip:   0.26 kB
+.vercel/output/functions/__server.func/_ssr/ventures-DG4cHJ8Y.mjs                      0.49 kB │ gzip:   0.30 kB
+.vercel/output/functions/__server.func/_ssr/technology-pSt-Yte-.mjs                    0.49 kB │ gzip:   0.30 kB
+.vercel/output/functions/__server.func/_ssr/status-pill-DHlMzlRZ.mjs                   0.53 kB │ gzip:   0.35 kB
+.vercel/output/functions/__server.func/_ssr/eyebrow-4dIwfNWW.mjs                       0.57 kB │ gzip:   0.38 kB
+.vercel/output/functions/__server.func/_ssr/section-marker-CCYUwniI.mjs                0.76 kB │ gzip:   0.43 kB
+.vercel/output/functions/__server.func/_ssr/input-bzFG7x1p.mjs                         0.76 kB │ gzip:   0.44 kB
+.vercel/output/functions/__server.func/_ssr/text-link-DiZtIufh.mjs                     0.78 kB │ gzip:   0.46 kB
+.vercel/output/functions/__server.func/_ssr/signup-gate-DC_GelM4.mjs                   0.83 kB │ gzip:   0.44 kB
+.vercel/output/functions/__server.func/_ssr/availability-y9nAK4EL.mjs                  0.95 kB │ gzip:   0.50 kB
+.vercel/output/functions/__server.func/_chunks/ssr-renderer.mjs                        0.96 kB │ gzip:   0.49 kB
+.vercel/output/functions/__server.func/_ssr/container-DiVVmyRP.mjs                     1.09 kB │ gzip:   0.63 kB
+.vercel/output/functions/__server.func/_libs/defu.mjs                                  1.41 kB │ gzip:   0.58 kB
+.vercel/output/functions/__server.func/_ssr/bot-qualification-demo-D882rMff.mjs        1.44 kB │ gzip:   0.64 kB
+.vercel/output/functions/__server.func/_ssr/operations-data-JUx0BNTG.mjs               1.45 kB │ gzip:   0.71 kB
+.vercel/output/functions/__server.func/_ssr/project-inquiry-cta-CKKcUcxx.mjs           1.51 kB │ gzip:   0.63 kB
+.vercel/output/functions/__server.func/_ssr/experiments-BRrhefpc.mjs                   1.63 kB │ gzip:   0.71 kB
+.vercel/output/functions/__server.func/_ssr/signup-gate.server-Bc1WNhUk.mjs            1.76 kB │ gzip:   0.91 kB
+.vercel/output/functions/__server.func/_ssr/page-hero-KA1FJYue.mjs                     1.78 kB │ gzip:   0.70 kB
+.vercel/output/functions/__server.func/_runtime.mjs                                    1.92 kB │ gzip:   0.87 kB
+.vercel/output/functions/__server.func/_ssr/isolation.server-zhygvfhn.mjs              2.05 kB │ gzip:   1.08 kB
+.vercel/output/functions/__server.func/_ssr/cta-band-Bn_Y93nF.mjs                      2.14 kB │ gzip:   0.86 kB
+.vercel/output/functions/__server.func/_ssr/button-DphQxs5J.mjs                        2.19 kB │ gzip:   0.89 kB
+.vercel/output/functions/__server.func/_ssr/process-jLcXAE_Z.mjs                       2.29 kB │ gzip:   0.86 kB
+.vercel/output/functions/__server.func/_ssr/api-cache-CcL-_g5Q.mjs                     2.38 kB │ gzip:   1.04 kB
+.vercel/output/functions/__server.func/_ssr/createSsrRpc-DUTET4vp.mjs                  2.40 kB │ gzip:   1.14 kB
+.vercel/output/functions/__server.func/_ssr/page-header-B2uxuPWW.mjs                   2.43 kB │ gzip:   0.89 kB
+.vercel/output/functions/__server.func/_ssr/area-view-DHoyUuLP.mjs                     2.66 kB │ gzip:   1.02 kB
+.vercel/output/functions/__server.func/_ssr/age-policy-CViFmtph.mjs                    2.70 kB │ gzip:   1.06 kB
+.vercel/output/functions/__server.func/_ssr/finding-card-DI1uSgWC.mjs                  2.72 kB │ gzip:   0.99 kB
+.vercel/output/functions/__server.func/_ssr/services.index-Br05yHkR.mjs                2.88 kB │ gzip:   1.05 kB
+.vercel/output/functions/__server.func/_ssr/unknown-card-BrTVinrw.mjs                  2.93 kB │ gzip:   1.08 kB
+.vercel/output/functions/__server.func/_libs/class-variance-authority+clsx.mjs         3.17 kB │ gzip:   1.24 kB
+.vercel/output/functions/__server.func/_ssr/contact-BFRvOvcv.mjs                       3.48 kB │ gzip:   1.08 kB
+.vercel/output/functions/__server.func/_ssr/verify.server-10Vs9NLX.mjs                 3.54 kB │ gzip:   1.58 kB
+.vercel/output/functions/__server.func/_ssr/personal-context-BdXrRnyq.mjs              3.61 kB │ gzip:   1.22 kB
+.vercel/output/functions/__server.func/_libs/better-auth__utils.mjs                    3.80 kB │ gzip:   1.31 kB
+.vercel/output/functions/__server.func/_ssr/needs-ClJ3Sl4B.mjs                         4.01 kB │ gzip:   1.42 kB
+.vercel/output/functions/__server.func/_ssr/services._slug-BHmBh2sP.mjs                5.38 kB │ gzip:   1.53 kB
+.vercel/output/functions/__server.func/_libs/nanostores.mjs                            5.50 kB │ gzip:   1.81 kB
+.vercel/output/functions/__server.func/_ssr/discoveries-BjUP4Tp8.mjs                   5.61 kB │ gzip:   1.83 kB
+.vercel/output/functions/__server.func/_libs/radix-ui__react-slot.mjs                  5.61 kB │ gzip:   1.73 kB
+.vercel/output/functions/__server.func/_ssr/privacy-BvkoXRmp.mjs                       5.64 kB │ gzip:   1.66 kB
+.vercel/output/functions/__server.func/_ssr/experiment-card-17WeSlnI.mjs               6.07 kB │ gzip:   1.87 kB
+.vercel/output/functions/__server.func/_ssr/actions-Bpsx4vnl.mjs                       6.38 kB │ gzip:   1.97 kB
+.vercel/output/functions/__server.func/_ssr/state-DgmMg2vj.mjs                         6.62 kB │ gzip:   2.65 kB
+.vercel/output/functions/__server.func/_ssr/feedback-CXx-dRe0.mjs                      6.91 kB │ gzip:   1.97 kB
+.vercel/output/functions/__server.func/_ssr/opportunities-BcXjrJ_R.mjs                 7.59 kB │ gzip:   2.30 kB
+.vercel/output/functions/__server.func/_ssr/request-BTkW_aoI.mjs                       7.77 kB │ gzip:   2.59 kB
+.vercel/output/functions/__server.func/_ssr/terms-C6p7FWBg.mjs                         8.66 kB │ gzip:   1.97 kB
+.vercel/output/functions/__server.func/_ssr/requests._id-CdvKbvbF.mjs                  8.93 kB │ gzip:   2.39 kB
+.vercel/output/functions/__server.func/_ssr/about-QsCapAvo.mjs                         8.98 kB │ gzip:   2.48 kB
+.vercel/output/functions/__server.func/_ssr/group.index-CJoLK48_.mjs                   9.18 kB │ gzip:   2.13 kB
+.vercel/output/functions/__server.func/_ssr/group.businesses-DOOTViPw.mjs              9.47 kB │ gzip:   2.20 kB
+.vercel/output/functions/__server.func/_ssr/unknowns-B9oZ6iLk.mjs                     10.77 kB │ gzip:   3.37 kB
+.vercel/output/functions/__server.func/_ssr/db-BzIbyLnS.mjs                           11.30 kB │ gzip:   4.27 kB
+.vercel/output/functions/__server.func/_tanstack-start-manifest_v-B_acc-9F.mjs        11.32 kB │ gzip:   2.21 kB
+.vercel/output/functions/__server.func/_ssr/login-Chr5Qhny.mjs                        11.36 kB │ gzip:   3.03 kB
+.vercel/output/functions/__server.func/_ssr/prototype.inbox-DJ4N8HoF.mjs              12.34 kB │ gzip:   3.74 kB
+.vercel/output/functions/__server.func/_libs/tanstack__history.mjs                    12.50 kB │ gzip:   3.70 kB
+.vercel/output/functions/__server.func/_libs/better-auth__memory-adapter.mjs          14.71 kB │ gzip:   4.12 kB
+.vercel/output/functions/__server.func/_ssr/url-Dj5TGTcl.mjs                          14.78 kB │ gzip:   4.60 kB
+.vercel/output/functions/__server.func/_libs/@radix-ui/react-compose-refs+[...].mjs   16.79 kB │ gzip:   4.66 kB
+.vercel/output/functions/__server.func/_libs/@better-auth/telemetry+[...].mjs         17.53 kB │ gzip:   4.91 kB
+.vercel/output/functions/__server.func/_libs/h3-v2+rou3.mjs                           17.58 kB │ gzip:   5.16 kB
+.vercel/output/functions/__server.func/_ssr/content-CheBO_5u.mjs                      22.04 kB │ gzip:   6.71 kB
+.vercel/output/functions/__server.func/_ssr/forge-bot-intake-CRwFmVXO.mjs             22.18 kB │ gzip:   4.98 kB
+.vercel/output/functions/__server.func/_libs/h3+rou3+srvx.mjs                         22.57 kB │ gzip:   6.12 kB
+.vercel/output/functions/__server.func/_ssr/feed-Bg7aM_ZT.mjs                         23.23 kB │ gzip:   5.37 kB
+.vercel/output/functions/__server.func/_libs/noble__hashes.mjs                        23.93 kB │ gzip:   7.95 kB
+.vercel/output/functions/__server.func/_ssr/system-DAvELJaG.mjs                       24.65 kB │ gzip:   6.44 kB
+.vercel/output/functions/__server.func/_ssr/providers-xJCtWi3s.mjs                    24.89 kB │ gzip:   5.12 kB
+.vercel/output/functions/__server.func/_ssr/routes-BPrOvKG5.mjs                       25.03 kB │ gzip:   4.98 kB
+.vercel/output/functions/__server.func/_ssr/operations-BYyQYaPu.mjs                   26.28 kB │ gzip:   6.17 kB
+.vercel/output/functions/__server.func/_libs/lucide-react.mjs                         27.62 kB │ gzip:   5.82 kB
+.vercel/output/functions/__server.func/_libs/@tanstack/router-core+[...].mjs          29.60 kB │ gzip:   7.98 kB
+.vercel/output/functions/__server.func/index.mjs                                      31.99 kB │ gzip:  10.06 kB
+.vercel/output/functions/__server.func/_ssr/domain-KVAVciyA.mjs                       35.76 kB │ gzip:   6.46 kB
+.vercel/output/functions/__server.func/_ssr/client-B2JPMsgg.mjs                       36.88 kB │ gzip:  11.49 kB
+.vercel/output/functions/__server.func/_libs/jose.mjs                                 38.65 kB │ gzip:   8.59 kB
+.vercel/output/functions/__server.func/_libs/noble__ciphers.mjs                       47.40 kB │ gzip:  14.67 kB
+.vercel/output/functions/__server.func/_ssr/router-kn2JBSxq.mjs                       48.89 kB │ gzip:  12.45 kB
+.vercel/output/functions/__server.func/_ssr/ssr.mjs                                   76.08 kB │ gzip:  19.94 kB
+.vercel/output/functions/__server.func/_libs/tailwind-merge.mjs                       90.54 kB │ gzip:  16.17 kB
+.vercel/output/functions/__server.func/_ssr/owner-D2uxeghB.mjs                       130.34 kB │ gzip:  33.25 kB
+.vercel/output/functions/__server.func/_libs/pg.mjs                                  148.64 kB │ gzip:  34.40 kB
+.vercel/output/functions/__server.func/_ssr/server-DpzK35xY.mjs                      316.70 kB │ gzip:  74.86 kB
+.vercel/output/functions/__server.func/_libs/@better-auth/kysely-adapter+[...].mjs   473.01 kB │ gzip:  78.51 kB
+.vercel/output/functions/__server.func/_libs/electric-sql__pglite.mjs                751.95 kB │ gzip: 153.28 kB
+.vercel/output/functions/__server.func/_libs/@tanstack/react-router+[...].mjs        764.41 kB │ gzip: 161.12 kB
+.vercel/output/functions/__server.func/_libs/@better-auth/core+[...].mjs             800.74 kB │ gzip: 157.46 kB
+
+✓ built in 1.52s
+ℹ Generated .vercel/output/nitro.json
+
+[nitro] ✔ You can preview this build using npx vite preview
+[nitro] ✔ You can deploy this build using npx nitro deploy --prebuilt
+
+> db:migrate
+> node scripts/migrate.mjs
+
+[migrate] DATABASE_URL not set — skipping (the PGLite fallback migrates itself).
+==> backend tests
+F....................................................................... [  8%]
+........................................................................ [ 16%]
+........................................................................ [ 24%]
+........................................................................ [ 32%]
+.......................................s.....................F.F.FF..... [ 40%]
+........................................................................ [ 48%]
+....................................s................................... [ 56%]
+........................................................................ [ 64%]
+........................................................................ [ 72%]
+........................................................................ [ 80%]
+........................................................................ [ 88%]
+.............................................F.......................... [ 96%]
+...........................                                              [100%]
+=================================== FAILURES ===================================
+_____________ test_root_routes_are_reachable_under_the_api_prefix ______________
+
+db = <sqlalchemy.orm.session.Session object at 0x7bca2fc1a690>
+
+    def test_root_routes_are_reachable_under_the_api_prefix(db):
+        client = _client()
+    
+        assert client.get("/health").status_code == 200
+        mirrored = client.get("/api/health")
+    
+        assert mirrored.status_code == 200
+>       assert mirrored.json() == {"status": "ok", "ready": True}
+E       AssertionError: assert {'db': 'up', ...s': 'ok', ...} == {'ready': Tru...status': 'ok'}
+E         
+E         Omitting 2 identical items, use -vv to show
+E         Left contains 4 more items:
+E         {'db': 'up',
+E          'ok': True,
+E          'time': '2026-10-07T20:33:23.013960+00:00',
+E          'version': '2.3.0'}
+E         Use -v to get more diff
+
+tests/test_api_ingress_alias.py:25: AssertionError
+________ test_local_health_is_ok_and_ready_without_vercel_requirements _________
+
+db = <sqlalchemy.orm.session.Session object at 0x7bca1b49e750>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7bca1b2226c0>
+
+    def test_local_health_is_ok_and_ready_without_vercel_requirements(db, monkeypatch):
+        monkeypatch.delenv("VERCEL", raising=False)
+        monkeypatch.delenv("DATABASE_URL", raising=False)
+        monkeypatch.delenv("CRON_SECRET", raising=False)
+    
+        response = _health()
+    
+        assert response.status_code == 200
+>       assert response.json() == {"status": "ok", "ready": True}
+E       AssertionError: assert {'db': 'up', ...s': 'ok', ...} == {'ready': Tru...status': 'ok'}
+E         
+E         Omitting 2 identical items, use -vv to show
+E         Left contains 4 more items:
+E         {'db': 'up',
+E          'ok': True,
+E          'time': '2026-10-07T20:35:28.498957+00:00',
+E          'version': '2.3.0'}
+E         Use -v to get more diff
+
+tests/test_health_readiness.py:35: AssertionError
+_________ test_vercel_health_reports_database_and_missing_cron_secret __________
+
+db = <sqlalchemy.orm.session.Session object at 0x7bca1b7d1640>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7bca2595dd90>
+
+    def test_vercel_health_reports_database_and_missing_cron_secret(db, monkeypatch):
+        monkeypatch.setenv("VERCEL", "1")
+        monkeypatch.delenv("DATABASE_URL", raising=False)
+        monkeypatch.delenv("CRON_SECRET", raising=False)
+    
+        response = _health()
+    
+        assert response.status_code == 200
+>       assert response.json() == {"status": "degraded", "ready": False}
+E       AssertionError: assert {'db': 'not_c...egraded', ...} == {'ready': Fal...': 'degraded'}
+E         
+E         Omitting 2 identical items, use -vv to show
+E         Left contains 4 more items:
+E         {'db': 'not_configured',
+E          'ok': False,
+E          'time': '2026-10-07T20:35:28.900278+00:00',
+E          'version': '2.3.0'}
+E         Use -v to get more diff
+
+tests/test_health_readiness.py:68: AssertionError
+_________________ test_health_never_returns_cron_secret_value __________________
+
+db = <sqlalchemy.orm.session.Session object at 0x7bca27ade4b0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7bca1b5ff620>
+
+    def test_health_never_returns_cron_secret_value(db, monkeypatch):
+        secret = "health-must-not-return-this-secret-value"
+        database_url = "postgresql://health-user:health-password@db.example.test/forge"
+        monkeypatch.delenv("VERCEL", raising=False)
+        monkeypatch.setenv("CRON_SECRET", secret)
+        monkeypatch.setenv("DATABASE_URL", database_url)
+    
+        response = _health()
+    
+        assert response.status_code == 200
+>       assert response.json() == {"status": "ok", "ready": True}
+E       AssertionError: assert {'db': 'up', ...s': 'ok', ...} == {'ready': Tru...status': 'ok'}
+E         
+E         Omitting 2 identical items, use -vv to show
+E         Left contains 4 more items:
+E         {'db': 'up',
+E          'ok': True,
+E          'time': '2026-10-07T20:35:29.297895+00:00',
+E          'version': '2.3.0'}
+E         Use -v to get more diff
+
+tests/test_health_readiness.py:122: AssertionError
+_____________ test_vercel_health_reports_safe_database_error_class _____________
+
+db = <sqlalchemy.orm.session.Session object at 0x7bca274251c0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7bca1b550aa0>
+
+    def test_vercel_health_reports_safe_database_error_class(db, monkeypatch):
+        from app import database
+    
+        class DatabaseUnavailable(Exception):
+            pass
+    
+        def unavailable_session():
+            raise DatabaseUnavailable("password=must-not-be-returned")
+    
+        monkeypatch.setenv("VERCEL", "1")
+        monkeypatch.setenv("DATABASE_URL", "postgresql://private-credentials")
+        monkeypatch.setenv("CRON_SECRET", "private-cron-secret")
+        monkeypatch.setattr(database, "SessionLocal", unavailable_session)
+    
+        response = _health()
+    
+        assert response.status_code == 200
+>       assert response.json() == {"status": "degraded", "ready": False}
+E       AssertionError: assert {'db': 'down'...egraded', ...} == {'ready': Fal...': 'degraded'}
+E         
+E         Omitting 2 identical items, use -vv to show
+E         Left contains 4 more items:
+E         {'db': 'down',
+E          'ok': False,
+E          'time': '2026-10-07T20:35:29.494033+00:00',
+E          'version': '2.3.0'}
+E         Use -v to get more diff
+
+tests/test_health_readiness.py:157: AssertionError
+_________ test_api_health_and_public_feed_answer_under_the_api_prefix __________
+
+db = <sqlalchemy.orm.session.Session object at 0x7bca0f081be0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7bca24797e60>
+
+    def test_api_health_and_public_feed_answer_under_the_api_prefix(db, monkeypatch):
+        from app import security
+        from app.main import app
+    
+        monkeypatch.delenv("VERCEL", raising=False)
+        monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    
+        def override_get_db():
+            yield db
+    
+        app.dependency_overrides[get_db] = override_get_db
+        try:
+            client = TestClient(app)
+            health = client.get("/api/health")
+            assert health.status_code == 200, health.text
+>           assert health.json() == {"status": "ok", "ready": True}
+E           AssertionError: assert {'db': 'up', ...s': 'ok', ...} == {'ready': Tru...status': 'ok'}
+E             
+E             Omitting 2 identical items, use -vv to show
+E             Left contains 4 more items:
+E             {'db': 'up',
+E              'ok': True,
+E              'time': '2026-10-07T20:38:22.708251+00:00',
+E              'version': '2.3.0'}
+E             Use -v to get more diff
+
+tests/test_vercel_config_contract.py:123: AssertionError
+=============================== warnings summary ===============================
+../../ForgeOS/backend/.deps/fastapi/testclient.py:1
+  /home/hatch/workspace/repos/ForgeOS/backend/.deps/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+../../ForgeOS/backend/.deps/starlette/testclient.py:53
+  /home/hatch/workspace/repos/ForgeOS/backend/.deps/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+../../ForgeOS/backend/.deps/pydantic/_internal/_config.py:291
+  /home/hatch/workspace/repos/ForgeOS/backend/.deps/pydantic/_internal/_config.py:291: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.9/migration/
+    warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+
+app/migrations.py:76: 1 warning
+tests/test_capability_discovery.py: 1 warning
+tests/test_commercial_ops.py: 2 warnings
+tests/test_demand_understanding.py: 1 warning
+tests/test_demand_worker.py: 2 warnings
+tests/test_economic_validation.py: 1 warning
+tests/test_evidence_relationship_substrate_adapter.py: 2 warnings
+tests/test_experiment_lifecycle.py: 2 warnings
+tests/test_health_readiness.py: 1 warning
+tests/test_legacy_evidence_substrate_adapter.py: 1 warning
+tests/test_multi_source_orchestration.py: 3 warnings
+tests/test_openalex_collector.py: 2 warnings
+tests/test_operational_substrate_adapter.py: 1 warning
+tests/test_phase1_provenance_and_identity.py: 1 warning
+tests/test_prospect_discovery.py: 1 warning
+tests/test_public_value_flow.py: 1 warning
+tests/test_research_task_engine.py: 1 warning
+tests/test_signal_request_demand_api.py: 1 warning
+tests/test_world_graph.py: 2 warnings
+  /home/hatch/workspace/repos/ForgeOS-renovation/backend/tests/../app/migrations.py:76: SAWarning: Cannot correctly sort tables; there are unresolvable cycles between tables "actions, claims, decisions, experiments, learning_events, options, outcomes, rare_signal_assessments, research_questions", which is usually caused by mutually dependent foreign key constraints.  Foreign key constraints involving these tables will not be considered; this warning may raise an error in a future release.
+    for table in Base.metadata.sorted_tables:
+
+tests/test_scout.py::test_approve_skip_sent_flow
+tests/test_scout.py::test_daily_cap_blocks
+tests/test_scout.py::test_daily_cap_blocks
+  /home/hatch/workspace/repos/ForgeOS-renovation/backend/tests/../app/services/scout.py:150: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_api_ingress_alias.py::test_root_routes_are_reachable_under_the_api_prefix
+FAILED tests/test_health_readiness.py::test_local_health_is_ok_and_ready_without_vercel_requirements
+FAILED tests/test_health_readiness.py::test_vercel_health_reports_database_and_missing_cron_secret
+FAILED tests/test_health_readiness.py::test_health_never_returns_cron_secret_value
+FAILED tests/test_health_readiness.py::test_vercel_health_reports_safe_database_error_class
+FAILED tests/test_vercel_config_contract.py::test_api_health_and_public_feed_answer_under_the_api_prefix
+6 failed, 883 passed, 2 skipped, 33 warnings in 324.54s (0:05:24)
+check_all exit: 1

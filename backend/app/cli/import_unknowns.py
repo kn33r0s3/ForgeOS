@@ -22,7 +22,7 @@ Defaults to --dry-run (parse only, no writes). --apply writes to the DB.
 import argparse
 import re
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date
 
 STATE_MAP = {

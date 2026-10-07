@@ -15,12 +15,11 @@ from app import models
 from app.services.observer_engine import ObserverEngine
 from app.services import (
     forge_loop,
-    source_manager,
     decision_engine,
     learning_engine,
     action_engine,
 )
-from app.services.ai_engine import AIUnavailableError, get_provider_status, _complete_with_fallback
+from app.services.ai_engine import AIUnavailableError, get_provider_status
 from app.config import settings
 
 
@@ -487,7 +486,6 @@ def test_standing_authorization_flows_through_execution_engine(db):
     # test proves standing authorization is what converts the owner-approval
     # requirement to ALLOW, rather than merely observing an already-allowed
     # policy decision.
-    from app import models
     policy = db.query(models.AutonomyPolicy).filter(
         models.AutonomyPolicy.active.is_(True)
     ).order_by(models.AutonomyPolicy.id.desc()).first()
@@ -737,8 +735,7 @@ def test_canonical_gate_hard_block_never_eligible(db):
 
 def test_canonical_gate_nonmatching_envelope_never_eligible(db):
     """C. Nonmatching SA envelope cannot reach execution_allowed=True."""
-    from app import models
-    from app.services import autonomy_engine, execution_engine
+    from app.services import execution_engine
 
     _make_autonomy_policy(db)
     _authorize_outreach_standing_auth_with_bounds(db, bound_overrides={"channel": "email"})
@@ -775,7 +772,7 @@ def test_canonical_gate_nonmatching_envelope_never_eligible(db):
 
 def test_canonical_gate_expired_sa_never_eligible(db):
     """D. Expired SA cannot reach execution_allowed=True."""
-    from app.services import autonomy_engine, execution_engine
+    from app.services import execution_engine
     from datetime import datetime, timedelta, timezone
 
     _make_autonomy_policy(db)
@@ -981,7 +978,7 @@ def test_canonical_gate_owner_approved_works(db):
 
 def test_canonical_gate_max_per_day_counts_sa_authorized(db):
     """K. Second SA action rejected when max_per_day=1; merely-proposed not counted."""
-    from app.services import action_engine, autonomy_engine, execution_engine
+    from app.services import action_engine
 
     _make_autonomy_policy(db)
     _authorize_outreach_standing_auth_with_bounds(db, bound_overrides={"max_per_day": 1})
@@ -1186,7 +1183,6 @@ def test_revalidation_sa_still_succeeds_with_current_envelope(db):
 def test_revalidation_sa_revoked_still_fails(db):
     """G. Revoked standing authorization still fails (with fresh revalidation)."""
     from app.services import autonomy_engine, execution_engine
-    from datetime import datetime, timedelta, timezone
 
     _make_autonomy_policy(db)
     auth = _authorize_outreach_standing_auth_with_bounds(db)
@@ -1458,7 +1454,6 @@ def _try_sa_authorized_action(db, description="source continuity test action"):
 
 def test_source_guard_approved_source_succeeds(db):
     """A. APPROVED source + ACTIVE SA → matching action still succeeds."""
-    from app.services import autonomy_engine
     auth, source = _sa_with_source(db)
     assert source.status == "APPROVED"
 
@@ -1468,7 +1463,6 @@ def test_source_guard_approved_source_succeeds(db):
 
 def test_source_guard_cancelled_source_fails_closed(db):
     """B. CANCELLED source + previously ACTIVE SA → matching action fails closed."""
-    from app.services import action_engine, autonomy_engine
     auth, source = _sa_with_source(db)
 
     # Cancel the source AFTER SA activation (direct status update;
@@ -1488,7 +1482,6 @@ def test_source_guard_cancelled_source_fails_closed(db):
 
 def test_source_guard_failed_source_fails_closed(db):
     """C. FAILED source + previously ACTIVE SA → matching action fails closed."""
-    from app.services import action_engine, autonomy_engine
     auth, source = _sa_with_source(db)
 
     # Source goes APPROVED → RUNNING → FAILED.
@@ -1505,7 +1498,6 @@ def test_source_guard_failed_source_fails_closed(db):
 
 def test_source_guard_succeeded_source_succeeds(db):
     """D. SUCCEEDED source + ACTIVE SA → matching action still succeeds."""
-    from app.services import autonomy_engine
     auth, source = _sa_with_source(db)
 
     source.status = "SUCCEEDED"
@@ -1518,7 +1510,6 @@ def test_source_guard_succeeded_source_succeeds(db):
 
 def test_source_guard_verified_source_succeeds(db):
     """E. VERIFIED source + ACTIVE SA → matching action still succeeds."""
-    from app.services import autonomy_engine
     auth, source = _sa_with_source(db)
 
     source.status = "VERIFIED"
@@ -1573,7 +1564,7 @@ def test_source_guard_canonical_path_not_test_precondition(db):
     Uses grant_execution_eligibility (the canonical gate) with a real
     Experiment, not just matches_standing_envelope directly.
     """
-    from app.services import action_engine, execution_engine
+    from app.services import execution_engine
     auth, source = _sa_with_source(db)
     _deactivate_policy(db)
     opportunity = _make_opportunity(db, confidence=100.0)
@@ -1603,7 +1594,7 @@ def test_source_guard_canonical_path_not_test_precondition(db):
 def test_source_guard_full_lifecycle(db):
     """Real lifecycle: valid source → SA proposed → SA approved → source
     CANCELLED → new SA-authorized action refused at grant time."""
-    from app.services import action_engine, autonomy_engine, execution_engine
+    from app.services import action_engine, autonomy_engine
     from datetime import datetime, timedelta, timezone
 
     _make_autonomy_policy(db)
@@ -1695,7 +1686,7 @@ def test_k1_gate_fails_execute_refuses(db):
     """
     from app import models
     from app.schemas.experiment import ExperimentAuthorize, ExperimentProposalCreate
-    from app.services import experiment_service, execution_engine
+    from app.services import experiment_service
 
     # Create a BLOCKED experiment (gate will fail).
     signal = models.Signal(source="test", content="TEST: k1 blocked")
@@ -1758,7 +1749,6 @@ def test_k1_blocked_cannot_execute(db):
 def test_k1_stale_policy_cannot_execute(db):
     """D. Stale-policy gate failure cannot execute through execute_experiment()."""
     from app.services import experiment_service, execution_engine
-    from app.schemas.experiment import ExperimentAuthorize
 
     exp, policy, _ = _direct_allow_experiment(db, cost=10.0)
     assert exp.policy_decision == "allow"

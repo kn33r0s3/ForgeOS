@@ -39,7 +39,6 @@ available for the legacy manual-note path only.
 
 from __future__ import annotations
 
-import json
 import re
 from datetime import datetime, timezone
 from typing import Optional
@@ -127,21 +126,21 @@ def _interview_plan(opp: models.Opportunity, x: int, y: int, z: int) -> str:
     derived = derive_opportunity_hypothesis(opp)
     price = opp.estimated_price
     return "\n".join([
-        f"DATA STATUS: HYPOTHESIS — not customer-validated",
+        "DATA STATUS: HYPOTHESIS — not customer-validated",
         f"TARGET CUSTOMER TYPE: {derived['target_customer']}",
         f"SPECIFIC PROBLEM: {derived['problem']}",
         f"WHY THIS INTERVIEW: {derived['value_hypothesis']}",
         f"TASK: interview {x} real prospects matching the target customer type",
-        f"PLAN: contact and interview each; record their actual answer. "
-        f"Do NOT fabricate responses.",
-        f"QUESTIONS:",
-        f"  1. Does this problem happen often?",
-        f"  2. What does it cost in money, time, missed appointments, or staff effort?",
-        f"  3. How do you handle reminders or status communication today?",
-        f"  4. What does the current solution cost?",
-        f"  5. Would you pay for a service that measurably reduces the problem?",
+        "PLAN: contact and interview each; record their actual answer. "
+        "Do NOT fabricate responses.",
+        "QUESTIONS:",
+        "  1. Does this problem happen often?",
+        "  2. What does it cost in money, time, missed appointments, or staff effort?",
+        "  3. How do you handle reminders or status communication today?",
+        "  4. What does the current solution cost?",
+        "  5. Would you pay for a service that measurably reduces the problem?",
         f"  6. What price would be reasonable? (Operator assumption to test: {price})",
-        f"EXPECTED SIGNAL: would-pay / would-not-pay / existing-solution / severity / price-sensitivity",
+        "EXPECTED SIGNAL: would-pay / would-not-pay / existing-solution / severity / price-sensitivity",
         f"SUCCESS BAR: >= {y} of {x} confirm the problem AND >= {z} willing to pay",
         f"TIME WINDOW: {DEFAULT_TIME_WINDOW}",
     ])

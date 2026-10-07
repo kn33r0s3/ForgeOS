@@ -216,7 +216,6 @@ def test_scheduled_intelligence_runs_three_engines(monkeypatch):
     assert intel["autonomy_cycle"]["status"] in ("ok", "error")
 def test_scheduled_intelligence_does_not_check_legacy_flag(monkeypatch):
     """The intelligence endpoint must not reference the legacy flag."""
-    import inspect
 
     source = inspect.getsource(scheduled.run_scheduled_intelligence)
     assert "FORGEOS_LEGACY_INTELLIGENCE_ENABLED" not in source

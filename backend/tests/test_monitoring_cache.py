@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta, timezone
-import json
 
 from app import models
 from app.services import intelligence_cache, opportunity_engine, opportunity_monitor

@@ -1,0 +1,16 @@
+# Renovation: Python style checker. Conservative rule set — errors only.
+# (Top-level keys because ruff reads ruff.toml directly, not via pyproject.)
+target-version = "py312"
+line-length = 100
+
+[lint]
+# E: pycodestyle errors, F: pyflakes (unused imports/vars, undefined names)
+select = ["E", "F"]
+ignore = [
+  "E501",  # line too long — not enforced; the backend has long historical lines
+  "E741",  # ambiguous variable names (l, O, I) — historical code
+]
+
+[lint.per-file-ignores]
+# Tests may use asserts and magic values freely.
+"tests/**" = ["E731"]

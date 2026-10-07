@@ -24,12 +24,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 os.environ["AI_PROVIDER"] = "mock"
 os.environ["EMBEDDING_PROVIDER"] = "hash"
 
-import pytest
 from app import models
 from app.services import economic_intelligence as ei
-from app.services import pattern_engine, opportunity_engine, source_manager
+from app.services import pattern_engine, opportunity_engine
 from app.services.observer_engine import ObserverEngine
-from sqlalchemy import text
 
 
 # ---------------------------------------------------------------------------
@@ -120,7 +118,6 @@ def test_widened_affected_party_detector():
     parties (were false-negatives before the fix). The count-prefixed case
     ('5 restaurants') is caught by the curated noun list too, so it also
     resolves — either form identifies who is affected."""
-    from app.services import economic_intelligence as ei
     for text, expected in [
         ("Independent repair shops lose hours manually explaining orders.", "repair shop"),
         ("Small property managers struggle to collect maintenance photos.", "property manager"),
@@ -202,7 +199,6 @@ def test_strong_bar_requires_both_pain_and_monetary_or_urgency():
     """is_economically_strong must stay strict: a customer alone, or a '$'
     figure alone, is not strong enough to seed a lone opportunity; only a
     named problem + named party + pain AND (monetary|urgency|demand) surfs."""
-    from app.services import economic_intelligence as ei
     # Weak: no pain at all -> never strong, even though it names a customer.
     weak = ei.extract_economic_signal("restaurants really like their current ordering systems")
     weak_scores = ei.score_economic_signal(weak)
@@ -224,7 +220,6 @@ def test_strong_bar_requires_both_pain_and_monetary_or_urgency():
 def test_corroboration_collapses_repeated_content(db):
     """Repeated identical content must NOT inflate independent observations,
     even when the is_duplicate_of flag is null (bulk pre-dedup rows)."""
-    from app.services import economic_intelligence as ei
     p = models.Pattern(
         title="recurring: skill tool grants",
         description="signal",

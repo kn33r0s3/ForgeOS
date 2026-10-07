@@ -9,7 +9,6 @@ worker is allowed to finish before the next run is admitted).
 """
 
 import logging
-import os
 import signal
 import time
 from pathlib import Path

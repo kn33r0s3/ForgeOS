@@ -10,6 +10,17 @@ def _health(path="/health", *, headers=None):
     return TestClient(app).get(path, headers=headers)
 
 
+def _assert_health_contract(payload, *, status, ready):
+    """Renovation: /health keeps its status/ready keys and carries the four
+    contract keys ok/version/time/db."""
+    assert payload["status"] == status
+    assert payload["ready"] is ready
+    assert payload["ok"] is (status == "ok")
+    assert payload["version"]
+    assert payload["time"]
+    assert payload["db"] in ("up", "down", "not_configured")
+
+
 def test_fastapi_startup_executes_with_isolated_database(db, monkeypatch):
     import app.database as database
     import app.main as main
@@ -32,10 +43,7 @@ def test_local_health_is_ok_and_ready_without_vercel_requirements(db, monkeypatc
     response = _health()
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "ready": True}
-
-
-def test_health_details_requires_owner_key_and_preserves_diagnostics(db, monkeypatch):
+    _assert_health_contract(response.json(), status="ok", ready=True)
     from app import security
 
     monkeypatch.delenv("VERCEL", raising=False)
@@ -65,7 +73,7 @@ def test_vercel_health_reports_database_and_missing_cron_secret(db, monkeypatch)
     response = _health()
 
     assert response.status_code == 200
-    assert response.json() == {"status": "degraded", "ready": False}
+    _assert_health_contract(response.json(), status="degraded", ready=False)
 
     from app import security
 
@@ -119,7 +127,7 @@ def test_health_never_returns_cron_secret_value(db, monkeypatch):
     response = _health()
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "ready": True}
+    _assert_health_contract(response.json(), status="ok", ready=True)
     assert secret not in response.text
     assert database_url not in response.text
     assert "health-password" not in response.text
@@ -154,7 +162,7 @@ def test_vercel_health_reports_safe_database_error_class(db, monkeypatch):
     response = _health()
 
     assert response.status_code == 200
-    assert response.json() == {"status": "degraded", "ready": False}
+    _assert_health_contract(response.json(), status="degraded", ready=False)
 
     from app import security
 

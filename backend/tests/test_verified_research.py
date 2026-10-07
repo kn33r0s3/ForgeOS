@@ -3,7 +3,6 @@ from datetime import date
 from app import models
 from app.services import collector_runner, multi_judge, research_planner, research_task_engine
 from app.services import evidence_graph
-from app.services.observer_engine import ObserverEngine
 
 
 class SourceCollectorFixture:
