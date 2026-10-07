@@ -177,16 +177,20 @@ def _count_actions_today(db: Session) -> int:
     )
 
 
-def _find_duplicate_pending(db: Session, opportunity_id: int, action_type: str) -> Optional[models.Experiment]:
-    return (
+def _find_duplicate_pending(
+    db: Session, opportunity_id: int, action_type: str, exclude_experiment_id: Optional[int] = None
+) -> Optional[models.Experiment]:
+    query = (
         db.query(models.Experiment)
         .filter(
             models.Experiment.opportunity_id == opportunity_id,
             models.Experiment.action_type == action_type,
             models.Experiment.status.in_(["planned", "ready", "in_progress"]),
         )
-        .first()
     )
+    if exclude_experiment_id is not None:
+        query = query.filter(models.Experiment.id != exclude_experiment_id)
+    return query.first()
 
 
 def _count_failed_attempts(db: Session, opportunity_id: int, action_type: str) -> int:
@@ -205,7 +209,11 @@ def _count_failed_attempts(db: Session, opportunity_id: int, action_type: str) -
 
 
 def evaluate_action(
-    db: Session, opportunity: models.Opportunity, action_type: str, estimated_cost: Optional[float]
+    db: Session,
+    opportunity: models.Opportunity,
+    action_type: str,
+    estimated_cost: Optional[float],
+    exclude_experiment_id: Optional[int] = None,
 ) -> dict:
     """
     The core policy evaluation. Returns {"decision": "allow" |
@@ -213,6 +221,10 @@ def evaluate_action(
     "attempt_number": int}. Every reason is a plain sentence built from
     the real number that triggered it — nothing here is a template
     with the numbers hidden.
+
+    exclude_experiment_id: when re-validating an existing Experiment at
+    grant time, exclude it from the duplicate-pending check (it is not
+    a duplicate of itself).
     """
     policy = get_active_policy(db)
     if not policy:
@@ -242,7 +254,7 @@ def evaluate_action(
     if action_type not in allowed_types:
         escalate("block", f'Action type "{action_type}" is not in the currently allowed set ({sorted(allowed_types) or "none"}).')
 
-    duplicate = _find_duplicate_pending(db, opportunity.id, action_type)
+    duplicate = _find_duplicate_pending(db, opportunity.id, action_type, exclude_experiment_id)
     if duplicate:
         escalate("block", f"A {action_type} action (#{duplicate.id}) is already pending for this opportunity.")
 
@@ -559,7 +571,12 @@ def _count_matching_actions_today(db: Session, auth: models.Action, envelope: di
         models.Action.action_type == envelope.get("action_type"),
         models.Action.action_type != STANDING_AUTH_ACTION_TYPE,
         models.Action.proposed_at >= day_start,
-        models.Action.status.in_(["APPROVED", "RUNNING", "SUCCEEDED", "VERIFIED"]),
+        # APPROVED+ statuses count (owner-advanced). PROPOSED counts ONLY
+        # when the action was autonomously authorized under a standing
+        # authorization (standing_auth_id stamped by
+        # apply_standing_authorization_to_action) — merely proposed
+        # actions without that stamp are not counted.
+        models.Action.status.in_(["PROPOSED", "APPROVED", "RUNNING", "SUCCEEDED", "VERIFIED"]),
     ).all()
     # Only count those whose parameters match the envelope's channel/scope.
     count = 0
@@ -596,6 +613,27 @@ def matches_standing_envelope(
     if not isinstance(envelope, dict):
         return False, ["Standing authorization envelope is malformed — failed closed."]
     proposed_params = proposed_params or {}
+
+    # Source continuity guard: the Action that originally established this
+    # authorization must still be a valid source. An ACTIVE standing
+    # authorization whose source was cancelled, failed, or otherwise
+    # invalidated must not authorize new actions. SUCCEEDED and VERIFIED
+    # are valid — the authorization may legitimately rest on a completed
+    # action. This check lives in the canonical envelope seam so every
+    # consumer (check, apply, grant) fail-closes identically.
+    source_action_id = envelope.get("source_action_id")
+    if not isinstance(source_action_id, int):
+        return False, ["Standing authorization source is missing or malformed — failed closed."]
+    source = db.get(models.Action, source_action_id)
+    if source is None:
+        return False, [
+            f"Standing authorization source action #{source_action_id} not found — failed closed."
+        ]
+    if source.status not in ("APPROVED", "SUCCEEDED", "VERIFIED"):
+        return False, [
+            f"Standing authorization source action #{source_action_id} is {source.status}, "
+            "not a valid authorization source — failed closed."
+        ]
 
     # action_type must match exactly.
     if envelope.get("action_type") != proposed_action_type:

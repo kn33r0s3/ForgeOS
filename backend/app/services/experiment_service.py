@@ -58,6 +58,13 @@ def assert_executable(experiment: models.Experiment) -> None:
         raise ValueError("Experiment has already been executed")
     if _normalize_auth_status(experiment.authorization_status) != "allowed" or not experiment.authorized_at:
         raise ValueError("Experiment is not authorized for execution")
+    # Canonical execution gate: execution_allowed is the authoritative
+    # execution-eligibility flag, written only by
+    # execution_engine.grant_execution_eligibility(). authorization_status
+    # =="allowed" records owner authorization; it does NOT itself mean the
+    # safety gate cleared this specific execution. Fail closed.
+    if not getattr(experiment, "execution_allowed", False):
+        raise ValueError("Experiment has not been cleared by the canonical execution gate")
 
 
 def create_proposed(db: Session, data: ExperimentProposalCreate) -> models.Experiment:
@@ -104,11 +111,28 @@ def authorize_experiment(db: Session, experiment_id: int, data: ExperimentAuthor
     experiment.authorized_by = data.authorized_by or experiment.authorized_by
     experiment.authorized_at = utcnow() if status == "allowed" else None
     experiment.approved_at = experiment.authorized_at
-    experiment.execution_allowed = status == "allowed"
     experiment.requires_owner_approval = status in {"allowed", "require_approval"} or experiment.requires_owner_approval
     experiment.execution_status = "authorized" if status == "allowed" else experiment.execution_status
 
+    # Execution eligibility is granted ONLY through the canonical gate
+    # in execution_engine. This function must not set
+    # execution_allowed=True directly — the gate re-verifies
+    # authorization state and fail-closes on every hard constraint.
+    # (Pre-seam behavior set the flag here unconditionally; that bypass
+    # is removed. There is exactly one code path that grants the flag.)
+    experiment.execution_allowed = False
     db.commit()
+    db.refresh(experiment)
+
+    if status == "allowed":
+        from app.services import execution_engine as _execution_engine
+
+        granted = _execution_engine.grant_execution_eligibility(
+            db, experiment.id, granted_by=(data.authorized_by or "system")
+        )
+        if granted is not None:
+            experiment = granted
+
     db.refresh(experiment)
     return experiment
 

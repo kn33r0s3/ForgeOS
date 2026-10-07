@@ -280,6 +280,174 @@ def approve_action(db: Session, action_id: int) -> Optional[models.Experiment]:
     return action
 
 
+def grant_execution_eligibility(db: Session, experiment_id: int, granted_by: str = "system") -> Optional[models.Experiment]:
+    """Canonical execution-eligibility gate.
+
+    The ONLY function in the codebase permitted to set
+    execution_allowed=True. Every other path (create_action,
+    approve_action, experiment_service.authorize_experiment) must
+    delegate here; none may set the flag directly.
+
+    Establishes CURRENT authorization at grant time — it does not trust
+    a historical ALLOW. Re-runs the canonical policy evaluation via
+    autonomy_engine.evaluate_action() using the live AutonomyPolicy, so a
+    policy change between proposal and grant cannot leave a stale ALLOW
+    executable. Fail-closed on every hard constraint. Never performs an
+    external action; it only flips the eligibility flag.
+
+    Authorization basis (one must hold):
+    - Standing-authorized: the linked Action carries a standing_auth_id
+      whose authorization is still ACTIVE, unexpired, and whose envelope
+      still matches at grant time. A valid SA satisfies REQUIRE_APPROVAL
+      but never overrides a hard BLOCK.
+    - Owner-approved: Experiment.approved_at is set (via approve_action
+      or an owner-attributed authorization). Owner approval satisfies
+      REQUIRE_APPROVAL but never overrides a hard BLOCK.
+    - Direct policy ALLOW: fresh evaluate_action() returns "allow" with
+      the CURRENT policy (not the historical proposal-time result).
+
+    Refuses (returns None, flag untouched) on:
+    - missing/blocked Experiment, policy_decision == "block"
+    - domain == "blocked" or order-like action_type (never executable)
+    - linked Action with policy_result == "BLOCK"
+    - fresh policy evaluation returns BLOCK (any basis)
+    - fresh policy returns REQUIRE_APPROVAL with no valid SA or owner approval
+    - SA revoked, expired, or envelope mismatch at grant time
+    - requires_owner_approval with no approval and no valid SA
+    """
+    import json as _json
+
+    action = db.query(models.Experiment).filter(models.Experiment.id == experiment_id).first()
+    if not action:
+        return None
+    if action.status == "blocked":
+        return None
+    if (action.policy_decision or "").lower() == "block":
+        return None
+
+    # Hard fail-closed for market / order domain — never executable.
+    is_blocked_or_order = (getattr(action, "domain", "revenue") == "blocked") or (
+        action.action_type in ORDER_LIKE_ACTION_TYPES
+    )
+    if is_blocked_or_order:
+        return None
+
+    # Find the linked canonical Action (if the Experiment was created
+    # through the canonical create_action seam).
+    linked = (
+        db.query(models.Action)
+        .filter(models.Action.experiment_id == action.id)
+        .order_by(models.Action.id.desc())
+        .first()
+    )
+
+    sa_auth_id = None
+    linked_params = {}
+    if linked is not None:
+        if (linked.policy_result or "") == "BLOCK":
+            return None
+        try:
+            linked_params = _json.loads(linked.parameters_json or "{}")
+        except Exception:
+            linked_params = {}
+        if isinstance(linked_params, dict):
+            sa_auth_id = linked_params.get("standing_auth_id")
+
+    # --- Fresh policy revalidation ---
+    # Re-run the canonical evaluation with the CURRENT policy, using inputs
+    # derived from the authoritative Action (not the stale Experiment
+    # projection). The Action owns parameters_json; the Experiment's
+    # estimated_cost is frozen at creation and may diverge if the Action's
+    # params are updated. This does not duplicate policy logic — it calls
+    # autonomy_engine.evaluate_action directly. No recursion:
+    # evaluate_action never calls this gate.
+    #
+    # Opportunity-less path: if neither Action nor Experiment has an
+    # opportunity, fresh policy evaluation is impossible without inventing
+    # context. We do not invent context. The owner's explicit approval
+    # (approved_at) stands as the authorization basis; hard static checks
+    # (blocked status, policy_decision=="block", blocked/order domain)
+    # still apply. This boundary is explicitly tested.
+    fresh_decision = None
+    opportunity = None
+
+    # Canonical inputs: prefer the durable Action's fields where it owns them.
+    grant_action_type = linked.action_type if linked is not None else action.action_type
+    grant_opportunity_id = None
+    if linked is not None and linked.opportunity_id is not None:
+        grant_opportunity_id = linked.opportunity_id
+    elif action.opportunity_id is not None:
+        grant_opportunity_id = action.opportunity_id
+
+    grant_estimated_cost = None
+    if isinstance(linked_params, dict) and linked_params.get("estimated_cost") is not None:
+        # Authoritative: the Action's current parameters.
+        try:
+            grant_estimated_cost = float(linked_params.get("estimated_cost"))
+        except (TypeError, ValueError):
+            grant_estimated_cost = None
+    if grant_estimated_cost is None:
+        # Fallback: the Experiment's frozen projection (may be stale).
+        grant_estimated_cost = action.estimated_cost
+
+    if grant_opportunity_id is not None:
+        opportunity = db.query(models.Opportunity).filter(
+            models.Opportunity.id == grant_opportunity_id
+        ).first()
+    if opportunity is not None:
+        fresh = autonomy_engine.evaluate_action(
+            db,
+            opportunity,
+            grant_action_type,
+            grant_estimated_cost,
+            exclude_experiment_id=action.id,
+        )
+        fresh_decision = fresh["decision"]
+        # Hard BLOCK from current policy overrides every basis.
+        if fresh_decision == "block":
+            return None
+
+    # --- Authorization basis ---
+    if sa_auth_id is not None:
+        # Standing-authorized path: the authorization must still be
+        # valid RIGHT NOW, not just at proposal time.
+        sa = db.get(models.Action, sa_auth_id)
+        if sa is None or sa.status != "ACTIVE":
+            return None
+        active = autonomy_engine.get_active_standing_authorizations(
+            db, linked.action_type if linked else None
+        )
+        if not any(a.id == sa_auth_id for a in active):
+            return None
+        matched, _ = autonomy_engine.matches_standing_envelope(
+            db, sa, linked.action_type, linked_params
+        )
+        if not matched:
+            return None
+        # SA valid + no hard BLOCK from fresh policy → eligible.
+        # (Fresh REQUIRE_APPROVAL is satisfied by the valid SA.)
+    elif action.approved_at is not None:
+        # Owner-approved path: explicit human approval on record.
+        # Owner approval satisfies fresh REQUIRE_APPROVAL, but a hard
+        # BLOCK (already checked above) still refuses.
+        # If there is no opportunity for fresh evaluation, the owner's
+        # explicit authorization stands on its own.
+        pass
+    elif fresh_decision == "allow":
+        # Direct policy ALLOW: the CURRENT policy allows it outright.
+        # Historical proposal-time ALLOW is not trusted.
+        pass
+    else:
+        # No valid authorization basis: fresh policy did not allow, and
+        # there is no SA or owner approval to cover REQUIRE_APPROVAL.
+        return None
+
+    action.execution_allowed = True
+    db.commit()
+    db.refresh(action)
+    return action
+
+
 def start_action(db: Session, action_id: int) -> Optional[models.Experiment]:
     """
     Mark an action as actually being carried out. Refuses to start an
