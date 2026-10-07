@@ -880,3 +880,41 @@ def test_archival_authorization_preserved(db):
         world_graph.archive_entity(db, b, actor="owner", rationale="")
     db.rollback()
     assert db.get(models.SubstrateEntity, b.id).status == "active"
+
+
+def test_seed_founding_bets(db):
+    created = operating_v4.seed_founding_bets(db)
+    assert len(created) == 3
+    claims = [json.loads(b.attributes)["claim"] for b in created]
+    assert any(c.startswith("Bet A") for c in claims)
+    assert any(c.startswith("Bet B") for c in claims)
+    assert any(c.startswith("Bet C") for c in claims)
+    # Anti-theater fields present on every bet.
+    for b in created:
+        attrs = json.loads(b.attributes)
+        assert attrs["kill_criterion"]
+        assert attrs["decision_rule"]
+        assert attrs["skeptic_case"]
+        assert attrs["affordable_loss"]["money_at_risk"] == "Rs 0 cash."
+        assert attrs["status"] == "live"
+    # Idempotent: second run creates nothing.
+    assert operating_v4.seed_founding_bets(db) == []
+    # A killed bet is never resurrected by re-seeding.
+    operating_v4.decide_bet(db, created[0].id, "killed", notes="test kill")
+    assert operating_v4.seed_founding_bets(db) == []
+    assert len(operating_v4.live_bets(db)) == 2
+
+
+def test_seed_founding_bets_respects_wip_cap(db):
+    for i in range(3):
+        operating_v4.create_bet(
+            db,
+            claim=f"other-{i}",
+            constraint="x",
+            test="t",
+            kill_criterion="k",
+            decision_rule="r",
+            skeptic_case="s",
+        )
+    # WIP cap full with other bets: seed skips instead of raising.
+    assert operating_v4.seed_founding_bets(db) == []

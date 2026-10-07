@@ -15,6 +15,15 @@ is known by everyone. The unknowns are the asset: each one is a question
 reality hasn't answered yet, and questions are what pull the system
 forward. This map is the fuel inventory.
 
+**Registry contract (defined 2026-10-07, architect-approved):**
+`docs/UNKNOWN_MAP.md` is the authoritative human-readable identity/state
+registry for unknowns. `Claim` rows in the database (via
+`unknowns_sync.py`) are its operational projection — not the source of
+truth. Experiments, evidence, and outcomes are the execution and learning
+records. Do not migrate unknown state into the DB as part of any
+revenue-phase work; a deliberate future migration may change this
+contract only if reality proves the DB must own it.
+
 ## A. Reality questions (cheap checks nobody has run)
 
 | # | Unknown | State | Cheapest legitimate test | What changes if answered |

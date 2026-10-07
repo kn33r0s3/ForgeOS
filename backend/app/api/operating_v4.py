@@ -163,6 +163,13 @@ def create_bet(payload: BetIn, request: Request, db: Session = Depends(get_db)):
     return {"id": b.id}
 
 
+@router.post("/bets/seed-founding")
+def seed_founding_bets(request: Request, db: Session = Depends(get_db)):
+    _owner(request)
+    created = operating_v4.seed_founding_bets(db)
+    return {"seeded": len(created), "bet_ids": [b.id for b in created]}
+
+
 @router.post("/bets/{bet_id}/decide")
 def decide_bet(bet_id: int, payload: BetDecisionIn, request: Request, db: Session = Depends(get_db)):
     _owner(request)

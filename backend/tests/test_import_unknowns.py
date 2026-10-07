@@ -25,8 +25,8 @@ def test_state_mapping():
 def test_parses_all_sections():
     unknowns = parse_unknown_map(read_map())
     ids = [u.row_id for u in unknowns]
-    # A1–A9, B1–B4, C1–C3, D1–D78
-    assert len(unknowns) == 9 + 4 + 3 + 78, f"got {len(unknowns)}"
+    # A1–A9, B1–B4, C1–C3, D1–D83 (D79–D83 banked in round 16 without updating this count)
+    assert len(unknowns) == 9 + 4 + 3 + 83, f"got {len(unknowns)}"
     assert ids[0] == "A1"
     assert "D70" in ids
     assert "D78" in ids

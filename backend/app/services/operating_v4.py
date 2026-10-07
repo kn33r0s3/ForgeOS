@@ -5,9 +5,12 @@ primitive. All v4 rules enforced here.
 """
 
 import json
+import logging
 import os
 from datetime import datetime, timezone
 from typing import Optional
+
+log = logging.getLogger(__name__)
 
 from sqlalchemy.orm import Session
 
@@ -141,6 +144,244 @@ def decide_bet(db: Session, bet_id: int, decision: str, notes: Optional[str] = N
     db.commit()
     db.refresh(bet)
     return bet
+
+
+# ---------------------------------------------------------------------
+# Founding evidence Bets (architect-approved 2026-10-07)
+# ---------------------------------------------------------------------
+# The Unknown -> Experiment -> Evidence -> Profit proposal was reviewed as a
+# proposal, not an implementation request. Verdict: strategic direction
+# APPROVED; E1-E5 APPROVED WITH STRUCTURAL CHANGES; schema/dashboard expansion
+# (Experiment.unknown_id, new template system, UNKNOWN_MAP migration to DB)
+# NOT APPROVED. These three Bets are the approved first phase — seeded through
+# the existing create_bet seam, with the anti-theater pre-registration carried
+# by the Bet's own fields (kill_criterion, decision_rule, affordable_loss).
+# No new tables, no new models, no dashboard.
+#
+# Structural corrections baked in:
+# - Cycle is UNKNOWN -> CHEAPEST LEGITIMATE PROBE -> EVIDENCE -> DECISION ->
+#   REAL VALUE -> REVENUE, not a linear pipeline; UNKNOWN -> THESIS KILLED
+#   counts as progress.
+# - E1 records ACTUALS (inquiries, responses, latency, sales, amounts paid);
+#   "lost revenue" is forbidden — only an explicitly labeled ESTIMATE.
+# - E2 answers are reported belief, requiring behavioral verification.
+# - E3 segments via historical episodes, not bill opinions.
+# - E4 uses 30-day time-windowed reported incidence, not vague stories.
+# - E5 is the human collection layer (five owner conversations), not a
+#   separate experiment.
+# - First verified rupee != profit: affordable_loss tracks owner time and
+#   cash separately from day one.
+# Unknown IDs refer to docs/UNKNOWN_MAP.md, the authoritative registry.
+
+SEED_FOUNDING_BETS = [
+    {
+        "claim": (
+            "Bet A — Response / Presence / Sale Path: for the target seller "
+            "segment, slow or missing responses (not lack of demand) are what "
+            "prevent inquiries from becoming paid sales, and the sale closes "
+            "in the channel the seller already uses."
+        ),
+        "constraint": (
+            "B1-B4 UNKNOWN (zero real seller conversations); D12/D1 UNKNOWN "
+            "(no measured inquiry/response data); D2 UNKNOWN and "
+            "thesis-threatening (demand vs presence); D11 UNKNOWN (segment "
+            "split); D13 UNKNOWN (where sales close)."
+        ),
+        "test": (
+            "Founding Merchant Reality Sprint — cheapest legitimate probes "
+            "first. (1) Five owner-run 10-minute conversations = the human "
+            "collection layer (open questions, no pitching, consent-first). "
+            "In every conversation ask FIRST (D2): 'If I brought you 10 new "
+            "customers tomorrow, what breaks?' — treat answers as reported "
+            "belief only; a 'give me customers' answer must be checked against "
+            "behavioral evidence (missed calls, slow replies) before it "
+            "updates the thesis. (2) Extract two histories per conversation "
+            "(D11): 'tell me about the last time you had too few customers' vs "
+            "'the last time customers wanted to buy and you could not keep "
+            "up' — historical episodes segment demand- vs presence-constrained "
+            "sellers; 'which bill scares you most' is economic context, not "
+            "the segmentation test. (3) 'Walk me through your last 5 sales "
+            "step by step — how did each one actually close?' (D13). "
+            "(4) One-week inquiry autopsy with up to 5 consenting sellers "
+            "(D12/D1): record inquiries received, responses sent, response "
+            "latency, no-response cases, conversations continued, offers "
+            "made, sales completed, actual amount paid, channel where sale "
+            "closed. NEVER record 'lost revenue' — an unanswered inquiry is "
+            "not observed revenue. A separate, explicitly labeled 'estimated "
+            "recoverable value' may be computed; it is an estimate, never "
+            "revenue."
+        ),
+        "kill_criterion": (
+            "Kill the bet if: the five conversations + autopsy cannot be "
+            "completed within the owner-time budget; or evidence shows demand "
+            "(not response/presence) is the binding constraint across the "
+            "observed segment with no credible rescue segment; or no seller "
+            "consents to the autopsy and no behavioral data can be obtained. "
+            "Dampen/pivot (not full kill) if the constraint is "
+            "segment-specific, e.g. demand binds for shutter retail while "
+            "presence binds for social sellers."
+        ),
+        "decision_rule": (
+            "An outcome is valid only if it changes this decision: is the "
+            "first commercial wedge actually response/presence/recovery "
+            "(-> proceed to First Rupee Sprint design) or is demand the "
+            "binding constraint (-> pivot the wedge thesis per segment)? "
+            "Secondarily: where does the transaction really close (-> shapes "
+            "any future intervention's channel; if voice closes, Hami is a "
+            "bridge, not a destination). 'We learned something interesting' "
+            "without a decision change = experiment theater; the bet stays "
+            "live."
+        ),
+        "skeptic_case": (
+            "Owners may say 'give me customers' while routinely missing "
+            "calls — reported belief is not proof of the constraint. Five "
+            "conversations is a small, non-random sample; do not "
+            "overgeneralize across segments. 'Estimated recoverable value' "
+            "must never be presented as revenue. Provenance: "
+            "architect-approved 2026-10-07 (Unknown->Experiment->Evidence->"
+            "Profit review, relayed by owner); unknowns per "
+            "docs/UNKNOWN_MAP.md."
+        ),
+        "owner_time": "Five 10-min conversations + scheduling (<=3h total); autopsy observation is seller-side, owner only sets it up.",
+        "money_at_risk": "Rs 0 cash.",
+        "trust_at_risk": "Seller relationships — open questions, no pitching, consent-first; one bad conversation burns the channel.",
+        "deadline": datetime(2026, 10, 28, tzinfo=timezone.utc),
+    },
+    {
+        "claim": (
+            "Bet B — Payment Trust: fake payment confirmations are a "
+            "frequent, costly merchant pain in Kathmandu retail, and "
+            "merchants lack a reliable verification method — making "
+            "adversarial-proof receipt verification a real intervention "
+            "candidate."
+        ),
+        "constraint": (
+            "D19/D20/D21 UNKNOWN. No measured incidence; unknown who verifies "
+            "at the counter, with what, and whether disputes actually occur."
+        ),
+        "test": (
+            "In the five owner conversations (shared collection layer) plus "
+            "up to 5 additional merchant asks: 'In the last 30 days, how many "
+            "times has someone shown you a payment confirmation you had to "
+            "verify?' Per report capture: reported incidents, time window "
+            "(30 days), whether an actual dispute occurred, verification "
+            "method used, what happened. Also: 'Who checks the phone when a "
+            "QR payment comes in — do you share one login?' (D20) and 'Which "
+            "app do you actually use to confirm QR payments, and why?' "
+            "(D21). This yields reported incidence, not prevalence — never a "
+            "population frequency claim."
+        ),
+        "kill_criterion": (
+            "Kill if: reported 30-day incidence is ~zero across 8+ merchants "
+            "with no disputes; or merchants report a satisfactory existing "
+            "verification method; or the pain is real but no intervention "
+            "Hami could offer would change the outcome."
+        ),
+        "decision_rule": (
+            "Valid only if it changes this decision: is payment verification "
+            "a real merchant pain worth turning into an intervention (-> "
+            "design a verification aid that survives a fake green tick, "
+            "verified on the merchant's own device) or not (-> kill/dampen; "
+            "D19 stays context)?"
+        ),
+        "skeptic_case": (
+            "Self-reports overstate rare, salient events; 'had to verify' is "
+            "not fraud. QR-app dissatisfaction (e.g. 2.73 rating) may reflect "
+            "UX, not a verification gap. Provenance: architect-approved "
+            "2026-10-07; unknowns per docs/UNKNOWN_MAP.md."
+        ),
+        "owner_time": "Rides the same five conversations; <=1h for additional merchant asks.",
+        "money_at_risk": "Rs 0 cash.",
+        "trust_at_risk": "Minimal — questions only, no intervention proposed yet.",
+        "deadline": datetime(2026, 10, 28, tzinfo=timezone.utc),
+    },
+    {
+        "claim": (
+            "Bet C — Seller Behavior / Funnel: Nepali sellers deliberately "
+            "withhold prices to force inbox engagement, so 'transparency' "
+            "tooling would fight the seller's own strategy — Hami must work "
+            "with the funnel, not against it."
+        ),
+        "constraint": (
+            "D17 UNKNOWN. Unknown whether price withholding is deliberate "
+            "lead-capture or habit; unknown whether it converts."
+        ),
+        "test": (
+            "OBSERVATION first, no contact: manual audit of 50 posts across "
+            "10 seller pages — price present/absent, comment counts. Then in "
+            "conversations: ask 3 sellers whether withholding converts and "
+            "why they do it. Comment counts are directional, not conversion "
+            "proof."
+        ),
+        "kill_criterion": (
+            "Kill if: the audit shows prices are usually present (no "
+            "withholding pattern); or sellers report withholding does not "
+            "convert; or the behavior is segment-specific with no wedge "
+            "implication."
+        ),
+        "decision_rule": (
+            "Valid only if it changes this decision: does the seller's "
+            "existing commerce behavior invalidate the assumed wedge "
+            "(-> pivot: build with the funnel) or confirm it (-> proceed)? "
+            "May promote D14/D18/D32 depending on what Bet A exposes."
+        ),
+        "skeptic_case": (
+            "Comment counts weakly proxy conversion; stated reasons may "
+            "rationalize habit; 50 posts is directional, not statistical. "
+            "Provenance: architect-approved 2026-10-07; unknowns per "
+            "docs/UNKNOWN_MAP.md."
+        ),
+        "owner_time": "<=2h for the manual post audit; conversation questions ride the shared collection layer.",
+        "money_at_risk": "Rs 0 cash.",
+        "trust_at_risk": "None — public observation only.",
+        "deadline": datetime(2026, 10, 28, tzinfo=timezone.utc),
+    },
+]
+
+
+def seed_founding_bets(db: Session) -> list:
+    """Seed the three architect-approved founding Bets. Idempotent.
+
+    Skips any bet whose claim is already present (live OR decided — a killed
+    bet is never resurrected by re-seeding). Respects the MAX_LIVE_BETS WIP
+    cap: if the cap is full with other bets, remaining seeds are skipped
+    with a warning instead of raising.
+    """
+    existing_claims = set()
+    for b in (
+        db.query(models.SubstrateEntity)
+        .filter(models.SubstrateEntity.entity_type == BET_ENTITY_TYPE)
+        .all()
+    ):
+        claim = _bet_attributes(b).get("claim") or ""
+        existing_claims.add(claim[:60])
+    created = []
+    for spec in SEED_FOUNDING_BETS:
+        if spec["claim"][:60] in existing_claims:
+            continue
+        if len(live_bets(db)) >= MAX_LIVE_BETS:
+            log.warning(
+                "seed_founding_bets: WIP cap (%d live) reached with other "
+                "bets; skipping remaining founding bets.",
+                MAX_LIVE_BETS,
+            )
+            break
+        bet = create_bet(
+            db,
+            claim=spec["claim"],
+            constraint=spec["constraint"],
+            test=spec["test"],
+            kill_criterion=spec["kill_criterion"],
+            decision_rule=spec["decision_rule"],
+            skeptic_case=spec["skeptic_case"],
+            owner_time=spec.get("owner_time"),
+            money_at_risk=spec.get("money_at_risk"),
+            trust_at_risk=spec.get("trust_at_risk"),
+            deadline=spec.get("deadline"),
+        )
+        created.append(bet)
+        existing_claims.add(spec["claim"][:60])
+    return created
 
 
 # ---------------------------------------------------------------------
