@@ -16,11 +16,11 @@ action, not taken).
   the start commit.
 - No `renovation` branch was ever created (owner's explicit direct-to-main
   rule, reconfirmed in the spec update).
-- Final commit: `4849188` ("renovation: final verification", amended with
-  this report's final gate numbers), pushed to `origin/main`. Full chain:
+- Final commit: "renovation: final verification" series on origin/main
+  (see `git log`; hashes `cdd774b` phase 3, `7b19a0d` phase 4). Full chain:
   `7008111` → `30b1830` (phase 0) → `e2bcda6` (phase 1) →
   `8962b23` (phase 2) → `cdd774b` (phase 3) → `7b19a0d` (phase 4) →
-  `4849188` (final verification).
+  final verification.
 - The main checkout at `~/workspace/repos/ForgeOS` (local main `9933559`,
   divergent with unpushed development work) was never committed to or
   pushed from. Verified before every push via `git rev-parse
