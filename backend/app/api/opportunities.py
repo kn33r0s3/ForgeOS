@@ -18,12 +18,10 @@ from app.services import economic_validation
 from app.services import prospect_discovery
 from app.schemas.experiment import ExperimentAuthorize, ExperimentOutcomeCreate, ExperimentProposalCreate
 
+# Commercial opportunity and experiment APIs. Opportunity ranking is
+# EXPLICIT EXPLOITATION-LANE logic, not Hami's global unknown selector.
 router = APIRouter(
     tags=["opportunities"],
-    description=(
-        "Commercial opportunity and experiment APIs. Opportunity ranking is "
-        "EXPLICIT EXPLOITATION-LANE logic, not Hami's global unknown selector."
-    ),
 )
 
 
