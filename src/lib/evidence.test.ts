@@ -101,7 +101,7 @@ describe("unknowns fuel inventory", () => {
     assert.equal(discoveryUnknowns.length, 83);
     assert.equal(unknownsCount, 83);
     const ids = new Set(discoveryUnknowns.map((u) => u.id));
-    assert.equal(ids.size, 70);
+    assert.equal(ids.size, 83);
     for (const u of discoveryUnknowns) {
       assert.match(u.id, /^D\d+$/);
       assert.ok(u.question.length > 20, `${u.id}: question too thin`);
