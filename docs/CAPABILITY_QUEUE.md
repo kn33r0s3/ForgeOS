@@ -1,25 +1,30 @@
 # Hami capability claim ledger (ForgeOS repository)
 
-## [IN PROGRESS] Public route navigation
+## [DONE] Public route navigation
 
 - Date: 2026-10-08.
 - Routine owner action still required: point visitors to `/terms` to find
   `/contact`, and explain where existing public services and public-work
   routes live.
 - Action this change removes: hunting through legal copy or requiring a
-  manually supplied URL to reach Contact and its existing public pathways.
+  manually supplied URL to reach Contact and its existing `/providers` and
+  `/domain` pathways. Contact appears as a normal item in the shared menu,
+  not as a separate button.
 - Remaining boundary: public inquiry intake remains closed; the Contact route
   retains its existing “not open yet” state, and provider verification,
   consent, and posting behavior remain governed by their current routes.
   Navigation does not guarantee a listing, response, or match.
-- Verification so far: focused content/header tests pass (19 tests), and
-  `npm run typecheck` passes. Build validation is still pending. No external
-  contact, production write, or live experiment was performed.
+- Verification: `npm test` passes (209 script tests and 201 TypeScript tests);
+  `npm run typecheck` and `npm run build` pass. The build skips database
+  migrations because `DATABASE_URL` is unset. Lint has zero errors and one
+  existing Fast Refresh warning in
+  `src/components/experiments/experiment-card.tsx`. No external contact,
+  production write, or live experiment was performed.
 - Metric: `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains
   **NOT MEASURABLE**; this navigation change is not a real transaction.
-- Next removable dependency: complete build validation, then visitors can
-  discover the existing routes directly; any activation of intake or change
-  to the underlying public actions requires separate owner authorization.
+- Next removable dependency: visitors can now discover the existing routes
+  directly; any activation of intake or change to the underlying public
+  actions still requires separate owner authorization.
 
 ## [IN PROGRESS] Batch 14 — autonomous maintenance controls
 

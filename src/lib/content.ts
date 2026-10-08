@@ -17,6 +17,7 @@ export const NAV = [
   { label: "Findings", to: "/discoveries" },
   { label: "Unknowns", to: "/unknowns" },
   { label: "About", to: "/about" },
+  { label: "Contact", to: "/contact" },
 ] as const;
 
 export const providerCategories = ["All"] as const;

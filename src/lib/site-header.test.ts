@@ -10,10 +10,11 @@ const HEADER_PATH = join(__dirname, "../components/layout/site-header.tsx");
 describe("SiteHeader responsive account actions", () => {
   const source = readFileSync(HEADER_PATH, "utf-8");
 
-  it("keeps Contact directly reachable from the shared header", () => {
-    assert.match(source, /to="\/contact"/);
-    assert.match(source, /aria-current=\{pathname === "\/contact" \? "page" : undefined\}/);
-    assert.match(source, />\s*Contact\s*<\/Link>/);
+  it("renders Contact as a regular item in both navigation menus", () => {
+    assert.equal((source.match(/NAV\.map\(\(item/g) ?? []).length, 2);
+    assert.match(source, /aria-label="Main navigation"[\s\S]*NAV\.map/);
+    assert.match(source, /aria-label="Mobile navigation"[\s\S]*NAV\.map/);
+    assert.doesNotMatch(source, /to="\/contact"/);
   });
 
   it("mobile drawer contains Join Hami link", () => {

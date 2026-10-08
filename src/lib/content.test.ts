@@ -103,9 +103,9 @@ describe("Hami public content", () => {
   it("exposes public-first primary destinations", () => {
     const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
     const hrefs = NAV.map((item) => item.to);
-    // The primary navigation keeps global records, not a specific experiment.
-    // Join Hami is a separate header button, not a nav menu item.
-    assert.deepEqual(hrefs, ["/", "/discoveries", "/unknowns", "/about"]);
+    // The primary navigation keeps public routes, including Contact, not a
+    // specific experiment. Account actions remain separate.
+    assert.deepEqual(hrefs, ["/", "/discoveries", "/unknowns", "/about", "/contact"]);
     const publicHrefs = new Set<string>(hrefs);
     for (const path of FORBIDDEN_PUBLIC_PATHS) {
       assert.equal(publicHrefs.has(path), false, `nav leaked ${path}`);
@@ -421,12 +421,7 @@ describe("Hami public root", () => {
     assert.doesNotMatch(footer, /Inbox prototype/);
     assert.doesNotMatch(footer, /\/prototype\/inbox/);
     assert.doesNotMatch(footer, /Experiment 1 \(not started\)/);
-    assert.equal(
-      NAV.some((item) => (item.label as string) === "Contact"),
-      false,
-      "Contact remains a compact header action rather than another primary nav item",
-    );
-    assert.match(header, /to="\/contact"/);
+    assert.ok(NAV.some((item) => item.label === "Contact" && item.to === "/contact"));
     assert.match(header, /aria-current={active \? "page" : undefined}/);
     assert.match(businesses, /to="\/forge-bot-intake"/);
     assert.match(businesses, /online intake is closed/i);
