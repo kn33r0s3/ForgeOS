@@ -277,7 +277,7 @@ describe("homepage contract", () => {
 
 describe("information architecture", () => {
   const home = () => read("src/routes/index.tsx");
-  const navRoutes = ["/", "/discoveries", "/unknowns", "/experiments", "/about"];
+  const navRoutes = ["/", "/discoveries", "/unknowns", "/about"];
 
   it("every homepage preview section links to a real nav route", () => {
     const src = home();
@@ -288,7 +288,7 @@ describe("information architecture", () => {
       );
     }
     assert.ok(src.includes('to="/about"'), "homepage missing link to /about");
-    // All preview links must be in NAV
+    // Experiment records stay reachable from the homepage but are not top-menu destinations.
     const nav = read("src/lib/content.ts");
     for (const route of navRoutes) {
       assert.ok(nav.includes(`to: "${route}"`), `NAV missing ${route}`);

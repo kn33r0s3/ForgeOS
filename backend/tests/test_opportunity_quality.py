@@ -182,3 +182,14 @@ def test_discovery_keeps_repair_problem_target_specific(db):
     assert result.customer_segment == "repair shop"
     assert result.market_confidence == 0.0
     assert result.revenue_confidence == 0.0
+
+
+def test_opportunity_api_imports_and_marks_commercial_lane():
+    from app.api import opportunities
+
+    route = next(
+        route
+        for route in opportunities.router.routes
+        if getattr(route, "path", None) == "/opportunities"
+    )
+    assert "EXPLICIT EXPLOITATION LANE" in route.description

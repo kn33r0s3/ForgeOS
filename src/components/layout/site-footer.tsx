@@ -15,7 +15,6 @@ const RECORD_LINKS = [
 ] as const;
 
 const CURRENT_LINKS = [
-  { label: "Experiment 1 (not started)", to: "/needs" },
   { label: "Action state", to: "/actions" },
 ] as const;
 
@@ -61,7 +60,7 @@ export function SiteFooter() {
             </Link>
           ))}
         </FooterColumn>
-        <FooterColumn title="Current activity & prototype">
+        <FooterColumn title="Current action status">
           {CURRENT_LINKS.map((item) => (
             <Link key={item.to} to={item.to} className={LINK}>
               {item.label}

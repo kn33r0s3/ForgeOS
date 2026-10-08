@@ -1,4 +1,4 @@
-"""API routes for listing generated opportunities and logging experiments."""
+"""Commercial opportunity paths are EXPLOITATION-LANE, not global selection."""
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
@@ -20,9 +20,7 @@ from app.schemas.experiment import ExperimentAuthorize, ExperimentOutcomeCreate,
 
 # Commercial opportunity and experiment APIs. Opportunity ranking is
 # EXPLICIT EXPLOITATION-LANE logic, not Hami's global unknown selector.
-router = APIRouter(
-    tags=["opportunities"],
-)
+router = APIRouter(tags=["opportunities"])
 
 
 class ExperimentOutcomeBody(BaseModel):

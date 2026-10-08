@@ -103,9 +103,9 @@ describe("Hami public content", () => {
   it("exposes public-first primary destinations", () => {
     const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
     const hrefs = NAV.map((item) => item.to);
-    // The primary navigation: Home, Findings, Unknowns, Experiments, About.
+    // The primary navigation keeps global records, not a specific experiment.
     // Join Hami is a separate header button, not a nav menu item.
-    assert.deepEqual(hrefs, ["/", "/discoveries", "/unknowns", "/experiments", "/about"]);
+    assert.deepEqual(hrefs, ["/", "/discoveries", "/unknowns", "/about"]);
     const publicHrefs = new Set<string>(hrefs);
     for (const path of FORBIDDEN_PUBLIC_PATHS) {
       assert.equal(publicHrefs.has(path), false, `nav leaked ${path}`);
@@ -404,12 +404,12 @@ describe("Hami public root", () => {
     assert.ok(NAV.some((item) => item.label === "About" && item.to === "/about"));
     assert.ok(NAV.some((item) => item.label === "Findings" && item.to === "/discoveries"));
     assert.ok(NAV.some((item) => item.label === "Unknowns" && item.to === "/unknowns"));
-    assert.ok(NAV.some((item) => item.label === "Experiments" && item.to === "/experiments"));
+    assert.doesNotMatch(header, /Experiments|\/experiments/);
     assert.doesNotMatch(header, /Inbox tool|\/prototype\/inbox/);
     // Per HAMI CONTINUITY LAW: inbox is historical material, not public identity.
     assert.doesNotMatch(footer, /Inbox prototype/);
     assert.doesNotMatch(footer, /\/prototype\/inbox/);
-    assert.match(footer, /Experiment 1 \(not started\)/);
+    assert.doesNotMatch(footer, /Experiment 1 \(not started\)/);
     assert.ok(
       !NAV.some((item) => (item.label as string) === "Contact"),
       "Contact is in the nav without a real contact route",
