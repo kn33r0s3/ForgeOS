@@ -108,3 +108,14 @@ jobs:
             echo "$HTTP_BODY" | sed -E 's/(api[_-]?key|token|secret)["'\'']?\s*[:=]\s*["'\'']?[^"'\''&,} ]+/\\1=[REDACTED]/gi'
             exit 1
           fi
+
+  post-deploy-smoke:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Allow the main-branch deployment to settle
+        run: sleep 90
+      - name: GET health and config on both production domains
+        run: node scripts/production-maintenance.mjs --smoke

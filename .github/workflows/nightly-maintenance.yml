@@ -1,0 +1,177 @@
+name: Nightly Hami maintenance
+
+on:
+  schedule:
+    - cron: "0 1 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  backend-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: "sqlite:///:memory:"
+      AI_PROVIDER: mock
+      FORGE_API_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: python -m pip install -r requirements.txt
+      - run: python -m pytest tests -q
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  production-checks:
+    runs-on: ubuntu-latest
+    outputs:
+      summary: ${{ steps.checks.outputs.summary }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Read-only production crawl and closed-state checks
+        id: checks
+        env:
+          FORGE_API_KEY: ${{ secrets.FORGE_API_KEY }}
+        run: node scripts/production-maintenance.mjs --nightly
+
+  report:
+    if: always()
+    needs:
+      - frontend-tests
+      - backend-tests
+      - typecheck
+      - lint
+      - build
+      - production-checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Open or update the daily report and any failure issue
+        uses: actions/github-script@v7
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          PRODUCTION_SUMMARY: ${{ needs.production-checks.outputs.summary }}
+        with:
+          script: |
+            const statuses = JSON.parse(process.env.NEEDS);
+            const rows = Object.entries(statuses).map(
+              ([name, result]) => `- ${name}: ${result.result}`,
+            );
+            const failures = Object.entries(statuses)
+              .filter(([, result]) => result.result !== "success")
+              .map(([name, result]) => `${name}: ${result.result}`);
+            const productionSummary =
+              process.env.PRODUCTION_SUMMARY || "Production checks did not report a summary.";
+            const passed = failures.length === 0;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const reportTitle = "Daily Hami report";
+            const reportBody = [
+              `## Daily Hami report — ${new Date().toISOString().slice(0, 10)}`,
+              "",
+              passed ? "All scheduled checks passed." : "One or more scheduled checks need owner attention.",
+              "",
+              ...rows,
+              `- Production: ${productionSummary}`,
+              "",
+              `Run details: ${runUrl}`,
+              "",
+              "Production checks use GET requests only. No intake, LIVE action, or experiment was activated.",
+            ].join("\n");
+
+            async function upsertIssue(title, body) {
+              const { data: openIssues } = await github.rest.issues.listForRepo({
+                ...context.repo,
+                state: "open",
+                per_page: 100,
+              });
+              const existing = openIssues.find(
+                (issue) => !issue.pull_request && issue.title === title,
+              );
+              if (existing) {
+                await github.rest.issues.update({
+                  ...context.repo,
+                  issue_number: existing.number,
+                  body,
+                });
+              } else {
+                await github.rest.issues.create({
+                  ...context.repo,
+                  title,
+                  body,
+                  ...(title.startsWith("HIGH PRIORITY:")
+                    ? { labels: ["NEEDS OWNER"] }
+                    : {}),
+                });
+              }
+            }
+
+            await upsertIssue(reportTitle, reportBody);
+            if (!passed) {
+              const failureTitle = "HIGH PRIORITY: Daily Hami maintenance failure";
+              const failureBody = [
+                "## High-priority maintenance failure",
+                "",
+                `Detected on ${new Date().toISOString()}.`,
+                "",
+                ...failures.map((failure) => `- ${failure}`),
+                `- Production: ${productionSummary}`,
+                "",
+                `Run details: ${runUrl}`,
+                "",
+                "No automatic repair, external contact, intake activation, or LIVE action was attempted.",
+              ].join("\n");
+              await upsertIssue(failureTitle, failureBody);
+            }
