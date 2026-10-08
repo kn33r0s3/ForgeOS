@@ -357,7 +357,8 @@ def test_methods_are_replaceable_and_registration_is_explicit(db, world):
 def test_preview_is_read_only_and_api_runs_explicitly(db, world, monkeypatch):
     from app import security
 
-    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    # Discovery runs are owner-keyed (Step 1); the test client presents the key.
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "discovery-test-key")
     before = _counts(db)
     preview = engine.run_discovery(db, persist=False)
     db.rollback()
@@ -369,7 +370,7 @@ def test_preview_is_read_only_and_api_runs_explicitly(db, world, monkeypatch):
 
     app.dependency_overrides[get_db] = override_get_db
     try:
-        client = TestClient(app)
+        client = TestClient(app, headers={"X-API-Key": "discovery-test-key"})
         methods = client.get("/forge/substrate/discovery/methods").json()
         assert "question_reframe" in {row["name"] for row in methods}
         assert client.get("/forge/substrate/discovery/preview").status_code == 200

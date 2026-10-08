@@ -9,9 +9,11 @@ from app import security
 
 
 @pytest.fixture
-def substrate_client(db):
+def substrate_client(db, monkeypatch):
     world_graph.seed_core_types(db)
     db.commit()
+    # Substrate writes are owner-keyed (Step 1); the test client presents the key.
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "substrate-test-key")
 
     def override_get_db():
         try:
@@ -20,7 +22,11 @@ def substrate_client(db):
             db.rollback()
 
     app.dependency_overrides[get_db] = override_get_db
-    client = TestClient(app, raise_server_exceptions=False)
+    client = TestClient(
+        app,
+        raise_server_exceptions=False,
+        headers={"X-API-Key": "substrate-test-key"},
+    )
     yield client
     app.dependency_overrides.clear()
     client.close()

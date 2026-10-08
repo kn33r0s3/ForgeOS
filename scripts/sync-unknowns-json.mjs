@@ -49,7 +49,7 @@ mkdirSync(dir, { recursive: true });
 writeFileSync(join(dir, "unknowns.json"), JSON.stringify(out, null, 1) + "\n");
 
 const previousRounds = new Map();
-for (const match of previousTs.matchAll(/\{\s*id:\s*"(D\d+)",([\s\S]*?)\n  \},/g)) {
+for (const match of previousTs.matchAll(/\{\s*id:\s*"(D\d+)",([\s\S]*?)\n {2}\},/g)) {
   const round = match[2].match(/\bround:\s*(\d+)/);
   if (round) previousRounds.set(match[1], Number(round[1]));
 }

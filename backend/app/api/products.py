@@ -18,20 +18,25 @@ only from real ACTUAL_* Outcome rows, never fabricated by this system.
 """
 
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app import schemas, models
+from app import schemas, models, security
 from app.services import product_engine
 from app.services import offer_preparation
 
 router = APIRouter(prefix="/products", tags=["products"])
 
 
+def _owner(request: Request) -> None:
+    security.require_owner_api_key(request)
+
+
 # ----------------------------------------------------------------- products
 @router.post("", response_model=schemas.ProductOut)
-def create_product(body: schemas.ProductCreate, db: Session = Depends(get_db)):
+def create_product(request: Request, body: schemas.ProductCreate, db: Session = Depends(get_db)):
+    _owner(request)
     if body.opportunity_id is not None:
         opp = db.query(models.Opportunity).filter_by(id=body.opportunity_id).first()
         if opp is None:
@@ -52,7 +57,8 @@ def create_product(body: schemas.ProductCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/offer-drafts", response_model=schemas.ProductOut, status_code=201)
-def create_offer_draft(body: schemas.OfferDraftCreate, db: Session = Depends(get_db)):
+def create_offer_draft(request: Request, body: schemas.OfferDraftCreate, db: Session = Depends(get_db)):
+    _owner(request)
     """Prepare an owner-reviewable offer hypothesis without contacting anyone."""
     try:
         return offer_preparation.create_offer_draft(
@@ -90,7 +96,8 @@ def list_customers(db: Session = Depends(get_db)):
 
 
 @router.post("/customers", response_model=schemas.CustomerEventOut)
-def add_customer_event_global(body: schemas.CustomerEventCreate, db: Session = Depends(get_db)):
+def add_customer_event_global(request: Request, body: schemas.CustomerEventCreate, db: Session = Depends(get_db)):
+    _owner(request)
     try:
         return product_engine.create_customer_event(
             db,
@@ -112,7 +119,8 @@ def add_customer_event_global(body: schemas.CustomerEventCreate, db: Session = D
 
 
 @router.patch("/channels/{channel_id}", response_model=schemas.ChannelOut)
-def update_channel(channel_id: int, body: schemas.ChannelUpdate, db: Session = Depends(get_db)):
+def update_channel(request: Request, channel_id: int, body: schemas.ChannelUpdate, db: Session = Depends(get_db)):
+    _owner(request)
     c = product_engine.update_channel(
         db, channel_id,
         status=body.status, name=body.name, description=body.description,
@@ -123,7 +131,8 @@ def update_channel(channel_id: int, body: schemas.ChannelUpdate, db: Session = D
 
 
 @router.post("/channels/{channel_id}/customers", response_model=schemas.CustomerEventOut)
-def add_customer_event(channel_id: int, body: schemas.CustomerEventCreate, db: Session = Depends(get_db)):
+def add_customer_event(request: Request, channel_id: int, body: schemas.CustomerEventCreate, db: Session = Depends(get_db)):
+    _owner(request)
     ch = db.query(models.DistributionChannel).filter_by(id=channel_id).first()
     if ch is None:
         raise HTTPException(404, "channel not found")
@@ -158,10 +167,12 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
 
 @router.post("/{product_id}/offer-approval", response_model=schemas.ProductOut)
 def update_offer_approval(
+    request: Request,
     product_id: int,
     body: schemas.OfferApprovalUpdate,
     db: Session = Depends(get_db),
 ):
+    _owner(request)
     product = offer_preparation.set_offer_approval(
         db, product_id, status=body.status, note=body.note
     )
@@ -171,7 +182,8 @@ def update_offer_approval(
 
 
 @router.patch("/{product_id}", response_model=schemas.ProductOut)
-def update_product(product_id: int, body: schemas.ProductUpdate, db: Session = Depends(get_db)):
+def update_product(request: Request, product_id: int, body: schemas.ProductUpdate, db: Session = Depends(get_db)):
+    _owner(request)
     p = product_engine.update_product(
         db, product_id,
         name=body.name, offer=body.offer, target_customer=body.target_customer,
@@ -185,7 +197,8 @@ def update_product(product_id: int, body: schemas.ProductUpdate, db: Session = D
 
 
 @router.post("/{product_id}/channels", response_model=schemas.ChannelOut)
-def add_channel(product_id: int, body: schemas.ChannelCreate, db: Session = Depends(get_db)):
+def add_channel(request: Request, product_id: int, body: schemas.ChannelCreate, db: Session = Depends(get_db)):
+    _owner(request)
     if product_engine.get_product(db, product_id) is None:
         raise HTTPException(404, "product not found")
     return product_engine.create_channel(

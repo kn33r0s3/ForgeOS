@@ -153,13 +153,17 @@ def test_legacy_active_rows_without_attributable_pass_are_not_verified(db):
     assert world_graph.capability_activation_record(db, capability) is None
 
 
-def test_substrate_api_rejects_unattributed_passes_and_reports_verification(db):
+def test_substrate_api_rejects_unattributed_passes_and_reports_verification(db, monkeypatch):
+    from app import security
+    # Substrate writes are owner-keyed (Step 1).
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "capability-test-key")
+
     def override_get_db():
         yield db
 
     app.dependency_overrides[get_db] = override_get_db
     try:
-        client = TestClient(app)
+        client = TestClient(app, headers={"X-API-Key": "capability-test-key"})
         world_graph.seed_core_types(db)
         db.commit()
         _non_starved(db)
