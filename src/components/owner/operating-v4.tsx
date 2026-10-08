@@ -83,6 +83,7 @@ interface Selection {
   live_bet_count: number;
   available_live_slots: number;
   comparison_method: string;
+  assessment_guidance: string;
   portfolio_gaps: string[];
   responsibility: Responsibility[];
 }
@@ -192,6 +193,7 @@ export function OperatingV4({ apiKey }: { apiKey: string }) {
             contacted, or executed here. Opportunity and money rankings remain separate exploitation lanes.
           </p>
           {selection && <p className="mt-2 text-xs text-muted">{selection.comparison_method}</p>}
+          {selection && <p className="mt-1 text-xs text-muted">{selection.assessment_guidance}</p>}
         </div>
         {selection ? (
           <>

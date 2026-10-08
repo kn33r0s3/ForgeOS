@@ -33,8 +33,8 @@ if (command === "angles") {
     .map((a) => ({
       id: a.id,
       question: a.question,
-      // Evidence tier: earned or "unscored". valueHypothesis is the WTP
-      // hypothesis (internal tiebreaker, never displayed as a tier).
+      // This local round aid is not global selection. Missing WTP hypotheses
+      // remain null/unassessed; they are never substituted with a low value.
       valueTier: a.valueTier,
       valueHypothesis: a.valueHypothesis,
       valueWhy: a.valueWhy,

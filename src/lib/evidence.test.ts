@@ -97,17 +97,18 @@ describe("evidence gate", () => {
 });
 
 describe("unknowns fuel inventory", () => {
-  it("holds all 70 discovery unknowns with valid shape", () => {
-    assert.equal(discoveryUnknowns.length, 70);
-    assert.equal(unknownsCount, 70);
+  it("holds all 83 discovery unknowns with valid shape", () => {
+    assert.equal(discoveryUnknowns.length, 83);
+    assert.equal(unknownsCount, 83);
     const ids = new Set(discoveryUnknowns.map((u) => u.id));
     assert.equal(ids.size, 70);
     for (const u of discoveryUnknowns) {
       assert.match(u.id, /^D\d+$/);
       assert.ok(u.question.length > 20, `${u.id}: question too thin`);
-      assert.ok(["unknown", "supported", "hypothesized"].includes(u.state));
+      assert.ok(["unknown", "supported", "hypothesized", "tested", "contradicted", "blocked"].includes(u.state));
       assert.ok(u.stakes.length > 10, `${u.id}: no stakes recorded`);
-      assert.ok(u.round >= 1 && u.round <= 14, `${u.id}: bad round`);
+      if (u.round !== null) assert.ok(u.round >= 1 && u.round <= 14, `${u.id}: bad round`);
+      else assert.ok(Number(u.id.slice(1)) >= 71, `${u.id}: existing round unexpectedly missing`);
     }
   });
 

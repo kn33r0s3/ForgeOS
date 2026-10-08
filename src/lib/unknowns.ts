@@ -768,3 +768,5 @@ export const discoveryUnknowns: DiscoveryUnknown[] = [
     round: null,
   },
 ];
+
+export const unknownsCount = discoveryUnknowns.length;

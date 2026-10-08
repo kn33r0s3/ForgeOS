@@ -154,6 +154,8 @@ def decide_bet(db: Session, bet_id: int, decision: str, notes: Optional[str] = N
     if not bet or bet.entity_type != BET_ENTITY_TYPE:
         raise ValueError("Bet not found.")
     attrs = _bet_attributes(bet)
+    if decision == "paused" and attrs.get("status") != "live":
+        raise ValueError("Only a live Bet can be paused.")
     attrs["status"] = decision
     attrs["decided_at"] = utcnow().isoformat()
     attrs["decision_notes"] = notes
@@ -545,6 +547,13 @@ def select_next_candidates(db: Session) -> dict:
             "Qualitative, lexicographic comparison; no aggregate numeric score. "
             "Strategic learning/leverage factors precede cost, time, and harm. "
             "Unassessed and model-proposed values do not become Low."
+        ),
+        "assessment_guidance": (
+            "For stake, uncertainty, evidence potential, capability gain, "
+            "transferability, upside, and reversibility, High indicates more "
+            "of the named positive potential. For cost, time, and harm, High "
+            "indicates greater burden, delay, or exposure. Unknown remains "
+            "Unassessed. These judgments are not evidence."
         ),
         "responsibility": [
             {
@@ -1344,6 +1353,7 @@ def set_current_watch_horizon(db: Session, frontier: str) -> models.SubstrateEnt
         None,
     )
     if existing is None:
+        previous = FROZEN_FRONTIER
         horizon = world_graph.create_entity(
             db,
             entity_type=HORIZON_DOMAIN_ENTITY_TYPE,
@@ -1356,6 +1366,17 @@ def set_current_watch_horizon(db: Session, frontier: str) -> models.SubstrateEnt
                 "unparked_at": None,
             },
             created_by="owner",
+        )
+        world_graph.create_event(
+            db,
+            event_type="state_changed",
+            source="owner",
+            entity_id=horizon.id,
+            payload={
+                "change": "watch_horizon_initialized",
+                "previous": previous,
+                "current": text,
+            },
         )
     else:
         previous = existing.display_name.removeprefix("Horizon: ")

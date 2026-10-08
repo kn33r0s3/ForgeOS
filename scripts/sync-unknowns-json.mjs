@@ -107,6 +107,8 @@ export interface DiscoveryUnknown {
 export const discoveryUnknowns: DiscoveryUnknown[] = [
 ${tsRows}
 ];
+
+export const unknownsCount = discoveryUnknowns.length;
 `;
 writeFileSync(tsPath, ts);
 console.log(

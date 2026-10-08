@@ -145,7 +145,8 @@ function RipenessList() {
       <p className="mt-1 text-sm text-muted">
         Open unknowns ranked by earned value — evidence tier first, then the
         WTP hypothesis as tiebreaker, doable now before needs-a-human. Live
-        from the engine's fuel.
+        from the engine's fuel. This is a local round aid, not Hami's global
+        next-experiment selector.
       </p>
       <div className="mt-4 grid gap-3">
         {queue.map((item) => (

@@ -896,13 +896,27 @@ def test_seed_founding_bets(db):
         assert attrs["decision_rule"]
         assert attrs["skeptic_case"]
         assert attrs["affordable_loss"]["money_at_risk"] == "Rs 0 cash."
-        assert attrs["status"] == "live"
+        if attrs["claim"].startswith("Bet A"):
+            assert attrs["status"] == "paused"
+        else:
+            assert attrs["status"] == "live"
     # Idempotent: second run creates nothing.
     assert operating_v4.seed_founding_bets(db) == []
-    # A killed bet is never resurrected by re-seeding.
-    operating_v4.decide_bet(db, created[0].id, "killed", notes="test kill")
+    # The paused seller-response probe remains paused, not killed or selected.
+    selector = operating_v4.select_next_candidates(db)
+    seller_probe = next(
+        item for item in selector["ranked_candidates"]
+        if item["claim_or_question"].startswith("Bet A")
+    )
+    assert seller_probe["status"] == "paused"
+    assert seller_probe["candidate_id"] not in {
+        item["candidate_id"] for item in selector["selected_slate"]
+    }
+    assert "Paused Bet" in seller_probe["selection_reason"]
+    # A different historical seed can be killed and is not resurrected.
+    operating_v4.decide_bet(db, created[1].id, "killed", notes="test kill")
     assert operating_v4.seed_founding_bets(db) == []
-    assert len(operating_v4.live_bets(db)) == 2
+    assert len(operating_v4.live_bets(db)) == 1
 
 
 def test_seed_founding_bets_respects_wip_cap(db):
@@ -918,3 +932,356 @@ def test_seed_founding_bets_respects_wip_cap(db):
         )
     # WIP cap full with other bets: seed skips instead of raising.
     assert operating_v4.seed_founding_bets(db) == []
+
+
+def _selection_assessments(**changes):
+    assessments = {
+        dimension: {"level": "low", "provenance": "owner-confirmed"}
+        for dimension in operating_v4.SELECTION_DIMENSIONS
+    }
+    for dimension, value in changes.items():
+        if value is None:
+            assessments[dimension] = {
+                "level": "unassessed",
+                "provenance": "unassessed",
+            }
+        elif isinstance(value, tuple):
+            level, provenance = value
+            assessments[dimension] = {"level": level, "provenance": provenance}
+        else:
+            assessments[dimension] = {
+                "level": value,
+                "provenance": "owner-confirmed",
+            }
+    return assessments
+
+
+def _selection_candidate(db, **changes):
+    values = {
+        "source_unknown_id": "D2",
+        "claim": "A falsifiable question about a binding constraint?",
+        "why_it_matters": "Could change the next strategic capability.",
+        "disconfirming_test": "Observe a defined real-world outcome that contradicts the claim.",
+        "kill_rule": "Stop if the disconfirming outcome is observed.",
+        "consent_requirement": "No contact without explicit affected-party consent.",
+        "bounded_cost": "At most 2 owner hours and Rs 0 cash.",
+        "bounded_harm": "No personal data; stop if trust or privacy risk appears.",
+        "time_to_first_evidence_days": 5,
+        "horizon_relation": "inside",
+        "assessments": _selection_assessments(),
+    }
+    values.update(changes)
+    return operating_v4.create_candidate(db, **values)
+
+
+def _selected_candidate_ids(selection):
+    return {item["candidate_id"] for item in selection["selected_slate"]}
+
+
+def test_candidate_is_only_a_bet_projection_and_does_not_consume_live_slot(db):
+    candidate = _selection_candidate(db)
+    assert candidate.entity_type == operating_v4.BET_ENTITY_TYPE
+    assert isinstance(candidate, models.SubstrateEntity)
+    assert json.loads(candidate.attributes)["status"] == "candidate"
+    assert operating_v4.live_bets(db) == []
+    assert operating_v4.select_next_candidates(db)["available_live_slots"] == 3
+
+
+def test_wtp_alone_cannot_win_global_selection(db):
+    high_wtp = _selection_candidate(db, claim="WTP-only candidate")
+    high_wtp_attrs = json.loads(high_wtp.attributes)
+    high_wtp_attrs["value_hypothesis"] = 3
+    high_wtp.attributes = json.dumps(high_wtp_attrs)
+    broad = _selection_candidate(
+        db,
+        claim="Transferable high-stakes unknown",
+        assessments=_selection_assessments(
+            uncertainty="high",
+            evidence_potential="high",
+            stake="high",
+            transferability="high",
+            capability_gain="high",
+            upside="high",
+        ),
+        time_to_first_evidence_days=30,
+    )
+    broad_attrs = json.loads(broad.attributes)
+    broad_attrs["value_hypothesis"] = 1
+    broad.attributes = json.dumps(broad_attrs)
+    db.commit()
+
+    ranked = operating_v4.select_next_candidates(db)["ranked_candidates"]
+    assert ranked[0]["candidate_id"] == f"bet:{broad.id}"
+
+
+def test_easy_to_test_alone_cannot_win_global_selection(db):
+    easy = _selection_candidate(
+        db,
+        claim="Easy test with low strategic leverage",
+        time_to_first_evidence_days=1,
+        assessments=_selection_assessments(
+            uncertainty="low",
+            evidence_potential="low",
+            stake="low",
+            transferability="low",
+            capability_gain="low",
+            upside="low",
+            cost="low",
+            time="low",
+        ),
+    )
+    consequential = _selection_candidate(
+        db,
+        claim="Harder test of a high-stakes reusable capability",
+        time_to_first_evidence_days=21,
+        assessments=_selection_assessments(
+            uncertainty="high",
+            evidence_potential="high",
+            stake="high",
+            transferability="high",
+            capability_gain="high",
+            upside="high",
+            cost="high",
+            time="high",
+        ),
+    )
+    ranked = operating_v4.select_next_candidates(db)["ranked_candidates"]
+    assert ranked[0]["candidate_id"] == f"bet:{consequential.id}"
+    assert ranked[1]["candidate_id"] == f"bet:{easy.id}"
+
+
+def test_failed_admission_gate_blocks_candidate(db):
+    candidate = _selection_candidate(db, disconfirming_test="")
+    item = next(
+        row for row in operating_v4.select_next_candidates(db)["ranked_candidates"]
+        if row["candidate_id"] == f"bet:{candidate.id}"
+    )
+    assert any("disconfirming test" in blocker for blocker in item["gate_blockers"])
+    assert item["candidate_id"] not in _selected_candidate_ids(
+        operating_v4.select_next_candidates(db)
+    )
+
+
+def test_missing_non_gating_assessment_remains_unassessed(db):
+    candidate = _selection_candidate(
+        db,
+        assessments=_selection_assessments(transferability=None),
+    )
+    item = next(
+        row for row in operating_v4.select_next_candidates(db)["ranked_candidates"]
+        if row["candidate_id"] == f"bet:{candidate.id}"
+    )
+    assert item["assessments"]["transferability"] == {
+        "level": "unassessed",
+        "provenance": "unassessed",
+        "confirmed": False,
+        "is_evidence": False,
+    }
+    assert "transferability assessment" in item["missing_information"]
+
+
+def test_model_proposed_assessment_is_unconfirmed_and_not_ranked_as_evidence(db):
+    low = _selection_candidate(
+        db,
+        claim="Owner-confirmed low stake",
+        assessments=_selection_assessments(stake="low"),
+    )
+    proposed = _selection_candidate(
+        db,
+        claim="Model-proposed high stake",
+        assessments=_selection_assessments(stake=("high", "model-proposed")),
+    )
+    selection = operating_v4.select_next_candidates(db)
+    item = next(
+        row for row in selection["ranked_candidates"]
+        if row["candidate_id"] == f"bet:{proposed.id}"
+    )
+    assert item["assessments"]["stake"]["level"] == "high"
+    assert item["assessments"]["stake"]["provenance"] == "model-proposed"
+    assert item["assessments"]["stake"]["confirmed"] is False
+    assert item["assessments"]["stake"]["is_evidence"] is False
+    assert selection["ranked_candidates"][0]["candidate_id"] == f"bet:{low.id}"
+
+
+def test_kill_rule_is_required_for_admission(db):
+    candidate = _selection_candidate(db, kill_rule="")
+    item = next(
+        row for row in operating_v4.select_next_candidates(db)["ranked_candidates"]
+        if row["candidate_id"] == f"bet:{candidate.id}"
+    )
+    assert any("kill rule" in blocker for blocker in item["gate_blockers"])
+
+
+def test_consent_permission_requirement_is_required_for_admission(db):
+    candidate = _selection_candidate(db, consent_requirement="")
+    item = next(
+        row for row in operating_v4.select_next_candidates(db)["ranked_candidates"]
+        if row["candidate_id"] == f"bet:{candidate.id}"
+    )
+    assert any("consent/permission" in blocker for blocker in item["gate_blockers"])
+
+
+def test_bounded_cost_and_harm_are_required_for_admission(db):
+    candidate = _selection_candidate(
+        db,
+        bounded_cost="",
+        bounded_harm="",
+        assessments=_selection_assessments(cost=None, harm=None),
+    )
+    item = next(
+        row for row in operating_v4.select_next_candidates(db)["ranked_candidates"]
+        if row["candidate_id"] == f"bet:{candidate.id}"
+    )
+    assert any("bounded expected cost" in blocker for blocker in item["gate_blockers"])
+    assert any("bounded expected harm" in blocker for blocker in item["gate_blockers"])
+
+
+def test_outside_horizon_candidate_remains_selectable_for_exploration(db):
+    operating_v4.set_current_watch_horizon(db, "Current local commerce watch")
+    outside = _selection_candidate(
+        db,
+        claim="An explicitly outside-horizon question",
+        horizon_relation="outside",
+        time_to_first_evidence_days=21,
+        assessments=_selection_assessments(
+            uncertainty="high",
+            evidence_potential="high",
+            stake="high",
+            transferability="high",
+        ),
+    )
+    selection = operating_v4.select_next_candidates(db)
+    item = next(row for row in selection["ranked_candidates"] if row["candidate_id"] == f"bet:{outside.id}")
+    assert item["gate_blockers"] == []
+    assert item["candidate_id"] in _selected_candidate_ids(selection)
+    assert selection["portfolio_requirements"]["exploration_outside_watch_horizon"] is True
+
+
+def test_watch_horizon_is_editable_on_existing_horizon_register(db):
+    assert operating_v4.current_watch_horizon(db) == {
+        "frontier": operating_v4.FROZEN_FRONTIER,
+        "is_default": True,
+    }
+    first = operating_v4.set_current_watch_horizon(db, "Initial watch focus")
+    second = operating_v4.set_current_watch_horizon(db, "Updated watch focus")
+    assert first.id == second.id
+    assert operating_v4.current_watch_horizon(db) == {
+        "frontier": "Updated watch focus",
+        "is_default": False,
+    }
+    assert db.query(models.SubstrateEntity).filter_by(
+        entity_type=operating_v4.HORIZON_DOMAIN_ENTITY_TYPE
+    ).count() == 1
+    events = db.query(models.WorldEvent).filter_by(event_type="state_changed").all()
+    assert len(events) == 2
+    assert "Initial watch focus" in events[0].payload
+    assert "Updated watch focus" in events[1].payload
+
+
+def test_live_bet_can_be_paused_without_archiving_or_killing(db):
+    bet = _bet(db)
+    with pytest.raises(ValueError, match="requires an owner rationale"):
+        operating_v4.decide_bet(db, bet.id, "paused")
+    paused = operating_v4.decide_bet(db, bet.id, "paused", notes="Owner paused this probe.")
+    assert paused.status == "active"
+    assert json.loads(paused.attributes)["status"] == "paused"
+    assert len(operating_v4.live_bets(db)) == 0
+
+
+def test_portfolio_selects_overall_exploration_and_fast_candidates(db):
+    strongest = _selection_candidate(
+        db,
+        claim="Strongest in-horizon candidate",
+        horizon_relation="inside",
+        time_to_first_evidence_days=30,
+        assessments=_selection_assessments(
+            uncertainty="high",
+            evidence_potential="high",
+            stake="high",
+            transferability="high",
+            capability_gain="high",
+            upside="high",
+        ),
+    )
+    exploration = _selection_candidate(
+        db,
+        claim="Exploration candidate beyond current horizon",
+        horizon_relation="outside",
+        time_to_first_evidence_days=30,
+    )
+    fast = _selection_candidate(
+        db,
+        claim="Fast evidence candidate",
+        horizon_relation="inside",
+        time_to_first_evidence_days=7,
+    )
+    selection = operating_v4.select_next_candidates(db)
+    selected = _selected_candidate_ids(selection)
+    assert selected == {f"bet:{strongest.id}", f"bet:{exploration.id}", f"bet:{fast.id}"}
+    assert selection["portfolio_requirements"] == {
+        "first_evidence_within_7_days": True,
+        "exploration_outside_watch_horizon": True,
+        "strongest_overall_included": True,
+    }
+    assert selection["portfolio_gaps"] == []
+    assert len(selection["selected_slate"]) == 3
+
+
+def test_candidate_slate_respects_three_live_bet_cap(db):
+    for index in range(3):
+        _bet(db, claim=f"live-{index}")
+    candidate = _selection_candidate(db)
+    selection = operating_v4.select_next_candidates(db)
+    assert len(operating_v4.live_bets(db)) == operating_v4.MAX_LIVE_BETS
+    assert selection["available_live_slots"] == 0
+    assert selection["selected_slate"] == []
+    assert candidate.entity_type == operating_v4.BET_ENTITY_TYPE
+
+
+def test_selection_exposes_human_code_model_responsibility_without_execution(db):
+    selection = operating_v4.select_next_candidates(db)
+    stages = {item["stage"] for item in selection["responsibility"]}
+    assert stages == {
+        "unknown / observation",
+        "hypothesis",
+        "candidate selection",
+        "experiment design",
+        "execution",
+        "evidence",
+        "verification",
+        "action",
+        "outcome",
+        "learning",
+        "next unknown",
+    }
+    assert all(item["authorization"] for item in selection["responsibility"])
+    assert not any("execute" in item for item in selection["selected_slate"])
+
+
+def test_owner_only_selection_read_is_enforced(db, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from app.config import settings
+    from app.database import get_db
+    from app.main import app
+
+    monkeypatch.setattr(settings, "FORGE_API_KEY", "selection-owner-test-key")
+
+    def override_get_db():
+        yield db
+
+    app.dependency_overrides[get_db] = override_get_db
+    client = TestClient(app)
+    try:
+        denied = client.get("/opv4/selection")
+        allowed = client.get(
+            "/opv4/selection",
+            headers={"X-API-Key": "selection-owner-test-key"},
+        )
+    finally:
+        client.close()
+        app.dependency_overrides.clear()
+    assert denied.status_code == 401
+    assert allowed.status_code == 200
+    assert "ranked_candidates" in allowed.json()
+    assert "selected_slate" in allowed.json()
