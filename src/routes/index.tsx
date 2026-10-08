@@ -256,6 +256,16 @@ function Hero() {
                   How Hami works <ArrowRight aria-hidden="true" />
                 </Link>
               </Button>
+              <Button asChild variant="ghost" size="lg">
+                <Link to="/providers">
+                  Browse verified services <ArrowRight aria-hidden="true" />
+                </Link>
+              </Button>
+              <Button asChild variant="ghost" size="lg">
+                <Link to="/domain">
+                  Post public work <ArrowRight aria-hidden="true" />
+                </Link>
+              </Button>
             </div>
           </div>
           {/* Right: the loop, framed */}

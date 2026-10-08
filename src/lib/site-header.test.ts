@@ -10,6 +10,12 @@ const HEADER_PATH = join(__dirname, "../components/layout/site-header.tsx");
 describe("SiteHeader responsive account actions", () => {
   const source = readFileSync(HEADER_PATH, "utf-8");
 
+  it("keeps Contact directly reachable from the shared header", () => {
+    assert.match(source, /to="\/contact"/);
+    assert.match(source, /aria-current=\{pathname === "\/contact" \? "page" : undefined\}/);
+    assert.match(source, />\s*Contact\s*<\/Link>/);
+  });
+
   it("mobile drawer contains Join Hami link", () => {
     // The mobile navigation drawer (id="mobile-navigation") must include
     // the Join Hami action, since the header buttons are hidden below sm:.

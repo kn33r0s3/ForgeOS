@@ -310,6 +310,10 @@ describe("Hami public root", () => {
     const discoveries = readFileSync(join(root, "src/routes/discoveries.tsx"), "utf8");
     const header = readFileSync(join(root, "src/components/layout/site-header.tsx"), "utf8");
     const footer = readFileSync(join(root, "src/components/layout/site-footer.tsx"), "utf8");
+    const projectInquiryCta = readFileSync(
+      join(root, "src/components/pages/project-inquiry-cta.tsx"),
+      "utf8",
+    );
     const businesses = readFileSync(join(root, "src/routes/group.businesses.tsx"), "utf8");
     const forgeBot = readFileSync(join(root, "src/routes/forge-bot-intake.tsx"), "utf8");
     const owner = readFileSync(join(root, "src/routes/owner.tsx"), "utf8");
@@ -346,6 +350,8 @@ describe("Hami public root", () => {
     assert.match(home, /See all findings/);
     assert.match(home, /See all unknowns/);
     assert.match(home, /See all experiments/);
+    assert.match(home, /to="\/providers"[\s\S]*Browse verified services/);
+    assert.match(home, /to="\/domain"[\s\S]*Post public work/);
     assert.doesNotMatch(home, /to="\/prototype\/inbox"|Try the free inbox tool/);
     assert.match(
       home,
@@ -400,6 +406,11 @@ describe("Hami public root", () => {
     assert.doesNotMatch(footer, /Share a need/);
     assert.doesNotMatch(footer, /Work board/);
     assert.match(footer, /Built in Kathmandu/);
+    assert.match(footer, /to="\/contact"/);
+    assert.match(footer, /to: "\/providers"/);
+    assert.match(footer, /to: "\/domain"/);
+    assert.match(projectInquiryCta, /to="\/providers"/);
+    assert.match(projectInquiryCta, /to="\/domain"/);
     assert.ok(NAV.some((item) => item.label === "Home" && item.to === "/"));
     assert.ok(NAV.some((item) => item.label === "About" && item.to === "/about"));
     assert.ok(NAV.some((item) => item.label === "Findings" && item.to === "/discoveries"));
@@ -410,10 +421,12 @@ describe("Hami public root", () => {
     assert.doesNotMatch(footer, /Inbox prototype/);
     assert.doesNotMatch(footer, /\/prototype\/inbox/);
     assert.doesNotMatch(footer, /Experiment 1 \(not started\)/);
-    assert.ok(
-      !NAV.some((item) => (item.label as string) === "Contact"),
-      "Contact is in the nav without a real contact route",
+    assert.equal(
+      NAV.some((item) => (item.label as string) === "Contact"),
+      false,
+      "Contact remains a compact header action rather than another primary nav item",
     );
+    assert.match(header, /to="\/contact"/);
     assert.match(header, /aria-current={active \? "page" : undefined}/);
     assert.match(businesses, /to="\/forge-bot-intake"/);
     assert.match(businesses, /online intake is closed/i);

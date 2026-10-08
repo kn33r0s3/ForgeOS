@@ -16,6 +16,8 @@ const RECORD_LINKS = [
 
 const CURRENT_LINKS = [
   { label: "Action state", to: "/actions" },
+  { label: "Browse verified services", to: "/providers" },
+  { label: "Post public work", to: "/domain" },
 ] as const;
 
 const LEGAL_LINKS = [
@@ -60,7 +62,7 @@ export function SiteFooter() {
             </Link>
           ))}
         </FooterColumn>
-        <FooterColumn title="Current action status">
+        <FooterColumn title="Public work & status">
           {CURRENT_LINKS.map((item) => (
             <Link key={item.to} to={item.to} className={LINK}>
               {item.label}
@@ -75,6 +77,9 @@ export function SiteFooter() {
           ))}
         </FooterColumn>
         <FooterColumn title="Connect">
+          <Link to="/contact" className={LINK}>
+            Contact Hami
+          </Link>
           {SITE.url ? (
             <a href={SITE.url} className={LINK}>
               {SITE.domain}

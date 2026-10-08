@@ -78,6 +78,14 @@ export function SiteHeader() {
             })}
           </nav>
           <div className="flex items-center gap-2">
+            <Link
+              to="/contact"
+              aria-current={pathname === "/contact" ? "page" : undefined}
+              className="inline-flex min-h-11 items-center justify-center rounded-card border-2 px-3 text-sm font-extrabold transition-colors hover:bg-[#F2A33A]/10"
+              style={{ borderColor: "#F2A33A", color: "#F2A33A" }}
+            >
+              Contact
+            </Link>
             {isPending ? (
               <span
                 role="status"
