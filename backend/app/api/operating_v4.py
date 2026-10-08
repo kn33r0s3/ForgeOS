@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app import models, security
 from app.database import get_db
-from app.services import operating_v4
+from app.services import discovery_selection, operating_v4
 
 router = APIRouter(prefix="/opv4", tags=["operating-v4"])
 
@@ -43,7 +43,7 @@ class CandidateAssessmentIn(BaseModel):
 
 
 class CandidateIn(BaseModel):
-    source_unknown_id: str
+    source_unknown_id: Optional[str] = None
     claim: Optional[str] = None
     why_it_matters: Optional[str] = None
     disconfirming_test: Optional[str] = None
@@ -53,6 +53,9 @@ class CandidateIn(BaseModel):
     bounded_harm: Optional[str] = None
     time_to_first_evidence_days: Optional[int] = Field(default=None, ge=0)
     horizon_relation: Literal["inside", "outside", "unassessed"] = "unassessed"
+    candidate_lane: Literal["known_unknown", "unknown_unknown_discovery"] = "known_unknown"
+    discovery_source: Optional[str] = None
+    discovery_basis: Optional[str] = None
     assessments: dict[str, CandidateAssessmentIn] = Field(default_factory=dict)
 
 
@@ -157,6 +160,20 @@ def get_selection(request: Request, db: Session = Depends(get_db)):
     return operating_v4.select_next_candidates(db)
 
 
+@router.get(
+    "/discovery/candidates",
+    description=(
+        "Owner-only, read-only grounded discovery probes. Proposes "
+        "unknown-unknown experiments from existing repository data; it does "
+        "not persist candidates, and every proposal is model-proposed and "
+        "unconfirmed until the owner acts."
+    ),
+)
+def get_discovery_candidates(request: Request, db: Session = Depends(get_db)):
+    _owner(request)
+    return discovery_selection.generate_discovery_candidates(db)
+
+
 @router.post(
     "/bets/candidates",
     description="Record an owner-proposed candidate Bet for selection only; no execution.",
@@ -176,6 +193,9 @@ def create_candidate(payload: CandidateIn, request: Request, db: Session = Depen
             bounded_harm=payload.bounded_harm,
             time_to_first_evidence_days=payload.time_to_first_evidence_days,
             horizon_relation=payload.horizon_relation,
+            candidate_lane=payload.candidate_lane,
+            discovery_source=payload.discovery_source,
+            discovery_basis=payload.discovery_basis,
             assessments={
                 dimension: assessment.model_dump()
                 for dimension, assessment in payload.assessments.items()

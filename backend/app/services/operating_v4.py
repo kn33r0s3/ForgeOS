@@ -43,6 +43,18 @@ SELECTION_DIMENSIONS = (
     "reversibility",
     "harm",
 )
+# Two experiment lanes on the SAME candidate/Bet projection. Discovery is a
+# classification, not a new table, primitive, or queue.
+CANDIDATE_LANES = ("known_unknown", "unknown_unknown_discovery")
+# Grounded origins for discovery candidates. A source that cannot be grounded
+# in existing repository data is reported UNAVAILABLE, never fabricated.
+DISCOVERY_SOURCES = (
+    "map_gap",
+    "evidence_contradiction",
+    "outcome_anomaly",
+    "capability_gap",
+    "horizon_escape",
+)
 WATCH_HORIZON_NAME = "__current_watch_horizon__"
 
 PROOF_LEVELS = {
@@ -186,7 +198,7 @@ def _unknown_catalog() -> dict[str, dict]:
 def create_candidate(
     db: Session,
     *,
-    source_unknown_id: str,
+    source_unknown_id: Optional[str],
     claim: Optional[str],
     why_it_matters: Optional[str],
     disconfirming_test: Optional[str],
@@ -197,19 +209,68 @@ def create_candidate(
     time_to_first_evidence_days: Optional[int],
     horizon_relation: str,
     assessments: dict,
+    candidate_lane: str = "known_unknown",
+    discovery_source: Optional[str] = None,
+    discovery_basis: Optional[str] = None,
+    provisional_unknown: bool = False,
+    origin_bet_id: Optional[int] = None,
+    origin_evidence_id: Optional[int] = None,
 ) -> models.SubstrateEntity:
     """Store an owner-proposed candidate on the existing Bet projection.
 
     This records a proposal only. It neither selects a live Bet nor authorizes
     or executes the test.
+
+    Two lanes share this seam. ``known_unknown`` tests an explicitly
+    represented unknown (source_unknown_id required, unless the candidate is a
+    provisional unknown converted from a discovery finding). The
+    ``unknown_unknown_discovery`` lane probes the boundary of current
+    knowledge; it needs no pre-existing named unknown, but it must name the
+    grounded discovery source and the observable reason Hami might be missing
+    something (discovery_basis). Both lanes pass the same admission gates.
     """
+    if candidate_lane not in CANDIDATE_LANES:
+        raise ValueError(f"candidate_lane must be one of {CANDIDATE_LANES}.")
     if time_to_first_evidence_days is not None and time_to_first_evidence_days < 0:
         raise ValueError("time_to_first_evidence_days cannot be negative.")
     if horizon_relation not in ("inside", "outside", "unassessed"):
         raise ValueError("horizon_relation must be inside|outside|unassessed")
-    unknown = _unknown_catalog().get(source_unknown_id)
-    if unknown is None:
-        raise ValueError(f"Unknown {source_unknown_id!r} is not in UNKNOWN_MAP.md.")
+    unknown = None
+    if candidate_lane == "known_unknown":
+        if discovery_source is not None or (discovery_basis or "").strip():
+            raise ValueError(
+                "discovery_source/discovery_basis belong to the "
+                "unknown_unknown_discovery lane only."
+            )
+        if source_unknown_id is None:
+            if not provisional_unknown:
+                raise ValueError(
+                    "A known-unknown candidate requires a source_unknown_id, "
+                    "or provisional_unknown=True when converted from a "
+                    "discovery finding."
+                )
+        else:
+            unknown = _unknown_catalog().get(source_unknown_id)
+            if unknown is None:
+                raise ValueError(
+                    f"Unknown {source_unknown_id!r} is not in UNKNOWN_MAP.md."
+                )
+    else:  # unknown_unknown_discovery
+        if not discovery_source or discovery_source not in DISCOVERY_SOURCES:
+            raise ValueError(
+                f"discovery_source must be one of {DISCOVERY_SOURCES}."
+            )
+        if not (discovery_basis or "").strip():
+            raise ValueError(
+                "A discovery candidate requires a discovery_basis: the "
+                "observable reason Hami might be missing something."
+            )
+        if source_unknown_id is not None:
+            unknown = _unknown_catalog().get(source_unknown_id)
+            if unknown is None:
+                raise ValueError(
+                    f"Unknown {source_unknown_id!r} is not in UNKNOWN_MAP.md."
+                )
 
     normalized_assessments = {}
     for dimension in SELECTION_DIMENSIONS:
@@ -237,18 +298,24 @@ def create_candidate(
             "is_evidence": False,
         }
 
-    claim_text = (claim or unknown["question"]).strip()
+    claim_text = (claim or (unknown["question"] if unknown else "")).strip()
     if not claim_text:
         raise ValueError("A candidate requires a claim or question.")
     attributes = {
         "claim": claim_text,
-        "constraint": (why_it_matters or unknown.get("stake") or "").strip(),
+        "constraint": (why_it_matters or (unknown.get("stake") if unknown else "") or "").strip(),
         "test": (disconfirming_test or "").strip(),
         "kill_criterion": (kill_rule or "").strip(),
         "decision_rule": "",
         "skeptic_case": "",
         "status": "candidate",
         "source_unknown_id": source_unknown_id,
+        "candidate_lane": candidate_lane,
+        "discovery_source": discovery_source,
+        "discovery_basis": (discovery_basis or "").strip(),
+        "provisional_unknown": bool(provisional_unknown),
+        "origin_bet_id": origin_bet_id,
+        "origin_evidence_id": origin_evidence_id,
         "consent_requirement": (consent_requirement or "").strip(),
         "bounded_cost": (bounded_cost or "").strip(),
         "bounded_harm": (bounded_harm or "").strip(),
@@ -413,6 +480,16 @@ def select_next_candidates(db: Session) -> dict:
             "candidate_id": f"bet:{row.id}",
             "candidate": row.display_name,
             "source_unknown_id": source_id,
+            "candidate_lane": attributes.get("candidate_lane", "known_unknown"),
+            "discovery_source": attributes.get("discovery_source"),
+            "discovery_basis": attributes.get("discovery_basis") or "",
+            "provisional_unknown": bool(attributes.get("provisional_unknown")),
+            "origin_bet_id": attributes.get("origin_bet_id"),
+            "origin_evidence_id": attributes.get("origin_evidence_id"),
+            "model_proposed": any(
+                (raw_assessments.get(dimension) or {}).get("provenance") == "model-proposed"
+                for dimension in SELECTION_DIMENSIONS
+            ),
             "claim_or_question": attributes.get("claim") or "",
             "why_it_matters": attributes.get("constraint") or (
                 source.get("stake", "") if source else ""
