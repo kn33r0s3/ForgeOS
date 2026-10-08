@@ -4,6 +4,7 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
 
+from app import security
 from app.database import SessionLocal
 from app.services.triage_signal_bridge import safe_record_paid_triage
 
@@ -31,6 +32,7 @@ HOP_BY_HOP = {
 
 @router.post("/triage")
 async def triage(request: Request):
+    security.require_owner_api_key(request)
     body = await request.body()
 
     if len(body) > 12 * 1024:
