@@ -101,6 +101,13 @@ BUILTIN_KINDS: dict[str, str] = {
     "investigation_method": "A way of investigating that the current methods do not cover.",
     "resource_candidate": "Something recorded that may be an unused or overlooked resource.",
     "reason_to_stop": "Recorded evidence that a line of inquiry should stop.",
+    # Recovered from PR #15 (Step 3B-1): unknown-unknown discovery finding types.
+    "new_unknown": "A previously unrecognized unknown that Hami should now track.",
+    "updated_unknown": "A known unknown whose understanding has materially changed.",
+    "anomaly": "An observed outcome or state the current model does not explain.",
+    "blind_spot": "A territory Hami is not looking at where unknowns likely live.",
+    "new_relationship": "A previously unrecognized relationship between recorded entities.",
+    "no_material_discovery": "A bounded probe that found nothing material (explicit negative result).",
 }
 BUILTIN_RELATION_TYPES: dict[str, str] = {
     "may_relate": "A possible, untested connection proposed by a discovery method.",
@@ -1008,6 +1015,231 @@ def _refuted_basis_stop(ctx: DiscoveryContext) -> Iterable[Finding]:
 
 _SUBSTRATE = ("substrate.entities", "substrate.relations", "substrate.evidence")
 
+
+# ---------------------------------------------------------------------------
+# Step 3B-1: Recovered from PR #15 (unknown-unknown discovery loop).
+# These 5 methods adapt PR #15's grounded sources as DiscoveryMethods.
+# All are DB queries (no network); empty results are honest "no discovery".
+# ---------------------------------------------------------------------------
+
+# Local copy of PR #15's watch-horizon marker (not in main's operating_v4).
+_PR15_WATCH_HORIZON_NAME = "__current_watch_horizon__"
+
+
+def _pr15_horizon_attrs(h: models.SubstrateEntity) -> dict:
+    try:
+        return json.loads(h.attributes or "{}")
+    except (ValueError, TypeError):
+        return {}
+
+
+def _pr15_bet_text(db) -> list[tuple[int, str]]:
+    """(id, searchable text) for live candidate Bet projections."""
+    from app.services import operating_v4 as _opv4
+
+    rows = (
+        db.query(models.SubstrateEntity)
+        .filter(models.SubstrateEntity.entity_type == _opv4.BET_ENTITY_TYPE)
+        .all()
+    )
+    out = []
+    for row in rows:
+        try:
+            attrs = json.loads(row.attributes or "{}")
+        except (ValueError, TypeError):
+            attrs = {}
+        text = " ".join(
+            str(attrs.get(key) or "") for key in ("claim", "constraint", "test")
+        ).lower()
+        out.append((row.id, text))
+    return out
+
+
+def _map_gap(ctx: DiscoveryContext) -> Iterable[Finding]:
+    """Owner-curated horizon domains with zero candidate coverage. (PR #15)"""
+    from app.services import operating_v4 as _opv4
+
+    db = ctx.db
+    bet_text = _pr15_bet_text(db)
+    for h in _opv4.list_horizon_domains(db):
+        attrs = _pr15_horizon_attrs(h)
+        if attrs.get("name") == _PR15_WATCH_HORIZON_NAME:
+            continue
+        if attrs.get("status") == "parked":
+            continue
+        name = (attrs.get("name") or "").strip()
+        if not name:
+            continue
+        covered = any(name.lower() in text for _, text in bet_text)
+        if not covered:
+            yield Finding(
+                kind="new_unknown",
+                key=f"map-gap:{h.id}",
+                statement=(
+                    f"Horizon domain '{name}' is owner-curated as important, yet no "
+                    "candidate Bet references it. Hami may be missing the questions "
+                    "that live in this territory."
+                ),
+                basis=(BasisRef("entity", h.id),),
+                epistemic_state="possible",
+                subject_entity_ids=(h.id,),
+                facets={"source": "map_gap", "horizon_domain": name,
+                        "horizon_relation": "inside", "provenance": "model-proposed",
+                        "confirmed": False},
+                next_step=(
+                    f"Bounded review of existing evidence touching '{name}'; "
+                    "list candidate unknowns it suggests."
+                ),
+                follow_up_questions=(
+                    f"There are material unknowns in '{name}' that no current candidate investigates.",
+                ),
+            )
+
+
+def _superseded_belief(ctx: DiscoveryContext) -> Iterable[Finding]:
+    """Beliefs superseded by other beliefs: the record disagrees with itself. (PR #15)"""
+    db = ctx.db
+    superseded = (
+        db.query(models.Belief)
+        .filter(models.Belief.merged_into_id.isnot(None))
+        .order_by(models.Belief.id.asc())
+        .all()
+    )
+    for belief in superseded:
+        statement = (belief.statement or "")[:160]
+        yield Finding(
+            kind="contradiction",
+            key=f"superseded-belief:{belief.id}",
+            statement=(
+                f"Belief #{belief.id} ('{statement}…') was superseded by belief "
+                f"#{belief.merged_into_id}. The assumption that produced the wrong "
+                "belief may have infected sibling conclusions Hami still holds."
+            ),
+            basis=(BasisRef("entity", belief.id),) if hasattr(belief, "id") else (),
+            epistemic_state="hypothesized",
+            facets={"source": "evidence_contradiction", "superseded_belief_id": belief.id,
+                    "merged_into_id": belief.merged_into_id,
+                    "provenance": "model-proposed", "confirmed": False},
+            next_step=(
+                "Trace the superseded belief's basis; check sibling beliefs "
+                "built on the same assumption."
+            ),
+            follow_up_questions=(
+                "The flawed assumption behind the superseded belief also supports other current beliefs.",
+            ),
+        )
+
+
+def _outcome_anomaly(ctx: DiscoveryContext) -> Iterable[Finding]:
+    """Real outcomes that failed their objective or are disputed. (PR #15)"""
+    db = ctx.db
+    anomalies = (
+        db.query(models.Outcome)
+        .filter(
+            ((models.Outcome.success.is_(False)) | (models.Outcome.verification_state == "DISPUTED")),
+        )
+        .order_by(models.Outcome.id.asc())
+        .all()
+    )
+    for outcome in anomalies:
+        label = (
+            "disputed" if outcome.verification_state == "DISPUTED"
+            else "failed its objective"
+        )
+        detail = (outcome.qualitative_result or outcome.outcome_type or "")[:160]
+        yield Finding(
+            kind="anomaly",
+            key=f"outcome-anomaly:{outcome.id}",
+            statement=(
+                f"Outcome #{outcome.id} ({outcome.outcome_type}) {label}: "
+                f"'{detail}…'. The current model did not predict or explain this."
+            ),
+            basis=(BasisRef("entity", outcome.id),),
+            epistemic_state="possible",
+            facets={"source": "outcome_anomaly", "outcome_id": outcome.id,
+                    "outcome_type": outcome.outcome_type, "label": label,
+                    "provenance": "model-proposed", "confirmed": False},
+            next_step=(
+                "Reconstruct the causal chain behind the outcome; name the "
+                "variable the model lacks."
+            ),
+            follow_up_questions=(
+                "The anomalous outcome reveals a missing variable in Hami's model.",
+            ),
+        )
+
+
+def _pending_capability(ctx: DiscoveryContext) -> Iterable[Finding]:
+    """Capabilities the ledger says are needed but not yet active. (PR #15)"""
+    db = ctx.db
+    pending = (
+        db.query(models.ForgeCapability)
+        .filter(models.ForgeCapability.status.in_(("proposed", "building")))
+        .order_by(models.ForgeCapability.id.asc())
+        .all()
+    )
+    for cap in pending:
+        yield Finding(
+            kind="capability_gap",
+            key=f"pending-capability:{cap.id}",
+            statement=(
+                f"Capability '{cap.name}' is '{cap.status}', not active. "
+                "Investigations it would enable are currently impossible, "
+                "so unknowns in its territory cannot even be asked."
+            ),
+            basis=(BasisRef("capability", cap.id),),
+            epistemic_state="possible",
+            facets={"source": "capability_gap", "capability_id": cap.id,
+                    "capability_name": cap.name, "status": cap.status,
+                    "provenance": "model-proposed", "confirmed": False},
+            next_step=(
+                "Enumerate the investigations the missing capability blocks; "
+                "assess which territories stay dark without it."
+            ),
+            follow_up_questions=(
+                f"Activating '{cap.name}' would expose material unknowns Hami cannot currently see.",
+            ),
+        )
+
+
+def _horizon_escape(ctx: DiscoveryContext) -> Iterable[Finding]:
+    """Parked domains: owner-acknowledged territory outside the watch horizon. (PR #15)"""
+    from app.services import operating_v4 as _opv4
+
+    db = ctx.db
+    for h in _opv4.list_horizon_domains(db):
+        attrs = _pr15_horizon_attrs(h)
+        if attrs.get("name") == _PR15_WATCH_HORIZON_NAME:
+            continue
+        if attrs.get("status") != "parked":
+            continue
+        name = (attrs.get("name") or "").strip()
+        if not name:
+            continue
+        reason = (attrs.get("reason_parked") or "no reason recorded")[:160]
+        yield Finding(
+            kind="blind_spot",
+            key=f"horizon-escape:{h.id}",
+            statement=(
+                f"Domain '{name}' is parked ({reason}). The watch horizon is a focus, "
+                "not a universe boundary; unknown unknowns are most likely where "
+                "Hami is not looking."
+            ),
+            basis=(BasisRef("entity", h.id),),
+            epistemic_state="possible",
+            subject_entity_ids=(h.id,),
+            facets={"source": "horizon_escape", "parked_domain": name,
+                    "reason_parked": reason, "horizon_relation": "outside",
+                    "provenance": "model-proposed", "confirmed": False},
+            next_step=(
+                f"Bounded probe of '{name}' for anomalies, contradictions, "
+                "or unasked questions."
+            ),
+            follow_up_questions=(
+                f"There are material unknowns in parked domain '{name}'.",
+            ),
+        )
+
 DEFAULT_REGISTRY = DiscoveryMethodRegistry([
     DiscoveryMethod("evidence_contradiction", "1",
                     "Subjects whose recorded evidence both supports and refutes them, including held assumptions.",
@@ -1033,4 +1265,20 @@ DEFAULT_REGISTRY = DiscoveryMethodRegistry([
     DiscoveryMethod("refuted_basis_stop", "1",
                     "Earlier discoveries or proposed relations that evidence has refuted.",
                     _refuted_basis_stop, emits=("reason_to_stop",), requires=_SUBSTRATE),
+    # Step 3B-1: recovered from PR #15 (unknown-unknown discovery loop).
+    DiscoveryMethod("map_gap", "1",
+                    "Owner-curated horizon domains with zero candidate coverage.",
+                    _map_gap, emits=("new_unknown",), requires=("substrate.entities",)),
+    DiscoveryMethod("superseded_belief", "1",
+                    "Beliefs superseded by other beliefs; flawed assumptions may persist.",
+                    _superseded_belief, emits=("contradiction",), requires=("substrate.entities",)),
+    DiscoveryMethod("outcome_anomaly", "1",
+                    "Real outcomes that failed their objective or are disputed.",
+                    _outcome_anomaly, emits=("anomaly",), requires=("substrate.entities",)),
+    DiscoveryMethod("pending_capability", "1",
+                    "Capabilities the ledger says are needed but not yet active.",
+                    _pending_capability, emits=("capability_gap",), requires=("substrate.capabilities",)),
+    DiscoveryMethod("horizon_escape", "1",
+                    "Parked domains outside the watch horizon where unknowns likely live.",
+                    _horizon_escape, emits=("blind_spot",), requires=("substrate.entities",)),
 ])
