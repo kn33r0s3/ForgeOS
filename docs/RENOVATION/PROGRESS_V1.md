@@ -1,0 +1,38 @@
+LAST DONE STEP: 37
+- step 1 done 2026-10-08 08:23 | proof: pwd shows /home/hatch/workspace/repos/ForgeOS and ls shows AGENTS.md README.md package.json vercel.json backend src
+- step 2 done 2026-10-08 08:23 | proof: ls docs/RENOVATION shows HAMI_AGENT_PLAYBOOK.txt playbook_cli.py PROGRESS.md
+- step 3 done 2026-10-08 08:23 | proof: Read full AGENTS.md; confirmed drive-owner-dependency-to-zero, bootstrap rule, explicit-auth-before-contact/publish/spend, REAL TEST MOCK HYPOTHESIS distinct
+- step 4 done 2026-10-08 08:23 | proof: docs/RENOVATION/DECISIONS.md exists with the required first line and the four rules under Rules I read
+- step 5 done 2026-10-08 08:23 | proof: Read full README.md; the OBSERVE VERIFY UNDERSTAND DECIDE ACT MEASURE LEARN loop is stated verbatim and tests never count as customer evidence
+- step 6 done 2026-10-08 08:23 | proof: git status shows On branch main and does not say not a git repository
+- step 7 done 2026-10-08 08:23 | proof: cat docs/RENOVATION/START_COMMIT.txt shows 10 commit lines
+- step 8 done 2026-10-08 08:23 | proof: Owner override: did NOT create renovation branch; stayed on main per explicit direct-to-main order which beats playbook stop sign 6
+- step 9 done 2026-10-08 08:24 | proof: pre-renovation tag already exists exactly once pointing at 7008111 pre-renovation state; did not move it
+- step 10 done 2026-10-08 08:24 | proof: docs/RENOVATION/OWNER_QUESTIONS.md created with the required first line
+- step 11 done 2026-10-08 08:24 | proof: ls docs/CAPABILITY_QUEUE.md shows the file exists
+- step 12 done 2026-10-08 08:24 | proof: git log --oneline -n 1 shows 78ae82f renovation: start
+- step 13 done 2026-10-08 08:24 | proof: Gate: tag pre-renovation present, all three notebook files exist, four AGENTS rules repeatable; branch line is main not renovation by explicit owner direct-to-main override of stop sign 6
+- step 14 done 2026-10-08 08:24 | proof: docs/RENOVATION/00_MAP.md exists with all eleven required headings
+- step 15 done 2026-10-08 08:24 | proof: All 18 folders have one line in 00_MAP.md marked SEEN or NOT PRESENT (4 folders verified absent)
+- step 16 done 2026-10-08 08:24 | proof: Deploy note covers web Vite root folder, api FastAPI backend folder, daily cron on /api/scheduled/cycle, and /api/* routed to api service
+- step 17 done 2026-10-08 08:24 | proof: Frontends note lists src/routes/index.tsx src/routes/about.tsx and the two public-copy test files
+- step 18 done 2026-10-08 08:24 | proof: skipped, found
+- step 19 done 2026-10-08 08:25 | proof: ROOT APP ROUTES lists all 38 route files seen in src/routes/
+- step 20 done 2026-10-08 08:25 | proof: Wrote the frontend/ line with real evidence: ls shows no frontend dir; legacy Next.js is at docs/archive/legacy-frontend with next 15.5.24
+- step 21 done 2026-10-08 08:25 | proof: Both server/ and scripts/ lines written in 00_MAP.md and marked DO NOT TOUCH
+- step 22 done 2026-10-08 08:25 | proof: Backend note lists all 13 README layers each marked EXISTS with its proving service file
+- step 23 done 2026-10-08 08:25 | proof: Three answers written: what evidence-triage does, how it starts, and that docker-compose deploys it
+- step 24 done 2026-10-08 08:25 | proof: Three lines written: migrations SQL files, storage local db+log, verification 23 artifacts
+- step 25 done 2026-10-08 08:25 | proof: Wrote belongs to Hami? UNKNOWN with the folder inspected, README absent, nothing changed
+- step 26 done 2026-10-08 08:36 | proof: baseline_backend_tests.txt contains 1023 passed 2 skipped in 372.83s
+- step 27 done 2026-10-08 08:36 | proof: baseline_typecheck.txt exists; tsc --noEmit passed with zero errors; wrote PASS under Tests
+- step 28 done 2026-10-08 08:37 | proof: baseline_build.txt exists; npm run build exit 0 with zero errors; wrote PASS under Tests
+- step 29 done 2026-10-08 08:37 | proof: baseline_lint.txt exists; eslint exit 0 with 0 errors and 1 pre-existing warning; wrote PASS under Tests
+- step 30 done 2026-10-08 08:37 | proof: Five lines written under Missing docs: 2 EXISTS 3 MISSING as ls showed
+- step 31 done 2026-10-08 08:37 | proof: Dirty files list written: no .DS_Store, no logs/screenshots/attachments, no opencode.jsonc.bad, no .node_modules.lock
+- step 32 done 2026-10-08 08:37 | proof: Two files over 1MB listed with sizes: hami-home.png 1.1M and forge.db 1.6M
+- step 33 done 2026-10-08 08:38 | proof: Secret risk section lists 96 matched file names only; verified no real secret values exist
+- step 34 done 2026-10-08 08:38 | proof: Short localhost list written under Backend: all matches are dev/test/local-infra, none production-breaking
+- step 35 done 2026-10-08 08:38 | proof: Three cron lines written; added WARNING line to OWNER_QUESTIONS.md since the cycle can email the owner when legacy+SMTP enabled
+- step 36 done 2026-10-08 08:38 | proof: Env names list written with names only and no values
+- step 37 done 2026-10-08 08:38 | proof: Three blockers copied under Questions from docs/CAPABILITY_QUEUE.md
