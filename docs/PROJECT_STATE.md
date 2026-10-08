@@ -1,30 +1,50 @@
 # PROJECT STATE — Hami (ForgeOS)
 
 > One page, always current. Updated at the end of every task.
-> Last updated: 2026-10-05. HEAD: `7dc0e1f` (main).
+> Last updated: 2026-10-08. HEAD: `main` (Batch 14 commits are local and not pushed).
+
+## Current maintenance state (2026-10-08)
+
+- Batch 14 adds autonomy tiers, owner review for Tier 2 paths, CI guards,
+  grouped patch/minor Dependabot updates, nightly reports, and read-only
+  production smoke checks. Intake and `FORGE_BOT_LIVE` were not changed.
+- Main protection is configured for strict CI checks and one code-owner
+  approval; admin enforcement is on. Repository auto-merge is enabled for
+  check-gated Dependabot PRs. An owner-authored Tier 2 PR needs a different
+  eligible reviewer because self-approval and admin bypass are disabled.
+- Local verification: backend SQLite suite 916 passed / 2 skipped; frontend
+  tests, typecheck, build, route smoke, and guard tests passed. Lint has one
+  pre-existing Fast Refresh warning and no errors.
+- The commits are not pushed, so Actions and production-only GET checks have
+  not run. No production request or write was made during this batch.
+- The slow-reply seller probe is paused historical material, not the active
+  frontier. No contact or resume action is authorized by this update.
 
 ## What exists
 
 **Public pages (live):** Home `/`, Findings `/discoveries`, Unknowns `/unknowns`,
 Experiments `/experiments`, About `/about`, Services `/services`, Group `/group`,
-Needs `/needs`, Action state `/actions`, Inbox prototype `/prototype/inbox`,
-Terms `/terms`, Privacy `/privacy`, Login `/login`.
+Needs `/needs`, Action state `/actions`, Terms `/terms`, Privacy `/privacy`,
+Login `/login`.
+The experiments record remains reachable but is not linked from the home hero,
+top menu, or footer.
 **Owner-only:** Owner console `/owner` (behind login).
-**Hidden (exist, unlinked):** Opportunities, Contact, What we've learned,
-The climb, Feed, Providers, Operations.
+**Hidden (exist, unlinked):** Inbox prototype `/prototype/inbox`, Opportunities,
+Contact, What we've learned, The climb, Feed, Providers, Operations.
 **APIs:** `GET /api/health`, `GET /api/public/*`.
 Full registry: `features.json`.
 
 **Backend:** ForgeOS engine — six primitives (ENTITY, RELATION, EVENT,
 EVIDENCE, CAPABILITY, ACTION), action engine with owner-approval gates,
 intervention gate (one active human-involving intervention), evidence
-ledger, truth progression. 717 backend tests.
+ledger, truth progression. 916 backend tests pass; 2 are skipped.
 
 ## What is live
 
 - Production: `https://haminp.vercel.app` (alias `forge-os-ebon.vercel.app`).
 - `/api/health` returns 200 (`degraded`, not ready — no durable DB in prod).
-- Homepage shows the honest pre-revenue state; Experiment 1 proposed, not started.
+- Homepage shows the honest pre-revenue state. The slow-reply probe is paused,
+  retained as history, and not an active experiment or priority.
 
 ## In progress
 
@@ -37,9 +57,8 @@ ledger, truth progression. 717 backend tests.
 
 ## Blocked
 
-- **ONE NAMED SELLER.** Experiment 1 (slow-reply recovery) cannot start
-  until the owner names one social seller and authorizes first contact.
-  Suggested: name by 2026-10-08/09 so a reply week overlaps Dashain shopping.
+- **PAUSED HISTORICAL PROBE.** The seller slow-reply probe remains paused.
+  No contact is authorized, and it is not Hami's active strategic frontier.
 - **SECURITY (verified 2026-10-05, needs owner decision):** route audit found
   27 unguarded consequential endpoints on forge.router — including
   POST /forge/actions/{id}/approve and /execute (broken guard call raises
@@ -67,7 +86,7 @@ Full log: `DECISIONS.md`.
 
 ## Open owner decisions
 
-- [ ] Name the first seller + authorize first contact (blocks Experiment 1).
+- [ ] Keep the seller probe paused; any future resume requires explicit owner authorization.
 - [ ] Approve/merge: `doctrine`, `frontend-mission`, `owner-gate`, `project-memory` PRs.
 - [ ] Company registration: next step when certificate arrives.
 - [ ] Payment: personal eSewa/Khalti for the first rupee — approve or decline.

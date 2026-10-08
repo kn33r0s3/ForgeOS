@@ -19,9 +19,9 @@
 - Initial blocker found and resolved: `backend/app/api/opportunities.py`
   passed unsupported `description=` to `APIRouter`; a regression test now
   covers successful import and preserves the exploitation-lane description.
-- Current blocker: CI and production workflows have not yet run with this
-  change, so remote check names and the read-only deployed health/heartbeat
-  signals remain unverified.
+- Current blocker: these local commits have not been pushed, so the new
+  workflows have not run remotely and the deployed health/heartbeat signals
+  remain unverified.
 - Verification: the APIRouter incompatibility is fixed with a regression test.
   Backend SQLite suite: 916 passed, 2 skipped. `npm test`: 209 script tests
   and 200 TypeScript tests passed. Typecheck and production build passed; the
@@ -31,10 +31,16 @@
   GET-only production checks. The integrated PR guard passed against current
   source. No production request, live experiment, external contact, or
   production write was performed.
-- GitHub settings inspection: the available `gh` identity has repository admin
-  permission; main currently requires only `backend`, code-owner review is off,
-  and auto-merge is off. A one-time settings update is planned. Do not contact
-  anyone or activate production intake/live behavior.
+- GitHub settings: the available `gh` identity had repository admin permission.
+  Main now requires strict passing checks `backend-tests`, `frontend-tests`,
+  `typecheck`, `lint`, `build`, `route-smoke`, `secret-scan`, and
+  `repository-guards`; one approving code-owner review is required and admin
+  enforcement is on. Repository auto-merge is enabled, and the
+  `tier-2-approved` exception label exists. The required status names have not
+  yet been exercised by a run of the new workflow.
+- Tier 2 review consequence: an author cannot approve their own PR. With admin
+  enforcement enabled, a Tier 2 PR authored by the owner needs another eligible
+  reviewer; this workflow was not bypassed or tested.
 - Metric: `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**;
   this CI work is not a real transaction.
 - Next removable dependency: after the guardrails are committed, verify one
