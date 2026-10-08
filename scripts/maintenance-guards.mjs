@@ -188,7 +188,7 @@ function approvedTier2(event) {
 function runPullRequestGuards() {
   const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
   const base = event.pull_request?.base?.sha;
-  const head = event.pull_request?.head?.sha;
+  const head = git(["rev-parse", "HEAD"]);
   if (!base || !head) {
     throw new Error("Pull request base/head SHA is missing from the GitHub event.");
   }

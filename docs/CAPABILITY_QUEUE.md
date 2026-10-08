@@ -41,6 +41,9 @@
 - Tier 2 review consequence: an author cannot approve their own PR. With admin
   enforcement enabled, a Tier 2 PR authored by the owner needs another eligible
   reviewer; this workflow was not bypassed or tested.
+- PR-guard integration detail: compare the base SHA with the checked-out merge
+  commit, not a fork's potentially unfetched head SHA. This lets the guard read
+  the exact merged candidate tree with the existing full-history checkout.
 - Metric: `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**;
   this CI work is not a real transaction.
 - Next removable dependency: after the guardrails are committed, verify one
