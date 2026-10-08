@@ -151,6 +151,9 @@ def run_scheduled_intelligence(authorization: str | None = Header(default=None))
     Uses only existing non-legacy engines, called directly (no wrapper):
     - forge_loop.run_cycle: state → patterns → beliefs → questions → tasks.
       Pure DB reasoning; creates plans/proposals, executes nothing.
+    - collector_runner.run_pending_tasks: execute planned ResearchTasks via
+      collectors. Idempotent per (question_id, source, query); enforces
+      source clearance before network access; per-task failure isolation.
     - research_task_engine.resume_running_tasks: requeue stale running tasks.
     - execution_engine.run_autonomous_action_cycle: propose (never execute)
       actions via the owner's AutonomyPolicy gate.
@@ -188,7 +191,36 @@ def run_scheduled_intelligence(authorization: str | None = Header(default=None))
         logger.warning("scheduled intelligence: forge_cycle failed (%s)", type(exc).__name__)
         intelligence["forge_cycle"] = {"status": "error", "error": type(exc).__name__}
 
-    # Stage 2: requeue stale research tasks so eligible work is not stuck.
+    # Stage 2: collection cycle — execute planned ResearchTasks via collectors.
+    # Uses the existing collector_runner.run_pending_tasks() which:
+    # - processes tasks planned by research_planner (explicit, not indiscriminate)
+    # - enforces source clearance via require_cleared_source() before network access
+    # - is idempotent per (question_id, source, query) via uq_research_tasks_idempotency_key
+    # - handles failures per-task (max_attempts=3) without killing the cycle
+    # Does NOT call run_default_collection() — that deliberately skips uncleared feeds.
+    try:
+        with database.SessionLocal() as db:
+            from app.services import collector_runner
+
+            collection_outcomes = collector_runner.run_pending_tasks(db, limit=5)
+            intelligence["collection_cycle"] = {
+                "status": "ok",
+                "tasks_executed": len(collection_outcomes),
+                "outcomes": [
+                    {
+                        "task_id": o.get("task_id"),
+                        "source": o.get("source"),
+                        "status": o.get("status"),
+                        "signals_created": o.get("signals_created", 0),
+                    }
+                    for o in collection_outcomes
+                ],
+            }
+    except Exception as exc:
+        logger.warning("scheduled intelligence: collection_cycle failed (%s)", type(exc).__name__)
+        intelligence["collection_cycle"] = {"status": "error", "error": type(exc).__name__}
+
+    # Stage 3: requeue stale research tasks so eligible work is not stuck.
     try:
         with database.SessionLocal() as db:
             from app.services import research_task_engine
@@ -199,7 +231,7 @@ def run_scheduled_intelligence(authorization: str | None = Header(default=None))
         logger.warning("scheduled intelligence: resume_tasks failed (%s)", type(exc).__name__)
         intelligence["resumed_tasks"] = {"status": "error", "error": type(exc).__name__}
 
-    # Stage 3: propose (never execute) actions for opportunities via policy.
+    # Stage 4: propose (never execute) actions for opportunities via policy.
     try:
         with database.SessionLocal() as db:
             from app.services import execution_engine
