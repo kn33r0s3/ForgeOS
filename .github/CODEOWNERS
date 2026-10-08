@@ -1,0 +1,17 @@
+# Tier 2: owner review is required through main-branch code-owner protection.
+/src/routes/ @kn33r0s3
+/src/lib/content.ts @kn33r0s3
+/backend/app/security.py @kn33r0s3
+/backend/app/services/*privacy*.py @kn33r0s3
+/backend/app/services/*retention*.py @kn33r0s3
+/vercel.json @kn33r0s3
+/backend/app/config.py @kn33r0s3
+/vite.config.ts @kn33r0s3
+/tsconfig.json @kn33r0s3
+/package.json @kn33r0s3
+/package-lock.json @kn33r0s3
+/backend/requirements*.txt @kn33r0s3
+/migrations/ @kn33r0s3
+/docs/ORIGIN.md @kn33r0s3
+/AGENTS.md @kn33r0s3
+/.github/ @kn33r0s3

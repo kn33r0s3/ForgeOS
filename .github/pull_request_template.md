@@ -1,5 +1,11 @@
 ## What changed
 
+### What changed, which existing code, what is still unknown
+
+- What changed:
+- Existing code reused or modified:
+- What is still unknown:
+
 ## Features added / changed / removed (must match features.json)
 
 - Added:

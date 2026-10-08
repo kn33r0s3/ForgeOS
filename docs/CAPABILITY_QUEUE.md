@@ -1,5 +1,47 @@
 # Hami capability claim ledger (ForgeOS repository)
 
+## [IN PROGRESS] Batch 14 — autonomous maintenance controls
+
+- Date: 2026-10-08.
+- Routine owner action still required: review CI and production health manually,
+  catch unsafe route/copy/test changes, and retain explicit review for sensitive
+  Tier 2 changes. This work removes repeatable checking and report assembly, not
+  owner judgment or authorization.
+- Action this change removes: manual detection of prohibited new architecture
+  file names, experiment/prototype/inbox promotion into high-visibility
+  navigation, deleted/weakened tests, missing PR context, failed checks, and
+  stale/unsafe production-readiness signals.
+- Remaining boundary: owner review remains required for Tier 2 paths; external
+  intake and Forge Bot LIVE stay closed; nightly owner-readiness inspection
+  depends on the already configured GitHub Actions owner key. Workflows must
+  make GET-only production checks and must never print credentials or private
+  readiness payloads.
+- Initial blocker found and resolved: `backend/app/api/opportunities.py`
+  passed unsupported `description=` to `APIRouter`; a regression test now
+  covers successful import and preserves the exploitation-lane description.
+- Current blocker: CI and production workflows have not yet run with this
+  change, so remote check names and the read-only deployed health/heartbeat
+  signals remain unverified.
+- Verification: the APIRouter incompatibility is fixed with a regression test.
+  Backend SQLite suite: 916 passed, 2 skipped. `npm test`: 209 script tests
+  and 200 TypeScript tests passed. Typecheck and production build passed; the
+  migration step skipped because no `DATABASE_URL` is configured. Lint passed
+  with one pre-existing Fast Refresh warning. Local route smoke passed all 13
+  live routes. Eleven new maintenance-policy tests passed, including mocked
+  GET-only production checks. The integrated PR guard passed against current
+  source. No production request, live experiment, external contact, or
+  production write was performed.
+- GitHub settings inspection: the available `gh` identity has repository admin
+  permission; main currently requires only `backend`, code-owner review is off,
+  and auto-merge is off. A one-time settings update is planned. Do not contact
+  anyone or activate production intake/live behavior.
+- Metric: `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**;
+  this CI work is not a real transaction.
+- Next removable dependency: after the guardrails are committed, verify one
+  real Actions run and the read-only production checks against the deployed
+  routes; any missing authorization or failing health remains an owner-facing
+  blocker, never an automated activation.
+
 ## Current closure map (2026-10-04)
 
 At the start of this review, `HEAD` and `origin/main` matched

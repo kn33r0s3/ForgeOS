@@ -50,6 +50,26 @@ If this cannot be proven, do not create the file. Modify existing code instead.
 
 ---
 
+## AUTONOMY TIERS
+
+See [docs/AUTONOMY.md](docs/AUTONOMY.md) for the complete operating contract.
+
+- **Tier 0 — Observe:** approved, read-only observation; no contact, personal
+  data collection, external action, or state-changing write.
+- **Tier 1 — Prepare:** analyze, draft, and propose; a human reviews before
+  publishing, contacting anyone, spending, or changing production state.
+- **Tier 2 — Owner-gated:** sensitive or high-impact surfaces require explicit
+  owner authorization. Changes to Tier 2 paths also require the owner as a
+  code-owner reviewer.
+- **Tier 3 — Bounded standing authorization:** execution is allowed only inside
+  an explicitly approved action, purpose, scope, spend, rate, privacy,
+  counterparty, exclusion, expiry, and evidence boundary. It never creates
+  external permission or missing execution capability.
+
+No agent may infer permission from a tier label, a policy `ALLOW`, or a passing
+test. Intake and Forge Bot LIVE remain closed unless the owner explicitly
+authorizes their activation. Agents never weaken tests to pass them.
+
 # FORGEOS TOP RULE — DRIVE OWNER DEPENDENCY TO ZERO
 
 This is Hami's first substantive project rule: prefer fewer owner actions per
