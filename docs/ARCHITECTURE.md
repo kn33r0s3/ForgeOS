@@ -142,45 +142,46 @@ Recognize customer, transaction, and revenue states only from attributable
 evidence. Measure `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` only from
 verified real transactions; if none exist, report **NOT MEASURABLE**, not zero.
 
-## 8. Active Product Bet
+## 8. Commercial focus and selection boundary
 
-The one active commercial bet is **Forge Bot v0: reach one real paying
-consultancy**, using deterministic qualification and a zero/near-zero-cost
-stack. Forge Bot is a feature of ForgeOS/Hami, not a separate application,
-database, or state architecture.
+`docs/ORIGIN.md` is the source of Hami's mission: **expand the frontier of
+what can be understood, discovered, created, coordinated, and accomplished
+in reality.** No commercial segment, product category, or revenue ranker
+narrows that mission. Candidate unknowns and experiments are compared at the
+existing Bet/unknown seam; commercial opportunity and money rankers remain
+scoped to exploitation after an owner has chosen a commercial question.
 
-The exact consultancy, segment, channel, price, qualification fields, and
-willingness to pay are not established. The Nepal education-abroad consultancy
-segment remains a hypothesis until the owner reports five real conversations;
-work only with licensed agencies if those conversations support it. Foreign
-employment requires separate regulatory and reputation review. Discovery is
-owner-run. No outreach, offer, contact channel, or spend is authorized by this
-architecture.
+`AGENTS.md` governs active-segment claims where earlier architecture wording
+conflicts with it. The first commercial work remains owner-run discovery for
+one real customer and one real paid outcome. No category, offer, price, or
+willingness to pay is assumed in advance. Education-abroad and
+foreign-employment consultancies remain hypotheses until the owner reports
+five real conversations; work only with licensed agencies if supported, and
+foreign employment requires separate regulatory and reputation review.
+No outreach, offer, contact, spend, or external experiment is authorized by
+this document.
 
-Use deterministic rules grounded in owner-reported discovery and existing
-records. Do not assume a universal intake, channel, or follow-up cadence. For
-an operational 30-day kill rule, start the clock on the date of the first
-recorded, real, owner-run customer discovery conversation. By the end of day
-30, Forge Bot v0 must have produced at least one verified real paid outcome
-from a consultancy; otherwise stop this bet. Conversations, stated
-willingness to pay, tests, simulations, and unverified payment claims do not
-meet this threshold. Stopping does not authorize a pivot, outreach, offer, or
-spend. The separate five-conversation gate for evaluating the Nepal
-education-abroad hypothesis remains in force and does not substitute for a
-paid outcome.
+**Historical proposal, retained for provenance (superseded 2026-10-08):**
+an earlier proposed version of this document called Forge Bot v0 reaching a
+paying consultancy the active commercial Bet, named education-abroad
+consultancies as the opening segment hypothesis, and set a 30-day paid-outcome
+kill rule starting at the first owner-run discovery conversation. That text
+was a proposal, not verified customer evidence or authorization, and is not
+the current selection mandate. The slow-reply/social-seller material remains
+historical; its probe is paused, not killed or deleted, and it receives no
+special selection priority.
 
-## 9. Parked Bets
+## 9. Parked commercial work
 
-- System/home is not an independent consumer product or second go-to-market
-  bet. “Possible paths” is a downstream capability only when connected to a
-  real qualified Forge Bot user and problem.
+- Forge Bot and seller/inbox material are capabilities or historical probes
+  inside ForgeOS/Hami, not Hami's mission, a separate product, or a fixed
+  strategic frontier.
 - Community is an outcome, not an active product bet.
-- Premium frontend work is parked until Forge Bot has 2–3 paying clients or
-  Hami has a validated consumer product with real users. Correctness and
-  security work required by the active bet remains in scope.
-- Other segments, products, offers, and pivots remain parked until explicitly
-  selected from evidence. Failure of Forge Bot does not itself authorize a
-  pivot.
+- Premium frontend work remains parked unless required for correctness,
+  security, or an owner-selected outcome-oriented pilot.
+- No segment, product, offer, or pivot becomes active merely because it is
+  easy to formulate, monetize, or test. Any future commercial focus must
+  follow the global candidate-selection and owner-authorization boundaries.
 
 ## 10. Data / World-Scale Principles
 

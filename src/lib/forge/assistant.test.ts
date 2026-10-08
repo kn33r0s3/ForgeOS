@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   isAngleTried,
@@ -7,6 +8,8 @@ import {
   type RoundFinding,
 } from "./assistant.ts";
 import { triedAnglesCount } from "./tried-angles.ts";
+import { discoveryUnknowns } from "../unknowns.ts";
+import { hypothesizedValueOf } from "./value-tiers.ts";
 
 const goodFinding: RoundFinding = {
   statement: "COD couriers settle cash to sellers on a T+0 to 2-day float.",
@@ -67,6 +70,7 @@ describe("forge assistant — ripenessQueue", () => {
   it("ranks by evidence tier, then hypothesis, then doability, then age", () => {
     const queue = ripenessQueue(64);
     const rank = (t: string | number) => (t === "unscored" ? 0 : (t as number));
+    const hypothesisRank = (value: number | null) => value ?? 0;
     for (let k = 1; k < queue.length; k++) {
       const prev = queue[k - 1];
       const cur = queue[k];
@@ -76,13 +80,13 @@ describe("forge assistant — ripenessQueue", () => {
       );
       if (rank(cur.valueTier) === rank(prev.valueTier)) {
         assert.ok(
-          cur.valueHypothesis <= prev.valueHypothesis,
+          hypothesisRank(cur.valueHypothesis) <= hypothesisRank(prev.valueHypothesis),
           `${cur.id} (hyp ${cur.valueHypothesis}) before ${prev.id} (hyp ${prev.valueHypothesis})`,
         );
-        if (cur.valueHypothesis === prev.valueHypothesis) {
+        if (hypothesisRank(cur.valueHypothesis) === hypothesisRank(prev.valueHypothesis)) {
           const order = (r: string) => (r === "now" ? 0 : 1);
           assert.ok(order(cur.ripeness) >= order(prev.ripeness));
-          if (cur.ripeness === prev.ripeness) {
+          if (cur.ripeness === prev.ripeness && cur.round !== null && prev.round !== null) {
             assert.ok(cur.round >= prev.round);
           }
         }
@@ -108,9 +112,40 @@ describe("forge assistant — ripenessQueue", () => {
       queue.every((i) => i.valueTier === "unscored"),
       `top 10 must all be unscored, got ${queue.map((i) => `${i.id}:${i.valueTier}`).join(", ")}`,
     );
-    // Within unscored, the WTP hypothesis orders the queue.
+    // Within unscored, recorded hypotheses order this local queue; absent
+    // hypotheses remain explicitly unassessed rather than LOW.
     for (let k = 1; k < queue.length; k++) {
-      assert.ok(queue[k].valueHypothesis <= queue[k - 1].valueHypothesis);
+      assert.ok(
+        (queue[k].valueHypothesis ?? 0) <= (queue[k - 1].valueHypothesis ?? 0),
+      );
+    }
+  });
+
+  it("leaves a missing WTP hypothesis unassessed", () => {
+    const value = hypothesizedValueOf("D71");
+    assert.equal(value.hypothesis, null);
+    assert.match(value.why, /unassessed/i);
+  });
+
+  it("keeps D71-D83 projection fields in parity with the authoritative map", () => {
+    const markdown = readFileSync("docs/UNKNOWN_MAP.md", "utf8");
+    const rows = new Map<string, string[]>();
+    for (const line of markdown.split("\n")) {
+      const match = line.match(/^\|\s*(D(?:7[1-9]|8[0-3]))\s*\|/);
+      if (match) rows.set(match[1], line.split("|").slice(1, 6).map((cell) => cell.trim()));
+    }
+    assert.equal(rows.size, 13);
+    const projection = new Map(discoveryUnknowns.map((unknown) => [unknown.id, unknown]));
+    const stripMarkdown = (value: string) =>
+      value.replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1");
+    for (const [id, [rowId, question, stateNote, cheapestTest, stakes]] of rows) {
+      const item = projection.get(rowId);
+      assert.ok(item, `${rowId} missing from generated TypeScript projection`);
+      assert.equal(item.id, id);
+      assert.equal(item.question, stripMarkdown(question));
+      assert.equal(item.stateNote, stripMarkdown(stateNote));
+      assert.equal(item.cheapestTest, stripMarkdown(cheapestTest));
+      assert.equal(item.stakes, stripMarkdown(stakes));
     }
   });
 

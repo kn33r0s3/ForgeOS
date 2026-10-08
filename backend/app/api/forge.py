@@ -487,12 +487,20 @@ def get_goal_graph(goal_id: int, db: Session = Depends(get_db)):
     return graph
 
 
-@router.get("/money/opportunities", response_model=list[schemas.RankedOpportunity])
+@router.get(
+    "/money/opportunities",
+    response_model=list[schemas.RankedOpportunity],
+    description=(
+        "EXPLICIT EXPLOITATION LANE: rank commercial opportunities by money "
+        "evidence; this is not Hami's global unknown/experiment selector."
+    ),
+)
 def get_ranked_opportunities(request: Request, goal_id: Optional[int] = None, limit: int = 10, db: Session = Depends(get_db)):
     """
     Every opportunity, scored live by money_score and ranked highest
     first — never a fabricated number, see money_engine.py's module
-    docstring. Filter with ?goal_id=. Owner-only: this exposes the
+    docstring. EXPLOITATION LANE only, not a global experiment selector.
+    Filter with ?goal_id=. Owner-only: this exposes the
     owner's internal price projections and revenue estimates.
     """
     require_owner_api_key(request)
@@ -520,7 +528,14 @@ def get_opportunity_money_graph(opportunity_id: int, request: Request, db: Sessi
     return graph
 
 
-@router.get("/money/recommend", response_model=schemas.MoneyRecommendation)
+@router.get(
+    "/money/recommend",
+    response_model=schemas.MoneyRecommendation,
+    description=(
+        "EXPLICIT EXPLOITATION LANE: recommend a revenue follow-through "
+        "among commercial opportunities; not global unknown selection."
+    ),
+)
 def get_money_recommendation(request: Request, db: Session = Depends(get_db)):
     """
     "What should I pursue today to make money?" — the single highest-
@@ -586,7 +601,14 @@ def get_opportunity_evidence_status(opportunity_id: int, request: Request, db: S
     return money_engine.classify_evidence(opportunity)
 
 
-@router.get("/money/opportunities/owner-ranked", response_model=list[schemas.OwnerRankedOpportunity])
+@router.get(
+    "/money/opportunities/owner-ranked",
+    response_model=list[schemas.OwnerRankedOpportunity],
+    description=(
+        "EXPLICIT EXPLOITATION LANE: commercial ranking by speed to first "
+        "revenue; not Hami's global unknown/experiment selector."
+    ),
+)
 def get_owner_ranked_opportunities(request: Request, limit: int = 10, db: Session = Depends(get_db)):
     """
     Owner-first ranking: explicitly rewards speed to first revenue over

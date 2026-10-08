@@ -1,9 +1,13 @@
-// Discovery unknowns D1–D70 as structured engine data.
-// Generated from docs/UNKNOWN_MAP.md — the doc is the source of truth;
-// this file is the machine-readable projection the engine reasons over.
-// Regenerate (don't hand-edit) if the map changes.
+// Generated from docs/UNKNOWN_MAP.md by scripts/sync-unknowns-json.mjs.
+// The map is authoritative; do not hand-edit this projection.
 
-export type UnknownState = "unknown" | "supported" | "hypothesized";
+export type UnknownState =
+  | "unknown"
+  | "hypothesized"
+  | "tested"
+  | "supported"
+  | "contradicted"
+  | "blocked";
 
 export interface DiscoveryUnknown {
   id: string;
@@ -12,7 +16,7 @@ export interface DiscoveryUnknown {
   stateNote: string;
   cheapestTest: string;
   stakes: string;
-  round: number;
+  round: number | null;
 }
 
 export const discoveryUnknowns: DiscoveryUnknown[] = [
@@ -27,7 +31,7 @@ export const discoveryUnknowns: DiscoveryUnknown[] = [
   },
   {
     id: "D2",
-    question: "Do owners want to be \"found\"? — fulfillment/admin may bind harder than demand. **Thesis-threatening:** if presence is the constraint, the \"find real opportunities\" wedge needs revision",
+    question: "Do owners want to be \"found\"? — fulfillment/admin may bind harder than demand. Thesis-threatening: if presence is the constraint, the \"find real opportunities\" wedge needs revision",
     state: "unknown",
     stateNote: "UNKNOWN",
     cheapestTest: "\"If I brought you 10 new customers tomorrow, what breaks?\" — ask first in every discovery conversation",
@@ -216,7 +220,7 @@ export const discoveryUnknowns: DiscoveryUnknown[] = [
   },
   {
     id: "D23",
-    question: "Does formal supply-side credit (Unilever Shikhar app / channel financing with banks) actually reach small independent kirana, or stop at papered dealers/distributors? (round 4: Unilever Nepal extends credit + training + channel financing; Samriddhi shop advised by landlord *not* to register)",
+    question: "Does formal supply-side credit (Unilever Shikhar app / channel financing with banks) actually reach small independent kirana, or stop at papered dealers/distributors? (round 4: Unilever Nepal extends credit + training + channel financing; Samriddhi shop advised by landlord not to register)",
     state: "unknown",
     stateNote: "UNKNOWN",
     cheapestTest: "Ask distributors' route salesmen (observation) + ask 3 papered vs 3 unpapered shops: \"Do you get stock on credit from your supplier? From whom, on what terms?\"",
@@ -237,54 +241,9 @@ export const discoveryUnknowns: DiscoveryUnknown[] = [
     question: "Did Nepal's own ledger apps (\"मेरो कारोबार\", Mero Karobar — Nepali-language khata app, 2020, Gotagaun/Morang, offline+online, NPR 1–2k/yr) survive/scale?",
     state: "supported",
     stateNote: "SUPPORTED (research, 2026-10-04): rebranded to \"Karobar\" ~2022; 500,000+ Play installs (androidrank 2026-09-13, est. ~825k, 3,830 ratings @ 4.43, still growing); founder claims 300k Nepal + 50k Bangladesh downloads, >Rs 10M/yr revenue, 35 employees (New Business Age Sep 2026); Bangladesh traction confirmed by a BRAC University internship report interviewing a Dhaka shop owner user",
-    cheapestTest: "",
+    cheapestTest: "Done 2026-10-04: androidrank Play data + New Business Age + BRAC report",
     stakes: "Don't rebuild it — the udharo-ledger corner is taken by a profitable 35-person Nepali company. Its feature list (record/inventory/invoice) defines the open wedge: money-trust and response-capacity.",
     round: 4,
-  },
-  {
-    id: "D26",
-    question: "How liquid is the kirana resale market, and do sellers exit on economics (thin margins) or time (busyness)? (round 4: one Chabahil listing explicitly says selling \"व्यस्तताको कारणले\" — because of busyness)",
-    state: "unknown",
-    stateNote: "UNKNOWN",
-    cheapestTest: "Track sewamandufree listings over quarters (asking price vs. daily sales ratios, time-to-sold) + ask 2 sellers why they sold",
-    stakes: "If exit is time-driven, it corroborates D2 (presence binds) from the *seller* side — the shop itself is worth more to a new pair of hands than to the owner",
-    round: 4,
-  },
-  {
-    id: "D27",
-    question: "The repair-trade survival paradox: is the \"20% net, 80% close within 2 years\" claim real on the ground, and is cash-flow (rent + parts stock) the actual killer? (round 5: Kathmandu repair-training institute page; highest-margin trade studied, least survivable)",
-    state: "unknown",
-    stateNote: "UNKNOWN",
-    cheapestTest: "In the five conversations, include 2 repair-bench owners; ask \"what killed the shop that was here before you?\" + observe shutter lineage in one repair lane",
-    stakes: "If margin ≠ survival holds, the wedge can't be margin-based pricing at all — outcome/cash-flow framing only",
-    round: 5,
-  },
-  {
-    id: "D28",
-    question: "Grey parts channel: what share of repair parts move through customs-evading routes, and does that block formal supply credit for the trade entirely? (round 5: Nepal Police seized mobile parts worth NPR 1.15 crore in Parasi, Sep 2026; mobile federation names illegal import as the sector's #1 problem)",
-    state: "unknown",
-    stateNote: "UNKNOWN",
-    cheapestTest: "Ask 3 repair owners where they source screens/batteries and what happens when a batch is seized or stuck; cross-check with parts wholesalers' public listings",
-    stakes: "If the paper trail breaks upstream, formal supply credit (D23) is structurally unavailable to this trade regardless of shop-level paperwork",
-    round: 5,
-  },
-  {
-    id: "D29",
-    question: "Hands-bound skill monopoly: can repair-bench owners delegate the actual repair, or is the trade strictly one body? (round 5: Dadeldhura owner replies to a \"hire a helper\" comment that he *is* the helper)",
-    state: "unknown",
-    stateNote: "UNKNOWN",
-    cheapestTest: "Ask repair owners: \"who else in this lane can do what you do, and what would you pay them?\" + ask \"what happens to the shop the week you're sick?\"",
-    stakes: "Strictest possible D2: if the repair cannot be delegated, any capacity tool must amplify the owner's own hands — not redistribute work",
-    round: 5,
-  },
-  {
-    id: "D30",
-    question: "Hands-bound trust: how do customers pick a repair shop (recommendation vs. proximity), and what does the shop do to be worthy of an unlocked device? (round 5: repair promos on FB center on \"विश्वास, गुणस्तर र सेवा\" — trust, quality, service)",
-    state: "unknown",
-    stateNote: "UNKNOWN",
-    cheapestTest: "In the five conversations: \"when you handed a stranger your broken phone, why that shop?\" — from both sides of the counter if possible",
-    stakes: "If choice is trust-traced (D3 family), the RELATION primitive gets a concrete first use-case: trust-graph traversal for the bench",
-    round: 5,
   },
   {
     id: "D31",
@@ -321,6 +280,51 @@ export const discoveryUnknowns: DiscoveryUnknown[] = [
     cheapestTest: "Compare churn/retention signals across the apps' review histories; read Khatabook's FY23–FY25 filings if public",
     stakes: "Tests whether \"small, paid, local\" beats \"big, free, foreign\" in merchant software — a pricing thesis for Hami's own first rupee",
     round: 6,
+  },
+  {
+    id: "D26",
+    question: "How liquid is the kirana resale market, and do sellers exit on economics (thin margins) or time (busyness)? (round 4: one Chabahil listing explicitly says selling \"व्यस्तताको कारणले\" — because of busyness)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Track sewamandufree listings over quarters (asking price vs. daily sales ratios, time-to-sold) + ask 2 sellers why they sold",
+    stakes: "If exit is time-driven, it corroborates D2 (presence binds) from the seller side — the shop itself is worth more to a new pair of hands than to the owner",
+    round: 4,
+  },
+  {
+    id: "D27",
+    question: "The repair-trade survival paradox: is the \"20% net, 80% close within 2 years\" claim real on the ground, and is cash-flow (rent + parts stock) the actual killer? (round 5: Kathmandu repair-training institute page; highest-margin trade studied, least survivable)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "In the five conversations, include 2 repair-bench owners; ask \"what killed the shop that was here before you?\" + observe shutter lineage in one repair lane",
+    stakes: "If margin ≠ survival holds, the wedge can't be margin-based pricing at all — outcome/cash-flow framing only",
+    round: 5,
+  },
+  {
+    id: "D28",
+    question: "Grey parts channel: what share of repair parts move through customs-evading routes, and does that block formal supply credit for the trade entirely? (round 5: Nepal Police seized mobile parts worth NPR 1.15 crore in Parasi, Sep 2026; mobile federation names illegal import as the sector's #1 problem)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Ask 3 repair owners where they source screens/batteries and what happens when a batch is seized or stuck; cross-check with parts wholesalers' public listings",
+    stakes: "If the paper trail breaks upstream, formal supply credit (D23) is structurally unavailable to this trade regardless of shop-level paperwork",
+    round: 5,
+  },
+  {
+    id: "D29",
+    question: "Hands-bound skill monopoly: can repair-bench owners delegate the actual repair, or is the trade strictly one body? (round 5: Dadeldhura owner replies to a \"hire a helper\" comment that he is the helper)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Ask repair owners: \"who else in this lane can do what you do, and what would you pay them?\" + ask \"what happens to the shop the week you're sick?\"",
+    stakes: "Strictest possible D2: if the repair cannot be delegated, any capacity tool must amplify the owner's own hands — not redistribute work",
+    round: 5,
+  },
+  {
+    id: "D30",
+    question: "Hands-bound trust: how do customers pick a repair shop (recommendation vs. proximity), and what does the shop do to be worthy of an unlocked device? (round 5: repair promos on FB center on \"विश्वास, गुणस्तर र सेवा\" — trust, quality, service)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "In the five conversations: \"when you handed a stranger your broken phone, why that shop?\" — from both sides of the counter if possible",
+    stakes: "If choice is trust-traced (D3 family), the RELATION primitive gets a concrete first use-case: trust-graph traversal for the bench",
+    round: 5,
   },
   {
     id: "D35",
@@ -409,7 +413,7 @@ export const discoveryUnknowns: DiscoveryUnknown[] = [
     state: "unknown",
     stateNote: "UNKNOWN",
     cheapestTest: "In the five conversations: \"After the co-op scandals, where do you keep the savings now?\" + watch for co-op mentions in owner-voice content",
-    stakes: "If the fraud burned the paperless segment's money-home, merchant finance is in a gap moment — trust in *institutions* is the unknown, not just trust in tools",
+    stakes: "If the fraud burned the paperless segment's money-home, merchant finance is in a gap moment — trust in institutions is the unknown, not just trust in tools",
     round: 9,
   },
   {
@@ -508,7 +512,7 @@ export const discoveryUnknowns: DiscoveryUnknown[] = [
     state: "unknown",
     stateNote: "UNKNOWN",
     cheapestTest: "In the five conversations: \"When the month ends and the till is short, who gets paid first — the landlord, the supplier, or the bank?\"",
-    stakes: "If rent ≈ half the net margin, the landlord is the counter's largest single cost of *existence* — and Hami's \"thin wallet\" persona thesis gets a concrete ceiling",
+    stakes: "If rent ≈ half the net margin, the landlord is the counter's largest single cost of existence — and Hami's \"thin wallet\" persona thesis gets a concrete ceiling",
     round: 12,
   },
   {
@@ -646,6 +650,121 @@ export const discoveryUnknowns: DiscoveryUnknown[] = [
     stakes: "If the Europe funnel harvests fees without departures, it is the next Sastodeal-shape trust poison (round 10 N3) — and Hami's trust-fraud lens gets a new test case",
     round: 14,
   },
+  {
+    id: "D71",
+    question: "What do unified-inbox tools (Kathmandu Post, Aug 2026: platform combining Facebook/Instagram/TikTok APIs) fail to do for a Nepali social seller — and is the gap software or human?",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Test in the sprint: the tool answers, Hami's human answers fast + gets paid only on recovered sales. Ask the seller: \"what did the inbox tool not do for you?\"",
+    stakes: "If the tools solve routing but not the reply itself, Hami's edge is the human + the pay-on-recovery model, not software — the wedge is labor, not code",
+    round: null,
+  },
+  {
+    id: "D72",
+    question: "Does the reported e-commerce registration law (REPORTED: \"E-commerce Act 2025\", in force 2025-04-15; mandatory registration for ALL online sellers incl. FB/IG/TikTok/WhatsApp; fine up to Rs200,000; REPORTED ~950 registered by 2025-07-18 deadline; REPORTED E-Commerce Directive 2082 adds NRB-gateway-only payments + e-invoicing — act name and 950 figure NOT verified against the Department's own notice) constrain the sprint — and does Hami-as-platform need registration if it takes a cut of recovered sales?",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Legal read alongside company registration: (1) is Hami a \"platform\" under the Act when it takes a revenue share but sells nothing itself? (2) sprint works ONLY with already-registered sellers (registration help is a scope jump — regulatory education Hami will not pioneer; separate unknown for later). NOT legal advice from the agent — needs a real read",
+    stakes: "Most social sellers operate unregistered = illegally. The sprint can't ignore this: it filters to already-registered sellers. Registration help is out of scope for the sprint. The law is also a possible value angle — but only with a real legal read",
+    round: null,
+  },
+  {
+    id: "D73",
+    question: "Did the Aug 2026 re-drive move the registration count — how many social sellers are now listed on the DoCSCP portal? (round 15: DoCSCP issued a fresh urgent mandatory-listing notice 06/083-84 on ~2026-08-17 after the July 2025 deadline drew only ~950)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Watch DoCSCP announcements/press for an updated listed-business count; check the portal's public listing",
+    stakes: "Measures whether re-noticing changes behavior or is ignored like the first deadline — the compliance rate is the law's real status",
+    round: null,
+  },
+  {
+    id: "D74",
+    question: "Has any online seller actually been fined or shut down under the Act or Directive 2082 — or is enforcement still paper? (round 15: Directive 2082 sets Rs 10–50k for unregistered operation, up to Rs 500k + imprisonment for misleading ads/privacy breaches; no named online-seller fine surfaced in press or social by Oct 2026)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Watch DoCSCP enforcement press + inspection reports; ask sellers if anyone they know was fined",
+    stakes: "Paper law vs enforced law decides whether the sprint's seller pool must be registered-today or can sequence registration into the offer",
+    round: null,
+  },
+  {
+    id: "D75",
+    question: "Is the Directive 2082 registration burden (PAN + company cert + domain ownership + hosting agreement + privacy policy + cybersecurity test report + e-invoicing) actually affordable/feasible for a home-based FB seller — and does anyone sell \"registration as a service\"? (round 15: the doc list reads enterprise-grade; compliance vendors are advertising)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Price the registration cost: PAN (free-ish) + domain + hosting + SSL + cybersecurity test — who quotes it; ask 3 small sellers what registration would cost them",
+    stakes: "If compliance costs Rs 20–50k all-in, the law itself is the barrier — and registration help could be Hami's cheapest sprint wedge, or a prohibitive filter",
+    round: null,
+  },
+  {
+    id: "D76",
+    question: "Does the emerging compliance-vendor layer (Sajhapolicy, Support Tax & Finance, Kardata ad campaigns targeting online sellers with PAN/registration help, seen Sept 2026) actually reach small informal sellers, or only formal businesses? (round 15)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Watch vendor campaign growth + ask 3 sellers if they've seen/hired such a service",
+    stakes: "If vendors serve only the formal, the unregistered majority has no bridge — the compliance gap is a distribution problem, not an awareness one",
+    round: null,
+  },
+  {
+    id: "D77",
+    question: "Do social sellers keep selling unchanged through the notice waves — is the second deadline being ignored like the first? (round 15: notice posted in FB groups Aug 18; commenters ask \"how do I register?\" while others keep selling)",
+    state: "unknown",
+    stateNote: "UNKNOWN (likely needs human observation of seller behavior)",
+    cheapestTest: "Sample 10 active FB/TikTok sellers in 3 months: still posting \"inbox\" sales vs. showing listing numbers",
+    stakes: "If behavior doesn't change, the law's equilibrium is mass non-compliance + selective enforcement — Hami must plan for a permanently informal seller base",
+    round: null,
+  },
+  {
+    id: "D78",
+    question: "Do unanswered inquiries run ~30% for small businesses generally — and does a hand-kept shared list fix it before any automation? (feed 2026-10-06: a 320-follower automation shop drew one month of a small business's inquiries as 100 circles; 30 never heard back, lost to an unmanaged inbox, not rivals; fix was a single shared list kept by hand for two weeks before any automation — reported via feed; original post login-walled, not independently opened)",
+    state: "hypothesized",
+    stateNote: "HYPOTHESIZED (corroborating observation, NOT Kathmandu ground truth)",
+    cheapestTest: "In the sprint: measure the named seller's unanswered-inquiry share in week 1 before the reply week; test whether a hand-kept shared list alone (no automation) moves the recovery number",
+    stakes: "If a manual list works first, the wedge is labor + discipline, not software — pay-on-recovery is the product, the inbox tool stays a convenience. If the 30% figure doesn't replicate locally, the wedge's size thesis needs recalibration",
+    round: null,
+  },
+  {
+    id: "D79",
+    question: "Does the Rs 5,000-or-2% fine for receiving business income through a personal QR actually exist anywhere outside the viral ShareSanskar infographic? (round 16: no NRB notice, gazette, or press coverage found through 2026-10-07; the infographic's own comments debate it — fake-news claims, confusion with India)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Check NRB circulars + IRD tax notices directly; ask a compliance vendor (Sajhapolicy) whether they cite it to clients",
+    stakes: "If real, it is a forced-formalization event for every personal-QR counter; if fake, it is a trust-poisoning rumor that still changes seller behavior",
+    round: null,
+  },
+  {
+    id: "D80",
+    question: "If the personal-QR fine is real, who gets enforced against first — the street stall vendor or the mid-size formalizable shop? (round 16: sellers' comments show small-vs-corporate fairness anxiety)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Watch for first named enforcement case; D77's selective-enforcement pattern applies",
+    stakes: "Decides whether the informal majority has time to adapt or faces a sudden cost",
+    round: null,
+  },
+  {
+    id: "D81",
+    question: "What share of counter QRs in the Valley are personal-profile QRs (a person's name + mobile number, like the publicly posted 'Mina Kumari Shrestha' eSewa profile) vs branded merchant QRs with terminal numbers? (round 16)",
+    state: "unknown",
+    stateNote: "UNKNOWN (needs human counter observation)",
+    cheapestTest: "Walk 20 counters: photograph which QR type is on display; note personal vs merchant branding",
+    stakes: "Sizes the population exposed to D79's fine and the gap between the formal rail and the actual rail",
+    round: null,
+  },
+  {
+    id: "D82",
+    question: "Does the 'Manual QR + screenshot confirmation' checkout (Zalient Shop, Sept 2026) create a fake-screenshot fraud surface for online sellers? (round 16: customer uploads payment screenshot, merchant confirms by hand)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Ask Zalient Shop or its sellers about disputed manual-QR orders; sample seller groups for fake-screenshot complaints",
+    stakes: "If screenshots are forgeable at scale, the informal workaround is a trust hole - links round 13's COD fraud stack",
+    round: null,
+  },
+  {
+    id: "D83",
+    question: "Are collateral-free digital microloans (NRB revised guidelines: up to Rs 5L short-term / 10L long-term for SMEs, REPORTED via single press) actually being disbursed to small shops on the basis of QR transaction trails - or is the product announced and unissued? (round 16)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Check bank/PSP product pages for QR-trail-based loan products; ask 3 merchants if offered one",
+    stakes: "If real, the QR rail becomes a credit rail - banks compete for merchant float; if vapor, it is another paper product",
+    round: null,
+  },
 ];
-
-export const unknownsCount = discoveryUnknowns.length;

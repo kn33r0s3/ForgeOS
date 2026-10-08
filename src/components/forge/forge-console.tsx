@@ -168,7 +168,9 @@ function RipenessList() {
               }`}>
                 {item.ripeness === "now" ? "doable now" : "needs a human"}
               </span>
-              <span className="ml-auto text-xs text-muted">round {item.round}</span>
+              <span className="ml-auto text-xs text-muted">
+                {item.round === null ? "round unassigned" : `round ${item.round}`}
+              </span>
             </div>
             <p className="mt-1 text-sm leading-6 text-muted">{item.question}</p>
             <p className="mt-1 text-xs italic text-muted/80">

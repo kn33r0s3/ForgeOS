@@ -18,7 +18,7 @@ import { tierFromEvidence } from "./value.ts";
 
 /** A WTP hypothesis: which answers look money-close. Not evidence. Never displayed. */
 export interface HypothesizedValue {
-  hypothesis: 1 | 2 | 3;
+  hypothesis: 1 | 2 | 3 | null;
   why: string;
 }
 
@@ -96,7 +96,10 @@ const HYPOTHESES: Record<string, HypothesizedValue> = {
 };
 
 export function hypothesizedValueOf(id: string): HypothesizedValue {
-  return HYPOTHESES[id] ?? { hypothesis: 1, why: "No hypothesis recorded." };
+  return HYPOTHESES[id] ?? {
+    hypothesis: null,
+    why: "Unassessed — no value/WTP hypothesis recorded.",
+  };
 }
 
 /** The evidence tier: earned or unscored. The only tier the engine shows. */

@@ -1,10 +1,10 @@
 """Operating Model v4 API (owner-guarded). Scoreboard is GET-only."""
 
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app import models, security
@@ -33,6 +33,27 @@ class BetIn(BaseModel):
     deadline: Optional[datetime] = None
     assumption_ids: Optional[list[int]] = None
     horizon_domain_id: Optional[int] = None
+
+
+class CandidateAssessmentIn(BaseModel):
+    level: Literal["high", "medium", "low", "unassessed"] = "unassessed"
+    provenance: Literal[
+        "observed", "computed", "owner-confirmed", "model-proposed", "unassessed"
+    ] = "unassessed"
+
+
+class CandidateIn(BaseModel):
+    source_unknown_id: str
+    claim: Optional[str] = None
+    why_it_matters: Optional[str] = None
+    disconfirming_test: Optional[str] = None
+    kill_rule: Optional[str] = None
+    consent_requirement: Optional[str] = None
+    bounded_cost: Optional[str] = None
+    bounded_harm: Optional[str] = None
+    time_to_first_evidence_days: Optional[int] = Field(default=None, ge=0)
+    horizon_relation: Literal["inside", "outside", "unassessed"] = "unassessed"
+    assessments: dict[str, CandidateAssessmentIn] = Field(default_factory=dict)
 
 
 class BetDecisionIn(BaseModel):
@@ -118,6 +139,51 @@ class ObservationIn(BaseModel):
 class ParkDomainIn(BaseModel):
     name: str
     reason: str
+
+
+class WatchHorizonIn(BaseModel):
+    frontier: str
+
+
+@router.get(
+    "/selection",
+    description=(
+        "Owner-only, read-only global candidate comparison. Returns qualitative "
+        "rankings and portfolio recommendations; it does not promote or execute Bets."
+    ),
+)
+def get_selection(request: Request, db: Session = Depends(get_db)):
+    _owner(request)
+    return operating_v4.select_next_candidates(db)
+
+
+@router.post(
+    "/bets/candidates",
+    description="Record an owner-proposed candidate Bet for selection only; no execution.",
+)
+def create_candidate(payload: CandidateIn, request: Request, db: Session = Depends(get_db)):
+    _owner(request)
+    try:
+        candidate = operating_v4.create_candidate(
+            db,
+            source_unknown_id=payload.source_unknown_id,
+            claim=payload.claim,
+            why_it_matters=payload.why_it_matters,
+            disconfirming_test=payload.disconfirming_test,
+            kill_rule=payload.kill_rule,
+            consent_requirement=payload.consent_requirement,
+            bounded_cost=payload.bounded_cost,
+            bounded_harm=payload.bounded_harm,
+            time_to_first_evidence_days=payload.time_to_first_evidence_days,
+            horizon_relation=payload.horizon_relation,
+            assessments={
+                dimension: assessment.model_dump()
+                for dimension, assessment in payload.assessments.items()
+            },
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return {"id": candidate.id, "status": "candidate"}
 
 
 @router.get("/bets")
@@ -347,10 +413,13 @@ def record_frontier(payload: FrontierIn, request: Request, db: Session = Depends
 @router.get("/frontier")
 def get_frontier(request: Request, db: Session = Depends(get_db)):
     _owner(request)
+    horizon = operating_v4.current_watch_horizon(db)
     return {
-        "frontier": operating_v4.FROZEN_FRONTIER,
+        **horizon,
         "frozen_from": operating_v4.FRONTIER_START,
         "day_90": operating_v4.FRONTIER_DAY_90,
+        "editable": True,
+        "universe_boundary": False,
     }
 
 
@@ -528,6 +597,23 @@ def list_horizon(request: Request, db: Session = Depends(get_db)):
         {"id": h.id, **json.loads(h.attributes or "{}")}
         for h in operating_v4.list_horizon_domains(db)
     ]
+
+
+@router.put("/horizon/watch")
+def update_watch_horizon(
+    payload: WatchHorizonIn, request: Request, db: Session = Depends(get_db)
+):
+    _owner(request)
+    try:
+        horizon = operating_v4.set_current_watch_horizon(db, payload.frontier)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return {
+        "id": horizon.id,
+        "frontier": horizon.display_name.removeprefix("Horizon: "),
+        "is_default": False,
+        "universe_boundary": False,
+    }
 
 
 @router.post("/horizon/park")

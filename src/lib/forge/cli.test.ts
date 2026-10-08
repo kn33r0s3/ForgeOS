@@ -25,19 +25,19 @@ describe("forge cli — ForgeBot v1 tools", () => {
     const { stdout, code } = run(["angles", "--limit", "3"]);
     assert.equal(code, 0);
     const { angles } = JSON.parse(stdout) as {
-      angles: Array<{ id: string; valueTier: string | number; valueHypothesis: number; valueWhy: string }>;
+      angles: Array<{ id: string; valueTier: string | number; valueHypothesis: number | null; valueWhy: string }>;
     };
     assert.equal(angles.length, 3);
     for (const a of angles) {
       assert.match(a.id, /^D\d+$/);
       // No give-up evidence recorded anywhere: every tier is "unscored".
       assert.equal(a.valueTier, "unscored");
-      assert.ok([1, 2, 3].includes(a.valueHypothesis));
+      assert.ok(a.valueHypothesis === null || [1, 2, 3].includes(a.valueHypothesis));
       assert.ok(a.valueWhy.length > 10);
     }
     // Within unscored, the WTP hypothesis never increases down the list.
     for (let k = 1; k < angles.length; k++) {
-      assert.ok(angles[k].valueHypothesis <= angles[k - 1].valueHypothesis);
+      assert.ok((angles[k].valueHypothesis ?? 0) <= (angles[k - 1].valueHypothesis ?? 0));
     }
   });
 

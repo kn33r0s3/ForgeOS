@@ -2,6 +2,10 @@
 MONEY ENGINE
 =============
 
+This is EXPLOITATION-LANE logic: it ranks commercial opportunities for
+revenue follow-through. It does not select Hami's global unknowns,
+experiments, or capability-building frontier.
+
 Turns Forge's accumulated understanding of reality into ranked,
 evidence-grounded monetization opportunities for the owner — and,
 critically, treats "will this make money" as something that must be

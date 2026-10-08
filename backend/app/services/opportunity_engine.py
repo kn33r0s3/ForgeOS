@@ -2,6 +2,10 @@
 OPPORTUNITY ENGINE
 ===================
 
+This is EXPLOITATION-LANE logic: it shapes and ranks business opportunities
+after a problem/pattern has been selected for commercial evaluation. It is not
+Hami's global unknown or experiment selector.
+
 Turns a Pattern (or a raw free-text idea) into a structured business
 Opportunity: problem, target customer, solution, business model,
 pricing idea, difficulty, and an overall opportunity score.

@@ -5,8 +5,8 @@
  *   1. verifyRound() — check the operator's round findings through the
  *      evidence gate BEFORE anything is banked. The assistant never lets
  *      an ungated claim through, no matter who found it.
- *   2. ripenessQueue() + isAngleTried() — say what's ripest to investigate
- *      next, and refuse repeated angles.
+ *   2. ripenessQueue() + isAngleTried() — local round aids, not Hami's
+ *      global next-experiment selector; refuse repeated angles.
  *
  * Later: the assistant runs rounds itself (competitor), then better.
  * Now: it assists. Every function here is used by the operator today.
@@ -65,19 +65,21 @@ export interface RipeAngle {
   question: string;
   cheapestTest: string;
   stakes: string;
-  round: number;
+  round: number | null;
   ripeness: Ripeness;
   /** Evidence tier: earned or "unscored". The only tier the engine shows. */
   valueTier: EvidenceTier;
   /** WTP hypothesis — internal tiebreaker only, never displayed as a tier. */
-  valueHypothesis: 1 | 2 | 3;
+  valueHypothesis: 1 | 2 | 3 | null;
   valueWhy: string;
 }
 
 const HUMAN_GATED = /five conversations|ask [a-z]+ owners|ask \d+|a human|in person/i;
 
 /**
- * What's ripest to investigate next: evidence first, then hypothesis.
+ * Local round ordering only; global experiment selection lives in the
+ * owner-only Operating Model selector, not this WTP/doability queue.
+ * What's ripest within this round: evidence first, then hypothesis.
  * Open unknowns ranked by evidence tier (earned value before unscored),
  * WTP hypothesis as the tiebreaker (never displayed as a tier),
  * desk-doable now before human-gated ones, oldest first within each
@@ -101,13 +103,14 @@ export function ripenessQueue(limit = 10): RipeAngle[] {
     };
   });
   const tierRank = (t: EvidenceTier) => (t === "unscored" ? 0 : t);
+  const hypothesisRank = (value: RipeAngle["valueHypothesis"]) => value ?? 0;
   ranked.sort((a, b) => {
     if (tierRank(a.valueTier) !== tierRank(b.valueTier))
       return tierRank(b.valueTier) - tierRank(a.valueTier);
-    if (a.valueHypothesis !== b.valueHypothesis)
-      return b.valueHypothesis - a.valueHypothesis;
+    if (hypothesisRank(a.valueHypothesis) !== hypothesisRank(b.valueHypothesis))
+      return hypothesisRank(b.valueHypothesis) - hypothesisRank(a.valueHypothesis);
     if (a.ripeness !== b.ripeness) return a.ripeness === "now" ? -1 : 1;
-    return a.round - b.round;
+    return (a.round ?? Number.MAX_SAFE_INTEGER) - (b.round ?? Number.MAX_SAFE_INTEGER);
   });
   return ranked.slice(0, limit);
 }

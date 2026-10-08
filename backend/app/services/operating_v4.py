@@ -7,6 +7,7 @@ primitive. All v4 rules enforced here.
 import json
 import logging
 import os
+from functools import cmp_to_key
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -18,9 +19,31 @@ from app import models
 from app.models import utcnow
 
 BET_ENTITY_TYPE = "bet"
-BET_STATUSES = ("live", "amplified", "dampened", "killed")
+BET_STATUSES = ("candidate", "live", "paused", "amplified", "dampened", "killed")
 MAX_LIVE_BETS = 3
 STARVED_DAYS = 14
+
+ASSESSMENT_LEVELS = ("high", "medium", "low", "unassessed")
+ASSESSMENT_PROVENANCE = (
+    "observed",
+    "computed",
+    "owner-confirmed",
+    "model-proposed",
+    "unassessed",
+)
+SELECTION_DIMENSIONS = (
+    "stake",
+    "uncertainty",
+    "evidence_potential",
+    "capability_gain",
+    "transferability",
+    "upside",
+    "cost",
+    "time",
+    "reversibility",
+    "harm",
+)
+WATCH_HORIZON_NAME = "__current_watch_horizon__"
 
 PROOF_LEVELS = {
     0: "idea / agent-written text — may suggest a Bet",
@@ -72,8 +95,11 @@ def create_bet(
     deadline: Optional[datetime] = None,
     assumption_ids: Optional[list] = None,
     horizon_domain_id: Optional[int] = None,
+    initial_status: str = "live",
 ) -> models.SubstrateEntity:
-    if len(live_bets(db)) >= MAX_LIVE_BETS:
+    if initial_status not in ("live", "paused"):
+        raise ValueError("initial_status must be live|paused")
+    if initial_status == "live" and len(live_bets(db)) >= MAX_LIVE_BETS:
         raise ValueError(f"WIP limit: at most {MAX_LIVE_BETS} live Bets.")
     # Parked-domain enforcement: a Bet may not target a parked horizon domain.
     # Explicit reference (not v3's fragile name match).
@@ -99,7 +125,7 @@ def create_bet(
         "kill_criterion": kill_criterion,
         "skeptic_case": skeptic_case,
         "decision_rule": decision_rule,
-        "status": "live",
+        "status": initial_status,
         "assumption_ids": assumption_ids or [],
         "horizon_domain_id": horizon_domain_id,
     }
@@ -120,8 +146,10 @@ def create_bet(
 
 
 def decide_bet(db: Session, bet_id: int, decision: str, notes: Optional[str] = None):
-    if decision not in ("amplified", "dampened", "killed"):
-        raise ValueError("decision must be amplified|dampened|killed")
+    if decision not in ("paused", "amplified", "dampened", "killed"):
+        raise ValueError("decision must be paused|amplified|dampened|killed")
+    if decision == "paused" and not (notes or "").strip():
+        raise ValueError("Pausing a Bet requires an owner rationale.")
     bet = db.get(models.SubstrateEntity, bet_id)
     if not bet or bet.entity_type != BET_ENTITY_TYPE:
         raise ValueError("Bet not found.")
@@ -146,6 +174,449 @@ def decide_bet(db: Session, bet_id: int, decision: str, notes: Optional[str] = N
     return bet
 
 
+def _unknown_catalog() -> dict[str, dict]:
+    path = os.path.join(os.path.dirname(__file__), "..", "data", "unknowns.json")
+    with open(path, encoding="utf-8") as source:
+        rows = json.load(source)["unknowns"]
+    return {row["id"]: row for row in rows}
+
+
+def create_candidate(
+    db: Session,
+    *,
+    source_unknown_id: str,
+    claim: Optional[str],
+    why_it_matters: Optional[str],
+    disconfirming_test: Optional[str],
+    kill_rule: Optional[str],
+    consent_requirement: Optional[str],
+    bounded_cost: Optional[str],
+    bounded_harm: Optional[str],
+    time_to_first_evidence_days: Optional[int],
+    horizon_relation: str,
+    assessments: dict,
+) -> models.SubstrateEntity:
+    """Store an owner-proposed candidate on the existing Bet projection.
+
+    This records a proposal only. It neither selects a live Bet nor authorizes
+    or executes the test.
+    """
+    if time_to_first_evidence_days is not None and time_to_first_evidence_days < 0:
+        raise ValueError("time_to_first_evidence_days cannot be negative.")
+    if horizon_relation not in ("inside", "outside", "unassessed"):
+        raise ValueError("horizon_relation must be inside|outside|unassessed")
+    unknown = _unknown_catalog().get(source_unknown_id)
+    if unknown is None:
+        raise ValueError(f"Unknown {source_unknown_id!r} is not in UNKNOWN_MAP.md.")
+
+    normalized_assessments = {}
+    for dimension in SELECTION_DIMENSIONS:
+        item = assessments.get(dimension, {}) if isinstance(assessments, dict) else {}
+        level = item.get("level", "unassessed") if isinstance(item, dict) else "unassessed"
+        provenance = (
+            item.get("provenance", "unassessed")
+            if isinstance(item, dict)
+            else "unassessed"
+        )
+        if level not in ASSESSMENT_LEVELS:
+            raise ValueError(f"{dimension} level must be one of {ASSESSMENT_LEVELS}.")
+        if provenance not in ASSESSMENT_PROVENANCE:
+            raise ValueError(
+                f"{dimension} provenance must be one of {ASSESSMENT_PROVENANCE}."
+            )
+        if (level == "unassessed") != (provenance == "unassessed"):
+            raise ValueError(
+                f"{dimension} unassessed level and provenance must be paired."
+            )
+        normalized_assessments[dimension] = {
+            "level": level,
+            "provenance": provenance,
+            "confirmed": provenance not in ("model-proposed", "unassessed"),
+            "is_evidence": False,
+        }
+
+    claim_text = (claim or unknown["question"]).strip()
+    if not claim_text:
+        raise ValueError("A candidate requires a claim or question.")
+    attributes = {
+        "claim": claim_text,
+        "constraint": (why_it_matters or unknown.get("stake") or "").strip(),
+        "test": (disconfirming_test or "").strip(),
+        "kill_criterion": (kill_rule or "").strip(),
+        "decision_rule": "",
+        "skeptic_case": "",
+        "status": "candidate",
+        "source_unknown_id": source_unknown_id,
+        "consent_requirement": (consent_requirement or "").strip(),
+        "bounded_cost": (bounded_cost or "").strip(),
+        "bounded_harm": (bounded_harm or "").strip(),
+        "time_to_first_evidence_days": time_to_first_evidence_days,
+        "time_to_first_evidence_provenance": (
+            "owner-confirmed" if time_to_first_evidence_days is not None else "unassessed"
+        ),
+        "horizon_relation": horizon_relation,
+        "horizon_relation_provenance": (
+            "owner-confirmed" if horizon_relation != "unassessed" else "unassessed"
+        ),
+        "assessments": normalized_assessments,
+        "evidence_references": [],
+    }
+    from app.services import world_graph  # local import to avoid cycles
+
+    candidate = world_graph.create_entity(
+        db,
+        entity_type=BET_ENTITY_TYPE,
+        display_name=f"Candidate: {claim_text[:80]}",
+        attributes=attributes,
+        created_by="owner",
+    )
+    db.commit()
+    db.refresh(candidate)
+    return candidate
+
+
+def _candidate_gate_blockers(attributes: dict) -> list[str]:
+    blockers = []
+    required = (
+        ("claim", "falsifiable claim or question"),
+        ("test", "named disconfirming test"),
+        ("kill_criterion", "kill rule"),
+        ("consent_requirement", "consent/permission requirement"),
+        ("bounded_cost", "bounded expected cost"),
+        ("bounded_harm", "bounded expected harm"),
+    )
+    for key, label in required:
+        value = attributes.get(key)
+        if not isinstance(value, str) or not value.strip():
+            blockers.append(f"Missing {label}.")
+    assessments = attributes.get("assessments") or {}
+    if not isinstance(assessments, dict):
+        assessments = {}
+    for dimension in ("cost", "harm"):
+        item = assessments.get(dimension) or {}
+        if not isinstance(item, dict):
+            item = {}
+        if (
+            item.get("level") not in ("high", "medium", "low")
+            or item.get("provenance") in ("unassessed", "model-proposed")
+        ):
+            blockers.append(
+                f"{dimension.capitalize()} must have a bounded, non-model assessment."
+            )
+    return blockers
+
+
+def _trusted_assessment(candidate: dict, dimension: str) -> Optional[str]:
+    item = candidate["assessments"].get(dimension, {})
+    if not item.get("confirmed"):
+        return None
+    return item["level"] if item["level"] != "unassessed" else None
+
+
+def _compare_candidates(left: dict, right: dict) -> int:
+    positive = (
+        "uncertainty",
+        "evidence_potential",
+        "stake",
+        "transferability",
+        "capability_gain",
+        "upside",
+        "reversibility",
+    )
+    preference = {"low": 0, "medium": 1, "high": 2}
+    for dimension in positive:
+        a = _trusted_assessment(left, dimension)
+        b = _trusted_assessment(right, dimension)
+        if a is not None and b is not None and a != b:
+            return preference[b] - preference[a]
+    for dimension in ("harm", "cost", "time"):
+        a = _trusted_assessment(left, dimension)
+        b = _trusted_assessment(right, dimension)
+        if a is not None and b is not None and a != b:
+            return preference[a] - preference[b]
+    return (left["candidate_id"] > right["candidate_id"]) - (
+        left["candidate_id"] < right["candidate_id"]
+    )
+
+
+def select_next_candidates(db: Session) -> dict:
+    """Rank owner-authored candidate Bets qualitatively; never score or execute.
+
+    Gate failures are blockers, not negative scores. Unknown assessments and
+    model proposals are surfaced but excluded from comparisons. Strategic
+    learning/leverage factors precede ease, time, cost, and harm.
+    """
+    source_unknowns = _unknown_catalog()
+    rows = (
+        db.query(models.SubstrateEntity)
+        .filter(
+            models.SubstrateEntity.entity_type == BET_ENTITY_TYPE,
+            models.SubstrateEntity.status == "active",
+        )
+        .order_by(models.SubstrateEntity.id.asc())
+        .all()
+    )
+    candidates = []
+    for row in rows:
+        attributes = _bet_attributes(row)
+        status = attributes.get("status")
+        if status not in ("candidate", "live", "paused"):
+            continue
+        source_id = attributes.get("source_unknown_id")
+        source = (
+            source_unknowns.get(source_id)
+            if isinstance(source_id, str)
+            else None
+        )
+        raw_assessments = attributes.get("assessments") or {}
+        if not isinstance(raw_assessments, dict):
+            raw_assessments = {}
+        assessments = {}
+        missing_information = []
+        for dimension in SELECTION_DIMENSIONS:
+            raw = raw_assessments.get(dimension) or {}
+            if not isinstance(raw, dict):
+                raw = {}
+            level = raw.get("level")
+            provenance = raw.get("provenance")
+            if level not in ASSESSMENT_LEVELS or provenance not in ASSESSMENT_PROVENANCE:
+                level, provenance = "unassessed", "unassessed"
+            confirmed = provenance not in ("model-proposed", "unassessed")
+            assessments[dimension] = {
+                "level": level,
+                "provenance": provenance,
+                "confirmed": confirmed,
+                "is_evidence": False,
+            }
+            if level == "unassessed":
+                missing_information.append(f"{dimension} assessment")
+            elif provenance == "model-proposed":
+                missing_information.append(f"{dimension} assessment needs confirmation")
+        blockers = _candidate_gate_blockers(attributes)
+        if status == "paused":
+            blockers.insert(0, "Paused Bet preserved as history; not eligible for selection.")
+        elif status == "live":
+            blockers.insert(0, "Existing live Bet is not an unpromoted selection candidate.")
+        if source_id and source is None:
+            blockers.append("Source unknown is no longer present in the generated map projection.")
+        if not source_id:
+            missing_information.append("source unknown link")
+        first_evidence_days = attributes.get("time_to_first_evidence_days")
+        if first_evidence_days is None:
+            missing_information.append("expected first-evidence timing")
+        if attributes.get("horizon_relation") == "unassessed":
+            missing_information.append("relationship to current watch horizon")
+        evidence_refs = attributes.get("evidence_references") or []
+        item = {
+            "candidate_id": f"bet:{row.id}",
+            "candidate": row.display_name,
+            "source_unknown_id": source_id,
+            "claim_or_question": attributes.get("claim") or "",
+            "why_it_matters": attributes.get("constraint") or (
+                source.get("stake", "") if source else ""
+            ),
+            "assessments": assessments,
+            "evidence_status": (
+                f"{len(evidence_refs)} linked reference(s); not independently verified here."
+                if evidence_refs
+                else "No evidence references recorded on this Bet; assessments are not evidence."
+            ),
+            "kill_rule": attributes.get("kill_criterion") or "Unassessed",
+            "expected_first_evidence": (
+                f"Within {first_evidence_days} day(s)"
+                if isinstance(first_evidence_days, int)
+                else "Unassessed"
+            ),
+            "time_to_first_evidence_days": first_evidence_days,
+            "horizon_relation": attributes.get("horizon_relation", "unassessed"),
+            "gate_blockers": blockers,
+            "missing_information": sorted(set(missing_information)),
+            "status": status,
+            "rank": None,
+            "selection_reason": None,
+        }
+        candidates.append(item)
+
+    eligible = [item for item in candidates if not item["gate_blockers"]]
+    eligible.sort(key=cmp_to_key(_compare_candidates))
+    live_count = len(live_bets(db))
+    available_slots = max(0, MAX_LIVE_BETS - live_count)
+    selected: dict[str, str] = {}
+
+    def choose(items: list[dict], reason: str) -> None:
+        if len(selected) >= available_slots:
+            return
+        candidate = next(
+            (item for item in items if item["candidate_id"] not in selected),
+            None,
+        )
+        if candidate:
+            selected[candidate["candidate_id"]] = reason
+
+    choose(eligible, "Strongest overall by the qualitative global comparison.")
+    choose(
+        [
+            item
+            for item in eligible
+            if item["horizon_relation"] == "outside"
+            and item["horizon_relation"] != "unassessed"
+        ],
+        "Reserved exploration slot: explicitly outside the current watch horizon.",
+    )
+    choose(
+        [
+            item
+            for item in eligible
+            if isinstance(item["time_to_first_evidence_days"], int)
+            and item["time_to_first_evidence_days"] <= 7
+        ],
+        "Meets the owner-approved first-evidence-within-7-days portfolio floor.",
+    )
+    for item in eligible:
+        if len(selected) >= available_slots:
+            break
+        selected.setdefault(
+            item["candidate_id"],
+            "Next by qualitative merit within the remaining owner-review slots.",
+        )
+
+    ranked = eligible + sorted(
+        (item for item in candidates if item["gate_blockers"]),
+        key=lambda item: item["candidate_id"],
+    )
+    for index, item in enumerate(ranked, start=1):
+        item["rank"] = index
+        reason = selected.get(item["candidate_id"])
+        if reason:
+            item["selection_reason"] = f"Selected for owner review. {reason}"
+        elif item["gate_blockers"]:
+            item["selection_reason"] = "Blocked: " + " ".join(item["gate_blockers"])
+        elif item["candidate_id"] in {c["candidate_id"] for c in eligible}:
+            item["selection_reason"] = (
+                "Not selected: ranked outside the available owner-review slots "
+                "under the portfolio constraints."
+            )
+
+    selected_slate = [
+        item for item in ranked if item["candidate_id"] in selected
+    ]
+    return {
+        "ranked_candidates": ranked,
+        "selected_slate": selected_slate,
+        "live_bet_count": live_count,
+        "available_live_slots": available_slots,
+        "portfolio_requirements": {
+            "first_evidence_within_7_days": any(
+                item["time_to_first_evidence_days"] <= 7
+                for item in selected_slate
+                if isinstance(item["time_to_first_evidence_days"], int)
+            ),
+            "exploration_outside_watch_horizon": any(
+                item["horizon_relation"] == "outside" for item in selected_slate
+            ),
+            "strongest_overall_included": bool(
+                available_slots
+                and eligible
+                and selected_slate
+                and selected_slate[0]["candidate_id"] == eligible[0]["candidate_id"]
+            ),
+        },
+        "portfolio_gaps": [
+            requirement
+            for requirement, fulfilled in (
+                (
+                    "No admitted candidate has owner-confirmed first evidence within 7 days.",
+                    any(
+                        item["time_to_first_evidence_days"] <= 7
+                        for item in selected_slate
+                        if isinstance(item["time_to_first_evidence_days"], int)
+                    ),
+                ),
+                (
+                    "No admitted candidate is explicitly outside the current watch horizon.",
+                    any(
+                        item["horizon_relation"] == "outside" for item in selected_slate
+                    ),
+                ),
+            )
+            if available_slots and not fulfilled
+        ],
+        "comparison_method": (
+            "Qualitative, lexicographic comparison; no aggregate numeric score. "
+            "Strategic learning/leverage factors precede cost, time, and harm. "
+            "Unassessed and model-proposed values do not become Low."
+        ),
+        "responsibility": [
+            {
+                "stage": "unknown / observation",
+                "performed_by": ["human", "code"],
+                "current_boundary": "Humans record map unknowns and observations; code generates projections and imports Claims. AI output can suggest, not establish reality.",
+                "authorization": "External observation/contact requires the applicable owner authorization and affected-party consent.",
+            },
+            {
+                "stage": "hypothesis",
+                "performed_by": ["human", "AI model"],
+                "current_boundary": "Owners author Bet/unknown hypotheses; models may propose text in separate business-analysis flows. Model proposals are not evidence.",
+                "authorization": "Hypothesis writing alone does not authorize contact, spend, publication, or action.",
+            },
+            {
+                "stage": "candidate selection",
+                "performed_by": ["code", "human"],
+                "current_boundary": "This owner-only selector compares candidate Bet projections; a human must author/register each candidate. Legacy WTP and revenue rankers do not feed this comparison.",
+                "authorization": "The read-only ranking requires owner API access; selection does not promote or authorize a Bet.",
+            },
+            {
+                "stage": "experiment design",
+                "performed_by": ["human", "code"],
+                "current_boundary": "The owner supplies the disconfirming test, consent/permission requirement, bounded cost/harm, and kill rule; code validates admission fields.",
+                "authorization": "Candidate registration is owner-guarded and does not authorize execution.",
+            },
+            {
+                "stage": "execution",
+                "performed_by": ["human", "code"],
+                "current_boundary": "This selector executes nothing. Existing code workflows run only where their own capability and authorization gates permit.",
+                "authorization": "Explicit owner authorization, affected-party consent, external permission, and available capability remain required.",
+            },
+            {
+                "stage": "evidence",
+                "performed_by": ["human", "code"],
+                "current_boundary": "Humans or existing code paths record sourced evidence; model-proposed assessments are explicitly not evidence.",
+                "authorization": "Evidence collection remains subject to consent, privacy, access, and legal constraints.",
+            },
+            {
+                "stage": "verification",
+                "performed_by": ["code", "human"],
+                "current_boundary": "Existing evidence/proof gates validate recorded claims; some proof levels require a verifier or counterparty confirmation.",
+                "authorization": "Verification does not substitute for permission to collect evidence or act.",
+            },
+            {
+                "stage": "action",
+                "performed_by": ["human", "code"],
+                "current_boundary": "Owners authorize consequential actions; code can execute only through existing gated paths. The selector has no execution button.",
+                "authorization": "Action-specific authorization and external permission remain mandatory.",
+            },
+            {
+                "stage": "outcome",
+                "performed_by": ["human", "code"],
+                "current_boundary": "Real outcomes require attributable real-world evidence; code can persist records but cannot infer a transaction from a plan.",
+                "authorization": "Outcome recording does not retroactively authorize the action.",
+            },
+            {
+                "stage": "learning",
+                "performed_by": ["human", "code"],
+                "current_boundary": "Code preserves decision/evidence records; humans currently interpret results and update the authoritative unknown map.",
+                "authorization": "Updating internal learning records is not authorization for a subsequent external step.",
+            },
+            {
+                "stage": "next unknown",
+                "performed_by": ["human"],
+                "current_boundary": "A human currently notices or curates the next unknown; no automatic outcome-to-unknown loop is claimed.",
+                "authorization": "Any resulting external test still needs its own authorization and consent.",
+            },
+        ],
+    }
+
+
 # ---------------------------------------------------------------------
 # Founding evidence Bets (architect-approved 2026-10-07)
 # ---------------------------------------------------------------------
@@ -153,10 +624,11 @@ def decide_bet(db: Session, bet_id: int, decision: str, notes: Optional[str] = N
 # proposal, not an implementation request. Verdict: strategic direction
 # APPROVED; E1-E5 APPROVED WITH STRUCTURAL CHANGES; schema/dashboard expansion
 # (Experiment.unknown_id, new template system, UNKNOWN_MAP migration to DB)
-# NOT APPROVED. These three Bets are the approved first phase — seeded through
+# NOT APPROVED. These three Bets are historical founding material — seeded through
 # the existing create_bet seam, with the anti-theater pre-registration carried
 # by the Bet's own fields (kill_criterion, decision_rule, affordable_loss).
-# No new tables, no new models, no dashboard.
+# No new tables, no new models, no dashboard. Bet A is retained as paused
+# history and is never a privileged input to the global selector.
 #
 # Structural corrections baked in:
 # - Cycle is UNKNOWN -> CHEAPEST LEGITIMATE PROBE -> EVIDENCE -> DECISION ->
@@ -246,6 +718,7 @@ SEED_FOUNDING_BETS = [
         "money_at_risk": "Rs 0 cash.",
         "trust_at_risk": "Seller relationships — open questions, no pitching, consent-first; one bad conversation burns the channel.",
         "deadline": datetime(2026, 10, 28, tzinfo=timezone.utc),
+        "initial_status": "paused",
     },
     {
         "claim": (
@@ -378,6 +851,7 @@ def seed_founding_bets(db: Session) -> list:
             money_at_risk=spec.get("money_at_risk"),
             trust_at_risk=spec.get("trust_at_risk"),
             deadline=spec.get("deadline"),
+            initial_status=spec.get("initial_status", "live"),
         )
         created.append(bet)
         existing_claims.add(spec["claim"][:60])
@@ -839,6 +1313,68 @@ def unpark_domain(db: Session, domain_id: int) -> models.SubstrateEntity:
     db.commit()
     db.refresh(h)
     return h
+
+
+def current_watch_horizon(db: Session) -> dict:
+    """Return the editable Horizon-register focus, or the historical default."""
+    for horizon in list_horizon_domains(db):
+        if _horizon_attributes(horizon).get("name") == WATCH_HORIZON_NAME:
+            return {
+                "frontier": horizon.display_name.removeprefix("Horizon: "),
+                "is_default": False,
+            }
+    return {"frontier": FROZEN_FRONTIER, "is_default": True}
+
+
+def set_current_watch_horizon(db: Session, frontier: str) -> models.SubstrateEntity:
+    """Owner-edited watch focus stored on the existing Horizon projection."""
+    text = (frontier or "").strip()
+    if not text:
+        raise ValueError("Watch horizon text is required.")
+    if len(text) > 2000:
+        raise ValueError("Watch horizon text must be 2000 characters or fewer.")
+    from app.services import world_graph  # local import to avoid cycles
+
+    existing = next(
+        (
+            horizon
+            for horizon in list_horizon_domains(db)
+            if _horizon_attributes(horizon).get("name") == WATCH_HORIZON_NAME
+        ),
+        None,
+    )
+    if existing is None:
+        horizon = world_graph.create_entity(
+            db,
+            entity_type=HORIZON_DOMAIN_ENTITY_TYPE,
+            display_name=f"Horizon: {text}",
+            attributes={
+                "name": WATCH_HORIZON_NAME,
+                "reason_parked": "Owner-editable watch focus; not a universe boundary.",
+                "status": "unparked",
+                "parked_at": utcnow().isoformat(),
+                "unparked_at": None,
+            },
+            created_by="owner",
+        )
+    else:
+        previous = existing.display_name.removeprefix("Horizon: ")
+        existing.display_name = f"Horizon: {text}"
+        world_graph.create_event(
+            db,
+            event_type="state_changed",
+            source="owner",
+            entity_id=existing.id,
+            payload={
+                "change": "watch_horizon_updated",
+                "previous": previous,
+                "current": text,
+            },
+        )
+        horizon = existing
+    db.commit()
+    db.refresh(horizon)
+    return horizon
 
 
 # ---------------------------------------------------------------------

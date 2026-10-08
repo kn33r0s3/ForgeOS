@@ -18,7 +18,13 @@ from app.services import economic_validation
 from app.services import prospect_discovery
 from app.schemas.experiment import ExperimentAuthorize, ExperimentOutcomeCreate, ExperimentProposalCreate
 
-router = APIRouter(tags=["opportunities"])
+router = APIRouter(
+    tags=["opportunities"],
+    description=(
+        "Commercial opportunity and experiment APIs. Opportunity ranking is "
+        "EXPLICIT EXPLOITATION-LANE logic, not Hami's global unknown selector."
+    ),
+)
 
 
 class ExperimentOutcomeBody(BaseModel):
@@ -54,7 +60,14 @@ class ProspectDiscoveryReadinessBody(BaseModel):
     qualification_questions: list[str] | None = Field(default=None, max_length=10)
 
 
-@router.get("/opportunities", response_model=list[schemas.OpportunityOut])
+@router.get(
+    "/opportunities",
+    response_model=list[schemas.OpportunityOut],
+    description=(
+        "Commercial opportunity list/ranking (EXPLICIT EXPLOITATION LANE); "
+        "not a global selection of unknowns, experiments, or capabilities."
+    ),
+)
 def get_opportunities(limit: int = 200, db: Session = Depends(get_db)):
     """List discovered opportunities, highest score first."""
     return opportunity_engine.list_opportunities(db, limit=limit)
