@@ -48,10 +48,10 @@ ledger, truth progression. 717 backend tests.
   execution-action creation, legacy research writes, goal/strategy mutations,
   and private reads for autonomy policy/evaluation, task history, strategy
   performance, execution ranking/recommendation, internal beliefs, research
-  results, strategies, outcomes, and runtime state. Each repair and its
-  route-level evidence is tracked in `docs/CAPABILITY_QUEUE.md`. Remaining
-  route contracts still require individual review; deployed source identity
-  is NOT VERIFIED.
+  results, strategies, outcomes, runtime state, and commercial opportunity/
+  experiment data. Each repair and its route-level evidence is tracked in
+  `docs/CAPABILITY_QUEUE.md`. Remaining route contracts still require
+  individual review; deployed source identity is NOT VERIFIED.
 - Production readiness: no durable database configured; CRON_SECRET absent.
 - Company registration (Hami Systems): IN PROGRESS, awaiting approval.
 - Payment: no legally verified merchant path until business PAN exists.

@@ -66,8 +66,9 @@ class ProspectDiscoveryReadinessBody(BaseModel):
         "not a global selection of unknowns, experiments, or capabilities."
     ),
 )
-def get_opportunities(limit: int = 200, db: Session = Depends(get_db)):
-    """List discovered opportunities, highest score first."""
+def get_opportunities(request: Request, limit: int = 200, db: Session = Depends(get_db)):
+    """List commercial opportunities, highest score first. Owner-only."""
+    require_owner_api_key(request)
     return opportunity_engine.list_opportunities(db, limit=limit)
 
 
@@ -135,7 +136,13 @@ def monitor_opportunity(opportunity_id: int, request: Request, db: Session = Dep
 
 
 @router.get("/opportunities/{opportunity_id}/options")
-def get_opportunity_options(opportunity_id: int, db: Session = Depends(get_db)):
+def get_opportunity_options(
+    opportunity_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Evaluate internal candidate options for an opportunity. Owner-only."""
+    require_owner_api_key(request)
     return option_space.evaluate_option_space(db, opportunity_id)
 
 
@@ -329,8 +336,13 @@ def create_experiment(payload: schemas.ExperimentCreate, request: Request, db: S
 
 
 @router.get("/experiments", response_model=list[schemas.ExperimentOut])
-def get_experiments(opportunity_id: Optional[int] = None, db: Session = Depends(get_db)):
-    """List logged experiments, optionally filtered by opportunity."""
+def get_experiments(
+    request: Request,
+    opportunity_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    """List internal logged experiments, optionally filtered by opportunity."""
+    require_owner_api_key(request)
     query = db.query(models.Experiment)
     if opportunity_id is not None:
         query = query.filter(models.Experiment.opportunity_id == opportunity_id)

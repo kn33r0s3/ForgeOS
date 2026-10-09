@@ -520,6 +520,19 @@ def test_forge_memory_and_operations_reads_require_owner_key(client_with_db, mon
     assert public_unknowns.status_code == 200, public_unknowns.text
 
 
+def test_commercial_opportunity_reads_require_owner_key(client_with_db, monkeypatch):
+    from app import security
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    for path in (
+        "/opportunities?limit=1",
+        "/opportunities/999/options",
+        "/experiments",
+    ):
+        response = client_with_db.get(path)
+        assert response.status_code == 503, f"{path}: {response.status_code} {response.text}"
+
+
 def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     client_with_db, db, monkeypatch
 ):
