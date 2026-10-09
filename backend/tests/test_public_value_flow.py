@@ -444,6 +444,29 @@ def test_goal_mutations_require_owner_key(client_with_db, db, monkeypatch):
     assert authorized.status_code == 200, authorized.text
 
 
+def test_autonomy_cycle_trigger_requires_owner_key(client_with_db, monkeypatch):
+    from app import security
+    from app.services import execution_engine
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    monkeypatch.setattr(
+        execution_engine,
+        "run_autonomous_action_cycle",
+        lambda db: schemas.AutonomousCycleSummary(
+            proposed=0,
+            allowed=0,
+            blocked=0,
+            require_approval=0,
+        ),
+    )
+    response = client_with_db.post("/forge/autonomy/run-cycle")
+    assert response.status_code == 503
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
+    authorized = client_with_db.post("/forge/autonomy/run-cycle")
+    assert authorized.status_code == 200, authorized.text
+
+
 def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     client_with_db, db, monkeypatch
 ):

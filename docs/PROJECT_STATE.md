@@ -40,12 +40,15 @@ ledger, truth progression. 717 backend tests.
 - **ONE NAMED SELLER.** Experiment 1 (slow-reply recovery) cannot start
   until the owner names one social seller and authorizes first contact.
   Suggested: name by 2026-10-08/09 so a reply week overlaps Dashain shopping.
-- **SECURITY (verified 2026-10-05, needs owner decision):** route audit found
-  27 unguarded consequential endpoints on forge.router — including
-  POST /forge/actions/{id}/approve and /execute (broken guard call raises
-  TypeError instead of enforcing auth) and PATCH /forge/autonomy/policy
-  (rewrites spend limits with no key). Middleware 401s writes only when
-  FORGE_API_KEY is set. Fix proposed, not applied — awaiting owner.
+- **SECURITY (route audit continuing; initial findings remediated in source):**
+  the 2026-10-05 scan identified 27 forge-router writes without route-level
+  owner checks. Confirmed high-impact gaps have since been repaired in the
+  existing handlers, including autonomy-policy changes, action proposal,
+  approval and execution, outcome recording, revenue-source linking,
+  execution-action creation, legacy research writes, and goal/strategy
+  mutations. Each repair and its route-level evidence is tracked in
+  `docs/CAPABILITY_QUEUE.md`. Remaining route contracts still require
+  individual review; deployed source identity is NOT VERIFIED.
 - Production readiness: no durable database configured; CRON_SECRET absent.
 - Company registration (Hami Systems): IN PROGRESS, awaiting approval.
 - Payment: no legally verified merchant path until business PAN exists.

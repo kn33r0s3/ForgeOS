@@ -1089,7 +1089,10 @@ def get_strategy_performance(strategy_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/autonomy/run-cycle", response_model=schemas.AutonomousCycleSummary)
-def run_autonomy_cycle_now(db: Session = Depends(get_db)):
+def run_autonomy_cycle_now(
+    request: Request,
+    db: Session = Depends(get_db),
+):
     """
     Manually trigger one pass of the autonomous action-proposal loop
     (the same one worker.py runs on every Forge cycle) — useful for
@@ -1097,6 +1100,7 @@ def run_autonomy_cycle_now(db: Session = Depends(get_db)):
     cycle. AUTONOMOUS DECISION only: this proposes and evaluates
     actions against policy, it never starts or executes any of them.
     """
+    require_owner_api_key(request)
     return execution_engine.run_autonomous_action_cycle(db)
 
 
