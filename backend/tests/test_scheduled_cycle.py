@@ -210,12 +210,12 @@ def test_scheduled_intelligence_runs_five_stages(monkeypatch):
     body = response.json()
     assert body["status"] == "completed"
     intel = body["intelligence"]
-    # All five stages reported (ok or isolated error).
-    assert intel["forge_cycle"]["status"] in ("ok", "error")
-    assert intel["collection_cycle"]["status"] in ("ok", "error")
+    # All five stages reported (ok, partial, or isolated error).
+    assert intel["forge_cycle"]["status"] in ("ok", "partial", "error")
+    assert intel["collection_cycle"]["status"] in ("ok", "partial", "error")
     assert intel["resumed_tasks"]["status"] in ("ok", "error")
     assert intel["autonomy_cycle"]["status"] in ("ok", "error")
-    assert intel["discovery_cycle"]["status"] in ("ok", "error")
+    assert intel["discovery_cycle"]["status"] in ("ok", "partial", "error")
 
 
 def test_scheduled_intelligence_discovery_returns_operational_summary(monkeypatch):
@@ -361,3 +361,114 @@ def test_scheduled_intelligence_discovery_counts_executed_methods(monkeypatch):
     assert disc["status"] == "ok"
     assert disc["methods_run"] == 2  # Only m1 and m3 ran
     assert disc["methods_total"] == 4  # All 4 in registry
+
+
+def test_scheduled_intelligence_forge_partial_on_stage_errors(monkeypatch):
+    """Stage 1 reports partial (not ok) when forge_cycle has stage_errors."""
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    import app.services.forge_loop as fl
+
+    def mock_run_cycle(db):
+        return {
+            "cycle_id": "test-123",
+            "signals_processed": 5,
+            "stage_errors": {"planner": "simulated failure"},
+        }
+
+    monkeypatch.setattr(fl, "run_cycle", mock_run_cycle)
+    client = TestClient(app)
+
+    response = client.get(
+        "/scheduled/intelligence",
+        headers={"Authorization": "Bearer test-cron-secret"},
+    )
+
+    assert response.status_code == 200
+    forge = response.json()["intelligence"]["forge_cycle"]
+    assert forge["status"] == "partial"
+    assert forge["stage_errors"] == {"planner": "simulated failure"}
+
+
+def test_scheduled_intelligence_collection_partial_on_failed_deferred(monkeypatch):
+    """Stage 2 reports partial when outcomes include failed/deferred."""
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    import app.services.collector_runner as cr
+
+    def mock_run_pending(db, limit=5):
+        return [
+            {"task_id": 1, "source": "web", "status": "completed", "signals_created": 3},
+            {"task_id": 2, "source": "rss", "status": "failed", "signals_created": 0},
+            {"task_id": 3, "source": "api", "status": "deferred", "signals_created": 0},
+        ]
+
+    monkeypatch.setattr(cr, "run_pending_tasks", mock_run_pending)
+    client = TestClient(app)
+
+    response = client.get(
+        "/scheduled/intelligence",
+        headers={"Authorization": "Bearer test-cron-secret"},
+    )
+
+    assert response.status_code == 200
+    coll = response.json()["intelligence"]["collection_cycle"]
+    assert coll["status"] == "partial"
+    assert coll["tasks_executed"] == 3
+    assert coll["tasks_failed"] == 1
+    assert coll["tasks_deferred"] == 1
+
+
+def test_scheduled_intelligence_discovery_partial_on_errors(monkeypatch):
+    """Stage 5 reports partial (not ok) when discovery has errors/deferred."""
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    import app.services.discovery_engine as de
+
+    def mock_run(db, **kwargs):
+        return {
+            "methods": [
+                {"name": "m1", "status": "ran"},
+                {"name": "m2", "status": "error"},
+            ],
+            "surfaced": [], "existing": [], "rejected": [],
+            "deferred": [{"method": "m3", "reason": "blocked"}],
+            "errors": [{"method": "m2", "error": "simulated"}],
+            "capability_gaps": [],
+        }
+
+    monkeypatch.setattr(de, "run_discovery", mock_run)
+    client = TestClient(app)
+
+    response = client.get(
+        "/scheduled/intelligence",
+        headers={"Authorization": "Bearer test-cron-secret"},
+    )
+
+    assert response.status_code == 200
+    disc = response.json()["intelligence"]["discovery_cycle"]
+    assert disc["status"] == "partial"
+    assert disc["errors"] == 1
+    assert disc["deferred"] == 1
+
+
+def test_scheduled_intelligence_stage_error_isolated(monkeypatch):
+    """A stage that throws is reported as error without failing other stages."""
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    import app.services.forge_loop as fl
+
+    def mock_run_cycle(db):
+        raise RuntimeError("simulated stage failure")
+
+    monkeypatch.setattr(fl, "run_cycle", mock_run_cycle)
+    client = TestClient(app)
+
+    response = client.get(
+        "/scheduled/intelligence",
+        headers={"Authorization": "Bearer test-cron-secret"},
+    )
+
+    assert response.status_code == 200
+    intel = response.json()["intelligence"]
+    # Failed stage reports error
+    assert intel["forge_cycle"]["status"] == "error"
+    # Other stages still run (ok, partial, or error — but present)
+    assert "collection_cycle" in intel
+    assert "discovery_cycle" in intel

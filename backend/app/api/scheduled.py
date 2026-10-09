@@ -185,11 +185,15 @@ def run_scheduled_intelligence(authorization: str | None = Header(default=None))
             from app.services import forge_loop
 
             summary = forge_loop.run_cycle(db)
+            stage_errors = summary.get("stage_errors", {})
+            # Truthful status: ok only when no internal errors; partial when
+            # the cycle completed but one or more sub-operations failed.
+            stage1_status = "partial" if stage_errors else "ok"
             intelligence["forge_cycle"] = {
-                "status": "ok",
+                "status": stage1_status,
                 "cycle_id": summary.get("cycle_id"),
                 "signals_processed": summary.get("signals_processed", 0),
-                "stage_errors": summary.get("stage_errors", {}),
+                "stage_errors": stage_errors,
             }
     except Exception as exc:
         logger.warning("scheduled intelligence: forge_cycle failed (%s)", type(exc).__name__)
@@ -207,18 +211,29 @@ def run_scheduled_intelligence(authorization: str | None = Header(default=None))
             from app.services import collector_runner
 
             collection_outcomes = collector_runner.run_pending_tasks(db, limit=5)
+            outcomes_list = [
+                {
+                    "task_id": o.get("task_id"),
+                    "source": o.get("source"),
+                    "status": o.get("status"),
+                    "signals_created": o.get("signals_created", 0),
+                }
+                for o in collection_outcomes
+            ]
+            # Truthful status: ok only when all outcomes completed; partial
+            # when any failed or were deferred. A returned list is not proof
+            # of success — check each outcome's status.
+            failed_or_deferred = [
+                o for o in outcomes_list
+                if o.get("status") in ("failed", "deferred")
+            ]
+            stage2_status = "partial" if failed_or_deferred else "ok"
             intelligence["collection_cycle"] = {
-                "status": "ok",
-                "tasks_executed": len(collection_outcomes),
-                "outcomes": [
-                    {
-                        "task_id": o.get("task_id"),
-                        "source": o.get("source"),
-                        "status": o.get("status"),
-                        "signals_created": o.get("signals_created", 0),
-                    }
-                    for o in collection_outcomes
-                ],
+                "status": stage2_status,
+                "tasks_executed": len(outcomes_list),
+                "tasks_failed": len([o for o in outcomes_list if o.get("status") == "failed"]),
+                "tasks_deferred": len([o for o in outcomes_list if o.get("status") == "deferred"]),
+                "outcomes": outcomes_list,
             }
     except Exception as exc:
         logger.warning("scheduled intelligence: collection_cycle failed (%s)", type(exc).__name__)
@@ -277,15 +292,22 @@ def run_scheduled_intelligence(authorization: str | None = Header(default=None))
                 methods_executed = sum(
                     1 for m in report.get("methods", []) if m.get("status") == "ran"
                 )
+                errors_count = len(report.get("errors", []))
+                deferred_count = len(report.get("deferred", []))
+                # Truthful status: ok only with no errors and no deferred work;
+                # partial when the discovery ran but some methods errored or
+                # were deferred. Preserve the distinction among errors,
+                # deferred, rejected, and normal no-result findings.
+                stage5_status = "partial" if (errors_count or deferred_count) else "ok"
                 intelligence["discovery_cycle"] = {
-                    "status": "ok",
+                    "status": stage5_status,
                     "methods_run": methods_executed,
                     "methods_total": len(report.get("methods", [])),
                     "surfaced": len(report.get("surfaced", [])),
                     "existing": len(report.get("existing", [])),
                     "rejected": len(report.get("rejected", [])),
-                    "deferred": len(report.get("deferred", [])),
-                    "errors": len(report.get("errors", [])),
+                    "deferred": deferred_count,
+                    "errors": errors_count,
                     "capability_gaps": len(report.get("capability_gaps", [])),
                 }
             except Exception:
