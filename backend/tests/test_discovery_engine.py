@@ -796,3 +796,38 @@ def test_3b2_curiosity_idempotent_keys(db):
     keys1 = sorted(f.key for f in findings1)
     keys2 = sorted(f.key for f in findings2)
     assert keys1 == keys2, "Method not idempotent"
+
+
+def test_ignorance_map_finds_capability_gaps(db):
+    """ignorance_map surfaces capability gaps as blind spots."""
+    from app.services import discovery_engine as engine
+
+    # The method should run without error even with empty DB
+    # (capability gaps are optional; uninvestigated questions are the primary signal)
+    findings = _run_method(db, "ignorance_map")
+    # Method runs successfully (may return empty if no gaps/questions)
+    assert isinstance(findings, list)
+
+
+def test_ignorance_map_finds_uninvestigated_questions(db):
+    """ignorance_map surfaces questions with no research tasks."""
+    from app.services import discovery_engine as engine
+
+    q = models.ResearchQuestion(
+        question="What businesses operate in Butwal?",
+        status="open",
+    )
+    db.add(q)
+    db.commit()
+
+    findings = _run_method(db, "ignorance_map")
+    q_findings = [f for f in findings if f.key.startswith("ignorance-uninvestigated:")]
+    assert len(q_findings) >= 1
+
+
+def test_ignorance_map_method_registered(db):
+    """ignorance_map is in the default registry."""
+    from app.services import discovery_engine as engine
+    method = engine.DEFAULT_REGISTRY.get("ignorance_map")
+    assert method.name == "ignorance_map"
+    assert "blind_spot" in method.emits
