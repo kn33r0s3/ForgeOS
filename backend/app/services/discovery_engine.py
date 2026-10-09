@@ -1279,9 +1279,8 @@ def _ignorance_map(ctx: DiscoveryContext) -> Iterable[Finding]:
                 f"Domains requiring this capability cannot be investigated. "
                 f"Blocker: {gap.description or 'no description'}"
             ),
-            basis=(BasisRef("entity", gap.id),),
+            basis=(BasisRef("capability", gap.id),),
             epistemic_state="possible",
-            subject_entity_ids=(gap.id,),
             facets={"source": "ignorance_map", "gap_type": "capability",
                     "capability_name": gap_name,
                     "provenance": "model-proposed", "confirmed": False},
@@ -1313,9 +1312,8 @@ def _ignorance_map(ctx: DiscoveryContext) -> Iterable[Finding]:
                 f"Question '{q_text}...' has no research tasks. "
                 "Hami has identified the unknown but not yet investigated it."
             ),
-            basis=(BasisRef("entity", q.id),),
+            basis=(BasisRef("research_question", q.id),),
             epistemic_state="possible",
-            subject_entity_ids=(q.id,),
             facets={"source": "ignorance_map", "gap_type": "uninvestigated",
                     "provenance": "model-proposed", "confirmed": False},
             next_step=(
@@ -1554,7 +1552,8 @@ DEFAULT_REGISTRY = DiscoveryMethodRegistry([
                     _horizon_escape, emits=("blind_spot",), requires=("substrate.entities",)),
     DiscoveryMethod("ignorance_map", "1",
                     "Capability-blocked domains and uninvestigated questions: explicit map of what Hami cannot currently investigate.",
-                    _ignorance_map, emits=("blind_spot", "new_unknown"), requires=("substrate.entities",)),
+                    _ignorance_map, emits=("blind_spot", "new_unknown"),
+                    requires=("substrate.capabilities", "substrate.research")),
     # Step 3B-2: recover curiosity_engine's question-generation into the discovery path.
     DiscoveryMethod("curiosity_questions", "1",
                     "Research questions generated from weak spots in the knowledge base (low-confidence beliefs, unexplored patterns, contradictions, unstable beliefs, untested beliefs, contradictory causal knowledge, uncertain strategies, unvalidated/ungrounded opportunities).",

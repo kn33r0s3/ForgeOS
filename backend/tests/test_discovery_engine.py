@@ -799,20 +799,27 @@ def test_3b2_curiosity_idempotent_keys(db):
 
 
 def test_ignorance_map_finds_capability_gaps(db):
-    """ignorance_map surfaces capability gaps as blind spots."""
-    from app.services import discovery_engine as engine
+    """Capability-backed blind spots pass discovery's provenance validation."""
+    world_graph.seed_core_types(db)
+    world_graph.create_capability(
+        db,
+        capability_type="workflow",
+        name="TEST unimplemented capability",
+        description="TEST capability gap",
+        owner_agent="test",
+    )
 
-    # The method should run without error even with empty DB
-    # (capability gaps are optional; uninvestigated questions are the primary signal)
-    findings = _run_method(db, "ignorance_map")
-    # Method runs successfully (may return empty if no gaps/questions)
-    assert isinstance(findings, list)
+    report = engine.run_discovery(db, methods=["ignorance_map"], persist=False)
+
+    assert any(
+        finding["kind"] == "blind_spot" and "TEST unimplemented capability" in finding["statement"]
+        for finding in report["preview"]
+    )
+    assert not [item for item in report["rejected"] if item["method"] == "ignorance_map"]
 
 
 def test_ignorance_map_finds_uninvestigated_questions(db):
-    """ignorance_map surfaces questions with no research tasks."""
-    from app.services import discovery_engine as engine
-
+    """Research-question-backed unknowns pass discovery's provenance validation."""
     q = models.ResearchQuestion(
         question="What businesses operate in Butwal?",
         status="open",
@@ -820,9 +827,13 @@ def test_ignorance_map_finds_uninvestigated_questions(db):
     db.add(q)
     db.commit()
 
-    findings = _run_method(db, "ignorance_map")
-    q_findings = [f for f in findings if f.key.startswith("ignorance-uninvestigated:")]
-    assert len(q_findings) >= 1
+    report = engine.run_discovery(db, methods=["ignorance_map"], persist=False)
+
+    assert any(
+        finding["kind"] == "new_unknown" and "What businesses operate in Butwal?" in finding["statement"]
+        for finding in report["preview"]
+    )
+    assert not [item for item in report["rejected"] if item["method"] == "ignorance_map"]
 
 
 def test_ignorance_map_method_registered(db):
