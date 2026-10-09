@@ -1254,6 +1254,14 @@ def test_disputed_payment_settles_only_when_an_amount_is_stated(client_with_db, 
     db.add(connection)
     db.commit()
     client_with_db.post(f"/forge/connections/{connection.id}/advance", params={"next_state": "paid", "amount_npr": 900})
+    original_payment_evidence = _verified_payment_evidence(
+        client_with_db, db, "Provider receipt for original 900 NPR payment"
+    )
+    confirmed = client_with_db.post(
+        f"/forge/connections/{connection.id}/confirm-payment",
+        params={"evidence_id": original_payment_evidence.id},
+    )
+    assert confirmed.status_code == 200, confirmed.text
     disputed = client_with_db.post(
         f"/forge/connections/{connection.id}/dispute-payment",
         params={"note": "The work was incomplete"},
@@ -1265,15 +1273,59 @@ def test_disputed_payment_settles_only_when_an_amount_is_stated(client_with_db, 
     assert trust["disputed_payments"][0]["verification"] == "DISPUTED"
     missing = client_with_db.post(f"/forge/connections/{connection.id}/settle-payment", params={"note": "Agreed", "amount_npr": -1})
     assert missing.status_code == 422
+    missing_evidence = client_with_db.post(
+        f"/forge/connections/{connection.id}/settle-payment",
+        params={"note": "Both parties recorded 700 NPR", "amount_npr": 700},
+    )
+    assert missing_evidence.status_code == 409
+    outcome = db.query(models.Outcome).filter(
+        models.Outcome.notes == f"idempotency:network-connection:{connection.id}:paid"
+    ).one()
+    outcome.verification_state = "SETTLED"
+    outcome.actual_value = 700
+    db.commit()
+    legacy_settled = client_with_db.get(
+        f"/public/trust/provider/{provider.id}"
+    ).json()
+    assert legacy_settled["settled_payments"] == []
+    assert legacy_settled["reported_payments"][0]["verification"] == "REPORTED"
+    outcome.verification_state = "DISPUTED"
+    outcome.actual_value = 900
+    db.commit()
+    reused_evidence = client_with_db.post(
+        f"/forge/connections/{connection.id}/settle-payment",
+        params={
+            "note": "This is not independent settlement evidence",
+            "amount_npr": 700,
+            "evidence_id": original_payment_evidence.id,
+        },
+    )
+    assert reused_evidence.status_code == 409
+
+    settlement_evidence = _verified_payment_evidence(
+        client_with_db, db, "Provider settlement receipt for 700 NPR"
+    )
     settled = client_with_db.post(
         f"/forge/connections/{connection.id}/settle-payment",
-        params={"note": "Both recorded 700 NPR", "amount_npr": 700},
+        params={
+            "note": "Owner recorded the mutually reported settlement",
+            "amount_npr": 700,
+            "evidence_id": settlement_evidence.id,
+        },
     )
     assert settled.status_code == 200, settled.text
     assert settled.json()["winner"] is None
+    assert settled.json()["evidence_id"] == settlement_evidence.id
     final = client_with_db.get(f"/public/trust/provider/{provider.id}").json()
     assert final["settled_payments"][0]["amount"] == 700
     assert final["disputed_payments"] == []
+    settlement_edge = db.query(models.EvidenceRelationship).filter_by(
+        evidence_id=settlement_evidence.id,
+        outcome_id=outcome.id,
+        network_connection_id=connection.id,
+        relation_type="updates",
+    ).one()
+    assert settlement_edge is not None
     assert db.query(models.LearningEvent).count() >= 2
 
 

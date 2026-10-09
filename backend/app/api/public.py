@@ -548,6 +548,17 @@ def _payment_rows(db: Session, connections: list[models.NetworkConnection]) -> d
             )
         ):
             verification = "REPORTED"
+        elif verification == "SETTLED" and not (
+            outcome.data_scope == "REAL"
+            and outcome.source_kind == evidence_source.REAL
+            and network_connections.has_independent_payment_evidence(
+                db,
+                connection.id,
+                outcome.id,
+                relation_type="updates",
+            )
+        ):
+            verification = "REPORTED"
         item = schemas.RecordedPaymentOut(
             connection_id=connection.id,
             amount=outcome.actual_value,

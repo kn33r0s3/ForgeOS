@@ -1802,18 +1802,53 @@ def dispute_network_payment(request: Request, connection_id: int, note: str, db:
 
 
 @router.post("/connections/{connection_id}/settle-payment")
-def settle_network_payment(request: Request, connection_id: int, note: str, amount_npr: int, db: Session = Depends(get_db)):
+def settle_network_payment(
+    request: Request,
+    connection_id: int,
+    note: str,
+    amount_npr: int,
+    evidence_id: Optional[int] = Query(default=None, ge=1),
+    db: Session = Depends(get_db),
+):
     require_owner_api_key(request)
+    from app.services import network_connections
+
     row = db.query(models.NetworkConnection).filter_by(id=connection_id).first()
     outcome = _paid_outcome(db, connection_id)
     if row is None or outcome is None or outcome.verification_state != "DISPUTED":
         raise HTTPException(409, "only a disputed payment can be settled")
     if amount_npr < 0 or not note.strip():
         raise HTTPException(422, "settlement needs the stated amount and a note")
+    if outcome.data_scope != "REAL":
+        raise HTTPException(409, "only a REAL-scope payment can be settled")
+    if evidence_id is None:
+        raise HTTPException(
+            409,
+            "independent third-party settlement evidence is required (evidence_id)",
+        )
+    if not network_connections.has_new_settlement_evidence(
+        db, evidence_id, outcome.id
+    ):
+        raise HTTPException(
+            409,
+            "settlement needs evidence distinct from the original payment evidence",
+        )
+    try:
+        evidence = network_connections.attach_payment_evidence(
+            db,
+            row,
+            outcome,
+            evidence_id,
+            relation_type="updates",
+        )
+    except ValueError as exc:
+        raise HTTPException(409, detail=str(exc)) from exc
+    outcome.source_kind = evidence_source.REAL
     outcome.verification_state = "SETTLED"
     outcome.actual_value = float(amount_npr)
     outcome.qualitative_result = (
-        f"{outcome.qualitative_result} Settled amount recorded: {amount_npr} NPR. Note: {note.strip()}"
+        f"Connection {row.id} payment settled at {amount_npr} NPR, supported by "
+        f"Evidence #{evidence.id}. Owner note: {note.strip()}"
     )
     _payment_lesson(
         db,
@@ -1822,7 +1857,13 @@ def settle_network_payment(request: Request, connection_id: int, note: str, amou
         actual=f"Settled at {amount_npr} NPR. Note: {note.strip()}",
         lesson="The parties recorded a settlement. This is not a guess about who was right.",
     )
-    return {"id": row.id, "payment": "settled", "amount_npr": amount_npr, "winner": None}
+    return {
+        "id": row.id,
+        "payment": "settled",
+        "amount_npr": amount_npr,
+        "winner": None,
+        "evidence_id": evidence.id,
+    }
 
 
 @router.post("/connections/{connection_id}/response")

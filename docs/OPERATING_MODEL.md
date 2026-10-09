@@ -108,7 +108,9 @@ classified REAL, sourced as `third_party`, and recorded at L5 or above with its
 external verifier reference plus a stored external URL or provider reference.
 Public trust fails closed for older VERIFIED rows that lack that evidence. Once
 linked to a verified payment, the proof record cannot be changed through the
-proof-level API.
+proof-level API. A disputed payment's settlement requires a distinct,
+independently anchored evidence row linked as an update to the payment; proof
+for the original payment alone cannot establish the settlement amount.
 
 Agents may propose interpretations.
 

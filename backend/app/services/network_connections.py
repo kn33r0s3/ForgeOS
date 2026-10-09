@@ -209,6 +209,8 @@ def attach_payment_evidence(
     connection: models.NetworkConnection,
     outcome: models.Outcome,
     evidence_id: int,
+    *,
+    relation_type: str = "supports",
 ) -> models.Evidence:
     """Link externally anchored evidence to this connection and its payment."""
     evidence = db.get(models.Evidence, evidence_id)
@@ -222,7 +224,7 @@ def attach_payment_evidence(
     edge, created = evidence_graph.link_evidence(
         db,
         evidence,
-        relation_type="supports",
+        relation_type=relation_type,
         outcome_id=outcome.id,
         network_connection=connection,
     )
@@ -238,6 +240,8 @@ def has_independent_payment_evidence(
     db: Session,
     connection_id: int,
     outcome_id: int,
+    *,
+    relation_type: str = "supports",
 ) -> bool:
     evidence_rows = (
         db.query(models.Evidence)
@@ -248,10 +252,28 @@ def has_independent_payment_evidence(
         .filter(
             models.EvidenceRelationship.network_connection_id == connection_id,
             models.EvidenceRelationship.outcome_id == outcome_id,
+            models.EvidenceRelationship.relation_type == relation_type,
         )
         .all()
     )
     return any(is_independent_payment_evidence(row) for row in evidence_rows)
+
+
+def has_new_settlement_evidence(
+    db: Session,
+    evidence_id: int,
+    outcome_id: int,
+) -> bool:
+    return (
+        db.query(models.EvidenceRelationship.id)
+        .filter(
+            models.EvidenceRelationship.evidence_id == evidence_id,
+            models.EvidenceRelationship.outcome_id == outcome_id,
+            models.EvidenceRelationship.relation_type == "supports",
+        )
+        .first()
+        is None
+    )
 
 
 def record_response(db: Session, connection: models.NetworkConnection, note: str) -> models.Outcome:

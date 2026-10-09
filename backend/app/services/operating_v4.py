@@ -1651,7 +1651,7 @@ def _set_proof_level(
             models.EvidenceRelationship.evidence_id == evidence_id,
             models.EvidenceRelationship.network_connection_id.isnot(None),
             models.Outcome.source_kind == evidence_source.REAL,
-            models.Outcome.verification_state == "VERIFIED",
+            models.Outcome.verification_state.in_(("VERIFIED", "SETTLED")),
             models.Outcome.notes.like("idempotency:network-connection:%:paid"),
         )
         .first()
