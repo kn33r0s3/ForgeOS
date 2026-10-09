@@ -324,6 +324,43 @@ def test_revenue_source_link_requires_owner_key(client_with_db, db, monkeypatch)
     assert authorized.json()["revenue_source_id"] == source.id
 
 
+def test_execution_action_creation_requires_owner_key(client_with_db, db, monkeypatch):
+    from app import security
+
+    opportunity = models.Opportunity(
+        problem="Test-only opportunity for an execution action."
+    )
+    db.add(opportunity)
+    db.commit()
+    db.refresh(opportunity)
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    existing_count = db.query(models.Experiment).count()
+    response = client_with_db.post(
+        "/forge/execution/actions",
+        json={
+            "opportunity_id": opportunity.id,
+            "action_type": "customer_interview",
+            "description": "TEST only: plan an interview, do not contact anyone.",
+        },
+    )
+
+    assert response.status_code == 503
+    assert db.query(models.Experiment).count() == existing_count
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
+    authorized = client_with_db.post(
+        "/forge/execution/actions",
+        json={
+            "opportunity_id": opportunity.id,
+            "action_type": "customer_interview",
+            "description": "TEST only: owner-authorized planning, no contact.",
+        },
+    )
+    assert authorized.status_code == 200, authorized.text
+    assert db.query(models.Experiment).count() == existing_count + 1
+
+
 def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     client_with_db, db, monkeypatch
 ):

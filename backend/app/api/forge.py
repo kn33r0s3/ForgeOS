@@ -727,7 +727,11 @@ def set_opportunity_revenue_source(
 
 
 @router.post("/execution/actions", response_model=schemas.ExperimentOut)
-def create_execution_action(payload: schemas.ExecutionActionCreate, db: Session = Depends(get_db)):
+def create_execution_action(
+    request: Request,
+    payload: schemas.ExecutionActionCreate,
+    db: Session = Depends(get_db),
+):
     """
     Create a concrete, trackable executable action against an
     opportunity — not merely advice. requires_owner_approval and
@@ -735,6 +739,7 @@ def create_execution_action(payload: schemas.ExecutionActionCreate, db: Session 
     involving spending or commitment (paid_pilot, service_delivery)
     cannot be started until POST .../approve is called explicitly.
     """
+    require_owner_api_key(request)
     action = execution_engine.create_action(
         db,
         payload.opportunity_id,
