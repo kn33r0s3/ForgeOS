@@ -129,13 +129,15 @@ than a few days old, re-verify before trusting the details.
 
 ## Current state (verified 2026-10-09)
 
-- **HEAD:** `origin/main` at `0afb43f` ("Merge pull request #20 from kn33r0s3/recovery/step3b1-discovery-convergence").
+- **HEAD:** `origin/main` at `1400e71` ("Merge pull request #15 from kn33r0s3/discovery-loop-v1") + recovery work.
 - **Health:** haminp.vercel.app/api/health → ok; forge-os-ebon.vercel.app/api/health → ok.
 - **Intake:** `intake_enabled: false` (Forge Bot closed).
-- **Recent merges:** PR #17 (Step 1 router auth), PR #18 (Step 2 scheduled observation), PR #20 (Step 3B-1 discovery convergence).
-- **Step 3B-1:** 5 PR #15 discovery sources recovered into discovery_engine.py as DiscoveryMethods; 6 new finding types; 10 tests; 1046 backend tests pass.
+- **Recent merges:** PR #17 (Step 1 router auth), PR #18 (Step 2 scheduled observation), PR #20 (Step 3B-1 discovery convergence), PR #15 (discovery loop on Selection v0).
+- **Step 3B-1:** 5 PR #15 discovery sources recovered into discovery_engine.py as DiscoveryMethods; 6 new finding types; 10 tests.
+- **Recovery pass (9038616):** Secured /forge/questions, /forge/tasks, /forge/evidence with owner auth; fixed EvidenceOut nullable 500; added bibliographic background classifier; corrected /scheduled/intelligence docs; added relevance_status to PublicDiscoveryOut.
+- **Qualification gate (4005927):** Patterns require problem/demand grounding (Signal.signal_type) for commercial questions; 3 new regression tests.
+- **PR #15 discovery loop:** Selection v0 extended with `unknown_unknown_discovery` lane; `discovery_selection.py` generates probes from 5 sources; 24 tests.
 - **source_kind WIP:** stashed (not in working tree); patch backed up to ~/Downloads/hami-audit/source_kind-wip.patch.
-- **BUILD_BOOK.md:** saved to docs/ (untracked, not yet committed).
   ("Complete standing authorization execution seam" — execution_engine
   .create_action() now routes authorization through
   action_engine.propose_action() with the experiment_id FK: one

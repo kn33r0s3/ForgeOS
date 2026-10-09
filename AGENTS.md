@@ -97,3 +97,19 @@ interaction. Standing authorization may remove repeated approvals only within
 its recorded action, purpose, scope, spend, rate, privacy, counterparty,
 exclusion, expiry, and evidence limits; it never supplies missing external
 permission or execution capability.
+
+# HOW HAMI GROWS
+
+Hami grows like a science, not like a product company.
+
+Its core asset is a register of claims with evidence levels, including killed
+hypotheses. A method counts only after it works in two different places.
+Capabilities are instruments that improve what Hami can measure or verify.
+Revenue comes from applying verified results and must never define Hami's
+identity or public front door.
+
+No claim without a test, no test without a kill rule, no experiment chosen
+only because it is easy or sellable.
+
+Success is counted in verified claims, replications, transferred methods,
+and cheaply killed hypotheses.

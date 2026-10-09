@@ -57,6 +57,11 @@ interface Candidate {
   candidate_id: string;
   candidate: string;
   source_unknown_id: string | null;
+  candidate_lane: "known_unknown" | "unknown_unknown_discovery";
+  discovery_source: string | null;
+  discovery_basis: string;
+  provisional_unknown: boolean;
+  model_proposed: boolean;
   claim_or_question: string;
   why_it_matters: string;
   assessments: Record<string, Assessment>;
@@ -301,9 +306,24 @@ function CandidateCard({ candidate, selected }: { candidate: Candidate; selected
         }`}>
           {candidate.gate_blockers.length ? "Blocked" : selected ? "Selected for review" : "Admitted"}
         </span>
+        <span className={`rounded-full border px-2 py-1 text-xs font-bold ${
+          candidate.candidate_lane === "unknown_unknown_discovery"
+            ? "border-amber-500/40 text-amber-600"
+            : "border-line text-muted"
+        }`}>
+          {candidate.candidate_lane === "unknown_unknown_discovery" ? "DISCOVERY" : "KNOWN UNKNOWN"}
+        </span>
+        {candidate.provisional_unknown && (
+          <span className="rounded-full border border-line px-2 py-1 text-xs text-muted">
+            provisional · from discovery
+          </span>
+        )}
       </div>
       <h4 className="mt-3 font-extrabold">{candidate.candidate}</h4>
       <p className="mt-1 text-sm leading-6">{candidate.claim_or_question}</p>
+      {candidate.candidate_lane === "unknown_unknown_discovery" && candidate.discovery_basis && (
+        <p className="mt-2 text-sm text-muted"><strong>Why Hami suspects a blind spot:</strong> {candidate.discovery_basis}</p>
+      )}
       <p className="mt-2 text-sm text-muted"><strong>Why it matters:</strong> {candidate.why_it_matters || "Unassessed"}</p>
       <dl className="mt-3 grid gap-2 sm:grid-cols-2">
         {Object.entries(candidate.assessments).map(([dimension, assessment]) => (
