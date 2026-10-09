@@ -241,6 +241,39 @@ def test_generic_action_approval_and_execution_require_owner_key(client_with_db,
     assert manual_action.status == "SUCCEEDED"
 
 
+def test_outcome_api_requires_owner_key_before_marking_action_verified(
+    client_with_db, db, monkeypatch
+):
+    from app import security
+    from app.services import action_engine
+
+    action = action_engine.propose_action(
+        db,
+        objective="Record an operator-performed manual step",
+        action_type="manual_note",
+    )
+    action_engine.start_and_execute_action(db, action.id)
+    assert action.status == "SUCCEEDED"
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    response = client_with_db.post(
+        "/forge/outcomes",
+        params={
+            "outcome_type": "QUALITATIVE",
+            "action_id": action.id,
+            "qualitative_result": "Anonymous caller claims success.",
+            "success": True,
+            "data_scope": "REAL",
+        },
+    )
+
+    assert response.status_code == 503
+    assert db.query(models.Outcome).count() == 0
+    db.refresh(action)
+    assert action.status == "SUCCEEDED"
+    assert action.verification_state != "VERIFIED_SUCCESS"
+
+
 def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     client_with_db, db, monkeypatch
 ):

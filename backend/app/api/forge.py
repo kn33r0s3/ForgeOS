@@ -1326,6 +1326,7 @@ def _outcome_truth_label(outcome: models.Outcome) -> str:
 
 @router.post("/outcomes")
 def create_outcome(
+    request: Request,
     outcome_type: str,
     action_id: Optional[int] = None,
     experiment_id: Optional[int] = None,
@@ -1340,6 +1341,7 @@ def create_outcome(
     idempotency_key: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
+    require_owner_api_key(request)
     from app.services import action_engine
     o = action_engine.record_outcome(
         db,
