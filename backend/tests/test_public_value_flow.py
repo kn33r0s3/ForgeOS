@@ -467,6 +467,29 @@ def test_autonomy_cycle_trigger_requires_owner_key(client_with_db, monkeypatch):
     assert authorized.status_code == 200, authorized.text
 
 
+def test_internal_forge_reads_require_owner_key(client_with_db, db, monkeypatch):
+    from app import security
+    from app.services.autonomy_engine import seed_default_policy
+
+    seed_default_policy(db)
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    paths = (
+        "/forge/autonomy/policy",
+        "/forge/autonomy/evaluate?opportunity_id=999&action_type=customer_interview",
+        "/forge/strategies/999/performance",
+        "/forge/tasks/999/history",
+        "/forge/execution/rank",
+        "/forge/execution/recommend",
+    )
+    for path in paths:
+        response = client_with_db.get(path)
+        assert response.status_code == 503, f"{path}: {response.status_code} {response.text}"
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
+    authorized_policy = client_with_db.get("/forge/autonomy/policy")
+    assert authorized_policy.status_code == 200, authorized_policy.text
+
+
 def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     client_with_db, db, monkeypatch
 ):

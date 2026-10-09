@@ -45,10 +45,12 @@ ledger, truth progression. 717 backend tests.
   owner checks. Confirmed high-impact gaps have since been repaired in the
   existing handlers, including autonomy-policy changes, action proposal,
   approval and execution, outcome recording, revenue-source linking,
-  execution-action creation, legacy research writes, and goal/strategy
-  mutations. Each repair and its route-level evidence is tracked in
-  `docs/CAPABILITY_QUEUE.md`. Remaining route contracts still require
-  individual review; deployed source identity is NOT VERIFIED.
+  execution-action creation, legacy research writes, goal/strategy mutations,
+  and private reads for autonomy policy/evaluation, task history, strategy
+  performance, and execution ranking/recommendation. Each repair and its
+  route-level evidence is tracked in `docs/CAPABILITY_QUEUE.md`. Remaining
+  route contracts still require individual review; deployed source identity
+  is NOT VERIFIED.
 - Production readiness: no durable database configured; CRON_SECRET absent.
 - Company registration (Hami Systems): IN PROGRESS, awaiting approval.
 - Payment: no legally verified merchant path until business PAN exists.

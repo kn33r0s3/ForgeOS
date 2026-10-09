@@ -128,7 +128,8 @@ def get_tasks(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/tasks/{task_id}/history", response_model=list[schemas.ResearchTaskEventOut])
-def get_task_history(task_id: int, db: Session = Depends(get_db)):
+def get_task_history(request: Request, task_id: int, db: Session = Depends(get_db)):
+    require_owner_api_key(request)
     task = db.query(models.ResearchTask).filter(models.ResearchTask.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Research task not found")
@@ -969,12 +970,18 @@ def record_execution_verified_revenue(
 
 
 @router.get("/execution/rank", response_model=list[schemas.RankedAction])
-def get_ranked_actions(limit: int = 10, db: Session = Depends(get_db)):
+def get_ranked_actions(
+    request: Request,
+    limit: int = 10,
+    db: Session = Depends(get_db),
+):
     """
     Every not-yet-completed execution action, scored and ranked by the
     owner's own formula: economic_potential x confidence x
     goal_relevance x evidence_quality / execution_cost_time.
+    Owner-only: this exposes internal action priorities and factors.
     """
+    require_owner_api_key(request)
     ranked = execution_engine.rank_pending_actions(db, limit=limit)
     return [
         schemas.RankedAction(
@@ -989,13 +996,15 @@ def get_ranked_actions(limit: int = 10, db: Session = Depends(get_db)):
 
 
 @router.get("/execution/recommend", response_model=schemas.ExecutionRecommendation)
-def get_execution_recommendation(db: Session = Depends(get_db)):
+def get_execution_recommendation(request: Request, db: Session = Depends(get_db)):
     """
     "What should I do right now to make money?" — from actual ranked
     execution actions, not a fresh guess. Falls back to an
     opportunity-level recommendation (still real data) if no execution
     actions exist yet.
+    Owner-only.
     """
+    require_owner_api_key(request)
     recommendation = execution_engine.recommend_next_money_action(db)
     if not recommendation:
         raise HTTPException(status_code=404, detail="No opportunities or actions exist yet")
@@ -1010,13 +1019,14 @@ def get_execution_recommendation(db: Session = Depends(get_db)):
 
 
 @router.get("/autonomy/policy", response_model=schemas.AutonomyPolicyOut)
-def get_autonomy_policy(db: Session = Depends(get_db)):
+def get_autonomy_policy(request: Request, db: Session = Depends(get_db)):
     """
     The owner's current operating boundary — what Forge may do
     autonomously vs. what requires approval. Seeded conservatively by
     default (zero autonomous spend, only the free/low-risk action
-    types allowed) — see autonomy_engine.py.
+    types allowed) — see autonomy_engine.py. Owner-only.
     """
+    require_owner_api_key(request)
     policy = autonomy_engine.get_active_policy(db)
     if not policy:
         raise HTTPException(status_code=404, detail="No active autonomy policy configured")
@@ -1049,13 +1059,18 @@ def update_autonomy_policy(
 
 @router.get("/autonomy/evaluate", response_model=schemas.PolicyEvaluationOut)
 def preview_policy_evaluation(
-    opportunity_id: int, action_type: str, estimated_cost: Optional[float] = None, db: Session = Depends(get_db)
+    request: Request,
+    opportunity_id: int,
+    action_type: str,
+    estimated_cost: Optional[float] = None,
+    db: Session = Depends(get_db),
 ):
     """
     Preview what the policy engine would decide for a candidate action
     WITHOUT creating it — "why did/would Forge choose this" made
-    inspectable before committing to anything.
+    inspectable before committing to anything. Owner-only.
     """
+    require_owner_api_key(request)
     opportunity = db.query(models.Opportunity).filter(models.Opportunity.id == opportunity_id).first()
     if not opportunity:
         raise HTTPException(status_code=404, detail="Opportunity not found")
@@ -1075,13 +1090,18 @@ def get_revenue_breakdown(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/strategies/{strategy_id}/performance", response_model=schemas.StrategyPerformanceOut)
-def get_strategy_performance(strategy_id: int, db: Session = Depends(get_db)):
+def get_strategy_performance(
+    request: Request,
+    strategy_id: int,
+    db: Session = Depends(get_db),
+):
     """
     Real, recorded track record for one strategy — attempts,
     successes, revenue, cost — computed only from completed
     Experiments linked to it. All-zero/unknown fields if nothing has
-    completed yet, never an invented figure.
+    completed yet, never an invented figure. Owner-only.
     """
+    require_owner_api_key(request)
     strategy = db.query(models.Strategy).filter(models.Strategy.id == strategy_id).first()
     if not strategy:
         raise HTTPException(status_code=404, detail="Strategy not found")
