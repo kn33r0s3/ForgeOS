@@ -1,6 +1,6 @@
 # ForgeOS / Hami current status
 
-**Updated:** 2026-10-04
+**Updated:** 2026-10-09
 **Evidence boundary:** repository and CI observations below are dated; external
 state is not assumed current unless explicitly identified as a dated observation.
 

@@ -1,4 +1,4 @@
-# Current personal pilot checkpoint — September 14, 2026
+# Current personal pilot checkpoint — October 9, 2026
 
 **REAL revenue: $0. REAL customers: 0. External validation: 0.**
 The current startup and human workflow instructions are in [docs/OPERATOR_GUIDE.md](docs/OPERATOR_GUIDE.md).
