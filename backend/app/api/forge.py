@@ -959,13 +959,18 @@ def get_autonomy_policy(db: Session = Depends(get_db)):
 
 
 @router.patch("/autonomy/policy", response_model=schemas.AutonomyPolicyOut)
-def update_autonomy_policy(payload: schemas.AutonomyPolicyUpdate, db: Session = Depends(get_db)):
+def update_autonomy_policy(
+    payload: schemas.AutonomyPolicyUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
     """
     Adjust the owner's operating boundary. Only provided fields
     change; omitted fields keep their current value. This is the one
     and only way the boundary widens — nothing in the backend can
     grant itself more autonomy than the owner has configured here.
     """
+    require_owner_api_key(request)
     policy = autonomy_engine.get_active_policy(db)
     if not policy:
         raise HTTPException(status_code=404, detail="No active autonomy policy configured")

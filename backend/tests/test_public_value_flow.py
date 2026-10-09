@@ -130,6 +130,42 @@ def test_forge_connections_endpoints_require_owner_key(client_with_db, db, monke
     assert db.query(models.NetworkConnection).count() == 1
 
 
+def test_autonomy_policy_widening_requires_owner_key(client_with_db, db, monkeypatch):
+    from app import security
+    from app.services.autonomy_engine import seed_default_policy
+
+    seed_default_policy(db)
+    policy = db.query(models.AutonomyPolicy).filter_by(active=True).one()
+    assert policy.max_daily_actions == 3
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    missing_key = client_with_db.patch(
+        "/forge/autonomy/policy",
+        json={"max_daily_actions": 99},
+    )
+    assert missing_key.status_code == 503
+    db.refresh(policy)
+    assert policy.max_daily_actions == 3
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
+    headerless = TestClient(app, raise_server_exceptions=True)
+    unauthorized = headerless.patch(
+        "/forge/autonomy/policy",
+        json={"max_daily_actions": 99},
+    )
+    headerless.close()
+    assert unauthorized.status_code == 401
+    db.refresh(policy)
+    assert policy.max_daily_actions == 3
+
+    authorized = client_with_db.patch(
+        "/forge/autonomy/policy",
+        json={"max_daily_actions": 5},
+    )
+    assert authorized.status_code == 200, authorized.text
+    assert authorized.json()["max_daily_actions"] == 5
+
+
 def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     client_with_db, db, monkeypatch
 ):
