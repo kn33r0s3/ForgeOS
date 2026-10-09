@@ -36,6 +36,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 from app.services.pattern_engine import tokenize
 from typing import Optional
 
@@ -52,8 +53,6 @@ MAX_GOAL_BOOST = 20.0
 MAX_STRUCTURAL_GOAL_BOOST = 40.0
 
 
-def utcnow():
-    return datetime.now(timezone.utc)
 
 
 class GoalEngine:

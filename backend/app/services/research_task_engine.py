@@ -11,12 +11,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 
 STEP_NAMES = ("plan", "select_tools", "execute", "evaluate")
 
 
-def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 def create_task(

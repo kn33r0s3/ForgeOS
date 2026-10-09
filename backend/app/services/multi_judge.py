@@ -12,6 +12,7 @@ from typing import Any, Callable, Iterable
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 from app.services import evidence_graph
 from app.services.tool_registry import ToolUnavailableError, default_registry
 
@@ -25,8 +26,6 @@ class JudgeSpec:
     available: Callable[[], bool] = lambda: True
 
 
-def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 def _evidence_key(evidence_ids: Iterable[int]) -> str:

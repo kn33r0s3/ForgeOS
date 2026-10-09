@@ -37,10 +37,9 @@ from itertools import combinations
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 
 
-def utcnow():
-    return datetime.now(timezone.utc)
 
 MIN_SIGNAL_SUPPORT = 2  # a keyword must appear in >=2 signals to count as a theme
 MIN_CLUSTER_SIZE = 2    # a pattern needs >=2 supporting signals

@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 
 RELATION_TYPES = {
     "supports",
@@ -50,8 +51,6 @@ def _matches_evidence_intent(
     return all(getattr(evidence, field) == value for field, value in expected.items())
 
 
-def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 def normalize_statement(statement: str) -> str:

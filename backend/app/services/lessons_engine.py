@@ -25,6 +25,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 
 # Words that carry real signal for consolidating lessons about an opportunity
 # / market. Used only to build a stable dedupe theme key (deterministic — no
@@ -82,8 +83,6 @@ def _theme_words_in(text: str) -> list[str]:
     return [word for word, pattern in _THEME_WORD_PATTERNS if pattern.search(text)]
 
 
-def utcnow():
-    return datetime.now(timezone.utc)
 
 
 # ---------------------------------------------------------------------------

@@ -49,6 +49,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 from app.services.pattern_engine import tokenize
 from typing import Optional
 
@@ -65,8 +66,6 @@ MIN_CANDIDATE_RELEVANCE = 10.0  # a causal fact below this relevance to the goal
 RESCORE_CHANGE_THRESHOLD = 5.0  # a re-run only supersedes an existing strategy if its score moved by at least this much
 
 
-def utcnow():
-    return datetime.now(timezone.utc)
 
 
 # --- per-goal relevance (see module docstring for why these are separate from goal_engine.py) ---

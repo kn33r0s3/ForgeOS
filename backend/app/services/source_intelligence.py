@@ -24,10 +24,9 @@ from typing import Any, Optional
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 
 
-def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 def _hash(text: str) -> str:

@@ -9,10 +9,9 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 
 
-def utcnow():
-    return datetime.now(timezone.utc)
 
 
 def _event_key(prefix: str, task_id: int | None, name: str, result_ids: list[int]) -> str:

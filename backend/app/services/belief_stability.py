@@ -34,6 +34,7 @@ from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 from app.services import goal_engine
 
 STABILITY_WINDOW_DAYS = 30
@@ -59,8 +60,6 @@ MAX_INSTABILITY_BOOST = 25.0
 UNSTABLE_THRESHOLD = 50.0  # stability_score below this counts as "unstable enough to investigate"
 
 
-def utcnow():
-    return datetime.now(timezone.utc)
 
 
 def _recent_events(

@@ -65,6 +65,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 
 # Conservative seed — "do not create unlimited real-world authority
 # without safeguards" enforced by what this actually seeds to, not
@@ -99,8 +100,6 @@ BASE_RISK_BY_ACTION_TYPE = {
 }
 
 
-def utcnow():
-    return datetime.now(timezone.utc)
 
 
 def seed_default_policy(db: Session) -> None:

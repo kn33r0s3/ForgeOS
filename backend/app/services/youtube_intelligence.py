@@ -21,6 +21,7 @@ import xml.etree.ElementTree as ET
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 from app.services import evidence_graph, intelligence_cache
 from app.services.tool_registry import ToolCapability
 
@@ -34,8 +35,6 @@ class MediaResult:
     reused: bool
 
 
-def utcnow():
-    return datetime.now(timezone.utc)
 
 
 def video_id_from_url(url: str) -> str:

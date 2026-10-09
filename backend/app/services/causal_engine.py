@@ -36,6 +36,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 from typing import Optional
 
 SUCCESS_CONFIDENCE_BOOST = 15.0
@@ -48,8 +49,6 @@ NEW_CAUSAL_KNOWLEDGE_BASE_CONFIDENCE = 50.0
 MAX_CAUSAL_GOAL_BOOST = 20.0
 
 
-def utcnow():
-    return datetime.now(timezone.utc)
 
 
 def _derive_condition(db: Session, belief: models.Belief) -> str:

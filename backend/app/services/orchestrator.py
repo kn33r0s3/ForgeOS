@@ -46,6 +46,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 from app.services import (
     decision_engine,
     execution_engine,
@@ -56,8 +57,6 @@ from app.services import (
 )
 
 
-def utcnow():
-    return datetime.now(timezone.utc)
 
 
 # ---------------------------------------------------------------------------

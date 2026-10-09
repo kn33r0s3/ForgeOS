@@ -16,10 +16,9 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 
 
-def utcnow():
-    return datetime.now(timezone.utc)
 
 
 def propose_decision(
