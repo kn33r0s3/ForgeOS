@@ -4,6 +4,7 @@ import json
 import os
 import secrets
 from datetime import datetime, timezone
+from typing import Literal
 
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -941,6 +942,10 @@ class PublicUnknownOut(BaseModel):
     stake: str
 
 
+class PublicStatsOut(BaseModel):
+    owner_interventions_per_real_transaction: float | Literal["NOT MEASURABLE"]
+
+
 class UnknownsSummaryOut(BaseModel):
     counts: dict[str, int]
     total: int
@@ -1090,7 +1095,7 @@ def list_public_unknowns(
     return public[:limit]
 
 
-@router.get("/stats")
+@router.get("/stats", response_model=PublicStatsOut)
 def get_public_stats(db: Session = Depends(get_db)):
     """Public real-world statistics. REAL-only; TEST/MOCK/HYPOTHESIS never leak.
 

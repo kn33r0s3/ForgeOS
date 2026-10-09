@@ -47,3 +47,22 @@ def test_every_public_route_schema_excludes_internal_metrics():
             pending_models.extend(_models_in(field.annotation))
 
     assert not violations, "internal fields must stay out of public schemas: " + ", ".join(violations)
+
+
+def test_public_stats_api_preserves_not_measurable_state_without_real_transactions(db):
+    from fastapi.testclient import TestClient
+    from app.database import get_db
+    from app.main import app
+
+    def override_get_db():
+        yield db
+
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        response = TestClient(app).get("/api/public/stats")
+        assert response.status_code == 200
+        assert response.json() == {
+            "owner_interventions_per_real_transaction": "NOT MEASURABLE",
+        }
+    finally:
+        app.dependency_overrides.clear()
