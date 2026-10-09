@@ -99,8 +99,8 @@ def test_private_customer_reads_require_configured_api_key(path, monkeypatch):
         assert client.get("/public/feed").status_code == 200
 
 
-def test_private_customer_reads_remain_open_when_api_key_is_disabled(monkeypatch):
-    """Preserve the existing local-first behavior when no key is configured."""
+def test_optional_middleware_leaves_unmarked_local_first_reads_open_when_key_is_disabled(monkeypatch):
+    """The middleware is optional; sensitive route handlers still enforce owner access."""
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
     from app import security

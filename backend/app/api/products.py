@@ -78,7 +78,8 @@ def list_products(db: Session = Depends(get_db)):
 
 # ---- static paths MUST be declared before /{product_id} (route order) -----
 @router.get("/pipeline", response_model=schemas.ProductPipeline)
-def pipeline(db: Session = Depends(get_db)):
+def pipeline(request: Request, db: Session = Depends(get_db)):
+    _owner(request)
     return product_engine.pipeline(db)
 
 
@@ -91,7 +92,8 @@ def list_channels(db: Session = Depends(get_db)):
 
 
 @router.get("/customers", response_model=list[schemas.CustomerEventOut])
-def list_customers(db: Session = Depends(get_db)):
+def list_customers(request: Request, db: Session = Depends(get_db)):
+    _owner(request)
     return db.query(models.CustomerEvent).order_by(models.CustomerEvent.created_at.desc()).all()
 
 

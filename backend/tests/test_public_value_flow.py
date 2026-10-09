@@ -533,6 +533,33 @@ def test_commercial_opportunity_reads_require_owner_key(client_with_db, monkeypa
         assert response.status_code == 503, f"{path}: {response.status_code} {response.text}"
 
 
+def test_customer_ledger_read_requires_owner_key(client_with_db, db, monkeypatch):
+    from app import security
+
+    db.add(
+        models.CustomerEvent(
+            contact_name="TEST private contact",
+            contact_identifier="private-contact@example.test",
+            notes="TEST private contact note",
+        )
+    )
+    db.commit()
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+
+    for path in ("/products/customers", "/products/pipeline"):
+        response = client_with_db.get(path)
+        assert response.status_code == 503, f"{path}: {response.status_code} {response.text}"
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
+    headers = {"X-API-Key": "test-owner-key"}
+    authorized_customers = client_with_db.get("/products/customers", headers=headers)
+    assert authorized_customers.status_code == 200, authorized_customers.text
+    assert authorized_customers.json()[0]["contact_identifier"] == "private-contact@example.test"
+    authorized_pipeline = client_with_db.get("/products/pipeline", headers=headers)
+    assert authorized_pipeline.status_code == 200, authorized_pipeline.text
+    assert authorized_pipeline.json()["customer_events"][0]["contact_identifier"] == "private-contact@example.test"
+
+
 def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     client_with_db, db, monkeypatch
 ):
