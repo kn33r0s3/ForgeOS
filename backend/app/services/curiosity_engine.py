@@ -124,7 +124,13 @@ class CuriosityEngine:
 
         Skips patterns classified as [BIBLIOGRAPHIC BACKGROUND] — these are
         retained as background observations but do not generate commercial
-        questions without a real-world problem behind them."""
+        questions without a real-world problem behind them.
+
+        Further requires commercial qualification: the pattern's supporting
+        signals must predominantly indicate real-world problems or demand
+        (signal_type in 'problem'/'demand'), not mere observations. A missing
+        grounding link remains missing — we do not invent problems to make
+        patterns qualify."""
         from app.services.belief_engine import is_presentable_belief
         patterns = self.db.query(models.Pattern).all()
         beliefs = [belief for belief in self.db.query(models.Belief).all() if is_presentable_belief(belief)]
@@ -138,6 +144,10 @@ class CuriosityEngine:
             # Skip bibliographic background observations — they lack the
             # real-world problem context needed for commercial questions.
             if pattern.description and "[BIBLIOGRAPHIC BACKGROUND]" in pattern.description:
+                continue
+            # Require commercial qualification: pattern must be grounded in
+            # real-world problems/demand, not just observations.
+            if not self._is_commercially_qualified(pattern):
                 continue
             top_keyword = pattern.title.replace("Recurring theme:", "").split(",")[0].strip().lower()
             if not top_keyword:
@@ -157,6 +167,46 @@ class CuriosityEngine:
             if not explored:
                 unexplored.append(pattern)
         return unexplored
+
+    def _is_commercially_qualified(self, pattern: models.Pattern) -> bool:
+        """Check if a pattern is grounded enough for commercial question generation.
+
+        A pattern qualifies only if the majority of its supporting signals
+        indicate real-world problems or demand (signal_type='problem' or
+        'demand'), not mere observations. This uses the existing Signal
+        classification — we do not invent grounding.
+
+        The five criteria from the relevance gate map to existing structures:
+        1. Hami unknown → the ResearchQuestion created from this pattern
+        2. Geography/population → implied by problem/demand signals (real-world context)
+        3. Evidence requirement → the question text describes the uncertainty
+        4. Decision consequence → linkable via Claim.decision_id (future)
+        5. Next test → linkable via Claim.experiment_id (future)
+
+        A missing link remains missing. Patterns without problem/demand grounding
+        are retained as background observations but do not generate commercial
+        questions.
+        """
+        if not pattern.origin_signal_ids:
+            return False
+
+        try:
+            signal_ids = [int(sid.strip()) for sid in pattern.origin_signal_ids.split(",") if sid.strip()]
+        except (ValueError, AttributeError):
+            return False
+
+        if not signal_ids:
+            return False
+
+        signals = self.db.query(models.Signal).filter(models.Signal.id.in_(signal_ids)).all()
+        if not signals:
+            return False
+
+        # Count signals indicating real-world problems or demand
+        grounded = sum(1 for s in signals if (s.signal_type or "").lower() in ("problem", "demand"))
+
+        # Require majority grounding
+        return grounded >= len(signals) / 2
 
     def find_contradictions(self) -> list[tuple[models.Pattern, models.Pattern]]:
         """Naive contradiction detection: two patterns that share a

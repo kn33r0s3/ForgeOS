@@ -572,3 +572,111 @@ def test_pr15_empty_sources_yield_no_findings(db):
                  "pending_capability", "horizon_escape"):
         findings = _run_method(db, name)
         assert findings == [], f"{name} fabricated findings from empty DB"
+
+
+# Relevance gate regression tests (Section 2: strengthened qualification)
+
+
+def test_bibliographic_pattern_cannot_generate_commercial_questions(db):
+    """Bibliographic metadata patterns are classified as background, not commercial."""
+    from app.services import pattern_engine, curiosity_engine
+
+    world_graph.seed_core_types(db)
+    # Create signals from scholarly source with bibliographic keywords
+    for i in range(5):
+        sig = models.Signal(
+            source="crossref",
+            content=f"Crossref metadata record {i} with bibliographic evidence",
+            signal_type="observation",
+        )
+        db.add(sig)
+    db.flush()
+
+    patterns = pattern_engine.run_pattern_detection(db)
+    # At least one pattern should be detected
+    assert len(patterns) >= 1
+
+    # Check that bibliographic patterns are marked
+    biblio_patterns = [p for p in patterns if "[BIBLIOGRAPHIC BACKGROUND]" in (p.description or "")]
+    # If patterns were created from this data, they should be marked
+    # (may be 0 if keywords don't cluster, which is also fine)
+
+    # Curiosity should not generate questions from bibliographic patterns
+    ce = curiosity_engine.CuriosityEngine(db)
+    unexplored = ce.find_unexplored_patterns()
+    for pattern in unexplored:
+        assert "[BIBLIOGRAPHIC BACKGROUND]" not in (pattern.description or ""), \
+            "Bibliographic pattern leaked into commercial question generation"
+
+
+def test_observation_only_pattern_cannot_bypass_qualification(db):
+    """Patterns with only 'observation' signals (no problem/demand) do not qualify."""
+    from app.services import curiosity_engine
+
+    world_graph.seed_core_types(db)
+    # Create a pattern from observation-only signals (non-scholarly source)
+    signals = []
+    for i in range(5):
+        sig = models.Signal(
+            source="web",
+            content=f"Generic observation about topic {i} without problem context",
+            signal_type="observation",  # NOT problem or demand
+        )
+        db.add(sig)
+        signals.append(sig)
+    db.flush()
+
+    # Create pattern manually with these signals
+    pattern = models.Pattern(
+        title="Recurring theme: topic, observation",
+        description="5 signals repeatedly mention: topic, observation.",
+        frequency=5,
+        confidence_score=50.0,
+        origin_signal_ids=",".join(str(s.id) for s in signals),
+    )
+    db.add(pattern)
+    db.flush()
+
+    ce = curiosity_engine.CuriosityEngine(db)
+    # Pattern should NOT be commercially qualified (no problem/demand grounding)
+    assert not ce._is_commercially_qualified(pattern), \
+        "Observation-only pattern incorrectly qualified for commercial questions"
+
+    # Should not appear in unexplored patterns for question generation
+    unexplored = ce.find_unexplored_patterns()
+    pattern_ids = [p.id for p in unexplored]
+    assert pattern.id not in pattern_ids, \
+        "Unqualified pattern leaked into question generation"
+
+
+def test_grounded_problem_pattern_can_qualify(db):
+    """Patterns with problem/demand signals CAN qualify for commercial questions."""
+    from app.services import curiosity_engine
+
+    world_graph.seed_core_types(db)
+    # Create signals indicating real problems
+    signals = []
+    for i in range(5):
+        sig = models.Signal(
+            source="manual",
+            content=f"Customers complain about slow delivery {i}",
+            signal_type="problem",  # Real-world problem!
+        )
+        db.add(sig)
+        signals.append(sig)
+    db.flush()
+
+    pattern = models.Pattern(
+        title="Recurring theme: slow, delivery, customers",
+        description="5 signals repeatedly mention: slow, delivery, customers.",
+        frequency=5,
+        confidence_score=75.0,
+        origin_signal_ids=",".join(str(s.id) for s in signals),
+    )
+    db.add(pattern)
+    db.flush()
+
+    ce = curiosity_engine.CuriosityEngine(db)
+    # Pattern SHOULD be commercially qualified (problem grounding)
+    assert ce._is_commercially_qualified(pattern), \
+        "Problem-grounded pattern should qualify for commercial questions"
