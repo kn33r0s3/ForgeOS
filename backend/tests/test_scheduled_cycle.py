@@ -496,3 +496,24 @@ def test_scheduled_intelligence_includes_owner_retry_stage(monkeypatch):
     # Other stages still present (route not failed by retry skip)
     assert "forge_cycle" in intel
     assert "discovery_cycle" in intel
+
+
+def test_scheduled_intelligence_includes_scout_stage(monkeypatch):
+    """The intelligence route runs the scout cycle as Stage 7."""
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    client = TestClient(app)
+
+    response = client.get(
+        "/scheduled/intelligence",
+        headers={"Authorization": "Bearer test-cron-secret"},
+    )
+
+    assert response.status_code == 200
+    intel = response.json()["intelligence"]
+    # Stage 7 present
+    assert "scout_cycle" in intel
+    assert intel["scout_cycle"]["status"] in ("ok", "partial", "error")
+    # Other stages still present
+    assert "forge_cycle" in intel
+    assert "discovery_cycle" in intel
+    assert "owner_notification_retry" in intel

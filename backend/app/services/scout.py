@@ -394,3 +394,63 @@ def seed_registry_experiments(db: Session) -> list:
         created.append(exp)
     db.commit()
     return created
+
+
+def run_scout_cycle(db: Session) -> dict:
+    """Autonomous scout cycle: score, rank, and queue candidates.
+
+    Runs without owner input. For each registered candidate:
+    - Scores via score_candidate (evidence-weighted)
+    - Ranks via rank_candidates
+    - Checks send authorization (do-not-contact, daily cap)
+    - Generates drafts for top eligible candidates (draft only, never sends)
+
+    Returns operational summary with counts. Never sends messages;
+    drafts require explicit owner approval via approve_draft.
+
+    This is the bot owning the research loop: it processes what exists,
+    prioritizes by evidence, and prepares the action queue. It does not
+    invent candidates or fabricate outreach.
+    """
+    ranked = rank_candidates(db)
+    scored = 0
+    drafts_generated = 0
+    blocked = 0
+    errors = []
+
+    for entity, score in ranked:
+        entity_id = entity.id
+        if not entity_id:
+            continue
+        try:
+            if score is not None:
+                scored += 1
+            # Check if eligible for draft generation
+            if is_do_not_contact(db, entity_id):
+                blocked += 1
+                continue
+            try:
+                check_send_allowed(db, entity_id)
+            except Exception:
+                blocked += 1
+                continue
+            # Generate draft for top candidates (limit to 3 per cycle)
+            if drafts_generated < 3 and (score or 0) > 0:
+                try:
+                    attrs = json.loads(entity.attributes or "{}")
+                    observed = attrs.get("observed_signals", {})
+                    fact = observed.get("primary_fact", "your business operations")
+                    generate_draft(db, entity_id, observed_fact=fact)
+                    drafts_generated += 1
+                except Exception as exc:
+                    errors.append(f"draft_{entity_id}: {type(exc).__name__}")
+        except Exception as exc:
+            errors.append(f"score_{entity_id}: {type(exc).__name__}")
+
+    return {
+        "candidates_ranked": len(ranked),
+        "candidates_scored": scored,
+        "drafts_generated": drafts_generated,
+        "blocked": blocked,
+        "errors": errors,
+    }
