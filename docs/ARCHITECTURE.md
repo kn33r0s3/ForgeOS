@@ -297,3 +297,123 @@ as accepted architecture. Once approved, update this document and commit the
 change to `main`; do not rewrite history. Keep historical documents intact
 unless a separate cleanup task authorizes changes. Report implemented,
 verified, unverified, blocked, and unknown states distinctly.
+
+## 16. Current build program — recover relevance before expanding Hami
+
+This is the ordered implementation program for agents. It applies the existing
+architecture; it does not create another product, ontology, workflow engine,
+or source of authority. `docs/SESSION_START.md` is its entry point and
+`docs/CAPABILITY_QUEUE.md` is its evidence ledger.
+
+### 16.1 Rung 0 — reconcile repository truth
+
+**Existing seams:** Git history, `backend/app/main.py`, `vercel.json`, CI
+workflows, and the deployment-health contract.
+
+Before changing behavior, compare `HEAD`, `origin/main`, and their merge base.
+Integrate reachable history in place; never reset, delete recovery work, or
+choose one lineage by discarding the other. Resolve overlaps at the existing
+file/function seam and test the integrated result.
+
+**Done when:** the active branch contains both needed histories, the worktree
+is understood, and source/production relationship is verified or explicitly
+unverified.
+
+### 16.2 Rung 1 — contain private operational records and repair contracts
+
+**Existing seams:** `backend/app/security.py`, `backend/app/api/forge.py`,
+`backend/app/schemas/__init__.py`, and `backend/app/services/reality_memory.py`.
+
+Raw research questions, task plans, task histories, evidence records, beliefs,
+and internal runtime detail are operational records. They are not public
+projections merely because they are readable. Protect them with the existing
+owner-key mechanism whenever the key is configured. Keep only deliberate,
+privacy-safe projections under `backend/app/api/public.py`.
+
+The evidence API must tolerate historical nullability permitted by the
+`Evidence` model, or return a deliberate safe response rather than an
+unhandled 500. Add regression coverage using existing test modules.
+
+**Done when:** unauthenticated production-shaped requests cannot read raw
+operational records, public projections retain intended access, and the
+evidence endpoint has an explicit tested response for legacy/null fields.
+
+### 16.3 Rung 2 — relevance gate before pattern, plan, or publication
+
+**Existing seams:** `backend/app/services/pattern_engine.py`,
+`backend/app/services/research_planner.py`,
+`backend/app/services/research_evidence_assessment.py`, and
+`backend/app/api/public.py:list_public_discoveries`.
+
+External metadata is an observation lead. It must not become a commercial
+pattern, buyer question, opportunity, or public discovery merely because terms
+repeat across scholarly records. Before a signal can enter that downstream
+path, require all of the following through existing provenance and assessment
+fields:
+
+1. an existing Hami unknown or explicitly recorded research question;
+2. declared geographic/population scope, or an explicit `unscoped` result;
+3. an allowed evidence requirement for the source;
+4. a named decision the record could change; and
+5. an honest relevance result (`relevant`, `lead_only`, `unassessed`, or
+   `rejected`) that cannot be promoted by a model assertion.
+
+Retain old signals and evidence. Quarantine or deprioritize unsuitable records
+through current state/provenance; do not delete history or rewrite it as
+customer evidence.
+
+**Done when:** repeated OpenAlex/Crossref vocabulary cannot generate generic
+“who would pay” questions, while a genuinely scoped source record can still
+reach an existing unknown and its legitimate test.
+
+### 16.4 Rung 3 — map evidence to a next legitimate test
+
+**Existing seams:** `src/routes/discoveries.tsx`, `src/routes/unknowns.tsx`,
+`src/routes/actions.tsx`, `src/lib/unknowns-api.ts`, and public API
+projections.
+
+Do not build another dashboard. Extend existing public discovery and unknowns
+surfaces only after Rungs 1–2 pass, so a visitor can follow:
+
+```text
+source → evidence label → linked unknown → permitted next test → outcome state
+```
+
+The map must distinguish unavailable data, an unscoped lead, a hypothesis, a
+test, and REAL evidence. It must not expose raw tasks, private context,
+credentials, contacts, or owner decisions.
+
+**Done when:** each displayed item comes from an existing API, has an honest
+epistemic label, and never implies a customer, demand, or revenue outcome it
+cannot prove.
+
+### 16.5 Rung 4 — external evidence and the first paid outcome
+
+**Existing seams:** `operating_v4` Bet/probe records, the action/outcome
+services, `docs/REVENUE_LOG.md`, and the capability queue.
+
+No code change can supply the missing customer, contact permission, merchant
+onboarding, or payment capability. When a real Bet is selected, record its
+claim, smallest test, affordable loss, consent/authorization boundary,
+counterparty, expiry, and kill rule using existing seams. Use only REAL
+evidence for a customer, transaction, or revenue claim.
+
+**Done when:** one attributable person or business receives measurable value
+and a payment/outcome is recorded with external evidence. Until then, this
+rung remains blocked—not simulated.
+
+### 16.6 Source use and automation boundary
+
+The existing cleared collectors are useful in bounded roles:
+
+| Existing source seam | Legitimate use | Never establishes |
+| --- | --- | --- |
+| Crossref / OpenAlex | Scholarly and bibliographic leads | Local demand, willingness to pay, or a buyer |
+| World Bank | Attributed country-level context | A local customer problem |
+| GDELT | Coverage metadata and recent reporting leads | Truth of an article or commercial demand |
+| Exact cleared web source | Its documented public record only | Permission to crawl a site or contact people |
+
+Scheduled collection is an external network action. Its exact source,
+frequency, rate, privacy, expiry, evidence purpose, and failure behavior must
+remain recorded in source-clearance and scheduled-route seams. It never
+authorizes contact, publication, spending, or activation of intake.
