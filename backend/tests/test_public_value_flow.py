@@ -102,6 +102,16 @@ def test_forge_connections_endpoints_require_owner_key(client_with_db, db, monke
         ("post", f"/forge/connections/{row.id}/settle-payment", {"note": "x", "amount_npr": 1}),
         ("post", f"/forge/connections/{row.id}/response", {"note": "x"}),
         ("post", f"/forge/connections/{row.id}/publish"),
+        (
+            "post",
+            "/forge/learning/from-experiment",
+            {
+                "experiment_id": 999,
+                "prediction": "x",
+                "actual": "x",
+                "lesson": "x",
+            },
+        ),
     ]
     # Key unset: owner endpoints refuse with 503.
     monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")

@@ -1154,6 +1154,7 @@ def accept_decision(decision_id: int, request: Request, db: Session = Depends(ge
 
 @router.post("/learning/from-experiment")
 def learning_from_experiment(
+    request: Request,
     experiment_id: int,
     prediction: str,
     actual: str,
@@ -1164,6 +1165,7 @@ def learning_from_experiment(
     data_scope: str = "REAL",
     db: Session = Depends(get_db),
 ):
+    require_owner_api_key(request)
     from app.services import learning_engine
     exp = db.get(models.Experiment, experiment_id)
     if not exp or exp.status != "completed" or not db.query(models.Outcome).filter_by(experiment_id=experiment_id, data_scope=data_scope).first():
