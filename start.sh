@@ -40,8 +40,8 @@ elif command -v python3.12 >/dev/null 2>&1; then
   PY="$(command -v python3.12)"
 fi
 
-if ! "$PY" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)'; then
-  echo "❌ ForgeOS requires Python 3.10+ for the backend and scheduler (found: $("$PY" --version 2>&1))"
+if ! "$PY" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 9) else 1)'; then
+  echo "❌ ForgeOS requires Python 3.9+ for the backend and scheduler (found: $("$PY" --version 2>&1))"
   exit 1
 fi
 
