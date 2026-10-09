@@ -14,7 +14,8 @@ from app.services import source_manager, lessons_engine
 @pytest.fixture
 def httpdb(monkeypatch):
     from app import security
-    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    # Owner-keyed writes (Step 1): the test client presents the key.
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "http-canonical-key")
     engine = create_engine('sqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool)
     Base.metadata.create_all(engine)
     db = sessionmaker(bind=engine)()
@@ -27,7 +28,7 @@ def httpdb(monkeypatch):
             raise
     app.dependency_overrides[get_db] = dependency
     # No app lifespan: schema is explicitly initialized on this isolated DB.
-    client = TestClient(app, raise_server_exceptions=False)
+    client = TestClient(app, raise_server_exceptions=False, headers={"X-API-Key": "http-canonical-key"})
     yield client, db, engine
     client.close(); app.dependency_overrides.clear(); db.close(); engine.dispose()
 

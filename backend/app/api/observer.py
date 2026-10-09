@@ -25,11 +25,12 @@ router = APIRouter(prefix="/observer", tags=["observer"])
 
 
 @router.post("/observe", response_model=schemas.SignalOut)
-def observe(payload: schemas.ObserveRequest, db: Session = Depends(get_db)):
+def observe(request: Request, payload: schemas.ObserveRequest, db: Session = Depends(get_db)):
     """Submit one piece of raw information. The Observer Engine
     normalizes it, tags it, classifies its type, scores its importance
     (0-100), and stores it as a Signal — all synchronously, no external
     API calls required."""
+    security.require_owner_api_key(request)
     engine = ObserverEngine(db)
     return engine.observe(payload.content, source=payload.source)
 

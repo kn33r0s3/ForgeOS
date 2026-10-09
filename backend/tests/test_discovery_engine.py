@@ -357,7 +357,8 @@ def test_methods_are_replaceable_and_registration_is_explicit(db, world):
 def test_preview_is_read_only_and_api_runs_explicitly(db, world, monkeypatch):
     from app import security
 
-    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    # Discovery runs are owner-keyed (Step 1); the test client presents the key.
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "discovery-test-key")
     before = _counts(db)
     preview = engine.run_discovery(db, persist=False)
     db.rollback()
@@ -369,7 +370,7 @@ def test_preview_is_read_only_and_api_runs_explicitly(db, world, monkeypatch):
 
     app.dependency_overrides[get_db] = override_get_db
     try:
-        client = TestClient(app)
+        client = TestClient(app, headers={"X-API-Key": "discovery-test-key"})
         methods = client.get("/forge/substrate/discovery/methods").json()
         assert "question_reframe" in {row["name"] for row in methods}
         assert client.get("/forge/substrate/discovery/preview").status_code == 200
@@ -387,3 +388,187 @@ def test_preview_is_read_only_and_api_runs_explicitly(db, world, monkeypatch):
         assert keyed.status_code == 200
     finally:
         app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# Step 3B-1: Tests for PR #15 recovered sources (adapted from test_discovery_selection.py).
+# These verify the 5 new DiscoveryMethods work as discovery_engine methods.
+# ---------------------------------------------------------------------------
+
+def _horizon_domain(db, name, status="unparked", reason=None):
+    """Create a horizon domain entity."""
+    from datetime import datetime, timezone
+
+    attrs = {
+        "name": name,
+        "status": status,
+        "reason_parked": reason or "test reason",
+        "parked_at": datetime.now(timezone.utc).isoformat(),
+        "unparked_at": None,
+    }
+    return world_graph.create_entity(
+        db,
+        entity_type="horizon_domain",
+        display_name=name,
+        attributes=attrs,
+        created_by="test",
+    )
+
+
+def _run_method(db, method_name):
+    """Run a single discovery method and return its findings."""
+    from app.services.discovery_engine import DiscoveryContext, DEFAULT_REGISTRY
+
+    method = DEFAULT_REGISTRY.get(method_name)
+    ctx = DiscoveryContext(db=db, inputs={})
+    return list(method.run(ctx))
+
+
+def test_pr15_map_gap_finds_uncovered_domain(db):
+    """Horizon domain with no candidate coverage → new_unknown finding."""
+    world_graph.seed_core_types(db)
+    _horizon_domain(db, "Quantum Computing", status="unparked")
+    findings = _run_method(db, "map_gap")
+    assert len(findings) == 1
+    f = findings[0]
+    assert f.kind == "new_unknown"
+    assert "Quantum Computing" in f.statement
+    assert f.facets["source"] == "map_gap"
+    assert f.facets["provenance"] == "model-proposed"
+    assert f.facets["confirmed"] is False
+
+
+def test_pr15_map_gap_skips_covered_domain(db):
+    """Horizon domain with candidate coverage → no finding."""
+    from app.services import operating_v4 as _opv4
+
+    world_graph.seed_core_types(db)
+    _horizon_domain(db, "Thamel Retail", status="unparked")
+    # Create a bet that references the domain
+    bet = world_graph.create_entity(
+        db, entity_type=_opv4.BET_ENTITY_TYPE, display_name="Test Bet",
+        attributes={"claim": "Thamel Retail has unknowns", "constraint": "", "test": ""},
+        created_by="test",
+    )
+    findings = _run_method(db, "map_gap")
+    # The domain name appears in bet text, so no finding
+    assert len(findings) == 0
+
+
+def test_pr15_superseded_belief_finds_flawed_assumption(db):
+    """Superseded belief → contradiction finding."""
+    world_graph.seed_core_types(db)
+    # Create two beliefs, one superseded by the other
+    old = models.Belief(statement="Old wrong belief", confidence_score=0.3)
+    db.add(old)
+    db.flush()
+    new = models.Belief(statement="New correct belief", confidence_score=0.9)
+    db.add(new)
+    db.flush()
+    old.merged_into_id = new.id
+    db.flush()
+
+    findings = _run_method(db, "superseded_belief")
+    assert len(findings) == 1
+    f = findings[0]
+    assert f.kind == "contradiction"
+    assert f.facets["source"] == "evidence_contradiction"
+    assert f.facets["superseded_belief_id"] == old.id
+
+
+def test_pr15_outcome_anomaly_finds_failed_outcome(db):
+    """Failed outcome → anomaly finding."""
+    world_graph.seed_core_types(db)
+    outcome = models.Outcome(
+        outcome_type="test_outcome",
+        success=False,
+        qualitative_result="The test failed unexpectedly",
+        verification_state="UNVERIFIED",
+    )
+    db.add(outcome)
+    db.flush()
+
+    findings = _run_method(db, "outcome_anomaly")
+    assert len(findings) == 1
+    f = findings[0]
+    assert f.kind == "anomaly"
+    assert f.facets["source"] == "outcome_anomaly"
+    assert f.facets["label"] == "failed its objective"
+
+
+def test_pr15_outcome_anomaly_finds_disputed_outcome(db):
+    """Disputed outcome → anomaly finding."""
+    world_graph.seed_core_types(db)
+    outcome = models.Outcome(
+        outcome_type="test_outcome",
+        success=True,
+        qualitative_result="Results are contested",
+        verification_state="DISPUTED",
+    )
+    db.add(outcome)
+    db.flush()
+
+    findings = _run_method(db, "outcome_anomaly")
+    assert len(findings) == 1
+    assert findings[0].facets["label"] == "disputed"
+
+
+def test_pr15_pending_capability_finds_proposed_capability(db):
+    """Proposed capability → capability_gap finding."""
+    world_graph.seed_core_types(db)
+    cap = world_graph.create_capability(
+        db, capability_type="workflow", name="test-probe-capability",
+        description="A capability Hami needs.", owner_agent="test",
+    )
+    # create_capability sets status; ensure it's proposed
+    cap.status = "proposed"
+    db.flush()
+
+    findings = _run_method(db, "pending_capability")
+    assert len(findings) >= 1
+    f = [x for x in findings if x.facets.get("capability_id") == cap.id]
+    assert len(f) == 1
+    assert f[0].kind == "capability_gap"
+    assert f[0].facets["source"] == "capability_gap"
+
+
+def test_pr15_horizon_escape_finds_parked_domain(db):
+    """Parked domain → blind_spot finding."""
+    world_graph.seed_core_types(db)
+    _horizon_domain(db, "Far Future Tech", status="parked", reason="Too early")
+
+    findings = _run_method(db, "horizon_escape")
+    assert len(findings) == 1
+    f = findings[0]
+    assert f.kind == "blind_spot"
+    assert f.facets["source"] == "horizon_escape"
+    assert f.facets["horizon_relation"] == "outside"
+    assert "Far Future Tech" in f.statement
+
+
+def test_pr15_new_finding_types_registered(db):
+    """The 6 PR #15 finding types are in BUILTIN_KINDS."""
+    from app.services import discovery_engine as engine
+
+    for kind in ("new_unknown", "updated_unknown", "anomaly",
+                 "blind_spot", "new_relationship", "no_material_discovery"):
+        assert kind in engine.BUILTIN_KINDS, f"{kind} not in BUILTIN_KINDS"
+
+
+def test_pr15_methods_registered(db):
+    """The 5 PR #15 methods are in DEFAULT_REGISTRY."""
+    from app.services.discovery_engine import DEFAULT_REGISTRY
+
+    for name in ("map_gap", "superseded_belief", "outcome_anomaly",
+                 "pending_capability", "horizon_escape"):
+        method = DEFAULT_REGISTRY.get(name)
+        assert method.name == name
+
+
+def test_pr15_empty_sources_yield_no_findings(db):
+    """Empty database → no findings from PR #15 methods (honest, not fabricated)."""
+    world_graph.seed_core_types(db)
+    for name in ("map_gap", "superseded_belief", "outcome_anomaly",
+                 "pending_capability", "horizon_escape"):
+        findings = _run_method(db, name)
+        assert findings == [], f"{name} fabricated findings from empty DB"

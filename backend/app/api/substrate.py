@@ -6,16 +6,20 @@ import json
 from datetime import datetime
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app import models
+from app import models, security
 from app.database import get_db
 from app.services import discovery_engine, type_validation, world_graph
 
 router = APIRouter(prefix="/forge/substrate", tags=["substrate"])
+
+
+def _owner(request: Request) -> None:
+    security.require_owner_api_key(request)
 
 
 class TypeCreate(BaseModel):
@@ -266,7 +270,8 @@ def list_types(
 
 
 @router.post("/types", status_code=201)
-def propose_type(body: TypeCreate, db: Session = Depends(get_db)):
+def propose_type(request: Request, body: TypeCreate, db: Session = Depends(get_db)):
+    _owner(request)
     try:
         row = world_graph.register_type(
             db,
@@ -284,7 +289,8 @@ def propose_type(body: TypeCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/types/{category}/{type_name}/status")
-def change_type_status(category: str, type_name: str, body: TypeStatusChange, db: Session = Depends(get_db)):
+def change_type_status(request: Request, category: str, type_name: str, body: TypeStatusChange, db: Session = Depends(get_db)):
+    _owner(request)
     row = db.query(models.TypeRegistry).filter_by(category=category, type_name=type_name).one_or_none()
     if row is None:
         raise _not_found("type not found")
@@ -324,7 +330,8 @@ def get_entity(entity_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/entities", status_code=201)
-def add_entity(body: EntityCreate, db: Session = Depends(get_db)):
+def add_entity(request: Request, body: EntityCreate, db: Session = Depends(get_db)):
+    _owner(request)
     try:
         row = world_graph.create_entity(
             db,
@@ -342,7 +349,8 @@ def add_entity(body: EntityCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/entities/{entity_id}/identity")
-def change_entity_identity(entity_id: int, body: IdentityChange, db: Session = Depends(get_db)):
+def change_entity_identity(request: Request, entity_id: int, body: IdentityChange, db: Session = Depends(get_db)):
+    _owner(request)
     entity = db.get(models.SubstrateEntity, entity_id)
     if entity is None:
         raise _not_found("entity not found")
@@ -359,7 +367,8 @@ def change_entity_identity(entity_id: int, body: IdentityChange, db: Session = D
 
 
 @router.post("/entities/{entity_id}/merge")
-def merge_entity(entity_id: int, body: EntityMerge, db: Session = Depends(get_db)):
+def merge_entity(request: Request, entity_id: int, body: EntityMerge, db: Session = Depends(get_db)):
+    _owner(request)
     duplicate = db.get(models.SubstrateEntity, entity_id)
     survivor = db.get(models.SubstrateEntity, body.survivor_entity_id)
     if duplicate is None or survivor is None:
@@ -377,7 +386,8 @@ def merge_entity(entity_id: int, body: EntityMerge, db: Session = Depends(get_db
 
 
 @router.post("/entities/{entity_id}/archive")
-def archive_entity(entity_id: int, body: EntityArchive, db: Session = Depends(get_db)):
+def archive_entity(request: Request, entity_id: int, body: EntityArchive, db: Session = Depends(get_db)):
+    _owner(request)
     row = db.get(models.SubstrateEntity, entity_id)
     if row is None:
         raise _not_found("entity not found")
@@ -409,7 +419,8 @@ def list_relations(
 
 
 @router.post("/relations", status_code=201)
-def add_relation(body: RelationCreate, db: Session = Depends(get_db)):
+def add_relation(request: Request, body: RelationCreate, db: Session = Depends(get_db)):
+    _owner(request)
     try:
         row = world_graph.create_relation(db, **body.model_dump())
         db.commit()
@@ -420,7 +431,8 @@ def add_relation(body: RelationCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/relations/{relation_id}/truth")
-def change_relation_truth(relation_id: int, body: RelationTruthChange, db: Session = Depends(get_db)):
+def change_relation_truth(request: Request, relation_id: int, body: RelationTruthChange, db: Session = Depends(get_db)):
+    _owner(request)
     row = db.get(models.WorldRelation, relation_id)
     if row is None:
         raise _not_found("relation not found")
@@ -452,7 +464,8 @@ def list_events(
 
 
 @router.post("/events", status_code=201)
-def add_event(body: EventCreate, db: Session = Depends(get_db)):
+def add_event(request: Request, body: EventCreate, db: Session = Depends(get_db)):
+    _owner(request)
     try:
         row = world_graph.create_event(db, **body.model_dump())
         db.commit()
@@ -478,7 +491,8 @@ def list_evidence(
 
 
 @router.post("/evidence", status_code=201)
-def add_evidence(body: EvidenceCreate, db: Session = Depends(get_db)):
+def add_evidence(request: Request, body: EvidenceCreate, db: Session = Depends(get_db)):
+    _owner(request)
     try:
         row = world_graph.create_evidence(db, **body.model_dump())
         db.commit()
@@ -504,7 +518,8 @@ def list_capabilities(
 
 
 @router.post("/capabilities", status_code=201)
-def add_capability(body: CapabilityCreate, db: Session = Depends(get_db)):
+def add_capability(request: Request, body: CapabilityCreate, db: Session = Depends(get_db)):
+    _owner(request)
     existing = db.query(models.ForgeCapability).filter_by(name=body.name.strip()).one_or_none()
     if existing is not None:
         expected = (
@@ -528,7 +543,8 @@ def add_capability(body: CapabilityCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/capabilities/{capability_id}/build")
-def begin_capability_build(capability_id: int, db: Session = Depends(get_db)):
+def begin_capability_build(request: Request, capability_id: int, db: Session = Depends(get_db)):
+    _owner(request)
     row = db.get(models.ForgeCapability, capability_id)
     if row is None:
         raise _not_found("capability not found")
@@ -542,7 +558,8 @@ def begin_capability_build(capability_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/capabilities/{capability_id}/test")
-def test_capability(capability_id: int, body: CapabilityTest, db: Session = Depends(get_db)):
+def test_capability(request: Request, capability_id: int, body: CapabilityTest, db: Session = Depends(get_db)):
+    _owner(request)
     row = db.get(models.ForgeCapability, capability_id)
     if row is None:
         raise _not_found("capability not found")
@@ -562,7 +579,8 @@ def test_capability(capability_id: int, body: CapabilityTest, db: Session = Depe
 
 
 @router.post("/capabilities/{capability_id}/activate")
-def activate_capability(capability_id: int, db: Session = Depends(get_db)):
+def activate_capability(request: Request, capability_id: int, db: Session = Depends(get_db)):
+    _owner(request)
     row = db.get(models.ForgeCapability, capability_id)
     if row is None:
         raise _not_found("capability not found")
@@ -610,7 +628,8 @@ def list_discovery_findings(
 
 
 @router.post("/discovery/runs", status_code=201)
-def run_discovery(body: DiscoveryRun, db: Session = Depends(get_db)):
+def run_discovery(request: Request, body: DiscoveryRun, db: Session = Depends(get_db)):
+    _owner(request)
     """Explicitly run and persist discovery; never part of the scheduled cycle."""
     try:
         report = discovery_engine.run_discovery(db, methods=body.methods, persist=True)
