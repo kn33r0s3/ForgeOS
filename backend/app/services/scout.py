@@ -147,7 +147,7 @@ def get_daily_cap(db: Session) -> int:
 
 
 def sends_today(db: Session) -> int:
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     return (
         db.query(models.OutreachDraft)
         .filter(
