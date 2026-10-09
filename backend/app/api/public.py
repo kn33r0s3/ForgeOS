@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.database import get_db
-from app.services import public_epistemics
+from app.services import public_epistemics, public_stats
 from app.config import settings
 from app.services import forge_bot_privacy
 
@@ -1088,3 +1088,14 @@ def list_public_unknowns(
             raise HTTPException(400, f"unknown state: {state}")
         public = [u for u in public if u["state"] == su]
     return public[:limit]
+
+
+@router.get("/stats")
+def get_public_stats(db: Session = Depends(get_db)):
+    """Public real-world statistics. REAL-only; TEST/MOCK/HYPOTHESIS never leak.
+
+    Returns NOT_MEASURABLE (not 0) for metrics with no verified real data yet.
+    """
+    return {
+        "owner_interventions_per_real_transaction": public_stats.owner_interventions_per_real_transaction(db),
+    }
