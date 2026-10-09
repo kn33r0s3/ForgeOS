@@ -129,10 +129,9 @@ than a few days old, re-verify before trusting the details.
 
 ## Current state (verified 2026-10-09)
 
-- **HEAD:** `origin/main` at `1400e71` ("Merge pull request #15 from kn33r0s3/discovery-loop-v1") + recovery work.
+- **HEAD:** `origin/main` at `096e3d0` ("Fix CI: add workflow_call trigger to secrets.yml").
 - **Health:** haminp.vercel.app/api/health → ok; forge-os-ebon.vercel.app/api/health → ok.
 - **Intake:** `intake_enabled: false` (Forge Bot closed).
-- **Recent merges:** PR #17 (Step 1 router auth), PR #18 (Step 2 scheduled observation), PR #20 (Step 3B-1 discovery convergence), PR #15 (discovery loop on Selection v0).
 - **Step 3B-1:** 5 PR #15 discovery sources recovered into discovery_engine.py as DiscoveryMethods; 6 new finding types; 10 tests.
 - **Recovery pass (9038616):** Secured /forge/questions, /forge/tasks, /forge/evidence with owner auth; fixed EvidenceOut nullable 500; added bibliographic background classifier; corrected /scheduled/intelligence docs; added relevance_status to PublicDiscoveryOut.
 - **Qualification gate (4005927):** Patterns require problem/demand grounding (Signal.signal_type) for commercial questions; 3 new regression tests.
