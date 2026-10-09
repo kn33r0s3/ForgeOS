@@ -9,7 +9,7 @@ from fastapi import APIRouter, Header, HTTPException
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
-from app import database
+from app import database, models
 from app.api.forge_bot_owner_notification import send_daily_owner_summary_notification
 from app.config import settings
 from app.services.forge_bot_privacy import run_daily_maintenance
@@ -310,6 +310,38 @@ def run_scheduled_intelligence(authorization: str | None = Header(default=None))
                     "errors": errors_count,
                     "capability_gaps": len(report.get("capability_gaps", [])),
                 }
+                # Close the loop: convert surfaced question findings into
+                # ResearchQuestion rows so the next cycle's research planner
+                # can pick them up. This is what makes discovery actionable
+                # rather than merely reported.
+                questions_created = 0
+                for surfaced in report.get("surfaced", []):
+                    if surfaced.get("kind") != "question":
+                        continue
+                    statement = (surfaced.get("statement") or "").strip()
+                    if not statement or len(statement) > 2000:
+                        continue
+                    # Deduplicate: skip if an open question with same text exists
+                    existing_q = (
+                        db.query(models.ResearchQuestion)
+                        .filter(
+                            models.ResearchQuestion.question == statement,
+                            models.ResearchQuestion.status.in_(["open", "proposed"]),
+                        )
+                        .first()
+                    )
+                    if existing_q:
+                        continue
+                    q = models.ResearchQuestion(
+                        question=statement,
+                        status="open",
+                        priority_score=50.0,  # Discovery-sourced; planner will reprioritize
+                    )
+                    db.add(q)
+                    questions_created += 1
+                if questions_created:
+                    db.commit()
+                intelligence["discovery_cycle"]["questions_created"] = questions_created
             except Exception:
                 db.rollback()
                 raise

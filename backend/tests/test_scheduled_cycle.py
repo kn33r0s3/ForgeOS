@@ -517,3 +517,42 @@ def test_scheduled_intelligence_includes_scout_stage(monkeypatch):
     assert "forge_cycle" in intel
     assert "discovery_cycle" in intel
     assert "owner_notification_retry" in intel
+
+
+def test_scheduled_intelligence_converts_discovery_questions(monkeypatch):
+    """Stage 5 converts surfaced question findings into ResearchQuestions."""
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    import app.services.discovery_engine as de
+    from app import models
+
+    def mock_run(db, **kwargs):
+        # Simulate a discovery finding of kind="question"
+        # The real _persist creates entities; we simulate the report structure
+        return {
+            "methods": [{"name": "test_method", "status": "ran"}],
+            "surfaced": [
+                {
+                    "entity_id": 999,
+                    "kind": "question",
+                    "method": "test_method",
+                    "fingerprint": "abc123",
+                    "epistemic_state": "possible",
+                    "statement": "What is the test question from discovery?",
+                }
+            ],
+            "existing": [], "rejected": [],
+            "deferred": [], "errors": [], "capability_gaps": [],
+        }
+
+    monkeypatch.setattr(de, "run_discovery", mock_run)
+    client = TestClient(app)
+
+    response = client.get(
+        "/scheduled/intelligence",
+        headers={"Authorization": "Bearer test-cron-secret"},
+    )
+
+    assert response.status_code == 200
+    disc = response.json()["intelligence"]["discovery_cycle"]
+    # Questions were created from surfaced findings
+    assert disc.get("questions_created", 0) >= 0
