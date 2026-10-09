@@ -1,7 +1,7 @@
 # PROJECT STATE — Hami (ForgeOS)
 
 > One page, always current. Updated at the end of every task.
-> Last updated: 2026-10-05. HEAD: `7dc0e1f` (main).
+> Last updated: 2026-10-10. HEAD: `9914ed9` (main).
 
 ## What exists
 
@@ -18,7 +18,9 @@ Full registry: `features.json`.
 **Backend:** ForgeOS engine — six primitives (ENTITY, RELATION, EVENT,
 EVIDENCE, CAPABILITY, ACTION), action engine with owner-approval gates,
 intervention gate (one active human-involving intervention), evidence
-ledger, truth progression. 717 backend tests.
+ledger, truth progression, and an open-world discovery registry whose
+ignorance-map findings now pass evidence-reference validation. 1015 backend
+tests passed in the latest full run (2 skipped).
 
 ## What is live
 
