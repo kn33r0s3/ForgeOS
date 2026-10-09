@@ -514,3 +514,21 @@ describe("homepage findings defects (regression)", () => {
     assert.match(card, /relevanceLabels/);
   });
 });
+
+describe("evidence trace (regression)", () => {
+  it("FindingCard renders linked unknown and next test from real data", () => {
+    const card = readFileSync("src/components/findings/finding-card.tsx", "utf8");
+    // Must show linked_unknown when present, honest empty when absent
+    assert.match(card, /linked_unknown/);
+    assert.match(card, /Not established/);
+    // Must show next_test when present, honest empty when absent  
+    assert.match(card, /next_test/);
+    assert.match(card, /Not recorded/);
+  });
+
+  it("FindingCard does not manufacture links", () => {
+    const card = readFileSync("src/components/findings/finding-card.tsx", "utf8");
+    // When backend returns null, the UI must say so — not invent text
+    assert.doesNotMatch(card, /placeholder|example|sample unknown/i);
+  });
+});

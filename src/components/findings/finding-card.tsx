@@ -50,6 +50,21 @@ export function FindingCard({
         <p className="mt-2 min-w-0 flex-1 break-words text-sm leading-6 text-muted">
           {finding.excerpt}
         </p>
+        {/* Evidence trace: what this record establishes and what it doesn't */}
+        <div className="mt-3 space-y-1 border-t border-line pt-3 text-xs leading-5">
+          <div className="flex gap-2">
+            <span className="shrink-0 font-mono font-bold uppercase tracking-wider text-dim">Linked unknown:</span>
+            <span className="text-muted">
+              {finding.linked_unknown ? finding.linked_unknown : <em>Not established — no unknown linked to this record.</em>}
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <span className="shrink-0 font-mono font-bold uppercase tracking-wider text-dim">Next test:</span>
+            <span className="text-muted">
+              {finding.next_test ? finding.next_test : <em>Not recorded — no test proposed for this record.</em>}
+            </span>
+          </div>
+        </div>
         {finding.canonical_url ? (
           <a
             href={finding.canonical_url}
