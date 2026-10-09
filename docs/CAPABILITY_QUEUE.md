@@ -1340,14 +1340,24 @@ realized revenue.
 
 | Global unknown/experiment selection v0 | **IN PROGRESS — local selection gap verified; no global slate exists yet** | Current owner action: manually choose an unknown, define a Bet/probe, assess constraints, and separately approve any external contact/action. This change removes manual cross-candidate comparison and makes missing admission evidence explicit; it does not execute probes, collect evidence, authorize actions, or create economic outcomes. Remaining blockers: candidate claims, consent/permission, bounded cost/harm, and kill rules need explicit owner input; external tests still require affected-party consent, legal permission, and execution capability. Next removable dependency: owner-by-owner candidate design, only after this read-only selector is verified; experiment execution remains separately authorized. Verification planned: generated-map parity; selector/gate/portfolio and owner-auth tests; SQLite, local PostgreSQL, and full suites. |
 
-## [DONE] Scheduled discovery integration (2026-10-09)
+## [DONE] Scheduled discovery integration (2026-10-09, corrected 2026-10-09)
 
 - **Implementation:** `GET /scheduled/intelligence` now runs a 5th stage using
   `app.services.discovery_engine.run_discovery` with `max_findings_per_method=10`.
   The stage uses a separate DB session, commits only on success, rolls back on
-  failure, and returns only an operational summary (counts of methods, surfaced,
-  existing, rejected, deferred, errors, capability_gaps). Per-method failure
-  isolation is preserved; a discovery failure does not prevent other stages.
+  failure, and returns only an operational summary (counts of methods_run,
+  methods_total, surfaced, existing, rejected, deferred, errors, capability_gaps).
+  Per-method failure isolation is preserved; a discovery failure does not prevent
+  other stages.
+- **Work bound (corrected):** Uses `itertools.islice` for genuine early-stop —
+  the lazy iterator is consumed only up to the limit, not materialized first.
+  **Limitation:** This bounds findings *consumed*, not DB rows scanned or time
+  spent. Methods that eagerly build large lists before their first yield are not
+  bounded by this. Per-method work characteristics are documented in method
+  docstrings.
+- **Methods count (corrected):** `methods_run` counts only methods with
+  `status=="ran"`, not those blocked by missing capabilities or errored before
+  execution. `methods_total` reports the registry size for context.
 - **Qualification gates preserved:** The `curiosity_questions` method calls
   `CuriosityEngine.find_unexplored_patterns()` which enforces the bibliographic
   background filter and commercial qualification gate. Findings are emitted with
@@ -1361,9 +1371,10 @@ realized revenue.
   approving commercial bets, authorizing any external action or contact.
 - **Next dependency:** A real-world observation to validate against — automated
   internal discovery does not constitute field discovery, customer demand, a real
-  transaction, or verified revenue.
-- **Tests:** 3 new tests in `test_scheduled_cycle.py` (five-stage execution,
-  operational summary shape, failure isolation). Existing discovery-engine
-  regression tests retained.
+  transaction, or verified revenue. An empty discovery run is not successful
+  discovery of a new real-world problem.
+- **Tests:** 5 new tests in `test_scheduled_cycle.py` (five-stage execution,
+  operational summary shape, failure isolation, bounded limit, executed-methods
+  count). Existing discovery-engine regression tests retained.
 - **Metric:** `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**;
   no real qualifying transaction exists.

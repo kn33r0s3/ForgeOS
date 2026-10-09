@@ -50,6 +50,7 @@ cycle; it runs only when explicitly invoked (service call or the
 from __future__ import annotations
 
 import hashlib
+import itertools
 import json
 import math
 import re
@@ -583,7 +584,13 @@ def run_discovery(
             continue
         ctx = DiscoveryContext(db=db, inputs=inputs, actor=actor)
         try:
-            findings = list(method.run(ctx))[:max_findings_per_method]
+            # Genuine early-stop: islice consumes the lazy iterator without
+            # materializing the entire result set first. This bounds the number
+            # of findings CONSUMED from the method, not the DB rows scanned or
+            # time spent — methods that eagerly build large lists before their
+            # first yield are not bounded by this. See method docstrings for
+            # per-method work characteristics.
+            findings = list(itertools.islice(method.run(ctx), max_findings_per_method))
         except Exception as exc:  # a broken plugin must not stop the others
             entry["status"] = "error"
             report["errors"].append({"method": method.name, "error": f"{type(exc).__name__}: {exc}"})

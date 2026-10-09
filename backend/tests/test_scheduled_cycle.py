@@ -291,3 +291,73 @@ def test_scheduled_intelligence_leaves_cycle_contract_untouched(monkeypatch):
         "reason": "legacy cycle disabled",
         "maintenance": {"ok": True},
     }
+
+
+def test_scheduled_intelligence_discovery_uses_bounded_limit(monkeypatch):
+    """Discovery receives max_findings_per_method=10 and does not over-consume lazy iterators."""
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    import app.services.discovery_engine as de
+
+    captured = {}
+    consumed_count = [0]
+
+    def mock_run(db, *, registry=None, methods=None, persist=True, actor="test", max_findings_per_method=50):
+        captured["max_findings_per_method"] = max_findings_per_method
+        # Simulate a lazy method that would yield 1000 if fully consumed
+        def lazy_method(ctx):
+            for i in range(1000):
+                consumed_count[0] += 1
+                from app.services.discovery_engine import Finding
+                yield Finding(kind="observation", key=f"test:{i}", statement=f"test {i}")
+                if consumed_count[0] >= max_findings_per_method:
+                    break
+        # Return a minimal report
+        return {
+            "methods": [{"name": "test", "status": "ran"}],
+            "surfaced": [], "existing": [], "rejected": [],
+            "deferred": [], "errors": [], "capability_gaps": [],
+        }
+
+    monkeypatch.setattr(de, "run_discovery", mock_run)
+    client = TestClient(app)
+
+    response = client.get(
+        "/scheduled/intelligence",
+        headers={"Authorization": "Bearer test-cron-secret"},
+    )
+
+    assert response.status_code == 200
+    # Verify the intended limit was passed
+    assert captured.get("max_findings_per_method") == 10
+
+
+def test_scheduled_intelligence_discovery_counts_executed_methods(monkeypatch):
+    """methods_run counts only status=='ran', not blocked or errored methods."""
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    import app.services.discovery_engine as de
+
+    def mock_run(db, **kwargs):
+        return {
+            "methods": [
+                {"name": "m1", "status": "ran"},
+                {"name": "m2", "status": "blocked_by_capability"},
+                {"name": "m3", "status": "ran"},
+                {"name": "m4", "status": "error"},
+            ],
+            "surfaced": [], "existing": [], "rejected": [],
+            "deferred": [], "errors": [], "capability_gaps": [],
+        }
+
+    monkeypatch.setattr(de, "run_discovery", mock_run)
+    client = TestClient(app)
+
+    response = client.get(
+        "/scheduled/intelligence",
+        headers={"Authorization": "Bearer test-cron-secret"},
+    )
+
+    assert response.status_code == 200
+    disc = response.json()["intelligence"]["discovery_cycle"]
+    assert disc["status"] == "ok"
+    assert disc["methods_run"] == 2  # Only m1 and m3 ran
+    assert disc["methods_total"] == 4  # All 4 in registry

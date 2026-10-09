@@ -259,10 +259,13 @@ def run_scheduled_intelligence(authorization: str | None = Header(default=None))
     # failure isolation; findings are validated and persisted via the existing
     # discovery lifecycle (idempotent by fingerprint). Findings are emitted with
     # honest epistemic states (hypothesized/possible) — never as validated.
-    # Bounded: max_findings_per_method=10 constrains work performed, not just
-    # results persisted. Separate DB session; commit only on success, rollback
-    # on failure. Returns only an operational summary (counts), never raw
-    # internal details or private records.
+    # Bounded: max_findings_per_method=10 uses itertools.islice for genuine
+    # early-stop (does not materialize the full iterable first). This bounds
+    # findings consumed, not DB rows scanned or time spent — see method
+    # docstrings for per-method work characteristics.
+    # Separate DB session; commit only on success, rollback on failure.
+    # Returns only an operational summary (counts), never raw internal details
+    # or private records.
     try:
         with database.SessionLocal() as db:
             from app.services import discovery_engine
@@ -270,9 +273,14 @@ def run_scheduled_intelligence(authorization: str | None = Header(default=None))
             try:
                 report = discovery_engine.run_discovery(db, max_findings_per_method=10)
                 db.commit()
+                # Count actually executed methods (status=="ran"), not blocked/errored
+                methods_executed = sum(
+                    1 for m in report.get("methods", []) if m.get("status") == "ran"
+                )
                 intelligence["discovery_cycle"] = {
                     "status": "ok",
-                    "methods_run": len(report.get("methods", [])),
+                    "methods_run": methods_executed,
+                    "methods_total": len(report.get("methods", [])),
                     "surfaced": len(report.get("surfaced", [])),
                     "existing": len(report.get("existing", [])),
                     "rejected": len(report.get("rejected", [])),
