@@ -344,4 +344,29 @@ def run_scheduled_intelligence(authorization: str | None = Header(default=None))
         logger.warning("scheduled intelligence: owner_notification_retry failed (%s)", type(exc).__name__)
         intelligence["owner_notification_retry"] = {"status": "error", "error": type(exc).__name__}
 
+    # Stage 7: scout cycle — autonomous candidate processing.
+    # Scores and ranks registered candidates, generates drafts for top
+    # eligible ones (draft only, never sends). Uses existing scout.py seams.
+    # Isolated: separate DB session, isolated exception handling.
+    # A scout failure does not fail or conceal the other stages.
+    try:
+        with database.SessionLocal() as db:
+            from app.services import scout
+
+            scout_result = scout.run_scout_cycle(db)
+            db.commit()
+            err_count = len(scout_result.get("errors", []))
+            stage7_status = "partial" if err_count else "ok"
+            intelligence["scout_cycle"] = {
+                "status": stage7_status,
+                "candidates_ranked": scout_result.get("candidates_ranked", 0),
+                "candidates_scored": scout_result.get("candidates_scored", 0),
+                "drafts_generated": scout_result.get("drafts_generated", 0),
+                "blocked": scout_result.get("blocked", 0),
+                "errors": err_count,
+            }
+    except Exception as exc:
+        logger.warning("scheduled intelligence: scout_cycle failed (%s)", type(exc).__name__)
+        intelligence["scout_cycle"] = {"status": "error", "error": type(exc).__name__}
+
     return {"status": "completed", "intelligence": intelligence}

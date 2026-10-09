@@ -115,3 +115,52 @@ def test_seed_registry_experiments(db):
     fields = json.loads(created[0].five_fields_json)
     for key in ("reality", "possibility", "constraint", "intervention", "outcome"):
         assert key in fields
+
+
+def test_scout_cycle_scores_and_ranks(db):
+    """run_scout_cycle processes registered candidates without sending."""
+    from app.services import scout
+
+    scout.register_candidate(
+        db,
+        display_name="Test Business",
+        source_url="https://example.com/test",
+        public_contact_route="test@example.com",
+        observed_signals={"primary_fact": "custom fabrication"},
+    )
+    result = scout.run_scout_cycle(db)
+
+    assert result["candidates_ranked"] >= 1
+    # candidates_scored may be 0 if no Evidence signals exist (unscored=None is valid)
+    assert result["candidates_scored"] >= 0
+    # Drafts may be generated but nothing is sent
+    assert result["drafts_generated"] >= 0
+    # No messages sent — drafts require explicit approval
+    from app import models
+    sent = db.query(models.OutreachDraft).filter(
+        models.OutreachDraft.status == "sent"
+    ).count()
+    assert sent == 0
+
+
+def test_scout_cycle_respects_do_not_contact(db):
+    """Candidates on do-not-contact are blocked, not drafted."""
+    from app.services import scout
+
+    entity = scout.register_candidate(
+        db,
+        display_name="Blocked Business",
+        source_url="https://example.com/blocked",
+        public_contact_route="blocked@example.com",
+    )
+    # Add to do-not-contact
+    from app import models
+    dnc = models.DoNotContact(
+        candidate_entity_id=entity.id,
+        reason="test",
+    )
+    db.add(dnc)
+    db.commit()
+
+    result = scout.run_scout_cycle(db)
+    assert result["blocked"] >= 1

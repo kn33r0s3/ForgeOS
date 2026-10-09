@@ -18,7 +18,8 @@ The legacy WorkerTask queue, legacy API endpoints, and legacy scheduled cycle ar
 4. `execution_engine.run_autonomous_action_cycle` — proposes (never executes) actions
 5. `discovery_engine.run_discovery` — runs generalized discovery methods over substrate
 6. `forge_bot_owner_notification.retry_queued_owner_notifications` — retries already-queued owner notices only (NEW)
-7. Returns `{"status": "completed", "intelligence": {...}}` with per-engine results
+7. `scout.run_scout_cycle` — scores/ranks candidates, generates drafts (never sends) (NEW 2026-10-10)
+8. Returns `{"status": "completed", "intelligence": {...}}` with per-engine results
 
 **Production now generates non-legacy work automatically** via the intelligence seam.
 This uses existing engines only — no legacy flag, no WorkerTask, no new scheduler.
