@@ -106,6 +106,37 @@ def test_public_stats_ignores_test_mock_hypothesis(db):
     }
 
 
+def test_public_stats_ignores_sandbox_scope(db):
+    """REAL kind + VERIFIED proof but SANDBOX scope: contributes zero.
+
+    A sandbox simulation of a real-world process is still not the real
+    world. Both truth axes (source_kind and data_scope) must be REAL.
+    """
+    from app.services.public_stats import public_stats
+
+    # Outcome: REAL kind, VERIFIED, but SANDBOX scope
+    _outcome(
+        db,
+        source_kind="REAL",
+        data_scope="SANDBOX",
+        verification_state="VERIFIED",
+    )
+    # CustomerEvent: REAL kind, SANDBOX scope
+    db.add(
+        models.CustomerEvent(
+            stage="paid_customer",
+            source_kind="REAL",
+            data_scope="SANDBOX",
+        )
+    )
+    db.commit()
+    assert public_stats(db) == {
+        "revenue": 0.0,
+        "customers": 0,
+        "verified_outcomes": 0,
+    }
+
+
 def test_public_stats_counts_only_real_with_proof(db):
     from app.services.public_stats import public_stats
 
@@ -164,6 +195,12 @@ def test_owner_interventions_not_measurable_without_real_transactions(db):
 
 
 def test_owner_interventions_ratio(db):
+    # Regression: counting all Action rows as "owner interventions" is a
+    # false positive. Actions include proposed/authorized/executed work
+    # across all actors and purposes; a verified transaction does not
+    # reveal how many owner interventions enabled it. Until the canonical
+    # evidence path attributes actual owner interventions with provenance,
+    # the metric is NOT MEASURABLE — even with verified transactions present.
     from app.services.public_stats import owner_interventions_per_real_transaction
 
     for _ in range(4):
@@ -171,7 +208,7 @@ def test_owner_interventions_ratio(db):
     _outcome(db, source_kind="REAL", verification_state="VERIFIED")
     _outcome(db, source_kind="REAL", verification_state="VERIFIED")
     db.commit()
-    assert owner_interventions_per_real_transaction(db) == 2.0
+    assert owner_interventions_per_real_transaction(db) == "NOT MEASURABLE"
 
 
 def test_sandbox_writes_stay_sandbox_downstream(db):
