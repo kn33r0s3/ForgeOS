@@ -157,8 +157,9 @@ def retry_research_task(
 
 
 @router.get("/beliefs", response_model=list[schemas.BeliefOut])
-def get_beliefs(db: Session = Depends(get_db)):
-    """Current beliefs, highest confidence first."""
+def get_beliefs(request: Request, db: Session = Depends(get_db)):
+    """Current beliefs, highest confidence first. Owner-only."""
+    require_owner_api_key(request)
     from app.services.belief_engine import is_presentable_belief
     rows = (
         db.query(models.Belief)
@@ -263,20 +264,31 @@ def record_experiment_result(
 
 
 @router.get("/experiments", response_model=list[schemas.BeliefExperimentOut])
-def list_experiments(belief_id: Optional[int] = None, db: Session = Depends(get_db)):
+def list_experiments(
+    request: Request,
+    belief_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    require_owner_api_key(request)
     return experiment_runner.ExperimentRunner(db).list_experiments(belief_id=belief_id)
 
 
 @router.get("/sources", response_model=list[schemas.SourceOut])
-def get_sources(db: Session = Depends(get_db)):
-    """Tracked reliability of each observation source."""
+def get_sources(request: Request, db: Session = Depends(get_db)):
+    """Tracked reliability of each observation source. Owner-only."""
+    require_owner_api_key(request)
     return source_manager.list_sources(db)
 
 
 @router.get("/predictions", response_model=list[schemas.PredictionOut])
-def get_predictions(status: Optional[str] = None, db: Session = Depends(get_db)):
+def get_predictions(
+    request: Request,
+    status: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
     """Predictions Forge has made from confident beliefs. Filter with
-    ?status=pending|confirmed|failed."""
+    ?status=pending|confirmed|failed. Owner-only."""
+    require_owner_api_key(request)
     return reality_memory.list_predictions(db, status=status)
 
 
@@ -396,7 +408,7 @@ def ask_forge(request: Request, payload: schemas.AskRequest, db: Session = Depen
 
 
 @router.get("/world/beliefs/{belief_id}", response_model=schemas.BeliefGraph)
-def get_belief_graph(belief_id: int, db: Session = Depends(get_db)):
+def get_belief_graph(request: Request, belief_id: int, db: Session = Depends(get_db)):
     """
     The Temporal, Goal-Aware, Causal World Model view of one belief:
     which pattern caused it, which opportunities and goals that
@@ -413,6 +425,7 @@ def get_belief_graph(belief_id: int, db: Session = Depends(get_db)):
     failed_actions). This is a read-only synthesis over existing
     tables, not a new store of facts.
     """
+    require_owner_api_key(request)
     graph = world_model.get_belief_graph(db, belief_id)
     if not graph:
         raise HTTPException(status_code=404, detail="Belief not found")
@@ -435,8 +448,13 @@ def create_goal(
 
 
 @router.get("/goals", response_model=list[schemas.GoalOut])
-def list_goals(status: Optional[str] = None, db: Session = Depends(get_db)):
-    """List goals, highest priority first. Filter with ?status=active|paused|achieved|abandoned."""
+def list_goals(
+    request: Request,
+    status: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """List goals, highest priority first. Filter with ?status=active|paused|achieved|abandoned. Owner-only."""
+    require_owner_api_key(request)
     return goal_engine.GoalEngine(db).list_goals(status=status)
 
 
@@ -477,14 +495,18 @@ def link_opportunity_to_goal(
 
 @router.get("/causal-knowledge", response_model=list[schemas.CausalKnowledgeOut])
 def get_causal_knowledge(
-    belief_id: Optional[int] = None, goal_id: Optional[int] = None, db: Session = Depends(get_db)
+    request: Request,
+    belief_id: Optional[int] = None,
+    goal_id: Optional[int] = None,
+    db: Session = Depends(get_db),
 ):
     """
     Browse Forge's causal knowledge — structured condition/action/
     outcome facts built automatically from completed BeliefExperiments
     (see causal_engine.py). Highest confidence first. Filter with
-    ?belief_id= or ?goal_id=.
+    ?belief_id= or ?goal_id=. Owner-only.
     """
+    require_owner_api_key(request)
     return causal_engine.list_causal_knowledge(db, belief_id=belief_id, goal_id=goal_id)
 
 
@@ -513,22 +535,27 @@ def generate_strategies(
 
 @router.get("/goals/{goal_id}/strategies", response_model=list[schemas.StrategyOut])
 def get_strategies_for_goal(
-    goal_id: int, status: Optional[str] = "candidate", db: Session = Depends(get_db)
+    request: Request,
+    goal_id: int,
+    status: Optional[str] = "candidate",
+    db: Session = Depends(get_db),
 ):
     """List strategies for one goal, highest confidence first. Defaults
     to only current candidates (?status=candidate); pass
     ?status=superseded to see prior candidates this goal has had, or
-    omit status entirely for both."""
+    omit status entirely for both. Owner-only."""
+    require_owner_api_key(request)
     return strategy_engine.list_strategies(db, goal_id=goal_id, status=status)
 
 
 @router.get("/strategies/compare", response_model=schemas.StrategyCompareResponse)
-def compare_strategies(a: int, b: int, db: Session = Depends(get_db)):
+def compare_strategies(request: Request, a: int, b: int, db: Session = Depends(get_db)):
     """
     Compare two strategies using their frozen, already-computed scores
     — "Strategy A scores higher because..." made concrete, from the
     underlying numerical factors rather than a fresh judgment call.
     """
+    require_owner_api_key(request)
     result = strategy_engine.compare_strategies(db, a, b)
     if not result:
         raise HTTPException(status_code=404, detail="One or both strategies not found")
@@ -536,7 +563,7 @@ def compare_strategies(a: int, b: int, db: Session = Depends(get_db)):
 
 
 @router.get("/world/goals/{goal_id}", response_model=schemas.GoalGraph)
-def get_goal_graph(goal_id: int, db: Session = Depends(get_db)):
+def get_goal_graph(request: Request, goal_id: int, db: Session = Depends(get_db)):
     """
     The Strategic (goal-scoped) World Model view: every opportunity
     linked to this goal (with its live money_score), every belief and
@@ -544,6 +571,7 @@ def get_goal_graph(goal_id: int, db: Session = Depends(get_db)):
     strategy generated so far. Read-only — does not generate new
     strategies (use POST /forge/goals/{id}/strategies for that).
     """
+    require_owner_api_key(request)
     graph = world_model.get_goal_graph(db, goal_id)
     if not graph:
         raise HTTPException(status_code=404, detail="Goal not found")
@@ -1141,14 +1169,15 @@ def run_economic_discovery_now(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/economic/patterns/{pattern_id}/corroboration", response_model=schemas.CorroborationOut)
-def get_pattern_corroboration(pattern_id: int, db: Session = Depends(get_db)):
+def get_pattern_corroboration(request: Request, pattern_id: int, db: Session = Depends(get_db)):
     """
     Source diversity for one pattern's supporting signals — how many
     genuinely independent sources back it, vs. how many are duplicates/
     syndication of the same underlying report. Computed live, not
     stored, from existing Pattern/Signal data (v1.4's Signal.source and
-    Signal.is_duplicate_of).
+    Signal.is_duplicate_of). Owner-only.
     """
+    require_owner_api_key(request)
     pattern = db.query(models.Pattern).filter(models.Pattern.id == pattern_id).first()
     if not pattern:
         raise HTTPException(status_code=404, detail="Pattern not found")
@@ -1286,7 +1315,8 @@ def learning_from_experiment(
 
 
 @router.get("/learning")
-def list_learning(limit: int = 50, db: Session = Depends(get_db)):
+def list_learning(request: Request, limit: int = 50, db: Session = Depends(get_db)):
+    require_owner_api_key(request)
     from app.services import learning_engine
     rows = learning_engine.list_learning_events(db, limit=limit)
     return [
@@ -1388,7 +1418,8 @@ def execute_action(action_id: int, request: Request, db: Session = Depends(get_d
 
 
 @router.get("/actions")
-def list_actions(limit: int = 50, db: Session = Depends(get_db)):
+def list_actions(request: Request, limit: int = 50, db: Session = Depends(get_db)):
+    require_owner_api_key(request)
     from app.services import action_engine
     rows = action_engine.list_actions(db, limit=limit)
     return [
@@ -1463,7 +1494,8 @@ def create_outcome(
 
 
 @router.get("/outcomes")
-def list_outcomes(limit: int = 50, db: Session = Depends(get_db)):
+def list_outcomes(request: Request, limit: int = 50, db: Session = Depends(get_db)):
+    require_owner_api_key(request)
     from app.services import action_engine
     rows = action_engine.list_outcomes(db, limit=limit)
     return [
@@ -1485,7 +1517,8 @@ def list_outcomes(limit: int = 50, db: Session = Depends(get_db)):
 
 
 @router.get("/cycles")
-def list_cycles(limit: int = 20, db: Session = Depends(get_db)):
+def list_cycles(request: Request, limit: int = 20, db: Session = Depends(get_db)):
+    require_owner_api_key(request)
     rows = (
         db.query(models.CycleRun)
         .order_by(models.CycleRun.started_at.desc())
@@ -1506,10 +1539,11 @@ def list_cycles(limit: int = 20, db: Session = Depends(get_db)):
 
 
 @router.get("/runtime")
-def get_runtime(db: Session = Depends(get_db)):
+def get_runtime(request: Request, db: Session = Depends(get_db)):
     """Real system window: counts + last cycle + worker task state from the live DB.
-    No fabricated activity — only what is actually stored.
+    No fabricated activity — only what is actually stored. Owner-only.
     """
+    require_owner_api_key(request)
     from sqlalchemy import func
     from app.services import truth_audit
 

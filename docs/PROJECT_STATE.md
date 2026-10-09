@@ -47,7 +47,8 @@ ledger, truth progression. 717 backend tests.
   approval and execution, outcome recording, revenue-source linking,
   execution-action creation, legacy research writes, goal/strategy mutations,
   and private reads for autonomy policy/evaluation, task history, strategy
-  performance, and execution ranking/recommendation. Each repair and its
+  performance, execution ranking/recommendation, internal beliefs, research
+  results, strategies, outcomes, and runtime state. Each repair and its
   route-level evidence is tracked in `docs/CAPABILITY_QUEUE.md`. Remaining
   route contracts still require individual review; deployed source identity
   is NOT VERIFIED.

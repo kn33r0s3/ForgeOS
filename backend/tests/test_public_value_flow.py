@@ -490,6 +490,36 @@ def test_internal_forge_reads_require_owner_key(client_with_db, db, monkeypatch)
     assert authorized_policy.status_code == 200, authorized_policy.text
 
 
+def test_forge_memory_and_operations_reads_require_owner_key(client_with_db, monkeypatch):
+    from app import security
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    paths = (
+        "/forge/beliefs",
+        "/forge/experiments",
+        "/forge/sources",
+        "/forge/predictions",
+        "/forge/world/beliefs/999",
+        "/forge/causal-knowledge",
+        "/forge/goals",
+        "/forge/goals/999/strategies",
+        "/forge/strategies/compare?a=999&b=999",
+        "/forge/world/goals/999",
+        "/forge/economic/patterns/999/corroboration",
+        "/forge/learning",
+        "/forge/actions",
+        "/forge/outcomes",
+        "/forge/cycles",
+        "/forge/runtime",
+    )
+    for path in paths:
+        response = client_with_db.get(path)
+        assert response.status_code == 503, f"{path}: {response.status_code} {response.text}"
+
+    public_unknowns = client_with_db.get("/forge/unknowns")
+    assert public_unknowns.status_code == 200, public_unknowns.text
+
+
 def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     client_with_db, db, monkeypatch
 ):
