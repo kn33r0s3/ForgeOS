@@ -560,6 +560,24 @@ def test_customer_ledger_read_requires_owner_key(client_with_db, db, monkeypatch
     assert authorized_pipeline.json()["customer_events"][0]["contact_identifier"] == "private-contact@example.test"
 
 
+def test_product_catalog_reads_require_owner_key(client_with_db, monkeypatch):
+    from app import security
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    for path in ("/products", "/products/channels", "/products/999"):
+        response = client_with_db.get(path)
+        assert response.status_code == 503, f"{path}: {response.status_code} {response.text}"
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
+    headers = {"X-API-Key": "test-owner-key"}
+    for path in ("/products", "/products/channels", "/products/999"):
+        assert client_with_db.get(path).status_code == 401
+        assert client_with_db.get(path, headers={"X-API-Key": "wrong"}).status_code == 401
+    assert client_with_db.get("/products", headers=headers).status_code == 200
+    assert client_with_db.get("/products/channels", headers=headers).status_code == 200
+    assert client_with_db.get("/products/999", headers=headers).status_code == 404
+
+
 def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     client_with_db, db, monkeypatch
 ):

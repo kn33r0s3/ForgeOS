@@ -72,7 +72,8 @@ def create_offer_draft(request: Request, body: schemas.OfferDraftCreate, db: Ses
 
 
 @router.get("", response_model=list[schemas.ProductSummary])
-def list_products(db: Session = Depends(get_db)):
+def list_products(request: Request, db: Session = Depends(get_db)):
+    _owner(request)
     return [product_engine.product_summary(db, p) for p in product_engine.list_products(db)]
 
 
@@ -84,7 +85,8 @@ def pipeline(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/channels", response_model=list[schemas.ChannelOut])
-def list_channels(db: Session = Depends(get_db)):
+def list_channels(request: Request, db: Session = Depends(get_db)):
+    _owner(request)
     return [
         product_engine.rollup_channel(db, c)
         for c in db.query(models.DistributionChannel).order_by(models.DistributionChannel.created_at.desc()).all()
@@ -160,7 +162,8 @@ def add_customer_event(request: Request, channel_id: int, body: schemas.Customer
 
 # ---------------------------------------------------------------- product by id
 @router.get("/{product_id}", response_model=schemas.ProductSummary)
-def get_product(product_id: int, db: Session = Depends(get_db)):
+def get_product(request: Request, product_id: int, db: Session = Depends(get_db)):
+    _owner(request)
     p = product_engine.get_product(db, product_id)
     if p is None:
         raise HTTPException(404, "product not found")

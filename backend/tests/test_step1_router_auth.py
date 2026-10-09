@@ -53,7 +53,6 @@ PUBLIC_READS = [
     "/forge/substrate/types",
     "/forge/substrate/discovery/methods",
     "/observer/signals",
-    "/products",
 ]
 
 
