@@ -190,6 +190,18 @@ def list_public_discoveries(limit: int = Query(default=20, ge=1, le=50), db: Ses
         excerpt = (signal.content or "").strip().replace("\n", " ")
         if len(excerpt) > 280:
             excerpt = excerpt[:277].rstrip() + "..."
+        # Section 6: classify relevance honestly
+        # Bibliographic sources without real-world linkage are background observations
+        is_bibliographic = (signal.source or "").lower() in {"crossref", "openalex", "world_bank", "gdelt", "govinfo"}
+        has_consequence = bool(
+            claim.decision_id or claim.experiment_id or claim.outcome_id
+        )
+        if has_consequence:
+            relevance_status = "validated_finding"
+        elif is_bibliographic:
+            relevance_status = "background_observation"
+        else:
+            relevance_status = "unqualified_lead"
         discoveries.append(
             schemas.PublicDiscoveryOut(
                 id=claim.id,
@@ -201,9 +213,10 @@ def list_public_discoveries(limit: int = Query(default=20, ge=1, le=50), db: Ses
                 epistemic_state=label["epistemic_state"],
                 stale=label["stale"],
                 freshness="stale" if label["stale"] else "fresh",
-                has_consequence=bool(
-                    claim.decision_id or claim.experiment_id or claim.outcome_id
-                ),
+                has_consequence=has_consequence,
+                relevance_status=relevance_status,
+                linked_unknown=None,  # TODO: link to defined Hami unknown when available
+                next_test=None,  # TODO: populate from research plan when defined
             )
         )
     return discoveries

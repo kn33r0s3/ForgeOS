@@ -102,9 +102,11 @@ def run_cycle(data_scope: str = "REAL", db: Session = Depends(get_db)):
 
 
 @router.get("/questions", response_model=list[schemas.ResearchQuestionOut])
-def get_questions(status: Optional[str] = None, db: Session = Depends(get_db)):
+def get_questions(request: Request, status: Optional[str] = None, db: Session = Depends(get_db)):
     """What Forge currently wants to learn, highest priority first.
-    Filter with ?status=open|planned|closed."""
+    Filter with ?status=open|planned|closed.
+    Owner-only: internal research objectives."""
+    require_owner_api_key(request)
     query = db.query(models.ResearchQuestion)
     if status:
         query = query.filter(models.ResearchQuestion.status == status)
@@ -112,9 +114,11 @@ def get_questions(status: Optional[str] = None, db: Session = Depends(get_db)):
 
 
 @router.get("/tasks", response_model=list[schemas.ResearchTaskOut])
-def get_tasks(db: Session = Depends(get_db)):
+def get_tasks(request: Request, db: Session = Depends(get_db)):
     """Research tasks planned from open questions — not yet executed
-    by any collector in v0.1."""
+    by any collector in v0.1.
+    Owner-only: internal task details."""
+    require_owner_api_key(request)
     return db.query(models.ResearchTask).order_by(models.ResearchTask.created_at.desc()).all()
 
 
@@ -253,9 +257,11 @@ def get_predictions(status: Optional[str] = None, db: Session = Depends(get_db))
 
 
 @router.get("/evidence", response_model=list[schemas.EvidenceOut])
-def get_evidence(belief_id: Optional[int] = None, db: Session = Depends(get_db)):
+def get_evidence(request: Request, belief_id: Optional[int] = None, db: Session = Depends(get_db)):
     """Evidence Reality Memory has persisted, optionally filtered to
-    one belief."""
+    one belief.
+    Owner-only: internal evidence metadata."""
+    require_owner_api_key(request)
     return reality_memory.list_evidence(db, belief_id=belief_id)
 
 

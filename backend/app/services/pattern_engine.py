@@ -326,11 +326,62 @@ def _build_title(keywords: list[str]) -> str:
     return f"Recurring theme: {words}"
 
 
+# Bibliographic/metadata terms that, when dominant in a pattern whose signals
+# come primarily from scholarly APIs, indicate a background observation rather
+# than a real-world problem. This is not a blacklist — legitimate literature
+# research with geographic/population context is preserved.
+_BIBLIOGRAPHIC_TERMS = frozenset({
+    "crossref", "metadata", "record", "records", "evidence", "bibliographic",
+    "citation", "citations", "doi", "openalex", "scholarly", "bibliography",
+})
+
+_SCHOLARLY_SOURCES = frozenset({"crossref", "openalex", "world_bank", "gdelt", "govinfo"})
+
+
+def _is_bibliographic_background(keywords: list[str], signal_ids: set[int], signals: list[models.Signal]) -> bool:
+    """Detect patterns that are pure bibliographic metadata, not real-world problems.
+
+    A pattern is classified as background if:
+    1. The majority of its keywords are bibliographic/metadata terms, AND
+    2. The majority of its supporting signals come from scholarly/bibliographic APIs.
+
+    This preserves legitimate literature research that has geographic or
+    population context (those patterns won't have bibliographic-dominant keywords).
+    """
+    if not keywords or not signal_ids:
+        return False
+
+    # Check keyword dominance
+    biblio_kw_count = sum(1 for kw in keywords if kw.lower() in _BIBLIOGRAPHIC_TERMS)
+    if biblio_kw_count < len(keywords) / 2:
+        return False
+
+    # Check source dominance
+    signal_map = {s.id: s for s in signals}
+    scholarly_count = 0
+    total = 0
+    for sid in signal_ids:
+        sig = signal_map.get(sid)
+        if sig and sig.source:
+            total += 1
+            if sig.source.lower() in _SCHOLARLY_SOURCES:
+                scholarly_count += 1
+
+    if total == 0:
+        return False
+
+    return scholarly_count >= total / 2
+
+
 def _build_description(keywords: list[str], signal_ids: set[int], signals: list[models.Signal]) -> str:
     examples = [s.content for s in signals if s.id in signal_ids][:3]
     examples_text = " | ".join(f'"{e.strip()}"' for e in examples)
     kw_text = ", ".join(keywords)
+    # Classify bibliographic background observations clearly
+    prefix = ""
+    if _is_bibliographic_background(keywords, signal_ids, signals):
+        prefix = "[BIBLIOGRAPHIC BACKGROUND] "
     return (
-        f"{len(signal_ids)} signals repeatedly mention: {kw_text}. "
+        f"{prefix}{len(signal_ids)} signals repeatedly mention: {kw_text}. "
         f"Examples: {examples_text}"
     )

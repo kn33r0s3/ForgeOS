@@ -120,7 +120,11 @@ class CuriosityEngine:
         ]
 
     def find_unexplored_patterns(self) -> list[models.Pattern]:
-        """Patterns Forge has detected but never turned into a belief."""
+        """Patterns Forge has detected but never turned into a belief.
+
+        Skips patterns classified as [BIBLIOGRAPHIC BACKGROUND] — these are
+        retained as background observations but do not generate commercial
+        questions without a real-world problem behind them."""
         from app.services.belief_engine import is_presentable_belief
         patterns = self.db.query(models.Pattern).all()
         beliefs = [belief for belief in self.db.query(models.Belief).all() if is_presentable_belief(belief)]
@@ -131,6 +135,10 @@ class CuriosityEngine:
 
         unexplored = []
         for pattern in patterns:
+            # Skip bibliographic background observations — they lack the
+            # real-world problem context needed for commercial questions.
+            if pattern.description and "[BIBLIOGRAPHIC BACKGROUND]" in pattern.description:
+                continue
             top_keyword = pattern.title.replace("Recurring theme:", "").split(",")[0].strip().lower()
             if not top_keyword:
                 continue

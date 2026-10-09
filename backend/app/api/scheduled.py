@@ -158,9 +158,13 @@ def run_scheduled_intelligence(authorization: str | None = Header(default=None))
     - execution_engine.run_autonomous_action_cycle: propose (never execute)
       actions via the owner's AutonomyPolicy gate.
 
-    Safety: no network calls, no spending, no human contact, no external
-    commitments. Idempotent: re-running with unchanged state creates minimal
-    new work (engines skip already-tasked questions, duplicate actions, etc.).
+    Safety: bounded network calls via cleared sources only, no spending, no human contact, no external
+    commitments. Network access occurs only through collector_runner.run_pending_tasks,
+    which enforces source clearance (source_clearance_registry.py) before any fetch.
+    Only the five governed sources (OpenAlex, Crossref, World Bank, GDELT, GovInfo)
+    are permitted, each with its authorized purpose and rate limits. Idempotent:
+    re-running with unchanged state creates minimal new work (engines skip
+    already-tasked questions, duplicate actions, etc.).
     Each engine runs in its own DB session with per-engine failure isolation:
     one engine failing is recorded and the others still run.
 

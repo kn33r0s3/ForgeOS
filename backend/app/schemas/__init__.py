@@ -589,8 +589,8 @@ class EvidenceOut(BaseModel):
     belief_id: Optional[int]
     signal_id: Optional[int]
     source: Optional[str]
-    content: str
-    direction: str
+    content: Optional[str] = None
+    direction: Optional[str] = None
     canonical_url: Optional[str] = None
     external_id: Optional[str] = None
     title: Optional[str] = None
@@ -1370,6 +1370,10 @@ class PublicDiscoveryOut(BaseModel):
     freshness: str = "unknown"
     stale: bool = False
     has_consequence: bool = False  # linked to a decision, experiment, or outcome
+    # Section 6: distinguish observation types honestly
+    relevance_status: str = "unqualified_lead"  # background_observation | unqualified_lead | relevant_to_unknown | validated_finding
+    linked_unknown: Optional[str] = None  # identifier of the Hami unknown this informs, if any
+    next_test: Optional[str] = None  # legitimate next test, if defined
 
 
 class PublicFeedRelation(BaseModel):
