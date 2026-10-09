@@ -226,7 +226,10 @@ def test_task_survives_sqlite_restart(tmp_path):
     assert restored.objective == "What evidence exists for a durable research task?"
 
 
-def test_tasks_endpoint_exposes_failed_and_planned_status(db):
+def test_tasks_endpoint_exposes_failed_and_planned_status(db, monkeypatch):
+    from app import security
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "research-task-test-key")
     planned = make_task(db)
     second_question = models.ResearchQuestion(question="Does a second task expose its failed status?")
     db.add(second_question)
@@ -245,7 +248,10 @@ def test_tasks_endpoint_exposes_failed_and_planned_status(db):
 
     app.dependency_overrides[get_db] = override_get_db
     try:
-        response = TestClient(app).get("/forge/tasks")
+        response = TestClient(app).get(
+            "/forge/tasks",
+            headers={"X-API-Key": "research-task-test-key"},
+        )
     finally:
         app.dependency_overrides.clear()
 
