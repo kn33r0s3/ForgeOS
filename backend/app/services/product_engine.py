@@ -22,7 +22,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app import models
+from app import evidence_source, models
 
 
 # ---------------------------------------------------------------------------
@@ -110,7 +110,15 @@ def rollup_product(db: Session, product: models.Product) -> dict:
     own Outcome rows whose outcome_type is one of ACTUAL_*. Returns the
     field values that should be persisted back to the Product row.
     """
-    rows = db.query(models.Outcome).filter_by(product_id=product.id, data_scope=product.data_scope).all()
+    outcomes = db.query(models.Outcome).filter_by(
+        product_id=product.id,
+        data_scope=product.data_scope,
+    )
+    if product.data_scope == "REAL":
+        outcomes = outcomes.filter(
+            *evidence_source.verified_real_outcome_filters(models.Outcome)
+        )
+    rows = outcomes.all()
     revenue = 0.0
     cost = 0.0
     customers = 0
@@ -130,17 +138,18 @@ def product_summary(db: Session, product: models.Product) -> dict:
     # GET summaries compute rollups without mutating rows or committing.
 
     channels = db.query(models.DistributionChannel).filter_by(product_id=product.id).all()
-    leads = (
-        db.query(models.CustomerEvent)
-        .filter_by(product_id=product.id)
-        .filter(models.CustomerEvent.stage.in_(["lead", "contacted", "interested"]))
-        .count()
+    customer_events = db.query(models.CustomerEvent).filter_by(
+        product_id=product.id,
+        data_scope=product.data_scope,
     )
-    paid = (
-        db.query(models.CustomerEvent)
-        .filter_by(product_id=product.id, stage="paid_customer")
-        .count()
-    )
+    if product.data_scope == "REAL":
+        customer_events = customer_events.filter(
+            models.CustomerEvent.source_kind == evidence_source.REAL
+        )
+    leads = customer_events.filter(
+        models.CustomerEvent.stage.in_(["lead", "contacted", "interested"])
+    ).count()
+    paid = customer_events.filter_by(stage="paid_customer").count()
     return {
         "id": product.id,
         "opportunity_id": product.opportunity_id,
@@ -219,7 +228,15 @@ def rollup_channel(db: Session, channel: models.DistributionChannel) -> dict:
     events that moved past 'lead', conversion = events that became
     'paid_customer'. Never invented.
     """
-    events = db.query(models.CustomerEvent).filter_by(channel_id=channel.id, data_scope=channel.data_scope).all()
+    events_query = db.query(models.CustomerEvent).filter_by(
+        channel_id=channel.id,
+        data_scope=channel.data_scope,
+    )
+    if channel.data_scope == "REAL":
+        events_query = events_query.filter(
+            models.CustomerEvent.source_kind == evidence_source.REAL
+        )
+    events = events_query.all()
     outreach = len([e for e in events if e.stage != "lead"])
     response = conv = 0
     for e in events:
@@ -306,6 +323,10 @@ def create_customer_event(db: Session, *, product_id=None, channel_id=None,
             and outcome.verification_state == "VERIFIED"
             and outcome.actual_value is not None
             and outcome.actual_value > 0
+            and (
+                data_scope != "REAL"
+                or outcome.source_kind == evidence_source.REAL
+            )
         ):
             raise ValueError("paid_customer stage requires linked verified positive revenue evidence")
     elif stage == "churned":
@@ -324,6 +345,7 @@ def create_customer_event(db: Session, *, product_id=None, channel_id=None,
         action_id=action_id,
         outcome_id=outcome_id,
         data_scope=data_scope,
+        source_kind=outcome.source_kind if outcome else evidence_source.MOCK,
     )
     db.add(ev)
     db.commit() if commit else db.flush()
@@ -343,7 +365,6 @@ def pipeline(db: Session) -> dict:
     channel_dicts = [rollup_channel(db, c) for c in channels]
     real_summaries = [x for x in summaries if x["data_scope"] == "REAL"]
     real_channels = [x for x in channel_dicts if x["data_scope"] == "REAL"]
-    real_events = [x for x in events if x.data_scope == "REAL"]
     sandbox_summaries = [x for x in summaries if x["data_scope"] == "SANDBOX"]
 
     def ev(out):

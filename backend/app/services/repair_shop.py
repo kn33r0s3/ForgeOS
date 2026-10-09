@@ -15,7 +15,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app import models
+from app import evidence_source, models
 from app.models import utcnow
 from app.services import execution_engine
 
@@ -329,6 +329,9 @@ def record_verified_payment(
         verification_state="VERIFIED",
         notes=f"Provider reference: {provider_reference}; entered by {actor}.",
         data_scope=scope,
+        source_kind=(
+            evidence_source.REAL if scope == "REAL" else evidence_source.MOCK
+        ),
     )
     db.add(outcome)
     db.flush()
@@ -376,6 +379,7 @@ def record_work_outcome(
         lesson="Compare the expected workflow value with the recorded repair-shop outcome before changing the next decision.",
         error_type="confirmed" if success is True else ("qualitative_miss" if success is False else "unassessed"),
         data_scope=item.data_scope,
+        source_kind=outcome.source_kind,
     )
     db.add(learning)
     _transition(db, item, "LEARNING_RECORDED", event_type="OUTCOME_AND_LEARNING_RECORDED", actor=actor, reason="Actual outcome recorded and linked learning event created.", metadata={"outcome_id": outcome.id, "learning_event_id": learning.id, "epistemic_state": "ACTUAL"})

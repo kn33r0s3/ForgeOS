@@ -82,7 +82,7 @@ from sqlalchemy.orm import Session
 
 from typing import Optional
 
-from app import models
+from app import evidence_source, models
 from app.services import (
     reality_memory,
     memory_layer,
@@ -262,7 +262,22 @@ def get_opportunity_money_graph(db: Session, opportunity_id: int) -> Optional[di
 
     score = money_engine.score_opportunity(db, opportunity)
     revenue_experiments = money_engine.list_revenue_experiments(db, opportunity_id=opportunity_id)
-    total_revenue_recorded = round(sum(e.revenue for e in revenue_experiments if e.revenue and e.data_scope == "REAL"), 2)
+    experiment_ids = [experiment.id for experiment in revenue_experiments]
+    verified_revenue = (
+        db.query(models.Outcome.actual_value)
+        .filter(
+            models.Outcome.experiment_id.in_(experiment_ids),
+            models.Outcome.outcome_type == "ACTUAL_REVENUE",
+            *evidence_source.verified_real_outcome_filters(models.Outcome),
+        )
+        .all()
+        if experiment_ids
+        else []
+    )
+    total_revenue_recorded = round(
+        sum(actual_value or 0.0 for (actual_value,) in verified_revenue),
+        2,
+    )
 
     related_strategies = []
     if opportunity.goal_id is not None:

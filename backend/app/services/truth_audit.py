@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app import models
+from app import evidence_source, models
 
 
 def _count(db: Session, model, *criteria) -> int:
@@ -53,12 +53,27 @@ def snapshot(db: Session) -> dict:
         else 0
     )
     human_validated = _count(db, models.Opportunity, models.Opportunity.status == "validated")
-    real_experiments = _count(db, models.Experiment, models.Experiment.data_scope == "REAL")
-    real_outcomes = _count(db, models.Outcome, models.Outcome.data_scope == "REAL")
-    real_learning = _count(db, models.LearningEvent, models.LearningEvent.data_scope == "REAL")
+    real_experiments = _count(
+        db,
+        models.Experiment,
+        *evidence_source.real_scope_source_filters(models.Experiment),
+    )
+    real_outcomes = _count(
+        db,
+        models.Outcome,
+        *evidence_source.verified_real_outcome_filters(models.Outcome),
+    )
+    real_learning = _count(
+        db,
+        models.LearningEvent,
+        *evidence_source.real_scope_source_filters(models.LearningEvent),
+    )
     actual_revenue = float(
         db.query(func.coalesce(func.sum(models.Outcome.actual_value), 0.0))
-        .filter(models.Outcome.data_scope == "REAL", models.Outcome.outcome_type == "ACTUAL_REVENUE")
+        .filter(
+            models.Outcome.outcome_type == "ACTUAL_REVENUE",
+            *evidence_source.verified_real_outcome_filters(models.Outcome),
+        )
         .scalar() or 0.0
     )
     source_rows = db.query(models.Signal.source, func.count()).group_by(models.Signal.source).all()
@@ -134,6 +149,7 @@ def snapshot(db: Session) -> dict:
             "signals_are_raw_observations": True,
             "evidence_is_not_verified_truth": True,
             "opportunities_are_hypotheses_until_human_validated": True,
-            "actual_revenue_is_real_scope_only": True,
+            "actual_revenue_is_real_scope_only": False,
+            "actual_revenue_requires_real_source_and_verification": True,
         },
     }

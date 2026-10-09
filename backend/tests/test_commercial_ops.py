@@ -276,14 +276,15 @@ def test_product_lifecycle_and_honest_rollup(db):
     s0 = product_engine.product_summary(db, p)
     assert s0["actual_revenue"] == 0.0 and s0["paid_customer_count"] == 0
 
-    # Synthetic TEST fixture only: explicit USD ledger entries (not business revenue)
+    # Default MOCK/REPORTED rows remain visible in history but never count as
+    # real revenue or customers.
     action_engine.record_outcome(db, outcome_type="ACTUAL_REVENUE", product_id=p.id,
                                  actual_value=99.0, unit="USD", source="manual")
     action_engine.record_outcome(db, outcome_type="ACTUAL_CUSTOMERS", product_id=p.id,
                                  actual_value=1, unit="count", source="manual")
     s1 = product_engine.product_summary(db, p)
-    assert s1["actual_revenue"] == 99.0
-    assert s1["actual_customers"] == 1
+    assert s1["actual_revenue"] == 0.0
+    assert s1["actual_customers"] == 0
 
     # an outcome tied to a DIFFERENT product must not leak in
     p2 = product_engine.create_product(db, name="Other", offer="other offer")
@@ -294,46 +295,51 @@ def test_product_lifecycle_and_honest_rollup(db):
 def test_distribution_channel_and_customer_funnel(db):
     """Channels and customer ledger record real contacts and roll up an
     honest funnel (lead -> contacted -> paid_customer)."""
-    p = product_engine.create_product(db, name="P", offer="offer")
+    p = product_engine.create_product(db, name="P", offer="offer", data_scope="SANDBOX")
     ch = product_engine.create_channel(db, product_id=p.id, channel_type="manual_outreach",
-                                       name="Reddit r/repairshops")
+                                       name="Synthetic sandbox channel", data_scope="SANDBOX")
     # log a lead, then a paid customer
     product_engine.create_customer_event(db, channel_id=ch.id, product_id=p.id,
-                                         stage="lead", event_type="outbound", segment="repair shop")
+                                         stage="lead", event_type="outbound", segment="test segment",
+                                         data_scope="SANDBOX")
     response = models.Outcome(
         product_id=p.id,
         outcome_type="ACTUAL_RESPONSE",
-        qualitative_result="Synthetic test fixture: contact reported interest.",
-        source="synthetic_test_fixture",
+        qualitative_result="Synthetic sandbox fixture: contact reported interest.",
+        source="synthetic_sandbox_fixture",
         verification_state="VERIFIED",
-        data_scope="REAL",
+        data_scope="SANDBOX",
+        source_kind="TEST",
     )
     payment = models.Outcome(
         product_id=p.id,
         outcome_type="ACTUAL_REVENUE",
         actual_value=1.0,
         unit="USD",
-        source="synthetic_test_fixture",
+        source="synthetic_sandbox_fixture",
         verification_state="VERIFIED",
-        data_scope="REAL",
+        data_scope="SANDBOX",
+        source_kind="TEST",
     )
     db.add_all([response, payment])
     db.commit()
     product_engine.create_customer_event(db, channel_id=ch.id, product_id=p.id,
                                          stage="contacted", event_type="response",
-                                         outcome_id=response.id)
+                                         outcome_id=response.id, data_scope="SANDBOX")
     product_engine.create_customer_event(db, channel_id=ch.id, product_id=p.id,
                                          stage="paid_customer", event_type="purchase",
-                                         outcome_id=payment.id)
+                                         outcome_id=payment.id, data_scope="SANDBOX")
     roll = product_engine.rollup_channel(db, ch)
-    assert roll["outreach_count"] >= 3     # real logged contacts
+    assert roll["outreach_count"] >= 3     # sandbox contacts stay visible in their scope
     assert roll["response_count"] == 2      # contacted + paid
     assert roll["conversion_count"] == 1    # one paying customer
 
     snap = product_engine.pipeline(db)
-    assert snap["total_products"] == 1
-    assert snap["total_leads"] == 2  # lead + contacted (prospects in pipeline)
-    assert snap["total_paid_customers"] == 1
+    assert snap["total_products"] == 0
+    assert snap["realized_revenue"] == 0.0
+    assert snap["sandbox_revenue"] == 1.0
+    assert snap["total_leads"] == 0
+    assert snap["total_paid_customers"] == 0
 
 
 def test_pipeline_launched_and_never_fabricates(db):
@@ -366,6 +372,7 @@ def _mk_event(db, *, lesson_text, prediction="x", actual="y", error_type=None,
         prediction=prediction, actual=actual, lesson=lesson_text,
         error_type=error_type, prediction_error=pred_err,
         opportunity_id=opportunity_id, belief_id=belief_id,
+        data_scope="REAL", source_kind="REAL",
     )
     db.add(ev)
     db.commit()

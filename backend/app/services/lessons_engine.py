@@ -23,7 +23,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app import models
+from app import evidence_source, models
 from app.models import utcnow
 
 # Words that carry real signal for consolidating lessons about an opportunity
@@ -143,7 +143,12 @@ def consolidate_learning_event(db: Session, event: models.LearningEvent,
     # If the event names an opportunity, try to attach that context to the key.
     lesson = (
         db.query(models.Lesson)
-        .filter_by(theme_key=key, active=True, data_scope=event.data_scope)
+        .filter_by(
+            theme_key=key,
+            active=True,
+            data_scope=event.data_scope,
+            source_kind=event.source_kind,
+        )
         .order_by(models.Lesson.last_seen.desc())
         .first()
     )
@@ -167,6 +172,7 @@ def consolidate_learning_event(db: Session, event: models.LearningEvent,
             last_seen=now,
             active=True,
             data_scope=event.data_scope,
+            source_kind=event.source_kind,
             created_at=now,
             updated_at=now,
         )
@@ -233,6 +239,8 @@ def recall_lessons(db: Session, *, opportunity_id: Optional[int] = None,
     Used at reasoning time so past reality shapes the next decision.
     """
     q = db.query(models.Lesson).filter(models.Lesson.data_scope == data_scope)
+    if data_scope == "REAL":
+        q = q.filter(models.Lesson.source_kind == evidence_source.REAL)
     if not include_inactive:
         q = q.filter(models.Lesson.active == True)  # noqa: E712
     if opportunity_id is not None:
@@ -282,6 +290,7 @@ def assist_decision(db: Session, *, opportunity_id: Optional[int] = None,
             "first_seen": l.first_seen, "active": l.active,
             "created_at": l.created_at, "updated_at": l.updated_at,
             "data_scope": l.data_scope,
+            "source_kind": l.source_kind,
         } for l in lessons],
         "notes": notes,
     }

@@ -24,6 +24,16 @@ HYPOTHESIS = "HYPOTHESIS"
 ALL = (REAL, TEST, MOCK, HYPOTHESIS)
 
 
+def real_scope_source_filters(model):
+    """SQL filters for records that are explicitly REAL, not just REAL-scope."""
+    return model.data_scope == "REAL", model.source_kind == REAL
+
+
+def verified_real_outcome_filters(model):
+    """SQL filters for actual outcome evidence safe to count as real."""
+    return (*real_scope_source_filters(model), model.verification_state == "VERIFIED")
+
+
 def validate(value: str) -> str:
     """Return the uppercased label, or raise ValueError for anything else."""
     normalized = (value or "").strip().upper()

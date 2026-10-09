@@ -61,7 +61,7 @@ inventing new ones.
 
 from sqlalchemy.orm import Session
 
-from app import models
+from app import evidence_source, models
 from app.models import utcnow
 from app.services import action_engine, money_engine, autonomy_engine
 from typing import Optional
@@ -831,7 +831,7 @@ def get_revenue_breakdown(db: Session) -> dict:
     own stated 30/90-day projections — estimates, never facts),
     EXPECTED (money_engine's probability-weighted expected_value —
     real evidence, discounted by how confident that evidence is), and
-    REALIZED (actual summed Experiment.revenue from completed actions
+    REALIZED (actual summed, verified REAL ACTUAL_REVENUE outcomes from completed actions
     — the only tier that's ever "earned," not projected).
     """
     opportunities = db.query(models.Opportunity).all()
@@ -844,7 +844,13 @@ def get_revenue_breakdown(db: Session) -> dict:
         if breakdown["expected_value"] is not None:
             expected_total += breakdown["expected_value"]
 
-    realized = sum(o.actual_value or 0 for o in db.query(models.Outcome).filter_by(outcome_type="ACTUAL_REVENUE", data_scope="REAL").all())
+    realized = sum(
+        outcome.actual_value or 0
+        for outcome in db.query(models.Outcome)
+        .filter(models.Outcome.outcome_type == "ACTUAL_REVENUE")
+        .filter(*evidence_source.verified_real_outcome_filters(models.Outcome))
+        .all()
+    )
 
     return {
         "potential_30d": round(potential_30d, 2),
@@ -867,7 +873,12 @@ def get_strategy_performance(db: Session, strategy_id: int) -> dict:
     """
     completed = (
         db.query(models.Experiment)
-        .filter(models.Experiment.strategy_id == strategy_id, models.Experiment.data_scope == "REAL", models.Experiment.completed_at.isnot(None))
+        .filter(
+            models.Experiment.strategy_id == strategy_id,
+            models.Experiment.data_scope == "REAL",
+            models.Experiment.source_kind == evidence_source.REAL,
+            models.Experiment.completed_at.isnot(None),
+        )
         .all()
     )
     if not completed:
@@ -881,10 +892,36 @@ def get_strategy_performance(db: Session, strategy_id: int) -> dict:
             "net_profit": None,
         }
 
-    successes = sum(1 for a in completed if (a.revenue and a.revenue > 0) or (a.conversions and a.conversions > 0))
-    total_revenue = sum(a.revenue for a in completed if a.revenue)
-    costed = [a for a in completed if a.costs is not None]
-    total_cost = sum(a.costs for a in costed)
+    experiment_ids = [experiment.id for experiment in completed]
+    outcomes = (
+        db.query(models.Outcome)
+        .filter(models.Outcome.experiment_id.in_(experiment_ids))
+        .filter(*evidence_source.verified_real_outcome_filters(models.Outcome))
+        .all()
+    )
+    revenue_by_experiment = {}
+    cost_by_experiment = {}
+    for outcome in outcomes:
+        if (outcome.unit or "USD").upper() != "USD" or outcome.actual_value is None:
+            continue
+        if outcome.outcome_type == "ACTUAL_REVENUE":
+            revenue_by_experiment[outcome.experiment_id] = (
+                revenue_by_experiment.get(outcome.experiment_id, 0.0) + outcome.actual_value
+            )
+        elif outcome.outcome_type == "ACTUAL_COST":
+            cost_by_experiment[outcome.experiment_id] = (
+                cost_by_experiment.get(outcome.experiment_id, 0.0) + outcome.actual_value
+            )
+
+    successes = sum(
+        1
+        for experiment in completed
+        if (experiment.conversions or 0) > 0
+        or revenue_by_experiment.get(experiment.id, 0.0) > 0
+    )
+    total_revenue = sum(revenue_by_experiment.values())
+    total_cost = sum(cost_by_experiment.values())
+    has_cost_evidence = bool(cost_by_experiment)
 
     return {
         "strategy_id": strategy_id,
@@ -892,8 +929,8 @@ def get_strategy_performance(db: Session, strategy_id: int) -> dict:
         "successes": successes,
         "success_rate": round(successes / len(completed) * 100.0, 1),
         "total_revenue": round(total_revenue, 2),
-        "total_cost": round(total_cost, 2) if costed else None,
-        "net_profit": round(total_revenue - total_cost, 2) if costed else None,
+        "total_cost": round(total_cost, 2) if has_cost_evidence else None,
+        "net_profit": round(total_revenue - total_cost, 2) if has_cost_evidence else None,
     }
 
 

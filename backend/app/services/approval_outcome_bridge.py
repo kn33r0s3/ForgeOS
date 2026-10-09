@@ -10,7 +10,7 @@ import math
 
 from sqlalchemy.orm import Session
 
-from app import models
+from app import evidence_source, models
 from app.services import execution_engine
 
 
@@ -106,7 +106,13 @@ def record_verified_revenue_evidence(
         raise ValueError("A human outcome must be recorded before verified revenue")
     existing = (
         db.query(models.Outcome)
-        .filter_by(experiment_id=action.id, outcome_type="ACTUAL_REVENUE", data_scope=action.data_scope)
+        .filter_by(
+            experiment_id=action.id,
+            outcome_type="ACTUAL_REVENUE",
+            data_scope=action.data_scope,
+            source_kind=evidence_source.REAL,
+            verification_state="VERIFIED",
+        )
         .first()
     )
     if existing is not None:

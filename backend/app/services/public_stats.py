@@ -41,9 +41,7 @@ def _real_verified_revenue_query(db: Session):
     return (
         db.query(models.Outcome)
         .filter(models.Outcome.outcome_type == "ACTUAL_REVENUE")
-        .filter(models.Outcome.data_scope == "REAL")
-        .filter(models.Outcome.source_kind == evidence_source.REAL)
-        .filter(models.Outcome.verification_state == "VERIFIED")
+        .filter(*evidence_source.verified_real_outcome_filters(models.Outcome))
     )
 
 
@@ -52,23 +50,18 @@ def public_stats(db: Session) -> dict:
     revenue = (
         db.query(func.coalesce(func.sum(models.Outcome.actual_value), 0.0))
         .filter(models.Outcome.outcome_type == "ACTUAL_REVENUE")
-        .filter(models.Outcome.data_scope == "REAL")
-        .filter(models.Outcome.source_kind == evidence_source.REAL)
-        .filter(models.Outcome.verification_state == "VERIFIED")
+        .filter(*evidence_source.verified_real_outcome_filters(models.Outcome))
         .scalar()
     )
     customers = (
         db.query(func.count(models.CustomerEvent.id))
         .filter(models.CustomerEvent.stage == "paid_customer")
-        .filter(models.CustomerEvent.data_scope == "REAL")
-        .filter(models.CustomerEvent.source_kind == evidence_source.REAL)
+        .filter(*evidence_source.real_scope_source_filters(models.CustomerEvent))
         .scalar()
     )
     verified_outcomes = (
         db.query(func.count(models.Outcome.id))
-        .filter(models.Outcome.data_scope == "REAL")
-        .filter(models.Outcome.source_kind == evidence_source.REAL)
-        .filter(models.Outcome.verification_state == "VERIFIED")
+        .filter(*evidence_source.verified_real_outcome_filters(models.Outcome))
         .scalar()
     )
     return {

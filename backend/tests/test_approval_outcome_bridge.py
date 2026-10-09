@@ -93,6 +93,16 @@ def test_verified_payment_evidence_creates_real_revenue_only_after_outcome(db):
 
     assert db.query(models.Outcome).filter_by(outcome_type="QUALITATIVE").count() == 1
     assert db.query(models.Outcome).filter_by(outcome_type="ACTUAL_REVENUE").count() == 0
+    db.add(models.Outcome(
+        experiment_id=seeded["action_id"],
+        outcome_type="ACTUAL_REVENUE",
+        actual_value=25.0,
+        unit="USD",
+        verification_state="REPORTED",
+        data_scope="REAL",
+        source_kind="MOCK",
+    ))
+    db.commit()
 
     record_verified_revenue_evidence(
         db,
@@ -106,11 +116,12 @@ def test_verified_payment_evidence_creates_real_revenue_only_after_outcome(db):
     action = db.get(models.Experiment, seeded["action_id"])
     assert action.revenue == 25.0
     revenue_outcomes = db.query(models.Outcome).filter_by(outcome_type="ACTUAL_REVENUE").all()
-    assert len(revenue_outcomes) == 1
-    assert revenue_outcomes[0].actual_value == 25.0
-    assert revenue_outcomes[0].verification_state == "VERIFIED"
-    assert revenue_outcomes[0].experiment_id == seeded["action_id"]
-    assert revenue_outcomes[0].action_id is None
+    assert len(revenue_outcomes) == 2
+    verified = next(row for row in revenue_outcomes if row.source_kind == "REAL")
+    assert verified.actual_value == 25.0
+    assert verified.verification_state == "VERIFIED"
+    assert verified.experiment_id == seeded["action_id"]
+    assert verified.action_id is None
 
 
 def test_verified_revenue_before_human_result_writes_nothing(db):

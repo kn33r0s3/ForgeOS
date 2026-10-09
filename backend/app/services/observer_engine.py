@@ -43,7 +43,7 @@ import json
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from sqlalchemy.exc import IntegrityError
-from app import models
+from app import evidence_source, models
 from app.services import signal_processor, importance_ranker, source_manager, signal_quality
 
 
@@ -240,21 +240,16 @@ class ObserverEngine:
     def stats(self) -> dict:
         """Summary numbers for the Dashboard's Observer section."""
         total = self.db.query(models.Signal).count()
-        if total == 0:
-            return {
-                "total_observations": 0,
-                "high_importance_count": 0,
-                "average_importance": 0.0,
-                "low_quality_count": 0,
-                "quality_flag_breakdown": {},
-            }
-
         signals = self.db.query(
             models.Signal.importance_score, models.Signal.quality_score, models.Signal.quality_flags
         ).all()
         importance_scores = [s[0] or 0.0 for s in signals]
         high_importance_count = sum(1 for s in importance_scores if s >= 70)
-        average_importance = round(sum(importance_scores) / len(importance_scores), 1)
+        average_importance = (
+            round(sum(importance_scores) / len(importance_scores), 1)
+            if importance_scores
+            else 0.0
+        )
         # quality_score is NULL for signals observed before v1.4 — only
         # count assessed ones as "low quality" rather than treating
         # "not yet assessed" as if it were disqualifying.
@@ -286,11 +281,14 @@ class ObserverEngine:
         opportunities_active = self.db.query(models.Opportunity).filter(models.Opportunity.status != "archived").count()
         opportunities_duplicate_archived = self.db.query(models.Opportunity).filter(models.Opportunity.status == "archived").count()
 
-        outcomes_real = self.db.query(models.Outcome).filter(models.Outcome.data_scope == "REAL").count()
+        outcomes_real = self.db.query(models.Outcome).filter(
+            *evidence_source.verified_real_outcome_filters(models.Outcome)
+        ).count()
         verified_revenue = sum(
-            r.revenue or 0.0
-            for r in self.db.query(models.Outcome).filter(
-                models.Outcome.data_scope == "REAL", models.Outcome.outcome_type == "ACTUAL_REVENUE"
+            outcome.actual_value or 0.0
+            for outcome in self.db.query(models.Outcome).filter(
+                models.Outcome.outcome_type == "ACTUAL_REVENUE",
+                *evidence_source.verified_real_outcome_filters(models.Outcome),
             ).all()
         )
 

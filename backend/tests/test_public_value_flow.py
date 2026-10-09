@@ -838,6 +838,15 @@ def test_public_alerts_are_only_recorded_changes(client_with_db, db):
         source="domain_record",
         qualitative_result="TEST-only alert fixture must stay private",
         data_scope="SANDBOX",
+        source_kind="TEST",
+    ))
+    db.add(models.Outcome(
+        outcome_type="QUALITATIVE",
+        source="domain_record",
+        qualitative_result="Spare filter public record was verified for feed projection.",
+        data_scope="REAL",
+        source_kind="REAL",
+        verification_state="VERIFIED",
     ))
     db.commit()
     alerts = client_with_db.get("/public/alerts")
@@ -1193,7 +1202,7 @@ def test_connection_response_is_not_acceptance_and_is_alerted(client_with_db, db
     assert replied.json()["accepted"] is False
     assert replied.json()["state"] == "contacted"
     alerts = client_with_db.get("/public/alerts").json()
-    assert any("not acceptance" in item["text"] for item in alerts)
+    assert not any("not acceptance" in item["text"] for item in alerts)
     listed = client_with_db.get("/forge/connections").json()
     match = next(item for item in listed if item["id"] == row.id)
     assert match["state"] == "contacted"

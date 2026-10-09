@@ -645,6 +645,7 @@ def record_outcome(
                 actual=f"{outcome_type}: {actual_value} {unit or ''}. {qualitative_result or ''}",
                 lesson=f"[{data_scope}] Recorded {outcome_type} from outcome #{outcome.id}. Compare this reported result with the offer; one event does not prove market demand.",
                 error_type="confirmed" if success else None, data_scope=data_scope,
+                source_kind=outcome.source_kind,
                 belief_update_applied=False)
             db.add(event)
             db.flush()

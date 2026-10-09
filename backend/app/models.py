@@ -1573,6 +1573,7 @@ class LearningEvent(Base):
     confidence_delta = Column(Float, nullable=True)  # applied change, if any
     product_id = Column(Integer, ForeignKey("products.id"), nullable=True, index=True)
     data_scope = Column(String, nullable=False, default="REAL", index=True)  # inherited from the outcome that produced this learning
+    source_kind = Column(String, nullable=False, default="MOCK", index=True)  # inherited evidence kind; legacy rows remain non-real
     created_at = Column(DateTime, default=utcnow)
 
 
@@ -1619,6 +1620,7 @@ class Lesson(Base):
     active = Column(Boolean, nullable=False, default=True)  # false once superseded/contradicted
     superseded_by_id = Column(Integer, nullable=True)
     data_scope = Column(String, nullable=False, default="REAL", index=True)  # REAL lessons affect real metrics; SANDBOX lessons stay visibly test-only
+    source_kind = Column(String, nullable=False, default="MOCK", index=True)  # inherited from consolidated learning evidence
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow)
 

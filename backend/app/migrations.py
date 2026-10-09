@@ -93,6 +93,12 @@ EXPECTED_COLUMNS = _build_expected_columns()
 # indexes declared on the ORM model. Keep the small set of indexes for newly
 # added query paths explicit rather than pretending create_all repairs them.
 EXPECTED_INDEXES = {
+    "learning_events": [
+        ("ix_learning_events_source_kind", "source_kind"),
+    ],
+    "lessons": [
+        ("ix_lessons_source_kind", "source_kind"),
+    ],
     "evidence_relationships": [
         ("ix_evidence_relationships_judgment_id", "judgment_id"),
         ("ix_evidence_relationships_network_connection_id", "network_connection_id"),

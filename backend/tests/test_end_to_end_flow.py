@@ -67,8 +67,8 @@ RESPONSES_POSITIVE = {
 }
 
 
-def test_opportunity_to_product_full_chain(db):
-    """The whole chain works through the canonical orchestrator."""
+def test_synthetic_outcome_cannot_complete_real_product_flow(db):
+    """Test fixtures exercise the path without becoming real-world evidence."""
     opp = _make_opportunity(
         db,
         "Independent repair shops lose hours manually explaining appointment status by phone.",
@@ -101,7 +101,7 @@ def test_opportunity_to_product_full_chain(db):
     assert executed is not None
     assert executed.status == "in_progress"
 
-    # --- HITL records the ACTUAL outcome (human response, not fabricated) ---
+    # --- The fixture response remains MOCK evidence despite its REAL scope ---
     orch = orchestrator.record_demand_outcome(db, exp_id, **RESPONSES_POSITIVE)
     exp = db.get(models.Experiment, exp_id)
     assert exp.status == "completed"
@@ -113,22 +113,23 @@ def test_opportunity_to_product_full_chain(db):
     ev = orch["learning"]
     assert ev is not None
     assert ev.error_type == "confirmed"
+    assert ev.source_kind == "MOCK"
+    assert ev.data_scope == "REAL"
+    assert opp.status != "measured"
     lesson = db.query(models.Lesson).filter_by(opportunity_id=opp.id).first()
     assert lesson is not None
+    assert lesson.source_kind == "MOCK"
     assert lesson.prediction_error_avg >= 0.0
 
-    # --- LESSON RECALL -> NEXT DECISION ---
+    # --- MOCK lessons are not recalled into REAL-scope decisions ---
     nd = decision_engine.suggest_next_experiment_decision(db, opp.id)
-    assert "Recalled lesson" in (nd.rationale or "")
+    assert "Recalled lesson" not in (nd.rationale or "")
 
-    # --- VALIDATION GATE -> PRODUCT ---
+    # --- Synthetic contacts cannot satisfy the REAL product validation gate ---
     prod = orchestrator.create_product_for_validated(db, opp.id, y_confirm=Y, z_willing=Z)
-    assert prod["status"] == "created"
-    assert prod["product"]["status"] in ("concept", "validating")
-
-    # --- honest rollup: product revenue = sum of ACTUAL_REVENUE rows with product_id ---
-    # the $40 was recorded before the product existed, so it must NOT roll in.
-    assert prod["product"]["actual_revenue"] == 0.0
+    assert prod["status"] == "not_validated"
+    assert prod["confirm_problem"] == 0
+    assert prod["will_pay"] == 0
 
 
 def test_gate_stays_closed_without_confirmation(db):

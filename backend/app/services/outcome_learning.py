@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from app import models
+from app import evidence_source, models
 from app.models import utcnow
 from app.services import learning_engine
 
@@ -48,11 +48,19 @@ def record_experiment_outcome(
         raise ValueError("Approval required before outcome")
     if experiment.action_type == "customer_interview" and not experiment.started_at:
         raise ValueError("Mark human task executed first")
-    existing = db.query(models.Outcome).filter_by(experiment_id=experiment_id, outcome_type=outcome_type or "QUALITATIVE", data_scope=data_scope).first()
+    existing = db.query(models.Outcome).filter_by(
+        experiment_id=experiment_id,
+        outcome_type=outcome_type or "QUALITATIVE",
+        data_scope=data_scope,
+    ).first()
     if existing:
         if existing.qualitative_result != actual or existing.actual_value != actual_value or existing.success != success:
             raise ValueError("An immutable outcome already exists; do not overwrite history")
-        learning = db.query(models.LearningEvent).filter_by(experiment_id=experiment_id, data_scope=data_scope).first()
+        learning = db.query(models.LearningEvent).filter_by(
+            experiment_id=experiment_id,
+            data_scope=data_scope,
+            source_kind=existing.source_kind,
+        ).first()
         return {"outcome": existing, "learning": learning, "reused": True}
     outcome = models.Outcome(
         action_id=action_id,
@@ -66,6 +74,7 @@ def record_experiment_outcome(
         success=success,
         verification_state="REPORTED",
         data_scope=data_scope,
+        source_kind=evidence_source.MOCK,
     )
     db.add(outcome)
     if action_id is not None:
@@ -92,10 +101,16 @@ def record_experiment_outcome(
             error_type=derived_error_type,
             product_id=product_id,
             data_scope=data_scope,
+            source_kind=outcome.source_kind,
             commit=False,
         )
     opportunity = db.query(models.Opportunity).filter_by(id=experiment.opportunity_id).first()
-    if opportunity and data_scope == "REAL":
+    if (
+        opportunity
+        and data_scope == "REAL"
+        and outcome.source_kind == evidence_source.REAL
+        and outcome.verification_state == "VERIFIED"
+    ):
         opportunity.status = "measured"
     if commit:
         try:

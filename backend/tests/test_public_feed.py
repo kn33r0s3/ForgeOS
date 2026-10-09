@@ -314,12 +314,14 @@ def test_public_feed_projects_heterogeneous_records_with_evidence_and_relations(
             outcome_type="QUALITATIVE",
             qualitative_result="The request was withdrawn by its submitter.",
             data_scope="REAL",
+            source_kind="REAL",
         ),
         models.Outcome(
             source="domain_record",
             outcome_type="QUALITATIVE",
             qualitative_result="Synthetic sandbox outcome.",
             data_scope="SANDBOX",
+            source_kind="TEST",
         ),
     ])
     db.commit()
@@ -534,6 +536,7 @@ def test_public_feed_composes_connections_but_keeps_endpoint_visibility_gates(db
         outcome_type="QUALITATIVE",
         qualitative_result="A real recorded test outcome.",
         data_scope="REAL",
+        source_kind="REAL",
     )
     db.add_all([provider, hidden, need, result])
     db.flush()
@@ -687,6 +690,7 @@ def test_public_feed_preserves_outcome_verification_state(db):
             qualitative_result=f"{verification_state.lower()} outcome note.",
             verification_state=verification_state,
             data_scope="REAL",
+            source_kind="REAL",
         ))
     db.commit()
 

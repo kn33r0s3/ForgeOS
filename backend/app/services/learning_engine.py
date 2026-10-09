@@ -20,7 +20,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app import models
+from app import evidence_source, models
 from app.models import utcnow
 from app.services import belief_engine, causal_engine
 
@@ -39,12 +39,27 @@ def record_learning_from_experiment(
     confidence_delta: Optional[float] = None,
     product_id: Optional[int] = None,
     data_scope: str = "REAL",
+    source_kind: str = evidence_source.MOCK,
     commit: bool = True,
 ) -> models.LearningEvent:
     """Create a LearningEvent from a completed Experiment (opportunity test)."""
     exp = db.query(models.Experiment).filter_by(id=experiment_id).first()
     if not exp:
         raise ValueError(f"Experiment {experiment_id} not found")
+    source_kind = evidence_source.validate(source_kind)
+    if exp.data_scope != data_scope:
+        raise ValueError("Learning scope must match experiment")
+    if source_kind == evidence_source.REAL:
+        verified_outcome = (
+            db.query(models.Outcome.id)
+            .filter(
+                models.Outcome.experiment_id == experiment_id,
+                *evidence_source.verified_real_outcome_filters(models.Outcome),
+            )
+            .first()
+        )
+        if verified_outcome is None:
+            raise ValueError("REAL learning requires linked verified REAL outcome evidence")
 
     event = models.LearningEvent(
         experiment_id=experiment_id,
@@ -57,6 +72,7 @@ def record_learning_from_experiment(
         confidence_delta=confidence_delta,
         product_id=product_id,
         data_scope=data_scope,
+        source_kind=source_kind,
         belief_update_applied=False,
     )
     db.add(event)
@@ -67,8 +83,6 @@ def record_learning_from_experiment(
     if exp.result is None:
         exp.result = actual
 
-    if exp.data_scope != data_scope:
-        raise ValueError("Learning scope must match experiment")
     try:
         db.flush()
         from app.services import lessons_engine

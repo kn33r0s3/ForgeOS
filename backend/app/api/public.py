@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from app import models, schemas
+from app import evidence_source, models, schemas
 from app.database import get_db
 from app.services import public_epistemics, public_stats
 from app.config import settings
@@ -624,7 +624,7 @@ def list_public_alerts(limit: int = Query(default=20, ge=1, le=50), db: Session 
     rows = (
         db.query(models.Outcome)
         .filter(models.Outcome.source.in_(["domain_record", "booking_request", "network_connection"]))
-        .filter(models.Outcome.data_scope == "REAL")
+        .filter(*evidence_source.real_scope_source_filters(models.Outcome))
         .order_by(models.Outcome.id.desc())
         .limit(limit)
         .all()

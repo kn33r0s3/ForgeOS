@@ -268,6 +268,7 @@ def test_rank_opportunities_excludes_archived(db):
 
 
 def test_observer_stats_http_endpoint_contains_additive_fields():
+    from app import models
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy.pool import StaticPool
@@ -280,6 +281,25 @@ def test_observer_stats_http_endpoint_contains_additive_fields():
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine)()
     source_manager.seed_default_sources(session)
+    session.add_all([
+        models.Outcome(
+            outcome_type="ACTUAL_REVENUE",
+            actual_value=99.0,
+            unit="USD",
+            verification_state="VERIFIED",
+            data_scope="REAL",
+            source_kind="MOCK",
+        ),
+        models.Outcome(
+            outcome_type="ACTUAL_REVENUE",
+            actual_value=25.0,
+            unit="USD",
+            verification_state="VERIFIED",
+            data_scope="REAL",
+            source_kind="REAL",
+        ),
+    ])
+    session.commit()
 
     def _override_db():
         try:
@@ -308,6 +328,9 @@ def test_observer_stats_http_endpoint_contains_additive_fields():
         ]
         for key in expected_keys:
             assert key in data, f"Key {key} missing from /observer/stats HTTP response"
+        assert data["total_observations"] == 0
+        assert data["outcomes_real"] == 1
+        assert data["verified_revenue"] == 25.0
     finally:
         app.dependency_overrides.clear()
         session.close()

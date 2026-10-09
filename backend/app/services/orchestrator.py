@@ -44,7 +44,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app import models
+from app import evidence_source, models
 from app.models import utcnow
 from app.services import (
     decision_engine,
@@ -516,33 +516,60 @@ def run_orchestration_flow(
 
 def _flow_snapshot(db: Session) -> dict:
     """Honest stage counts — how much of the chain has really been exercised."""
-    real_revenue = db.query(models.Outcome).filter_by(outcome_type="ACTUAL_REVENUE", data_scope="REAL").all()
+    real_outcomes = db.query(models.Outcome).filter(
+        *evidence_source.verified_real_outcome_filters(models.Outcome)
+    )
+    real_revenue = real_outcomes.filter(
+        models.Outcome.outcome_type == "ACTUAL_REVENUE"
+    ).all()
     sandbox_revenue = db.query(models.Outcome).filter_by(outcome_type="ACTUAL_REVENUE", data_scope="SANDBOX").all()
     return {
         "signals": db.query(models.Signal).count(),
         "opportunities": db.query(models.Opportunity).count(),
         # an opportunity is 'live' once it has started a validation execution
         "decisions_accepted": db.query(models.Decision).filter_by(status="accepted").count(),
-        "validation_experiments": db.query(models.Experiment).filter_by(action_type="customer_interview").count(),
-        "experiments_completed": db.query(models.Experiment).filter_by(status="completed").count(),
-        "outcomes": db.query(models.Outcome).filter_by(data_scope="REAL").count(),
-        "learning_events": db.query(models.LearningEvent).filter_by(data_scope="REAL").count(),
-        "lessons": db.query(models.Lesson).filter_by(data_scope="REAL").count(),
+        "validation_experiments": db.query(models.Experiment).filter_by(
+            action_type="customer_interview", data_scope="REAL", source_kind=evidence_source.REAL
+        ).count(),
+        "experiments_completed": db.query(models.Experiment).filter_by(
+            status="completed", data_scope="REAL", source_kind=evidence_source.REAL
+        ).count(),
+        "outcomes": real_outcomes.count(),
+        "learning_events": db.query(models.LearningEvent).filter(
+            *evidence_source.real_scope_source_filters(models.LearningEvent)
+        ).count(),
+        "lessons": db.query(models.Lesson).filter(
+            *evidence_source.real_scope_source_filters(models.Lesson)
+        ).count(),
         "products": db.query(models.Product).filter_by(data_scope="REAL").count(),
         "distribution_channels": db.query(models.DistributionChannel).filter_by(data_scope="REAL").count(),
-        "customer_events": db.query(models.CustomerEvent).filter_by(data_scope="REAL").count(),
+        "customer_events": db.query(models.CustomerEvent).filter(
+            *evidence_source.real_scope_source_filters(models.CustomerEvent)
+        ).count(),
         "actions_awaiting_approval": db.query(models.Experiment)
             .filter(models.Experiment.status.in_(["planned"])).count(),
         "actual_revenue": round(sum(float(o.actual_value or 0) for o in real_revenue if (o.unit or "USD").upper() == "USD"), 2),
-        "real_customers": int(sum(float(o.actual_value or 0) for o in db.query(models.Outcome).filter_by(outcome_type="ACTUAL_CUSTOMERS", data_scope="REAL").all())),
+        "real_customers": int(sum(
+            float(o.actual_value or 0)
+            for o in real_outcomes.filter(
+                models.Outcome.outcome_type == "ACTUAL_CUSTOMERS"
+            ).all()
+        )),
         "sandbox": {
             "actual_revenue": round(sum(float(o.actual_value or 0) for o in sandbox_revenue if (o.unit or "USD").upper() == "USD"), 2),
             "outcomes": db.query(models.Outcome).filter_by(data_scope="SANDBOX").count(),
             "products": db.query(models.Product).filter_by(data_scope="SANDBOX").count(),
             "label": "TEST/SANDBOX — not real business traction",
         },
-        "products_with_revenue": db.query(models.Product)
-            .filter_by(data_scope="REAL").filter(models.Product.actual_revenue > 0.0).count(),
+        "products_with_revenue": db.query(models.Outcome.product_id)
+            .filter(*evidence_source.verified_real_outcome_filters(models.Outcome))
+            .filter(
+                models.Outcome.outcome_type == "ACTUAL_REVENUE",
+                models.Outcome.actual_value > 0.0,
+                models.Outcome.product_id.isnot(None),
+            )
+            .distinct()
+            .count(),
     }
 
 
@@ -564,25 +591,42 @@ def ranked_opportunities(db, limit=50):
 
 
 def validation_counts(db, opportunity_id, data_scope):
-    experiments = (
-        db.query(models.Experiment).filter_by(opportunity_id=opportunity_id).all()
+    experiments_query = db.query(models.Experiment).filter_by(
+        opportunity_id=opportunity_id,
+        data_scope=data_scope,
     )
+    if data_scope == "REAL":
+        experiments_query = experiments_query.filter(
+            models.Experiment.source_kind == evidence_source.REAL
+        )
+    experiments = experiments_query.all()
     # confirm_problem: real interview outcomes marked success + any customer
     # event that reached an interested/paying stage (recorded by the human).
-    outcomes = (
+    outcomes_query = (
         db.query(models.Outcome)
         .filter(models.Outcome.experiment_id.isnot(None))
-        .filter(
-            models.Outcome.experiment_id.in_(
-                db.query(models.Experiment.id).filter_by(opportunity_id=opportunity_id)
-            )
-        )
-        .all()
+        .filter(models.Outcome.experiment_id.in_([experiment.id for experiment in experiments]))
     )
-    outcomes = [o for o in outcomes if o.data_scope == data_scope]
+    if data_scope == "REAL":
+        outcomes_query = outcomes_query.filter(
+            *evidence_source.verified_real_outcome_filters(models.Outcome)
+        )
+    else:
+        outcomes_query = outcomes_query.filter(models.Outcome.data_scope == data_scope)
+    outcomes = outcomes_query.all()
     response_ids = {o.id for o in outcomes if o.outcome_type == "ACTUAL_RESPONSE"}
-    interest_events = db.query(models.CustomerEvent).filter_by(opportunity_id=opportunity_id, data_scope=data_scope).all()
-    interest_events = [c for c in interest_events if c.outcome_id in response_ids]
+    interest_events_query = db.query(models.CustomerEvent).filter_by(
+        opportunity_id=opportunity_id,
+        data_scope=data_scope,
+    )
+    if data_scope == "REAL":
+        interest_events_query = interest_events_query.filter(
+            models.CustomerEvent.source_kind == evidence_source.REAL
+        )
+    interest_events = [
+        event for event in interest_events_query.all()
+        if event.outcome_id in response_ids
+    ]
     # Prefer per-contact evidence. Fall back to one aggregate confirmation only
     # when no contact ledger exists; never double-count the same interview.
     # Unique identifiable contacts only; repeated events are not new people.
@@ -597,6 +641,12 @@ def validation_counts(db, opportunity_id, data_scope):
     # revenue a second time. This remains reported demand, not paid customers.
     eligible_exp_ids = {o.experiment_id for o in outcomes if o.outcome_type == "ACTUAL_RESPONSE"}
     willing_contacts = sum(any(c.stage in ("interested", "paid_customer") for c in rows) for rows in groups.values())
-    will_pay = min(willing_contacts, sum(int(e.conversions or 0) for e in experiments
-        if e.id in eligible_exp_ids and e.data_scope == data_scope and e.status == "completed"))
+    will_pay = min(
+        willing_contacts,
+        sum(
+            int(experiment.conversions or 0)
+            for experiment in experiments
+            if experiment.id in eligible_exp_ids and experiment.status == "completed"
+        ),
+    )
     return confirm_problem, will_pay

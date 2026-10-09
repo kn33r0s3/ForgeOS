@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app import models, schemas
+from app import evidence_source, models, schemas
 from app.services import network_endpoints, public_epistemics
 
 
@@ -504,7 +504,7 @@ def build_public_feed(
     outcomes = (
         db.query(models.Outcome)
         .filter(models.Outcome.source.in_(_PUBLIC_OUTCOME_SOURCES))
-        .filter(models.Outcome.data_scope == "REAL")
+        .filter(*evidence_source.real_scope_source_filters(models.Outcome))
         .filter(models.Outcome.qualitative_result.isnot(None))
         .order_by(models.Outcome.observed_at.desc())
         .limit(limit)

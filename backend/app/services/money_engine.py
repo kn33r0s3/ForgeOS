@@ -90,7 +90,7 @@ it's actually stale would itself be a kind of fabrication.
 from sqlalchemy.orm import Session
 
 from typing import Optional
-from app import models
+from app import evidence_source, models
 from app.models import utcnow
 
 # Composite score weights — sum to 1.0. Willingness-to-pay and revenue
@@ -433,11 +433,28 @@ def record_revenue_result(db: Session, experiment_id, result, revenue=None, conv
             actual=result, lesson="Explicit result recorded; revise the next test using this evidence, not estimated revenue.",
             error_type="confirmed" if success else "qualitative_miss", data_scope=scope, commit=False)
         opportunity = db.get(models.Opportunity, experiment.opportunity_id)
-        if opportunity and scope == "REAL":
-            opportunity.revenue_confidence = round(max(0, min(100, opportunity.revenue_confidence + delta)), 1)
-            opportunity.market_confidence = round(max(0, min(100, opportunity.market_confidence + delta * .5)), 1)
+        verified_revenue = (
+            db.query(models.Outcome)
+            .filter(
+                models.Outcome.experiment_id == experiment_id,
+                models.Outcome.outcome_type == "ACTUAL_REVENUE",
+                *evidence_source.verified_real_outcome_filters(models.Outcome),
+            )
+            .first()
+        )
+        if opportunity and scope == "REAL" and verified_revenue:
+            verified_success = (verified_revenue.actual_value or 0) > 0
+            verified_delta = (
+                REVENUE_SUCCESS_BOOST if verified_success else -REVENUE_FAILURE_PENALTY
+            )
+            opportunity.revenue_confidence = round(
+                max(0, min(100, opportunity.revenue_confidence + verified_delta)), 1
+            )
+            opportunity.market_confidence = round(
+                max(0, min(100, opportunity.market_confidence + verified_delta * .5)), 1
+            )
             opportunity.uncertainty = max(0, opportunity.uncertainty - EVIDENCE_UNCERTAINTY_REDUCTION)
-            if success:
+            if verified_success:
                 ids = set(filter(None, (opportunity.willingness_evidence_ids or "").split(",")))
                 ids.add(str(experiment.id))
                 opportunity.willingness_evidence_ids = ",".join(sorted(ids, key=_willingness_id_sort_key))
@@ -609,13 +626,44 @@ def get_money_dashboard(db: Session) -> dict:
     needing_validation = [item for item in ranked if item["opportunity"].revenue_confidence == 0.0][:10]
 
     all_revenue_experiments = (
-        db.query(models.Experiment).filter(models.Experiment.hypothesis.isnot(None), models.Experiment.data_scope == "REAL").all()
+        db.query(models.Experiment)
+        .filter(
+            models.Experiment.hypothesis.isnot(None),
+            models.Experiment.data_scope == "REAL",
+            models.Experiment.source_kind == evidence_source.REAL,
+        )
+        .all()
     )
     completed = [e for e in all_revenue_experiments if e.result is not None]
     active = [e for e in all_revenue_experiments if e.result is None]
-    winning = [e for e in completed if e.revenue and e.revenue > 0]
-    failed = [e for e in completed if not (e.revenue and e.revenue > 0)]
-    total_revenue = round(sum(o.actual_value or 0 for o in db.query(models.Outcome).filter_by(data_scope="REAL", outcome_type="ACTUAL_REVENUE").all()), 2)
+    completed_ids = [experiment.id for experiment in completed]
+    verified_revenue_experiment_ids = set()
+    if completed_ids:
+        verified_revenue_experiment_ids = {
+            outcome.experiment_id
+            for outcome in (
+                db.query(models.Outcome)
+                .filter(models.Outcome.experiment_id.in_(completed_ids))
+                .filter(models.Outcome.outcome_type == "ACTUAL_REVENUE")
+                .filter(*evidence_source.verified_real_outcome_filters(models.Outcome))
+                .filter(models.Outcome.actual_value > 0)
+                .all()
+            )
+        }
+    winning = [
+        experiment
+        for experiment in completed
+        if (experiment.conversions or 0) > 0 or experiment.id in verified_revenue_experiment_ids
+    ]
+    winning_ids = {experiment.id for experiment in winning}
+    failed = [experiment for experiment in completed if experiment.id not in winning_ids]
+    total_revenue = round(sum(
+        outcome.actual_value or 0
+        for outcome in db.query(models.Outcome)
+        .filter(models.Outcome.outcome_type == "ACTUAL_REVENUE")
+        .filter(*evidence_source.verified_real_outcome_filters(models.Outcome))
+        .all()
+    ), 2)
     conversion_rate = round(len(winning) / len(completed) * 100.0, 1) if completed else None
 
     return {

@@ -154,6 +154,302 @@ def test_public_stats_counts_only_real_with_proof(db):
     assert stats["verified_outcomes"] == 1
 
 
+def test_internal_real_rollups_require_real_verified_provenance(db):
+    from app.services import (
+        execution_engine,
+        money_engine,
+        orchestrator,
+        product_engine,
+        truth_audit,
+        world_model,
+    )
+    from app.services.observer_engine import ObserverEngine
+
+    opportunity = models.Opportunity(
+        problem="Provenance rollup fixture",
+        target_customer="test-only segment",
+        solution="test-only solution",
+        business_model="test-only model",
+    )
+    db.add(opportunity)
+    db.flush()
+    product = models.Product(
+        opportunity_id=opportunity.id,
+        name="Rollup fixture",
+        offer="Evidence filter test",
+        data_scope="REAL",
+    )
+    revenue_experiment = models.Experiment(
+        opportunity_id=opportunity.id,
+        action="Synthetic unverified revenue result",
+        hypothesis="This fixture must not become recorded revenue.",
+        result="Reported only",
+        revenue=99.0,
+        data_scope="REAL",
+        source_kind="MOCK",
+    )
+    validation_experiment = models.Experiment(
+        opportunity_id=opportunity.id,
+        action="Synthetic interview result",
+        action_type="customer_interview",
+        status="completed",
+        conversions=1,
+        data_scope="REAL",
+        source_kind="REAL",
+    )
+    db.add_all([product, revenue_experiment, validation_experiment])
+    db.flush()
+    db.add_all([
+        models.Outcome(
+            product_id=product.id,
+            outcome_type="ACTUAL_REVENUE",
+            actual_value=99.0,
+            unit="USD",
+            verification_state="VERIFIED",
+            data_scope="REAL",
+            source_kind="MOCK",
+        ),
+        models.Outcome(
+            product_id=product.id,
+            outcome_type="ACTUAL_REVENUE",
+            actual_value=50.0,
+            unit="USD",
+            verification_state="REPORTED",
+            data_scope="REAL",
+            source_kind="REAL",
+        ),
+        models.Outcome(
+            product_id=product.id,
+            experiment_id=revenue_experiment.id,
+            outcome_type="ACTUAL_REVENUE",
+            actual_value=25.0,
+            unit="USD",
+            verification_state="VERIFIED",
+            data_scope="REAL",
+            source_kind="REAL",
+        ),
+        models.Outcome(
+            experiment_id=validation_experiment.id,
+            outcome_type="ACTUAL_RESPONSE",
+            qualitative_result="Verified synthetic response.",
+            verification_state="VERIFIED",
+            data_scope="REAL",
+            source_kind="REAL",
+        ),
+        models.CustomerEvent(
+            product_id=product.id,
+            opportunity_id=opportunity.id,
+            contact_name="Synthetic respondent",
+            stage="interested",
+            outcome_id=None,
+            data_scope="REAL",
+            source_kind="REAL",
+        ),
+        models.LearningEvent(
+            prediction="Synthetic prediction",
+            actual="Synthetic result",
+            lesson="Mock learning must not count as reality.",
+            data_scope="REAL",
+            source_kind="MOCK",
+        ),
+        models.LearningEvent(
+            prediction="Recorded prediction",
+            actual="Recorded result",
+            lesson="Verified learning fixture.",
+            data_scope="REAL",
+            source_kind="REAL",
+        ),
+        models.Lesson(
+            theme_key="mock-rollup-fixture",
+            title="Mock lesson",
+            summary="Not real evidence.",
+            data_scope="REAL",
+            source_kind="MOCK",
+        ),
+        models.Lesson(
+            theme_key="real-rollup-fixture",
+            title="Real lesson fixture",
+            summary="Verified learning fixture.",
+            data_scope="REAL",
+            source_kind="REAL",
+        ),
+    ])
+    db.flush()
+    response_outcome = db.query(models.Outcome).filter_by(
+        experiment_id=validation_experiment.id,
+        outcome_type="ACTUAL_RESPONSE",
+    ).one()
+    customer_event = db.query(models.CustomerEvent).filter_by(
+        opportunity_id=opportunity.id
+    ).one()
+    customer_event.outcome_id = response_outcome.id
+    db.commit()
+
+    assert product_engine.rollup_product(db, product)["actual_revenue"] == 25.0
+    dashboard = money_engine.get_money_dashboard(db)
+    assert dashboard["total_revenue_recorded"] == 25.0
+    assert dashboard["completed_experiments_count"] == 0
+    assert execution_engine.get_revenue_breakdown(db)["realized"] == 25.0
+    flow = orchestrator._flow_snapshot(db)
+    assert flow["actual_revenue"] == 25.0
+    assert flow["outcomes"] == 2
+    assert flow["learning_events"] == 1
+    assert flow["lessons"] == 1
+    assert flow["products_with_revenue"] == 1
+
+    labels = truth_audit.snapshot(db)["epistemic_labels"]
+    assert labels["actual_outcomes"] == 2
+    assert labels["actual_revenue"] == 25.0
+    assert labels["reality_learning_events"] == 1
+    observer = ObserverEngine(db).stats()
+    assert observer["outcomes_real"] == 2
+    assert observer["verified_revenue"] == 25.0
+    assert world_model.get_opportunity_money_graph(
+        db,
+        opportunity.id,
+    )["total_revenue_recorded"] == 25.0
+    assert orchestrator.validation_counts(db, opportunity.id, "REAL") == (1, 1)
+
+
+def test_strategy_performance_requires_real_experiments_and_verified_outcomes(db):
+    from datetime import datetime, timezone
+
+    from app.services.execution_engine import get_strategy_performance
+
+    goal = models.Goal(statement="Test strategy provenance")
+    db.add(goal)
+    db.flush()
+    strategy = models.Strategy(
+        goal_id=goal.id,
+        title="Provenance strategy",
+        description="Test-only strategy",
+        rationale="Verify linked evidence filtering",
+    )
+    opportunity = models.Opportunity(
+        problem="Strategy provenance fixture",
+        target_customer="test-only segment",
+        solution="test-only solution",
+        business_model="test-only model",
+    )
+    db.add_all([strategy, opportunity])
+    db.flush()
+    completed_at = datetime.now(timezone.utc)
+    mock_experiment = models.Experiment(
+        strategy_id=strategy.id,
+        opportunity_id=opportunity.id,
+        action="Synthetic result",
+        hypothesis="Must not count as strategy evidence",
+        result="Synthetic revenue",
+        revenue=99.0,
+        costs=20.0,
+        conversions=1,
+        completed_at=completed_at,
+        data_scope="REAL",
+        source_kind="MOCK",
+    )
+    real_experiment = models.Experiment(
+        strategy_id=strategy.id,
+        opportunity_id=opportunity.id,
+        action="Recorded result",
+        hypothesis="Use verified outcome only for cash",
+        result="Human-recorded response",
+        revenue=500.0,
+        costs=80.0,
+        conversions=1,
+        completed_at=completed_at,
+        data_scope="REAL",
+        source_kind="REAL",
+    )
+    db.add_all([mock_experiment, real_experiment])
+    db.flush()
+    db.add_all([
+        models.Outcome(
+            experiment_id=mock_experiment.id,
+            outcome_type="ACTUAL_REVENUE",
+            actual_value=999.0,
+            unit="USD",
+            source="test",
+            verification_state="VERIFIED",
+            data_scope="REAL",
+            source_kind="REAL",
+        ),
+        models.Outcome(
+            experiment_id=real_experiment.id,
+            outcome_type="ACTUAL_REVENUE",
+            actual_value=25.0,
+            unit="USD",
+            source="test",
+            verification_state="VERIFIED",
+            data_scope="REAL",
+            source_kind="REAL",
+        ),
+        models.Outcome(
+            experiment_id=real_experiment.id,
+            outcome_type="ACTUAL_COST",
+            actual_value=3.0,
+            unit="USD",
+            source="test",
+            verification_state="VERIFIED",
+            data_scope="REAL",
+            source_kind="REAL",
+        ),
+    ])
+    db.commit()
+
+    assert get_strategy_performance(db, strategy.id) == {
+        "strategy_id": strategy.id,
+        "attempts": 1,
+        "successes": 1,
+        "success_rate": 100.0,
+        "total_revenue": 25.0,
+        "total_cost": 3.0,
+        "net_profit": 22.0,
+    }
+
+
+def test_reported_revenue_result_does_not_update_real_confidence(db):
+    from app.services import execution_engine, money_engine
+
+    opportunity = models.Opportunity(
+        problem="Reported revenue fixture",
+        target_customer="test-only segment",
+        solution="test-only solution",
+        business_model="test-only model",
+        status="identified",
+        market_confidence=0.0,
+        revenue_confidence=0.0,
+        uncertainty=100.0,
+    )
+    db.add(opportunity)
+    db.flush()
+    experiment = models.Experiment(
+        opportunity_id=opportunity.id,
+        action="Record an unverified report",
+        hypothesis="Reported revenue is not verified revenue",
+        data_scope="REAL",
+        source_kind="MOCK",
+    )
+    db.add(experiment)
+    db.commit()
+
+    money_engine.record_revenue_result(
+        db,
+        experiment.id,
+        "Reported $99; no payment proof",
+        revenue=99.0,
+    )
+
+    outcome = db.query(models.Outcome).filter_by(experiment_id=experiment.id).one()
+    assert outcome.source_kind == "MOCK"
+    assert outcome.verification_state == "REPORTED"
+    assert opportunity.status == "identified"
+    assert opportunity.revenue_confidence == 0.0
+    assert opportunity.market_confidence == 0.0
+    assert opportunity.uncertainty == 100.0
+    assert opportunity.willingness_evidence_ids is None
+    assert execution_engine.get_revenue_breakdown(db)["realized"] == 0.0
+
+
 def test_real_outcome_without_proof_is_refused(db):
     from app.services.action_engine import record_outcome
 
