@@ -13,12 +13,18 @@ The legacy WorkerTask queue, legacy API endpoints, and legacy scheduled cycle ar
 
 **Production Vercel cron** (daily 06:00 UTC) → `/api/scheduled/intelligence` (NEW 2026-10-07):
 1. `forge_loop.run_cycle` — DB reasoning: signals → patterns → beliefs → questions → tasks
-2. `research_task_engine.resume_running_tasks` — requeues stale running tasks
-3. `execution_engine.run_autonomous_action_cycle` — proposes (never executes) actions
-4. Returns `{"status": "completed", "intelligence": {...}}` with per-engine results
+2. `collector_runner.run_pending_tasks` — executes planned research tasks via collectors
+3. `research_task_engine.resume_running_tasks` — requeues stale running tasks
+4. `execution_engine.run_autonomous_action_cycle` — proposes (never executes) actions
+5. `discovery_engine.run_discovery` — runs generalized discovery methods over substrate
+6. `forge_bot_owner_notification.retry_queued_owner_notifications` — retries already-queued owner notices only (NEW)
+7. Returns `{"status": "completed", "intelligence": {...}}` with per-engine results
 
 **Production now generates non-legacy work automatically** via the intelligence seam.
 This uses existing engines only — no legacy flag, no WorkerTask, no new scheduler.
+
+**Note:** "Configured in code" is distinct from "independently proven to have run in production."
+The Vercel cron configuration exists; a fresh production run log has not been independently verified in this document.
 
 ## What Triggers Work via Hatch (External Continuity)
 

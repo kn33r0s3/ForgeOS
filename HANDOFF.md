@@ -129,10 +129,18 @@ than a few days old, re-verify before trusting the details.
 
 ## Last verified state snapshot (2026-10-09)
 
-- **HEAD at this snapshot:** `origin/main` at `096e3d0` ("Fix CI: add workflow_call trigger to secrets.yml"). `origin/main` has advanced since this snapshot; inspect Git before relying on the SHA below.
-- **Health:** haminp.vercel.app/api/health → ok; forge-os-ebon.vercel.app/api/health → ok.
+**Update 2026-10-09 (integrity audit round 1):** HEAD at `bf7ec97` ("Connect owner-notification retry as isolated Stage 6"). Changes since `096e3d0`:
+- public_stats.py: require data_scope==REAL; owner_interventions always NOT_MEASURABLE
+- scheduled.py: stages report ok/partial/error truthfully; Stage 6 owner retry added
+- discovery_engine.py: fixed stale "not wired" comment
+- 28-file utcnow() deduplication; unused imports removed
+- New tests: SANDBOX exclusion, partial stage statuses, retry-only path
+- Frontend: 206/206 pass. Backend: syntax verified (pytest not available in this env).
+
+- **HEAD at prior snapshot:** `origin/main` at `096e3d0` ("Fix CI: add workflow_call trigger to secrets.yml").
+- **Health:** haminp.vercel.app/api/health → ok (verified 2026-10-09).
 - **Intake:** `intake_enabled: false` (Forge Bot closed).
-- **Step 3B-1:** 5 PR #15 discovery sources recovered into discovery_engine.py as DiscoveryMethods; 6 new finding types; 10 tests.
+- **Blockers:** Zero real seller conversations. Zero verified transactions. Contact clock running.
 - **Recovery pass (9038616):** Secured /forge/questions, /forge/tasks, /forge/evidence with owner auth; fixed EvidenceOut nullable 500; added bibliographic background classifier; corrected /scheduled/intelligence docs; added relevance_status to PublicDiscoveryOut.
 - **Qualification gate (4005927):** Patterns require problem/demand grounding (Signal.signal_type) for commercial questions; 3 new regression tests.
 - **PR #15 discovery loop:** Selection v0 extended with `unknown_unknown_discovery` lane; `discovery_selection.py` generates probes from 5 sources; 24 tests.
