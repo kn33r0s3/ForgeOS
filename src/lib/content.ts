@@ -69,6 +69,10 @@ export type PublicDiscovery = {
   epistemic_state: string;
   freshness?: string;
   has_consequence?: boolean;
+  // Relevance classification (backend: PublicDiscoveryOut)
+  relevance_status?: "background_observation" | "unqualified_lead" | "relevant_to_unknown" | "validated_finding";
+  linked_unknown?: string | null;
+  next_test?: string | null;
 };
 
 export type PublicFeedRelation = {

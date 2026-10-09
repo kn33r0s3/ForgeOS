@@ -15,6 +15,13 @@ export function FindingCard({
   index?: number;
 }) {
   const stale = finding.freshness === "stale";
+  const relevanceLabels: Record<string, string> = {
+    background_observation: "Background",
+    unqualified_lead: "Research lead",
+    relevant_to_unknown: "Relevant unknown",
+    validated_finding: "Validated",
+  };
+  const relevanceLabel = finding.relevance_status ? relevanceLabels[finding.relevance_status] : null;
   return (
     <li
       className="card card-interactive reveal flex min-w-0 flex-col p-5"
@@ -28,6 +35,11 @@ export function FindingCard({
           <span className="status-pill status-pill-neutral max-w-full break-all">
             {finding.epistemic_state}
           </span>
+          {relevanceLabel && (
+            <span className="status-pill status-pill-neutral max-w-full break-all" title="Relevance classification">
+              {relevanceLabel}
+            </span>
+          )}
           <span className={`status-pill ${stale ? "status-pill-warning" : "status-pill-success"}`}>
             <Clock3 className="size-3" aria-hidden="true" /> {finding.freshness || "unknown"}
           </span>

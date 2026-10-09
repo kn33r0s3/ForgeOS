@@ -349,7 +349,7 @@ describe("Hami public root", () => {
     assert.doesNotMatch(home, /to="\/prototype\/inbox"|Try the free inbox tool/);
     assert.match(
       home,
-      /<Hero \/>[\s\S]*<FindingsPreview \/>[\s\S]*<UnknownsPreview \/>[\s\S]*<ExperimentsPreview \/>[\s\S]*<AboutLink \/>[\s\S]*<HomeFooter \/>/,
+      /<Hero \/>[\s\S]*<Capabilities \/>[\s\S]*<FindingsPreview \/>[\s\S]*<UnknownsPreview \/>[\s\S]*<ExperimentsPreview \/>[\s\S]*<AboutLink \/>[\s\S]*<HomeFooter \/>/,
     );
     assert.match(home, /Honest status/i);
     assert.match(home, /pre-revenue/i);
@@ -477,5 +477,40 @@ describe("Hami public root", () => {
     assert.equal(robots.includes("sanipoperations.com.np"), false);
     assert.match(robots, /Sitemap: https:\/\/haminp.vercel.app\/sitemap\.xml/);
     assert.match(work, /to: "\/domain"/);
+  });
+});
+
+describe("homepage findings defects (regression)", () => {
+  it("FindingsPreview loads enough to find consequential findings", () => {
+    const home = readFileSync("src/routes/index.tsx", "utf8");
+    // Must load more than the display count BEFORE filtering, otherwise
+    // consequential findings outside the first N are missed.
+    // The old code was: loadDiscoveries(3).then(d => (d ?? []).filter(f => f.has_consequence))
+    assert.match(home, /loadDiscoveries\(20\)/);
+    assert.doesNotMatch(home, /loadDiscoveries\(3\)[\s\S]*?\.filter\(\(f\) => f\.has_consequence\)/);
+  });
+
+  it("FindingsPreview distinguishes failure from empty dataset", () => {
+    const home = readFileSync("src/routes/index.tsx", "utf8");
+    // API failure and null loader result must not appear as verified empty.
+    // The component tracks a separate `failed` state.
+    assert.match(home, /const \[failed, setFailed\] = useState\(false\)/);
+    assert.match(home, /setFailed\(true\)/);
+    // Failed state shows "Unavailable", not "Empty record"
+    assert.match(home, /label="Unavailable"/);
+    assert.match(home, /label="Empty record"/);
+  });
+
+  it("PublicDiscovery type includes relevance fields", () => {
+    const content = readFileSync("src/lib/content.ts", "utf8");
+    assert.match(content, /relevance_status\?:/);
+    assert.match(content, /linked_unknown\?:/);
+    assert.match(content, /next_test\?:/);
+  });
+
+  it("FindingCard displays relevance status when present", () => {
+    const card = readFileSync("src/components/findings/finding-card.tsx", "utf8");
+    assert.match(card, /relevance_status/);
+    assert.match(card, /relevanceLabels/);
   });
 });

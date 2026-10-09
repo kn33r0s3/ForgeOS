@@ -53,6 +53,7 @@ function HomePage() {
   return (
     <main className="bg-background text-ink">
       <Hero />
+      <Capabilities />
       <FindingsPreview />
       <UnknownsPreview />
       <ExperimentsPreview />
@@ -60,6 +61,82 @@ function HomePage() {
       <StatusRecord />
       <HomeFooter />
     </main>
+  );
+}
+
+function Capabilities() {
+  const capabilities = [
+    {
+      name: "Observe",
+      description: "Collect information through five explicitly governed sources — OpenAlex, Crossref, World Bank, GDELT, and GovInfo — each with defined purposes and rate limits.",
+      status: "Implemented",
+      statusTone: "text-emerald-600",
+    },
+    {
+      name: "Preserve",
+      description: "Retain evidence, provenance, and uncertainty. Nothing is flattened into claims; every record cites its source and epistemic state.",
+      status: "Implemented",
+      statusTone: "text-emerald-600",
+    },
+    {
+      name: "Investigate",
+      description: "Distinguish background observations from relevant unknowns. Bibliographic metadata stays as background; only problem-grounded patterns generate commercial questions.",
+      status: "Implemented",
+      statusTone: "text-emerald-600",
+    },
+    {
+      name: "Act",
+      description: "Use capabilities only within authorization boundaries. State-changing actions require owner approval; the public surface is read-only.",
+      status: "Gated",
+      statusTone: "text-amber-600",
+    },
+    {
+      name: "Learn",
+      description: "Compare results with expectations and update understanding when evidence supports it. No verified real-world outcomes yet — the system is honest about this gap.",
+      status: "Not yet validated",
+      statusTone: "text-muted",
+    },
+  ];
+
+  return (
+    <section className="border-b border-line bg-surface">
+      <Container className="py-12 sm:py-16 lg:py-20">
+        <SectionHead
+          numeral="§"
+          eyebrow="System"
+          title="What Hami does"
+          lede="Five capabilities, each with an honest status. No capability is claimed beyond what the implementation supports."
+        />
+        <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {capabilities.map((cap, i) => (
+            <div
+              key={cap.name}
+              className="reveal rounded-lg border border-line bg-background p-6"
+              style={{ "--i": i } as React.CSSProperties}
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="font-display text-xl font-bold text-ink">{cap.name}</h3>
+                <span className={`font-mono text-micro font-bold uppercase tracking-[0.15em] ${cap.statusTone}`}>
+                  {cap.status}
+                </span>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-muted">{cap.description}</p>
+            </div>
+          ))}
+          <div
+            className="reveal rounded-lg border border-dashed border-line p-6"
+            style={{ "--i": 5 } as React.CSSProperties}
+          >
+            <h3 className="font-display text-xl font-bold text-ink">The gap</h3>
+            <p className="mt-3 text-sm leading-6 text-muted">
+              Implemented engineering is not the same as demonstrated economic results.
+              Hami has not yet served a real merchant, recovered revenue, or validated
+              an outcome with a real person. That work is next.
+            </p>
+          </div>
+        </div>
+      </Container>
+    </section>
   );
 }
 
@@ -337,15 +414,30 @@ function EmptyRecord({
 
 function FindingsPreview() {
   const [items, setItems] = useState<PublicDiscovery[] | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let live = true;
-    loadDiscoveries(3)
+    // Load enough to find consequential findings; filter AFTER loading,
+    // not before. Loading only 3 then filtering can miss relevant findings
+    // that fall outside the first three results.
+    loadDiscoveries(20)
       .then((d) => {
-        if (live) setItems((d ?? []).filter((f) => f.has_consequence));
+        if (!live) return;
+        if (d === null) {
+          // Null means the loader couldn't retrieve data (not empty)
+          setFailed(true);
+          setItems([]);
+        } else {
+          setItems(d.filter((f) => f.has_consequence).slice(0, 3));
+        }
       })
       .catch(() => {
-        if (live) setItems([]);
+        if (live) {
+          // API failure is distinct from verified empty dataset
+          setFailed(true);
+          setItems([]);
+        }
       });
     return () => {
       live = false;
@@ -362,16 +454,21 @@ function FindingsPreview() {
           lede="What we know and how sure we are — from the engine's evidence records."
         />
         <div className="mt-8">
-          {!items ? (
+          {!items && !failed ? (
             <div className="skeleton h-32 w-full" aria-label="Loading findings" />
-          ) : items.length === 0 ? (
+          ) : failed ? (
+            <EmptyRecord
+              label="Unavailable"
+              message="The findings service is currently unavailable. Please try again later."
+            />
+          ) : items!.length === 0 ? (
             <EmptyRecord
               label="Empty record"
               message="No findings with recorded consequences yet. Findings appear here once they change a decision, experiment, or outcome."
             />
           ) : (
             <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {items.map((finding, i) => (
+              {items!.map((finding, i) => (
                 <li key={finding.id} className="reveal" style={{ "--i": i } as React.CSSProperties}>
                   <FindingCard finding={finding} index={i} />
                 </li>
