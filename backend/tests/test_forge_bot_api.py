@@ -1397,6 +1397,8 @@ def test_owner_console_readiness_is_keyed_and_aggregate_only(db, monkeypatch):
     monkeypatch.setattr(settings, "SMTP_HOST", "")
     monkeypatch.setattr(settings, "SMTP_USER", "")
     monkeypatch.setattr(settings, "SMTP_PASSWORD", "")
+    deployed_sha = "a" * 40
+    monkeypatch.setenv("VERCEL_GIT_COMMIT_SHA", deployed_sha)
     client, cleanup = _client(db)
     try:
         lead = client.post("/forge-bot/leads", json=_payload())
@@ -1418,6 +1420,7 @@ def test_owner_console_readiness_is_keyed_and_aggregate_only(db, monkeypatch):
     assert readiness["migrations_ok"] is True
     assert readiness["smtp_configured"] is False
     assert readiness["hmac_key_configured"] is True
+    assert readiness["deployed_commit"] == deployed_sha
     assert readiness["intake_enabled"] is True
     assert readiness["live_enabled"] is False
     assert readiness["lead_counts_by_stage"] == {

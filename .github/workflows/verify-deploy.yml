@@ -22,7 +22,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: "22"
           cache: npm
 
       - name: Install
@@ -56,10 +56,6 @@ jobs:
           fi
           # Intentionally no exit: the verification record must capture the actual result.
 
-      - name: Get deployed SHA
-        id: sha
-        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
       - name: Fetch production content
         id: fetch
         run: |
@@ -81,6 +77,52 @@ jobs:
           FORGE_API_KEY: ${{ secrets.FORGE_API_KEY }}
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
 
+      - name: Get deployed SHA
+        id: sha
+        env:
+          FORGE_API_KEY: ${{ secrets.FORGE_API_KEY }}
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        run: |
+          set -o pipefail
+          DEPLOYED_SHA="$(curl -fsS "$BACKEND_URL/api/forge-bot/owner/readiness" \
+            -H "X-API-Key: $FORGE_API_KEY" \
+            | node -e '
+              let body = "";
+              process.stdin.setEncoding("utf8");
+              process.stdin.on("data", chunk => body += chunk);
+              process.stdin.on("end", () => {
+                const sha = JSON.parse(body).deployed_commit;
+                if (typeof sha !== "string" || !/^[0-9a-f]{7,40}$/i.test(sha)) {
+                  console.error("Owner readiness did not provide a valid deployed commit.");
+                  process.exitCode = 1;
+                  return;
+                }
+                process.stdout.write(sha);
+              });
+            ')"
+          echo "sha=$DEPLOYED_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Evaluate verification
+        id: result
+        env:
+          DEPLOYED_SHA: ${{ steps.sha.outputs.sha }}
+          TESTS_PASSED: ${{ steps.tests.outputs.passed }}
+        run: |
+          DEPLOYMENT_MATCH=false
+          if [ "$DEPLOYED_SHA" = "$GITHUB_SHA" ]; then
+            DEPLOYMENT_MATCH=true
+          else
+            echo "::warning::Production SHA does not match the tested push."
+          fi
+
+          if [ "$TESTS_PASSED" = "true" ] && [ "$DEPLOYMENT_MATCH" = "true" ]; then
+            PASSED=true
+          else
+            PASSED=false
+          fi
+          echo "deployment_match=$DEPLOYMENT_MATCH" >> "$GITHUB_OUTPUT"
+          echo "passed=$PASSED" >> "$GITHUB_OUTPUT"
+
       - name: Record verification
         env:
           FORGE_API_KEY: ${{ secrets.FORGE_API_KEY }}
@@ -93,8 +135,8 @@ jobs:
             -d "{
               \"deployed_sha\": \"${{ steps.sha.outputs.sha }}\",
               \"fetched_content\": \"sha256:${{ steps.fetch.outputs.hash }}\",
-              \"test_counts\": \"${{ steps.tests.outputs.counts }}\",
-              \"passed\": ${{ steps.tests.outputs.passed }},
+              \"test_counts\": \"${{ steps.tests.outputs.counts }}; tested_sha=${{ github.sha }}; deployment_match=${{ steps.result.outputs.deployment_match }}\",
+              \"passed\": ${{ steps.result.outputs.passed }},
               \"source\": \"ci\"
             }")
           HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n1)
