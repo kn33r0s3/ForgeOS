@@ -127,36 +127,15 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
-## Current state (verified 2026-10-07 ~22:45 NPT — re-verify on takeover)
+## Current state (verified 2026-10-09)
 
-- **Worktree:** `origin/main` at `3ae4ec5` ("Fix: Join Hami and Login
-  reachable on mobile navigation"). Working tree has the founding-bets
-  change set only (see below), uncommitted.
-- **Architect verdict received (2026-10-07, via owner relay — ChatGPT web
-  relay was blocked all day by a Cloudflare challenge that rejected this
-  machine's egress IP; owner pasted the proposal from their own device):**
-  Unknown→Experiment→Evidence→Profit proposal reviewed AS A PROPOSAL.
-  Strategic direction APPROVED. E1–E5 APPROVED WITH STRUCTURAL CHANGES.
-  Code proposals as written DO NOT APPROVE YET (no `Experiment.unknown_id`,
-  no new template system, no UNKNOWN_MAP→DB migration, dashboard deferred).
-  Implemented accordingly: `seed_founding_bets()` in
-  `backend/app/services/operating_v4.py` seeds the 3 approved Bets (A:
-  Response/Presence/Sale Path; B: Payment Trust; C: Seller Behavior/Funnel)
-  through the existing `create_bet` seam — kill criteria, decision rules,
-  skeptic cases, and affordable loss (Rs 0 cash + bounded owner time) all
-  carried by the Bet's own fields. New owner-gated endpoint
-  `POST /opv4/bets/seed-founding`. E5 is the human collection layer (five
-  owner conversations), not a separate experiment. Registry contract now
-  defined in `docs/UNKNOWN_MAP.md` header: map = authoritative registry,
-  Claim rows = DB projection, experiments/evidence/outcomes = execution
-  records.
-- **Continuity note (architect-flagged, resolved honestly):** the proposal
-  said "88 unknowns" but public `main` banks D1–D83. D84–D88 exist only in
-  the unpushed local chain (discovery round 17, commits `6a553d3`,
-  `e16b0a6`). The founding Bets reference only D-numbers ≤ D83, so they
-  are valid against public `main`. Do not assume the public D-inventory is
-  the complete 88 until the local chain is reconciled and pushed.
-- **Repo:** `kn33r0s3/ForgeOS`; `main` == `origin/main` at `09749c3`
+- **HEAD:** `origin/main` at `0afb43f` ("Merge pull request #20 from kn33r0s3/recovery/step3b1-discovery-convergence").
+- **Health:** haminp.vercel.app/api/health → ok; forge-os-ebon.vercel.app/api/health → ok.
+- **Intake:** `intake_enabled: false` (Forge Bot closed).
+- **Recent merges:** PR #17 (Step 1 router auth), PR #18 (Step 2 scheduled observation), PR #20 (Step 3B-1 discovery convergence).
+- **Step 3B-1:** 5 PR #15 discovery sources recovered into discovery_engine.py as DiscoveryMethods; 6 new finding types; 10 tests; 1046 backend tests pass.
+- **source_kind WIP:** stashed (not in working tree); patch backed up to ~/Downloads/hami-audit/source_kind-wip.patch.
+- **BUILD_BOOK.md:** saved to docs/ (untracked, not yet committed).
   ("Complete standing authorization execution seam" — execution_engine
   .create_action() now routes authorization through
   action_engine.propose_action() with the experiment_id FK: one
