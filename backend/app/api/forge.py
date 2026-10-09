@@ -1217,6 +1217,7 @@ def list_learning(limit: int = 50, db: Session = Depends(get_db)):
 
 @router.post("/actions")
 def create_action(
+    request: Request,
     objective: str,
     action_type: str = "manual_note",
     decision_id: Optional[int] = None,
@@ -1224,6 +1225,7 @@ def create_action(
     parameters: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
+    require_owner_api_key(request)
     import json
     from app.services import action_engine
     if action_type == "forge_bot_response":

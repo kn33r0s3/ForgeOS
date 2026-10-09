@@ -274,6 +274,23 @@ def test_outcome_api_requires_owner_key_before_marking_action_verified(
     assert action.verification_state != "VERIFIED_SUCCESS"
 
 
+def test_generic_action_proposal_requires_owner_key(client_with_db, db, monkeypatch):
+    from app import security
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    existing_count = db.query(models.Action).count()
+    response = client_with_db.post(
+        "/forge/actions",
+        params={
+            "objective": "Insert an anonymous action proposal",
+            "action_type": "manual_note",
+        },
+    )
+
+    assert response.status_code == 503
+    assert db.query(models.Action).count() == existing_count
+
+
 def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     client_with_db, db, monkeypatch
 ):
