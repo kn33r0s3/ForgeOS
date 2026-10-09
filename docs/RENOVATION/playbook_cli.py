@@ -36,7 +36,15 @@ def load_steps():
 
 def last_done():
     if not PROG.exists():
-        return 0
+        # Fail closed: PROGRESS.md was archived to PROGRESS_V1.md during the
+        # v1→v2 playbook migration (commit df265a0). Do not silently return 0
+        # and replay from step 1. The operator must reconcile which playbook
+        # version applies and restore or create the progress record explicitly.
+        sys.exit(
+            f"FAIL-CLOSED: {PROG.name} not found. "
+            f"Archived v1 progress is at PROGRESS_V1.md. "
+            f"Reconcile the playbook version and restore progress before continuing."
+        )
     first = PROG.read_text(encoding="utf-8").splitlines()[:1]
     m = re.match(r"LAST DONE STEP:\s*(\d+)", first[0]) if first else None
     return int(m.group(1)) if m else 0

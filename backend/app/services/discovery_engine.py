@@ -42,9 +42,9 @@ How it works
   active); a row that merely *claims* ``active`` without an activation record
   is itself surfaced as a capability gap.
 
-The engine makes no network calls and is not wired into the scheduled forge
-cycle; it runs only when explicitly invoked (service call or the
-``/forge/substrate/discovery`` endpoints).
+The engine makes no network calls. It runs when explicitly invoked
+(service call, the ``/forge/substrate/discovery`` endpoints, or Stage 5
+of the ``/scheduled/intelligence`` cycle).
 """
 
 from __future__ import annotations
