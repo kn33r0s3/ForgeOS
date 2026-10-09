@@ -135,7 +135,7 @@ than a few days old, re-verify before trusting the details.
 - **Recent merges:** PR #17 (Step 1 router auth), PR #18 (Step 2 scheduled observation), PR #20 (Step 3B-1 discovery convergence).
 - **Step 3B-1:** 5 PR #15 discovery sources recovered into discovery_engine.py as DiscoveryMethods; 6 new finding types; 10 tests; 1046 backend tests pass.
 - **source_kind WIP:** stashed (not in working tree); patch backed up to ~/Downloads/hami-audit/source_kind-wip.patch.
-- **BUILD_BOOK.md:** saved to docs/ (untracked, not yet committed).
+- **BUILD_BOOK.md:** saved to docs/ and committed on this branch (lands via PR; branch protection intact).
   ("Complete standing authorization execution seam" — execution_engine
   .create_action() now routes authorization through
   action_engine.propose_action() with the experiment_id FK: one
