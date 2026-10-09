@@ -11,6 +11,7 @@ infrastructure for durable, truthful SMTP delivery.
 from datetime import date, datetime, timezone
 from typing import Optional
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app import models
@@ -20,6 +21,12 @@ from app.services import integration_outbox, integration_dispatcher
 OWNER_TEST_SUBJECT = "Forge Bot owner notification test"
 OWNER_TEST_BODY = "This is the fixed one-shot Forge Bot owner notification test."
 OWNER_TEST_IDEMPOTENCY_KEY = "forge-bot-owner-notification-test:v1"
+OWNER_NOTIFICATION_IDEMPOTENCY_PREFIXES = (
+    "forge-bot-daily-owner-summary:",
+    "forge-bot-lead-owner-notification:",
+    "forge-bot-owner-notification-test:",
+)
+MAX_OWNER_NOTIFICATION_RETRIES_PER_DIGEST = 3
 
 
 def send_owner_summary_notification(
@@ -94,6 +101,8 @@ def send_daily_owner_summary_notification(
     if not owner_email or "@" not in owner_email:
         return None
 
+    _retry_pending_owner_notifications(db, owner_email)
+
     day = summary_date_utc or datetime.now(timezone.utc).date()
     leads = (
         db.query(models.ForgeBotLeadContact)
@@ -112,6 +121,44 @@ def send_daily_owner_summary_notification(
         body=_format_daily_owner_summary_body(day, leads),
         idempotency_key=f"forge-bot-daily-owner-summary:{day.isoformat()}",
     )
+
+
+def _retry_pending_owner_notifications(db: Session, recipient: str) -> None:
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    notification_keys = or_(
+        *(
+            models.IntegrationDelivery.idempotency_key.startswith(prefix)
+            for prefix in OWNER_NOTIFICATION_IDEMPOTENCY_PREFIXES
+        )
+    )
+    recipient_marker = f'"to": "{recipient}"'
+    pending = (
+        db.query(models.IntegrationDelivery)
+        .filter(
+            models.IntegrationDelivery.integration_name == "smtp",
+            models.IntegrationDelivery.operation == "send_email",
+            models.IntegrationDelivery.status == "QUEUED",
+            notification_keys,
+            models.IntegrationDelivery.request_json.contains(
+                recipient_marker,
+                autoescape=True,
+            ),
+            (models.IntegrationDelivery.next_attempt_at.is_(None))
+            | (models.IntegrationDelivery.next_attempt_at <= now),
+        )
+        .order_by(
+            models.IntegrationDelivery.created_at.asc(),
+            models.IntegrationDelivery.id.asc(),
+        )
+        .limit(MAX_OWNER_NOTIFICATION_RETRIES_PER_DIGEST)
+        .all()
+    )
+    for delivery in pending:
+        integration_dispatcher.dispatch_single_delivery(
+            db,
+            delivery.id,
+            smtp_timeout_seconds=_owner_email_timeout_seconds(),
+        )
 
 
 def _queue_owner_email(

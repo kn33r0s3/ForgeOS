@@ -67,6 +67,21 @@ try {
       failures.push(`${route} -> ${err.message}`);
     }
   }
+
+  for (const route of ["/__hami_unknown_route__", "/__hami_unknown_route__/nested"]) {
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}${route}`, {
+        redirect: "manual",
+      });
+      if (res.status === 404) {
+        console.log(`ok ${route} -> 404`);
+      } else {
+        failures.push(`${route} -> ${res.status}`);
+      }
+    } catch (err) {
+      failures.push(`${route} -> ${err.message}`);
+    }
+  }
 } finally {
   server.kill();
 }

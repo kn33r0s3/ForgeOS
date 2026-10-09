@@ -344,7 +344,9 @@ function OwnerConsolePage() {
                   readiness.oldest_unsent_or_failed_owner_email_at
                     ? `Oldest pending/failed: ${displayTime(readiness.oldest_unsent_or_failed_owner_email_at)}`
                     : "No pending or failed owner email",
-                  emailQueueState === "green" ? "No action needed." : "Inspect and retry the oldest failed or unsent delivery.",
+                  emailQueueState === "green"
+                    ? "No action needed."
+                    : "Check SMTP settings; queued owner notices retry when the scheduled digest runs. Permanent failures need correction.",
                 )}
                 {signalFor(
                   readiness.last_test_email_result === "ACCEPTED_BY_SMTP" ? "green" : "amber",

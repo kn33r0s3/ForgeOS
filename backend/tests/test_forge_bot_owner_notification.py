@@ -1,5 +1,5 @@
 import json
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 
 from app import models
 from app.api import forge_bot_owner_notification
@@ -80,6 +80,97 @@ def test_daily_owner_summary_skips_without_smtp_credentials(db, monkeypatch):
 
     assert result is None
     assert db.query(models.IntegrationDelivery).count() == 0
+
+
+def test_daily_owner_summary_retries_only_due_owner_notifications(db, monkeypatch):
+    monkeypatch.setattr(settings, "SMTP_HOST", "smtp.example.test")
+    monkeypatch.setattr(settings, "SMTP_USER", "sender@example.test")
+    monkeypatch.setattr(settings, "SMTP_PASSWORD", "test-only-password")
+    monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_EMAIL", "owner@example.test")
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    retryable = models.IntegrationDelivery(
+        integration_name="smtp",
+        operation="send_email",
+        idempotency_key="forge-bot-lead-owner-notification:FB-TESTRETRY",
+        request_json=json.dumps({
+            "to": "owner@example.test",
+            "subject": "Existing owner notice",
+            "body": "Previously queued owner notification.",
+        }, sort_keys=True),
+        status="QUEUED",
+        attempts=1,
+        next_attempt_at=now - timedelta(minutes=1),
+    )
+    unrelated = models.IntegrationDelivery(
+        integration_name="smtp",
+        operation="send_email",
+        idempotency_key="approved-action:TEST-1",
+        request_json=json.dumps({
+            "to": "owner@example.test",
+            "subject": "Unrelated approved message",
+            "body": "Must not be sent by the owner notification retry.",
+        }, sort_keys=True),
+        status="QUEUED",
+        attempts=1,
+        next_attempt_at=now - timedelta(minutes=1),
+    )
+    different_recipient = models.IntegrationDelivery(
+        integration_name="smtp",
+        operation="send_email",
+        idempotency_key="forge-bot-lead-owner-notification:FB-TESTOTHERRECIPIENT",
+        request_json=json.dumps({
+            "to": "prospect@example.test",
+            "subject": "Different recipient",
+            "body": "Must not be sent as an owner notification.",
+        }, sort_keys=True),
+        status="QUEUED",
+        attempts=1,
+        next_attempt_at=now - timedelta(minutes=1),
+    )
+    not_due = models.IntegrationDelivery(
+        integration_name="smtp",
+        operation="send_email",
+        idempotency_key="forge-bot-daily-owner-summary:2026-10-08",
+        request_json=json.dumps({
+            "to": "owner@example.test",
+            "subject": "Not due yet",
+            "body": "Must wait for its retry time.",
+        }, sort_keys=True),
+        status="QUEUED",
+        attempts=1,
+        next_attempt_at=now + timedelta(hours=1),
+    )
+    db.add_all([retryable, unrelated, different_recipient, not_due])
+    db.commit()
+    dispatches = []
+
+    def accept_by_smtp(session, delivery_id, *, smtp_timeout_seconds=None):
+        delivery = session.get(models.IntegrationDelivery, delivery_id)
+        delivery.status = "ACCEPTED_BY_SMTP"
+        delivery.last_error = None
+        delivery.response_json = '{"status":"accepted"}'
+        session.commit()
+        dispatches.append((delivery_id, smtp_timeout_seconds))
+        return delivery
+
+    monkeypatch.setattr(
+        forge_bot_owner_notification.integration_dispatcher,
+        "dispatch_single_delivery",
+        accept_by_smtp,
+    )
+
+    forge_bot_owner_notification.send_daily_owner_summary_notification(
+        db, date(2026, 10, 9)
+    )
+
+    assert retryable.status == "ACCEPTED_BY_SMTP"
+    assert unrelated.status == "QUEUED"
+    assert different_recipient.status == "QUEUED"
+    assert not_due.status == "QUEUED"
+    assert (retryable.id, 5) in dispatches
+    assert all(delivery_id != unrelated.id for delivery_id, _ in dispatches)
+    assert all(delivery_id != different_recipient.id for delivery_id, _ in dispatches)
+    assert all(delivery_id != not_due.id for delivery_id, _ in dispatches)
 
 
 def test_real_lead_owner_notification_skips_without_smtp_credentials(db, monkeypatch):

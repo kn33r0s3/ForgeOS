@@ -127,9 +127,9 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
-## Current state (verified 2026-10-09)
+## Last verified state snapshot (2026-10-09)
 
-- **HEAD:** `origin/main` at `096e3d0` ("Fix CI: add workflow_call trigger to secrets.yml").
+- **HEAD at this snapshot:** `origin/main` at `096e3d0` ("Fix CI: add workflow_call trigger to secrets.yml"). `origin/main` has advanced since this snapshot; inspect Git before relying on the SHA below.
 - **Health:** haminp.vercel.app/api/health → ok; forge-os-ebon.vercel.app/api/health → ok.
 - **Intake:** `intake_enabled: false` (Forge Bot closed).
 - **Step 3B-1:** 5 PR #15 discovery sources recovered into discovery_engine.py as DiscoveryMethods; 6 new finding types; 10 tests.
