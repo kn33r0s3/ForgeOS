@@ -22,11 +22,10 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 from app.services import belief_engine, causal_engine
 
 
-def utcnow():
-    return datetime.now(timezone.utc)
 
 
 def record_learning_from_experiment(

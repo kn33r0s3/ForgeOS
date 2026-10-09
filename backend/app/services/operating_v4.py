@@ -91,6 +91,27 @@ def live_bets(db: Session) -> list:
     return [b for b in bets if _bet_attributes(b).get("status") == "live"]
 
 
+def overdue_bets(db: Session) -> list:
+    """Live Bets past their deadline. Deadlines don't auto-kill — they
+    surface for the amplify/dampen/kill decision the operating model
+    requires. A Bet without a deadline is never overdue."""
+    now = utcnow()
+    result = []
+    for bet in live_bets(db):
+        deadline_str = _bet_attributes(bet).get("deadline")
+        if not deadline_str:
+            continue
+        try:
+            deadline = datetime.fromisoformat(deadline_str.replace("Z", "+00:00"))
+            if deadline.tzinfo is None:
+                deadline = deadline.replace(tzinfo=timezone.utc)
+            if deadline < now:
+                result.append(bet)
+        except (ValueError, TypeError):
+            continue
+    return result
+
+
 def create_bet(
     db: Session,
     claim: str,
@@ -1803,6 +1824,7 @@ def scoreboard(db: Session) -> dict:
         "bets_killed": by_status.get("killed", 0),
         "bets_amplified": by_status.get("amplified", 0),
         "bets_by_status": by_status,
+        "overdue_bets": len(overdue_bets(db)),
         "highest_proof_level": highest[0] if highest else 0,
         "verified_rupees": 0.0,  # real money moves update this; never estimated
         "sampling_gaps": gaps,

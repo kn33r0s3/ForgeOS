@@ -11,6 +11,7 @@ from typing import Iterable
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 from app.services import economic_intelligence, opportunity_engine
 from app.services.pattern_engine import tokenize
 
@@ -30,8 +31,6 @@ SCORE_WEIGHTS = {
 }
 
 
-def utcnow():
-    return datetime.now(timezone.utc)
 
 
 def _tokens(signal: models.Signal) -> set[str]:

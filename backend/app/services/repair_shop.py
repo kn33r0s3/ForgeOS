@@ -17,6 +17,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 from app.services import execution_engine
 
 
@@ -28,8 +29,6 @@ WORK_ITEM_STATES = {
 }
 
 
-def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 def _scope(value: str) -> str:

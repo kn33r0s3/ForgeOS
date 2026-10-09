@@ -7,11 +7,10 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 from app.services import learning_engine
 
 
-def utcnow():
-    return datetime.now(timezone.utc)
 
 
 def record_experiment_outcome(

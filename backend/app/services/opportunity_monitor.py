@@ -9,11 +9,10 @@ import json
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 from app.services import multi_judge
 
 
-def utcnow():
-    return datetime.now(timezone.utc)
 
 
 def _as_utc(value):

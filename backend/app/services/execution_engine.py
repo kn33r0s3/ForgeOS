@@ -63,6 +63,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 from app.services import action_engine, money_engine, autonomy_engine
 from typing import Optional
 
@@ -101,8 +102,6 @@ ACTION_TYPE_EXECUTION_MODE = {
 MIN_COST_TIME_DIVISOR = 1.0  # floor so a $0/same-day action doesn't divide by zero or blow up the score
 
 
-def utcnow():
-    return datetime.now(timezone.utc)
 
 
 # Order-like action types that must never be executable by ForgeOS,

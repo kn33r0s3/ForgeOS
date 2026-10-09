@@ -489,7 +489,7 @@ enforcement layer when claims overlap.
 ## [DONE WITH LIMITATION] Command 2: open-world discovery engine
 
 - Agent: Grok (executor), owner-authorized direct commits to `origin/main`, 2026-09-30 NPT.
-- Scope: build a replaceable discovery capability inside the substrate so Hami can surface things it did not know to look for, without a fixed research workflow or a domain taxonomy. No new table, primitive, service or ledger. See `docs/FEATURE_INVENTORY.md` § Open-world discovery engine.
+- Scope: build a replaceable discovery capability inside the substrate so Hami can surface things it did not know to look for, without a fixed research workflow or a domain taxonomy. No new table, primitive, service or ledger. See `docs/archive/legacy-docs/FEATURE_INVENTORY.md` § Open-world discovery engine.
 - Implementation:
   - `backend/app/services/discovery_engine.py` adds a `DiscoveryMethodRegistry` of versioned plugins and eight built-in methods: `evidence_contradiction`, `question_reframe`, `numeric_divergence`, `disconnection`, `isolation`, `recurrence`, `capability_integrity` and `refuted_basis_stop`.
   - Findings persist only as ENTITY + EVIDENCE + RELATION + EVENT. Entities are validated by `type_registry.schema_json`. Evidence stays `possible`/`hypothesized` with basis provenance. Relations are `derived_from` (hypothesized), or `may_relate`/`reframes`/`stops` (possible). Events are `discovery_run_completed` and `discovery_deferred`.

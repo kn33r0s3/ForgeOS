@@ -92,6 +92,7 @@ from sqlalchemy.orm import Session
 
 from typing import Optional
 from app import models
+from app.models import utcnow
 
 # Composite score weights — sum to 1.0. Willingness-to-pay and revenue
 # confidence are weighted highest: for a MONEY engine specifically,
@@ -160,8 +161,6 @@ EVIDENCE_UNCERTAINTY_REDUCTION = 15.0
 DEFAULT_DIFFICULTY = 50.0  # neutral assumption when difficulty hasn't been estimated yet
 
 
-def utcnow():
-    return datetime.now(timezone.utc)
 
 
 def _evidence_strength(comma_ids: Optional[str]) -> float:

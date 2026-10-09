@@ -53,13 +53,12 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app import models
+from app.models import utcnow
 from app.services import reality_memory, memory_layer
 from typing import Optional
 import re
 
 
-def utcnow():
-    return datetime.now(timezone.utc)
 
 
 def _signal_id_sort_key(value: str) -> tuple[int, object]:

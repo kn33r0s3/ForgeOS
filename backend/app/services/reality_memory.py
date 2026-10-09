@@ -27,6 +27,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 from app import models
+from app.models import utcnow
 
 CONFIDENCE_DROP_FOR_FAILURE = 10.0  # belief must fall at least this much to count as a failed prediction
 PREDICTION_CONFIDENCE_THRESHOLD = 60.0  # only confident beliefs get predictions generated
@@ -34,8 +35,6 @@ RELIABILITY_ADJUST_ON_SUCCESS = 2.0
 RELIABILITY_ADJUST_ON_FAILURE = -3.0  # failures cost more than successes earn — protects against overconfidence
 
 
-def utcnow():
-    return datetime.now(timezone.utc)
 
 
 # --- Evidence -------------------------------------------------------------
