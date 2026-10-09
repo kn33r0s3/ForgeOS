@@ -291,6 +291,39 @@ def test_generic_action_proposal_requires_owner_key(client_with_db, db, monkeypa
     assert db.query(models.Action).count() == existing_count
 
 
+def test_revenue_source_link_requires_owner_key(client_with_db, db, monkeypatch):
+    from app import security
+
+    opportunity = models.Opportunity(problem="Test-only opportunity awaiting owner grounding.")
+    source = models.RevenueSource(
+        name="Test-only documented channel",
+        source_type="other",
+        payout_structure="Unknown until owner verifies the terms.",
+    )
+    db.add_all([opportunity, source])
+    db.commit()
+    db.refresh(opportunity)
+    db.refresh(source)
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    response = client_with_db.post(
+        f"/forge/money/opportunities/{opportunity.id}/revenue-source",
+        json={"revenue_source_id": source.id},
+    )
+
+    assert response.status_code == 503
+    db.refresh(opportunity)
+    assert opportunity.revenue_source_id is None
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
+    authorized = client_with_db.post(
+        f"/forge/money/opportunities/{opportunity.id}/revenue-source",
+        json={"revenue_source_id": source.id},
+    )
+    assert authorized.status_code == 200, authorized.text
+    assert authorized.json()["revenue_source_id"] == source.id
+
+
 def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     client_with_db, db, monkeypatch
 ):

@@ -709,13 +709,17 @@ def get_suggested_revenue_sources(opportunity_id: int, request: Request, db: Ses
 
 @router.post("/money/opportunities/{opportunity_id}/revenue-source", response_model=schemas.OpportunityOut)
 def set_opportunity_revenue_source(
-    opportunity_id: int, payload: schemas.LinkRevenueSourceRequest, db: Session = Depends(get_db)
+    request: Request,
+    opportunity_id: int,
+    payload: schemas.LinkRevenueSourceRequest,
+    db: Session = Depends(get_db),
 ):
     """
     Explicitly ground an opportunity in a real, known revenue source.
     This is the only way an opportunity ever gets linked to one —
     never automatic, even when a suggestion is obvious.
     """
+    require_owner_api_key(request)
     opportunity = money_engine.link_revenue_source(db, opportunity_id, payload.revenue_source_id)
     if not opportunity:
         raise HTTPException(status_code=404, detail="Opportunity or revenue source not found")
