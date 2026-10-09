@@ -129,6 +129,21 @@ than a few days old, re-verify before trusting the details.
 
 ## Current state (verified 2026-10-07 ~22:45 NPT — re-verify on takeover)
 
+- **2026-10-08 ~17:10 NPT — unknown-unknown discovery loop built on Selection v0.**
+  `origin/main` at `af61bca` + 1 docs commit ("How Hami grows" in AGENTS.md).
+  Selection v0 extended, not redesigned: candidates now carry a lane
+  (`known_unknown` | `unknown_unknown_discovery`) on the existing Bet
+  projection; new `backend/app/services/discovery_selection.py` generates
+  grounded discovery probes from 5 sources (map gaps, evidence
+  contradictions, outcome anomalies, capability gaps, horizon escape) and
+  converts findings into known-unknown candidates via existing
+  EVIDENCE/EVENT seams. New owner-only `GET /opv4/discovery/candidates`;
+  owner selection view shows KNOWN UNKNOWN vs DISCOVERY badges. 24 new
+  tests; full backend 939 passed/2 skipped; frontend 398 passed; typecheck
+  and build green; lint has 1 pre-existing error (untouched file).
+  Production `/api/health` 200 on both domains (an earlier same-day outage
+  from a bad `APIRouter(description=...)` kwarg was fixed in `af61bca`).
+  PostgreSQL validation unavailable (no server in this environment).
 - **Worktree:** `origin/main` at `3ae4ec5` ("Fix: Join Hami and Login
   reachable on mobile navigation"). Working tree has the founding-bets
   change set only (see below), uncommitted.
