@@ -58,7 +58,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app import schemas, models
+from app import evidence_source, schemas, models
 from app.config import settings
 from app.security import require_owner_api_key
 from app.services import (
@@ -1303,6 +1303,16 @@ def list_actions(limit: int = 50, db: Session = Depends(get_db)):
     ]
 
 
+def _outcome_truth_label(outcome: models.Outcome) -> str:
+    if outcome.data_scope == "SANDBOX":
+        return "SANDBOX/TEST ACTUAL"
+    if outcome.source_kind != evidence_source.REAL:
+        return f"{outcome.source_kind}/{outcome.verification_state} - NOT REAL EVIDENCE"
+    if outcome.verification_state != "VERIFIED":
+        return "REAL/REPORTED - NOT VERIFIED"
+    return "REAL/VERIFIED ACTUAL"
+
+
 @router.post("/outcomes")
 def create_outcome(
     outcome_type: str,
@@ -1343,7 +1353,8 @@ def create_outcome(
         "success": o.success,
         "verification_state": o.verification_state,
         "data_scope": o.data_scope,
-        "label": "SANDBOX/TEST ACTUAL" if o.data_scope == "SANDBOX" else "REAL ACTUAL",
+        "source_kind": o.source_kind,
+        "label": _outcome_truth_label(o),
     }
 
 
@@ -1361,7 +1372,9 @@ def list_outcomes(limit: int = 50, db: Session = Depends(get_db)):
             "success": o.success,
             "action_id": o.action_id,
             "data_scope": o.data_scope,
-            "label": "SANDBOX/TEST ACTUAL" if o.data_scope == "SANDBOX" else "REAL ACTUAL",
+            "source_kind": o.source_kind,
+            "verification_state": o.verification_state,
+            "label": _outcome_truth_label(o),
         }
         for o in rows
     ]

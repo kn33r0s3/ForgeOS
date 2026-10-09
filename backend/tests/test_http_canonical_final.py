@@ -203,6 +203,45 @@ def test_product_cash_commit_failure_has_no_orphan_learning(httpdb,monkeypatch):
     assert db.query(models.Outcome).count()==1
 
 
+def test_real_scope_outcome_response_does_not_claim_mock_report_as_real(httpdb):
+    client, db, _ = httpdb
+    response = client.post(
+        "/forge/outcomes",
+        params={
+            "outcome_type": "QUALITATIVE",
+            "qualitative_result": "An owner report without independent verification.",
+            "data_scope": "REAL",
+        },
+    )
+    assert response.status_code == 200, response.text
+    created = response.json()
+    assert created["data_scope"] == "REAL"
+    assert created["source_kind"] == "MOCK"
+    assert created["verification_state"] == "REPORTED"
+    assert created["label"] == "MOCK/REPORTED - NOT REAL EVIDENCE"
+
+    verified = models.Outcome(
+        outcome_type="ACTUAL_REVENUE",
+        actual_value=25.0,
+        unit="USD",
+        source="verified fixture",
+        verification_state="VERIFIED",
+        data_scope="REAL",
+        source_kind="REAL",
+    )
+    db.add(verified)
+    db.commit()
+
+    listed = client.get("/forge/outcomes")
+    assert listed.status_code == 200, listed.text
+    rows = {item["id"]: item for item in listed.json()}
+    outcome = rows[created["id"]]
+    assert outcome["source_kind"] == "MOCK"
+    assert outcome["verification_state"] == "REPORTED"
+    assert outcome["label"] == "MOCK/REPORTED - NOT REAL EVIDENCE"
+    assert rows[verified.id]["label"] == "REAL/VERIFIED ACTUAL"
+
+
 def test_duplicate_contacts_and_customer_rejection_do_not_validate(httpdb):
     c,db,_=httpdb
     oid,_=source_to_experiment(c,db);ready(c,oid)
