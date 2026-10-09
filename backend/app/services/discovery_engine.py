@@ -1248,6 +1248,86 @@ def _horizon_escape(ctx: DiscoveryContext) -> Iterable[Finding]:
         )
 
 
+def _ignorance_map(ctx: DiscoveryContext) -> Iterable[Finding]:
+    """Explicit map of what Hami cannot investigate: capability-blocked domains.
+
+    Scans capability gaps and unanswered questions to identify domains where
+    Hami lacks the means to investigate. For each, records whether existing
+    collectors could help or if the domain is blocked by a missing capability.
+
+    This makes Hami's ignorance visible and actionable — a prerequisite for
+    autonomous expansion. It does not fake discovery; it names the blocker.
+    """
+    from app import models as _models
+
+    db = ctx.db
+
+    # Find capability gaps (things Hami needs but cannot do)
+    gaps = (
+        db.query(_models.ForgeCapability)
+        .filter(_models.ForgeCapability.status.in_(["proposed"]))
+        .limit(20)
+        .all()
+    )
+    for gap in gaps:
+        gap_name = gap.name or f"capability_{gap.id}"
+        yield Finding(
+            kind="blind_spot",
+            key=f"ignorance-gap:{gap.id}",
+            statement=(
+                f"Hami lacks capability '{gap_name}'. "
+                f"Domains requiring this capability cannot be investigated. "
+                f"Blocker: {gap.description or 'no description'}"
+            ),
+            basis=(BasisRef("entity", gap.id),),
+            epistemic_state="possible",
+            subject_entity_ids=(gap.id,),
+            facets={"source": "ignorance_map", "gap_type": "capability",
+                    "capability_name": gap_name,
+                    "provenance": "model-proposed", "confirmed": False},
+            next_step=(
+                f"Determine if existing collectors can substitute for '{gap_name}', "
+                "or record the specific infrastructure needed."
+            ),
+            follow_up_questions=(
+                f"What investigations are blocked by missing capability '{gap_name}'?",
+            ),
+        )
+
+    # Find questions with no research tasks (uninvestigated)
+    uninvestigated = (
+        db.query(_models.ResearchQuestion)
+        .outerjoin(_models.ResearchTask,
+                   _models.ResearchTask.question_id == _models.ResearchQuestion.id)
+        .filter(_models.ResearchTask.id.is_(None))
+        .filter(_models.ResearchQuestion.status.in_(["open", "proposed"]))
+        .limit(10)
+        .all()
+    )
+    for q in uninvestigated:
+        q_text = (q.question or "")[:120]
+        yield Finding(
+            kind="new_unknown",
+            key=f"ignorance-uninvestigated:{q.id}",
+            statement=(
+                f"Question '{q_text}...' has no research tasks. "
+                "Hami has identified the unknown but not yet investigated it."
+            ),
+            basis=(BasisRef("entity", q.id),),
+            epistemic_state="possible",
+            subject_entity_ids=(q.id,),
+            facets={"source": "ignorance_map", "gap_type": "uninvestigated",
+                    "provenance": "model-proposed", "confirmed": False},
+            next_step=(
+                "Create a bounded research task using an existing cleared collector, "
+                "or record why no collector can address this question."
+            ),
+            follow_up_questions=(
+                f"What is the cheapest useful observation for '{q_text}...'?",
+            ),
+        )
+
+
 def _curiosity_questions(ctx: DiscoveryContext) -> Iterable[Finding]:
     """Step 3B-2: Recover curiosity_engine's question-generation into the discovery path.
 
@@ -1472,6 +1552,9 @@ DEFAULT_REGISTRY = DiscoveryMethodRegistry([
     DiscoveryMethod("horizon_escape", "1",
                     "Parked domains outside the watch horizon where unknowns likely live.",
                     _horizon_escape, emits=("blind_spot",), requires=("substrate.entities",)),
+    DiscoveryMethod("ignorance_map", "1",
+                    "Capability-blocked domains and uninvestigated questions: explicit map of what Hami cannot currently investigate.",
+                    _ignorance_map, emits=("blind_spot", "new_unknown"), requires=("substrate.entities",)),
     # Step 3B-2: recover curiosity_engine's question-generation into the discovery path.
     DiscoveryMethod("curiosity_questions", "1",
                     "Research questions generated from weak spots in the knowledge base (low-confidence beliefs, unexplored patterns, contradictions, unstable beliefs, untested beliefs, contradictory causal knowledge, uncertain strategies, unvalidated/ungrounded opportunities).",
