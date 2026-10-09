@@ -166,6 +166,81 @@ def test_autonomy_policy_widening_requires_owner_key(client_with_db, db, monkeyp
     assert authorized.json()["max_daily_actions"] == 5
 
 
+def test_generic_action_approval_and_execution_require_owner_key(client_with_db, db, monkeypatch):
+    from app import security
+    from app.services import action_engine
+
+    approval_required = action_engine.propose_action(
+        db,
+        objective="Send a test email only after owner approval",
+        action_type="email",
+        parameters={"to": "nobody@example.invalid"},
+    )
+    assert approval_required.status == "APPROVAL_REQUIRED"
+
+    manual_action = action_engine.propose_action(
+        db,
+        objective="Record that an operator must perform a manual step",
+        action_type="manual_note",
+    )
+    assert manual_action.status == "PROPOSED"
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    headerless = TestClient(app, raise_server_exceptions=True)
+    try:
+        unavailable_approval = headerless.post(
+            f"/forge/actions/{approval_required.id}/approve"
+        )
+        unavailable_execution = headerless.post(
+            f"/forge/actions/{manual_action.id}/execute"
+        )
+    finally:
+        headerless.close()
+
+    assert unavailable_approval.status_code == 503
+    assert unavailable_execution.status_code == 503
+    db.refresh(approval_required)
+    db.refresh(manual_action)
+    assert approval_required.status == "APPROVAL_REQUIRED"
+    assert approval_required.approved_at is None
+    assert manual_action.status == "PROPOSED"
+    assert manual_action.started_at is None
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
+    headerless = TestClient(app, raise_server_exceptions=True)
+    try:
+        unauthorized_approval = headerless.post(
+            f"/forge/actions/{approval_required.id}/approve"
+        )
+        unauthorized_execution = headerless.post(
+            f"/forge/actions/{manual_action.id}/execute"
+        )
+    finally:
+        headerless.close()
+
+    assert unauthorized_approval.status_code == 401
+    assert unauthorized_execution.status_code == 401
+    db.refresh(approval_required)
+    db.refresh(manual_action)
+    assert approval_required.status == "APPROVAL_REQUIRED"
+    assert approval_required.approved_at is None
+    assert manual_action.status == "PROPOSED"
+    assert manual_action.started_at is None
+
+    authorized_approval = client_with_db.post(
+        f"/forge/actions/{approval_required.id}/approve"
+    )
+    authorized_execution = client_with_db.post(
+        f"/forge/actions/{manual_action.id}/execute"
+    )
+    assert authorized_approval.status_code == 200, authorized_approval.text
+    assert authorized_execution.status_code == 200, authorized_execution.text
+    db.refresh(approval_required)
+    db.refresh(manual_action)
+    assert approval_required.status == "APPROVED"
+    assert manual_action.status == "SUCCEEDED"
+
+
 def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     client_with_db, db, monkeypatch
 ):

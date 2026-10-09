@@ -1263,7 +1263,9 @@ def approve_action(action_id: int, request: Request, db: Session = Depends(get_d
     if action and action.action_type == "forge_bot_response":
         from app.api.forge_bot import _require_owner_key
 
-        _require_owner_key(request)
+        _require_owner_key(request, db)
+    else:
+        require_owner_api_key(request)
     from app.services import action_engine
     a = action_engine.approve_action(db, action_id)
     if not a:
@@ -1277,7 +1279,9 @@ def execute_action(action_id: int, request: Request, db: Session = Depends(get_d
     if action and action.action_type == "forge_bot_response":
         from app.api.forge_bot import _require_owner_key
 
-        _require_owner_key(request)
+        _require_owner_key(request, db)
+    else:
+        require_owner_api_key(request)
     from app.services import action_engine
     a = action_engine.start_and_execute_action(db, action_id)
     if not a:
