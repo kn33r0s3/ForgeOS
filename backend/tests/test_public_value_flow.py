@@ -361,6 +361,61 @@ def test_execution_action_creation_requires_owner_key(client_with_db, db, monkey
     assert db.query(models.Experiment).count() == existing_count + 1
 
 
+def test_legacy_research_mutations_require_owner_key(client_with_db, monkeypatch):
+    from app import security
+    from app.services import collector_runner, forge_loop
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    monkeypatch.setattr(
+        security.settings, "FORGEOS_LEGACY_INTELLIGENCE_ENABLED", True
+    )
+    monkeypatch.setattr(
+        forge_loop,
+        "run_cycle",
+        lambda db, data_scope="REAL": schemas.ForgeCycleSummary(
+            signals_processed=0,
+            patterns_found=0,
+            beliefs_updated=0,
+            predictions_created=0,
+            predictions_resolved=0,
+            questions_created=0,
+            research_tasks_created=0,
+            opportunities_classified=0,
+            opportunities_needing_validation=0,
+        ),
+    )
+    monkeypatch.setattr(collector_runner, "run_pending_tasks", lambda db, limit=5: [])
+    monkeypatch.setattr(collector_runner, "run_default_collection", lambda db: [])
+
+    requests = (
+        ("/forge/cycle", None),
+        ("/forge/tasks/999/retry", None),
+        ("/forge/beliefs/999/check", None),
+        (
+            "/forge/beliefs/999/experiments",
+            {"hypothesis": "TEST hypothesis", "method": "TEST observation"},
+        ),
+        (
+            "/forge/experiments/999/result",
+            {"result": "TEST result", "confidence_change": 0},
+        ),
+        ("/forge/tasks/999/run", None),
+        ("/forge/tasks/run-pending", None),
+        ("/forge/collect", None),
+    )
+    for path, payload in requests:
+        response = (
+            client_with_db.post(path, json=payload)
+            if payload is not None
+            else client_with_db.post(path)
+        )
+        assert response.status_code == 503, f"{path}: {response.status_code} {response.text}"
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
+    authorized_cycle = client_with_db.post("/forge/cycle")
+    assert authorized_cycle.status_code == 200, authorized_cycle.text
+
+
 def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     client_with_db, db, monkeypatch
 ):

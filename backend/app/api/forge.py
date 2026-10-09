@@ -91,10 +91,15 @@ def _require_legacy_intelligence() -> None:
 
 
 @router.post("/cycle", response_model=schemas.ForgeCycleSummary)
-def run_cycle(data_scope: str = "REAL", db: Session = Depends(get_db)):
+def run_cycle(
+    request: Request,
+    data_scope: str = "REAL",
+    db: Session = Depends(get_db),
+):
     """Run one full Forge intelligence cycle: refresh patterns, form/
     update beliefs, reality-check existing beliefs, and generate new
     research questions + tasks from any weak spots found."""
+    require_owner_api_key(request)
     _require_legacy_intelligence()
     from app.services import forge_loop
 
@@ -136,7 +141,12 @@ def get_task_history(task_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/tasks/{task_id}/retry", response_model=schemas.ResearchTaskOut)
-def retry_research_task(task_id: int, db: Session = Depends(get_db)):
+def retry_research_task(
+    request: Request,
+    task_id: int,
+    db: Session = Depends(get_db),
+):
+    require_owner_api_key(request)
     from app.services import research_task_engine
 
     task = db.query(models.ResearchTask).filter(models.ResearchTask.id == task_id).first()
@@ -198,9 +208,14 @@ def get_unknowns(db: Session = Depends(get_db)):
 
 
 @router.post("/beliefs/{belief_id}/check", response_model=schemas.BeliefCheckResponse)
-def check_belief(belief_id: int, db: Session = Depends(get_db)):
+def check_belief(
+    request: Request,
+    belief_id: int,
+    db: Session = Depends(get_db),
+):
     """Re-score one belief against the current signal pool right now,
     without waiting for the next full cycle."""
+    require_owner_api_key(request)
     belief = db.query(models.Belief).filter(models.Belief.id == belief_id).first()
     if not belief:
         raise HTTPException(status_code=404, detail="Belief not found")
@@ -209,10 +224,14 @@ def check_belief(belief_id: int, db: Session = Depends(get_db)):
 
 @router.post("/beliefs/{belief_id}/experiments", response_model=schemas.BeliefExperimentOut)
 def create_belief_experiment(
-    belief_id: int, payload: schemas.BeliefExperimentCreate, db: Session = Depends(get_db)
+    request: Request,
+    belief_id: int,
+    payload: schemas.BeliefExperimentCreate,
+    db: Session = Depends(get_db),
 ):
     """Plan a real-world test of a belief (e.g. build an MVP and
     measure the result)."""
+    require_owner_api_key(request)
     belief = db.query(models.Belief).filter(models.Belief.id == belief_id).first()
     if not belief:
         raise HTTPException(status_code=404, detail="Belief not found")
@@ -223,10 +242,14 @@ def create_belief_experiment(
 
 @router.post("/experiments/{experiment_id}/result", response_model=schemas.BeliefExperimentOut)
 def record_experiment_result(
-    experiment_id: int, payload: schemas.BeliefExperimentResult, db: Session = Depends(get_db)
+    request: Request,
+    experiment_id: int,
+    payload: schemas.BeliefExperimentResult,
+    db: Session = Depends(get_db),
 ):
     """Record what actually happened and push the resulting confidence
     change into the linked belief."""
+    require_owner_api_key(request)
     try:
         experiment = experiment_runner.ExperimentRunner(db).record_result(
             experiment_id, payload.result, payload.confidence_change
@@ -283,12 +306,17 @@ def mine_knowledge(request: Request, payload: schemas.KnowledgeMineRequest, db: 
 
 
 @router.post("/tasks/{task_id}/run", response_model=schemas.TaskRunResult)
-def run_task(task_id: int, db: Session = Depends(get_db)):
+def run_task(
+    request: Request,
+    task_id: int,
+    db: Session = Depends(get_db),
+):
     """Execute one planned research task through its matching collector
     right now (rather than waiting for the Background Forge Worker).
     An uncleared source fails the task and does not collect. A cleared
     web task may open that page. Network errors mark the task failed
     rather than raising."""
+    require_owner_api_key(request)
     _require_legacy_intelligence()
     from app.services import collector_runner
 
@@ -299,8 +327,13 @@ def run_task(task_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/tasks/run-pending", response_model=list[schemas.TaskRunResult])
-def run_pending_tasks(limit: int = 5, db: Session = Depends(get_db)):
+def run_pending_tasks(
+    request: Request,
+    limit: int = 5,
+    db: Session = Depends(get_db),
+):
     """Execute a batch of currently-planned research tasks right now."""
+    require_owner_api_key(request)
     _require_legacy_intelligence()
     from app.services import collector_runner
 
@@ -308,10 +341,11 @@ def run_pending_tasks(limit: int = 5, db: Session = Depends(get_db)):
 
 
 @router.post("/collect", response_model=list[schemas.DefaultCollectionResult])
-def collect_default(db: Session = Depends(get_db)):
+def collect_default(request: Request, db: Session = Depends(get_db)):
     """Record that the standing Reddit, GitHub, RSS, and arXiv feeds
     are skipped. None is cleared in docs/PUBLIC_SOURCES.md, so this
     route does not open those requests."""
+    require_owner_api_key(request)
     _require_legacy_intelligence()
     from app.services import collector_runner
 
