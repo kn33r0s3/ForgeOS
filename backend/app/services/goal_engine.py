@@ -31,7 +31,6 @@ With no goals defined, every function here returns 0.0 and nothing
 downstream changes behavior — goals are strictly additive.
 """
 
-from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 

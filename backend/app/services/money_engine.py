@@ -86,7 +86,6 @@ data_as_of and source_citation — a number presented as current when
 it's actually stale would itself be a kind of fabrication.
 """
 
-from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 

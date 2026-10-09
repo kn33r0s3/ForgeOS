@@ -40,7 +40,6 @@ available for the legacy manual-note path only.
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy.orm import Session

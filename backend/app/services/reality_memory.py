@@ -21,7 +21,6 @@ turn out to be wrong become less trusted — without any of that logic
 needing to live in the collectors themselves.
 """
 
-from datetime import datetime, timezone
 
 from typing import Optional
 

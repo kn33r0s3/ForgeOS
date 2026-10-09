@@ -29,7 +29,6 @@ Two ways this gets used:
      full boost).
 """
 
-from datetime import datetime, timezone, timedelta
 
 from sqlalchemy.orm import Session
 

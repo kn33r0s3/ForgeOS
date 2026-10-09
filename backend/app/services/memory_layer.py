@@ -22,7 +22,6 @@ knowledge base, and keeps the $0/no-new-dependency principle intact
 (no vector database, no numpy/faiss).
 """
 
-from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 

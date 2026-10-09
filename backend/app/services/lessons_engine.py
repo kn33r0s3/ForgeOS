@@ -19,7 +19,6 @@ are the merged record of those real events, never invented claims.
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy.orm import Session

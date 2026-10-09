@@ -48,7 +48,6 @@ with an LLM call later (via ai_engine.py) without changing the public
 functions here.
 """
 
-from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 

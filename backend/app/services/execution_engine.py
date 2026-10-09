@@ -58,7 +58,6 @@ Opportunity (money_engine.score_opportunity()'s breakdown) rather than
 inventing new ones.
 """
 
-from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 

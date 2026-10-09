@@ -10,7 +10,6 @@ A Decision answers: "Why this action, and not the alternatives?"
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy.orm import Session

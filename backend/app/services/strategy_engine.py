@@ -44,7 +44,6 @@ scoring math, kept in one place (here) and reused by world_model.py's
 goal graph rather than reimplemented there too.
 """
 
-from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 

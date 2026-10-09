@@ -31,7 +31,6 @@ changing its public function signature (`run_pattern_detection`).
 
 import re
 from collections import defaultdict
-from datetime import datetime, timezone
 from itertools import combinations
 
 from sqlalchemy.orm import Session

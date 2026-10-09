@@ -31,7 +31,6 @@ by exact text, the same dedup convention pattern_engine.py and
 belief_engine.py already use.
 """
 
-from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
