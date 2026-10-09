@@ -1240,6 +1240,190 @@ def _horizon_escape(ctx: DiscoveryContext) -> Iterable[Finding]:
             ),
         )
 
+
+def _curiosity_questions(ctx: DiscoveryContext) -> Iterable[Finding]:
+    """Step 3B-2: Recover curiosity_engine's question-generation into the discovery path.
+
+    Uses CuriosityEngine's 8 weak-spot probes (read-only) to generate research
+    questions, emitting each as a Finding of kind="question". Questions are
+    MODEL-PROPOSED / UNCONFIRMED until supported by evidence (epistemic_state=
+    "hypothesized", facets.confirmed=False).
+
+    Does NOT call run_curiosity_scan() (which stores ResearchQuestions); this
+    is a pure read-only probe yielding Findings. The legacy
+    FORGEOS_LEGACY_INTELLIGENCE_ENABLED flag is not needed because this method
+    creates no side effects — it only observes and proposes.
+    """
+    from app.services import curiosity_engine as _ce
+
+    db = ctx.db
+    ce = _ce.CuriosityEngine(db)
+
+    # 1. Low-confidence beliefs -> questions about confirming/disproving evidence
+    try:
+        for belief in ce.find_low_confidence_beliefs():
+            for q in ce.generate_questions_for_belief(belief):
+                yield Finding(
+                    kind="question",
+                    key=f"curiosity-low-confidence-belief:{belief.id}:{_hash(q)[:8]}",
+                    statement=q,
+                    basis=(BasisRef("entity", belief.id),),
+                    epistemic_state="hypothesized",
+                    facets={"source": "curiosity_questions", "probe": "low_confidence_belief",
+                            "belief_id": belief.id, "provenance": "model-proposed",
+                            "confirmed": False},
+                    next_step="Gather evidence that would confirm or disprove the belief.",
+                )
+    except Exception:
+        # Source failure is not "no discovery" — skip this probe, continue others.
+        pass
+
+    # 2. Unexplored patterns -> questions about the pattern topic
+    try:
+        for pattern in ce.find_unexplored_patterns():
+            for q in ce.generate_questions_for_pattern(pattern):
+                yield Finding(
+                    kind="question",
+                    key=f"curiosity-unexplored-pattern:{pattern.id}:{_hash(q)[:8]}",
+                    statement=q,
+                    basis=(BasisRef("entity", pattern.id),),
+                    epistemic_state="hypothesized",
+                    facets={"source": "curiosity_questions", "probe": "unexplored_pattern",
+                            "pattern_id": pattern.id, "provenance": "model-proposed",
+                            "confirmed": False},
+                    next_step="Investigate the pattern to form or refute a belief.",
+                )
+    except Exception:
+        pass
+
+    # 3. Contradicting patterns -> questions about why signals disagree
+    try:
+        for a, b in ce.find_contradictions():
+            for q in ce.generate_questions_for_contradiction(a, b):
+                yield Finding(
+                    kind="question",
+                    key=f"curiosity-contradiction:{a.id}-{b.id}:{_hash(q)[:8]}",
+                    statement=q,
+                    basis=(BasisRef("entity", a.id), BasisRef("entity", b.id)),
+                    epistemic_state="hypothesized",
+                    facets={"source": "curiosity_questions", "probe": "contradiction",
+                            "pattern_a_id": a.id, "pattern_b_id": b.id,
+                            "provenance": "model-proposed", "confirmed": False},
+                    next_step="Resolve why the two signals disagree.",
+                )
+    except Exception:
+        pass
+
+    # 4. Unstable beliefs -> questions about why confidence keeps changing
+    try:
+        for belief in ce.find_unstable_beliefs():
+            for q in ce.generate_questions_for_instability(belief):
+                yield Finding(
+                    kind="question",
+                    key=f"curiosity-unstable-belief:{belief.id}:{_hash(q)[:8]}",
+                    statement=q,
+                    basis=(BasisRef("entity", belief.id),),
+                    epistemic_state="hypothesized",
+                    facets={"source": "curiosity_questions", "probe": "unstable_belief",
+                            "belief_id": belief.id, "provenance": "model-proposed",
+                            "confirmed": False},
+                    next_step="Find what would settle the belief's truth.",
+                )
+    except Exception:
+        pass
+
+    # 5. Untested important beliefs -> questions about validating actions
+    try:
+        for belief in ce.find_untested_important_beliefs():
+            for q in ce.generate_questions_for_untested_belief(belief):
+                yield Finding(
+                    kind="question",
+                    key=f"curiosity-untested-belief:{belief.id}:{_hash(q)[:8]}",
+                    statement=q,
+                    basis=(BasisRef("entity", belief.id),),
+                    epistemic_state="hypothesized",
+                    facets={"source": "curiosity_questions", "probe": "untested_belief",
+                            "belief_id": belief.id, "provenance": "model-proposed",
+                            "confirmed": False},
+                    next_step="Design a test that would validate or disprove the belief.",
+                )
+    except Exception:
+        pass
+
+    # 6. Contradictory causal knowledge -> questions about inconsistent results
+    try:
+        for causal in ce.find_contradictory_causal_knowledge():
+            for q in ce.generate_questions_for_contradictory_causal(causal):
+                basis = (BasisRef("entity", causal.belief_id),) if causal.belief_id else ()
+                yield Finding(
+                    kind="question",
+                    key=f"curiosity-contradictory-causal:{causal.id}:{_hash(q)[:8]}",
+                    statement=q,
+                    basis=basis,
+                    epistemic_state="hypothesized",
+                    facets={"source": "curiosity_questions", "probe": "contradictory_causal",
+                            "causal_id": causal.id, "provenance": "model-proposed",
+                            "confirmed": False},
+                    next_step="Investigate why the action produces inconsistent results.",
+                )
+    except Exception:
+        pass
+
+    # 7. Low-confidence strategies -> questions about needed evidence
+    try:
+        for strategy in ce.find_low_confidence_strategies():
+            for q in ce.generate_questions_for_uncertain_strategy(strategy):
+                yield Finding(
+                    kind="question",
+                    key=f"curiosity-uncertain-strategy:{strategy.id}:{_hash(q)[:8]}",
+                    statement=q,
+                    basis=(BasisRef("entity", strategy.id),),
+                    epistemic_state="hypothesized",
+                    facets={"source": "curiosity_questions", "probe": "low_confidence_strategy",
+                            "strategy_id": strategy.id, "provenance": "model-proposed",
+                            "confirmed": False},
+                    next_step="Gather evidence to increase strategy confidence.",
+                )
+    except Exception:
+        pass
+
+    # 8. Unvalidated opportunities -> questions about revenue experiments
+    try:
+        for opportunity, _score in ce.find_unvalidated_opportunities():
+            for q in ce.generate_questions_for_unvalidated_opportunity(opportunity):
+                yield Finding(
+                    kind="question",
+                    key=f"curiosity-unvalidated-opportunity:{opportunity.id}:{_hash(q)[:8]}",
+                    statement=q,
+                    basis=(BasisRef("entity", opportunity.id),),
+                    epistemic_state="hypothesized",
+                    facets={"source": "curiosity_questions", "probe": "unvalidated_opportunity",
+                            "opportunity_id": opportunity.id, "provenance": "model-proposed",
+                            "confirmed": False},
+                    next_step="Run a revenue experiment to validate willingness to pay.",
+                )
+    except Exception:
+        pass
+
+    # 9. Ungrounded opportunities -> questions about real payout mechanisms
+    try:
+        for opportunity in ce.find_ungrounded_opportunities():
+            for q in ce.generate_questions_for_ungrounded_opportunity(opportunity):
+                yield Finding(
+                    kind="question",
+                    key=f"curiosity-ungrounded-opportunity:{opportunity.id}:{_hash(q)[:8]}",
+                    statement=q,
+                    basis=(BasisRef("entity", opportunity.id),),
+                    epistemic_state="hypothesized",
+                    facets={"source": "curiosity_questions", "probe": "ungrounded_opportunity",
+                            "opportunity_id": opportunity.id, "provenance": "model-proposed",
+                            "confirmed": False},
+                    next_step="Identify a real platform or program that would pay.",
+                )
+    except Exception:
+        pass
+
+
 DEFAULT_REGISTRY = DiscoveryMethodRegistry([
     DiscoveryMethod("evidence_contradiction", "1",
                     "Subjects whose recorded evidence both supports and refutes them, including held assumptions.",
@@ -1281,4 +1465,8 @@ DEFAULT_REGISTRY = DiscoveryMethodRegistry([
     DiscoveryMethod("horizon_escape", "1",
                     "Parked domains outside the watch horizon where unknowns likely live.",
                     _horizon_escape, emits=("blind_spot",), requires=("substrate.entities",)),
+    # Step 3B-2: recover curiosity_engine's question-generation into the discovery path.
+    DiscoveryMethod("curiosity_questions", "1",
+                    "Research questions generated from weak spots in the knowledge base (low-confidence beliefs, unexplored patterns, contradictions, unstable beliefs, untested beliefs, contradictory causal knowledge, uncertain strategies, unvalidated/ungrounded opportunities).",
+                    _curiosity_questions, emits=("question",), requires=("substrate.entities",)),
 ])

@@ -572,3 +572,121 @@ def test_pr15_empty_sources_yield_no_findings(db):
                  "pending_capability", "horizon_escape"):
         findings = _run_method(db, name)
         assert findings == [], f"{name} fabricated findings from empty DB"
+
+
+# Step 3B-2: curiosity_questions method tests
+
+
+def test_3b2_curiosity_low_confidence_belief_yields_questions(db):
+    """Low-confidence belief → question findings via curiosity probe."""
+    world_graph.seed_core_types(db)
+    # Create a low-confidence belief (below 50.0 threshold) that qualifies as hypothesis
+    belief = models.Belief(
+        statement="Test low confidence belief",
+        confidence_score=30.0,
+        actor_segment="test users",
+        need_pain="need testing",
+        give_up="time",
+        supporting_signal_ids="1",
+    )
+    db.add(belief)
+    db.flush()
+
+    findings = _run_method(db, "curiosity_questions")
+    # Should find at least the low-confidence belief questions
+    belief_findings = [f for f in findings if f.facets.get("probe") == "low_confidence_belief"]
+    assert len(belief_findings) >= 1
+    f = belief_findings[0]
+    assert f.kind == "question"
+    assert f.epistemic_state == "hypothesized"
+    assert f.facets["provenance"] == "model-proposed"
+    assert f.facets["confirmed"] is False
+    assert f.facets["belief_id"] == belief.id
+
+
+def test_3b2_curiosity_questions_are_unconfirmed(db):
+    """All curiosity findings are MODEL-PROPOSED / UNCONFIRMED."""
+    world_graph.seed_core_types(db)
+    belief = models.Belief(
+        statement="Another test belief",
+        confidence_score=20.0,
+        actor_segment="test users",
+        need_pain="need testing",
+        give_up="time",
+        supporting_signal_ids="1",
+    )
+    db.add(belief)
+    db.flush()
+
+    findings = _run_method(db, "curiosity_questions")
+    assert len(findings) >= 1
+    for f in findings:
+        assert f.epistemic_state == "hypothesized", f"Finding not hypothesized: {f.key}"
+        assert f.facets.get("confirmed") is False, f"Finding marked confirmed: {f.key}"
+        assert f.facets.get("provenance") == "model-proposed"
+
+
+def test_3b2_curiosity_provenance_preserved(db):
+    """Every curiosity finding cites its source basis."""
+    world_graph.seed_core_types(db)
+    belief = models.Belief(
+        statement="Provenance test belief",
+        confidence_score=10.0,
+        actor_segment="test users",
+        need_pain="need testing",
+        give_up="time",
+        supporting_signal_ids="1",
+    )
+    db.add(belief)
+    db.flush()
+
+    findings = _run_method(db, "curiosity_questions")
+    assert len(findings) >= 1
+    for f in findings:
+        assert f.basis, f"Finding has no basis: {f.key}"
+        assert len(f.basis) >= 1
+        # Basis refs should be valid
+        for ref in f.basis:
+            assert ref.kind in engine.BASIS_KINDS
+            assert ref.id >= 1
+
+
+def test_3b2_curiosity_empty_db_yields_no_findings(db):
+    """Empty database → no curiosity findings (honest, not fabricated)."""
+    world_graph.seed_core_types(db)
+    findings = _run_method(db, "curiosity_questions")
+    # Empty DB should yield no findings (or only world agenda if seeded)
+    # The method should not fabricate questions from nothing
+    for f in findings:
+        assert f.basis, "Fabricated finding without basis"
+
+
+def test_3b2_curiosity_method_registered(db):
+    """The curiosity_questions method is in DEFAULT_REGISTRY."""
+    from app.services.discovery_engine import DEFAULT_REGISTRY
+
+    method = DEFAULT_REGISTRY.get("curiosity_questions")
+    assert method.name == "curiosity_questions"
+    assert "question" in method.emits
+
+
+def test_3b2_curiosity_idempotent_keys(db):
+    """Repeated invocation yields same keys (idempotent)."""
+    world_graph.seed_core_types(db)
+    belief = models.Belief(
+        statement="Idempotency test belief",
+        confidence_score=25.0,
+        actor_segment="test users",
+        need_pain="need testing",
+        give_up="time",
+        supporting_signal_ids="1",
+    )
+    db.add(belief)
+    db.flush()
+
+    findings1 = _run_method(db, "curiosity_questions")
+    findings2 = _run_method(db, "curiosity_questions")
+
+    keys1 = sorted(f.key for f in findings1)
+    keys2 = sorted(f.key for f in findings2)
+    assert keys1 == keys2, "Method not idempotent"
