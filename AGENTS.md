@@ -28,8 +28,14 @@ recover the valuable behavior and integrate it into the existing Hami
 lineage rather than selecting or creating another version.
 
 Never delete history, reset to a convenient version, force-push,
-delete recovery branches, or discard reachable historical work during
-recovery.
+or discard reachable historical work.
+
+**Single-branch rule (owner directive 2026-10-09):** Exactly one active
+branch: `main`. No new branches, worktrees, PRs, or MRs. Obsolete
+branch references may be deleted only after their unique work has been
+inspected and accounted for (integrated into main or documented as
+superseded/duplicate). The remote branch is the archive; deletion from
+the active list is not deletion of history.
 
 The repository itself is the memory of Hami.
 
