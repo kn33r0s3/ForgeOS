@@ -194,8 +194,8 @@ def test_scheduled_intelligence_requires_bearer_secret(monkeypatch):
     assert response.status_code == 401
 
 
-def test_scheduled_intelligence_runs_three_engines(monkeypatch):
-    """A+B: state → work → execution. The endpoint runs all three engines
+def test_scheduled_intelligence_runs_five_stages(monkeypatch):
+    """A+B: state → work → execution → discovery. The endpoint runs all engines
     for real (they are safe: no network, no spending, no contact).
     Engines report ok or error per-engine; the endpoint always answers."""
     monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
@@ -210,9 +210,60 @@ def test_scheduled_intelligence_runs_three_engines(monkeypatch):
     body = response.json()
     assert body["status"] == "completed"
     intel = body["intelligence"]
-    # All three engines reported (ok or isolated error).
+    # All five stages reported (ok or isolated error).
     assert intel["forge_cycle"]["status"] in ("ok", "error")
+    assert intel["collection_cycle"]["status"] in ("ok", "error")
     assert intel["resumed_tasks"]["status"] in ("ok", "error")
+    assert intel["autonomy_cycle"]["status"] in ("ok", "error")
+    assert intel["discovery_cycle"]["status"] in ("ok", "error")
+
+
+def test_scheduled_intelligence_discovery_returns_operational_summary(monkeypatch):
+    """Discovery stage returns only counts, never raw internal details."""
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    client = TestClient(app)
+
+    response = client.get(
+        "/scheduled/intelligence",
+        headers={"Authorization": "Bearer test-cron-secret"},
+    )
+
+    assert response.status_code == 200
+    intel = response.json()["intelligence"]
+    disc = intel["discovery_cycle"]
+    assert disc["status"] in ("ok", "error")
+    if disc["status"] == "ok":
+        # Operational summary only: counts, not raw findings or private records
+        for key in ("methods_run", "surfaced", "existing", "rejected",
+                    "deferred", "errors", "capability_gaps"):
+            assert key in disc
+            assert isinstance(disc[key], int)
+        # Must not leak raw findings, statements, or private data
+        assert "surfaced" not in disc or isinstance(disc["surfaced"], int)
+        assert "findings" not in disc
+        assert "statements" not in disc
+
+
+def test_scheduled_intelligence_discovery_failure_isolated(monkeypatch):
+    """A discovery-stage failure does not prevent other stages from running."""
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    # Force discovery to fail
+    import app.services.discovery_engine as de
+    def _fail(*args, **kwargs):
+        raise RuntimeError("simulated discovery failure")
+    monkeypatch.setattr(de, "run_discovery", _fail)
+    client = TestClient(app)
+
+    response = client.get(
+        "/scheduled/intelligence",
+        headers={"Authorization": "Bearer test-cron-secret"},
+    )
+
+    assert response.status_code == 200
+    intel = response.json()["intelligence"]
+    # Discovery reported error, but other stages still ran
+    assert intel["discovery_cycle"]["status"] == "error"
+    assert intel["forge_cycle"]["status"] in ("ok", "error")
     assert intel["autonomy_cycle"]["status"] in ("ok", "error")
 def test_scheduled_intelligence_does_not_check_legacy_flag(monkeypatch):
     """The intelligence endpoint must not reference the legacy flag."""

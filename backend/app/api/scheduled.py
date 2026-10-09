@@ -253,4 +253,38 @@ def run_scheduled_intelligence(authorization: str | None = Header(default=None))
         logger.warning("scheduled intelligence: autonomy_cycle failed (%s)", type(exc).__name__)
         intelligence["autonomy_cycle"] = {"status": "error", "error": type(exc).__name__}
 
+    # Stage 5: discovery — run the generalized discovery engine over the substrate.
+    # Uses app.services.discovery_engine.run_discovery with the DEFAULT_REGISTRY
+    # (14 methods including curiosity_questions). Each method runs with per-method
+    # failure isolation; findings are validated and persisted via the existing
+    # discovery lifecycle (idempotent by fingerprint). Findings are emitted with
+    # honest epistemic states (hypothesized/possible) — never as validated.
+    # Bounded: max_findings_per_method=10 constrains work performed, not just
+    # results persisted. Separate DB session; commit only on success, rollback
+    # on failure. Returns only an operational summary (counts), never raw
+    # internal details or private records.
+    try:
+        with database.SessionLocal() as db:
+            from app.services import discovery_engine
+
+            try:
+                report = discovery_engine.run_discovery(db, max_findings_per_method=10)
+                db.commit()
+                intelligence["discovery_cycle"] = {
+                    "status": "ok",
+                    "methods_run": len(report.get("methods", [])),
+                    "surfaced": len(report.get("surfaced", [])),
+                    "existing": len(report.get("existing", [])),
+                    "rejected": len(report.get("rejected", [])),
+                    "deferred": len(report.get("deferred", [])),
+                    "errors": len(report.get("errors", [])),
+                    "capability_gaps": len(report.get("capability_gaps", [])),
+                }
+            except Exception:
+                db.rollback()
+                raise
+    except Exception as exc:
+        logger.warning("scheduled intelligence: discovery_cycle failed (%s)", type(exc).__name__)
+        intelligence["discovery_cycle"] = {"status": "error", "error": type(exc).__name__}
+
     return {"status": "completed", "intelligence": intelligence}

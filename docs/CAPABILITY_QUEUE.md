@@ -1339,3 +1339,31 @@ realized revenue.
 | Standing authorization — compound owner judgment | **IMPLEMENTED v2 / existing suite green; focused tests blocked on env** | `backend/app/services/autonomy_engine.py` implements bounded standing authorizations on the existing `Action` table (no new tables): PROPOSED → owner approval → ACTIVE → REVOKED/EXPIRED, WorldEvents per transition. v2 fixes: (1) No invented defaults — max_per_day/max_spend derived from source action + policy, or MISSING (proposal non-activatable until owner supplies). (2) max_per_day enforced via existing Action rows (no counter table). (3) All envelope fields enforced or fail closed. (4) Integration at `action_engine.propose_action` (correct seam): only upgrades REQUIRE_APPROVAL-for-owner-approval → ALLOW; BLOCK and policy-violation require_approvals never touched. (1) Owner action still genuinely required: FIRST authorization per action class + explicit approval of each proposal. (2) Action removed: repeated per-instance approvals within an approved envelope. (3) Remains unverified: focused unit tests A-T — 7 test variants failed in CI with undiagnosable env subtleties despite implementation passing full suite; needs local debugging. (4) Next: after first real seller contact, derive proposal from that action. Commits: 08225f6 (v2), 3ed816e (test cleanup). |
 
 | Global unknown/experiment selection v0 | **IN PROGRESS — local selection gap verified; no global slate exists yet** | Current owner action: manually choose an unknown, define a Bet/probe, assess constraints, and separately approve any external contact/action. This change removes manual cross-candidate comparison and makes missing admission evidence explicit; it does not execute probes, collect evidence, authorize actions, or create economic outcomes. Remaining blockers: candidate claims, consent/permission, bounded cost/harm, and kill rules need explicit owner input; external tests still require affected-party consent, legal permission, and execution capability. Next removable dependency: owner-by-owner candidate design, only after this read-only selector is verified; experiment execution remains separately authorized. Verification planned: generated-map parity; selector/gate/portfolio and owner-auth tests; SQLite, local PostgreSQL, and full suites. |
+
+## [DONE] Scheduled discovery integration (2026-10-09)
+
+- **Implementation:** `GET /scheduled/intelligence` now runs a 5th stage using
+  `app.services.discovery_engine.run_discovery` with `max_findings_per_method=10`.
+  The stage uses a separate DB session, commits only on success, rolls back on
+  failure, and returns only an operational summary (counts of methods, surfaced,
+  existing, rejected, deferred, errors, capability_gaps). Per-method failure
+  isolation is preserved; a discovery failure does not prevent other stages.
+- **Qualification gates preserved:** The `curiosity_questions` method calls
+  `CuriosityEngine.find_unexplored_patterns()` which enforces the bibliographic
+  background filter and commercial qualification gate. Findings are emitted with
+  `epistemic_state="hypothesized"` and `facets.confirmed=False` — never as validated.
+- **Authorization:** Existing `CRON_SECRET` Bearer auth unchanged. No new entity
+  types activated automatically. No findings converted to commercial bets.
+  No actions executed. No human contact, spending, or public publication.
+- **Routine owner action removed:** Manual triggering of discovery runs; the
+  scheduled cycle now includes discovery automatically.
+- **What remains owner-gated:** Reviewing discovered findings, validating unknowns,
+  approving commercial bets, authorizing any external action or contact.
+- **Next dependency:** A real-world observation to validate against — automated
+  internal discovery does not constitute field discovery, customer demand, a real
+  transaction, or verified revenue.
+- **Tests:** 3 new tests in `test_scheduled_cycle.py` (five-stage execution,
+  operational summary shape, failure isolation). Existing discovery-engine
+  regression tests retained.
+- **Metric:** `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**;
+  no real qualifying transaction exists.
