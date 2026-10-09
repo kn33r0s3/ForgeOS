@@ -80,6 +80,7 @@ class ProofIn(BaseModel):
     level: int
     source_type: Optional[str] = None
     verifier: Optional[str] = None
+    source_kind: Optional[Literal["REAL"]] = None
 
 
 class VerificationIn(BaseModel):
@@ -356,12 +357,17 @@ def verify_capability_real_world(
 def set_proof(evidence_id: int, payload: ProofIn, request: Request, db: Session = Depends(get_db)):
     _owner(request)
     try:
-        ev = operating_v4.set_proof_level(
-            db, evidence_id, payload.level, payload.source_type, payload.verifier
-        )
+        if payload.source_kind == "REAL":
+            ev = operating_v4.set_real_proof_level(
+                db, evidence_id, payload.level, payload.source_type, payload.verifier
+            )
+        else:
+            ev = operating_v4.set_proof_level(
+                db, evidence_id, payload.level, payload.source_type, payload.verifier
+            )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
-    return {"id": ev.id, "proof_level": ev.proof_level}
+    return {"id": ev.id, "proof_level": ev.proof_level, "source_kind": ev.source_kind}
 
 
 @router.get("/scoreboard")

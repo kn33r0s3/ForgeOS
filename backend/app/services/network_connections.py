@@ -14,7 +14,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app import models
+from app import evidence_source, models
 from app.api.public import _match_for_need
 from app.services import evidence_graph
 from app.services.network_endpoints import (
@@ -188,6 +188,70 @@ def evidence_for_connection(db: Session, connection_id: int) -> list[models.Evid
         .order_by(models.Evidence.id.asc())
         .all()
     )
+
+
+def is_independent_payment_evidence(evidence: models.Evidence) -> bool:
+    return (
+        evidence.source_kind == evidence_source.REAL
+        and (evidence.source_type or "").strip().lower() == "third_party"
+        and evidence.proof_level >= 5
+        and bool((evidence.verifier or "").strip())
+        and bool(
+            (evidence.canonical_url or "").strip()
+            or (evidence.external_id or "").strip()
+        )
+        and bool((evidence.canonical_url or "").strip() or (evidence.external_id or "").strip())
+    )
+
+
+def attach_payment_evidence(
+    db: Session,
+    connection: models.NetworkConnection,
+    outcome: models.Outcome,
+    evidence_id: int,
+) -> models.Evidence:
+    """Link externally anchored evidence to this connection and its payment."""
+    evidence = db.get(models.Evidence, evidence_id)
+    if evidence is None:
+        raise ValueError("evidence_id must identify stored evidence")
+    if not is_independent_payment_evidence(evidence):
+        raise ValueError(
+            "payment evidence must be REAL, third-party, L5+, externally anchored, "
+            "and include an external URL or provider reference"
+        )
+    edge, created = evidence_graph.link_evidence(
+        db,
+        evidence,
+        relation_type="supports",
+        outcome_id=outcome.id,
+        network_connection=connection,
+    )
+    if not created and edge.network_connection_id is None:
+        edge.network_connection_id = connection.id
+        db.commit()
+    elif not created and edge.network_connection_id != connection.id:
+        raise ValueError("payment evidence is already linked to another connection")
+    return evidence
+
+
+def has_independent_payment_evidence(
+    db: Session,
+    connection_id: int,
+    outcome_id: int,
+) -> bool:
+    evidence_rows = (
+        db.query(models.Evidence)
+        .join(
+            models.EvidenceRelationship,
+            models.EvidenceRelationship.evidence_id == models.Evidence.id,
+        )
+        .filter(
+            models.EvidenceRelationship.network_connection_id == connection_id,
+            models.EvidenceRelationship.outcome_id == outcome_id,
+        )
+        .all()
+    )
+    return any(is_independent_payment_evidence(row) for row in evidence_rows)
 
 
 def record_response(db: Session, connection: models.NetworkConnection, note: str) -> models.Outcome:

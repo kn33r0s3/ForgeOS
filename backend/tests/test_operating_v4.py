@@ -70,6 +70,38 @@ def test_l5_requires_verifier(db):
     assert db.get(models.Evidence, ev.id).proof_level == 5
 
 
+def test_real_evidence_requires_third_party_l5_and_external_anchor(db):
+    ev = _evidence(db)
+    with pytest.raises(ValueError, match="third-party proof at L5"):
+        operating_v4.set_real_proof_level(
+            db, ev.id, 4, source_type="third_party",
+            verifier="provider receipt",
+        )
+    with pytest.raises(ValueError, match="third-party proof at L5"):
+        operating_v4.set_real_proof_level(
+            db, ev.id, 5, source_type="firsthand",
+            verifier="provider receipt",
+        )
+    with pytest.raises(ValueError, match="third-party proof at L5"):
+        operating_v4.set_real_proof_level(
+            db, ev.id, 5, source_type="third_party",
+            verifier=" ",
+        )
+    with pytest.raises(ValueError, match="external URL or provider reference"):
+        operating_v4.set_real_proof_level(
+            db, ev.id, 5, source_type="third_party",
+            verifier="provider transaction reference",
+        )
+    assert ev.source_kind == "MOCK"
+    ev.external_id = "provider-payment-reference-123"
+    operating_v4.set_real_proof_level(
+        db, ev.id, 5, source_type="third_party",
+        verifier="provider transaction reference",
+    )
+    assert ev.source_kind == "REAL"
+    assert ev.proof_level == 5
+
+
 def test_l0_l4_unchanged(db):
     # Firsthand evidence can still sit at L0-L4 without a verifier.
     for level in (0, 2, 3, 4):

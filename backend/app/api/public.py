@@ -528,6 +528,8 @@ def _public_connection_fulfillment(db: Session, row: models.NetworkConnection) -
 
 
 def _payment_rows(db: Session, connections: list[models.NetworkConnection]) -> dict[str, list[schemas.RecordedPaymentOut]]:
+    from app.services import network_connections
+
     buckets = {"REPORTED": [], "VERIFIED": [], "DISPUTED": [], "SETTLED": []}
     for connection in connections:
         outcome = (
@@ -537,13 +539,22 @@ def _payment_rows(db: Session, connections: list[models.NetworkConnection]) -> d
         )
         if outcome is None or outcome.actual_value is None:
             continue
+        verification = outcome.verification_state
+        if verification == "VERIFIED" and not (
+            outcome.data_scope == "REAL"
+            and outcome.source_kind == evidence_source.REAL
+            and network_connections.has_independent_payment_evidence(
+                db, connection.id, outcome.id
+            )
+        ):
+            verification = "REPORTED"
         item = schemas.RecordedPaymentOut(
             connection_id=connection.id,
             amount=outcome.actual_value,
             unit=outcome.unit or "NPR",
-            verification=outcome.verification_state,
+            verification=verification,
         )
-        buckets.get(outcome.verification_state, buckets["REPORTED"]).append(item)
+        buckets.get(verification, buckets["REPORTED"]).append(item)
     return buckets
 
 

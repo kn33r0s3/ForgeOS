@@ -102,6 +102,14 @@ L5 and above require external anchoring.
 
 A counterparty confirmation or third-party timestamp may establish provenance, timing, or occurrence, but it does not automatically establish a costly signal. The underlying evidence must still satisfy the proof-level definition.
 
+For network payments, an owner confirmation alone does not verify a transfer.
+The payment must link the specific outcome and connection to evidence explicitly
+classified REAL, sourced as `third_party`, and recorded at L5 or above with its
+external verifier reference plus a stored external URL or provider reference.
+Public trust fails closed for older VERIFIED rows that lack that evidence. Once
+linked to a verified payment, the proof record cannot be changed through the
+proof-level API.
+
 Agents may propose interpretations.
 
 Agents cannot promote evidence by assertion.

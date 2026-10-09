@@ -32,6 +32,29 @@ def _test_request():
     )
 
 
+def _verified_payment_evidence(client, db, content="Provider-issued transaction receipt"):
+    evidence = models.Evidence(
+        source="provider transaction record",
+        content=content,
+        external_id="provider-payment-reference-123",
+    )
+    db.add(evidence)
+    db.commit()
+    db.refresh(evidence)
+    proof = client.post(
+        f"/opv4/evidence/{evidence.id}/proof",
+        json={
+            "level": 5,
+            "source_type": "third_party",
+            "verifier": "provider-generated transaction reference",
+            "source_kind": "REAL",
+        },
+    )
+    assert proof.status_code == 200, proof.text
+    assert proof.json()["source_kind"] == "REAL"
+    return evidence
+
+
 @pytest.fixture
 def client_with_db(db, monkeypatch):
     from app import security
@@ -1031,10 +1054,67 @@ def test_paid_connection_records_an_amount_and_stays_unconfirmed_until_verified(
     assert isinstance(match["seconds_to_recorded_payment"], int)
     assert match["seconds_to_recorded_payment"] >= 0
     confirmed = client_with_db.post(f"/forge/connections/{row.id}/confirm-payment")
+    assert confirmed.status_code == 409
+    db.refresh(outcome)
+    assert outcome.verification_state == "REPORTED"
+    assert outcome.source_kind == "MOCK"
+
+    mock_evidence = models.Evidence(
+        source="provider transaction record",
+        content="Provider-issued transaction receipt",
+        source_type="third_party",
+        proof_level=5,
+        verifier="provider-generated transaction reference",
+    )
+    db.add(mock_evidence)
+    db.commit()
+    rejected = client_with_db.post(
+        f"/forge/connections/{row.id}/confirm-payment",
+        params={"evidence_id": mock_evidence.id},
+    )
+    assert rejected.status_code == 409
+
+    unanchored_evidence = models.Evidence(
+        source="provider transaction record",
+        content="Provider-issued transaction receipt",
+        source_type="third_party",
+        proof_level=5,
+        verifier="provider-generated transaction reference",
+        source_kind="REAL",
+    )
+    db.add(unanchored_evidence)
+    db.commit()
+    unanchored = client_with_db.post(
+        f"/forge/connections/{row.id}/confirm-payment",
+        params={"evidence_id": unanchored_evidence.id},
+    )
+    assert unanchored.status_code == 409
+
+    evidence = _verified_payment_evidence(client_with_db, db)
+    confirmed = client_with_db.post(
+        f"/forge/connections/{row.id}/confirm-payment",
+        params={"evidence_id": evidence.id},
+    )
     assert confirmed.status_code == 200, confirmed.text
     assert confirmed.json()["payment"] == "verified"
+    assert confirmed.json()["evidence_id"] == evidence.id
     db.refresh(outcome)
     assert outcome.verification_state == "VERIFIED"
+    assert outcome.source_kind == "REAL"
+    edge = db.query(models.EvidenceRelationship).filter_by(
+        evidence_id=evidence.id,
+        outcome_id=outcome.id,
+        network_connection_id=row.id,
+    ).one()
+    assert edge.relation_type == "supports"
+
+    changed = client_with_db.post(
+        f"/opv4/evidence/{evidence.id}/proof",
+        json={"level": 4, "source_type": "third_party"},
+    )
+    assert changed.status_code == 422
+    db.refresh(evidence)
+    assert evidence.proof_level == 5
 
 
 def test_public_trust_lists_recorded_payments_without_a_score(client_with_db, db):
@@ -1081,7 +1161,24 @@ def test_public_trust_lists_recorded_payments_without_a_score(client_with_db, db
     reported = client_with_db.get(f"/public/trust/provider/{provider.id}").json()
     assert reported["reported_payments"][0]["amount"] == 900
     assert reported["verified_payments"] == []
-    client_with_db.post(f"/forge/connections/{connection.id}/confirm-payment")
+
+    outcome = db.query(models.Outcome).filter(
+        models.Outcome.notes == f"idempotency:network-connection:{connection.id}:paid"
+    ).one()
+    outcome.verification_state = "VERIFIED"
+    db.commit()
+    legacy_verified = client_with_db.get(f"/public/trust/provider/{provider.id}").json()
+    assert legacy_verified["verified_payments"] == []
+    assert legacy_verified["reported_payments"][0]["verification"] == "REPORTED"
+    outcome.verification_state = "REPORTED"
+    db.commit()
+
+    evidence = _verified_payment_evidence(client_with_db, db, "Provider receipt for 900 NPR")
+    confirmed = client_with_db.post(
+        f"/forge/connections/{connection.id}/confirm-payment",
+        params={"evidence_id": evidence.id},
+    )
+    assert confirmed.status_code == 200, confirmed.text
     verified = client_with_db.get(f"/public/trust/provider/{provider.id}").json()
     assert verified["verified_payments"][0]["verification"] == "VERIFIED"
     assert verified["reported_payments"] == []
@@ -1157,7 +1254,6 @@ def test_disputed_payment_settles_only_when_an_amount_is_stated(client_with_db, 
     db.add(connection)
     db.commit()
     client_with_db.post(f"/forge/connections/{connection.id}/advance", params={"next_state": "paid", "amount_npr": 900})
-    client_with_db.post(f"/forge/connections/{connection.id}/confirm-payment")
     disputed = client_with_db.post(
         f"/forge/connections/{connection.id}/dispute-payment",
         params={"note": "The work was incomplete"},

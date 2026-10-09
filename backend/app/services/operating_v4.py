@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 from sqlalchemy.orm import Session
 
-from app import models
+from app import evidence_source, models
 from app.models import utcnow
 
 BET_ENTITY_TYPE = "bet"
@@ -1617,19 +1617,69 @@ def set_proof_level(
     source_type: Optional[str] = None,
     verifier: Optional[str] = None,
 ) -> models.Evidence:
+    return _set_proof_level(db, evidence_id, level, source_type, verifier, mark_real=False)
+
+
+def set_real_proof_level(
+    db: Session,
+    evidence_id: int,
+    level: int,
+    source_type: Optional[str] = None,
+    verifier: Optional[str] = None,
+) -> models.Evidence:
+    return _set_proof_level(db, evidence_id, level, source_type, verifier, mark_real=True)
+
+
+def _set_proof_level(
+    db: Session,
+    evidence_id: int,
+    level: int,
+    source_type: Optional[str],
+    verifier: Optional[str],
+    *,
+    mark_real: bool,
+) -> models.Evidence:
     if level not in PROOF_LEVELS:
         raise ValueError(f"proof_level must be 0-7, got {level}")
     ev = db.get(models.Evidence, evidence_id)
     if not ev:
         raise ValueError("Evidence not found.")
-    st = source_type or ev.source_type
+    attached_to_verified_outcome = (
+        db.query(models.EvidenceRelationship.id)
+        .join(models.Outcome, models.Outcome.id == models.EvidenceRelationship.outcome_id)
+        .filter(
+            models.EvidenceRelationship.evidence_id == evidence_id,
+            models.EvidenceRelationship.network_connection_id.isnot(None),
+            models.Outcome.source_kind == evidence_source.REAL,
+            models.Outcome.verification_state == "VERIFIED",
+            models.Outcome.notes.like("idempotency:network-connection:%:paid"),
+        )
+        .first()
+    )
+    if attached_to_verified_outcome:
+        raise ValueError("evidence supporting a verified payment cannot be changed")
+    st = (source_type or ev.source_type or "").strip().lower()
+    clean_verifier = (verifier if verifier is not None else ev.verifier or "").strip()
+    has_external_anchor = bool(
+        (ev.canonical_url or "").strip() or (ev.external_id or "").strip()
+    )
+    if mark_real and (
+        level < 5
+        or st != "third_party"
+        or not clean_verifier
+        or not has_external_anchor
+    ):
+        raise ValueError(
+            "REAL evidence requires third-party proof at L5+, an external verifier, "
+            "and an external URL or provider reference"
+        )
     if st == "agent_written" and level > 0:
         ev.proof_level = 0
         ev.proof_capped_reason = "agent-written items are capped at L0"
     elif st == "secondhand" and level > 1:
         ev.proof_level = 1
         ev.proof_capped_reason = "secondhand items are capped at L1"
-    elif level >= 5 and not (verifier or ev.verifier):
+    elif level >= 5 and not clean_verifier:
         raise ValueError(
             "L5+ requires external anchoring: counterparty confirmation or "
             "a third-party timestamp (verifier field). Anchoring establishes "
@@ -1639,9 +1689,11 @@ def set_proof_level(
         ev.proof_level = level
         ev.proof_capped_reason = None
     if source_type:
-        ev.source_type = source_type
-    if verifier:
-        ev.verifier = verifier
+        ev.source_type = st
+    if verifier is not None:
+        ev.verifier = clean_verifier or None
+    if mark_real:
+        ev.source_kind = evidence_source.REAL
     db.commit()
     db.refresh(ev)
     return ev

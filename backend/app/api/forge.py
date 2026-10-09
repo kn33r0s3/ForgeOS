@@ -54,7 +54,7 @@ Source reliability tracking.
     GET  /forge/scenarios                                                    -> Phase 1 2036 Scenario Engine overview (secondary domain)
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -1709,8 +1709,15 @@ def advance_network_connection(
 
 
 @router.post("/connections/{connection_id}/confirm-payment")
-def confirm_network_payment(request: Request, connection_id: int, db: Session = Depends(get_db)):
+def confirm_network_payment(
+    request: Request,
+    connection_id: int,
+    evidence_id: Optional[int] = Query(default=None, ge=1),
+    db: Session = Depends(get_db),
+):
     require_owner_api_key(request)
+    from app.services import network_connections
+
     row = db.query(models.NetworkConnection).filter_by(id=connection_id).first()
     if row is None or row.state != "paid":
         raise HTTPException(409, "only a recorded paid connection can be confirmed")
@@ -1723,9 +1730,33 @@ def confirm_network_payment(request: Request, connection_id: int, db: Session = 
         raise HTTPException(409, "no recorded amount to confirm")
     if outcome.verification_state != "REPORTED":
         raise HTTPException(409, "only a reported payment can be verified")
+    if outcome.data_scope != "REAL":
+        raise HTTPException(409, "only a REAL-scope payment can be verified")
+    if evidence_id is None:
+        raise HTTPException(
+            409,
+            "independent third-party payment evidence is required (evidence_id)",
+        )
+    try:
+        evidence = network_connections.attach_payment_evidence(
+            db, row, outcome, evidence_id
+        )
+    except ValueError as exc:
+        raise HTTPException(409, detail=str(exc)) from exc
+    outcome.source_kind = evidence_source.REAL
     outcome.verification_state = "VERIFIED"
+    outcome.qualitative_result = (
+        f"Connection {row.id} payment of {outcome.actual_value} NPR was "
+        f"independently supported by Evidence #{evidence.id}."
+    )
     db.commit()
-    return {"id": row.id, "state": row.state, "amount_npr": outcome.actual_value, "payment": "verified"}
+    return {
+        "id": row.id,
+        "state": row.state,
+        "amount_npr": outcome.actual_value,
+        "payment": "verified",
+        "evidence_id": evidence.id,
+    }
 
 
 def _paid_outcome(db: Session, connection_id: int) -> models.Outcome | None:
