@@ -416,6 +416,34 @@ def test_legacy_research_mutations_require_owner_key(client_with_db, monkeypatch
     assert authorized_cycle.status_code == 200, authorized_cycle.text
 
 
+def test_goal_mutations_require_owner_key(client_with_db, db, monkeypatch):
+    from app import security
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    existing_count = db.query(models.Goal).count()
+    requests = (
+        ("post", "/forge/goals", {"statement": "TEST owner-selected goal"}),
+        ("patch", "/forge/goals/999", {"priority": 100}),
+        ("post", "/forge/goals/999/opportunities/999", None),
+        ("post", "/forge/goals/999/strategies", None),
+    )
+    for method, path, payload in requests:
+        response = (
+            client_with_db.request(method, path, json=payload)
+            if payload is not None
+            else client_with_db.request(method, path)
+        )
+        assert response.status_code == 503, f"{path}: {response.status_code} {response.text}"
+    assert db.query(models.Goal).count() == existing_count
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
+    authorized = client_with_db.post(
+        "/forge/goals",
+        json={"statement": "TEST owner-selected goal"},
+    )
+    assert authorized.status_code == 200, authorized.text
+
+
 def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     client_with_db, db, monkeypatch
 ):

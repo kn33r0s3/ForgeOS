@@ -419,10 +419,15 @@ def get_belief_graph(belief_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/goals", response_model=schemas.GoalOut)
-def create_goal(payload: schemas.GoalCreate, db: Session = Depends(get_db)):
+def create_goal(
+    request: Request,
+    payload: schemas.GoalCreate,
+    db: Session = Depends(get_db),
+):
     """Create a Goal — something Forge is currently trying to make
     progress toward. Optional and additive: Forge works exactly as
     before if no goals ever exist."""
+    require_owner_api_key(request)
     return goal_engine.GoalEngine(db).create_goal(
         payload.statement, target_metric=payload.target_metric, priority=payload.priority
     )
@@ -435,8 +440,14 @@ def list_goals(status: Optional[str] = None, db: Session = Depends(get_db)):
 
 
 @router.patch("/goals/{goal_id}", response_model=schemas.GoalOut)
-def update_goal(goal_id: int, payload: schemas.GoalUpdate, db: Session = Depends(get_db)):
+def update_goal(
+    request: Request,
+    goal_id: int,
+    payload: schemas.GoalUpdate,
+    db: Session = Depends(get_db),
+):
     """Update a goal's status and/or priority."""
+    require_owner_api_key(request)
     engine = goal_engine.GoalEngine(db)
     goal = engine.get_goal(goal_id)
     if not goal:
@@ -445,8 +456,14 @@ def update_goal(goal_id: int, payload: schemas.GoalUpdate, db: Session = Depends
 
 
 @router.post("/goals/{goal_id}/opportunities/{opportunity_id}", response_model=schemas.OpportunityOut)
-def link_opportunity_to_goal(goal_id: int, opportunity_id: int, db: Session = Depends(get_db)):
+def link_opportunity_to_goal(
+    request: Request,
+    goal_id: int,
+    opportunity_id: int,
+    db: Session = Depends(get_db),
+):
     """Link an existing Opportunity to the Goal it serves."""
+    require_owner_api_key(request)
     engine = goal_engine.GoalEngine(db)
     goal = engine.get_goal(goal_id)
     if not goal:
@@ -471,7 +488,11 @@ def get_causal_knowledge(
 
 
 @router.post("/goals/{goal_id}/strategies", response_model=list[schemas.StrategyOut])
-def generate_strategies(goal_id: int, db: Session = Depends(get_db)):
+def generate_strategies(
+    request: Request,
+    goal_id: int,
+    db: Session = Depends(get_db),
+):
     """
     Generate (or refresh) candidate strategies for one Goal, grounded
     entirely in Forge's own beliefs and causal knowledge — never
@@ -482,6 +503,7 @@ def generate_strategies(goal_id: int, db: Session = Depends(get_db)):
     candidate is returned unchanged. Strategy Engine only proposes; it
     never executes anything.
     """
+    require_owner_api_key(request)
     goal = goal_engine.GoalEngine(db).get_goal(goal_id)
     if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")
