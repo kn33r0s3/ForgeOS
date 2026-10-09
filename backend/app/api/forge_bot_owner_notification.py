@@ -161,6 +161,52 @@ def _retry_pending_owner_notifications(db: Session, recipient: str) -> None:
         )
 
 
+def retry_queued_owner_notifications(db: Session) -> dict:
+    """Retry-only entry point for scheduled owner-notice redelivery.
+
+    Skips safely when SMTP or the exact owner recipient is not configured.
+    Retries only existing due queued owner-notification deliveries via the
+    existing _retry_pending_owner_notifications filters (QUEUED state,
+    owner idempotency prefixes, exact recipient, due time). Never
+    constructs or enqueues a new daily digest.
+
+    Returns {"status": "skipped"|"ok", "retried": int, "reason": str}.
+    """
+    if not settings.SMTP_HOST or not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        return {"status": "skipped", "retried": 0, "reason": "smtp_not_configured"}
+    owner_email = settings.FORGE_BOT_CONTACT_EMAIL
+    if not owner_email or "@" not in owner_email:
+        return {"status": "skipped", "retried": 0, "reason": "recipient_not_configured"}
+
+    # Count due queued before retry to report how many were attempted.
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    notification_keys = or_(
+        *(
+            models.IntegrationDelivery.idempotency_key.startswith(prefix)
+            for prefix in OWNER_NOTIFICATION_IDEMPOTENCY_PREFIXES
+        )
+    )
+    recipient_marker = f'"to": "{owner_email}"'
+    pending_before = (
+        db.query(models.IntegrationDelivery)
+        .filter(
+            models.IntegrationDelivery.integration_name == "smtp",
+            models.IntegrationDelivery.operation == "send_email",
+            models.IntegrationDelivery.status == "QUEUED",
+            notification_keys,
+            models.IntegrationDelivery.request_json.contains(
+                recipient_marker,
+                autoescape=True,
+            ),
+            (models.IntegrationDelivery.next_attempt_at.is_(None))
+            | (models.IntegrationDelivery.next_attempt_at <= now),
+        )
+        .count()
+    )
+    _retry_pending_owner_notifications(db, owner_email)
+    return {"status": "ok", "retried": pending_before, "reason": ""}
+
+
 def _queue_owner_email(
     db: Session,
     *,

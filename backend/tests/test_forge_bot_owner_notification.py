@@ -239,3 +239,47 @@ def test_owner_test_email_fails_closed_without_configured_recipient(db, monkeypa
 
     assert result is None
     assert db.query(models.IntegrationDelivery).count() == 0
+
+
+def test_retry_queued_skips_without_smtp(db, monkeypatch):
+    """No SMTP config: clean skip, no deliveries created."""
+    monkeypatch.setattr(settings, "SMTP_HOST", "")
+    monkeypatch.setattr(settings, "SMTP_USER", "")
+    monkeypatch.setattr(settings, "SMTP_PASSWORD", "")
+    monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_EMAIL", "owner@example.test")
+
+    result = forge_bot_owner_notification.retry_queued_owner_notifications(db)
+
+    assert result["status"] == "skipped"
+    assert result["reason"] == "smtp_not_configured"
+    assert result["retried"] == 0
+    assert db.query(models.IntegrationDelivery).count() == 0
+
+
+def test_retry_queued_skips_without_recipient(db, monkeypatch):
+    """No recipient config: clean skip, no deliveries created."""
+    monkeypatch.setattr(settings, "SMTP_HOST", "smtp.example.test")
+    monkeypatch.setattr(settings, "SMTP_USER", "sender@example.test")
+    monkeypatch.setattr(settings, "SMTP_PASSWORD", "test-only-password")
+    monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_EMAIL", "")
+
+    result = forge_bot_owner_notification.retry_queued_owner_notifications(db)
+
+    assert result["status"] == "skipped"
+    assert result["reason"] == "recipient_not_configured"
+    assert db.query(models.IntegrationDelivery).count() == 0
+
+
+def test_retry_queued_creates_no_new_digest(db, monkeypatch):
+    """Retry-only path never enqueues a new daily digest."""
+    monkeypatch.setattr(settings, "SMTP_HOST", "smtp.example.test")
+    monkeypatch.setattr(settings, "SMTP_USER", "sender@example.test")
+    monkeypatch.setattr(settings, "SMTP_PASSWORD", "test-only-password")
+    monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_EMAIL", "owner@example.test")
+
+    before = db.query(models.IntegrationDelivery).count()
+    result = forge_bot_owner_notification.retry_queued_owner_notifications(db)
+    after = db.query(models.IntegrationDelivery).count()
+
+    assert result["status"] == "ok"
+    assert after == before  # No new deliveries created

@@ -472,3 +472,27 @@ def test_scheduled_intelligence_stage_error_isolated(monkeypatch):
     # Other stages still run (ok, partial, or error — but present)
     assert "collection_cycle" in intel
     assert "discovery_cycle" in intel
+
+
+def test_scheduled_intelligence_includes_owner_retry_stage(monkeypatch):
+    """The intelligence route invokes the retry-only path as an isolated stage."""
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    from app.config import settings
+    monkeypatch.setattr(settings, "SMTP_HOST", "")
+    monkeypatch.setattr(settings, "SMTP_USER", "")
+    monkeypatch.setattr(settings, "SMTP_PASSWORD", "")
+
+    client = TestClient(app)
+    response = client.get(
+        "/scheduled/intelligence",
+        headers={"Authorization": "Bearer test-cron-secret"},
+    )
+
+    assert response.status_code == 200
+    intel = response.json()["intelligence"]
+    # Stage 6 present even when SMTP not configured (clean skip)
+    assert "owner_notification_retry" in intel
+    assert intel["owner_notification_retry"]["status"] == "skipped"
+    # Other stages still present (route not failed by retry skip)
+    assert "forge_cycle" in intel
+    assert "discovery_cycle" in intel

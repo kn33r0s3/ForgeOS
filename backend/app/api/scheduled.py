@@ -317,4 +317,31 @@ def run_scheduled_intelligence(authorization: str | None = Header(default=None))
         logger.warning("scheduled intelligence: discovery_cycle failed (%s)", type(exc).__name__)
         intelligence["discovery_cycle"] = {"status": "error", "error": type(exc).__name__}
 
+    # Stage 6: retry already-queued owner notifications (retry-only).
+    # Isolated: separate DB session, isolated exception handling. Retries
+    # only existing due queued deliveries via the existing retry helper's
+    # filters. Never constructs or enqueues a new daily digest. Does not
+    # authorize customer messages or change intake flags. A retry failure
+    # does not fail or conceal the other stages.
+    try:
+        with database.SessionLocal() as db:
+            from app.api import forge_bot_owner_notification
+
+            retry_result = forge_bot_owner_notification.retry_queued_owner_notifications(db)
+            db.commit()
+            if retry_result["status"] == "skipped":
+                intelligence["owner_notification_retry"] = {
+                    "status": "skipped",
+                    "reason": retry_result["reason"],
+                    "retried": 0,
+                }
+            else:
+                intelligence["owner_notification_retry"] = {
+                    "status": "ok",
+                    "retried": retry_result["retried"],
+                }
+    except Exception as exc:
+        logger.warning("scheduled intelligence: owner_notification_retry failed (%s)", type(exc).__name__)
+        intelligence["owner_notification_retry"] = {"status": "error", "error": type(exc).__name__}
+
     return {"status": "completed", "intelligence": intelligence}
