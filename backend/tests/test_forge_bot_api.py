@@ -1402,9 +1402,9 @@ def test_owner_console_readiness_is_keyed_and_aggregate_only(db, monkeypatch):
     client, cleanup = _client(db)
     try:
         lead = client.post("/forge-bot/leads", json=_payload())
-        unauthorized = client.get("/forge-bot/owner/readiness")
+        unauthorized = client.get("/api/forge-bot/owner/readiness")
         response = client.get(
-            "/forge-bot/owner/readiness",
+            "/api/forge-bot/owner/readiness",
             headers={"X-API-Key": settings.FORGE_API_KEY},
         )
     finally:

@@ -59,8 +59,14 @@ jobs:
       - name: Fetch production content
         id: fetch
         run: |
+          set -o pipefail
           sleep 90
-          CONTENT_HASH=$(curl -s "https://haminp.vercel.app/?v=$(date +%s)" | sha256sum | cut -d' ' -f1)
+          CONTENT=$(curl -fsSL "https://haminp.vercel.app/?v=$(date +%s)")
+          if [ -z "$CONTENT" ]; then
+            echo "::error::Production returned an empty response."
+            exit 1
+          fi
+          CONTENT_HASH=$(printf '%s' "$CONTENT" | sha256sum | cut -d' ' -f1)
           echo "hash=$CONTENT_HASH" >> "$GITHUB_OUTPUT"
 
       - name: Check verifier preconditions
