@@ -127,7 +127,18 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
-## Last verified state snapshot (2026-10-09)
+## Last verified state snapshot (2026-10-10)
+
+**Update 2026-10-10 (daily freshness check):** HEAD at `1626fda`
+("Close the discovery loop: convert surfaced questions to ResearchQuestions").
+Working tree clean; `main` == `origin/main`.
+
+- **Health:** haminp.vercel.app/api/health → **DEGRADED**
+  (`{"status":"degraded","ready":false,"ok":false,"db":"down"}`) — NOT ok;
+  requires follow-up. forge-os-ebon.vercel.app/api/health → ok.
+- **Intake:** `intake_enabled: false` (unchanged, Forge Bot closed).
+- **Unknowns:** 83 D-entries in `docs/UNKNOWN_MAP.md` (was D78 at the
+  2026-10-09 bank; `ce3c794`).
 
 **Update 2026-10-09 (integrity audit round 1):** HEAD at `bf7ec97` ("Connect owner-notification retry as isolated Stage 6"). Changes since `096e3d0`:
 - public_stats.py: require data_scope==REAL; owner_interventions always NOT_MEASURABLE
