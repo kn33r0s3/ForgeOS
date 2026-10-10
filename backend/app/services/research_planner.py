@@ -1498,6 +1498,8 @@ def _create_follow_up_requirement(
         "capability_requirement_id", requirement_id
     )
     candidate: dict[str, Any] | None = None
+    discovered_doi: str | None = None
+    discovery_parent_evidence_id: int | None = None
     retrieval_observation = (
         (parent_task.results or {}).get("retrieval_observation", {})
         if parent_task is not None and isinstance(parent_task.results, dict)
@@ -1530,6 +1532,31 @@ def _create_follow_up_requirement(
             candidate = {
                 **capability,
                 "required_evidence_type": requirement["evidence_kind"],
+            }
+
+    if source is None and evidence_requirement_id == "bibliographic_discovery":
+        doi_lead = _next_openalex_doi_lead(db, question.id)
+        capability = next(
+            (
+                item
+                for item in capability_discovery.ranked_source_capabilities(
+                    db, "scholarly_evidence"
+                )
+                if item["source"] == "openalex"
+            ),
+            None,
+        )
+        if doi_lead is not None and capability is not None:
+            source = "openalex"
+            query = doi_lead["doi"]
+            mode_override = "keyword"
+            evidence_alias = "scholarly_evidence"
+            capability_requirement_id = "scholarly_evidence"
+            discovered_doi = doi_lead["doi"]
+            discovery_parent_evidence_id = doi_lead["evidence_id"]
+            candidate = {
+                **capability,
+                "required_evidence_type": "openalex_scholarly_abstract",
             }
 
     if (
@@ -1649,7 +1676,9 @@ def _create_follow_up_requirement(
         "follow_up_depth": follow_up_depth,
         "decomposition_depth": follow_up_depth,
         "follow_up_reason": (
-            "valid_empty_semantic_retrieval_with_cleared_keyword_mode"
+            "crossref_doi_lead_openalex_abstract_lookup"
+            if discovered_doi
+            else "valid_empty_semantic_retrieval_with_cleared_keyword_mode"
             if mode_override == "keyword"
             else "primary_capability_unavailable_metadata_discovery_only"
             if source == "crossref"
@@ -1668,6 +1697,9 @@ def _create_follow_up_requirement(
         child["openalex_query"] = query
         if mode_override:
             child["search_mode_override"] = mode_override
+        if discovered_doi:
+            child["discovered_doi"] = discovered_doi
+            child["discovery_parent_evidence_id"] = discovery_parent_evidence_id
     task_requirement = {
         **requirement,
         **child,
@@ -1690,6 +1722,9 @@ def _create_follow_up_requirement(
         "follow_up_of_task_id": parent_task_id,
         "follow_up_reason": child["follow_up_reason"],
     }
+    if discovered_doi:
+        task.results["discovered_doi"] = discovered_doi
+        task.results["discovery_parent_evidence_id"] = discovery_parent_evidence_id
     child["task_ids"] = [task.id]
     plan["requirements"].append(child)
     plan.setdefault("orchestration_requirements", []).append(
@@ -1709,6 +1744,98 @@ def _create_follow_up_requirement(
         }
     )
     return child, child["follow_up_reason"]
+
+
+def _next_openalex_doi_lead(
+    db: Session,
+    question_id: int,
+) -> dict[str, Any] | None:
+    tasks = (
+        db.query(models.ResearchTask)
+        .filter_by(question_id=question_id)
+        .order_by(models.ResearchTask.id)
+        .all()
+    )
+    already_looked_up = {
+        task.results.get("discovered_doi", "").casefold()
+        for task in tasks
+        if task.source == "openalex"
+        and isinstance(task.results, dict)
+        and isinstance(task.results.get("discovered_doi"), str)
+    }
+    leads: list[tuple[int, int, int, str, int]] = []
+    for task in tasks:
+        if (
+            task.source != "crossref"
+            or task.status != "completed"
+            or not isinstance(task.results, dict)
+            or not isinstance(task.results.get("source_results"), list)
+        ):
+            continue
+        task_evidence_ids = {
+            int(value)
+            for value in (task.evidence_ids or "").split(",")
+            if value.isdigit()
+        }
+        for result_index, result in enumerate(task.results["source_results"]):
+            if not isinstance(result, dict):
+                continue
+            evidence_id = result.get("evidence_id")
+            if isinstance(evidence_id, bool) or not isinstance(evidence_id, int):
+                continue
+            if evidence_id not in task_evidence_ids:
+                continue
+            evidence = db.get(models.Evidence, evidence_id)
+            if evidence is None:
+                continue
+            try:
+                provenance = json.loads(evidence.provenance or "{}")
+            except (TypeError, json.JSONDecodeError):
+                continue
+            if not isinstance(provenance, dict):
+                continue
+            doi = provenance.get("doi")
+            if not isinstance(doi, str):
+                doi = evidence.external_id
+            if (
+                evidence.source != "crossref"
+                or not evidence.canonical_url
+                or evidence.retrieved_at is None
+                or provenance.get("source_registry_id")
+                != "crossref-public-works-metadata"
+                or provenance.get("metadata_only") is not True
+                or not isinstance(doi, str)
+                or evidence.canonical_url != f"https://doi.org/{doi}"
+                or not re.fullmatch(r"10\.\d{4,9}/[^\s,|]+", doi, re.IGNORECASE)
+                or doi.casefold() in already_looked_up
+                or evidence.external_id != doi
+                or result.get("external_id") != doi
+            ):
+                continue
+            assessment = result.get("assessment")
+            overlap = (
+                assessment.get("keyword_overlap", {}).get("matched_terms", [])
+                if isinstance(assessment, dict)
+                and isinstance(assessment.get("keyword_overlap"), dict)
+                else []
+            )
+            relevance_count = len(overlap) if isinstance(overlap, list) else 0
+            leads.append(
+                (
+                    relevance_count,
+                    task.id,
+                    result_index,
+                    doi,
+                    evidence_id,
+                )
+            )
+    if not leads:
+        return None
+    _, _, _, doi, evidence_id = min(
+        leads,
+        key=lambda row: (-row[0], row[1], row[2]),
+    )
+    return {"doi": doi, "evidence_id": evidence_id}
 
 
 def _refresh_plan_from_tasks(

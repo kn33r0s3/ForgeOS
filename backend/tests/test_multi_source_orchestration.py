@@ -11,6 +11,7 @@ from app import models
 from app.database import Base
 from app.migrations import run_migrations
 from app.services import (
+    capability_discovery,
     collector_runner,
     research_planner,
     research_synthesis_engine,
@@ -1325,3 +1326,174 @@ def test_fully_supported_requirement_synthesizes_without_follow_up(db, monkeypat
     assert question.status == "closed"
     assert refreshed_plan["gap_decisions"][0]["decision"] == "satisfied_no_follow_up"
     assert db.query(models.ResearchTask).filter_by(question_id=question.id).count() == 1
+
+
+def test_crossref_lead_selection_uses_persisted_dois_across_follow_up_cycles(
+    db, monkeypatch
+):
+    _freeze_clearance_date(monkeypatch)
+    question = models.ResearchQuestion(
+        question="What scholarly evidence describes household financial protection?"
+    )
+    db.add(question)
+    db.commit()
+    crossref_capability = next(
+        item
+        for item in capability_discovery.ranked_source_capabilities(
+            db, "bibliographic_discovery"
+        )
+        if item["source"] == "crossref"
+    )
+    parent = research_task_engine.create_task(
+        db,
+        question_id=question.id,
+        source="crossref",
+        query=question.question,
+        objective=question.question,
+    )
+    doi_leads = [
+        ("10.1234/less-relevant", 1),
+        ("10.5678/more-relevant", 4),
+    ]
+    source_results = []
+    evidence_ids = []
+    for doi, overlap_count in doi_leads:
+        evidence = models.Evidence(
+            source="crossref",
+            external_id=doi,
+            canonical_url=f"https://doi.org/{doi}",
+            title=f"Bibliographic title for {doi}",
+            retrieved_at=models.utcnow(),
+            provenance=json.dumps(
+                {
+                    "source_registry_id": "crossref-public-works-metadata",
+                    "metadata_only": True,
+                    "doi": doi,
+                },
+                sort_keys=True,
+            ),
+        )
+        db.add(evidence)
+        db.flush()
+        evidence_ids.append(evidence.id)
+        source_results.append(
+            {
+                "evidence_id": evidence.id,
+                "external_id": doi,
+                "title": evidence.title,
+                "assessment": {
+                    "keyword_overlap": {
+                        "matched_terms": ["term"] * overlap_count,
+                    }
+                },
+            }
+        )
+    parent.status = "completed"
+    parent.evidence_ids = ",".join(map(str, evidence_ids))
+    parent.results = {
+        **(parent.results or {}),
+        "research_requirement_id": "bibliographic_discovery",
+        "source_registry_id": crossref_capability["registry_id"],
+        "source_results": source_results,
+    }
+    db.commit()
+    requirement = {
+        "id": "bibliographic_discovery",
+        "evidence_requirement_id": "bibliographic_discovery",
+        "capability_requirement_id": "bibliographic_discovery",
+        "question": question.question,
+        "evidence_kind": "bibliographic_metadata_lead_only",
+        "candidate_sources": [crossref_capability],
+        "capable_sources": [crossref_capability],
+        "geographic_qualification": None,
+        "population_qualification": None,
+        "unresolved_dimensions": ["substantive_content"],
+        "decomposition_depth": 0,
+    }
+    plan = {"requirements": [requirement], "orchestration_requirements": []}
+
+    first_child, _ = research_planner._create_follow_up_requirement(
+        db,
+        question,
+        plan,
+        requirement,
+        task_count=1,
+    )
+
+    assert first_child["discovered_doi"] == "10.5678/more-relevant"
+    first_task = db.get(models.ResearchTask, first_child["task_ids"][0])
+    assert first_task.source == "openalex"
+    assert first_task.query == "10.5678/more-relevant"
+    assert first_task.results["discovered_doi"] == "10.5678/more-relevant"
+    assert first_task.results["follow_up_reason"] == (
+        "crossref_doi_lead_openalex_abstract_lookup"
+    )
+    assert (
+        first_task.results["discovery_parent_evidence_id"]
+        == source_results[1]["evidence_id"]
+    )
+
+    abstract_evidence = models.Evidence(
+        source="openalex",
+        external_id="https://openalex.org/W1234567890",
+        canonical_url="https://openalex.org/W1234567890",
+        title="A retrieved scholarly work",
+        retrieved_at=models.utcnow(),
+        provenance=json.dumps(
+            {
+                "source_registry_id": "openalex-public-works-cc0",
+                "source_type": "openalex",
+                "license": "CC0",
+                "traceable": True,
+                "openalex_id": "https://openalex.org/W1234567890",
+                "title": "A retrieved scholarly work",
+                "query": first_task.query,
+                "abstract_reconstructed": True,
+                "abstract": "A substantive abstract retrieved from the stored DOI lead.",
+                "geographic_scope_status": (
+                    "not_assessed_from_affiliations_or_retrieval_relevance"
+                ),
+                "temporal_scope_status": "publication_year_only_not_study_period",
+                "retrieval_relevance_is_not_empirical_support": True,
+            },
+            sort_keys=True,
+        ),
+    )
+    db.add(abstract_evidence)
+    db.flush()
+    first_task.status = "completed"
+    first_task.evidence_ids = str(abstract_evidence.id)
+    first_task.results = {
+        **first_task.results,
+        "source_results": [
+            {
+                "evidence_id": abstract_evidence.id,
+                "external_id": abstract_evidence.external_id,
+                "title": abstract_evidence.title,
+            }
+        ],
+    }
+    db.commit()
+    verified_abstract_ids, _ = research_planner._verified_openalex_evidence_ids(
+        db,
+        [first_task],
+        {"id": "scholarly_evidence"},
+    )
+    assert verified_abstract_ids == [abstract_evidence.id]
+
+    second_child, _ = research_planner._create_follow_up_requirement(
+        db,
+        question,
+        plan,
+        requirement,
+        task_count=3,
+    )
+
+    assert second_child["discovered_doi"] == "10.1234/less-relevant"
+    second_task = db.get(models.ResearchTask, second_child["task_ids"][0])
+    assert second_task.source == "openalex"
+    assert second_task.query != first_task.query
+    assert (
+        second_task.results["discovery_parent_evidence_id"]
+        == source_results[0]["evidence_id"]
+    )

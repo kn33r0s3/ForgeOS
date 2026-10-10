@@ -27,7 +27,10 @@ from app.services import (
 )
 from app.services.collectors import openalex
 from app.services.observer_engine import ObserverEngine
-from app.services.research_evidence_assessment import openalex_requirement_eligibility
+from app.services.research_evidence_assessment import (
+    assess_source_record,
+    openalex_requirement_eligibility,
+)
 
 QUERY = "postharvest loss smallholder farmers Nepal"
 WORKS = {
@@ -162,7 +165,9 @@ def test_openalex_clearance_registers_exact_https_scope_and_pacing(db, monkeypat
     assert entry.url == openalex.API_URL
     assert entry.hostname == "api.openalex.org"
     assert entry.min_interval_seconds == 1
-    assert entry.allowed_operation == "search_cc0_work_metadata_and_abstracts"
+    assert entry.allowed_operation == (
+        "search_or_exact_doi_lookup_cc0_work_metadata_and_abstracts"
+    )
     assert "abstract_inverted_index" in entry.allowed_fields
     assert entry.license_tag == "CC0 Public Domain Dedication (OpenAlex Dataset Metadata)"
     assert entry.supports_requirements == (
@@ -277,6 +282,22 @@ def test_openalex_reconstructs_abstract_and_projects_only_safe_metadata(db, monk
     ]
     assert provenance["authorships"][0]["countries"] == ["US"]
     assert provenance["abstract_reconstructed"] is True
+    assert provenance["metadata_only"] is False
+    assert provenance["retrieved_content_kind"] == (
+        "work_metadata_and_reconstructed_abstract"
+    )
+    assessment = assess_source_record(
+        QUERY,
+        title=item["title"],
+        content=item["content"],
+        published_at=item["published_at"],
+        retrieved_at=datetime.fromisoformat(item["retrieved_at"]),
+        source_identity=item["external_id"],
+        canonical_url=item["canonical_url"],
+        provenance=provenance,
+    )
+    assert assessment["assessment_state"] == "content_not_reviewed"
+    assert assessment["claim_support"] == "not_inferred"
     assert provenance["geographic_scope_status"] == (
         "not_assessed_from_affiliations_or_retrieval_relevance"
     )
@@ -287,6 +308,31 @@ def test_openalex_reconstructs_abstract_and_projects_only_safe_metadata(db, monk
     assert provenance["license"] == "CC0"
     assert "publisher.example" not in json.dumps(item)
     assert "relevance_score" not in json.dumps(item)
+    metadata_only = openalex._normalize_work(
+        {
+            **WORKS["results"][0],
+            "abstract_inverted_index": None,
+        },
+        query=QUERY,
+        search_mode="keyword",
+        request_url=requests[0][0].full_url,
+        retrieved_at=datetime.now(timezone.utc).isoformat(),
+        entry=authorization.entry,
+    )
+    assert metadata_only["provenance"]["metadata_only"] is True
+    assert metadata_only["provenance"]["retrieved_content_kind"] == "work_metadata_only"
+    metadata_assessment = assess_source_record(
+        QUERY,
+        title=metadata_only["title"],
+        content=metadata_only["content"],
+        published_at=metadata_only["published_at"],
+        retrieved_at=datetime.fromisoformat(metadata_only["retrieved_at"]),
+        source_identity=metadata_only["external_id"],
+        canonical_url=metadata_only["canonical_url"],
+        provenance=metadata_only["provenance"],
+    )
+    assert metadata_assessment["assessment_state"] == "metadata_only_lead"
+    assert metadata_assessment["claim_support"] == "not_inferred"
 
     request, timeout = requests[0]
     assert request.full_url.startswith(f"{openalex.API_URL}?")
@@ -333,6 +379,43 @@ def test_openalex_keyword_and_semantic_use_correct_endpoints_and_caps(db, monkey
     )
     assert normalized["provenance"]["search_mode"] == "semantic"
     assert normalized["identity_key"] == f"openalex:{normalized['external_id']}"
+
+
+def test_openalex_follows_persisted_doi_with_exact_bounded_filter(db, monkeypatch):
+    authorization, requests = _mock_openalex(monkeypatch, db)
+    doi = "10.1234/example.1"
+    items = openalex.fetch_openalex_works(
+        doi,
+        task_provenance={
+            "original_research_question": QUERY,
+            "discovered_doi": doi,
+            "discovery_parent_evidence_id": 42,
+        },
+        authorization=authorization,
+    )
+
+    assert len(items) == 1
+    request, _ = requests[0]
+    params = urllib.parse.parse_qs(urllib.parse.urlsplit(request.full_url).query)
+    assert params["filter"] == [f"doi:https://doi.org/{doi}"]
+    assert params["per_page"] == ["1"]
+    assert "search" not in params
+    assert "search.semantic" not in params
+    assert items[0]["provenance"]["discovered_doi"] == doi
+    assert items[0]["provenance"]["discovery_parent_evidence_id"] == 42
+    assert items[0]["provenance"]["lookup_method"] == "exact_doi_filter"
+
+
+def test_openalex_rejects_malformed_discovered_doi_before_api_request(db, monkeypatch):
+    authorization, requests = _mock_openalex(monkeypatch, db)
+
+    with pytest.raises(ValueError, match="valid DOI"):
+        openalex.fetch_openalex_works(
+            "10.1234/example",
+            task_provenance={"discovered_doi": "10.1234/example,|filter"},
+            authorization=authorization,
+        )
+    assert requests == []
 
 
 def test_openalex_reconstruct_abstract_rejects_malformed_positions():

@@ -38,6 +38,7 @@ SELECT_FIELDS = (
 )
 _OPENALEX_ID = re.compile(r"^https://openalex\.org/W\d+$")
 _DOI_URL = re.compile(r"^https://doi\.org/10\.\d{4,9}/\S+$", re.IGNORECASE)
+_DOI = re.compile(r"^10\.\d{4,9}/[^\s,|]+$", re.IGNORECASE)
 
 
 class _TextExtractor(HTMLParser):
@@ -103,6 +104,10 @@ def fetch_openalex_works(
     search_mode = _validate_search_mode(search_mode)
     query = _validate_query(query, search_mode)
     max_records = _validate_max_records(max_records, search_mode)
+    context = task_provenance if isinstance(task_provenance, dict) else {}
+    discovered_doi = _validate_discovered_doi(context.get("discovered_doi"))
+    if discovered_doi:
+        max_records = 1
     entry = source_clearance_registry.validate_authorization(
         authorization,
         url=API_URL,
@@ -110,12 +115,19 @@ def fetch_openalex_works(
     )
     _verify_live_policy(entry)
 
-    search_parameter = "search.semantic" if search_mode == "semantic" else "search"
-    query_parameters = {
-        search_parameter: query,
-        "per_page": max_records,
-        "select": SELECT_FIELDS,
-    }
+    if discovered_doi:
+        query_parameters = {
+            "filter": f"doi:https://doi.org/{discovered_doi}",
+            "per_page": max_records,
+            "select": SELECT_FIELDS,
+        }
+    else:
+        search_parameter = "search.semantic" if search_mode == "semantic" else "search"
+        query_parameters = {
+            search_parameter: query,
+            "per_page": max_records,
+            "select": SELECT_FIELDS,
+        }
     params = urllib.parse.urlencode(query_parameters)
     request_url = f"{API_URL}?{params}"
     request = urllib.request.Request(
@@ -244,12 +256,34 @@ def _normalize_work(
         "published_at": published_at,
         "canonical_url": openalex_id,
         "traceable": True,
-        "metadata_only": True,
+        "metadata_only": abstract is None,
+        "retrieved_content_kind": (
+            "work_metadata_only"
+            if abstract is None
+            else "work_metadata_and_reconstructed_abstract"
+        ),
         "geographic_scope_status": "not_assessed_from_affiliations_or_retrieval_relevance",
         "temporal_scope_status": "publication_year_only_not_study_period",
         "retrieval_relevance_is_not_empirical_support": True,
         "external_pdf_fetched": False,
         "publisher_page_fetched": False,
+        "discovered_doi": _validate_discovered_doi(
+            (task_provenance or {}).get("discovered_doi")
+            if isinstance(task_provenance, dict)
+            else None
+        ),
+        "discovery_parent_evidence_id": (
+            task_provenance.get("discovery_parent_evidence_id")
+            if isinstance(task_provenance, dict)
+            and isinstance(task_provenance.get("discovery_parent_evidence_id"), int)
+            else None
+        ),
+        "lookup_method": (
+            "exact_doi_filter"
+            if isinstance(task_provenance, dict)
+            and task_provenance.get("discovered_doi")
+            else "keyword_or_semantic_search"
+        ),
         "license": "CC0",
         "license_tag": entry.license_tag,
         "retrieved_fields": list(entry.allowed_fields),
@@ -294,6 +328,9 @@ def _task_provenance_fields(
         ),
         "derived_retrieval_query": derived_query,
         "search_mode": search_mode,
+        "discovered_doi": _validate_discovered_doi(
+            context.get("discovered_doi")
+        ),
         "geographic_qualification": geographic if isinstance(geographic, str) else None,
         "population_qualification": population if isinstance(population, str) else None,
         "unresolved_dimensions": (
@@ -339,6 +376,17 @@ def _validate_query(value: Any, search_mode: Literal["keyword", "semantic"] = "k
     if not query or len(query) > maximum:
         raise ValueError(f"OpenAlex query must contain 1-{maximum} characters")
     return query
+
+
+def _validate_discovered_doi(value: Any) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError("OpenAlex discovered DOI must be text")
+    doi = value.strip()
+    if not _DOI.fullmatch(doi):
+        raise ValueError("OpenAlex discovered DOI is not a valid DOI identifier")
+    return doi
 
 
 def _validate_search_mode(value: Any) -> Literal["keyword", "semantic"]:

@@ -240,6 +240,8 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
             "population_qualification",
             "unresolved_dimensions",
             "capability_id",
+            "discovered_doi",
+            "discovery_parent_evidence_id",
         ):
             if task_context.get(context_key) is not None:
                 provenance[context_key] = task_context[context_key]

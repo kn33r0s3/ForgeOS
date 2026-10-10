@@ -275,9 +275,11 @@ SOURCE_CLEARANCES: tuple[SourceClearance, ...] = (
         categories=("scholarly_evidence", "research_discovery"),
         allowed_need=(
             "Search OpenAlex work records and persist CC0 scholarly metadata plus reconstructed "
-            "abstracts. Do not fetch publisher pages or external PDFs, or treat retrieval relevance "
-            "as empirical truth or local market validation. Keyword queries are capped at 100 works; "
-            "semantic queries are capped at 50 works and 2,000 query characters."
+            "abstracts, including exact DOI filters derived from persisted bibliographic leads. Do "
+            "not fetch publisher pages or external PDFs, or treat retrieval relevance as empirical "
+            "truth or local market validation. Keyword queries are capped at 100 works; semantic "
+            "queries are capped at 50 works and 2,000 query characters; DOI lookups return at most "
+            "one work."
         ),
         evidence_references=(
             "docs/PUBLIC_SOURCES.md",
@@ -293,7 +295,7 @@ SOURCE_CLEARANCES: tuple[SourceClearance, ...] = (
         terms_url=_OPENALEX_TERMS,
         required_terms_phrases=("all data is cc0",),
         redirect_urls=(_OPENALEX_WORKS_URL,),
-        allowed_operation="search_cc0_work_metadata_and_abstracts",
+        allowed_operation="search_or_exact_doi_lookup_cc0_work_metadata_and_abstracts",
         allowed_fields=(
             "id",
             "doi",
