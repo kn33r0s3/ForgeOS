@@ -131,11 +131,12 @@ than a few days old, re-verify before trusting the details.
 
 **Update 2026-10-10 (daily freshness check):** HEAD at `1626fda`
 ("Close the discovery loop: convert surfaced questions to ResearchQuestions").
-Working tree clean; `main` == `origin/main`.
+Working tree clean; `main` == `origin/main`. Push landed as `eaae141`.
 
-- **Health:** haminp.vercel.app/api/health → **DEGRADED**
-  (`{"status":"degraded","ready":false,"ok":false,"db":"down"}`) — NOT ok;
-  requires follow-up. forge-os-ebon.vercel.app/api/health → ok.
+- **Health:** haminp.vercel.app/api/health → **ok** (first probe at 00:38 UTC
+  returned `{"status":"degraded","ok":false,"db":"down"}` — a single blip;
+  two re-probes at 00:39 UTC returned `{"status":"ok","ok":true,"db":"up"}`).
+  forge-os-ebon.vercel.app/api/health → ok.
 - **Intake:** `intake_enabled: false` (unchanged, Forge Bot closed).
 - **Unknowns:** 83 D-entries in `docs/UNKNOWN_MAP.md` (was D78 at the
   2026-10-09 bank; `ce3c794`).
