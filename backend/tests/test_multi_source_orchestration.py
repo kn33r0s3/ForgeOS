@@ -344,6 +344,68 @@ def test_pending_batch_executes_newly_planned_follow_up_within_limit(db, monkeyp
     assert db.query(models.ResearchTask).filter_by(status="planned").count() == 0
 
 
+def test_pending_batch_prefers_cleared_sources_then_question_priority(db, monkeypatch):
+    blocked_question = models.ResearchQuestion(
+        question="Lower-priority discovery question from an uncleared source?",
+        priority_score=100.0,
+    )
+    lower_priority_question = models.ResearchQuestion(
+        question="Lower-priority question from a cleared source?",
+        priority_score=20.0,
+    )
+    higher_priority_question = models.ResearchQuestion(
+        question="Higher-priority question from a cleared source?",
+        priority_score=90.0,
+    )
+    db.add_all(
+        [blocked_question, lower_priority_question, higher_priority_question]
+    )
+    db.commit()
+    blocked = research_task_engine.create_task(
+        db,
+        question_id=blocked_question.id,
+        source="arxiv",
+        query="blocked source query",
+    )
+    lower_priority = research_task_engine.create_task(
+        db,
+        question_id=lower_priority_question.id,
+        source="crossref",
+        query="lower priority cleared query",
+    )
+    higher_priority = research_task_engine.create_task(
+        db,
+        question_id=higher_priority_question.id,
+        source="openalex",
+        query="higher priority cleared query",
+    )
+
+    monkeypatch.setattr(
+        source_clearance_registry,
+        "collector_is_cleared",
+        lambda collector: collector in {"crossref", "openalex"},
+    )
+    attempted = []
+
+    def complete_task(session, task):
+        attempted.append(task.id)
+        task.status = "completed"
+        session.commit()
+        return {"task_id": task.id, "status": "completed"}
+
+    monkeypatch.setattr(collector_runner, "execute_task", complete_task)
+
+    first = collector_runner.run_pending_tasks(db, limit=1)
+    second = collector_runner.run_pending_tasks(db, limit=1)
+
+    assert [outcome["task_id"] for outcome in first + second] == [
+        higher_priority.id,
+        lower_priority.id,
+    ]
+    assert attempted == [higher_priority.id, lower_priority.id]
+    assert db.get(models.ResearchTask, blocked.id).status == "planned"
+
+
 def test_pending_batch_attempts_deferred_task_only_once(db, monkeypatch):
     question = models.ResearchQuestion(question=QUESTION)
     db.add(question)

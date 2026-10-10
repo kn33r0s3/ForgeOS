@@ -22,6 +22,7 @@ from datetime import date
 from time import monotonic
 from hashlib import sha256
 from datetime import datetime, timezone
+from sqlalchemy import and_, case, or_
 from sqlalchemy.orm import Session
 
 from app import models
@@ -489,20 +490,45 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
 
 
 def run_pending_tasks(db: Session, limit: int = 5) -> list[dict]:
-    """Execute a bounded batch, including follow-ups planned during execution."""
+    """Execute bounded, currently cleared and high-priority work first."""
     if limit <= 0:
         return []
 
     research_task_engine.resume_running_tasks(db, limit=limit)
+    clearances = source_clearance_registry.source_clearances()
+    cleared_collectors = {
+        entry.collector
+        for entry in clearances
+        if entry.collector != "web"
+        and source_clearance_registry.collector_is_cleared(entry.collector)
+    }
+    cleared_web_urls = {
+        entry.url
+        for entry in clearances
+        if entry.collector == "web" and _web_clearance_error(entry.url) is None
+    }
+    currently_clearable = or_(
+        models.ResearchTask.source.in_(cleared_collectors),
+        and_(
+            models.ResearchTask.source == "web",
+            models.ResearchTask.query.in_(cleared_web_urls),
+        ),
+    )
     outcomes = []
     attempted_task_ids = set()
     while len(outcomes) < limit:
-        query = db.query(models.ResearchTask).filter(
-            models.ResearchTask.status == "planned"
+        query = (
+            db.query(models.ResearchTask)
+            .join(models.ResearchQuestion)
+            .filter(models.ResearchTask.status == "planned")
         )
         if attempted_task_ids:
             query = query.filter(models.ResearchTask.id.notin_(attempted_task_ids))
-        task = query.order_by(models.ResearchTask.id.asc()).first()
+        task = query.order_by(
+            case((currently_clearable, 0), else_=1),
+            models.ResearchQuestion.priority_score.desc(),
+            models.ResearchTask.id.asc(),
+        ).first()
         if task is None:
             break
         attempted_task_ids.add(task.id)
