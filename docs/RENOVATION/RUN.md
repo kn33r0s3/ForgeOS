@@ -1,15 +1,15 @@
-# RUN — exact commands that were really run (2026-10-08)
+# RUN — portable commands and dated observations (updated 2026-10-11)
 
 ## Start / stop the app
 
 ```bash
-# Fresh checkout: backend/.deps does not exist; reuse the main checkout's
-# installed deps (identical requirements.txt) or let start.sh pip-install.
-FORGEOS_DEPS_DIR=/home/hatch/workspace/repos/ForgeOS/backend/.deps ./start.sh
+# Fresh checkout: start.sh installs into this checkout's backend/.deps when needed.
+# Do not copy absolute dependency paths from historical machine-specific logs.
+./start.sh
 ./stop.sh
 ```
 
-Observed 2026-10-08:
+Historical observation from 2026-10-08 (not a current runtime verification):
 - Backend serves on :8000. `curl http://localhost:8000/docs` → 200.
   `curl http://localhost:8000/api/health` → `{"status":"ok","ready":true}`.
   `/health` also returns 200 once the server is up.
@@ -29,15 +29,17 @@ Observed 2026-10-08:
 sh scripts/check_all.sh
 ```
 
-Runs in order, stops at first failure: `npm run typecheck`,
-`npm run lint` (if the script exists), `npm run build`, then the backend
-pytest suite (uses `backend/.deps` if present, else the main checkout's).
+Runs in order and stops at first failure: `npm run typecheck`, lint, build,
+then the backend pytest suite. It uses this checkout's local `.venv`/`venv`
+or `python3` and conditionally adds this checkout's `backend/.deps`; it no longer
+depends on another developer's absolute filesystem path.
 
 ## Backend tests only
 
 ```bash
 cd backend
-PYTHONPATH=/home/hatch/workspace/repos/ForgeOS/backend/.deps:$PWD python3 -m pytest tests/ -q
+python3 -m pip install --target .deps -r requirements.txt
+PYTHONPATH="$PWD/.deps:$PWD" python3 -m pytest tests/ -q
 ```
 
 ## Web build only
