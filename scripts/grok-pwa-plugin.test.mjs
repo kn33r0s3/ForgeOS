@@ -8,7 +8,6 @@ import {
   APP_THEME_COLOR,
   appNameFromHost,
   createHeadInjector,
-  grokXCreatorHeadTags,
   injectGrokPwaHead,
   isDocumentPath,
   isInstallQuery,
@@ -26,88 +25,29 @@ const TEMPLATE_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 // process.cwd() when no cwd is given. Tests of the defaults use an empty dir.
 const BLANK_CWD = mkdtempSync(join(tmpdir(), "grok-pwa-blank-"));
 
-test("injects before </head>", () => {
-  const out = injectGrokPwaHead("<html><head><title>x</title></head><body></body></html>");
+test("adds Hami PWA metadata without loading the Grok builder", () => {
+  const out = injectGrokPwaHead(
+    "<html><head><title>Hami</title></head><body></body></html>",
+    { cwd: BLANK_CWD },
+  );
   assert.match(out, /rel="manifest"/);
   assert.match(out, /apple-touch-icon/);
-  assert.match(out, /grok-app-builder\/extensions\.js/);
+  assert.match(out, /application-name" content="Hami"/);
+  assert.match(out, /apple-mobile-web-app-title" content="Hami"/);
+  assert.doesNotMatch(out, /grok\\.com\\/grok-app-builder\\/extensions\\.js|grok-project-id|grok:app_id|x:creator/i);
   assert.ok(out.indexOf("manifest") < out.indexOf("</head>"));
 });
 
-test("injects the extensions script without a project id", () => {
-  const out = injectGrokPwaHead("<html><head></head></html>", {
-    appName: "Demo",
-    projectId: "",
-  });
-  assert.match(out, /src="https:\/\/grok\.com\/grok-app-builder\/extensions\.js" defer/);
-  assert.doesNotMatch(out, /grok-project-id/);
-  assert.doesNotMatch(out, /data-project-id/);
-  assert.doesNotMatch(out, /property="grok:app_id"/);
+test("strips legacy builder branding already present in rendered HTML", () => {
+  const legacy = '<html><head><title>Grok App</title><script src="https://grok.com/grok-app-builder/extensions.js" data-project-id="proj-123" defer></script><meta name="grok-project-id" content="proj-123"><meta property="grok:app_id" content="proj-123"><meta property="x:creator" content="@alice"><meta property="x:creator:id" content="42"><meta name="application-name" content="Grok App"><meta name="apple-mobile-web-app-title" content="Grok App"></head></html>';
+  const out = injectGrokPwaHead(legacy, { site: { title: "Hami" }, cwd: BLANK_CWD });
+  assert.doesNotMatch(out, /Grok App|grok\\.com\\/grok-app-builder\\/extensions\\.js|grok-project-id|grok:app_id|x:creator/i);
+  assert.match(out, /<title>Hami<\\/title>/);
+  assert.match(out, /application-name" content="Hami"/);
+  assert.match(out, /apple-mobile-web-app-title" content="Hami"/);
 });
 
-test("injects project id on the script and meta when provided", () => {
-  const out = injectGrokPwaHead("<html><head></head></html>", {
-    appName: "Demo",
-    projectId: "proj-123",
-  });
-  assert.match(out, /name="grok-project-id" content="proj-123"/);
-  assert.match(out, /data-project-id="proj-123"/);
-  assert.match(out, /property="grok:app_id" content="proj-123"/);
-});
-
-test("does not duplicate grok:app_id", () => {
-  const ctx = { appName: "Demo", projectId: "proj-123" };
-  const once = injectGrokPwaHead("<html><head></head></html>", ctx);
-  const twice = injectGrokPwaHead(once, ctx);
-  assert.equal(once, twice);
-  assert.equal(twice.split('property="grok:app_id"').length - 1, 1);
-});
-
-test("omits x:creator tags without both creator values", () => {
-  assert.deepEqual(grokXCreatorHeadTags("", "42"), []);
-  assert.deepEqual(grokXCreatorHeadTags("@alice", ""), []);
-  const out = injectGrokPwaHead("<html><head></head></html>", {
-    appName: "Demo",
-    projectId: "",
-    creator: "@alice",
-    creatorId: "",
-  });
-  assert.doesNotMatch(out, /property="x:creator"/);
-});
-
-test("injects x:creator tags when both creator values are set", () => {
-  const out = injectGrokPwaHead("<html><head></head></html>", {
-    appName: "Demo",
-    projectId: "",
-    creator: "@alice",
-    creatorId: "42",
-  });
-  assert.match(out, /property="x:creator" content="@alice"/);
-  assert.match(out, /property="x:creator:id" content="42"/);
-});
-
-test("escapes x:creator values", () => {
-  const tags = grokXCreatorHeadTags('"><script>', '1" onclick="alert(1)');
-  assert.equal(
-    tags[0],
-    '<meta property="x:creator" content="&quot;&gt;&lt;script&gt;">',
-  );
-  assert.equal(
-    tags[1],
-    '<meta property="x:creator:id" content="1&quot; onclick=&quot;alert(1)">',
-  );
-});
-
-test("does not duplicate x:creator tags", () => {
-  const ctx = { appName: "Demo", projectId: "", creator: "@alice", creatorId: "42" };
-  const once = injectGrokPwaHead("<html><head></head></html>", ctx);
-  const twice = injectGrokPwaHead(once, ctx);
-  assert.equal(once, twice);
-  assert.equal(twice.split('property="x:creator" content=').length - 1, 1);
-  assert.equal(twice.split('property="x:creator:id"').length - 1, 1);
-});
-
-test("platform chrome overwrites share-card metas and always sets og:title", () => {
+test("Hami metadata overwrites stale share-card metas and always sets og:title", () => {
   const html =
     '<html><head><title>Hello World</title><meta property="og:title" content="Old"><meta name="twitter:card" content="summary"></head></html>';
   const out = injectGrokPwaHead(html, { appName: "Wild Race", cwd: BLANK_CWD });
@@ -240,12 +180,18 @@ test("does not emit x:game:image without a public host or banner", () => {
   assert.doesNotMatch(noBanner, /x:game:image/);
 });
 
-test("site title Grok App is a real name, not a sentinel", () => {
+test("uses Hami identity on the public Vercel domain", () => {
   const out = injectGrokPwaHead("<html><head></head></html>", {
-    host: "wild-race.grok.me",
-    site: { title: "Grok App" },
+    host: "haminp.vercel.app",
+    site: { title: "Hami" },
+    cwd: BLANK_CWD,
   });
-  assert.match(out, /property="og:title" content="Grok App"/);
+  assert.match(out, /property="og:title" content="Hami"/);
+  assert.match(out, /application-name" content="Hami"/);
+  assert.match(out, /apple-mobile-web-app-title" content="Hami"/);
+  const manifest = JSON.parse(renderWebManifest("haminp.vercel.app"));
+  assert.equal(manifest.name, "Hami");
+  assert.equal(manifest.short_name, "Hami");
 });
 
 test("published grok.me slug is still a title fallback", () => {
@@ -392,12 +338,12 @@ test("streaming injector matches </HEAD> case-insensitively", () => {
   assert.match(out, /<body>hello<\/body>/);
 });
 
-test("does not duplicate the extensions script", () => {
-  const ctx = { appName: "Demo", projectId: "proj-123" };
-  const once = injectGrokPwaHead("<html><head></head></html>", ctx);
-  const twice = injectGrokPwaHead(once, ctx);
+test("does not reintroduce builder branding on repeated injection", () => {
+  const legacy = '<html><head><title>Grok App</title><script src="https://grok.com/grok-app-builder/extensions.js"></script><meta property="grok:app_id" content="legacy"></head></html>';
+  const once = injectGrokPwaHead(legacy, { site: { title: "Hami" }, cwd: BLANK_CWD });
+  const twice = injectGrokPwaHead(once, { site: { title: "Hami" }, cwd: BLANK_CWD });
   assert.equal(once, twice);
-  assert.equal(twice.split("extensions.js").length - 1, 1);
+  assert.doesNotMatch(twice, /Grok App|grok\\.com\\/grok-app-builder\\/extensions\\.js|grok:app_id/i);
 });
 
 test("is idempotent", () => {
@@ -461,14 +407,14 @@ test("strips install params from the app link", () => {
 });
 
 test("names the install page from host slug", () => {
-  assert.equal(appNameFromHost("localhost:8080"), "Grok App");
-  assert.equal(appNameFromHost("172.17.154.217:8080"), "Grok App");
+  assert.equal(appNameFromHost("localhost:8080"), "Hami");
+  assert.equal(appNameFromHost("172.17.154.217:8080"), "Hami");
   assert.equal(appNameFromHost("wild-race.grok.me"), "Wild Race");
 });
 
 test("rejects hosts that are not plain slugs", () => {
-  assert.equal(appNameFromHost("<script>alert(1)</script>"), "Grok App");
-  assert.equal(appNameFromHost('"><img src=x onerror=1>.grok.me'), "Grok App");
+  assert.equal(appNameFromHost("<script>alert(1)</script>"), "Hami");
+  assert.equal(appNameFromHost('"><img src=x onerror=1>.grok.me'), "Hami");
 });
 
 test("renders install page markup", () => {
