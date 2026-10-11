@@ -146,6 +146,19 @@ describe("Hami public content", () => {
     assert.ok(!card.includes("ProjectInquiryCta"), "offer cards must not duplicate the closed intake CTA");
   });
 
+  it("connects every service detail to every sibling and the canonical catalogue", () => {
+    const detail = readFileSync(join(root, "routes", "services.$slug.tsx"), "utf8");
+    assert.match(detail, /\{service\.number\}—\{String\(services\.length\)/);
+    assert.ok(detail.includes('to="/services/$slug"'));
+    assert.ok(detail.includes("params={{ slug: related.slug }}"));
+    assert.ok(detail.includes('to="/services"'));
+    assert.ok(detail.includes("services.filter((related) => related.slug !== service.slug)"));
+    assert.ok(detail.includes("Related work, connected."));
+    for (const service of services) {
+      assert.ok(detail.includes("related.slug"), `${service.slug} must participate in the shared related-service loop`);
+    }
+  });
+
   it("keeps commercial services separate from prototype capabilities", () => {
     assert.equal(services.length, 6);
     assert.ok(getService("software"));
