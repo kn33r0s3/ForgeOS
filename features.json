@@ -1,6 +1,6 @@
 {
   "$schema": "https://haminp.vercel.app/features.schema.json",
-  "description": "Hami feature registry. Every live feature is listed here with its route/endpoint. Removing or renaming a live feature without updating this registry fails CI. Status: live = publicly reachable and linked; hidden = exists but not linked from public nav; archived = retired, kept for history; planned = not built.",
+  "description": "Hami feature registry. Every live feature is listed here with its route/endpoint. Removing or renaming a live feature without updating this registry fails CI. Status: live = publicly reachable and linked; hidden = exists but not linked from public nav; archived = retired, kept for history; planned = not built. date_added and commit preserve the route-introduction provenance; status reflects current availability and visibility.",
   "features": [
     {
       "commit": "41eea98",
@@ -254,8 +254,8 @@
       "status": "live"
     },
     {
-      "commit": "8994eb8",
-      "date_added": "2026-10-11",
+      "commit": "99f531b",
+      "date_added": "2026-10-01",
       "heading": "Forge Bot qualification demo",
       "id": "page-bot-qualification-demo",
       "intent": "Development-only deterministic TEST prototype. No real contact data or API submission; noindex.",
@@ -265,8 +265,8 @@
       "status": "hidden"
     },
     {
-      "commit": "8994eb8",
-      "date_added": "2026-10-11",
+      "commit": "7e0a9ca",
+      "date_added": "2026-09-25",
       "heading": "One path for work and needs",
       "id": "page-domain",
       "intent": "Public jobs, offers, trades, connections, trust and recorded state changes; a post or match is not a verified transaction.",
@@ -275,8 +275,8 @@
       "status": "live"
     },
     {
-      "commit": "8994eb8",
-      "date_added": "2026-10-11",
+      "commit": "ce3273c",
+      "date_added": "2026-10-01",
       "heading": "A clear request, for owner review",
       "id": "page-forge-bot-intake",
       "intent": "Consent-scoped inquiry intake; configured closed and noindex until owner-approved activation.",
@@ -286,8 +286,8 @@
       "status": "hidden"
     },
     {
-      "commit": "8994eb8",
-      "date_added": "2026-10-11",
+      "commit": "41eea98",
+      "date_added": "2026-09-24",
       "heading": "Grand ambition. Useful work today.",
       "id": "page-group-businesses",
       "intent": "Current practical technical and operational offers distinguished from future group directions.",
@@ -296,8 +296,8 @@
       "status": "live"
     },
     {
-      "commit": "8994eb8",
-      "date_added": "2026-10-11",
+      "commit": "41eea98",
+      "date_added": "2026-09-24",
       "heading": "A clear path through the unclear part",
       "id": "page-process",
       "intent": "Shared Understand → Build → Operate → Improve delivery process.",
@@ -306,8 +306,8 @@
       "status": "live"
     },
     {
-      "commit": "8994eb8",
-      "date_added": "2026-10-11",
+      "commit": "41eea98",
+      "date_added": "2026-09-24",
       "heading": "Bring us the business need",
       "id": "page-request",
       "intent": "Demand-understanding form; anonymous intake is currently disabled and the page honestly submits no note while closed.",
@@ -316,8 +316,8 @@
       "status": "hidden"
     },
     {
-      "commit": "8994eb8",
-      "date_added": "2026-10-11",
+      "commit": "41eea98",
+      "date_added": "2026-09-24",
       "heading": "Project request redirect",
       "id": "redirect-request-a-project",
       "intent": "Redirect-only alias to /request; preserve the route for old links.",
@@ -327,8 +327,8 @@
       "selector": "main"
     },
     {
-      "commit": "8994eb8",
-      "date_added": "2026-10-11",
+      "commit": "7e0a9ca",
+      "date_added": "2026-09-25",
       "heading": "What has actually happened",
       "id": "page-request-status",
       "intent": "Status page for requests created from the verified-provider journey; pending is not acceptance.",
@@ -337,8 +337,8 @@
       "status": "live"
     },
     {
-      "commit": "8994eb8",
-      "date_added": "2026-10-11",
+      "commit": "41eea98",
+      "date_added": "2026-09-24",
       "heading": "Focused work. Clear ownership.",
       "id": "page-service-detail",
       "intent": "Detail view for one of Hami's existing six service categories, reached from /services.",
@@ -347,8 +347,8 @@
       "status": "live"
     },
     {
-      "commit": "8994eb8",
-      "date_added": "2026-10-11",
+      "commit": "61c4b20",
+      "date_added": "2026-09-30",
       "heading": "Edit personal context",
       "id": "page-system",
       "intent": "User-private account context or temporary browser-tab context; never public discovery data.",
@@ -357,8 +357,8 @@
       "status": "live"
     },
     {
-      "commit": "8994eb8",
-      "date_added": "2026-10-11",
+      "commit": "41eea98",
+      "date_added": "2026-09-24",
       "heading": "Technology",
       "id": "page-technology",
       "intent": "Strategic direction within one Hami group; not represented as a separate operating company.",
@@ -367,8 +367,8 @@
       "status": "live"
     },
     {
-      "commit": "8994eb8",
-      "date_added": "2026-10-11",
+      "commit": "41eea98",
+      "date_added": "2026-09-24",
       "heading": "Ventures",
       "id": "page-ventures",
       "intent": "Strategic direction for possible future ventures; no operating venture is implied.",
@@ -377,8 +377,8 @@
       "status": "live"
     },
     {
-      "commit": "8994eb8",
-      "date_added": "2026-10-11",
+      "commit": "679a96b",
+      "date_added": "2026-09-25",
       "heading": "Work redirect",
       "id": "redirect-work",
       "intent": "Redirect-only legacy alias to /domain; preserve the route for old links.",
