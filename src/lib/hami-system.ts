@@ -179,7 +179,6 @@ export const PUBLIC_SYSTEM_PATHS = [
   "/needs",
   "/about",
   "/system",
-  "/requests/$id",
   "/terms",
   "/privacy",
 ] as const;
