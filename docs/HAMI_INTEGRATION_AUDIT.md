@@ -8,7 +8,7 @@ This is a living, repository-grounded audit, not a claim that every capability i
 
 ## Inventory and method
 
-A recursive Git tree read found **919 tracked tree entries**, including **38 frontend route files**, **25 backend API modules**, **113 backend service modules**, and **146 files under `docs/`**. These are file counts, not proof every route or service is active. The pass traced the canonical navigation map, route lifecycle registry, sitemap, orphan-route scanner, route components/loaders, FastAPI router registrations, authorization middleware, owner/operations consoles, payment adapters, Better Auth and preview-specific identity/connectors, relevant tests/CI, and the commercial evidence log.
+At the current continuation point (`main` `9ce7b360143d453b2907cda33f5ce3a094071f52`, 2026-10-11 14:32:48 UTC), the recursive Git tree contains **922 tracked tree entries: 799 files and 123 directories**, including **38 frontend route files**, **25 backend API modules**, **113 backend service modules**, and **147 files under `docs/`**. These are inventory counts, not proof that every route or service is active. The pass traced the canonical navigation map, route lifecycle registry, sitemap, orphan-route scanner, route components/loaders, FastAPI router registrations, authorization middleware, owner/operations consoles, payment adapters, Better Auth and preview-specific identity/connectors, relevant tests/CI, and the commercial evidence log.
 
 Canonical constraints remain in force:
 - One product and one data substrate: reuse `ENTITY`, `RELATION`, `EVENT`, `EVIDENCE`, `CAPABILITY`, and `ACTION` through `type_registry.schema_json`.
@@ -30,6 +30,18 @@ Canonical constraints remain in force:
 - `e30e2c36` — excluded submitted private-request records from deployed public signal projections when no authorized owner key is presented/configured.
 - `86515524` — added a live-route entry-path contract and recorded group/service integration.
 - `03a01597` — removed a direct public Businesses-page link to the hidden, closed intake route; the page now routes to live service/process/work surfaces.
+- `08ac7574` — removed `/requests/$id` from the public-system path list because it is a request-status workflow route, not a public discovery destination; the route and provider-request journey remain intact.
+- `82297e49` — aligned the legacy Businesses regression assertions with the intentionally closed intake state; the old test had required a link that public navigation now must not expose.
+- `fff36be5` — made the independent deploy-verification workflow fail after recording `passed=false`; run `38147317743` demonstrates the old defect was real: it recorded a false verdict for a 227-pass/1-fail test run, and the new step then failed the workflow.
+- `a102b1a8` — closed the production evidence-triage wiring gap: without an explicitly configured service URL, deployed requests now return 503 instead of trying the Compose-only hostname; the paid x402 Compose service is opt-in, with focused tests and the capability map updated.
+- `d432ca9e` — added the missing `node:fs` `readFileSync` import used in `src/lib/forge/cli.test.ts`; CI on that commit passed typecheck, frontend tests, build, lint, route smoke, and secret scan, while backend tests were still running when checked.
+- `9ce7b360` — corrected stale capability-map claims about the homepage and Businesses page linking directly to the closed Forge Bot intake; the retained route remains closed and `noindex`.
+
+### Current continuation status
+
+- `main` advances rapidly; the current inventory is pinned above to an exact SHA. Verify CI against a fresh head after every subsequent commit rather than extrapolating results from an earlier SHA.
+- At SHA `286cd93c`, frontend tests, build, typecheck, lint, route smoke and secret scan were observed successful; backend tests were still in progress. The following `9ce7b360` documentation commit triggers a new CI run, so this is **not** a claim that the latest head is fully green.
+- Production HTML/runtime log reads remain blocked by the connected Vercel scope (403). Do not infer live rendered output, environment-secret values, or production worker behavior from source or from the build alone.
 
 Always inspect CI against the exact latest `main` SHA after a commit. A commit existing is not a test result; build success or a deployment badge alone is not proof every active job or runtime path is green.
 
