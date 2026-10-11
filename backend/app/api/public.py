@@ -660,25 +660,19 @@ def public_revenue_miner(db: Session = Depends(get_db)):
 
 @router.get("/alerts", response_model=list[schemas.PublicAlertOut])
 def list_public_alerts(limit: int = Query(default=20, ge=1, le=50), db: Session = Depends(get_db)):
-    """Recorded changes only. No alert is created unless an outcome already exists."""
-    rows = (
-        db.query(models.Outcome)
-        .filter(models.Outcome.source.in_(["domain_record", "booking_request", "network_connection"]))
-        .filter(*evidence_source.real_scope_source_filters(models.Outcome))
-        .order_by(models.Outcome.id.desc())
-        .limit(limit)
-        .all()
-    )
+    """Public alert summaries reuse the canonical visibility/provenance-safe outcome projection."""
+    from app.services.public_feed import build_public_feed
+
+    outcomes = build_public_feed(db, limit=limit, kind="outcome")
     return [
         schemas.PublicAlertOut(
-            id=row.id,
-            source=row.source,
-            text=row.qualitative_result or "",
+            id=item.entity_id,
+            source=item.source,
+            text=item.summary,
             classification="DERIVED",
-            created_at=row.observed_at,
+            created_at=item.occurred_at,
         )
-        for row in rows
-        if row.qualitative_result
+        for item in outcomes
     ]
 
 

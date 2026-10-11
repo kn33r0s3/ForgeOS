@@ -1383,7 +1383,7 @@ def test_domain_dispute_records_an_event_and_names_a_winner_nowhere(owner_client
     assert "The pump was not as described" not in str(events)
 
 
-def test_public_alerts_are_only_recorded_changes(owner_client_with_db, db):
+def test_public_alerts_use_safe_canonical_outcome_summaries(owner_client_with_db, db):
     empty = owner_client_with_db.get("/public/alerts")
     assert empty.status_code == 200
     assert empty.json() == []
@@ -1392,11 +1392,16 @@ def test_public_alerts_are_only_recorded_changes(owner_client_with_db, db):
         json={"kind": "offer", "title": "Spare filter", "detail": "Unused filter in Bhaktapur"},
     )
     assert created.status_code == 200, created.text
+    record_id = created.json()["id"]
+    record = db.get(models.DomainRecord, record_id)
+    record.status = "closed"
+    record.close_result = "completed"
     db.add(models.Outcome(
         outcome_type="QUALITATIVE",
         source="internal",
         qualitative_result="Operator-only note with phone 9800000001",
         data_scope="REAL",
+        source_kind="REAL",
     ))
     db.add(models.Outcome(
         outcome_type="QUALITATIVE",
@@ -1404,11 +1409,22 @@ def test_public_alerts_are_only_recorded_changes(owner_client_with_db, db):
         qualitative_result="TEST-only alert fixture must stay private",
         data_scope="SANDBOX",
         source_kind="TEST",
+        notes=f"idempotency:domain-record:{record_id}:close",
     ))
     db.add(models.Outcome(
         outcome_type="QUALITATIVE",
         source="domain_record",
-        qualitative_result="Spare filter public record was verified for feed projection.",
+        qualitative_result="PRIVATE NOTE contact 9800000001; requester email@example.test",
+        notes=f"idempotency:domain-record:{record_id}:close",
+        data_scope="REAL",
+        source_kind="REAL",
+        verification_state="VERIFIED",
+        success=True,
+    ))
+    db.add(models.Outcome(
+        outcome_type="QUALITATIVE",
+        source="booking_request",
+        qualitative_result="PRIVATE BOOKING contact 9800000001; email@example.test",
         data_scope="REAL",
         source_kind="REAL",
         verification_state="VERIFIED",
@@ -1419,9 +1435,12 @@ def test_public_alerts_are_only_recorded_changes(owner_client_with_db, db):
     body = alerts.json()
     assert len(body) == 1
     assert body[0]["classification"] == "DERIVED"
-    assert "Spare filter" in body[0]["text"]
+    assert "recorded as completed" in body[0]["text"]
+    assert "PRIVATE NOTE" not in alerts.text
+    assert "PRIVATE BOOKING" not in alerts.text
     assert "TEST-only alert fixture" not in alerts.text
     assert "9800000001" not in alerts.text
+    assert "email@example.test" not in alerts.text
     assert "close_token" not in alerts.text
 
 
