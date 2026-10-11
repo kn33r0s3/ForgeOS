@@ -269,3 +269,20 @@ def test_local_runtime_keeps_optional_gate_off_when_key_is_missing(monkeypatch):
 
 
 
+
+
+def test_public_payment_reconciliation_requires_post_method(monkeypatch):
+    from fastapi import FastAPI
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
+    app = FastAPI()
+    app.middleware("http")(security.api_key_middleware)
+
+    @app.api_route("/{route:path}", methods=["POST", "PUT"])
+    def public_handler(route: str):
+        return {"route": route}
+
+    path = "/api/payments/intent/public-recovery-ref-0123456789/reconcile"
+    with TestClient(app) as test_client:
+        assert test_client.post(path).status_code == 200
+        assert test_client.put(path).status_code == 401

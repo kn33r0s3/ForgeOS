@@ -288,6 +288,7 @@ describe("feature registry", () => {
   it("wires public offer checkout to durable provider intents and a noindex result page", () => {
     const home = readFileSync(path.join(root, "routes", "index.tsx"), "utf8");
     const result = readFileSync(path.join(root, "routes", "payment-result.tsx"), "utf8");
+    const storage = readFileSync(path.join(root, "lib", "checkout-attempt-storage.ts"), "utf8");
     const api = readFileSync(path.join(root, "..", "backend", "app", "api", "payments.py"), "utf8");
     const engine = readFileSync(path.join(root, "..", "backend", "app", "services", "payment_intent_engine.py"), "utf8");
     assert.ok(home.includes("/api/payments/offers"));
@@ -297,8 +298,9 @@ describe("feature registry", () => {
     assert.ok(home.includes("Retry the same checkout attempt"));
     assert.ok(home.includes("onClick={() => void beginCheckout(offer, provider)}"));
     assert.ok(home.includes("error?.offerId === offer.id && error.retryable") && home.includes("beginCheckout(offer, error.provider)"), "only the failed offer may retry with its original provider");
-    assert.ok(home.includes("readStoredCheckoutAttempt") && home.includes("sessionStorage.setItem") && home.includes("sessionStorage.getItem"), "attempt identity survives a page refresh within the tab");
-    assert.ok(home.includes("writeStoredCheckoutAttempt(offerId: number, attempt: StoredCheckoutAttempt): boolean"));
+    assert.ok(home.includes('from "@/lib/checkout-attempt-storage"') && home.includes("readStoredCheckoutAttempt"));
+    assert.ok(storage.includes("export function writeStoredCheckoutAttempt") && storage.includes("export function clearStoredCheckoutAttempt"));
+    assert.ok(storage.includes("storage.getItem(key) === null"), "a clear requires read-back proof");
     assert.ok(home.includes("if (!writeStoredCheckoutAttempt(offer.id, attempt))") && home.includes("No checkout request was sent."), "checkout fails closed before fetch if the idempotency key cannot persist");
     assert.ok(
       home.indexOf("if (!writeStoredCheckoutAttempt(offer.id, attempt))") <
@@ -319,13 +321,14 @@ describe("feature registry", () => {
     assert.ok(api.includes('"/intent/{public_ref}/reconcile"') && api.includes('"/products/{product_id}/checkout/reconcile"'), "provider-confirmed recovery is reachable from result and checkout-error paths");
     assert.ok(engine.includes("reconcile_public_intent") && engine.includes("reconcile_checkout_by_key") && engine.includes("retry_allowed"), "a new attempt requires server-side provider reconciliation");
     assert.ok(home.includes("reconcileCheckout") && home.includes("clearStoredCheckoutAttempt") && home.includes("payload.retry_allowed"), "the offer screen clears its key only after backend authorization");
-    assert.ok(result.includes("/reconcile") && result.includes("sessionStorage.removeItem") && result.includes("retry_allowed"), "the result page retains ambiguous attempts and clears terminal keys only after confirmation");
-    const normalizedResult = result.replace(/\s+/g, " ");
-    assert.ok(normalizedResult.includes("catch { cleared = false; }"), "storage exceptions must never be treated as a cleared checkout identity");
+    assert.ok(result.includes("/reconcile") && result.includes("clearStoredCheckoutAttempt(payload.offer_id)") && result.includes("retry_allowed"), "the result page shares the fail-closed clear contract");
+    assert.ok(result.includes("payload.retry_allowed === true && recovery.retry_allowed === true"), "retry permission requires both server-side fields to agree");
+    assert.ok(result.includes('from "@/lib/checkout-attempt-storage"'));
     assert.ok(
-      normalizedResult.indexOf("if (!cleared)") < normalizedResult.indexOf("setRetryAllowed(allowed)"),
+      result.indexOf("if (allowed && !clearStoredCheckoutAttempt(payload.offer_id))") < result.indexOf("setRetryAllowed(allowed)"),
       "retry permission must remain blocked until local attempt identity is verified cleared",
     );
+    assert.ok(home.includes("if (!clearStoredCheckoutAttempt(offer.id))"), "the offer page also blocks retries when deletion cannot be verified");
 
     assert.ok(engine.includes("finalize_esewa_callback") && engine.includes("finalize_khalti_callback"));
   });

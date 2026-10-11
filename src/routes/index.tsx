@@ -18,6 +18,13 @@ import {
   ExperimentCard,
   EXPERIMENTS,
 } from "@/components/experiments/experiment-card";
+import {
+  clearStoredCheckoutAttempt,
+  readStoredCheckoutAttempt,
+  writeStoredCheckoutAttempt,
+  type CheckoutProvider,
+  type StoredCheckoutAttempt,
+} from "@/lib/checkout-attempt-storage";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -77,8 +84,6 @@ type PublicCheckoutResponse = {
   );
 };
 
-type CheckoutProvider = "esewa" | "khalti";
-type StoredCheckoutAttempt = { key: string; provider: CheckoutProvider };
 type CheckoutAttemptError = {
   offerId: number;
   provider: CheckoutProvider;
@@ -86,48 +91,6 @@ type CheckoutAttemptError = {
   retryable: boolean;
   newAttempt?: boolean;
 };
-
-function checkoutAttemptStorageKey(offerId: number) {
-  return `hami:checkout-attempt:${offerId}`;
-}
-
-function readStoredCheckoutAttempt(offerId: number): StoredCheckoutAttempt | null {
-  try {
-    const raw = window.sessionStorage.getItem(checkoutAttemptStorageKey(offerId));
-    if (!raw) return null;
-    const value = JSON.parse(raw) as Partial<StoredCheckoutAttempt>;
-    if (
-      typeof value.key !== "string" ||
-      value.key.length < 16 ||
-      value.key.length > 128 ||
-      (value.provider !== "esewa" && value.provider !== "khalti")
-    ) return null;
-    return { key: value.key, provider: value.provider };
-  } catch {
-    // Storage may be blocked in privacy-restricted browser contexts.
-    return null;
-  }
-}
-
-function writeStoredCheckoutAttempt(offerId: number, attempt: StoredCheckoutAttempt): boolean {
-  try {
-    window.sessionStorage.setItem(checkoutAttemptStorageKey(offerId), JSON.stringify(attempt));
-    return true;
-  } catch {
-    // Never initiate payment if the retry key cannot survive a page refresh.
-    return false;
-  }
-}
-
-function clearStoredCheckoutAttempt(offerId: number): boolean {
-  try {
-    window.sessionStorage.removeItem(checkoutAttemptStorageKey(offerId));
-    return window.sessionStorage.getItem(checkoutAttemptStorageKey(offerId)) === null;
-  } catch {
-    // sessionStorage is unavailable as a whole; the component also clears its in-memory identity.
-    return true;
-  }
-}
 
 function PublicOffers() {
   const [offers, setOffers] = useState<PublicPaymentOffer[] | null>(null);

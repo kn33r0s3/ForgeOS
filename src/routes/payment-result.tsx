@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Container } from "@/components/layout/container";
+import { clearStoredCheckoutAttempt } from "@/lib/checkout-attempt-storage";
 
 type PaymentIntentStatus = {
   intent: string;
@@ -91,19 +92,10 @@ function PaymentResultPage() {
       setRecord(payload);
       const recovery = payload.recovery;
       if (!recovery) throw new Error("Hami did not receive a provider reconciliation result.");
-      const allowed = payload.retry_allowed === true || recovery.retry_allowed === true;
-      if (allowed) {
-        let cleared = false;
-        try {
-          window.sessionStorage.removeItem("hami:checkout-attempt:" + payload.offer_id);
-          cleared = window.sessionStorage.getItem("hami:checkout-attempt:" + payload.offer_id) === null;
-        } catch {
-          cleared = false;
-        }
-        if (!cleared) {
-          setRecoveryMessage("The provider confirmed the previous attempt ended, but this tab could not clear the saved attempt key. No new attempt was started.");
-          return;
-        }
+      const allowed = payload.retry_allowed === true && recovery.retry_allowed === true;
+      if (allowed && !clearStoredCheckoutAttempt(payload.offer_id)) {
+        setRecoveryMessage("The provider confirmed the previous attempt ended, but this tab could not clear the saved attempt key. No new attempt was started.");
+        return;
       }
       setRetryAllowed(allowed);
       setRecoveryMessage(recovery.message);

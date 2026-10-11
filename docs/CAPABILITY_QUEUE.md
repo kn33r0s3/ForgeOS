@@ -1,3 +1,12 @@
+## [CI COLLECTION FIX + PAYMENT-SAFETY / CI PENDING] Share a fail-closed checkout identity contract (2026-10-12)
+
+- The previous backend run stopped during test collection because the public-reconciliation parameterized test sat beneath another test's `path` decorator. The original private-read parametrization is restored.
+- The offer page and payment-result page now call one shared checkout-attempt storage helper rather than maintaining duplicate implementations.
+- The result page also requires the top-level retry decision and nested recovery decision to agree; a contradictory response cannot override an explicit denial. Deletion is authorized only after read-back verifies absence; exceptions and residual keys return false.
+- Added executable tests for write/read success, write failure, removal failure, read-back failure, residual keys, verified deletion, and malformed provider records. No live provider calls, credentials, checkout flags, buyer data, or fulfillment state changed.
+- Tightened public reconciliation matching to ASCII intent references and numeric product IDs and limited the exception to POST only. Checkout initiation, fulfillment, unrelated routes and other write methods remain owner-key protected.
+- Exact-head backend/frontend CI, lint, typecheck, build, secret scan and independent deployment verification are required.
+
 ## [SOURCE FIX / CI PENDING] Keep browser reconciliation public without weakening owner-write authorization (2026-10-12)
 
 - The global write gate protects POST/PUT/PATCH/DELETE by default, but it also blocked the two browser-facing recovery endpoints. Supplying the owner key from the UI would be unsafe; these exact routes instead require the original checkout identity or high-entropy intent reference and use the existing HMAC-backed rate limiter.

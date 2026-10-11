@@ -100,7 +100,11 @@ def _public_payment_reconciliation_path(path: str) -> bool:
         and parts[1] == "intent"
         and parts[3] == "reconcile"
     ):
-        return 16 <= len(parts[2]) <= 128
+        return (
+            16 <= len(parts[2]) <= 128
+            and parts[2].isascii()
+            and all(char.isalnum() or char in "-_" for char in parts[2])
+        )
     if (
         len(parts) == 5
         and parts[0] == "payments"
@@ -147,7 +151,7 @@ async def api_key_middleware(request: Request, call_next):
             path in PUBLIC_WRITE_PATHS
             or path.startswith("/public/domain/")
             or path.startswith("/api/public/domain/")
-            or _public_payment_reconciliation_path(path)
+            or (method == "POST" and _public_payment_reconciliation_path(path))
         )
         private_substrate_read = path.startswith(("/forge/substrate/", "/api/forge/substrate/"))
         owner_guarded_forge_bot_route = _forge_bot_owner_route(path)
