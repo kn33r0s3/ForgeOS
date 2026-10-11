@@ -29,7 +29,7 @@ def _decision(secret, method, header_key=None, query_key=None):
     from fastapi import Request
     from starlette.datastructures import Headers, QueryParams
 
-    security.settings.FORGE_API_KEY = secret
+    original = security.settings.FORGE_API_KEY
     class _R(Request):
         def __init__(self):
             self._m = method
@@ -42,11 +42,16 @@ def _decision(secret, method, header_key=None, query_key=None):
         @property
         def query_params(self): return self._q
 
-    # Replicate the middleware's enforcement decision in isolation.
-    req = _R()
-    if secret and method not in {"GET", "HEAD", "OPTIONS"}:
-        return security._authorized(req)
-    return True  # reads / no-secret always pass
+    # Restore settings after the isolated decision so test order cannot leak
+    # an owner key into unrelated API tests that share the process.
+    try:
+        security.settings.FORGE_API_KEY = secret
+        req = _R()
+        if secret and method not in {"GET", "HEAD", "OPTIONS"}:
+            return security._authorized(req)
+        return True
+    finally:
+        security.settings.FORGE_API_KEY = original
 
 
 def test_auth_off_passes_through():
@@ -77,6 +82,38 @@ def test_auth_on_gates_writes_but_allows_correct_key():
         "/api/repair-shop/work-items/1",
     ],
 )
+
+@pytest.mark.parametrize(
+    ("path", "allowed"),
+    [
+        ("/api/payments/intent/public-recovery-ref-0123456789/reconcile", True),
+        ("/payments/intent/public-recovery-ref-0123456789/reconcile", True),
+        ("/api/payments/products/5/checkout/reconcile", True),
+        ("/api/payments/products/5/checkout", False),
+        ("/api/payments/intent/public-recovery-ref-0123456789/fulfill", False),
+        ("/api/payments/intent/short/reconcile", False),
+        ("/api/payments/products/5/checkout/reconcile/extra", False),
+    ],
+)
+def test_public_payment_reconciliation_allowlist_is_narrow(path, allowed, monkeypatch):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from app import security
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
+    app = FastAPI()
+    app.middleware("http")(security.api_key_middleware)
+
+    @app.api_route("/{route:path}", methods=["POST"])
+    def public_handler(route: str):
+        return {"route": route}
+
+    with TestClient(app) as test_client:
+        response = test_client.post(path)
+    assert response.status_code == (200 if allowed else 401), response.text
+
+
+
 def test_private_customer_reads_require_configured_api_key(path, monkeypatch):
     """Private customer read routes are gated without creating test customer data."""
     from fastapi import FastAPI

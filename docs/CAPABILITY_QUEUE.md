@@ -1,3 +1,9 @@
+## [SOURCE FIX / CI PENDING] Keep browser reconciliation public without weakening owner-write authorization (2026-10-12)
+
+- The global write gate protects POST/PUT/PATCH/DELETE by default, but it also blocked the two browser-facing recovery endpoints. Supplying the owner key from the UI would be unsafe; these exact routes instead require the original checkout identity or high-entropy intent reference and use the existing HMAC-backed rate limiter.
+- The allowlist matches only \`/payments/intent/{public_ref}/reconcile\` (reference length 16–128) and \`/payments/products/{id}/checkout/reconcile\`. Checkout initiation, fulfillment, unrelated payment paths, short references and extra suffixes remain owner-key protected.
+- Regression tests run with \`FORGE_API_KEY\` configured, confirm both intended public route shapes pass, and verify neighboring payment writes remain blocked. The unknowns inventory assertion now reflects D93–D96. Exact-head CI and deployment status still required.
+
 ## [PAYMENT-SAFETY FIX / CI PENDING] Fail closed when result-page storage access throws (2026-10-12)
 
 - The provider reconciliation response can authorize a fresh attempt only after the tab-scoped key is removed and verified absent. The result-page catch block mistakenly treated any storage exception as successful clearing.

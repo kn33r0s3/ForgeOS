@@ -126,6 +126,7 @@ def test_payment_status_is_owner_protected_configuration_only_and_never_contacts
 
 
 def test_public_intent_reconciliation_endpoint_is_no_store_and_rate_limited(monkeypatch):
+    monkeypatch.setattr(settings, "FORGE_API_KEY", "test-owner-key")
     monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_HMAC_KEY", "test-public-reconciliation-key")
     monkeypatch.setattr(
         payments.forge_bot_privacy, "consume_rate_limited_request", lambda *args, **kwargs: True
@@ -154,6 +155,7 @@ def test_public_intent_reconciliation_endpoint_is_no_store_and_rate_limited(monk
 
 
 def test_public_intent_reconciliation_conflicts_require_owner_review(monkeypatch):
+    monkeypatch.setattr(settings, "FORGE_API_KEY", "test-owner-key")
     monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_HMAC_KEY", "test-public-reconciliation-key")
     monkeypatch.setattr(
         payments.forge_bot_privacy, "consume_rate_limited_request", lambda *args, **kwargs: True
@@ -169,6 +171,7 @@ def test_public_intent_reconciliation_conflicts_require_owner_review(monkeypatch
 
 
 def test_public_checkout_reconciliation_by_key_uses_existing_key_and_no_store(monkeypatch):
+    monkeypatch.setattr(settings, "FORGE_API_KEY", "test-owner-key")
     monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_HMAC_KEY", "test-public-reconciliation-key")
     monkeypatch.setattr(
         payments.forge_bot_privacy, "consume_rate_limited_request", lambda *args, **kwargs: True

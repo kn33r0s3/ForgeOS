@@ -85,6 +85,35 @@ def require_owner_api_key(request: Request) -> None:
         raise HTTPException(status_code=401, detail="Valid X-API-Key required.")
 
 
+def _public_payment_reconciliation_path(path: str) -> bool:
+    """Allow only the two attempt-bound public payment recovery POST routes.
+
+    The routes prove possession of a high-entropy public intent reference or the
+    original checkout idempotency key and enforce their own rate limit. Checkout
+    initiation and broader /payments/* paths are deliberately not allowlisted.
+    """
+    normalized = path.removeprefix("/api")
+    parts = normalized.strip("/").split("/")
+    if (
+        len(parts) == 4
+        and parts[0] == "payments"
+        and parts[1] == "intent"
+        and parts[3] == "reconcile"
+    ):
+        return 16 <= len(parts[2]) <= 128
+    if (
+        len(parts) == 5
+        and parts[0] == "payments"
+        and parts[1] == "products"
+        and parts[2].isascii()
+        and parts[2].isdigit()
+        and parts[3] == "checkout"
+        and parts[4] == "reconcile"
+    ):
+        return True
+    return False
+
+
 def _forge_bot_owner_route(path: str) -> bool:
     normalized = path.removeprefix("/api")
     return (
@@ -118,6 +147,7 @@ async def api_key_middleware(request: Request, call_next):
             path in PUBLIC_WRITE_PATHS
             or path.startswith("/public/domain/")
             or path.startswith("/api/public/domain/")
+            or _public_payment_reconciliation_path(path)
         )
         private_substrate_read = path.startswith(("/forge/substrate/", "/api/forge/substrate/"))
         owner_guarded_forge_bot_route = _forge_bot_owner_route(path)
