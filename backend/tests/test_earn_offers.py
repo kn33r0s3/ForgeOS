@@ -53,10 +53,15 @@ def test_status_progression_is_enforced_server_side(db):
     from app import models
     outcome = db.query(models.Outcome).one()
     assert outcome.source == "earning_offer"
+    assert outcome.outcome_type == "QUALITATIVE"
     assert outcome.success is True
-    assert outcome.actual_value == 1500
-    assert outcome.unit == "NPR"
+    assert outcome.actual_value is None
+    assert outcome.unit is None
+    assert outcome.source_kind == "MOCK"
+    assert outcome.verification_state == "REPORTED"
+    assert "Stated price NPR 1500" in outcome.qualitative_result
     assert "NPR 1,500 received in cash" in outcome.qualitative_result
+    assert db.query(models.Outcome).filter_by(outcome_type="ACTUAL_REVENUE").count() == 0
 
 
 def test_terminal_status_requires_an_honest_outcome_note(db):

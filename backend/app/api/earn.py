@@ -203,14 +203,13 @@ def update_offer_status(
     db.refresh(row)
     if body.status in {"paid", "failed", "abandoned"}:
         from app.services import action_engine
-        stated_price = float(row.price_npr) if row.price_npr is not None else None
         action_engine.record_domain_event(
             db,
             idempotency_key=f"earning-offer:{row.id}:{body.status}",
             source="earning_offer",
             success=body.status == "paid",
-            actual_value=stated_price if body.status == "paid" else None,
-            unit="NPR" if body.status == "paid" and stated_price is not None else None,
+            # price_npr is a quote, not a measured cash receipt. Preserve it
+            # in the narrative below, never in Outcome.actual_value.
             qualitative_result=(
                 f"Earning offer {row.id} closed as {body.status}. "
                 f"Stated price NPR {row.price_npr}. Note: {note}"
