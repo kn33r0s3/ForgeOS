@@ -163,12 +163,14 @@ def test_daily_cycle_collects_no_more_than_existing_batch_limit(db, monkeypatch)
 
 
 def test_daily_cycle_structures_collected_external_signals_in_same_run(db, monkeypatch):
+    # Neutral generated TEST material: enough shared vocabulary to exercise
+    # observation -> pattern -> belief, but no asserted customer, pain or cost.
     texts = [
-        "At least 12 restaurants in Kathmandu still take phone orders and write them on paper tickets. Managers report 3-5 wrong dishes per busy night, losing roughly NPR 8000-15000 each weekend.",
-        "Restaurant managers in Kathmandu report that paper kitchen tickets get lost every Friday night. One owner counted 7 lost tickets last week, leading to angry customers who refused to pay for 4 orders.",
-        "Three cafe owners near Thamel still use handwritten order pads. Staff make mistakes on 15 percent of orders according to their own count. Customers complain about wrong dishes at least twice per week.",
-        "A restaurant owner in Lazimpat said they lose about NPR 12000 every weekend because phone orders are miswritten and kitchen tickets are illegible. They tried hiring more staff but the paper process remains the bottleneck.",
-        "Small restaurants need a simple digital order system. Manual phone-to-paper process creates constant operational friction: 5 restaurants interviewed last month all reported the same problem of lost tickets and misheard phone orders.",
+        "TEST fixture records a sample workflow diagram with arrows between demo stations during the scheduled rehearsal.",
+        "TEST fixture stores sample catalog entries and label changes on demo screens during the scheduled rehearsal.",
+        "TEST fixture tracks sample state transitions across demo stations during the scheduled rehearsal.",
+        "TEST fixture displays example rows moving through mock screens and demo stations during the scheduled rehearsal.",
+        "TEST fixture checks sample JSON records against an example schema during the scheduled rehearsal.",
     ]
 
     class PytestSourceCollector(SourceCollector):
@@ -211,9 +213,27 @@ def test_daily_cycle_structures_collected_external_signals_in_same_run(db, monke
         query=question.question,
     )
     monkeypatch.setitem(collector_runner.COLLECTORS, "pytest-network-source", PytestSourceCollector)
+    # This test owns a specific planned task. Do not let the daily cycle select
+    # other queued tasks (which could perform real cleared-source retrievals).
+    def run_fixture_task(session, limit=2):
+        if limit < 1:
+            return []
+        task = (
+            session.query(models.ResearchTask)
+            .filter_by(
+                question_id=question.id,
+                source="pytest-network-source",
+                status="planned",
+            )
+            .order_by(models.ResearchTask.id.asc())
+            .first()
+        )
+        return [collector_runner.execute_task(session, task)] if task is not None else []
+
+    monkeypatch.setattr(collector_runner, "run_pending_tasks", run_fixture_task)
+
     # The daily-cycle runner owns and closes its session. Give it a distinct
-    # session on the same isolated in-memory test engine; never let the runner
-    # close or recycle the pytest fixture's own connection.
+    # session on the same isolated in-memory test engine.
     runner_session_factory = sessionmaker(
         bind=db.get_bind(),
         autocommit=False,
