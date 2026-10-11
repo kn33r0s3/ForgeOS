@@ -284,6 +284,22 @@ describe("feature registry", () => {
     assert.ok(engine.includes("An explicitly approved offer brief is required before launch"));
     assert.ok(engine.includes("Offer details changed after approval; review is required again."));
   });
+  it("wires public offer checkout to durable provider intents and a noindex result page", () => {
+    const home = readFileSync(path.join(root, "routes", "index.tsx"), "utf8");
+    const result = readFileSync(path.join(root, "routes", "payment-result.tsx"), "utf8");
+    const api = readFileSync(path.join(root, "..", "backend", "app", "api", "payments.py"), "utf8");
+    const engine = readFileSync(path.join(root, "..", "backend", "app", "services", "payment_intent_engine.py"), "utf8");
+    assert.ok(home.includes("/api/payments/offers"));
+    assert.ok(home.includes("/api/payments/products/") && home.includes("/checkout"));
+    assert.ok(home.includes("Idempotency-Key"));
+    assert.ok(home.includes('payload.checkout.type === "form_post"') && home.includes("form.submit()"));
+    assert.ok(result.includes('createFileRoute("/payment-result")'));
+    assert.ok(result.includes('name: "robots", content: "noindex,nofollow,noarchive"'));
+    assert.ok(result.includes('record.status === "VERIFIED"'));
+    assert.ok(api.includes('"/products/{product_id}/checkout"'));
+    assert.ok(engine.includes("finalize_esewa_callback") && engine.includes("finalize_khalti_callback"));
+  });
+
   it("keeps the operating model, scout queue, and buyer-journey tools connected to their guarded APIs", () => {
     const owner = readFileSync(path.join(root, "routes", "owner.tsx"), "utf8");
     const controls = [

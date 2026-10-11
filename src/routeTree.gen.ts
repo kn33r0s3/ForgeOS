@@ -27,6 +27,7 @@ import { Route as NeedsRouteImport } from './routes/needs'
 import { Route as OperationsRouteImport } from './routes/operations'
 import { Route as OpportunitiesRouteImport } from './routes/opportunities'
 import { Route as OwnerRouteImport } from './routes/owner'
+import { Route as PaymentResultRouteImport } from './routes/payment-result'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProcessRouteImport } from './routes/process'
 import { Route as ProvidersRouteImport } from './routes/providers'
@@ -136,6 +137,11 @@ const OpportunitiesRoute = OpportunitiesRouteImport.update({
 const OwnerRoute = OwnerRouteImport.update({
   id: '/owner',
   path: '/owner',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentResultRoute = PaymentResultRouteImport.update({
+  id: '/payment-result',
+  path: '/payment-result',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -258,6 +264,7 @@ export interface FileRoutesByFullPath {
   '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
   '/owner': typeof OwnerRoute
+  '/payment-result': typeof PaymentResultRoute
   '/privacy': typeof PrivacyRoute
   '/process': typeof ProcessRoute
   '/providers': typeof ProvidersRoute
@@ -297,6 +304,7 @@ export interface FileRoutesByTo {
   '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
   '/owner': typeof OwnerRoute
+  '/payment-result': typeof PaymentResultRoute
   '/privacy': typeof PrivacyRoute
   '/process': typeof ProcessRoute
   '/providers': typeof ProvidersRoute
@@ -337,6 +345,7 @@ export interface FileRoutesById {
   '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
   '/owner': typeof OwnerRoute
+  '/payment-result': typeof PaymentResultRoute
   '/privacy': typeof PrivacyRoute
   '/process': typeof ProcessRoute
   '/providers': typeof ProvidersRoute
@@ -498,6 +507,7 @@ export interface RootRouteChildren {
   OperationsRoute: typeof OperationsRoute
   OpportunitiesRoute: typeof OpportunitiesRoute
   OwnerRoute: typeof OwnerRoute
+  PaymentResultRoute: typeof PaymentResultRoute
   PrivacyRoute: typeof PrivacyRoute
   ProcessRoute: typeof ProcessRoute
   ProvidersRoute: typeof ProvidersRoute
@@ -642,6 +652,13 @@ declare module '@tanstack/react-router' {
       path: '/owner'
       fullPath: '/owner'
       preLoaderRoute: typeof OwnerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payment-result': {
+      id: '/payment-result'
+      path: '/payment-result'
+      fullPath: '/payment-result'
+      preLoaderRoute: typeof PaymentResultRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -832,6 +849,7 @@ const rootRouteChildren: RootRouteChildren = {
   OperationsRoute: OperationsRoute,
   OpportunitiesRoute: OpportunitiesRoute,
   OwnerRoute: OwnerRoute,
+  PaymentResultRoute: PaymentResultRoute,
   PrivacyRoute: PrivacyRoute,
   ProcessRoute: ProcessRoute,
   ProvidersRoute: ProvidersRoute,

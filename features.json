@@ -386,7 +386,18 @@
       "route": "/work",
       "status": "archived",
       "selector": "main"
+    },
+    {
+      "commit": "87bb217",
+      "date_added": "2026-10-12",
+      "heading": "Payment status",
+      "id": "page-payment-result",
+      "intent": "Noindex transaction-return page; reports only provider-verified payment intent state and never collects personal data.",
+      "name": "Payment result",
+      "route": "/payment-result",
+      "selector": "main",
+      "status": "hidden"
     }
   ],
-  "updated": "2026-10-11"
+  "updated": "2026-10-12"
 }

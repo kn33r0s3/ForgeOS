@@ -39,6 +39,162 @@ export const Route = createFileRoute("/")({
   }),
 });
 
+type PublicPaymentOffer = {
+  id: number;
+  name: string;
+  offer: string;
+  pricing: string;
+  currency: "NPR";
+  amount_paisa: number;
+  checkout_enabled: boolean;
+  providers: Array<"esewa" | "khalti">;
+};
+
+type PublicCheckoutResponse = {
+  intent: string;
+  status: string;
+  amount_paisa: number;
+  amount_npr: string;
+  currency: "NPR";
+  product_name: string;
+  checkout: null | (
+    | { type: "form_post"; url: string; fields: Record<string, string> }
+    | { type: "redirect"; url: string }
+  );
+};
+
+function PublicOffers() {
+  const [offers, setOffers] = useState<PublicPaymentOffer[] | null>(null);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [keys, setKeys] = useState<Record<number, string>>({});
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let current = true;
+    fetch("/api/payments/offers", { headers: { Accept: "application/json" }, cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Published offers are temporarily unavailable.");
+        return (await response.json()) as PublicPaymentOffer[];
+      })
+      .then((items) => { if (current) setOffers(Array.isArray(items) ? items : []); })
+      .catch(() => { if (current) setOffers([]); });
+    return () => { current = false; };
+  }, []);
+
+  async function beginCheckout(offer: PublicPaymentOffer, provider: "esewa" | "khalti") {
+    if (busyId !== null) return;
+    setBusyId(offer.id);
+    setError("");
+    const key = keys[offer.id] ?? (
+      window.crypto?.randomUUID?.()
+      ?? ("hami-" + Date.now() + "-" + Math.random().toString(36).slice(2))
+    );
+    setKeys((current) => ({ ...current, [offer.id]: key }));
+    try {
+      const response = await fetch("/api/payments/products/" + offer.id + "/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": key,
+        },
+        body: JSON.stringify({ provider }),
+      });
+      const payload = await response.json().catch(() => null) as
+        | (PublicCheckoutResponse & { detail?: string })
+        | null;
+      if (!response.ok || !payload) {
+        throw new Error(payload && "detail" in payload && typeof payload.detail === "string"
+          ? payload.detail
+          : "Checkout could not be started (" + response.status + ").");
+      }
+      if (!payload.checkout) {
+        window.location.assign("/payment-result?intent=" + encodeURIComponent(payload.intent));
+        return;
+      }
+      if (payload.checkout.type === "redirect") {
+        const destination = new URL(payload.checkout.url);
+        if (destination.protocol !== "https:") throw new Error("The payment provider returned a non-HTTPS destination.");
+        window.location.assign(destination.toString());
+        return;
+      }
+      const destination = new URL(payload.checkout.url);
+      if (destination.protocol !== "https:") throw new Error("The payment provider returned a non-HTTPS form destination.");
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = destination.toString();
+      form.style.display = "none";
+      for (const [name, value] of Object.entries(payload.checkout.fields)) {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      }
+      document.body.appendChild(form);
+      form.submit();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Checkout could not be started.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  if (offers === null || offers.length === 0) return null;
+
+  return (
+    <section className="border-b border-line bg-surface" aria-labelledby="published-offers-heading">
+      <Container className="py-12 sm:py-16">
+        <Eyebrow tone="amber">Published offers</Eyebrow>
+        <h2 id="published-offers-heading" className="mt-3 font-display text-title font-extrabold tracking-tight text-ink">
+          Offers that passed the evidence gate
+        </h2>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-muted">
+          Only currently published products with verified demand appear here. A checkout request is not a completed payment; Hami records revenue only after the provider verifies the transaction.
+        </p>
+        {error ? <p role="alert" className="mt-4 rounded-card border border-danger/60 p-3 text-sm">{error}</p> : null}
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          {offers.map((offer) => (
+            <article key={offer.id} className="rounded-card border-2 border-line bg-card p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <h3 className="text-lg font-extrabold">{offer.name}</h3>
+                <span className="rounded border border-line px-2 py-1 font-mono text-xs">{offer.currency}</span>
+              </div>
+              <p className="mt-3 text-sm leading-6">{offer.offer}</p>
+              <p className="mt-4 font-display text-2xl font-extrabold">{offer.pricing}</p>
+              {offer.checkout_enabled && offer.providers.length ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {offer.providers.map((provider) => (
+                    <button
+                      key={provider}
+                      type="button"
+                      disabled={busyId !== null}
+                      onClick={() => void beginCheckout(offer, provider)}
+                      className="min-h-11 rounded-card border-2 border-accent px-4 py-2 text-sm font-bold text-accent disabled:opacity-60"
+                    >
+                      {busyId === offer.id ? "Opening secure checkout…" : "Pay with " + (provider === "esewa" ? "eSewa" : "Khalti")}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-4 text-sm text-muted">Checkout is not enabled for this offer yet. No payment has been requested.</p>
+              )}
+              {error ? (
+                <button
+                  type="button"
+                  onClick={() => setKeys((current) => { const next = { ...current }; delete next[offer.id]; return next; })}
+                  className="mt-3 text-xs font-bold text-muted underline"
+                >
+                  Start a new checkout attempt
+                </button>
+              ) : null}
+            </article>
+          ))}
+        </div>
+      </Container>
+    </section>
+  );
+}
+
 const LOOP_NODES = [
   "Reality",
   "Observation",
@@ -54,6 +210,7 @@ function HomePage() {
   return (
     <main className="bg-background text-ink">
       <Hero />
+      <PublicOffers />
       <Capabilities />
       <FindingsPreview />
       <UnknownsPreview />

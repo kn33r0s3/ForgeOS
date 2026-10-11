@@ -172,9 +172,6 @@ def test_esewa_amount_mismatch_is_disputed_without_revenue(db, monkeypatch):
         "transaction_uuid": intent.merchant_order_id,
         "product_code": "TEST-MERCHANT",
     })
-    result = payment_intent_engine.finalize_esewa_callback(
-        db, public_ref=intent.public_ref, encoded_data="test-signed-payload"
-    ) if False else None
     with pytest.raises(ValueError, match="does not match"):
         payment_intent_engine.finalize_esewa_callback(
             db, public_ref=intent.public_ref, encoded_data="test-signed-payload"

@@ -1,3 +1,9 @@
+## [SOURCE CHANGE / CI PENDING] Add public offer and payment-result UI for verified checkout intents (2026-10-12)
+
+- The homepage now renders offers only from the server-filtered `/api/payments/offers` projection. eSewa signed-form submission and Khalti redirects occur only after the visitor explicitly clicks a provider button.
+- A noindex `/payment-result` route reads the minimal no-store intent status. It labels revenue verified only when the persisted intent status is `VERIFIED`; pending, failed and disputed states explicitly do not establish revenue.
+- The return route is registered as hidden so it remains reachable from provider callbacks but does not become navigation or sitemap content. Public checkout remains disabled by default in server configuration.
+- Exact-SHA UI/backend build and tests pending.
 ## [SOURCE CHANGE / CI PENDING] Bind provider checkout to durable verified payment intents (2026-10-12)
 
 - Added public offer listing, per-product checkout entry behind `FORGEOS_PUBLIC_CHECKOUT_ENABLED=false` by default, random public payment-intent references, hashed idempotency keys, provider/order identity, visitor-HMAC rate limiting and a 16 KiB body cap.
