@@ -380,6 +380,17 @@ def test_pending_batch_prefers_cleared_sources_then_question_priority(db, monkey
         source="openalex",
         query="higher priority cleared query",
     )
+    content_follow_up = research_task_engine.create_task(
+        db,
+        question_id=higher_priority_question.id,
+        source="openalex",
+        query="content-derived source query",
+    )
+    content_follow_up.results = {
+        **(content_follow_up.results or {}),
+        "follow_up_reason": "openalex_content_source_reference_follow_up",
+    }
+    db.commit()
 
     monkeypatch.setattr(
         source_clearance_registry,
@@ -400,11 +411,12 @@ def test_pending_batch_prefers_cleared_sources_then_question_priority(db, monkey
     second = collector_runner.run_pending_tasks(db, limit=1)
 
     assert [outcome["task_id"] for outcome in first + second] == [
+        content_follow_up.id,
         higher_priority.id,
-        lower_priority.id,
     ]
-    assert attempted == [higher_priority.id, lower_priority.id]
+    assert attempted == [content_follow_up.id, higher_priority.id]
     assert db.get(models.ResearchTask, blocked.id).status == "planned"
+    assert db.get(models.ResearchTask, lower_priority.id).status == "planned"
 
 
 def test_pending_batch_attempts_deferred_task_only_once(db, monkeypatch):
@@ -1497,3 +1509,169 @@ def test_crossref_lead_selection_uses_persisted_dois_across_follow_up_cycles(
         second_task.results["discovery_parent_evidence_id"]
         == source_results[0]["evidence_id"]
     )
+
+
+def test_retrieved_data_source_changes_follow_up_and_records_access_gap(db, monkeypatch):
+    _freeze_clearance_date(monkeypatch)
+    question = models.ResearchQuestion(
+        question="What population-level evidence describes household health outcomes?"
+    )
+    db.add(question)
+    db.commit()
+    crossref_capability = next(
+        item
+        for item in capability_discovery.ranked_source_capabilities(
+            db, "bibliographic_discovery"
+        )
+        if item["source"] == "crossref"
+    )
+    parent = research_task_engine.create_task(
+        db,
+        question_id=question.id,
+        source="crossref",
+        query=question.question,
+    )
+    crossref_evidence = models.Evidence(
+        source="crossref",
+        external_id="10.1234/health-study",
+        canonical_url="https://doi.org/10.1234/health-study",
+        title="A bibliographic lead",
+        retrieved_at=models.utcnow(),
+        provenance=json.dumps(
+            {
+                "source_registry_id": "crossref-public-works-metadata",
+                "metadata_only": True,
+                "doi": "10.1234/health-study",
+            }
+        ),
+    )
+    db.add(crossref_evidence)
+    db.flush()
+    parent.status = "completed"
+    parent.evidence_ids = str(crossref_evidence.id)
+    parent.results = {
+        **(parent.results or {}),
+        "research_requirement_id": "bibliographic_discovery",
+        "source_registry_id": crossref_capability["registry_id"],
+        "source_results": [
+            {
+                "evidence_id": crossref_evidence.id,
+                "external_id": crossref_evidence.external_id,
+                "assessment": {"keyword_overlap": {"matched_terms": ["health"]}},
+            }
+        ],
+    }
+    db.commit()
+    requirement = {
+        "id": "bibliographic_discovery",
+        "evidence_requirement_id": "bibliographic_discovery",
+        "capability_requirement_id": "bibliographic_discovery",
+        "question": question.question,
+        "evidence_kind": "bibliographic_metadata_lead_only",
+        "candidate_sources": [crossref_capability],
+        "capable_sources": [crossref_capability],
+        "unresolved_dimensions": ["substantive_content"],
+        "decomposition_depth": 0,
+    }
+    plan = {"requirements": [requirement], "orchestration_requirements": []}
+
+    doi_child, _ = research_planner._create_follow_up_requirement(
+        db, question, plan, requirement, task_count=1
+    )
+    doi_task = db.get(models.ResearchTask, doi_child["task_ids"][0])
+    abstract = (
+        "We analyze a national health cohort using records from the National "
+        "Health and Nutrition Examination Survey (NHANES). The study reports "
+        "associations but does not establish causation."
+    )
+    abstract_evidence = models.Evidence(
+        source="openalex",
+        external_id="https://openalex.org/W9876543210",
+        canonical_url="https://openalex.org/W9876543210",
+        title="Health outcomes in a population cohort",
+        retrieved_at=models.utcnow(),
+        provenance=json.dumps(
+            {
+                "source_registry_id": "openalex-public-works-cc0",
+                "source_type": "openalex",
+                "license": "CC0",
+                "traceable": True,
+                "abstract_reconstructed": True,
+                "abstract": abstract,
+            }
+        ),
+    )
+    db.add(abstract_evidence)
+    db.flush()
+    doi_task.status = "completed"
+    doi_task.evidence_ids = str(abstract_evidence.id)
+    doi_task.results = {
+        **(doi_task.results or {}),
+        "source_results": [
+            {
+                "evidence_id": abstract_evidence.id,
+                "external_id": abstract_evidence.external_id,
+            }
+        ],
+    }
+    db.commit()
+
+    content_child, reason = research_planner._create_follow_up_requirement(
+        db, question, plan, requirement, task_count=2
+    )
+
+    assert reason == "openalex_content_source_reference_follow_up"
+    assert (
+        content_child["discovered_source_reference"]
+        == "National Health and Nutrition Examination Survey (NHANES)"
+    )
+    content_task = db.get(models.ResearchTask, content_child["task_ids"][0])
+    assert content_task.source == "openalex"
+    assert content_task.query == content_child["discovered_source_reference"]
+    assert content_task.results["follow_up_reason"] == reason
+    assert content_child["claim_support"] == "not_inferred"
+    assert "primary-data access" in content_child["evidence_scope"]
+    assert (
+        content_task.results["discovery_parent_evidence_id"]
+        == abstract_evidence.id
+    )
+
+    access_gap = next(
+        item
+        for item in plan["requirements"]
+        if item["id"].startswith("primary_source_access_")
+    )
+    gap = db.get(models.ForgeCapability, access_gap["capability_gap_id"])
+    gap_data = json.loads(gap.attributes)["capability_discovery"]
+    assert access_gap["source_reference_evidence_id"] == abstract_evidence.id
+    assert access_gap["terminal_reason"] == "no_currently_authorized_source_capability"
+    assert gap_data["why_insufficient"] == "no_active_cleared_capability"
+    assert gap_data["required_scope"]["source_reference"] == (
+        "National Health and Nutrition Examination Survey (NHANES)"
+    )
+    assert gap_data["required_scope"]["source_reference_evidence_id"] == (
+        abstract_evidence.id
+    )
+    assert (
+        db.query(models.WorldEvent)
+        .filter_by(event_type="capability_gap_recorded")
+        .count()
+        >= 1
+    )
+
+
+def test_data_source_reference_extraction_is_not_subject_specific():
+    examples = [
+        (
+            "Survey responses were collected from the European Union Labour Force Survey.",
+            "European Union Labour Force Survey",
+        ),
+        (
+            "The analysis uses data from the National Health and Nutrition "
+            "Examination Survey (NHANES).",
+            "National Health and Nutrition Examination Survey (NHANES)",
+        ),
+        ("We compare household income across two regions.", None),
+    ]
+    for abstract, expected in examples:
+        assert research_planner._data_source_reference(abstract) == expected

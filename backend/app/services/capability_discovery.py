@@ -125,6 +125,10 @@ def _scope_for(question: models.ResearchQuestion, requirement: dict[str, Any]) -
         "required_evidence_type": requirement.get(
             "required_evidence_type", requirement.get("evidence_kind")
         ),
+        "source_reference": requirement.get("source_reference"),
+        "source_reference_evidence_id": requirement.get(
+            "source_reference_evidence_id"
+        ),
         "geographic_scope": requirement.get("geographic_qualification"),
         "temporal_scope": _temporal_scope(
             " ".join(

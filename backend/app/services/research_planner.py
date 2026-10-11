@@ -86,6 +86,19 @@ _STOP_WORDS = {
     "where", "which", "while", "with", "would", "your",
 }
 
+_REFERENCED_DATA_SOURCE = re.compile(
+    r"\b(?:data|dataset|microdata|records?|observations?|sample|responses?)\s+"
+    r"(?:(?:were|was|are|is)\s+)?"
+    r"(?:(?:drawn|obtained|collected|extracted|taken)\s+)?"
+    r"from\s+(?:the\s+)?(?P<reference>[^.;!?]+)",
+    re.IGNORECASE,
+)
+_DATA_SOURCE_MARKER = re.compile(
+    r"\b(?:survey|census|dataset|database|registry|panel|archive|repository|"
+    r"administrative records|microdata)\b",
+    re.IGNORECASE,
+)
+
 _UNCERTAINTIES = [
     "Problem prevalence, frequency, and severity are unverified.",
     "Affected customer groups, decision authority, and willingness to pay are unknown.",
@@ -1499,6 +1512,7 @@ def _create_follow_up_requirement(
     )
     candidate: dict[str, Any] | None = None
     discovered_doi: str | None = None
+    discovered_source_reference: str | None = None
     discovery_parent_evidence_id: int | None = None
     retrieval_observation = (
         (parent_task.results or {}).get("retrieval_observation", {})
@@ -1533,6 +1547,38 @@ def _create_follow_up_requirement(
                 **capability,
                 "required_evidence_type": requirement["evidence_kind"],
             }
+
+    if source is None and evidence_requirement_id == "bibliographic_discovery":
+        content_lead = _next_openalex_content_source(db, question.id)
+        capability = next(
+            (
+                item
+                for item in capability_discovery.ranked_source_capabilities(
+                    db, "scholarly_evidence"
+                )
+                if item["source"] == "openalex"
+            ),
+            None,
+        )
+        if content_lead is not None and capability is not None:
+            source = "openalex"
+            query = content_lead["source_reference"]
+            mode_override = "keyword"
+            evidence_alias = "scholarly_evidence"
+            capability_requirement_id = "scholarly_evidence"
+            discovered_source_reference = content_lead["source_reference"]
+            discovery_parent_evidence_id = content_lead["evidence_id"]
+            candidate = {
+                **capability,
+                "required_evidence_type": "openalex_scholarly_abstract",
+            }
+            _record_primary_source_access_gap(
+                db,
+                question,
+                plan,
+                source_reference=discovered_source_reference,
+                parent_evidence_id=discovery_parent_evidence_id,
+            )
 
     if source is None and evidence_requirement_id == "bibliographic_discovery":
         doi_lead = _next_openalex_doi_lead(db, question.id)
@@ -1676,7 +1722,9 @@ def _create_follow_up_requirement(
         "follow_up_depth": follow_up_depth,
         "decomposition_depth": follow_up_depth,
         "follow_up_reason": (
-            "crossref_doi_lead_openalex_abstract_lookup"
+            "openalex_content_source_reference_follow_up"
+            if discovered_source_reference
+            else "crossref_doi_lead_openalex_abstract_lookup"
             if discovered_doi
             else "valid_empty_semantic_retrieval_with_cleared_keyword_mode"
             if mode_override == "keyword"
@@ -1695,8 +1743,16 @@ def _create_follow_up_requirement(
     }
     if source == "openalex":
         child["openalex_query"] = query
+        child["claim_support"] = "not_inferred"
+        child["evidence_scope"] = (
+            "An indexed scholarly record or abstract is an observation; substantive "
+            "claims, primary-data access, and local applicability remain unassessed."
+        )
         if mode_override:
             child["search_mode_override"] = mode_override
+        if discovered_source_reference:
+            child["discovered_source_reference"] = discovered_source_reference
+            child["discovery_parent_evidence_id"] = discovery_parent_evidence_id
         if discovered_doi:
             child["discovered_doi"] = discovered_doi
             child["discovery_parent_evidence_id"] = discovery_parent_evidence_id
@@ -1722,6 +1778,9 @@ def _create_follow_up_requirement(
         "follow_up_of_task_id": parent_task_id,
         "follow_up_reason": child["follow_up_reason"],
     }
+    if discovered_source_reference:
+        task.results["discovered_source_reference"] = discovered_source_reference
+        task.results["discovery_parent_evidence_id"] = discovery_parent_evidence_id
     if discovered_doi:
         task.results["discovered_doi"] = discovered_doi
         task.results["discovery_parent_evidence_id"] = discovery_parent_evidence_id
@@ -1836,6 +1895,147 @@ def _next_openalex_doi_lead(
         key=lambda row: (-row[0], row[1], row[2]),
     )
     return {"doi": doi, "evidence_id": evidence_id}
+
+
+def _data_source_reference(abstract: str) -> str | None:
+    """Extract a named dataset reference from explicit source-introduction wording."""
+    for match in _REFERENCED_DATA_SOURCE.finditer(abstract):
+        reference = match.group("reference").split(",", 1)[0].strip(" \t\n\r\"'")
+        if (
+            3 <= len(reference) <= 200
+            and _DATA_SOURCE_MARKER.search(reference)
+        ):
+            return reference
+    return None
+
+
+def _next_openalex_content_source(
+    db: Session,
+    question_id: int,
+) -> dict[str, Any] | None:
+    tasks = (
+        db.query(models.ResearchTask)
+        .filter_by(question_id=question_id)
+        .order_by(models.ResearchTask.id)
+        .all()
+    )
+    already_followed = {
+        task.results.get("discovery_parent_evidence_id")
+        for task in tasks
+        if task.source == "openalex"
+        and isinstance(task.results, dict)
+        and task.results.get("follow_up_reason")
+        == "openalex_content_source_reference_follow_up"
+    }
+    for task in reversed(tasks):
+        if (
+            task.source != "openalex"
+            or task.status != "completed"
+            or not isinstance(task.results, dict)
+        ):
+            continue
+        source_results = task.results.get("source_results")
+        if not isinstance(source_results, list):
+            continue
+        evidence_ids = {
+            int(value)
+            for value in (task.evidence_ids or "").split(",")
+            if value.isdigit()
+        }
+        for result in reversed(source_results):
+            if not isinstance(result, dict):
+                continue
+            evidence_id = result.get("evidence_id")
+            if (
+                isinstance(evidence_id, bool)
+                or not isinstance(evidence_id, int)
+                or evidence_id not in evidence_ids
+                or evidence_id in already_followed
+            ):
+                continue
+            evidence = db.get(models.Evidence, evidence_id)
+            if (
+                evidence is None
+                or evidence.source != "openalex"
+                or not evidence.canonical_url
+                or evidence.retrieved_at is None
+            ):
+                continue
+            try:
+                provenance = json.loads(evidence.provenance or "{}")
+            except (TypeError, json.JSONDecodeError):
+                continue
+            if (
+                not isinstance(provenance, dict)
+                or provenance.get("source_registry_id")
+                != "openalex-public-works-cc0"
+                or provenance.get("source_type") != "openalex"
+                or provenance.get("license") != "CC0"
+                or provenance.get("abstract_reconstructed") is not True
+                or not isinstance(provenance.get("abstract"), str)
+            ):
+                continue
+            source_reference = _data_source_reference(provenance["abstract"])
+            if source_reference:
+                return {
+                    "source_reference": source_reference,
+                    "evidence_id": evidence.id,
+                }
+    return None
+
+
+def _record_primary_source_access_gap(
+    db: Session,
+    question: models.ResearchQuestion,
+    plan: dict[str, Any],
+    *,
+    source_reference: str,
+    parent_evidence_id: int,
+) -> None:
+    identity = sha256(
+        f"{question.id}\0{source_reference.casefold()}".encode("utf-8")
+    ).hexdigest()[:16]
+    requirement_id = f"primary_source_access_{identity}"
+    if any(row.get("id") == requirement_id for row in plan["requirements"]):
+        return
+
+    requirement: dict[str, Any] = {
+        "id": requirement_id,
+        "requirement_id": requirement_id,
+        "capability_requirement_id": requirement_id,
+        "evidence_requirement_id": requirement_id,
+        "question": (
+            f"Identify a currently authorized primary-data access route for "
+            f"{source_reference}, named in Evidence {parent_evidence_id}."
+        ),
+        "original_research_question": question.question,
+        "required_evidence_type": "authorized_primary_dataset_access",
+        "evidence_kind": "authorized_primary_dataset_access",
+        "source_reference": source_reference,
+        "source_reference_evidence_id": parent_evidence_id,
+        "geographic_qualification": None,
+        "population_qualification": None,
+        "unresolved_dimensions": [
+            "primary_data_endpoint",
+            "source_terms_and_license",
+            "current_collection_authorization",
+        ],
+        "candidate_sources": [],
+        "candidate_capabilities": [],
+        "selected_capability": None,
+        "capable_sources": [],
+        "epistemic_state": "blocked",
+        "substantive_support_assessed": False,
+        "status": "terminal_unresolved",
+        "resolution_state": "blocked_external_evidence_required",
+        "terminal_reason": "no_currently_authorized_source_capability",
+        "evidence_ids": [],
+        "task_ids": [],
+    }
+    gap = capability_discovery.ensure_capability_gap(db, question, requirement)
+    requirement["capability_gap_id"] = gap.id
+    requirement.update(capability_discovery.route_assessment([], gap))
+    plan["requirements"].append(requirement)
 
 
 def _refresh_plan_from_tasks(

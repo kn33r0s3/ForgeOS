@@ -242,6 +242,7 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
             "capability_id",
             "discovered_doi",
             "discovery_parent_evidence_id",
+            "discovered_source_reference",
         ):
             if task_context.get(context_key) is not None:
                 provenance[context_key] = task_context[context_key]
@@ -388,6 +389,12 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
             "geographic_qualification": geography if isinstance(geography, str) else None,
             "population_qualification": population if isinstance(population, str) else None,
             "unresolved_dimensions": unresolved if isinstance(unresolved, list) else [],
+            "discovery_parent_evidence_id": task_context.get(
+                "discovery_parent_evidence_id"
+            ),
+            "discovered_source_reference": task_context.get(
+                "discovered_source_reference"
+            ),
             "returned_works": 0,
             "claim_effect": "none",
             "external_pdf_fetched": False,
@@ -529,6 +536,14 @@ def run_pending_tasks(db: Session, limit: int = 5) -> list[dict]:
         task = query.order_by(
             case((currently_clearable, 0), else_=1),
             models.ResearchQuestion.priority_score.desc(),
+            case(
+                (
+                    models.ResearchTask.results["follow_up_reason"].as_string()
+                    == "openalex_content_source_reference_follow_up",
+                    0,
+                ),
+                else_=1,
+            ),
             models.ResearchTask.id.asc(),
         ).first()
         if task is None:
