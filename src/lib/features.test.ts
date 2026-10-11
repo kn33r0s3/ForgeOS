@@ -244,6 +244,7 @@ describe("feature registry", () => {
     assert.ok(owner.includes('"/api/orchestrate/overview?limit=25&data_scope=REAL"'));
     assert.ok(owner.includes('"/api/products/channels"'));
     assert.ok(owner.includes('"/api/payments/status"'));
+    assert.ok(owner.includes("actual_revenue_by_currency") && owner.includes("Verified outcome revenue · NPR"), "owner console must show verified NPR separately from USD");
     assert.ok(owner.includes("configuration_only"), "payment visibility must be explicitly configuration-only");
     assert.ok(owner.includes("conversion_count"), "distribution funnel rollups must use persisted channel counters");
     assert.ok(!owner.includes('"/api/payments/esewa/checkout"'), "owner overview must not initiate checkout");

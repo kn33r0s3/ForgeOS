@@ -1,3 +1,9 @@
+## [SOURCE CHANGE / CI PENDING] Expose verified NPR totals in the owner cockpit (2026-10-12)
+
+- The existing product and orchestration rollups already return USD and NPR separately. The owner cockpit now displays both currencies in the pipeline summary, product totals, and per-product outcomes; SANDBOX totals remain explicitly separate.
+- No currency conversion or new revenue state was added. USD compatibility fields remain USD-only; NPR displays only the NPR rollup from verified REAL outcomes. Checkout remains disabled by default.
+- Exact-head typecheck, frontend tests, build, and backend CI are required before this is marked verified.
+
 ## [SCOPE INTEGRITY / SOURCE CHANGE / CI PENDING] Keep the current experiment a pilot, not Hami's boundary (2026-10-12)
 
 - Hami's owner-established identity is open-ended: investigate value in any form; do not restrict its domain to the current product, experiment, economic activity, geography, resource class, or predefined operation.
