@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { Container } from "@/components/layout/container";
+import { HamiPathways } from "@/components/layout/hami-pathways";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 
@@ -199,6 +200,7 @@ function AboutPage() {
           </Button>
         </section>
       </Container>
+      <HamiPathways current="about" />
     </main>
   );
 }

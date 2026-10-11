@@ -123,3 +123,23 @@ export const SYSTEM_PATHWAYS = {
 } as const;
 
 export type SystemSurface = keyof typeof SYSTEM_PATHWAYS;
+
+export const ABOUT_PATHWAYS = [
+  { label: "Findings", to: "/discoveries" },
+  { label: "Open unknowns", to: "/unknowns" },
+  { label: "Experiments", to: "/experiments" },
+  { label: "How we work", to: "/process" },
+] as const;
+
+export const GROUP_PATHWAYS = [
+  { label: "Hami services", to: "/services" },
+  { label: "How we work", to: "/process" },
+  { label: "Technology", to: "/technology" },
+  { label: "Ventures", to: "/ventures" },
+] as const;
+
+export const PROCESS_PATHWAYS = [
+  { label: "Hami services", to: "/services" },
+  { label: "Public work board", to: "/domain" },
+  { label: "The group", to: "/group" },
+] as const;

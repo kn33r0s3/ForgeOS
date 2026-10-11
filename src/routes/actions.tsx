@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Cog, Hourglass, ListChecks } from "lucide-react";
 import { Container } from "@/components/layout/container";
+import { HamiPathways } from "@/components/layout/hami-pathways";
 import { PageHeader } from "@/components/layout/page-header";
 import { MetricTile, UnavailableState } from "@/components/ui/feedback";
 import { loadRuntimeSnapshot, type RuntimeSnapshot } from "@/lib/operations-data";
@@ -104,6 +105,7 @@ function ActionsPage() {
           </div>
         ) : null}
       </Container>
+      <HamiPathways current="actions" />
     </main>
   );
 }

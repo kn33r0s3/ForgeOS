@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { groupAreas } from "@/lib/content";
 import { Container } from "@/components/layout/container";
+import { HamiPathways } from "@/components/layout/hami-pathways";
 import { PageHero } from "@/components/layout/page-hero";
 import { SectionMarker } from "@/components/layout/section-marker";
 import { StatusPill } from "@/components/layout/status-pill";
@@ -149,6 +150,7 @@ function GroupPage() {
         }
         body="No invented subsidiaries, clients, revenue, investments, awards, partnerships, or market share — anywhere on this platform. That rule is the product."
       />
+      <HamiPathways current="group" />
     </main>
   );
 }

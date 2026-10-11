@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { processSteps } from "@/lib/content";
 import { Container } from "@/components/layout/container";
+import { HamiPathways } from "@/components/layout/hami-pathways";
 import { PageHero } from "@/components/layout/page-hero";
 import { CtaBand } from "@/components/layout/cta-band";
 
@@ -46,6 +47,7 @@ function ProcessPage() {
         </Container>
       </section>
       <CtaBand />
+      <HamiPathways current="process" />
     </main>
   );
 }
