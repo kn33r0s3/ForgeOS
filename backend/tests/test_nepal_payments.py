@@ -46,7 +46,42 @@ def test_khalti_amount_is_npr_to_paisa(monkeypatch):
 
 def test_esewa_callback_rejects_tampering(monkeypatch):
     monkeypatch.setattr(settings, "ESEWA_SECRET_KEY", "secret")
-    payload = {"status": "COMPLETE", "total_amount": "100.00", "transaction_uuid": "order-123", "product_code": "MERCHANT", "signed_field_names": "status,total_amount,transaction_uuid,product_code", "signature": "bad"}
+    payload = {"status": "COMPLETE", "total_amount": "100.00", "transaction_uuid": "order-123", "product_code": "MERCHANT", "signed_field_names": "status,total_amount,transaction_uuid,product_code,signed_field_names", "signature": "bad"}
     encoded = base64.b64encode(json.dumps(payload).encode()).decode()
     with pytest.raises(ValueError, match="signature mismatch"):
         nepal_payments.verify_esewa_response(encoded)
+
+
+
+def test_esewa_callback_requires_signing_the_transaction_identity(monkeypatch):
+    monkeypatch.setattr(settings, "ESEWA_SECRET_KEY", "secret")
+    payload = {
+        "status": "COMPLETE",
+        "total_amount": "100.00",
+        "transaction_uuid": "order-123",
+        "product_code": "MERCHANT",
+        "signed_field_names": "status,total_amount,product_code,signed_field_names",
+        "signature": "unused",
+    }
+    encoded = base64.b64encode(json.dumps(payload).encode()).decode()
+    with pytest.raises(ValueError, match="invalid eSewa callback payload"):
+        nepal_payments.verify_esewa_response(encoded)
+
+
+def test_esewa_callback_verifies_official_signed_fields(monkeypatch):
+    monkeypatch.setattr(settings, "ESEWA_SECRET_KEY", "secret")
+    fields = "transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names"
+    payload = {
+        "transaction_code": "TX-123",
+        "status": "COMPLETE",
+        "total_amount": "100.00",
+        "transaction_uuid": "order-123",
+        "product_code": "MERCHANT",
+        "signed_field_names": fields,
+    }
+    signed = ",".join(f"{field}={payload[field]}" for field in fields.split(","))
+    payload["signature"] = base64.b64encode(
+        hmac.new(b"secret", signed.encode(), hashlib.sha256).digest()
+    ).decode()
+    encoded = base64.b64encode(json.dumps(payload).encode()).decode()
+    assert nepal_payments.verify_esewa_response(encoded) == payload

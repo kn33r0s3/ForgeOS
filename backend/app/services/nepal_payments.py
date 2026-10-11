@@ -84,7 +84,20 @@ def verify_esewa_response(encoded_data: str) -> dict[str, Any]:
     secret = _require(settings.ESEWA_SECRET_KEY, "ESEWA_SECRET_KEY")
     try:
         payload = json.loads(base64.b64decode(encoded_data, validate=True).decode("utf-8"))
-        fields = payload["signed_field_names"].split(",")
+        if not isinstance(payload, dict):
+            raise ValueError("callback must be a JSON object")
+        signed_field_names = payload["signed_field_names"]
+        if not isinstance(signed_field_names, str):
+            raise ValueError("signed_field_names must be text")
+        fields = signed_field_names.split(",")
+        required = {"status", "total_amount", "transaction_uuid", "product_code", "signed_field_names"}
+        if (
+            not fields
+            or any(not field or field.strip() != field for field in fields)
+            or len(fields) != len(set(fields))
+            or not required.issubset(fields)
+        ):
+            raise ValueError("callback does not sign all required transaction fields")
         signed = ",".join(f"{field}={payload[field]}" for field in fields)
         expected = base64.b64encode(hmac.new(secret.encode(), signed.encode(), hashlib.sha256).digest()).decode()
     except (ValueError, KeyError, TypeError, AttributeError) as exc:

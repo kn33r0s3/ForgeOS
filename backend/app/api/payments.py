@@ -3,6 +3,7 @@ from decimal import Decimal
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field, AnyHttpUrl
 
+from app.config import settings
 from app.security import require_owner_api_key
 from app.services import nepal_payments
 
@@ -52,11 +53,59 @@ def esewa_lookup(request: Request, body: EsewaLookupRequest):
         raise _provider_error(exc) from exc
 
 @router.get("/esewa/callback")
-def esewa_callback(request: Request, data: str = Query(min_length=20)):
-    require_owner_api_key(request)
+def esewa_callback(data: str = Query(min_length=20)):
+    """Verify the browser return without requiring an owner key.
+
+    The provider redirects the payer's browser here, so it cannot carry Hami's
+    private owner API key. This endpoint is read-only: it validates the signed
+    provider payload and checks status/amount/merchant with eSewa's server API.
+    It deliberately does not create orders, mark revenue, or trigger fulfillment.
+    """
     try:
         payload = nepal_payments.verify_esewa_response(data)
-        return {"provider": "esewa", "verified": payload.get("status") == "COMPLETE", "response": payload}
+        callback_status = str(payload.get("status", ""))
+        transaction_uuid = str(payload.get("transaction_uuid", ""))
+        merchant_code = str(payload.get("product_code", ""))
+        total_amount = Decimal(str(payload.get("total_amount", "")))
+        if not total_amount.is_finite() or total_amount <= 0 or not transaction_uuid:
+            raise ValueError("invalid eSewa callback transaction fields")
+        configured_merchant = settings.ESEWA_MERCHANT_CODE
+        if not configured_merchant or merchant_code != configured_merchant:
+            raise ValueError("eSewa callback merchant mismatch")
+
+        lookup: dict = {}
+        if callback_status == "COMPLETE":
+            lookup = nepal_payments.esewa_lookup(
+                amount_npr=total_amount,
+                transaction_uuid=transaction_uuid,
+            )
+
+        lookup_amount = lookup.get("totalAmount", lookup.get("total_amount"))
+        amount_matches = False
+        if lookup_amount is not None:
+            try:
+                amount_matches = Decimal(str(lookup_amount)) == total_amount
+            except Exception:
+                amount_matches = False
+        lookup_merchant = lookup.get("scd", lookup.get("product_code"))
+        verified = (
+            callback_status == "COMPLETE"
+            and lookup.get("status") == "COMPLETE"
+            and amount_matches
+            and lookup_merchant == configured_merchant
+        )
+        return {
+            "provider": "esewa",
+            "verified": verified,
+            "response": {
+                "status": callback_status,
+                "transaction_uuid": transaction_uuid,
+                "total_amount": format(total_amount, "f"),
+                "transaction_code": payload.get("transaction_code"),
+                "provider_status": lookup.get("status"),
+                "provider_reference": lookup.get("refId"),
+            },
+        }
     except Exception as exc:
         raise _provider_error(exc) from exc
 
