@@ -1,6 +1,6 @@
-# ForgeOS API Reference
+# Hami Backend API Reference
 
-The FastAPI backend is the authoritative source for the root Hami dashboard.
+The FastAPI backend is the shared data/API layer used by Hami's operating and public surfaces. Existing `/forge/*` paths and `FORGEOS_*` environment identifiers remain implementation-compatibility names inside this one product; they do not denote a separate ForgeOS application.
 For local direct requests, use `http://127.0.0.1:8000` (API docs:
 `http://127.0.0.1:8000/docs`). The Vite development server proxies the same
 `/api/*` paths to the configured local backend; Vercel routes those same-origin

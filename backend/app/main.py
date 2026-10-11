@@ -79,7 +79,7 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    description="Hami — the ForgeOS-evolved economic intelligence system.",
+    description="Hami backend API for evidence, opportunities, economic records, and guarded actions.",
     lifespan=lifespan,
 )
 

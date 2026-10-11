@@ -186,3 +186,12 @@ def test_vercel_health_reports_safe_database_error_class(db, monkeypatch):
         "ready": False,
         "blockers": ["database_unavailable"],
     }
+
+
+def test_openapi_metadata_uses_hami_product_identity():
+    from app.main import app
+
+    info = app.openapi()["info"]
+    assert info["title"] == "Hami"
+    assert info["description"].startswith("Hami backend API")
+    assert "ForgeOS" not in info["description"]
