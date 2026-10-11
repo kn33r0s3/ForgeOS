@@ -608,3 +608,27 @@ def test_lessons_are_never_fabricated(db):
     out = lessons_engine.run_lessons_cycle(db)
     assert out["events_total"] == 0
     assert out["lessons_total"] == 0
+
+
+
+def test_sandbox_npr_revenue_cannot_be_recorded_as_real_cash(db):
+    """Sandbox/test transactions must never inflate NPR cash revenue."""
+    product = product_engine.create_product(
+        db,
+        name="Sandbox NPR guard fixture",
+        offer="Synthetic transaction only",
+        data_scope="SANDBOX",
+    )
+    with pytest.raises(ValueError, match="sandbox revenue cannot be represented as NPR cash"):
+        action_engine.record_outcome(
+            db,
+            outcome_type="ACTUAL_REVENUE",
+            product_id=product.id,
+            actual_value=5000.0,
+            unit="NPR",
+            source="synthetic_sandbox_fixture",
+            source_kind="TEST",
+            verification_state="VERIFIED",
+            data_scope="SANDBOX",
+            idempotency_key="sandbox-npr-must-not-be-cash",
+        )
