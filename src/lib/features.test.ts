@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { FOOTER_GROUPS, NAV, PUBLIC_SYSTEM_PATHS } from "./hami-system";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const registry = JSON.parse(
@@ -61,6 +62,40 @@ describe("feature registry", () => {
       }
     }
     assert.deepEqual(missing, [], `live APIs missing endpoints: ${missing.join(", ")}`);
+  });
+
+  it("every implemented top-level page route has an explicit registry lifecycle state", () => {
+    const routeFiles = readdirSync(path.join(root, "routes")).filter((name) => name.endsWith(".tsx"));
+    const routes = new Set<string>();
+    for (const filename of routeFiles) {
+      const base = filename.slice(0, -4);
+      if (base === "__root" || base === "$") continue;
+      const normalized = base.endsWith(".index") ? base.slice(0, -".index".length) : base;
+      routes.add(base === "index" ? "/" : "/" + normalized.replace(/\\./g, "/"));
+    }
+    const registered = new Set(registry.features.map((feature: { route: string }) => feature.route));
+    const missing = [...routes].filter((route) => !registered.has(route));
+    assert.deepEqual(missing, [], `route files missing a registry entry: ${missing.join(", ")}`);
+  });
+
+  it("all Hami navigation and pathway routes are registered as live", () => {
+    const required = [
+      ...NAV.map((item) => item.to),
+      ...FOOTER_GROUPS.flatMap((group) => group.items.map((item) => item.to)),
+      ...PUBLIC_SYSTEM_PATHS,
+    ];
+    const byRoute = new Map(registry.features.map((feature: { route: string; status: string }) => [feature.route, feature.status]));
+    const missing = [...new Set(required)].filter((route) => byRoute.get(route) !== "live");
+    assert.deepEqual(missing, [], `public Hami pathways missing a live registry entry: ${missing.join(", ")}`);
+  });
+
+  it("serves the schema referenced by the public feature registry", () => {
+    const schemaPath = path.join(root, "..", "public", "features.schema.json");
+    assert.ok(existsSync(schemaPath), "public/features.schema.json is missing");
+    const schema = JSON.parse(readFileSync(schemaPath, "utf8"));
+    assert.equal(registry.$schema, schema.$id);
+    assert.equal(schema.$id, "https://haminp.vercel.app/features.schema.json");
+    assert.equal(schema.$defs.feature.properties.status.enum.join(","), "live,hidden,archived,planned");
   });
 
   it("registry entries are well-formed", () => {

@@ -143,3 +143,29 @@ export const PROCESS_PATHWAYS = [
   { label: "Public work board", to: "/domain" },
   { label: "The group", to: "/group" },
 ] as const;
+
+/** Every public pathway below must have a matching live feature-registry entry. */
+export const PUBLIC_SYSTEM_PATHS = [
+  "/",
+  "/discoveries",
+  "/unknowns",
+  "/feed",
+  "/opportunities",
+  "/actions",
+  "/experiments",
+  "/services",
+  "/services/$slug",
+  "/group",
+  "/group/businesses",
+  "/process",
+  "/technology",
+  "/ventures",
+  "/providers",
+  "/domain",
+  "/needs",
+  "/about",
+  "/system",
+  "/requests/$id",
+  "/terms",
+  "/privacy",
+] as const;

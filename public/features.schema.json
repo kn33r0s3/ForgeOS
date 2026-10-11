@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://haminp.vercel.app/features.schema.json",
+  "title": "Hami feature registry",
+  "type": "object",
+  "required": [
+    "$schema",
+    "description",
+    "features",
+    "updated"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "updated": {
+      "type": "string",
+      "format": "date"
+    },
+    "features": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/feature"
+      }
+    }
+  },
+  "$defs": {
+    "feature": {
+      "type": "object",
+      "required": [
+        "commit",
+        "date_added",
+        "id",
+        "intent",
+        "name",
+        "route",
+        "status"
+      ],
+      "properties": {
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{7,40}$"
+        },
+        "date_added": {
+          "type": "string",
+          "format": "date"
+        },
+        "heading": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "intent": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "route": {
+          "type": "string",
+          "pattern": "^/"
+        },
+        "selector": {
+          "type": "string"
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "live",
+            "hidden",
+            "archived",
+            "planned"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
