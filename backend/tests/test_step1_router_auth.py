@@ -194,3 +194,54 @@ def test_local_runtime_keeps_optional_gate_off_when_key_is_missing(monkeypatch):
     response = asyncio.run(security.api_key_middleware(Request(scope), call_next))
     assert response.status_code == 200
     assert response.body == b"local-pass"
+
+
+
+def test_private_user_request_signals_are_excluded_from_public_reads_in_deployed_runtime(monkeypatch):
+    from starlette.requests import Request
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.delenv("NODE_ENV", raising=False)
+    request = Request(
+        {
+            "type": "http",
+            "asgi": {"version": "3.0"},
+            "http_version": "1.1",
+            "method": "GET",
+            "scheme": "https",
+            "path": "/api/signals",
+            "raw_path": b"/api/signals",
+            "query_string": b"",
+            "headers": [],
+            "server": ("haminp.vercel.app", 443),
+            "client": ("127.0.0.1", 10000),
+            "root_path": "",
+        }
+    )
+    assert security.can_read_private_signals(request) is False
+
+
+def test_private_user_request_signals_stay_local_first_without_deployment_or_key(monkeypatch):
+    from starlette.requests import Request
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    monkeypatch.delenv("VERCEL", raising=False)
+    monkeypatch.setenv("NODE_ENV", "test")
+    request = Request(
+        {
+            "type": "http",
+            "asgi": {"version": "3.0"},
+            "http_version": "1.1",
+            "method": "GET",
+            "scheme": "http",
+            "path": "/signals",
+            "raw_path": b"/signals",
+            "query_string": b"",
+            "headers": [],
+            "server": ("localhost", 8080),
+            "client": ("127.0.0.1", 10000),
+            "root_path": "",
+        }
+    )
+    assert security.can_read_private_signals(request) is True

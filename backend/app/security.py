@@ -86,8 +86,9 @@ def require_owner_api_key(request: Request) -> None:
 
 
 def can_read_private_signals(request: Request) -> bool:
-    """Keep local-first reads open, but require the configured key for submitted requests."""
-    return not _enabled() or _authorized(request)
+    """Keep local reads open; expose submitted user requests only to an authorized owner."""
+    key_required = _enabled() or _deployed_runtime()
+    return not key_required or (_enabled() and _authorized(request))
 
 
 def _forge_bot_owner_route(path: str) -> bool:
