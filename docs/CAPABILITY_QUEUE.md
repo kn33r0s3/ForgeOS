@@ -1,3 +1,10 @@
+## [PAYMENT-IDENTITY HARDENING / CI PENDING] Use cryptographic keys and preserve unknown storage state (2026-10-12)
+
+- A source audit found the checkout key generator fell back from `crypto.randomUUID()` to `Math.random()`. Removed the non-cryptographic fallback; UUID or cryptographic random bytes are now the only key sources. If neither exists, checkout stops before POST.
+- The stored-key reader now differentiates a genuinely absent key from unreadable storage and malformed/unsupported records. A new checkout is blocked when state cannot be trusted and no in-memory attempt identity exists; the offer page does not overwrite an ambiguous prior slot.
+- Added runtime tests for the explicit storage states, malformed JSON, UUID preference, cryptographic-byte fallback and refusal when crypto is unavailable. Existing no-store, rate-limit, provider-confirmation, and owner-fulfillment behavior is unchanged.
+- Exact-SHA lint, typecheck, frontend/backend tests, build, Gitleaks and independent deployment verification remain required.
+
 ## [SECRETS-SCAN FIX / CI PENDING] Make checkout test token unmistakably synthetic (2026-10-12)
 
 - Gitleaks flagged the unit-test idempotency placeholder as a generic API key because its text entropy resembled a credential. Inspection confirmed this is a local in-memory test value; it is not used in configuration or sent to a provider.

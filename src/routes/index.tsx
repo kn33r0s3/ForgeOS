@@ -20,6 +20,7 @@ import {
 } from "@/components/experiments/experiment-card";
 import {
   clearStoredCheckoutAttempt,
+  createCheckoutAttemptKey,
   readStoredCheckoutAttempt,
   writeStoredCheckoutAttempt,
   type CheckoutProvider,
@@ -113,10 +114,10 @@ function PublicOffers() {
         const restoredKeys: Record<number, string> = {};
         const restoredProviders: Record<number, CheckoutProvider> = {};
         for (const offer of availableOffers) {
-          const attempt = readStoredCheckoutAttempt(offer.id);
-          if (!attempt) continue;
-          restoredKeys[offer.id] = attempt.key;
-          restoredProviders[offer.id] = attempt.provider;
+          const stored = readStoredCheckoutAttempt(offer.id);
+          if (stored.state !== "stored") continue;
+          restoredKeys[offer.id] = stored.attempt.key;
+          restoredProviders[offer.id] = stored.attempt.provider;
         }
         setKeys(restoredKeys);
         setProvidersByOffer(restoredProviders);
@@ -127,14 +128,17 @@ function PublicOffers() {
 
   async function reconcileCheckout(offer: PublicPaymentOffer) {
     if (busyId !== null) return;
-    const storedAttempt = readStoredCheckoutAttempt(offer.id);
+    const storedRead = readStoredCheckoutAttempt(offer.id);
+    const storedAttempt = storedRead.state === "stored" ? storedRead.attempt : null;
     const key = keys[offer.id] ?? storedAttempt?.key;
     const provider = providersByOffer[offer.id] ?? storedAttempt?.provider;
     if (!key || !provider) {
       setError({
         offerId: offer.id,
         provider: provider ?? "esewa",
-        message: "No saved checkout identity is available to verify. Do not start another attempt from this message.",
+        message: storedRead.state === "invalid" || storedRead.state === "unavailable"
+          ? "Hami cannot verify this tab's saved checkout identity. To prevent a duplicate payment, no new attempt was started."
+          : "No saved checkout identity is available to verify. Do not start another attempt from this message.",
         retryable: false,
       });
       return;
@@ -204,9 +208,31 @@ function PublicOffers() {
 
   async function beginCheckout(offer: PublicPaymentOffer, provider: CheckoutProvider) {
     if (busyId !== null) return;
-    const storedAttempt = readStoredCheckoutAttempt(offer.id);
+    const storedRead = readStoredCheckoutAttempt(offer.id);
+    const storedAttempt = storedRead.state === "stored" ? storedRead.attempt : null;
     const existingKey = keys[offer.id] ?? storedAttempt?.key;
     const existingProvider = providersByOffer[offer.id] ?? storedAttempt?.provider;
+    if (
+      !existingKey &&
+      (storedRead.state === "invalid" || storedRead.state === "unavailable")
+    ) {
+      setError({
+        offerId: offer.id,
+        provider,
+        message: "Hami cannot verify this tab's saved checkout identity. To prevent a duplicate payment, no new attempt was started.",
+        retryable: false,
+      });
+      return;
+    }
+    if (existingKey && !existingProvider) {
+      setError({
+        offerId: offer.id,
+        provider,
+        message: "The saved checkout key has no verified provider identity. No checkout request was sent.",
+        retryable: false,
+      });
+      return;
+    }
     if (existingKey && existingProvider && existingProvider !== provider) {
       setError({
         offerId: offer.id,
@@ -218,12 +244,18 @@ function PublicOffers() {
       });
       return;
     }
+    const key = existingKey ?? createCheckoutAttemptKey();
+    if (!key) {
+      setError({
+        offerId: offer.id,
+        provider,
+        message: "This browser cannot generate a secure checkout identity. No checkout request was sent.",
+        retryable: false,
+      });
+      return;
+    }
     setBusyId(offer.id);
     setError(null);
-    const key = existingKey ?? (
-      window.crypto?.randomUUID?.()
-      ?? ("hami-" + Date.now() + "-" + Math.random().toString(36).slice(2))
-    );
     const attempt: StoredCheckoutAttempt = { key, provider };
     setKeys((current) => ({ ...current, [offer.id]: key }));
     setProvidersByOffer((current) => ({ ...current, [offer.id]: provider }));

@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   checkoutAttemptStorageKey,
   clearStoredCheckoutAttempt,
+  createCheckoutAttemptKey,
   readStoredCheckoutAttempt,
   writeStoredCheckoutAttempt,
 } from "./checkout-attempt-storage.ts";
@@ -24,7 +25,44 @@ describe("shared checkout-attempt storage", () => {
   it("round-trips a valid provider-bound attempt", () => {
     const storage = memoryStorage();
     assert.equal(writeStoredCheckoutAttempt(5, attempt, () => storage), true);
-    assert.deepEqual(readStoredCheckoutAttempt(5, () => storage), attempt);
+    assert.deepEqual(readStoredCheckoutAttempt(5, () => storage), { state: "stored", attempt });
+  });
+
+  it("distinguishes an absent key from unreadable storage", () => {
+    const unavailable: StoragePort = {
+      getItem: () => { throw new Error("blocked"); },
+      setItem: () => {},
+      removeItem: () => {},
+    };
+    assert.deepEqual(readStoredCheckoutAttempt(5, () => memoryStorage()), { state: "absent" });
+    assert.deepEqual(readStoredCheckoutAttempt(5, () => unavailable), { state: "unavailable" });
+  });
+
+  it("rejects malformed JSON rather than treating it as a new-attempt slot", () => {
+    const storage = memoryStorage({ [checkoutAttemptStorageKey(5)]: "{" });
+    assert.deepEqual(readStoredCheckoutAttempt(5, () => storage), { state: "invalid" });
+  });
+
+  it("uses UUID randomness and never needs a weak pseudo-random fallback", () => {
+    const key = createCheckoutAttemptKey({
+      uuid: () => "TEST-TEST-TEST-TEST",
+      randomBytes: () => { throw new Error("UUID must be preferred"); },
+    });
+    assert.equal(key, "TEST-TEST-TEST-TEST");
+  });
+
+  it("uses cryptographic random bytes when UUID generation is unavailable", () => {
+    const key = createCheckoutAttemptKey({
+      randomBytes: (length) => new Uint8Array(length).fill(0xab),
+    });
+    assert.equal(key, "ab".repeat(32));
+  });
+
+  it("refuses to generate a checkout identity without a cryptographic source", () => {
+    assert.equal(createCheckoutAttemptKey({}), null);
+    assert.equal(createCheckoutAttemptKey({
+      uuid: () => { throw new Error("unavailable"); },
+    }), null);
   });
 
   it("refuses persistence when storage throws", () => {
@@ -68,7 +106,7 @@ describe("shared checkout-attempt storage", () => {
   it("confirms clearing only after read-back proves the key absent", () => {
     const storage = memoryStorage({ [checkoutAttemptStorageKey(5)]: JSON.stringify(attempt) });
     assert.equal(clearStoredCheckoutAttempt(5, () => storage), true);
-    assert.equal(readStoredCheckoutAttempt(5, () => storage), null);
+    assert.deepEqual(readStoredCheckoutAttempt(5, () => storage), { state: "absent" });
   });
 
   it("rejects malformed or unsupported provider records", () => {
@@ -76,7 +114,7 @@ describe("shared checkout-attempt storage", () => {
       [checkoutAttemptStorageKey(5)]: JSON.stringify({ key: "too-short", provider: "khalti" }),
       [checkoutAttemptStorageKey(6)]: JSON.stringify({ key: attempt.key, provider: "other" }),
     });
-    assert.equal(readStoredCheckoutAttempt(5, () => storage), null);
-    assert.equal(readStoredCheckoutAttempt(6, () => storage), null);
+    assert.deepEqual(readStoredCheckoutAttempt(5, () => storage), { state: "invalid" });
+    assert.deepEqual(readStoredCheckoutAttempt(6, () => storage), { state: "invalid" });
   });
 });

@@ -300,6 +300,9 @@ describe("feature registry", () => {
     assert.ok(home.includes("error?.offerId === offer.id && error.retryable") && home.includes("beginCheckout(offer, error.provider)"), "only the failed offer may retry with its original provider");
     assert.ok(home.includes('from "@/lib/checkout-attempt-storage"') && home.includes("readStoredCheckoutAttempt"));
     assert.ok(storage.includes("export function writeStoredCheckoutAttempt") && storage.includes("export function clearStoredCheckoutAttempt"));
+    assert.ok(storage.includes("export function createCheckoutAttemptKey") && storage.includes("getRandomValues"));
+    assert.ok(storage.includes('state: "unavailable"') && storage.includes('state: "invalid"'), "unreadable or malformed storage is not reported as an empty slot");
+    assert.ok(!home.includes("Math.random()"), "payment idempotency keys never use pseudo-random fallback");
     assert.ok(storage.includes("storage.getItem(key) === null"), "a clear requires read-back proof");
     assert.ok(home.includes("if (!writeStoredCheckoutAttempt(offer.id, attempt))") && home.includes("No checkout request was sent."), "checkout fails closed before fetch if the idempotency key cannot persist");
     assert.ok(
