@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowUpRight, BriefcaseBusiness, Handshake, KeyRound, Link2, MapPin, PenLine, Radio } from "lucide-react";
 import { Container } from "@/components/layout/container";
+import { HamiPathways } from "@/components/layout/hami-pathways";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState, SkeletonCards, UnavailableState } from "@/components/ui/feedback";
 import {
@@ -442,6 +443,7 @@ function DomainPage() {
           </section>
         </div>
       </Container>
+      <HamiPathways current="work" />
     </main>
   );
 }

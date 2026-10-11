@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowUpRight } from "lucide-react";
 import { services } from "@/lib/content";
 import { Container } from "@/components/layout/container";
+import { HamiPathways } from "@/components/layout/hami-pathways";
 import { PageHero } from "@/components/layout/page-hero";
 import { CtaBand } from "@/components/layout/cta-band";
 import { ProjectInquiryCta } from "@/components/pages/project-inquiry-cta";
@@ -50,6 +51,7 @@ function ServicesPage() {
         </Container>
       </section>
       <CtaBand />
+      <HamiPathways current="services" />
     </main>
   );
 }

@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, CalendarDays, MapPin, Search, ShieldCheck, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
+import { HamiPathways } from "@/components/layout/hami-pathways";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState, SkeletonCards, UnavailableState } from "@/components/ui/feedback";
 import {
@@ -420,6 +421,7 @@ function ProvidersPage() {
           ) : null}
         </aside>
       </Container>
+      <HamiPathways current="providers" />
     </main>
   );
 }

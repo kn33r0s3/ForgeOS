@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Handshake, ScrollText } from "lucide-react";
 import { Container } from "@/components/layout/container";
+import { HamiPathways } from "@/components/layout/hami-pathways";
 import { PageHeader } from "@/components/layout/page-header";
 
 export const Route = createFileRoute("/needs")({
@@ -62,6 +63,7 @@ function NeedsPage() {
           page describes the work being attempted, not results achieved.
         </p>
       </Container>
+      <HamiPathways current="needs" />
     </main>
   );
 }

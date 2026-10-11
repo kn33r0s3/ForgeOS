@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Container } from "@/components/layout/container";
+import { HamiPathways } from "@/components/layout/hami-pathways";
 import { PageHeader } from "@/components/layout/page-header";
 import { ExperimentCard, EXPERIMENTS } from "@/components/experiments/experiment-card";
 
@@ -42,6 +43,7 @@ function ExperimentsPage() {
           </div>
         )}
       </Container>
+      <HamiPathways current="experiments" />
     </main>
   );
 }
