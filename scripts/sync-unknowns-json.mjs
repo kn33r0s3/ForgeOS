@@ -6,7 +6,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const checkOnly = process.argv.includes("--check");
 const md = readFileSync(join(root, "docs/UNKNOWN_MAP.md"), "utf8");
+const jsonPath = join(root, "backend/app/data/unknowns.json");
 const tsPath = join(root, "src/lib/unknowns.ts");
 const previousTs = readFileSync(tsPath, "utf8");
 
@@ -43,10 +45,7 @@ for (const line of md.split("\n")) {
 
 const dateMatch = md.match(/\*\*Date:\*\*\s*(\d{4}-\d{2}-\d{2})/);
 const out = { unknowns, last_loop: dateMatch ? dateMatch[1] : null };
-
-const dir = join(root, "backend/app/data");
-mkdirSync(dir, { recursive: true });
-writeFileSync(join(dir, "unknowns.json"), JSON.stringify(out, null, 1) + "\n");
+const json = JSON.stringify(out, null, 1) + "\n";
 
 const previousRounds = new Map();
 for (const match of previousTs.matchAll(/\{\s*id:\s*"(D\d+)",([\s\S]*?)\n {2}\},/g)) {
@@ -110,7 +109,25 @@ ${tsRows}
 
 export const unknownsCount = discoveryUnknowns.length;
 `;
-writeFileSync(tsPath, ts);
-console.log(
-  `Synced ${unknowns.length} unknowns to backend/app/data/unknowns.json and ${discoveryUnknowns.length} D-unknowns to src/lib/unknowns.ts`,
-);
+if (checkOnly) {
+  const stale = [];
+  if (readFileSync(jsonPath, "utf8") !== json) stale.push("backend/app/data/unknowns.json");
+  if (previousTs !== ts) stale.push("src/lib/unknowns.ts");
+  if (stale.length > 0) {
+    console.error(
+      `Unknown projections are out of sync with docs/UNKNOWN_MAP.md: ${stale.join(", ")}. Run node scripts/sync-unknowns-json.mjs to regenerate them.`,
+    );
+    process.exitCode = 1;
+  } else {
+    console.log(
+      `Unknown projections are in sync: ${unknowns.length} map rows and ${discoveryUnknowns.length} D-unknowns.`,
+    );
+  }
+} else {
+  mkdirSync(dirname(jsonPath), { recursive: true });
+  writeFileSync(jsonPath, json);
+  writeFileSync(tsPath, ts);
+  console.log(
+    `Synced ${unknowns.length} unknowns to backend/app/data/unknowns.json and ${discoveryUnknowns.length} D-unknowns to src/lib/unknowns.ts`,
+  );
+}
