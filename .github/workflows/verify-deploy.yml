@@ -13,6 +13,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Let active tests finish; newer pending pushes replace superseded queued runs.
+  cancel-in-progress: false
+
 jobs:
   verify:
     runs-on: ubuntu-latest

@@ -11,6 +11,11 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Let active tests finish; newer pending pushes replace superseded queued runs.
+  cancel-in-progress: false
+
 jobs:
   backend-tests:
     runs-on: ubuntu-latest
