@@ -301,7 +301,7 @@ type ProductSummaryView = {
   paid_customer_count: number;
   actual_customers: number;
   actual_revenue: number;
-  actual_revenue_by_currency: { USD: number; NPR: number };
+  actual_revenue_by_currency?: { USD?: number; NPR?: number } | null;
 };
 
 type CommercialState = {
@@ -369,12 +369,12 @@ type OrchestratorPipelineView = {
   customer_events: number;
   actions_awaiting_approval: number;
   actual_revenue: number;
-  actual_revenue_by_currency: { USD: number; NPR: number };
+  actual_revenue_by_currency?: { USD?: number; NPR?: number } | null;
   real_customers: number;
   products_with_revenue: number;
   sandbox: {
     actual_revenue: number;
-    actual_revenue_by_currency: { USD: number; NPR: number };
+    actual_revenue_by_currency?: { USD?: number; NPR?: number } | null;
     outcomes: number;
     products: number;
     label: string;
@@ -1203,9 +1203,13 @@ function OwnerConsolePage() {
   const realLeads = realProducts.reduce((sum, p) => sum + p.lead_count, 0);
   const recordedRealCustomers = realProducts.reduce((sum, p) => sum + p.actual_customers, 0);
   const recordedRealRevenue = realProducts.reduce((sum, p) => sum + p.actual_revenue, 0);
-  const recordedRealNprRevenue = realProducts.reduce((sum, p) => sum + p.actual_revenue_by_currency.NPR, 0);
+  const recordedRealNprRevenue = realProducts.every((p) => typeof p.actual_revenue_by_currency?.NPR === "number" && Number.isFinite(p.actual_revenue_by_currency.NPR))
+    ? realProducts.reduce((sum, p) => sum + (p.actual_revenue_by_currency?.NPR ?? 0), 0)
+    : undefined;
   const recordedSandboxRevenue = sandboxProducts.reduce((sum, p) => sum + p.actual_revenue, 0);
-  const recordedSandboxNprRevenue = sandboxProducts.reduce((sum, p) => sum + p.actual_revenue_by_currency.NPR, 0);
+  const recordedSandboxNprRevenue = sandboxProducts.every((p) => typeof p.actual_revenue_by_currency?.NPR === "number" && Number.isFinite(p.actual_revenue_by_currency.NPR))
+    ? sandboxProducts.reduce((sum, p) => sum + (p.actual_revenue_by_currency?.NPR ?? 0), 0)
+    : undefined;
 
   return (
     <main className="flex-1">
@@ -1484,9 +1488,9 @@ function OwnerConsolePage() {
                             <p className="text-sm text-muted">Verified REAL outcome revenue · USD</p>
                             <p className="mt-1 text-2xl font-extrabold tabular-nums">{formatUsd(orchestrationOverview.pipeline.actual_revenue)}</p>
                             <p className="mt-2 text-sm text-muted">Verified REAL outcome revenue · NPR</p>
-                            <p className="mt-1 text-xl font-extrabold tabular-nums">{formatNpr(orchestrationOverview.pipeline.actual_revenue_by_currency.NPR)}</p>
+                            <p className="mt-1 text-xl font-extrabold tabular-nums">{formatNpr(orchestrationOverview.pipeline.actual_revenue_by_currency?.NPR)}</p>
                             <p className="mt-2 text-xs text-muted">
-                              SANDBOX remains separate: USD {formatUsd(orchestrationOverview.pipeline.sandbox.actual_revenue)} · NPR {formatNpr(orchestrationOverview.pipeline.sandbox.actual_revenue_by_currency.NPR)} · {orchestrationOverview.pipeline.sandbox.products} sandbox products; not business traction.
+                              SANDBOX remains separate: USD {formatUsd(orchestrationOverview.pipeline.sandbox.actual_revenue)} · NPR {formatNpr(orchestrationOverview.pipeline.sandbox.actual_revenue_by_currency?.NPR)} · {orchestrationOverview.pipeline.sandbox.products} sandbox products; not business traction.
                             </p>
                           </div>
                           <div className="mt-5" id="pipeline">
@@ -1977,7 +1981,7 @@ shop-03 | lead | not confirmed | uses an existing alternative`} />
                                   Leads {product.lead_count} · paid-customer records {product.paid_customer_count}
                                 </p>
                                 <p className="mt-1 text-sm">
-                                  Verified outcome revenue · USD {formatUsd(product.actual_revenue)} · NPR {formatNpr(product.actual_revenue_by_currency.NPR)} · actual customers {product.actual_customers}
+                                  Verified outcome revenue · USD {formatUsd(product.actual_revenue)} · NPR {formatNpr(product.actual_revenue_by_currency?.NPR)} · actual customers {product.actual_customers}
                                 </p>
                                 {product.data_scope === "REAL" && product.opportunity_id !== null && product.launch_state !== "public" ? (
                                   <div className="mt-4 grid gap-2 border-t border-line pt-3">
