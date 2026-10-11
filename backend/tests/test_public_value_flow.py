@@ -3,12 +3,12 @@ import sqlite3
 import time
 
 import pytest
-from fastapi import BackgroundTasks, Request
+from fastapi import BackgroundTasks, Request, Response
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 
 from app import models, schemas
-from app.api.analyze import analyze_idea, get_analyze_status
+from app.api.analyze import _research_status_token, analyze_idea, get_analyze_status
 from app.database import Base, get_db
 from app.main import app
 from app.migrations import run_migrations
@@ -622,7 +622,10 @@ def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     assert payload["research_status"] == "research_started"
     assert payload["evidence_count"] == 0
     assert payload["research_sources"] == []
-    progress = owner_client_with_db.get(payload["research_status_url"])
+    progress = owner_client_with_db.get(
+        payload["research_status_url"],
+        headers={"X-Research-Status-Token": response.headers["x-research-status-token"]},
+    )
     assert progress.status_code == 200, progress.text
     progress_payload = progress.json()
     # Queued takes precedence while a planned follow-up task remains; the
@@ -690,6 +693,7 @@ def test_analyze_acknowledges_before_the_collector_background_task(db, monkeypat
     monkeypatch.setattr(collector_runner, "execute_task", record_background_collection)
     monkeypatch.setattr(research_planner, "build_research_plan", record_full_planning)
     background_tasks = BackgroundTasks()
+    response_headers = Response()
     started_at = time.perf_counter()
     response = analyze_idea(
         schemas.AnalyzeRequest(
@@ -697,6 +701,7 @@ def test_analyze_acknowledges_before_the_collector_background_task(db, monkeypat
         ),
         background_tasks,
         _test_request(),
+        response_headers,
         db,
     )
     acknowledgement_ms = (time.perf_counter() - started_at) * 1000
@@ -718,7 +723,11 @@ def test_analyze_acknowledges_before_the_collector_background_task(db, monkeypat
         db.get(models.ResearchTask, task_id).status == "planned"
         for task_id in response.research_task_ids
     )
-    status = get_analyze_status(response.research_question_id, db)
+    status = get_analyze_status(
+        response.research_question_id,
+        response_headers.headers["X-Research-Status-Token"],
+        db,
+    )
     assert status.phase == "queued"
     assert status.research_status == "research_started"
 
@@ -734,9 +743,11 @@ def test_analyze_reuses_the_same_durable_task_for_a_duplicate_request(db):
     )
     first_handoff = BackgroundTasks()
     second_handoff = BackgroundTasks()
+    first_headers = Response()
+    second_headers = Response()
 
-    first = analyze_idea(payload, first_handoff, _test_request(), db)
-    second = analyze_idea(payload, second_handoff, _test_request(), db)
+    first = analyze_idea(payload, first_handoff, _test_request(), first_headers, db)
+    second = analyze_idea(payload, second_handoff, _test_request(), second_headers, db)
 
     assert first.research_question_id == second.research_question_id
     assert first.research_task_ids == second.research_task_ids
@@ -763,9 +774,12 @@ def test_analyze_reuses_the_same_durable_task_for_a_duplicate_request(db):
 def test_research_status_distinguishes_queued_from_running_work(
     owner_client_with_db, db, task_status, expected_phase
 ):
+    signal = models.Signal(source="manual", content="TEST-only submission bound to a research status fixture")
     question = models.ResearchQuestion(question=f"Status fixture: {task_status}")
-    db.add(question)
+    db.add_all([signal, question])
     db.commit()
+    db.refresh(signal)
+    db.refresh(question)
     task = models.ResearchTask(
         question_id=question.id,
         source="crossref",
@@ -775,7 +789,10 @@ def test_research_status_distinguishes_queued_from_running_work(
     db.add(task)
     db.commit()
 
-    response = owner_client_with_db.get(f"/analyze/{question.id}/status")
+    response = owner_client_with_db.get(
+        f"/analyze/{question.id}/status",
+        headers={"X-Research-Status-Token": _research_status_token(question.id, signal.id)},
+    )
 
     assert response.status_code == 200, response.text
     assert response.json()["phase"] == expected_phase
@@ -786,12 +803,14 @@ def test_research_status_distinguishes_queued_from_running_work(
 def test_analyze_does_not_report_completed_for_mixed_empty_task_results(
     db,
 ):
+    response_headers = Response()
     response = analyze_idea(
         schemas.AnalyzeRequest(
             idea="What independent evidence could confirm or disconfirm this proposed service need?"
         ),
         BackgroundTasks(),
         _test_request(),
+        response_headers,
         db,
     )
 
@@ -808,7 +827,11 @@ def test_analyze_does_not_report_completed_for_mixed_empty_task_results(
     failed.status = "failed"
     db.commit()
 
-    progress = get_analyze_status(response.research_question_id, db)
+    progress = get_analyze_status(
+        response.research_question_id,
+        response_headers.headers["X-Research-Status-Token"],
+        db,
+    )
     assert response.research_status == "research_started"
     assert progress.evidence_count == 0
     assert progress.research_status == "research_failed"
@@ -817,12 +840,14 @@ def test_analyze_does_not_report_completed_for_mixed_empty_task_results(
 def test_analyze_requires_persisted_evidence_before_source_collection_can_complete(
     owner_client_with_db, db
 ):
+    response_headers = Response()
     response = analyze_idea(
         schemas.AnalyzeRequest(
             idea="Could an unfamiliar question reveal a recurring unmet need?"
         ),
         BackgroundTasks(),
         _test_request(),
+        response_headers,
         db,
     )
 
@@ -832,7 +857,10 @@ def test_analyze_requires_persisted_evidence_before_source_collection_can_comple
     task.evidence_ids = "999999"
     db.commit()
 
-    progress = owner_client_with_db.get(response.research_status_url)
+    progress = owner_client_with_db.get(
+        response.research_status_url,
+        headers={"X-Research-Status-Token": response_headers.headers["X-Research-Status-Token"]},
+    )
     assert progress.status_code == 200, progress.text
     assert progress.json()["research_status"] == "research_needs_evidence"
     assert progress.json()["evidence_count"] == 0
