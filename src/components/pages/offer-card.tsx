@@ -1,5 +1,5 @@
 import type { BusinessOffer } from "@/lib/content";
-import { ProjectInquiryCta } from "@/components/pages/project-inquiry-cta";
+import { Link } from "@tanstack/react-router";
 
 export function OfferCard({ offer }: { offer: BusinessOffer }) {
   return (
@@ -28,7 +28,11 @@ export function OfferCard({ offer }: { offer: BusinessOffer }) {
           <dd className="mt-1 leading-relaxed text-muted">{offer.start}</dd>
         </div>
       </dl>
-      <ProjectInquiryCta />
+      <div className="mt-6 border-t border-line pt-4">
+        <Link to={offer.relatedTo} className="link-arrow inline-flex min-h-10 items-center gap-2 text-sm font-bold text-cyan">
+          {offer.relatedLabel}
+        </Link>
+      </div>
     </article>
   );
 }

@@ -954,11 +954,21 @@ export type BusinessOffer = {
   does: string;
   value: string;
   start: string;
+  /** Canonical Hami surface that owns the detailed explanation for this offer. */
+  relatedTo:
+    | "/services/software"
+    | "/services/internal-tools"
+    | "/services/automation"
+    | "/services/support"
+    | "/process";
+  relatedLabel: string;
 };
 
 export const currentOffers: BusinessOffer[] = [
   {
     title: "Build digital products",
+    relatedTo: "/services/software",
+    relatedLabel: "Explore software & web development",
     problem: "An idea needs a useful digital surface, but the right first version is unclear.",
     does: "Shape and build a focused website, web application, internal tool, or product surface around the real user and operating need.",
     value: "A usable, maintainable first release with a clear scope and an honest next step.",
@@ -966,6 +976,8 @@ export const currentOffers: BusinessOffer[] = [
   },
   {
     title: "Develop business software",
+    relatedTo: "/services/internal-tools",
+    relatedLabel: "Explore internal tools",
     problem: "Important work is trapped in scattered documents, generic tools, or manual handoffs.",
     does: "Model the workflow and build the smallest software surface that makes states, decisions, and ownership clearer.",
     value: "Less ambiguity in daily work and a system that can be improved without starting over.",
@@ -973,6 +985,8 @@ export const currentOffers: BusinessOffer[] = [
   },
   {
     title: "Automate workflows",
+    relatedTo: "/services/automation",
+    relatedLabel: "Explore business automation",
     problem: "Repeatable digital work consumes time and creates avoidable errors.",
     does: "Map the current path, identify safe repeatable steps, and connect the relevant tools or actions.",
     value: "A more consistent workflow with documented boundaries and human control where it matters.",
@@ -980,6 +994,8 @@ export const currentOffers: BusinessOffer[] = [
   },
   {
     title: "Operate technical systems",
+    relatedTo: "/services/support",
+    relatedLabel: "Explore technical support",
     problem: "A technical system needs attention, but ownership, context, or the next action is unclear.",
     does: "Investigate a focused issue, improve the operating routine, and provide practical support within the agreed scope.",
     value: "Clearer technical ownership, fewer unknowns, and a dependable path to resolution.",
@@ -987,6 +1003,8 @@ export const currentOffers: BusinessOffer[] = [
   },
   {
     title: "Explore a new venture",
+    relatedTo: "/process",
+    relatedLabel: "See how Hami works through a new idea",
     problem: "A business idea needs technical and operational thinking before significant build-out.",
     does: "Help test the problem, shape a first operating model, and identify what should be built or learned next.",
     value: "A grounded decision about whether and how to move forward, without pretending the venture already exists.",

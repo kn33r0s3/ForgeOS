@@ -123,6 +123,23 @@ describe("Hami public content", () => {
     assert.doesNotMatch(footer, /Sign in \/ Sign up/);
   });
 
+  it("every group offer resolves into its canonical Hami service or process route", () => {
+    assert.equal(currentOffers.length, 5);
+    assert.equal(new Set(currentOffers.map((offer) => offer.relatedTo)).size, currentOffers.length);
+    for (const offer of currentOffers) {
+      assert.ok(offer.relatedLabel.trim(), `${offer.title} needs a contextual route label`);
+      if (offer.relatedTo.startsWith("/services/")) {
+        const slug = offer.relatedTo.slice("/services/".length);
+        assert.ok(getService(slug), `${offer.title} points to unknown service ${slug}`);
+      } else {
+        assert.equal(offer.relatedTo, "/process", `${offer.title} must link to a known canonical route`);
+      }
+    }
+    const card = readFileSync(join(root, "src/components/pages/offer-card.tsx"), "utf8");
+    assert.ok(card.includes("to={offer.relatedTo}"), "offer cards must route to their canonical detail");
+    assert.ok(!card.includes("ProjectInquiryCta"), "offer cards must not duplicate the closed intake CTA");
+  });
+
   it("keeps commercial services separate from prototype capabilities", () => {
     assert.equal(services.length, 6);
     assert.ok(getService("software"));
