@@ -386,10 +386,16 @@ type OrchestratorFlowDetailView = {
   decision: { id: number | null; title: string | null; rationale: string | null; status: string | null; recalled_lessons: string[] };
   experiment: { id: number | null; hypothesis: string | null; expected_result: string | null; status: string | null; policy_decision: string | null; requires_owner_approval: boolean; stage: string; required_inputs: string[]; result: string | null; data_scope: string | null; revenue: number | null; conversions: number | null };
   outcomes_count: number;
+  outcomes: Array<{
+    id: number;
+    outcome_type: string;
+    source_kind: string;
+    verification_state: string;
+  }>;
   products: Array<{ id: number; name: string; status: string; launch_state?: string | null }>;
 };
 
-type RespondentStage = "lead" | "contacted" | "interested" | "paid_customer" | "churned";
+type RespondentStage = "lead" | "contacted" | "interested";
 
 function parseOutcomeRespondents(raw: string): {
   contacts: Array<{ identifier: string; stage: RespondentStage; event_type: string; notes: string }>;
@@ -400,7 +406,7 @@ function parseOutcomeRespondents(raw: string): {
   const seen = new Set<string>();
   const contacts: Array<{ identifier: string; stage: RespondentStage; event_type: string; notes: string }> = [];
   let conversions = 0;
-  const stages = new Set<RespondentStage>(["lead", "contacted", "interested", "paid_customer", "churned"]);
+  const stages = new Set<RespondentStage>(["lead", "contacted", "interested"]);
   for (const [index, line] of lines.entries()) {
     const parts = line.split("|").map((part) => part.trim());
     if (parts.length !== 4) throw new Error("Respondent line " + (index + 1) + " must use: pseudonymous-id | stage | confirmed/not confirmed | short note.");
@@ -412,9 +418,8 @@ function parseOutcomeRespondents(raw: string): {
     if (seen.has(normalizedId)) throw new Error("Duplicate respondent ID: " + identifier + ".");
     seen.add(normalizedId);
     const confirmed = rawConfirmation === "confirmed";
-    if ((stage === "interested" || stage === "paid_customer") && !confirmed) throw new Error("Respondent " + identifier + ": interested/paid stages require problem confirmation.");
-    if (stage === "paid_customer" && !/(payment verified|verified payment|provider receipt|transaction reference)/i.test(note)) throw new Error("Respondent " + identifier + ": paid_customer requires a real verified payment/receipt reference in the note.");
-    if (stage === "interested" || stage === "paid_customer") conversions += 1;
+    if (stage === "interested" && !confirmed) throw new Error("Respondent " + identifier + ": interested stage requires problem confirmation.");
+    if (stage === "interested") conversions += 1;
     contacts.push({ identifier, stage, event_type: "response", notes: (confirmed ? "confirmed: " : "not confirmed: ") + note });
   }
   return { contacts, conversions };
@@ -878,7 +883,7 @@ function OwnerConsolePage() {
           data_scope: "REAL",
         },
         undefined,
-        "Human-reported validation outcome recorded. This is not a payment or revenue record.",
+        "Owner-reported outcome saved as MOCK/REPORTED; it is not verified REAL evidence, payment, or revenue, and does not unlock the product gate by itself.",
       );
     } catch (cause) {
       setPipelineError(cause instanceof Error ? cause.message : "The respondent notes could not be validated.");
@@ -1344,6 +1349,22 @@ function OwnerConsolePage() {
                                       <div><dt className="text-muted">Validation task</dt><dd>{orchestratorDetail.experiment.status || "Not prepared"} · {orchestratorDetail.experiment.stage}</dd></div>
                                       <div><dt className="text-muted">Demand evidence</dt><dd>{orchestratorDetail.outcomes_count} recorded outcome(s); {orchestratorDetail.products.length} product record(s)</dd></div>
                                     </dl>
+                                    <div className="mt-4 rounded-card border border-line p-3">
+                                      <h5 className="font-bold">Outcome provenance</h5>
+                                      {orchestratorDetail.outcomes.length ? (
+                                        <ul className="mt-2 grid gap-2 text-sm">
+                                          {orchestratorDetail.outcomes.map((outcome) => (
+                                            <li key={outcome.id} className="flex flex-wrap items-start justify-between gap-2 border-b border-line/60 pb-2 last:border-0">
+                                              <span>Outcome #{outcome.id} · {outcome.outcome_type}</span>
+                                              <span className="font-mono text-xs">{outcome.source_kind}/{outcome.verification_state}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      ) : <p className="mt-2 text-sm text-muted">No outcome records yet.</p>}
+                                      <p className="mt-3 text-xs leading-5 text-muted">
+                                        Owner-entered interview notes are stored as MOCK/REPORTED. REAL scope alone is not proof: only separately qualifying REAL/VERIFIED evidence counts toward the product demand gate. A paid-customer record requires a separate verified ACTUAL_REVENUE outcome.
+                                      </p>
+                                    </div>
                                     {orchestratorDetail.opportunity.economic_evidence_summary ? <p className="mt-3 text-sm">{orchestratorDetail.opportunity.economic_evidence_summary}</p> : null}
                                     {orchestratorDetail.experiment.hypothesis ? (
                                       <div className="mt-4 rounded-card border border-line p-3">
@@ -1381,7 +1402,7 @@ function OwnerConsolePage() {
                                     {orchestratorDetail.experiment.status === "in_progress" ? (
                                       <form onSubmit={(event) => void submitPipelineOutcome(event)} className="mt-5 grid gap-3 border-t border-line pt-4">
                                         <h5 className="font-bold">Record actual interview results</h5>
-                                        <p className="text-sm text-muted">Record only work you personally performed or directly observed. Use one respondent per line: <code>id | stage | confirmed/not confirmed | short note</code>. Use pseudonymous IDs, not names, emails or phone numbers. Use paid_customer only after you personally verify a real payment from a provider receipt or transaction reference; this form records your assertion and does not verify the provider. An interview or willingness-to-pay statement is not revenue.</p>
+                                        <p className="text-sm text-muted">Record only work you personally performed or directly observed. Use one respondent per line: <code>id | stage | confirmed/not confirmed | short note</code>. This interview form accepts only lead, contacted, and interested; it cannot mark paid_customer or churned. Use pseudonymous IDs, not names, emails, or phone numbers. The existing write path saves owner-entered interview notes as MOCK/REPORTED, not verified REAL evidence. An interview or willingness-to-pay statement is not revenue; paid-customer status requires a separately verified ACTUAL_REVENUE outcome.</p>
                                         <label className="grid gap-1 text-sm font-semibold">
                                           What actually happened?
                                           <textarea value={outcomeActual} onChange={(event) => setOutcomeActual(event.target.value)} required minLength={2} maxLength={3000} rows={3} className="min-h-20 rounded-card border-2 border-line bg-black px-3 py-2 text-ink" placeholder="Summarize the real conversations and what was said." />

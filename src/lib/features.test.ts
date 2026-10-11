@@ -265,7 +265,10 @@ describe("feature registry", () => {
     assert.ok(owner.includes('        "outcome",'), "actual interview results must use the guarded outcome endpoint");
     assert.ok(owner.includes("parseOutcomeRespondents"), "actual respondent rows must be validated");
     assert.ok(owner.includes("pseudonymous IDs"), "outcome capture must minimize contact data");
-    assert.ok(owner.includes("does not verify the provider"), "payment proof notes must not imply independent verification");
+    assert.ok(owner.includes('type RespondentStage = "lead" | "contacted" | "interested"'), "interview capture must use the stages the backend can truthfully record");
+    assert.ok(owner.includes("Owner-reported outcome saved as MOCK/REPORTED"), "owner-entered notes must not be presented as verified reality");
+    assert.ok(owner.includes("outcome.source_kind") && owner.includes("outcome.verification_state"), "detail must show outcome provenance");
+    assert.ok(owner.includes("separate verified ACTUAL_REVENUE outcome"), "paid-customer status requires verified revenue");
     assert.ok(!owner.includes('"/api/products/pipeline"'), "owner cockpit must not fetch the contact-rich product pipeline");
     assert.ok(api.includes('result.pop("customer_events", None)'), "detail/action responses must exclude customer ledger rows");
   });

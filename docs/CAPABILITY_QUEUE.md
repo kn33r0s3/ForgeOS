@@ -1,3 +1,9 @@
+## [SOURCE CHANGE / CI PENDING] Align interview capture with evidence provenance gates (2026-10-12)
+
+- The interview form previously offered `paid_customer` based on a receipt-like free-text note, but the existing backend correctly requires a linked positive verified `ACTUAL_REVENUE` outcome for that stage. The form now captures only `lead`, `contacted`, and `interested`; it cannot fabricate paid or churned lifecycle state from interview text.
+- Opportunity detail now shows each existing outcome's `source_kind/verification_state` without echoing raw qualitative notes. The UI states that owner-entered interview notes are `MOCK/REPORTED`, that REAL scope alone is not proof, and that only qualifying `REAL/VERIFIED` evidence counts toward the product gate.
+- This preserves the current truth boundary. It does not bypass evidence checks or initiate eSewa/Khalti. Verified-demand evidence path and product-to-order-to-payment-to-verified-outcome loop remain separate, unfinished work.
+- Previous main SHA `2fbc86b4fa9cfb2fe2bd7240d028529a7be1b507` passed nine CI jobs and independent deploy verification. This incremental UI correction requires its own exact-SHA CI and deployment verification.
 ## [CODE COMPLETE / CI + DEPLOY VERIFIED; PRODUCTION CONFIG OPEN] Feed fixture and respondent-privacy repair (2026-10-12)
 
 - Corrected on main at `2fbc86b4fa9cfb2fe2bd7240d028529a7be1b507`: `test_public_feed_projects_heterogeneous_records_with_evidence_and_relations` now connects through the explicit open DomainRecord ID instead of hard-coding a database ID that belonged to a closed fixture.
