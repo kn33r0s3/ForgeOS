@@ -1,5 +1,5 @@
-# Renovation map (look before you touch — notes only, nothing changed)
-Mapped 2026-10-08 against origin/main @ 7008111. SEEN = opened/read, GUESS = inferred.
+# Historical renovation map (2026-10-08 snapshot; refresh before relying on this inventory)
+Mapped against origin/main @ 7008111. SEEN = opened/read, GUESS = inferred. This map predates October 11 Hami integration/branding changes.
 
 ## Folders
 
@@ -36,7 +36,7 @@ vercel.json in plain words:
 - ROOT APP ROUTES (from `src/routes/`): `$`, `__root`, `about`, `actions`, `api/*`, `bot-qualification-demo`, `climb`, `contact`, `discoveries`, `domain`, `experiments`, `feed`, `forge-bot-intake`, `group.*`, `index`, `login`, `needs`, `operations`, `opportunities`, `owner`, `privacy`, `process`, `prototype.inbox`, `providers`, `request-a-project`, `request`, `requests.$id`, `services.$slug`, ... (30 files).
 - `frontend/` is NOT PRESENT — skipped. Legacy dashboard is `docs/archive/legacy-frontend/` (Next.js, archived per README).
 - `server/` — SEEN: middleware + grok identity types. Platform part. DO NOT TOUCH.
-- `scripts/` — SEEN: build/test/ops scripts. `scripts/grok-pwa-*` are platform parts. DO NOT TOUCH those.
+- `scripts/` — build/test/ops scripts. The earlier `scripts/grok-pwa-*` PWA injector files have since been removed; keep remaining preview identity/auth code separate rather than treating every Grok reference as production branding.
 - Hard-coded local addresses: `src/lib/app-data/client.server.ts` (localhost/127.0.0.1/[::1] dev-host check), `src/lib/auth/server.ts` (allowed hosts incl. localhost:8080), `src/lib/auth/gate-identity.server.ts` (preview gate at 127.0.0.1:6014). All dev/preview scoping, not production endpoints.
 
 ## Backend
@@ -118,5 +118,14 @@ GROK_CONNECTOR_ACCESS_TOKEN, GROK_GATE_ORIGIN, GROK_PROJECT_ID, HOST, ...
 
 - Top 3 blockers from `docs/CAPABILITY_QUEUE.md`: (1) Owner readiness/maintenance heartbeat — BLOCKED/unverified, needs owner key. (2) Production database inspection — BLOCKED, no authorized credential procedure. (3) Customer-facing response — BLOCKED, no sender/channel configured; send flag defaults false.
 - `sanipops_clean/` purpose: UNKNOWN (no README; single nested dir). Left untouched.
-- `services/evidence-triage` (`forgeos-evidence-triage`, node, has Dockerfile): what deploys it — UNKNOWN.
+- `services/evidence-triage` is an optional paid x402 Node service, not a declared Vercel service. Compose gates it behind `paid-triage`; it fails closed unless `X402_PAY_TO` and an actual reachable `X402_RESOURCE_URL` are configured. The FastAPI proxy also requires an explicit `EVIDENCE_TRIAGE_URL`; no production deployment has been verified.
 - Skipped per safety rules (targets verifiably absent): `attachments/`, `frontend/`, `logs/`, `screenshots/`, `opencode.jsonc.bad`, `.node_modules.lock`, playbook `renovation` branch (direct-to-main stands), AGENTS.md-split owner question (premise false), TEN STOP SIGNS copy (not in source).
+
+
+## October 11 continuation corrections
+
+- Canonical web app: root Vite app at port 8080. Compose runs FastAPI and explicitly profiled processes, not the root web app itself. `FORGEOS_USE_DOCKER=true ./start.sh` starts the Compose backend and root Vite app on the host.
+- Default Compose no longer starts the archived Next.js frontend/Caddy. They require `--profile legacy-frontend`; Caddy binds to loopback rather than every network interface.
+- The native start script keeps default SQLite `DATABASE_URL` scoped to FastAPI/scheduler/worker processes. Passing SQLite into the root web app was incompatible with `src/lib/db.ts`, which interprets a non-empty URL as PostgreSQL/Neon.
+- The paid triage helper no longer guesses a local or production service hostname. Both the owner-key-protected proxy URL and x402 advertised resource URL must be explicitly configured. `services/evidence-triage` is not deployed by `vercel.json`.
+- `services/forge-bot/` contains specification/mapping files only; the actual API is implemented under `backend/app/api/forge_bot.py` and backend services.

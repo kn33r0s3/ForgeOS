@@ -1,48 +1,45 @@
-# 🐳 ForgeOS Docker Commands Cheat Sheet
+# Hami / ForgeOS Docker commands
 
-**Location:** `/Users/nirojpaudyal/Downloads/ForgeOS`
+The canonical web interface is the root Vite app on port 8080. Compose runs the
+FastAPI backend (port 8000) and optional workers; it does not start the
+archived Next.js dashboard by default.
 
----
+## Recommended combined startup
 
-## Starting & Stopping
-
-### Start All Services (Background)
 ```bash
-cd /Users/nirojpaudyal/Downloads/ForgeOS
-docker compose up -d
+FORGEOS_USE_DOCKER=true ./start.sh
+# Canonical Hami UI: http://localhost:8080
+# Backend docs: http://localhost:8000/docs
 ```
 
-### Start All Services (View Logs)
+## Backend-only Compose startup
+
 ```bash
-docker compose up
-# Press Ctrl+C to stop and keep containers running
-# Or Ctrl+C twice to stop and remove containers
+docker compose up --build -d
+curl http://localhost:8000/health
 ```
 
-### Start All Services (Rebuild Images)
+## Optional local profiles
+
 ```bash
-docker compose up --build
+# Existing scheduler/maintenance process
+docker compose --profile worker up --build -d
+
+# Archived Next.js dashboard (not canonical Hami); loopback only
+docker compose --profile legacy-frontend up --build
+
+# For local x402 testing, add explicit X402_RESOURCE_URL and X402_PAY_TO values
+# to an uncommitted .env file; EVIDENCE_TRIAGE_URL is a separate proxy setting.
+# X402_RESOURCE_URL must name the actual x402 endpoint (for local tests only):
+# X402_RESOURCE_URL=http://127.0.0.1:8787/triage
+# X402_PAY_TO=<authorized-wallet-address>
+# EVIDENCE_TRIAGE_URL=http://evidence-triage:8787
+docker compose --profile paid-triage up --build
 ```
 
-### Stop All Services
-```bash
-docker compose down
-```
-
-### Stop All Services & Remove Volumes
-```bash
-docker compose down -v
-```
-
----
-
-## Viewing Status
-
-### Check Container Status
-```bash
-# Quick view
-docker compose ps
-
+Do not use `docker compose down -v` or delete `storage/forge.db` as routine
+cleanup; those commands can destroy local data. The root `start.sh` uses
+non-destructive shutdown.
 # Detailed view
 docker compose ps -a
 
@@ -66,14 +63,14 @@ docker compose logs -f
 # Backend logs
 docker compose logs -f backend
 
-# Frontend logs
-docker compose logs -f frontend
+# Legacy frontend logs (only after --profile legacy-frontend is enabled)
+docker compose --profile legacy-frontend logs -f frontend
 
 # Worker logs
 docker compose logs -f worker
 
-# Caddy logs
-docker compose logs -f caddy
+# Legacy Caddy logs (only after --profile legacy-frontend is enabled)
+docker compose --profile legacy-frontend logs -f caddy
 ```
 
 #### Last N lines
@@ -130,7 +127,7 @@ docker compose build --no-cache backend
 # Backend
 docker exec -it forgeos-backend bash
 
-# Frontend
+# Legacy frontend (only when the legacy-frontend profile is running)
 docker exec -it forgeos-frontend bash
 
 # Worker
@@ -186,11 +183,11 @@ cp storage/forge.db storage/forge.db.backup
 # Backend health
 curl http://localhost:8000/health
 
-# Backend via proxy
-curl http://localhost:3000/api/health
+# Legacy frontend proxy (only with --profile legacy-frontend)
+curl http://127.0.0.1:3000/api/health
 
-# Frontend
-curl http://localhost:3000/ | head -c 100
+# Optional legacy frontend (only with --profile legacy-frontend)
+curl http://127.0.0.1:3000/ | head -c 100
 ```
 
 ### From Container
@@ -437,7 +434,8 @@ docker compose up
 
 ## Quick Links
 
-- **Dashboard:** http://localhost:3000
+- **Canonical Hami:** http://localhost:8080
+- **Optional legacy dashboard:** http://127.0.0.1:3000 (profile only)
 - **Backend API:** http://localhost:8000
 - **API Docs:** http://localhost:8000/docs
 - **API Proxy:** http://localhost:3000/api

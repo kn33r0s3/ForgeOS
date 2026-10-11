@@ -8,7 +8,7 @@ This is a living, repository-grounded audit, not a claim that every capability i
 
 ## Inventory and method
 
-At the current continuation point (`main` `9ce7b360143d453b2907cda33f5ce3a094071f52`, 2026-10-11 14:32:48 UTC), the recursive Git tree contains **922 tracked tree entries: 799 files and 123 directories**, including **38 frontend route files**, **25 backend API modules**, **113 backend service modules**, and **147 files under `docs/`**. These are inventory counts, not proof that every route or service is active. The pass traced the canonical navigation map, route lifecycle registry, sitemap, orphan-route scanner, route components/loaders, FastAPI router registrations, authorization middleware, owner/operations consoles, payment adapters, Better Auth and preview-specific identity/connectors, relevant tests/CI, and the commercial evidence log.
+At the current continuation point (`main` `5a66ec8757f5efa6e5c2424e542528b2b6c70707`, 2026-10-11 14:52:33 UTC), the recursive Git tree contains **923 tracked tree entries: 800 files and 123 directories**, including **38 frontend route files**, **25 backend API modules**, **113 backend service modules**, and **147 files under `docs/`**. These are inventory counts, not proof that every route or service is active. The pass traced the canonical navigation map, route lifecycle registry, sitemap, orphan-route scanner, route components/loaders, FastAPI router registrations, authorization middleware, owner/operations consoles, payment adapters, Better Auth and preview-specific identity/connectors, relevant tests/CI, and the commercial evidence log.
 
 Canonical constraints remain in force:
 - One product and one data substrate: reuse `ENTITY`, `RELATION`, `EVENT`, `EVIDENCE`, `CAPABILITY`, and `ACTION` through `type_registry.schema_json`.
@@ -36,12 +36,18 @@ Canonical constraints remain in force:
 - `a102b1a8` — closed the production evidence-triage wiring gap: without an explicitly configured service URL, deployed requests now return 503 instead of trying the Compose-only hostname; the paid x402 Compose service is opt-in, with focused tests and the capability map updated.
 - `d432ca9e` — added the missing `node:fs` `readFileSync` import used in `src/lib/forge/cli.test.ts`; CI on that commit passed typecheck, frontend tests, build, lint, route smoke, and secret scan, while backend tests were still running when checked.
 - `9ce7b360` — corrected stale capability-map claims about the homepage and Businesses page linking directly to the closed Forge Bot intake; the retained route remains closed and `noindex`.
+- `03686e2d` — made the owner orchestrator projection require `source_kind=REAL` before showing a REAL-scope validation; a newer MOCK row can no longer shadow a real-provenance row.
+- `5ebf713d` — protected public booking-status reads with a non-stored HMAC capability token, passed in a URL fragment and checked before database lookup; tokenless/wrong-token reads cannot enumerate numeric IDs. Key rotation invalidates old links.
+- `d4704f98` — aligned Docker mode with the canonical root Vite frontend, made the archived Next.js/Caddy stack opt-in and loopback-bound, scoped default backend SQLite to backend processes, and added a startup contract test.
+- `aa7f339d` — removed the optional Compose hostname fallback for evidence triage; the owner-protected proxy now returns 503 until its URL is explicitly configured.
+- `5a66ec87` — made x402 refuse an invented localhost resource URL, added URL config tests, and added the standalone triage service test/typecheck job to root CI.
 
 ### Current continuation status
 
-- `main` advances rapidly; the current inventory is pinned above to an exact SHA. Verify CI against a fresh head after every subsequent commit rather than extrapolating results from an earlier SHA.
-- At SHA `286cd93c`, frontend tests, build, typecheck, lint, route smoke and secret scan were observed successful; backend tests were still in progress. The following `9ce7b360` documentation commit triggers a new CI run, so this is **not** a claim that the latest head is fully green.
-- Production HTML/runtime log reads remain blocked by the connected Vercel scope (403). Do not infer live rendered output, environment-secret values, or production worker behavior from source or from the build alone.
+- Inventory is pinned to `5a66ec8757f5efa6e5c2424e542528b2b6c70707`; any later commit requires a fresh inventory/CI check.
+- CI for `5ebf713d` completed successfully, including backend, frontend, build, typecheck, lint, route smoke and secret scan; independent deploy verification also succeeded for that SHA.
+- CI for `d4704f98`, `aa7f339d`, and `5a66ec87` was still in progress/queued at this update. Do not declare the new startup contract or x402 config fix verified until those jobs complete.
+- Production HTML/runtime log reads remain blocked by the connected Vercel scope (403). The independent verifier is useful SHA-aligned evidence, but no direct browser/cache inspection or separate Node triage deployment has been established.
 
 Always inspect CI against the exact latest `main` SHA after a commit. A commit existing is not a test result; build success or a deployment badge alone is not proof every active job or runtime path is green.
 

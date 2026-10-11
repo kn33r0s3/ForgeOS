@@ -85,14 +85,23 @@ example `FORGEOS_API_TARGET=http://127.0.0.1:8100 npm run dev`. The frontend
 does not provide mock API records; if the backend is unavailable, it shows the
 connection error rather than sample data.
 
-`./start.sh` starts the native backend, scheduler, and root web app together.
+`./start.sh` starts the native backend, scheduler, and canonical root Vite web app together.
 The task worker is disabled by default; enable deliberately with
 `FORGEOS_ENABLE_WORKER=true ./start.sh`. Stop that combined stack with
 `./stop.sh`.
 
-The optional Docker Compose frontend on port 3000 is the archived legacy
-Next.js dashboard at `docs/archive/legacy-frontend/`; it is not the current
-Hami web app.
+For a containerized backend with the **same canonical root web UI**, run
+`FORGEOS_USE_DOCKER=true ./start.sh`. The Docker backend uses the mounted
+`storage/forge.db` by default, while the root web app leaves `DATABASE_URL`
+unset and uses its documented PGLite fallback for private context/auth data.
+If an explicit PostgreSQL `DATABASE_URL` is provided, that same URL is passed
+to both processes. The startup script scopes its default SQLite URL to backend
+processes only; it never passes a SQLite URL to the web app PostgreSQL driver.
+
+The separate archived Next.js dashboard at `docs/archive/legacy-frontend/` is
+available only through the explicit Compose profile
+`docker compose --profile legacy-frontend up --build`. Its Caddy port binds to
+loopback; it is not the current Hami web app and is not started by default.
 
 ### Production frontend/API configuration
 
