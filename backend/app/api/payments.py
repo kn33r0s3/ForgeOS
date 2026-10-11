@@ -216,6 +216,14 @@ def esewa_callback(
                 url=payment_intent_engine.payment_result_url(intent),
                 status_code=303,
             )
+        except payment_intent_engine.PaymentReconciliationRequired as exc:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "eSewa reports a refund for a previously verified payment. "
+                    "Owner reconciliation is required; the existing revenue record has not been changed."
+                ),
+            ) from exc
         except (RuntimeError, OSError) as exc:
             raise HTTPException(status_code=503, detail="eSewa verification is temporarily unavailable.") from exc
         except ValueError as exc:

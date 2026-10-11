@@ -389,6 +389,20 @@ def create_checkout(
         raise
 
 
+_REFUND_STATUSES = {"FULL_REFUND", "PARTIAL_REFUND", "REFUNDED"}
+
+
+def _raise_reconciliation_on_verified_refund(
+    intent: models.OpPaymentIntent, provider: str, provider_status: str
+) -> None:
+    """Never mutate a verified payment ledger automatically when a refund is reported."""
+    if intent.status == "VERIFIED" and (provider_status or "").strip().upper() in _REFUND_STATUSES:
+        raise PaymentReconciliationRequired(
+            f"{provider} reports a refund for a previously verified payment; "
+            "owner reconciliation is required."
+        )
+
+
 def _nonverified_state(
     db: Session, intent: models.OpPaymentIntent, provider_status: str, note: str
 ) -> models.OpPaymentIntent:
@@ -609,6 +623,7 @@ def finalize_esewa_callback(
     ):
         _transition(db, intent, "DISPUTED", note="Signed callback identity, merchant, or amount mismatched this intent.")
         raise ValueError("eSewa transaction does not match this payment intent.")
+    _raise_reconciliation_on_verified_refund(intent, "eSewa", status)
     if status != "COMPLETE":
         return _nonverified_state(db, intent, status, "eSewa signed callback is not a completed payment.")
     lookup = nepal_payments.esewa_lookup(
@@ -623,6 +638,19 @@ def finalize_esewa_callback(
         lookup_amount_paisa = int((Decimal(str(lookup_amount)) * Decimal(100)).quantize(Decimal("1")))
     except Exception:
         lookup_amount_paisa = -1
+    if lookup_status.strip().upper() in _REFUND_STATUSES:
+        _raise_reconciliation_on_verified_refund(intent, "eSewa", lookup_status)
+        if (
+            lookup_amount_paisa == intent.amount_paisa
+            and lookup_merchant == settings.ESEWA_MERCHANT_CODE
+        ):
+            return _nonverified_state(
+                db, intent, lookup_status, "eSewa server lookup reports a refund."
+            )
+        return _transition(
+            db, intent, "DISPUTED",
+            note="eSewa server lookup reported a refund but identity, amount, or merchant did not match.",
+        )
     if (
         lookup_status != "COMPLETE" or lookup_amount_paisa != intent.amount_paisa
         or lookup_merchant != settings.ESEWA_MERCHANT_CODE or not reference

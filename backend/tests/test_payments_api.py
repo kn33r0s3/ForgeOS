@@ -141,3 +141,26 @@ def test_khalti_callback_reports_owner_reconciliation_for_refund_conflict(monkey
     assert "Owner reconciliation is required" in response.json()["detail"]
     assert "existing revenue record has not been changed" in response.json()["detail"]
 
+
+
+
+def test_esewa_callback_reports_owner_reconciliation_for_verified_refund(monkeypatch):
+    def reconciliation_required(_db, **kwargs):
+        raise payments.payment_intent_engine.PaymentReconciliationRequired(
+            "eSewa reports a refund for a previously verified payment; owner reconciliation is required."
+        )
+
+    monkeypatch.setattr(
+        payments.payment_intent_engine, "finalize_esewa_callback", reconciliation_required
+    )
+    response = client.get(
+        "/api/payments/esewa/callback",
+        params={
+            "data": "signed-esewa-refund-callback-payload-123456",
+            "intent": "esewa-refund-callback-intent-123456789",
+        },
+    )
+    assert response.status_code == 409
+    assert "eSewa reports a refund" in response.json()["detail"]
+    assert "Owner reconciliation is required" in response.json()["detail"]
+    assert "existing revenue record has not been changed" in response.json()["detail"]

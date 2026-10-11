@@ -427,3 +427,102 @@ def test_esewa_amount_mismatch_is_disputed_without_revenue(db, monkeypatch):
     db.refresh(intent)
     assert intent.status == "DISPUTED"
     assert db.query(models.Outcome).filter_by(product_id=product.id, outcome_type="ACTUAL_REVENUE").count() == 0
+
+
+
+def _fulfilled_esewa_intent_for_refund_test(db):
+    product = _published_product(db)
+    intent = models.OpPaymentIntent(
+        public_ref="esewa-refund-test-intent-0123456789",
+        product_id=product.id,
+        provider="esewa",
+        status="VERIFIED",
+        amount_paisa=500000,
+        currency="NPR",
+        merchant_order_id="hami-esewa-refund-test-order-123456",
+        idempotency_key_hash="9" * 64,
+        provider_reference="ESEWA-ORIGINAL-RECEIPT",
+        data_scope="REAL",
+    )
+    db.add(intent)
+    db.commit()
+    db.refresh(intent)
+    result = payment_intent_engine.fulfill_verified_intent(db, intent.id)
+    assert result["fulfilled"] is True
+    return product, intent, result
+
+
+def test_esewa_signed_refund_after_verified_fulfillment_requires_owner_reconciliation(db, monkeypatch):
+    product, intent, fulfilled = _fulfilled_esewa_intent_for_refund_test(db)
+    outcome_id = fulfilled["outcome_id"]
+    original_fulfilled_at = fulfilled["fulfilled_at"]
+    monkeypatch.setattr(settings, "ESEWA_MERCHANT_CODE", "TEST-MERCHANT")
+    monkeypatch.setattr(nepal_payments, "verify_esewa_response", lambda _: {
+        "status": "FULL_REFUND",
+        "total_amount": "5000.00",
+        "transaction_uuid": intent.merchant_order_id,
+        "product_code": "TEST-MERCHANT",
+        "transaction_code": "ESEWA-REFUND-CALLBACK",
+    })
+
+    with pytest.raises(
+        payment_intent_engine.PaymentReconciliationRequired,
+        match="eSewa reports a refund",
+    ):
+        payment_intent_engine.finalize_esewa_callback(
+            db, public_ref=intent.public_ref, encoded_data="test-signed-refund-payload"
+        )
+
+    db.refresh(intent)
+    outcome = db.get(models.Outcome, outcome_id)
+    assert intent.status == "VERIFIED"
+    assert intent.outcome_id == outcome_id
+    assert intent.fulfilled_at.isoformat() == original_fulfilled_at
+    assert outcome.actual_value == 5000.0
+    assert outcome.unit == "NPR"
+    assert outcome.source_kind == "REAL"
+    assert outcome.verification_state == "VERIFIED"
+    assert db.query(models.Outcome).filter_by(
+        product_id=product.id, outcome_type="ACTUAL_REVENUE", unit="NPR"
+    ).count() == 1
+
+
+def test_esewa_lookup_refund_after_verified_fulfillment_requires_owner_reconciliation(db, monkeypatch):
+    product, intent, fulfilled = _fulfilled_esewa_intent_for_refund_test(db)
+    outcome_id = fulfilled["outcome_id"]
+    original_fulfilled_at = fulfilled["fulfilled_at"]
+    monkeypatch.setattr(settings, "ESEWA_MERCHANT_CODE", "TEST-MERCHANT")
+    monkeypatch.setattr(nepal_payments, "verify_esewa_response", lambda _: {
+        "status": "COMPLETE",
+        "total_amount": "5000.00",
+        "transaction_uuid": intent.merchant_order_id,
+        "product_code": "TEST-MERCHANT",
+        "transaction_code": "ESEWA-ORIGINAL-CALLBACK",
+    })
+    monkeypatch.setattr(nepal_payments, "esewa_lookup", lambda **kwargs: {
+        "status": "PARTIAL_REFUND",
+        "totalAmount": "5000.00",
+        "scd": "TEST-MERCHANT",
+        "refId": "ESEWA-ORIGINAL-RECEIPT",
+    })
+
+    with pytest.raises(
+        payment_intent_engine.PaymentReconciliationRequired,
+        match="eSewa reports a refund",
+    ):
+        payment_intent_engine.finalize_esewa_callback(
+            db, public_ref=intent.public_ref, encoded_data="test-signed-complete-payload"
+        )
+
+    db.refresh(intent)
+    outcome = db.get(models.Outcome, outcome_id)
+    assert intent.status == "VERIFIED"
+    assert intent.outcome_id == outcome_id
+    assert intent.fulfilled_at.isoformat() == original_fulfilled_at
+    assert outcome.actual_value == 5000.0
+    assert outcome.unit == "NPR"
+    assert outcome.source_kind == "REAL"
+    assert outcome.verification_state == "VERIFIED"
+    assert db.query(models.Outcome).filter_by(
+        product_id=product.id, outcome_type="ACTUAL_REVENUE", unit="NPR"
+    ).count() == 1

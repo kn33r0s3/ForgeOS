@@ -1,3 +1,10 @@
+## [SOURCE CHANGE / CI PENDING] Reconcile eSewa refunds after payment verification (2026-10-12)
+
+- The owner-reconciliation contract used for Khalti now covers eSewa refund statuses reported by the signed callback or server-side status lookup.
+- If a refund is reported after an intent is already VERIFIED, Hami raises a dedicated reconciliation conflict and leaves the verified intent, fulfillment timestamp, linked REAL/VERIFIED revenue outcome, and currency totals unchanged. For a not-yet-verified intent, a matching refund lookup becomes REFUNDED; mismatched identity, amount, or merchant remains DISPUTED.
+- Added service regressions for callback- and lookup-reported refunds after fulfillment, plus an API regression for HTTP 409. Tests use controlled fixtures only; no provider was contacted.
+- Exact-head full backend CI and independent deployment verification are required.
+
 ## [SOURCE CHANGE / CI PENDING] Persist checkout identity and scope retry controls (2026-10-12)
 
 - The public-offer screen persists only the random idempotency key and selected provider in tab-scoped `sessionStorage`, restoring them for currently published offers after refresh. It does not persist buyer data or provider credentials.
