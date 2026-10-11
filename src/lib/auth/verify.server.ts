@@ -1,6 +1,7 @@
 import { getRequest } from "@tanstack/react-start/server";
 import { gateIdentityEnabled } from "./gate-identity.server";
-import { auth, authConfigured } from "./server";
+import { auth, authConfigured, authDisabled } from "./server";
+import { isWorkspacePreview } from "../env.server";
 
 /**
  * Server-side session resolution (server-only).
@@ -83,13 +84,16 @@ export async function getSessionUser(
  */
 export async function requireUserId(bearerToken?: string): Promise<string> {
   if (!authConfigured && !gateIdentityEnabled()) {
-    if (databaseConfigured) {
+    if (authDisabled && databaseConfigured) {
       throw new Error(
         "Auth is disabled (VITE_AUTH_ENABLED=false) but DATABASE_URL is set — " +
           "refusing to fall back to the shared dev user against a real database.",
       );
     }
-    return DEV_USER_ID;
+    if (authDisabled && isWorkspacePreview() && !databaseConfigured) {
+      return DEV_USER_ID;
+    }
+    throw new UnauthorizedError();
   }
   const user = await getSessionUser(bearerToken);
   if (!user) throw new UnauthorizedError();
