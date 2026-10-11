@@ -6,8 +6,10 @@ This file records how existing routes and engines form one Hami system. It is a 
 
 - `src/lib/hami-system.ts` owns the public top navigation (`NAV`), footer groups (`FOOTER_GROUPS`), page-to-page paths (`SYSTEM_PATHWAYS`), and the path inventory guarded by tests (`PUBLIC_SYSTEM_PATHS`).
 - `src/components/layout/hami-pathways.tsx` renders contextual links into the same product loop.
+- `GroupAreaGrid` is the single renderer for group-area cards on `/group` and `/group/businesses`; every strategic direction points to an existing Hami route without claiming a separate company.
+- Each `/services/$slug` page uses the canonical `services` data to link to its sibling services and back to `/services`. The contextual CTA component distinguishes Hami's own catalogue from the separate external-provider directory.
 - `features.json` is the route/API lifecycle registry. `public/features.schema.json` defines its public schema. Every implemented top-level route must have an explicit registry state.
-- The header, footer, pathways, sitemap, and registry are checked together by `src/lib/features.test.ts`. A new page is not complete just because its file exists. Technology, Ventures and provider-request status also return to shared pathways. Terms no longer advertise the closed contact route.
+- The header, footer, pathways, sitemap, and registry are checked together by `src/lib/features.test.ts`. A new page is not complete just because its file exists. Tests now check both directions: every navigation/pathway target must exist, and every live page must have a deliberate entry path or an explicit workflow-only role. Technology, Ventures and provider-request status also return to shared pathways. Terms no longer advertise the closed contact route.
 
 ## The two connected flows
 
@@ -34,7 +36,7 @@ Hidden does not mean delete. Archived does not mean create another page. A page 
 
 ## Operator and authorization boundary
 
-`/owner` is the key-protected noindex cockpit for readiness, inquiry evidence, ForgeBot, intelligence/research, products and payments visibility, operating model, scouting, and buyer-side journey records. `/operations` is a separate key-protected noindex surface for economic state, action records and explicitly initiated operations. Neither belongs in public navigation. Their existence does not make action execution, outreach, intake, payment collection, or revenue live.
+`/owner` is the key-protected noindex cockpit for readiness, inquiry evidence, ForgeBot, intelligence/research, products and payments visibility, operating model, scouting, and buyer-side journey records. `/operations` is a separate key-protected noindex surface for economic state, action records and explicitly initiated operations. The owner console links to Operations after the owner has unlocked it, and Operations links back; neither belongs in public navigation. Their existence does not make action execution, outreach, intake, payment collection, or revenue live.
 
 Before changing those boundaries, trace the existing endpoints and key/authentication behavior. Preserve owner approval, action envelopes, daily caps, source clearance, provenance, and evidence labels. Do not make the app automatically execute merely to make a control appear active.
 

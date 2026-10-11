@@ -159,6 +159,43 @@ describe("feature registry", () => {
     assert.deepEqual(invalid, [], `pages use undefined Hami pathway keys: ${invalid.join(", ")}`);
   });
 
+  it("every live page has a deliberate entry path or is an explicit workflow-only route", () => {
+    const sitemap = readFileSync(path.join(root, "..", "public", "sitemap.xml"), "utf8");
+    const sitemapPaths = [...sitemap.matchAll(/<loc>https:\/\/haminp\.vercel\.app([^<]*)<\/loc>/g)]
+      .map((match) => match[1] || "/");
+    const entryPaths = new Set<string>([
+      ...NAV.map((item) => item.to),
+      ...FOOTER_GROUPS.flatMap((group) => group.items.map((item) => item.to)),
+      ...PUBLIC_SYSTEM_PATHS,
+      ...Object.values(SYSTEM_PATHWAYS).flatMap((links) => links.map((item) => item.to)),
+      ...sitemapPaths,
+    ]);
+    const routeMatches = (pattern: string, candidate: string) => {
+      const expected = pattern.split("/");
+      const actual = candidate.split("/");
+      return expected.length === actual.length && expected.every((segment, index) =>
+        segment.startsWith("$") ? actual[index].length > 0 && !actual[index].startsWith("$") : segment === actual[index],
+      );
+    };
+    // Request status is only addressable after the provider-request flow creates a record.
+    const workflowOnly = new Set(["/requests/$id"]);
+    const publicPages = registry.features.filter((feature: { route: string; status: string }) =>
+      feature.status === "live" && feature.route && !feature.route.startsWith("/api/"),
+    );
+    const orphaned = publicPages.filter((feature: { route: string }) =>
+      !workflowOnly.has(feature.route) &&
+      ![...entryPaths].some((candidate) => routeMatches(feature.route, candidate)),
+    );
+    assert.deepEqual(
+      orphaned.map((feature: { route: string; name: string }) => `${feature.name} (${feature.route})`),
+      [],
+      "every live page must be reachable through the shared navigation, a contextual path, the sitemap, or an explicit workflow",
+    );
+    const providers = readFileSync(path.join(root, "routes", "providers.tsx"), "utf8");
+    assert.match(providers, /to:\s*"\/requests\/\$id"/, "provider requests must connect to their status route");
+    assert.ok(!entryPaths.has("/requests/$id"), "workflow-only request status is not a public navigation destination");
+  });
+
   it("the public sitemap contains only live Hami routes", () => {
     const sitemap = readFileSync(path.join(root, "..", "public", "sitemap.xml"), "utf8");
     const paths = [...sitemap.matchAll(/<loc>https:\/\/haminp\.vercel\.app([^<]*)<\/loc>/g)]

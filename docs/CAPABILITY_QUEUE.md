@@ -1,5 +1,13 @@
 # Hami capability claim ledger (ForgeOS repository)
 
+## [DONE WITH LIMITATION] Connect route and service surfaces into one Hami (2026-10-11)
+
+- **EXISTING SEAMS REUSED:** `src/lib/hami-system.ts` remains the single public NAV/footer/pathway source; `features.json` remains the route lifecycle authority; `src/lib/content.ts` remains the single source of the six Hami service categories and seven strategic group directions. No route, service category, API, or domain table was added.
+- **CONNECTIONS CLOSED:** both Group and Businesses surfaces now render the same `GroupAreaGrid`; all seven strategic directions route to existing Hami surfaces; each service detail links to the five sibling categories and back to the canonical service index; shared CTAs use contextual existing destinations; the private owner console links to the key-protected Operations dashboard after unlock and Operations links back.
+- **TRUTH AND ACCESS PRESERVED:** Hami-owned service offers remain distinct from external verified providers; online inquiry, Forge Bot intake, and payment collection remain gated/closed as configured; owner and operations routes stay hidden/noindex and outside public NAV; archived aliases stay archived; no fabricated customer, action, booking, or revenue state was introduced.
+- **REGRESSION COVERAGE:** feature tests now require group destinations and CTA targets to resolve to live registry routes, verify the service catalogue's sibling links, and ensure every live page has an entry path or the explicit workflow-only booking-status role. The feature registry and sitemap still exclude hidden/archived/noindex surfaces from public discovery.
+- **VERIFICATION:** Vercel reported the service-catalogue change READY on `438df1e43a528d21a66e422af90ff169f5f38835`; the service test-path correction `f01bc68ecb2a6f43cb70fa417f703c007b64127f` also has a successful Vercel check and READY deployment. Production HTML fetch remains unavailable through the current Vercel/web connectors, so this proves deployment/build status, not browser-level rendering or owner API readiness.
+
 ## [PARTIAL] Fix production CORS environment parsing and recover owner-readiness endpoint (2026-10-11)
 
 - **EXISTING SEAMS INSPECTED:** `backend/app/config.py::Settings.ALLOWED_ORIGINS`, `backend/app/main.py` CORS middleware, and `backend/tests/test_vercel_config_contract.py`. Production deploy verification run `38140140968` returned HTTP 500 from `/api/forge-bot/owner/readiness` immediately after the owner set Production `ALLOWED_ORIGINS` as a comma-separated value. The setting was annotated `list[str]`; Pydantic Settings JSON-decodes list-valued environment variables, so the CSV deployment value caused settings initialization to fail.
