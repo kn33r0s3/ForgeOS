@@ -47,4 +47,22 @@ describe("Hami authentication boundary", () => {
     assert.doesNotMatch(publicFiles, /dateOfBirth|termsVersion|termsAcceptedAt|user_personal_context/);
     assert.match(read("./terms-policy.ts"), /ACTIVE_TERMS.*null/);
   });
+  it("requires a stable deployed signing secret and blocks the auth API when unavailable", () => {
+    const server = read("./server.ts");
+    assert.ok(server.includes("authSecretReady = Boolean(explicitAuthSecret) || isWorkspacePreview()"));
+    assert.ok(server.includes("!authDisabled && authSecretReady &&"));
+
+    const availability = read("./availability.ts");
+    assert.ok(availability.includes("authConfigured,"));
+
+    const login = read("../../routes/login.tsx");
+    assert.ok(login.includes("!authEnabled || !authConfigured"));
+
+    const apiRoute = read("../../routes/api/auth/$.ts");
+    assert.ok(apiRoute.includes("if (!authConfigured)"));
+    assert.ok(apiRoute.includes("status: 503"));
+    assert.ok(apiRoute.includes("GET: ({ request }) => handleAuthRequest(request)"));
+    assert.ok(apiRoute.includes("POST: ({ request }) => handleAuthRequest(request)"));
+  });
+
 });
