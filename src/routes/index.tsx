@@ -67,6 +67,7 @@ function PublicOffers() {
   const [offers, setOffers] = useState<PublicPaymentOffer[] | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [keys, setKeys] = useState<Record<number, string>>({});
+  const [providersByOffer, setProvidersByOffer] = useState<Record<number, "esewa" | "khalti">>({});
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -85,6 +86,7 @@ function PublicOffers() {
     if (busyId !== null) return;
     setBusyId(offer.id);
     setError("");
+    setProvidersByOffer((current) => ({ ...current, [offer.id]: provider }));
     const key = keys[offer.id] ?? (
       window.crypto?.randomUUID?.()
       ?? ("hami-" + Date.now() + "-" + Math.random().toString(36).slice(2))
@@ -185,7 +187,7 @@ function PublicOffers() {
               {error ? (
                 <button
                   type="button"
-                  onClick={() => void beginCheckout(offer, provider)}
+                  onClick={() => void beginCheckout(offer, providersByOffer[offer.id] ?? offer.providers[0] ?? "esewa")}
                   className="mt-3 text-xs font-bold text-muted underline"
                 >
                   Retry the same checkout attempt
