@@ -531,14 +531,26 @@ def test_public_feed_composes_connections_but_keeps_endpoint_visibility_gates(db
         close_token_hash="test-hash",
         status="open",
     )
+    outcome_record = models.DomainRecord(
+        kind="offer",
+        title="A closed public test item",
+        detail="A public record with an outcome.",
+        close_token_hash="test-hash-closed",
+        status="closed",
+        close_result="completed",
+    )
+    db.add_all([provider, hidden, need, outcome_record])
+    db.flush()
     result = models.Outcome(
         source="domain_record",
         outcome_type="QUALITATIVE",
-        qualitative_result="A real recorded test outcome.",
+        qualitative_result="PRIVATE NOTE buyer@example.com; call 9800000001.",
+        notes=f"idempotency:domain-record:{outcome_record.id}:close",
+        verification_state="REPORTED",
         data_scope="REAL",
         source_kind="REAL",
     )
-    db.add_all([provider, hidden, need, result])
+    db.add(result)
     db.flush()
 
     first = models.NetworkConnection(
@@ -552,6 +564,28 @@ def test_public_feed_composes_connections_but_keeps_endpoint_visibility_gates(db
         public_visible=True,
     )
     db.add(first)
+    db.flush()
+    visible_connection_outcome = models.Outcome(
+        source="network_connection",
+        outcome_type="QUALITATIVE",
+        qualitative_result="PRIVATE NOTE phone 9800000001.",
+        notes=f"idempotency:network-connection:{first.id}:paid",
+        actual_value=8000,
+        unit="NPR",
+        success=True,
+        verification_state="VERIFIED",
+        data_scope="REAL",
+        source_kind="REAL",
+    )
+    booking_outcome = models.Outcome(
+        source="booking_request",
+        outcome_type="QUALITATIVE",
+        qualitative_result="PRIVATE BOOKING requester@example.com pending.",
+        notes="idempotency:booking-request:17",
+        data_scope="REAL",
+        source_kind="REAL",
+    )
+    db.add_all([visible_connection_outcome, booking_outcome])
     db.flush()
     second = models.NetworkConnection(
         left_kind="network_connection",
@@ -578,6 +612,20 @@ def test_public_feed_composes_connections_but_keeps_endpoint_visibility_gates(db
         content="This evidence belongs to a hidden endpoint connection.",
     )
     db.add_all([second, private_edge, private_evidence])
+    db.flush()
+    hidden_connection_outcome = models.Outcome(
+        source="network_connection",
+        outcome_type="QUALITATIVE",
+        qualitative_result="HIDDEN CONNECTION NOTE hidden@example.com.",
+        notes=f"idempotency:network-connection:{private_edge.id}:paid",
+        actual_value=4000,
+        unit="NPR",
+        success=True,
+        verification_state="VERIFIED",
+        data_scope="REAL",
+        source_kind="REAL",
+    )
+    db.add(hidden_connection_outcome)
     db.flush()
     db.add(models.EvidenceRelationship(
         evidence_id=private_evidence.id,
@@ -632,6 +680,20 @@ def test_public_feed_composes_connections_but_keeps_endpoint_visibility_gates(db
         for relation in item.relations
         if relation.entity_type == "evidence"
     }
+    outcome_feed = build_public_feed(db, limit=100, kind="outcome")
+    outcome_by_id = {item.entity_id: item for item in outcome_feed}
+    assert result.id in outcome_by_id
+    assert visible_connection_outcome.id in outcome_by_id
+    assert booking_outcome.id not in outcome_by_id
+    assert hidden_connection_outcome.id not in outcome_by_id
+    # Public outcomes preserve structured verification/amount, never free-form notes.
+    assert "buyer@example.com" not in str(outcome_feed)
+    assert "PRIVATE NOTE" not in str(outcome_feed)
+    assert "9800000001" not in str(outcome_feed)
+    assert "PRIVATE BOOKING" not in str(outcome_feed)
+    assert "HIDDEN CONNECTION NOTE" not in str(outcome_feed)
+    assert "8000" in outcome_by_id[visible_connection_outcome.id].summary
+    assert "8000" not in outcome_by_id[result.id].summary
     assert private_evidence.id not in all_public_evidence_ids
     assert "hidden endpoint connection" not in str(feed)
 
@@ -682,23 +744,44 @@ def test_opportunity_claim_question_link_respects_regulated_publication_gate(db)
     )
 
 
-def test_public_feed_preserves_outcome_verification_state(db):
+def test_public_feed_preserves_outcome_verification_state_without_exposing_notes(db):
     for verification_state in ("REPORTED", "VERIFIED", "DISPUTED"):
-        db.add(models.Outcome(
+        record = models.DomainRecord(
+            kind="trade",
+            title=f"Public status fixture {verification_state}",
+            detail="A bounded test record.",
+            close_token_hash=f"test-{verification_state}",
+            status="closed",
+            close_result="paid" if verification_state != "REPORTED" else "completed",
+        )
+        db.add(record)
+        db.flush()
+        action = "dispute" if verification_state == "DISPUTED" else "close"
+        outcome = models.Outcome(
             source="domain_record",
             outcome_type="QUALITATIVE",
-            qualitative_result=f"{verification_state.lower()} outcome note.",
+            qualitative_result=f"PRIVATE NOTE {verification_state.lower()} buyer@example.com",
+            notes=f"idempotency:domain-record:{record.id}:{action}",
+            actual_value=1000 if verification_state == "VERIFIED" else None,
+            unit="NPR" if verification_state == "VERIFIED" else None,
+            success=True if verification_state == "VERIFIED" else None,
             verification_state=verification_state,
             data_scope="REAL",
             source_kind="REAL",
-        ))
+        )
+        db.add(outcome)
     db.commit()
 
     items = public_feed.build_public_feed(db, kind="outcome", limit=10)
     states = {item.status: item.epistemic_state for item in items}
-
     assert states == {
         "reported": "reported_outcome",
         "verified": "verified_outcome",
         "disputed": "disputed_outcome",
     }
+    assert "PRIVATE NOTE" not in str(items)
+    assert "buyer@example.com" not in str(items)
+    verified = next(item for item in items if item.status == "verified")
+    assert "Amount: 1000 NPR" in verified.summary
+    disputed = next(item for item in items if item.status == "disputed")
+    assert "No winner is recorded" in disputed.summary
