@@ -17,7 +17,7 @@
     "typecheck": "tsc --noEmit",
     "check": "tsc --noEmit && eslint .",
     "check:auth": "node scripts/check-auth-invariant.mjs",
-    "test": "node scripts/check-orphaned-routes.mjs && node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test 'src/lib/**/*.test.ts'",
+    "test": "node scripts/sync-unknowns-json.mjs --check && node scripts/check-orphaned-routes.mjs && node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test 'src/lib/**/*.test.ts'",
     "lint": "eslint .",
     "format": "prettier --write .",
     "status": "node scripts/status.mjs",
