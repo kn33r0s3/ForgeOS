@@ -1722,7 +1722,13 @@ def _connection_note(db: Session, row: models.NetworkConnection, kind: str) -> s
     else:
         query = query.filter(models.Outcome.notes == f"idempotency:network-connection:{row.id}:{kind}")
     outcome = query.first()
-    return outcome.qualitative_result if outcome else None
+    if outcome is None:
+        return None
+    if kind == "response":
+        # The owner can see that a reply exists, but list projections should
+        # not echo arbitrary reply prose or contact details from the ledger.
+        return "A response was recorded. It is not acceptance, fulfillment, or payment."
+    return outcome.qualitative_result
 
 
 def _latest_connection_response(db: Session, row: models.NetworkConnection) -> str | None:

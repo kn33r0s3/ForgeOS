@@ -1,3 +1,8 @@
+## [SOURCE CHANGE / CI PENDING] Restore public-feed test fixture identity and redact connection replies (2026-10-12)
+
+- Linux backend CI on `494d6167` showed two failures: `test_public_feed_projects_heterogeneous_records_with_evidence_and_relations` hard-coded domain-record ID 1, which had become the closed outcome fixture; it now links the public connection to the explicit open record's actual ID.
+- `test_connection_response_is_not_acceptance_and_is_alerted` also exposed raw reply text through the owner connection list. The shared response projection now returns the existing safe summary instead of echoing reply prose. The original note remains stored; no records are deleted.
+- Exact-SHA backend/frontend/deploy verification after this repair is pending. These changes do not affect payment verification or authorize external actions.
 ## [SOURCE CHANGE / CI PENDING] Make the existing owner pipeline actionable (2026-10-12)
 
 - Reused the existing /owner route and canonical orchestrator API. The owner can inspect a ranked REAL opportunity, prepare a validation plan, approve/reject a human task, truthfully mark a task performed, record observed outcomes, propose the next decision, and request the existing product evidence gate.

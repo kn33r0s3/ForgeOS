@@ -282,6 +282,16 @@ def test_public_feed_projects_heterogeneous_records_with_evidence_and_relations(
     )
     db.add(outcome_record)
     db.flush()
+    open_record = models.DomainRecord(
+        kind="job",
+        title="Need local survey support",
+        detail="An operator-submitted work request.",
+        city="Pokhara",
+        close_token_hash="test-hash",
+        status="open",
+    )
+    db.add(open_record)
+    db.flush()
     db.add_all([
         models.ServiceListing(
             provider_id=provider.id,
@@ -301,17 +311,9 @@ def test_public_feed_projects_heterogeneous_records_with_evidence_and_relations(
             agreement_gap="No agreement recorded.",
             public_visible=True,
         ),
-        models.DomainRecord(
-            kind="job",
-            title="Need local survey support",
-            detail="An operator-submitted work request.",
-            city="Pokhara",
-            close_token_hash="test-hash",
-            status="open",
-        ),
         models.NetworkConnection(
             left_kind="domain_record",
-            left_id=1,
+            left_id=open_record.id,
             right_kind="provider",
             right_id=provider.id,
             state="candidate",
