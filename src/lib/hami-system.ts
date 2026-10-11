@@ -55,3 +55,71 @@ export const FOOTER_GROUPS = [
     ],
   },
 ] as const;
+
+export const SYSTEM_PATHWAYS = {
+  home: [
+    { label: "Read findings", to: "/discoveries" },
+    { label: "Inspect unknowns", to: "/unknowns" },
+    { label: "Explore the network", to: "/feed" },
+    { label: "See experiments", to: "/experiments" },
+    { label: "Explore services", to: "/services" },
+    { label: "Open the work board", to: "/domain" },
+  ],
+  findings: [
+    { label: "Related network records", to: "/feed" },
+    { label: "Questions still open", to: "/unknowns" },
+    { label: "Tests and outcomes", to: "/experiments" },
+  ],
+  unknowns: [
+    { label: "Source observations", to: "/discoveries" },
+    { label: "Connected records", to: "/feed" },
+    { label: "Experiments and outcomes", to: "/experiments" },
+  ],
+  network: [
+    { label: "Review findings", to: "/discoveries" },
+    { label: "Opportunity hypotheses", to: "/opportunities" },
+    { label: "Public work board", to: "/domain" },
+    { label: "Verified providers", to: "/providers" },
+  ],
+  opportunities: [
+    { label: "Evidence behind the question", to: "/discoveries" },
+    { label: "Open unknowns", to: "/unknowns" },
+    { label: "Experiments", to: "/experiments" },
+    { label: "Recorded action state", to: "/actions" },
+  ],
+  experiments: [
+    { label: "Open unknowns", to: "/unknowns" },
+    { label: "Collected evidence", to: "/discoveries" },
+    { label: "Action state", to: "/actions" },
+    { label: "The current field test", to: "/needs" },
+  ],
+  services: [
+    { label: "How Hami works", to: "/process" },
+    { label: "Verified external providers", to: "/providers" },
+    { label: "Public work board", to: "/domain" },
+    { label: "Group context", to: "/group" },
+  ],
+  providers: [
+    { label: "Hami's own service offers", to: "/services" },
+    { label: "Public work board", to: "/domain" },
+    { label: "Connected network", to: "/feed" },
+  ],
+  work: [
+    { label: "Verified providers", to: "/providers" },
+    { label: "Connected public records", to: "/feed" },
+    { label: "Opportunity hypotheses", to: "/opportunities" },
+    { label: "Hami services", to: "/services" },
+  ],
+  needs: [
+    { label: "Experiment log", to: "/experiments" },
+    { label: "Questions to resolve", to: "/unknowns" },
+    { label: "Public work board", to: "/domain" },
+  ],
+  actions: [
+    { label: "Opportunity hypotheses", to: "/opportunities" },
+    { label: "Experiments", to: "/experiments" },
+    { label: "Evidence trail", to: "/feed" },
+  ],
+} as const;
+
+export type SystemSurface = keyof typeof SYSTEM_PATHWAYS;
