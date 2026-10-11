@@ -983,6 +983,52 @@ def test_public_booking_enters_our_outcome_record_without_requester_pii(owner_cl
     assert "same-day" not in text
 
 
+def test_public_domain_redacts_contact_details_on_write_and_legacy_reads(owner_client_with_db, db):
+    created = owner_client_with_db.post(
+        "/public/domain",
+        json={
+            "kind": "job",
+            "title": "Repair help buyer@example.test",
+            "detail": "Call 9800000001 to arrange a repair in Kathmandu.",
+            "city": "Kathmandu",
+        },
+    )
+    assert created.status_code == 200, created.text
+    created_body = created.json()
+    assert "buyer@example.test" not in created.text
+    assert "9800000001" not in created.text
+    assert "[redacted-email]" in created_body["title"]
+    assert "[redacted-phone]" in created_body["detail"]
+    stored = db.get(models.DomainRecord, created_body["id"])
+    assert "buyer@example.test" not in stored.title
+    assert "9800000001" not in stored.detail
+
+    # Old rows may predate the write-side sanitizer, so each public projection
+    # must defend itself rather than trusting stored text.
+    legacy = models.DomainRecord(
+        kind="job",
+        title="Legacy mechanic buyer@example.test",
+        detail="Call 9800000002 for mechanic repair",
+        city="Lalitpur",
+        status="open",
+        close_token_hash="test-legacy-contact-hash",
+    )
+    db.add(legacy)
+    db.commit()
+    db.refresh(legacy)
+
+    domain = owner_client_with_db.get("/public/domain")
+    feed = owner_client_with_db.get("/public/feed", params={"kind": "work_item"})
+    matches = owner_client_with_db.get("/public/matches")
+    for response in (domain, feed, matches):
+        assert response.status_code == 200, response.text
+        assert "buyer@example.test" not in response.text
+        assert "9800000001" not in response.text
+        assert "9800000002" not in response.text
+        assert "[redacted-email]" in response.text
+        assert "[redacted-phone]" in response.text
+
+
 def test_domain_record_is_ours_and_closes_into_an_outcome(owner_client_with_db, db):
     created = owner_client_with_db.post(
         "/public/domain",

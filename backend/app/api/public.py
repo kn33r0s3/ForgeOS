@@ -273,7 +273,12 @@ def _match_tokens(text: str) -> set[str]:
 
 
 def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMatchOut:
-    need_tokens = _match_tokens(f"{need.title} {need.detail}")
+    from app.services.public_feed import sanitize_public_text
+
+    need_title = sanitize_public_text(need.title) or ""
+    need_detail = sanitize_public_text(need.detail) or ""
+    need_city = sanitize_public_text(need.city)
+    need_tokens = _match_tokens(f"{need_title} {need_detail}")
     candidates: list[schemas.PublicMatchCandidate] = []
     providers = _public_provider_query(db).all()
     for provider in providers:
@@ -317,8 +322,11 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
         .all()
     )
     for other in others:
-        shared = need_tokens & _match_tokens(f"{other.title} {other.detail}")
-        same_city = bool(need.city and other.city and need.city.strip().lower() == other.city.strip().lower())
+        other_title = sanitize_public_text(other.title) or ""
+        other_detail = sanitize_public_text(other.detail) or ""
+        other_city = sanitize_public_text(other.city)
+        shared = need_tokens & _match_tokens(f"{other_title} {other_detail}")
+        same_city = bool(need_city and other_city and need_city.strip().lower() == other_city.strip().lower())
         if not shared and not same_city:
             continue
         reasons = []
@@ -336,8 +344,8 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
                 kind="post",
                 id=other.id,
                 entity_type="domain_record",
-                name=other.title,
-                where=other.city,
+                name=other_title,
+                where=other_city,
                 stated_price=other.stated_price,
                 stated_availability=None,
                 reasons=reasons,
@@ -394,8 +402,8 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
     return schemas.PublicMatchOut(
         need_id=need.id,
         need_kind=need.kind,
-        need_title=need.title,
-        need_city=need.city,
+        need_title=need_title,
+        need_city=need_city,
         candidates=candidates,
         unknowns=need_unknowns,
     )
@@ -753,8 +761,15 @@ def terms_complete(raw: str | None) -> bool:
 
 
 def _domain_out(row: models.DomainRecord) -> schemas.DomainRecordOut:
+    from app.services.public_feed import sanitize_public_text
+
     base = schemas.DomainRecordOut.model_validate(row)
-    return base.model_copy(update={"terms_complete": terms_complete(row.terms)})
+    return base.model_copy(update={
+        "title": sanitize_public_text(row.title) or "",
+        "detail": sanitize_public_text(row.detail) or "",
+        "city": sanitize_public_text(row.city),
+        "terms_complete": terms_complete(row.terms),
+    })
 
 
 @router.get("/domain", response_model=list[schemas.DomainRecordOut])
@@ -788,12 +803,22 @@ def create_domain_record(
     db: Session = Depends(get_db),
 ):
     _consume_public_write_limit(db, request, "public-domain-post", 5)
+    from app.services.public_feed import sanitize_public_text
+
+    title = sanitize_public_text(body.title.strip()) or ""
+    detail = sanitize_public_text(body.detail.strip()) or ""
+    city = sanitize_public_text((body.city or "").strip()) or None
+    if not title.strip() or not detail.strip():
+        raise HTTPException(
+            status_code=422,
+            detail="title and detail must contain text after contact-detail redaction.",
+        )
     token = secrets.token_urlsafe(24)
     row = models.DomainRecord(
         kind=body.kind,
-        title=body.title.strip(),
-        detail=body.detail.strip(),
-        city=(body.city or "").strip() or None,
+        title=title,
+        detail=detail,
+        city=city,
         stated_price=(body.stated_price or "").strip() or None,
         terms=json.dumps(body.terms) if body.terms else None,
         status="open",
@@ -812,7 +837,7 @@ def create_domain_record(
             "This is a post in our records, not a completed trade or a payment."
         ),
     )
-    created = schemas.DomainRecordOut.model_validate(row)
+    created = _domain_out(row)
     return schemas.DomainRecordCreated(**created.model_dump(), close_token=token)
 
 
