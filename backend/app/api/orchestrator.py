@@ -50,7 +50,13 @@ def _experiment(db, oid, scope):
 def _flow(db, oid, scope):
     if not db.get(models.Opportunity, oid):
         raise HTTPException(404, "Opportunity not found")
-    return orchestrator.promote_opportunity(db, oid, create_missing=False, data_scope=scope)
+    result = orchestrator.promote_opportunity(
+        db, oid, create_missing=False, data_scope=scope
+    )
+    # The service projection includes a contact ledger with identifiers and notes.
+    # The owner cockpit does not need those customer records in its detail payload.
+    result.pop("customer_events", None)
+    return result
 
 
 @router.get("/overview")
@@ -132,7 +138,14 @@ def advance_opportunity(request: Request, opportunity_id: int, data_scope: Scope
         raise HTTPException(404, "Opportunity not found")
     if y_confirm > x_interviews or z_willing > x_interviews:
         raise HTTPException(422, "Thresholds cannot exceed interview target")
-    return orchestrator.promote_opportunity(db, opportunity_id, data_scope=data_scope, x_interviews=x_interviews, y_confirm=y_confirm, z_willing=z_willing, price_assumption=price_assumption, time_window=time_window)
+    result = orchestrator.promote_opportunity(
+        db, opportunity_id, data_scope=data_scope, x_interviews=x_interviews,
+        y_confirm=y_confirm, z_willing=z_willing, price_assumption=price_assumption,
+        time_window=time_window,
+    )
+    # This endpoint prepares work but must observe the same contact-data boundary.
+    result.pop("customer_events", None)
+    return result
 
 @router.post("/{opportunity_id}/approve")
 def approve_opportunity_action(request: Request, opportunity_id: int, data_scope: Scope = "REAL", db: Session = Depends(get_db)):

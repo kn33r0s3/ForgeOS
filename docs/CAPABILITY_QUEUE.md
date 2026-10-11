@@ -1,3 +1,16 @@
+## [SOURCE CHANGE / CI PENDING] Prevent customer-ledger data from entering orchestrator responses (2026-10-12)
+
+- The existing service-level flow includes raw customer_events, including identifiers and free-text notes. The overview was already minimized, but the detail flow and direct advance response did not preserve that boundary.
+- The shared detail projection and direct advance response now omit customer_events. A route regression inserts a private marker and checks both GET detail and POST advance responses.
+- This is an owner-data minimization change only; it does not delete the underlying customer ledger. The full backend CI for this exact change is pending.
+
+## [SOURCE CHANGE / CI PENDING] Connect guarded opportunity actions to the owner cockpit (2026-10-12)
+
+- Existing owner screen: src/routes/owner.tsx. Existing action API: backend/app/api/orchestrator.py. Reuse this seam; do not introduce a competing engine or duplicate state.
+- Expose prepare/approve/execute/reject/record outcome/next-decision/product-gate verbs only as explicit owner clicks. Never contact prospects or call payment gateways automatically.
+- Capture actual outcome rows using pseudonymous respondent IDs. Interview response and willingness-to-pay are not collected funds; a paid_customer stage requires real verified payment proof.
+- Keep product creation behind the existing demand evidence gate; creating a product record does not launch it, initiate checkout, or record revenue.
+- The production FORGE_API_KEY, ALLOWED_ORIGINS, Twilio rotation, live gateway status and any real transaction remain unverified through current connected access.
 ## [SOURCE CHANGE / CI PENDING] Pause automatic research-question promotion until backlog triage (2026-10-12)
 
 - **EXISTING SEAMS:** `backend/app/config.py`, `backend/app/services/forge_loop.py`, `backend/app/services/rare_signal_engine.py`, and `backend/app/api/scheduled.py`.

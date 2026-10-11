@@ -302,6 +302,61 @@ def test_orchestrator_overview_is_owner_only_read_only_and_excludes_customer_eve
         app.dependency_overrides.pop(get_db, None)
 
 
+def test_orchestrator_flow_and_advance_exclude_customer_event_rows(db):
+    client = _client_for(db)
+    marker = "PRIVATE_CONTACT_MARKER_SHOULD_NEVER_LEAVE_LEDGER"
+    try:
+        opportunity = models.Opportunity(
+            problem="Independent repair shops lose time answering repeated status calls.",
+            target_customer="independent repair shops",
+            solution="A status visibility service",
+            business_model="service",
+            pricing_idea="$40/mo",
+            score=60.0,
+            status="identified",
+            market_confidence=0.0,
+            revenue_confidence=0.0,
+            uncertainty=100.0,
+        )
+        db.add(opportunity)
+        db.commit()
+        db.refresh(opportunity)
+        db.add(
+            models.CustomerEvent(
+                opportunity_id=opportunity.id,
+                contact_name=marker,
+                contact_identifier="private-id-marker",
+                notes=marker,
+                stage="lead",
+                event_type="response",
+                data_scope="REAL",
+                source_kind="REAL",
+            )
+        )
+        db.commit()
+
+        detail = client.get(
+            f"/api/orchestrate/flow/{opportunity.id}",
+            headers=_api_headers(),
+        )
+        assert detail.status_code == 200, detail.text
+        assert "customer_events" not in detail.json()
+        assert marker not in detail.text
+        assert "private-id-marker" not in detail.text
+
+        advanced = client.post(
+            f"/api/orchestrate/{opportunity.id}/advance?data_scope=REAL",
+            headers=_api_headers(),
+        )
+        assert advanced.status_code == 200, advanced.text
+        assert "customer_events" not in advanced.json()
+        assert marker not in advanced.text
+        assert "private-id-marker" not in advanced.text
+    finally:
+        client.close()
+        app.dependency_overrides.pop(get_db, None)
+
+
 def test_orchestrator_overview_real_scope_ignores_mock_validation_rows(db):
     client = _client_for(db)
     try:
