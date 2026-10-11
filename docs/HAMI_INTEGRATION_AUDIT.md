@@ -8,7 +8,7 @@ This is a living, repository-grounded audit, not a claim that every capability i
 
 ## Inventory and method
 
-At the current continuation point (`main` `cbb48a6dcd5fc6bbb9aeda3f29b2b4a8d076c830`, 2026-10-11 15:08:54 UTC), the recursive Git tree contains **923 tracked tree entries: 800 files and 123 directories**, including **38 frontend route files**, **25 backend API modules**, **113 backend service modules**, and **147 files under `docs/`**. These are inventory counts, not proof that every route or service is active. The pass traced the canonical navigation map, route lifecycle registry, sitemap, orphan-route scanner, route components/loaders, FastAPI router registrations, authorization middleware, owner/operations consoles, payment adapters, Better Auth and preview-specific identity/connectors, relevant tests/CI, and the commercial evidence log.
+At the current continuation point (`main` `a6adeef3310efed46ea51250405e844e6ea8c945`, 2026-10-11 18:59:19 UTC), the recursive Git tree contains **923 tracked tree entries: 800 files and 123 directories**, including **38 frontend route files**, **25 backend API modules**, **113 backend service modules**, and **147 files under `docs/`**. These are inventory counts, not proof that every route or service is active. The pass traced the canonical navigation map, route lifecycle registry, sitemap, orphan-route scanner, route components/loaders, FastAPI router registrations, authorization middleware, owner/operations consoles, payment adapters, Better Auth and preview-specific identity/connectors, relevant tests/CI, and the commercial evidence log.
 
 Canonical constraints remain in force:
 - One product and one data substrate: reuse `ENTITY`, `RELATION`, `EVENT`, `EVIDENCE`, `CAPABILITY`, and `ACTION` through `type_registry.schema_json`.
@@ -45,13 +45,17 @@ Canonical constraints remain in force:
 - `11253378` — made `scripts/check_all.sh` repository-portable; the startup contract test now locks against the previous absolute dependency path.
 - `60f4da29` — runs repository guards on direct `main` pushes and recursively scans nested route modules, including the nested API-auth route.
 - `9618b43f` / `cbbb88b2` / `78e8fc9b` / `cbb48a6d` — moved the public booking-status HMAC capability from a query parameter to `X-Booking-Status-Token`; the status page still keeps it in a URL fragment so the page navigation request itself does not send the token. Backend/frontend tests now enforce header-only transmission and the same wrong-token/not-found behavior.
+- `5d5286f9` / `e06ff7ab` / `9c4e621d` / `8b217e8e` — made authentication readiness require a stable signing secret and a network-addressable PostgreSQL database outside workspace preview; local PGLite remains preview/local-only. The shared dev-user fallback is limited to explicitly auth-disabled isolated preview, and the auth API rejects calls when the server says auth is unavailable.
+- `a808d254` — added owner-key guards to previously exposed intelligence transcript/performance reads and corrected health-readiness/SQLite-test contracts.
+- `acf4a927` — added HMAC capability tokens to asynchronous demand-understanding and research-status endpoints. IDs alone now return the same 404 as missing records; absent signing configuration fails before writes; tokens are returned in headers and required in headers for polling.
+- `a6adeef3` — updated research-status regression tests to use the status capability and pass the injected `Response` correctly when testing the handler directly. Exact-SHA CI then passed **1,058 backend tests, 2 skipped**, plus build, typecheck, lint, frontend tests, route smoke, triage tests/typecheck, repository guards, secrets scan, and independent deployment verification.
 
 ### Current continuation status
 
-- Inventory is pinned to `cbb48a6dcd5fc6bbb9aeda3f29b2b4a8d076c830`; refresh it again after the next commit.
-- The latest booking-capability header commits have new CI runs queued/in progress, so their regression tests are written but are **not yet verified on the current head**. Earlier at `60f4da29`, root frontend tests, typecheck, lint, build, route smoke, evidence-triage test/typecheck, repository guards, secret scan and independent deployment verification passed; backend tests were still running at the last poll.
-- The full root CI completed successfully on `11253378` (including backend tests); that does not substitute for the current `cbb48a6d` run.
-- Production HTML/runtime log reads remain blocked by the connected Vercel scope (403). The independent verifier is SHA-aligned evidence, but direct browser/cache inspection, stable Better Auth secret configuration, private owner access, and a separate production Node triage deployment have not been established.
+- Inventory is pinned to `a6adeef3310efed46ea51250405e844e6ea8c945`; refresh it again after the next commit.
+- Exact-SHA `a6adeef` CI is **fully green**: backend `1058 passed, 2 skipped`, frontend tests, typecheck, lint, build, route smoke, evidence-triage tests/typecheck, repository guards, and secret scan all passed. Independent deploy verification also passed on that SHA.
+- The previous `acf4a927` run failed because old research-status tests did not provide the new HMAC capability and direct Python handler calls omitted the newly injected `Response`, shifting the DB argument. Those test contracts were corrected at `a6adeef`; the complete suite then passed.
+- Source now fails closed if deployed auth lacks a stable secret or durable PostgreSQL, but actual secret/URL values and authenticated production paths remain unverified because protected Vercel reads return 403. Production owner access, browser/cache freshness, scheduler cadence, and a separate production Node triage deployment have not been established.
 
 Always inspect CI against the exact latest `main` SHA after a commit. A commit existing is not a test result; build success or a deployment badge alone is not proof every active job or runtime path is green.
 
