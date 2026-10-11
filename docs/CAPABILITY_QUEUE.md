@@ -1,3 +1,8 @@
+## [TEST FIX / CI PENDING] Use low-entropy synthetic checkout key in regression fixture (2026-10-12)
+
+- Gitleaks flagged the newly added hardcoded test idempotency key as a generic API key because its text entropy was high. It was a test fixture, not a provider credential; the fixture is now an obvious repeated test token. No scanner suppression or allowlist was added.
+- Exact-head secret scan, backend tests, frontend checks, build and deployment verification are required.
+
 ## [SOURCE FIX / CI PENDING] Match reconciliation lookup to provider-bound idempotency digest (2026-10-12)
 
 - The creation path hashes product ID, provider and idempotency key together. Recovery mistakenly hashed only the raw key, which could report NO_ATTEMPT while a real pending checkout existed.

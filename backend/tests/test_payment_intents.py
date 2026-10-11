@@ -422,7 +422,7 @@ def _recovery_intent(db, product, *, provider, status, suffix, provider_payment_
 
 def test_checkout_reconciliation_finds_provider_bound_pending_attempt(db, monkeypatch):
     product = _published_product(db)
-    key = "reconcile-existing-khalti-attempt-123456"
+    key = "test-test-test-test-1234"
     intent = _recovery_intent(
         db, product, provider="khalti", status="INITIATED", suffix="keymatch",
         provider_payment_id="khalti-recovery-pidx-keymatch-123",
