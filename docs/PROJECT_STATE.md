@@ -1,12 +1,12 @@
 # PROJECT STATE — Hami
 
-> Current operating snapshot: 2026-10-11 (Nepal time). Branch `main`; current HEAD `27cb0a94777492ee7e584db727631e6f974394ed`.
+> Current operating snapshot: 2026-10-11 (Nepal time). Branch `main`; read `git rev-parse HEAD` for the exact current commit.
 > Do not infer current backend or commercial readiness from a successful frontend deployment.
 
 ## Product and integration state
 
 - **One product:** Hami is the user-facing system. ForgeOS remains the repository/technical lineage; no replacement architecture or parallel app is being created.
-- **Production frontend:** [haminp.vercel.app](https://haminp.vercel.app). Vercel reports the current `main` deployment READY at commit `27cb0a94777492ee7e584db727631e6f974394ed`. This verifies deployment state and alias assignment, not runtime/API or database readiness.
+- **Production frontend:** [haminp.vercel.app](https://haminp.vercel.app). Vercel reports the Hami production alias READY and assigned to the latest successful `main` deployment. This verifies deployment state and alias assignment, not runtime/API or database readiness.
 - **Canonical route registry:** `features.json` has 36 entries: 25 live, 7 hidden, 4 archived, and 0 planned. Duplicate IDs/routes are not present in the current registry. Historical creation date/commit are preserved for existing route rows.
 - **One navigation/pathway source:** `src/lib/hami-system.ts` defines `NAV`, `FOOTER_GROUPS`, `SYSTEM_PATHWAYS` and `PUBLIC_SYSTEM_PATHS`. Header, footer, contextual pathways and sitemap are checked by frontend regression tests.
 - **Connected public paths:** findings, network records, unknowns, experiments, opportunity hypotheses, action state, Hami services, provider directory, public work board, group context, process, technology and ventures. Group offer cards link to canonical service details or Hami's shared process instead of creating duplicate service pages.
