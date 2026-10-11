@@ -272,6 +272,16 @@ def test_public_feed_projects_heterogeneous_records_with_evidence_and_relations(
     )
     db.add(provider)
     db.flush()
+    outcome_record = models.DomainRecord(
+        kind="job",
+        title="Closed survey item with an outcome",
+        detail="A public record with a structured outcome.",
+        close_token_hash="test-outcome-hash",
+        status="closed",
+        close_result="withdrawn",
+    )
+    db.add(outcome_record)
+    db.flush()
     db.add_all([
         models.ServiceListing(
             provider_id=provider.id,
@@ -312,7 +322,9 @@ def test_public_feed_projects_heterogeneous_records_with_evidence_and_relations(
         models.Outcome(
             source="domain_record",
             outcome_type="QUALITATIVE",
-            qualitative_result="The request was withdrawn by its submitter.",
+            qualitative_result="The request was withdrawn by its submitter; PRIVATE NOTE buyer@example.com.",
+            notes=f"idempotency:domain-record:{outcome_record.id}:close",
+            verification_state="REPORTED",
             data_scope="REAL",
             source_kind="REAL",
         ),
@@ -377,6 +389,14 @@ def test_public_feed_projects_heterogeneous_records_with_evidence_and_relations(
 
     kinds = {item["kind"] for item in payload}
     assert {"signal", "question", "pattern", "belief", "opportunity", "actor", "capability", "work_item", "connection", "outcome"} <= kinds
+    real_outcome = db.query(models.Outcome).filter_by(
+        source="domain_record", data_scope="REAL", source_kind="REAL"
+    ).first()
+    assert real_outcome is not None
+    outcome_item = by_identity[("outcome", real_outcome.id)]
+    assert "No payment is inferred" in outcome_item.summary
+    assert "buyer@example.com" not in str(payload)
+    assert "PRIVATE NOTE" not in str(payload)
     signal_item = next(item for item in payload if item["kind"] == "signal")
     assert signal_item["source_url"] == signal.canonical_url
     assert signal_item["relations"][0]["entity_type"] == "signal"
