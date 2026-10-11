@@ -2096,3 +2096,33 @@ def test_public_table_migration_preserves_legacy_data_and_keeps_integrity_ok(tmp
         assert {"public_providers", "public_service_listings", "public_verification_records", "public_booking_requests"}.issubset(table_names)
         assert probe.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         assert probe.execute("SELECT label FROM legacy_records WHERE id = 1").fetchone()[0] == "preserved"
+
+def test_public_booking_request_fails_before_writing_when_status_signing_key_is_missing(owner_client_with_db, db, monkeypatch):
+    from app.config import settings
+
+    provider = models.Provider(
+        name="Verified provider",
+        category="Repair",
+        country="Nepal",
+        public_visible=True,
+        is_active=True,
+        verification_status="verified",
+    )
+    db.add(provider)
+    db.commit()
+    monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_HMAC_KEY", "")
+
+    response = owner_client_with_db.post(
+        "/public/booking-requests",
+        json={
+            "provider_id": provider.id,
+            "requester_name": "Asha Shah",
+            "requester_phone": "9800000001",
+            "requester_email": "asha@example.com",
+            "requested_service": "Refrigerator repair",
+        },
+    )
+
+    assert response.status_code == 503, response.text
+    assert db.query(models.BookingRequest).count() == 0
+    assert db.query(models.Outcome).count() == 0

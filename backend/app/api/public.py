@@ -245,14 +245,20 @@ def _consume_public_write_limit(
         )
 
 
-def _booking_status_token(booking_id: int) -> str:
-    """Create a non-enumerable public status capability without storing another secret or table."""
+def _booking_status_signing_key() -> str:
+    """Fail closed before a booking write if a secure status capability cannot be issued."""
     key = settings.FORGE_BOT_CONTACT_HMAC_KEY
     if not key:
         raise HTTPException(
             status_code=503,
             detail="Secure booking status is unavailable until its signing key is configured.",
         )
+    return key
+
+
+def _booking_status_token(booking_id: int) -> str:
+    """Create a non-enumerable public status capability without storing another secret or table."""
+    key = _booking_status_signing_key()
     message = f"hami-public-booking-status:v1:{booking_id}".encode("utf-8")
     return hmac.new(key.encode("utf-8"), message, hashlib.sha256).hexdigest()
 
@@ -896,6 +902,9 @@ def create_booking_request(
     request: Request,
     db: Session = Depends(get_db),
 ):
+    # Check signing readiness before rate-limit, booking, or outcome writes so a
+    # missing key cannot leave a stored request while telling the visitor it failed.
+    _booking_status_signing_key()
     _consume_public_write_limit(db, request, "public-booking-request", 5)
     provider = (
         _public_provider_query(db)
