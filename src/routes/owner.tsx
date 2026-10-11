@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Container } from "@/components/layout/container";
 import { ForgeConsoleWidgets } from "@/components/forge/forge-console";
@@ -198,10 +198,72 @@ type ResearchQuestionRow = {
 
 type ResearchTaskRow = {
   id: number;
+  question_id: number;
   status: string;
   source: string | null;
+  query: string;
+  objective: string | null;
+  current_step: string | null;
+  attempts: number;
+  max_attempts: number;
+  evidence_ids: string | null;
   updated_at: string | null;
+  created_at: string;
 };
+
+type ResearchTaskEventRow = {
+  id: number;
+  task_id: number;
+  event_type: string;
+  step_name: string | null;
+  details: Record<string, unknown> | null;
+  created_at: string;
+};
+
+type TaskHistoryState =
+  | { status: "loading" }
+  | { status: "unavailable" }
+  | { status: "error"; message: string }
+  | { status: "loaded"; events: ResearchTaskEventRow[] };
+
+const TASK_STATUS_ORDER = [
+  "planned",
+  "queued",
+  "open",
+  "running",
+  "deferred",
+  "blocked",
+  "completed",
+  "failed",
+] as const;
+
+function summarizeTaskEventDetails(details: Record<string, unknown> | null): string {
+  if (!details) return "";
+  const allowedKeys = [
+    "status",
+    "reason",
+    "attempt",
+    "next_attempt",
+    "step",
+    "signals_created",
+    "tasks_deferred",
+    "evidence_ids",
+  ] as const;
+  const parts: string[] = [];
+  for (const key of allowedKeys) {
+    const value = details[key];
+    if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
+      continue;
+    }
+    const text = String(value).replace(/\s+/g, " ").trim();
+    if (!text) continue;
+    const clipped = text.length > 100 ? `${text.slice(0, 100)}…` : text;
+    parts.push(`${key.replace(/_/g, " ")}: ${clipped}`);
+    if (parts.length >= 3) break;
+  }
+  if (Object.prototype.hasOwnProperty.call(details, "error")) parts.push("error details withheld");
+  return parts.join(" · ").slice(0, 300);
+}
 
 type ClearanceEntry = {
   display_name: string;
@@ -437,6 +499,9 @@ function OwnerConsolePage() {
   const [evidenceReference, setEvidenceReference] = useState("");
   const [outcomeNote, setOutcomeNote] = useState("");
   const [intel, setIntel] = useState<IntelligenceState | null>(null);
+  const [expandedTaskId, setExpandedTaskId] = useState<number | null>(null);
+  const [taskHistoryById, setTaskHistoryById] = useState<Record<number, TaskHistoryState>>({});
+  const taskHistoryRequestId = useRef(0);
   const [commercial, setCommercial] = useState<CommercialState>({
     products: null,
     error: null,
@@ -451,6 +516,9 @@ function OwnerConsolePage() {
   const cycleOperations = intel?.runtime?.truth?.operations;
 
   async function refresh(ownerKey = key) {
+    taskHistoryRequestId.current += 1;
+    setExpandedTaskId(null);
+    setTaskHistoryById({});
     const [readiness, leads] = await Promise.all([
       ownerFetch<Readiness>("owner/readiness", ownerKey),
       ownerFetch<Lead[]>("owner/leads", ownerKey),
@@ -544,6 +612,53 @@ function OwnerConsolePage() {
       // Intelligence is additive; a failure here must not hide readiness/leads.
       setIntel(null);
       throw cause;
+    }
+  }
+
+  async function toggleTaskHistory(taskId: number) {
+    if (expandedTaskId === taskId) {
+      taskHistoryRequestId.current += 1;
+      setExpandedTaskId(null);
+      return;
+    }
+
+    const requestId = ++taskHistoryRequestId.current;
+    setExpandedTaskId(taskId);
+    setTaskHistoryById((current) => ({
+      ...current,
+      [taskId]: { status: "loading" },
+    }));
+
+    try {
+      const events = await forgeFetch<ResearchTaskEventRow[]>(`tasks/${taskId}/history`, key);
+      if (requestId !== taskHistoryRequestId.current) return;
+      if (events === null) {
+        setTaskHistoryById((current) => ({
+          ...current,
+          [taskId]: { status: "unavailable" },
+        }));
+        return;
+      }
+      if (!Array.isArray(events)) {
+        setTaskHistoryById((current) => ({
+          ...current,
+          [taskId]: { status: "error", message: "The history response was not a list." },
+        }));
+        return;
+      }
+      setTaskHistoryById((current) => ({
+        ...current,
+        [taskId]: { status: "loaded", events },
+      }));
+    } catch (cause) {
+      if (requestId !== taskHistoryRequestId.current) return;
+      setTaskHistoryById((current) => ({
+        ...current,
+        [taskId]: {
+          status: "error",
+          message: cause instanceof Error ? cause.message : "Task history could not be loaded.",
+        },
+      }));
     }
   }
 
@@ -647,6 +762,9 @@ function OwnerConsolePage() {
   }
 
   function lockConsole() {
+    taskHistoryRequestId.current += 1;
+    setExpandedTaskId(null);
+    setTaskHistoryById({});
     setKey("");
     setConsoleState(null);
     setSelected(null);
@@ -1097,21 +1215,125 @@ function OwnerConsolePage() {
                         <div className="rounded-card border-2 border-line bg-card p-4">
                           <p className="font-bold">Research tasks</p>
                           {intel.tasks === null ? (
-                            <p className="mt-1 text-sm text-muted">UNKNOWN</p>
+                            <p className="mt-1 text-sm text-muted">UNKNOWN — task records unavailable.</p>
                           ) : intel.tasks.length === 0 ? (
                             <p className="mt-1 text-sm text-muted">None recorded.</p>
                           ) : (
-                            <dl className="mt-2 grid gap-1 text-sm">
-                              {(["open", "running", "completed", "failed"] as const).map((s) => {
-                                const n = intel.tasks!.filter((t) => t.status === s).length;
-                                return (
-                                  <div key={s} className="flex justify-between">
-                                    <dt className="text-muted">{s}</dt>
-                                    <dd className="font-bold">{n}</dd>
-                                  </div>
-                                );
-                              })}
-                            </dl>
+                            <>
+                              <dl className="mt-2 grid gap-1 text-sm">
+                                {[...new Set(intel.tasks.map((task) => task.status))]
+                                  .sort((left, right) => {
+                                    const leftRank = TASK_STATUS_ORDER.indexOf(left as (typeof TASK_STATUS_ORDER)[number]);
+                                    const rightRank = TASK_STATUS_ORDER.indexOf(right as (typeof TASK_STATUS_ORDER)[number]);
+                                    if (leftRank === -1 && rightRank === -1) return left.localeCompare(right);
+                                    if (leftRank === -1) return 1;
+                                    if (rightRank === -1) return -1;
+                                    return leftRank - rightRank;
+                                  })
+                                  .map((status) => {
+                                    const count = intel.tasks!.filter((task) => task.status === status).length;
+                                    return (
+                                      <div key={status} className="flex justify-between">
+                                        <dt className="text-muted">{status}</dt>
+                                        <dd className="font-bold">{count}</dd>
+                                      </div>
+                                    );
+                                  })}
+                              </dl>
+                              <div className="mt-3 grid gap-3">
+                                {intel.tasks.slice(0, 5).map((task) => {
+                                  const history = taskHistoryById[task.id];
+                                  const title = (task.objective || task.query || "").trim();
+                                  const isExpanded = expandedTaskId === task.id;
+                                  return (
+                                    <article key={task.id} className="rounded-card border border-line p-3">
+                                      <div className="flex flex-wrap items-start justify-between gap-2">
+                                        <div className="min-w-0">
+                                          <p className="text-xs font-mono text-muted">
+                                            Task #{task.id} · question #{task.question_id}
+                                          </p>
+                                          <p className="mt-1 break-words text-sm font-semibold">
+                                            {title
+                                              ? title.length > 140 ? `${title.slice(0, 140)}…` : title
+                                              : "Task objective UNKNOWN"}
+                                          </p>
+                                          <p className="mt-1 break-words text-xs text-muted">
+                                            {task.source || "Source UNKNOWN"} · {task.status}
+                                          </p>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          className="min-h-9 rounded-card border border-line px-3 py-1 text-xs font-semibold"
+                                          aria-expanded={isExpanded}
+                                          aria-controls={`task-history-${task.id}`}
+                                          onClick={() => void toggleTaskHistory(task.id)}
+                                        >
+                                          {isExpanded ? "Hide history" : "View history"}
+                                        </button>
+                                      </div>
+                                      <dl className="mt-2 grid gap-1 text-xs">
+                                        <div className="flex flex-wrap justify-between gap-2">
+                                          <dt className="text-muted">Current step</dt>
+                                          <dd className="break-words text-right">{task.current_step || "UNKNOWN"}</dd>
+                                        </div>
+                                        <div className="flex flex-wrap justify-between gap-2">
+                                          <dt className="text-muted">Attempts</dt>
+                                          <dd>{task.attempts}/{task.max_attempts}</dd>
+                                        </div>
+                                        <div className="flex flex-wrap justify-between gap-2">
+                                          <dt className="text-muted">Updated</dt>
+                                          <dd>{task.updated_at ? new Date(task.updated_at).toLocaleString() : "UNKNOWN"}</dd>
+                                        </div>
+                                        <div className="flex flex-wrap justify-between gap-2">
+                                          <dt className="text-muted">Evidence refs</dt>
+                                          <dd className="max-w-full break-all text-right">
+                                            {task.evidence_ids
+                                              ? task.evidence_ids.length > 100 ? `${task.evidence_ids.slice(0, 100)}…` : task.evidence_ids
+                                              : "UNKNOWN"}
+                                          </dd>
+                                        </div>
+                                      </dl>
+                                      {isExpanded ? (
+                                        <div id={`task-history-${task.id}`} className="mt-3 border-t border-line pt-3">
+                                          <p className="text-xs font-semibold">Recorded task events</p>
+                                          {!history || history.status === "loading" ? (
+                                            <p className="mt-2 text-xs text-muted">Loading owner-only history…</p>
+                                          ) : history.status === "unavailable" ? (
+                                            <p className="mt-2 text-xs text-muted">UNKNOWN — task history is not available on this backend.</p>
+                                          ) : history.status === "error" ? (
+                                            <p className="mt-2 break-words text-xs text-warning">{history.message}</p>
+                                          ) : history.events.length === 0 ? (
+                                            <p className="mt-2 text-xs text-muted">No events recorded.</p>
+                                          ) : (
+                                            <ol className="mt-2 grid gap-3">
+                                              {[...history.events].slice(-6).reverse().map((event) => {
+                                                const detail = summarizeTaskEventDetails(event.details);
+                                                return (
+                                                  <li key={event.id} className="border-l-2 border-line pl-3">
+                                                    <p className="break-words text-xs font-semibold">
+                                                      {event.event_type}{event.step_name ? ` · ${event.step_name}` : ""}
+                                                    </p>
+                                                    <p className="mt-1 text-xs text-muted">
+                                                      {event.created_at ? new Date(event.created_at).toLocaleString() : "UNKNOWN"}
+                                                    </p>
+                                                    {detail ? (
+                                                      <p className="mt-1 break-words text-xs text-muted">{detail}</p>
+                                                    ) : null}
+                                                  </li>
+                                                );
+                                              })}
+                                            </ol>
+                                          )}
+                                        </div>
+                                      ) : null}
+                                    </article>
+                                  );
+                                })}
+                              </div>
+                              {intel.tasks.length > 5 ? (
+                                <p className="mt-2 text-xs text-muted">Showing the 5 most recently created tasks of {intel.tasks.length}.</p>
+                              ) : null}
+                            </>
                           )}
                         </div>
                       </div>

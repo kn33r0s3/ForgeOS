@@ -286,6 +286,18 @@ describe("feature registry", () => {
     }
   });
 
+  it("connects owner research tasks to guarded task-event provenance", () => {
+    const owner = readFileSync(path.join(root, "routes", "owner.tsx"), "utf8");
+    const backend = readFileSync(path.join(root, "..", "backend", "app", "api", "forge.py"), "utf8");
+    assert.ok(owner.includes("tasks/${taskId}/history"), "task history must reuse the existing Forge API");
+    assert.ok(owner.includes("X-API-Key"), "task history must use the owner-key client");
+    assert.ok(owner.includes("taskHistoryById") && owner.includes("UNKNOWN — task history is not available on this backend."), "unavailable history must remain explicitly unknown");
+    assert.ok(owner.includes("summarizeTaskEventDetails") && owner.includes("error details withheld"), "event details must use the bounded summary");
+    assert.ok(owner.includes("Evidence refs") && owner.includes("Attempts"), "task provenance and retry state must be visible");
+    assert.ok(backend.includes('@router.get("/tasks/{task_id}/history"'), "the canonical event-history endpoint must remain registered");
+    assert.ok(backend.includes("require_owner_api_key(request)"), "the research router must retain owner-key enforcement");
+  });
+
   it("connects persisted partial-cycle truth to the private owner cockpit", () => {
     const owner = readFileSync(path.join(root, "routes", "owner.tsx"), "utf8");
     assert.ok(owner.includes("partial_cycles"), "owner cockpit must read partial-run totals");
