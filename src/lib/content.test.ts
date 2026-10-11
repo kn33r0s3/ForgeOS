@@ -473,7 +473,7 @@ describe("Hami public root", () => {
     assert.doesNotMatch(`${header}\n${forgeBot}`, /\/privacy/);
     assert.match(owner, /X-API-Key/);
     assert.doesNotMatch(owner, /localStorage|sessionStorage|dangerouslySetInnerHTML/);
-    assert.match(owner, /publicly reachable but not linked from the\s+public site/i);
+    assert.match(owner, /to="\/operations"/);
     assert.match(owner, /the API protects owner data and actions/i);
     assert.match(demandForm, /availability !== "open"/);
     assert.match(demandForm, /Online inquiries are not open yet/);

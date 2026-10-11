@@ -192,7 +192,8 @@ describe("feature registry", () => {
     const operations = readFileSync(path.join(root, "routes", "operations.tsx"), "utf8");
     assert.ok(owner.includes('to="/operations"'), "owner console must link to operating controls");
     assert.ok(operations.includes('to="/owner"'), "operating dashboard must link back to owner console");
-    assert.ok(!NAV.some((item) => item.to === "/owner" || item.to === "/operations"));
+    const publicNavRoutes: string[] = NAV.map((item) => item.to);
+    assert.ok(!publicNavRoutes.includes("/owner") && !publicNavRoutes.includes("/operations"));
     for (const route of ["/owner", "/operations"]) {
       assert.ok(
         registry.features.some((feature: { route: string; status: string }) => feature.route === route && feature.status === "hidden"),
