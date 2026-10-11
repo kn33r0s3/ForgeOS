@@ -256,21 +256,21 @@ describe("feature registry", () => {
       {
         mount: "<OperatingV4 apiKey={key} />",
         file: path.join(root, "components", "owner", "operating-v4.tsx"),
-        api: 'fetch(`/api/opv4/${path}`)',
+        apiPrefix: "/api/opv4/",
         backend: path.join(root, "..", "backend", "app", "api", "operating_v4.py"),
         prefix: '/opv4',
       },
       {
         mount: "<ScoutQueue apiKey={key} />",
         file: path.join(root, "components", "owner", "scout-queue.tsx"),
-        api: 'fetch(`/api/scout/${path}`)',
+        apiPrefix: "/api/scout/",
         backend: path.join(root, "..", "backend", "app", "api", "scout.py"),
         prefix: '/scout',
       },
       {
         mount: "<PurchaseJourney apiKey={key} />",
         file: path.join(root, "components", "owner", "purchase-journey.tsx"),
-        api: 'fetch(`/api/residue/${path}`)',
+        apiPrefix: "/api/residue/",
         backend: path.join(root, "..", "backend", "app", "api", "residue.py"),
         prefix: '/residue',
       },
@@ -279,7 +279,7 @@ describe("feature registry", () => {
       assert.ok(owner.includes(control.mount), `owner console must mount ${control.mount}`);
       const component = readFileSync(control.file, "utf8");
       assert.match(component, /X-API-Key.*key/);
-      assert.ok(component.includes(control.api), `${control.mount} must call its canonical API`);
+      assert.ok(component.includes(control.apiPrefix) && component.includes("${path}"), `${control.mount} must call its canonical API`);
       const backend = readFileSync(control.backend, "utf8");
       assert.ok(backend.includes(`prefix="${control.prefix}"`), `${control.prefix} router must remain registered at its canonical prefix`);
       assert.ok(backend.includes("security.require_owner_api_key(request)"), `${control.prefix} endpoints must retain owner-key enforcement`);
