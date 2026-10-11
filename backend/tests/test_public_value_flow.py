@@ -1084,7 +1084,8 @@ def test_public_connection_responses_are_idempotent_and_not_acceptance(owner_cli
     assert db.query(models.Outcome).filter(
         models.Outcome.notes.like(f"idempotency:network-connection:{connection.id}:paid%")
     ).count() == 0
-    assert second.json()["latest_response"].endswith("Shared the requested dates.")
+    assert second.json()["latest_response"] == "A response was recorded. It is not acceptance, fulfillment, or payment."
+    assert "Shared the requested dates." not in second.json()["latest_response"]
 
     denied = owner_client_with_db.post(
         f"/public/domain/{body['id']}/connections/{connection.id}/response",
@@ -1094,14 +1095,16 @@ def test_public_connection_responses_are_idempotent_and_not_acceptance(owner_cli
 
     listed = owner_client_with_db.get("/public/connections")
     assert listed.status_code == 200
-    assert listed.json()[0]["latest_response"].endswith("Shared the requested dates.")
+    assert listed.json()[0]["latest_response"] == "A response was recorded. It is not acceptance, fulfillment, or payment."
+    assert "Shared the requested dates." not in listed.json()[0]["latest_response"]
     matches = owner_client_with_db.get("/public/matches")
     assert matches.status_code == 200
     candidate = next(
         item for item in matches.json()[0]["candidates"]
         if item["connection_id"] == connection.id
     )
-    assert candidate["latest_response"].endswith("Shared the requested dates.")
+    assert candidate["latest_response"] == "A response was recorded. It is not acceptance, fulfillment, or payment."
+    assert "Shared the requested dates." not in candidate["latest_response"]
 
 
 def test_public_booking_status_requires_private_capability_and_does_not_leak_requester_pii(
@@ -1894,6 +1897,7 @@ def test_connection_response_is_not_acceptance_and_is_alerted(owner_client_with_
     match = next(item for item in listed if item["id"] == row.id)
     assert match["state"] == "contacted"
     assert "not acceptance" in match["latest_response"]
+    assert "I can come Thursday" not in match["latest_response"]
 
 
 def test_stale_evidence_cannot_promote_a_candidate(owner_client_with_db, db):
@@ -1994,8 +1998,8 @@ def test_public_connection_shows_a_response_only_after_publication(owner_client_
     db.commit()
     visible = owner_client_with_db.get("/public/connections").json()
     assert visible[0]["latest_response"]
-    assert "not acceptance" in visible[0]["latest_response"]
-    assert "Thursday works" in visible[0]["latest_response"]
+    assert visible[0]["latest_response"] == "A response was recorded. It is not acceptance, fulfillment, or payment."
+    assert "Thursday works" not in visible[0]["latest_response"]
 
 
 def test_fulfillment_records_the_work_and_not_a_payment(owner_client_with_db, db):
@@ -2034,8 +2038,8 @@ def test_fulfillment_records_the_work_and_not_a_payment(owner_client_with_db, db
     assert outcome.actual_value is None
     assert "not a payment" in outcome.qualitative_result
     visible = owner_client_with_db.get("/public/connections").json()
-    assert "The fridge cools again" in visible[0]["latest_fulfillment"]
-    assert "not a payment" in visible[0]["latest_fulfillment"]
+    assert visible[0]["latest_fulfillment"] == "Work was recorded as fulfilled. This is not a payment."
+    assert "The fridge cools again" not in visible[0]["latest_fulfillment"]
 
 
 def test_world_research_agenda_opens_once_and_does_not_state_prices(db):

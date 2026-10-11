@@ -463,7 +463,7 @@ def _public_connection_response(db: Session, row: models.NetworkConnection) -> s
         .order_by(models.Outcome.id.desc())
         .first()
     )
-    return outcome.qualitative_result if outcome else None
+    return "A response was recorded. It is not acceptance, fulfillment, or payment." if outcome else None
 
 
 def _public_candidate_connection(
@@ -542,7 +542,7 @@ def _public_connection_fulfillment(db: Session, row: models.NetworkConnection) -
         .filter(models.Outcome.notes == f"idempotency:network-connection:{row.id}:fulfilled")
         .first()
     )
-    return outcome.qualitative_result if outcome else None
+    return "Work was recorded as fulfilled. This is not a payment." if outcome else None
 
 
 def _payment_rows(db: Session, connections: list[models.NetworkConnection]) -> dict[str, list[schemas.RecordedPaymentOut]]:
