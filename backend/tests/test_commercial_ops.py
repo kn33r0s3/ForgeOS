@@ -70,20 +70,6 @@ def test_auth_on_gates_writes_but_allows_correct_key():
 
 
 @pytest.mark.parametrize(
-    "path",
-    [
-        "/products/customers",
-        "/api/products/customers",
-        "/products/pipeline",
-        "/api/products/pipeline",
-        "/repair-shop/work-items",
-        "/api/repair-shop/work-items",
-        "/repair-shop/work-items/1",
-        "/api/repair-shop/work-items/1",
-    ],
-)
-
-@pytest.mark.parametrize(
     ("path", "allowed"),
     [
         ("/api/payments/intent/public-recovery-ref-0123456789/reconcile", True),
@@ -113,6 +99,20 @@ def test_public_payment_reconciliation_allowlist_is_narrow(path, allowed, monkey
     assert response.status_code == (200 if allowed else 401), response.text
 
 
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/products/customers",
+        "/api/products/customers",
+        "/products/pipeline",
+        "/api/products/pipeline",
+        "/repair-shop/work-items",
+        "/api/repair-shop/work-items",
+        "/repair-shop/work-items/1",
+        "/api/repair-shop/work-items/1",
+    ],
+)
 
 def test_private_customer_reads_require_configured_api_key(path, monkeypatch):
     """Private customer read routes are gated without creating test customer data."""
