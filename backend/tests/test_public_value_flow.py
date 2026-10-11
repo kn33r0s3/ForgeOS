@@ -632,11 +632,13 @@ def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     # report active research rather than terminal resolution while work exists.
     assert progress_payload["research_status"] == "research_in_progress"
     assert any(task["status"] == "planned" for task in progress_payload["tasks"])
-    assert progress_payload["research_plan"]["terminal_reason"] == (
-        "one_or_more_requirements_remain_unresolved_under_current_source_clearances"
-    )
-    assert len(progress_payload["research_plan"]["requirements"]) == 5
-    assert progress_payload["research_plan"]["requirements"][0]["status"] == "satisfied"
+    # This plan is still active, not terminal: the status endpoint accurately
+    # omits terminal_reason while source-governed follow-up work remains queued.
+    assert progress_payload["research_plan"].get("terminal_reason") is None
+    requirements = progress_payload["research_plan"]["requirements"]
+    assert len(requirements) == 5
+    assert requirements[0]["status"] == "satisfied"
+    assert any(item["status"] != "satisfied" for item in requirements)
     assert progress_payload["research_sources"][0]["url"] == "https://doi.org/10.1234/repair.1"
     assert any(task["status"] == "completed" for task in progress_payload["tasks"])
     assert progress_payload["evidence_count"] == 1

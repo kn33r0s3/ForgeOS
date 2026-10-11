@@ -1,5 +1,13 @@
 # Hami capability claim ledger (ForgeOS repository)
 
+## [PARTIAL] Correct test session ownership and queued research-plan assertions (2026-10-11)
+
+- **EXISTING SEAMS INSPECTED:** `backend/app/database.py::_configure_engine`, `backend/scripts/run_daily_cycle.py::run_once`, `backend/tests/test_daily_cycle_rollback.py::test_daily_cycle_structures_collected_external_signals_in_same_run`, and `backend/tests/test_public_value_flow.py::test_public_problem_submission_starts_real_research_and_defers_opportunity`.
+- **WHY THE PRIOR TEST-ONLY COMMIT DID NOT CLOSE CI:** the test injects its fixture-owned SQLAlchemy session into `run_once()`, which treats it as owned and closes it. The test then queries that session for fixture signals. The new assertion found no rows after the runner returned. The test now keeps the fixture session alive and prevents reconfiguring the test engine before reading persisted rows by their unique fixture URL. The second test asserted a terminal reason on an active, queued plan; the status contract omits terminal_reason until terminal.
+- **ACTION THIS CHANGE REMOVES:** no production behavior changes; this adjusts only assertions and fixture isolation so the suite tests real status/provenance contracts.
+- **REMAINING PRODUCTION BLOCKERS:** production `ALLOWED_ORIGINS` still must be set to an exact same-origin allowlist in Vercel; this connection returns 403 for scope `kn33r0s3s-projects`. Twilio credentials still need owner-driven rotation and environment replacement. No secrets were read or changed.
+- **VERIFICATION AT CHANGE TIME:** commit `5ef1e3f` had 1,026 passed, 2 skipped, 2 failed in the full Linux backend suite; frontend tests, typecheck, lint, build, route smoke, secret scan, Vercel deployment status, and independent deployment verification succeeded. This follow-up is not yet verified; fresh CI is required.
+
 ## [PARTIAL] Restore honest backend regression coverage and document production blockers (2026-10-11)
 
 - **EXISTING SEAMS INSPECTED:** `backend/tests/conftest.py`, `backend/tests/test_daily_cycle_rollback.py`, `backend/tests/test_public_value_flow.py`, `backend/app/services/collector_runner.py`, `backend/app/services/collectors/base.py`, and `backend/app/api/analyze.py`. The daily-cycle test uses an in-memory synthetic collector named `pytest-network-source`; the base normalizer had labelled its output `external`, while the assertion incorrectly expected that synthetic content to become a public opportunity. The analyze status endpoint reports `research_in_progress` when persisted evidence exists and a follow-up task remains planned.

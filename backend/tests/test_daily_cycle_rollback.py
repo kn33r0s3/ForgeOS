@@ -210,6 +210,11 @@ def test_daily_cycle_structures_collected_external_signals_in_same_run(db, monke
     )
     monkeypatch.setitem(collector_runner.COLLECTORS, "pytest-network-source", PytestSourceCollector)
     monkeypatch.setattr(run_daily_cycle, "SessionLocal", lambda: db)
+    # run_once owns and closes its session. Here that factory deliberately
+    # supplies the fixture-owned session, which pytest must keep open to
+    # inspect the persisted TEST rows after the runner returns.
+    monkeypatch.setattr(run_daily_cycle.app_database, "_configure_engine", lambda: None)
+    monkeypatch.setattr(db, "close", lambda: None)
     monkeypatch.setattr(
         run_daily_cycle.execution_engine,
         "run_autonomous_action_cycle",
@@ -231,7 +236,7 @@ def test_daily_cycle_structures_collected_external_signals_in_same_run(db, monke
     assert record["post_collection_cycle"]["opportunity_questions_linked"] == 0
     test_signals = (
         db.query(models.Signal)
-        .filter(models.Signal.source == "pytest-network-source")
+        .filter(models.Signal.canonical_url.like("https://evidence.example.test/daily/%"))
         .all()
     )
     assert len(test_signals) == len(texts)
