@@ -312,10 +312,16 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
     candidates: list[schemas.PublicMatchCandidate] = []
     providers = _public_provider_query(db).all()
     for provider in providers:
+        provider_name = sanitize_public_text(provider.name) or ""
+        provider_summary = sanitize_public_text(provider.summary) or ""
+        provider_city = sanitize_public_text(provider.city)
         listings = [row for row in provider.listings if row.public_visible and row.is_active]
-        listing_text = " ".join(f"{row.title} {row.description}" for row in listings)
-        shared = need_tokens & _match_tokens(f"{provider.name} {provider.summary or ''} {listing_text}")
-        same_city = bool(need.city and provider.city and need.city.strip().lower() == provider.city.strip().lower())
+        listing_text = " ".join(
+            f"{sanitize_public_text(row.title) or ''} {sanitize_public_text(row.description) or ''}"
+            for row in listings
+        )
+        shared = need_tokens & _match_tokens(f"{provider_name} {provider_summary} {listing_text}")
+        same_city = bool(need_city and provider_city and need_city.strip().lower() == provider_city.strip().lower())
         if not shared and not same_city:
             continue
         primary = listings[0] if listings else None
@@ -336,8 +342,8 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
                 kind="provider",
                 id=provider.id,
                 entity_type="provider",
-                name=provider.name,
-                where=provider.city,
+                name=provider_name,
+                where=provider_city,
                 stated_price=f"{primary.price_from} {primary.currency or 'NPR'}" if primary and primary.price_from else None,
                 stated_availability=primary.availability_status if primary else None,
                 reasons=reasons,
@@ -400,7 +406,10 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
             continue
         if claim.id in seen_claims:
             continue
-        shared = need_tokens & _match_tokens(f"{claim.statement} {signal.title or ''} {signal.content}")
+        claim_statement = sanitize_public_text(claim.statement) or ""
+        signal_title = sanitize_public_text(signal.title) or ""
+        signal_content = sanitize_public_text(signal.content) or ""
+        shared = need_tokens & _match_tokens(f"{claim_statement} {signal_title} {signal_content}")
         if not shared:
             continue
         seen_claims.add(claim.id)
@@ -409,8 +418,8 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
                 kind="knowledge",
                 id=claim.id,
                 entity_type="claim",
-                name=(signal.title or claim.statement)[:160],
-                where=signal.source,
+                name=sanitize_public_text(signal.title or claim.statement)[:160] if sanitize_public_text(signal.title or claim.statement) else "",
+                where=sanitize_public_text(signal.source) or "",
                 stated_price=None,
                 stated_availability=None,
                 reasons=["shared words: " + ", ".join(sorted(shared)[:6]), f"from {signal.source}"],

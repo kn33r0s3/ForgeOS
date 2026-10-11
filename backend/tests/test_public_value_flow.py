@@ -1014,6 +1014,26 @@ def test_public_domain_redacts_contact_details_on_write_and_legacy_reads(owner_c
         close_token_hash="test-legacy-contact-hash",
     )
     db.add(legacy)
+    db.flush()
+    provider = models.Provider(
+        name="Repair provider buyer@example.test",
+        summary="Contact 9800000005 for service details.",
+        city="Lalitpur",
+        country="Nepal",
+        public_visible=True,
+        is_active=True,
+        verification_status="verified",
+    )
+    db.add(provider)
+    db.flush()
+    db.add(models.ServiceListing(
+        provider_id=provider.id,
+        title="Repair service",
+        description="Contact 9800000005",
+        category="repair",
+        public_visible=True,
+        is_active=True,
+    ))
     db.commit()
     db.refresh(legacy)
 
@@ -1025,6 +1045,7 @@ def test_public_domain_redacts_contact_details_on_write_and_legacy_reads(owner_c
         assert "buyer@example.test" not in response.text
         assert "9800000001" not in response.text
         assert "9800000002" not in response.text
+        assert "9800000005" not in response.text
         assert "[redacted-email]" in response.text
         assert "[redacted-phone]" in response.text
 
