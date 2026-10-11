@@ -1,3 +1,9 @@
+## [SOURCE CHANGE / CI PENDING] Require approved offer terms before publication (2026-10-12)
+
+- Added `POST /products/{id}/prepare-offer-review` to attach a review brief to the existing product created by the canonical orchestrator; it never creates a duplicate product. It requires a fixed one-time NPR price such as `NPR 5000 one-time`.
+- Public/piloting launch now requires the existing evidence-backed demand threshold, a prepared offer brief, and an explicit owner approval. Public checkout additionally requires the fixed NPR one-time price. Editing commercial terms revokes approval; removing approval from a public offer pauses it.
+- Product approval and lifecycle transitions emit the existing `state_changed` EVENT. No new top-level semantic table, outreach, checkout, or revenue was added.
+- Exact-SHA Linux CI is pending; follow-up payment-intent and provider-callback work remains required before a public checkout can be enabled.
 ## [SOURCE CHANGE / CI PENDING] Align interview capture with evidence provenance gates (2026-10-12)
 
 - The interview form previously offered `paid_customer` based on a receipt-like free-text note, but the existing backend correctly requires a linked positive verified `ACTUAL_REVENUE` outcome for that stage. The form now captures only `lead`, `contacted`, and `interested`; it cannot fabricate paid or churned lifecycle state from interview text.

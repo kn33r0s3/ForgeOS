@@ -9,6 +9,8 @@ explicit for owner review.
 from __future__ import annotations
 
 import json
+import re
+import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
@@ -106,6 +108,94 @@ def create_offer_draft(
     return product
 
 
+def fixed_npr_price_paisa(pricing: str | None) -> int | None:
+    """Accept only explicit fixed one-time NPR contracts, never fuzzy price prose."""
+    match = re.fullmatch(
+        r"\s*NPR\s*([0-9]{1,8})(?:\.([0-9]{1,2}))?\s+one[- ]time\s*",
+        pricing or "",
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        return None
+    rupees = int(match.group(1))
+    fraction = (match.group(2) or "").ljust(2, "0")
+    amount = rupees * 100 + int(fraction or "0")
+    return amount if amount > 0 else None
+
+
+def _state_event(db: Session, product: models.Product, *, change: str, before: str, after: str) -> None:
+    from app.services import world_graph
+
+    world_graph.create_event(
+        db,
+        event_type="state_changed",
+        source="offer_preparation",
+        payload={
+            "domain": "product",
+            "product_id": product.id,
+            "change": change,
+            "from": before,
+            "to": after,
+        },
+        idempotency_key=f"product:{product.id}:{change}:{uuid.uuid4().hex}",
+    )
+
+
+def prepare_existing_product_for_review(
+    db: Session,
+    product_id: int,
+) -> models.Product | None:
+    """Attach an owner-reviewable brief to the existing Product; never duplicate it."""
+    product = product_engine.get_product(db, product_id)
+    if product is None:
+        return None
+    if product.data_scope != "REAL":
+        raise ValueError("A public offer review requires a REAL-scope product.")
+    if product.opportunity_id is None:
+        raise ValueError("Link the product to its originating opportunity before review.")
+    opportunity = db.get(models.Opportunity, product.opportunity_id)
+    if opportunity is None:
+        raise ValueError("The originating opportunity no longer exists.")
+    if product.launch_state in {"public", "piloting"} or product.status in {"launched", "iterating"}:
+        raise ValueError("Pause a launched product before preparing a new review.")
+    amount_paisa = fixed_npr_price_paisa(product.pricing)
+    if amount_paisa is None:
+        raise ValueError('Set a fixed one-time price such as "NPR 5000 one-time" before review.')
+
+    brief = {
+        "kind": "existing_product_owner_review",
+        "product_id": product.id,
+        "opportunity_id": opportunity.id,
+        "problem_statement": opportunity.problem,
+        "target_customer": product.target_customer or opportunity.target_customer,
+        "offer": product.offer,
+        "delivery_scope": product.mvp_scope or "UNRESOLVED — owner must define exact delivery scope.",
+        "fixed_price": {"currency": "NPR", "amount_paisa": amount_paisa, "billing": "one_time"},
+        "price_hypothesis": "An owner-set offer price is not evidence that a customer agreed to pay it.",
+        "value_hypothesis": opportunity.economic_evidence_summary or "Customer value remains unverified until a real delivery/outcome is recorded.",
+        "exclusions": [
+            "No customer is claimed from this brief.",
+            "No payment is claimed before provider verification.",
+            "No automatic outreach, publication, or fulfillment is authorized by this brief.",
+        ],
+        "authorization_requirements": [
+            "Owner approval before public offer publication.",
+            "Customer authorization before accessing their systems or data.",
+        ],
+        "next_action": "Owner review: confirm offer, exact price, delivery scope, exclusions, and customer-specific promises.",
+    }
+    prior = product.approval_status
+    product.offer_brief_json = json.dumps(brief, ensure_ascii=False, sort_keys=True)
+    product.approval_status = "PENDING_REVIEW"
+    product.approval_note = None
+    product.approved_at = None
+    product.updated_at = _now()
+    _state_event(db, product, change="offer_review_prepared", before=prior, after="PENDING_REVIEW")
+    db.commit()
+    db.refresh(product)
+    return product
+
+
 def set_offer_approval(
     db: Session,
     product_id: int,
@@ -118,9 +208,15 @@ def set_offer_approval(
         return None
     if not product.offer_brief_json:
         raise ValueError("offer approval requires an offer draft")
+    previous = product.approval_status
     product.approval_status = status
     product.approval_note = (note or "").strip() or None
     product.approved_at = _now() if status == "APPROVED" else None
+    if status != "APPROVED" and product.launch_state == "public":
+        product.launch_state = "paused"
+        product.status = "validating"
+    product.updated_at = _now()
+    _state_event(db, product, change="offer_approval_changed", before=previous, after=status)
     db.commit()
     db.refresh(product)
     return product

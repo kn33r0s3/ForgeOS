@@ -18,6 +18,7 @@ The Product entity formalizes the discovery->build->distribute handoff:
 
 from __future__ import annotations
 
+import uuid
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -74,13 +75,35 @@ def update_product(db: Session, product_id: int, *, name=None, offer=None,
         raise ValueError("Invalid product status")
     if launch_state is not None and launch_state not in {"not_launched", "piloting", "public", "paused"}:
         raise ValueError("Invalid launch state")
-    if status in {"launched", "iterating"} or launch_state in {"piloting", "public"}:
-        from app.services import orchestrator
+    launch_requested = status in {"launched", "iterating"} or launch_state in {"piloting", "public"}
+    commercial_fields_changed = any(
+        value is not None and value != getattr(p, field)
+        for field, value in {
+            "name": name,
+            "offer": offer,
+            "target_customer": target_customer,
+            "pricing": pricing,
+            "mvp_scope": mvp_scope,
+            "hypothesis": hypothesis,
+        }.items()
+    )
+    if launch_requested:
+        from app.services import orchestrator, offer_preparation
+        if commercial_fields_changed and p.approval_status == "APPROVED":
+            raise ValueError("Offer terms changed in this request; re-review the offer before launch.")
         if p.opportunity_id is None:
             raise ValueError("Link and validate an opportunity before launch")
         confirmed, willing = orchestrator.validation_counts(db, p.opportunity_id, p.data_scope)
         if confirmed < orchestrator.DEFAULT_Y_CONFIRM_PROBLEM or willing < orchestrator.DEFAULT_Z_WILLING_TO_PAY:
             raise ValueError("Recorded demand validation is required before launch")
+        if p.approval_status != "APPROVED" or p.approved_at is None or not p.offer_brief_json:
+            raise ValueError("An explicitly approved offer brief is required before launch")
+        if p.data_scope != "REAL" and launch_state == "public":
+            raise ValueError("SANDBOX products cannot be published as REAL offers")
+        proposed_price = pricing if pricing is not None else p.pricing
+        if launch_state == "public" and offer_preparation.fixed_npr_price_paisa(proposed_price) is None:
+            raise ValueError('Public checkout requires a fixed one-time NPR price such as "NPR 5000 one-time"')
+    old_state = (p.status, p.launch_state, p.approval_status)
     for field, val in {
         "name": name, "offer": offer, "target_customer": target_customer,
         "pricing": pricing, "mvp_scope": mvp_scope, "hypothesis": hypothesis,
@@ -92,7 +115,39 @@ def update_product(db: Session, product_id: int, *, name=None, offer=None,
     if status == "retired":
         from datetime import datetime, timezone
         p.retired_at = datetime.now(timezone.utc)
+    if commercial_fields_changed and p.approval_status == "APPROVED":
+        p.approval_status = "NEEDS_EDIT"
+        p.approval_note = "Offer details changed after approval; review is required again."
+        p.approved_at = None
+        if p.launch_state == "public":
+            p.launch_state = "paused"
+        if p.status in {"launched", "iterating"}:
+            p.status = "validating"
     p.updated_at = _now()
+    new_state = (p.status, p.launch_state, p.approval_status)
+    if old_state != new_state:
+        from app.services import world_graph
+        world_graph.create_event(
+            db,
+            event_type="state_changed",
+            source="product_engine",
+            payload={
+                "domain": "product",
+                "product_id": p.id,
+                "change": "product_lifecycle_changed",
+                "from": {
+                    "status": old_state[0],
+                    "launch_state": old_state[1],
+                    "approval_status": old_state[2],
+                },
+                "to": {
+                    "status": new_state[0],
+                    "launch_state": new_state[1],
+                    "approval_status": new_state[2],
+                },
+            },
+            idempotency_key=f"product:{p.id}:lifecycle:{uuid.uuid4().hex}",
+        )
     db.commit()
     db.refresh(p)
     return p

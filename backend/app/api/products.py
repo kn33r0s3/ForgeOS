@@ -170,6 +170,22 @@ def get_product(request: Request, product_id: int, db: Session = Depends(get_db)
     return product_engine.product_summary(db, p)
 
 
+@router.post("/{product_id}/prepare-offer-review", response_model=schemas.ProductOut)
+def prepare_existing_product_offer_review(
+    request: Request,
+    product_id: int,
+    db: Session = Depends(get_db),
+):
+    _owner(request)
+    try:
+        product = offer_preparation.prepare_existing_product_for_review(db, product_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if product is None:
+        raise HTTPException(status_code=404, detail="product not found")
+    return product
+
+
 @router.post("/{product_id}/offer-approval", response_model=schemas.ProductOut)
 def update_offer_approval(
     request: Request,

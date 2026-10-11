@@ -357,6 +357,101 @@ def test_pipeline_launched_and_never_fabricates(db):
     assert snap["total_paid_customers"] == 0
 
 
+
+def test_existing_gated_product_can_be_prepared_for_review_without_duplication(db, monkeypatch):
+    from app.services import offer_preparation, orchestrator
+
+    opportunity = models.Opportunity(
+        problem="Independent shops lose time on repeated status calls.",
+        target_customer="independent repair shops",
+        solution="A status visibility offer",
+        score=70.0,
+        status="validating",
+    )
+    db.add(opportunity)
+    db.commit()
+    db.refresh(opportunity)
+    product = product_engine.create_product(
+        db,
+        opportunity_id=opportunity.id,
+        name="Shop status visibility",
+        offer="A one-time setup and status workflow",
+        target_customer="independent repair shops",
+        pricing="NPR 5000 one-time",
+        mvp_scope="One shop workflow review and setup checklist",
+        data_scope="REAL",
+    )
+    product.status = "validating"
+    db.commit()
+    before = db.query(models.Product).count()
+
+    prepared = offer_preparation.prepare_existing_product_for_review(db, product.id)
+    assert prepared is not None
+    assert prepared.id == product.id
+    assert db.query(models.Product).count() == before
+    assert prepared.approval_status == "PENDING_REVIEW"
+    brief = offer_preparation.brief(prepared)
+    assert brief["fixed_price"] == {"currency": "NPR", "amount_paisa": 500000, "billing": "one_time"}
+    assert db.query(models.WorldEvent).filter_by(event_type="state_changed").count() >= 1
+
+    monkeypatch.setattr(orchestrator, "validation_counts", lambda *args: (5, 3))
+    approved = offer_preparation.set_offer_approval(
+        db, product.id, status="APPROVED", note="Owner reviewed the concrete scope and price."
+    )
+    assert approved.approval_status == "APPROVED"
+    assert approved.approved_at is not None
+    launched = product_engine.update_product(db, product.id, status="launched", launch_state="public")
+    assert launched.launch_state == "public"
+
+    edited = product_engine.update_product(db, product.id, pricing="NPR 6000 one-time")
+    assert edited.approval_status == "NEEDS_EDIT"
+    assert edited.approved_at is None
+    assert edited.launch_state == "paused"
+    assert edited.status == "validating"
+
+
+def test_public_product_launch_rejects_unapproved_offer_even_if_demand_counts_pass(db, monkeypatch):
+    from app.services import orchestrator
+
+    opportunity = models.Opportunity(
+        problem="A defined problem",
+        target_customer="a customer segment",
+        solution="A concrete offer",
+        score=70.0,
+        status="validating",
+    )
+    db.add(opportunity)
+    db.commit()
+    db.refresh(opportunity)
+    product = product_engine.create_product(
+        db,
+        opportunity_id=opportunity.id,
+        name="Public-test product",
+        offer="Exact offer",
+        pricing="NPR 1000 one-time",
+        data_scope="REAL",
+    )
+    product.status = "validating"
+    product.offer_brief_json = '{"kind":"test-only brief"}'
+    db.commit()
+    monkeypatch.setattr(orchestrator, "validation_counts", lambda *args: (5, 3))
+    with pytest.raises(ValueError, match="approved offer brief"):
+        product_engine.update_product(db, product.id, status="launched", launch_state="public")
+    db.refresh(product)
+    assert product.status == "validating"
+    assert product.launch_state == "not_launched"
+
+
+def test_fixed_npr_price_requires_an_explicit_one_time_contract():
+    from app.services.offer_preparation import fixed_npr_price_paisa
+
+    assert fixed_npr_price_paisa("NPR 5000 one-time") == 500000
+    assert fixed_npr_price_paisa("npr 25.50 one time") == 2550
+    assert fixed_npr_price_paisa("roughly NPR 5000") is None
+    assert fixed_npr_price_paisa("NPR 5000/month") is None
+    assert fixed_npr_price_paisa("$49 one-time") is None
+
+
 # ---------------------------------------------------------------------------
 # Lessons Memory (v2.10) — durable consolidate + recall, learned like an
 # assistant files facts and recalls them into later reasoning.
