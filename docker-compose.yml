@@ -1,13 +1,13 @@
 name: forgeos
 
 x-forgeos-environment: &forgeos-environment
-  DATABASE_URL: sqlite:////app/storage/forge.db
+  DATABASE_URL: ${DATABASE_URL:-sqlite:////app/storage/forge.db}
   AI_PROVIDER: ${AI_PROVIDER:-mock}
   AI_FALLBACK_TO_MOCK: ${AI_FALLBACK_TO_MOCK:-false}
   EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-hash}
   OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
   OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434/v1}
-  EVIDENCE_TRIAGE_URL: ${EVIDENCE_TRIAGE_URL:-http://evidence-triage:8787}
+  EVIDENCE_TRIAGE_URL: ${EVIDENCE_TRIAGE_URL:-}
 
 services:
   evidence-triage:
@@ -21,10 +21,10 @@ services:
       HOST: 0.0.0.0
       PORT: 8787
       X402_PAY_TO: ${X402_PAY_TO:-}
-      X402_RESOURCE_URL: ${X402_RESOURCE_URL:-http://127.0.0.1:8000/evidence-triage/triage}
-    expose:
-      - "8787"
-    restart: unless-stopped
+      X402_RESOURCE_URL: ${X402_RESOURCE_URL:-}
+    ports:
+      - "127.0.0.1:8787:8787"
+    restart: "no"
 
   backend:
     build:
@@ -91,6 +91,7 @@ services:
       EMBEDDING_PROVIDER: hash
 
   frontend:
+    profiles: ["legacy-frontend"]
     build:
       context: ./docs/archive/legacy-frontend
       args:
@@ -106,10 +107,11 @@ services:
     restart: unless-stopped
 
   caddy:
+    profiles: ["legacy-frontend"]
     image: caddy:2.8-alpine
     container_name: forgeos-caddy
     ports:
-      - "0.0.0.0:3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
     depends_on:

@@ -7,7 +7,8 @@ FORGEOS_ENABLE_WORKER="${FORGEOS_ENABLE_WORKER:-false}"
 FORGEOS_ENABLE_SCHEDULER="${FORGEOS_ENABLE_SCHEDULER:-true}"
 FORGEOS_USE_DOCKER="${FORGEOS_USE_DOCKER:-false}"
 FORGEOS_DEPS_DIR="${FORGEOS_DEPS_DIR:-$PWD/backend/.deps}"
-export DATABASE_URL="${DATABASE_URL:-sqlite:///$PWD/storage/forge.db}"
+# Keep backend SQLite default out of the web process, which uses PostgreSQL/Neon or PGLite.
+BACKEND_DATABASE_URL="${DATABASE_URL:-sqlite:///$PWD/storage/forge.db}"
 export PYTHONPATH="$FORGEOS_DEPS_DIR:$PWD/backend${PYTHONPATH:+:$PYTHONPATH}"
 export PATH="$FORGEOS_DEPS_DIR/bin:$PATH"
 
@@ -19,17 +20,38 @@ if [ ! -f docs/archive/legacy-frontend/.env.local ]; then
   if [ -f docs/archive/legacy-frontend/.env.local.example ]; then cp docs/archive/legacy-frontend/.env.local.example docs/archive/legacy-frontend/.env.local; echo "✓ Created legacy frontend environment"; else echo "⚠ legacy-frontend .env.local.example not found — skipping"; fi
 fi
 
-echo "[database] canonical native SQLite URL: $DATABASE_URL"
-
-if [ "$FORGEOS_USE_DOCKER" = "true" ] && command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-  echo "Docker detected — canonical container DB: /app/storage/forge.db -> $PWD/storage/forge.db"
-  if [ "$FORGEOS_ENABLE_SCHEDULER" = "true" ] || [ "$FORGEOS_ENABLE_WORKER" = "true" ]; then
-    exec docker compose --profile worker up --build
-  fi
-  exec docker compose up --build
-fi
+echo "[database] backend database URL is configured (value intentionally not logged)."
 
 command -v npm >/dev/null || { echo "❌ Need npm"; exit 1; }
+
+if [ "$FORGEOS_USE_DOCKER" = "true" ] && command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+  echo "Docker detected — starting the FastAPI backend in Compose and the canonical root Vite app on the host."
+  if [ "$FORGEOS_ENABLE_SCHEDULER" = "true" ] || [ "$FORGEOS_ENABLE_WORKER" = "true" ]; then
+    docker compose --profile worker up --build -d
+  else
+    docker compose up --build -d
+  fi
+
+  for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do
+    if curl -fsS http://127.0.0.1:8000/health >/dev/null 2>&1; then break; fi
+    sleep 1
+  done
+  if ! curl -fsS http://127.0.0.1:8000/health >/dev/null 2>&1; then
+    echo "❌ Container backend failed its health check:"
+    docker compose logs backend
+    docker compose down
+    exit 1
+  fi
+
+  echo "Starting canonical Hami web app on :8080 ..."
+  (exec npm run dev) > logs/public-app.log 2>&1 &
+  echo $! > logs/public-app.pid
+  echo "✓ Hami is up — public app http://localhost:8080, API http://localhost:8000/docs"
+  trap './stop.sh' INT TERM
+  wait
+  exit $?
+fi
+
 
 PY="python3"
 if [ -x backend/venv/bin/python ]; then
@@ -51,7 +73,7 @@ if [ ! -d "$FORGEOS_DEPS_DIR/sqlalchemy" ]; then
   "$PY" -m pip install --target "$FORGEOS_DEPS_DIR" -r backend/requirements.txt
 fi
 echo "Starting backend on :8000 ..."
-(cd backend && exec "$PY" -m uvicorn app.main:app --host 127.0.0.1 --port 8000) > logs/backend.log 2>&1 &
+(cd backend && export DATABASE_URL="$BACKEND_DATABASE_URL" && exec "$PY" -m uvicorn app.main:app --host 127.0.0.1 --port 8000) > logs/backend.log 2>&1 &
 echo $! > logs/backend.pid
 for _ in 1 2 3 4 5 6 7 8 9 10; do
   if curl -fsS http://127.0.0.1:8000/health >/dev/null 2>&1; then break; fi
@@ -63,7 +85,7 @@ fi
 
 if [ "$FORGEOS_ENABLE_SCHEDULER" = "true" ]; then
   echo "Starting canonical cycle scheduler..."
-  (cd backend && exec "$PY" -m scripts.scheduler --every 1800 --backup-every 21600 --backup-keep 10) > logs/scheduler.log 2>&1 &
+  (cd backend && export DATABASE_URL="$BACKEND_DATABASE_URL" && exec "$PY" -m scripts.scheduler --every 1800 --backup-every 21600 --backup-keep 10) > logs/scheduler.log 2>&1 &
   echo $! > logs/scheduler.pid
 else
   echo "Cycle scheduler disabled."
@@ -72,7 +94,7 @@ fi
 
 if [ "$FORGEOS_ENABLE_WORKER" = "true" ]; then
   echo "Starting task worker (explicitly enabled)..."
-  (cd backend && exec "$PY" worker.py 1800) > logs/worker.log 2>&1 &
+  (cd backend && export DATABASE_URL="$BACKEND_DATABASE_URL" && exec "$PY" worker.py 1800) > logs/worker.log 2>&1 &
   echo $! > logs/worker.pid
 else
   rm -f logs/worker.pid
