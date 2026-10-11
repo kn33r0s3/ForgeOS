@@ -606,6 +606,8 @@ def record_outcome(
         currency = (unit or "USD").upper()
         if currency not in {"USD", "NPR"}:
             raise ValueError("Revenue/cost outcomes currently support USD or NPR; currencies are never auto-converted")
+        if outcome_type == "ACTUAL_REVENUE" and currency == "NPR" and data_scope == "SANDBOX":
+            raise ValueError("NPR revenue must come from the REAL provider-verified payment flow; sandbox revenue cannot be represented as NPR cash.")
         unit = currency
     product = db.get(models.Product, product_id) if product_id else None
     if product_id and (not product or product.data_scope != data_scope):

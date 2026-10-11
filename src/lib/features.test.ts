@@ -295,7 +295,12 @@ describe("feature registry", () => {
     assert.ok(home.includes('payload.checkout.type === "form_post"') && home.includes("form.submit()"));
     assert.ok(result.includes('createFileRoute("/payment-result")'));
     assert.ok(result.includes('name: "robots", content: "noindex,nofollow,noarchive"'));
-    assert.ok(result.includes('record.status === "VERIFIED"'));
+    assert.ok(result.includes('record?.status === "VERIFIED"'));
+    assert.ok(result.includes("record?.fulfilled") && result.includes("not yet recorded as realized revenue"));
+    const owner = readFileSync(path.join(root, "routes", "owner.tsx"), "utf8");
+    assert.ok(owner.includes("<PaymentFulfillmentQueue apiKey={key} />"));
+    assert.ok(api.includes('"/owner/fulfillment-queue"') && api.includes('"/owner/intents/{intent_id}/fulfill"'));
+    assert.ok(engine.includes("def fulfill_verified_intent") && engine.includes("pending_fulfillment_intents"));
     assert.ok(api.includes('"/products/{product_id}/checkout"'));
     assert.ok(engine.includes("finalize_esewa_callback") && engine.includes("finalize_khalti_callback"));
   });

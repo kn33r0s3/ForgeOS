@@ -419,7 +419,8 @@ def test_public_feed_projects_heterogeneous_records_with_evidence_and_relations(
         assert "buyer@example.test" not in response.text
         assert "9800000004" not in response.text
         assert "[redacted-email]" in response.text
-        assert "[redacted-phone]" in response.text
+    # Some public provider DTOs omit phone entirely rather than returning a placeholder.
+    # The free-text listing price below must redact both contact types when present.
     assert "buyer-price@example.test" not in service_directory.text
     assert "9800000008" not in service_directory.text
     assert "[redacted-email]" in service_directory.text

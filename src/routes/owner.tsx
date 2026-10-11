@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Container } from "@/components/layout/container";
 import { ForgeConsoleWidgets } from "@/components/forge/forge-console";
@@ -322,6 +322,20 @@ type ChannelSummaryView = {
   data_scope: "REAL" | "SANDBOX";
 };
 
+type PaymentFulfillmentIntentView = {
+  id: number;
+  product_id: number;
+  product_name: string;
+  provider: "esewa" | "khalti";
+  status: "VERIFIED";
+  amount_paisa: number;
+  amount_npr: string;
+  currency: "NPR";
+  provider_reference: string | null;
+  created_at: string | null;
+  outcome_id: number | null;
+};
+
 type PaymentConfigurationView = {
   scope: "configuration_only";
   provider_connectivity_checked: false;
@@ -569,6 +583,111 @@ function CycleCard({ cycle }: { cycle: CycleSummary }) {
         </p>
       )}
     </article>
+  );
+}
+
+function PaymentFulfillmentQueue({ apiKey }: { apiKey: string }) {
+  const [items, setItems] = useState<PaymentFulfillmentIntentView[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [refresh, setRefresh] = useState(0);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    let current = true;
+    if (!apiKey) {
+      setItems(null);
+      return () => { current = false; };
+    }
+    setLoading(true);
+    setError("");
+    ownerProjectionFetch<PaymentFulfillmentIntentView[]>("/api/payments/owner/fulfillment-queue", apiKey)
+      .then((payload) => { if (current) setItems(Array.isArray(payload) ? payload : []); })
+      .catch((cause) => {
+        if (current) {
+          setItems(null);
+          setError(cause instanceof Error ? cause.message : "Payment fulfillment queue is unavailable.");
+        }
+      })
+      .finally(() => { if (current) setLoading(false); });
+    return () => { current = false; };
+  }, [apiKey, refresh]);
+
+  async function confirmFulfillment(item: PaymentFulfillmentIntentView) {
+    const confirmed = window.confirm(
+      "Confirm that the purchased offer was actually delivered or fulfilled? This records verified REAL NPR revenue and a paid-customer event. Do not confirm merely because the provider reports payment.",
+    );
+    if (!confirmed) return;
+    setBusyId(item.id);
+    setError("");
+    setNotice("");
+    try {
+      await ownerCommandFetch(
+        "/api/payments/owner/intents/" + item.id + "/fulfill",
+        apiKey,
+        { confirmed: true },
+      );
+      setNotice("Fulfillment confirmed for payment #" + item.id + ". The verified outcome and paid-customer event are now linked.");
+      setRefresh((value) => value + 1);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Fulfillment could not be recorded.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <section className="mt-6 rounded-card border-2 border-line p-4" aria-label="Payments awaiting fulfillment">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="font-extrabold">Provider-verified payments awaiting fulfillment</h3>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
+            A provider callback alone is not realized revenue. Confirm only after the promised service or deliverable was actually fulfilled.
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={loading || busyId !== null}
+          onClick={() => setRefresh((value) => value + 1)}
+          className="min-h-10 rounded-card border border-line px-3 py-2 text-sm font-bold disabled:opacity-60"
+        >
+          Refresh
+        </button>
+      </div>
+      {error ? <p role="alert" className="mt-3 rounded-card border border-danger/60 p-3 text-sm">{error}</p> : null}
+      {notice ? <p role="status" className="mt-3 rounded-card border border-line p-3 text-sm">{notice}</p> : null}
+      {items === null ? (
+        <p className="mt-3 text-sm text-muted">{loading ? "Loading owner-protected payment intents…" : "Payment fulfillment data is unavailable."}</p>
+      ) : items.length === 0 ? (
+        <p className="mt-3 text-sm text-muted">No provider-verified payments currently await fulfillment. Pending or unverified transactions do not appear here.</p>
+      ) : (
+        <ul className="mt-4 grid gap-3">
+          {items.map((item) => (
+            <li key={item.id} className="rounded-card border border-line bg-card p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h4 className="font-extrabold">{item.product_name}</h4>
+                  <p className="mt-1 text-sm text-muted">
+                    Payment #{item.id} · {item.provider === "esewa" ? "eSewa" : "Khalti"} · provider status VERIFIED
+                  </p>
+                  {item.provider_reference ? <p className="mt-1 break-all text-xs text-muted">Provider reference: {item.provider_reference}</p> : null}
+                  <p className="mt-2 font-display text-xl font-extrabold">NPR {item.amount_npr}</p>
+                </div>
+                <button
+                  type="button"
+                  disabled={busyId !== null || loading}
+                  onClick={() => void confirmFulfillment(item)}
+                  className="min-h-11 rounded-card border-2 border-accent px-4 py-2 text-sm font-bold text-accent disabled:opacity-60"
+                >
+                  {busyId === item.id ? "Recording fulfillment…" : "Confirm fulfilled"}
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -1764,9 +1883,9 @@ shop-03 | lead | not confirmed | uses an existing alternative`} />
               <section className="mt-10 border-t-2 border-line pt-5" aria-label="Products and payments">
                 <h2 className="text-xl font-extrabold">Products &amp; payments</h2>
                 <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
-                  Read-only commercial visibility from existing owner-protected product records.
-                  REAL outcomes and SANDBOX records remain separate. This view never initiates
-                  checkout, contacts a provider, or treats configuration as evidence of payment.
+                  Commercial visibility from the existing product ledger. Provider callbacks only
+                  verify payment; the owner-only fulfillment action below records revenue after
+                  the promised service has actually been delivered.
                 </p>
 
                 {commercial.products === null ? (
@@ -1954,6 +2073,8 @@ shop-03 | lead | not confirmed | uses an existing alternative`} />
                   </p>
                 </div>
               </section>
+
+              <PaymentFulfillmentQueue apiKey={key} />
 
               <section className="mt-10 border-t-2 border-line pt-5" aria-label="ForgeBot">
                 <h2 className="text-xl font-extrabold">ForgeBot</h2>

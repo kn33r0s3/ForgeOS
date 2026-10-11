@@ -10,6 +10,7 @@ type PaymentIntentStatus = {
   amount_npr: string;
   currency: "NPR";
   product_name: string;
+  fulfilled: boolean;
 };
 
 export const Route = createFileRoute("/payment-result")({
@@ -58,6 +59,7 @@ function PaymentResultPage() {
   }, [intent, refreshCount]);
 
   const isVerified = record?.status === "VERIFIED";
+  const isFulfilled = isVerified && record?.fulfilled === true;
   const isPending = !!record && ["CREATED", "INITIATED", "PENDING"].includes(record.status);
 
   return (
@@ -66,7 +68,7 @@ function PaymentResultPage() {
         <div className="mx-auto max-w-2xl rounded-card border-2 border-line bg-card p-5 sm:p-8">
           <p className="font-mono text-xs uppercase tracking-[0.14em] text-muted">Payment result</p>
           <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight">
-            {isVerified ? "Payment verified" : isPending ? "Payment confirmation pending" : record ? "Payment not verified" : "Checking payment status"}
+            {isFulfilled ? "Payment and fulfillment confirmed" : isVerified ? "Payment verified; fulfillment pending" : isPending ? "Payment confirmation pending" : record ? "Payment not verified" : "Checking payment status"}
           </h1>
           {busy && !record ? <p className="mt-4 text-sm text-muted">Checking the transaction status with Hami’s payment ledger…</p> : null}
           {record ? (
@@ -79,7 +81,9 @@ function PaymentResultPage() {
           ) : null}
           {isVerified ? (
             <p className="mt-5 rounded-card border border-line p-3 text-sm leading-6">
-              The provider lookup verified this payment and Hami linked it to the product’s revenue record.
+              {isFulfilled
+                ? "The provider lookup verified payment and an owner confirmed fulfillment. The linked REAL revenue outcome and paid-customer event have been recorded."
+                : "The provider lookup verified payment, but fulfillment is awaiting owner confirmation. This payment is not yet recorded as realized revenue."}
             </p>
           ) : isPending ? (
             <p className="mt-5 rounded-card border border-line p-3 text-sm leading-6">

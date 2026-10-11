@@ -153,7 +153,7 @@ function PublicOffers() {
           Offers that passed the evidence gate
         </h2>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-muted">
-          Only currently published products with verified demand appear here. A checkout request is not a completed payment; Hami records revenue only after the provider verifies the transaction.
+          Only currently published products with verified demand appear here. Provider verification confirms payment; Hami records revenue only after an owner confirms the promised service or deliverable was fulfilled.
         </p>
         {error ? <p role="alert" className="mt-4 rounded-card border border-danger/60 p-3 text-sm">{error}</p> : null}
         <div className="mt-6 grid gap-4 md:grid-cols-2">
