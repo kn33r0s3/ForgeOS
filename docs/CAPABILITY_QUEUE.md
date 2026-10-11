@@ -1,5 +1,13 @@
 # Hami capability claim ledger (ForgeOS repository)
 
+## [PARTIAL] Restore honest backend regression coverage and document production blockers (2026-10-11)
+
+- **EXISTING SEAMS INSPECTED:** `backend/tests/conftest.py`, `backend/tests/test_daily_cycle_rollback.py`, `backend/tests/test_public_value_flow.py`, `backend/app/services/collector_runner.py`, `backend/app/services/collectors/base.py`, and `backend/app/api/analyze.py`. The daily-cycle test uses an in-memory synthetic collector named `pytest-network-source`; the base normalizer had labelled its output `external`, while the assertion incorrectly expected that synthetic content to become a public opportunity. The analyze status endpoint reports `research_in_progress` when persisted evidence exists and a follow-up task remains planned.
+- **OWNER ACTION REMOVED:** no owner action was necessary for these regression-test maintenance changes; they only make the fixture provenance and asserted async status match the existing contracts. The test fixture now explicitly remains `source_type=test` and asserts it is not promoted to a public opportunity.
+- **REMAINING PRODUCTION BLOCKERS:** `ALLOWED_ORIGINS` still needs an explicit exact-origin allowlist in Vercel Production; the Vercel connector presently returns 403 for scope `kn33r0s3s-projects`, so this session cannot inspect or update project environment variables. Twilio credential rotation and Vercel secret replacement must happen in the relevant provider/environment; this change does not read or rotate secrets. Independent deploy-verification passed for SHA `be4801ae38e88894a3345d8ccc06e850e792fefc`; the two failing backend assertions were still outstanding there.
+- **NEXT REMOVABLE DEPENDENCY:** restore correct Vercel scope access so the exact production CORS allowlist can be set and verified; have the owner rotate exposed Twilio credentials and replace environment values, then rerun deploy verification on the resulting main SHA.
+- **VERIFICATION AT CHANGE TIME:** latest full Linux backend run on `be4801ae38e88894a3345d8ccc06e850e792fefc` reported 1026 passed, 2 skipped, 2 failed. CI for this test-only patch is pending; results will be recorded after the run completes.
+
 ## [PARTIAL] Expose product outcomes and payment boundaries in the owner console (2026-10-11)
 
 - **EXISTING SEAMS INSPECTED:** `src/routes/owner.tsx`, `backend/app/api/products.py`, `backend/app/services/product_engine.py`, and `backend/app/api/payments.py`. Product summaries are owner-key protected and do not return customer-event contact records. Payment routes currently expose checkout/initiation and transaction-specific lookup/callback verification, not passive provider readiness.

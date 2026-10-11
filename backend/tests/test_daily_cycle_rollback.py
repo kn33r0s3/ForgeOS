@@ -185,6 +185,19 @@ def test_daily_cycle_structures_collected_external_signals_in_same_run(db, monke
                 for index, text in enumerate(texts, start=1)
             ]
 
+        def normalize(self, raw_item):
+            # SourceCollector.normalize defaults to "external" for live
+            # collectors; this in-memory fixture must override that label.
+            observation = super().normalize(raw_item)
+            observation["source_type"] = "test"
+            metadata = dict(observation.get("metadata") or {})
+            metadata["source_type"] = "test"
+            observation["metadata"] = metadata
+            provenance = dict(observation.get("provenance") or {})
+            provenance["fixture_only"] = True
+            observation["provenance"] = provenance
+            return observation
+
     question = models.ResearchQuestion(question="Pytest fixture source task")
     db.add(question)
     db.commit()
@@ -210,19 +223,29 @@ def test_daily_cycle_structures_collected_external_signals_in_same_run(db, monke
     assert record["collection"][0]["signals_created"] == len(texts)
     assert record["post_collection_cycle"]["patterns_found"] >= 1
     assert record["post_collection_cycle"]["beliefs_updated"] >= 1
-    assert record["post_collection_cycle"]["opportunities_discovered"] >= 1, record["post_collection_cycle"]
-    assert record["post_collection_cycle"]["opportunity_questions_linked"] >= 1
+
+    # These are deliberately synthetic fixture records, not authorized
+    # external evidence. Their content may form internal patterns/beliefs,
+    # but the cycle must not turn this fixture into a public opportunity.
+    assert record["post_collection_cycle"]["opportunities_discovered"] == 0
+    assert record["post_collection_cycle"]["opportunity_questions_linked"] == 0
+    test_signals = (
+        db.query(models.Signal)
+        .filter(models.Signal.source == "pytest-network-source")
+        .all()
+    )
+    assert len(test_signals) == len(texts)
+    assert all(signal.source_type == "test" for signal in test_signals)
+    assert all(
+        '"fixture_only": true' in (signal.provenance or "").lower()
+        for signal in test_signals
+    )
+
     projected = public_feed.build_public_feed(db)
     opportunity_items = [item for item in projected if item.kind == "opportunity"]
-    assert opportunity_items
-    claim_ids = {
-        relation.entity_id
-        for item in opportunity_items
-        for relation in item.relations
-        if relation.entity_type == "claim"
-    }
-    assert claim_ids
-    assert db.query(models.ResearchQuestion).filter(
-        models.ResearchQuestion.source_claim_id.in_(claim_ids)
-    ).count() >= 1
-    assert all("evidence.example.test" in (item.source_url or "") for item in projected if item.kind == "signal")
+    assert opportunity_items == []
+    assert not any(
+        "evidence.example.test" in (item.source_url or "")
+        for item in projected
+        if item.kind == "signal"
+    )

@@ -628,7 +628,10 @@ def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     # Queued takes precedence while a planned follow-up task remains; the
     # research_status and plan still carry the unresolved-evidence state.
     assert progress_payload["phase"] == "queued"
-    assert progress_payload["research_status"] == "research_terminal_unresolved"
+    # Evidence was persisted, but the source-governed follow-up remains queued;
+    # report active research rather than terminal resolution while work exists.
+    assert progress_payload["research_status"] == "research_in_progress"
+    assert any(task["status"] == "planned" for task in progress_payload["tasks"])
     assert progress_payload["research_plan"]["terminal_reason"] == (
         "one_or_more_requirements_remain_unresolved_under_current_source_clearances"
     )
