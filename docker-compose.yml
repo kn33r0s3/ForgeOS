@@ -11,6 +11,8 @@ x-forgeos-environment: &forgeos-environment
 
 services:
   evidence-triage:
+    # Paid x402 endpoint: opt in only after X402_PAY_TO is configured.
+    profiles: ["paid-triage"]
     build:
       context: ./services/evidence-triage
     container_name: forgeos-evidence-triage

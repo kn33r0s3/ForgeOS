@@ -13,10 +13,18 @@ router = APIRouter(
     tags=["evidence-triage"],
 )
 
-TRIAGE_URL = os.getenv(
-    "EVIDENCE_TRIAGE_URL",
-    "http://evidence-triage:8787",
-)
+DEFAULT_LOCAL_TRIAGE_URL = "http://evidence-triage:8787"
+
+
+def _triage_service_url() -> str | None:
+    """Resolve the paid triage service without guessing a production hostname."""
+    configured = os.getenv("EVIDENCE_TRIAGE_URL", "").strip().rstrip("/")
+    if configured:
+        return configured
+    if security._deployed_runtime():
+        return None
+    # This DNS name exists only when the optional Compose service is enabled.
+    return DEFAULT_LOCAL_TRIAGE_URL
 
 HOP_BY_HOP = {
     "connection",
@@ -33,6 +41,12 @@ HOP_BY_HOP = {
 @router.post("/triage")
 async def triage(request: Request):
     security.require_owner_api_key(request)
+    triage_url = _triage_service_url()
+    if triage_url is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Evidence triage is not configured for this deployment.",
+        )
     body = await request.body()
 
     if len(body) > 12 * 1024:
@@ -64,7 +78,7 @@ async def triage(request: Request):
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             response = await client.post(
-                f"{TRIAGE_URL}/triage",
+                f"{triage_url}/triage",
                 content=body,
                 headers=forward_headers,
             )
