@@ -94,8 +94,15 @@ record.
   static; none imply a completed economic outcome.
 - **Backend-only / internal:** source collection, research runs, detailed
   evidence/pattern/belief processing, worker controls, and several economic
-  transitions have no general public UI. Internal operations reads are not
-  currently owner-authenticated.
+  transitions have no general public UI. The owner and operations pages are
+  noindex surfaces, not secret URLs. `/operations` reads detailed money and
+  execution records only after the owner supplies a key in the UI; the traced
+  backend handlers check the key. Production key configuration and successful
+  owner access remain unverified. Deployed middleware now fails closed for
+  non-allowlisted writes and private substrate/contact reads when the owner key
+  is absent; public signal projections also omit private request rows when the
+  deployed request lacks an authorized key. Continue endpoint-by-endpoint review
+  rather than assuming one middleware rule covers every private route.
 - **TEST-only:** synthetic Forge Bot submissions are not real leads. A test
   pass never counts as customer evidence.
 - **Blocked:** Forge Bot REAL intake, customer messaging, booking automation,
@@ -114,7 +121,6 @@ The navigation change removes the need to manually share the business and
 closed inquiry URLs. It does not remove owner-run discovery, decide a market or
 price, authorize contact, open intake, or create a transaction. The next
 economic evidence still requires owner-run conversations and an attributable
-real paid outcome. Before the detailed operations view can be treated as
-owner-only, its read path needs an explicit owner authorization boundary. No
+real paid outcome. The page is noindex rather than route-authenticated, so it is not a secret URL; traced money/action reads are key-guarded, while production key presence and end-to-end owner access remain unverified. No
 real transaction is verified; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION`
 remains **NOT MEASURABLE**.
