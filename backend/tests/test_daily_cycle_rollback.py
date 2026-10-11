@@ -1,6 +1,8 @@
 """Regression proof that a failed Forge stage cannot poison autonomy."""
 from types import SimpleNamespace
 
+from sqlalchemy.orm import sessionmaker
+
 from app import models
 from app.services import collector_runner, research_task_engine, public_feed
 from app.services.collectors.base import SourceCollector
@@ -209,12 +211,16 @@ def test_daily_cycle_structures_collected_external_signals_in_same_run(db, monke
         query=question.question,
     )
     monkeypatch.setitem(collector_runner.COLLECTORS, "pytest-network-source", PytestSourceCollector)
-    monkeypatch.setattr(run_daily_cycle, "SessionLocal", lambda: db)
-    # run_once owns and closes its session. Here that factory deliberately
-    # supplies the fixture-owned session, which pytest must keep open to
-    # inspect the persisted TEST rows after the runner returns.
+    # The daily-cycle runner owns and closes its session. Give it a distinct
+    # session on the same isolated in-memory test engine; never let the runner
+    # close or recycle the pytest fixture's own connection.
+    runner_session_factory = sessionmaker(
+        bind=db.get_bind(),
+        autocommit=False,
+        autoflush=False,
+    )
+    monkeypatch.setattr(run_daily_cycle, "SessionLocal", runner_session_factory)
     monkeypatch.setattr(run_daily_cycle.app_database, "_configure_engine", lambda: None)
-    monkeypatch.setattr(db, "close", lambda: None)
     monkeypatch.setattr(
         run_daily_cycle.execution_engine,
         "run_autonomous_action_cycle",
@@ -222,6 +228,10 @@ def test_daily_cycle_structures_collected_external_signals_in_same_run(db, monke
     )
     monkeypatch.setenv("FORGEOS_COLLECT_LIMIT", "1")
 
+    # Release the fixture session's checked-out connection before run_once
+    # opens its own session. The fixture engine remains alive for inspection.
+    db.rollback()
+    db.close()
     record = run_daily_cycle.run_once()
 
     assert "collection" in record, record
@@ -236,23 +246,30 @@ def test_daily_cycle_structures_collected_external_signals_in_same_run(db, monke
     assert record["post_collection_cycle"]["opportunity_questions_linked"] == 0
     # The source label is the stable fixture identity; its URL is intentionally
     # synthetic and must not be treated as cleared external-source evidence.
-    test_signals = (
-        db.query(models.Signal)
-        .filter(models.Signal.source == "pytest-network-source")
-        .all()
-    )
-    assert len(test_signals) == len(texts)
-    assert all(signal.source_type == "test" for signal in test_signals)
-    assert all(
-        '"fixture_only": true' in (signal.provenance or "").lower()
-        for signal in test_signals
-    )
+    inspection_session = runner_session_factory()
+    try:
+        test_signals = (
+            inspection_session.query(models.Signal)
+            .filter(models.Signal.source == "pytest-network-source")
+            .all()
+        )
+        assert len(test_signals) == len(texts), [
+            (signal.id, signal.source, signal.source_type, signal.canonical_url)
+            for signal in inspection_session.query(models.Signal).all()
+        ]
+        assert all(signal.source_type == "test" for signal in test_signals)
+        assert all(
+            '"fixture_only": true' in (signal.provenance or "").lower()
+            for signal in test_signals
+        )
 
-    projected = public_feed.build_public_feed(db)
-    opportunity_items = [item for item in projected if item.kind == "opportunity"]
-    assert opportunity_items == []
-    assert not any(
-        "evidence.example.test" in (item.source_url or "")
-        for item in projected
-        if item.kind == "signal"
-    )
+        projected = public_feed.build_public_feed(inspection_session)
+        opportunity_items = [item for item in projected if item.kind == "opportunity"]
+        assert opportunity_items == []
+        assert not any(
+            "evidence.example.test" in (item.source_url or "")
+            for item in projected
+            if item.kind == "signal"
+        )
+    finally:
+        inspection_session.close()
