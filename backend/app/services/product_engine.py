@@ -341,14 +341,21 @@ def create_customer_event(db: Session, *, product_id=None, channel_id=None,
         channel = _parent(db, models.DistributionChannel, channel_id, data_scope)
         if product_id and product_id != channel.product_id:
             raise ValueError("Customer event product must match channel")
+        if opportunity_id and channel.opportunity_id and opportunity_id != channel.opportunity_id:
+            raise ValueError("Customer event opportunity must match channel")
         product_id = product_id or channel.product_id
         opportunity_id = opportunity_id or channel.opportunity_id
+    product = None
     if product_id:
         product = _parent(db, models.Product, product_id, data_scope)
+        if opportunity_id and product.opportunity_id and opportunity_id != product.opportunity_id:
+            raise ValueError("Customer event opportunity must match product")
         opportunity_id = opportunity_id or product.opportunity_id
     outcome = None
     if outcome_id:
         outcome = _parent(db, models.Outcome, outcome_id, data_scope)
+        if outcome.product_id != product_id:
+            raise ValueError("Customer event outcome must belong to the same product")
     action = None
     if action_id:
         action = db.get(models.Action, action_id)

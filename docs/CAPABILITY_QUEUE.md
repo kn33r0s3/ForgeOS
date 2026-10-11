@@ -1,3 +1,8 @@
+## [SOURCE CHANGE / CI PENDING] Prevent cross-product outcome attribution in customer events (2026-10-12)
+
+- Customer-event creation now requires the linked Outcome's `product_id` to equal the event's product ID, and rejects an explicitly conflicting opportunity ID against its channel/product relation. This prevents one product's verified revenue/response from being counted as another product's customer or funnel event.
+- Added a regression test using sandbox records; the test cannot write REAL revenue.
+- Exact-SHA CI is pending.
 ## [SOURCE CHANGE / CI PENDING] Make checkout idempotency keys reject cross-provider reuse (2026-10-12)
 
 - A request idempotency hash previously included the selected provider, so reusing one client key with `esewa` and `khalti` generated two unrelated hashes; the intended provider-conflict check could never run. The hash is now based on the key itself, and product/provider mismatch is rejected by the existing guard.

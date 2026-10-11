@@ -512,6 +512,41 @@ def test_payment_intent_operational_state_is_linked_to_product_and_outcome(db):
     assert db.get(models.OpPaymentIntent, intent.id).outcome_id is None
 
 
+
+def test_customer_event_cannot_attribute_another_products_revenue(db):
+    first = product_engine.create_product(
+        db, name="Sandbox product A", offer="A", data_scope="SANDBOX"
+    )
+    second = product_engine.create_product(
+        db, name="Sandbox product B", offer="B", data_scope="SANDBOX"
+    )
+    revenue = models.Outcome(
+        product_id=first.id,
+        outcome_type="ACTUAL_REVENUE",
+        actual_value=500.0,
+        unit="NPR",
+        qualitative_result="Sandbox receipt fixture.",
+        source="synthetic_sandbox_fixture",
+        verification_state="VERIFIED",
+        data_scope="SANDBOX",
+        source_kind="TEST",
+    )
+    db.add(revenue)
+    db.commit()
+    db.refresh(revenue)
+
+    with pytest.raises(ValueError, match="same product"):
+        product_engine.create_customer_event(
+            db,
+            product_id=second.id,
+            stage="paid_customer",
+            event_type="purchase",
+            outcome_id=revenue.id,
+            data_scope="SANDBOX",
+        )
+    assert db.query(models.CustomerEvent).filter_by(outcome_id=revenue.id).count() == 0
+
+
 # ---------------------------------------------------------------------------
 # Lessons Memory (v2.10) — durable consolidate + recall, learned like an
 # assistant files facts and recalls them into later reasoning.
