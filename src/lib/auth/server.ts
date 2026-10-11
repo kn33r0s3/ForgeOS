@@ -52,9 +52,11 @@ const env = (key: string): string | undefined => {
 // provisions auth; set it to "false" to force auth off everywhere (dev user).
 export const authDisabled = env("VITE_AUTH_ENABLED") === "false";
 const explicitAuthSecret = env("BETTER_AUTH_SECRET");
-// A process-local random secret is acceptable only for isolated workspace preview.
-// Deployed instances need one stable, operator-configured signing secret.
+const databaseUrl = env("DATABASE_URL");
+// The embedded PGLite fallback is for isolated preview/local development only.
+// Deployed auth needs a durable shared PostgreSQL database as well as a stable secret.
 export const authSecretReady = Boolean(explicitAuthSecret) || isWorkspacePreview();
+export const authDatabaseReady = Boolean(databaseUrl) || isWorkspacePreview();
 
 const googleClientId = env("GOOGLE_CLIENT_ID");
 const googleClientSecret = env("GOOGLE_CLIENT_SECRET");
@@ -64,7 +66,7 @@ export const googleAuthConfigured = Boolean(googleClientId && googleClientSecret
 
 /** True when this app has at least one configured, real authentication method. */
 export const authConfigured =
-  !authDisabled && authSecretReady && (emailAndPasswordEnabled || googleAuthConfigured);
+  !authDisabled && authSecretReady && authDatabaseReady && (emailAndPasswordEnabled || googleAuthConfigured);
 
 // This app's own Better Auth origin. In a dynamic preview, Better Auth derives
 // the app origin from the validated request host. Direct Google OAuth still
@@ -104,7 +106,6 @@ const trustedOrigins: string[] = explicitBaseURL
       ...LOCAL_DEV_ORIGINS,
     ];
 
-const databaseUrl = env("DATABASE_URL");
 
 // Real Postgres when `DATABASE_URL` is set, else the app's
 // embedded PGLite (preview) via a Kysely dialect — so Better Auth persists to the
