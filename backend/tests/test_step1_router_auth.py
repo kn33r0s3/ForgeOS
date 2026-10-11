@@ -41,6 +41,7 @@ def _keyed(monkeypatch, key="step1-owner-key"):
 
 # (method, path, json body or None) for one write route per router
 WRITE_ROUTES = [
+    ("post", "/signals", {"content": "anonymous raw signal"}),
     ("post", "/orchestrate/9999/advance", None),
     ("post", "/forge/substrate/types", {"category": "entity_type", "type_name": "t", "schema": {}, "owner_agent": "test"}),
     ("post", "/products", {"name": "p", "offer": "o"}),
@@ -52,7 +53,6 @@ WRITE_ROUTES = [
 PUBLIC_READS = [
     "/forge/substrate/types",
     "/forge/substrate/discovery/methods",
-    "/observer/signals",
 ]
 
 
@@ -97,6 +97,9 @@ def test_public_reads_stay_open(client, monkeypatch, path):
 
 
 PRIVATE_INTELLIGENCE_READS = [
+    "/signals",
+    "/observer/signals",
+    "/observer/recent",
     "/forge/revenue-sources",
     "/intelligence/youtube/999999",
     "/intelligence/performance/tools/unknown-tool",
@@ -266,51 +269,3 @@ def test_local_runtime_keeps_optional_gate_off_when_key_is_missing(monkeypatch):
 
 
 
-def test_private_user_request_signals_are_excluded_from_public_reads_in_deployed_runtime(monkeypatch):
-    from starlette.requests import Request
-
-    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
-    monkeypatch.setenv("VERCEL", "1")
-    monkeypatch.delenv("NODE_ENV", raising=False)
-    request = Request(
-        {
-            "type": "http",
-            "asgi": {"version": "3.0"},
-            "http_version": "1.1",
-            "method": "GET",
-            "scheme": "https",
-            "path": "/api/signals",
-            "raw_path": b"/api/signals",
-            "query_string": b"",
-            "headers": [],
-            "server": ("haminp.vercel.app", 443),
-            "client": ("127.0.0.1", 10000),
-            "root_path": "",
-        }
-    )
-    assert security.can_read_private_signals(request) is False
-
-
-def test_private_user_request_signals_stay_local_first_without_deployment_or_key(monkeypatch):
-    from starlette.requests import Request
-
-    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
-    monkeypatch.delenv("VERCEL", raising=False)
-    monkeypatch.setenv("NODE_ENV", "test")
-    request = Request(
-        {
-            "type": "http",
-            "asgi": {"version": "3.0"},
-            "http_version": "1.1",
-            "method": "GET",
-            "scheme": "http",
-            "path": "/signals",
-            "raw_path": b"/signals",
-            "query_string": b"",
-            "headers": [],
-            "server": ("localhost", 8080),
-            "client": ("127.0.0.1", 10000),
-            "root_path": "",
-        }
-    )
-    assert security.can_read_private_signals(request) is True

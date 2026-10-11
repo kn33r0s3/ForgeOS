@@ -72,9 +72,18 @@ def _client_for(db):
     return TestClient(app, raise_server_exceptions=True)
 
 
+def _owner_headers(monkeypatch):
+    from app import security
+
+    key = "test-only-signal-owner-key"
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", key)
+    return {"X-API-Key": key}
+
+
 def test_demand_understanding_fails_closed_without_status_signing_key(db, monkeypatch):
     monkeypatch.setattr(settings, "FORGEOS_LEGACY_INTELLIGENCE_ENABLED", True)
     client = _client_for(db)
+    owner_headers = _owner_headers(monkeypatch)
     monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_HMAC_KEY", "")
     try:
         response = client.post(
@@ -83,6 +92,7 @@ def test_demand_understanding_fails_closed_without_status_signing_key(db, monkey
                 "content": "TEST-only request must not persist without status capability",
                 "purpose": "demand_understanding",
             },
+            headers=owner_headers,
         )
     finally:
         client.close()
@@ -93,8 +103,9 @@ def test_demand_understanding_fails_closed_without_status_signing_key(db, monkey
     assert db.query(models.WorkerTask).filter_by(worker_type="demand_understanding").count() == 0
 
 
-def test_explicit_signal_request_enters_observation_and_demand_worker(db):
+def test_explicit_signal_request_enters_observation_and_demand_worker(db, monkeypatch):
     client = _client_for(db)
+    owner_headers = _owner_headers(monkeypatch)
     try:
         response = client.post(
             "/signals",
@@ -105,7 +116,7 @@ def test_explicit_signal_request_enters_observation_and_demand_worker(db):
                 ),
                 "purpose": "demand_understanding",
             },
-            headers={"Idempotency-Key": "developer-test-request-001"},
+            headers={**owner_headers, "Idempotency-Key": "developer-test-request-001"},
         )
         status = client.get(
             response.headers["x-demand-understanding-status-url"],
@@ -179,7 +190,7 @@ def test_demand_status_endpoint_does_not_expose_other_worker_tasks(db):
     assert response.status_code == 404
 
 
-def test_demand_submission_query_count_stays_within_measured_budget(db):
+def test_demand_submission_query_count_stays_within_measured_budget(db, monkeypatch):
     # seed_core_types is now called by the db fixture (conftest.py)
     statements = []
     bind = db.get_bind()
@@ -189,6 +200,7 @@ def test_demand_submission_query_count_stays_within_measured_budget(db):
 
     event.listen(bind, "before_cursor_execute", count_statement)
     client = _client_for(db)
+    owner_headers = _owner_headers(monkeypatch)
     try:
         response = client.post(
             "/signals",
@@ -196,7 +208,7 @@ def test_demand_submission_query_count_stays_within_measured_budget(db):
                 "content": "Developer performance fixture, not market demand: need bicycle repair.",
                 "purpose": "demand_understanding",
             },
-            headers={"Idempotency-Key": "demand-query-budget-fixture"},
+            headers={**owner_headers, "Idempotency-Key": "demand-query-budget-fixture"},
         )
     finally:
         client.close()
@@ -251,13 +263,14 @@ def test_demand_status_distinguishes_delayed_retry_from_active_work(db):
     assert response.json()["next_run_at"] is not None
 
 
-def test_idempotent_signal_request_reuses_observation_event_evidence_and_task(db):
+def test_idempotent_signal_request_reuses_observation_event_evidence_and_task(db, monkeypatch):
     client = _client_for(db)
+    owner_headers = _owner_headers(monkeypatch)
     body = {
         "content": "Developer test request (not market demand): need a bicycle repair.",
         "purpose": "demand_understanding",
     }
-    headers = {"Idempotency-Key": "developer-test-request-duplicate"}
+    headers = {**owner_headers, "Idempotency-Key": "developer-test-request-duplicate"}
     try:
         first = client.post("/signals", json=body, headers=headers)
         duplicate = client.post("/signals", json=body, headers=headers)
@@ -279,9 +292,10 @@ def test_idempotent_signal_request_reuses_observation_event_evidence_and_task(db
     assert db.query(models.WorkerTask).filter_by(worker_type="demand_understanding").count() == 1
 
 
-def test_idempotency_key_reuse_with_different_content_is_rejected(db):
+def test_idempotency_key_reuse_with_different_content_is_rejected(db, monkeypatch):
     client = _client_for(db)
-    headers = {"Idempotency-Key": "developer-test-request-conflict"}
+    owner_headers = _owner_headers(monkeypatch)
+    headers = {**owner_headers, "Idempotency-Key": "developer-test-request-conflict"}
     try:
         first = client.post(
             "/signals",
@@ -310,17 +324,25 @@ def test_idempotency_key_reuse_with_different_content_is_rejected(db):
     assert db.query(models.WorkerTask).filter_by(worker_type="demand_understanding").count() == 1
 
 
-def test_ordinary_signal_api_behavior_is_unchanged(db):
+def test_ordinary_signal_write_is_owner_only_and_cannot_bypass_public_intake(db, monkeypatch):
     client = _client_for(db)
+    owner_headers = _owner_headers(monkeypatch)
     try:
+        anonymous = client.post(
+            "/signals",
+            json={"content": "Anonymous raw signal must not persist", "source": "manual"},
+        )
         response = client.post(
             "/signals",
             json={"content": "Existing generic signal", "source": "manual", "category": "test"},
+            headers=owner_headers,
         )
     finally:
         client.close()
         app.dependency_overrides.clear()
 
+    assert anonymous.status_code == 401
+    assert db.query(models.Signal).filter_by(content="Anonymous raw signal must not persist").count() == 0
     assert response.status_code == 200
     assert response.json()["category"] == "test"
     assert db.query(models.WorldEvent).filter_by(event_type="demand_observed").count() == 0
@@ -421,7 +443,7 @@ def test_public_demand_intake_uses_existing_signal_flow_and_is_idempotent(db, mo
     assert db.query(models.Customer).count() == 0
 
 
-def test_user_request_signals_are_hidden_from_public_lists_and_visible_with_api_key(
+def test_raw_signal_lists_require_owner_key_and_public_projections_remain_redacted(
     db,
     monkeypatch,
 ):
@@ -433,19 +455,15 @@ def test_user_request_signals_are_hidden_from_public_lists_and_visible_with_api_
     db.add_all([signal, ordinary])
     db.commit()
     client = _client_for(db)
-    # _client_for resets the key for local-first tests; enable production-style reads.
     monkeypatch.setattr(security.settings, "FORGE_API_KEY", "internal-read-key")
 
     try:
-        public_lists = (
-            "/signals",
-            "/observer/signals",
-            "/observer/recent",
-        )
-        anonymous_results = [client.get(path) for path in public_lists]
+        raw_lists = ("/signals", "/observer/signals", "/observer/recent")
+        anonymous_results = [client.get(path) for path in raw_lists]
+        wrong_key_results = [client.get(path, headers={"X-API-Key": "wrong"}) for path in raw_lists]
         authorized_results = [
             client.get(path, headers={"X-API-Key": "internal-read-key"})
-            for path in public_lists
+            for path in raw_lists
         ]
         public_projections = [
             client.get("/public/feed"),
@@ -455,19 +473,19 @@ def test_user_request_signals_are_hidden_from_public_lists_and_visible_with_api_
         client.close()
         app.dependency_overrides.clear()
 
-    for response in anonymous_results:
-        assert response.status_code == 200
+    for response in anonymous_results + wrong_key_results:
+        assert response.status_code == 401
         assert private_content not in response.text
-        assert "Ordinary observation remains listed" in response.text
     for response in authorized_results:
         assert response.status_code == 200
         assert private_content in response.text
+        assert "Ordinary observation remains listed" in response.text
     for response in public_projections:
         assert response.status_code == 200
         assert private_content not in response.text
 
 
-def test_signal_request_sqlite_reopen_preserves_authorization_and_epistemic_boundary(tmp_path):
+def test_signal_request_sqlite_reopen_preserves_authorization_and_epistemic_boundary(tmp_path, monkeypatch):
     engine = create_engine(
         f"sqlite:///{tmp_path / 'request-observation.sqlite'}",
         connect_args={"check_same_thread": False},
@@ -481,6 +499,7 @@ def test_signal_request_sqlite_reopen_preserves_authorization_and_epistemic_boun
     try:
         with factory() as db:
             client = _client_for(db)
+            owner_headers = _owner_headers(monkeypatch)
             try:
                 response = client.post(
                     "/signals",
@@ -491,7 +510,7 @@ def test_signal_request_sqlite_reopen_preserves_authorization_and_epistemic_boun
                         ),
                         "purpose": "demand_understanding",
                     },
-                    headers={"Idempotency-Key": "sqlite-developer-request-001"},
+                    headers={**owner_headers, "Idempotency-Key": "sqlite-developer-request-001"},
                 )
                 assert response.status_code == 200, response.text
                 signal_id = response.json()["id"]

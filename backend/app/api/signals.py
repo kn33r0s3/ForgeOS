@@ -136,13 +136,15 @@ def _record_demand_request(
 
 @router.post("", response_model=schemas.SignalOut)
 def create_signal(
+    request: Request,
     payload: schemas.SignalCreate,
     response: Response,
     background_tasks: BackgroundTasks,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     db: Session = Depends(get_db),
 ):
-    """Store a new observed signal (e.g. a customer complaint, a market note)."""
+    """Owner-only raw observation path; anonymous submissions use /public-request."""
+    security.require_owner_api_key(request)
     if payload.purpose == "demand_understanding":
         return _record_demand_request(
             payload.content,
@@ -191,12 +193,9 @@ def get_signals(
     limit: int = 200,
     db: Session = Depends(get_db),
 ):
-    """List stored signals, most recent first."""
-    return observer.list_signals(
-        db,
-        limit=limit,
-        include_user_requests=security.can_read_private_signals(request),
-    )
+    """List the raw Signal ledger for owner review; public callers use Feed projections."""
+    security.require_owner_api_key(request)
+    return observer.list_signals(db, limit=limit, include_user_requests=True)
 
 
 @router.get(

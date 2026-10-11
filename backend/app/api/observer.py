@@ -42,14 +42,13 @@ def get_important_signals(
     min_importance: float = 0.0,
     db: Session = Depends(get_db),
 ):
-    """List observed signals ranked by importance score (highest
-    first). Use min_importance to filter out noise, e.g. ?min_importance=70
-    for only the signals most likely to matter."""
+    """Owner-only raw signal listing; public callers use evidence-backed Feed projections."""
+    security.require_owner_api_key(request)
     engine = ObserverEngine(db)
     return engine.list_signals(
         limit=limit,
         min_importance=min_importance,
-        include_user_requests=security.can_read_private_signals(request),
+        include_user_requests=True,
     )
 
 
@@ -59,12 +58,12 @@ def get_recent_signals(
     limit: int = 10,
     db: Session = Depends(get_db),
 ):
-    """Most recently observed signals, regardless of score — used for
-    the Dashboard's 'recent discoveries' feed."""
+    """Owner-only raw signal history; public discovery uses the Feed projection."""
+    security.require_owner_api_key(request)
     engine = ObserverEngine(db)
     return engine.recent_signals(
         limit=limit,
-        include_user_requests=security.can_read_private_signals(request),
+        include_user_requests=True,
     )
 
 
