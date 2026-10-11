@@ -345,6 +345,59 @@ def test_khalti_refunded_flag_does_not_become_pending(db, monkeypatch):
     assert result.outcome_id is None
     assert db.query(models.Outcome).filter_by(product_id=product.id, outcome_type="ACTUAL_REVENUE").count() == 0
 
+
+def test_khalti_refund_after_verified_fulfillment_requires_reconciliation_without_mutation(db, monkeypatch):
+    product = _published_product(db)
+    intent = models.OpPaymentIntent(
+        public_ref="khalti-refund-after-verified-intent-012345",
+        product_id=product.id,
+        provider="khalti",
+        status="VERIFIED",
+        amount_paisa=500000,
+        currency="NPR",
+        merchant_order_id="khalti-refund-after-verified-order-123456",
+        idempotency_key_hash="f" * 64,
+        provider_payment_id="khalti-pidx-after-verified-123456",
+        provider_reference="KHALTI-ORIGINAL-RECEIPT",
+        data_scope="REAL",
+    )
+    db.add(intent)
+    db.commit()
+    db.refresh(intent)
+
+    fulfilled = payment_intent_engine.fulfill_verified_intent(db, intent.id)
+    original_outcome_id = fulfilled["outcome_id"]
+    original_fulfilled_at = fulfilled["fulfilled_at"]
+    original_outcome = db.get(models.Outcome, original_outcome_id)
+    assert original_outcome.actual_value == 5000.0
+    assert original_outcome.unit == "NPR"
+    assert original_outcome.verification_state == "VERIFIED"
+
+    monkeypatch.setattr(nepal_payments, "khalti_lookup", lambda **kwargs: {
+        "pidx": intent.provider_payment_id,
+        "status": "Completed",
+        "total_amount": intent.amount_paisa,
+        "transaction_id": "KHALTI-REFUND-RECEIPT",
+        "refunded": True,
+    })
+    with pytest.raises(payment_intent_engine.PaymentReconciliationRequired, match="owner reconciliation is required"):
+        payment_intent_engine.finalize_khalti_callback(
+            db, public_ref=intent.public_ref, pidx=intent.provider_payment_id
+        )
+
+    db.refresh(intent)
+    db.refresh(original_outcome)
+    assert intent.status == "VERIFIED"
+    assert intent.outcome_id == original_outcome_id
+    assert intent.fulfilled_at.isoformat() == original_fulfilled_at
+    assert original_outcome.actual_value == 5000.0
+    assert original_outcome.unit == "NPR"
+    assert original_outcome.source_kind == "REAL"
+    assert original_outcome.verification_state == "VERIFIED"
+    assert db.query(models.Outcome).filter_by(
+        product_id=product.id, outcome_type="ACTUAL_REVENUE", unit="NPR"
+    ).count() == 1
+
 def test_esewa_amount_mismatch_is_disputed_without_revenue(db, monkeypatch):
     product = _published_product(db)
     intent = models.OpPaymentIntent(

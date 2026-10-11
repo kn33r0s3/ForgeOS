@@ -23,6 +23,13 @@ from app.services import action_engine, nepal_payments, offer_preparation, orche
 _TERMINAL = {"VERIFIED", "FAILED", "CANCELLED", "DISPUTED", "REFUNDED"}
 
 
+class PaymentReconciliationRequired(RuntimeError):
+    """A provider reports a refund that conflicts with a previously verified payment.
+
+    The existing ledger is intentionally left untouched for owner review.
+    """
+
+
 def checkout_enabled() -> bool:
     return bool(settings.FORGEOS_PUBLIC_CHECKOUT_ENABLED)
 
@@ -647,7 +654,9 @@ def finalize_khalti_callback(
         return _transition(db, intent, "DISPUTED", note="Khalti lookup returned a different payment ID.")
     if lookup.get("refunded") is True:
         if intent.status == "VERIFIED":
-            raise RuntimeError("Khalti reports a refund for a previously verified payment; owner reconciliation is required.")
+            raise PaymentReconciliationRequired(
+                "Khalti reports a refund for a previously verified payment; owner reconciliation is required."
+            )
         return _nonverified_state(db, intent, "REFUNDED", "Khalti lookup reports a refunded payment.")
     if status != "Completed":
         return _nonverified_state(db, intent, status, "Khalti lookup did not confirm a completed payment.")

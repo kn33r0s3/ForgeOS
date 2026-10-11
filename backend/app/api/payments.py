@@ -169,6 +169,14 @@ def khalti_public_callback(
     try:
         payment_intent_engine.finalize_khalti_callback(db, public_ref=intent, pidx=pidx)
         return RedirectResponse(url=payment_intent_engine.payment_result_url(intent), status_code=303)
+    except payment_intent_engine.PaymentReconciliationRequired as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Khalti reports a refund for a previously verified payment. "
+                "Owner reconciliation is required; the existing revenue record has not been changed."
+            ),
+        ) from exc
     except (RuntimeError, OSError) as exc:
         raise HTTPException(status_code=503, detail="Khalti verification is temporarily unavailable.") from exc
     except ValueError as exc:

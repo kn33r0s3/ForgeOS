@@ -122,3 +122,22 @@ def test_payment_status_is_owner_protected_configuration_only_and_never_contacts
     flags = incomplete.json()["providers"]
     assert flags["esewa"]["required_credentials_present"] is False
     assert flags["khalti"]["required_credentials_present"] is False
+
+def test_khalti_callback_reports_owner_reconciliation_for_refund_conflict(monkeypatch):
+    def reconciliation_required(**kwargs):
+        raise payments.payment_intent_engine.PaymentReconciliationRequired(
+            "Khalti reports a refund for a previously verified payment; owner reconciliation is required."
+        )
+
+    monkeypatch.setattr(payments.payment_intent_engine, "finalize_khalti_callback", reconciliation_required)
+    response = client.get(
+        "/api/payments/khalti/callback",
+        params={
+            "intent": "khalti-refund-callback-intent-123456",
+            "pidx": "khalti-refund-pidx-123456",
+        },
+    )
+    assert response.status_code == 409
+    assert "Owner reconciliation is required" in response.json()["detail"]
+    assert "existing revenue record has not been changed" in response.json()["detail"]
+

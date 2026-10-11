@@ -12,6 +12,13 @@
 - Truth and architecture boundaries remain unchanged: one Hami, six canonical semantic primitives, no duplicate engine. Open-ended investigation does not claim all capabilities already exist; claims need evidence and action remains bounded by authorization, safety, privacy, legality, viability, and actual execution capability.
 - No database, customer, revenue, payment-activation, or outreach state was changed. Exact-head CI and independent deployment verification are pending.
 
+## [SOURCE CHANGE / CI PENDING] Report post-verification Khalti refunds as owner reconciliation (2026-10-12)
+
+- A Khalti lookup can report a refund after the payment intent is already VERIFIED and may already have a REAL/VERIFIED revenue outcome. The callback now returns HTTP 409 with a precise owner-reconciliation message rather than misclassifying this conflict as a transient provider outage.
+- The service raises a dedicated exception and does not mutate the verified intent, fulfillment timestamp, existing outcome, or currency totals. Added service and route regressions for the non-mutating behavior and truthful response.
+- No automatic reversal, new payment state, outreach, or provider configuration change was made. Any financial adjustment remains an owner decision.
+- Exact-head CI and deployment verification are required.
+
 ## [SOURCE CHANGE / CI PENDING] Harden provider destinations and expose currency-safe revenue projections (2026-10-12)
 
 - `PUBLIC_APP_URL` must be an origin, not a nested path. eSewa forms are restricted to the official v2 form host/path; Khalti redirects are restricted to HTTPS `*.khalti.com`. Khalti totals below NPR 10 are hidden for that provider and rejected before an intent is created.
