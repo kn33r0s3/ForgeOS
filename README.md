@@ -1,40 +1,34 @@
-# Current personal pilot checkpoint — October 9, 2026
+# Hami — product and system entrypoint
 
-**REAL revenue: $0. REAL customers: 0. External validation: 0.**
-The current startup and human workflow instructions are in [docs/OPERATOR_GUIDE.md](docs/OPERATOR_GUIDE.md).
-Architecture map: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-Historical end-state blueprint: [docs/archive/legacy-docs/FUTURE_BLUEPRINT.md](docs/archive/legacy-docs/FUTURE_BLUEPRINT.md).
-Current status: [STATUS.md](STATUS.md). Historical release results are retained in [docs/archive/status-reports/STATUS-history.md](docs/archive/status-reports/STATUS-history.md) and [docs/archive/legacy-docs/COMPLETION_REPORT.md](docs/archive/legacy-docs/COMPLETION_REPORT.md).
-Older roadmap/readiness statements below are historical, not verified sales claims.
-Use a separate database for synthetic source inputs, plus SANDBOX labels downstream.
+**Current snapshot:** 2026-10-11 (Nepal time) · branch `main` · deployed commit `27cb0a9`.
 
----
+**Production web surface:** [https://haminp.vercel.app](https://haminp.vercel.app). Vercel currently reports the deployment for this commit as READY and lists the Hami alias. A deployment/build status does not by itself verify API readiness, durable production persistence, scheduled jobs, real users, or economic outcomes.
 
-# Hami
+Hami is the product identity. This repository is the in-place technical lineage evolving from ForgeOS; historical API paths, database records, environment variables, imports, and migration identifiers remain compatible unless a specific migration proves safe. There is one Hami application, not a replacement frontend, parallel service catalogue, or second architecture.
 
-Hami is the intended product identity evolving the existing ForgeOS
-implementation in place. No Hami domain, DNS, or deployment is asserted by
-this repository. Historical ForgeOS API paths, database records, environment
-variables, imports, and migration identifiers remain compatible unless a
-specific migration proves safe.
+## Canonical Hami system map
 
-**One real customer → one real paid outcome → repeat → automate → scale.**
-The first pilot must follow owner-run discovery and demonstrate an outcome;
-no category, fee, or willingness to pay is assumed. The $249 Hami Revenue
-Operator is a later-stage offer only after demonstrated value. New paid
-software and infrastructure remain off-limits before first real revenue unless
-verified critical need justifies them.
+- [System map and integration rules](docs/HAMI_SYSTEM_MAP.md) describes the two connected flows, route states, security boundaries and acceptance rule for future work.
+- [Feature/route registry](features.json) tracks every page and the registered public APIs with an explicit `live`, `hidden`, `archived` or `planned` state. Its schema is published at [public/features.schema.json](public/features.schema.json).
+- `src/lib/hami-system.ts` is the single source for top navigation, footer groups, contextual page pathways and required public routes. The header/footer no longer keep separate competing route lists.
+- `src/components/layout/hami-pathways.tsx` connects related evidence, questions, experiments, opportunities, actions, services, provider records and work pages.
+- `public/sitemap.xml` includes only indexable, live public destinations. Owner controls, closed intake, TEST-only demos, archived redirects and pages marked `noindex` are intentionally omitted from public discovery.
+
+**Current registry snapshot:** 36 entries — 25 live, 7 hidden, 4 archived, 0 planned. Hidden means retained but not advertised (owner-only, TEST-only or closed); it does not mean delete. Archived routes remain compatibility redirects rather than parallel features.
+
+## Commercial and authorization truth
+
+`docs/REVENUE_LOG.md` currently contains no commercial evidence entries. No customer, booking, payment or revenue claim follows from a page, passing test, deployed endpoint or intelligence cycle. Report `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` as **NOT MEASURABLE** until a real qualifying transaction is independently evidenced.
+
+The online contact/request path and Forge Bot intake remain closed; a public request is not a booking or permission to contact someone. No automatic outreach, consequential action or payment collection is enabled by navigation integration. Do not claim willingness to pay, a selected seller, a verified merchant route or real revenue without the corresponding owner authorization and evidence.
+
+The first pilot remains outcome-oriented: owner-run discovery → one real customer → one real paid outcome → repeat → automate → scale. No category, fee, or willingness to pay is assumed. The $249 Hami Revenue Operator remains a later-stage offer after demonstrated value. New paid software and infrastructure remain off-limits before first real revenue unless a verified critical need justifies them.
 
 ## Engineering invariant
 
-**Drive owner dependency to zero**: prioritize fewer owner actions per verified
-real economic outcome, not endpoint count or internal activity. Every change
-must state the owner action it removes, what remains, and the next evidenced
-dependency. Preserve authorization, privacy, and evidence boundaries; see
-[AGENTS.md](AGENTS.md) for the project-level rule. Report
-`OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` as **NOT MEASURABLE** until a real
-transaction is verified. A successful intelligence cycle or an allowed policy
-decision is not itself an economic outcome or autonomous execution.
+**Drive owner dependency to zero**: prioritize fewer owner actions per verified real economic outcome, not endpoint count or internal activity. Every change should state the owner action it removes, what remains, and the next evidenced dependency. Preserve authorization, privacy and evidence boundaries; see [AGENTS.md](AGENTS.md). A successful intelligence cycle or an allowed policy decision is not itself an economic outcome or autonomous execution.
+
+Current status and historical run results are tracked in [STATUS.md](STATUS.md), [docs/REVENUE_LOG.md](docs/REVENUE_LOG.md), [docs/CAPABILITY_QUEUE.md](docs/CAPABILITY_QUEUE.md), and [docs/archive/status-reports/STATUS-history.md](docs/archive/status-reports/STATUS-history.md).
 
 ---
 

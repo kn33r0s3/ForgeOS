@@ -1,63 +1,49 @@
-# PROJECT STATE — Hami (ForgeOS)
+# PROJECT STATE — Hami
 
-> One page, always current. Updated at the end of every task.
-> Last updated: 2026-10-10. HEAD: `9914ed9` (main).
+> Current operating snapshot: 2026-10-11 (Nepal time). Branch `main`; current HEAD `27cb0a94777492ee7e584db727631e6f974394ed`.
+> Do not infer current backend or commercial readiness from a successful frontend deployment.
 
-## What exists
+## Product and integration state
 
-**Public pages (live):** Home `/`, Findings `/discoveries`, Unknowns `/unknowns`,
-Experiments `/experiments`, About `/about`, Services `/services`, Group `/group`,
-Needs `/needs`, Action state `/actions`, Inbox prototype `/prototype/inbox`,
-Terms `/terms`, Privacy `/privacy`, Login `/login`.
-**Owner-only:** Owner console `/owner` (behind login).
-**Hidden (exist, unlinked):** Opportunities, Contact, What we've learned,
-The climb, Feed, Providers, Operations.
-**APIs:** `GET /api/health`, `GET /api/public/*`.
-Full registry: `features.json`.
+- **One product:** Hami is the user-facing system. ForgeOS remains the repository/technical lineage; no replacement architecture or parallel app is being created.
+- **Production frontend:** [haminp.vercel.app](https://haminp.vercel.app). Vercel reports the current `main` deployment READY at commit `27cb0a94777492ee7e584db727631e6f974394ed`. This verifies deployment state and alias assignment, not runtime/API or database readiness.
+- **Canonical route registry:** `features.json` has 36 entries: 25 live, 7 hidden, 4 archived, and 0 planned. Duplicate IDs/routes are not present in the current registry. Historical creation date/commit are preserved for existing route rows.
+- **One navigation/pathway source:** `src/lib/hami-system.ts` defines `NAV`, `FOOTER_GROUPS`, `SYSTEM_PATHWAYS` and `PUBLIC_SYSTEM_PATHS`. Header, footer, contextual pathways and sitemap are checked by frontend regression tests.
+- **Connected public paths:** findings, network records, unknowns, experiments, opportunity hypotheses, action state, Hami services, provider directory, public work board, group context, process, technology and ventures. Group offer cards link to canonical service details or Hami's shared process instead of creating duplicate service pages.
+- **Indexable sitemap:** 23 unique public URLs, all registered as live. Closed Contact and Request pages, owner/private tools, TEST-only demos, redirects, and Terms/Privacy pages marked `noindex` are omitted.
+- **Surface lifecycle is intentional:** hidden pages are retained where auth, testing or owner readiness requires it; archived URLs remain redirects for compatibility. No page should be marked live merely because it responds.
 
-**Backend:** ForgeOS engine — six primitives (ENTITY, RELATION, EVENT,
-EVIDENCE, CAPABILITY, ACTION), action engine with owner-approval gates,
-intervention gate (one active human-involving intervention), evidence
-ledger, truth progression, and an open-world discovery registry whose
-ignorance-map findings now pass evidence-reference validation. 1015 backend
-tests passed in the latest full run (2 skipped).
+## Public route groups
 
-## What is live
+**Core understanding loop:** `/` → `/discoveries` → `/feed` → `/unknowns` → `/experiments` → `/opportunities` → `/actions`.
 
-- Production: `https://haminp.vercel.app` (alias `forge-os-ebon.vercel.app`).
-- `/api/health` returns 200 (`degraded`, not ready — no durable DB in prod).
-- Homepage shows the honest pre-revenue state; Experiment 1 proposed, not started.
+**Work and value:** `/services` → canonical `/services/$slug` detail; separate `/providers` for verified external providers; `/domain` for public work; `/needs` for the proposed field test, not a live intake channel; `/requests/$id` for an actual provider request record, where pending is not acceptance.
 
-## In progress
+**Group and direction:** `/group`, `/group/businesses`, `/process`, `/technology`, `/ventures` are linked into the same service/work/evidence model. Technology and Ventures are strategic directions, not claims of operating subsidiaries.
 
-- `doctrine` — Doctrine v1.0 single source of truth (branch, awaiting review).
-- `frontend-mission` — five-field experiment cards, about five questions,
-  nav home quick action, join-hami wipe animation (branch, awaiting review).
-- `owner-gate` — single-active-intervention enforcement (branch, awaiting review).
-- `project-memory` — this workstream: PROJECT_STATE.md, features.json,
-  DECISIONS.md, `npm run status`, CI guards, dead-work audit.
+**Personal context:** `/system` is explicitly private context. It must not be merged into public network/discovery data without explicit authorization.
 
-## Blocked
+## Operational and commercial boundaries
 
-- **ONE NAMED SELLER.** Experiment 1 (slow-reply recovery) cannot start
-  until the owner names one social seller and authorizes first contact.
-  Suggested: name by 2026-10-08/09 so a reply week overlaps Dashain shopping.
-- **SECURITY (route audit continuing; initial findings remediated in source):**
-  the 2026-10-05 scan identified 27 forge-router writes without route-level
-  owner checks. Confirmed high-impact gaps have since been repaired in the
-  existing handlers, including autonomy-policy changes, action proposal,
-  approval and execution, outcome recording, revenue-source linking,
-  execution-action creation, legacy research writes, goal/strategy mutations,
-  and private reads for autonomy policy/evaluation, task history, strategy
-  performance, execution ranking/recommendation, internal beliefs, research
-  results, strategies, outcomes, runtime state, and commercial opportunity/
-  experiment data, plus the customer-contact ledger. Each repair and its
-  route-level evidence is tracked in `docs/CAPABILITY_QUEUE.md`. Remaining
-  route contracts still require individual review; deployed source identity
-  is NOT VERIFIED.
-- Production readiness: no durable database configured; CRON_SECRET absent.
-- Company registration (Hami Systems): IN PROGRESS, awaiting approval.
-- Payment: no legally verified merchant path until business PAN exists.
+- `docs/REVENUE_LOG.md` has no recorded commercial evidence at this snapshot. There is no verified customer/payment/revenue entry in that ledger. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+- Contact and anonymous request intake remain closed; no owner-provided `SITE.email` is configured. The public offer cards route to relevant service detail pages, while the shared top-level CTA remains truthful about intake being closed.
+- Forge Bot intake/demo, the prototype inbox, and owner controls remain hidden/noindex. Hidden is not deleted or claimed to be live.
+- `/owner` is the key-protected noindex cockpit for inquiry evidence, ForgeBot, intelligence/research, products/payments visibility, operating model and buyer-side records. `/operations` is a separate key-protected noindex surface for economic state/action records and explicitly initiated operations. A page or panel does not authorize external execution.
+- No automatic outreach, consequential action or payment collection is enabled by these UI integrations. Preserve owner approval, action envelopes, daily caps, source clearance, privacy minimization, provenance and evidence labels.
+- **Backend readiness remains a separate verification task.** Historical status reports flag production database durability/readiness, scheduled-job credentials and remaining route-contract/security review as unverified or blocked. Do not call these solved based on a frontend deployment. Check `STATUS.md` and `docs/CAPABILITY_QUEUE.md` for dated evidence.
+- The first seller and first real outcome remain owner-gated. No seller contact, booking, payment or revenue result is implied by this integration pass.
+
+## Current build/integration rule
+
+Reuse → extend → connect → recover. Before adding a route/service/engine, inspect its existing record, route, component, API, loader, authorization, history and tests. A new public surface must have one registry row, correct state/provenance, a canonical navigation/pathway and regression coverage. Never fabricate users, evidence, bookings, payments, external actions or revenue.
+
+## Reference documents
+
+- [Hami system map](HAMI_SYSTEM_MAP.md)
+- [Feature registry](../features.json)
+- [Capability queue and remaining technical gaps](CAPABILITY_QUEUE.md)
+- [Revenue evidence log](REVENUE_LOG.md)
+- [Operator guide](OPERATOR_GUIDE.md)
 
 ## Last 10 decisions
 
@@ -74,9 +60,11 @@ tests passed in the latest full run (2 skipped).
 
 Full log: `DECISIONS.md`.
 
-## Open owner decisions
+## Open owner decisions / gates
 
-- [ ] Name the first seller + authorize first contact (blocks Experiment 1).
-- [ ] Approve/merge: `doctrine`, `frontend-mission`, `owner-gate`, `project-memory` PRs.
-- [ ] Company registration: next step when certificate arrives.
-- [ ] Payment: personal eSewa/Khalti for the first rupee — approve or decline.
+- [ ] Name the first seller and separately authorize first contact; this gates Experiment 1.
+- [ ] Decide whether/when to open online intake only after readiness, consent, safety, legal and response-path checks pass.
+- [ ] Verify business registration/PAN and an authorized merchant/provider path before enabling payments.
+- [ ] Independently verify production database durability/readiness and scheduled-job credentials/heartbeat before claiming production intelligence readiness.
+- [ ] Complete the remaining individual route-contract/security review in `docs/CAPABILITY_QUEUE.md`.
+
