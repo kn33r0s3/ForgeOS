@@ -453,11 +453,11 @@
   {
    "id": "D35",
    "category": "D",
-   "question": "Did the Patan High Court-ordered ride-sharing regulation ever get written? (round 7: 2019 court ordered government to regulate Tootle/Pathao; 2020 DoTM notices still cited the 1993 Act)",
+   "question": "Has the Patan High Court-ordered ride-sharing framework become binding in Bagmati, and what operator-specific authorizations do Pathao/InDrive hold? (round 7: 2019 order to regulate Tootle/Pathao; 2020 DoTM notices still cited the 1993 Act)",
    "state": "UNKNOWN",
-   "state_note": "UNKNOWN",
-   "cheapest_test": "Read the current Motor Vehicles and Transport Management Act / ride-sharing guidelines (if any exist) as of 2026; check whether Pathao/InDrive operate under a specific license or continued gray area",
-   "stake": "If the regulation never materialized, the \"regulatory space\" Tootle fought for was vapor — pioneers can win the court order and still lose the market"
+   "state_note": "UNKNOWN (partial research, 2026-10-12: MoPIT's current Acts/Rules index still labels the Digital Mobility Service Operating Standards 2082 and Vehicle and Transport Management Act 2082 as drafts; the DMSOS draft was posted for public comment on 2026-04-20, and Kathmandu Post reported on 2026-07-30 it remained under ministry review. Gandaki implemented a separate provincial ride-sharing regulation in February 2026; Bagmati remained without comparable implementing guidelines in the latest reporting. No public official evidence found confirming a specific Pathao/InDrive digital-mobility licence. Sources: [MoPIT Acts/Rules index](https://mopit.gov.np/category/act-and-rule/); [MoPIT DMSOS draft](https://mopit.gov.np/content/139/standards-for-operation-of-digital-mobility-services-/); [Kathmandu Post, 2026-07-30](https://kathmandupost.com/money/2026/07/30/government-yet-to-finalise-ride-hailing-rules-as-disputes-over-fares-persist); [Kathmandu Post, 2026-02-02](https://kathmandupost.com/money/2026/02/02/gandaki-enforces-ride-hailing-rules-after-months-of-delay-bagmati-yet-to-follow))",
+   "cheapest_test": "Request current permit/registration basis from DoTM and the Bagmati ministry; obtain any authorization or Gazette cited by each operator; do not treat absence of a public result as proof of no licence",
+   "stake": "The court order led to a draft, not proof that a binding framework was finalized. Public evidence points to different provincial status; do not infer operator illegality/compliance or demand for Hami without primary authorization records and separate customer evidence."
   },
   {
    "id": "D36",
