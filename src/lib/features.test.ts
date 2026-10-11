@@ -241,7 +241,7 @@ describe("feature registry", () => {
 
   it("connects orchestrator, distribution and payment configuration inside the private owner cockpit", () => {
     const owner = readFileSync(path.join(root, "routes", "owner.tsx"), "utf8");
-    assert.ok(owner.includes('"/api/orchestrate/overview?limit=5&data_scope=REAL"'));
+    assert.ok(owner.includes('"/api/orchestrate/overview?limit=25&data_scope=REAL"'));
     assert.ok(owner.includes('"/api/products/channels"'));
     assert.ok(owner.includes('"/api/payments/status"'));
     assert.ok(owner.includes("configuration_only"), "payment visibility must be explicitly configuration-only");
@@ -250,6 +250,25 @@ describe("feature registry", () => {
     assert.ok(!owner.includes('"/api/payments/khalti/initiate"'), "owner overview must not initiate a payment");
   });
 
+  it("wires owner pipeline detail and guarded actions while excluding contact-ledger data", () => {
+    const owner = readFileSync(path.join(root, "routes", "owner.tsx"), "utf8");
+    const api = readFileSync(path.join(root, "..", "backend", "app", "api", "orchestrator.py"), "utf8");
+    for (const endpoint of [
+      "/api/orchestrate/flow/",
+      'runPipelineAction("advance"',
+      'runPipelineAction("approve"',
+      'runPipelineAction("execute"',
+      'runPipelineAction("reject"',
+      'runPipelineAction("product"',
+      'runPipelineAction("next-decision"',
+    ]) assert.ok(owner.includes(endpoint), "pipeline is missing endpoint/action " + endpoint);
+    assert.ok(owner.includes('        "outcome",'), "actual interview results must use the guarded outcome endpoint");
+    assert.ok(owner.includes("parseOutcomeRespondents"), "actual respondent rows must be validated");
+    assert.ok(owner.includes("pseudonymous IDs"), "outcome capture must minimize contact data");
+    assert.ok(owner.includes("does not verify the provider"), "payment proof notes must not imply independent verification");
+    assert.ok(!owner.includes('"/api/products/pipeline"'), "owner cockpit must not fetch the contact-rich product pipeline");
+    assert.ok(api.includes('result.pop("customer_events", None)'), "detail/action responses must exclude customer ledger rows");
+  });
   it("keeps the operating model, scout queue, and buyer-journey tools connected to their guarded APIs", () => {
     const owner = readFileSync(path.join(root, "routes", "owner.tsx"), "utf8");
     const controls = [

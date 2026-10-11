@@ -379,6 +379,63 @@ type OrchestratorOverviewView = {
   pipeline: OrchestratorPipelineView;
 };
 
+type OrchestratorFlowDetailView = {
+  data_scope: "REAL" | "SANDBOX";
+  opportunity_id: number;
+  opportunity: { id: number; problem: string; target_customer: string | null; score: number | null; status: string; market_confidence: number; revenue_confidence: number; uncertainty: number; economic_evidence_summary: string | null; value_hypothesis: string; offer_hypothesis: string };
+  decision: { id: number | null; title: string | null; rationale: string | null; status: string | null; recalled_lessons: string[] };
+  experiment: { id: number | null; hypothesis: string | null; expected_result: string | null; status: string | null; policy_decision: string | null; requires_owner_approval: boolean; stage: string; required_inputs: string[]; result: string | null; data_scope: string | null; revenue: number | null; conversions: number | null };
+  outcomes_count: number;
+  products: Array<{ id: number; name: string; status: string; launch_state?: string | null }>;
+};
+
+type RespondentStage = "lead" | "contacted" | "interested" | "paid_customer" | "churned";
+
+function parseOutcomeRespondents(raw: string): {
+  contacts: Array<{ identifier: string; stage: RespondentStage; event_type: string; notes: string }>;
+  conversions: number;
+} {
+  const lines = raw.split("\n").map((line) => line.trim()).filter(Boolean);
+  if (lines.length === 0) throw new Error("Add at least one actual interview respondent.");
+  const seen = new Set<string>();
+  const contacts: Array<{ identifier: string; stage: RespondentStage; event_type: string; notes: string }> = [];
+  let conversions = 0;
+  const stages = new Set<RespondentStage>(["lead", "contacted", "interested", "paid_customer", "churned"]);
+  for (const [index, line] of lines.entries()) {
+    const parts = line.split("|").map((part) => part.trim());
+    if (parts.length !== 4) throw new Error("Respondent line " + (index + 1) + " must use: pseudonymous-id | stage | confirmed/not confirmed | short note.");
+    const [identifier = "", rawStage = "", rawConfirmation = "", note = ""] = parts;
+    const stage = rawStage as RespondentStage;
+    if (!identifier || !stages.has(stage) || !note) throw new Error("Respondent line " + (index + 1) + " has a missing ID/note or invalid stage.");
+    if (!["confirmed", "not confirmed"].includes(rawConfirmation)) throw new Error("Respondent line " + (index + 1) + " must say exactly confirmed or not confirmed.");
+    const normalizedId = identifier.toLowerCase();
+    if (seen.has(normalizedId)) throw new Error("Duplicate respondent ID: " + identifier + ".");
+    seen.add(normalizedId);
+    const confirmed = rawConfirmation === "confirmed";
+    if ((stage === "interested" || stage === "paid_customer") && !confirmed) throw new Error("Respondent " + identifier + ": interested/paid stages require problem confirmation.");
+    if (stage === "paid_customer" && !/(payment verified|verified payment|provider receipt|transaction reference)/i.test(note)) throw new Error("Respondent " + identifier + ": paid_customer requires a real verified payment/receipt reference in the note.");
+    if (stage === "interested" || stage === "paid_customer") conversions += 1;
+    contacts.push({ identifier, stage, event_type: "response", notes: (confirmed ? "confirmed: " : "not confirmed: ") + note });
+  }
+  return { contacts, conversions };
+}
+
+async function ownerCommandFetch<T>(path: string, ownerKey: string, body?: Record<string, unknown>): Promise<T> {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: { "X-API-Key": ownerKey, ...(body ? { "Content-Type": "application/json" } : {}) },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  if (!response.ok) {
+    const payload: unknown = await response.json().catch(() => null);
+    const detail = typeof payload === "object" && payload !== null && "detail" in payload && typeof payload.detail === "string"
+      ? payload.detail
+      : "Owner action failed (" + response.status + ") at " + path + ".";
+    throw new Error(detail);
+  }
+  return (await response.json()) as T;
+}
+
 function formatUsd(value: number | null | undefined) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "UNKNOWN";
   return new Intl.NumberFormat("en-US", {
@@ -512,6 +569,14 @@ function OwnerConsolePage() {
   const [channelsError, setChannelsError] = useState<string | null>(null);
   const [paymentConfiguration, setPaymentConfiguration] = useState<PaymentConfigurationView | null>(null);
   const [paymentConfigurationError, setPaymentConfigurationError] = useState<string | null>(null);
+  const [selectedOpportunityId, setSelectedOpportunityId] = useState<number | null>(null);
+  const [orchestratorDetail, setOrchestratorDetail] = useState<OrchestratorFlowDetailView | null>(null);
+  const [pipelineBusy, setPipelineBusy] = useState(false);
+  const [pipelineError, setPipelineError] = useState("");
+  const [pipelineNotice, setPipelineNotice] = useState("");
+  const [outcomeActual, setOutcomeActual] = useState("");
+  const [outcomeSuccess, setOutcomeSuccess] = useState<"unknown" | "yes" | "no">("unknown");
+  const [outcomeRespondents, setOutcomeRespondents] = useState("");
 
   const cycleOperations = intel?.runtime?.truth?.operations;
 
@@ -553,7 +618,7 @@ function OwnerConsolePage() {
     // Read a PII-free view of the canonical orchestrator; do not load customer-event rows.
     try {
       const payload = await ownerProjectionFetch<OrchestratorOverviewView>(
-        "/api/orchestrate/overview?limit=5&data_scope=REAL",
+        "/api/orchestrate/overview?limit=25&data_scope=REAL",
         ownerKey,
       );
       if (!payload || !Array.isArray(payload.flow) || !payload.pipeline) {
@@ -693,6 +758,133 @@ function OwnerConsolePage() {
     }
   }
 
+  async function openOpportunityPipeline(opportunityId: number) {
+    setPipelineBusy(true);
+    setPipelineError("");
+    setPipelineNotice("");
+    setSelectedOpportunityId(opportunityId);
+    setOrchestratorDetail(null);
+    try {
+      const detail = await ownerProjectionFetch<OrchestratorFlowDetailView>(
+        "/api/orchestrate/flow/" + opportunityId + "?data_scope=REAL",
+        key,
+      );
+      setOrchestratorDetail(detail);
+      setOutcomeActual("");
+      setOutcomeSuccess("unknown");
+      setOutcomeRespondents("");
+    } catch (cause) {
+      setPipelineError(cause instanceof Error ? cause.message : "The opportunity detail could not be loaded.");
+    } finally {
+      setPipelineBusy(false);
+    }
+  }
+
+  async function runPipelineAction(
+    action: "advance" | "approve" | "execute" | "reject" | "outcome" | "product" | "next-decision",
+    body?: Record<string, unknown>,
+    confirmation?: string,
+    successMessage = "Pipeline action recorded.",
+  ) {
+    if (selectedOpportunityId === null) return;
+    if (confirmation && !window.confirm(confirmation)) return;
+    setPipelineBusy(true);
+    setPipelineError("");
+    setPipelineNotice("");
+    const id = selectedOpportunityId;
+    const path = action === "advance"
+      ? "/api/orchestrate/" + id + "/advance?data_scope=REAL&x_interviews=10&y_confirm=5&z_willing=3"
+      : "/api/orchestrate/" + id + "/" + action + "?data_scope=REAL";
+    let message = successMessage;
+    try {
+      const result = await ownerCommandFetch<Record<string, unknown>>(path, key, body);
+      if (action === "product") {
+        if (result.status === "not_validated") {
+          message = "Product gate not met: " + (typeof result.reason === "string" ? result.reason : "the recorded evidence does not meet the demand threshold.");
+        } else if (result.status === "created") {
+          message = "Product record #" + String(result.product_id ?? "UNKNOWN") + " created from validated demand. This does not launch it, initiate checkout, or record revenue.";
+        } else if (result.status === "exists") {
+          message = "A product record already exists for this opportunity (#" + String(result.product_id ?? "UNKNOWN") + ").";
+        }
+      }
+      if (action === "outcome") {
+        setOutcomeActual("");
+        setOutcomeSuccess("unknown");
+        setOutcomeRespondents("");
+      }
+      setPipelineNotice(message);
+    } catch (cause) {
+      setPipelineError(cause instanceof Error ? cause.message : "The pipeline action failed.");
+      setPipelineBusy(false);
+      return;
+    }
+
+    const refreshWarnings: string[] = [];
+    try {
+      const overview = await ownerProjectionFetch<OrchestratorOverviewView>(
+        "/api/orchestrate/overview?limit=25&data_scope=REAL", key,
+      );
+      setOrchestrationOverview(overview);
+      setOrchestrationError(null);
+    } catch (cause) {
+      refreshWarnings.push("opportunity summary could not refresh");
+      setOrchestrationError(cause instanceof Error ? cause.message : "Orchestrator overview is unavailable.");
+    }
+    try {
+      const products = await ownerProjectionFetch<ProductSummaryView[]>("/api/products", key);
+      setCommercial({ products, error: null });
+    } catch (cause) {
+      refreshWarnings.push("product summary could not refresh");
+      setCommercial({ products: null, error: cause instanceof Error ? cause.message : "Product visibility is unavailable." });
+    }
+    try {
+      const refreshedChannels = await ownerProjectionFetch<ChannelSummaryView[]>("/api/products/channels", key);
+      setChannels(refreshedChannels);
+      setChannelsError(null);
+    } catch (cause) {
+      refreshWarnings.push("distribution summary could not refresh");
+      setChannelsError(cause instanceof Error ? cause.message : "Distribution channel visibility is unavailable.");
+    }
+    try {
+      const detail = await ownerProjectionFetch<OrchestratorFlowDetailView>(
+        "/api/orchestrate/flow/" + id + "?data_scope=REAL", key,
+      );
+      setOrchestratorDetail(detail);
+    } catch (cause) {
+      refreshWarnings.push("opportunity detail could not refresh");
+      setPipelineError(cause instanceof Error ? cause.message : "Opportunity detail is unavailable.");
+    }
+    if (refreshWarnings.length) setPipelineNotice(message + " Refresh warning: " + refreshWarnings.join(", ") + ".");
+    setPipelineBusy(false);
+  }
+
+  async function submitPipelineOutcome(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (selectedOpportunityId === null) return;
+    if (!outcomeActual.trim()) {
+      setPipelineError("Enter the outcome you personally recorded before saving.");
+      return;
+    }
+    try {
+      const respondents = parseOutcomeRespondents(outcomeRespondents);
+      await runPipelineAction(
+        "outcome",
+        {
+          actual: outcomeActual.trim(),
+          ...(outcomeSuccess === "yes" ? { success: true } : outcomeSuccess === "no" ? { success: false } : {}),
+          source: "owner_recorded_interview",
+          conversions: respondents.conversions,
+          contacts: respondents.contacts,
+          data_scope: "REAL",
+        },
+        undefined,
+        "Human-reported validation outcome recorded. This is not a payment or revenue record.",
+      );
+    } catch (cause) {
+      setPipelineError(cause instanceof Error ? cause.message : "The respondent notes could not be validated.");
+    }
+  }
+
   async function runAction(
     path: string,
     body?: Record<string, string>,
@@ -776,6 +968,14 @@ function OwnerConsolePage() {
     setChannelsError(null);
     setPaymentConfiguration(null);
     setPaymentConfigurationError(null);
+    setSelectedOpportunityId(null);
+    setOrchestratorDetail(null);
+    setPipelineBusy(false);
+    setPipelineError("");
+    setPipelineNotice("");
+    setOutcomeActual("");
+    setOutcomeSuccess("unknown");
+    setOutcomeRespondents("");
     setNotice("");
     setError("");
   }
@@ -1089,8 +1289,12 @@ function OwnerConsolePage() {
                               SANDBOX remains separate: {formatUsd(orchestrationOverview.pipeline.sandbox.actual_revenue)} and {orchestrationOverview.pipeline.sandbox.products} sandbox products; not business traction.
                             </p>
                           </div>
-                          <div className="mt-5">
-                            <h4 className="font-bold">Highest-ranked opportunity records</h4>
+                          <div className="mt-5" id="pipeline">
+                            <h4 className="font-bold">Opportunity pipeline</h4>
+                            <p className="mt-1 text-sm text-muted">
+                              Ranked REAL-scope opportunities (up to 25). Select one to inspect its validation plan and record work you actually performed.
+                              Nothing here contacts a prospect or treats willingness-to-pay as collected money.
+                            </p>
                             {orchestrationOverview.flow.length === 0 ? (
                               <p className="mt-2 text-sm text-muted">No opportunity rows are currently returned by the selected REAL-scope view.</p>
                             ) : (
@@ -1109,13 +1313,108 @@ function OwnerConsolePage() {
                                       <div><dt className="text-muted">Products</dt><dd className="font-bold">{item.product_count}</dd></div>
                                       <div><dt className="text-muted">Distribution channels</dt><dd className="font-bold">{item.distribution_channel_count}</dd></div>
                                     </dl>
-                                    {item.requires_owner_approval ? (
-                                      <p className="mt-2 text-xs text-muted">Validation requires explicit owner approval; no action was taken.</p>
-                                    ) : null}
+                                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                                      <button type="button" disabled={pipelineBusy} onClick={() => void openOpportunityPipeline(item.opportunity_id)} className="min-h-10 rounded-card border-2 border-accent px-3 py-2 text-sm font-bold text-accent disabled:opacity-60">
+                                        {selectedOpportunityId === item.opportunity_id ? "Refresh pipeline detail" : "Open pipeline"}
+                                      </button>
+                                      {item.requires_owner_approval ? <span className="text-xs text-muted">Owner approval required</span> : null}
+                                    </div>
                                   </li>
                                 ))}
                               </ul>
                             )}
+                            {selectedOpportunityId !== null ? (
+                              <section className="mt-5 rounded-card border-2 border-accent/70 bg-card p-4 sm:p-6" aria-label="Selected opportunity validation">
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                  <div>
+                                    <p className="font-mono text-xs uppercase tracking-wide text-accent">Owner-only validation record</p>
+                                    <h4 className="mt-1 text-lg font-extrabold">Opportunity #{selectedOpportunityId}</h4>
+                                  </div>
+                                  <button type="button" onClick={() => { setSelectedOpportunityId(null); setOrchestratorDetail(null); setPipelineError(""); setPipelineNotice(""); }} className="min-h-10 rounded-card border border-line px-3 text-sm font-bold">Close detail</button>
+                                </div>
+                                {pipelineError ? <p role="alert" className="mt-3 rounded-card border border-danger/70 p-3 text-sm">{pipelineError}</p> : null}
+                                {pipelineNotice ? <p role="status" className="mt-3 rounded-card border border-line p-3 text-sm">{pipelineNotice}</p> : null}
+                                {orchestratorDetail === null ? (
+                                  <p className="mt-3 text-sm text-muted">{pipelineBusy ? "Loading the canonical opportunity record…" : "Opportunity detail is unavailable."}</p>
+                                ) : (
+                                  <>
+                                    <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                                      <div><dt className="text-muted">Target customer</dt><dd>{orchestratorDetail.opportunity.target_customer || "Not specified"}</dd></div>
+                                      <div><dt className="text-muted">Current decision</dt><dd>{orchestratorDetail.decision.status || "Not started"}{orchestratorDetail.decision.title ? " · " + orchestratorDetail.decision.title : ""}</dd></div>
+                                      <div><dt className="text-muted">Validation task</dt><dd>{orchestratorDetail.experiment.status || "Not prepared"} · {orchestratorDetail.experiment.stage}</dd></div>
+                                      <div><dt className="text-muted">Demand evidence</dt><dd>{orchestratorDetail.outcomes_count} recorded outcome(s); {orchestratorDetail.products.length} product record(s)</dd></div>
+                                    </dl>
+                                    {orchestratorDetail.opportunity.economic_evidence_summary ? <p className="mt-3 text-sm">{orchestratorDetail.opportunity.economic_evidence_summary}</p> : null}
+                                    {orchestratorDetail.experiment.hypothesis ? (
+                                      <div className="mt-4 rounded-card border border-line p-3">
+                                        <p className="font-bold">Validation hypothesis</p>
+                                        <p className="mt-1 text-sm">{orchestratorDetail.experiment.hypothesis}</p>
+                                        {orchestratorDetail.experiment.expected_result ? <p className="mt-2 text-sm text-muted">{orchestratorDetail.experiment.expected_result}</p> : null}
+                                        {orchestratorDetail.experiment.required_inputs.length ? (
+                                          <ul className="mt-2 list-disc pl-5 text-sm text-muted">
+                                            {orchestratorDetail.experiment.required_inputs.map((input, index) => <li key={index}>{input}</li>)}
+                                          </ul>
+                                        ) : null}
+                                        {orchestratorDetail.experiment.result ? <p className="mt-2 text-sm">Recorded result: {orchestratorDetail.experiment.result}</p> : null}
+                                      </div>
+                                    ) : null}
+                                    <div className="mt-4 flex flex-wrap gap-2">
+                                      {orchestratorDetail.experiment.id === null ? (
+                                        <button type="button" disabled={pipelineBusy} onClick={() => void runPipelineAction("advance", undefined, "Prepare a human-run validation plan for this opportunity? This prepares records only; it will not contact anyone or spend money.", "Validation plan prepared; no external action was taken.")} className="min-h-10 rounded-card border-2 border-accent px-3 text-sm font-bold text-accent disabled:opacity-60">Prepare validation plan</button>
+                                      ) : null}
+                                      {orchestratorDetail.experiment.id !== null && orchestratorDetail.experiment.requires_owner_approval && orchestratorDetail.experiment.status === "planned" ? (
+                                        <button type="button" disabled={pipelineBusy} onClick={() => void runPipelineAction("approve", undefined, "Approve this human-run validation task? This authorizes a human task, not automated outreach.", "Human-run validation task approved.")} className="min-h-10 rounded-card border-2 border-accent px-3 text-sm font-bold text-accent disabled:opacity-60">Approve task</button>
+                                      ) : null}
+                                      {orchestratorDetail.experiment.id !== null && (orchestratorDetail.experiment.status === "ready" || (orchestratorDetail.experiment.status === "planned" && !orchestratorDetail.experiment.requires_owner_approval)) ? (
+                                        <button type="button" disabled={pipelineBusy} onClick={() => void runPipelineAction("execute", undefined, "Confirm that you have actually performed the human validation task. This only records the task as performed; it does not record an outcome.", "Human task marked performed; record the actual response next.")} className="min-h-10 rounded-card border-2 border-accent px-3 text-sm font-bold text-accent disabled:opacity-60">Record task performed</button>
+                                      ) : null}
+                                      {orchestratorDetail.experiment.id !== null && ["planned", "ready", "in_progress"].includes(orchestratorDetail.experiment.status || "") ? (
+                                        <button type="button" disabled={pipelineBusy} onClick={() => void runPipelineAction("reject", undefined, "Reject and abandon this validation task? This is terminal for this task.", "Validation task rejected; no business outcome recorded.")} className="min-h-10 rounded-card border border-danger px-3 text-sm font-bold text-danger disabled:opacity-60">Reject task</button>
+                                      ) : null}
+                                      {orchestratorDetail.experiment.status === "completed" ? (
+                                        <button type="button" disabled={pipelineBusy} onClick={() => void runPipelineAction("next-decision", undefined, "Create a new proposed decision based on this completed validation cycle?", "A new decision proposal was requested; it requires its own review.")} className="min-h-10 rounded-card border border-line px-3 text-sm font-bold disabled:opacity-60">Propose next decision</button>
+                                      ) : null}
+                                      {orchestratorDetail.experiment.status === "completed" && orchestratorDetail.products.length === 0 ? (
+                                        <button type="button" disabled={pipelineBusy} onClick={() => void runPipelineAction("product", { data_scope: "REAL" }, "Check the existing demand gate (5 problem confirmations and 3 willing-to-pay respondents). This creates a product record only; it does not launch, charge, or record revenue.", "Product gate checked.")} className="min-h-10 rounded-card border-2 border-accent px-3 text-sm font-bold text-accent disabled:opacity-60">Make it a product</button>
+                                      ) : null}
+                                    </div>
+                                    {orchestratorDetail.experiment.status === "in_progress" ? (
+                                      <form onSubmit={(event) => void submitPipelineOutcome(event)} className="mt-5 grid gap-3 border-t border-line pt-4">
+                                        <h5 className="font-bold">Record actual interview results</h5>
+                                        <p className="text-sm text-muted">Record only work you personally performed or directly observed. Use one respondent per line: <code>id | stage | confirmed/not confirmed | short note</code>. Use pseudonymous IDs, not names, emails or phone numbers. Use paid_customer only after you personally verify a real payment from a provider receipt or transaction reference; this form records your assertion and does not verify the provider. An interview or willingness-to-pay statement is not revenue.</p>
+                                        <label className="grid gap-1 text-sm font-semibold">
+                                          What actually happened?
+                                          <textarea value={outcomeActual} onChange={(event) => setOutcomeActual(event.target.value)} required minLength={2} maxLength={3000} rows={3} className="min-h-20 rounded-card border-2 border-line bg-black px-3 py-2 text-ink" placeholder="Summarize the real conversations and what was said." />
+                                        </label>
+                                        <label className="grid gap-1 text-sm font-semibold">
+                                          Overall validation result
+                                          <select value={outcomeSuccess} onChange={(event) => setOutcomeSuccess(event.target.value as "unknown" | "yes" | "no")} className="min-h-10 rounded-card border-2 border-line bg-black px-3 text-ink">
+                                            <option value="unknown">Uncertain / mixed evidence</option>
+                                            <option value="yes">Hypothesis supported by these interviews</option>
+                                            <option value="no">Hypothesis not supported by these interviews</option>
+                                          </select>
+                                        </label>
+                                        <label className="grid gap-1 text-sm font-semibold">
+                                          Actual respondents (one per line)
+                                          <textarea value={outcomeRespondents} onChange={(event) => setOutcomeRespondents(event.target.value)} required rows={5} className="min-h-28 rounded-card border-2 border-line bg-black px-3 py-2 font-mono text-xs text-ink" placeholder={"shop-01 | interested | confirmed | says they may pay NPR 4000/mo
+shop-02 | lead | confirmed | confirmed delay problem; price unknown
+shop-03 | lead | not confirmed | uses an existing alternative"} />
+                                        </label>
+                                        <button type="submit" disabled={pipelineBusy} className="min-h-11 justify-self-start rounded-card border-2 border-accent px-4 font-bold text-accent disabled:opacity-60">Save actual outcome</button>
+                                      </form>
+                                    ) : null}
+                                    {orchestratorDetail.products.length > 0 ? (
+                                      <div className="mt-5 border-t border-line pt-4">
+                                        <h5 className="font-bold">Product records</h5>
+                                        <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+                                          {orchestratorDetail.products.map((product) => <li key={product.id} className="rounded-card border border-line p-3 text-sm"><strong>{product.name}</strong><p className="mt-1 text-muted">{product.status}{product.launch_state ? " · " + product.launch_state : ""}</p></li>)}
+                                        </ul>
+                                      </div>
+                                    ) : null}
+                                  </>
+                                )}
+                              </section>
+                            ) : null}
                           </div>
                         </>
                       )}

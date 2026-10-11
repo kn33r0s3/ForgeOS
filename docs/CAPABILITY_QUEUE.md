@@ -1,3 +1,11 @@
+## [SOURCE CHANGE / CI PENDING] Make the existing owner pipeline actionable (2026-10-12)
+
+- Reused the existing /owner route and canonical orchestrator API. The owner can inspect a ranked REAL opportunity, prepare a validation plan, approve/reject a human task, truthfully mark a task performed, record observed outcomes, propose the next decision, and request the existing product evidence gate.
+- Outcome rows use pseudonymous respondent IDs and explicit observed stages. Paid-customer status is recorded only after the owner reports checking a real receipt/transaction reference; the UI does not independently verify provider evidence.
+- The product button uses the existing 5-confirmation/3-willing-to-pay threshold. It creates a product record only; it never publishes an offer, contacts a prospect, initiates eSewa/Khalti, or records revenue.
+- Overview displays up to 25 ranked REAL-scope opportunities; the API caps this projection at 25, so it is not claimed to be a complete paginated list when more rows exist.
+- Flow/detail and advance responses omit raw customer_events; backend regression coverage inserts a marker and verifies it is not returned. Exact-main CI for the integrated UI/backend change remains pending.
+- Production FORGE_API_KEY, ALLOWED_ORIGINS, Twilio rotation, payment-provider connectivity, settlement, and any real transaction remain unverified; no outreach or payment request was sent.
 ## [SOURCE CHANGE / CI PENDING] Prevent customer-ledger data from entering orchestrator responses (2026-10-12)
 
 - The existing service-level flow includes raw customer_events, including identifiers and free-text notes. The overview was already minimized, but the detail flow and direct advance response did not preserve that boundary.
