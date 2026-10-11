@@ -129,6 +129,8 @@ describe("feature registry", () => {
     const inactive = paths.filter((route) => resolveFeature(route)?.status !== "live");
     assert.deepEqual(inactive, [], `sitemap lists hidden/archived/unregistered paths: ${inactive.join(", ")}`);
     assert.ok(!paths.includes("/contact"), "closed contact surface must not be presented as an active search destination");
+    assert.ok(!paths.includes("/terms"), "noindex Terms page must not be advertised in the sitemap");
+    assert.ok(!paths.includes("/privacy"), "noindex Privacy page must not be advertised in the sitemap");
   });
 
   it("active service pages never route visitors to the closed contact surface", () => {
