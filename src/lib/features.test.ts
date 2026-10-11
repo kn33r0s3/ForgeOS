@@ -286,6 +286,17 @@ describe("feature registry", () => {
     }
   });
 
+  it("connects persisted partial-cycle truth to the private owner cockpit", () => {
+    const owner = readFileSync(path.join(root, "routes", "owner.tsx"), "utf8");
+    assert.ok(owner.includes("partial_cycles"), "owner cockpit must read partial-run totals");
+    assert.ok(owner.includes('"Cycle outcomes"'), "owner cockpit must expose aggregate cycle health");
+    assert.ok(
+      owner.includes('cycle.status === "PARTIAL"') && owner.includes('"text-warning"'),
+      "partial-run notes must be warnings, not hard-failure errors",
+    );
+    assert.ok(owner.includes("stage_partials"), "owner summary contract must include persisted partial stages");
+  });
+
   it("does not advertise the hidden, closed intake route from the public Businesses page", () => {
     const businessesPage = readFileSync(path.join(root, "routes", "group.businesses.tsx"), "utf8");
     assert.ok(!businessesPage.includes('to="/forge-bot-intake"'));

@@ -148,7 +148,7 @@ type CycleSummary = {
   duration_ms: number | null;
   status: string;
   error: string | null;
-  // JSON string of {stages, stage_errors} for scheduled intelligence runs;
+  // JSON string of {stages, stage_errors, stage_partials} for scheduled intelligence runs;
   // null for older rows that predate per-stage persistence.
   summary: string | null;
 };
@@ -158,6 +158,14 @@ type RuntimeWindow = {
   evidence: number | null;
   research_tasks: number | null;
   opportunities: number | null;
+  truth?: {
+    operations?: {
+      completed_cycles: number;
+      partial_cycles?: number;
+      failed_cycles: number;
+      running_cycles: number;
+    };
+  };
   active_stage: string;
   worker: {
     queued_tasks: number;
@@ -370,6 +378,12 @@ function CycleCard({ cycle }: { cycle: CycleSummary }) {
       : cycle.status === "FAILED"
         ? "border-danger/70"
         : "border-warning/70";
+  const noteColor =
+    cycle.status === "PARTIAL"
+      ? "text-warning"
+      : cycle.status === "FAILED"
+        ? "text-danger"
+        : "text-muted";
   return (
     <article className={`rounded-card border-2 ${stateColor} bg-card p-4`}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -382,7 +396,7 @@ function CycleCard({ cycle }: { cycle: CycleSummary }) {
         </p>
       </div>
       {cycle.error ? (
-        <p className="mt-1 break-words text-sm text-danger">{cycle.error}</p>
+        <p className={`mt-1 break-words text-sm ${noteColor}`}>{cycle.error}</p>
       ) : null}
       {stages ? (
         <dl className="mt-3 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
@@ -433,6 +447,8 @@ function OwnerConsolePage() {
   const [channelsError, setChannelsError] = useState<string | null>(null);
   const [paymentConfiguration, setPaymentConfiguration] = useState<PaymentConfigurationView | null>(null);
   const [paymentConfigurationError, setPaymentConfigurationError] = useState<string | null>(null);
+
+  const cycleOperations = intel?.runtime?.truth?.operations;
 
   async function refresh(ownerKey = key) {
     const [readiness, leads] = await Promise.all([
@@ -1009,12 +1025,22 @@ function OwnerConsolePage() {
                               : "No worker task recorded.",
                           )}
                           {signalFor(
-                            intel.runtime.cycles.running_count > 0 ? "amber" : "green",
-                            "Cycles running",
-                            `${intel.runtime.cycles.running_count}`,
-                            intel.runtime.cycles.last
-                              ? `Last run #${intel.runtime.cycles.last.id} — ${intel.runtime.cycles.last.status}`
-                              : "No cycle recorded yet.",
+                            !cycleOperations
+                              ? "amber"
+                              : cycleOperations.failed_cycles > 0
+                                ? "red"
+                                : cycleOperations.partial_cycles === undefined
+                                  ? "amber"
+                                  : cycleOperations.partial_cycles > 0 || cycleOperations.running_cycles > 0
+                                    ? "amber"
+                                    : "green",
+                            "Cycle outcomes",
+                            cycleOperations
+                              ? `Completed ${cycleOperations.completed_cycles} · Partial ${cycleOperations.partial_cycles ?? "UNKNOWN"} · Failed ${cycleOperations.failed_cycles} · Running ${cycleOperations.running_cycles}`
+                              : "UNKNOWN",
+                            cycleOperations
+                              ? "Partial means degraded work, not clean completion; counts come from persisted CycleRun records."
+                              : "Cycle outcome counts unavailable; do not infer success.",
                           )}
                           {signalFor(
                             "green",
