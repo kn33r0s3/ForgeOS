@@ -178,7 +178,7 @@ describe("Hami public content", () => {
 
   it("does not describe closed inquiries as a working project-request flow", () => {
     const groupPage = readFileSync(join(root, "src/routes/group.index.tsx"), "utf8");
-    assert.ok(!groupPage.includes("working\\n                  project-request flow."));
+    assert.doesNotMatch(groupPage, /working\s+project-request flow/);
     assert.match(groupPage, /Online inquiries are currently closed/);
     const businessesPage = readFileSync(join(root, "src/routes/group.businesses.tsx"), "utf8");
     assert.match(businessesPage, /Online inquiries are currently closed/);
