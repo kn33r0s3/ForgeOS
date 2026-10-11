@@ -114,5 +114,6 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
+      - run: node scripts/sync-unknowns-json.mjs --check
       - run: node scripts/check-orphaned-routes.mjs
       - run: node --test scripts/startup-contract.test.mjs
