@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { generateKeyPairSync, type KeyObject } from "node:crypto";
 import { SignJWT, exportJWK, type JWK } from "jose";
+import { isWorkspacePreview } from "../env.server.ts";
 import {
   gateIdentityEnabled,
   gateIdentityFromHeaders,
@@ -491,5 +492,64 @@ describe("sessionBoundToGateIdentity", () => {
       false,
     );
     assert.equal(sessionBoundToGateIdentity([], "user-1", provider), false);
+  });
+});
+
+
+describe("workspace preview classification", () => {
+  function withEnv(
+    values: Record<string, string | undefined>,
+    run: () => void,
+  ): void {
+    const previous = Object.fromEntries(
+      Object.keys(values).map((key) => [key, process.env[key]]),
+    );
+    try {
+      for (const [key, value] of Object.entries(values)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+      run();
+    } finally {
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  }
+
+  it("does not mistake a Vercel deployment without a Grok project id for workspace preview", () => {
+    withEnv(
+      {
+        GROK_PROJECT_ID: undefined,
+        VERCEL: "1",
+        VERCEL_ENV: "production",
+      },
+      () => assert.equal(isWorkspacePreview(), false),
+    );
+  });
+
+  it("does not treat a production runtime as a workspace preview without deployment-specific variables", () => {
+    withEnv(
+      {
+        GROK_PROJECT_ID: undefined,
+        VERCEL: undefined,
+        VERCEL_ENV: undefined,
+        NODE_ENV: "production",
+      },
+      () => assert.equal(isWorkspacePreview(), false),
+    );
+  });
+
+  it("keeps local editor preview behavior when no deployment markers exist", () => {
+    withEnv(
+      {
+        GROK_PROJECT_ID: undefined,
+        VERCEL: undefined,
+        VERCEL_ENV: undefined,
+        NODE_ENV: "test",
+      },
+      () => assert.equal(isWorkspacePreview(), true),
+    );
   });
 });

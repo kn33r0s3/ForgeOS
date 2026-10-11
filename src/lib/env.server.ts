@@ -4,11 +4,16 @@ export function env(key: string): string | undefined {
 }
 
 /**
- * Workspace preview vs deployed app. The deployer writes GROK_PROJECT_ID on
- * every publish; the sandbox preview never has it. Single source of truth for
- * the split — gate audience, gate endpoints and connector-token semantics all
- * key off this predicate.
+ * Grok workspace preview vs a deployed app.
+ *
+ * GROK_PROJECT_ID identifies a configured Grok deployment, but its absence is
+ * not proof that code is running inside that platform's editor. Vercel and
+ * production runtimes are deployed environments even when Grok-specific
+ * variables are not present.
  */
 export function isWorkspacePreview(): boolean {
-  return !env("GROK_PROJECT_ID");
+  if (env("GROK_PROJECT_ID")) return false;
+  if (env("VERCEL") || env("VERCEL_ENV")) return false;
+  if (env("NODE_ENV") === "production") return false;
+  return true;
 }
