@@ -1203,11 +1203,11 @@ function OwnerConsolePage() {
   const realLeads = realProducts.reduce((sum, p) => sum + p.lead_count, 0);
   const recordedRealCustomers = realProducts.reduce((sum, p) => sum + p.actual_customers, 0);
   const recordedRealRevenue = realProducts.reduce((sum, p) => sum + p.actual_revenue, 0);
-  const recordedRealNprRevenue = realProducts.every((p) => typeof p.actual_revenue_by_currency?.NPR === "number" && Number.isFinite(p.actual_revenue_by_currency.NPR))
+  const recordedRealNprRevenue = realProducts.every((p) => typeof p.actual_revenue_by_currency?.NPR === "number" && Number.isFinite(p.actual_revenue_by_currency?.NPR))
     ? realProducts.reduce((sum, p) => sum + (p.actual_revenue_by_currency?.NPR ?? 0), 0)
     : undefined;
   const recordedSandboxRevenue = sandboxProducts.reduce((sum, p) => sum + p.actual_revenue, 0);
-  const recordedSandboxNprRevenue = sandboxProducts.every((p) => typeof p.actual_revenue_by_currency?.NPR === "number" && Number.isFinite(p.actual_revenue_by_currency.NPR))
+  const recordedSandboxNprRevenue = sandboxProducts.every((p) => typeof p.actual_revenue_by_currency?.NPR === "number" && Number.isFinite(p.actual_revenue_by_currency?.NPR))
     ? sandboxProducts.reduce((sum, p) => sum + (p.actual_revenue_by_currency?.NPR ?? 0), 0)
     : undefined;
 
