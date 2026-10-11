@@ -33,6 +33,7 @@ def _public_origin() -> str:
     local_http = parts.scheme == "http" and parts.hostname in {"localhost", "127.0.0.1"}
     if (
         not parts.hostname or parts.username or parts.password or parts.query or parts.fragment
+        or parts.path not in ("", "/")
         or not (parts.scheme == "https" or local_http)
     ):
         raise RuntimeError("PUBLIC_APP_URL must be an explicit HTTPS origin before payment redirects are enabled.")
@@ -41,6 +42,37 @@ def _public_origin() -> str:
 
 def payment_result_url(public_ref: str) -> str:
     return _public_origin() + "/payment-result?intent=" + public_ref
+
+
+def _trusted_https_url(value: str, *, allowed_domains: set[str], allow_subdomains: bool = False, required_path: str | None = None) -> bool:
+    """Reject malformed, credential-bearing, non-HTTPS, and off-provider URLs."""
+    try:
+        parts = urlsplit(value)
+        host = (parts.hostname or "").lower()
+        port = parts.port
+    except (TypeError, ValueError):
+        return False
+    if (
+        parts.scheme != "https" or not host or parts.username or parts.password
+        or parts.fragment or port not in (None, 443)
+        or (required_path is not None and parts.path != required_path)
+    ):
+        return False
+    if allow_subdomains:
+        return any(host == domain or host.endswith("." + domain) for domain in allowed_domains)
+    return host in allowed_domains
+
+
+def _trusted_esewa_form_url(value: str) -> bool:
+    return _trusted_https_url(
+        value,
+        allowed_domains={"epay.esewa.com.np", "rc-epay.esewa.com.np"},
+        required_path="/api/epay/main/v2/form",
+    )
+
+
+def _trusted_khalti_payment_url(value: str) -> bool:
+    return _trusted_https_url(value, allowed_domains={"khalti.com"}, allow_subdomains=True)
 
 
 def _has_provider_credentials(provider: str) -> bool:
@@ -112,6 +144,7 @@ def public_offers(db: Session) -> list[dict]:
         providers = [
             provider for provider in ("esewa", "khalti")
             if enabled and _has_provider_credentials(provider)
+            and (provider != "khalti" or amount_paisa >= 1000)
         ]
         from app.services.public_feed import sanitize_public_text
         result.append({
@@ -233,11 +266,13 @@ def _checkout_details(intent: models.OpPaymentIntent) -> dict:
             success_url=callback,
             failure_url=callback,
         )
-        form_url = fields.pop("form_url")
+        form_url = str(fields.pop("form_url", ""))
+        if not _trusted_esewa_form_url(form_url):
+            raise RuntimeError("eSewa checkout URL is not an approved HTTPS eSewa form endpoint.")
         return {"type": "form_post", "url": form_url, "fields": fields}
     if intent.provider == "khalti":
-        if not intent.checkout_url:
-            raise RuntimeError("Khalti checkout URL is not available for this intent.")
+        if not intent.checkout_url or not _trusted_khalti_payment_url(intent.checkout_url):
+            raise RuntimeError("Khalti checkout URL is not an approved HTTPS Khalti payment endpoint.")
         return {"type": "redirect", "url": intent.checkout_url}
     raise ValueError("Unsupported payment provider.")
 
@@ -278,6 +313,8 @@ def create_checkout(
         raise RuntimeError("Privacy-preserving checkout rate limiting is not configured.")
     origin = _public_origin()
     amount_paisa = _fixed_price(product)
+    if provider == "khalti" and amount_paisa < 1000:
+        raise ValueError("Khalti payments require a minimum total of NPR 10.")
     intent = models.OpPaymentIntent(
         public_ref=secrets.token_urlsafe(32),
         product_id=product.id,
@@ -322,8 +359,8 @@ def create_checkout(
             )
             pidx = str(response.get("pidx", ""))
             payment_url = str(response.get("payment_url", ""))
-            if not pidx or not payment_url.startswith("https://"):
-                raise RuntimeError("Khalti initiation did not return a valid payment ID and HTTPS URL.")
+            if not pidx or not _trusted_khalti_payment_url(payment_url):
+                raise RuntimeError("Khalti initiation did not return a valid payment ID and approved HTTPS URL.")
             _transition(db, intent, "INITIATED", provider_payment_id=pidx, checkout_url=payment_url)
         else:
             # eSewa's checkout request is a signed form, not a server-side

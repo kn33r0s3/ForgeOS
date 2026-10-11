@@ -81,7 +81,7 @@ def test_esewa_checkout_persists_one_intent_and_idempotent_retry_reuses_it(db, m
     def checkout(**kwargs):
         calls.append(kwargs)
         return {
-            "form_url": "https://pay.example.test/esewa",
+            "form_url": "https://epay.esewa.com.np/api/epay/main/v2/form",
             "amount": "5000.00",
             "total_amount": "5000.00",
             "transaction_uuid": kwargs["transaction_uuid"],
@@ -119,7 +119,7 @@ def test_idempotency_key_cannot_start_a_second_provider_for_the_same_product(db,
     monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_HMAC_KEY", "test-only-checkout-rate-limit-key")
     monkeypatch.setattr(orchestrator, "validation_counts", lambda *args: (5, 3))
     monkeypatch.setattr(nepal_payments, "esewa_checkout", lambda **kwargs: {
-        "form_url": "https://pay.example.test/esewa",
+        "form_url": "https://epay.esewa.com.np/api/epay/main/v2/form",
         "amount": "5000.00",
         "total_amount": "5000.00",
         "transaction_uuid": kwargs["transaction_uuid"],
@@ -146,6 +146,51 @@ def test_idempotency_key_cannot_start_a_second_provider_for_the_same_product(db,
         )
     assert khalti_calls == []
     assert db.query(models.OpPaymentIntent).count() == 1
+
+def test_public_app_url_rejects_nested_paths(monkeypatch):
+    monkeypatch.setattr(settings, "PUBLIC_APP_URL", "https://haminp.vercel.app/not-the-origin")
+    with pytest.raises(RuntimeError, match="HTTPS origin"):
+        payment_intent_engine._public_origin()
+
+
+def test_provider_checkout_redirects_must_use_approved_hosts(monkeypatch):
+    intent = models.OpPaymentIntent(
+        public_ref="redirect-guard-test-reference-123456",
+        product_id=1,
+        provider="esewa",
+        status="CREATED",
+        amount_paisa=500000,
+        currency="NPR",
+        merchant_order_id="hami-esewa-redirect-test-123456",
+        idempotency_key_hash="e" * 64,
+        data_scope="REAL",
+    )
+    monkeypatch.setattr(nepal_payments, "esewa_checkout", lambda **kwargs: {
+        "form_url": "https://epay.esewa.com.np.attacker.example/api/epay/main/v2/form",
+    })
+    with pytest.raises(RuntimeError, match="approved HTTPS eSewa"):
+        payment_intent_engine._checkout_details(intent)
+    intent.provider = "khalti"
+    intent.checkout_url = "https://khalti.com.attacker.example/pay"
+    with pytest.raises(RuntimeError, match="approved HTTPS Khalti"):
+        payment_intent_engine._checkout_details(intent)
+
+
+def test_khalti_minimum_amount_rejected_before_intent_creation(db, monkeypatch):
+    product = _published_product(db)
+    product.pricing = "NPR 5 one-time"
+    db.commit()
+    monkeypatch.setattr(settings, "FORGEOS_PUBLIC_CHECKOUT_ENABLED", True)
+    monkeypatch.setattr(settings, "KHALTI_SECRET_KEY", "test-khalti-secret")
+    monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_HMAC_KEY", "test-only-checkout-rate-limit-key")
+    monkeypatch.setattr(orchestrator, "validation_counts", lambda *args: (5, 3))
+    with pytest.raises(ValueError, match="minimum total of NPR 10"):
+        payment_intent_engine.create_checkout(
+            db, product_id=product.id, provider="khalti",
+            idempotency_key="khalti-minimum-amount-key-123",
+        )
+    assert db.query(models.OpPaymentIntent).count() == 0
+
 
 def test_esewa_server_lookup_verifies_payment_then_owner_fulfillment_records_revenue(db, monkeypatch):
     product = _published_product(db)

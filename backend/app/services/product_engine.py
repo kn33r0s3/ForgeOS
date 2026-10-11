@@ -445,6 +445,18 @@ def pipeline(db: Session) -> dict:
     real_channels = [x for x in channel_dicts if x["data_scope"] == "REAL"]
     sandbox_summaries = [x for x in summaries if x["data_scope"] == "SANDBOX"]
 
+    def revenue_by_currency(items: list[dict]) -> dict[str, float]:
+        return {
+            currency: round(
+                sum((item.get("actual_revenue_by_currency") or {}).get(currency, 0.0) for item in items),
+                2,
+            )
+            for currency in ("USD", "NPR")
+        }
+
+    real_revenue_by_currency = revenue_by_currency(real_summaries)
+    sandbox_revenue_by_currency = revenue_by_currency(sandbox_summaries)
+
     def ev(out):
         return {
             "id": out.id, "product_id": out.product_id, "channel_id": out.channel_id,
@@ -466,7 +478,9 @@ def pipeline(db: Session) -> dict:
         "total_leads": sum(s["lead_count"] for s in real_summaries),
         "total_paid_customers": sum(s["paid_customer_count"] for s in real_summaries),
         "realized_revenue": round(sum(s["actual_revenue"] for s in real_summaries), 2),
+        "realized_revenue_by_currency": real_revenue_by_currency,
         "sandbox_revenue": round(sum(s["actual_revenue"] for s in sandbox_summaries), 2),
+        "sandbox_revenue_by_currency": sandbox_revenue_by_currency,
         "sandbox_products": len(sandbox_summaries),
     }
 

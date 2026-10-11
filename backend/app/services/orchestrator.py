@@ -523,6 +523,20 @@ def _flow_snapshot(db: Session) -> dict:
         models.Outcome.outcome_type == "ACTUAL_REVENUE"
     ).all()
     sandbox_revenue = db.query(models.Outcome).filter_by(outcome_type="ACTUAL_REVENUE", data_scope="SANDBOX").all()
+    actual_revenue_by_currency = {
+        currency: round(
+            sum(float(o.actual_value or 0) for o in real_revenue if (o.unit or "USD").upper() == currency),
+            2,
+        )
+        for currency in ("USD", "NPR")
+    }
+    sandbox_revenue_by_currency = {
+        currency: round(
+            sum(float(o.actual_value or 0) for o in sandbox_revenue if (o.unit or "USD").upper() == currency),
+            2,
+        )
+        for currency in ("USD", "NPR")
+    }
     return {
         "signals": db.query(models.Signal).count(),
         "opportunities": db.query(models.Opportunity).count(),
@@ -548,7 +562,8 @@ def _flow_snapshot(db: Session) -> dict:
         ).count(),
         "actions_awaiting_approval": db.query(models.Experiment)
             .filter(models.Experiment.status.in_(["planned"])).count(),
-        "actual_revenue": round(sum(float(o.actual_value or 0) for o in real_revenue if (o.unit or "USD").upper() == "USD"), 2),
+        "actual_revenue": actual_revenue_by_currency["USD"],
+        "actual_revenue_by_currency": actual_revenue_by_currency,
         "real_customers": int(sum(
             float(o.actual_value or 0)
             for o in real_outcomes.filter(
@@ -556,7 +571,8 @@ def _flow_snapshot(db: Session) -> dict:
             ).all()
         )),
         "sandbox": {
-            "actual_revenue": round(sum(float(o.actual_value or 0) for o in sandbox_revenue if (o.unit or "USD").upper() == "USD"), 2),
+            "actual_revenue": sandbox_revenue_by_currency["USD"],
+            "actual_revenue_by_currency": sandbox_revenue_by_currency,
             "outcomes": db.query(models.Outcome).filter_by(data_scope="SANDBOX").count(),
             "products": db.query(models.Product).filter_by(data_scope="SANDBOX").count(),
             "label": "TEST/SANDBOX — not real business traction",

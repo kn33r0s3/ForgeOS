@@ -489,6 +489,14 @@ def test_verified_npr_revenue_is_separate_from_usd_rollup(db):
     assert rollup["actual_revenue_by_currency"] == {"USD": 12.5, "NPR": 5000.0}
     assert rollup["actual_cost_by_currency"] == {"USD": 0.0, "NPR": 0.0}
 
+    product_snapshot = product_engine.pipeline(db)
+    assert product_snapshot["realized_revenue_by_currency"] == {"USD": 12.5, "NPR": 5000.0}
+    assert product_snapshot["sandbox_revenue_by_currency"] == {"USD": 0.0, "NPR": 0.0}
+    from app.services import orchestrator
+    owner_snapshot = orchestrator._flow_snapshot(db)
+    assert owner_snapshot["actual_revenue_by_currency"] == {"USD": 12.5, "NPR": 5000.0}
+    assert owner_snapshot["sandbox"]["actual_revenue_by_currency"] == {"USD": 0.0, "NPR": 0.0}
+
 
 def test_payment_intent_operational_state_is_linked_to_product_and_outcome(db):
     product = product_engine.create_product(

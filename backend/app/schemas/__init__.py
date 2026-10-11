@@ -1784,8 +1784,10 @@ class ProductPipeline(BaseModel):
     total_outreach: int  # sum of real outreach_counts (from outcomes)
     total_leads: int
     total_paid_customers: int
-    realized_revenue: float  # REAL ACTUAL_REVENUE outcomes only
-    sandbox_revenue: float = 0.0  # TEST/SANDBOX only; never business traction
+    realized_revenue: float  # legacy USD-only REAL ACTUAL_REVENUE total
+    realized_revenue_by_currency: dict[str, float] = Field(default_factory=dict)
+    sandbox_revenue: float = 0.0  # legacy USD-only TEST/SANDBOX total
+    sandbox_revenue_by_currency: dict[str, float] = Field(default_factory=dict)
     sandbox_products: int = 0
 
 

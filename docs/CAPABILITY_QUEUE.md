@@ -1,3 +1,8 @@
+## [SOURCE CHANGE / CI PENDING] Harden provider destinations and expose currency-safe revenue projections (2026-10-12)
+
+- `PUBLIC_APP_URL` must be an origin, not a nested path. eSewa forms are restricted to the official v2 form host/path; Khalti redirects are restricted to HTTPS `*.khalti.com`. Khalti totals below NPR 10 are hidden for that provider and rejected before an intent is created.
+- Product and orchestration projections now report USD and NPR totals separately while preserving existing USD-only fields for compatibility. Currencies are never added together or silently converted.
+- Backend regressions cover nested origins, untrusted provider destinations, Khalti minimum price, and REAL/SANDBOX currency rollups. Exact-SHA CI is pending.
 ## [SOURCE CHANGE / CI PENDING] Make research acknowledgement test deterministic (2026-10-12)
 
 - Removed a brittle 500 ms direct-call timing assertion after Linux CI measured 1.08 s once even though the test proved full planning and collector execution were deferred. Kept the functional checks: no collector/planner call before acknowledgement, one background task queued, research state persisted, and the work runs after acknowledgement.
