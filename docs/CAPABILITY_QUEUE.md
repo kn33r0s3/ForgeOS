@@ -1,3 +1,11 @@
+## [OPERATING RULE CORRECTION / SOURCE CHANGE / CI PENDING] Separate open investigation from bounded intervention (2026-10-12)
+
+- The prior “one frontier for 90 days / everything else in the horizon register” rule was too easy to read as one seller thesis defining Hami's search domain.
+- The operating model now distinguishes open-ended cross-domain investigation from a single active real-world intervention. The existing UNKNOWN_MAP.md and six semantic primitives remain the only canonical substrate; no new queue, model, route, or engine was introduced.
+- The current online-purchase experiment remains an execution candidate, not a predetermined winner. Alternative value candidates may be investigated and compared; consequential action remains governed by existing authorization, affordable-loss, and verification gates.
+- The 90-day period is a review horizon, not a lock against disconfirming evidence. The 14-day no-contact tripwire now forces re-evaluation of access, doability, and alternatives instead of encouraging more non-obligatory building.
+- Exact-head CI and independent deployment verification required.
+
 ## [SOURCE CHANGE / CI PENDING] Reconcile eSewa refunds after payment verification (2026-10-12)
 
 - The owner-reconciliation contract used for Khalti now covers eSewa refund statuses reported by the signed callback or server-side status lookup.

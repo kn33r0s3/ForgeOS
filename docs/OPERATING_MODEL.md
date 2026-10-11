@@ -179,21 +179,72 @@ The purpose is to prevent Hami from becoming its own source of proof.
 
 ---
 
-### 7. Frozen frontier
+### 7. Open-ended investigation, bounded intervention
 
-One frontier is active for 90 days.
+Hami's **investigation domain is value itself**. No single industry, customer type,
+market, geography, resource class, or experiment defines the system's domain.
 
-Everything else belongs in the **horizon register**.
+The current working frontier remains how small online purchases in Nepal are
+actually decided, on buyer and seller sides. That is a current execution focus,
+not a finding that seller transactions are the largest, best, or only form of
+value Hami should investigate.
 
-Nothing in the horizon register receives work merely because an agent thinks it is interesting.
+**Investigation is open-ended even while interventions are bounded.** The
+90-day window is a review horizon, not an obligation to keep a disproven
+frontier. It limits uncontrolled switching of the active real-world
+intervention; it does not prohibit reading, observing, checking sources,
+mapping existing capabilities, comparing hypotheses, or discovering value in
+other domains.
 
-The current frontier is:
+Use the existing `docs/UNKNOWN_MAP.md` as the durable candidate/unknown
+registry, alongside existing Entity, Relation, Event, Evidence, Capability,
+Action, claim, and outcome records. Do not create a second horizon register,
+parallel queue, taxonomy, or discovery engine. A candidate from any domain may
+be examined through the same primitives. Categories and examples are search
+lenses only; no fixed list exhausts possible value.
 
-**How small online purchases in Nepal are actually decided, on both the buyer and seller side.**
+In each discovery cycle, compare the current frontier with any materially
+promising alternative surfaced by legitimate evidence. Ask, without limiting
+the answer to a preset domain list:
 
-Changing the frontier is itself a decision governed by the review gates.
+- What value exists, could be created, preserved, connected, transformed, used,
+  protected, or recovered?
+- Which entities hold it, need it, enable it, block it, or bear the cost when it
+  is missing or lost?
+- What relationship, resource, capability, information, or action could change
+  that state?
+- What evidence supports the interpretation, what contradicts it, and what is
+  still unknown?
+- What is the cheapest legitimate observation or test, what outcome would it
+  measure, and what risk, permission, time, or cost does it require?
+- If this is a commercial path, who benefits, who pays or fairly shares value,
+  and how would that exchange be verified? Do not force a non-economic value
+  question to pretend it has immediate revenue.
 
-At each 30-day review, Hami must name the strongest alternative frontier and compare it against the active one.
+Compare candidates by evidenced consequence and reach, urgency, confidence and
+counter-evidence, time and cost to learn, current capability fit, safety/legal/
+privacy constraints, reversibility, and how clearly the result could be
+verified. This comparison informs judgment; a score or agent assertion never
+proves value or authorizes action.
+
+Bounded execution stays in force: at most three live Bets and one active
+intervention design. Broad exploration does not authorize parallel
+interventions, contacting people, spending, publishing claims, or activating a
+closed channel. Any real-world action still needs its relevant authorization,
+capability, affordable-loss limit, and verification plan.
+
+Review the chosen intervention at least every 30 days and earlier when:
+- its registered kill criterion is met or new evidence materially contradicts it;
+- a different candidate has materially stronger evidence and a more viable,
+  safer, or more consequential test;
+- the 14-day no-contact tripwire freezes non-obligatory building.
+
+At a no-contact tripwire, do not preserve the frontier through inertia or
+respond by building more. Reassess access, the legitimacy and doability of the
+test, and competing value candidates. Keep the current frontier only when the
+evidence and real constraints still justify it. A frontier can be revised,
+paused, or killed through the existing decision/evidence path; the calendar is
+not proof that it is correct.
 
 ---
 
@@ -281,7 +332,10 @@ A report asserting verification without an independently recorded check is rejec
 
 ### Scope drift
 
-A request for a new domain enters the horizon register.
+A new domain is not automatically scope drift: Hami's investigation domain is
+open-ended. Record a promising new unknown or hypothesis in the existing
+unknown/evidence substrate and compare it with the active frontier. Do not
+automatically build for it or start a parallel intervention.
 
 ### Owner overload
 
@@ -416,7 +470,11 @@ The hunting question this gate strengthens:
 > Where does value disappear — and can Hami capture some of that
 > recovered value?
 
-A discovery that cannot plausibly reach earning stays in the horizon.
+A discovery that cannot yet plausibly be realized or measured remains a
+knowledge/unknown-map candidate; it is not discarded merely because it is not a
+seller or an immediate revenue path. The EARNING gate applies to consequential
+commercial interventions, not to the boundary of Hami's investigation domain.
+Revenue is one possible value outcome, not a gate on what Hami may investigate.
 
 ---
 

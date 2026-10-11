@@ -432,6 +432,14 @@ describe("feature registry", () => {
     const ids = registry.features.map((f: { id: string }) => f.id);
     assert.equal(new Set(ids).size, ids.length, "duplicate feature ids");
   });
+  it("keeps investigation open-ended while bounding real-world intervention", () => {
+    const operatingModel = readFileSync(path.join(root, "..", "docs", "OPERATING_MODEL.md"), "utf8");
+    assert.ok(operatingModel.includes("Investigation is open-ended even while interventions are bounded."));
+    assert.ok(operatingModel.includes("The 90-day window is a review horizon, not an obligation to keep a disproven"));
+    assert.ok(operatingModel.includes("Broad exploration does not authorize parallel"));
+    assert.ok(operatingModel.includes("Revenue is one possible value outcome, not a gate on what Hami may investigate."));
+  });
+
   it("preserves Hami's owner-approved value-domain invariant separately from the current pilot", () => {
     const agents = readFileSync(path.join(root, "..", "AGENTS.md"), "utf8");
     const blueprint = readFileSync(path.join(root, "..", "FORGE_SUBSTRATE_BLUEPRINT.md"), "utf8");
