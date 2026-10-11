@@ -19,7 +19,7 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { googleConfigured, termsConfigured, termsUrl } = Route.useLoaderData();
+  const { authConfigured, googleConfigured, termsConfigured, termsUrl } = Route.useLoaderData();
   const { mode: initialMode } = Route.useSearch();
   const { user, isPending } = useCurrentUserState();
   const [hydrated, setHydrated] = useState(false);
@@ -105,7 +105,7 @@ function LoginPage() {
                 Go to personal context
               </Link>
             </>
-          ) : !authEnabled ? (
+          ) : (!authEnabled || !authConfigured) ? (
             <p className="text-sm font-semibold text-danger" role="alert">Sign-in is unavailable in this app configuration.</p>
           ) : (
             <>
