@@ -120,29 +120,26 @@ export const SYSTEM_PATHWAYS = {
     { label: "Experiments", to: "/experiments" },
     { label: "Evidence trail", to: "/feed" },
   ],
+  about: [
+    { label: "Findings", to: "/discoveries" },
+    { label: "Open unknowns", to: "/unknowns" },
+    { label: "Experiments", to: "/experiments" },
+    { label: "How we work", to: "/process" },
+  ],
+  group: [
+    { label: "Hami services", to: "/services" },
+    { label: "How we work", to: "/process" },
+    { label: "Technology", to: "/technology" },
+    { label: "Ventures", to: "/ventures" },
+  ],
+  process: [
+    { label: "Hami services", to: "/services" },
+    { label: "Public work board", to: "/domain" },
+    { label: "The group", to: "/group" },
+  ],
 } as const;
 
 export type SystemSurface = keyof typeof SYSTEM_PATHWAYS;
-
-export const ABOUT_PATHWAYS = [
-  { label: "Findings", to: "/discoveries" },
-  { label: "Open unknowns", to: "/unknowns" },
-  { label: "Experiments", to: "/experiments" },
-  { label: "How we work", to: "/process" },
-] as const;
-
-export const GROUP_PATHWAYS = [
-  { label: "Hami services", to: "/services" },
-  { label: "How we work", to: "/process" },
-  { label: "Technology", to: "/technology" },
-  { label: "Ventures", to: "/ventures" },
-] as const;
-
-export const PROCESS_PATHWAYS = [
-  { label: "Hami services", to: "/services" },
-  { label: "Public work board", to: "/domain" },
-  { label: "The group", to: "/group" },
-] as const;
 
 /** Every public pathway below must have a matching live feature-registry entry. */
 export const PUBLIC_SYSTEM_PATHS = [
