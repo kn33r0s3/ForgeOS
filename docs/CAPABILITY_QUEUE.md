@@ -1,3 +1,13 @@
+## [SOURCE CHANGE / CI PENDING] Pause automatic research-question promotion until backlog triage (2026-10-12)
+
+- **EXISTING SEAMS:** `backend/app/config.py`, `backend/app/services/forge_loop.py`, `backend/app/services/rare_signal_engine.py`, and `backend/app/api/scheduled.py`.
+- **OWNER-REPORTED BOTTLENECK:** 108 ResearchQuestion rows, 105 with status `planned`, and 0 of 141 claims linked to a decision/experiment/outcome. Those figures came from the supplied audit; this session did not query a production database to independently reproduce them.
+- **FIX IN SOURCE:** added `FORGEOS_AUTO_RESEARCH_QUESTION_GENERATION_ENABLED`, default `false`. The recurring Forge cycle no longer runs Curiosity question generation, rare-signal question creation, or opportunity-claim question linking by default. The scheduled discovery pass skips `curiosity_questions` and does not promote discovery question proposals into `ResearchQuestion` rows while paused. Existing records and explicit problem submissions are preserved; no questions or customer data were deleted.
+- **ADDITIONAL INTEGRITY FIX:** discovery promotion now deduplicates against every question status, including `planned`, rather than only `open` and `proposed`.
+- **TEST-FIXTURE AUDIT:** `client_with_db` in `backend/tests/test_public_value_flow.py` is intentionally headerless; only `owner_client_with_db` attaches `X-API-Key`. The product-catalog regression uses the headerless fixture, then checks missing, wrong, and valid credentials after setting the key. Do not weaken or replace this regression; current source does not support the claim that this fixture auto-adds the owner key.
+- **BOUNDARY:** this pauses automatic question generation; it does not mark existing questions investigated, prove claims, permit outreach, or create revenue. Leave generation disabled until backlog curation has a falsifiable-claim and evidence-path review.
+- **VERIFICATION:** source/tests updated; exact-main CI still pending at change time. Update this entry only after the new commit's Linux backend suite and other checks report final conclusions.
+
 ## [CODE COMPLETE / CI VERIFIED; PRODUCTION KEY REQUIRED] Capability-protected asynchronous public task status (2026-10-11)
 
 - **EXISTING SEAMS INSPECTED:** `backend/app/api/signals.py`, `backend/app/api/analyze.py`, `backend/tests/test_signal_request_demand_api.py`, and `backend/tests/test_step1_router_auth.py`. No new database table or primitive is required.

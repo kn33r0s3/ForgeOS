@@ -90,6 +90,7 @@ that entirely.
 
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.services import (
     pattern_engine,
     belief_engine,
@@ -222,11 +223,16 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
     predictions_after = {p.id for p in reality_memory.list_predictions(db, limit=1000)}
     predictions_created = len(predictions_after - predictions_before)
 
-    # 6. Curiosity scan -> new research questions from weak spots
-    ce = curiosity_engine.CuriosityEngine(db)
-    new_questions = ce.run_curiosity_scan()
+    # 6. Automatic question generation stays paused by default while the
+    # existing backlog is reviewed. Existing, owner/user-supplied questions
+    # remain available to the planner; no new vague template questions are added.
+    question_generation_enabled = settings.FORGEOS_AUTO_RESEARCH_QUESTION_GENERATION_ENABLED
+    new_questions = []
+    if question_generation_enabled:
+        ce = curiosity_engine.CuriosityEngine(db)
+        new_questions = ce.run_curiosity_scan()
 
-    # 7. Plan research tasks for open questions
+    # 7. Plan research tasks for existing open questions
     new_tasks = research_planner.plan_tasks_for_open_questions(db)
 
     # 8. Rare Signal Detection (v2.6): persist explainable weak-signal
@@ -234,7 +240,11 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
     # research planner. Detection is heuristic; no opportunity is made
     # here and no score is treated as truth.
     rare_assessments = rare_signal_engine.detect_rare_signals(db)
-    rare_questions = rare_signal_engine.trigger_research_for_rare_signals(db, rare_assessments)
+    rare_questions = (
+        rare_signal_engine.trigger_research_for_rare_signals(db, rare_assessments)
+        if question_generation_enabled
+        else []
+    )
 
     # 9. Economic Intelligence (v1.8): review every Pattern with no
     #    Opportunity yet against real economic evidence — a problem, an
@@ -252,16 +262,17 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
     #      and regulated-asset review are applied before the question link is
     #      created; the feed remains the final visibility gate.
     opportunity_questions_linked = 0
-    try:
-        opportunity_questions_linked = (
-            opportunity_engine.link_opportunity_evidence_to_claim_questions(db)
-        )
-    except Exception as exc:
-        stage_errors["opportunity_claim_questions"] = str(exc)
+    if question_generation_enabled:
         try:
-            db.rollback()
-        except Exception:
-            pass
+            opportunity_questions_linked = (
+                opportunity_engine.link_opportunity_evidence_to_claim_questions(db)
+            )
+        except Exception as exc:
+            stage_errors["opportunity_claim_questions"] = str(exc)
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
     # 9.5. Refresh the additive substrate projections from their existing
     #      source-of-truth tables. These adapters only write typed references,
@@ -585,6 +596,9 @@ def _run_cycle_impl(db: Session, data_scope: str = "REAL") -> dict:
         "research_tasks_created": len(new_tasks),
         "rare_signals_detected": len(rare_assessments),
         "rare_signal_research_questions": len(rare_questions),
+        "question_generation": (
+            "enabled" if question_generation_enabled else "paused_backlog_review"
+        ),
         "patterns_reviewed_for_opportunities": discovery_summary["patterns_reviewed"],
         "opportunities_discovered": discovery_summary["opportunities_created"] + discovery_summary.get("single_signal_opportunities_created", 0),
         "opportunity_questions_linked": opportunity_questions_linked,

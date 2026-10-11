@@ -11,6 +11,7 @@ from typing import Iterable
 from sqlalchemy.orm import Session
 
 from app import models
+from app.config import settings
 from app.models import utcnow
 from app.services import economic_intelligence, opportunity_engine
 from app.services.pattern_engine import tokenize
@@ -258,7 +259,13 @@ def trigger_research_for_rare_signals(
     *,
     threshold: float = 70.0,
 ) -> list[models.ResearchQuestion]:
-    """Create one idempotent P1 question for each important assessment."""
+    """Create one idempotent P1 question for each important assessment.
+
+    Disabled by default while the existing research-question backlog is reviewed.
+    """
+    if not settings.FORGEOS_AUTO_RESEARCH_QUESTION_GENERATION_ENABLED:
+        return []
+
     from app.services import research_planner
 
     created = []

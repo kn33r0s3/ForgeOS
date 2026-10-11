@@ -111,7 +111,9 @@ def test_high_quality_economic_cluster_can_handoff_but_isolated_rare_signal_cann
     assert assessment.opportunity_id == opportunity.id
 
 
-def test_geographic_language_spread_and_research_trigger_are_persistent(db):
+def test_geographic_language_spread_and_research_trigger_are_persistent(db, monkeypatch):
+    from app.config import settings
+
     now = datetime(2026, 9, 11, tzinfo=timezone.utc)
     for source, country, language in (("reddit", "us", "en"), ("github", "de", "de"), ("rss", "jp", "ja")):
         add_signal(
@@ -123,6 +125,13 @@ def test_geographic_language_spread_and_research_trigger_are_persistent(db):
         )
     assessments = detect_rare_signals(db, now=now)
     assessment = max(assessments, key=lambda item: item.score)
+    monkeypatch.setattr(settings, "FORGEOS_AUTO_RESEARCH_QUESTION_GENERATION_ENABLED", False)
+    before = db.query(models.ResearchQuestion).count()
+    assert trigger_research_for_rare_signals(db, assessments, threshold=60) == []
+    assert db.query(models.ResearchQuestion).count() == before
+    assert db.get(models.RareSignalAssessment, assessment.id).research_question_id is None
+
+    monkeypatch.setattr(settings, "FORGEOS_AUTO_RESEARCH_QUESTION_GENERATION_ENABLED", True)
     questions = trigger_research_for_rare_signals(db, assessments, threshold=60)
     again = trigger_research_for_rare_signals(db, assessments, threshold=60)
 

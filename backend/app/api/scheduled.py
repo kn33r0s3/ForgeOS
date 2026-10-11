@@ -41,6 +41,44 @@ def _cycle_stage_summary(intelligence: dict) -> tuple[str, dict[str, str], dict[
         else "COMPLETED"
     )
     return cycle_status, stage_errors, stage_partials
+def _promote_discovery_questions(db, report: dict) -> int:
+    """Promote discovery proposals only when recurring question generation is enabled.
+
+    Discovery proposals remain available in the substrate for review. Promotion
+    into the operational ResearchQuestion queue is paused until the existing
+    backlog has been triaged.
+    """
+    if not settings.FORGEOS_AUTO_RESEARCH_QUESTION_GENERATION_ENABLED:
+        return 0
+
+    questions_created = 0
+    for surfaced in report.get("surfaced", []):
+        if surfaced.get("kind") != "question":
+            continue
+        statement = (surfaced.get("statement") or "").strip()
+        if not statement or len(statement) > 2000:
+            continue
+        # Deduplicate across every lifecycle status, including planned.
+        existing_q = (
+            db.query(models.ResearchQuestion)
+            .filter(models.ResearchQuestion.question == statement)
+            .first()
+        )
+        if existing_q:
+            continue
+        db.add(
+            models.ResearchQuestion(
+                question=statement,
+                status="open",
+                priority_score=50.0,  # Discovery-sourced; planner will reprioritize
+            )
+        )
+        questions_created += 1
+    if questions_created:
+        db.commit()
+    return questions_created
+
+
 _cycle_scheduler = None
 if settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
     from app.services.cycle_scheduler import CycleScheduler
@@ -371,7 +409,16 @@ def run_scheduled_intelligence(
             from app.services import discovery_engine
 
             try:
-                report = discovery_engine.run_discovery(db, max_findings_per_method=10)
+                discovery_methods = None
+                if not settings.FORGEOS_AUTO_RESEARCH_QUESTION_GENERATION_ENABLED:
+                    discovery_methods = [
+                        method.name
+                        for method in discovery_engine.DEFAULT_REGISTRY.methods()
+                        if method.name != "curiosity_questions"
+                    ]
+                report = discovery_engine.run_discovery(
+                    db, methods=discovery_methods, max_findings_per_method=10
+                )
                 db.commit()
                 # Count actually executed methods (status=="ran"), not blocked/errored
                 methods_executed = sum(
@@ -397,36 +444,15 @@ def run_scheduled_intelligence(
                 }
                 # Close the loop: convert surfaced question findings into
                 # ResearchQuestion rows so the next cycle's research planner
-                # can pick them up. This is what makes discovery actionable
-                # rather than merely reported.
-                questions_created = 0
-                for surfaced in report.get("surfaced", []):
-                    if surfaced.get("kind") != "question":
-                        continue
-                    statement = (surfaced.get("statement") or "").strip()
-                    if not statement or len(statement) > 2000:
-                        continue
-                    # Deduplicate: skip if an open question with same text exists
-                    existing_q = (
-                        db.query(models.ResearchQuestion)
-                        .filter(
-                            models.ResearchQuestion.question == statement,
-                            models.ResearchQuestion.status.in_(["open", "proposed"]),
-                        )
-                        .first()
-                    )
-                    if existing_q:
-                        continue
-                    q = models.ResearchQuestion(
-                        question=statement,
-                        status="open",
-                        priority_score=50.0,  # Discovery-sourced; planner will reprioritize
-                    )
-                    db.add(q)
-                    questions_created += 1
-                if questions_created:
-                    db.commit()
+                # Surface discovery evidence/proposals, but don't grow the
+                # operational research queue until its existing backlog is reviewed.
+                questions_created = _promote_discovery_questions(db, report)
                 intelligence["discovery_cycle"]["questions_created"] = questions_created
+                intelligence["discovery_cycle"]["question_generation"] = (
+                    "enabled"
+                    if settings.FORGEOS_AUTO_RESEARCH_QUESTION_GENERATION_ENABLED
+                    else "paused_backlog_review"
+                )
             except Exception:
                 db.rollback()
                 raise

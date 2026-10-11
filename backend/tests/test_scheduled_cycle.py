@@ -520,11 +520,13 @@ def test_scheduled_intelligence_includes_scout_stage(monkeypatch):
     assert "owner_notification_retry" in intel
 
 
-def test_scheduled_intelligence_converts_discovery_questions(monkeypatch):
-    """Stage 5 converts surfaced question findings into ResearchQuestions."""
+def test_scheduled_intelligence_pauses_discovery_question_promotion(monkeypatch):
+    """Stage 5 reports the backlog gate instead of auto-growing the queue."""
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "FORGEOS_AUTO_RESEARCH_QUESTION_GENERATION_ENABLED", False)
     monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
     import app.services.discovery_engine as de
-    from app import models
 
     def mock_run(db, **kwargs):
         # Simulate a discovery finding of kind="question"
@@ -555,8 +557,37 @@ def test_scheduled_intelligence_converts_discovery_questions(monkeypatch):
 
     assert response.status_code == 200
     disc = response.json()["intelligence"]["discovery_cycle"]
-    # Questions were created from surfaced findings
-    assert disc.get("questions_created", 0) >= 0
+    assert disc.get("questions_created") == 0
+    assert disc.get("question_generation") == "paused_backlog_review"
+
+
+def test_discovery_question_promotion_is_paused_and_deduplicates_planned_rows(db, monkeypatch):
+    from app.api.scheduled import _promote_discovery_questions
+    from app.config import settings
+    from app import models
+
+    already_planned = "What evidence would make a reviewed claim more certain?"
+    new_statement = "Which independently observable result would disprove the current buyer hypothesis?"
+    db.add(models.ResearchQuestion(question=already_planned, status="planned"))
+    db.commit()
+    report = {
+        "surfaced": [
+            {"kind": "question", "statement": already_planned},
+            {"kind": "question", "statement": new_statement},
+        ]
+    }
+    before = db.query(models.ResearchQuestion).count()
+    monkeypatch.setattr(settings, "FORGEOS_AUTO_RESEARCH_QUESTION_GENERATION_ENABLED", False)
+    assert _promote_discovery_questions(db, report) == 0
+    assert db.query(models.ResearchQuestion).count() == before
+
+    monkeypatch.setattr(settings, "FORGEOS_AUTO_RESEARCH_QUESTION_GENERATION_ENABLED", True)
+    assert _promote_discovery_questions(db, report) == 1
+    assert db.query(models.ResearchQuestion).count() == before + 1
+    created = db.query(models.ResearchQuestion).filter_by(question=new_statement).one()
+    assert created.status == "open"
+    assert _promote_discovery_questions(db, report) == 0
+    assert db.query(models.ResearchQuestion).count() == before + 1
 
 
 def test_scheduled_intelligence_persists_cycle_run(monkeypatch, db):

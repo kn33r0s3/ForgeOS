@@ -203,6 +203,13 @@ class Settings(BaseSettings):
         "FORGEOS_LEGACY_INTELLIGENCE_ENABLED", "false"
     ).lower() in ("1", "true", "yes")
 
+    # Recurring generators stay paused until the existing research backlog is
+    # reviewed for specificity, falsifiability, and an answerable evidence path.
+    # Explicit owner/user-supplied research requests use their own governed paths.
+    FORGEOS_AUTO_RESEARCH_QUESTION_GENERATION_ENABLED: bool = os.getenv(
+        "FORGEOS_AUTO_RESEARCH_QUESTION_GENERATION_ENABLED", "false"
+    ).lower() in ("1", "true", "yes")
+
     model_config = SettingsConfigDict(env_file=".env")
 
 
