@@ -12,7 +12,67 @@ from app import evidence_source, models, schemas
 from app.services import network_endpoints, public_epistemics
 
 
-_PUBLIC_OUTCOME_SOURCES = ("domain_record", "booking_request", "network_connection")
+# Outcome prose is evidence for the owner, not automatically public copy.
+# Only outcomes tied to a canonical parent are projected; summaries are derived
+# from structured fields, never from free-form qualitative_result text.
+_PUBLIC_OUTCOME_SOURCES = ("domain_record", "network_connection")
+
+
+def _idempotency_parts(outcome: models.Outcome) -> list[str] | None:
+    marker = (outcome.notes or "").split(":")
+    if len(marker) != 4 or marker[0] != "idempotency" or not marker[2].isdigit():
+        return None
+    return marker
+
+
+def _domain_outcome_summary(db: Session, outcome: models.Outcome) -> str | None:
+    marker = _idempotency_parts(outcome)
+    if marker is None or marker[1] != "domain-record" or marker[3] not in {"close", "dispute"}:
+        return None
+    record = db.get(models.DomainRecord, int(marker[2]))
+    if record is None:
+        return None
+    if marker[3] == "dispute" or (outcome.verification_state or "").upper() == "DISPUTED":
+        return f"Domain record {record.id} has a dispute. No winner is recorded."
+    close_result = (record.close_result or "").strip().lower()
+    if close_result == "paid":
+        if (
+            (outcome.verification_state or "").upper() == "VERIFIED"
+            and outcome.success is True
+            and outcome.actual_value is not None
+        ):
+            return (
+                f"Domain record {record.id} recorded a verified paid outcome. "
+                f"Amount: {outcome.actual_value:g} {outcome.unit or 'NPR'}."
+            )
+        return f"Domain record {record.id} has a reported paid outcome; amount not independently verified."
+    if close_result == "completed":
+        return f"Domain record {record.id} recorded as completed. No payment is inferred."
+    if close_result == "withdrawn":
+        return f"Domain record {record.id} was withdrawn. No payment is inferred."
+    return f"Domain record {record.id} has an outcome record; no free-form note is published."
+
+
+def _network_outcome_parent_id(outcome: models.Outcome) -> int | None:
+    marker = _idempotency_parts(outcome)
+    if marker is None or marker[1] != "network-connection":
+        return None
+    return int(marker[2])
+
+
+def _network_outcome_summary(outcome: models.Outcome, connection_id: int) -> str:
+    verification = (outcome.verification_state or "REPORTED").strip().upper()
+    if verification == "DISPUTED":
+        return f"Network connection {connection_id} has a dispute. No winner is recorded."
+    if verification == "VERIFIED" and outcome.success is True and outcome.actual_value is not None:
+        return (
+            f"Network connection {connection_id} recorded a verified payment outcome. "
+            f"Amount: {outcome.actual_value:g} {outcome.unit or 'NPR'}."
+        )
+    if outcome.success is False:
+        return f"Network connection {connection_id} recorded a failed outcome. No payment is inferred."
+    return f"Network connection {connection_id} has a {verification.lower()} outcome record; details are restricted."
+
 _EVIDENCE_TARGET_COLUMNS = {
     "claim": models.EvidenceRelationship.claim_id,
     "opportunity": models.EvidenceRelationship.opportunity_id,
@@ -501,18 +561,26 @@ def build_public_feed(
         .filter(models.Provider.verification_status == "verified")
         .all()
     }
+    # Booking requests are private request/status records. They may be polled
+    # only with the booking capability token and never enter the public feed.
     outcomes = (
         db.query(models.Outcome)
         .filter(models.Outcome.source.in_(_PUBLIC_OUTCOME_SOURCES))
         .filter(*evidence_source.real_scope_source_filters(models.Outcome))
         .filter(models.Outcome.qualitative_result.isnot(None))
         .order_by(models.Outcome.observed_at.desc())
-        .limit(limit)
+        .limit(limit * 4)
         .all()
     )
-    public_outcome_ids = {
-        outcome.id for outcome in outcomes if (outcome.qualitative_result or "").strip()
-    }
+    public_outcome_summaries: dict[int, str] = {}
+    for outcome in outcomes:
+        if outcome.source == "domain_record":
+            summary = _domain_outcome_summary(db, outcome)
+            if summary:
+                public_outcome_summaries[outcome.id] = summary
+    # Do not let an outcome about a network edge make that edge public. Those
+    # outcomes are considered only after the normal endpoint-visibility closure.
+    public_outcome_ids = set(public_outcome_summaries)
     public_references = (
         {("claim", claim_id) for claim_id in public_claims}
         | {("signal", signal_id) for signal_id in public_signal_ids}
@@ -562,9 +630,8 @@ def build_public_feed(
         for reference in item.relations:
             if reference.entity_type == "signal":
                 public_titles.setdefault((reference.entity_type, reference.entity_id), item.title)
-    for outcome in outcomes:
-        if (outcome.qualitative_result or "").strip():
-            public_titles[("outcome", outcome.id)] = "Recorded outcome"
+    for outcome_id in public_outcome_ids:
+        public_titles[("outcome", outcome_id)] = "Recorded outcome"
 
     for connection in connections:
         if connection.id not in visible_connection_ids:
@@ -611,8 +678,19 @@ def build_public_feed(
             ),
         ))
 
+    # Domain outcomes were validated before graph-visibility closure. Network
+    # outcomes require their parent connection to pass that same visibility gate.
     for outcome in outcomes:
-        if not (outcome.qualitative_result or "").strip():
+        summary = public_outcome_summaries.get(outcome.id)
+        if outcome.source == "network_connection":
+            connection_id = _network_outcome_parent_id(outcome)
+            if connection_id is None or connection_id not in visible_connection_ids:
+                continue
+            connection = db.get(models.NetworkConnection, connection_id)
+            if connection is None or not connection.public_visible:
+                continue
+            summary = _network_outcome_summary(outcome, connection_id)
+        if summary is None:
             continue
         verification_state = (outcome.verification_state or "REPORTED").strip().upper()
         epistemic_state = {
@@ -625,7 +703,7 @@ def build_public_feed(
             entity_type="outcome",
             entity_id=outcome.id,
             title="Recorded outcome",
-            summary=outcome.qualitative_result,
+            summary=summary,
             occurred_at=outcome.observed_at,
             status=verification_state.lower(),
             epistemic_state=epistemic_state,
