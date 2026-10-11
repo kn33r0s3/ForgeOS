@@ -1696,6 +1696,8 @@ class ProductOut(BaseModel):
 class ProductSummary(ProductOut):
     """Product + honest distribution rollup."""
     has_offer_brief: bool = False
+    actual_revenue_by_currency: dict[str, float] = Field(default_factory=dict)
+    actual_cost_by_currency: dict[str, float] = Field(default_factory=dict)
     channel_count: int = 0
     lead_count: int = 0
     paid_customer_count: int = 0

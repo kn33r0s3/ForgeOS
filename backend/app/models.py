@@ -2295,3 +2295,42 @@ class ResidueFlag(Base):
     review_notes = Column(Text, nullable=True)
 
     evidence = relationship("Evidence", foreign_keys=[evidence_id])
+
+
+
+class OpPaymentIntent(Base):
+    """Durable provider checkout attempt, linked to a canonical Product/Outcome.
+
+    This operational table is a payment projection/state machine, not a new
+    semantic primitive. Only a provider-verified finalizer may attach REAL
+    ACTUAL_REVENUE evidence to outcome_id.
+    """
+
+    __tablename__ = "op_payment_intents"
+    __table_args__ = (
+        CheckConstraint("provider IN ('esewa','khalti')", name="ck_op_payment_intents_provider"),
+        CheckConstraint(
+            "status IN ('CREATED','INITIATED','PENDING','VERIFIED','FAILED','CANCELLED','DISPUTED','REFUNDED')",
+            name="ck_op_payment_intents_status",
+        ),
+        CheckConstraint("currency = 'NPR'", name="ck_op_payment_intents_currency"),
+        CheckConstraint("amount_paisa > 0", name="ck_op_payment_intents_positive_amount"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    public_ref = Column(String(64), nullable=False, unique=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False, index=True)
+    provider = Column(String(16), nullable=False, index=True)
+    status = Column(String(16), nullable=False, default="CREATED", index=True)
+    amount_paisa = Column(Integer, nullable=False)
+    currency = Column(String(3), nullable=False, default="NPR")
+    merchant_order_id = Column(String(80), nullable=False, unique=True)
+    idempotency_key_hash = Column(String(64), nullable=False, unique=True)
+    provider_payment_id = Column(String(200), nullable=True, unique=True)
+    provider_reference = Column(String(200), nullable=True)
+    checkout_url = Column(String(2048), nullable=True)
+    outcome_id = Column(Integer, ForeignKey("outcomes.id"), nullable=True, unique=True)
+    data_scope = Column(String(8), nullable=False, default="REAL")
+    status_note = Column(Text, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+    updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow)

@@ -603,9 +603,10 @@ def record_outcome(
     if outcome_type in {"ACTUAL_REVENUE", "ACTUAL_COST"}:
         if actual_value is None:
             raise ValueError("An explicit collected/spent amount is required")
-        if unit and unit.upper() != "USD":
-            raise ValueError("Dollar rollups currently support USD only; currency conversion is not implemented")
-        unit = "USD"
+        currency = (unit or "USD").upper()
+        if currency not in {"USD", "NPR"}:
+            raise ValueError("Revenue/cost outcomes currently support USD or NPR; currencies are never auto-converted")
+        unit = currency
     product = db.get(models.Product, product_id) if product_id else None
     if product_id and (not product or product.data_scope != data_scope):
         raise ValueError("Product not found or data scope mismatch")

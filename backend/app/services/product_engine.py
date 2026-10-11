@@ -177,14 +177,27 @@ def rollup_product(db: Session, product: models.Product) -> dict:
     revenue = 0.0
     cost = 0.0
     customers = 0
+    revenue_by_currency = {"USD": 0.0, "NPR": 0.0}
+    cost_by_currency = {"USD": 0.0, "NPR": 0.0}
     for o in rows:
-        if o.outcome_type == "ACTUAL_REVENUE" and o.actual_value is not None and (o.unit or "USD").upper() == "USD":
-            revenue += o.actual_value
-        elif o.outcome_type == "ACTUAL_COST" and o.actual_value is not None and (o.unit or "USD").upper() == "USD":
-            cost += o.actual_value
+        currency = (o.unit or "USD").upper()
+        if o.outcome_type == "ACTUAL_REVENUE" and o.actual_value is not None and currency in revenue_by_currency:
+            revenue_by_currency[currency] += o.actual_value
+            if currency == "USD":
+                revenue += o.actual_value
+        elif o.outcome_type == "ACTUAL_COST" and o.actual_value is not None and currency in cost_by_currency:
+            cost_by_currency[currency] += o.actual_value
+            if currency == "USD":
+                cost += o.actual_value
         elif o.outcome_type == "ACTUAL_CUSTOMERS" and o.actual_value is not None:
             customers += int(o.actual_value)
-    return {"actual_revenue": revenue, "actual_cost": cost, "actual_customers": customers}
+    return {
+        "actual_revenue": revenue,
+        "actual_cost": cost,
+        "actual_customers": customers,
+        "actual_revenue_by_currency": revenue_by_currency,
+        "actual_cost_by_currency": cost_by_currency,
+    }
 
 
 def product_summary(db: Session, product: models.Product) -> dict:

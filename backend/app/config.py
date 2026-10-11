@@ -116,6 +116,12 @@ class Settings(BaseSettings):
     ESEWA_STATUS_URL: str = os.getenv("ESEWA_STATUS_URL", DEFAULT_ESEWA_V2_STATUS_URL)
     KHALTI_SECRET_KEY: str = os.getenv("KHALTI_SECRET_KEY", "")
     KHALTI_API_BASE_URL: str = os.getenv("KHALTI_API_BASE_URL", "https://khalti.com/api/v2")
+    # Public checkout stays closed until production merchant configuration,
+    # callback verification and the public origin have been verified.
+    FORGEOS_PUBLIC_CHECKOUT_ENABLED: bool = os.getenv(
+        "FORGEOS_PUBLIC_CHECKOUT_ENABLED", "false"
+    ).lower() in ("1", "true", "yes")
+    PUBLIC_APP_URL: str = os.getenv("PUBLIC_APP_URL", "https://haminp.vercel.app")
 
     # --- Messaging (Twilio SMS) ---
     TWILIO_ACCOUNT_SID: str = os.getenv("TWILIO_ACCOUNT_SID", "")

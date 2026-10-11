@@ -1,3 +1,9 @@
+## [SOURCE CHANGE / CI PENDING] Add durable payment-intent substrate and currency-safe revenue rollups (2026-10-12)
+
+- Added one operational `op_payment_intents` table linked to the existing Product and verified Outcome. It stores a random public reference, provider/order identity, idempotency hash, NPR paisa amount, lifecycle status, and optional Outcome reference. It stores no buyer contact data.
+- Added `FORGEOS_PUBLIC_CHECKOUT_ENABLED`, default `false`; no checkout route is enabled by this setting until the provider callback path is implemented and production configuration is verified.
+- The canonical revenue writer now accepts NPR alongside USD without converting between currencies. Product summaries keep the legacy `actual_revenue` field USD-only and expose separate currency rollups so NPR cannot inflate USD totals.
+- Tests cover durable linkage and separate NPR/USD verified revenue. Exact-SHA Linux tests are pending.
 ## [SOURCE CHANGE / CI PENDING] Expose same-product review and publication controls in /owner (2026-10-12)
 
 - Added owner-side pricing and lifecycle controls on the existing Product card: prepare review, approve terms, publish, and pause. Actions use the same product ID and shared owner-key guard; no duplicate offer/product state is created.

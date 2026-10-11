@@ -452,6 +452,66 @@ def test_fixed_npr_price_requires_an_explicit_one_time_contract():
     assert fixed_npr_price_paisa("$49 one-time") is None
 
 
+def test_verified_npr_revenue_is_separate_from_usd_rollup(db):
+    product = product_engine.create_product(
+        db,
+        name="NPR revenue rollup fixture",
+        offer="A verified one-time NPR payment",
+        data_scope="REAL",
+    )
+    usd = action_engine.record_outcome(
+        db,
+        outcome_type="ACTUAL_REVENUE",
+        product_id=product.id,
+        actual_value=12.5,
+        unit="USD",
+        source="verified provider fixture",
+        source_kind="REAL",
+        verification_state="VERIFIED",
+        data_scope="REAL",
+        idempotency_key="test-usd-payment-rollup",
+    )
+    npr = action_engine.record_outcome(
+        db,
+        outcome_type="ACTUAL_REVENUE",
+        product_id=product.id,
+        actual_value=5000.0,
+        unit="NPR",
+        source="verified provider fixture",
+        source_kind="REAL",
+        verification_state="VERIFIED",
+        data_scope="REAL",
+        idempotency_key="test-npr-payment-rollup",
+    )
+    assert usd.id != npr.id
+    rollup = product_engine.product_summary(db, product)
+    assert rollup["actual_revenue"] == 12.5
+    assert rollup["actual_revenue_by_currency"] == {"USD": 12.5, "NPR": 5000.0}
+    assert rollup["actual_cost_by_currency"] == {"USD": 0.0, "NPR": 0.0}
+
+
+def test_payment_intent_operational_state_is_linked_to_product_and_outcome(db):
+    product = product_engine.create_product(
+        db, name="Payment intent fixture", offer="Existing product", data_scope="REAL"
+    )
+    intent = models.OpPaymentIntent(
+        public_ref="public-intent-reference-123456789",
+        product_id=product.id,
+        provider="esewa",
+        status="CREATED",
+        amount_paisa=500000,
+        currency="NPR",
+        merchant_order_id="hami-esewa-0123456789abcdef",
+        idempotency_key_hash="a" * 64,
+        data_scope="REAL",
+    )
+    db.add(intent)
+    db.commit()
+    db.refresh(intent)
+    assert db.get(models.OpPaymentIntent, intent.id).product_id == product.id
+    assert db.get(models.OpPaymentIntent, intent.id).outcome_id is None
+
+
 # ---------------------------------------------------------------------------
 # Lessons Memory (v2.10) — durable consolidate + recall, learned like an
 # assistant files facts and recalls them into later reasoning.
