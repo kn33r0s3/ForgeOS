@@ -80,7 +80,10 @@ export async function getSessionUser(
  * - Auth disabled (`VITE_AUTH_ENABLED=false`) + `DATABASE_URL` set -> throw (fail
  *   closed): one shared dev user on a real database would let every visitor
  *   read/write everyone's rows.
- * - Auth disabled + no database -> the shared dev user id.
+ * - Auth disabled + no database -> the shared dev user id only in an isolated
+ *   workspace preview/local development process.
+ * - Deployed auth without a stable secret (or an explicit auth-off switch) is
+ *   unauthorized; it must never fall back to a shared user.
  */
 export async function requireUserId(bearerToken?: string): Promise<string> {
   if (!authConfigured && !gateIdentityEnabled()) {
