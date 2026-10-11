@@ -219,7 +219,7 @@ function stripThirdPartyAppBranding(html) {
       "",
     )
     .replace(
-      /<meta\b(?=[^>]*\bname\s*=\s*["'](?:apple-mobile-web-app-title|application-name)["'])[^>]*>/gi,
+      /<meta\b(?=[^>]*\bname\s*=\s*["'](?:apple-mobile-web-app-title|application-name)["'])(?=[^>]*\bcontent\s*=\s*["']Grok\s+App["'])[^>]*>/gi,
       "",
     )
     .replace(/<title\b[^>]*>\s*Grok\s+App\s*<\/title\s*>/gi, "<title>Hami</title>");
