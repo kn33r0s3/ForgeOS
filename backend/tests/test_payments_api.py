@@ -124,7 +124,7 @@ def test_payment_status_is_owner_protected_configuration_only_and_never_contacts
     assert flags["khalti"]["required_credentials_present"] is False
 
 def test_khalti_callback_reports_owner_reconciliation_for_refund_conflict(monkeypatch):
-    def reconciliation_required(**kwargs):
+    def reconciliation_required(_db, **kwargs):
         raise payments.payment_intent_engine.PaymentReconciliationRequired(
             "Khalti reports a refund for a previously verified payment; owner reconciliation is required."
         )

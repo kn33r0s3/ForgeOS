@@ -1,3 +1,8 @@
+## [TEST FIX / CI PENDING] Match Khalti reconciliation stub signature to API call (2026-10-12)
+
+- The authenticated callback API passes the SQLAlchemy session positionally, then intent/pidx as keywords. The regression test double now accepts the same signature; production behavior is unchanged.
+- The previous Linux full suite reported 1,095 passed, 2 skipped and exactly one failure caused by the zero-positional-argument test stub. The new full-head CI remains required.
+
 ## [SOURCE CHANGE / CI PENDING] Retain checkout idempotency key after an ambiguous browser failure (2026-10-12)
 
 - A generic fetch/provider error could occur after the server had persisted an intent or a provider had started checkout. The public UI previously deleted the per-offer idempotency key, allowing the next click to create a second intent.
