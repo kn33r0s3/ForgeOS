@@ -94,11 +94,13 @@ function readStoredCheckoutAttempt(offerId: number): StoredCheckoutAttempt | nul
   }
 }
 
-function writeStoredCheckoutAttempt(offerId: number, attempt: StoredCheckoutAttempt) {
+function writeStoredCheckoutAttempt(offerId: number, attempt: StoredCheckoutAttempt): boolean {
   try {
     window.sessionStorage.setItem(checkoutAttemptStorageKey(offerId), JSON.stringify(attempt));
+    return true;
   } catch {
-    // In-memory idempotency remains active when session storage is unavailable.
+    // Never initiate payment if the retry key cannot survive a page refresh.
+    return false;
   }
 }
 
@@ -160,7 +162,16 @@ function PublicOffers() {
     const attempt: StoredCheckoutAttempt = { key, provider };
     setKeys((current) => ({ ...current, [offer.id]: key }));
     setProvidersByOffer((current) => ({ ...current, [offer.id]: provider }));
-    writeStoredCheckoutAttempt(offer.id, attempt);
+    if (!writeStoredCheckoutAttempt(offer.id, attempt)) {
+      setError({
+        offerId: offer.id,
+        provider,
+        message: "This browser cannot safely persist the checkout attempt. No checkout request was sent.",
+        retryable: false,
+      });
+      setBusyId(null);
+      return;
+    }
     let retryable = true;
     try {
       const response = await fetch("/api/payments/products/" + offer.id + "/checkout", {

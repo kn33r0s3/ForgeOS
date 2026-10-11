@@ -1,3 +1,9 @@
+## [SOURCE CHANGE / CI PENDING] Fail closed when checkout retry storage is unavailable (2026-10-12)
+
+- Checkout previously swallowed a `sessionStorage.setItem` failure and still sent the provider request with only an in-memory idempotency key. A refresh after an ambiguous response could then lose that key and permit a duplicate payment intent.
+- The storage writer now returns success/failure, and checkout returns before the network POST when the key cannot be persisted. The existing provider/key pair still remains tab-scoped; no buyer details or credentials are stored.
+- Checkout remains disabled by default and provider credentials are absent in production. Exact-head frontend tests, typecheck, build, backend CI and deployment verification are required.
+
 ## [TEST FIX / CI PENDING] Normalize Markdown whitespace in operating-model regression (2026-10-12)
 
 - The open-ended investigation policy is present in the operating model, but its feature-registry test failed because it expected “The 90-day window…” when the source sentence starts the next line with “90-day window…”. The test now normalizes Markdown whitespace and asserts the actual policy wording rather than formatting.
