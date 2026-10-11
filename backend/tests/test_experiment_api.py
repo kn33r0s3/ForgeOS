@@ -255,3 +255,47 @@ def test_experiment_write_endpoints_unavailable_when_key_unset(db):
     finally:
         app.dependency_overrides.clear()
         client.close()
+
+
+
+def test_orchestrator_overview_is_owner_only_read_only_and_excludes_customer_events(db):
+    client = _client_for(db)
+    try:
+        opportunity = models.Opportunity(
+            problem="Independent repair shops lose time answering repeated status calls.",
+            target_customer="independent repair shops",
+            solution="A status visibility service",
+            business_model="service",
+            pricing_idea="$40/mo",
+            score=60.0,
+            status="identified",
+            market_confidence=0.0,
+            revenue_confidence=0.0,
+            uncertainty=100.0,
+        )
+        db.add(opportunity)
+        db.commit()
+        db.refresh(opportunity)
+        decisions_before = db.query(models.Decision).count()
+        experiments_before = db.query(models.Experiment).count()
+
+        denied = client.get("/api/orchestrate/overview")
+        assert denied.status_code == 401
+
+        response = client.get("/api/orchestrate/overview", headers=_api_headers())
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["data_scope"] == "REAL"
+        assert body["flow"]
+        row = next(item for item in body["flow"] if item["opportunity_id"] == opportunity.id)
+        assert row["decision_status"] == "not_started"
+        assert row["validation_status"] == "not_started"
+        assert "customer_events" not in row
+        assert "contact_name" not in row and "contact_identifier" not in row
+
+        # GET must not prepare a decision/experiment or write a real-world result.
+        assert db.query(models.Decision).count() == decisions_before
+        assert db.query(models.Experiment).count() == experiments_before
+    finally:
+        client.close()
+        app.dependency_overrides.pop(get_db, None)

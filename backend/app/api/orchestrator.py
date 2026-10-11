@@ -52,6 +52,64 @@ def _flow(db, oid, scope):
         raise HTTPException(404, "Opportunity not found")
     return orchestrator.promote_opportunity(db, oid, create_missing=False, data_scope=scope)
 
+
+@router.get("/overview")
+def get_orchestration_overview(
+    request: Request,
+    limit: int = Query(5, ge=1, le=25),
+    data_scope: Scope = "REAL",
+    db: Session = Depends(get_db),
+):
+    """Read-only stage projection for the owner cockpit; excludes customer/contact event rows."""
+    _owner(request)
+    scope = orchestrator.normalize_data_scope(data_scope)
+    rows = []
+    for opportunity in orchestrator.ranked_opportunities(db, limit):
+        decision = (
+            db.query(models.Decision)
+            .filter_by(opportunity_id=opportunity.id)
+            .filter(
+                models.Decision.title.like("[SANDBOX]%")
+                if scope == "SANDBOX"
+                else ~models.Decision.title.like("[SANDBOX]%")
+            )
+            .order_by(models.Decision.created_at.desc())
+            .first()
+        )
+        experiment = (
+            db.query(models.Experiment)
+            .filter_by(
+                opportunity_id=opportunity.id,
+                action_type="customer_interview",
+                data_scope=scope,
+            )
+            .order_by(models.Experiment.created_at.desc())
+            .first()
+        )
+        rows.append({
+            "opportunity_id": opportunity.id,
+            "problem": opportunity.problem,
+            "target_customer_hypothesis": orchestrator.derive_opportunity_hypothesis(opportunity)["target_customer"],
+            "opportunity_status": opportunity.status,
+            "score": opportunity.score,
+            "decision_status": decision.status if decision else "not_started",
+            "validation_status": experiment.status if experiment else "not_started",
+            "validation_experiment_id": experiment.id if experiment else None,
+            "requires_owner_approval": experiment.requires_owner_approval if experiment else None,
+            "product_count": db.query(models.Product).filter_by(
+                opportunity_id=opportunity.id, data_scope=scope
+            ).count(),
+            "distribution_channel_count": db.query(models.DistributionChannel).filter_by(
+                opportunity_id=opportunity.id, data_scope=scope
+            ).count(),
+            "data_scope": scope,
+        })
+    return {
+        "data_scope": scope,
+        "flow": rows,
+        "pipeline": orchestrator._flow_snapshot(db),
+    }
+
 @router.get("/flow")
 def get_flow(request: Request, limit: int = Query(10, ge=1, le=50), data_scope: Scope = "REAL", db: Session = Depends(get_db)):
     _owner(request)

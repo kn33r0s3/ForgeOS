@@ -239,6 +239,17 @@ describe("feature registry", () => {
     }
   });
 
+  it("connects orchestrator, distribution and payment configuration inside the private owner cockpit", () => {
+    const owner = readFileSync(path.join(root, "routes", "owner.tsx"), "utf8");
+    assert.ok(owner.includes('"/api/orchestrate/overview?limit=5&data_scope=REAL"'));
+    assert.ok(owner.includes('"/api/products/channels"'));
+    assert.ok(owner.includes('"/api/payments/status"'));
+    assert.ok(owner.includes("configuration_only"), "payment visibility must be explicitly configuration-only");
+    assert.ok(owner.includes("conversion_count"), "distribution funnel rollups must use persisted channel counters");
+    assert.ok(!owner.includes('"/api/payments/esewa/checkout"'), "owner overview must not initiate checkout");
+    assert.ok(!owner.includes('"/api/payments/khalti/initiate"'), "owner overview must not initiate a payment");
+  });
+
   it("does not advertise the hidden, closed intake route from the public Businesses page", () => {
     const businessesPage = readFileSync(path.join(root, "routes", "group.businesses.tsx"), "utf8");
     assert.ok(!businessesPage.includes('to="/forge-bot-intake"'));

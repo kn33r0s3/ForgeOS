@@ -7,6 +7,14 @@
 
 # Hami capability claim ledger (ForgeOS repository)
 
+## [IN PROGRESS] Cross-layer Hami integration and dependency audit (2026-10-11)
+
+- **SCOPE:** trace public and private routes to their canonical frontend entry points, backend router registration, service/engine callers, persisted evidence, authorization gates, and deployment wiring. Include route-registry completeness, API call-site coverage, duplicate/legacy implementations, platform-brand residue, and production verification.
+- **FIRST VERIFIED GAPS:** the owner cockpit displayed intelligence engine counts but did not consume the canonical orchestrator flow; product detail showed aggregate channel counts but not the existing channel rollups; payment visibility was hard-coded UNKNOWN because no passive configuration endpoint existed. These findings are addressed in the adjacent owner-cockpit change without adding another page or domain model.
+- **BRANDING BOUNDARY:** the old Grok PWA injector/middleware files are absent and the existing regression test checks that. Platform-specific references remain in workspace preview/auth/tooling files; do not mass-delete them until every runtime/build dependency and developer workflow has been traced.
+- **AUDIT LIMITATION:** this is an ongoing source/deployment audit, not a claim that every line or production runtime has been verified. The Vercel connector currently denies read access to the project/team, so browser-level production HTML, owner API access, env vars and runtime logs still need an authorized production check.
+- **NEXT:** generate and verify the full router → endpoint → service → model → caller graph, then classify each remaining endpoint as owner UI, public capability, scheduled/internal worker, integration adapter, compatibility surface, or genuinely orphaned before retiring or connecting anything.
+
 ## [DONE WITH LIMITATION] Connect route and service surfaces into one Hami (2026-10-11)
 
 - **EXISTING SEAMS REUSED:** `src/lib/hami-system.ts` remains the single public NAV/footer/pathway source; `features.json` remains the route lifecycle authority; `src/lib/content.ts` remains the single source of the six Hami service categories and seven strategic group directions. No route, service category, API, or domain table was added.
@@ -46,14 +54,16 @@
 - **NEXT REMOVABLE DEPENDENCY:** restore correct Vercel scope access so the exact production CORS allowlist can be set and verified; have the owner rotate exposed Twilio credentials and replace environment values, then rerun deploy verification on the resulting main SHA.
 - **VERIFICATION AT CHANGE TIME:** latest full Linux backend run on `be4801ae38e88894a3345d8ccc06e850e792fefc` reported 1026 passed, 2 skipped, 2 failed. CI for this test-only patch is pending; results will be recorded after the run completes.
 
-## [PARTIAL] Expose product outcomes and payment boundaries in the owner console (2026-10-11)
+## [DONE WITH LIMITATION] Connect orchestrator, distribution and payment configuration to the owner cockpit (2026-10-11)
 
-- **EXISTING SEAMS INSPECTED:** `src/routes/owner.tsx`, `backend/app/api/products.py`, `backend/app/services/product_engine.py`, and `backend/app/api/payments.py`. Product summaries are owner-key protected and do not return customer-event contact records. Payment routes currently expose checkout/initiation and transaction-specific lookup/callback verification, not passive provider readiness.
-- **OWNER ACTION STILL REQUIRED:** authenticate to the owner console and reconcile a real payment only when the owner has an actual provider transaction reference. Provider credentials and payment state are not inferred by the UI.
-- **ACTION THIS CHANGE REMOVES:** needing to leave the owner console to inspect the existing product summary records and their evidence-gated REAL outcome rollups. The new panel uses the existing `GET /api/products` seam and does not fetch the consolidated pipeline endpoint, which includes customer-event contact data.
-- **REMAINING BLOCKER:** eSewa/Khalti provider readiness remains **UNKNOWN** in the UI because no passive status endpoint exists. This change does not initiate checkout, call gateways, modify activation flags, or claim live payment collection.
-- **NEXT REMOVABLE DEPENDENCY:** establish an owner-authorized, read-only payment reconciliation/status seam based on specific verified provider records; only then expose evidence-grounded provider state without initiating transactions.
-- **VERIFICATION AT CHANGE TIME:** implementation source and response schema inspected; automated CI results pending after the commit. REAL verified-outcome revenue is displayed as USD because the existing product rollup counts ACTUAL_REVENUE only when unit is USD. SANDBOX metrics remain separate.
+- **EXISTING SEAMS REUSED:** the existing private `/owner` route, `/api/orchestrate` router, `/api/products/channels` read projection, `/api/products` summary, and `/api/payments` router. No page, domain table, payment rail, or parallel service was added.
+- **CONNECTIONS CLOSED:** the owner cockpit now displays an owner-key protected, PII-minimized orchestration stage view; persisted REAL product/distribution channel rollups; and passive eSewa/Khalti credential-presence flags. The payment status API discloses booleans only and performs no gateway request. Customer-event contact rows are not loaded into the orchestrator overview; the sensitive `/api/products/pipeline` projection remains unused by this view.
+- **TRUTH AND ACCESS PRESERVED:** the overview is read-only; decision/validation states do not mean work was executed. Channel stage counts are not independently verified revenue. Credential presence is configuration, not merchant approval, provider reachability, payment completion, settlement, or live collection. Checkout/initiation endpoints, approvals, intake and LIVE flags are unchanged.
+- **REGRESSION COVERAGE ADDED:** API tests assert owner-key protection, configuration-only payment status with no provider calls or secret disclosure, and that the orchestrator GET leaves decision/experiment counts unchanged and excludes contact-event fields. Frontend contract tests require the owner cockpit to use these read-only seams only.
+- **REMAINING BLOCKERS:** production API and owner-key access cannot be independently validated through the current Vercel connector (project/team access returns 403). A verified provider transaction is still required before any transaction-specific reconciliation; the current callback verifies provider state but does not record an outcome or mark revenue. The broader route-to-service/caller audit and remaining Grok workspace/tooling references still need full dependency tracing.
+- **NEXT REMOVABLE DEPENDENCY:** trace transaction callback/lookup verification into the existing evidence-gated outcome record without allowing unverified callbacks to create revenue; then complete the route-to-service call graph across all registered routers.
+- **VERIFICATION AT CHANGE TIME:** source contracts inspected; new API/UI regression checks are written but require GitHub CI to execute. No payment provider was contacted, no secret value was returned, and no real transaction or revenue was created.
+
 
 ## Closure map snapshot (2026-10-04)
 

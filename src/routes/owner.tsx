@@ -64,6 +64,17 @@ export const Route = createFileRoute("/owner")({
   }),
 });
 
+async function ownerProjectionFetch<T>(path: string, ownerKey: string): Promise<T> {
+  const response = await fetch(path, { headers: { "X-API-Key": ownerKey } });
+  if (response.status === 401) {
+    throw new Error("Owner authentication failed. Check the key and try again.");
+  }
+  if (!response.ok) {
+    throw new Error(`Owner projection request failed (${response.status}) at ${path}.`);
+  }
+  return (await response.json()) as T;
+}
+
 async function ownerFetch<T>(
   path: string,
   key: string,
@@ -221,6 +232,83 @@ type CommercialState = {
   error: string | null;
 };
 
+type ChannelSummaryView = {
+  id: number;
+  product_id: number | null;
+  opportunity_id: number | null;
+  channel_type: string;
+  name: string;
+  description: string | null;
+  status: string;
+  outreach_count: number;
+  response_count: number;
+  conversion_count: number;
+  data_scope: "REAL" | "SANDBOX";
+};
+
+type PaymentConfigurationView = {
+  scope: "configuration_only";
+  provider_connectivity_checked: false;
+  transaction_state_checked: false;
+  providers: {
+    esewa: {
+      merchant_code_configured: boolean;
+      signing_secret_configured: boolean;
+      required_credentials_present: boolean;
+    };
+    khalti: {
+      secret_key_configured: boolean;
+      required_credentials_present: boolean;
+    };
+  };
+  not_established: string[];
+};
+
+type OrchestratorPipelineView = {
+  signals: number;
+  opportunities: number;
+  decisions_accepted: number;
+  validation_experiments: number;
+  experiments_completed: number;
+  outcomes: number;
+  learning_events: number;
+  lessons: number;
+  products: number;
+  distribution_channels: number;
+  customer_events: number;
+  actions_awaiting_approval: number;
+  actual_revenue: number;
+  real_customers: number;
+  products_with_revenue: number;
+  sandbox: {
+    actual_revenue: number;
+    outcomes: number;
+    products: number;
+    label: string;
+  };
+};
+
+type OrchestratorOpportunityView = {
+  opportunity_id: number;
+  problem: string | null;
+  target_customer_hypothesis: string;
+  opportunity_status: string;
+  score: number | null;
+  decision_status: string;
+  validation_status: string;
+  validation_experiment_id: number | null;
+  requires_owner_approval: boolean | null;
+  product_count: number;
+  distribution_channel_count: number;
+  data_scope: "REAL" | "SANDBOX";
+};
+
+type OrchestratorOverviewView = {
+  data_scope: "REAL" | "SANDBOX";
+  flow: OrchestratorOpportunityView[];
+  pipeline: OrchestratorPipelineView;
+};
+
 function formatUsd(value: number | null | undefined) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "UNKNOWN";
   return new Intl.NumberFormat("en-US", {
@@ -339,6 +427,12 @@ function OwnerConsolePage() {
     products: null,
     error: null,
   });
+  const [orchestrationOverview, setOrchestrationOverview] = useState<OrchestratorOverviewView | null>(null);
+  const [orchestrationError, setOrchestrationError] = useState<string | null>(null);
+  const [channels, setChannels] = useState<ChannelSummaryView[] | null>(null);
+  const [channelsError, setChannelsError] = useState<string | null>(null);
+  const [paymentConfiguration, setPaymentConfiguration] = useState<PaymentConfigurationView | null>(null);
+  const [paymentConfigurationError, setPaymentConfigurationError] = useState<string | null>(null);
 
   async function refresh(ownerKey = key) {
     const [readiness, leads] = await Promise.all([
@@ -370,6 +464,48 @@ function OwnerConsolePage() {
         products: null,
         error: cause instanceof Error ? cause.message : "Product visibility is unavailable.",
       });
+    }
+
+    // Read a PII-free view of the canonical orchestrator; do not load customer-event rows.
+    try {
+      const payload = await ownerProjectionFetch<OrchestratorOverviewView>(
+        "/api/orchestrate/overview?limit=5&data_scope=REAL",
+        ownerKey,
+      );
+      if (!payload || !Array.isArray(payload.flow) || !payload.pipeline) {
+        throw new Error("Orchestrator overview returned an unexpected response.");
+      }
+      setOrchestrationOverview(payload);
+      setOrchestrationError(null);
+    } catch (cause) {
+      setOrchestrationOverview(null);
+      setOrchestrationError(cause instanceof Error ? cause.message : "Orchestrator overview is unavailable.");
+    }
+
+    // Channel rollups are safe to display; do not fetch /products/pipeline because it includes contact records.
+    try {
+      const payload = await ownerProjectionFetch<unknown>("/api/products/channels", ownerKey);
+      if (!Array.isArray(payload)) {
+        throw new Error("Distribution channel visibility returned an unexpected response.");
+      }
+      setChannels(payload as ChannelSummaryView[]);
+      setChannelsError(null);
+    } catch (cause) {
+      setChannels(null);
+      setChannelsError(cause instanceof Error ? cause.message : "Distribution channel visibility is unavailable.");
+    }
+
+    // Configuration-only status does not contact eSewa/Khalti or assert a successful payment.
+    try {
+      const payload = await ownerProjectionFetch<PaymentConfigurationView>("/api/payments/status", ownerKey);
+      if (!payload || payload.scope !== "configuration_only" || !payload.providers) {
+        throw new Error("Payment configuration returned an unexpected response.");
+      }
+      setPaymentConfiguration(payload);
+      setPaymentConfigurationError(null);
+    } catch (cause) {
+      setPaymentConfiguration(null);
+      setPaymentConfigurationError(cause instanceof Error ? cause.message : "Payment configuration is unavailable.");
     }
 
     if (selected) {
@@ -405,6 +541,12 @@ function OwnerConsolePage() {
     } catch (cause) {
       setConsoleState(null);
       setCommercial({ products: null, error: null });
+      setOrchestrationOverview(null);
+      setOrchestrationError(null);
+      setChannels(null);
+      setChannelsError(null);
+      setPaymentConfiguration(null);
+      setPaymentConfigurationError(null);
       setError(cause instanceof Error ? cause.message : "Owner access is unavailable.");
     } finally {
       setBusy(false);
@@ -494,6 +636,12 @@ function OwnerConsolePage() {
     setSelected(null);
     setIntel(null);
     setCommercial({ products: null, error: null });
+    setOrchestrationOverview(null);
+    setOrchestrationError(null);
+    setChannels(null);
+    setChannelsError(null);
+    setPaymentConfiguration(null);
+    setPaymentConfigurationError(null);
     setNotice("");
     setError("");
   }
@@ -770,6 +918,75 @@ function OwnerConsolePage() {
                   </p>
                 ) : (
                   <div className="mt-4 grid gap-6">
+                    {/* Canonical orchestrator: persisted stage state only, no customer/contact details. */}
+                    <div>
+                      <h3 className="font-extrabold">Canonical orchestration path</h3>
+                      <p className="mt-1 text-sm text-muted">
+                        Opportunity → owner-reviewed decision → human validation → product → distribution → verified outcome.
+                        Counts come from persisted records; this panel never advances or approves work.
+                      </p>
+                      {orchestrationOverview === null ? (
+                        <p className="mt-2 rounded-card border border-line bg-card p-4 text-sm text-muted">
+                          {orchestrationError ?? "Orchestrator status UNKNOWN — refresh the owner console to load the read-only projection."}
+                        </p>
+                      ) : (
+                        <>
+                          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            {([
+                              ["Opportunities", orchestrationOverview.pipeline.opportunities],
+                              ["Accepted decisions", orchestrationOverview.pipeline.decisions_accepted],
+                              ["Validation experiments", orchestrationOverview.pipeline.validation_experiments],
+                              ["Completed experiments", orchestrationOverview.pipeline.experiments_completed],
+                              ["Verified REAL outcomes", orchestrationOverview.pipeline.outcomes],
+                              ["REAL products", orchestrationOverview.pipeline.products],
+                              ["REAL distribution channels", orchestrationOverview.pipeline.distribution_channels],
+                              ["Actions awaiting approval", orchestrationOverview.pipeline.actions_awaiting_approval],
+                            ] as const).map(([label, value]) => (
+                              <div key={label} className="rounded-card border-2 border-line bg-card p-3">
+                                <p className="text-sm text-muted">{label}</p>
+                                <p className="mt-1 text-xl font-extrabold tabular-nums">{value}</p>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="mt-3 rounded-card border-2 border-line bg-card p-4">
+                            <p className="text-sm text-muted">Verified REAL outcome revenue · USD</p>
+                            <p className="mt-1 text-2xl font-extrabold tabular-nums">{formatUsd(orchestrationOverview.pipeline.actual_revenue)}</p>
+                            <p className="mt-1 text-xs text-muted">
+                              SANDBOX remains separate: {formatUsd(orchestrationOverview.pipeline.sandbox.actual_revenue)} and {orchestrationOverview.pipeline.sandbox.products} sandbox products; not business traction.
+                            </p>
+                          </div>
+                          <div className="mt-5">
+                            <h4 className="font-bold">Highest-ranked opportunity records</h4>
+                            {orchestrationOverview.flow.length === 0 ? (
+                              <p className="mt-2 text-sm text-muted">No opportunity rows are currently returned by the selected REAL-scope view.</p>
+                            ) : (
+                              <ul className="mt-2 grid gap-3">
+                                {orchestrationOverview.flow.map((item) => (
+                                  <li key={item.opportunity_id} className="rounded-card border-2 border-line bg-card p-4">
+                                    <div className="flex flex-wrap items-start justify-between gap-2">
+                                      <p className="font-bold">Opportunity #{item.opportunity_id}</p>
+                                      <span className="rounded border border-line px-2 py-1 text-xs font-bold">{item.opportunity_status}</span>
+                                    </div>
+                                    <p className="mt-2 text-sm">{item.problem || "Problem not recorded"}</p>
+                                    <p className="mt-1 text-sm text-muted">Target-customer hypothesis: {item.target_customer_hypothesis}</p>
+                                    <dl className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+                                      <div><dt className="text-muted">Decision</dt><dd className="font-bold">{item.decision_status}</dd></div>
+                                      <div><dt className="text-muted">Validation</dt><dd className="font-bold">{item.validation_status}</dd></div>
+                                      <div><dt className="text-muted">Products</dt><dd className="font-bold">{item.product_count}</dd></div>
+                                      <div><dt className="text-muted">Distribution channels</dt><dd className="font-bold">{item.distribution_channel_count}</dd></div>
+                                    </dl>
+                                    {item.requires_owner_approval ? (
+                                      <p className="mt-2 text-xs text-muted">Validation requires explicit owner approval; no action was taken.</p>
+                                    ) : null}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
                     {/* Runtime window */}
                     <div>
                       <h3 className="font-extrabold">Engine state</h3>
@@ -993,29 +1210,79 @@ function OwnerConsolePage() {
                 )}
 
                 <div className="mt-6">
+                  <h3 className="font-extrabold">Distribution channels</h3>
+                  <p className="mt-1 text-sm text-muted">
+                    Existing channel rollups only. “Recorded events” is a ledger count, not a claim that outreach succeeded.
+                  </p>
+                  {channels === null ? (
+                    <p className="mt-2 rounded-card border border-line bg-card p-4 text-sm text-muted">
+                      {channelsError ?? "Distribution channel state UNKNOWN — refresh the owner console."}
+                    </p>
+                  ) : channels.length === 0 ? (
+                    <p className="mt-2 rounded-card border border-line bg-card p-4 text-sm text-muted">
+                      No distribution-channel records were returned for the owner view.
+                    </p>
+                  ) : (
+                    <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+                      {channels.map((channel) => {
+                        const productName = commercial.products?.find((product) => product.id === channel.product_id)?.name;
+                        const related = productName
+                          ?? (channel.product_id !== null ? `Product #${channel.product_id}` : null)
+                          ?? (channel.opportunity_id !== null ? `Opportunity #${channel.opportunity_id}` : "Unlinked record");
+                        return (
+                          <li key={channel.id} className="rounded-card border-2 border-line bg-card p-4">
+                            <div className="flex flex-wrap items-start justify-between gap-2">
+                              <h4 className="font-bold">{channel.name}</h4>
+                              <span className="rounded border border-line px-2 py-1 text-xs font-bold">{channel.data_scope}</span>
+                            </div>
+                            <p className="mt-1 text-sm text-muted">{related} · {channel.channel_type} · {channel.status}</p>
+                            {channel.description ? <p className="mt-2 text-sm">{channel.description}</p> : null}
+                            <p className="mt-3 text-sm">
+                              Recorded events {channel.outreach_count} · responses {channel.response_count} · conversion-stage records {channel.conversion_count}
+                            </p>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+
+                <div className="mt-6">
                   <h3 className="font-extrabold">Payment integration visibility</h3>
-                  <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                    <article className="rounded-card border-2 border-line bg-card p-4">
-                      <p className="font-bold">eSewa</p>
-                      <p className="mt-1 text-sm">Provider readiness: UNKNOWN</p>
-                      <p className="mt-1 text-sm text-muted">
-                        Existing routes expose checkout, transaction lookup and callback verification.
-                        There is no passive provider-readiness endpoint, so this screen makes no provider call.
+                  {paymentConfiguration === null ? (
+                    <p className="mt-2 rounded-card border border-line bg-card p-4 text-sm text-muted">
+                      {paymentConfigurationError ?? "Provider configuration UNKNOWN — refresh the owner console."}
+                    </p>
+                  ) : (
+                    <>
+                      <p className="mt-2 text-sm text-muted">
+                        Configuration-only snapshot: no gateway request was made and no transaction was looked up.
                       </p>
-                    </article>
-                    <article className="rounded-card border-2 border-line bg-card p-4">
-                      <p className="font-bold">Khalti</p>
-                      <p className="mt-1 text-sm">Provider readiness: UNKNOWN</p>
-                      <p className="mt-1 text-sm text-muted">
-                        Existing routes expose initiation and transaction lookup. A real transaction
-                        reference is required for lookup; this screen does not initiate or look up a payment.
-                      </p>
-                    </article>
-                  </div>
+                      <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                        <article className="rounded-card border-2 border-line bg-card p-4">
+                          <p className="font-bold">eSewa</p>
+                          <p className="mt-1 text-sm">
+                            Required credentials: {paymentConfiguration.providers.esewa.required_credentials_present ? "present" : "incomplete"}
+                          </p>
+                          <p className="mt-1 text-sm text-muted">
+                            Merchant code: {paymentConfiguration.providers.esewa.merchant_code_configured ? "configured" : "missing"} · signing secret: {paymentConfiguration.providers.esewa.signing_secret_configured ? "configured" : "missing"}
+                          </p>
+                        </article>
+                        <article className="rounded-card border-2 border-line bg-card p-4">
+                          <p className="font-bold">Khalti</p>
+                          <p className="mt-1 text-sm">
+                            Required credentials: {paymentConfiguration.providers.khalti.required_credentials_present ? "present" : "incomplete"}
+                          </p>
+                          <p className="mt-1 text-sm text-muted">
+                            Secret key: {paymentConfiguration.providers.khalti.secret_key_configured ? "configured" : "missing"}
+                          </p>
+                        </article>
+                      </div>
+                    </>
+                  )}
                   <p className="mt-3 text-sm text-muted">
-                    Payment success and live collection are not established by a configured integration,
-                    a checkout link, or this panel. Reconcile a specific transaction through the existing
-                    owner-authorized path when the owner has a real provider reference.
+                    Provider availability, merchant approval, transaction completion, settlement, and live collection remain NOT VERIFIED.
+                    The configuration endpoint returns booleans only and never discloses credential values.
                   </p>
                 </div>
               </section>

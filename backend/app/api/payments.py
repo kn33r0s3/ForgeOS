@@ -35,6 +35,38 @@ def _provider_error(exc: Exception) -> HTTPException:
     status = 503 if isinstance(exc, (RuntimeError, OSError)) else 422
     return HTTPException(status_code=status, detail=message[:500])
 
+
+@router.get("/status")
+def payment_configuration_status(request: Request):
+    """Return credential-presence flags only; never call a payment provider here."""
+    require_owner_api_key(request)
+    esewa_merchant_code_configured = bool(settings.ESEWA_MERCHANT_CODE.strip())
+    esewa_signing_secret_configured = bool(settings.ESEWA_SECRET_KEY.strip())
+    khalti_secret_key_configured = bool(settings.KHALTI_SECRET_KEY.strip())
+    return {
+        "scope": "configuration_only",
+        "provider_connectivity_checked": False,
+        "transaction_state_checked": False,
+        "providers": {
+            "esewa": {
+                "merchant_code_configured": esewa_merchant_code_configured,
+                "signing_secret_configured": esewa_signing_secret_configured,
+                "required_credentials_present": (
+                    esewa_merchant_code_configured and esewa_signing_secret_configured
+                ),
+            },
+            "khalti": {
+                "secret_key_configured": khalti_secret_key_configured,
+                "required_credentials_present": khalti_secret_key_configured,
+            },
+        },
+        "not_established": [
+            "provider availability or merchant approval",
+            "transaction completion or settlement",
+            "live payment collection or verified revenue",
+        ],
+    }
+
 @router.post("/esewa/checkout")
 def esewa_checkout(request: Request, body: EsewaCheckoutRequest):
     require_owner_api_key(request)
