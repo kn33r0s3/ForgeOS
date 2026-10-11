@@ -9,6 +9,7 @@ import { getBookingRequestStatus, type BookingStatus } from "@/lib/content";
 
 export const Route = createFileRoute("/requests/$id")({
   component: RequestStatusPage,
+  head: () => ({ meta: [{ name: "robots", content: "noindex,nofollow" }] }),
 });
 
 function RequestStatusPage() {
@@ -19,6 +20,7 @@ function RequestStatusPage() {
   // "no such request" (404) with "network failed", so nothing is inferred and
   // the requester can retry instead of being told "not on record" wrongly.
   const [invalidId, setInvalidId] = useState(false);
+  const [missingToken, setMissingToken] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
@@ -26,14 +28,24 @@ function RequestStatusPage() {
     const bookingId = Number(id);
     if (!Number.isInteger(bookingId) || bookingId <= 0) {
       setInvalidId(true);
+      setMissingToken(false);
       setLoadFailed(false);
       return;
     }
+    const statusToken = typeof window === "undefined" ? "" : window.location.hash.slice(1);
+    if (!/^[a-f0-9]{64}$/.test(statusToken)) {
+      setInvalidId(false);
+      setMissingToken(true);
+      setLoadFailed(false);
+      setRecord(null);
+      return;
+    }
     setInvalidId(false);
+    setMissingToken(false);
     setLoadFailed(false);
     setRecord(null);
     let active = true;
-    void getBookingRequestStatus(bookingId).then((loaded) => {
+    void getBookingRequestStatus(bookingId, statusToken).then((loaded) => {
       if (!active) return;
       if (!loaded) setLoadFailed(true);
       else setRecord(loaded);
@@ -72,6 +84,16 @@ function RequestStatusPage() {
             icon={SearchX}
             title="No request found"
             body="No request with this number is on record."
+          >
+            <Link to="/providers" className="link-arrow inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-accent">
+              <ArrowLeft className="size-4" aria-hidden="true" /> Back to providers
+            </Link>
+          </EmptyState>
+        ) : missingToken ? (
+          <EmptyState
+            icon={SearchX}
+            title="Secure status link required"
+            body="The request number alone cannot reveal its status. Reopen the private status link issued when the request was submitted."
           >
             <Link to="/providers" className="link-arrow inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-accent">
               <ArrowLeft className="size-4" aria-hidden="true" /> Back to providers

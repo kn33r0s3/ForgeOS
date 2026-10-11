@@ -65,6 +65,15 @@
 - **VERIFICATION AT CHANGE TIME:** source contracts inspected; new API/UI regression checks are written but require GitHub CI to execute. No payment provider was contacted, no secret value was returned, and no real transaction or revenue was created.
 
 
+## [FIXED IN SOURCE — CI PENDING] Protect public booking status with a signed capability (2026-10-11)
+
+- **ROOT CAUSE:** `GET /public/booking-requests/{id}` accepted an enumerable numeric ID as authorization and disclosed a request's service, date/time, and provider response. The existing test only checked that requester name/phone/email/notes were omitted, so it did not catch unauthorized status access.
+- **CANONICAL FIX:** booking creation returns a domain-separated HMAC status token. The existing provider flow carries it only in the URL fragment; the browser sends it to the status API as a query parameter, while fragments never leave the browser in the HTTP request. Missing/wrong tokens cannot enumerate a request; wrong tokens return the same 404 as a missing request. Status responses remain PII-minimized, and the status page is `noindex,nofollow`.
+- **NO PARALLEL SUBSYSTEM:** the signature uses the existing `FORGE_BOT_CONTACT_HMAC_KEY` already required by the public write-rate limiter, with a separate message namespace. No new table, stored token, or schema migration is added. Public booking creation remains rate-limited and the request remains pending—not accepted or paid.
+- **LIMITATION:** rotating `FORGE_BOT_CONTACT_HMAC_KEY` invalidates previously issued status links. If durable links across key rotation become a requirement, add a persisted hashed, per-request capability through the canonical additive migration path.
+- **REGRESSION COVERAGE:** the backend test now checks tokenless, wrong-token, valid-token, and no-PII behavior end-to-end; the frontend contract test checks fragment handling and noindex behavior. CI and production runtime behavior must be checked after this commit.
+
+
 ## Closure map snapshot (2026-10-04)
 
 At the start of this review, `HEAD` and `origin/main` matched

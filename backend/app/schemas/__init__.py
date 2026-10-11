@@ -1595,6 +1595,8 @@ class BookingRequestOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     accepted_at: Optional[datetime]
+    # Returned only at creation; never stored in the row or included in status output.
+    status_token: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

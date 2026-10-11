@@ -245,6 +245,18 @@ def _consume_public_write_limit(
         )
 
 
+def _booking_status_token(booking_id: int) -> str:
+    """Create a non-enumerable public status capability without storing another secret or table."""
+    key = settings.FORGE_BOT_CONTACT_HMAC_KEY
+    if not key:
+        raise HTTPException(
+            status_code=503,
+            detail="Secure booking status is unavailable until its signing key is configured.",
+        )
+    message = f"hami-public-booking-status:v1:{booking_id}".encode("utf-8")
+    return hmac.new(key.encode("utf-8"), message, hashlib.sha256).hexdigest()
+
+
 def _match_tokens(text: str) -> set[str]:
     words = []
     for raw in (text or "").lower().replace(",", " ").split():
@@ -929,11 +941,21 @@ def create_booking_request(
             "Status is pending. This is not acceptance and not payment."
         ),
     )
-    return request
+    return schemas.BookingRequestOut.model_validate(request).model_copy(
+        update={"status_token": _booking_status_token(request.id)}
+    )
 
 
 @router.get("/booking-requests/{booking_id}", response_model=schemas.BookingRequestStatusOut)
-def get_booking_request(booking_id: int, db: Session = Depends(get_db)):
+def get_booking_request(
+    booking_id: int,
+    status_token: str = Query(..., min_length=64, max_length=64),
+    db: Session = Depends(get_db),
+):
+    # Authenticate before querying so a numeric ID alone cannot enumerate stored requests.
+    expected_token = _booking_status_token(booking_id)
+    if not hmac.compare_digest(status_token, expected_token):
+        raise HTTPException(404, "booking request not found")
     row = db.query(models.BookingRequest).filter_by(id=booking_id).first()
     if row is None:
         raise HTTPException(404, "booking request not found")

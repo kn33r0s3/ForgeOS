@@ -582,3 +582,22 @@ describe("evidence trace (regression)", () => {
     assert.doesNotMatch(card, /placeholder|example|sample unknown/i);
   });
 });
+
+
+describe("private booking-status links", () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
+
+  it("uses a signed token fragment and keeps status pages out of search indexes", () => {
+    const publicApi = readFileSync(join(root, "backend/app/api/public.py"), "utf8");
+    const providers = readFileSync(join(root, "src/routes/providers.tsx"), "utf8");
+    const statusPage = readFileSync(join(root, "src/routes/requests.$id.tsx"), "utf8");
+    const content = readFileSync(join(root, "src/lib/content.ts"), "utf8");
+
+    assert.ok(publicApi.includes("_booking_status_token"), "booking status must use a signed capability");
+    assert.ok(publicApi.includes('status_token: str = Query(..., min_length=64, max_length=64)'));
+    assert.ok(providers.includes("hash: result.status_token"), "the capability must travel in the URL fragment");
+    assert.ok(statusPage.includes('window.location.hash.slice(1)'), "the capability must be read client-side");
+    assert.ok(statusPage.includes('content: "noindex,nofollow"'), "private status pages must not be indexed");
+    assert.ok(content.includes("getBookingRequestStatus(id: number, statusToken: string)"));
+  });
+});

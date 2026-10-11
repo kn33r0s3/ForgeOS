@@ -604,7 +604,7 @@ export async function createBookingRequest(input: {
   requested_date?: string | null;
   requested_time?: string | null;
   notes?: string | null;
-}): Promise<{ id: number; status: string; provider_response?: string | null; requested_service: string } | null> {
+}): Promise<{ id: number; status: string; status_token?: string; provider_response?: string | null; requested_service: string } | null> {
   const candidateUrls = getPublicApiCandidates("/booking-requests");
 
   for (const url of candidateUrls) {
@@ -627,11 +627,13 @@ export async function createBookingRequest(input: {
         status?: string;
         provider_response?: string | null;
         requested_service?: string;
+        status_token?: string;
       };
 
       return {
         id: payload.id ?? 0,
         status: payload.status ?? "pending",
+        status_token: payload.status_token,
         provider_response: payload.provider_response ?? null,
         requested_service: payload.requested_service ?? input.requested_service,
       };
@@ -654,8 +656,11 @@ export type BookingStatus = {
   provider_response?: string | null;
 };
 
-export async function getBookingRequestStatus(id: number): Promise<BookingStatus | null> {
-  const candidateUrls = getPublicApiCandidates(`/booking-requests/${id}`);
+export async function getBookingRequestStatus(id: number, statusToken: string): Promise<BookingStatus | null> {
+  if (!/^[a-f0-9]{64}$/.test(statusToken)) return null;
+  const candidateUrls = getPublicApiCandidates(
+    `/booking-requests/${id}?status_token=${encodeURIComponent(statusToken)}`,
+  );
 
   for (const url of candidateUrls) {
     try {

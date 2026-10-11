@@ -155,8 +155,18 @@ function ProvidersPage() {
     }
 
     setLastBookingId(result.id);
+    if (!result.status_token) {
+      setBookingStatus(
+        `Request #${result.id} was recorded, but a secure status link could not be issued. Do not share the request number as proof of access.`,
+      );
+      return;
+    }
     setBookingStatus(`Request #${result.id} is ${result.status}.`);
-    await navigate({ to: "/requests/$id", params: { id: String(result.id) } });
+    await navigate({
+      to: "/requests/$id",
+      params: { id: String(result.id) },
+      hash: result.status_token,
+    });
   };
 
   return (

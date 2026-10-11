@@ -1076,7 +1076,12 @@ def test_public_connection_responses_are_idempotent_and_not_acceptance(owner_cli
     assert candidate["latest_response"].endswith("Shared the requested dates.")
 
 
-def test_public_booking_status_does_not_leak_requester_pii(owner_client_with_db, db):
+def test_public_booking_status_requires_private_capability_and_does_not_leak_requester_pii(
+    owner_client_with_db, db, monkeypatch
+):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_HMAC_KEY", "test-public-booking-status-signing-key")
     provider = models.Provider(
         name="Verified provider",
         category="Service",
@@ -1087,24 +1092,44 @@ def test_public_booking_status_does_not_leak_requester_pii(owner_client_with_db,
     )
     db.add(provider)
     db.commit()
-    request = models.BookingRequest(
-        provider_id=provider.id,
-        requester_name="Asha Shah",
-        requester_phone="9800000001",
-        requester_email="asha@example.com",
-        requested_service="Plumbing",
-        status="pending",
-        notes="Needs same-day visit.",
+    created = owner_client_with_db.post(
+        "/public/booking-requests",
+        json={
+            "provider_id": provider.id,
+            "requester_name": "Asha Shah",
+            "requester_phone": "9800000001",
+            "requester_email": "asha@example.com",
+            "requested_service": "Plumbing",
+            "requested_date": "2026-10-15",
+            "notes": "Needs same-day visit.",
+        },
     )
-    db.add(request)
-    db.commit()
-    db.refresh(request)
+    assert created.status_code == 200, created.text
+    created_payload = created.json()
+    booking_id = created_payload["id"]
+    token = created_payload["status_token"]
+    assert len(token) == 64
 
-    response = owner_client_with_db.get(f"/public/booking-requests/{request.id}")
+    # The numeric ID cannot be used to read a status; wrong tokens look like missing records.
+    no_token = owner_client_with_db.get(f"/public/booking-requests/{booking_id}")
+    assert no_token.status_code == 422
+    wrong_token = owner_client_with_db.get(
+        f"/public/booking-requests/{booking_id}",
+        params={"status_token": "0" * 64},
+    )
+    assert wrong_token.status_code == 404
+    assert wrong_token.json() == {"detail": "booking request not found"}
+
+    response = owner_client_with_db.get(
+        f"/public/booking-requests/{booking_id}",
+        params={"status_token": token},
+    )
     assert response.status_code == 200, response.text
     payload = response.json()
-    assert payload["id"] == request.id
+    assert payload["id"] == booking_id
     assert payload["requested_service"] == "Plumbing"
+    assert payload["requested_date"] == "2026-10-15"
+    assert "status_token" not in payload
     assert "requester_name" not in payload
     assert "requester_phone" not in payload
     assert "requester_email" not in payload
