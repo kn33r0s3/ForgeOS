@@ -105,7 +105,7 @@ describe("Hami public content", () => {
     const hrefs = NAV.map((item) => item.to);
     // The primary navigation: Home, Findings, Unknowns, Experiments, About.
     // Join Hami is a separate header button, not a nav menu item.
-    assert.deepEqual(hrefs, ["/", "/discoveries", "/unknowns", "/experiments", "/about"]);
+    assert.deepEqual(hrefs, ["/", "/discoveries", "/unknowns", "/feed", "/experiments", "/services", "/group", "/about"]);
     const publicHrefs = new Set<string>(hrefs);
     for (const path of FORBIDDEN_PUBLIC_PATHS) {
       assert.equal(publicHrefs.has(path), false, `nav leaked ${path}`);
@@ -153,7 +153,7 @@ describe("Hami public content", () => {
 
   it("does not present placeholder contact details as live destinations", () => {
     assert.equal(SITE.email, "");
-    assert.equal(SITE.url, "");
+    assert.equal(SITE.url, "https://haminp.vercel.app");
     const sourceDir = dirname(fileURLToPath(import.meta.url));
     const closedCopy = [
       "../components/layout/site-footer.tsx",
@@ -409,7 +409,10 @@ describe("Hami public root", () => {
     // Per HAMI CONTINUITY LAW: inbox is historical material, not public identity.
     assert.doesNotMatch(footer, /Inbox prototype/);
     assert.doesNotMatch(footer, /\/prototype\/inbox/);
-    assert.match(footer, /Experiment 1 \(not started\)/);
+    const experimentCard = readFileSync(join(root, "src/components/experiments/experiment-card.tsx"), "utf8");
+    assert.match(footer, /FOOTER_GROUPS/);
+    assert.match(experimentCard, /No log entries yet — the experiment has not started/);
+    assert.match(experimentCard, /outcome: "not started"/);
     assert.ok(
       !NAV.some((item) => (item.label as string) === "Contact"),
       "Contact is in the nav without a real contact route",

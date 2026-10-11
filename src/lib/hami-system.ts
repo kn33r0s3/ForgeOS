@@ -60,7 +60,7 @@ export const SYSTEM_PATHWAYS = {
   home: [
     { label: "Read findings", to: "/discoveries" },
     { label: "Inspect unknowns", to: "/unknowns" },
-    { label: "Explore the network", to: "/feed" },
+    { label: "Open network records", to: "/feed" },
     { label: "See experiments", to: "/experiments" },
     { label: "Explore services", to: "/services" },
     { label: "Open the work board", to: "/domain" },

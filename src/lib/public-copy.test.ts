@@ -292,7 +292,7 @@ describe("information architecture", () => {
     }
     assert.ok(src.includes('to="/about"'), "homepage missing link to /about");
     // All preview links must be in NAV
-    const nav = read("src/lib/content.ts");
+    const nav = read("src/lib/hami-system.ts");
     for (const route of navRoutes) {
       assert.ok(nav.includes(`to: "${route}"`), `NAV missing ${route}`);
     }
