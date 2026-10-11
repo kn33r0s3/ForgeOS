@@ -425,4 +425,18 @@ describe("feature registry", () => {
     const ids = registry.features.map((f: { id: string }) => f.id);
     assert.equal(new Set(ids).size, ids.length, "duplicate feature ids");
   });
+  it("preserves Hami's owner-approved value-domain invariant separately from the current pilot", () => {
+    const agents = readFileSync(path.join(root, "..", "AGENTS.md"), "utf8");
+    const blueprint = readFileSync(path.join(root, "..", "FORGE_SUBSTRATE_BLUEPRINT.md"), "utf8");
+    const readme = readFileSync(path.join(root, "..", "README.md"), "utf8");
+    const systemMap = readFileSync(path.join(root, "..", "docs", "HAMI_SYSTEM_MAP.md"), "utf8");
+    const home = readFileSync(routeFile("/"), "utf8");
+    assert.ok(agents.includes("Hami's domain is **value itself**"));
+    assert.ok(blueprint.includes("Universal Value Intelligence & Action System"));
+    assert.ok(blueprint.includes("do not define the full domain of Hami"));
+    assert.ok(readme.includes("Examples and present capabilities are not the boundary"));
+    assert.ok(systemMap.includes("Foundational scope: value itself"));
+    assert.ok(home.includes("These instruments are not a boundary"));
+  });
+
 });
