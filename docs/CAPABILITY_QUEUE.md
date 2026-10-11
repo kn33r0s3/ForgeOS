@@ -1,3 +1,13 @@
+## [IN PROGRESS] Align eSewa lookup default with the configured ePay V2 checkout (2026-10-11)
+
+- **EXISTING SEAM INSPECTED:** `backend/app/config.py::ESEWA_FORM_URL/ESEWA_STATUS_URL`, `backend/app/services/nepal_payments.py::esewa_checkout/esewa_lookup/verify_esewa_response`, and `backend/tests/test_nepal_payments.py`.
+- **FIRST VERIFIED GAP:** the checkout default uses eSewa ePay V2 (`/api/epay/main/v2/form`) and its HMAC-signed `transaction_uuid/product_code` contract, but the default status lookup pointed at the legacy `esewa.com.np` host. The official ePay V2 documentation lists the transaction-status endpoint at `https://epay.esewa.com.np/api/epay/transaction/status/`; legacy ePay documentation lists a different host. Keep the endpoints from one API version aligned.
+- **FIX IN SOURCE:** replace the V2 status default with the matching documented host and add a regression assertion against the field default. Explicit `ESEWA_STATUS_URL` remains an operator override, so production environment value must still be checked.
+- **OWNER ACTION REMOVED:** new configurations no longer default V2 status lookups to the legacy endpoint.
+- **OWNER ACTION STILL REQUIRED:** verify merchant approval/credentials and, through authorized production access, confirm `ESEWA_STATUS_URL` is unset or matches the V2 endpoint. This change does not create orders, persist payment events, fulfill services, or declare revenue.
+- **VERIFICATION:** source/test change committed only after the previous exact-SHA test+deploy-verification pair passed; this payment change's CI remains pending.
+- **NEXT REMOVABLE DEPENDENCY:** build a transaction/order state transition only after an authorized offer, amount, provider reference and idempotent confirmation rules exist; currently lookup/checkout are adapters, not an order ledger.
+
 ## [IN PROGRESS] Durable database readiness across auth and API health (2026-10-11)
 
 - **EXISTING SEAMS INSPECTED:** `src/lib/env.server.ts`, `src/lib/auth/server.ts`, `src/lib/auth/auth-boundary.test.ts`, `backend/app/main.py::_health_details`, and `backend/tests/test_health_readiness.py`. Better Auth is built with `pg.Pool` for configured connection strings; a SQLite URL is not a valid durable PostgreSQL auth store.

@@ -12,6 +12,8 @@ import os
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+DEFAULT_ESEWA_V2_STATUS_URL = "https://epay.esewa.com.np/api/epay/transaction/status/"
+
 
 def parse_allowed_origins(value: str) -> list[str]:
     """Accept comma-separated or JSON-array CORS origins from deployment env.
@@ -111,7 +113,7 @@ class Settings(BaseSettings):
     ESEWA_MERCHANT_CODE: str = os.getenv("ESEWA_MERCHANT_CODE", "")
     ESEWA_SECRET_KEY: str = os.getenv("ESEWA_SECRET_KEY", "")
     ESEWA_FORM_URL: str = os.getenv("ESEWA_FORM_URL", "https://epay.esewa.com.np/api/epay/main/v2/form")
-    ESEWA_STATUS_URL: str = os.getenv("ESEWA_STATUS_URL", "https://esewa.com.np/api/epay/transaction/status/")
+    ESEWA_STATUS_URL: str = os.getenv("ESEWA_STATUS_URL", DEFAULT_ESEWA_V2_STATUS_URL)
     KHALTI_SECRET_KEY: str = os.getenv("KHALTI_SECRET_KEY", "")
     KHALTI_API_BASE_URL: str = os.getenv("KHALTI_API_BASE_URL", "https://khalti.com/api/v2")
 

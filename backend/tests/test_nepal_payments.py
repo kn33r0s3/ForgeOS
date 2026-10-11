@@ -1,3 +1,8 @@
+def test_esewa_v2_status_default_matches_the_official_v2_endpoint():
+    assert DEFAULT_ESEWA_V2_STATUS_URL == "https://epay.esewa.com.np/api/epay/transaction/status/"
+    assert Settings.model_fields["ESEWA_STATUS_URL"].default == DEFAULT_ESEWA_V2_STATUS_URL
+
+
 import base64
 import json
 import hashlib
@@ -5,7 +10,7 @@ import hmac
 from decimal import Decimal
 import pytest
 
-from app.config import settings
+from app.config import DEFAULT_ESEWA_V2_STATUS_URL, Settings, settings
 from app.services import nepal_payments
 
 
