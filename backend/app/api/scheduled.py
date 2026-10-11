@@ -237,6 +237,23 @@ def run_scheduled_intelligence(
     cycle_started_at = datetime.now(timezone.utc)
     try:
         with database.SessionLocal() as odb:
+            # Recover abandoned history before recording a fresh run. Keep the
+            # new run usable even if reconciliation itself is unavailable.
+            try:
+                from app.services import truth_audit
+
+                reconciled = truth_audit.reconcile_stale_cycles(odb)
+                if reconciled:
+                    logger.warning(
+                        "scheduled intelligence: reconciled %s stale CycleRun record(s)",
+                        reconciled,
+                    )
+            except Exception as exc:
+                odb.rollback()
+                logger.warning(
+                    "scheduled intelligence: stale CycleRun reconciliation failed (%s)",
+                    type(exc).__name__,
+                )
             row = models.CycleRun(started_at=cycle_started_at, status="RUNNING")
             odb.add(row)
             odb.commit()

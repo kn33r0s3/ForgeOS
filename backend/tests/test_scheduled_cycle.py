@@ -1,4 +1,5 @@
 import time
+from datetime import datetime, timedelta, timezone
 from threading import Event
 
 from fastapi.testclient import TestClient
@@ -632,6 +633,13 @@ def test_scheduled_intelligence_records_partial_cycle_truthfully(monkeypatch, db
     from app.services import collector_runner, discovery_engine, execution_engine, forge_loop, research_task_engine, scout
 
     monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    stale = models.CycleRun(
+        started_at=datetime.now(timezone.utc) - timedelta(hours=2),
+        status="RUNNING",
+    )
+    db.add(stale)
+    db.commit()
+
     monkeypatch.setattr(forge_loop, "run_cycle", lambda session: {
         "cycle_id": "test-cycle", "signals_processed": 0, "stage_errors": {}
     })
@@ -665,6 +673,11 @@ def test_scheduled_intelligence_records_partial_cycle_truthfully(monkeypatch, db
     assert response.json()["cycle_status"] == "PARTIAL"
 
     db.expire_all()
+    db.refresh(stale)
+    assert stale.status == "FAILED"
+    assert stale.ended_at is not None
+    assert "stale RUNNING record reconciled" in stale.error
+
     row = db.query(models.CycleRun).order_by(models.CycleRun.id.desc()).first()
     assert row is not None and row.summary_json is not None
     assert row.status == "PARTIAL"
