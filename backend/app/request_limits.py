@@ -19,6 +19,8 @@ def _is_limited_write(method: str, path: str) -> bool:
         return True
     if normalized in _LIMITED_PATHS:
         return True
+    if normalized.startswith("/payments/products/") and normalized.endswith("/checkout"):
+        return True
     if not normalized.startswith("/public/domain/"):
         return False
     parts = normalized.strip("/").split("/")

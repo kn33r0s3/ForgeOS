@@ -50,6 +50,8 @@ def client_for_db(db):
         "/public/booking-requests",
         "/signals/public-request",
         "/analyze",
+        "/payments/products/1/checkout",
+        "/api/payments/products/1/checkout",
         "/api/public/domain",
         "/api/public/domain/1/close",
         "/api/public/domain/1/dispute",

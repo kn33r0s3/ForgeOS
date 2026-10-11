@@ -1,3 +1,10 @@
+## [SOURCE CHANGE / CI PENDING] Bind provider checkout to durable verified payment intents (2026-10-12)
+
+- Added public offer listing, per-product checkout entry behind `FORGEOS_PUBLIC_CHECKOUT_ENABLED=false` by default, random public payment-intent references, hashed idempotency keys, provider/order identity, visitor-HMAC rate limiting and a 16 KiB body cap.
+- eSewa callbacks bind to the stored merchant UUID and exact NPR amount, then require server-side lookup. Khalti redirects treat pidx as a pointer and require lookup confirming matching pidx/amount, Completed status, no refund, and a provider transaction reference.
+- Only verified provider lookup can create one linked `REAL/VERIFIED` `ACTUAL_REVENUE` outcome. NPR rollups are reported separately from existing USD totals. Unmatched or unconfirmed returns never create revenue.
+- Provider credentials, merchant approval and production env values are not inspectable in the current Vercel connector scope. Checkout remains off; no live payment request was initiated.
+- Exact-SHA CI pending.
 ## [SOURCE CHANGE / CI PENDING] Redact contact details in free-text prices (2026-10-12)
 
 - `ServiceListing.price_from` and `DomainRecord.stated_price` are text fields, not numeric amounts. Public service, domain-record, and match projections now redact embedded contact details; new work-board price text is redacted at write time, and legacy rows are sanitized at read time.

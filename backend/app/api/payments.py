@@ -1,11 +1,15 @@
 from __future__ import annotations
 from decimal import Decimal
-from fastapi import APIRouter, HTTPException, Query, Request
+from typing import Literal
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field, AnyHttpUrl
+from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.security import require_owner_api_key
-from app.services import nepal_payments
+from app.database import get_db
+from app.services import nepal_payments, payment_intent_engine, forge_bot_privacy
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 
@@ -28,6 +32,10 @@ class KhaltiInitiateRequest(BaseModel):
 
 class KhaltiLookupRequest(BaseModel):
     pidx: str = Field(min_length=4, max_length=200)
+
+
+class PublicProductCheckoutRequest(BaseModel):
+    provider: Literal["esewa", "khalti"]
 
 
 def _provider_error(exc: Exception) -> HTTPException:
@@ -67,6 +75,71 @@ def payment_configuration_status(request: Request):
         ],
     }
 
+@router.get("/offers")
+def public_payment_offers(db: Session = Depends(get_db)):
+    return payment_intent_engine.public_offers(db)
+
+
+@router.post("/products/{product_id}/checkout")
+def create_public_product_checkout(
+    product_id: int,
+    body: PublicProductCheckoutRequest,
+    request: Request,
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=16, max_length=128),
+    db: Session = Depends(get_db),
+):
+    if not settings.FORGEOS_PUBLIC_CHECKOUT_ENABLED:
+        raise HTTPException(status_code=503, detail="Public checkout is disabled.")
+    try:
+        within_limit = forge_bot_privacy.consume_rate_limited_request(
+            db,
+            request,
+            hmac_key=settings.FORGE_BOT_CONTACT_HMAC_KEY,
+            scope="public-product-checkout",
+            limit=5,
+        )
+    except HTTPException:
+        raise
+    if not within_limit:
+        raise HTTPException(status_code=429, detail="Hourly checkout-attempt limit reached.")
+    try:
+        return payment_intent_engine.create_checkout(
+            db, product_id=product_id, provider=body.provider,
+            idempotency_key=idempotency_key,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/intent/{public_ref}")
+def public_payment_intent_status(
+    public_ref: str, response: Response, db: Session = Depends(get_db)
+):
+    try:
+        payload = payment_intent_engine.get_public_intent(db, public_ref)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Payment intent not found.") from exc
+    response.headers["Cache-Control"] = "no-store"
+    return payload
+
+
+@router.get("/khalti/callback")
+def khalti_public_callback(
+    intent: str = Query(min_length=24, max_length=64),
+    pidx: str = Query(min_length=4, max_length=200),
+    db: Session = Depends(get_db),
+):
+    try:
+        payment_intent_engine.finalize_khalti_callback(db, public_ref=intent, pidx=pidx)
+        return RedirectResponse(url=payment_intent_engine.payment_result_url(intent), status_code=303)
+    except (RuntimeError, OSError) as exc:
+        raise HTTPException(status_code=503, detail="Khalti verification is temporarily unavailable.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Payment intent or provider reference not found.") from exc
+
+
 @router.post("/esewa/checkout")
 def esewa_checkout(request: Request, body: EsewaCheckoutRequest):
     require_owner_api_key(request)
@@ -85,14 +158,26 @@ def esewa_lookup(request: Request, body: EsewaLookupRequest):
         raise _provider_error(exc) from exc
 
 @router.get("/esewa/callback")
-def esewa_callback(data: str = Query(min_length=20)):
-    """Verify the browser return without requiring an owner key.
-
-    The provider redirects the payer's browser here, so it cannot carry Hami's
-    private owner API key. This endpoint is read-only: it validates the signed
-    provider payload and checks status/amount/merchant with eSewa's server API.
-    It deliberately does not create orders, mark revenue, or trigger fulfillment.
-    """
+def esewa_callback(
+    data: str = Query(min_length=20),
+    intent: str | None = Query(default=None, min_length=24, max_length=64),
+    db: Session = Depends(get_db),
+):
+    """Bind browser return to the stored intent and validate provider status server-side."""
+    if intent:
+        try:
+            payment_intent_engine.finalize_esewa_callback(
+                db, public_ref=intent, encoded_data=data
+            )
+            return RedirectResponse(
+                url=payment_intent_engine.payment_result_url(intent),
+                status_code=303,
+            )
+        except (RuntimeError, OSError) as exc:
+            raise HTTPException(status_code=503, detail="eSewa verification is temporarily unavailable.") from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="eSewa callback did not match the stored payment intent.") from exc
+    # Compatibility path remains read-only for provider diagnostics without a Hami intent.
     try:
         payload = nepal_payments.verify_esewa_response(data)
         callback_status = str(payload.get("status", ""))
