@@ -104,7 +104,19 @@ function BusinessesPage() {
           </div>
         </section>
       </Container>
-      <CtaBand />
+      <CtaBand
+        eyebrow="Current work"
+        title={
+          <>
+            One Hami.
+            <br />
+            <span className="text-muted">One service catalogue.</span>
+          </>
+        }
+        body="These are Hami's current technical and operational offers. Strategic directions remain directions, and online inquiries are closed until the owner-approved path is ready."
+        to="/services"
+        actionLabel="Explore Hami services"
+      />
       <HamiPathways current="group" />
     </main>
   );

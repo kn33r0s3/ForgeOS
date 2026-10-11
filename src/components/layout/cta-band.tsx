@@ -6,19 +6,23 @@ import { Container } from "./container";
 import { Eyebrow } from "./eyebrow";
 
 export function CtaBand({
-  eyebrow = "Services, one path through the network",
+  eyebrow = "Independent provider directory",
   title = (
     <>
-      Verified services
+      Find an external provider
       <br />
-      <span className="text-muted">inside the same network.</span>
+      <span className="text-muted">when the work needs one.</span>
     </>
   ),
-  body = "A provider appears only after verification and publication. A request stays pending until that provider accepts it. Work, offers, and trades use the same records.",
+  body = "Hami's service catalogue describes Hami's own technical scope. This separate directory lists providers only when verified and published. A request stays pending until a provider accepts it; browsing does not create a booking.",
+  to = "/providers",
+  actionLabel = "Browse verified providers",
 }: {
   eyebrow?: string;
   title?: ReactNode;
   body?: string;
+  to?: "/providers" | "/services" | "/process" | "/group/businesses";
+  actionLabel?: string;
 }) {
   return (
     <section className="border-t border-line bg-card py-16 sm:py-20">
@@ -29,8 +33,8 @@ export function CtaBand({
           <p className="mt-4 max-w-md text-sm leading-relaxed text-muted">{body}</p>
         </div>
         <Button asChild size="lg">
-          <Link to="/providers">
-            Find a service
+          <Link to={to}>
+            {actionLabel}
             <ArrowUpRight />
           </Link>
         </Button>

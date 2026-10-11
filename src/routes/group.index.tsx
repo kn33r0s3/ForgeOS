@@ -124,6 +124,8 @@ function GroupPage() {
           </>
         }
         body="No invented subsidiaries, clients, revenue, investments, awards, partnerships, or market share — anywhere on this platform. That rule is the product."
+        to="/process"
+        actionLabel="See how Hami works"
       />
       <HamiPathways current="group" />
     </main>

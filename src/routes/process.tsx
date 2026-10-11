@@ -46,7 +46,19 @@ function ProcessPage() {
           </div>
         </Container>
       </section>
-      <CtaBand />
+      <CtaBand
+        eyebrow="Put the process to work"
+        title={
+          <>
+            Start with a real need.
+            <br />
+            <span className="text-muted">Build from what is known.</span>
+          </>
+        }
+        body="Hami's current service catalogue is the practical entry point for technical and operational work. Online inquiries remain closed; this route describes scope, not a promise of acceptance."
+        to="/services"
+        actionLabel="Explore Hami services"
+      />
       <HamiPathways current="process" />
     </main>
   );

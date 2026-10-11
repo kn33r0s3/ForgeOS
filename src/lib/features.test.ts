@@ -91,6 +91,31 @@ describe("feature registry", () => {
     assert.deepEqual(missing, [], `public Hami pathways missing a live registry entry: ${missing.join(", ")}`);
   });
 
+  it("shared CTA destinations match the context that renders them", () => {
+    const component = readFileSync(path.join(root, "..", "src/components/layout/cta-band.tsx"), "utf8");
+    assert.ok(component.includes('to = "/providers"'));
+    assert.ok(component.includes('actionLabel = "Browse verified providers"'));
+    assert.ok(component.includes("Hami's service catalogue describes Hami's own technical scope"));
+
+    const expected: Array<[string, string, string]> = [
+      ["routes/process.tsx", 'to="/services"', 'actionLabel="Explore Hami services"'],
+      ["routes/group.businesses.tsx", 'to="/services"', 'actionLabel="Explore Hami services"'],
+      ["routes/group.index.tsx", 'to="/process"', 'actionLabel="See how Hami works"'],
+      ["components/pages/area-view.tsx", 'to="/group/businesses"', 'actionLabel="See current Hami work"'],
+    ];
+    for (const [relativePath, target, label] of expected) {
+      const source = readFileSync(path.join(root, "..", "src", relativePath), "utf8");
+      assert.ok(source.includes(target), `${relativePath} needs destination ${target}`);
+      assert.ok(source.includes(label), `${relativePath} needs context-specific CTA label ${label}`);
+    }
+    for (const pathName of ["/providers", "/services", "/process", "/group/businesses"]) {
+      assert.ok(
+        registry.features.some((feature: { route: string; status: string }) => feature.route === pathName && feature.status === "live"),
+        `shared CTA target ${pathName} must remain a live Hami route`,
+      );
+    }
+  });
+
   it("every group direction links through the shared component to a live canonical route", () => {
     const broken = groupAreas.filter((area) =>
       !area.href ||

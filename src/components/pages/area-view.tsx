@@ -39,7 +39,19 @@ export function AreaView({ name }: { name: "Technology" | "Ventures" }) {
           </div>
         </Container>
       </section>
-      <CtaBand />
+      <CtaBand
+        eyebrow="One platform, current work"
+        title={
+          <>
+            Direction becomes real
+            <br />
+            <span className="text-muted">through useful work.</span>
+          </>
+        }
+        body="Technology and ventures are long-term directions, not standalone businesses. Explore the work Hami can currently do through the one service catalogue."
+        to="/group/businesses"
+        actionLabel="See current Hami work"
+      />
     </>
   );
 }
