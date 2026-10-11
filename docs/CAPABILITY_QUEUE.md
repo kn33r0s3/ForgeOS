@@ -1,3 +1,9 @@
+## [SOURCE CHANGE / CI PENDING] Retain checkout idempotency key after an ambiguous browser failure (2026-10-12)
+
+- A generic fetch/provider error could occur after the server had persisted an intent or a provider had started checkout. The public UI previously deleted the per-offer idempotency key, allowing the next click to create a second intent.
+- The retry action now repeats the same checkout call with the original idempotency key. No new attempt is created just because the browser did not receive the original response. A genuinely new attempt after a confirmed terminal provider state needs a separately modeled recovery path; this generic error button no longer pretends it is safe to start one.
+- No live checkout was enabled and no provider was contacted while making this change. Exact-head frontend tests, typecheck, build, and CI are required.
+
 ## [SOURCE CHANGE / CI PENDING] Expose verified NPR totals in the owner cockpit (2026-10-12)
 
 - The existing product and orchestration rollups already return USD and NPR separately. The owner cockpit now displays both currencies in the pipeline summary, product totals, and per-product outcomes; SANDBOX totals remain explicitly separate.

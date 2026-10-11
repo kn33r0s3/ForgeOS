@@ -294,6 +294,9 @@ describe("feature registry", () => {
     assert.ok(home.includes("/api/payments/products/") && home.includes("/checkout"));
     assert.ok(home.includes("Idempotency-Key"));
     assert.ok(home.includes('payload.checkout.type === "form_post"') && home.includes("form.submit()"));
+    assert.ok(home.includes("Retry the same checkout attempt"));
+    assert.ok(home.includes("onClick={() => void beginCheckout(offer, provider)}"));
+    assert.ok(!home.includes("delete next[offer.id]"), "ambiguous checkout failures must retain the idempotency key to avoid duplicate payment intents");
     assert.ok(result.includes('createFileRoute("/payment-result")'));
     assert.ok(result.includes('name: "robots", content: "noindex,nofollow,noarchive"'));
     assert.ok(result.includes('record?.status === "VERIFIED"'));

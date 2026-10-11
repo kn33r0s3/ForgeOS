@@ -185,10 +185,10 @@ function PublicOffers() {
               {error ? (
                 <button
                   type="button"
-                  onClick={() => setKeys((current) => { const next = { ...current }; delete next[offer.id]; return next; })}
+                  onClick={() => void beginCheckout(offer, provider)}
                   className="mt-3 text-xs font-bold text-muted underline"
                 >
-                  Start a new checkout attempt
+                  Retry the same checkout attempt
                 </button>
               ) : null}
             </article>
