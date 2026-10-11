@@ -255,7 +255,10 @@ def create_checkout(
         raise ValueError("Unsupported payment provider.")
     if not isinstance(idempotency_key, str) or not 16 <= len(idempotency_key) <= 128 or idempotency_key.strip() != idempotency_key:
         raise ValueError("Idempotency-Key must be 16–128 non-whitespace characters.")
-    digest = hashlib.sha256(f"product:{product_id}|provider:{provider}|key:{idempotency_key}".encode()).hexdigest()
+    # Idempotency is request-scoped across provider/body parameters. A client
+    # reusing the same key for a different product or provider must collide and
+    # be rejected below rather than accidentally creating a second payment.
+    digest = hashlib.sha256(idempotency_key.encode()).hexdigest()
     existing = db.query(models.OpPaymentIntent).filter_by(idempotency_key_hash=digest).one_or_none()
     if existing is not None:
         if existing.product_id != product_id or existing.provider != provider:

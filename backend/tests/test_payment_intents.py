@@ -90,6 +90,44 @@ def test_esewa_checkout_persists_one_intent_and_idempotent_retry_reuses_it(db, m
     assert calls[0]["transaction_uuid"] == calls[1]["transaction_uuid"]
 
 
+
+def test_idempotency_key_cannot_start_a_second_provider_for_the_same_product(db, monkeypatch):
+    product = _published_product(db)
+    monkeypatch.setattr(settings, "FORGEOS_PUBLIC_CHECKOUT_ENABLED", True)
+    monkeypatch.setattr(settings, "ESEWA_MERCHANT_CODE", "TEST-MERCHANT")
+    monkeypatch.setattr(settings, "ESEWA_SECRET_KEY", "test-signing-secret")
+    monkeypatch.setattr(settings, "KHALTI_SECRET_KEY", "test-khalti-secret")
+    monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_HMAC_KEY", "test-only-checkout-rate-limit-key")
+    monkeypatch.setattr(orchestrator, "validation_counts", lambda *args: (5, 3))
+    monkeypatch.setattr(nepal_payments, "esewa_checkout", lambda **kwargs: {
+        "form_url": "https://pay.example.test/esewa",
+        "amount": "5000.00",
+        "total_amount": "5000.00",
+        "transaction_uuid": kwargs["transaction_uuid"],
+        "product_code": "TEST-MERCHANT",
+        "success_url": kwargs["success_url"],
+        "failure_url": kwargs["failure_url"],
+        "signed_field_names": "total_amount,transaction_uuid,product_code",
+        "signature": "test-signature",
+    })
+    khalti_calls = []
+    monkeypatch.setattr(nepal_payments, "khalti_initiate", lambda **kwargs: khalti_calls.append(kwargs) or {
+        "pidx": "test-pidx-123456789",
+        "payment_url": "https://test-pay.khalti.com/?pidx=test-pidx-123456789",
+    })
+
+    key = "cross-provider-idempotency-key-123"
+    first = payment_intent_engine.create_checkout(
+        db, product_id=product.id, provider="esewa", idempotency_key=key,
+    )
+    assert first["provider"] == "esewa"
+    with pytest.raises(ValueError, match="conflicts"):
+        payment_intent_engine.create_checkout(
+            db, product_id=product.id, provider="khalti", idempotency_key=key,
+        )
+    assert khalti_calls == []
+    assert db.query(models.OpPaymentIntent).count() == 1
+
 def test_esewa_server_lookup_verifies_payment_then_owner_fulfillment_records_revenue(db, monkeypatch):
     product = _published_product(db)
     intent = models.OpPaymentIntent(

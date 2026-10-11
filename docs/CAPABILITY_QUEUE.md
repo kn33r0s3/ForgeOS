@@ -1,3 +1,8 @@
+## [SOURCE CHANGE / CI PENDING] Make checkout idempotency keys reject cross-provider reuse (2026-10-12)
+
+- A request idempotency hash previously included the selected provider, so reusing one client key with `esewa` and `khalti` generated two unrelated hashes; the intended provider-conflict check could never run. The hash is now based on the key itself, and product/provider mismatch is rejected by the existing guard.
+- Added a regression that ensures a same-key provider switch cannot initiate a second payment provider transaction. No live provider was contacted by the test.
+- Exact-SHA CI is pending.
 ## [SOURCE CHANGE / CI PENDING] Require owner-confirmed fulfillment before revenue is recorded (2026-10-12)
 
 - Provider lookups transition an intent to `VERIFIED` without writing an `ACTUAL_REVENUE` outcome. The owner-only fulfillment action creates the canonical `REAL/VERIFIED` NPR revenue outcome and a linked `CustomerEvent` only after actual delivery is confirmed.
