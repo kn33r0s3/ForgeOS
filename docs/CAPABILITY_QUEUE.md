@@ -9,11 +9,11 @@
 - Gitleaks flagged the newly added hardcoded test idempotency key as a generic API key because its text entropy was high. It was a test fixture, not a provider credential; the fixture is now an obvious repeated test token. No scanner suppression or allowlist was added.
 - Exact-head secret scan, backend tests, frontend checks, build and deployment verification are required.
 
-## [SOURCE FIX / CI PENDING] Match reconciliation lookup to provider-bound idempotency digest (2026-10-12)
+## [SOURCE CORRECTION / CI PENDING] Match recovery lookup to actual checkout idempotency digest (2026-10-12)
 
-- The creation path hashes product ID, provider and idempotency key together. Recovery mistakenly hashed only the raw key, which could report NO_ATTEMPT while a real pending checkout existed.
-- Recovery now queries the exact digest for eSewa and Khalti and refuses automatic recovery if one raw key maps to multiple provider attempts. Added regressions for a pending saved attempt and a conflicting cross-provider key; the synthetic fixture hashes are unique and ambiguous attempts remain blocked.
-- No checkout flag or credentials were enabled. Exact-head backend/frontend CI, build and deploy verification remain required.
+- \`create_checkout\` stores SHA-256 of the raw idempotency header and rejects its reuse across products/providers when it finds an existing row. An intervening recovery change incorrectly assumed a product/provider-bound digest and could report NO_ATTEMPT for an existing payment.
+- Recovery now uses the exact raw-key digest, then verifies that the stored attempt belongs to the requested product before asking the provider. Tests cover retrieving a real pending attempt and refusing to reuse a key from another product.
+- No checkout flag or credentials were enabled. Exact-head backend/frontend CI, secret scan, and deployment verification remain required.
 
 ## [CI FIX / SOURCE CHANGE / CI PENDING] Repair checkout retry guard regression assertion (2026-10-12)
 

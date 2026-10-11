@@ -485,16 +485,14 @@ def _recovery_intent(db, product, *, provider, status, suffix, provider_payment_
     return intent
 
 
-def test_checkout_reconciliation_finds_provider_bound_pending_attempt(db, monkeypatch):
+def test_checkout_reconciliation_finds_saved_pending_attempt(db, monkeypatch):
     product = _published_product(db)
     key = "test-test-test-test-1234"
     intent = _recovery_intent(
         db, product, provider="khalti", status="INITIATED", suffix="keymatch",
         provider_payment_id="khalti-recovery-pidx-keymatch-123",
     )
-    intent.idempotency_key_hash = hashlib.sha256(
-        f"product:{product.id}|provider:khalti|key:{key}".encode()
-    ).hexdigest()
+    intent.idempotency_key_hash = hashlib.sha256(key.encode()).hexdigest()
     db.commit()
     monkeypatch.setattr(nepal_payments, "khalti_lookup", lambda **kwargs: {
         "pidx": intent.provider_payment_id,
@@ -518,31 +516,25 @@ def test_checkout_reconciliation_finds_provider_bound_pending_attempt(db, monkey
     ).count() == 0
 
 
-def test_checkout_reconciliation_blocks_key_matching_multiple_providers(db):
+def test_checkout_reconciliation_cannot_use_an_attempt_from_another_product(db):
     product = _published_product(db)
-    key = "reconcile-conflicting-provider-key-123"
-    khalti = _recovery_intent(
-        db, product, provider="khalti", status="INITIATED", suffix="k-dup",
-        provider_payment_id="khalti-recovery-pidx-duplicate-123",
+    other_product = _published_product(db)
+    key = "test-test-test-test-1234"
+    intent = _recovery_intent(
+        db, product, provider="khalti", status="INITIATED", suffix="key-other",
+        provider_payment_id="synthetic-pidx-other-product",
     )
-    esewa = _recovery_intent(
-        db, product, provider="esewa", status="INITIATED", suffix="e-dup",
-    )
-    khalti.idempotency_key_hash = hashlib.sha256(
-        f"product:{product.id}|provider:khalti|key:{key}".encode()
-    ).hexdigest()
-    esewa.idempotency_key_hash = hashlib.sha256(
-        f"product:{product.id}|provider:esewa|key:{key}".encode()
-    ).hexdigest()
+    intent.idempotency_key_hash = hashlib.sha256(key.encode()).hexdigest()
     db.commit()
 
-    with pytest.raises(
-        payment_intent_engine.PaymentReconciliationRequired,
-        match="more than one provider attempt",
-    ):
+    # A raw idempotency key is globally unique; another product may not treat
+    # the existing row as absent and authorize an additional provider attempt.
+    with pytest.raises(ValueError, match="Checkout attempt was not found"):
         payment_intent_engine.reconcile_checkout_by_key(
-            db, product_id=product.id, idempotency_key=key
+            db, product_id=other_product.id, idempotency_key=key
         )
+    db.refresh(intent)
+    assert intent.status == "INITIATED"
 
 
 def test_khalti_expired_lookup_confirms_safe_new_attempt(db, monkeypatch):
