@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { currentOffers, groupAreas } from "@/lib/content";
 import { Container } from "@/components/layout/container";
+import { HamiPathways } from "@/components/layout/hami-pathways";
 import { PageHero } from "@/components/layout/page-hero";
 import { SectionMarker } from "@/components/layout/section-marker";
 import { TextLink } from "@/components/layout/text-link";
@@ -29,8 +30,8 @@ function BusinessesPage() {
       >
         <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
           <ProjectInquiryCta />
-          <Link to="/contact" className="text-cyan hover:underline">
-            Contact Hami
+          <Link to="/services" className="text-cyan hover:underline">
+            Explore Hami's service catalogue
           </Link>
         </div>
       </PageHero>
@@ -128,6 +129,7 @@ function BusinessesPage() {
         </section>
       </Container>
       <CtaBand />
+      <HamiPathways current="group" />
     </main>
   );
 }

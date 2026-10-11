@@ -2,6 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { getService, services } from "@/lib/content";
 import { Container } from "@/components/layout/container";
+import { HamiPathways } from "@/components/layout/hami-pathways";
 import { Eyebrow } from "@/components/layout/eyebrow";
 import { CtaBand } from "@/components/layout/cta-band";
 import { ProjectInquiryCta } from "@/components/pages/project-inquiry-cta";
@@ -93,9 +94,12 @@ function ServicePage() {
                   What happens next
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted">{service.next}</p>
-                <div className="mt-4">
-                  <Link to="/contact" className="text-cyan hover:underline">
-                    Contact Hami
+                <div className="mt-4 flex flex-wrap gap-4">
+                  <Link to="/process" className="text-cyan hover:underline">
+                    See how Hami works
+                  </Link>
+                  <Link to="/domain" className="text-cyan hover:underline">
+                    Browse the public work board
                   </Link>
                 </div>
               </div>
@@ -104,6 +108,7 @@ function ServicePage() {
         </Container>
       </section>
       <CtaBand />
+      <HamiPathways current="services" />
     </main>
   );
 }

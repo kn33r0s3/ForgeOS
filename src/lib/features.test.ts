@@ -131,6 +131,14 @@ describe("feature registry", () => {
     assert.ok(!paths.includes("/contact"), "closed contact surface must not be presented as an active search destination");
   });
 
+  it("active service pages never route visitors to the closed contact surface", () => {
+    for (const file of ["src/routes/services.$slug.tsx", "src/routes/group.businesses.tsx"]) {
+      const source = readFileSync(path.join(root, "..", file), "utf8");
+      assert.ok(!source.includes('to="/contact"'), `${file} links to a contact surface that is currently inactive`);
+    }
+    assert.ok(readFileSync(path.join(root, "..", "src/components/pages/project-inquiry-cta.tsx"), "utf8").includes('to="/domain"'));
+  });
+
   it("owner-only, TEST-only and closed intake surfaces remain hidden", () => {
     const status = (route: string) => registry.features.find((feature: { route: string }) => feature.route === route)?.status;
     for (const route of ["/owner", "/operations", "/prototype/inbox", "/bot-qualification-demo", "/forge-bot-intake", "/request", "/contact"]) {
