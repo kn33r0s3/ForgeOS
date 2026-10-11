@@ -1,5 +1,12 @@
 # Hami capability claim ledger (ForgeOS repository)
 
+## [PARTIAL] Production CORS allowlist applied; regression assertions being closed (2026-10-11)
+
+- **PRODUCTION CONFIGURATION:** created the Production-only `ALLOWED_ORIGINS` variable with exact origins `https://haminp.vercel.app,https://forge-os-ebon.vercel.app`. `pulsenp.vercel.app` is an alias redirecting to Hami's canonical domain and is intentionally omitted. No wildcard was used.
+- **DEPLOYMENT:** Vercel deployment `dpl_9Heh6s2BEEpMwbQu2qEDUTATKNkX` is `READY` for current `main` SHA `bdd3037ae4f09c3b88b6ff4130c1557075ab1226`; Vercel alias inventory maps `haminp.vercel.app`, `forge-os-ebon.vercel.app`, and the `pulsenp` redirect to this deployment. The deployed alias/SHA is observed; a direct browser CORS-preflight from an external client was not executable in this session.
+- **REMAINING BLOCKER:** Twilio credentials exposed outside their trusted environment still require owner-side rotation at Twilio and replacement in the actual consuming environment. No Twilio account connector is available here, no Twilio credential was read or rotated, and no value has been fabricated. Phase 1 remains blocked by this credential hygiene task and a green backend CI run.
+- **CI AT CHANGE TIME:** Linux backend run `38139584626` reported 1,026 passed, 2 skipped, 2 failed. The remaining failures are fixture identity lookup (query should use the stable synthetic collector source label, with `source_type=test` still asserted) and a stale requirement-count assumption (keep the five base requirement IDs present while allowing a distinct source-driven follow-up requirement). This change updates the tests without weakening production evidence or authorization gates; new CI is required.
+
 ## [PARTIAL] Correct test session ownership and queued research-plan assertions (2026-10-11)
 
 - **EXISTING SEAMS INSPECTED:** `backend/app/database.py::_configure_engine`, `backend/scripts/run_daily_cycle.py::run_once`, `backend/tests/test_daily_cycle_rollback.py::test_daily_cycle_structures_collected_external_signals_in_same_run`, and `backend/tests/test_public_value_flow.py::test_public_problem_submission_starts_real_research_and_defers_opportunity`.

@@ -234,9 +234,11 @@ def test_daily_cycle_structures_collected_external_signals_in_same_run(db, monke
     # but the cycle must not turn this fixture into a public opportunity.
     assert record["post_collection_cycle"]["opportunities_discovered"] == 0
     assert record["post_collection_cycle"]["opportunity_questions_linked"] == 0
+    # The source label is the stable fixture identity; its URL is intentionally
+    # synthetic and must not be treated as cleared external-source evidence.
     test_signals = (
         db.query(models.Signal)
-        .filter(models.Signal.canonical_url.like("https://evidence.example.test/daily/%"))
+        .filter(models.Signal.source == "pytest-network-source")
         .all()
     )
     assert len(test_signals) == len(texts)

@@ -636,7 +636,19 @@ def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     # omits terminal_reason while source-governed follow-up work remains queued.
     assert progress_payload["research_plan"].get("terminal_reason") is None
     requirements = progress_payload["research_plan"]["requirements"]
-    assert len(requirements) == 5
+    requirement_ids = {
+        item.get("requirement_id", item.get("id")) for item in requirements
+    }
+    # The five base requirements remain present; source-driven follow-up
+    # planning may append another explicit requirement without changing the base set.
+    assert {
+        "bibliographic_discovery",
+        "problem_incidence",
+        "alternatives_and_costs",
+        "disconfirming_evidence",
+        "buyer_willingness_to_pay",
+    }.issubset(requirement_ids)
+    assert len(requirements) == len(requirement_ids)
     assert requirements[0]["status"] == "satisfied"
     assert any(item["status"] != "satisfied" for item in requirements)
     assert progress_payload["research_sources"][0]["url"] == "https://doi.org/10.1234/repair.1"
