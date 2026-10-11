@@ -3,7 +3,7 @@ from typing import Optional, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy.orm import Session
-from app import models, security
+from app import evidence_source, models, security
 from app.database import get_db
 from app.services import orchestrator, execution_engine, decision_engine
 
@@ -76,16 +76,21 @@ def get_orchestration_overview(
             .order_by(models.Decision.created_at.desc())
             .first()
         )
-        experiment = (
-            db.query(models.Experiment)
-            .filter_by(
-                opportunity_id=opportunity.id,
-                action_type="customer_interview",
-                data_scope=scope,
-            )
-            .order_by(models.Experiment.created_at.desc())
-            .first()
+        experiment_query = db.query(models.Experiment).filter_by(
+            opportunity_id=opportunity.id,
+            action_type="customer_interview",
+            data_scope=scope,
         )
+        # REAL scope alone is not evidence provenance. Mock/test rows can
+        # exist in REAL scope for compatibility, but must never be shown as
+        # a real-world validation in this cockpit.
+        if scope == "REAL":
+            experiment_query = experiment_query.filter(
+                models.Experiment.source_kind == evidence_source.REAL
+            )
+        experiment = experiment_query.order_by(
+            models.Experiment.created_at.desc()
+        ).first()
         rows.append({
             "opportunity_id": opportunity.id,
             "problem": opportunity.problem,

@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+from datetime import datetime
 
 from app import models, security
 from app.database import get_db
@@ -299,3 +300,62 @@ def test_orchestrator_overview_is_owner_only_read_only_and_excludes_customer_eve
     finally:
         client.close()
         app.dependency_overrides.pop(get_db, None)
+
+
+def test_orchestrator_overview_real_scope_ignores_mock_validation_rows(db):
+    client = _client_for(db)
+    try:
+        opportunity = models.Opportunity(
+            problem="Independent repair shops lose time answering repeated status calls.",
+            target_customer="independent repair shops",
+            solution="A status visibility service",
+            business_model="service",
+            pricing_idea="NPR 4000/month",
+            score=60.0,
+            status="identified",
+            market_confidence=0.0,
+            revenue_confidence=0.0,
+            uncertainty=100.0,
+        )
+        db.add(opportunity)
+        db.commit()
+        db.refresh(opportunity)
+
+        real_validation = models.Experiment(
+            opportunity_id=opportunity.id,
+            action="Owner-run validation fixture",
+            action_type="customer_interview",
+            status="ready",
+            data_scope="REAL",
+            source_kind="REAL",
+            created_at=datetime(2026, 1, 1, 12, 0, 0),
+        )
+        mock_validation = models.Experiment(
+            opportunity_id=opportunity.id,
+            action="Mock validation fixture",
+            action_type="customer_interview",
+            status="completed",
+            data_scope="REAL",
+            source_kind="MOCK",
+            created_at=datetime(2026, 1, 2, 12, 0, 0),
+        )
+        db.add_all([real_validation, mock_validation])
+        db.commit()
+        db.refresh(real_validation)
+        db.refresh(mock_validation)
+
+        response = client.get("/api/orchestrate/overview", headers=_api_headers())
+        assert response.status_code == 200, response.text
+        row = next(
+            item
+            for item in response.json()["flow"]
+            if item["opportunity_id"] == opportunity.id
+        )
+
+        # A newer MOCK row must not shadow the only REAL-provenance row.
+        assert row["validation_status"] == "ready"
+        assert row["validation_experiment_id"] == real_validation.id
+    finally:
+        client.close()
+        app.dependency_overrides.pop(get_db, None)
+
