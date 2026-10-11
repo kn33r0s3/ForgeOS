@@ -1,3 +1,11 @@
+## [CROSS-DOMAIN DISCOVERY / SOURCE CHANGE / CI PENDING] Broaden the existing unknown map beyond sellers (2026-10-12)
+
+- The prior discovery frontier has become seller-heavy: the map had D1–D92 and its newest questions were still largely about missed inquiries, selling, and micro-shops. This describes the current search bias, not evidence that seller value is Hami's highest-value domain.
+- Added D93–D96 as UNKNOWN research candidates across disaster recovery coordination, hazard-information quality, agricultural resilience, and electricity-grid flexibility. They reuse the existing UNKNOWN_MAP.md and generated projections; no new models, routes, taxonomies, queues, or engines were added.
+- Sources establish reasons to investigate, not Hami opportunities, specific demand, or actionable interventions: [World Bank, Nepal Development Update, 2026-10-06](https://www.worldbank.org/en/news/press-release/2026/10/06/nepal-s-growth-projected-to-slow-following-devastating-rasuwa-flood); [UNDP, 2026-09-25](https://www.undp.org/stories/one-month-after-nepals-floods-long-road-recovery-begins); [Reuters, 2026-08-30](https://www.reuters.com/business/environment/before-flood-catastrophe-nepal-asked-china-early-warnings-risks-mounted-2026-08-30/); [IEA, Electricity 2026](https://www.iea.org/reports/electricity-2026/executive-summary); [IEA, Scaling Up Demand Flexibility, 2026](https://www.iea.org/reports/scaling-up-demand-flexibility/executive-summary).
+- All four remain UNKNOWN/L1 orientation; no new active Bet is selected. Human safety, official authority, evidence quality, and capability limits remain explicit gates.
+- Exact-head CI and independent deployment verification required.
+
 ## [OPERATING RULE CORRECTION / SOURCE CHANGE / CI PENDING] Separate open investigation from bounded intervention (2026-10-12)
 
 - The prior “one frontier for 90 days / everything else in the horizon register” rule was too easy to read as one seller thesis defining Hami's search domain.
