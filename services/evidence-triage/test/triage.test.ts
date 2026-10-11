@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { handleEvidenceTriage } from "../src/app.ts";
 import { MAX_INPUT_BYTES, triage } from "../src/triage.ts";
+import { resolvePublicResourceUrl } from "../src/x402.ts";
 
 const input = { text: "Small contractors are wasting 5 hours every week manually reconciling invoices. They would pay for a tool because missed invoices are costing $500.", source_kind: "public_post", source_reliability: 80 };
 
@@ -45,4 +46,11 @@ test("HTTP boundary returns the actual deterministic fulfillment", async () => {
   const result = await response.json() as { output_hash: string; fulfillment_id: string };
   assert.match(result.output_hash, /^[0-9a-f]{64}$/);
   assert.match(result.fulfillment_id, /^ful_/);
+});
+
+
+test("x402 configuration refuses to advertise an invented localhost resource", () => {
+  assert.throws(() => resolvePublicResourceUrl(""), /X402_RESOURCE_URL is required/);
+  assert.throws(() => resolvePublicResourceUrl("ftp://triage.example/triage"), /HTTP or HTTPS/);
+  assert.equal(resolvePublicResourceUrl(" https://triage.example/triage "), "https://triage.example/triage");
 });
