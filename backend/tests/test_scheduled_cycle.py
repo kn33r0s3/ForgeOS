@@ -748,6 +748,33 @@ def test_forge_cycles_returns_summary(monkeypatch, db):
     assert "summary" in body[0]
 
 
+def test_forge_runtime_projects_partial_cycles_for_owner_cockpit(monkeypatch, db):
+    """The owner runtime DTO exposes stored partial cycles separately from errors."""
+    from app import models
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "FORGE_API_KEY", "test-owner-key")
+    db.add_all(
+        [
+            models.CycleRun(status="COMPLETED"),
+            models.CycleRun(status="PARTIAL"),
+            models.CycleRun(status="FAILED"),
+            models.CycleRun(status="RUNNING"),
+        ]
+    )
+    db.commit()
+
+    client = TestClient(app)
+    response = client.get("/forge/runtime", headers={"X-API-Key": "test-owner-key"})
+
+    assert response.status_code == 200, response.text
+    operations = response.json()["truth"]["operations"]
+    assert operations["completed_cycles"] == 1
+    assert operations["partial_cycles"] == 1
+    assert operations["failed_cycles"] == 1
+    assert operations["running_cycles"] == 1
+
+
 def test_forge_clearance_lists_governed_sources(monkeypatch):
     """GET /forge/clearance exposes the source clearance registry with expiry
     state, so the owner console can show why a task cannot run."""

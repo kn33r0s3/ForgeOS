@@ -2112,8 +2112,8 @@ class CycleRun(Base):
     started_at = Column(DateTime, nullable=False, default=utcnow)
     ended_at = Column(DateTime, nullable=True)
     duration_ms = Column(Integer, nullable=True)
-    status = Column(String, nullable=False, default="RUNNING")  # RUNNING | COMPLETED | FAILED
-    summary_json = Column(Text, nullable=True)  # stage counts + per-stage errors
+    status = Column(String, nullable=False, default="RUNNING")  # RUNNING | COMPLETED | PARTIAL | FAILED
+    summary_json = Column(Text, nullable=True)  # per-stage outcomes, errors, and partials
     error = Column(Text, nullable=True)
 
 
