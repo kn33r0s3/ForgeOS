@@ -608,7 +608,7 @@ function AboutLink() {
                 </Link>
               </Button>
               <Button asChild variant="ghost">
-                <Link to="/climb" className="link-arrow">
+                <Link to="/about" hash="climb" className="link-arrow">
                   The climb <ArrowRight aria-hidden="true" />
                 </Link>
               </Button>

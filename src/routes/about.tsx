@@ -161,7 +161,7 @@ function AboutPage() {
         </section>
 
         {/* The climb */}
-        <section className="py-10">
+        <section id="climb" className="py-10 scroll-mt-24">
           <h2 className="font-display text-3xl font-extrabold tracking-tight text-ink">
             The climb
           </h2>
