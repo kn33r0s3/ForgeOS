@@ -1,8 +1,20 @@
-# ForgeOS / Hami current status
+# Hami current status (ForgeOS technical lineage)
 
-**Updated:** 2026-10-09
+**Updated:** 2026-10-11 (Nepal time)
 **Evidence boundary:** repository and CI observations below are dated; external
 state is not assumed current unless explicitly identified as a dated observation.
+
+## Current integration snapshot — 2026-10-11
+
+- **Production alias:** Vercel reports `haminp.vercel.app` READY for commit `82297e49e1640bd84cedac291bb4eb2fede8eae8` (deployment `dpl_HQLMWrauSmRQfsbwMsHuvVUX6p3H`). This is a deployment/alias observation, not proof that API credentials, durable persistence, scheduled work or economic outcomes are ready.
+- **One Hami product surface:** the public NAV/footer/pathway source remains `src/lib/hami-system.ts`; `features.json` remains the route/API lifecycle registry; the reverse-link regression now requires every live page to have a deliberate entry path, with `/requests/$id` documented as a workflow-only route created by an actual provider request.
+- **Group and service connections:** the seven group directions share `GroupAreaGrid` across `/group` and `/group/businesses`; all point to existing Hami routes. Each of the six Hami service details links to its five sibling categories and back to `/services`. Shared CTAs distinguish Hami-owned service scope from the independent external-provider directory.
+- **Private and closed surfaces:** `/owner` links to `/operations` after the owner unlocks the console, and Operations links back. Both remain hidden/noindex and outside public navigation. The public Businesses page no longer links to `/forge-bot-intake`; it explicitly states intake is closed and routes to existing services/process/work surfaces. The underlying closed route is retained rather than deleted or activated.
+- **Brand identity:** the PWA/Grok injection shell is removed; the Hami-owned manifest and browser metadata are guarded by tests. The backend OpenAPI description and API-reference heading now use Hami as product identity while legacy path/env identifiers are documented as implementation compatibility names.
+- **Regression coverage added:** route-entry reachability, contextual CTA destination contracts, group-area registry targets, service sibling links, closed-intake exposure, and OpenAPI product metadata. Vercel build/status checks succeeded for the current production alias commit; Vercel status alone does not execute or prove all local backend/frontend test suites.
+- **Current limits:** direct rendered-page inspection remains unavailable through the current web/Vercel fetch integration. The code-level link audit found no orphaned live page in the registry, but this is not an end-to-end browser test. Production owner-key presence/access, Better Auth deployed configuration, durable database behavior, scheduled-worker cadence, email delivery, complete provider payment/order/fufilment, real customer activity and revenue remain unverified. See `docs/HAMI_INTEGRATION_AUDIT.md` for prioritized work and evidence boundaries.
+
+**Historical snapshot note:** the sections below preserve dated operational reports and earlier verification results. Treat their explicitly dated observations as historical evidence, not as fresh verification of the current deployment; the system map, capability ledger and integration audit record later changes.
 
 ## Product and commercial state
 
