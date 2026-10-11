@@ -1396,9 +1396,9 @@ function OwnerConsolePage() {
                                         </label>
                                         <label className="grid gap-1 text-sm font-semibold">
                                           Actual respondents (one per line)
-                                          <textarea value={outcomeRespondents} onChange={(event) => setOutcomeRespondents(event.target.value)} required rows={5} className="min-h-28 rounded-card border-2 border-line bg-black px-3 py-2 font-mono text-xs text-ink" placeholder={"shop-01 | interested | confirmed | says they may pay NPR 4000/mo
+                                          <textarea value={outcomeRespondents} onChange={(event) => setOutcomeRespondents(event.target.value)} required rows={5} className="min-h-28 rounded-card border-2 border-line bg-black px-3 py-2 font-mono text-xs text-ink" placeholder={`shop-01 | interested | confirmed | says they may pay NPR 4000/mo
 shop-02 | lead | confirmed | confirmed delay problem; price unknown
-shop-03 | lead | not confirmed | uses an existing alternative"} />
+shop-03 | lead | not confirmed | uses an existing alternative`} />
                                         </label>
                                         <button type="submit" disabled={pipelineBusy} className="min-h-11 justify-self-start rounded-card border-2 border-accent px-4 font-bold text-accent disabled:opacity-60">Save actual outcome</button>
                                       </form>
