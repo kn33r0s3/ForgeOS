@@ -1,3 +1,10 @@
+## [CLARIFIED STATUS] ForgeBot v1 CLI vs deployed scheduler (2026-10-11)
+
+- **EXISTING TOOL PRESERVED:** `src/lib/forge/cli.ts` and `src/lib/forge/cli.test.ts` provide a runnable, tested local CLI for listing ripeness-ranked angles, checking tried angles, and gating a JSON batch of findings.
+- **REAL WIRING:** the CLI is not imported by the web app and is not invoked by the deployed scheduler. The current `/scheduled/intelligence` handler runs the Python pipeline in `backend/app/api/scheduled.py` and `backend/app/services/forge_loop.py`. `forge gate` only returns a verification verdict; it does not persist or bank the findings.
+- **CORRECTION:** `docs/ROUND_PROTOCOL.md` now marks autonomous ForgeBot v1 as **PLANNED / NOT WIRED**, rather than ACTIVE. The CLI remains useful operator/test tooling, not evidence of autonomous research or scheduled round execution.
+- **NEXT SAFE STEP:** only wire the existing helpers into the canonical pipeline after defining source clearance, provenance, write-back through the existing evidence primitives, owner authorization, run IDs, idempotency, failure states, and tests. Do not add a parallel data model or enable unsupervised contact/action.
+
 # Hami capability claim ledger (ForgeOS repository)
 
 ## [DONE WITH LIMITATION] Connect route and service surfaces into one Hami (2026-10-11)

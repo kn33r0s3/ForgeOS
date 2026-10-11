@@ -20,7 +20,19 @@ function run(args: string[], stdin?: string): { stdout: string; code: number } {
   }
 }
 
-describe("forge cli — ForgeBot v1 tools", () => {
+describe("forge CLI harness — ForgeBot round tooling", () => {
+  it("does not claim that the deployed scheduler runs the CLI", () => {
+    const root = new URL("../../../", import.meta.url);
+    const protocol = readFileSync(new URL("docs/ROUND_PROTOCOL.md", root), "utf8");
+    const scheduled = readFileSync(new URL("backend/app/api/scheduled.py", root), "utf8");
+    const implementation = readFileSync(new URL("src/lib/forge/cli.ts", root), "utf8");
+
+    assert.match(protocol, /v1 — competitor \(PLANNED \/ NOT WIRED\)/);
+    assert.match(protocol, /the deployed scheduled worker does not invoke it/i);
+    assert.match(implementation, /not wired into the deployed scheduled worker/i);
+    assert.match(scheduled, /forge_loop\.run_cycle/);
+    assert.doesNotMatch(scheduled, /src\/lib\/forge\/cli\.ts|node --experimental-strip-types src\/lib\/forge\/cli\.ts/);
+  });
   it("angles returns value-ranked untried angles as JSON", () => {
     const { stdout, code } = run(["angles", "--limit", "3"]);
     assert.equal(code, 0);

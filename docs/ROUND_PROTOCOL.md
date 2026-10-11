@@ -83,12 +83,16 @@ assistant) enforces it; later ForgeBot runs it.
 - **v0 — assistant (shipped):** the operator ran rounds; the assistant
   gated findings (`verifyRound`), ranked ripeness (`ripenessQueue`), and
   refused repeats (`isAngleTried`).
-- **v1 — competitor (ACTIVE):** ForgeBot runs the round itself. The
-  scheduled worker IS ForgeBot: it takes its angle from `forge angles`
-  (`src/lib/forge/cli.ts`), checks novelty with `forge tried`,
-  researches with its tools, gates its own findings with `forge gate`,
-  and banks only what passes. The operator grades the banked round —
-  ForgeBot does the work, musa checks it.
+- **v1 — competitor (PLANNED / NOT WIRED):** the tested CLI
+  (`src/lib/forge/cli.ts`) exposes local `angles`, `tried`, and `gate`
+  commands, but the deployed scheduled worker does not invoke it. The
+  current scheduled intelligence endpoint runs the Python pipeline in
+  `backend/app/api/scheduled.py` and `backend/app/services/forge_loop.py`.
+  The CLI gate emits a verdict; it does not persist findings into the
+  canonical evidence substrate. Do not claim autonomous rounds or banked
+  findings until an authorized, source-bounded runner is implemented and
+  verified end-to-end. The existing owner console still uses the v0
+  assistant helpers for operator review.
 - **v2 — better:** cross-round contradiction detection, question
   generation from the unknowns graph, self-directed angle selection.
   The trainee outperforms the fuel.

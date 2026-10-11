@@ -37,7 +37,7 @@
 
 ### NEEDS OWNER DECISION
 
-- `src/lib/forge/cli.ts` — added 2026-10-04 (b599c90), no inbound references. Purpose unclear.
+- `src/lib/forge/cli.ts` — manual CLI/tooling harness with its own `cli.test.ts`; not imported by the app or invoked by the deployed scheduled worker. Preserve it as tested operator tooling. The autonomous/scheduled v1 round remains PLANNED / NOT WIRED; don't mark the CLI itself as an active autonomous worker.
 - `src/lib/unknowns-api.ts` — added 2026-10-04 (5c1dad8), no inbound references. May be superseded by features work.
 - `src/lib/multiplayer/{index,p2p}.ts` — only self-referenced; P2P/multiplayer has no surface. Prototype or dead?
 - `src/lib/app-data/{index,readiness,use-connector-readiness}.ts` — unreferenced trio; siblings are used.

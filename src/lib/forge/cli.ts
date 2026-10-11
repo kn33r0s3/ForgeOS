@@ -1,19 +1,21 @@
 #!/usr/bin/env node
 /**
- * ForgeBot v1 — the runner.
+ * ForgeBot round CLI — a tested operator/tooling harness.
  *
- * The operator no longer picks angles or gates findings by hand.
- * ForgeBot (the scheduled round worker) uses this CLI as its tools:
- *
- *   forge angles [--limit 5]   top value-ranked untried angles as JSON
- *   forge tried "<angle>"       1 if the angle was tried, 0 if new ground
+ * Commands:
+ *   forge angles [--limit 5]   list value-ranked untried angles as JSON
+ *   forge tried "<angle>"       1 if an angle was tried, 0 if new ground
  *   forge gate                 read findings JSON from stdin, print verdict JSON
  *
- * The worker researches the chosen angle, then gates its own findings
- * through verifyRound before banking. The operator grades the banked
- * round — competitor stage: ForgeBot does the work, musa checks it.
+ * IMPORTANT: this CLI is not wired into the deployed scheduled worker. The
+ * current backend scheduler runs the Python intelligence pipeline in
+ * backend/app/api/scheduled.py and backend/app/services/forge_loop.py. These
+ * commands remain directly executable and regression-tested; do not report
+ * them as autonomous research, a scheduled round, or a banked finding.
  *
- * Run: node --experimental-strip-types src/lib/forge/cli.ts <command>
+ * Gate output is a verdict only. It does not itself persist or bank findings.
+ *
+ * Run manually: node --experimental-strip-types src/lib/forge/cli.ts <command>
  */
 import { isAngleTried, ripenessQueue, verifyRound } from "./assistant.ts";
 
