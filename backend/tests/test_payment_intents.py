@@ -457,11 +457,11 @@ def test_checkout_reconciliation_blocks_key_matching_multiple_providers(db):
     product = _published_product(db)
     key = "reconcile-conflicting-provider-key-123"
     khalti = _recovery_intent(
-        db, product, provider="khalti", status="INITIATED", suffix="dup-k",
+        db, product, provider="khalti", status="INITIATED", suffix="k-dup",
         provider_payment_id="khalti-recovery-pidx-duplicate-123",
     )
     esewa = _recovery_intent(
-        db, product, provider="esewa", status="INITIATED", suffix="dup-e",
+        db, product, provider="esewa", status="INITIATED", suffix="e-dup",
     )
     khalti.idempotency_key_hash = hashlib.sha256(
         f"product:{product.id}|provider:khalti|key:{key}".encode()
