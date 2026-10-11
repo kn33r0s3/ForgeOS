@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Container } from "@/components/layout/container";
+import { HamiPathways } from "@/components/layout/hami-pathways";
 import { UnknownCard } from "@/components/unknowns/unknown-card";
 import { PageHeader } from "@/components/layout/page-header";
 import {
@@ -157,6 +158,7 @@ function UnknownsPage() {
           backlog appear in the owner console only.
         </p>
       </Container>
+      <HamiPathways current="unknowns" />
     </main>
   );
 }

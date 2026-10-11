@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowUpRight, CircleHelp, Compass, GitBranch, Lightbulb, Link2, Radio, ShieldCheck, Sparkles, Users, Wrench, X } from "lucide-react";
 import { Container } from "@/components/layout/container";
+import { HamiPathways } from "@/components/layout/hami-pathways";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState, MetricTile, SkeletonCards, UnavailableState } from "@/components/ui/feedback";
 import { loadPublicFeed, type PublicFeedItem } from "@/lib/content";
@@ -401,6 +402,7 @@ function NetworkFeedPage() {
           })}
         </ol>
       </Container>
+      <HamiPathways current="network" />
     </main>
   );
 }

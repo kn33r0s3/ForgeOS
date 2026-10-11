@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowUpRight, Lightbulb, Link2, ShieldAlert } from "lucide-react";
 import { Container } from "@/components/layout/container";
+import { HamiPathways } from "@/components/layout/hami-pathways";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState, SkeletonCards, UnavailableState } from "@/components/ui/feedback";
 import { loadPublicFeed, type PublicFeedItem } from "@/lib/content";
@@ -126,6 +127,7 @@ function OpportunitiesPage() {
           </ol>
         ) : null}
       </Container>
+      <HamiPathways current="opportunities" />
     </main>
   );
 }

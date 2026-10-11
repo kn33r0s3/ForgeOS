@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { Container } from "@/components/layout/container";
+import { HamiPathways } from "@/components/layout/hami-pathways";
 import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/layout/eyebrow";
 import {
@@ -60,6 +61,7 @@ function HomePage() {
       <AboutLink />
       <StatusRecord />
       <HomeFooter />
+      <HamiPathways current="home" />
     </main>
   );
 }
