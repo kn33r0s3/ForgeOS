@@ -320,6 +320,12 @@ describe("feature registry", () => {
     assert.ok(engine.includes("reconcile_public_intent") && engine.includes("reconcile_checkout_by_key") && engine.includes("retry_allowed"), "a new attempt requires server-side provider reconciliation");
     assert.ok(home.includes("reconcileCheckout") && home.includes("clearStoredCheckoutAttempt") && home.includes("payload.retry_allowed"), "the offer screen clears its key only after backend authorization");
     assert.ok(result.includes("/reconcile") && result.includes("sessionStorage.removeItem") && result.includes("retry_allowed"), "the result page retains ambiguous attempts and clears terminal keys only after confirmation");
+    const normalizedResult = result.replace(/\s+/g, " ");
+    assert.ok(normalizedResult.includes("catch { cleared = false; }"), "storage exceptions must never be treated as a cleared checkout identity");
+    assert.ok(
+      normalizedResult.indexOf("if (!cleared)") < normalizedResult.indexOf("setRetryAllowed(allowed)"),
+      "retry permission must remain blocked until local attempt identity is verified cleared",
+    );
 
     assert.ok(engine.includes("finalize_esewa_callback") && engine.includes("finalize_khalti_callback"));
   });

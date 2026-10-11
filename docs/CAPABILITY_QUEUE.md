@@ -1,3 +1,10 @@
+## [PAYMENT-SAFETY FIX / CI PENDING] Fail closed when result-page storage access throws (2026-10-12)
+
+- The provider reconciliation response can authorize a fresh attempt only after the tab-scoped key is removed and verified absent. The result-page catch block mistakenly treated any storage exception as successful clearing.
+- Storage removal/read failures now leave `cleared = false`; the page returns before exposing retry permission. No provider call, payment configuration, or live checkout was changed.
+- This prevents a browser-storage exception from turning a terminal provider response into permission to start another checkout. Payment/revenue still require provider reconciliation and owner fulfillment confirmation.
+- Exact-head regression tests, frontend tests, typecheck, build, full backend CI, and independent deployment verification are required.
+
 ## [SOURCE FIX / CI PENDING] Parse documented Khalti terminal lookup responses returned as HTTP 400 (2026-10-12)
 
 - Khalti documents \`Expired\` and \`User canceled\` lookup responses as HTTP 400. Python's default HTTP client raises on 400 before payment recovery can inspect the provider status.

@@ -98,7 +98,7 @@ function PaymentResultPage() {
           window.sessionStorage.removeItem("hami:checkout-attempt:" + payload.offer_id);
           cleared = window.sessionStorage.getItem("hami:checkout-attempt:" + payload.offer_id) === null;
         } catch {
-          cleared = true;
+          cleared = false;
         }
         if (!cleared) {
           setRecoveryMessage("The provider confirmed the previous attempt ended, but this tab could not clear the saved attempt key. No new attempt was started.");
