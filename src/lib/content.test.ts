@@ -4,7 +4,6 @@ import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import {
-  NAV,
   SITE,
   capabilities,
   currentOffers,
@@ -17,6 +16,7 @@ import {
   submitPublicDemandRequest,
   trustPoints,
 } from "./content.ts";
+import { NAV } from "./hami-system.ts";
 import { candidateNeeds, needsCount, needsRounds } from "./needs.ts";
 
 const FORBIDDEN_CLAIM_RE =

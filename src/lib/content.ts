@@ -696,8 +696,6 @@ export async function getBookingRequestStatus(id: number): Promise<BookingStatus
   return null;
 }
 
-export type NavHref = (typeof NAV)[number]["to"];
-
 export type ServiceKind = "commercial";
 
 export type Service = {

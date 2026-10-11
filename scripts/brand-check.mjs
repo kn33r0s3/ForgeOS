@@ -27,10 +27,24 @@
  * favicon, PWA icons and title for a plain utility that keeps the og.grok.me
  * card — where no card is the expected verdict rather than a failure.
  */
-import { existsSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { OG_SITE_REL_PATH, readOgSite, siteHasCustomCard } from "./grok-pwa-shared.mjs";
+// This checker is standalone: it must not depend on the removed platform PWA injector.
+export const OG_SITE_REL_PATH = "src/lib/og/site.json";
+
+export function readOgSite(workspaceRoot) {
+  try {
+    const value = JSON.parse(readFileSync(join(workspaceRoot, OG_SITE_REL_PATH), "utf8"));
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  } catch {
+    return {};
+  }
+}
+
+export function siteHasCustomCard(site) {
+  return site?.card === "custom";
+}
 import { isMainModule } from "./with-app-env.mjs";
 
 // Over this, link scrapers (X card previews included) time out or skip the
