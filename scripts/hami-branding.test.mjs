@@ -14,22 +14,27 @@ test("Hami owns the production web-app manifest", () => {
   assert.equal(manifest.scope, "/");
   assert.equal(manifest.display, "standalone");
   assert.equal(manifest.icons[0].src, "/favicon.svg");
-  assert.doesNotMatch(JSON.stringify(manifest), /grok|app-builder/i);
+  assert.ok(!/grok|app-builder/i.test(JSON.stringify(manifest)));
 });
 
 test("production shell has no Grok PWA injector or preview bridge", () => {
   const vite = readFileSync(join(ROOT, "vite.config.ts"), "utf8");
   const root = readFileSync(join(ROOT, "src/routes/__root.tsx"), "utf8");
-  assert.doesNotMatch(vite, /grokPwaPlugin|grok-pwa-plugin|grok-pwa\\.ts/);
-  assert.doesNotMatch(root, /PreviewHostBridge|__grok\\//);
-  assert.match(root, /\\/manifest\\.webmanifest/);
+  assert.ok(!vite.includes("grokPwaPlugin"));
+  assert.ok(!vite.includes("grok-pwa-plugin"));
+  assert.ok(!root.includes("PreviewHostBridge"));
+  assert.ok(!root.includes("/__grok/"));
+  assert.ok(root.includes("/manifest.webmanifest"));
   assert.equal(existsSync(join(ROOT, "server/middleware/grok-pwa.ts")), false);
   assert.equal(existsSync(join(ROOT, "scripts/grok-pwa-plugin.mjs")), false);
 });
 
 test("connector errors do not instruct Hami visitors to use another app", () => {
   const errors = readFileSync(join(ROOT, "src/lib/app-data/errors.ts"), "utf8");
-  assert.doesNotMatch(errors, /Grok|grok\\.me|edge gate|open this app/i);
-  assert.match(errors, /isn’t available on this site yet/);
-  assert.match(errors, /isn’t configured yet/);
+  assert.ok(!errors.includes("Grok"));
+  assert.ok(!errors.toLowerCase().includes("grok.me"));
+  assert.ok(!errors.toLowerCase().includes("edge gate"));
+  assert.ok(!errors.toLowerCase().includes("open this app"));
+  assert.ok(errors.includes("isn’t available on this site yet"));
+  assert.ok(errors.includes("isn’t configured yet"));
 });
