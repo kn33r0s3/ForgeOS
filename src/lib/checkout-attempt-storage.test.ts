@@ -18,7 +18,7 @@ function memoryStorage(seed: Record<string, string> = {}): StoragePort {
   };
 }
 
-const attempt = { key: "TEST-idempotency-key-123456", provider: "khalti" as const };
+const attempt = { key: "TEST-TEST-TEST-TEST", provider: "khalti" as const };
 
 describe("shared checkout-attempt storage", () => {
   it("round-trips a valid provider-bound attempt", () => {

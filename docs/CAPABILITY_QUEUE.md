@@ -1,3 +1,9 @@
+## [SECRETS-SCAN FIX / CI PENDING] Make checkout test token unmistakably synthetic (2026-10-12)
+
+- Gitleaks flagged the unit-test idempotency placeholder as a generic API key because its text entropy resembled a credential. Inspection confirmed this is a local in-memory test value; it is not used in configuration or sent to a provider.
+- Replaced it with a deliberately repeated token that still satisfies the helper's minimum-length contract. No scanner rule or allowlist was weakened; no actual secret was exposed or rotated.
+- Exact-head Gitleaks, backend/frontend CI, and independent deployment verification must pass before release claims.
+
 ## [CI COLLECTION FIX + PAYMENT-SAFETY / CI PENDING] Share a fail-closed checkout identity contract (2026-10-12)
 
 - The previous backend run stopped during test collection because the public-reconciliation parameterized test sat beneath another test's `path` decorator. The original private-read parametrization is restored.
