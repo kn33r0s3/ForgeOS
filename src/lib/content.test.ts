@@ -594,7 +594,9 @@ describe("private booking-status links", () => {
     const content = readFileSync(join(root, "src/lib/content.ts"), "utf8");
 
     assert.ok(publicApi.includes("_booking_status_token"), "booking status must use a signed capability");
-    assert.ok(publicApi.includes('status_token: str = Query(..., min_length=64, max_length=64)'));
+    assert.ok(publicApi.includes('status_token: str = Header(..., alias="X-Booking-Status-Token", min_length=64, max_length=64)'));
+        assert.ok(content.includes('"X-Booking-Status-Token": statusToken'), "the capability must not be sent in the URL query");
+        assert.ok(!content.includes("status_token=${encodeURIComponent(statusToken)}"), "capability tokens must not enter request URLs");
     assert.ok(providers.includes("hash: result.status_token"), "the capability must travel in the URL fragment");
     assert.ok(statusPage.includes('window.location.hash.slice(1)'), "the capability must be read client-side");
     assert.ok(statusPage.includes('content: "noindex,nofollow"'), "private status pages must not be indexed");
