@@ -97,3 +97,18 @@ def test_per_offer_checklist_is_persisted_and_workspace_scoped(db):
             workspace_key="another-workspace-token-123", next_actions=items
         ), db)
     assert exc.value.status_code == 404
+
+def test_list_offers_workspace_capability_is_a_header_not_a_query_parameter():
+    from app.main import app
+
+    operation = app.openapi()["paths"]["/earn/offers"]["get"]
+    params = operation.get("parameters", [])
+    assert any(
+        item.get("name") == "X-Workspace-Key" and item.get("in") == "header" and item.get("required")
+        for item in params
+    )
+    assert not any(
+        item.get("name") == "workspace_key" and item.get("in") == "query"
+        for item in params
+    )
+
