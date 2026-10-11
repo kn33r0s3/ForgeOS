@@ -398,6 +398,164 @@ def test_khalti_refund_after_verified_fulfillment_requires_reconciliation_withou
         product_id=product.id, outcome_type="ACTUAL_REVENUE", unit="NPR"
     ).count() == 1
 
+
+
+def _recovery_intent(db, product, *, provider, status, suffix, provider_payment_id=None):
+    intent = models.OpPaymentIntent(
+        public_ref=f"recovery-public-ref-{provider}-{suffix}-012345",
+        product_id=product.id,
+        provider=provider,
+        status=status,
+        amount_paisa=500000,
+        currency="NPR",
+        merchant_order_id=f"hami-{provider}-recovery-order-{suffix}",
+        idempotency_key_hash=(suffix[0].lower() * 64),
+        provider_payment_id=provider_payment_id,
+        data_scope="REAL",
+    )
+    db.add(intent)
+    db.commit()
+    db.refresh(intent)
+    return intent
+
+
+def test_khalti_expired_lookup_confirms_safe_new_attempt(db, monkeypatch):
+    product = _published_product(db)
+    intent = _recovery_intent(
+        db, product, provider="khalti", status="PENDING", suffix="expired",
+        provider_payment_id="khalti-recovery-pidx-expired-123",
+    )
+    monkeypatch.setattr(nepal_payments, "khalti_lookup", lambda **kwargs: {
+        "pidx": intent.provider_payment_id,
+        "status": "Expired",
+        "total_amount": intent.amount_paisa,
+        "transaction_id": None,
+        "refunded": False,
+    })
+    result = payment_intent_engine.reconcile_public_intent(db, intent.public_ref)
+    db.refresh(intent)
+    assert result["retry_allowed"] is True
+    assert result["recovery"]["provider_status"] == "Expired"
+    assert intent.status == "CANCELLED"
+    assert db.query(models.Outcome).filter_by(
+        product_id=product.id, outcome_type="ACTUAL_REVENUE"
+    ).count() == 0
+
+
+def test_khalti_pending_lookup_does_not_unlock_new_attempt(db, monkeypatch):
+    product = _published_product(db)
+    intent = _recovery_intent(
+        db, product, provider="khalti", status="INITIATED", suffix="pending",
+        provider_payment_id="khalti-recovery-pidx-pending-123",
+    )
+    monkeypatch.setattr(nepal_payments, "khalti_lookup", lambda **kwargs: {
+        "pidx": intent.provider_payment_id,
+        "status": "Pending",
+        "total_amount": intent.amount_paisa,
+        "transaction_id": None,
+        "refunded": False,
+    })
+    result = payment_intent_engine.reconcile_public_intent(db, intent.public_ref)
+    db.refresh(intent)
+    assert result["retry_allowed"] is False
+    assert result["status"] == "PENDING"
+    assert intent.status == "PENDING"
+    assert db.query(models.Outcome).filter_by(
+        product_id=product.id, outcome_type="ACTUAL_REVENUE"
+    ).count() == 0
+
+
+def test_esewa_not_found_lookup_confirms_safe_new_attempt(db, monkeypatch):
+    product = _published_product(db)
+    intent = _recovery_intent(
+        db, product, provider="esewa", status="INITIATED", suffix="notfound"
+    )
+    monkeypatch.setattr(settings, "ESEWA_MERCHANT_CODE", "TEST-MERCHANT")
+    monkeypatch.setattr(nepal_payments, "esewa_lookup", lambda **kwargs: {"status": "NOT_FOUND"})
+    result = payment_intent_engine.reconcile_public_intent(db, intent.public_ref)
+    db.refresh(intent)
+    assert result["retry_allowed"] is True
+    assert result["recovery"]["provider_status"] == "NOT_FOUND"
+    assert intent.status == "CANCELLED"
+    assert db.query(models.Outcome).filter_by(
+        product_id=product.id, outcome_type="ACTUAL_REVENUE"
+    ).count() == 0
+
+
+def test_esewa_ambiguous_lookup_does_not_unlock_new_attempt(db, monkeypatch):
+    product = _published_product(db)
+    intent = _recovery_intent(
+        db, product, provider="esewa", status="INITIATED", suffix="ambig"
+    )
+    monkeypatch.setattr(settings, "ESEWA_MERCHANT_CODE", "TEST-MERCHANT")
+    monkeypatch.setattr(nepal_payments, "esewa_lookup", lambda **kwargs: {
+        "status": "AMBIGIOUS",
+        "totalAmount": "5000.00",
+        "scd": "TEST-MERCHANT",
+        "transaction_uuid": intent.merchant_order_id,
+        "refId": None,
+    })
+    result = payment_intent_engine.reconcile_public_intent(db, intent.public_ref)
+    db.refresh(intent)
+    assert result["retry_allowed"] is False
+    assert result["status"] == "PENDING"
+    assert intent.status == "PENDING"
+    assert db.query(models.Outcome).filter_by(
+        product_id=product.id, outcome_type="ACTUAL_REVENUE"
+    ).count() == 0
+
+
+def test_provider_completion_cannot_reopen_locally_failed_khalti_intent(db, monkeypatch):
+    product = _published_product(db)
+    intent = _recovery_intent(
+        db, product, provider="khalti", status="FAILED", suffix="conflict",
+        provider_payment_id="khalti-recovery-pidx-conflict-123",
+    )
+    monkeypatch.setattr(nepal_payments, "khalti_lookup", lambda **kwargs: {
+        "pidx": intent.provider_payment_id,
+        "status": "Completed",
+        "total_amount": intent.amount_paisa,
+        "transaction_id": "KHALTI-RECOVERY-CONFLICT-RECEIPT",
+        "refunded": False,
+    })
+    with pytest.raises(
+        payment_intent_engine.PaymentReconciliationRequired,
+        match="owner reconciliation is required",
+    ):
+        payment_intent_engine.reconcile_public_intent(db, intent.public_ref)
+    db.refresh(intent)
+    assert intent.status == "FAILED"
+    assert intent.outcome_id is None
+    assert db.query(models.Outcome).filter_by(
+        product_id=product.id, outcome_type="ACTUAL_REVENUE"
+    ).count() == 0
+
+
+def test_khalti_completed_lookup_verifies_payment_but_does_not_create_revenue(db, monkeypatch):
+    product = _published_product(db)
+    intent = _recovery_intent(
+        db, product, provider="khalti", status="PENDING", suffix="complete",
+        provider_payment_id="khalti-recovery-pidx-complete-123",
+    )
+    monkeypatch.setattr(nepal_payments, "khalti_lookup", lambda **kwargs: {
+        "pidx": intent.provider_payment_id,
+        "status": "Completed",
+        "total_amount": intent.amount_paisa,
+        "transaction_id": "KHALTI-RECOVERY-COMPLETED-RECEIPT",
+        "refunded": False,
+    })
+    result = payment_intent_engine.reconcile_public_intent(db, intent.public_ref)
+    db.refresh(intent)
+    assert result["retry_allowed"] is False
+    assert intent.status == "VERIFIED"
+    assert intent.provider_reference == "KHALTI-RECOVERY-COMPLETED-RECEIPT"
+    assert intent.outcome_id is None
+    assert intent.fulfilled_at is None
+    assert db.query(models.Outcome).filter_by(
+        product_id=product.id, outcome_type="ACTUAL_REVENUE"
+    ).count() == 0
+
+
 def test_esewa_amount_mismatch_is_disputed_without_revenue(db, monkeypatch):
     product = _published_product(db)
     intent = models.OpPaymentIntent(

@@ -50,6 +50,20 @@ type PublicPaymentOffer = {
   providers: Array<"esewa" | "khalti">;
 };
 
+type CheckoutRecoveryResponse = {
+  intent: string | null;
+  offer_id: number;
+  provider: CheckoutProvider | null;
+  status: string;
+  retry_allowed: boolean;
+  recovery: {
+    checked: boolean;
+    retry_allowed: boolean;
+    provider_status: string | null;
+    message: string;
+  };
+};
+
 type PublicCheckoutResponse = {
   intent: string;
   status: string;
@@ -70,6 +84,7 @@ type CheckoutAttemptError = {
   provider: CheckoutProvider;
   message: string;
   retryable: boolean;
+  newAttempt?: boolean;
 };
 
 function checkoutAttemptStorageKey(offerId: number) {
@@ -101,6 +116,16 @@ function writeStoredCheckoutAttempt(offerId: number, attempt: StoredCheckoutAtte
   } catch {
     // Never initiate payment if the retry key cannot survive a page refresh.
     return false;
+  }
+}
+
+function clearStoredCheckoutAttempt(offerId: number): boolean {
+  try {
+    window.sessionStorage.removeItem(checkoutAttemptStorageKey(offerId));
+    return window.sessionStorage.getItem(checkoutAttemptStorageKey(offerId)) === null;
+  } catch {
+    // sessionStorage is unavailable as a whole; the component also clears its in-memory identity.
+    return true;
   }
 }
 
@@ -136,6 +161,83 @@ function PublicOffers() {
       .catch(() => { if (current) setOffers([]); });
     return () => { current = false; };
   }, []);
+
+  async function reconcileCheckout(offer: PublicPaymentOffer) {
+    if (busyId !== null) return;
+    const storedAttempt = readStoredCheckoutAttempt(offer.id);
+    const key = keys[offer.id] ?? storedAttempt?.key;
+    const provider = providersByOffer[offer.id] ?? storedAttempt?.provider;
+    if (!key || !provider) {
+      setError({
+        offerId: offer.id,
+        provider: provider ?? "esewa",
+        message: "No saved checkout identity is available to verify. Do not start another attempt from this message.",
+        retryable: false,
+      });
+      return;
+    }
+    setBusyId(offer.id);
+    setError(null);
+    try {
+      const response = await fetch("/api/payments/products/" + offer.id + "/checkout/reconcile", {
+        method: "POST",
+        headers: { "Idempotency-Key": key, Accept: "application/json" },
+        cache: "no-store",
+      });
+      const payload = await response.json().catch(() => null) as
+        | (CheckoutRecoveryResponse & { detail?: string })
+        | null;
+      if (!response.ok || !payload) {
+        throw new Error(payload && typeof payload.detail === "string"
+          ? payload.detail
+          : "The provider could not confirm a safe retry. Keep the existing checkout attempt.");
+      }
+      if (payload.status === "VERIFIED" && payload.intent) {
+        window.location.assign("/payment-result?intent=" + encodeURIComponent(payload.intent));
+        return;
+      }
+      const recoveryMessage = payload.recovery?.message ?? "Provider status could not establish a safe retry.";
+      if (payload.retry_allowed === true) {
+        if (!clearStoredCheckoutAttempt(offer.id)) {
+          setError({
+            offerId: offer.id,
+            provider,
+            message: "The provider confirms the previous attempt ended, but this tab could not clear its saved attempt key. No new attempt was started.",
+            retryable: false,
+          });
+          return;
+        }
+        setKeys((current) => {
+          const nextKeys = { ...current };
+          delete nextKeys[offer.id];
+          return nextKeys;
+        });
+        setProvidersByOffer((current) => {
+          const nextProviders = { ...current };
+          delete nextProviders[offer.id];
+          return nextProviders;
+        });
+        setError({
+          offerId: offer.id,
+          provider,
+          message: recoveryMessage,
+          retryable: true,
+          newAttempt: true,
+        });
+        return;
+      }
+      setError({ offerId: offer.id, provider, message: recoveryMessage, retryable: false });
+    } catch (cause) {
+      setError({
+        offerId: offer.id,
+        provider,
+        message: cause instanceof Error ? cause.message : "The provider could not confirm a safe retry.",
+        retryable: false,
+      });
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   async function beginCheckout(offer: PublicPaymentOffer, provider: CheckoutProvider) {
     if (busyId !== null) return;
@@ -283,9 +385,19 @@ function PublicOffers() {
                   onClick={() => void beginCheckout(offer, error.provider)}
                   className="mt-3 text-xs font-bold text-muted underline"
                 >
-                  Retry the same checkout attempt
+                  {error.newAttempt ? "Start a new checkout attempt" : "Retry the same checkout attempt"}
                 </button>
               ) : null}
+            {error?.offerId === offer.id && !error.retryable ? (
+              <button
+                type="button"
+                disabled={busyId !== null}
+                onClick={() => void reconcileCheckout(offer)}
+                className="mt-3 block text-xs font-bold text-muted underline disabled:opacity-60"
+              >
+                {busyId === offer.id ? "Checking provider status…" : "Check provider status before retrying"}
+              </button>
+            ) : null}
             </article>
           ))}
         </div>

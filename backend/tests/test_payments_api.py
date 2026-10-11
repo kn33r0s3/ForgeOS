@@ -123,6 +123,84 @@ def test_payment_status_is_owner_protected_configuration_only_and_never_contacts
     assert flags["esewa"]["required_credentials_present"] is False
     assert flags["khalti"]["required_credentials_present"] is False
 
+
+
+def test_public_intent_reconciliation_endpoint_is_no_store_and_rate_limited(monkeypatch):
+    monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_HMAC_KEY", "test-public-reconciliation-key")
+    monkeypatch.setattr(
+        payments.forge_bot_privacy, "consume_rate_limited_request", lambda *args, **kwargs: True
+    )
+    monkeypatch.setattr(
+        payments.payment_intent_engine,
+        "reconcile_public_intent",
+        lambda _db, public_ref: {
+            "intent": public_ref,
+            "offer_id": 5,
+            "provider": "khalti",
+            "status": "CANCELLED",
+            "retry_allowed": True,
+            "recovery": {
+                "checked": True,
+                "retry_allowed": True,
+                "provider_status": "Expired",
+                "message": "Provider confirmed a terminal attempt.",
+            },
+        },
+    )
+    response = client.post("/api/payments/intent/public-recovery-ref-0123456789/reconcile")
+    assert response.status_code == 200, response.text
+    assert response.headers["cache-control"] == "no-store"
+    assert response.json()["retry_allowed"] is True
+
+
+def test_public_intent_reconciliation_conflicts_require_owner_review(monkeypatch):
+    monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_HMAC_KEY", "test-public-reconciliation-key")
+    monkeypatch.setattr(
+        payments.forge_bot_privacy, "consume_rate_limited_request", lambda *args, **kwargs: True
+    )
+    def conflict(_db, public_ref):
+        raise payments.payment_intent_engine.PaymentReconciliationRequired(
+            "Provider conflicts with this terminal state; owner reconciliation is required."
+        )
+    monkeypatch.setattr(payments.payment_intent_engine, "reconcile_public_intent", conflict)
+    response = client.post("/api/payments/intent/public-recovery-ref-0123456789/reconcile")
+    assert response.status_code == 409
+    assert "owner reconciliation is required" in response.json()["detail"]
+
+
+def test_public_checkout_reconciliation_by_key_uses_existing_key_and_no_store(monkeypatch):
+    monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_HMAC_KEY", "test-public-reconciliation-key")
+    monkeypatch.setattr(
+        payments.forge_bot_privacy, "consume_rate_limited_request", lambda *args, **kwargs: True
+    )
+    observed = {}
+    def reconcile(_db, *, product_id, idempotency_key):
+        observed.update(product_id=product_id, idempotency_key=idempotency_key)
+        return {
+            "intent": None,
+            "offer_id": product_id,
+            "provider": None,
+            "status": "NO_ATTEMPT",
+            "retry_allowed": True,
+            "recovery": {
+                "checked": False,
+                "retry_allowed": True,
+                "provider_status": None,
+                "message": "No attempt was persisted.",
+            },
+        }
+    monkeypatch.setattr(payments.payment_intent_engine, "reconcile_checkout_by_key", reconcile)
+    key = "public-recovery-idempotency-key-123456"
+    response = client.post(
+        "/api/payments/products/5/checkout/reconcile",
+        headers={"Idempotency-Key": key},
+    )
+    assert response.status_code == 200, response.text
+    assert response.headers["cache-control"] == "no-store"
+    assert observed == {"product_id": 5, "idempotency_key": key}
+    assert response.json()["retry_allowed"] is True
+
+
 def test_khalti_callback_reports_owner_reconciliation_for_refund_conflict(monkeypatch):
     def reconciliation_required(_db, **kwargs):
         raise payments.payment_intent_engine.PaymentReconciliationRequired(

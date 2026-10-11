@@ -242,6 +242,7 @@ def _public_payload(intent: models.OpPaymentIntent, product: models.Product) -> 
     from app.services.public_feed import sanitize_public_text
     return {
         "intent": intent.public_ref,
+        "offer_id": intent.product_id,
         "provider": intent.provider,
         "status": intent.status,
         "amount_paisa": intent.amount_paisa,
@@ -438,6 +439,317 @@ def _record_verified_payment(
         note="Provider status, merchant, amount and transaction reference verified server-side; awaiting owner-confirmed fulfillment.",
         provider_reference=provider_reference,
     )
+
+
+
+
+_RECOVERABLE_LOCAL_STATES = {"CREATED", "INITIATED", "PENDING", "FAILED", "CANCELLED"}
+_KHALTI_TERMINAL_RECOVERY = {
+    "EXPIRED": "CANCELLED",
+    "USER CANCELED": "CANCELLED",
+    "USER CANCELLED": "CANCELLED",
+    "CANCELED": "CANCELLED",
+    "CANCELLED": "CANCELLED",
+    "FAILED": "FAILED",
+}
+_ESEWA_TERMINAL_RECOVERY = {
+    "NOT_FOUND": "CANCELLED",
+    "CANCELED": "CANCELLED",
+    "CANCELLED": "CANCELLED",
+    "FAILED": "FAILED",
+}
+_RECOVERY_REFUND_STATUSES = {
+    "REFUNDED", "FULL_REFUND", "PARTIAL_REFUND", "PARTIALLY REFUNDED",
+}
+
+
+def _recovery_payload(
+    db: Session,
+    intent: models.OpPaymentIntent,
+    *,
+    checked: bool,
+    retry_allowed: bool,
+    message: str,
+    provider_status: str | None = None,
+) -> dict:
+    product = db.get(models.Product, intent.product_id)
+    if product is None:
+        raise ValueError("Payment intent product not found.")
+    return {
+        **_public_payload(intent, product),
+        "retry_allowed": retry_allowed,
+        "recovery": {
+            "checked": checked,
+            "retry_allowed": retry_allowed,
+            "provider_status": (provider_status or "")[:64] or None,
+            "message": message,
+        },
+    }
+
+
+def _recovery_mismatch(
+    db: Session, intent: models.OpPaymentIntent, *, note: str
+) -> dict:
+    if intent.status in {"FAILED", "CANCELLED"}:
+        raise PaymentReconciliationRequired(
+            "Provider details conflict with this terminal payment state; owner reconciliation is required."
+        )
+    if intent.status in _TERMINAL:
+        return _recovery_payload(
+            db, intent, checked=True, retry_allowed=False,
+            message="This payment requires owner reconciliation. Another attempt remains blocked.",
+        )
+    _transition(db, intent, "DISPUTED", note=note)
+    return _recovery_payload(
+        db, intent, checked=True, retry_allowed=False,
+        message="Provider details did not match the stored attempt. Owner reconciliation is required.",
+    )
+
+
+def _reconcile_payment_intent(
+    db: Session, intent: models.OpPaymentIntent
+) -> dict:
+    if intent.status == "VERIFIED":
+        return _recovery_payload(
+            db, intent, checked=False, retry_allowed=False,
+            message="This payment is already verified. A new attempt is not allowed from this status page.",
+        )
+    if intent.status in {"DISPUTED", "REFUNDED"}:
+        return _recovery_payload(
+            db, intent, checked=False, retry_allowed=False,
+            message="This payment requires owner reconciliation. Hami will not unlock another attempt automatically.",
+        )
+    if intent.status not in _RECOVERABLE_LOCAL_STATES:
+        return _recovery_payload(
+            db, intent, checked=False, retry_allowed=False,
+            message="This payment state is not eligible for automatic recovery.",
+        )
+
+    if intent.provider == "khalti":
+        if not intent.provider_payment_id:
+            raise PaymentReconciliationRequired(
+                "Khalti did not return a stored payment reference, so Hami cannot confirm a terminal provider state. Owner reconciliation is required."
+            )
+        lookup = nepal_payments.khalti_lookup(pidx=intent.provider_payment_id)
+        lookup_pidx = str(lookup.get("pidx", ""))
+        lookup_status = str(lookup.get("status", "")).strip()
+        normalized = lookup_status.upper()
+        try:
+            amount_paisa = int(lookup.get("total_amount", -1))
+        except (TypeError, ValueError):
+            amount_paisa = -1
+        lookup_order = str(lookup.get("purchase_order_id") or "")
+        if (
+            lookup_pidx != intent.provider_payment_id
+            or amount_paisa != intent.amount_paisa
+            or (lookup_order and lookup_order != intent.merchant_order_id)
+        ):
+            return _recovery_mismatch(
+                db, intent, note="Khalti recovery lookup returned a different payment, order, or amount."
+            )
+
+        if lookup.get("refunded") is True or normalized in _RECOVERY_REFUND_STATUSES:
+            if intent.status in {"FAILED", "CANCELLED"}:
+                raise PaymentReconciliationRequired(
+                    "Khalti reports a refund while Hami has a different terminal state; owner reconciliation is required."
+                )
+            _transition(db, intent, "REFUNDED", note="Khalti server-side lookup reports a refund.")
+            return _recovery_payload(
+                db, intent, checked=True, retry_allowed=False,
+                provider_status=lookup_status,
+                message="Khalti reports a refund. Hami will not unlock a new attempt automatically.",
+            )
+
+        if normalized == "COMPLETED":
+            reference = str(lookup.get("transaction_id") or "")
+            if not reference:
+                return _recovery_mismatch(
+                    db, intent, note="Khalti reported completion without a transaction reference."
+                )
+            if intent.status in {"FAILED", "CANCELLED"}:
+                raise PaymentReconciliationRequired(
+                    "Khalti reports a completed payment for an attempt Hami previously marked terminal; owner reconciliation is required."
+                )
+            _record_verified_payment(db, intent, provider_reference=reference)
+            return _recovery_payload(
+                db, intent, checked=True, retry_allowed=False,
+                provider_status=lookup_status,
+                message="Khalti confirms a completed payment. Hami marked it verified; fulfillment still requires owner confirmation.",
+            )
+
+        terminal_target = _KHALTI_TERMINAL_RECOVERY.get(normalized)
+        if terminal_target:
+            if intent.status in {"CREATED", "INITIATED", "PENDING"}:
+                _transition(
+                    db, intent, terminal_target,
+                    note=f"Khalti server-side lookup confirmed terminal status {lookup_status}.",
+                )
+            return _recovery_payload(
+                db, intent, checked=True, retry_allowed=True,
+                provider_status=lookup_status,
+                message="Khalti confirmed that this attempt ended without a completed payment. Starting a new attempt is now allowed.",
+            )
+
+        if intent.status in {"FAILED", "CANCELLED"}:
+            raise PaymentReconciliationRequired(
+                "Khalti still reports a pending or unrecognized state for an attempt Hami marked terminal; owner reconciliation is required."
+            )
+        _nonverified_state(
+            db, intent, lookup_status,
+            "Khalti server-side lookup did not confirm a completed or terminal failed payment.",
+        )
+        return _recovery_payload(
+            db, intent, checked=True, retry_allowed=False,
+            provider_status=lookup_status,
+            message="Khalti has not confirmed a terminal failed or cancelled state. Keep this attempt and check again later.",
+        )
+
+    if intent.provider == "esewa":
+        lookup = nepal_payments.esewa_lookup(
+            amount_npr=Decimal(intent.amount_paisa) / Decimal(100),
+            transaction_uuid=intent.merchant_order_id,
+        )
+        lookup_status = str(lookup.get("status", "")).strip()
+        normalized = lookup_status.upper()
+        raw_amount = lookup.get("totalAmount")
+        if raw_amount is None:
+            raw_amount = lookup.get("total_amount")
+        lookup_merchant = str(lookup.get("scd") or lookup.get("product_code") or "")
+        lookup_uuid = str(lookup.get("transaction_uuid") or "")
+        lookup_reference = str(lookup.get("refId") or lookup.get("ref_id") or "")
+
+        # eSewa NOT_FOUND responses may contain only status. The server-side
+        # lookup request binds that response to this stored amount/order/merchant.
+        if normalized == "NOT_FOUND":
+            if (
+                (lookup_merchant and lookup_merchant != settings.ESEWA_MERCHANT_CODE)
+                or (lookup_uuid and lookup_uuid != intent.merchant_order_id)
+            ):
+                return _recovery_mismatch(
+                    db, intent, note="eSewa NOT_FOUND response contradicted the stored merchant or order."
+                )
+            if raw_amount is not None:
+                try:
+                    found_amount_paisa = int((Decimal(str(raw_amount)) * Decimal(100)).quantize(Decimal("1")))
+                except Exception:
+                    found_amount_paisa = -1
+                if found_amount_paisa != intent.amount_paisa:
+                    return _recovery_mismatch(
+                        db, intent, note="eSewa NOT_FOUND response contradicted the stored amount."
+                    )
+        else:
+            try:
+                amount_paisa = int((Decimal(str(raw_amount)) * Decimal(100)).quantize(Decimal("1")))
+            except Exception:
+                amount_paisa = -1
+            if (
+                amount_paisa != intent.amount_paisa
+                or not settings.ESEWA_MERCHANT_CODE
+                or lookup_merchant != settings.ESEWA_MERCHANT_CODE
+                or (lookup_uuid and lookup_uuid != intent.merchant_order_id)
+            ):
+                return _recovery_mismatch(
+                    db, intent, note="eSewa recovery lookup returned a different merchant, order, or amount."
+                )
+
+        if normalized in _RECOVERY_REFUND_STATUSES:
+            if intent.status in {"FAILED", "CANCELLED"}:
+                raise PaymentReconciliationRequired(
+                    "eSewa reports a refund while Hami has a different terminal state; owner reconciliation is required."
+                )
+            _transition(db, intent, "REFUNDED", note="eSewa server-side lookup reports a refund.")
+            return _recovery_payload(
+                db, intent, checked=True, retry_allowed=False,
+                provider_status=lookup_status,
+                message="eSewa reports a refund. Hami will not unlock a new attempt automatically.",
+            )
+
+        if normalized == "COMPLETE":
+            if not lookup_reference:
+                return _recovery_mismatch(
+                    db, intent, note="eSewa reported completion without a transaction reference."
+                )
+            if intent.status in {"FAILED", "CANCELLED"}:
+                raise PaymentReconciliationRequired(
+                    "eSewa reports a completed payment for an attempt Hami previously marked terminal; owner reconciliation is required."
+                )
+            _record_verified_payment(db, intent, provider_reference=lookup_reference)
+            return _recovery_payload(
+                db, intent, checked=True, retry_allowed=False,
+                provider_status=lookup_status,
+                message="eSewa confirms a completed payment. Hami marked it verified; fulfillment still requires owner confirmation.",
+            )
+
+        terminal_target = _ESEWA_TERMINAL_RECOVERY.get(normalized)
+        if terminal_target:
+            if intent.status in {"CREATED", "INITIATED", "PENDING"}:
+                _transition(
+                    db, intent, terminal_target,
+                    note=f"eSewa server-side lookup confirmed terminal status {lookup_status}.",
+                )
+            return _recovery_payload(
+                db, intent, checked=True, retry_allowed=True,
+                provider_status=lookup_status,
+                message="eSewa confirmed that this attempt ended without a completed payment. Starting a new attempt is now allowed.",
+            )
+
+        if intent.status in {"FAILED", "CANCELLED"}:
+            raise PaymentReconciliationRequired(
+                "eSewa still reports a pending, ambiguous or unrecognized state for an attempt Hami marked terminal; owner reconciliation is required."
+            )
+        _nonverified_state(
+            db, intent, lookup_status,
+            "eSewa server-side lookup has not confirmed a completed or terminal failed payment.",
+        )
+        return _recovery_payload(
+            db, intent, checked=True, retry_allowed=False,
+            provider_status=lookup_status,
+            message="eSewa has not confirmed a terminal failed or cancelled state. Keep this attempt and check again later.",
+        )
+
+    raise ValueError("Unsupported payment provider.")
+
+
+def reconcile_public_intent(db: Session, public_ref: str) -> dict:
+    """Reconcile a checkout using a high-entropy public reference and provider lookup."""
+    intent = db.query(models.OpPaymentIntent).filter_by(public_ref=public_ref).one_or_none()
+    if intent is None:
+        raise ValueError("Payment intent not found.")
+    return _reconcile_payment_intent(db, intent)
+
+
+def reconcile_checkout_by_key(
+    db: Session, *, product_id: int, idempotency_key: str
+) -> dict:
+    """Reconcile a checkout error even when the browser never received its public reference."""
+    if (
+        not isinstance(idempotency_key, str)
+        or not 16 <= len(idempotency_key) <= 128
+        or idempotency_key.strip() != idempotency_key
+    ):
+        raise ValueError("Invalid checkout idempotency key.")
+    digest = hashlib.sha256(idempotency_key.encode()).hexdigest()
+    intent = db.query(models.OpPaymentIntent).filter_by(idempotency_key_hash=digest).one_or_none()
+    if intent is None:
+        product = db.get(models.Product, product_id)
+        if product is None:
+            raise ValueError("Checkout product not found.")
+        return {
+            "intent": None,
+            "offer_id": product.id,
+            "provider": None,
+            "status": "NO_ATTEMPT",
+            "retry_allowed": True,
+            "recovery": {
+                "checked": False,
+                "retry_allowed": True,
+                "provider_status": None,
+                "message": "Hami has no persisted payment attempt for this key. It is safe to start a new attempt.",
+            },
+        }
+    if intent.product_id != product_id:
+        raise ValueError("Checkout attempt not found.")
+    return _reconcile_payment_intent(db, intent)
 
 
 def pending_fulfillment_intents(db: Session) -> list[dict]:

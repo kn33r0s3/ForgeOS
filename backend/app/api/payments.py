@@ -84,6 +84,45 @@ def public_payment_offers(db: Session = Depends(get_db)):
     return payment_intent_engine.public_offers(db)
 
 
+
+def _consume_public_payment_reconciliation_limit(db: Session, request: Request) -> None:
+    within_limit = forge_bot_privacy.consume_rate_limited_request(
+        db,
+        request,
+        hmac_key=settings.FORGE_BOT_CONTACT_HMAC_KEY,
+        scope="public-payment-reconciliation",
+        limit=5,
+    )
+    if not within_limit:
+        raise HTTPException(status_code=429, detail="Payment status-check limit reached. Keep the existing attempt and try later.")
+
+
+@router.post("/products/{product_id}/checkout/reconcile")
+def public_checkout_reconciliation_by_key(
+    product_id: int,
+    request: Request,
+    response: Response,
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=16, max_length=128),
+    db: Session = Depends(get_db),
+):
+    _consume_public_payment_reconciliation_limit(db, request)
+    try:
+        payload = payment_intent_engine.reconcile_checkout_by_key(
+            db, product_id=product_id, idempotency_key=idempotency_key
+        )
+    except payment_intent_engine.PaymentReconciliationRequired as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except (RuntimeError, OSError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="The payment provider could not confirm a safe retry. Keep the existing attempt.",
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Checkout attempt was not found.") from exc
+    response.headers["Cache-Control"] = "no-store"
+    return payload
+
+
 @router.post("/products/{product_id}/checkout")
 def create_public_product_checkout(
     product_id: int,
@@ -115,6 +154,30 @@ def create_public_product_checkout(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+
+@router.post("/intent/{public_ref}/reconcile")
+def public_payment_intent_reconciliation(
+    public_ref: str,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    _consume_public_payment_reconciliation_limit(db, request)
+    try:
+        payload = payment_intent_engine.reconcile_public_intent(db, public_ref)
+    except payment_intent_engine.PaymentReconciliationRequired as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except (RuntimeError, OSError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="The payment provider could not confirm a safe retry. Keep the existing attempt.",
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Payment intent not found.") from exc
+    response.headers["Cache-Control"] = "no-store"
+    return payload
 
 
 @router.get("/intent/{public_ref}")

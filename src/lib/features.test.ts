@@ -316,6 +316,11 @@ describe("feature registry", () => {
     assert.ok(api.includes('"/owner/fulfillment-queue"') && api.includes('"/owner/intents/{intent_id}/fulfill"'));
     assert.ok(engine.includes("def fulfill_verified_intent") && engine.includes("pending_fulfillment_intents"));
     assert.ok(api.includes('"/products/{product_id}/checkout"'));
+    assert.ok(api.includes('"/intent/{public_ref}/reconcile"') && api.includes('"/products/{product_id}/checkout/reconcile"'), "provider-confirmed recovery is reachable from result and checkout-error paths");
+    assert.ok(engine.includes("reconcile_public_intent") && engine.includes("reconcile_checkout_by_key") && engine.includes("retry_allowed"), "a new attempt requires server-side provider reconciliation");
+    assert.ok(home.includes("reconcileCheckout") && home.includes("clearStoredCheckoutAttempt") && home.includes("payload.retry_allowed"), "the offer screen clears its key only after backend authorization");
+    assert.ok(result.includes("/reconcile") && result.includes("sessionStorage.removeItem") && result.includes("retry_allowed"), "the result page retains ambiguous attempts and clears terminal keys only after confirmation");
+
     assert.ok(engine.includes("finalize_esewa_callback") && engine.includes("finalize_khalti_callback"));
   });
 

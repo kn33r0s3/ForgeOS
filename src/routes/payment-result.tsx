@@ -11,6 +11,14 @@ type PaymentIntentStatus = {
   currency: "NPR";
   product_name: string;
   fulfilled: boolean;
+  offer_id: number;
+  retry_allowed?: boolean;
+  recovery?: {
+    checked: boolean;
+    retry_allowed: boolean;
+    provider_status?: string | null;
+    message: string;
+  };
 };
 
 export const Route = createFileRoute("/payment-result")({
@@ -32,6 +40,10 @@ function PaymentResultPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [refreshCount, setRefreshCount] = useState(0);
+  const [recoveryBusy, setRecoveryBusy] = useState(false);
+  const [recoveryMessage, setRecoveryMessage] = useState("");
+  const [retryAllowed, setRetryAllowed] = useState(false);
+
 
   useEffect(() => {
     let current = true;
@@ -58,9 +70,54 @@ function PaymentResultPage() {
     return () => { current = false; };
   }, [intent, refreshCount]);
 
+  async function confirmProviderStatus() {
+    if (!intent || recoveryBusy) return;
+    setRecoveryBusy(true);
+    setRecoveryMessage("");
+    setRetryAllowed(false);
+    try {
+      const response = await fetch("/api/payments/intent/" + encodeURIComponent(intent) + "/reconcile", {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok || !body) {
+        throw new Error(body && typeof body.detail === "string"
+          ? body.detail
+          : "The provider could not confirm a safe retry. Keep the existing attempt.");
+      }
+      const payload = body as PaymentIntentStatus;
+      setRecord(payload);
+      const recovery = payload.recovery;
+      if (!recovery) throw new Error("Hami did not receive a provider reconciliation result.");
+      const allowed = payload.retry_allowed === true || recovery.retry_allowed === true;
+      if (allowed) {
+        let cleared = false;
+        try {
+          window.sessionStorage.removeItem("hami:checkout-attempt:" + payload.offer_id);
+          cleared = window.sessionStorage.getItem("hami:checkout-attempt:" + payload.offer_id) === null;
+        } catch {
+          cleared = true;
+        }
+        if (!cleared) {
+          setRecoveryMessage("The provider confirmed the previous attempt ended, but this tab could not clear the saved attempt key. No new attempt was started.");
+          return;
+        }
+      }
+      setRetryAllowed(allowed);
+      setRecoveryMessage(recovery.message);
+    } catch (cause) {
+      setRecoveryMessage(cause instanceof Error ? cause.message : "The provider could not confirm a safe retry.");
+    } finally {
+      setRecoveryBusy(false);
+    }
+  }
+
   const isVerified = record?.status === "VERIFIED";
   const isFulfilled = isVerified && record?.fulfilled === true;
   const isPending = !!record && ["CREATED", "INITIATED", "PENDING"].includes(record.status);
+  const canCheckProvider = !!record && !isVerified && !retryAllowed && ["CREATED", "INITIATED", "PENDING", "FAILED", "CANCELLED"].includes(record.status);
 
   return (
     <main className="flex-1 bg-background text-ink">
@@ -95,7 +152,29 @@ function PaymentResultPage() {
             </p>
           ) : null}
           {error ? <p role="alert" className="mt-4 rounded-card border border-danger/60 p-3 text-sm">{error}</p> : null}
+          {recoveryMessage ? (
+            <p role={retryAllowed ? "status" : "alert"} className="mt-4 rounded-card border border-line p-3 text-sm leading-6">
+              {recoveryMessage}
+            </p>
+          ) : null}
+          {retryAllowed ? (
+            <p className="mt-3 text-sm leading-6 text-muted">
+              The previous attempt identity has been cleared from this tab. Return to Hami to begin a new checkout attempt; this status check did not initiate another payment.
+            </p>
+          ) : null}
+
           <div className="mt-6 flex flex-wrap gap-3">
+            {canCheckProvider ? (
+              <button
+                type="button"
+                disabled={busy || recoveryBusy}
+                onClick={() => void confirmProviderStatus()}
+                className="min-h-10 rounded-card border-2 border-accent px-4 py-2 text-sm font-bold text-accent disabled:opacity-60"
+              >
+                {recoveryBusy ? "Checking provider…" : "Check with provider before retrying"}
+              </button>
+            ) : null}
+
             <button
               type="button"
               disabled={busy || !intent}
