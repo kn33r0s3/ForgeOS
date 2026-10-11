@@ -1695,6 +1695,7 @@ class ProductOut(BaseModel):
 
 class ProductSummary(ProductOut):
     """Product + honest distribution rollup."""
+    has_offer_brief: bool = False
     channel_count: int = 0
     lead_count: int = 0
     paid_customer_count: int = 0

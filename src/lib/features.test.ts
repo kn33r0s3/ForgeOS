@@ -272,6 +272,18 @@ describe("feature registry", () => {
     assert.ok(!owner.includes('"/api/products/pipeline"'), "owner cockpit must not fetch the contact-rich product pipeline");
     assert.ok(api.includes('result.pop("customer_events", None)'), "detail/action responses must exclude customer ledger rows");
   });
+  it("connects existing products to review, approval, and guarded publication without creating duplicates", () => {
+    const owner = readFileSync(path.join(root, "routes", "owner.tsx"), "utf8");
+    const productsApi = readFileSync(path.join(root, "..", "backend", "app", "api", "products.py"), "utf8");
+    const engine = readFileSync(path.join(root, "..", "backend", "app", "services", "product_engine.py"), "utf8");
+    assert.ok(owner.includes('"/api/products/" + product.id + "/prepare-offer-review"'));
+    assert.ok(owner.includes('"/api/products/" + product.id + "/offer-approval"'));
+    assert.ok(owner.includes('status: "launched", launch_state: "public"'));
+    assert.ok(owner.includes("NPR 5000 one-time"));
+    assert.ok(productsApi.includes('"/{product_id}/prepare-offer-review"'));
+    assert.ok(engine.includes("An explicitly approved offer brief is required before launch"));
+    assert.ok(engine.includes("Offer details changed after approval; review is required again."));
+  });
   it("keeps the operating model, scout queue, and buyer-journey tools connected to their guarded APIs", () => {
     const owner = readFileSync(path.join(root, "routes", "owner.tsx"), "utf8");
     const controls = [

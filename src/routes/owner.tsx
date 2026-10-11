@@ -286,10 +286,16 @@ type IntelligenceState = {
 
 type ProductSummaryView = {
   id: number;
+  opportunity_id: number | null;
   name: string;
+  offer: string;
+  pricing: string | null;
   status: string;
   launch_state: string | null;
   approval_status: string;
+  approval_note?: string | null;
+  approved_at?: string | null;
+  has_offer_brief: boolean;
   data_scope: string;
   lead_count: number;
   paid_customer_count: number;
@@ -441,6 +447,21 @@ async function ownerCommandFetch<T>(path: string, ownerKey: string, body?: Recor
   return (await response.json()) as T;
 }
 
+async function ownerProductRequest<T>(path: string, method: "POST" | "PATCH", ownerKey: string, body?: Record<string, unknown>): Promise<T> {
+  const response = await fetch(path, {
+    method,
+    headers: { "X-API-Key": ownerKey, ...(body ? { "Content-Type": "application/json" } : {}) },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  if (!response.ok) {
+    const payload: unknown = await response.json().catch(() => null);
+    const detail = typeof payload === "object" && payload !== null && "detail" in payload && typeof payload.detail === "string"
+      ? payload.detail
+      : "Product action failed (" + response.status + ") at " + path + ".";
+    throw new Error(detail);
+  }
+  return (await response.json()) as T;
+}
 function formatUsd(value: number | null | undefined) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "UNKNOWN";
   return new Intl.NumberFormat("en-US", {
@@ -574,6 +595,10 @@ function OwnerConsolePage() {
   const [channelsError, setChannelsError] = useState<string | null>(null);
   const [paymentConfiguration, setPaymentConfiguration] = useState<PaymentConfigurationView | null>(null);
   const [paymentConfigurationError, setPaymentConfigurationError] = useState<string | null>(null);
+  const [productPricingDrafts, setProductPricingDrafts] = useState<Record<number, string>>({});
+  const [productLifecycleBusyId, setProductLifecycleBusyId] = useState<number | null>(null);
+  const [productLifecycleError, setProductLifecycleError] = useState("");
+  const [productLifecycleNotice, setProductLifecycleNotice] = useState("");
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<number | null>(null);
   const [orchestratorDetail, setOrchestratorDetail] = useState<OrchestratorFlowDetailView | null>(null);
   const [pipelineBusy, setPipelineBusy] = useState(false);
@@ -763,6 +788,41 @@ function OwnerConsolePage() {
     }
   }
 
+  async function runProductLifecycleAction(product: ProductSummaryView, action: "prepare" | "approve" | "publish" | "pause") {
+    if (productLifecycleBusyId !== null) return;
+    if (action === "approve" && !window.confirm("Approve the prepared offer brief and exact one-time NPR price? This approves the offer for launch review; it does not publish it or collect money.")) return;
+    if (action === "publish" && !window.confirm("Publish this product offer publicly? The API will re-check verified demand, approval, and the exact NPR price. This action does not initiate a payment.")) return;
+    if (action === "pause" && !window.confirm("Pause the public offer? Its public approval will be removed.")) return;
+    setProductLifecycleBusyId(product.id);
+    setProductLifecycleError("");
+    setProductLifecycleNotice("");
+    try {
+      if (action === "prepare") {
+        const draftPrice = productPricingDrafts[product.id] ?? product.pricing ?? "";
+        if (draftPrice !== (product.pricing ?? "")) {
+          await ownerProductRequest("/api/products/" + product.id, "PATCH", key, { pricing: draftPrice });
+        }
+        await ownerProductRequest("/api/products/" + product.id + "/prepare-offer-review", "POST", key);
+        setProductLifecycleNotice("Review brief prepared on Product #" + product.id + ". No duplicate product was created; it is pending owner approval.");
+      } else if (action === "approve") {
+        await ownerProductRequest("/api/products/" + product.id + "/offer-approval", "POST", key, { status: "APPROVED", note: "Explicit owner approval through the private /owner console." });
+        setProductLifecycleNotice("Offer terms approved. Publication still requires verified demand and the exact one-time NPR contract.");
+      } else if (action === "publish") {
+        await ownerProductRequest("/api/products/" + product.id, "PATCH", key, { status: "launched", launch_state: "public" });
+        setProductLifecycleNotice("Product offer published. This does not mean a payment occurred or revenue was collected.");
+      } else {
+        await ownerProductRequest("/api/products/" + product.id + "/offer-approval", "POST", key, { status: "NEEDS_EDIT", note: "Owner paused the offer from the private /owner console." });
+        setProductLifecycleNotice("Offer paused; its approval must be reviewed again before republication.");
+      }
+      const products = await ownerProjectionFetch<ProductSummaryView[]>("/api/products", key);
+      setCommercial({ products, error: null });
+      setProductPricingDrafts((previous) => { const next = { ...previous }; delete next[product.id]; return next; });
+    } catch (cause) {
+      setProductLifecycleError(cause instanceof Error ? cause.message : "Product lifecycle action failed.");
+    } finally {
+      setProductLifecycleBusyId(null);
+    }
+  }
   async function openOpportunityPipeline(opportunityId: number) {
     setPipelineBusy(true);
     setPipelineError("");
@@ -1746,31 +1806,71 @@ shop-03 | lead | not confirmed | uses an existing alternative`} />
 
                     <div className="mt-6">
                       <h3 className="font-extrabold">Existing products</h3>
+                      {productLifecycleError ? <p role="alert" className="mt-3 rounded-card border border-danger/70 p-3 text-sm">{productLifecycleError}</p> : null}
+                      {productLifecycleNotice ? <p role="status" className="mt-3 rounded-card border border-line p-3 text-sm">{productLifecycleNotice}</p> : null}
                       {commercial.products.length === 0 ? (
                         <p className="mt-2 rounded-card border border-line bg-card p-4 text-sm text-muted">
                           No product records returned by the owner-protected endpoint.
                         </p>
                       ) : (
                         <ul className="mt-3 grid gap-3 sm:grid-cols-2">
-                          {commercial.products.map((product) => (
-                            <li key={product.id} className="rounded-card border-2 border-line bg-card p-4">
-                              <div className="flex flex-wrap items-start justify-between gap-2">
-                                <h4 className="font-extrabold">{product.name}</h4>
-                                <span className="rounded border border-line px-2 py-1 text-xs font-bold">
-                                  {product.data_scope}
-                                </span>
-                              </div>
-                              <p className="mt-2 text-sm text-muted">
-                                {product.status} · launch {product.launch_state ?? "UNKNOWN"} · approval {product.approval_status}
-                              </p>
-                              <p className="mt-2 text-sm">
-                                Leads {product.lead_count} · paid-customer records {product.paid_customer_count}
-                              </p>
-                              <p className="mt-1 text-sm">
-                                Verified outcome revenue {formatUsd(product.actual_revenue)} · actual customers {product.actual_customers}
-                              </p>
-                            </li>
-                          ))}
+                          {commercial.products.map((product) => {
+                            const pricingDraft = productPricingDrafts[product.id] ?? product.pricing ?? "";
+                            const canPrepare = product.data_scope === "REAL"
+                              && product.opportunity_id !== null
+                              && product.launch_state !== "public"
+                              && !["launched", "iterating"].includes(product.status)
+                              && (product.approval_status !== "APPROVED" || !product.has_offer_brief || pricingDraft !== (product.pricing ?? ""));
+                            return (
+                              <li key={product.id} className="rounded-card border-2 border-line bg-card p-4">
+                                <div className="flex flex-wrap items-start justify-between gap-2">
+                                  <h4 className="font-extrabold">{product.name}</h4>
+                                  <span className="rounded border border-line px-2 py-1 text-xs font-bold">{product.data_scope}</span>
+                                </div>
+                                <p className="mt-2 text-sm text-muted">
+                                  {product.status} · launch {product.launch_state ?? "UNKNOWN"} · approval {product.approval_status}
+                                </p>
+                                <p className="mt-2 text-sm">{product.offer}</p>
+                                <p className="mt-1 text-sm text-muted">
+                                  Leads {product.lead_count} · paid-customer records {product.paid_customer_count}
+                                </p>
+                                <p className="mt-1 text-sm">
+                                  Verified outcome revenue {formatUsd(product.actual_revenue)} · actual customers {product.actual_customers}
+                                </p>
+                                {product.data_scope === "REAL" && product.opportunity_id !== null && product.launch_state !== "public" ? (
+                                  <div className="mt-4 grid gap-2 border-t border-line pt-3">
+                                    <label className="grid gap-1 text-sm font-semibold">
+                                      Fixed offer price
+                                      <input
+                                        value={pricingDraft}
+                                        onChange={(event) => setProductPricingDrafts((current) => ({ ...current, [product.id]: event.target.value }))}
+                                        disabled={productLifecycleBusyId === product.id}
+                                        className="min-h-10 rounded-card border-2 border-line bg-black px-3 text-ink"
+                                        placeholder="NPR 5000 one-time"
+                                      />
+                                    </label>
+                                    <p className="text-xs leading-5 text-muted">
+                                      Public launch accepts only a fixed one-time NPR amount, e.g. “NPR 5000 one-time”. A price is not proof of willingness to pay.
+                                    </p>
+                                    {canPrepare ? (
+                                      <button type="button" disabled={productLifecycleBusyId !== null} onClick={() => void runProductLifecycleAction(product, "prepare")} className="min-h-10 rounded-card border-2 border-accent px-3 text-sm font-bold text-accent disabled:opacity-60">
+                                        {productLifecycleBusyId === product.id ? "Saving…" : "Save price & prepare review"}
+                                      </button>
+                                    ) : null}
+                                    {product.has_offer_brief && product.approval_status === "PENDING_REVIEW" ? (
+                                      <button type="button" disabled={productLifecycleBusyId !== null} onClick={() => void runProductLifecycleAction(product, "approve")} className="min-h-10 rounded-card border-2 border-accent px-3 text-sm font-bold text-accent disabled:opacity-60">Approve offer terms</button>
+                                    ) : null}
+                                    {product.approval_status === "APPROVED" && product.has_offer_brief && product.launch_state !== "public" ? (
+                                      <button type="button" disabled={productLifecycleBusyId !== null} onClick={() => void runProductLifecycleAction(product, "publish")} className="min-h-10 rounded-card border-2 border-accent px-3 text-sm font-bold text-accent disabled:opacity-60">Publish offer</button>
+                                    ) : null}
+                                  </div>
+                                ) : null}
+                                {product.launch_state === "public" && product.approval_status === "APPROVED" ? (
+                                  <button type="button" disabled={productLifecycleBusyId !== null} onClick={() => void runProductLifecycleAction(product, "pause")} className="mt-3 min-h-10 rounded-card border border-danger px-3 text-sm font-bold text-danger disabled:opacity-60">Pause public offer</button>
+                                ) : null}
+                              </li>
+                            );
+                          })}
                         </ul>
                       )}
                     </div>

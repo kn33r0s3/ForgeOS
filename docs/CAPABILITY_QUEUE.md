@@ -1,3 +1,8 @@
+## [SOURCE CHANGE / CI PENDING] Expose same-product review and publication controls in /owner (2026-10-12)
+
+- Added owner-side pricing and lifecycle controls on the existing Product card: prepare review, approve terms, publish, and pause. Actions use the same product ID and shared owner-key guard; no duplicate offer/product state is created.
+- The summary exposes only a boolean `has_offer_brief` for UI control flow, not the internal review JSON. Publication still runs the backend demand, approval, and fixed-price checks.
+- Exact-SHA CI for this owner-control layer is pending.
 ## [SOURCE CHANGE / CI PENDING] Require approved offer terms before publication (2026-10-12)
 
 - Added `POST /products/{id}/prepare-offer-review` to attach a review brief to the existing product created by the canonical orchestrator; it never creates a duplicate product. It requires a fixed one-time NPR price such as `NPR 5000 one-time`.

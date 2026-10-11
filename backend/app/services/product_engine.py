@@ -223,6 +223,7 @@ def product_summary(db: Session, product: models.Product) -> dict:
         "hypothesis": product.hypothesis,
         "data_scope": product.data_scope,
         "offer_brief": product.offer_brief,
+        "has_offer_brief": bool(product.offer_brief),
         "approval_status": product.approval_status,
         "approval_note": product.approval_note,
         "approved_at": product.approved_at,
