@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Container } from "@/components/layout/container";
 import { ForgeConsoleWidgets } from "@/components/forge/forge-console";
 import { OperatingV4 } from "@/components/owner/operating-v4";
@@ -536,8 +536,8 @@ function OwnerConsolePage() {
           </p>
           <h1 className="mt-2 text-title">Owner console</h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-muted">
-            This noindex page is publicly reachable but not linked from the
-            public site. It loads no owner records until you enter the key.
+            This noindex console is not linked from public navigation. It loads no
+            owner records until you enter the key.
             Your key stays in this page’s memory and is sent only in the
             X-API-Key request header; the API protects owner data and actions.
           </p>
@@ -564,6 +564,12 @@ function OwnerConsolePage() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-xl font-extrabold">Readiness</h2>
                 <div className="flex flex-wrap gap-2">
+                  <Link
+                    to="/operations"
+                    className="inline-flex min-h-11 items-center rounded-card border-2 border-line px-4 text-sm font-bold hover:border-accent"
+                  >
+                    Open operating dashboard
+                  </Link>
                   <button type="button" onClick={sendTestEmail} disabled={busy} className="min-h-11 rounded-card border-2 border-accent px-4 font-bold text-accent disabled:opacity-60">
                     Send one-shot test email
                   </button>

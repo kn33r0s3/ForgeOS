@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { Container } from "@/components/layout/container";
 import { PageHeader } from "@/components/layout/page-header";
@@ -255,6 +255,17 @@ function OperationsPage() {
           </div>
         )}
       </PageHeader>
+
+      <section className="border-b border-line py-3">
+        <Container>
+          <Link
+            to="/owner"
+            className="link-arrow inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent"
+          >
+            Return to owner console
+          </Link>
+        </Container>
+      </section>
 
       <section className="border-b border-line py-5">
         <Container>

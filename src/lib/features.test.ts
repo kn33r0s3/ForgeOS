@@ -162,6 +162,20 @@ describe("feature registry", () => {
     assert.ok(readFileSync(path.join(root, "..", "src/components/pages/project-inquiry-cta.tsx"), "utf8").includes('to="/domain"'));
   });
 
+  it("connects the private owner and operating consoles without adding them to public navigation", () => {
+    const owner = readFileSync(path.join(root, "routes", "owner.tsx"), "utf8");
+    const operations = readFileSync(path.join(root, "routes", "operations.tsx"), "utf8");
+    assert.ok(owner.includes('to="/operations"'), "owner console must link to operating controls");
+    assert.ok(operations.includes('to="/owner"'), "operating dashboard must link back to owner console");
+    assert.ok(!NAV.some((item) => item.to === "/owner" || item.to === "/operations"));
+    for (const route of ["/owner", "/operations"]) {
+      assert.ok(
+        registry.features.some((feature: { route: string; status: string }) => feature.route === route && feature.status === "hidden"),
+        `${route} must remain private from public discovery`,
+      );
+    }
+  });
+
   it("owner-only, TEST-only and closed intake surfaces remain hidden", () => {
     const status = (route: string) => registry.features.find((feature: { route: string }) => feature.route === route)?.status;
     for (const route of ["/owner", "/operations", "/prototype/inbox", "/bot-qualification-demo", "/forge-bot-intake", "/request", "/contact"]) {
