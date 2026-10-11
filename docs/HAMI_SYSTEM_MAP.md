@@ -7,7 +7,7 @@ This file records how existing routes and engines form one Hami system. It is a 
 - `src/lib/hami-system.ts` owns the public top navigation (`NAV`), footer groups (`FOOTER_GROUPS`), page-to-page paths (`SYSTEM_PATHWAYS`), and the path inventory guarded by tests (`PUBLIC_SYSTEM_PATHS`).
 - `src/components/layout/hami-pathways.tsx` renders contextual links into the same product loop.
 - `features.json` is the route/API lifecycle registry. `public/features.schema.json` defines its public schema. Every implemented top-level route must have an explicit registry state.
-- The header, footer, pathways, sitemap, and registry are checked together by `src/lib/features.test.ts`. A new page is not complete just because its file exists.
+- The header, footer, pathways, sitemap, and registry are checked together by `src/lib/features.test.ts`. A new page is not complete just because its file exists. Technology, Ventures and provider-request status also return to shared pathways. Terms no longer advertise the closed contact route.
 
 ## The two connected flows
 

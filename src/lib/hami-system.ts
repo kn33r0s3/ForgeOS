@@ -137,6 +137,23 @@ export const SYSTEM_PATHWAYS = {
     { label: "Public work board", to: "/domain" },
     { label: "The group", to: "/group" },
   ],
+  technology: [
+    { label: "How Hami works", to: "/process" },
+    { label: "Current technical services", to: "/services" },
+    { label: "Public work and needs", to: "/domain" },
+    { label: "Connected evidence", to: "/feed" },
+  ],
+  ventures: [
+    { label: "Current work Hami can do", to: "/services" },
+    { label: "Work and needs", to: "/domain" },
+    { label: "Opportunity hypotheses", to: "/opportunities" },
+    { label: "The unified group", to: "/group" },
+  ],
+  requestStatus: [
+    { label: "Verified providers", to: "/providers" },
+    { label: "Hami service catalogue", to: "/services" },
+    { label: "Public work board", to: "/domain" },
+  ],
 } as const;
 
 export type SystemSurface = keyof typeof SYSTEM_PATHWAYS;

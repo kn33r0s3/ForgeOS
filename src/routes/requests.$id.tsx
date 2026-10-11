@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, CalendarDays, CheckCircle2, Circle, Clock3, MessageSquare, SearchX } from "lucide-react";
 import { Container } from "@/components/layout/container";
+import { HamiPathways } from "@/components/layout/hami-pathways";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState, Skeleton, UnavailableState } from "@/components/ui/feedback";
 import { getBookingRequestStatus, type BookingStatus } from "@/lib/content";
@@ -145,7 +146,8 @@ function RequestStatusPage() {
               <Link to="/providers" className="link-arrow inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent">
                 <ArrowLeft className="size-4" aria-hidden="true" /> Back to providers
               </Link>
-            </div>
+          <HamiPathways current="requestStatus" />
+        </div>
           </article>
         )}
       </Container>

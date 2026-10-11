@@ -149,6 +149,28 @@ describe("feature registry", () => {
     }
   });
 
+  it("strategic pages and request status close back into the same Hami pathways", () => {
+    const routes = [
+      ["technology.tsx", "technology"],
+      ["ventures.tsx", "ventures"],
+      ["requests.$id.tsx", "requestStatus"],
+    ] as const;
+    for (const [file, key] of routes) {
+      const source = readFileSync(path.join(root, "routes", file), "utf8");
+      assert.ok(
+        source.includes(`HamiPathways current="${key}"`),
+        `${file} is missing its canonical Hami pathway`,
+      );
+    }
+  });
+
+  it("legal copy does not direct visitors to closed contact", () => {
+    const terms = readFileSync(path.join(root, "..", "src", "routes", "terms.tsx"), "utf8");
+    assert.ok(!terms.includes('href="/contact"'));
+    assert.ok(terms.includes('href="/services"'));
+    assert.ok(terms.includes("currently closed"));
+  });
+
   it("serves the schema referenced by the public feature registry", () => {
     const schemaPath = path.join(root, "..", "public", "features.schema.json");
     assert.ok(existsSync(schemaPath), "public/features.schema.json is missing");

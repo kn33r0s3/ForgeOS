@@ -124,9 +124,10 @@ function TermsPage() {
           <section>
             <h2 className="font-display text-xl font-bold text-ink">9. Contact</h2>
             <p className="mt-3 text-sm leading-7 text-muted">
-              For questions about these terms, contact Hami through the{" "}
-              <a href="/contact" className="font-bold text-accent underline">
-                contact page
+              Hami’s online contact and anonymous inquiry channels are currently closed. For the
+              current scope of work, see the{" "}
+              <a href="/services" className="font-bold text-accent underline">
+                Hami service catalogue
               </a>
               .
             </p>
