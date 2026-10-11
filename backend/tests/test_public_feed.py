@@ -266,7 +266,7 @@ def test_public_feed_projects_heterogeneous_records_with_evidence_and_relations(
     provider = models.Provider(
         name="Public operator",
         business_name="Verified Works",
-        summary="Public capability provider.",
+        summary="Public capability provider. Contact buyer@example.test",
         country="Nepal",
         city="Kathmandu",
         phone="private-phone",
@@ -300,8 +300,8 @@ def test_public_feed_projects_heterogeneous_records_with_evidence_and_relations(
     db.add_all([
         models.ServiceListing(
             provider_id=provider.id,
-            title="Field assessment",
-            description="A listed public capability.",
+            title="Field assessment buyer@example.test",
+            description="A listed public capability. Call 9800000004 for details.",
             category="research",
             public_visible=True,
             is_active=True,
@@ -383,6 +383,10 @@ def test_public_feed_projects_heterogeneous_records_with_evidence_and_relations(
         response = client.get("/public/feed")
         assert response.status_code == 200, response.text
         payload = response.json()
+        provider_directory = client.get("/public/providers")
+        service_directory = client.get("/public/services")
+        assert provider_directory.status_code == 200, provider_directory.text
+        assert service_directory.status_code == 200, service_directory.text
         discoveries_response = client.get("/public/discoveries")
         assert discoveries_response.status_code == 200, discoveries_response.text
         discoveries_payload = discoveries_response.json()
@@ -410,6 +414,11 @@ def test_public_feed_projects_heterogeneous_records_with_evidence_and_relations(
     assert "9800000003" not in str(payload)
     assert "[redacted-email]" in str(payload)
     assert "[redacted-phone]" in str(payload)
+    for response in (provider_directory, service_directory):
+        assert "buyer@example.test" not in response.text
+        assert "9800000004" not in response.text
+        assert "[redacted-email]" in response.text
+        assert "[redacted-phone]" in response.text
     assert "buyer@example.test" not in str(discoveries_payload)
     assert "9800000003" not in str(discoveries_payload)
     assert "[redacted-email]" in str(discoveries_payload)

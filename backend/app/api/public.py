@@ -72,6 +72,34 @@ def _public_service_query(db: Session):
         .filter(models.ServiceListing.is_active.is_(True))
     )
 
+def _public_provider_out(row: models.Provider) -> schemas.PublicProviderOut:
+    """Sanitize free-form provider fields; explicit phone/email fields remain opt-in catalog fields."""
+    from app.services.public_feed import sanitize_public_text
+
+    base = schemas.PublicProviderOut.model_validate(row)
+    return base.model_copy(update={
+        "name": sanitize_public_text(row.name) or "",
+        "business_name": sanitize_public_text(row.business_name),
+        "category": sanitize_public_text(row.category),
+        "summary": sanitize_public_text(row.summary),
+        "region": sanitize_public_text(row.region),
+        "city": sanitize_public_text(row.city),
+        "country": sanitize_public_text(row.country) or "",
+    })
+
+
+def _public_service_out(row: models.ServiceListing) -> schemas.PublicServiceListingOut:
+    """Sanitize free-form public listing text while preserving structured price/status fields."""
+    from app.services.public_feed import sanitize_public_text
+
+    base = schemas.PublicServiceListingOut.model_validate(row)
+    return base.model_copy(update={
+        "title": sanitize_public_text(row.title) or "",
+        "description": sanitize_public_text(row.description) or "",
+        "category": sanitize_public_text(row.category),
+        "location": sanitize_public_text(row.location),
+    })
+
 
 def _like(value: str) -> str:
     return f"%{value.strip()}%"
@@ -119,7 +147,7 @@ def list_public_providers(
                 models.Provider.id.in_(_matching_listing_provider_ids(db, q)),
             )
         )
-    return query.order_by(models.Provider.created_at.desc()).all()
+    return [_public_provider_out(row) for row in query.order_by(models.Provider.created_at.desc()).all()]
 
 
 @router.get("/providers/{provider_id}", response_model=schemas.PublicProviderOut)
@@ -131,7 +159,7 @@ def get_public_provider(provider_id: int, db: Session = Depends(get_db)):
     )
     if row is None:
         raise HTTPException(404, "provider not found")
-    return row
+    return _public_provider_out(row)
 
 
 @router.get("/services", response_model=list[schemas.PublicServiceListingOut])
@@ -161,7 +189,7 @@ def list_public_services(
                 models.Provider.city.ilike(like),
             )
         )
-    return query.order_by(models.ServiceListing.created_at.desc()).all()
+    return [_public_service_out(row) for row in query.order_by(models.ServiceListing.created_at.desc()).all()]
 
 
 @router.get("/discoveries", response_model=list[schemas.PublicDiscoveryOut])
