@@ -3,7 +3,11 @@ from app.services import forge_loop, public_feed
 from app.services.observer_engine import ObserverEngine
 
 
-def test_canonical_cycle_links_external_evidence_into_public_network(db):
+def test_canonical_cycle_links_external_evidence_into_public_network(db, monkeypatch):
+    from app.config import settings
+
+    # Exercise the enabled linking path explicitly; production stays paused by default.
+    monkeypatch.setattr(settings, "FORGEOS_AUTO_RESEARCH_QUESTION_GENERATION_ENABLED", True)
     texts = [
         "At least 12 restaurants in Kathmandu still take phone orders and write them on paper tickets. Managers report 3-5 wrong dishes per busy night, losing roughly NPR 8000-15000 each weekend.",
         "Restaurant managers in Kathmandu report that paper kitchen tickets get lost every Friday night. One owner counted 7 lost tickets last week, leading to angry customers who refused to pay for 4 orders.",
@@ -42,6 +46,7 @@ def test_canonical_cycle_links_external_evidence_into_public_network(db):
     db.commit()
 
     summary = forge_loop.run_cycle(db)
+    assert summary["question_generation"] == "enabled"
 
     claims = db.query(models.Claim).order_by(models.Claim.id).all()
     assert len(claims) == len(signals)
