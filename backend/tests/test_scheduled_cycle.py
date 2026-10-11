@@ -556,3 +556,148 @@ def test_scheduled_intelligence_converts_discovery_questions(monkeypatch):
     disc = response.json()["intelligence"]["discovery_cycle"]
     # Questions were created from surfaced findings
     assert disc.get("questions_created", 0) >= 0
+
+
+def test_scheduled_intelligence_persists_cycle_run(monkeypatch, db):
+    """The 7-stage intelligence run records a CycleRun row with per-stage
+    outcomes in summary_json, so the owner console can show last execution,
+    stage results, and errors. Uses the existing CycleRun observability model."""
+    import json
+
+    from app import models
+
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    client = TestClient(app)
+
+    before = db.query(models.CycleRun).count()
+
+    response = client.get(
+        "/scheduled/intelligence",
+        headers={"Authorization": "Bearer test-cron-secret"},
+    )
+    assert response.status_code == 200
+
+    # The endpoint writes via database.SessionLocal(), which the db fixture
+    # points at the test engine; expire to see the new rows. Note Stage 1
+    # (forge_loop.run_cycle) records its own CycleRun too, so we look for
+    # the scheduled-intelligence row by its 7-stage summary.
+    db.expire_all()
+    after = db.query(models.CycleRun).count()
+    assert after > before
+    rows = db.query(models.CycleRun).order_by(models.CycleRun.id.desc()).all()
+    row = next(
+        (
+            r
+            for r in rows
+            if r.summary_json and '"scout_cycle"' in r.summary_json
+        ),
+        None,
+    )
+    assert row is not None, "no CycleRun with 7-stage summary found"
+    assert row.status in ("COMPLETED", "FAILED")
+    assert row.started_at is not None
+    assert row.ended_at is not None
+    assert row.summary_json is not None
+    summary = json.loads(row.summary_json)
+    assert "stages" in summary
+    # All seven stages recorded by their response keys.
+    for key in (
+        "forge_cycle",
+        "collection_cycle",
+        "resumed_tasks",
+        "autonomy_cycle",
+        "discovery_cycle",
+        "owner_notification_retry",
+        "scout_cycle",
+    ):
+        assert key in summary["stages"], f"missing stage {key}"
+
+def test_scheduled_intelligence_accepts_owner_key(monkeypatch):
+    """The owner X-API-Key is an accepted alternative to the cron Bearer
+    secret, letting the owner console trigger the supported intelligence path
+    on demand. The legacy-gated POST /forge/cycle stays disabled."""
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    monkeypatch.setenv("FORGE_API_KEY", "test-owner-key")
+    # Refresh settings so security._enabled() sees the key.
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "FORGE_API_KEY", "test-owner-key")
+    client = TestClient(app)
+
+    response = client.get(
+        "/scheduled/intelligence",
+        headers={"X-API-Key": "test-owner-key"},
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "completed"
+
+
+def test_scheduled_intelligence_rejects_bad_owner_key(monkeypatch):
+    """Wrong owner key and no cron secret -> 401, not 503."""
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "FORGE_API_KEY", "test-owner-key")
+    client = TestClient(app)
+
+    response = client.get(
+        "/scheduled/intelligence",
+        headers={"X-API-Key": "wrong-key"},
+    )
+    assert response.status_code == 401
+
+
+def test_forge_cycles_returns_summary(monkeypatch, db):
+    """GET /forge/cycles includes the per-stage summary so the owner UI can
+    render stage breakdowns without a second query."""
+    import json
+
+    from app import models
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "FORGE_API_KEY", "test-owner-key")
+    client = TestClient(app)
+
+    row = models.CycleRun(
+        status="COMPLETED",
+        summary_json=json.dumps({"stages": {"forge_cycle": {"status": "ok"}}}),
+    )
+    db.add(row)
+    db.commit()
+
+    response = client.get("/forge/cycles?limit=1", headers={"X-API-Key": "test-owner-key"})
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) >= 1
+    assert "summary" in body[0]
+
+
+def test_forge_clearance_lists_governed_sources(monkeypatch):
+    """GET /forge/clearance exposes the source clearance registry with expiry
+    state, so the owner console can show why a task cannot run."""
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "FORGE_API_KEY", "test-owner-key")
+    client = TestClient(app)
+
+    response = client.get("/forge/clearance", headers={"X-API-Key": "test-owner-key"})
+    assert response.status_code == 200
+    body = response.json()
+    assert "as_of" in body
+    assert "sources" in body
+    assert len(body["sources"]) >= 5
+    for entry in body["sources"]:
+        assert entry["clearance_state"] in ("valid", "expiring_soon", "expired")
+        assert "collector_cleared_now" in entry
+        assert "valid_through" in entry
+
+
+def test_forge_clearance_requires_owner_key(monkeypatch):
+    """GET /forge/clearance is owner-gated like the rest of /forge/*."""
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "FORGE_API_KEY", "test-owner-key")
+    client = TestClient(app)
+
+    response = client.get("/forge/clearance")
+    assert response.status_code == 401

@@ -1,11 +1,13 @@
 """Daily privacy maintenance with an optional legacy Forge cycle."""
 
 import hmac
+import json
 import logging
 import os
+from datetime import datetime, timezone
 from threading import Lock
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Request
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -17,6 +19,7 @@ from app.services.forge_bot_privacy import run_daily_maintenance
 router = APIRouter(prefix="/scheduled", tags=["scheduled"])
 logger = logging.getLogger(__name__)
 _local_cycle_lock = Lock()
+_intelligence_lock = Lock()
 _POSTGRES_LOCK_ID = 4_706_539_182
 _cycle_scheduler = None
 if settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
@@ -145,7 +148,10 @@ def run_scheduled_cycle(authorization: str | None = Header(default=None)):
 
 
 @router.get("/intelligence")
-def run_scheduled_intelligence(authorization: str | None = Header(default=None)):
+def run_scheduled_intelligence(
+    request: Request,
+    authorization: str | None = Header(default=None),
+):
     """Run Hami's non-legacy intelligence cycle (current lineage, no legacy flag).
 
     Uses only existing non-legacy engines, called directly (no wrapper):
@@ -170,12 +176,54 @@ def run_scheduled_intelligence(authorization: str | None = Header(default=None))
 
     This endpoint is separate from /scheduled/cycle (privacy-only contract)
     and is not gated by the legacy intelligence flag.
+
+    Auth: the cron Bearer secret OR the owner X-API-Key. The owner key path
+    lets the owner console trigger the supported intelligence path on demand;
+    the legacy-gated POST /forge/cycle remains disabled by standing order.
+    A run is recorded as a CycleRun row (existing observability model) so the
+    owner console can show last execution, per-stage results, and errors.
     """
     secret = os.getenv("CRON_SECRET", "")
-    if not secret:
-        raise HTTPException(status_code=503, detail="Scheduled intelligence is not configured")
-    if not authorization or not hmac.compare_digest(authorization, f"Bearer {secret}"):
+    cron_ok = bool(
+        secret
+        and authorization
+        and hmac.compare_digest(authorization, f"Bearer {secret}")
+    )
+    owner_ok = False
+    if not cron_ok:
+        # Owner-key alternative: reuse the existing owner gate without raising.
+        try:
+            from app.security import require_owner_api_key
+
+            require_owner_api_key(request)
+            owner_ok = True
+        except HTTPException:
+            owner_ok = False
+    if not cron_ok and not owner_ok:
+        if not secret:
+            raise HTTPException(
+                status_code=503, detail="Scheduled intelligence is not configured"
+            )
         raise HTTPException(status_code=401, detail="Unauthorized")
+
+    # Concurrency guard: one intelligence run at a time (same pattern as the
+    # legacy cycle lock). 409 when a run is already in progress.
+    if not _intelligence_lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="An intelligence run is already running")
+
+    # Observability: record this run in the existing CycleRun table. The
+    # bookkeeping below never fails the intelligence work itself.
+    cycle_run_id: int | None = None
+    cycle_started_at = datetime.now(timezone.utc)
+    try:
+        with database.SessionLocal() as odb:
+            row = models.CycleRun(started_at=cycle_started_at, status="RUNNING")
+            odb.add(row)
+            odb.commit()
+            odb.refresh(row)
+            cycle_run_id = row.id
+    except Exception as exc:
+        logger.warning("scheduled intelligence: CycleRun record failed (%s)", type(exc).__name__)
 
     intelligence: dict = {}
 
@@ -400,5 +448,39 @@ def run_scheduled_intelligence(authorization: str | None = Header(default=None))
     except Exception as exc:
         logger.warning("scheduled intelligence: scout_cycle failed (%s)", type(exc).__name__)
         intelligence["scout_cycle"] = {"status": "error", "error": type(exc).__name__}
+
+    # Finalize the CycleRun observability record with per-stage outcomes.
+    # This bookkeeping never fails the intelligence response itself.
+    try:
+        if cycle_run_id is not None:
+            with database.SessionLocal() as odb:
+                row = odb.get(models.CycleRun, cycle_run_id)
+                if row is not None:
+                    ended_at = datetime.now(timezone.utc)
+                    row.ended_at = ended_at
+                    start = row.started_at
+                    if start is not None:
+                        if start.tzinfo is None:
+                            start = start.replace(tzinfo=timezone.utc)
+                        row.duration_ms = int((ended_at - start).total_seconds() * 1000)
+                    stage_errors = {
+                        key: (val.get("error") or val.get("status"))
+                        for key, val in intelligence.items()
+                        if isinstance(val, dict) and val.get("status") == "error"
+                    }
+                    row.status = "FAILED" if stage_errors else "COMPLETED"
+                    row.summary_json = json.dumps(
+                        {"stages": intelligence, "stage_errors": stage_errors},
+                        default=str,
+                    )
+                    if stage_errors:
+                        row.error = "; ".join(f"{k}: {v}" for k, v in stage_errors.items())
+                    odb.commit()
+    except Exception as exc:
+        logger.warning(
+            "scheduled intelligence: CycleRun finalize failed (%s)", type(exc).__name__
+        )
+    finally:
+        _intelligence_lock.release()
 
     return {"status": "completed", "intelligence": intelligence}

@@ -129,6 +129,20 @@ than a few days old, re-verify before trusting the details.
 
 ## Last verified state snapshot (2026-10-11)
 
+**Update 2026-10-11 (owner visibility & integration recovery):** Forensic
+inventory of all 113 service modules complete: 34 CONNECTED_VERIFIED, 68
+CONNECTED_UNVERIFIED, 6 DISABLED (legacy-flag-gated), 5 UNREACHABLE (kept —
+small honest utilities, no dead weight worth deleting). Root cause of owner
+blindness: scheduled 7-stage results were ephemeral, /operations "Run Hami
+Cycle" targeted legacy-gated POST /forge/cycle (503 by standing order), and
+/research/questions/tasks/evidence/clearance APIs existed but were unwired.
+Fixes (uncommitted at snapshot time): /scheduled/intelligence now accepts
+owner X-API-Key, persists CycleRun with per-stage summary_json, 409 on
+concurrent runs; /forge/cycles exposes summary; new owner-gated
+/forge/clearance exposes source-clearance expiry/eligibility; /owner gains
+Intelligence section (engine state, last runs, research loop, clearance);
+/operations Run button now triggers the supported scheduled path.
+
 **Update 2026-10-11 (daily freshness check):** HEAD at `7fc2a0c`
 ("Follow persisted Crossref leads to OpenAlex abstracts"). Pull
 fast-forwarded `d8c9b5b..7fc2a0c` clean; `main` == `origin/main`.

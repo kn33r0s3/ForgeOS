@@ -84,12 +84,18 @@ function OperationsPage() {
   }, []);
 
   // ── Change 2: Explicit user action with confirmation ─────────────────────
+  // NOTE: this calls the supported scheduled intelligence path
+  // (GET /api/scheduled/intelligence), not the legacy-gated POST /forge/cycle
+  // (503 while FORGEOS_LEGACY_INTELLIGENCE_ENABLED is off by standing order).
+  // The endpoint accepts the owner key as an alternative to the cron secret.
   async function handleRunCycle() {
     const confirmed = window.confirm(
       "Run Hami Intelligence Cycle?\n\n" +
-      "This operation writes to multiple Hami database tables " +
-      "(cycle_runs, patterns, beliefs, research_tasks, predictions, opportunities, and more).\n\n" +
-      "It does NOT execute any actions or spend money. " +
+      "This runs the 7-stage scheduled intelligence path: reasoning cycle, " +
+      "collection via cleared sources, task resume, action proposals (never " +
+      "executed), discovery, notification retry, and scout scoring.\n\n" +
+      "It does NOT execute any actions, contact anyone, or spend money. " +
+      "The run is recorded and visible in the owner console's Intelligence section. " +
       "Proceed only when you want to advance the intelligence cycle."
     );
     if (!confirmed) return;
@@ -97,21 +103,25 @@ function OperationsPage() {
     setRunningCycle(true);
     setCycleMsg(null);
     try {
-      const res = await fetch("/api/forge/cycle", {
-        method: "POST",
+      const res = await fetch("/api/scheduled/intelligence", {
         headers: { "X-API-Key": ownerKey },
       });
+      if (res.status === 409) {
+        setCycleMsg("A run is already in progress — try again when it finishes.");
+        return;
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      // ForgeCycleSummary carries no `status`/`cycle_id` fields — report the
-      // fields it actually returns (scenario.status + the counted outcomes).
-      const scenarioStatus = data?.scenario?.status;
+      const stages = data?.intelligence ?? {};
+      const parts = Object.entries(stages).map(
+        ([name, info]) =>
+          `${name}: ${typeof info === "object" && info !== null && "status" in info ? (info as { status: string }).status : "?"}`,
+      );
+      const failed = parts.filter((p) => p.endsWith(": error")).length;
       setCycleMsg(
-        `Cycle complete${scenarioStatus ? ` (scenario: ${scenarioStatus})` : ""} — ` +
-          `${data.signals_processed ?? "?"} signal(s) processed, ` +
-          `${data.patterns_found ?? "?"} pattern(s) found, ` +
-          `${data.beliefs_updated ?? "?"} belief(s) updated, ` +
-          `${data.opportunities_discovered ?? "?"} opportunity(ies) discovered.`
+        `Intelligence run ${data?.status ?? "done"} — ${parts.length} stages` +
+          (failed ? `, ${failed} errored` : ", none errored") +
+          ". Details in the owner console's Intelligence section."
       );
       await loadOperatingData(ownerKey);
     } catch (err: unknown) {

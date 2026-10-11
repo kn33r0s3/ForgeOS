@@ -280,6 +280,41 @@ def get_sources(request: Request, db: Session = Depends(get_db)):
     return source_manager.list_sources(db)
 
 
+@router.get("/clearance")
+def get_clearance(request: Request):
+    """Source clearance registry: which external sources Hami may collect
+    from, under what terms, and when each clearance expires. This is the
+    legal/terms basis for collector eligibility — distinct from /sources
+    (reliability tracking). Owner-only.
+
+    A task cannot run when its source is absent here, expired, or missing
+    required terms phrases. No new registry: reads the existing
+    source_clearance_registry module.
+    """
+    require_owner_api_key(request)
+    from datetime import date
+
+    from app.services import source_clearance_registry as scr
+
+    today = date.today()
+    entries = []
+    for entry in scr.source_clearances():
+        meta = scr.clearance_metadata(entry)
+        valid_through = entry.valid_through
+        days_left = (valid_through - today).days
+        meta["days_until_expiry"] = days_left
+        meta["clearance_state"] = (
+            "expired" if days_left < 0 else "expiring_soon" if days_left <= 30 else "valid"
+        )
+        # Collector eligibility as the runner sees it right now.
+        meta["collector_cleared_now"] = scr.collector_is_cleared(entry.collector, today=today)
+        entries.append(meta)
+    return {
+        "as_of": today.isoformat(),
+        "sources": entries,
+    }
+
+
 @router.get("/predictions", response_model=list[schemas.PredictionOut])
 def get_predictions(
     request: Request,
@@ -1533,6 +1568,9 @@ def list_cycles(request: Request, limit: int = 20, db: Session = Depends(get_db)
             "duration_ms": c.duration_ms,
             "status": c.status,
             "error": c.error,
+            # Per-stage outcomes (ok/partial/error + counts). Present for
+            # scheduled intelligence runs; null for older rows.
+            "summary": c.summary_json,
         }
         for c in rows
     ]

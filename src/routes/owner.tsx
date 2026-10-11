@@ -95,6 +95,114 @@ async function ownerFetch<T>(
   return (await response.json()) as T;
 }
 
+// Same key-gated pattern as ownerFetch, but against the /api/forge/* owner
+// router (runtime window, cycle history, research loop, source clearance).
+// Returns null on 404 so the console degrades to UNKNOWN when the backend
+// predates an endpoint instead of failing the whole section.
+async function forgeFetch<T>(
+  path: string,
+  key: string,
+  init: RequestInit = {},
+): Promise<T | null> {
+  const response = await fetch(`/api/forge/${path}`, {
+    ...init,
+    headers: {
+      ...(init.body ? { "Content-Type": "application/json" } : {}),
+      ...init.headers,
+      "X-API-Key": key,
+    },
+  });
+  if (response.status === 401) {
+    throw new Error("Owner authentication failed. Check the key and try again.");
+  }
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    const payload: unknown = await response.json().catch(() => null);
+    const detail =
+      typeof payload === "object" &&
+      payload !== null &&
+      "detail" in payload &&
+      typeof payload.detail === "string"
+        ? payload.detail
+        : `The owner request failed (${response.status}).`;
+    throw new Error(detail);
+  }
+  return (await response.json()) as T;
+}
+
+type CycleSummary = {
+  id: number;
+  started_at: string | null;
+  ended_at: string | null;
+  duration_ms: number | null;
+  status: string;
+  error: string | null;
+  // JSON string of {stages, stage_errors} for scheduled intelligence runs;
+  // null for older rows that predate per-stage persistence.
+  summary: string | null;
+};
+
+type RuntimeWindow = {
+  signals: number | null;
+  evidence: number | null;
+  research_tasks: number | null;
+  opportunities: number | null;
+  active_stage: string;
+  worker: {
+    queued_tasks: number;
+    last_task: {
+      worker_type: string | null;
+      task_name: string | null;
+      status: string | null;
+      updated_at: string | null;
+      error: string | null;
+    } | null;
+  };
+  cycles: {
+    running_count: number;
+    last: {
+      id: number | null;
+      status: string | null;
+      started_at: string | null;
+      ended_at: string | null;
+      error: string | null;
+    } | null;
+  };
+};
+
+type ResearchQuestionRow = {
+  id: number;
+  question: string;
+  status: string;
+  priority_score: number;
+};
+
+type ResearchTaskRow = {
+  id: number;
+  status: string;
+  source: string | null;
+  updated_at: string | null;
+};
+
+type ClearanceEntry = {
+  display_name: string;
+  collector: string;
+  url: string;
+  valid_through: string;
+  days_until_expiry: number;
+  clearance_state: "valid" | "expiring_soon" | "expired";
+  collector_cleared_now: boolean;
+  allowed_operation: string;
+};
+
+type IntelligenceState = {
+  runtime: RuntimeWindow | null;
+  cycles: CycleSummary[] | null;
+  questions: ResearchQuestionRow[] | null;
+  tasks: ResearchTaskRow[] | null;
+  clearance: { as_of: string; sources: ClearanceEntry[] } | null;
+};
+
 function displayTime(value: string | null) {
   if (!value) return "Not recorded";
   const date = new Date(value);
@@ -122,6 +230,74 @@ function signalFor(
   );
 }
 
+// One recorded cycle run with its per-stage breakdown. The summary is a JSON
+// string of {stages, stage_errors} written by the scheduled intelligence
+// endpoint; older forge_loop rows carry a different shape or none at all.
+// Anything unparseable renders as UNKNOWN, never as green.
+function CycleCard({ cycle }: { cycle: CycleSummary }) {
+  let stages: Record<string, { status?: string }> | null = null;
+  if (cycle.summary) {
+    try {
+      const parsed: unknown = JSON.parse(cycle.summary);
+      if (typeof parsed === "object" && parsed !== null && "stages" in parsed) {
+        const raw = (parsed as { stages: unknown }).stages;
+        if (typeof raw === "object" && raw !== null) {
+          stages = raw as Record<string, { status?: string }>;
+        }
+      }
+    } catch {
+      stages = null;
+    }
+  }
+  const stateColor =
+    cycle.status === "COMPLETED"
+      ? "border-success/70"
+      : cycle.status === "FAILED"
+        ? "border-danger/70"
+        : "border-warning/70";
+  return (
+    <article className={`rounded-card border-2 ${stateColor} bg-card p-4`}>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="font-extrabold">
+          Run #{cycle.id} · {cycle.status}
+        </p>
+        <p className="text-sm text-muted">
+          {displayTime(cycle.started_at)}
+          {cycle.duration_ms != null ? ` · ${Math.round(cycle.duration_ms / 1000)}s` : ""}
+        </p>
+      </div>
+      {cycle.error ? (
+        <p className="mt-1 break-words text-sm text-danger">{cycle.error}</p>
+      ) : null}
+      {stages ? (
+        <dl className="mt-3 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
+          {Object.entries(stages).map(([name, info]) => {
+            const st = typeof info?.status === "string" ? info.status : "unknown";
+            const dot =
+              st === "ok"
+                ? "text-success"
+                : st === "error"
+                  ? "text-danger"
+                  : st === "partial" || st === "skipped"
+                    ? "text-warning"
+                    : "text-muted";
+            return (
+              <div key={name} className="flex justify-between gap-2">
+                <dt className="break-all text-muted">{name}</dt>
+                <dd className={`font-bold ${dot}`}>{st}</dd>
+              </div>
+            );
+          })}
+        </dl>
+      ) : (
+        <p className="mt-2 text-sm text-muted">
+          Per-stage breakdown UNKNOWN — this run predates stage persistence.
+        </p>
+      )}
+    </article>
+  );
+}
+
 function OwnerConsolePage() {
   const [key, setKey] = useState("");
   const [consoleState, setConsoleState] = useState<OwnerConsoleState | null>(null);
@@ -131,6 +307,7 @@ function OwnerConsolePage() {
   const [busy, setBusy] = useState(false);
   const [evidenceReference, setEvidenceReference] = useState("");
   const [outcomeNote, setOutcomeNote] = useState("");
+  const [intel, setIntel] = useState<IntelligenceState | null>(null);
 
   async function refresh(ownerKey = key) {
     const [readiness, leads] = await Promise.all([
@@ -141,6 +318,23 @@ function OwnerConsolePage() {
     if (selected) {
       const updated = leads.find((lead) => lead.reference === selected.reference);
       if (!updated) setSelected(null);
+    }
+    // Intelligence section: best-effort loads against /api/forge/*. A 404
+    // (backend predates the endpoint) yields null -> UNKNOWN in the UI.
+    // A 401 propagates like the rest of the console.
+    try {
+      const [runtime, cycles, questions, tasks, clearance] = await Promise.all([
+        forgeFetch<RuntimeWindow>("runtime", ownerKey),
+        forgeFetch<CycleSummary[]>("cycles?limit=5", ownerKey),
+        forgeFetch<ResearchQuestionRow[]>("questions?status=open", ownerKey),
+        forgeFetch<ResearchTaskRow[]>("tasks", ownerKey),
+        forgeFetch<{ as_of: string; sources: ClearanceEntry[] }>("clearance", ownerKey),
+      ]);
+      setIntel({ runtime, cycles, questions, tasks, clearance });
+    } catch (cause) {
+      // Intelligence is additive; a failure here must not hide readiness/leads.
+      setIntel(null);
+      throw cause;
     }
   }
 
@@ -240,6 +434,7 @@ function OwnerConsolePage() {
     setKey("");
     setConsoleState(null);
     setSelected(null);
+    setIntel(null);
     setNotice("");
     setError("");
   }
@@ -484,6 +679,166 @@ function OwnerConsolePage() {
                   ) : null}
                 </section>
               ) : null}
+
+              <section className="mt-10 border-t-2 border-line pt-5" aria-label="Intelligence">
+                <h2 className="text-xl font-extrabold">Intelligence</h2>
+                <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
+                  What Hami&apos;s engines actually did — last runs, per-stage
+                  results, research state, and source clearance. UNKNOWN means
+                  not instrumented, not zero. Nothing here is inferred from
+                  imports or tests; every number comes from a persisted record.
+                </p>
+                {intel === null ? (
+                  <p className="mt-3 rounded-card border border-line bg-card p-4 text-sm text-muted">
+                    Intelligence data unavailable — the console could not load it.
+                  </p>
+                ) : (
+                  <div className="mt-4 grid gap-6">
+                    {/* Runtime window */}
+                    <div>
+                      <h3 className="font-extrabold">Engine state</h3>
+                      {intel.runtime === null ? (
+                        <p className="mt-2 text-sm text-muted">UNKNOWN — /forge/runtime not available.</p>
+                      ) : (
+                        <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                          {signalFor(
+                            intel.runtime.active_stage.startsWith("IDLE") ? "amber" : "green",
+                            "Active stage",
+                            intel.runtime.active_stage,
+                            "Idle is normal — engines run on schedule or on demand.",
+                          )}
+                          {signalFor(
+                            intel.runtime.worker.queued_tasks > 0 ? "amber" : "green",
+                            "Worker queue",
+                            `${intel.runtime.worker.queued_tasks} queued`,
+                            intel.runtime.worker.last_task
+                              ? `Last: ${intel.runtime.worker.last_task.worker_type}/${intel.runtime.worker.last_task.task_name} — ${intel.runtime.worker.last_task.status}`
+                              : "No worker task recorded.",
+                          )}
+                          {signalFor(
+                            intel.runtime.cycles.running_count > 0 ? "amber" : "green",
+                            "Cycles running",
+                            `${intel.runtime.cycles.running_count}`,
+                            intel.runtime.cycles.last
+                              ? `Last run #${intel.runtime.cycles.last.id} — ${intel.runtime.cycles.last.status}`
+                              : "No cycle recorded yet.",
+                          )}
+                          {signalFor(
+                            "green",
+                            "Persisted totals",
+                            `Signals ${intel.runtime.signals ?? "?"} · Evidence ${intel.runtime.evidence ?? "?"} · Tasks ${intel.runtime.research_tasks ?? "?"} · Opportunities ${intel.runtime.opportunities ?? "?"}`,
+                            "Counts from live tables, not estimates.",
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Last intelligence run: per-stage results */}
+                    <div>
+                      <h3 className="font-extrabold">Last intelligence run</h3>
+                      {intel.cycles === null ? (
+                        <p className="mt-2 text-sm text-muted">UNKNOWN — /forge/cycles not available.</p>
+                      ) : intel.cycles.length === 0 ? (
+                        <p className="mt-2 rounded-card border border-line bg-card p-4 text-sm text-muted">
+                          No cycle recorded yet. Run one from /operations or wait for the schedule.
+                        </p>
+                      ) : (
+                        <div className="mt-2 grid gap-3">
+                          {intel.cycles.slice(0, 3).map((cycle) => (
+                            <CycleCard key={cycle.id} cycle={cycle} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Research loop */}
+                    <div>
+                      <h3 className="font-extrabold">Research loop</h3>
+                      <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-card border-2 border-line bg-card p-4">
+                          <p className="font-bold">Open questions</p>
+                          {intel.questions === null ? (
+                            <p className="mt-1 text-sm text-muted">UNKNOWN</p>
+                          ) : intel.questions.length === 0 ? (
+                            <p className="mt-1 text-sm text-muted">None open.</p>
+                          ) : (
+                            <ul className="mt-2 grid gap-2 text-sm">
+                              {intel.questions.slice(0, 5).map((q) => (
+                                <li key={q.id} className="break-words">
+                                  <span className="font-mono text-xs text-muted">#{q.id} · {q.priority_score.toFixed(0)}</span>{" "}
+                                  {q.question.length > 140 ? `${q.question.slice(0, 140)}…` : q.question}
+                                </li>
+                              ))}
+                              {intel.questions.length > 5 ? (
+                                <li className="text-muted">+{intel.questions.length - 5} more</li>
+                              ) : null}
+                            </ul>
+                          )}
+                        </div>
+                        <div className="rounded-card border-2 border-line bg-card p-4">
+                          <p className="font-bold">Research tasks</p>
+                          {intel.tasks === null ? (
+                            <p className="mt-1 text-sm text-muted">UNKNOWN</p>
+                          ) : intel.tasks.length === 0 ? (
+                            <p className="mt-1 text-sm text-muted">None recorded.</p>
+                          ) : (
+                            <dl className="mt-2 grid gap-1 text-sm">
+                              {(["open", "running", "completed", "failed"] as const).map((s) => {
+                                const n = intel.tasks!.filter((t) => t.status === s).length;
+                                return (
+                                  <div key={s} className="flex justify-between">
+                                    <dt className="text-muted">{s}</dt>
+                                    <dd className="font-bold">{n}</dd>
+                                  </div>
+                                );
+                              })}
+                            </dl>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Source clearance */}
+                    <div>
+                      <h3 className="font-extrabold">Source clearance</h3>
+                      <p className="mt-1 text-sm text-muted">
+                        Legal/terms basis for collector eligibility. A task cannot run when its
+                        source is absent here, expired, or not currently cleared.
+                      </p>
+                      {intel.clearance === null ? (
+                        <p className="mt-2 text-sm text-muted">UNKNOWN — /forge/clearance not available on this backend.</p>
+                      ) : (
+                        <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+                          {intel.clearance.sources.map((s) => (
+                            <li
+                              key={s.collector}
+                              className={`rounded-card border-2 p-3 text-sm ${
+                                s.clearance_state === "expired"
+                                  ? "border-danger/70 bg-danger/10"
+                                  : s.clearance_state === "expiring_soon"
+                                    ? "border-warning/70 bg-warning/10"
+                                    : "border-line bg-card"
+                              }`}
+                            >
+                              <p className="font-bold">{s.display_name}</p>
+                              <p className="text-muted">
+                                {s.clearance_state === "expired"
+                                  ? `EXPIRED ${Math.abs(s.days_until_expiry)}d ago`
+                                  : s.clearance_state === "expiring_soon"
+                                    ? `Expires in ${s.days_until_expiry}d`
+                                    : `Valid through ${s.valid_through}`}
+                                {" · "}
+                                {s.collector_cleared_now ? "collector cleared" : "collector NOT cleared"}
+                              </p>
+                              <p className="mt-1 break-all text-xs text-muted">{s.url}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </section>
 
               <section className="mt-10 border-t-2 border-line pt-5" aria-label="ForgeBot">
                 <h2 className="text-xl font-extrabold">ForgeBot</h2>
