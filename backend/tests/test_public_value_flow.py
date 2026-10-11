@@ -1115,14 +1115,14 @@ def test_public_booking_status_requires_private_capability_and_does_not_leak_req
     assert no_token.status_code == 422
     wrong_token = owner_client_with_db.get(
         f"/public/booking-requests/{booking_id}",
-        params={"status_token": "0" * 64},
+        headers={"X-Booking-Status-Token": "0" * 64},
     )
     assert wrong_token.status_code == 404
     assert wrong_token.json() == {"detail": "booking request not found"}
 
     response = owner_client_with_db.get(
         f"/public/booking-requests/{booking_id}",
-        params={"status_token": token},
+        headers={"X-Booking-Status-Token": token},
     )
     assert response.status_code == 200, response.text
     payload = response.json()
