@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from typing import Literal
 
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -958,7 +958,7 @@ def create_booking_request(
 @router.get("/booking-requests/{booking_id}", response_model=schemas.BookingRequestStatusOut)
 def get_booking_request(
     booking_id: int,
-    status_token: str = Query(..., min_length=64, max_length=64),
+    status_token: str = Header(..., alias="X-Booking-Status-Token", min_length=64, max_length=64),
     db: Session = Depends(get_db),
 ):
     # Authenticate before querying so a numeric ID alone cannot enumerate stored requests.
