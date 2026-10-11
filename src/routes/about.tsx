@@ -131,7 +131,7 @@ function AboutPage() {
             Six primitives
           </h2>
           <p className="mt-3 max-w-2xl text-base leading-7 text-muted">
-            Hami can represent open-ended domains through six shared semantic primitives. Domain-specific types belong within the registered model; they do not require a seventh top-level primitive.
+            Everything Hami knows is built from six primitives. No other data types.
           </p>
           <div className="mt-6 grid grid-cols-2 gap-px bg-line sm:grid-cols-3">
             {PRIMITIVES.map((p) => (
@@ -167,8 +167,7 @@ function AboutPage() {
           </h2>
           <p className="mt-3 max-w-2xl text-base leading-7 text-muted">
             Very big, very small. The big aim and the small aim are the same aim at
-            different scales. Each step is earned by the one before it. This first seller
-            pilot is one way to test the value loop, not a limit on Hami’s domain.
+            different scales. Each step is earned by the one before it.
           </p>
           <div className="mt-6">
             {CLIMB.map((s) => (
