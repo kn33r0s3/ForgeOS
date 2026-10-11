@@ -38,9 +38,9 @@
 ### NEEDS OWNER DECISION
 
 - `src/lib/forge/cli.ts` — manual CLI/tooling harness with its own `cli.test.ts`; not imported by the app or invoked by the deployed scheduled worker. Preserve it as tested operator tooling. The autonomous/scheduled v1 round remains PLANNED / NOT WIRED; don't mark the CLI itself as an active autonomous worker.
-- `src/lib/unknowns-api.ts` — added 2026-10-04 (5c1dad8), no inbound references. May be superseded by features work.
+- `src/lib/unknowns-api.ts` — older `/api/forge/unknowns` Claim projection client, with no current UI caller. Preserve it as a reference, not a second active public Unknowns source: `docs/UNKNOWN_MAP.md` → generated backend JSON/`src/lib/unknowns.ts` remains the current canonical projection path. Any future DB-owned migration needs an explicit source-of-truth decision.
 - `src/lib/multiplayer/{index,p2p}.ts` — only self-referenced; P2P/multiplayer has no surface. Prototype or dead?
-- `src/lib/app-data/{index,readiness,use-connector-readiness}.ts` — unreferenced trio; siblings are used.
+- `src/lib/app-data/{index,readiness,use-connector-readiness}.ts` — no current Hami page imports this trio. It belongs to the preview-host connector compatibility path, not the public economic-intelligence loop. Preserve while host integrations still reference sibling modules; do not report it as a live Hami customer feature.
 
 ## Vulture (Python) — 16 findings, all false positives
 
@@ -54,15 +54,56 @@ No action taken.
 `scripts/check-orphaned-routes.mjs` passes: all 38 routes are connected or
 intentionally hidden. (The earlier /actions orphan was fixed 2026-10-05.)
 
-## Backend endpoints never called from frontend
+## Backend API surface map (checked 2026-10-11)
 
-Frontend `src/` calls: `/api/auth`, `/api/forge-bot/*`, `/api/forge/*`
-(subset), `/api/health`, `/api/rtc`, `/api/signals/public-request/config`.
-Routers with no frontend callers: earn, intelligence, rare-signals, lessons,
-observer, orchestrate, payments, products, repair-shop, scheduled, signals,
-substrate, workers, world (13). These serve scheduled jobs, the owner
-console backend, or future surfaces — **NEEDS OWNER DECISION** before any
-removal. None removed by this audit.
+This is a source-level call-site map, not a live-runtime guarantee. A backend
+router without a browser caller may be intentionally scheduled or internal; it
+is not automatically dead code.
+
+**Directly connected to current Hami surfaces**
+- `/api/public/*` — the public data loaders in `src/lib/content.ts` read the
+  canonical feed, domain/work records, providers/service listings, discoveries,
+  matches, connections, trust, alerts and UNKNOWN_MAP projection. These reuse
+  backend public projections rather than browser-owned fake records.
+- `/api/auth/*` — Better Auth route handler under `src/routes/api/auth/$.ts`.
+- `/api/forge-bot/*` — owner inquiry/readiness console in `src/routes/owner.tsx`;
+  public Forge Bot intake remains hidden/closed.
+- `/api/forge/*` — owner runtime/cycle/research/source-clearance projection in
+  `src/routes/owner.tsx`; not the standalone TypeScript CLI.
+- `/api/orchestrate/overview`, `/api/products`,
+  `/api/products/channels`, and `/api/payments/status` — read-only private
+  commercial panel in `src/routes/owner.tsx`. Product and channel writes remain
+  owner-keyed backend operations; payment visibility is configuration-only.
+- `/api/opv4/*` — `src/components/owner/operating-v4.tsx`, rendered inside
+  the same owner console with the entered owner key.
+- `/api/scout/*` — `src/components/owner/scout-queue.tsx`, owner-keyed
+  candidate/draft/DNC/experiment controls; not automatic outreach.
+- `/api/residue/*` — `src/components/owner/purchase-journey.tsx`, owner-keyed
+  buyer journey and residue records.
+- `/api/signals/public-request/config` — `/request` renders the actual
+  closed/open gate. A closed result or unavailable gate must not be interpreted
+  as a live intake channel.
+
+**Scheduled or internal modules without a direct browser control surface**
+- `/api/scheduled/cycle` and `/api/scheduled/intelligence` — declared in
+  `vercel.json` as cron endpoints. They should not be triggered merely by
+  page navigation; production cadence/run success requires separate evidence.
+- `earn`, `intelligence`, `rare-signals`, `lessons`, `observer`,
+  `workers`, `substrate`, and `world` — no direct UI call was found in
+  this pass for these router modules. Their internal service/worker call paths
+  still need endpoint-by-endpoint tracing before classifying any endpoint as
+  inactive. Keep them; do not expose broad substrate or worker controls publicly.
+- `repair-shop` — no public UI caller; previously identified for an owner
+  business decision. A route inventory cannot settle whether the repair-shop
+  business is a Hami bet, so it remains unpromoted rather than being wired into
+  the public catalogue by assumption.
+
+The prior “13 routers have no frontend caller” grouping was incorrect for the
+current code: `orchestrate`, `products`, `payments`, and `signals` do have
+direct current consumers, and owner-only components consume `opv4`, `scout`,
+and `residue`. No endpoint or historical implementation was removed by this
+audit. Lack of a direct browser caller is a finding to trace, not permission to
+delete code or turn an internal API into a public page.
 
 ## Restore check — last 30 days
 
