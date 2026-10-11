@@ -56,11 +56,8 @@ def _verified_payment_evidence(client, db, content="Provider-issued transaction 
 
 
 @pytest.fixture
-def client_with_db(db, monkeypatch):
-    from app import security
-
-    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
-
+def client_with_db(db):
+    """A deliberately headerless client against the isolated test database."""
     def override_get_db():
         try:
             yield db
@@ -69,13 +66,22 @@ def client_with_db(db, monkeypatch):
 
     app.dependency_overrides[get_db] = override_get_db
     client = TestClient(app, raise_server_exceptions=True)
-    client.headers.update({"X-API-Key": "test-owner-key"})
     yield client
     app.dependency_overrides.clear()
     client.close()
 
 
-def test_forge_connections_endpoints_require_owner_key(client_with_db, db, monkeypatch):
+@pytest.fixture
+def owner_client_with_db(client_with_db, monkeypatch):
+    """Owner-authenticated helper; tests for missing headers must use client_with_db."""
+    from app import security
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
+    client_with_db.headers.update({"X-API-Key": "test-owner-key"})
+    return client_with_db
+
+
+def test_forge_connections_endpoints_require_owner_key(owner_client_with_db, db, monkeypatch):
     from app import security
 
     row = models.NetworkConnection(
@@ -117,7 +123,7 @@ def test_forge_connections_endpoints_require_owner_key(client_with_db, db, monke
     monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
     for method, path, *rest in paths:
         params = rest[0] if rest else {}
-        response = client_with_db.request(method, path, params=params)
+        response = owner_client_with_db.request(method, path, params=params)
         assert response.status_code == 503, (path, response.status_code, response.text)
     # Key set but not presented: 401, and nothing was written.
     monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
@@ -130,7 +136,7 @@ def test_forge_connections_endpoints_require_owner_key(client_with_db, db, monke
     assert db.query(models.NetworkConnection).count() == 1
 
 
-def test_autonomy_policy_widening_requires_owner_key(client_with_db, db, monkeypatch):
+def test_autonomy_policy_widening_requires_owner_key(owner_client_with_db, db, monkeypatch):
     from app import security
     from app.services.autonomy_engine import seed_default_policy
 
@@ -139,7 +145,7 @@ def test_autonomy_policy_widening_requires_owner_key(client_with_db, db, monkeyp
     assert policy.max_daily_actions == 3
 
     monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
-    missing_key = client_with_db.patch(
+    missing_key = owner_client_with_db.patch(
         "/forge/autonomy/policy",
         json={"max_daily_actions": 99},
     )
@@ -158,7 +164,7 @@ def test_autonomy_policy_widening_requires_owner_key(client_with_db, db, monkeyp
     db.refresh(policy)
     assert policy.max_daily_actions == 3
 
-    authorized = client_with_db.patch(
+    authorized = owner_client_with_db.patch(
         "/forge/autonomy/policy",
         json={"max_daily_actions": 5},
     )
@@ -166,7 +172,7 @@ def test_autonomy_policy_widening_requires_owner_key(client_with_db, db, monkeyp
     assert authorized.json()["max_daily_actions"] == 5
 
 
-def test_generic_action_approval_and_execution_require_owner_key(client_with_db, db, monkeypatch):
+def test_generic_action_approval_and_execution_require_owner_key(owner_client_with_db, db, monkeypatch):
     from app import security
     from app.services import action_engine
 
@@ -227,10 +233,10 @@ def test_generic_action_approval_and_execution_require_owner_key(client_with_db,
     assert manual_action.status == "PROPOSED"
     assert manual_action.started_at is None
 
-    authorized_approval = client_with_db.post(
+    authorized_approval = owner_client_with_db.post(
         f"/forge/actions/{approval_required.id}/approve"
     )
-    authorized_execution = client_with_db.post(
+    authorized_execution = owner_client_with_db.post(
         f"/forge/actions/{manual_action.id}/execute"
     )
     assert authorized_approval.status_code == 200, authorized_approval.text
@@ -242,7 +248,7 @@ def test_generic_action_approval_and_execution_require_owner_key(client_with_db,
 
 
 def test_outcome_api_requires_owner_key_before_marking_action_verified(
-    client_with_db, db, monkeypatch
+    owner_client_with_db, db, monkeypatch
 ):
     from app import security
     from app.services import action_engine
@@ -256,7 +262,7 @@ def test_outcome_api_requires_owner_key_before_marking_action_verified(
     assert action.status == "SUCCEEDED"
 
     monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
-    response = client_with_db.post(
+    response = owner_client_with_db.post(
         "/forge/outcomes",
         params={
             "outcome_type": "QUALITATIVE",
@@ -274,12 +280,12 @@ def test_outcome_api_requires_owner_key_before_marking_action_verified(
     assert action.verification_state != "VERIFIED_SUCCESS"
 
 
-def test_generic_action_proposal_requires_owner_key(client_with_db, db, monkeypatch):
+def test_generic_action_proposal_requires_owner_key(owner_client_with_db, db, monkeypatch):
     from app import security
 
     monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
     existing_count = db.query(models.Action).count()
-    response = client_with_db.post(
+    response = owner_client_with_db.post(
         "/forge/actions",
         params={
             "objective": "Insert an anonymous action proposal",
@@ -291,7 +297,7 @@ def test_generic_action_proposal_requires_owner_key(client_with_db, db, monkeypa
     assert db.query(models.Action).count() == existing_count
 
 
-def test_revenue_source_link_requires_owner_key(client_with_db, db, monkeypatch):
+def test_revenue_source_link_requires_owner_key(owner_client_with_db, db, monkeypatch):
     from app import security
 
     opportunity = models.Opportunity(problem="Test-only opportunity awaiting owner grounding.")
@@ -306,7 +312,7 @@ def test_revenue_source_link_requires_owner_key(client_with_db, db, monkeypatch)
     db.refresh(source)
 
     monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
-    response = client_with_db.post(
+    response = owner_client_with_db.post(
         f"/forge/money/opportunities/{opportunity.id}/revenue-source",
         json={"revenue_source_id": source.id},
     )
@@ -316,7 +322,7 @@ def test_revenue_source_link_requires_owner_key(client_with_db, db, monkeypatch)
     assert opportunity.revenue_source_id is None
 
     monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
-    authorized = client_with_db.post(
+    authorized = owner_client_with_db.post(
         f"/forge/money/opportunities/{opportunity.id}/revenue-source",
         json={"revenue_source_id": source.id},
     )
@@ -324,7 +330,7 @@ def test_revenue_source_link_requires_owner_key(client_with_db, db, monkeypatch)
     assert authorized.json()["revenue_source_id"] == source.id
 
 
-def test_execution_action_creation_requires_owner_key(client_with_db, db, monkeypatch):
+def test_execution_action_creation_requires_owner_key(owner_client_with_db, db, monkeypatch):
     from app import security
 
     opportunity = models.Opportunity(
@@ -336,7 +342,7 @@ def test_execution_action_creation_requires_owner_key(client_with_db, db, monkey
 
     monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
     existing_count = db.query(models.Experiment).count()
-    response = client_with_db.post(
+    response = owner_client_with_db.post(
         "/forge/execution/actions",
         json={
             "opportunity_id": opportunity.id,
@@ -349,7 +355,7 @@ def test_execution_action_creation_requires_owner_key(client_with_db, db, monkey
     assert db.query(models.Experiment).count() == existing_count
 
     monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
-    authorized = client_with_db.post(
+    authorized = owner_client_with_db.post(
         "/forge/execution/actions",
         json={
             "opportunity_id": opportunity.id,
@@ -361,7 +367,7 @@ def test_execution_action_creation_requires_owner_key(client_with_db, db, monkey
     assert db.query(models.Experiment).count() == existing_count + 1
 
 
-def test_legacy_research_mutations_require_owner_key(client_with_db, monkeypatch):
+def test_legacy_research_mutations_require_owner_key(owner_client_with_db, monkeypatch):
     from app import security
     from app.services import collector_runner, forge_loop
 
@@ -405,18 +411,18 @@ def test_legacy_research_mutations_require_owner_key(client_with_db, monkeypatch
     )
     for path, payload in requests:
         response = (
-            client_with_db.post(path, json=payload)
+            owner_client_with_db.post(path, json=payload)
             if payload is not None
-            else client_with_db.post(path)
+            else owner_client_with_db.post(path)
         )
         assert response.status_code == 503, f"{path}: {response.status_code} {response.text}"
 
     monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
-    authorized_cycle = client_with_db.post("/forge/cycle")
+    authorized_cycle = owner_client_with_db.post("/forge/cycle")
     assert authorized_cycle.status_code == 200, authorized_cycle.text
 
 
-def test_goal_mutations_require_owner_key(client_with_db, db, monkeypatch):
+def test_goal_mutations_require_owner_key(owner_client_with_db, db, monkeypatch):
     from app import security
 
     monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
@@ -429,22 +435,22 @@ def test_goal_mutations_require_owner_key(client_with_db, db, monkeypatch):
     )
     for method, path, payload in requests:
         response = (
-            client_with_db.request(method, path, json=payload)
+            owner_client_with_db.request(method, path, json=payload)
             if payload is not None
-            else client_with_db.request(method, path)
+            else owner_client_with_db.request(method, path)
         )
         assert response.status_code == 503, f"{path}: {response.status_code} {response.text}"
     assert db.query(models.Goal).count() == existing_count
 
     monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
-    authorized = client_with_db.post(
+    authorized = owner_client_with_db.post(
         "/forge/goals",
         json={"statement": "TEST owner-selected goal"},
     )
     assert authorized.status_code == 200, authorized.text
 
 
-def test_autonomy_cycle_trigger_requires_owner_key(client_with_db, monkeypatch):
+def test_autonomy_cycle_trigger_requires_owner_key(owner_client_with_db, monkeypatch):
     from app import security
     from app.services import execution_engine
 
@@ -459,15 +465,15 @@ def test_autonomy_cycle_trigger_requires_owner_key(client_with_db, monkeypatch):
             require_approval=0,
         ),
     )
-    response = client_with_db.post("/forge/autonomy/run-cycle")
+    response = owner_client_with_db.post("/forge/autonomy/run-cycle")
     assert response.status_code == 503
 
     monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
-    authorized = client_with_db.post("/forge/autonomy/run-cycle")
+    authorized = owner_client_with_db.post("/forge/autonomy/run-cycle")
     assert authorized.status_code == 200, authorized.text
 
 
-def test_internal_forge_reads_require_owner_key(client_with_db, db, monkeypatch):
+def test_internal_forge_reads_require_owner_key(owner_client_with_db, db, monkeypatch):
     from app import security
     from app.services.autonomy_engine import seed_default_policy
 
@@ -482,15 +488,15 @@ def test_internal_forge_reads_require_owner_key(client_with_db, db, monkeypatch)
         "/forge/execution/recommend",
     )
     for path in paths:
-        response = client_with_db.get(path)
+        response = owner_client_with_db.get(path)
         assert response.status_code == 503, f"{path}: {response.status_code} {response.text}"
 
     monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
-    authorized_policy = client_with_db.get("/forge/autonomy/policy")
+    authorized_policy = owner_client_with_db.get("/forge/autonomy/policy")
     assert authorized_policy.status_code == 200, authorized_policy.text
 
 
-def test_forge_memory_and_operations_reads_require_owner_key(client_with_db, monkeypatch):
+def test_forge_memory_and_operations_reads_require_owner_key(owner_client_with_db, monkeypatch):
     from app import security
 
     monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
@@ -513,14 +519,14 @@ def test_forge_memory_and_operations_reads_require_owner_key(client_with_db, mon
         "/forge/runtime",
     )
     for path in paths:
-        response = client_with_db.get(path)
+        response = owner_client_with_db.get(path)
         assert response.status_code == 503, f"{path}: {response.status_code} {response.text}"
 
-    public_unknowns = client_with_db.get("/forge/unknowns")
+    public_unknowns = owner_client_with_db.get("/forge/unknowns")
     assert public_unknowns.status_code == 200, public_unknowns.text
 
 
-def test_commercial_opportunity_reads_require_owner_key(client_with_db, monkeypatch):
+def test_commercial_opportunity_reads_require_owner_key(owner_client_with_db, monkeypatch):
     from app import security
 
     monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
@@ -529,11 +535,11 @@ def test_commercial_opportunity_reads_require_owner_key(client_with_db, monkeypa
         "/opportunities/999/options",
         "/experiments",
     ):
-        response = client_with_db.get(path)
+        response = owner_client_with_db.get(path)
         assert response.status_code == 503, f"{path}: {response.status_code} {response.text}"
 
 
-def test_customer_ledger_read_requires_owner_key(client_with_db, db, monkeypatch):
+def test_customer_ledger_read_requires_owner_key(owner_client_with_db, db, monkeypatch):
     from app import security
 
     db.add(
@@ -547,15 +553,15 @@ def test_customer_ledger_read_requires_owner_key(client_with_db, db, monkeypatch
     monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
 
     for path in ("/products/customers", "/products/pipeline"):
-        response = client_with_db.get(path)
+        response = owner_client_with_db.get(path)
         assert response.status_code == 503, f"{path}: {response.status_code} {response.text}"
 
     monkeypatch.setattr(security.settings, "FORGE_API_KEY", "test-owner-key")
     headers = {"X-API-Key": "test-owner-key"}
-    authorized_customers = client_with_db.get("/products/customers", headers=headers)
+    authorized_customers = owner_client_with_db.get("/products/customers", headers=headers)
     assert authorized_customers.status_code == 200, authorized_customers.text
     assert authorized_customers.json()[0]["contact_identifier"] == "private-contact@example.test"
-    authorized_pipeline = client_with_db.get("/products/pipeline", headers=headers)
+    authorized_pipeline = owner_client_with_db.get("/products/pipeline", headers=headers)
     assert authorized_pipeline.status_code == 200, authorized_pipeline.text
     assert authorized_pipeline.json()["customer_events"][0]["contact_identifier"] == "private-contact@example.test"
 
@@ -579,7 +585,7 @@ def test_product_catalog_reads_require_owner_key(client_with_db, monkeypatch):
 
 
 def test_public_problem_submission_starts_real_research_and_defers_opportunity(
-    client_with_db, db, monkeypatch
+    owner_client_with_db, db, monkeypatch
 ):
     class CrossrefFixture(SourceCollector):
         source_name = "crossref"
@@ -601,7 +607,7 @@ def test_public_problem_submission_starts_real_research_and_defers_opportunity(
             ]
 
     monkeypatch.setitem(collector_runner.COLLECTORS, "crossref", CrossrefFixture)
-    response = client_with_db.post(
+    response = owner_client_with_db.post(
         "/analyze",
         json={
             "idea": "Independent repair shops lose hours every week manually explaining appointment status to customers."
@@ -616,10 +622,12 @@ def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     assert payload["research_status"] == "research_started"
     assert payload["evidence_count"] == 0
     assert payload["research_sources"] == []
-    progress = client_with_db.get(payload["research_status_url"])
+    progress = owner_client_with_db.get(payload["research_status_url"])
     assert progress.status_code == 200, progress.text
     progress_payload = progress.json()
-    assert progress_payload["phase"] == "blocked"
+    # Queued takes precedence while a planned follow-up task remains; the
+    # research_status and plan still carry the unresolved-evidence state.
+    assert progress_payload["phase"] == "queued"
     assert progress_payload["research_status"] == "research_terminal_unresolved"
     assert progress_payload["research_plan"]["terminal_reason"] == (
         "one_or_more_requirements_remain_unresolved_under_current_source_clearances"
@@ -638,13 +646,13 @@ def test_public_problem_submission_starts_real_research_and_defers_opportunity(
     assert db.query(models.Opportunity).count() == 0
 
 
-def test_public_problem_submission_rejects_empty_input(client_with_db):
-    response = client_with_db.post("/analyze", json={"idea": "   "})
+def test_public_problem_submission_rejects_empty_input(owner_client_with_db):
+    response = owner_client_with_db.post("/analyze", json={"idea": "   "})
     assert response.status_code == 422
 
 
-def test_api_root_uses_hami_product_identity(client_with_db):
-    response = client_with_db.get("/")
+def test_api_root_uses_hami_product_identity(owner_client_with_db):
+    response = owner_client_with_db.get("/")
 
     assert response.status_code == 200, response.text
     assert response.json()["name"] == "Hami"
@@ -736,7 +744,7 @@ def test_analyze_reuses_the_same_durable_task_for_a_duplicate_request(db):
     ],
 )
 def test_research_status_distinguishes_queued_from_running_work(
-    client_with_db, db, task_status, expected_phase
+    owner_client_with_db, db, task_status, expected_phase
 ):
     question = models.ResearchQuestion(question=f"Status fixture: {task_status}")
     db.add(question)
@@ -750,7 +758,7 @@ def test_research_status_distinguishes_queued_from_running_work(
     db.add(task)
     db.commit()
 
-    response = client_with_db.get(f"/analyze/{question.id}/status")
+    response = owner_client_with_db.get(f"/analyze/{question.id}/status")
 
     assert response.status_code == 200, response.text
     assert response.json()["phase"] == expected_phase
@@ -790,7 +798,7 @@ def test_analyze_does_not_report_completed_for_mixed_empty_task_results(
 
 
 def test_analyze_requires_persisted_evidence_before_source_collection_can_complete(
-    client_with_db, db
+    owner_client_with_db, db
 ):
     response = analyze_idea(
         schemas.AnalyzeRequest(
@@ -807,13 +815,13 @@ def test_analyze_requires_persisted_evidence_before_source_collection_can_comple
     task.evidence_ids = "999999"
     db.commit()
 
-    progress = client_with_db.get(response.research_status_url)
+    progress = owner_client_with_db.get(response.research_status_url)
     assert progress.status_code == 200, progress.text
     assert progress.json()["research_status"] == "research_needs_evidence"
     assert progress.json()["evidence_count"] == 0
 
 
-def test_public_provider_and_service_visibility_requires_verified_status(client_with_db, db):
+def test_public_provider_and_service_visibility_requires_verified_status(owner_client_with_db, db):
     unverified = models.Provider(
         name="Unverified provider",
         category="Service",
@@ -854,13 +862,13 @@ def test_public_provider_and_service_visibility_requires_verified_status(client_
     )
     db.commit()
 
-    provider_response = client_with_db.get("/public/providers")
+    provider_response = owner_client_with_db.get("/public/providers")
     assert provider_response.status_code == 200
     provider_ids = {row["id"] for row in provider_response.json()}
     assert verified.id in provider_ids
     assert unverified.id not in provider_ids
 
-    service_response = client_with_db.get("/public/services")
+    service_response = owner_client_with_db.get("/public/services")
     assert service_response.status_code == 200
     service_payload = service_response.json()
     service_ids = {row["id"] for row in service_payload}
@@ -868,7 +876,7 @@ def test_public_provider_and_service_visibility_requires_verified_status(client_
     assert all(row["provider_id"] != unverified.id for row in service_payload)
 
 
-def test_public_booking_requests_are_rejected_for_unverified_or_non_public_providers(client_with_db, db):
+def test_public_booking_requests_are_rejected_for_unverified_or_non_public_providers(owner_client_with_db, db):
     provider = models.Provider(
         name="Provider",
         category="Service",
@@ -880,7 +888,7 @@ def test_public_booking_requests_are_rejected_for_unverified_or_non_public_provi
     db.add(provider)
     db.commit()
 
-    blocked = client_with_db.post(
+    blocked = owner_client_with_db.post(
         "/public/booking-requests",
         json={
             "provider_id": provider.id,
@@ -894,7 +902,7 @@ def test_public_booking_requests_are_rejected_for_unverified_or_non_public_provi
     assert db.query(models.Outcome).count() == 0
 
 
-def test_public_booking_enters_our_outcome_record_without_requester_pii(client_with_db, db):
+def test_public_booking_enters_our_outcome_record_without_requester_pii(owner_client_with_db, db):
     provider = models.Provider(
         name="Verified provider",
         category="Repair",
@@ -905,7 +913,7 @@ def test_public_booking_enters_our_outcome_record_without_requester_pii(client_w
     )
     db.add(provider)
     db.commit()
-    created = client_with_db.post(
+    created = owner_client_with_db.post(
         "/public/booking-requests",
         json={
             "provider_id": provider.id,
@@ -929,45 +937,45 @@ def test_public_booking_enters_our_outcome_record_without_requester_pii(client_w
     assert "same-day" not in text
 
 
-def test_domain_record_is_ours_and_closes_into_an_outcome(client_with_db, db):
-    created = client_with_db.post(
+def test_domain_record_is_ours_and_closes_into_an_outcome(owner_client_with_db, db):
+    created = owner_client_with_db.post(
         "/public/domain",
         json={"kind": "job", "title": "Evening shop helper", "detail": "Need someone in Kathmandu for four evenings.", "city": "Kathmandu"},
     )
     assert created.status_code == 200, created.text
     body = created.json()
     assert "close_token" in body
-    listed = client_with_db.get("/public/domain", params={"q": "shop helper"})
+    listed = owner_client_with_db.get("/public/domain", params={"q": "shop helper"})
     assert listed.status_code == 200
     assert listed.json()[0]["id"] == body["id"]
     assert "close_token" not in listed.json()[0]
     assert "close_token_hash" not in listed.json()[0]
 
-    denied = client_with_db.post(
+    denied = owner_client_with_db.post(
         f"/public/domain/{body['id']}/close",
         json={"close_token": "nope", "result": "withdrawn", "note": "Not this token"},
     )
     assert denied.status_code == 403
 
-    unpaid = client_with_db.post(
+    unpaid = owner_client_with_db.post(
         f"/public/domain/{body['id']}/close",
         json={"close_token": body["close_token"], "result": "paid", "note": "They paid me"},
     )
     assert unpaid.status_code == 422
 
-    closed = client_with_db.post(
+    closed = owner_client_with_db.post(
         f"/public/domain/{body['id']}/close",
         json={"close_token": body["close_token"], "result": "paid", "note": "Cash received for four evenings", "amount_npr": 2000},
     )
     assert closed.status_code == 200, closed.text
-    assert client_with_db.get("/public/domain").json() == []
+    assert owner_client_with_db.get("/public/domain").json() == []
     outcome = db.query(models.Outcome).filter(models.Outcome.source == "domain_record", models.Outcome.success.is_(True)).one()
     assert outcome.actual_value == 2000
     assert outcome.unit == "NPR"
     assert "Cash received for four evenings" in outcome.qualitative_result
 
 
-def test_public_connection_responses_are_idempotent_and_not_acceptance(client_with_db, db):
+def test_public_connection_responses_are_idempotent_and_not_acceptance(owner_client_with_db, db):
     provider = models.Provider(
         name="Repair response provider",
         category="Repair",
@@ -988,7 +996,7 @@ def test_public_connection_responses_are_idempotent_and_not_acceptance(client_wi
         is_active=True,
     ))
     db.commit()
-    created = client_with_db.post(
+    created = owner_client_with_db.post(
         "/public/domain",
         json={"kind": "job", "title": "Repair response test", "detail": "Need a repair response.", "city": "Kathmandu"},
     )
@@ -1008,15 +1016,15 @@ def test_public_connection_responses_are_idempotent_and_not_acceptance(client_wi
     db.commit()
     db.refresh(connection)
 
-    first = client_with_db.post(
+    first = owner_client_with_db.post(
         f"/public/domain/{body['id']}/connections/{connection.id}/response",
         json={"close_token": body["close_token"], "note": "Asked for availability."},
     )
-    second = client_with_db.post(
+    second = owner_client_with_db.post(
         f"/public/domain/{body['id']}/connections/{connection.id}/response",
         json={"close_token": body["close_token"], "note": "Shared the requested dates."},
     )
-    duplicate = client_with_db.post(
+    duplicate = owner_client_with_db.post(
         f"/public/domain/{body['id']}/connections/{connection.id}/response",
         json={"close_token": body["close_token"], "note": "Shared the requested dates."},
     )
@@ -1033,16 +1041,16 @@ def test_public_connection_responses_are_idempotent_and_not_acceptance(client_wi
     ).count() == 0
     assert second.json()["latest_response"].endswith("Shared the requested dates.")
 
-    denied = client_with_db.post(
+    denied = owner_client_with_db.post(
         f"/public/domain/{body['id']}/connections/{connection.id}/response",
         json={"close_token": "wrong", "note": "Should be rejected."},
     )
     assert denied.status_code == 403
 
-    listed = client_with_db.get("/public/connections")
+    listed = owner_client_with_db.get("/public/connections")
     assert listed.status_code == 200
     assert listed.json()[0]["latest_response"].endswith("Shared the requested dates.")
-    matches = client_with_db.get("/public/matches")
+    matches = owner_client_with_db.get("/public/matches")
     assert matches.status_code == 200
     candidate = next(
         item for item in matches.json()[0]["candidates"]
@@ -1051,7 +1059,7 @@ def test_public_connection_responses_are_idempotent_and_not_acceptance(client_wi
     assert candidate["latest_response"].endswith("Shared the requested dates.")
 
 
-def test_public_booking_status_does_not_leak_requester_pii(client_with_db, db):
+def test_public_booking_status_does_not_leak_requester_pii(owner_client_with_db, db):
     provider = models.Provider(
         name="Verified provider",
         category="Service",
@@ -1075,7 +1083,7 @@ def test_public_booking_status_does_not_leak_requester_pii(client_with_db, db):
     db.commit()
     db.refresh(request)
 
-    response = client_with_db.get(f"/public/booking-requests/{request.id}")
+    response = owner_client_with_db.get(f"/public/booking-requests/{request.id}")
     assert response.status_code == 200, response.text
     payload = response.json()
     assert payload["id"] == request.id
@@ -1086,7 +1094,7 @@ def test_public_booking_status_does_not_leak_requester_pii(client_with_db, db):
     assert "notes" not in payload
 
 
-def test_approved_actions_onboard_verify_and_publish_without_auto_public(client_with_db, db):
+def test_approved_actions_onboard_verify_and_publish_without_auto_public(owner_client_with_db, db):
     from app.services import action_engine
 
     candidate = action_engine.propose_action(
@@ -1099,7 +1107,7 @@ def test_approved_actions_onboard_verify_and_publish_without_auto_public(client_
     executed = action_engine.start_and_execute_action(db, candidate.id)
     assert executed.status == "SUCCEEDED"
     provider_id = int(executed.external_ref)
-    hidden = client_with_db.get("/public/providers")
+    hidden = owner_client_with_db.get("/public/providers")
     assert hidden.status_code == 200
     assert hidden.json() == []
 
@@ -1120,7 +1128,7 @@ def test_approved_actions_onboard_verify_and_publish_without_auto_public(client_
     action_engine.approve_action(db, verify.id)
     verified = action_engine.start_and_execute_action(db, verify.id)
     assert verified.status == "SUCCEEDED"
-    assert client_with_db.get("/public/providers").json() == []
+    assert owner_client_with_db.get("/public/providers").json() == []
 
     publish = action_engine.propose_action(
         db,
@@ -1137,14 +1145,14 @@ def test_approved_actions_onboard_verify_and_publish_without_auto_public(client_
     action_engine.approve_action(db, publish.id)
     published = action_engine.start_and_execute_action(db, publish.id)
     assert published.status == "SUCCEEDED"
-    providers = client_with_db.get("/public/providers", params={"q": "refrigerator"})
-    services = client_with_db.get("/public/services")
+    providers = owner_client_with_db.get("/public/providers", params={"q": "refrigerator"})
+    services = owner_client_with_db.get("/public/services")
     assert [row["id"] for row in providers.json()] == [provider_id]
     assert services.json()[0]["title"] == "Refrigerator repair"
     assert "phone" not in services.json()[0]
 
 
-def test_public_discoveries_are_sourced_observations_without_internal_scores(client_with_db, db):
+def test_public_discoveries_are_sourced_observations_without_internal_scores(owner_client_with_db, db):
     visible = models.Signal(
         source="rss",
         source_type="external",
@@ -1174,7 +1182,7 @@ def test_public_discoveries_are_sourced_observations_without_internal_scores(cli
     db.commit()
     db.add(models.EvidenceRelationship(evidence_id=evidence.id, claim_id=claim.id, relation_type="derived_from", relation_key=f"{evidence.id}:{claim.id}"))
     db.commit()
-    response = client_with_db.get("/public/discoveries")
+    response = owner_client_with_db.get("/public/discoveries")
     assert response.status_code == 200
     body = response.json()
     assert len(body) == 1
@@ -1187,7 +1195,7 @@ def test_public_discoveries_are_sourced_observations_without_internal_scores(cli
     assert "Hidden" not in response.text
 
 
-def test_public_match_uses_recorded_terms_and_names_unknowns(client_with_db, db):
+def test_public_match_uses_recorded_terms_and_names_unknowns(owner_client_with_db, db):
     provider = models.Provider(
         name="Hill Repair",
         category="Repair",
@@ -1226,7 +1234,7 @@ def test_public_match_uses_recorded_terms_and_names_unknowns(client_with_db, db)
     )
     db.add(need)
     db.commit()
-    response = client_with_db.get("/public/matches")
+    response = owner_client_with_db.get("/public/matches")
     assert response.status_code == 200
     body = response.json()
     assert len(body) == 1
@@ -1260,7 +1268,7 @@ def test_public_match_uses_recorded_terms_and_names_unknowns(client_with_db, db)
     db.commit()
     db.add(models.EvidenceRelationship(evidence_id=evidence.id, claim_id=claim.id, relation_type="derived_from", relation_key=f"k-{evidence.id}-{claim.id}"))
     db.commit()
-    again = client_with_db.get("/public/matches").json()
+    again = owner_client_with_db.get("/public/matches").json()
     knowledge = [row for row in again[0]["candidates"] if row["kind"] == "knowledge"]
     assert knowledge
     assert knowledge[0]["id"] == claim.id
@@ -1270,24 +1278,24 @@ def test_public_match_uses_recorded_terms_and_names_unknowns(client_with_db, db)
     assert any(item.startswith("evidence is ") for item in knowledge[0]["unknowns"])
 
 
-def test_domain_dispute_records_an_event_and_names_a_winner_nowhere(client_with_db, db):
-    created = client_with_db.post(
+def test_domain_dispute_records_an_event_and_names_a_winner_nowhere(owner_client_with_db, db):
+    created = owner_client_with_db.post(
         "/public/domain",
         json={"kind": "trade", "title": "Used pump", "detail": "Working pump in Lalitpur", "stated_price": "8000"},
     )
     assert created.status_code == 200, created.text
     body = created.json()
-    closed = client_with_db.post(
+    closed = owner_client_with_db.post(
         f"/public/domain/{body['id']}/close",
         json={"close_token": body["close_token"], "result": "paid", "note": "Cash handed over", "amount_npr": 8000},
     )
     assert closed.status_code == 200, closed.text
-    denied = client_with_db.post(
+    denied = owner_client_with_db.post(
         f"/public/domain/{body['id']}/dispute",
         json={"close_token": "nope", "note": "The pump was not as described"},
     )
     assert denied.status_code == 403
-    disputed = client_with_db.post(
+    disputed = owner_client_with_db.post(
         f"/public/domain/{body['id']}/dispute",
         json={"close_token": body["close_token"], "note": "The pump was not as described"},
     )
@@ -1299,11 +1307,11 @@ def test_domain_dispute_records_an_event_and_names_a_winner_nowhere(client_with_
     assert "8000" in events["payments"][0] or "8,000" in events["payments"][0] or "8000.0" in events["payments"][0]
 
 
-def test_public_alerts_are_only_recorded_changes(client_with_db, db):
-    empty = client_with_db.get("/public/alerts")
+def test_public_alerts_are_only_recorded_changes(owner_client_with_db, db):
+    empty = owner_client_with_db.get("/public/alerts")
     assert empty.status_code == 200
     assert empty.json() == []
-    created = client_with_db.post(
+    created = owner_client_with_db.post(
         "/public/domain",
         json={"kind": "offer", "title": "Spare filter", "detail": "Unused filter in Bhaktapur"},
     )
@@ -1330,7 +1338,7 @@ def test_public_alerts_are_only_recorded_changes(client_with_db, db):
         verification_state="VERIFIED",
     ))
     db.commit()
-    alerts = client_with_db.get("/public/alerts")
+    alerts = owner_client_with_db.get("/public/alerts")
     assert alerts.status_code == 200
     body = alerts.json()
     assert len(body) == 1
@@ -1341,7 +1349,7 @@ def test_public_alerts_are_only_recorded_changes(client_with_db, db):
     assert "close_token" not in alerts.text
 
 
-def test_unmatched_need_becomes_a_research_gap_and_not_an_offer(client_with_db, db):
+def test_unmatched_need_becomes_a_research_gap_and_not_an_offer(owner_client_with_db, db):
     from app.services import network_connections
 
     need = models.DomainRecord(
@@ -1397,7 +1405,7 @@ def test_unmatched_need_becomes_a_research_gap_and_not_an_offer(client_with_db, 
     assert reopened[0].status == "open"
 
 
-def test_candidate_connection_cannot_skip_states_or_publish_early(client_with_db, db):
+def test_candidate_connection_cannot_skip_states_or_publish_early(owner_client_with_db, db):
     from app.services import network_connections
 
     provider = models.Provider(
@@ -1437,12 +1445,12 @@ def test_candidate_connection_cannot_skip_states_or_publish_early(client_with_db
     assert hypothesis.estimated_revenue is None
     assert "No buyer has been recorded" in hypothesis.target_customer
     assert network_connections.scan_candidates(db) == []
-    assert client_with_db.get("/public/connections").json() == []
-    skipped = client_with_db.post(f"/forge/connections/{created[0].id}/advance", params={"next_state": "paid"})
+    assert owner_client_with_db.get("/public/connections").json() == []
+    skipped = owner_client_with_db.post(f"/forge/connections/{created[0].id}/advance", params={"next_state": "paid"})
     assert skipped.status_code == 409
-    bare = client_with_db.post(f"/forge/connections/{created[0].id}/advance", params={"next_state": "evidenced"})
+    bare = owner_client_with_db.post(f"/forge/connections/{created[0].id}/advance", params={"next_state": "evidenced"})
     assert bare.status_code == 409
-    missing = client_with_db.post(
+    missing = owner_client_with_db.post(
         f"/forge/connections/{created[0].id}/advance",
         params={"next_state": "evidenced", "evidence_reference": "https://example.com/not-stored"},
     )
@@ -1455,34 +1463,34 @@ def test_candidate_connection_cannot_skip_states_or_publish_early(client_with_db
         canonical_url="https://example.com/fridge-note",
     ))
     db.commit()
-    evidenced = client_with_db.post(
+    evidenced = owner_client_with_db.post(
         f"/forge/connections/{created[0].id}/advance",
         params={"next_state": "evidenced", "evidence_reference": "https://example.com/fridge-note"},
     )
     assert evidenced.status_code == 200, evidenced.text
-    viable = client_with_db.post(f"/forge/connections/{created[0].id}/advance", params={"next_state": "viable"})
+    viable = owner_client_with_db.post(f"/forge/connections/{created[0].id}/advance", params={"next_state": "viable"})
     assert viable.status_code == 200, viable.text
-    proposed = client_with_db.post(f"/forge/connections/{created[0].id}/advance", params={"next_state": "proposed"})
+    proposed = owner_client_with_db.post(f"/forge/connections/{created[0].id}/advance", params={"next_state": "proposed"})
     assert proposed.status_code == 200, proposed.text
-    early = client_with_db.post(f"/forge/connections/{created[0].id}/publish")
+    early = owner_client_with_db.post(f"/forge/connections/{created[0].id}/publish")
     assert early.status_code == 409
-    authorized = client_with_db.post(f"/forge/connections/{created[0].id}/advance", params={"next_state": "authorized"})
+    authorized = owner_client_with_db.post(f"/forge/connections/{created[0].id}/advance", params={"next_state": "authorized"})
     assert authorized.status_code == 200
-    published = client_with_db.post(f"/forge/connections/{created[0].id}/publish")
+    published = owner_client_with_db.post(f"/forge/connections/{created[0].id}/publish")
     assert published.status_code == 200
-    visible = client_with_db.get("/public/connections").json()
+    visible = owner_client_with_db.get("/public/connections").json()
     assert visible[0]["state"] == "authorized"
     assert visible[0]["forge_role"] == "introducer"
     assert visible[0]["owns_either_side"] is False
-    assert "score" not in client_with_db.get("/public/connections").text
-    failed = client_with_db.post(f"/forge/connections/{created[0].id}/advance", params={"next_state": "failed"})
+    assert "score" not in owner_client_with_db.get("/public/connections").text
+    failed = owner_client_with_db.post(f"/forge/connections/{created[0].id}/advance", params={"next_state": "failed"})
     assert failed.status_code == 200
     again = network_connections.scan_candidates(db)
     assert len(again) == 1
     assert again[0].id != created[0].id
 
 
-def test_paid_connection_records_an_amount_and_stays_unconfirmed_until_verified(client_with_db, db):
+def test_paid_connection_records_an_amount_and_stays_unconfirmed_until_verified(owner_client_with_db, db):
     row = models.NetworkConnection(
         left_kind="domain_record",
         left_id=1,
@@ -1495,9 +1503,9 @@ def test_paid_connection_records_an_amount_and_stays_unconfirmed_until_verified(
     )
     db.add(row)
     db.commit()
-    missing = client_with_db.post(f"/forge/connections/{row.id}/advance", params={"next_state": "paid"})
+    missing = owner_client_with_db.post(f"/forge/connections/{row.id}/advance", params={"next_state": "paid"})
     assert missing.status_code == 422
-    paid = client_with_db.post(
+    paid = owner_client_with_db.post(
         f"/forge/connections/{row.id}/advance",
         params={"next_state": "paid", "amount_npr": 2500},
     )
@@ -1507,11 +1515,11 @@ def test_paid_connection_records_an_amount_and_stays_unconfirmed_until_verified(
     assert outcome.actual_value == 2500
     assert outcome.unit == "NPR"
     assert outcome.verification_state == "REPORTED"
-    listed = client_with_db.get("/forge/connections").json()
+    listed = owner_client_with_db.get("/forge/connections").json()
     match = next(item for item in listed if item["id"] == row.id)
     assert isinstance(match["seconds_to_recorded_payment"], int)
     assert match["seconds_to_recorded_payment"] >= 0
-    confirmed = client_with_db.post(f"/forge/connections/{row.id}/confirm-payment")
+    confirmed = owner_client_with_db.post(f"/forge/connections/{row.id}/confirm-payment")
     assert confirmed.status_code == 409
     db.refresh(outcome)
     assert outcome.verification_state == "REPORTED"
@@ -1526,7 +1534,7 @@ def test_paid_connection_records_an_amount_and_stays_unconfirmed_until_verified(
     )
     db.add(mock_evidence)
     db.commit()
-    rejected = client_with_db.post(
+    rejected = owner_client_with_db.post(
         f"/forge/connections/{row.id}/confirm-payment",
         params={"evidence_id": mock_evidence.id},
     )
@@ -1542,14 +1550,14 @@ def test_paid_connection_records_an_amount_and_stays_unconfirmed_until_verified(
     )
     db.add(unanchored_evidence)
     db.commit()
-    unanchored = client_with_db.post(
+    unanchored = owner_client_with_db.post(
         f"/forge/connections/{row.id}/confirm-payment",
         params={"evidence_id": unanchored_evidence.id},
     )
     assert unanchored.status_code == 409
 
-    evidence = _verified_payment_evidence(client_with_db, db)
-    confirmed = client_with_db.post(
+    evidence = _verified_payment_evidence(owner_client_with_db, db)
+    confirmed = owner_client_with_db.post(
         f"/forge/connections/{row.id}/confirm-payment",
         params={"evidence_id": evidence.id},
     )
@@ -1566,7 +1574,7 @@ def test_paid_connection_records_an_amount_and_stays_unconfirmed_until_verified(
     ).one()
     assert edge.relation_type == "supports"
 
-    changed = client_with_db.post(
+    changed = owner_client_with_db.post(
         f"/opv4/evidence/{evidence.id}/proof",
         json={"level": 4, "source_type": "third_party"},
     )
@@ -1575,7 +1583,7 @@ def test_paid_connection_records_an_amount_and_stays_unconfirmed_until_verified(
     assert evidence.proof_level == 5
 
 
-def test_public_trust_lists_recorded_payments_without_a_score(client_with_db, db):
+def test_public_trust_lists_recorded_payments_without_a_score(owner_client_with_db, db):
     provider = models.Provider(
         name="Hill Repair",
         city="Kathmandu",
@@ -1593,9 +1601,9 @@ def test_public_trust_lists_recorded_payments_without_a_score(client_with_db, db
     )
     db.add_all([provider, hidden])
     db.commit()
-    hidden_trust = client_with_db.get(f"/public/trust/provider/{hidden.id}")
+    hidden_trust = owner_client_with_db.get(f"/public/trust/provider/{hidden.id}")
     assert hidden_trust.status_code == 404
-    empty = client_with_db.get(f"/public/trust/provider/{provider.id}")
+    empty = owner_client_with_db.get(f"/public/trust/provider/{provider.id}")
     assert empty.status_code == 200
     assert empty.json()["unknowns"]
     assert "score" not in empty.text
@@ -1611,12 +1619,12 @@ def test_public_trust_lists_recorded_payments_without_a_score(client_with_db, db
     )
     db.add(connection)
     db.commit()
-    paid = client_with_db.post(
+    paid = owner_client_with_db.post(
         f"/forge/connections/{connection.id}/advance",
         params={"next_state": "paid", "amount_npr": 900},
     )
     assert paid.status_code == 200, paid.text
-    reported = client_with_db.get(f"/public/trust/provider/{provider.id}").json()
+    reported = owner_client_with_db.get(f"/public/trust/provider/{provider.id}").json()
     assert reported["reported_payments"][0]["amount"] == 900
     assert reported["verified_payments"] == []
 
@@ -1625,25 +1633,25 @@ def test_public_trust_lists_recorded_payments_without_a_score(client_with_db, db
     ).one()
     outcome.verification_state = "VERIFIED"
     db.commit()
-    legacy_verified = client_with_db.get(f"/public/trust/provider/{provider.id}").json()
+    legacy_verified = owner_client_with_db.get(f"/public/trust/provider/{provider.id}").json()
     assert legacy_verified["verified_payments"] == []
     assert legacy_verified["reported_payments"][0]["verification"] == "REPORTED"
     outcome.verification_state = "REPORTED"
     db.commit()
 
-    evidence = _verified_payment_evidence(client_with_db, db, "Provider receipt for 900 NPR")
-    confirmed = client_with_db.post(
+    evidence = _verified_payment_evidence(owner_client_with_db, db, "Provider receipt for 900 NPR")
+    confirmed = owner_client_with_db.post(
         f"/forge/connections/{connection.id}/confirm-payment",
         params={"evidence_id": evidence.id},
     )
     assert confirmed.status_code == 200, confirmed.text
-    verified = client_with_db.get(f"/public/trust/provider/{provider.id}").json()
+    verified = owner_client_with_db.get(f"/public/trust/provider/{provider.id}").json()
     assert verified["verified_payments"][0]["verification"] == "VERIFIED"
     assert verified["reported_payments"] == []
-    assert "score" not in client_with_db.get(f"/public/trust/provider/{provider.id}").text
+    assert "score" not in owner_client_with_db.get(f"/public/trust/provider/{provider.id}").text
 
 
-def test_accepted_work_requires_a_complete_economic_contract(client_with_db, db):
+def test_accepted_work_requires_a_complete_economic_contract(owner_client_with_db, db):
     from app.api.public import terms_complete
     complete = {
         "requested": "Find one verified supplier",
@@ -1680,15 +1688,15 @@ def test_accepted_work_requires_a_complete_economic_contract(client_with_db, db)
     )
     db.add(connection)
     db.commit()
-    blocked = client_with_db.post(f"/forge/connections/{connection.id}/advance", params={"next_state": "accepted"})
+    blocked = owner_client_with_db.post(f"/forge/connections/{connection.id}/advance", params={"next_state": "accepted"})
     assert blocked.status_code == 409
     need.terms = __import__("json").dumps(complete)
     db.commit()
-    allowed = client_with_db.post(f"/forge/connections/{connection.id}/advance", params={"next_state": "accepted"})
+    allowed = owner_client_with_db.post(f"/forge/connections/{connection.id}/advance", params={"next_state": "accepted"})
     assert allowed.status_code == 200, allowed.text
 
 
-def test_disputed_payment_settles_only_when_an_amount_is_stated(client_with_db, db):
+def test_disputed_payment_settles_only_when_an_amount_is_stated(owner_client_with_db, db):
     provider = models.Provider(
         name="Hill Repair",
         city="Kathmandu",
@@ -1711,27 +1719,27 @@ def test_disputed_payment_settles_only_when_an_amount_is_stated(client_with_db, 
     )
     db.add(connection)
     db.commit()
-    client_with_db.post(f"/forge/connections/{connection.id}/advance", params={"next_state": "paid", "amount_npr": 900})
+    owner_client_with_db.post(f"/forge/connections/{connection.id}/advance", params={"next_state": "paid", "amount_npr": 900})
     original_payment_evidence = _verified_payment_evidence(
-        client_with_db, db, "Provider receipt for original 900 NPR payment"
+        owner_client_with_db, db, "Provider receipt for original 900 NPR payment"
     )
-    confirmed = client_with_db.post(
+    confirmed = owner_client_with_db.post(
         f"/forge/connections/{connection.id}/confirm-payment",
         params={"evidence_id": original_payment_evidence.id},
     )
     assert confirmed.status_code == 200, confirmed.text
-    disputed = client_with_db.post(
+    disputed = owner_client_with_db.post(
         f"/forge/connections/{connection.id}/dispute-payment",
         params={"note": "The work was incomplete"},
     )
     assert disputed.status_code == 200, disputed.text
     assert disputed.json()["winner"] is None
-    trust = client_with_db.get(f"/public/trust/provider/{provider.id}").json()
+    trust = owner_client_with_db.get(f"/public/trust/provider/{provider.id}").json()
     assert trust["verified_payments"] == []
     assert trust["disputed_payments"][0]["verification"] == "DISPUTED"
-    missing = client_with_db.post(f"/forge/connections/{connection.id}/settle-payment", params={"note": "Agreed", "amount_npr": -1})
+    missing = owner_client_with_db.post(f"/forge/connections/{connection.id}/settle-payment", params={"note": "Agreed", "amount_npr": -1})
     assert missing.status_code == 422
-    missing_evidence = client_with_db.post(
+    missing_evidence = owner_client_with_db.post(
         f"/forge/connections/{connection.id}/settle-payment",
         params={"note": "Both parties recorded 700 NPR", "amount_npr": 700},
     )
@@ -1742,7 +1750,7 @@ def test_disputed_payment_settles_only_when_an_amount_is_stated(client_with_db, 
     outcome.verification_state = "SETTLED"
     outcome.actual_value = 700
     db.commit()
-    legacy_settled = client_with_db.get(
+    legacy_settled = owner_client_with_db.get(
         f"/public/trust/provider/{provider.id}"
     ).json()
     assert legacy_settled["settled_payments"] == []
@@ -1750,7 +1758,7 @@ def test_disputed_payment_settles_only_when_an_amount_is_stated(client_with_db, 
     outcome.verification_state = "DISPUTED"
     outcome.actual_value = 900
     db.commit()
-    reused_evidence = client_with_db.post(
+    reused_evidence = owner_client_with_db.post(
         f"/forge/connections/{connection.id}/settle-payment",
         params={
             "note": "This is not independent settlement evidence",
@@ -1761,9 +1769,9 @@ def test_disputed_payment_settles_only_when_an_amount_is_stated(client_with_db, 
     assert reused_evidence.status_code == 409
 
     settlement_evidence = _verified_payment_evidence(
-        client_with_db, db, "Provider settlement receipt for 700 NPR"
+        owner_client_with_db, db, "Provider settlement receipt for 700 NPR"
     )
-    settled = client_with_db.post(
+    settled = owner_client_with_db.post(
         f"/forge/connections/{connection.id}/settle-payment",
         params={
             "note": "Owner recorded the mutually reported settlement",
@@ -1774,7 +1782,7 @@ def test_disputed_payment_settles_only_when_an_amount_is_stated(client_with_db, 
     assert settled.status_code == 200, settled.text
     assert settled.json()["winner"] is None
     assert settled.json()["evidence_id"] == settlement_evidence.id
-    final = client_with_db.get(f"/public/trust/provider/{provider.id}").json()
+    final = owner_client_with_db.get(f"/public/trust/provider/{provider.id}").json()
     assert final["settled_payments"][0]["amount"] == 700
     assert final["disputed_payments"] == []
     settlement_edge = db.query(models.EvidenceRelationship).filter_by(
@@ -1787,7 +1795,7 @@ def test_disputed_payment_settles_only_when_an_amount_is_stated(client_with_db, 
     assert db.query(models.LearningEvent).count() >= 2
 
 
-def test_connection_response_is_not_acceptance_and_is_alerted(client_with_db, db):
+def test_connection_response_is_not_acceptance_and_is_alerted(owner_client_with_db, db):
     row = models.NetworkConnection(
         left_kind="domain_record",
         left_id=9,
@@ -1800,22 +1808,22 @@ def test_connection_response_is_not_acceptance_and_is_alerted(client_with_db, db
     )
     db.add(row)
     db.commit()
-    replied = client_with_db.post(
+    replied = owner_client_with_db.post(
         f"/forge/connections/{row.id}/response",
         params={"note": "I can come Thursday"},
     )
     assert replied.status_code == 200, replied.text
     assert replied.json()["accepted"] is False
     assert replied.json()["state"] == "contacted"
-    alerts = client_with_db.get("/public/alerts").json()
+    alerts = owner_client_with_db.get("/public/alerts").json()
     assert not any("not acceptance" in item["text"] for item in alerts)
-    listed = client_with_db.get("/forge/connections").json()
+    listed = owner_client_with_db.get("/forge/connections").json()
     match = next(item for item in listed if item["id"] == row.id)
     assert match["state"] == "contacted"
     assert "not acceptance" in match["latest_response"]
 
 
-def test_stale_evidence_cannot_promote_a_candidate(client_with_db, db):
+def test_stale_evidence_cannot_promote_a_candidate(owner_client_with_db, db):
     from datetime import datetime, timedelta, timezone
     row = models.NetworkConnection(
         left_kind="domain_record",
@@ -1837,7 +1845,7 @@ def test_stale_evidence_cannot_promote_a_candidate(client_with_db, db):
     ))
     db.add(row)
     db.commit()
-    stale = client_with_db.post(
+    stale = owner_client_with_db.post(
         f"/forge/connections/{row.id}/advance",
         params={"next_state": "evidenced", "evidence_reference": "https://example.com/old-note"},
     )
@@ -1845,7 +1853,7 @@ def test_stale_evidence_cannot_promote_a_candidate(client_with_db, db):
     assert row.state == "candidate"
 
 
-def test_authorization_rejects_a_cost_that_is_not_in_the_evidence(client_with_db, db):
+def test_authorization_rejects_a_cost_that_is_not_in_the_evidence(owner_client_with_db, db):
     row = models.NetworkConnection(
         left_kind="domain_record",
         left_id=1,
@@ -1866,23 +1874,23 @@ def test_authorization_rejects_a_cost_that_is_not_in_the_evidence(client_with_db
     ))
     db.add(row)
     db.commit()
-    invented = client_with_db.post(
+    invented = owner_client_with_db.post(
         f"/forge/connections/{row.id}/advance",
         params={"next_state": "viable", "constraints": '{"landed_cost": "NPR 50000"}'},
     )
     assert invented.status_code == 409
-    quoted = client_with_db.post(
+    quoted = owner_client_with_db.post(
         f"/forge/connections/{row.id}/advance",
         params={"next_state": "viable", "constraints": '{"buyer": "Kathmandu"}'},
     )
     assert quoted.status_code == 200, quoted.text
-    saved = client_with_db.get("/forge/connections").json()
+    saved = owner_client_with_db.get("/forge/connections").json()
     match = next(item for item in saved if item["id"] == row.id)
     assert "Kathmandu" in match["constraints"]
     assert "landed_cost" in match["constraints"]
 
 
-def test_public_connection_shows_a_response_only_after_publication(client_with_db, db):
+def test_public_connection_shows_a_response_only_after_publication(owner_client_with_db, db):
     need = models.DomainRecord(
         kind="job", title="Public response need", detail="An open need.",
         close_token_hash="test-hash", status="open",
@@ -1905,19 +1913,19 @@ def test_public_connection_shows_a_response_only_after_publication(client_with_d
     )
     db.add(row)
     db.commit()
-    replied = client_with_db.post(f"/forge/connections/{row.id}/response", params={"note": "Thursday works"})
+    replied = owner_client_with_db.post(f"/forge/connections/{row.id}/response", params={"note": "Thursday works"})
     assert replied.status_code == 200
-    assert client_with_db.get("/public/connections").json() == []
+    assert owner_client_with_db.get("/public/connections").json() == []
     row.public_visible = True
     row.state = "authorized"
     db.commit()
-    visible = client_with_db.get("/public/connections").json()
+    visible = owner_client_with_db.get("/public/connections").json()
     assert visible[0]["latest_response"]
     assert "not acceptance" in visible[0]["latest_response"]
     assert "Thursday works" in visible[0]["latest_response"]
 
 
-def test_fulfillment_records_the_work_and_not_a_payment(client_with_db, db):
+def test_fulfillment_records_the_work_and_not_a_payment(owner_client_with_db, db):
     need = models.DomainRecord(
         kind="job", title="Public fulfillment need", detail="An open need.",
         close_token_hash="test-hash", status="open",
@@ -1940,9 +1948,9 @@ def test_fulfillment_records_the_work_and_not_a_payment(client_with_db, db):
     )
     db.add(row)
     db.commit()
-    missing = client_with_db.post(f"/forge/connections/{row.id}/advance", params={"next_state": "fulfilled"})
+    missing = owner_client_with_db.post(f"/forge/connections/{row.id}/advance", params={"next_state": "fulfilled"})
     assert missing.status_code == 422
-    done = client_with_db.post(
+    done = owner_client_with_db.post(
         f"/forge/connections/{row.id}/advance",
         params={"next_state": "fulfilled", "note": "The fridge cools again"},
     )
@@ -1952,7 +1960,7 @@ def test_fulfillment_records_the_work_and_not_a_payment(client_with_db, db):
     outcome = db.query(models.Outcome).filter(models.Outcome.notes == f"idempotency:network-connection:{row.id}:fulfilled").one()
     assert outcome.actual_value is None
     assert "not a payment" in outcome.qualitative_result
-    visible = client_with_db.get("/public/connections").json()
+    visible = owner_client_with_db.get("/public/connections").json()
     assert "The fridge cools again" in visible[0]["latest_fulfillment"]
     assert "not a payment" in visible[0]["latest_fulfillment"]
 
@@ -1977,7 +1985,7 @@ def test_world_research_agenda_opens_once_and_does_not_state_prices(db):
     assert all(task.query for task in tasks)
 
 
-def test_public_search_matches_service_wording_and_city(client_with_db, db):
+def test_public_search_matches_service_wording_and_city(owner_client_with_db, db):
     repair = models.Provider(
         name="Hill Repair",
         category="Repair",
@@ -2021,11 +2029,11 @@ def test_public_search_matches_service_wording_and_city(client_with_db, db):
     ])
     db.commit()
 
-    by_need = client_with_db.get("/public/providers", params={"q": "refrigerator"})
+    by_need = owner_client_with_db.get("/public/providers", params={"q": "refrigerator"})
     assert by_need.status_code == 200
     assert {row["id"] for row in by_need.json()} == {repair.id}
 
-    by_city = client_with_db.get("/public/services", params={"city": "Pokhara"})
+    by_city = owner_client_with_db.get("/public/services", params={"city": "Pokhara"})
     assert by_city.status_code == 200
     assert {row["provider_id"] for row in by_city.json()} == {tutor.id}
 

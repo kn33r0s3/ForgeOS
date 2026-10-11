@@ -210,7 +210,7 @@ def test_daily_cycle_structures_collected_external_signals_in_same_run(db, monke
     assert record["collection"][0]["signals_created"] == len(texts)
     assert record["post_collection_cycle"]["patterns_found"] >= 1
     assert record["post_collection_cycle"]["beliefs_updated"] >= 1
-    assert record["post_collection_cycle"]["opportunities_discovered"] >= 1
+    assert record["post_collection_cycle"]["opportunities_discovered"] >= 1, record["post_collection_cycle"]
     assert record["post_collection_cycle"]["opportunity_questions_linked"] >= 1
     projected = public_feed.build_public_feed(db)
     opportunity_items = [item for item in projected if item.kind == "opportunity"]
