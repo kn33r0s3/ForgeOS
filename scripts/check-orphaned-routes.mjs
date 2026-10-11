@@ -59,7 +59,22 @@ function findInboundLinks(routePath, allFiles) {
 }
 
 function main() {
-  const routeFiles = readdirSync(routesDir).filter((f) => f.endsWith(".tsx"));
+  // Collect route modules recursively. The current tree keeps the API auth
+  // splat in a nested directory; future nested pages must not bypass this
+  // entry-path monitor merely because readdir() was non-recursive.
+  const routeFiles = [];
+  const collectRouteModules = (dir, prefix = "") => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        collectRouteModules(full, relative);
+      } else if (entry.name.endsWith(".tsx")) {
+        routeFiles.push(relative);
+      }
+    }
+  };
+  collectRouteModules(routesDir);
 
   // Collect all source files for link scanning
   const allFiles = [];

@@ -105,15 +105,14 @@ jobs:
     uses: ./.github/workflows/secrets.yml
 
   repository-guards:
-    if: github.event_name == 'pull_request'
+    # Run on direct main pushes too; main is the canonical integration branch.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
       - run: npm ci
-      - run: node scripts/maintenance-guards.mjs
+      - run: node scripts/check-orphaned-routes.mjs
+      - run: node --test scripts/startup-contract.test.mjs
