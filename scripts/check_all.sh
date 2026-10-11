@@ -19,12 +19,19 @@ npm run build
 
 echo "==> backend tests"
 cd backend
+if [ -x .venv/bin/python ]; then
+  PYTHON="$PWD/.venv/bin/python"
+elif [ -x venv/bin/python ]; then
+  PYTHON="$PWD/venv/bin/python"
+else
+  PYTHON=python3
+fi
+
 if [ -d .deps ]; then
   DEPS="$PWD/.deps"
 else
-  # Fall back to the main checkout's installed deps (same requirements.txt).
-  DEPS="/home/hatch/workspace/repos/ForgeOS/backend/.deps"
+  DEPS=""
 fi
-PYTHONPATH="$DEPS:$PWD" python3 -m pytest tests/ -q
+PYTHONPATH="${DEPS:+$DEPS:}$PWD${PYTHONPATH:+:$PYTHONPATH}" "$PYTHON" -m pytest tests/ -q
 
 echo "ALL CHECKS PASSED"

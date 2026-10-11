@@ -8,6 +8,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const START = readFileSync(join(ROOT, "start.sh"), "utf8");
 const COMPOSE = readFileSync(join(ROOT, "docker-compose.yml"), "utf8");
 const WEB_DB = readFileSync(join(ROOT, "src/lib/db.ts"), "utf8");
+const CHECK_ALL = readFileSync(join(ROOT, "scripts/check_all.sh"), "utf8");
 
 test("Docker startup uses the canonical root Vite app, not archived Next.js", () => {
   assert.ok(START.includes("docker compose up --build -d"));
@@ -29,4 +30,12 @@ test("optional triage URLs never get invented local defaults", () => {
   assert.ok(COMPOSE.includes('EVIDENCE_TRIAGE_URL: ${EVIDENCE_TRIAGE_URL:-}'));
   assert.ok(COMPOSE.includes('X402_RESOURCE_URL: ${X402_RESOURCE_URL:-}'));
   assert.ok(COMPOSE.includes('profiles: ["paid-triage"]'));
+});
+
+
+test("the advertised check script is portable and uses repository-local dependency paths", () => {
+  assert.ok(!CHECK_ALL.includes("/home/hatch/workspace/repos/ForgeOS"));
+  assert.ok(CHECK_ALL.includes('PYTHONPATH="${DEPS:+$DEPS:}$PWD${PYTHONPATH:+:$PYTHONPATH}"'));
+  assert.ok(CHECK_ALL.includes(".venv/bin/python"));
+  assert.ok(CHECK_ALL.includes("venv/bin/python"));
 });
