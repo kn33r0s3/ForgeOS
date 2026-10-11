@@ -97,11 +97,13 @@ describe("evidence gate", () => {
 });
 
 describe("unknowns fuel inventory", () => {
-  it("holds all 83 discovery unknowns with valid shape", () => {
-    assert.equal(discoveryUnknowns.length, 83);
-    assert.equal(unknownsCount, 83);
+  it("holds every authoritative discovery unknown with valid shape", () => {
+    // scripts/sync-unknowns-json.mjs --check verifies this projection against
+    // docs/UNKNOWN_MAP.md, so do not pin the test to a stale inventory count.
+    assert.ok(discoveryUnknowns.length >= 83, "the established discovery inventory was unexpectedly truncated");
+    assert.equal(unknownsCount, discoveryUnknowns.length);
     const ids = new Set(discoveryUnknowns.map((u) => u.id));
-    assert.equal(ids.size, 83);
+    assert.equal(ids.size, discoveryUnknowns.length);
     for (const u of discoveryUnknowns) {
       assert.match(u.id, /^D\d+$/);
       assert.ok(u.question.length > 20, `${u.id}: question too thin`);
