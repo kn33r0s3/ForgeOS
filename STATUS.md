@@ -24,17 +24,23 @@ state is not assumed current unless explicitly identified as a dated observation
   Real customer, transaction, and revenue counts are therefore not established
   by that ledger; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT
   MEASURABLE**.
-- Forge Bot's lead input is the gated, unlisted web form at
-  `/forge-bot-intake`; production intake and `FORGE_BOT_LIVE` remain disabled.
-  The primary navigation now includes “For businesses” without removing its
-  other entries. The home page has a direct “Share a business need” button
-  and says, “For business owners, Hami helps clarify a need and find a
-  practical next step.” The closed route is not an available submission
-  channel. When open,
-  the successful response is synchronous in-page receipt only, not a reply to
-  the selected email/phone channel. Contact and qualification fields stay outside Signals, generic
-  substrate entities, and public projections. The existing anonymous
-  demand-intake redaction behavior is unchanged.
+- Forge Bot intake remains the gated, unlisted form at `/forge-bot-intake`; production
+  intake and `FORGE_BOT_LIVE` remain disabled. The current canonical primary
+  navigation is defined in `src/lib/hami-system.ts` (Home, Findings, Unknowns,
+  Network, Experiments, Services, Group, About). The homepage uses the shared
+  `HamiPathways` component to connect findings, unknowns, network, experiments,
+  services, and the public work board; it does not render the earlier direct
+  “Share a business need” button or the former “For business owners…” copy.
+  The public Businesses page explicitly says online inquiries remain closed
+  and links to existing Hami service/process/work surfaces, not the closed
+  intake route. `/request` is retained but its submission form checks the
+  backend `FORGEOS_LEGACY_INTELLIGENCE_ENABLED` gate (default false) and refuses
+  submission when closed or unavailable. A retained route is not proof that
+  intake is live. If intake is explicitly re-enabled in future, successful
+  submission is only synchronous in-page receipt, not a reply through the
+  selected email/phone channel. Contact and qualification fields stay outside
+  Signals, generic substrate entities, and public projections. Anonymous
+  demand-intake redaction remains in place.
 - Intake, opt-out, and erasure now emit registered, privacy-minimized
   `WorldEvent`s atomically with the private lead-record transition. The event
   payload keeps only an opaque reference, evidence class, and state change;
