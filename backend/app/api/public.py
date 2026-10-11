@@ -518,6 +518,8 @@ def record_public_connection_response(
     if connection.state not in {"proposed", "authorized", "contacted"}:
         raise HTTPException(409, "a response is only recorded before acceptance")
     from app.services import network_connections
+    from app.services.public_feed import sanitize_public_text
+
     try:
         network_connections.record_response(db, connection, body.note)
     except ValueError as exc:
@@ -533,10 +535,10 @@ def record_public_connection_response(
         right_id=connection.right_id,
         state=connection.state,
         epistemic_state=epistemic_state,
-        reason=connection.reason,
-        known=connection.known,
-        unknown=connection.unknown,
-        agreement_gap=connection.agreement_gap,
+        reason=sanitize_public_text(connection.reason) or "",
+        known=sanitize_public_text(connection.known),
+        unknown=sanitize_public_text(connection.unknown),
+        agreement_gap=sanitize_public_text(connection.agreement_gap) or "",
         latest_response=_public_connection_response(db, connection),
         latest_fulfillment=_public_connection_fulfillment(db, connection),
     )

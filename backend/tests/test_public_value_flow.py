@@ -1100,8 +1100,10 @@ def test_public_connection_responses_are_idempotent_and_not_acceptance(owner_cli
         right_kind="provider",
         right_id=provider.id,
         state="proposed",
-        reason="recorded candidate",
-        agreement_gap="terms are not accepted",
+        reason="recorded candidate; contact buyer@example.test or call 9800000001",
+        known="Buyer buyer@example.test",
+        unknown="Phone 9800000001",
+        agreement_gap="Terms from buyer@example.test are not accepted.",
         public_visible=True,
     )
     db.add(connection)
@@ -1124,6 +1126,11 @@ def test_public_connection_responses_are_idempotent_and_not_acceptance(owner_cli
     assert first.status_code == 200
     assert second.status_code == 200
     assert duplicate.status_code == 200
+    for response in (first, second, duplicate):
+        assert "buyer@example.test" not in response.text
+        assert "9800000001" not in response.text
+        assert "[redacted-email]" in response.text
+        assert "[redacted-phone]" in response.text
     assert connection.state == "proposed"
     assert db.query(models.Outcome).filter(
         models.Outcome.notes.like(f"idempotency:network-connection:{connection.id}:response:%")
@@ -1142,6 +1149,10 @@ def test_public_connection_responses_are_idempotent_and_not_acceptance(owner_cli
 
     listed = owner_client_with_db.get("/public/connections")
     assert listed.status_code == 200
+    assert "buyer@example.test" not in listed.text
+    assert "9800000001" not in listed.text
+    assert "[redacted-email]" in listed.text
+    assert "[redacted-phone]" in listed.text
     assert listed.json()[0]["latest_response"] == "A response was recorded. It is not acceptance, fulfillment, or payment."
     assert "Shared the requested dates." not in listed.json()[0]["latest_response"]
     matches = owner_client_with_db.get("/public/matches")
