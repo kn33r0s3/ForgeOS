@@ -127,7 +127,27 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
-## Last verified state snapshot (2026-10-10)
+## Last verified state snapshot (2026-10-11)
+
+**Update 2026-10-11 (daily freshness check):** HEAD at `7fc2a0c`
+("Follow persisted Crossref leads to OpenAlex abstracts"). Pull
+fast-forwarded `d8c9b5b..7fc2a0c` clean; `main` == `origin/main`.
+Working tree clean.
+
+- **Health:** haminp.vercel.app/api/health → **ok**
+  (`{"status":"ok","ready":true,"ok":true,"db":"up"}`).
+  forge-os-ebon.vercel.app/api/health → ok. No blips this run.
+- **Intake:** `intake_enabled: false` (unchanged, Forge Bot closed).
+- **Unknowns:** 92 D-entries in `docs/UNKNOWN_MAP.md` (+9 since the
+  2026-10-10 snapshot — discovery round 18 banked D89–D92 and repaired
+  D84–D88 whose rows never reached the map, `d8c9b5b`).
+- **Since `1097855`:** collector runner prefers currently cleared sources;
+  research planner follows persisted Crossref leads to OpenAlex abstracts;
+  source-clearance registry records verified cleared-source retrieval.
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold: name one seller, authorize
+  first contact; company registration and payment onboarding need the
+  owner's body/identity.
 
 **Update 2026-10-10 (daily freshness check):** HEAD at `1626fda`
 ("Close the discovery loop: convert surfaced questions to ResearchQuestions").
