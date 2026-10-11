@@ -239,6 +239,17 @@ describe("feature registry", () => {
     }
   });
 
+  it("does not advertise the hidden, closed intake route from the public Businesses page", () => {
+    const businessesPage = readFileSync(path.join(root, "routes", "group.businesses.tsx"), "utf8");
+    assert.ok(!businessesPage.includes('to="/forge-bot-intake"'));
+    assert.match(businessesPage, /Online inquiries remain closed/);
+    for (const target of ['to="/services"', 'to="/process"', 'to="/domain"']) {
+      assert.ok(businessesPage.includes(target), `closed intake state must route to a live Hami path: ${target}`);
+    }
+    const intakeFeature = registry.features.find((feature: { route: string }) => feature.route === "/forge-bot-intake");
+    assert.equal(intakeFeature?.status, "hidden");
+  });
+
   it("owner-only, TEST-only and closed intake surfaces remain hidden", () => {
     const status = (route: string) => registry.features.find((feature: { route: string }) => feature.route === route)?.status;
     for (const route of ["/owner", "/operations", "/prototype/inbox", "/bot-qualification-demo", "/forge-bot-intake", "/request", "/contact"]) {

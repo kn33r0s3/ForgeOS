@@ -72,21 +72,21 @@ function BusinessesPage() {
             </div>
             <div className="mt-6 max-w-3xl border-2 border-line bg-card p-5 sm:p-6">
               <p className="font-mono text-[0.68rem] font-bold uppercase tracking-[0.14em] text-accent">
-                Existing inquiry path · segment remains a hypothesis
+                Intake status · currently closed
               </p>
               <h3 className="mt-2 font-display text-xl font-bold tracking-tight text-ink">
-                Forge Bot inquiry status
+                Online inquiries remain closed
               </h3>
               <p className="mt-2 text-sm leading-6 text-muted">
-                A consent-scoped inquiry route exists for owner review. This is not a published offer;
-                online intake is closed while the pilot and safeguards remain unverified.
+                Hami retains a consent-scoped intake path, but it is not accepting public submissions
+                while the pilot and safeguards remain unverified. This catalogue describes scope; it
+                does not create a booking or acceptance promise.
               </p>
-              <Link
-                to="/forge-bot-intake"
-                className="link-arrow mt-3 inline-flex min-h-10 items-center gap-1 text-sm font-bold text-accent"
-              >
-                Read the inquiry page
-              </Link>
+              <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm font-bold">
+                <Link to="/services" className="text-accent hover:underline">Review Hami services</Link>
+                <Link to="/process" className="text-accent hover:underline">See how Hami works</Link>
+                <Link to="/domain" className="text-accent hover:underline">Browse public work</Link>
+              </div>
             </div>
           </div>
         </section>
