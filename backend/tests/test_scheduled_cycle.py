@@ -594,12 +594,22 @@ def test_scheduled_intelligence_persists_cycle_run(monkeypatch, db):
         None,
     )
     assert row is not None, "no CycleRun with 7-stage summary found"
-    assert row.status in ("COMPLETED", "FAILED")
+    assert row.status in ("COMPLETED", "PARTIAL", "FAILED")
     assert row.started_at is not None
     assert row.ended_at is not None
     assert row.summary_json is not None
     summary = json.loads(row.summary_json)
     assert "stages" in summary
+    assert "stage_errors" in summary
+    assert "stage_partials" in summary
+    expected_status = (
+        "FAILED"
+        if summary["stage_errors"]
+        else "PARTIAL"
+        if summary["stage_partials"]
+        else "COMPLETED"
+    )
+    assert row.status == expected_status
     # All seven stages recorded by their response keys.
     for key in (
         "forge_cycle",
@@ -611,6 +621,57 @@ def test_scheduled_intelligence_persists_cycle_run(monkeypatch, db):
         "scout_cycle",
     ):
         assert key in summary["stages"], f"missing stage {key}"
+
+def test_scheduled_intelligence_records_partial_cycle_truthfully(monkeypatch, db):
+    """A deferred collector task makes the recorded run PARTIAL, not COMPLETED."""
+    import json
+
+    from app import models
+    from app.api import forge_bot_owner_notification
+    from app.services import collector_runner, discovery_engine, execution_engine, forge_loop, research_task_engine, scout
+
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    monkeypatch.setattr(forge_loop, "run_cycle", lambda session: {
+        "cycle_id": "test-cycle", "signals_processed": 0, "stage_errors": {}
+    })
+    monkeypatch.setattr(collector_runner, "run_pending_tasks", lambda session, limit=5: [
+        {"task_id": 1, "source": "fixture", "status": "deferred", "signals_created": 0}
+    ])
+    monkeypatch.setattr(research_task_engine, "resume_running_tasks", lambda session, limit=10: [])
+    monkeypatch.setattr(execution_engine, "run_autonomous_action_cycle", lambda session: {
+        "proposed": 0, "allowed": 0, "blocked": 0, "require_approval": 0
+    })
+    monkeypatch.setattr(discovery_engine, "run_discovery", lambda session, **kwargs: {
+        "methods": [{"name": "fixture", "status": "ran"}],
+        "surfaced": [], "existing": [], "rejected": [], "deferred": [],
+        "errors": [], "capability_gaps": [],
+    })
+    monkeypatch.setattr(forge_bot_owner_notification, "retry_queued_owner_notifications", lambda session: {
+        "status": "skipped", "reason": "test fixture", "retried": 0
+    })
+    monkeypatch.setattr(scout, "run_scout_cycle", lambda session: {
+        "errors": [], "candidates_ranked": 0, "candidates_scored": 0,
+        "drafts_generated": 0, "blocked": 0,
+    })
+
+    client = TestClient(app)
+    response = client.get(
+        "/scheduled/intelligence",
+        headers={"Authorization": "Bearer test-cron-secret"},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "completed"
+
+    db.expire_all()
+    row = db.query(models.CycleRun).order_by(models.CycleRun.id.desc()).first()
+    assert row is not None and row.summary_json is not None
+    assert row.status == "PARTIAL"
+    assert row.error == "collection_cycle: partial"
+    summary = json.loads(row.summary_json)
+    assert summary["stage_errors"] == {}
+    assert summary["stage_partials"] == {"collection_cycle": "partial"}
+    assert summary["stages"]["collection_cycle"]["tasks_deferred"] == 1
+
 
 def test_scheduled_intelligence_accepts_owner_key(monkeypatch):
     """The owner X-API-Key is an accepted alternative to the cron Bearer

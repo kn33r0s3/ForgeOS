@@ -42,6 +42,23 @@ def test_snapshot_labels_raw_and_real_metrics_separately(db):
     assert metrics["operations"]["pending_actions"] == 0
 
 
+def test_partial_cycles_are_counted_separately_from_clean_completion(db):
+    db.add_all([
+        models.CycleRun(status="COMPLETED"),
+        models.CycleRun(status="PARTIAL"),
+        models.CycleRun(status="FAILED"),
+        models.CycleRun(status="RUNNING"),
+    ])
+    db.commit()
+
+    operations = truth_audit.snapshot(db)["operations"]
+
+    assert operations["completed_cycles"] == 1
+    assert operations["partial_cycles"] == 1
+    assert operations["failed_cycles"] == 1
+    assert operations["running_cycles"] == 1
+
+
 def test_stale_running_cycles_are_failed_without_deletion(db):
     stale = models.CycleRun(
         started_at=datetime.now(timezone.utc) - timedelta(hours=3),

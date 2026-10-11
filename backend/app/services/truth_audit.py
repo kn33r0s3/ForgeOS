@@ -88,6 +88,7 @@ def snapshot(db: Session) -> dict:
     evidence_total = _count(db, models.Evidence)
     evidence_with_provenance = _count(db, models.Evidence, models.Evidence.provenance.isnot(None))
     failed_cycles = _count(db, models.CycleRun, models.CycleRun.status == "FAILED")
+    partial_cycles = _count(db, models.CycleRun, models.CycleRun.status == "PARTIAL")
     completed_cycles = _count(db, models.CycleRun, models.CycleRun.status == "COMPLETED")
     pending_actions = _count(db, models.Action, models.Action.status.in_(["PENDING", "PROPOSED", "APPROVAL_REQUIRED"]))
     queued_tasks = _count(db, models.WorkerTask, models.WorkerTask.status == "queued")
@@ -138,6 +139,7 @@ def snapshot(db: Session) -> dict:
         },
         "operations": {
             "completed_cycles": completed_cycles,
+            "partial_cycles": partial_cycles,
             "failed_cycles": failed_cycles,
             "running_cycles": _count(db, models.CycleRun, models.CycleRun.status == "RUNNING"),
             "pending_actions": pending_actions,

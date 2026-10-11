@@ -468,13 +468,33 @@ def run_scheduled_intelligence(
                         for key, val in intelligence.items()
                         if isinstance(val, dict) and val.get("status") == "error"
                     }
-                    row.status = "FAILED" if stage_errors else "COMPLETED"
+                    stage_partials = {
+                        key: val.get("status")
+                        for key, val in intelligence.items()
+                        if isinstance(val, dict) and val.get("status") == "partial"
+                    }
+                    # Partial work is distinct from both full completion and failure.
+                    row.status = (
+                        "FAILED"
+                        if stage_errors
+                        else "PARTIAL"
+                        if stage_partials
+                        else "COMPLETED"
+                    )
                     row.summary_json = json.dumps(
-                        {"stages": intelligence, "stage_errors": stage_errors},
+                        {
+                            "stages": intelligence,
+                            "stage_errors": stage_errors,
+                            "stage_partials": stage_partials,
+                        },
                         default=str,
                     )
-                    if stage_errors:
-                        row.error = "; ".join(f"{k}: {v}" for k, v in stage_errors.items())
+                    run_notes = [
+                        *(f"{key}: {value}" for key, value in stage_errors.items()),
+                        *(f"{key}: partial" for key in stage_partials),
+                    ]
+                    if run_notes:
+                        row.error = "; ".join(run_notes)
                     odb.commit()
     except Exception as exc:
         logger.warning(
