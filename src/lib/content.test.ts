@@ -49,6 +49,8 @@ function collectCopy(): string[] {
 }
 
 describe("Hami public content", () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
+
   it("handles the closed legacy demand path without exposing its API error", async () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = async () =>
@@ -101,7 +103,6 @@ describe("Hami public content", () => {
   });
 
   it("exposes public-first primary destinations", () => {
-    const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
     const hrefs = NAV.map((item) => item.to);
     // The primary navigation: Home, Findings, Unknowns, Experiments, About.
     // Join Hami is a separate header button, not a nav menu item.
@@ -120,23 +121,28 @@ describe("Hami public content", () => {
     assert.match(header, /Login/);
     assert.match(header, /search=\{\{\s*mode:\s*"sign-in"\s*\}\}/);
     const footer = readFileSync(join(root, "src/components/layout/site-footer.tsx"), "utf8");
+    const systemMap = readFileSync(join(root, "src/lib/hami-system.ts"), "utf8");
     assert.doesNotMatch(footer, /Sign in \/ Sign up/);
   });
 
   it("every group offer resolves into its canonical Hami service or process route", () => {
     assert.equal(currentOffers.length, 5);
-    assert.equal(new Set(currentOffers.map((offer) => offer.relatedTo)).size, currentOffers.length);
+    const destinations = currentOffers.map((offer) =>
+      offer.relatedTo === "/process" ? offer.relatedTo : `${offer.relatedTo}:${offer.relatedSlug}`,
+    );
+    assert.equal(new Set(destinations).size, currentOffers.length);
     for (const offer of currentOffers) {
       assert.ok(offer.relatedLabel.trim(), `${offer.title} needs a contextual route label`);
-      if (offer.relatedTo.startsWith("/services/")) {
-        const slug = offer.relatedTo.slice("/services/".length);
-        assert.ok(getService(slug), `${offer.title} points to unknown service ${slug}`);
+      if (offer.relatedTo === "/services/$slug") {
+        assert.ok(getService(offer.relatedSlug), `${offer.title} points to unknown service ${offer.relatedSlug}`);
       } else {
         assert.equal(offer.relatedTo, "/process", `${offer.title} must link to a known canonical route`);
       }
     }
     const card = readFileSync(join(root, "src/components/pages/offer-card.tsx"), "utf8");
-    assert.ok(card.includes("to={offer.relatedTo}"), "offer cards must route to their canonical detail");
+    assert.ok(card.includes('to="/services/$slug"'), "service offers must use the registered dynamic route");
+    assert.ok(card.includes("params={{ slug: offer.relatedSlug }}"), "service offers must pass their canonical slug");
+    assert.ok(card.includes('to="/process"'), "venture offers must link to the process route");
     assert.ok(!card.includes("ProjectInquiryCta"), "offer cards must not duplicate the closed intake CTA");
   });
 
@@ -449,11 +455,10 @@ describe("Hami public root", () => {
     assert.match(privacy, /name: "robots", content: "noindex, nofollow"/);
     assert.match(privacy, /automatically\s+erased 30 days/);
     assert.match(privacy, /Vercel hosts the website, Neon provides the database/);
-    // No public signup: terms and privacy are reachable from the footer,
-    // but /login is deliberately unlinked (owner login only).
-    assert.match(footer, /\/terms/);
-    assert.match(footer, /\/privacy/);
-    assert.doesNotMatch(footer, /\/login/);
+    // Footer destinations live in the canonical Hami system map, not duplicated in the component.
+    assert.match(systemMap, /{ label: "Terms", to: "\/terms" }/);
+    assert.match(systemMap, /{ label: "Privacy", to: "\/privacy" }/);
+    assert.match(systemMap, /{ label: "Sign in", to: "\/login" }/);
     assert.doesNotMatch(`${header}\n${forgeBot}`, /\/privacy/);
     assert.match(owner, /X-API-Key/);
     assert.doesNotMatch(owner, /localStorage|sessionStorage|dangerouslySetInnerHTML/);

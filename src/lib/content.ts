@@ -948,26 +948,30 @@ export const groupAreas: GroupArea[] = [
   },
 ];
 
-export type BusinessOffer = {
+type BusinessOfferContent = {
   title: string;
   problem: string;
   does: string;
   value: string;
   start: string;
-  /** Canonical Hami surface that owns the detailed explanation for this offer. */
-  relatedTo:
-    | "/services/software"
-    | "/services/internal-tools"
-    | "/services/automation"
-    | "/services/support"
-    | "/process";
   relatedLabel: string;
 };
+
+/** An offer must target a real static route or the canonical dynamic service route with its slug. */
+export type BusinessOffer = BusinessOfferContent &
+  (
+    | {
+        relatedTo: "/services/$slug";
+        relatedSlug: "software" | "internal-tools" | "automation" | "support";
+      }
+    | { relatedTo: "/process"; relatedSlug?: never }
+  );
 
 export const currentOffers: BusinessOffer[] = [
   {
     title: "Build digital products",
-    relatedTo: "/services/software",
+    relatedTo: "/services/$slug",
+    relatedSlug: "software",
     relatedLabel: "Explore software & web development",
     problem: "An idea needs a useful digital surface, but the right first version is unclear.",
     does: "Shape and build a focused website, web application, internal tool, or product surface around the real user and operating need.",
@@ -976,7 +980,8 @@ export const currentOffers: BusinessOffer[] = [
   },
   {
     title: "Develop business software",
-    relatedTo: "/services/internal-tools",
+    relatedTo: "/services/$slug",
+    relatedSlug: "internal-tools",
     relatedLabel: "Explore internal tools",
     problem: "Important work is trapped in scattered documents, generic tools, or manual handoffs.",
     does: "Model the workflow and build the smallest software surface that makes states, decisions, and ownership clearer.",
@@ -985,7 +990,8 @@ export const currentOffers: BusinessOffer[] = [
   },
   {
     title: "Automate workflows",
-    relatedTo: "/services/automation",
+    relatedTo: "/services/$slug",
+    relatedSlug: "automation",
     relatedLabel: "Explore business automation",
     problem: "Repeatable digital work consumes time and creates avoidable errors.",
     does: "Map the current path, identify safe repeatable steps, and connect the relevant tools or actions.",
@@ -994,7 +1000,8 @@ export const currentOffers: BusinessOffer[] = [
   },
   {
     title: "Operate technical systems",
-    relatedTo: "/services/support",
+    relatedTo: "/services/$slug",
+    relatedSlug: "support",
     relatedLabel: "Explore technical support",
     problem: "A technical system needs attention, but ownership, context, or the next action is unclear.",
     does: "Investigate a focused issue, improve the operating routine, and provide practical support within the agreed scope.",

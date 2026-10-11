@@ -29,9 +29,22 @@ export function OfferCard({ offer }: { offer: BusinessOffer }) {
         </div>
       </dl>
       <div className="mt-6 border-t border-line pt-4">
-        <Link to={offer.relatedTo} className="link-arrow inline-flex min-h-10 items-center gap-2 text-sm font-bold text-cyan">
-          {offer.relatedLabel}
-        </Link>
+        {offer.relatedTo === "/process" ? (
+          <Link
+            to="/process"
+            className="link-arrow inline-flex min-h-10 items-center gap-2 text-sm font-bold text-cyan"
+          >
+            {offer.relatedLabel}
+          </Link>
+        ) : (
+          <Link
+            to="/services/$slug"
+            params={{ slug: offer.relatedSlug }}
+            className="link-arrow inline-flex min-h-10 items-center gap-2 text-sm font-bold text-cyan"
+          >
+            {offer.relatedLabel}
+          </Link>
+        )}
       </div>
     </article>
   );
