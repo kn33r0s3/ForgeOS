@@ -466,8 +466,8 @@ describe("Hami public root", () => {
       "Contact is in the nav without a real contact route",
     );
     assert.match(header, /aria-current={active \? "page" : undefined}/);
-    assert.match(businesses, /to="\/forge-bot-intake"/);
-    assert.match(businesses, /online intake is closed/i);
+    assert.doesNotMatch(businesses, /to="\/forge-bot-intake"/);
+    assert.match(businesses, /Online inquiries remain closed/i);
     assert.match(forgeBot, /name: "robots", content: "noindex,nofollow"/);
     assert.match(forgeBot, /Online inquiries are not open yet/);
     assert.match(forgeBot, /Booking link available/);
