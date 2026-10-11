@@ -34,15 +34,15 @@ test("adds Hami PWA metadata without loading the Grok builder", () => {
   assert.match(out, /apple-touch-icon/);
   assert.match(out, /application-name" content="Hami"/);
   assert.match(out, /apple-mobile-web-app-title" content="Hami"/);
-  assert.doesNotMatch(out, /grok\\.com\\/grok-app-builder\\/extensions\\.js|grok-project-id|grok:app_id|x:creator/i);
+  assert.doesNotMatch(out, /grok\.com\/grok-app-builder\/extensions\.js|grok-project-id|grok:app_id|x:creator/i);
   assert.ok(out.indexOf("manifest") < out.indexOf("</head>"));
 });
 
 test("strips legacy builder branding already present in rendered HTML", () => {
   const legacy = '<html><head><title>Grok App</title><script src="https://grok.com/grok-app-builder/extensions.js" data-project-id="proj-123" defer></script><meta name="grok-project-id" content="proj-123"><meta property="grok:app_id" content="proj-123"><meta property="x:creator" content="@alice"><meta property="x:creator:id" content="42"><meta name="application-name" content="Grok App"><meta name="apple-mobile-web-app-title" content="Grok App"></head></html>';
   const out = injectGrokPwaHead(legacy, { site: { title: "Hami" }, cwd: BLANK_CWD });
-  assert.doesNotMatch(out, /Grok App|grok\\.com\\/grok-app-builder\\/extensions\\.js|grok-project-id|grok:app_id|x:creator/i);
-  assert.match(out, /<title>Hami<\\/title>/);
+  assert.doesNotMatch(out, /Grok App|grok\.com\/grok-app-builder\/extensions\.js|grok-project-id|grok:app_id|x:creator/i);
+  assert.match(out, /<title>Hami<\/title>/);
   assert.match(out, /application-name" content="Hami"/);
   assert.match(out, /apple-mobile-web-app-title" content="Hami"/);
 });
@@ -343,7 +343,7 @@ test("does not reintroduce builder branding on repeated injection", () => {
   const once = injectGrokPwaHead(legacy, { site: { title: "Hami" }, cwd: BLANK_CWD });
   const twice = injectGrokPwaHead(once, { site: { title: "Hami" }, cwd: BLANK_CWD });
   assert.equal(once, twice);
-  assert.doesNotMatch(twice, /Grok App|grok\\.com\\/grok-app-builder\\/extensions\\.js|grok:app_id/i);
+  assert.doesNotMatch(twice, /Grok App|grok\.com\/grok-app-builder\/extensions\.js|grok:app_id/i);
 });
 
 test("is idempotent", () => {

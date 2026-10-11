@@ -211,18 +211,18 @@ export function grokPwaHeadTags(appName = DEFAULT_APP_NAME) {
 function stripThirdPartyAppBranding(html) {
   return String(html)
     .replace(
-      /<script\\b(?=[^>]*\\bsrc\\s*=\\s*["']https?:\\/\\/(?:www\\.)?grok\\.com\\/grok-app-builder\\/extensions\\.js["'])[^>]*>[\\s\\S]*?<\\/script\\s*>/gi,
+      /<script\b(?=[^>]*\bsrc\s*=\s*["']https?:\/\/(?:www\.)?grok\.com\/grok-app-builder\/extensions\.js["'])[^>]*>[\s\S]*?<\/script\s*>/gi,
       "",
     )
     .replace(
-      /<meta\\b(?=[^>]*\\b(?:name|property)\\s*=\\s*["'](?:grok-project-id|grok:app_id|x:creator(?::id)?)["'])[^>]*>/gi,
+      /<meta\b(?=[^>]*\b(?:name|property)\s*=\s*["'](?:grok-project-id|grok:app_id|x:creator(?::id)?)["'])[^>]*>/gi,
       "",
     )
     .replace(
-      /<meta\\b(?=[^>]*\\bname\\s*=\\s*["'](?:apple-mobile-web-app-title|application-name)["'])[^>]*>/gi,
+      /<meta\b(?=[^>]*\bname\s*=\s*["'](?:apple-mobile-web-app-title|application-name)["'])[^>]*>/gi,
       "",
     )
-    .replace(/<title\\b[^>]*>\\s*Grok\\s+App\\s*<\\/title\\s*>/gi, "<title>Hami</title>");
+    .replace(/<title\b[^>]*>\s*Grok\s+App\s*<\/title\s*>/gi, "<title>Hami</title>");
 }
 
 export function readOgSite(cwd = process.cwd()) {
