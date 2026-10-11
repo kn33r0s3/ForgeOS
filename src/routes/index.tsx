@@ -60,8 +60,8 @@ function HomePage() {
       <ExperimentsPreview />
       <AboutLink />
       <StatusRecord />
-      <HomeFooter />
       <HamiPathways current="home" />
+      <HomeFooter />
     </main>
   );
 }

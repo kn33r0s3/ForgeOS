@@ -71,7 +71,7 @@ describe("feature registry", () => {
       const base = filename.slice(0, -4);
       if (base === "__root" || base === "$") continue;
       const normalized = base.endsWith(".index") ? base.slice(0, -".index".length) : base;
-      routes.add(base === "index" ? "/" : "/" + normalized.replace(/\\./g, "/"));
+      routes.add(base === "index" ? "/" : "/" + normalized.replace(/\./g, "/"));
     }
     const registered = new Set(registry.features.map((feature: { route: string }) => feature.route));
     const missing = [...routes].filter((route) => !registered.has(route));
@@ -84,8 +84,9 @@ describe("feature registry", () => {
       ...FOOTER_GROUPS.flatMap((group) => group.items.map((item) => item.to)),
       ...PUBLIC_SYSTEM_PATHS,
     ];
-    const byRoute = new Map(registry.features.map((feature: { route: string; status: string }) => [feature.route, feature.status]));
-    const missing = [...new Set(required)].filter((route) => byRoute.get(route) !== "live");
+    const missing = [...new Set(required)].filter((route) =>
+      !registry.features.some((feature: { route: string; status: string }) => feature.route === route && feature.status === "live"),
+    );
     assert.deepEqual(missing, [], `public Hami pathways missing a live registry entry: ${missing.join(", ")}`);
   });
 
