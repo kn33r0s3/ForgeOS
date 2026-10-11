@@ -1,3 +1,8 @@
+## [SOURCE CHANGE / CI PENDING] Make research acknowledgement test deterministic (2026-10-12)
+
+- Removed a brittle 500 ms direct-call timing assertion after Linux CI measured 1.08 s once even though the test proved full planning and collector execution were deferred. Kept the functional checks: no collector/planner call before acknowledgement, one background task queued, research state persisted, and the work runs after acknowledgement.
+- No production behavior or data model changed. Exact-head Linux CI is required to verify the complete current tree.
+
 ## [SOURCE CHANGE / CI PENDING] Prevent cross-product outcome attribution in customer events (2026-10-12)
 
 - Customer-event creation now requires the linked Outcome's `product_id` to equal the event's product ID, and rejects an explicitly conflicting opportunity ID against its channel/product relation. This prevents one product's verified revenue/response from being counted as another product's customer or funnel event.
