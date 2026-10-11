@@ -442,10 +442,9 @@ def run_scheduled_intelligence(
                     "errors": errors_count,
                     "capability_gaps": len(report.get("capability_gaps", [])),
                 }
-                # Close the loop: convert surfaced question findings into
-                # ResearchQuestion rows so the next cycle's research planner
-                # Surface discovery evidence/proposals, but don't grow the
-                # operational research queue until its existing backlog is reviewed.
+                # Keep discovery proposals in existing evidence/substrate records.
+                # Promote them into ResearchQuestion only when recurring
+                # question generation is explicitly enabled.
                 questions_created = _promote_discovery_questions(db, report)
                 intelligence["discovery_cycle"]["questions_created"] = questions_created
                 intelligence["discovery_cycle"]["question_generation"] = (
