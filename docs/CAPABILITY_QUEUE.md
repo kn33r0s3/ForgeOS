@@ -1,3 +1,9 @@
+## [SOURCE FIX / CI PENDING] Parse documented Khalti terminal lookup responses returned as HTTP 400 (2026-10-12)
+
+- Khalti documents \`Expired\` and \`User canceled\` lookup responses as HTTP 400. Python's default HTTP client raises on 400 before payment recovery can inspect the provider status.
+- \`khalti_lookup\` now decodes only HTTP 400 responses whose JSON status is an explicit terminal failed/cancelled status. Invalid-token bodies, malformed payloads, unknown statuses and all other HTTP codes still fail closed.
+- Added tests for both documented terminal results, an authentication-error body, and a non-400 error. No live provider call was made. Exact-head CI, secret scan, and deployment verification remain required.
+
 ## [TEST FIX / CI PENDING] Use low-entropy synthetic checkout key in regression fixture (2026-10-12)
 
 - Gitleaks flagged the newly added hardcoded test idempotency key as a generic API key because its text entropy was high. It was a test fixture, not a provider credential; the fixture is now an obvious repeated test token. No scanner suppression or allowlist was added.

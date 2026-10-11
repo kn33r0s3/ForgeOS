@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
+import urllib.error
 from datetime import datetime, timezone
 
 import pytest
@@ -399,6 +401,69 @@ def test_khalti_refund_after_verified_fulfillment_requires_reconciliation_withou
         product_id=product.id, outcome_type="ACTUAL_REVENUE", unit="NPR"
     ).count() == 1
 
+
+
+
+
+@pytest.mark.parametrize("terminal_status", ["Expired", "User canceled"])
+def test_khalti_lookup_accepts_documented_http_400_terminal_status(
+    monkeypatch, terminal_status
+):
+    monkeypatch.setattr(settings, "KHALTI_SECRET_KEY", "test")
+    body = {
+        "pidx": "synthetic-pidx",
+        "total_amount": 500000,
+        "status": terminal_status,
+        "transaction_id": None,
+        "fee": 0,
+        "refunded": False,
+    }
+
+    def provider_http_400(*args, **kwargs):
+        raise urllib.error.HTTPError(
+            "https://khalti.invalid/epayment/lookup/",
+            400,
+            "Bad Request",
+            {},
+            io.BytesIO(json.dumps(body).encode("utf-8")),
+        )
+
+    monkeypatch.setattr(nepal_payments.urllib.request, "urlopen", provider_http_400)
+    assert nepal_payments.khalti_lookup(pidx="synthetic-pidx") == body
+
+
+def test_khalti_lookup_keeps_authentication_http_400_fail_closed(monkeypatch):
+    monkeypatch.setattr(settings, "KHALTI_SECRET_KEY", "test")
+
+    def provider_http_400(*args, **kwargs):
+        raise urllib.error.HTTPError(
+            "https://khalti.invalid/epayment/lookup/",
+            400,
+            "Bad Request",
+            {},
+            io.BytesIO(b'{"detail":"Invalid token"}'),
+        )
+
+    monkeypatch.setattr(nepal_payments.urllib.request, "urlopen", provider_http_400)
+    with pytest.raises(urllib.error.HTTPError):
+        nepal_payments.khalti_lookup(pidx="synthetic-pidx")
+
+
+def test_khalti_lookup_keeps_non_400_http_errors_fail_closed(monkeypatch):
+    monkeypatch.setattr(settings, "KHALTI_SECRET_KEY", "test")
+
+    def provider_http_403(*args, **kwargs):
+        raise urllib.error.HTTPError(
+            "https://khalti.invalid/epayment/lookup/",
+            403,
+            "Forbidden",
+            {},
+            io.BytesIO(b'{"status":"Expired"}'),
+        )
+
+    monkeypatch.setattr(nepal_payments.urllib.request, "urlopen", provider_http_403)
+    with pytest.raises(urllib.error.HTTPError):
+        nepal_payments.khalti_lookup(pidx="synthetic-pidx")
 
 
 def _recovery_intent(db, product, *, provider, status, suffix, provider_payment_id=None):

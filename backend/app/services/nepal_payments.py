@@ -10,6 +10,7 @@ import base64
 import hashlib
 import hmac
 import json
+import urllib.error
 import urllib.parse
 import urllib.request
 from decimal import Decimal, ROUND_HALF_UP
@@ -121,4 +122,32 @@ def khalti_initiate(*, amount_npr: Decimal | int | float | str, purchase_order_i
 
 def khalti_lookup(*, pidx: str) -> dict[str, Any]:
     secret = _require(settings.KHALTI_SECRET_KEY, "KHALTI_SECRET_KEY")
+    url = f"{settings.KHALTI_API_BASE_URL.rstrip('/')}/epayment/lookup/"
+    headers = {"Authorization": f"Key {secret}"}
+    try:
+        return _post_json(url, {"pidx": pidx}, headers)
+    except urllib.error.HTTPError as exc:
+        # Khalti documents Expired and User canceled as HTTP 400 lookup results.
+        # Accept only explicit terminal failed-payment statuses. Authentication
+        # errors, malformed payloads, unknown statuses, and all other codes fail closed.
+        if exc.code != 400:
+            raise
+        try:
+            body = json.loads(exc.read().decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as parse_exc:
+            raise RuntimeError("Khalti returned an unreadable lookup error response.") from parse_exc
+        if not isinstance(body, dict):
+            raise RuntimeError("Khalti returned a non-object lookup error response.")
+        status = str(body.get("status", "")).strip().upper()
+        documented_terminal_failures = {
+            "EXPIRED",
+            "USER CANCELED",
+            "USER CANCELLED",
+            "CANCELED",
+            "CANCELLED",
+            "FAILED",
+        }
+        if status not in documented_terminal_failures:
+            raise
+        return body
     return _post_json(f"{settings.KHALTI_API_BASE_URL.rstrip('/')}/epayment/lookup/", {"pidx": pidx}, {"Authorization": f"Key {secret}"})
