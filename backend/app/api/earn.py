@@ -11,7 +11,7 @@ import json
 from datetime import datetime
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -148,7 +148,7 @@ def _out(row: models.EarningOffer) -> EarningOfferOut:
 
 @router.get("/offers", response_model=list[EarningOfferOut])
 def list_offers(
-    workspace_key: str = Query(min_length=16, max_length=200),
+    workspace_key: str = Header(..., alias="X-Workspace-Key", min_length=16, max_length=200),
     db: Session = Depends(get_db),
 ):
     rows = (db.query(models.EarningOffer)
