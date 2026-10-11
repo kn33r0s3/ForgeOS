@@ -37,6 +37,20 @@ Viewed through value, that process means **discover → understand → identify 
 
 Future work must ask: What value exists or could exist? What prevents its realization? Which relation or transformation could change that? What evidence would discriminate between alternatives? What is the cheapest authorized, safe, falsifiable next action? What actual benefit, loss, cost, and externality resulted? Prefer work that improves this loop across domains, and report uncertainty honestly.
 
+### Mapping the five current homepage capabilities
+
+The five capability labels are the current operating instruments, not a taxonomy of value and not five separate subsystems. Keep their implementation statuses honest in the UI.
+
+| Current capability | Role in the open-ended value loop | Truth boundary |
+| --- | --- | --- |
+| **Observe** | Discover candidate value, needs, resources, events, and conditions from permitted sources. | The current five governed source adapters describe today's implementation, not the outer limit of sources or domains Hami may investigate. Every new source needs its own access, provenance, policy, and quality checks. |
+| **Preserve** | Carry evidence, provenance, source/scope, and uncertainty across discovery and later reasoning so value is not detached from its basis. | Recording an observation does not establish that its interpretation is true or that value exists. |
+| **Investigate** | Turn observations into unknowns, hypotheses, and tests; understand constraints and compare possible transformations. | General background, a heuristic score, or an inferred need is not proof of demand, feasibility, or benefit. A test must actually run and its result must be recorded. |
+| **Act** | Attempt a justified transformation or intervention that could realize value. | Requires a real capability, legal/safe context, permission and policy authorization. A proposal or policy ALLOW is not proof that an action executed or succeeded. Current Act status remains gated. |
+| **Learn** | Measure actual changes, costs, losses, benefits, and unintended consequences; preserve the outcome and revise understanding; reopen discovery. | Do not mark economic value realized without appropriately verified real-world outcome evidence. The current public status remains “Not yet validated” until such an outcome is established. |
+
+Operationally, Observe and Preserve support **Discover**; Preserve spans every stage; Investigate primarily supports **Understand** and the selection/testing of transformations; Act supports **Transform / attempt to Realize**; Learn verifies whether value was actually realized and feeds that result back into the next Discover cycle. The mapping is many-to-many, not a rigid pipeline: a finding can return to investigation, a test can disconfirm a hypothesis, and inaction can be the right result.
+
 ## One product, one navigation source
 
 - `src/lib/hami-system.ts` owns the public top navigation (`NAV`), footer groups (`FOOTER_GROUPS`), page-to-page paths (`SYSTEM_PATHWAYS`), and the path inventory guarded by tests (`PUBLIC_SYSTEM_PATHS`).
