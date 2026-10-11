@@ -6,7 +6,7 @@ import { HamiPathways } from "@/components/layout/hami-pathways";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState, SkeletonCards, UnavailableState } from "@/components/ui/feedback";
 import { loadPublicFeed, type PublicFeedItem } from "@/lib/content";
-import { loadRuntimeSnapshot } from "@/lib/operations-data";
+import { loadPublicRuntimeSummary } from "@/lib/operations-data";
 
 export const Route = createFileRoute("/opportunities")({
   component: OpportunitiesPage,
@@ -25,13 +25,13 @@ function OpportunitiesPage() {
     const fresh = reloadVersion > 0;
     void Promise.allSettled([
       loadPublicFeed(100, undefined, undefined, { fresh }),
-      loadRuntimeSnapshot({ fresh }),
+      loadPublicRuntimeSummary({ fresh }),
     ]).then(([feedResult, runtimeResult]) => {
       if (!active) return;
       setItems(feedResult.status === "fulfilled" ? feedResult.value : null);
       setValidatedCount(
         runtimeResult.status === "fulfilled"
-          ? runtimeResult.value.truth?.epistemic_labels.human_validated_problems ?? null
+          ? runtimeResult.value.human_validated_problems
           : null,
       );
       setLoading(false);

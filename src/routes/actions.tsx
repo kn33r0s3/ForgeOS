@@ -5,7 +5,7 @@ import { Container } from "@/components/layout/container";
 import { HamiPathways } from "@/components/layout/hami-pathways";
 import { PageHeader } from "@/components/layout/page-header";
 import { MetricTile, UnavailableState } from "@/components/ui/feedback";
-import { loadRuntimeSnapshot, type RuntimeSnapshot } from "@/lib/operations-data";
+import { loadPublicRuntimeSummary, type PublicRuntimeSummary } from "@/lib/operations-data";
 
 export const Route = createFileRoute("/actions")({
   component: ActionsPage,
@@ -13,7 +13,7 @@ export const Route = createFileRoute("/actions")({
 });
 
 function ActionsPage() {
-  const [runtime, setRuntime] = useState<RuntimeSnapshot | null>(null);
+  const [runtime, setRuntime] = useState<PublicRuntimeSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadVersion, setReloadVersion] = useState(0);
@@ -22,7 +22,7 @@ function ActionsPage() {
     let active = true;
     setLoading(true);
     setError(null);
-    void loadRuntimeSnapshot({ fresh: reloadVersion > 0 })
+    void loadPublicRuntimeSummary({ fresh: reloadVersion > 0 })
       .then((result) => {
         if (!active) return;
         setRuntime(result);
@@ -40,7 +40,7 @@ function ActionsPage() {
     };
   }, [reloadVersion]);
 
-  const pending = runtime?.truth?.operations.pending_actions ?? null;
+  const pending = runtime?.pending_actions ?? null;
 
   return (
     <main>
@@ -67,8 +67,8 @@ function ActionsPage() {
           <section className="grid gap-3 sm:grid-cols-3" aria-label="Runtime action summary" aria-busy={loading}>
             {loading ? <span role="status" className="sr-only">Reading recorded actions…</span> : null}
             <MetricTile index={0} icon={ListChecks} tone="accent" loading={loading} label="Pending action records" value={pending} />
-            <MetricTile index={1} icon={Hourglass} loading={loading} label="Queued worker tasks" value={runtime?.worker.queued_tasks ?? null} />
-            <MetricTile index={2} icon={Cog} loading={loading} label="Running cycles" value={runtime?.cycles.running_count ?? null} />
+            <MetricTile index={1} icon={Hourglass} loading={loading} label="Queued worker tasks" value={runtime?.queued_tasks ?? null} />
+            <MetricTile index={2} icon={Cog} loading={loading} label="Running cycles" value={runtime?.running_cycles ?? null} />
           </section>
         ) : null}
         {!loading && runtime !== null ? (
@@ -95,10 +95,10 @@ function ActionsPage() {
                 <dt className="text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Current continuation state</dt>
                 <dd className="mt-1 font-medium text-ink">{runtime.active_stage}</dd>
               </div>
-              {runtime.cycles.last_completed?.ended_at ? (
+              {runtime.last_completed_at ? (
                 <div>
                   <dt className="text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Last completed cycle</dt>
-                  <dd className="mt-1 text-muted">Recorded at {new Date(runtime.cycles.last_completed.ended_at).toLocaleString()}.</dd>
+                  <dd className="mt-1 text-muted">Recorded at {new Date(runtime.last_completed_at).toLocaleString()}.</dd>
                 </div>
               ) : null}
             </dl>

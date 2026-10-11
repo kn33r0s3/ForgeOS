@@ -1318,6 +1318,17 @@ class WorkerTaskOut(WorkerTaskBase):
 # from real Outcome rows (ACTUAL_*), never fabricated by the system.
 # ---------------------------------------------------------------------------
 
+class PublicRuntimeSummary(BaseModel):
+    """Public, aggregate-only runtime view. No task IDs, names, action text, or error details."""
+
+    active_stage: str
+    pending_actions: int
+    queued_tasks: int
+    running_cycles: int
+    human_validated_problems: int
+    last_completed_at: Optional[datetime] = None
+
+
 class PublicProviderOut(BaseModel):
     id: int
     name: str

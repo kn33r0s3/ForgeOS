@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timezone
 import sqlite3
 import time
 
@@ -1381,6 +1382,53 @@ def test_domain_dispute_records_an_event_and_names_a_winner_nowhere(owner_client
     # Free-form submitter notes remain in canonical Outcomes, not public DTOs.
     assert "Cash handed over" not in str(events)
     assert "The pump was not as described" not in str(events)
+
+
+def test_public_runtime_summary_is_aggregate_only(client_with_db, db):
+    action = models.Action(
+        action_type="manual_note",
+        objective="PRIVATE ACTION OBJECTIVE must not be public",
+        status="PENDING",
+    )
+    worker = models.WorkerTask(
+        worker_type="private-worker",
+        task_name="PRIVATE TASK TITLE",
+        status="queued",
+        error="PRIVATE WORKER ERROR",
+    )
+    cycle = models.CycleRun(
+        started_at=datetime(2026, 10, 11, 11, 0, tzinfo=timezone.utc),
+        ended_at=datetime(2026, 10, 11, 11, 1, tzinfo=timezone.utc),
+        status="COMPLETED",
+        error="PRIVATE CYCLE ERROR",
+    )
+    opportunity = models.Opportunity(
+        problem="Test-only validated problem",
+        status="validated",
+    )
+    db.add_all([action, worker, cycle, opportunity])
+    db.commit()
+
+    response = client_with_db.get("/public/runtime-summary")
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["pending_actions"] == 1
+    assert payload["queued_tasks"] == 1
+    assert payload["running_cycles"] == 0
+    assert payload["human_validated_problems"] == 1
+    assert payload["last_completed_at"] is not None
+    assert set(payload) == {
+        "active_stage",
+        "pending_actions",
+        "queued_tasks",
+        "running_cycles",
+        "human_validated_problems",
+        "last_completed_at",
+    }
+    assert "PRIVATE" not in response.text
+    assert "task_name" not in response.text
+    assert "worker_type" not in response.text
+    assert "error" not in response.text.lower()
 
 
 def test_public_alerts_use_safe_canonical_outcome_summaries(owner_client_with_db, db):

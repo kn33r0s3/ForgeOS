@@ -44,46 +44,13 @@ export interface MoneyDashboard {
   failed_experiments: ActionRecord[];
 }
 
-export interface RuntimeSnapshot {
-  signals: number | null;
-  evidence: number | null;
-  research_tasks: number | null;
-  opportunities: number | null;
-  outcomes: number | null;
+export interface PublicRuntimeSummary {
   active_stage: string;
-  worker: {
-    queued_tasks: number;
-    last_task: {
-      worker_type: string | null;
-      task_name: string | null;
-      status: string | null;
-      updated_at: string | null;
-      error: string | null;
-    } | null;
-  };
-  cycles: {
-    running_count: number;
-    last_completed: {
-      id: number | null;
-      started_at: string | null;
-      ended_at: string | null;
-      duration_ms: number | null;
-    } | null;
-  };
-  truth?: {
-    epistemic_labels: {
-      currently_collected_signals: number;
-      opportunity_hypotheses: number;
-      human_validated_problems: number;
-      actual_outcomes: number;
-      actual_revenue: number;
-    };
-    operations: {
-      pending_actions: number;
-      queued_tasks: number;
-      running_cycles: number;
-    };
-  };
+  pending_actions: number;
+  queued_tasks: number;
+  running_cycles: number;
+  human_validated_problems: number;
+  last_completed_at: string | null;
 }
 
 async function fetchApiJson<T>(path: string, ownerKey?: string): Promise<T> {
@@ -101,16 +68,15 @@ async function fetchApiJson<T>(path: string, ownerKey?: string): Promise<T> {
 }
 
 /**
- * Engine reads are cached for a few seconds because several pages ask for the
- * same snapshot (home, opportunities, actions each show part of
- * `/api/forge/runtime`). Callers that must reflect a just-performed action pass
- * `{ fresh: true }`.
- *
- * Errors are deliberately not cached: `fetchApiJson` throws on a bad response,
- * so a failure stays a live signal for the next caller and for "Retry".
+ * Public pages receive aggregate counts only. Detailed worker/task/action fields
+ * stay on the owner-key-protected `/api/forge/runtime` endpoint.
  */
-export function loadRuntimeSnapshot(scope?: CacheScope) {
-  return cachedRead("/api/forge/runtime", () => fetchApiJson<RuntimeSnapshot>("/api/forge/runtime"), scope);
+export function loadPublicRuntimeSummary(scope?: CacheScope) {
+  return cachedRead(
+    "/api/public/runtime-summary",
+    () => fetchApiJson<PublicRuntimeSummary>("/api/public/runtime-summary"),
+    scope,
+  );
 }
 
 export function loadMoneyDashboard(ownerKey: string, scope?: CacheScope) {

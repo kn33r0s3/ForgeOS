@@ -658,6 +658,42 @@ def public_revenue_miner(db: Session = Depends(get_db)):
     return schemas.PublicRevenueMinerOut(**revenue_miner_public_summary(db))
 
 
+@router.get("/runtime-summary", response_model=schemas.PublicRuntimeSummary)
+def public_runtime_summary(db: Session = Depends(get_db)):
+    """Expose aggregate operational state only; owner task/action details stay private."""
+    from app.services import truth_audit
+
+    truth = truth_audit.snapshot(db)
+    operations = truth["operations"]
+    epistemic = truth["epistemic_labels"]
+    running_cycles = int(operations["running_cycles"])
+    queued_tasks = int(operations["queued_tasks"])
+    last_completed = (
+        db.query(models.CycleRun.ended_at)
+        .filter(
+            models.CycleRun.status == "COMPLETED",
+            models.CycleRun.ended_at.isnot(None),
+        )
+        .order_by(models.CycleRun.ended_at.desc())
+        .first()
+    )
+    active_stage = (
+        "cycle_running"
+        if running_cycles
+        else "tasks_queued"
+        if queued_tasks
+        else "idle"
+    )
+    return schemas.PublicRuntimeSummary(
+        active_stage=active_stage,
+        pending_actions=int(operations["pending_actions"]),
+        queued_tasks=queued_tasks,
+        running_cycles=running_cycles,
+        human_validated_problems=int(epistemic["human_validated_problems"]),
+        last_completed_at=last_completed[0] if last_completed else None,
+    )
+
+
 @router.get("/alerts", response_model=list[schemas.PublicAlertOut])
 def list_public_alerts(limit: int = Query(default=20, ge=1, le=50), db: Session = Depends(get_db)):
     """Public alert summaries reuse the canonical visibility/provenance-safe outcome projection."""
