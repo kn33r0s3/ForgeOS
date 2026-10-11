@@ -1,3 +1,11 @@
+## [SCOPE INTEGRITY / SOURCE CHANGE / CI PENDING] Keep the current experiment a pilot, not Hami's boundary (2026-10-12)
+
+- Hami's owner-established identity is open-ended: investigate value in any form; do not restrict its domain to the current product, experiment, economic activity, geography, resource class, or predefined operation.
+- The immediate sequencing focus remains the current real-world experiment. It determines the next learning step; it does not redefine Hami's ontology or long-term scope.
+- A source change removed that rule from `AGENTS.md`, `FORGE_SUBSTRATE_BLUEPRINT.md`, `README.md`, `docs/HAMI_SYSTEM_MAP.md`, and existing About/homepage copy. These six files are restored from the last scope-preserving commit.
+- Truth and architecture boundaries remain unchanged: one Hami, six canonical semantic primitives, no duplicate engine. Open-ended investigation does not claim all capabilities already exist; claims need evidence and action remains bounded by authorization, safety, privacy, legality, viability, and actual execution capability.
+- No database, customer, revenue, payment-activation, or outreach state was changed. Exact-head CI and independent deployment verification are pending.
+
 ## [SOURCE CHANGE / CI PENDING] Harden provider destinations and expose currency-safe revenue projections (2026-10-12)
 
 - `PUBLIC_APP_URL` must be an origin, not a nested path. eSewa forms are restricted to the official v2 form host/path; Khalti redirects are restricted to HTTPS `*.khalti.com`. Khalti totals below NPR 10 are hidden for that provider and rejected before an intent is created.

@@ -108,6 +108,12 @@ permission or execution capability.
 
 Hami grows like a science, not like a product company.
 
+Hami's domain is **value itself**: any form, state, context, resource, relationship, need, capability, or possible transformation. The scope of investigation is open-ended; it is not limited to a product, market, industry, geography, current taxonomy, or list of operations. Categories and examples are navigation aids, never hard boundaries. New domains should connect through the existing ENTITY, RELATION, EVENT, EVIDENCE, CAPABILITY, and ACTION primitives and emit the appropriate registered events; do not add parallel engines or new top-level semantic primitives merely to cover a new kind of value.
+
+This open-ended scope does not relax truth or action constraints. Keep possibility, hypothesis, tested result, evidence-supported claim, and realized outcome distinct. Record provenance, contradictory evidence, cost, risk, permissions, and uncertainty. A test must actually run; supported claims need relevant evidence; realized value needs an observed outcome at the required verification standard. TEST/MOCK/HYPOTHESIS must never be presented as REAL. Investigate broadly; act only within legal, safe, authorized, viable, and technically verified boundaries. Choosing not to act is valid when evidence does not justify action.
+
+The durable north star is: **Hami's domain is value itself—in every form, state, and possible transformation—investigated without artificial boundary, claimed only with evidence, and acted upon only when governed and viable.** Revenue is one possible result of realizing value, not Hami's identity or scope.
+
 Its core asset is a register of claims with evidence levels, including killed
 hypotheses. A method counts only after it works in two different places.
 Capabilities are instruments that improve what Hami can measure or verify.
