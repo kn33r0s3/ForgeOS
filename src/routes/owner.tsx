@@ -203,6 +203,33 @@ type IntelligenceState = {
   clearance: { as_of: string; sources: ClearanceEntry[] } | null;
 };
 
+type ProductSummaryView = {
+  id: number;
+  name: string;
+  status: string;
+  launch_state: string | null;
+  approval_status: string;
+  data_scope: string;
+  lead_count: number;
+  paid_customer_count: number;
+  actual_customers: number;
+  actual_revenue: number;
+};
+
+type CommercialState = {
+  products: ProductSummaryView[] | null;
+  error: string | null;
+};
+
+function formatUsd(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "UNKNOWN";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
 function displayTime(value: string | null) {
   if (!value) return "Not recorded";
   const date = new Date(value);
@@ -308,6 +335,10 @@ function OwnerConsolePage() {
   const [evidenceReference, setEvidenceReference] = useState("");
   const [outcomeNote, setOutcomeNote] = useState("");
   const [intel, setIntel] = useState<IntelligenceState | null>(null);
+  const [commercial, setCommercial] = useState<CommercialState>({
+    products: null,
+    error: null,
+  });
 
   async function refresh(ownerKey = key) {
     const [readiness, leads] = await Promise.all([
@@ -315,6 +346,32 @@ function OwnerConsolePage() {
       ownerFetch<Lead[]>("owner/leads", ownerKey),
     ]);
     setConsoleState({ readiness, leads });
+
+    // Read only the product summary endpoint. The consolidated pipeline also
+    // returns customer-event contact data, which this visibility panel does
+    // not need and therefore must not fetch into browser memory.
+    try {
+      const response = await fetch("/api/products", {
+        headers: { "X-API-Key": ownerKey },
+      });
+      if (response.status === 401) {
+        throw new Error("Owner authentication failed. Check the key and try again.");
+      }
+      if (!response.ok) {
+        throw new Error(`Product visibility request failed (${response.status}).`);
+      }
+      const payload: unknown = await response.json();
+      if (!Array.isArray(payload)) {
+        throw new Error("Product visibility returned an unexpected response.");
+      }
+      setCommercial({ products: payload as ProductSummaryView[], error: null });
+    } catch (cause) {
+      setCommercial({
+        products: null,
+        error: cause instanceof Error ? cause.message : "Product visibility is unavailable.",
+      });
+    }
+
     if (selected) {
       const updated = leads.find((lead) => lead.reference === selected.reference);
       if (!updated) setSelected(null);
@@ -347,6 +404,7 @@ function OwnerConsolePage() {
       await refresh(key);
     } catch (cause) {
       setConsoleState(null);
+      setCommercial({ products: null, error: null });
       setError(cause instanceof Error ? cause.message : "Owner access is unavailable.");
     } finally {
       setBusy(false);
@@ -435,6 +493,7 @@ function OwnerConsolePage() {
     setConsoleState(null);
     setSelected(null);
     setIntel(null);
+    setCommercial({ products: null, error: null });
     setNotice("");
     setError("");
   }
@@ -456,6 +515,17 @@ function OwnerConsolePage() {
         24 * 60 * 60 * 1000
         ? "red"
         : "amber";
+  const realProducts = (commercial.products ?? []).filter((p) => p.data_scope === "REAL");
+  const sandboxProducts = (commercial.products ?? []).filter((p) => p.data_scope === "SANDBOX");
+  const launchedProducts = realProducts.filter(
+    (p) =>
+      ["launched", "iterating"].includes(p.status) &&
+      ["piloting", "public"].includes(p.launch_state ?? ""),
+  ).length;
+  const realLeads = realProducts.reduce((sum, p) => sum + p.lead_count, 0);
+  const recordedRealCustomers = realProducts.reduce((sum, p) => sum + p.actual_customers, 0);
+  const recordedRealRevenue = realProducts.reduce((sum, p) => sum + p.actual_revenue, 0);
+  const recordedSandboxRevenue = sandboxProducts.reduce((sum, p) => sum + p.actual_revenue, 0);
 
   return (
     <main className="flex-1">
@@ -681,7 +751,7 @@ function OwnerConsolePage() {
               ) : null}
 
               <section className="mt-10 border-t-2 border-line pt-5" aria-label="Intelligence">
-                <h2 className="text-xl font-extrabold">Intelligence</h2>
+                <h2 className="text-xl font-extrabold">Orchestrator &amp; intelligence</h2>
                 <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
                   What Hami&apos;s engines actually did — last runs, per-stage
                   results, research state, and source clearance. UNKNOWN means
@@ -838,6 +908,110 @@ function OwnerConsolePage() {
                     </div>
                   </div>
                 )}
+              </section>
+
+              <section className="mt-10 border-t-2 border-line pt-5" aria-label="Products and payments">
+                <h2 className="text-xl font-extrabold">Products &amp; payments</h2>
+                <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
+                  Read-only commercial visibility from existing owner-protected product records.
+                  REAL outcomes and SANDBOX records remain separate. This view never initiates
+                  checkout, contacts a provider, or treats configuration as evidence of payment.
+                </p>
+
+                {commercial.products === null ? (
+                  <p className="mt-3 rounded-card border-2 border-line bg-card p-4 text-sm text-muted">
+                    {commercial.error ?? "Product figures UNKNOWN — refresh the owner console to load the existing product summary endpoint."}
+                  </p>
+                ) : (
+                  <>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      <div className="rounded-card border-2 border-line bg-card p-4">
+                        <p className="text-sm text-muted">REAL product records</p>
+                        <p className="mt-1 text-2xl font-extrabold tabular-nums">{realProducts.length}</p>
+                      </div>
+                      <div className="rounded-card border-2 border-line bg-card p-4">
+                        <p className="text-sm text-muted">Launched / piloting</p>
+                        <p className="mt-1 text-2xl font-extrabold tabular-nums">{launchedProducts}</p>
+                      </div>
+                      <div className="rounded-card border-2 border-line bg-card p-4">
+                        <p className="text-sm text-muted">REAL-source leads</p>
+                        <p className="mt-1 text-2xl font-extrabold tabular-nums">{realLeads}</p>
+                      </div>
+                      <div className="rounded-card border-2 border-line bg-card p-4">
+                        <p className="text-sm text-muted">Recorded customers (verified ACTUAL outcomes)</p>
+                        <p className="mt-1 text-2xl font-extrabold tabular-nums">{recordedRealCustomers}</p>
+                      </div>
+                      <div className="rounded-card border-2 border-line bg-card p-4">
+                        <p className="text-sm text-muted">Verified outcome revenue · USD</p>
+                        <p className="mt-1 text-2xl font-extrabold tabular-nums">{formatUsd(recordedRealRevenue)}</p>
+                        <p className="mt-1 text-xs text-muted">Derived from verified REAL ACTUAL_REVENUE outcomes, not payment-provider configuration.</p>
+                      </div>
+                      <div className="rounded-card border-2 border-line bg-card p-4">
+                        <p className="text-sm text-muted">SANDBOX records / revenue</p>
+                        <p className="mt-1 text-2xl font-extrabold tabular-nums">{sandboxProducts.length} / {formatUsd(recordedSandboxRevenue)}</p>
+                        <p className="mt-1 text-xs text-muted">Test data is not business traction.</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-6">
+                      <h3 className="font-extrabold">Existing products</h3>
+                      {commercial.products.length === 0 ? (
+                        <p className="mt-2 rounded-card border border-line bg-card p-4 text-sm text-muted">
+                          No product records returned by the owner-protected endpoint.
+                        </p>
+                      ) : (
+                        <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+                          {commercial.products.map((product) => (
+                            <li key={product.id} className="rounded-card border-2 border-line bg-card p-4">
+                              <div className="flex flex-wrap items-start justify-between gap-2">
+                                <h4 className="font-extrabold">{product.name}</h4>
+                                <span className="rounded border border-line px-2 py-1 text-xs font-bold">
+                                  {product.data_scope}
+                                </span>
+                              </div>
+                              <p className="mt-2 text-sm text-muted">
+                                {product.status} · launch {product.launch_state ?? "UNKNOWN"} · approval {product.approval_status}
+                              </p>
+                              <p className="mt-2 text-sm">
+                                Leads {product.lead_count} · paid-customer records {product.paid_customer_count}
+                              </p>
+                              <p className="mt-1 text-sm">
+                                Verified outcome revenue {formatUsd(product.actual_revenue)} · actual customers {product.actual_customers}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                <div className="mt-6">
+                  <h3 className="font-extrabold">Payment integration visibility</h3>
+                  <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                    <article className="rounded-card border-2 border-line bg-card p-4">
+                      <p className="font-bold">eSewa</p>
+                      <p className="mt-1 text-sm">Provider readiness: UNKNOWN</p>
+                      <p className="mt-1 text-sm text-muted">
+                        Existing routes expose checkout, transaction lookup and callback verification.
+                        There is no passive provider-readiness endpoint, so this screen makes no provider call.
+                      </p>
+                    </article>
+                    <article className="rounded-card border-2 border-line bg-card p-4">
+                      <p className="font-bold">Khalti</p>
+                      <p className="mt-1 text-sm">Provider readiness: UNKNOWN</p>
+                      <p className="mt-1 text-sm text-muted">
+                        Existing routes expose initiation and transaction lookup. A real transaction
+                        reference is required for lookup; this screen does not initiate or look up a payment.
+                      </p>
+                    </article>
+                  </div>
+                  <p className="mt-3 text-sm text-muted">
+                    Payment success and live collection are not established by a configured integration,
+                    a checkout link, or this panel. Reconcile a specific transaction through the existing
+                    owner-authorized path when the owner has a real provider reference.
+                  </p>
+                </div>
               </section>
 
               <section className="mt-10 border-t-2 border-line pt-5" aria-label="ForgeBot">

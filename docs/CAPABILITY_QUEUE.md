@@ -1,5 +1,14 @@
 # Hami capability claim ledger (ForgeOS repository)
 
+## [PARTIAL] Expose product outcomes and payment boundaries in the owner console (2026-10-11)
+
+- **EXISTING SEAMS INSPECTED:** `src/routes/owner.tsx`, `backend/app/api/products.py`, `backend/app/services/product_engine.py`, and `backend/app/api/payments.py`. Product summaries are owner-key protected and do not return customer-event contact records. Payment routes currently expose checkout/initiation and transaction-specific lookup/callback verification, not passive provider readiness.
+- **OWNER ACTION STILL REQUIRED:** authenticate to the owner console and reconcile a real payment only when the owner has an actual provider transaction reference. Provider credentials and payment state are not inferred by the UI.
+- **ACTION THIS CHANGE REMOVES:** needing to leave the owner console to inspect the existing product summary records and their evidence-gated REAL outcome rollups. The new panel uses the existing `GET /api/products` seam and does not fetch the consolidated pipeline endpoint, which includes customer-event contact data.
+- **REMAINING BLOCKER:** eSewa/Khalti provider readiness remains **UNKNOWN** in the UI because no passive status endpoint exists. This change does not initiate checkout, call gateways, modify activation flags, or claim live payment collection.
+- **NEXT REMOVABLE DEPENDENCY:** establish an owner-authorized, read-only payment reconciliation/status seam based on specific verified provider records; only then expose evidence-grounded provider state without initiating transactions.
+- **VERIFICATION AT CHANGE TIME:** implementation source and response schema inspected; automated CI results pending after the commit. REAL verified-outcome revenue is displayed as USD because the existing product rollup counts ACTUAL_REVENUE only when unit is USD. SANDBOX metrics remain separate.
+
 ## Closure map snapshot (2026-10-04)
 
 At the start of this review, `HEAD` and `origin/main` matched
