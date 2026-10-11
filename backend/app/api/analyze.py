@@ -9,7 +9,10 @@ API routes that drive Forge's core analysis loop:
   GET  /stats           -> dashboard totals
 """
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+import hashlib
+import hmac
+
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -21,6 +24,43 @@ from app.services.observer_engine import ObserverEngine
 from app.services import forge_bot_privacy
 
 router = APIRouter(tags=["analyze"])
+
+
+_STATUS_TOKEN_MIN_KEY_LENGTH = 16
+
+
+def _status_signing_key() -> str:
+    key = str(settings.FORGE_BOT_CONTACT_HMAC_KEY or "")
+    if len(key) < _STATUS_TOKEN_MIN_KEY_LENGTH:
+        raise HTTPException(
+            status_code=503,
+            detail="Research status access is not configured.",
+        )
+    return key
+
+
+def _research_status_token(question_id: int, signal_id: int) -> str:
+    # Bind the bearer capability to both the research question and the public
+    # submission that received it. The token is sent only in a response header.
+    message = f"hami:research-status:v1:{int(question_id)}:{int(signal_id)}".encode("utf-8")
+    signature = hmac.new(
+        _status_signing_key().encode("utf-8"), message, hashlib.sha256
+    ).hexdigest()
+    return f"{int(signal_id)}.{signature}"
+
+
+def _valid_research_status_token(question_id: int, token: str | None) -> bool:
+    if not token:
+        return False
+    try:
+        signal_part, signature = token.split(".", maxsplit=1)
+        signal_id = int(signal_part)
+        if signal_id <= 0 or len(signature) != 64:
+            return False
+        expected = _research_status_token(question_id, signal_id)
+    except (ValueError, HTTPException):
+        return False
+    return hmac.compare_digest(token, expected)
 
 
 def execute_research_task_in_background(task_id: int) -> None:
@@ -51,6 +91,7 @@ def analyze_idea(
     payload: schemas.AnalyzeRequest,
     background_tasks: BackgroundTasks,
     request: Request,
+    response: Response,
     db: Session = Depends(get_db),
 ):
     """Start the real research pipeline for a user-submitted problem.
@@ -63,6 +104,9 @@ def analyze_idea(
     """
     if not settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
         raise HTTPException(status_code=503, detail="Legacy intelligence is disabled.")
+    # Fail before any Signal/Claim/ResearchQuestion write if the response cannot
+    # be given a signed capability for polling its private research projection.
+    _status_signing_key()
     if not forge_bot_privacy.consume_rate_limited_request(
         db,
         request,
@@ -215,6 +259,9 @@ def analyze_idea(
     else:
         findings_summary = "No cleared external source strategy is currently available for this question."
 
+    response.headers["X-Research-Status-Token"] = _research_status_token(
+        question.id, signal.id
+    )
     return schemas.AnalyzeResponse(
         opportunity_id=None,
         problem=idea,
@@ -258,8 +305,14 @@ def analyze_idea(
     "/analyze/{question_id}/status",
     response_model=schemas.AnalyzeProgressResponse,
 )
-def get_analyze_status(question_id: int, db: Session = Depends(get_db)):
-    """Return current persisted progress without rerunning research."""
+def get_analyze_status(
+    question_id: int,
+    status_token: str | None = Header(default=None, alias="X-Research-Status-Token"),
+    db: Session = Depends(get_db),
+):
+    """Return persisted research progress only to the submitting capability holder."""
+    if not _valid_research_status_token(question_id, status_token):
+        raise HTTPException(status_code=404, detail="research question not found")
     question = db.get(models.ResearchQuestion, question_id)
     if question is None:
         raise HTTPException(status_code=404, detail="research question not found")

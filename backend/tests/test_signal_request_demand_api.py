@@ -60,6 +60,7 @@ def _client_for(db):
     from app import security
 
     security.settings.FORGE_API_KEY = ""
+    settings.FORGE_BOT_CONTACT_HMAC_KEY = "test-only-demand-status-key-0123456789"
 
     def override_get_db():
         try:
@@ -69,6 +70,27 @@ def _client_for(db):
 
     app.dependency_overrides[get_db] = override_get_db
     return TestClient(app, raise_server_exceptions=True)
+
+
+def test_demand_understanding_fails_closed_without_status_signing_key(db, monkeypatch):
+    monkeypatch.setattr(settings, "FORGEOS_LEGACY_INTELLIGENCE_ENABLED", True)
+    client = _client_for(db)
+    monkeypatch.setattr(settings, "FORGE_BOT_CONTACT_HMAC_KEY", "")
+    try:
+        response = client.post(
+            "/signals",
+            json={
+                "content": "TEST-only request must not persist without status capability",
+                "purpose": "demand_understanding",
+            },
+        )
+    finally:
+        client.close()
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 503
+    assert db.query(models.Signal).filter_by(source="user_request").count() == 0
+    assert db.query(models.WorkerTask).filter_by(worker_type="demand_understanding").count() == 0
 
 
 def test_explicit_signal_request_enters_observation_and_demand_worker(db):
@@ -85,7 +107,13 @@ def test_explicit_signal_request_enters_observation_and_demand_worker(db):
             },
             headers={"Idempotency-Key": "developer-test-request-001"},
         )
-        status = client.get(response.headers["x-demand-understanding-status-url"])
+        status = client.get(
+            response.headers["x-demand-understanding-status-url"],
+            headers={
+                "X-Demand-Understanding-Status-Token":
+                    response.headers["x-demand-understanding-status-token"]
+            },
+        )
     finally:
         client.close()
         app.dependency_overrides.clear()
@@ -199,11 +227,24 @@ def test_demand_status_distinguishes_delayed_retry_from_active_work(db):
     db.commit()
     client = _client_for(db)
     try:
-        response = client.get(f"/signals/demand-understanding/{task.id}")
+        missing = client.get(f"/signals/demand-understanding/{task.id}")
+        wrong = client.get(
+            f"/signals/demand-understanding/{task.id}",
+            headers={"X-Demand-Understanding-Status-Token": "0" * 64},
+        )
+        response = client.get(
+            f"/signals/demand-understanding/{task.id}",
+            headers={
+                "X-Demand-Understanding-Status-Token":
+                    __import__("app.api.signals", fromlist=["_demand_status_token"])
+                    ._demand_status_token(task.id)
+            },
+        )
     finally:
         client.close()
         app.dependency_overrides.clear()
 
+    assert missing.status_code == wrong.status_code == 404
     assert response.status_code == 200
     assert response.json()["status"] == "queued"
     assert response.json()["phase"] == "retry_wait"

@@ -11,7 +11,7 @@ Public read-only routes are verified to remain open (no accidental lockout).
 import pytest
 from fastapi.testclient import TestClient
 
-from app import security
+from app import models, security
 from app.database import get_db
 from app.main import app
 from app.services import world_graph
@@ -120,6 +120,48 @@ def test_intelligence_reads_require_owner_key(client, monkeypatch, path):
 
     allowed = client.get(path, headers={"X-API-Key": "step1-owner-key"})
     assert allowed.status_code not in (401, 503), f"{path}: {allowed.status_code}"
+
+
+def test_research_status_requires_submission_capability_before_lookup(client, db, monkeypatch):
+    from app.api import analyze as analyze_api
+
+    monkeypatch.setattr(
+        analyze_api.settings,
+        "FORGE_BOT_CONTACT_HMAC_KEY",
+        "test-only-research-status-key-0123456789",
+    )
+    signal = models.Signal(source="manual", content="TEST-only status-token source")
+    question = models.ResearchQuestion(
+        question="TEST-only protected research status",
+        status="open",
+        research_plan={"status": "research_completed", "requirements": [], "unknowns": []},
+    )
+    other_question = models.ResearchQuestion(
+        question="TEST-only another protected research status",
+        status="open",
+        research_plan={"status": "research_completed", "requirements": [], "unknowns": []},
+    )
+    db.add_all([signal, question, other_question])
+    db.commit()
+    db.refresh(signal)
+    db.refresh(question)
+    db.refresh(other_question)
+    path = f"/analyze/{question.id}/status"
+
+    missing = client.get(path)
+    wrong = client.get(path, headers={"X-Research-Status-Token": "invalid-capability"})
+    token = analyze_api._research_status_token(question.id, signal.id)
+    valid = client.get(path, headers={"X-Research-Status-Token": token})
+    replay = client.get(
+        f"/analyze/{other_question.id}/status",
+        headers={"X-Research-Status-Token": token},
+    )
+
+    assert missing.status_code == 404
+    assert wrong.status_code == 404
+    assert valid.status_code == 200, valid.text
+    assert valid.json()["research_question_id"] == question.id
+    assert replay.status_code == 404
 
 
 def test_deployed_runtime_fails_closed_for_privileged_paths_when_key_is_missing(monkeypatch):

@@ -1,6 +1,7 @@
 """API routes for observing/storing and listing signals."""
 
 import hashlib
+import hmac
 import secrets
 from datetime import datetime, timezone
 
@@ -15,6 +16,26 @@ from app.config import settings
 from app import security
 
 router = APIRouter(prefix="/signals", tags=["signals"])
+
+
+_STATUS_TOKEN_MIN_KEY_LENGTH = 16
+
+
+def _status_signing_key() -> str:
+    key = str(settings.FORGE_BOT_CONTACT_HMAC_KEY or "")
+    if len(key) < _STATUS_TOKEN_MIN_KEY_LENGTH:
+        raise HTTPException(
+            status_code=503,
+            detail="Demand status access is not configured.",
+        )
+    return key
+
+
+def _demand_status_token(task_id: int) -> str:
+    message = f"hami:demand-status:v1:{int(task_id)}".encode("utf-8")
+    return hmac.new(
+        _status_signing_key().encode("utf-8"), message, hashlib.sha256
+    ).hexdigest()
 
 
 @router.get("/public-request/config")
@@ -39,6 +60,8 @@ def _record_demand_request(
             status_code=503,
             detail="Legacy demand-understanding is disabled.",
         )
+    # Fail before persisting a request if we cannot issue a private polling capability.
+    _status_signing_key()
 
     from app.services import demand_understanding, worker_manager
 
@@ -106,6 +129,7 @@ def _record_demand_request(
     response.headers["X-Demand-Understanding-Status-URL"] = (
         f"/signals/demand-understanding/{task.id}"
     )
+    response.headers["X-Demand-Understanding-Status-Token"] = _demand_status_token(task.id)
     background_tasks.add_task(worker_manager.process_demand_task_in_background, task.id)
     return signal
 
@@ -179,8 +203,16 @@ def get_signals(
     "/demand-understanding/{task_id}",
     response_model=schemas.DemandUnderstandingTaskStatus,
 )
-def get_demand_understanding_status(task_id: int, db: Session = Depends(get_db)):
-    """Return persisted progress for one demand-understanding task."""
+def get_demand_understanding_status(
+    task_id: int,
+    status_token: str | None = Header(default=None, alias="X-Demand-Understanding-Status-Token"),
+    db: Session = Depends(get_db),
+):
+    """Return persisted progress only to a holder of this task's status capability."""
+    if not status_token or not hmac.compare_digest(
+        status_token, _demand_status_token(task_id)
+    ):
+        raise HTTPException(status_code=404, detail="demand-understanding task not found")
     task = (
         db.query(models.WorkerTask)
         .filter_by(id=task_id, worker_type="demand_understanding")
