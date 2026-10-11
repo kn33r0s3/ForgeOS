@@ -65,4 +65,11 @@ describe("Hami authentication boundary", () => {
     assert.ok(apiRoute.includes("POST: ({ request }) => handleAuthRequest(request)"));
   });
 
+  it("does not use the shared dev user when deployed auth is unavailable", () => {
+    const verify = read("./verify.server.ts");
+    assert.ok(verify.includes("authDisabled && isWorkspacePreview() && !databaseConfigured"));
+    assert.ok(verify.includes("throw new UnauthorizedError()"));
+    assert.ok(verify.includes("import { isWorkspacePreview } from \"../env.server\""));
+  });
+
 });
