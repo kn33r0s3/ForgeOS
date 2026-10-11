@@ -117,21 +117,25 @@ function PublicOffers() {
         window.location.assign(destination.toString());
         return;
       }
-      const destination = new URL(payload.checkout.url);
-      if (destination.protocol !== "https:") throw new Error("The payment provider returned a non-HTTPS form destination.");
-      const form = document.createElement("form");
-      form.method = "POST";
-      form.action = destination.toString();
-      form.style.display = "none";
-      for (const [name, value] of Object.entries(payload.checkout.fields)) {
-        const input = document.createElement("input");
-        input.type = "hidden";
-        input.name = name;
-        input.value = value;
-        form.appendChild(input);
+      if (payload.checkout.type === "form_post") {
+        const destination = new URL(payload.checkout.url);
+        if (destination.protocol !== "https:") throw new Error("The payment provider returned a non-HTTPS form destination.");
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = destination.toString();
+        form.style.display = "none";
+        for (const [name, value] of Object.entries(payload.checkout.fields)) {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = name;
+          input.value = value;
+          form.appendChild(input);
+        }
+        document.body.appendChild(form);
+        form.submit();
+        return;
       }
-      document.body.appendChild(form);
-      form.submit();
+      throw new Error("The payment provider returned an unsupported checkout flow.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Checkout could not be started.");
     } finally {

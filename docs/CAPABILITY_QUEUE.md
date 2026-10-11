@@ -1,3 +1,7 @@
+## [SOURCE CHANGE / CI PENDING] Require explicit eSewa form-post checkout response (2026-10-12)
+
+- The initial public-offer UI accepted any non-redirect checkout response as an eSewa form. It now accepts the form branch only when `checkout.type === "form_post"`, validates HTTPS, and otherwise fails closed without submitting an unknown form.
+- This aligns runtime behavior and its frontend source regression; exact-SHA checks pending.
 ## [SOURCE CHANGE / CI PENDING] Add public offer and payment-result UI for verified checkout intents (2026-10-12)
 
 - The homepage now renders offers only from the server-filtered `/api/payments/offers` projection. eSewa signed-form submission and Khalti redirects occur only after the visitor explicitly clicks a provider button.
