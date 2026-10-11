@@ -11,6 +11,10 @@ import importlib
 import json
 from pathlib import Path
 
+import pytest
+
+from app.config import parse_allowed_origins
+
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 from starlette.routing import Match
@@ -19,6 +23,22 @@ from app.database import get_db
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = ROOT / "vercel.json"
+
+
+def test_allowed_origins_accepts_csv_and_json_array():
+    expected = ["https://haminp.vercel.app", "https://forge-os-ebon.vercel.app"]
+    assert parse_allowed_origins(
+        "https://haminp.vercel.app, https://forge-os-ebon.vercel.app"
+    ) == expected
+    assert parse_allowed_origins(
+        '["https://haminp.vercel.app", "https://forge-os-ebon.vercel.app"]'
+    ) == expected
+
+
+@pytest.mark.parametrize("value", ["", " , ", "*", '["*"]', '["https://haminp.vercel.app", 2]'])
+def test_allowed_origins_rejects_empty_wildcard_or_invalid_values(value):
+    with pytest.raises(ValueError):
+        parse_allowed_origins(value)
 
 
 def _config():

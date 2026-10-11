@@ -7,9 +7,40 @@ AI provider, the database, or future services (crawler, Reddit API,
 Ollama) only means touching this file plus the relevant service.
 """
 
+import json
 import os
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def parse_allowed_origins(value: str) -> list[str]:
+    """Accept comma-separated or JSON-array CORS origins from deployment env.
+
+    Pydantic Settings JSON-decodes environment values typed as lists before
+    validators run. Keeping the environment setting as a string and parsing it
+    here supports the existing comma-separated deployment contract safely.
+    """
+    raw = value.strip()
+    if not raw:
+        raise ValueError("ALLOWED_ORIGINS must contain at least one origin.")
+
+    if raw.startswith("["):
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise ValueError("ALLOWED_ORIGINS must be a comma-separated string or JSON array.") from exc
+        if not isinstance(parsed, list) or any(not isinstance(item, str) for item in parsed):
+            raise ValueError("ALLOWED_ORIGINS JSON value must be an array of strings.")
+        items = parsed
+    else:
+        items = raw.split(",")
+
+    origins = [item.strip() for item in items if item.strip()]
+    if not origins:
+        raise ValueError("ALLOWED_ORIGINS must contain at least one origin.")
+    if "*" in origins:
+        raise ValueError("ALLOWED_ORIGINS must use explicit origins; wildcard is not allowed.")
+    return origins
 
 
 def _int_env(name: str, default: int) -> int:
@@ -118,10 +149,10 @@ class Settings(BaseSettings):
     # The frontend runs locally on 127.0.0.1:3002 in this environment, and
     # the dev UI also commonly uses localhost:3000. Keep the default list in
     # sync with the real browser origins and allow overriding via env.
-    ALLOWED_ORIGINS: list[str] = os.getenv(
+    ALLOWED_ORIGINS: str = os.getenv(
         "ALLOWED_ORIGINS",
         "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3002,http://127.0.0.1:3002,http://0.0.0.0:3002,http://localhost:8080,http://127.0.0.1:8080",
-    ).split(",")
+    )
 
     # --- Security (opt-in) ---
     # Leave empty (default) for local-first operation with no auth. To protect

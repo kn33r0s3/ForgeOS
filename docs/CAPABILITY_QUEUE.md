@@ -1,5 +1,13 @@
 # Hami capability claim ledger (ForgeOS repository)
 
+## [PARTIAL] Fix production CORS environment parsing and recover owner-readiness endpoint (2026-10-11)
+
+- **EXISTING SEAMS INSPECTED:** `backend/app/config.py::Settings.ALLOWED_ORIGINS`, `backend/app/main.py` CORS middleware, and `backend/tests/test_vercel_config_contract.py`. Production deploy verification run `38140140968` returned HTTP 500 from `/api/forge-bot/owner/readiness` immediately after the owner set Production `ALLOWED_ORIGINS` as a comma-separated value. The setting was annotated `list[str]`; Pydantic Settings JSON-decodes list-valued environment variables, so the CSV deployment value caused settings initialization to fail.
+- **ACTION THIS CHANGE REMOVES:** production settings initialization now treats `ALLOWED_ORIGINS` as a string and parses it explicitly at the existing CORS middleware seam; both CSV and JSON-array values are accepted, blanks are rejected, and a wildcard is prohibited. Regression tests cover both accepted formats and fail-closed invalid values.
+- **OWNER ACTION STILL REQUIRED:** rotate any Twilio credentials that left the trusted environment, then replace `TWILIO_AUTH_TOKEN` in the actual consuming environment using the owner's Twilio/Vercel access. This session did not read or rotate credentials.
+- **REMAINING BLOCKERS:** the Vercel connector still returns 403 for team scope `kn33r0s3s-projects`, so runtime logs and environment changes cannot be inspected through that integration. The new production verifier must confirm the owner-readiness HTTP response and deployed SHA after this fix; backend CI has not yet passed on current `main`.
+- **VERIFICATION AT CHANGE TIME:** observed failure is the HTTP 500 recorded in verifier run `38140140968`; fix tests and new Linux CI/deployment verification are pending. No payment, outreach, intake or LIVE flags were changed.
+
 ## [PARTIAL] Production CORS allowlist applied; regression assertions being closed (2026-10-11)
 
 - **PRODUCTION CONFIGURATION:** created the Production-only `ALLOWED_ORIGINS` variable with exact origins `https://haminp.vercel.app,https://forge-os-ebon.vercel.app`. `pulsenp.vercel.app` is an alias redirecting to Hami's canonical domain and is intentionally omitted. No wildcard was used.
