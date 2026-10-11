@@ -22,6 +22,7 @@ import { emailAndPasswordEnabled } from "./email-password";
 import { GATE_PROVIDER_ID, gateIdentitySessions } from "./gate-session.server";
 import { pgliteDialect } from "./pglite-dialect";
 import { PREVIEW_ALLOWED_HOSTS } from "./preview";
+import { isWorkspacePreview } from "../env.server";
 import { ACTIVE_TERMS } from "./terms-policy";
 
 // Kick (and share) PGLite bootstrap as soon as the auth server module loads.
@@ -50,6 +51,10 @@ const env = (key: string): string | undefined => {
 // Explicit off-switch. The deployer sets `VITE_AUTH_ENABLED=true` when it
 // provisions auth; set it to "false" to force auth off everywhere (dev user).
 const authDisabled = env("VITE_AUTH_ENABLED") === "false";
+const explicitAuthSecret = env("BETTER_AUTH_SECRET");
+// A process-local random secret is acceptable only for isolated workspace preview.
+// Deployed instances need one stable, operator-configured signing secret.
+export const authSecretReady = Boolean(explicitAuthSecret) || isWorkspacePreview();
 
 const googleClientId = env("GOOGLE_CLIENT_ID");
 const googleClientSecret = env("GOOGLE_CLIENT_SECRET");
@@ -59,7 +64,7 @@ export const googleAuthConfigured = Boolean(googleClientId && googleClientSecret
 
 /** True when this app has at least one configured, real authentication method. */
 export const authConfigured =
-  !authDisabled && (emailAndPasswordEnabled || googleAuthConfigured);
+  !authDisabled && authSecretReady && (emailAndPasswordEnabled || googleAuthConfigured);
 
 // This app's own Better Auth origin. In a dynamic preview, Better Auth derives
 // the app origin from the validated request host. Direct Google OAuth still
@@ -115,9 +120,9 @@ export const SESSION_TOKEN_COOKIE = "__Host-grok-auth.session_token";
 
 export const auth = betterAuth({
   baseURL,
-  // Deployed apps inject BETTER_AUTH_SECRET. Preview: process-stable secret on
-  // globalThis so HMR doesn't invalidate PGLite-backed sessions (see above).
-  secret: env("BETTER_AUTH_SECRET") ?? previewAuthSecret(),
+  // The preview fallback keeps isolated workspace sessions stable across HMR.
+  // Deployed API handlers are disabled by authConfigured unless a stable secret exists.
+  secret: explicitAuthSecret ?? previewAuthSecret(),
   database,
 
   // CSRF / origin check for credentialed auth POSTs (email sign-up/sign-in, …).
