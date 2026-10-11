@@ -300,7 +300,11 @@ describe("feature registry", () => {
     assert.ok(home.includes("readStoredCheckoutAttempt") && home.includes("sessionStorage.setItem") && home.includes("sessionStorage.getItem"), "attempt identity survives a page refresh within the tab");
     assert.ok(home.includes("writeStoredCheckoutAttempt(offerId: number, attempt: StoredCheckoutAttempt): boolean"));
     assert.ok(home.includes("if (!writeStoredCheckoutAttempt(offer.id, attempt))") && home.includes("No checkout request was sent."), "checkout fails closed before fetch if the idempotency key cannot persist");
-    assert.ok(home.indexOf("if (!writeStoredCheckoutAttempt(offer.id, attempt))") < home.indexOf("const response = await fetch(\"/api/payments/products/\"), "storage failure must be checked before the checkout POST");
+    assert.ok(
+      home.indexOf("if (!writeStoredCheckoutAttempt(offer.id, attempt))") <
+        home.indexOf('const response = await fetch("/api/payments/products/" + offer.id + "/checkout"'),
+      "storage failure must be checked before the checkout POST",
+    );
     assert.ok(home.includes("existingProvider !== provider"), "an unresolved attempt may not switch providers");
     assert.ok(!home.includes("delete next[offer.id]"), "ambiguous checkout failures must retain the idempotency key to avoid duplicate payment intents");
     assert.ok(result.includes('createFileRoute("/payment-result")'));

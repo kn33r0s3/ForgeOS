@@ -1,3 +1,9 @@
+## [CI FIX / SOURCE CHANGE / CI PENDING] Repair checkout retry guard regression assertion (2026-10-12)
+
+- Exact-head CI caught an unterminated string in the new checkout persistence regression assertion, causing TypeScript, lint, and frontend tests to fail at parse time. The assertion now compares against the actual checkout fetch statement using a valid quoted literal.
+- No runtime behavior or payment configuration changed in this fix. The preceding source change still fails closed before the checkout POST when session storage cannot persist the idempotency key.
+- Exact-head CI and independent deployment verification required.
+
 ## [SOURCE CHANGE / CI PENDING] Fail closed when checkout retry storage is unavailable (2026-10-12)
 
 - Checkout previously swallowed a `sessionStorage.setItem` failure and still sent the provider request with only an in-memory idempotency key. A refresh after an ambiguous response could then lose that key and permit a duplicate payment intent.
