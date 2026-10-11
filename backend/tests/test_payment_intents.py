@@ -50,6 +50,25 @@ def test_public_checkout_is_disabled_by_default_or_setting(monkeypatch, db):
     assert db.query(models.OpPaymentIntent).count() == 0
 
 
+
+def test_legacy_payment_intent_schema_recreates_fulfillment_timestamp_index(db):
+    """The owner queue's new timestamp index must be repaired on existing databases."""
+    from sqlalchemy import inspect, text
+    from app.migrations import run_migrations
+
+    engine = db.get_bind()
+    index_name = "ix_op_payment_intents_fulfilled_at"
+    with engine.begin() as connection:
+        connection.execute(text(f"DROP INDEX IF EXISTS {index_name}"))
+
+    before = {item["name"] for item in inspect(engine).get_indexes("op_payment_intents")}
+    assert index_name not in before
+
+    applied = run_migrations(engine)
+    assert f"CREATE INDEX {index_name} ON op_payment_intents (fulfilled_at)" in applied
+    after = {item["name"] for item in inspect(engine).get_indexes("op_payment_intents")}
+    assert index_name in after
+
 def test_esewa_checkout_persists_one_intent_and_idempotent_retry_reuses_it(db, monkeypatch):
     product = _published_product(db)
     monkeypatch.setattr(settings, "FORGEOS_PUBLIC_CHECKOUT_ENABLED", True)

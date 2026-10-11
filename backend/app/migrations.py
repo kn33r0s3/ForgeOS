@@ -106,6 +106,9 @@ EXPECTED_INDEXES = {
     "evidence": [
         ("ix_evidence_subject_id", "subject_id"),
     ],
+    "op_payment_intents": [
+        ("ix_op_payment_intents_fulfilled_at", "fulfilled_at"),
+    ],
     "network_connections": [
         ("ix_network_connections_relation_id", "relation_id"),
         ("ix_network_connections_relation_type", "relation_type"),
