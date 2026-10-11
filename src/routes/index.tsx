@@ -63,12 +63,51 @@ type PublicCheckoutResponse = {
   );
 };
 
+type CheckoutProvider = "esewa" | "khalti";
+type StoredCheckoutAttempt = { key: string; provider: CheckoutProvider };
+type CheckoutAttemptError = {
+  offerId: number;
+  provider: CheckoutProvider;
+  message: string;
+  retryable: boolean;
+};
+
+function checkoutAttemptStorageKey(offerId: number) {
+  return `hami:checkout-attempt:${offerId}`;
+}
+
+function readStoredCheckoutAttempt(offerId: number): StoredCheckoutAttempt | null {
+  try {
+    const raw = window.sessionStorage.getItem(checkoutAttemptStorageKey(offerId));
+    if (!raw) return null;
+    const value = JSON.parse(raw) as Partial<StoredCheckoutAttempt>;
+    if (
+      typeof value.key !== "string" ||
+      value.key.length < 16 ||
+      value.key.length > 128 ||
+      (value.provider !== "esewa" && value.provider !== "khalti")
+    ) return null;
+    return { key: value.key, provider: value.provider };
+  } catch {
+    // Storage may be blocked in privacy-restricted browser contexts.
+    return null;
+  }
+}
+
+function writeStoredCheckoutAttempt(offerId: number, attempt: StoredCheckoutAttempt) {
+  try {
+    window.sessionStorage.setItem(checkoutAttemptStorageKey(offerId), JSON.stringify(attempt));
+  } catch {
+    // In-memory idempotency remains active when session storage is unavailable.
+  }
+}
+
 function PublicOffers() {
   const [offers, setOffers] = useState<PublicPaymentOffer[] | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [keys, setKeys] = useState<Record<number, string>>({});
-  const [providersByOffer, setProvidersByOffer] = useState<Record<number, "esewa" | "khalti">>({});
-  const [error, setError] = useState("");
+  const [providersByOffer, setProvidersByOffer] = useState<Record<number, CheckoutProvider>>({});
+  const [error, setError] = useState<CheckoutAttemptError | null>(null);
 
   useEffect(() => {
     let current = true;
@@ -77,21 +116,52 @@ function PublicOffers() {
         if (!response.ok) throw new Error("Published offers are temporarily unavailable.");
         return (await response.json()) as PublicPaymentOffer[];
       })
-      .then((items) => { if (current) setOffers(Array.isArray(items) ? items : []); })
+      .then((items) => {
+        if (!current) return;
+        const availableOffers = Array.isArray(items) ? items : [];
+        setOffers(availableOffers);
+        const restoredKeys: Record<number, string> = {};
+        const restoredProviders: Record<number, CheckoutProvider> = {};
+        for (const offer of availableOffers) {
+          const attempt = readStoredCheckoutAttempt(offer.id);
+          if (!attempt) continue;
+          restoredKeys[offer.id] = attempt.key;
+          restoredProviders[offer.id] = attempt.provider;
+        }
+        setKeys(restoredKeys);
+        setProvidersByOffer(restoredProviders);
+      })
       .catch(() => { if (current) setOffers([]); });
     return () => { current = false; };
   }, []);
 
-  async function beginCheckout(offer: PublicPaymentOffer, provider: "esewa" | "khalti") {
+  async function beginCheckout(offer: PublicPaymentOffer, provider: CheckoutProvider) {
     if (busyId !== null) return;
+    const storedAttempt = readStoredCheckoutAttempt(offer.id);
+    const existingKey = keys[offer.id] ?? storedAttempt?.key;
+    const existingProvider = providersByOffer[offer.id] ?? storedAttempt?.provider;
+    if (existingKey && existingProvider && existingProvider !== provider) {
+      setError({
+        offerId: offer.id,
+        provider: existingProvider,
+        message: "This offer already has a checkout attempt with " +
+          (existingProvider === "esewa" ? "eSewa" : "Khalti") +
+          ". Retry that same attempt before switching providers.",
+        retryable: true,
+      });
+      return;
+    }
     setBusyId(offer.id);
-    setError("");
-    setProvidersByOffer((current) => ({ ...current, [offer.id]: provider }));
-    const key = keys[offer.id] ?? (
+    setError(null);
+    const key = existingKey ?? (
       window.crypto?.randomUUID?.()
       ?? ("hami-" + Date.now() + "-" + Math.random().toString(36).slice(2))
     );
+    const attempt: StoredCheckoutAttempt = { key, provider };
     setKeys((current) => ({ ...current, [offer.id]: key }));
+    setProvidersByOffer((current) => ({ ...current, [offer.id]: provider }));
+    writeStoredCheckoutAttempt(offer.id, attempt);
+    let retryable = true;
     try {
       const response = await fetch("/api/payments/products/" + offer.id + "/checkout", {
         method: "POST",
@@ -104,10 +174,14 @@ function PublicOffers() {
       const payload = await response.json().catch(() => null) as
         | (PublicCheckoutResponse & { detail?: string })
         | null;
-      if (!response.ok || !payload) {
+      if (!response.ok) {
+        retryable = false;
         throw new Error(payload && "detail" in payload && typeof payload.detail === "string"
           ? payload.detail
           : "Checkout could not be started (" + response.status + ").");
+      }
+      if (!payload) {
+        throw new Error("Checkout returned an incomplete response. Retry the same checkout attempt.");
       }
       if (!payload.checkout) {
         window.location.assign("/payment-result?intent=" + encodeURIComponent(payload.intent));
@@ -139,7 +213,12 @@ function PublicOffers() {
       }
       throw new Error("The payment provider returned an unsupported checkout flow.");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Checkout could not be started.");
+      setError({
+        offerId: offer.id,
+        provider,
+        message: cause instanceof Error ? cause.message : "Checkout could not be started.",
+        retryable,
+      });
     } finally {
       setBusyId(null);
     }
@@ -157,7 +236,7 @@ function PublicOffers() {
         <p className="mt-3 max-w-3xl text-sm leading-6 text-muted">
           Only currently published products with verified demand appear here. Provider verification confirms payment; Hami records revenue only after an owner confirms the promised service or deliverable was fulfilled.
         </p>
-        {error ? <p role="alert" className="mt-4 rounded-card border border-danger/60 p-3 text-sm">{error}</p> : null}
+        {error ? <p role="alert" className="mt-4 rounded-card border border-danger/60 p-3 text-sm">{error.message}</p> : null}
         <div className="mt-6 grid gap-4 md:grid-cols-2">
           {offers.map((offer) => (
             <article key={offer.id} className="rounded-card border-2 border-line bg-card p-5">
@@ -173,7 +252,10 @@ function PublicOffers() {
                     <button
                       key={provider}
                       type="button"
-                      disabled={busyId !== null}
+                      disabled={
+                        busyId !== null ||
+                        Boolean(providersByOffer[offer.id] && providersByOffer[offer.id] !== provider)
+                      }
                       onClick={() => void beginCheckout(offer, provider)}
                       className="min-h-11 rounded-card border-2 border-accent px-4 py-2 text-sm font-bold text-accent disabled:opacity-60"
                     >
@@ -184,10 +266,10 @@ function PublicOffers() {
               ) : (
                 <p className="mt-4 text-sm text-muted">Checkout is not enabled for this offer yet. No payment has been requested.</p>
               )}
-              {error ? (
+              {error?.offerId === offer.id && error.retryable ? (
                 <button
                   type="button"
-                  onClick={() => void beginCheckout(offer, providersByOffer[offer.id] ?? offer.providers[0] ?? "esewa")}
+                  onClick={() => void beginCheckout(offer, error.provider)}
                   className="mt-3 text-xs font-bold text-muted underline"
                 >
                   Retry the same checkout attempt

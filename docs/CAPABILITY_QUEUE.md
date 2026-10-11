@@ -1,3 +1,11 @@
+## [SOURCE CHANGE / CI PENDING] Persist checkout identity and scope retry controls (2026-10-12)
+
+- The public-offer screen persists only the random idempotency key and selected provider in tab-scoped `sessionStorage`, restoring them for currently published offers after refresh. It does not persist buyer data or provider credentials.
+- A checkout error is tied to its own offer and provider. Retry is displayed only on that offer when the HTTP outcome is ambiguous; explicit non-2xx responses are not presented as retryable. Provider switching is blocked while the previous attempt remains unresolved.
+- Storage failures fall back to the existing in-memory key. No new payment attempt, provider call, database row, or live checkout was initiated by this code change.
+- New-attempt recovery after a terminal provider state remains separate work; the client must not infer terminality or create a fresh idempotency key without confirmed state.
+- Exact-head typecheck, frontend tests, build, and backend CI are required.
+
 ## [TEST FIX / CI PENDING] Match Khalti reconciliation stub signature to API call (2026-10-12)
 
 - The authenticated callback API passes the SQLAlchemy session positionally, then intent/pidx as keywords. The regression test double now accepts the same signature; production behavior is unchanged.
