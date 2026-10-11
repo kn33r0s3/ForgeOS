@@ -84,6 +84,9 @@ is not automatically dead code.
   closed/open gate. A closed result or unavailable gate must not be interpreted
   as a live intake channel.
 
+**Legacy workspace boundary — not a current public Hami journey**
+- `/earn/offers` is consumed only by `docs/archive/legacy-frontend/`'s optional archived Next.js dashboard; no active root Vite route imports that client. It stores its own `EarningOffer` working rows and only emits canonical EVENT/OUTCOME records when a status is closed as paid/failed/abandoned. It is not currently a complete public Hami transaction flow, and `workspace_key` is a lightweight client-generated scope token, **not full authentication**. Its read token has been moved from the URL query to `X-Workspace-Key` to reduce URL-log exposure. The active deployed write guard still requires the owner API key for state changes, so the archived client must not be marketed as an operational deployed intake or revenue flow. Preserve the old implementation, but classify it as **legacy / owner decision**, not as a verified live Hami capability.
+
 **Scheduled or internal modules without a direct browser control surface**
 - `/api/scheduled/cycle` and `/api/scheduled/intelligence` — declared in
   `vercel.json` as cron endpoints. They should not be triggered merely by
