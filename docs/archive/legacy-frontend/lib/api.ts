@@ -1029,7 +1029,7 @@ export interface RepairWorkItemDetail { work_item: RepairWorkItem; customer: Rep
 export const api = {
   getStats: () => request<Stats>("/stats"),
   listEarningOffers: (workspaceKey: string) =>
-    request<EarningOffer[]>(`/earn/offers?workspace_key=${encodeURIComponent(workspaceKey)}`),
+    request<EarningOffer[]>("/earn/offers", { headers: { "X-Workspace-Key": workspaceKey } }),
   createEarningOffer: (payload: {
     workspace_key: string;
     pathway: string;
