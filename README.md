@@ -34,11 +34,8 @@ Current status and historical run results are tracked in [STATUS.md](STATUS.md),
 
 ## What Hami is
 
-Hami's domain is value itself—in every form, state, context, and possible transformation. Hami exists to discover, understand, transform, and realize value without artificial limits on industry, market, geography, resource type, or predefined operations. Examples and present capabilities are not the boundary of what Hami may investigate.
-
-Hami evolves the existing ForgeOS system in place rather than creating a parallel architecture. Its scope of investigation is open-ended; its claims are evidence-bound; and its actions remain governed by authorization, privacy, safety, legality, viability, and actual execution capability. Possibility is not proof, a test is not a successful outcome, and a payment callback is not by itself realized value.
-
-Canonical operating principles are recorded in [AGENTS.md](AGENTS.md), and the shared implementation map is maintained in [docs/HAMI_SYSTEM_MAP.md](docs/HAMI_SYSTEM_MAP.md).
+Hami is not a scoring SaaS or a leaderboard of business ideas. It evolves the
+existing ForgeOS system rather than creating a parallel architecture.
 
 It is a system organized around:
 

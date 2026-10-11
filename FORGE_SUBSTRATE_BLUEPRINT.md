@@ -1,4 +1,4 @@
-# Hami — Universal Value Intelligence & Action System
+# Hami — Universal Economic Intelligence & Action System
 
 ## Authoritative Blueprint & Implementation Contract
 
@@ -12,11 +12,9 @@
 
 # 1. PURPOSE
 
-Hami is a universal value intelligence and action system. **Hami's domain is value itself**—in every form, state, context, and possible transformation.
+Hami is a universal economic intelligence and action system.
 
-Its purpose is to discover, understand, preserve, create, connect, transform, use, exchange, protect, recover, and realize value wherever a legitimate, viable path may exist. It observes the world, investigates needs and possibilities, connects entities and capabilities, tests hypotheses, takes governed actions, measures real-world consequences, and learns from the results.
-
-Value may be economic, physical, informational, human, social, ecological, operational, potential, or not yet categorized. No list of forms of value or operations is exhaustive. Economic intelligence, payments, and revenue are important possible applications and measurements, but they do not define the full domain of Hami.
+Its purpose is to observe legitimate information about the world, understand demand and opportunity, research what is unknown, connect needs with capabilities and resources, take authorized actions, observe real-world outcomes, and learn from those outcomes.
 
 Hami is not defined as:
 
@@ -35,7 +33,7 @@ Those may become surfaces, applications, experiments, or commercial wedges built
 
 They are not Hami's ontology.
 
-The long-term system is intended to discover and realize legitimate value across many domains, including services, businesses, work, skills, products, resources, knowledge, logistics, procurement, property, relationships, and other forms that may not yet be named. Economic opportunities are one important application, not the limit of the system's investigation or ontology.
+The long-term system is intended to become capable of discovering and pursuing legitimate economic opportunities across many domains, including services, businesses, work, skills, products, resources, logistics, procurement, property, and other authorized economic activity.
 
 Hami must expand from evidence and demonstrated capability rather than from uncontrolled feature proliferation.
 

@@ -32,7 +32,7 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "Hami" },
       {
         property: "og:description",
-        content: "Discover value in every form. Understand it. Act on it.",
+        content: "Discover what matters. Understand it. Act on it.",
       },
       { name: "apple-mobile-web-app-title", content: "Hami" },
     ],
@@ -231,31 +231,31 @@ function Capabilities() {
   const capabilities = [
     {
       name: "Observe",
-      description: "Discover through the five currently configured, explicitly governed source adapters — OpenAlex, Crossref, World Bank, GDELT, and GovInfo. These instruments are not a boundary on the kinds of value Hami may investigate.",
+      description: "Collect information through five explicitly governed sources — OpenAlex, Crossref, World Bank, GDELT, and GovInfo — each with defined purposes and rate limits.",
       status: "Implemented",
       statusTone: "text-emerald-600",
     },
     {
       name: "Preserve",
-      description: "Retain evidence, provenance, scope, and uncertainty so possibilities and interpretations do not become unsupported claims.",
+      description: "Retain evidence, provenance, and uncertainty. Nothing is flattened into claims; every record cites its source and epistemic state.",
       status: "Implemented",
       statusTone: "text-emerald-600",
     },
     {
       name: "Investigate",
-      description: "Turn observations into relevant unknowns, hypotheses, and tests. Background information alone does not prove a need, demand, or valuable transformation.",
+      description: "Distinguish background observations from relevant unknowns. Bibliographic metadata stays as background; only problem-grounded patterns generate commercial questions.",
       status: "Implemented",
       statusTone: "text-emerald-600",
     },
     {
       name: "Act",
-      description: "Attempt transformations only within capability, authorization, privacy, safety, and legal boundaries. Consequential actions remain gated.",
+      description: "Use capabilities only within authorization boundaries. State-changing actions require owner approval; the public surface is read-only.",
       status: "Gated",
       statusTone: "text-amber-600",
     },
     {
       name: "Learn",
-      description: "Compare expectations with observed outcomes, record success or failure, and update understanding. No verified real-world value outcome has yet established economic validation.",
+      description: "Compare results with expectations and update understanding when evidence supports it. No verified real-world outcomes yet — the system is honest about this gap.",
       status: "Not yet validated",
       statusTone: "text-muted",
     },
@@ -268,7 +268,7 @@ function Capabilities() {
           numeral="§"
           eyebrow="System"
           title="What Hami does"
-          lede="Five current capabilities form one value loop. They are instruments, not limits on Hami’s domain; each retains its honest implementation and evidence status."
+          lede="Five capabilities, each with an honest status. No capability is claimed beyond what the implementation supports."
         />
         <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {capabilities.map((cap, i) => (
@@ -292,9 +292,9 @@ function Capabilities() {
           >
             <h3 className="font-display text-xl font-bold text-ink">The gap</h3>
             <p className="mt-3 text-sm leading-6 text-muted">
-              Engineering capability is not realized value. Hami has not yet served a real
-              merchant, recovered revenue, or validated an outcome with a real person. No
-              realization claim is made until an actual outcome is appropriately evidenced.
+              Implemented engineering is not the same as demonstrated economic results.
+              Hami has not yet served a real merchant, recovered revenue, or validated
+              an outcome with a real person. That work is next.
             </p>
           </div>
         </div>
@@ -483,10 +483,6 @@ function Hero() {
             >
               हामी एउटा जीवित प्रणाली हो जसले मानिसहरूलाई के चाहिन्छ भन्ने बुझ्छ र
               बुझाइलाई वास्तविक मूल्यमा बदल्छ।
-            </p>
-            <p className="mt-4 max-w-xl text-sm leading-6 text-muted">
-              Value itself is Hami’s domain: in every form and possible transformation.
-              Today’s sources, tools, and pilots are instruments—not limits on what Hami may investigate.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4">
               <p className="text-sm font-extrabold uppercase tracking-[0.18em] text-accent">
