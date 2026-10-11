@@ -234,6 +234,11 @@ def test_public_feed_projects_heterogeneous_records_with_evidence_and_relations(
     db.add(opportunity)
     db.flush()
     signal, claim = _public_claim(db)
+    signal.title = "Public infrastructure notice buyer@example.test"
+    signal.content = (
+        "A public notice describes an emerging infrastructure need. "
+        "Call 9800000003 for additional details."
+    )
     db.add(models.Evidence(
         opportunity_id=opportunity.id,
         signal_id=signal.id,
@@ -378,6 +383,9 @@ def test_public_feed_projects_heterogeneous_records_with_evidence_and_relations(
         response = client.get("/public/feed")
         assert response.status_code == 200, response.text
         payload = response.json()
+        discoveries_response = client.get("/public/discoveries")
+        assert discoveries_response.status_code == 200, discoveries_response.text
+        discoveries_payload = discoveries_response.json()
         health_alias_response = client.get("/api/health")
         assert health_alias_response.status_code == 200, health_alias_response.text
         alias_response = client.get("/api/public/feed?limit=2")
@@ -398,6 +406,14 @@ def test_public_feed_projects_heterogeneous_records_with_evidence_and_relations(
     outcome_item = by_identity[("outcome", real_outcome.id)]
     assert "No payment is inferred" in outcome_item.summary
     assert "buyer@example.com" not in str(payload)
+    assert "buyer@example.test" not in str(payload)
+    assert "9800000003" not in str(payload)
+    assert "[redacted-email]" in str(payload)
+    assert "[redacted-phone]" in str(payload)
+    assert "buyer@example.test" not in str(discoveries_payload)
+    assert "9800000003" not in str(discoveries_payload)
+    assert "[redacted-email]" in str(discoveries_payload)
+    assert "[redacted-phone]" in str(discoveries_payload)
     assert "PRIVATE NOTE" not in str(payload)
     signal_item = next(item for item in payload if item["kind"] == "signal")
     assert signal_item["source_url"] == signal.canonical_url

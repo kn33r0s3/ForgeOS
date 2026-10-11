@@ -179,6 +179,8 @@ def list_public_discoveries(limit: int = Query(default=20, ge=1, le=50), db: Ses
         .limit(limit)
         .all()
     )
+    from app.services.public_feed import sanitize_public_text
+
     discoveries = []
     seen = set()
     for claim, signal in rows:
@@ -188,7 +190,7 @@ def list_public_discoveries(limit: int = Query(default=20, ge=1, le=50), db: Ses
         if claim.id in seen:
             continue
         seen.add(claim.id)
-        excerpt = (signal.content or "").strip().replace("\n", " ")
+        excerpt = sanitize_public_text((signal.content or "").strip().replace("\n", " ")) or ""
         if len(excerpt) > 280:
             excerpt = excerpt[:277].rstrip() + "..."
         # Section 6: classify relevance honestly
@@ -207,7 +209,7 @@ def list_public_discoveries(limit: int = Query(default=20, ge=1, le=50), db: Ses
             schemas.PublicDiscoveryOut(
                 id=claim.id,
                 source=signal.source,
-                title=signal.title or claim.statement[:120],
+                title=sanitize_public_text(signal.title or claim.statement[:120]) or "",
                 excerpt=excerpt,
                 canonical_url=signal.canonical_url,
                 retrieved_at=signal.retrieved_at,
