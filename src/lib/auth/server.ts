@@ -50,7 +50,7 @@ const env = (key: string): string | undefined => {
 
 // Explicit off-switch. The deployer sets `VITE_AUTH_ENABLED=true` when it
 // provisions auth; set it to "false" to force auth off everywhere (dev user).
-const authDisabled = env("VITE_AUTH_ENABLED") === "false";
+export const authDisabled = env("VITE_AUTH_ENABLED") === "false";
 const explicitAuthSecret = env("BETTER_AUTH_SECRET");
 // A process-local random secret is acceptable only for isolated workspace preview.
 // Deployed instances need one stable, operator-configured signing secret.
