@@ -433,9 +433,9 @@ describe("feature registry", () => {
     assert.equal(new Set(ids).size, ids.length, "duplicate feature ids");
   });
   it("keeps investigation open-ended while bounding real-world intervention", () => {
-    const operatingModel = readFileSync(path.join(root, "..", "docs", "OPERATING_MODEL.md"), "utf8");
+    const operatingModel = readFileSync(path.join(root, "..", "docs", "OPERATING_MODEL.md"), "utf8").replace(/\s+/g, " ");
     assert.ok(operatingModel.includes("Investigation is open-ended even while interventions are bounded."));
-    assert.ok(operatingModel.includes("The 90-day window is a review horizon, not an obligation to keep a disproven"));
+    assert.ok(operatingModel.includes("90-day window is a review horizon, not an obligation to keep a disproven"));
     assert.ok(operatingModel.includes("Broad exploration does not authorize parallel"));
     assert.ok(operatingModel.includes("Revenue is one possible value outcome, not a gate on what Hami may investigate."));
   });

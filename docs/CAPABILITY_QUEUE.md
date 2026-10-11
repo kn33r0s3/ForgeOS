@@ -1,3 +1,8 @@
+## [TEST FIX / CI PENDING] Normalize Markdown whitespace in operating-model regression (2026-10-12)
+
+- The open-ended investigation policy is present in the operating model, but its feature-registry test failed because it expected “The 90-day window…” when the source sentence starts the next line with “90-day window…”. The test now normalizes Markdown whitespace and asserts the actual policy wording rather than formatting.
+- No production policy or behavior changed. Exact-head frontend tests, typecheck, build, full backend CI, and independent deploy verification remain required.
+
 ## [CROSS-DOMAIN DISCOVERY / SOURCE CHANGE / CI PENDING] Broaden the existing unknown map beyond sellers (2026-10-12)
 
 - The prior discovery frontier has become seller-heavy: the map had D1–D92 and its newest questions were still largely about missed inquiries, selling, and micro-shops. This describes the current search bias, not evidence that seller value is Hami's highest-value domain.
