@@ -94,3 +94,103 @@ def test_public_reads_stay_open(client, monkeypatch, path):
         assert res.status_code == 401, f"{path}: {res.status_code}"
     else:
         assert res.status_code not in (401, 503), f"{path}: {res.status_code}"
+
+
+def test_deployed_runtime_fails_closed_for_privileged_paths_when_key_is_missing(monkeypatch):
+    import asyncio
+
+    from starlette.requests import Request
+    from starlette.responses import Response
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.delenv("NODE_ENV", raising=False)
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0"},
+        "http_version": "1.1",
+        "method": "POST",
+        "scheme": "https",
+        "path": "/api/observer/observe",
+        "raw_path": b"/api/observer/observe",
+        "query_string": b"",
+        "headers": [],
+        "server": ("haminp.vercel.app", 443),
+        "client": ("127.0.0.1", 10000),
+        "root_path": "",
+    }
+    called = False
+
+    async def call_next(_request):
+        nonlocal called
+        called = True
+        return Response("downstream-called", status_code=200)
+
+    response = asyncio.run(security.api_key_middleware(Request(scope), call_next))
+    assert response.status_code == 503
+    assert b"FORGE_API_KEY must be configured" in response.body
+    assert called is False
+
+
+def test_deployed_runtime_keeps_explicit_public_submission_paths_open_without_key(monkeypatch):
+    import asyncio
+
+    from starlette.requests import Request
+    from starlette.responses import Response
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.delenv("NODE_ENV", raising=False)
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0"},
+        "http_version": "1.1",
+        "method": "POST",
+        "scheme": "https",
+        "path": "/api/public/domain",
+        "raw_path": b"/api/public/domain",
+        "query_string": b"",
+        "headers": [],
+        "server": ("haminp.vercel.app", 443),
+        "client": ("127.0.0.1", 10000),
+        "root_path": "",
+    }
+
+    async def call_next(_request):
+        return Response("public-submit", status_code=200)
+
+    response = asyncio.run(security.api_key_middleware(Request(scope), call_next))
+    assert response.status_code == 200
+    assert response.body == b"public-submit"
+
+
+def test_local_runtime_keeps_optional_gate_off_when_key_is_missing(monkeypatch):
+    import asyncio
+
+    from starlette.requests import Request
+    from starlette.responses import Response
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    monkeypatch.delenv("VERCEL", raising=False)
+    monkeypatch.setenv("NODE_ENV", "test")
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0"},
+        "http_version": "1.1",
+        "method": "POST",
+        "scheme": "http",
+        "path": "/api/observer/observe",
+        "raw_path": b"/api/observer/observe",
+        "query_string": b"",
+        "headers": [],
+        "server": ("localhost", 8080),
+        "client": ("127.0.0.1", 10000),
+        "root_path": "",
+    }
+
+    async def call_next(_request):
+        return Response("local-pass", status_code=200)
+
+    response = asyncio.run(security.api_key_middleware(Request(scope), call_next))
+    assert response.status_code == 200
+    assert response.body == b"local-pass"

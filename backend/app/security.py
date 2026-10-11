@@ -1,22 +1,21 @@
 """
 SECURITY — optional API-key gate (Phase 26)
 
-ForgeOS is local-first and ships with no auth by default so it "just works" on
-a personal Mac. For anyone who exposes it (LAN, a production box, or a shared
-host), a single env var enables a real gate: set FORGE_API_KEY and every
-state-changing request plus reads from the private substrate API must present
-it via the `X-API-Key` header, or it's rejected 401.
-Other reads stay open so the dashboard keeps working without friction when
-auth is off.
+ForgeOS is local-first and ships with no auth by default for personal development.
+A deployed runtime (Vercel or NODE_ENV=production) fails closed on state-changing
+requests and private substrate/contact reads if FORGE_API_KEY is missing; when
+configured, those paths require X-API-Key. Explicitly allowlisted public submissions
+and public reads remain open.
 
 Design:
-  * Additive + opt-in: nothing changes unless FORGE_API_KEY is set.
+  * Local-first by default; deployed runtimes fail closed for privileged paths.
   * Stateless (no sessions/tokens to rotate or leak beyond the one key).
   * Constant-time comparison so a timing side-channel can't leak the key.
-  * Explicit 401 with a clear body, never a silent skip.
+  * Explicit 401 for a bad key and 503 for missing deployed configuration.
 """
 
 import hmac
+import os
 
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -56,6 +55,13 @@ PRIVATE_CONTACT_READ_PATH_PREFIXES = (
 
 def _enabled() -> bool:
     return bool(getattr(settings, "FORGE_API_KEY", ""))
+
+
+def _deployed_runtime() -> bool:
+    """Treat Vercel and explicit production runtimes as fail-closed deployments."""
+    vercel = os.getenv("VERCEL", "").strip().lower()
+    node_env = os.getenv("NODE_ENV", "").strip().lower()
+    return vercel not in {"", "0", "false", "no"} or node_env == "production"
 
 
 def _constant_time_eq(a: str, b: str) -> bool:
@@ -109,7 +115,8 @@ async def api_key_middleware(request: Request, call_next):
     repair-work-item reads contain contact details and require the configured
     key when one is present.
     """
-    if _enabled():
+    key_configured = _enabled()
+    if key_configured or _deployed_runtime():
         method = request.method.upper()
         path = request.url.path
         allowed_write = (
@@ -127,19 +134,25 @@ async def api_key_middleware(request: Request, call_next):
             for prefix in PRIVATE_CONTACT_READ_PATH_PREFIXES
         )
         state_change = method in {"POST", "PUT", "PATCH", "DELETE"} and not allowed_write
-        if (
+        requires_key = (
             (state_change and not owner_guarded_forge_bot_route)
             or private_substrate_read
             or (private_contact_read and not owner_guarded_forge_bot_route)
-        ) and not _authorized(request):
-            if private_substrate_read:
-                message = "Unauthorized: missing or invalid X-API-Key for substrate access."
-            elif private_contact_read:
-                message = "Unauthorized: missing or invalid X-API-Key for private customer data."
-            else:
-                message = "Unauthorized: missing or invalid X-API-Key for a state-changing request."
-            return JSONResponse(
-                status_code=401,
-                content={"detail": message},
-            )
+        )
+        if requires_key:
+            if not key_configured:
+                return JSONResponse(
+                    status_code=503,
+                    content={
+                        "detail": "FORGE_API_KEY must be configured before deployed private or state-changing API access is enabled."
+                    },
+                )
+            if not _authorized(request):
+                if private_substrate_read:
+                    message = "Unauthorized: missing or invalid X-API-Key for substrate access."
+                elif private_contact_read:
+                    message = "Unauthorized: missing or invalid X-API-Key for private customer data."
+                else:
+                    message = "Unauthorized: missing or invalid X-API-Key for a state-changing request."
+                return JSONResponse(status_code=401, content={"detail": message})
     return await call_next(request)
