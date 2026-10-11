@@ -21,6 +21,26 @@ logger = logging.getLogger(__name__)
 _local_cycle_lock = Lock()
 _intelligence_lock = Lock()
 _POSTGRES_LOCK_ID = 4_706_539_182
+
+
+def _cycle_stage_summary(intelligence: dict) -> tuple[str, dict[str, str], dict[str, str]]:
+    """Use one classification for both persisted CycleRun state and API output."""
+    stage_errors = {
+        key: (val.get("error") or val.get("status"))
+        for key, val in intelligence.items()
+        if isinstance(val, dict) and val.get("status") == "error"
+    }
+    stage_partials = {
+        key: val.get("status")
+        for key, val in intelligence.items()
+        if isinstance(val, dict) and val.get("status") == "partial"
+    }
+    cycle_status = (
+        "FAILED" if stage_errors
+        else "PARTIAL" if stage_partials
+        else "COMPLETED"
+    )
+    return cycle_status, stage_errors, stage_partials
 _cycle_scheduler = None
 if settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
     from app.services.cycle_scheduler import CycleScheduler
@@ -463,24 +483,8 @@ def run_scheduled_intelligence(
                         if start.tzinfo is None:
                             start = start.replace(tzinfo=timezone.utc)
                         row.duration_ms = int((ended_at - start).total_seconds() * 1000)
-                    stage_errors = {
-                        key: (val.get("error") or val.get("status"))
-                        for key, val in intelligence.items()
-                        if isinstance(val, dict) and val.get("status") == "error"
-                    }
-                    stage_partials = {
-                        key: val.get("status")
-                        for key, val in intelligence.items()
-                        if isinstance(val, dict) and val.get("status") == "partial"
-                    }
-                    # Partial work is distinct from both full completion and failure.
-                    row.status = (
-                        "FAILED"
-                        if stage_errors
-                        else "PARTIAL"
-                        if stage_partials
-                        else "COMPLETED"
-                    )
+                    # One classifier drives persisted state and API response.
+                    row.status, stage_errors, stage_partials = _cycle_stage_summary(intelligence)
                     row.summary_json = json.dumps(
                         {
                             "stages": intelligence,
@@ -503,4 +507,13 @@ def run_scheduled_intelligence(
     finally:
         _intelligence_lock.release()
 
-    return {"status": "completed", "intelligence": intelligence}
+    # "status" describes this HTTP request; cycle_status describes the work.
+    # A successful response must not disguise partial or failed cycle stages.
+    cycle_status, stage_errors, stage_partials = _cycle_stage_summary(intelligence)
+    return {
+        "status": "completed",
+        "cycle_status": cycle_status,
+        "stage_errors": stage_errors,
+        "stage_partials": stage_partials,
+        "intelligence": intelligence,
+    }

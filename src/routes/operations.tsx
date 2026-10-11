@@ -118,9 +118,11 @@ function OperationsPage() {
           `${name}: ${typeof info === "object" && info !== null && "status" in info ? (info as { status: string }).status : "?"}`,
       );
       const failed = parts.filter((p) => p.endsWith(": error")).length;
+      const partial = parts.filter((p) => p.endsWith(": partial")).length;
+      const cycleStatus = data?.cycle_status ?? "UNKNOWN";
       setCycleMsg(
-        `Intelligence run ${data?.status ?? "done"} — ${parts.length} stages` +
-          (failed ? `, ${failed} errored` : ", none errored") +
+        `Intelligence request ${data?.status ?? "done"} — cycle ${cycleStatus}; ${parts.length} stages` +
+          (failed ? `, ${failed} errored` : partial ? `, ${partial} partial` : ", no stage errors/partials") +
           ". Details in the owner console's Intelligence section."
       );
       await loadOperatingData(ownerKey);

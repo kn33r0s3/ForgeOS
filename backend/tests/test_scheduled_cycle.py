@@ -610,6 +610,7 @@ def test_scheduled_intelligence_persists_cycle_run(monkeypatch, db):
         else "COMPLETED"
     )
     assert row.status == expected_status
+    assert response.json()["cycle_status"] == expected_status
     # All seven stages recorded by their response keys.
     for key in (
         "forge_cycle",
@@ -660,7 +661,8 @@ def test_scheduled_intelligence_records_partial_cycle_truthfully(monkeypatch, db
         headers={"Authorization": "Bearer test-cron-secret"},
     )
     assert response.status_code == 200, response.text
-    assert response.json()["status"] == "completed"
+    assert response.json()["status"] == "completed"  # the HTTP request succeeded
+    assert response.json()["cycle_status"] == "PARTIAL"
 
     db.expire_all()
     row = db.query(models.CycleRun).order_by(models.CycleRun.id.desc()).first()
