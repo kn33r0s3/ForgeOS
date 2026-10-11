@@ -121,7 +121,7 @@ describe("Hami public content", () => {
     assert.match(header, /Login/);
     assert.match(header, /search=\{\{\s*mode:\s*"sign-in"\s*\}\}/);
     const footer = readFileSync(join(root, "src/components/layout/site-footer.tsx"), "utf8");
-    const systemMap = readFileSync(join(root, "src/lib/hami-system.ts"), "utf8");
+
     assert.doesNotMatch(footer, /Sign in \/ Sign up/);
   });
 
@@ -333,6 +333,7 @@ describe("Hami public root", () => {
     const discoveries = readFileSync(join(root, "src/routes/discoveries.tsx"), "utf8");
     const header = readFileSync(join(root, "src/components/layout/site-header.tsx"), "utf8");
     const footer = readFileSync(join(root, "src/components/layout/site-footer.tsx"), "utf8");
+    const systemMap = readFileSync(join(root, "src/lib/hami-system.ts"), "utf8");
     const businesses = readFileSync(join(root, "src/routes/group.businesses.tsx"), "utf8");
     const forgeBot = readFileSync(join(root, "src/routes/forge-bot-intake.tsx"), "utf8");
     const owner = readFileSync(join(root, "src/routes/owner.tsx"), "utf8");
