@@ -803,12 +803,13 @@ def get_money_dashboard(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/revenue-sources", response_model=list[schemas.RevenueSourceOut])
-def get_revenue_sources(db: Session = Depends(get_db)):
+def get_revenue_sources(request: Request, db: Session = Depends(get_db)):
     """
-    Revenue-source rows stored in this database. A percentage is present
-    only when a primary citation was stored with it. Startup does not
-    add platform fee figures.
+    Owner-only revenue-source research rows. Public statistics use the
+    purpose-built public projection; this route is not a public earning offer.
+    A percentage is present only when a primary citation was stored.
     """
+    require_owner_api_key(request)
     return money_engine.list_revenue_sources(db)
 
 

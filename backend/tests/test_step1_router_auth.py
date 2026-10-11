@@ -97,6 +97,7 @@ def test_public_reads_stay_open(client, monkeypatch, path):
 
 
 PRIVATE_INTELLIGENCE_READS = [
+    "/forge/revenue-sources",
     "/intelligence/youtube/999999",
     "/intelligence/performance/tools/unknown-tool",
     "/intelligence/performance/sources/unknown-source",
@@ -104,7 +105,7 @@ PRIVATE_INTELLIGENCE_READS = [
 
 
 @pytest.mark.parametrize("path", PRIVATE_INTELLIGENCE_READS)
-def test_intelligence_reads_require_owner_key(client, monkeypatch, path):
+def test_private_owner_reads_require_owner_key(client, monkeypatch, path):
     monkeypatch.delenv("VERCEL", raising=False)
     monkeypatch.setenv("NODE_ENV", "test")
 
