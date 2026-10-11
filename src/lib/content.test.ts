@@ -147,16 +147,17 @@ describe("Hami public content", () => {
   });
 
   it("connects every service detail to every sibling and the canonical catalogue", () => {
-    const detail = readFileSync(join(root, "routes", "services.$slug.tsx"), "utf8");
+    const detail = readFileSync(join(root, "src", "routes", "services.$slug.tsx"), "utf8");
     assert.match(detail, /\{service\.number\}—\{String\(services\.length\)/);
     assert.ok(detail.includes('to="/services/$slug"'));
     assert.ok(detail.includes("params={{ slug: related.slug }}"));
     assert.ok(detail.includes('to="/services"'));
     assert.ok(detail.includes("services.filter((related) => related.slug !== service.slug)"));
     assert.ok(detail.includes("Related work, connected."));
-    for (const service of services) {
-      assert.ok(detail.includes("related.slug"), `${service.slug} must participate in the shared related-service loop`);
-    }
+    const index = readFileSync(join(root, "src", "routes", "services.index.tsx"), "utf8");
+    assert.ok(index.includes("services.map"), "the index and detail pages must use the same service source");
+    assert.ok(index.includes('to="/services/$slug"'), "catalogue cards must resolve into canonical detail routes");
+    assert.equal(services.length, 6, "the shared catalogue remains the source of all six service categories");
   });
 
   it("keeps commercial services separate from prototype capabilities", () => {
