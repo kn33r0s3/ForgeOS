@@ -243,6 +243,8 @@ def product_summary(db: Session, product: models.Product) -> dict:
         "actual_customers": nums["actual_customers"],
         "actual_revenue": nums["actual_revenue"],
         "actual_cost": nums["actual_cost"],
+        "actual_revenue_by_currency": nums["actual_revenue_by_currency"],
+        "actual_cost_by_currency": nums["actual_cost_by_currency"],
         "channel_count": len(channels),
         "lead_count": leads,
         "paid_customer_count": paid,

@@ -2332,5 +2332,6 @@ class OpPaymentIntent(Base):
     outcome_id = Column(Integer, ForeignKey("outcomes.id"), nullable=True, unique=True)
     data_scope = Column(String(8), nullable=False, default="REAL")
     status_note = Column(Text, nullable=True)
+    fulfilled_at = Column(DateTime, nullable=True, index=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
     updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow)

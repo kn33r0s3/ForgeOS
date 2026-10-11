@@ -38,6 +38,10 @@ class PublicProductCheckoutRequest(BaseModel):
     provider: Literal["esewa", "khalti"]
 
 
+class FulfillPaymentIntentRequest(BaseModel):
+    confirmed: Literal[True]
+
+
 def _provider_error(exc: Exception) -> HTTPException:
     message = str(exc)
     status = 503 if isinstance(exc, (RuntimeError, OSError)) else 422
@@ -123,6 +127,37 @@ def public_payment_intent_status(
         raise HTTPException(status_code=404, detail="Payment intent not found.") from exc
     response.headers["Cache-Control"] = "no-store"
     return payload
+
+
+@router.get("/owner/fulfillment-queue")
+def owner_payment_fulfillment_queue(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    require_owner_api_key(request)
+    response.headers["Cache-Control"] = "no-store"
+    return payment_intent_engine.pending_fulfillment_intents(db)
+
+
+@router.post("/owner/intents/{intent_id}/fulfill")
+def owner_fulfill_payment_intent(
+    intent_id: int,
+    request: Request,
+    body: FulfillPaymentIntentRequest,
+    db: Session = Depends(get_db),
+):
+    require_owner_api_key(request)
+    if body.confirmed is not True:
+        raise HTTPException(status_code=422, detail="Explicit owner fulfillment confirmation is required.")
+    try:
+        return payment_intent_engine.fulfill_verified_intent(db, intent_id)
+    except ValueError as exc:
+        if str(exc) == "Payment intent not found.":
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail="Payment fulfillment requires owner reconciliation.") from exc
 
 
 @router.get("/khalti/callback")

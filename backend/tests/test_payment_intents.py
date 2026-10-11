@@ -45,7 +45,7 @@ def test_public_checkout_is_disabled_by_default_or_setting(monkeypatch, db):
     monkeypatch.setattr(settings, "FORGEOS_PUBLIC_CHECKOUT_ENABLED", False)
     with pytest.raises(RuntimeError, match="disabled"):
         payment_intent_engine.create_checkout(
-            db, product_id=9999, provider="esewa", idempotency_key="test-key-0123456789"
+            db, product_id=9999, provider="esewa", idempotency_key="checkout-disabled-regression-key"
         )
     assert db.query(models.OpPaymentIntent).count() == 0
 
@@ -90,7 +90,7 @@ def test_esewa_checkout_persists_one_intent_and_idempotent_retry_reuses_it(db, m
     assert calls[0]["transaction_uuid"] == calls[1]["transaction_uuid"]
 
 
-def test_esewa_server_lookup_creates_one_npr_verified_outcome(db, monkeypatch):
+def test_esewa_server_lookup_verifies_payment_then_owner_fulfillment_records_revenue(db, monkeypatch):
     product = _published_product(db)
     intent = models.OpPaymentIntent(
         public_ref="public-test-ref-0123456789ABCDEFG",
@@ -130,25 +130,118 @@ def test_esewa_server_lookup_creates_one_npr_verified_outcome(db, monkeypatch):
         db, public_ref=intent.public_ref, encoded_data="test-signed-payload"
     )
     assert result.status == "VERIFIED"
-    assert result.outcome_id is not None
-    outcome = db.get(models.Outcome, result.outcome_id)
-    assert outcome.outcome_type == "ACTUAL_REVENUE"
-    assert outcome.actual_value == 5000.0
-    assert outcome.unit == "NPR"
-    assert outcome.source_kind == "REAL"
-    assert outcome.verification_state == "VERIFIED"
+    assert result.outcome_id is None
+    assert result.fulfilled_at is None
+    assert db.query(models.Outcome).filter_by(
+        product_id=product.id, outcome_type="ACTUAL_REVENUE", unit="NPR"
+    ).count() == 0
+    before = product_engine.product_summary(db, product)
+    assert before["actual_revenue_by_currency"] == {"USD": 0.0, "NPR": 0.0}
 
     retried = payment_intent_engine.finalize_esewa_callback(
         db, public_ref=intent.public_ref, encoded_data="test-signed-payload"
     )
     assert retried.id == intent.id
+    assert retried.outcome_id is None
+
+    fulfilled = payment_intent_engine.fulfill_verified_intent(db, intent.id)
+    assert fulfilled["fulfilled"] is True
+    assert fulfilled["outcome_id"] is not None
+    assert fulfilled["customer_event_id"] is not None
+    outcome = db.get(models.Outcome, fulfilled["outcome_id"])
+    assert outcome.outcome_type == "ACTUAL_REVENUE"
+    assert outcome.actual_value == 5000.0
+    assert outcome.unit == "NPR"
+    assert outcome.source_kind == "REAL"
+    assert outcome.verification_state == "VERIFIED"
+    customer_event = db.get(models.CustomerEvent, fulfilled["customer_event_id"])
+    assert customer_event.stage == "paid_customer"
+    assert customer_event.event_type == "purchase"
+    assert customer_event.outcome_id == outcome.id
+    assert customer_event.contact_identifier is None
+    after = product_engine.product_summary(db, product)
+    assert after["actual_revenue"] == 0.0
+    assert after["actual_revenue_by_currency"] == {"USD": 0.0, "NPR": 5000.0}
+
+    retried_fulfillment = payment_intent_engine.fulfill_verified_intent(db, intent.id)
+    assert retried_fulfillment["outcome_id"] == fulfilled["outcome_id"]
     assert db.query(models.Outcome).filter_by(
         product_id=product.id, outcome_type="ACTUAL_REVENUE", unit="NPR"
     ).count() == 1
-    summary = product_engine.product_summary(db, product)
-    assert summary["actual_revenue"] == 0.0
-    assert summary["actual_revenue_by_currency"] == {"USD": 0.0, "NPR": 5000.0}
+    assert db.query(models.CustomerEvent).filter_by(outcome_id=fulfilled["outcome_id"]).count() == 1
 
+
+@pytest.mark.parametrize("terminal_status", ["VERIFIED", "FAILED", "CANCELLED", "DISPUTED", "REFUNDED"])
+def test_terminal_payment_intents_cannot_be_reopened(db, terminal_status):
+    product = _published_product(db)
+    intent = models.OpPaymentIntent(
+        public_ref="terminal-test-" + terminal_status.lower() + "-0123456789",
+        product_id=product.id,
+        provider="esewa",
+        status=terminal_status,
+        amount_paisa=500000,
+        currency="NPR",
+        merchant_order_id="terminal-order-" + terminal_status.lower() + "-012345",
+        idempotency_key_hash=(terminal_status[0].lower() * 64),
+        data_scope="REAL",
+    )
+    db.add(intent)
+    db.commit()
+    with pytest.raises(ValueError, match="terminal"):
+        payment_intent_engine._transition(db, intent, "PENDING")
+    db.refresh(intent)
+    assert intent.status == terminal_status
+
+
+def test_unverified_payment_intent_cannot_be_marked_fulfilled(db):
+    product = _published_product(db)
+    intent = models.OpPaymentIntent(
+        public_ref="pending-test-intent-0123456789ABC",
+        product_id=product.id,
+        provider="esewa",
+        status="INITIATED",
+        amount_paisa=500000,
+        currency="NPR",
+        merchant_order_id="pending-test-order-123456",
+        idempotency_key_hash="c" * 64,
+        data_scope="REAL",
+    )
+    db.add(intent)
+    db.commit()
+    with pytest.raises(ValueError, match="provider-verified"):
+        payment_intent_engine.fulfill_verified_intent(db, intent.id)
+    assert db.query(models.Outcome).filter_by(product_id=product.id, outcome_type="ACTUAL_REVENUE").count() == 0
+
+
+def test_khalti_refunded_flag_does_not_become_pending(db, monkeypatch):
+    product = _published_product(db)
+    intent = models.OpPaymentIntent(
+        public_ref="khalti-refund-test-intent-012345",
+        product_id=product.id,
+        provider="khalti",
+        status="INITIATED",
+        amount_paisa=500000,
+        currency="NPR",
+        merchant_order_id="khalti-refund-order-123456",
+        idempotency_key_hash="d" * 64,
+        provider_payment_id="khalti-pidx-refund-test-123456",
+        data_scope="REAL",
+    )
+    db.add(intent)
+    db.commit()
+    monkeypatch.setattr(nepal_payments, "khalti_lookup", lambda **kwargs: {
+        "pidx": intent.provider_payment_id,
+        "status": "Completed",
+        "total_amount": intent.amount_paisa,
+        "transaction_id": "khalti-refunded-tx",
+        "refunded": True,
+    })
+    result = payment_intent_engine.finalize_khalti_callback(
+        db, public_ref=intent.public_ref, pidx=intent.provider_payment_id
+    )
+    assert result.status == "REFUNDED"
+    assert result.outcome_id is None
+    assert db.query(models.Outcome).filter_by(product_id=product.id, outcome_type="ACTUAL_REVENUE").count() == 0
 
 def test_esewa_amount_mismatch_is_disputed_without_revenue(db, monkeypatch):
     product = _published_product(db)

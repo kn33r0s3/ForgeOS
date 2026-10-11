@@ -1,3 +1,10 @@
+## [SOURCE CHANGE / CI PENDING] Require owner-confirmed fulfillment before revenue is recorded (2026-10-12)
+
+- Provider lookups transition an intent to `VERIFIED` without writing an `ACTUAL_REVENUE` outcome. The owner-only fulfillment action creates the canonical `REAL/VERIFIED` NPR revenue outcome and a linked `CustomerEvent` only after actual delivery is confirmed.
+- Added a durable `fulfilled_at` timestamp to the existing operational payment-intent table, an owner-only fulfillment queue/action, a no-PII buyer event, terminal-state protection, and explicit Khalti-refund handling. Public status distinguishes "payment verified" from "fulfilled".
+- Checkout remains disabled by default. Vercel offers fail closed unless PostgreSQL is the runtime database. Refunds discovered after a previously verified payment require owner reconciliation; automated revenue reversal remains a launch blocker.
+- Product summary now exposes the currency-separated rollups it already computes. New tests cover callback-without-revenue, idempotent owner fulfillment, one linked verified revenue outcome/customer event, terminal-state immutability, unverified fulfillment rejection, and refunded-status truth. Exact-SHA CI pending.
+
 ## [SOURCE CHANGE / CI PENDING] Require explicit eSewa form-post checkout response (2026-10-12)
 
 - The initial public-offer UI accepted any non-redirect checkout response as an eSewa form. It now accepts the form branch only when `checkout.type === "form_post"`, validates HTTPS, and otherwise fails closed without submitting an unknown form.
@@ -5,14 +12,14 @@
 ## [SOURCE CHANGE / CI PENDING] Add public offer and payment-result UI for verified checkout intents (2026-10-12)
 
 - The homepage now renders offers only from the server-filtered `/api/payments/offers` projection. eSewa signed-form submission and Khalti redirects occur only after the visitor explicitly clicks a provider button.
-- A noindex `/payment-result` route reads the minimal no-store intent status. It labels revenue verified only when the persisted intent status is `VERIFIED`; pending, failed and disputed states explicitly do not establish revenue.
+- A noindex `/payment-result` route reads minimal no-store intent status and separates provider-verified payment from owner-confirmed fulfillment. Realized revenue is not claimed until the intent is fulfilled.
 - The return route is registered as hidden so it remains reachable from provider callbacks but does not become navigation or sitemap content. Public checkout remains disabled by default in server configuration.
 - Exact-SHA UI/backend build and tests pending.
 ## [SOURCE CHANGE / CI PENDING] Bind provider checkout to durable verified payment intents (2026-10-12)
 
 - Added public offer listing, per-product checkout entry behind `FORGEOS_PUBLIC_CHECKOUT_ENABLED=false` by default, random public payment-intent references, hashed idempotency keys, provider/order identity, visitor-HMAC rate limiting and a 16 KiB body cap.
 - eSewa callbacks bind to the stored merchant UUID and exact NPR amount, then require server-side lookup. Khalti redirects treat pidx as a pointer and require lookup confirming matching pidx/amount, Completed status, no refund, and a provider transaction reference.
-- Only verified provider lookup can create one linked `REAL/VERIFIED` `ACTUAL_REVENUE` outcome. NPR rollups are reported separately from existing USD totals. Unmatched or unconfirmed returns never create revenue.
+- Provider lookup alone only marks the payment intent `VERIFIED`. The owner-confirmed fulfillment action creates one linked `REAL/VERIFIED` `ACTUAL_REVENUE` outcome and paid-customer event. NPR rollups remain separate from USD totals; unmatched or unconfirmed returns never create revenue.
 - Provider credentials, merchant approval and production env values are not inspectable in the current Vercel connector scope. Checkout remains off; no live payment request was initiated.
 - Exact-SHA CI pending.
 ## [SOURCE CHANGE / CI PENDING] Redact contact details in free-text prices (2026-10-12)
