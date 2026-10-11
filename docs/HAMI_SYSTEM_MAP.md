@@ -2,6 +2,41 @@
 
 This file records how existing routes and engines form one Hami system. It is a map of implemented surfaces and their boundaries, not a promise that every subsystem is already operational.
 
+## Foundational scope: value itself
+
+**North star:** Hami's domain is value itself—in every form, state, context, and possible transformation—investigated without artificial boundary, claimed only with evidence, and acted upon only when governed and viable.
+
+Hami is an open-ended system for discovering, understanding, transforming, and realizing value. Its scope is not confined to one product, market, industry, geography, resource type, or predefined operation. Examples of value and transformation are illustrations, never an exhaustive taxonomy. New domains, categories, relations, and operations remain discoverable; existing architecture should represent them through the shared substrate rather than requiring a new parallel Hami.
+
+Hami examines what value exists or could exist; who or what needs, holds, enables, blocks, or loses it; which relationships and capabilities could change the situation; what transformation might help; what it costs and affects; and what evidence would confirm or refute the hypothesis. Value can be economic, physical, informational, human, social, ecological, operational, potential, or something not yet classified. Money is one possible outcome and measurement, not the definition or boundary of value.
+
+The shared semantic primitives remain canonical:
+
+- **ENTITY** — the thing, actor, resource, need, condition, or possibility under consideration.
+- **RELATION** — how entities depend on, exchange with, enable, constrain, transform, or affect one another.
+- **EVENT** — what happened and how a state changed.
+- **EVIDENCE** — provenance-bearing support, contradiction, or uncertainty about a claim.
+- **CAPABILITY** — a transformation or action that can be performed, with its preconditions and limits.
+- **ACTION** — a governed attempt to change the world or test a claim.
+
+Use the existing substrate and operational projections. Do not create a new top-level semantic primitive or parallel value engine to represent a newly discovered domain.
+
+### Value and truth states
+
+Keep these states distinct: **possible → hypothesized → tested → supported → realized**. The sequence is not automatic; evidence may weaken a claim, a test may fail, and an apparent opportunity may be rejected. “Tested” means a test actually ran and its result is recorded. “Supported” requires relevant evidence and still allows uncertainty. “Realized” requires an observed outcome at the appropriate verification level. A deployed route, model output, score, policy ALLOW, synthetic fixture, payment callback, or proposed action does not by itself prove value was realized.
+
+Every consequential path must preserve provenance, scope (REAL / TEST / MOCK / HYPOTHESIS), costs, risks, rights/permission, and authorization. Hami's investigative scope can remain open-ended while each action stays bounded by law, safety, privacy, permissions, viability, and explicit execution capability. It may recommend not acting when the evidence or expected result does not justify action.
+
+### The value loop
+
+The existing system loop is one connected process, not a mandate to build separate products:
+
+`OBSERVE → VERIFY → UNDERSTAND → DECIDE → ACT → MEASURE → LEARN → repeat`
+
+Viewed through value, that process means **discover → understand → identify or test a transformation → realize or reject it → measure consequences → learn**. Existing Findings, Unknowns, Evidence, Experiments, Opportunities, Decisions, Actions, Outcomes, and Learning are connected views/states of this process. A particular seller experiment or revenue path is one instance, not Hami's identity or limit.
+
+Future work must ask: What value exists or could exist? What prevents its realization? Which relation or transformation could change that? What evidence would discriminate between alternatives? What is the cheapest authorized, safe, falsifiable next action? What actual benefit, loss, cost, and externality resulted? Prefer work that improves this loop across domains, and report uncertainty honestly.
+
 ## One product, one navigation source
 
 - `src/lib/hami-system.ts` owns the public top navigation (`NAV`), footer groups (`FOOTER_GROUPS`), page-to-page paths (`SYSTEM_PATHWAYS`), and the path inventory guarded by tests (`PUBLIC_SYSTEM_PATHS`).
