@@ -188,9 +188,7 @@ def _health_details() -> dict[str, Any]:
     cron_secret_configured = bool(os.getenv("CRON_SECRET"))
     database_driver = database.engine.dialect.name
     database_durability = (
-        "ephemeral"
-        if is_vercel and database_driver == "sqlite" and not database_url_configured
-        else "configured"
+        "ephemeral" if is_vercel and database_driver == "sqlite" else "configured"
     )
 
     try:

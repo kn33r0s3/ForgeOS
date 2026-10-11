@@ -2,11 +2,21 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { AUTH_PROVIDERS } from "./providers.ts";
+import { isDurablePostgresDatabaseUrl } from "../env.server.ts";
 
 const read = (file: string) =>
   readFileSync(new URL(file, import.meta.url), "utf8");
 
 describe("Hami authentication boundary", () => {
+  it("accepts only valid network-addressable PostgreSQL URLs for durable auth storage", () => {
+    assert.equal(isDurablePostgresDatabaseUrl("postgres://hami:secret@db.example.test:5432/hami"), true);
+    assert.equal(isDurablePostgresDatabaseUrl("postgresql://hami:secret@db.example.test/hami?sslmode=require"), true);
+    assert.equal(isDurablePostgresDatabaseUrl("sqlite:////tmp/hami.db"), false);
+    assert.equal(isDurablePostgresDatabaseUrl("file:///tmp/hami.db"), false);
+    assert.equal(isDurablePostgresDatabaseUrl("postgresql://"), false);
+    assert.equal(isDurablePostgresDatabaseUrl(undefined), false);
+  });
+
   it("offers direct Google only and never exposes X as a provider", () => {
     assert.deepEqual(AUTH_PROVIDERS, [{ providerId: "google", label: "Google" }]);
     const providers = read("./providers.ts");
@@ -50,7 +60,8 @@ describe("Hami authentication boundary", () => {
   it("requires a stable deployed signing secret and blocks the auth API when unavailable", () => {
     const server = read("./server.ts");
     assert.ok(server.includes("authSecretReady = Boolean(explicitAuthSecret) || isWorkspacePreview()"));
-    assert.ok(server.includes("authDatabaseReady = Boolean(databaseUrl) || isWorkspacePreview()"));
+    assert.ok(server.includes("authDatabaseReady = Boolean(postgresDatabaseUrl) || isWorkspacePreview()"));
+    assert.ok(server.includes("const database = postgresDatabaseUrl"));
     assert.ok(server.includes("!authDisabled && authSecretReady && authDatabaseReady &&"));
 
     const availability = read("./availability.ts");

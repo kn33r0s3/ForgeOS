@@ -105,6 +105,30 @@ def test_vercel_health_reports_database_and_missing_cron_secret(db, monkeypatch)
     }
 
 
+def test_vercel_explicit_sqlite_url_is_never_reported_as_durable(db, monkeypatch):
+    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.setenv("DATABASE_URL", "sqlite:////tmp/configured.db")
+    monkeypatch.setenv("CRON_SECRET", "health-cron-secret")
+
+    from app import security
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "health-owner-key")
+    response = _health(
+        "/health/details",
+        headers={"X-API-Key": "health-owner-key"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["database"]["url_configured"] is True
+    assert payload["database"]["driver"] == "sqlite"
+    assert payload["database"]["durability"] == "ephemeral"
+    assert payload["readiness"] == {
+        "ready": False,
+        "blockers": ["durable_database_not_configured"],
+    }
+
+
 def test_health_reports_schedule_from_vercel_configuration(db, monkeypatch):
     monkeypatch.delenv("VERCEL", raising=False)
     config_path = Path(__file__).resolve().parents[2] / "vercel.json"

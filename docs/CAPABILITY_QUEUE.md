@@ -1,3 +1,13 @@
+## [IN PROGRESS] Durable database readiness across auth and API health (2026-10-11)
+
+- **EXISTING SEAMS INSPECTED:** `src/lib/env.server.ts`, `src/lib/auth/server.ts`, `src/lib/auth/auth-boundary.test.ts`, `backend/app/main.py::_health_details`, and `backend/tests/test_health_readiness.py`. Better Auth is built with `pg.Pool` for configured connection strings; a SQLite URL is not a valid durable PostgreSQL auth store.
+- **FIRST VERIFIED GAP:** frontend auth readiness previously treated any non-empty `DATABASE_URL` as durable and still passed that value into `pg.Pool`. Backend health only described SQLite as ephemeral on Vercel when the environment variable was absent; explicitly configured SQLite could incorrectly suppress the durability blocker.
+- **FIX IN SOURCE:** add a pure URL validator for network-addressable PostgreSQL URLs, keep Better Auth disabled on deployed runtimes without that configuration, and use PGLite rather than passing an unsupported URL to `pg.Pool`. Backend readiness now marks all Vercel/SQLite combinations ephemeral, regardless of whether a URL was explicitly supplied.
+- **OWNER ACTION REMOVED:** no more ambiguity where a configured SQLite URL falsely satisfies the durable-auth/database readiness gate.
+- **OWNER ACTION STILL REQUIRED:** configure and verify the actual durable PostgreSQL connection, stable `BETTER_AUTH_SECRET`, and `CRON_SECRET` in Production. The Vercel connector can report deployment metadata but currently denies protected deployment-content/configuration access with HTTP 403; no credentials were retrieved or changed.
+- **VERIFICATION:** the prior failing discovery-inventory assertion was corrected at `581b6a17cdcc360f01e60e0e2f49612cc85cd30e`; its frontend test job is green, while backend tests and deployment verification were still running at the last poll. Tests for this database-readiness change and the exact resulting deployment SHA remain pending.
+- **NEXT REMOVABLE DEPENDENCY:** finish exact-SHA CI/independent verification, then use authorized production access to confirm the DB driver/durability, auth sign-in/session persistence, and scheduled endpoint execution without exposing secrets.
+
 ## [CLARIFIED STATUS] ForgeBot v1 CLI vs deployed scheduler (2026-10-11)
 
 - **EXISTING TOOL PRESERVED:** `src/lib/forge/cli.ts` and `src/lib/forge/cli.test.ts` provide a runnable, tested local CLI for listing ripeness-ranked angles, checking tried angles, and gating a JSON batch of findings.

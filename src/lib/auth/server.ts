@@ -22,7 +22,7 @@ import { emailAndPasswordEnabled } from "./email-password";
 import { GATE_PROVIDER_ID, gateIdentitySessions } from "./gate-session.server";
 import { pgliteDialect } from "./pglite-dialect";
 import { PREVIEW_ALLOWED_HOSTS } from "./preview";
-import { isWorkspacePreview } from "../env.server";
+import { isDurablePostgresDatabaseUrl, isWorkspacePreview } from "../env.server";
 import { ACTIVE_TERMS } from "./terms-policy";
 
 // Kick (and share) PGLite bootstrap as soon as the auth server module loads.
@@ -53,10 +53,13 @@ const env = (key: string): string | undefined => {
 export const authDisabled = env("VITE_AUTH_ENABLED") === "false";
 const explicitAuthSecret = env("BETTER_AUTH_SECRET");
 const databaseUrl = env("DATABASE_URL");
+const postgresDatabaseUrl = isDurablePostgresDatabaseUrl(databaseUrl)
+  ? databaseUrl
+  : undefined;
 // The embedded PGLite fallback is for isolated preview/local development only.
-// Deployed auth needs a durable shared PostgreSQL database as well as a stable secret.
+// Deployed auth needs a valid network-addressable PostgreSQL URL and stable secret.
 export const authSecretReady = Boolean(explicitAuthSecret) || isWorkspacePreview();
-export const authDatabaseReady = Boolean(databaseUrl) || isWorkspacePreview();
+export const authDatabaseReady = Boolean(postgresDatabaseUrl) || isWorkspacePreview();
 
 const googleClientId = env("GOOGLE_CLIENT_ID");
 const googleClientSecret = env("GOOGLE_CLIENT_SECRET");
@@ -107,13 +110,11 @@ const trustedOrigins: string[] = explicitBaseURL
     ];
 
 
-// Real Postgres when `DATABASE_URL` is set, else the app's
-// embedded PGLite (preview) via a Kysely dialect — so Better Auth persists to the
-// SAME DB as app data, including email/password users. Both use the Better Auth
-// schema from `migrations/auth/0001_auth.sql`, copied into `migrations/` when
-// the app turns sign-in on.
-const database = databaseUrl
-  ? new Pool({ connectionString: databaseUrl })
+// Better Auth uses the durable PostgreSQL URL when valid; otherwise the PGLite
+// adapter remains available for isolated preview/local development. The auth API
+// stays disabled outside that environment until PostgreSQL is configured.
+const database = postgresDatabaseUrl
+  ? new Pool({ connectionString: postgresDatabaseUrl })
   : { dialect: pgliteDialect(() => getPglite()), type: "postgres" as const };
 
 /** Session token cookie name — also read by the live-preview popup completion page. */
