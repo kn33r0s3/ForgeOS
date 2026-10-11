@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { groupAreas } from "@/lib/content";
+import { createFileRoute } from "@tanstack/react-router";
+import { GroupAreaGrid } from "@/components/pages/group-area-grid";
 import { Container } from "@/components/layout/container";
 import { HamiPathways } from "@/components/layout/hami-pathways";
 import { PageHero } from "@/components/layout/page-hero";
@@ -57,8 +57,8 @@ function GroupPage() {
                   The public platform
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted">
-                  This website — services, group structure, and a working
-                  project-request flow.
+                  This website — current services, group directions, and public
+                  work records. Online inquiries are currently closed.
                 </p>
                 <div className="mt-5">
                   <TextLink to="/">Explore the platform</TextLink>
@@ -66,14 +66,15 @@ function GroupPage() {
               </article>
               <article className="rounded-xl border border-line bg-surface p-6">
                 <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-cyan">
-                  Available
+                  Current scope
                 </p>
                 <h3 className="mt-4 font-display text-xl font-semibold tracking-tight text-fg">
                   Technical & operational work
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted">
-                  Focused engagements: software, automation, operations, internal
-                  tools, workflow systems, support.
+                  Published scope: software, automation, operations, internal
+                  tools, workflow systems, and support. Online inquiry is closed,
+                  so this catalogue is not a booking promise.
                 </p>
                 <div className="mt-5">
                   <TextLink to="/group/businesses">See the current offers</TextLink>
@@ -109,33 +110,7 @@ function GroupPage() {
               companies, or revenue. Each becomes a declared business only when
               there is clear evidence of one behind it.
             </p>
-            <div className="mt-8 grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2">
-              {groupAreas.map((area) => {
-                const inner = (
-                  <>
-                    <strong className="font-display text-base font-semibold tracking-tight text-fg">
-                      {area.name}
-                    </strong>
-                    <p className="mt-2 text-xs leading-relaxed text-muted">
-                      {area.description}
-                    </p>
-                  </>
-                );
-                return area.href ? (
-                  <Link
-                    key={area.name}
-                    to={area.href}
-                    className="bg-surface p-5 transition-colors duration-150 hover:bg-cyan-dim"
-                  >
-                    {inner}
-                  </Link>
-                ) : (
-                  <div key={area.name} className="bg-surface p-5">
-                    {inner}
-                  </div>
-                );
-              })}
-            </div>
+            <GroupAreaGrid />
           </div>
         </section>
       </Container>

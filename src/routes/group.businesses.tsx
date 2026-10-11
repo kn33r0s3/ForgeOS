@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { currentOffers, groupAreas } from "@/lib/content";
+import { currentOffers } from "@/lib/content";
+import { GroupAreaGrid } from "@/components/pages/group-area-grid";
 import { Container } from "@/components/layout/container";
 import { HamiPathways } from "@/components/layout/hami-pathways";
 import { PageHero } from "@/components/layout/page-hero";
@@ -43,9 +44,10 @@ function BusinessesPage() {
               What Hami can do now
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
-              Current offerings are focused engagements around technology,
-              software, workflows, operations, infrastructure support, and early
-              venture thinking.
+              The catalogue describes Hami's current technical and operational scope;
+              it does not claim that every strategic direction is an operating business.
+              Online inquiries are currently closed, so a listing is not a booking or
+              acceptance promise.
             </p>
             <div className="mt-8 grid gap-4 md:grid-cols-2">
               {currentOffers.map((offer) => (
@@ -98,33 +100,7 @@ function BusinessesPage() {
               These are strategic directions, not existing subsidiaries or
               operating businesses.
             </p>
-            <div className="mt-8 grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2">
-              {groupAreas.map((area) => {
-                const inner = (
-                  <>
-                    <strong className="font-display text-base font-semibold tracking-tight text-fg">
-                      {area.name}
-                    </strong>
-                    <p className="mt-2 text-xs leading-relaxed text-muted">
-                      {area.description}
-                    </p>
-                  </>
-                );
-                return area.href ? (
-                  <Link
-                    key={area.name}
-                    to={area.href}
-                    className="bg-surface p-5 transition-colors duration-150 hover:bg-cyan-dim"
-                  >
-                    {inner}
-                  </Link>
-                ) : (
-                  <div key={area.name} className="bg-surface p-5">
-                    {inner}
-                  </div>
-                );
-              })}
-            </div>
+            <GroupAreaGrid />
           </div>
         </section>
       </Container>

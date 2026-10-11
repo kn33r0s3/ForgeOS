@@ -893,11 +893,15 @@ export type GroupAreaName =
   | "Infrastructure"
   | "Ventures";
 
+export type GroupAreaHref = "/technology" | "/services" | "/domain" | "/process" | "/ventures";
+
 export type GroupArea = {
   name: GroupAreaName;
   status: "strategic direction";
   description: string;
-  href?: "/technology" | "/ventures";
+  /** Existing canonical route that gives this direction a useful next step. */
+  href: GroupAreaHref;
+  hrefLabel: string;
 };
 
 export const groupAreas: GroupArea[] = [
@@ -907,37 +911,47 @@ export const groupAreas: GroupArea[] = [
     description:
       "Systems, infrastructure, and technical foundations that make the wider group more capable.",
     href: "/technology",
+    hrefLabel: "Explore Hami's technical direction",
   },
   {
     name: "Digital Products",
     status: "strategic direction",
     description:
       "Useful products and software built around real needs, with room to grow beyond a single project.",
+    href: "/services",
+    hrefLabel: "Explore current software services",
   },
   {
     name: "Operations",
     status: "strategic direction",
     description:
       "Practical operating systems and disciplined execution across the work the group takes on.",
-    href: undefined,
+    href: "/services",
+    hrefLabel: "Explore operational services",
   },
   {
     name: "Commerce",
     status: "strategic direction",
     description:
       "Future businesses and commercial activity developed with a clear operating foundation.",
+    href: "/domain",
+    hrefLabel: "Open current work and trade records",
   },
   {
     name: "Media",
     status: "strategic direction",
     description:
       "Media, content, and communication projects that help useful ideas travel further.",
+    href: "/process",
+    hrefLabel: "See the shared delivery process",
   },
   {
     name: "Infrastructure",
     status: "strategic direction",
     description:
       "The underlying platforms and environments that support durable work.",
+    href: "/technology",
+    hrefLabel: "Explore technical foundations",
   },
   {
     name: "Ventures",
@@ -945,6 +959,7 @@ export const groupAreas: GroupArea[] = [
     description:
       "A future home for experiments, partnerships, and new businesses when the evidence is right.",
     href: "/ventures",
+    hrefLabel: "Explore the venture direction",
   },
 ];
 

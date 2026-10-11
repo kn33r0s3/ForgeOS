@@ -40,7 +40,7 @@ function collectCopy(): string[] {
   }
   for (const step of processSteps) blobs.push(step.title, step.body);
   for (const cap of capabilities) blobs.push(cap.name, cap.kind, cap.note);
-  for (const area of groupAreas) blobs.push(area.name, area.status, area.description);
+  for (const area of groupAreas) blobs.push(area.name, area.status, area.description, area.href, area.hrefLabel);
   for (const offer of currentOffers) {
     blobs.push(offer.title, offer.problem, offer.does, offer.value, offer.start);
   }
@@ -156,10 +156,12 @@ describe("Hami public content", () => {
     assert.equal(capabilities.filter((item) => item.kind === "prototype").length, 1);
   });
 
-  it("labels group areas as strategic directions, not subsidiaries", () => {
-    assert.ok(groupAreas.length >= 5);
+  it("labels group areas as strategic directions and gives each an existing next step", () => {
+    assert.equal(groupAreas.length, 7);
     for (const area of groupAreas) {
       assert.equal(area.status, "strategic direction");
+      assert.ok(area.href, `${area.name} must point to one existing Hami route`);
+      assert.ok(area.hrefLabel.trim(), `${area.name} needs a useful destination label`);
     }
     assert.equal(
       processSteps.map((step) => step.title).join(" → "),
@@ -172,6 +174,14 @@ describe("Hami public content", () => {
       assert.equal(FORBIDDEN_CLAIM_RE.test(blob), false, blob);
       assert.equal(/\b\/tools\b/.test(blob), false, blob);
     }
+  });
+
+  it("does not describe closed inquiries as a working project-request flow", () => {
+    const groupPage = readFileSync(join(root, "src/routes/group.index.tsx"), "utf8");
+    assert.ok(!groupPage.includes("working\\n                  project-request flow."));
+    assert.match(groupPage, /Online inquiries are currently closed/);
+    const businessesPage = readFileSync(join(root, "src/routes/group.businesses.tsx"), "utf8");
+    assert.match(businessesPage, /Online inquiries are currently closed/);
   });
 
   it("does not present placeholder contact details as live destinations", () => {

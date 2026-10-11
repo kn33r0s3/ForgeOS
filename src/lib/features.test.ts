@@ -9,6 +9,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { FOOTER_GROUPS, NAV, PUBLIC_SYSTEM_PATHS, SYSTEM_PATHWAYS } from "./hami-system.ts";
+import { groupAreas } from "./content.ts";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const registry = JSON.parse(
@@ -88,6 +89,26 @@ describe("feature registry", () => {
       !registry.features.some((feature: { route: string; status: string }) => feature.route === route && feature.status === "live"),
     );
     assert.deepEqual(missing, [], `public Hami pathways missing a live registry entry: ${missing.join(", ")}`);
+  });
+
+  it("every group direction links through the shared component to a live canonical route", () => {
+    const broken = groupAreas.filter((area) =>
+      !area.href ||
+      !area.hrefLabel.trim() ||
+      !registry.features.some((feature: { route: string; status: string }) =>
+        feature.route === area.href && feature.status === "live",
+      ),
+    );
+    assert.deepEqual(
+      broken.map((area) => area.name),
+      [],
+      "each strategic direction must lead into an existing live Hami surface",
+    );
+    for (const file of ["routes/group.index.tsx", "routes/group.businesses.tsx"]) {
+      const source = readFileSync(path.join(root, file), "utf8");
+      assert.ok(source.includes("GroupAreaGrid"), `${file} must reuse the canonical area grid`);
+      assert.ok(!source.includes("groupAreas.map"), `${file} must not define another area-card implementation`);
+    }
   });
 
   it("every related Hami pathway points to a live registered route", () => {
