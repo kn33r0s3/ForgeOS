@@ -4,21 +4,13 @@ export const SITE = {
   name: "Hami",
   themeColor: "#0C0B0A",
   domain: "haminp.vercel.app",
-  url: "",
+  url: "https://haminp.vercel.app",
   email: "",
   location: "Built in Kathmandu",
   tagline: "Understanding what people need — with evidence.",
   description:
     "Hami is being built in Kathmandu: a system for finding real needs, building evidence for them, and turning understanding into action with humans as partners. Pre-revenue; no merchants served yet; intake closed.",
 } as const;
-
-export const NAV = [
-  { label: "Home", to: "/" },
-  { label: "Findings", to: "/discoveries" },
-  { label: "Unknowns", to: "/unknowns" },
-  { label: "Experiments", to: "/experiments" },
-  { label: "About", to: "/about" },
-] as const;
 
 export const providerCategories = ["All"] as const;
 

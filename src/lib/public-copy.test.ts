@@ -88,7 +88,8 @@ describe("homepage contract", () => {
   const home = () => read("src/routes/index.tsx").replace(/\s+/g, " ");
   const header = () => read("src/components/layout/site-header.tsx");
   const footer = () => read("src/components/layout/site-footer.tsx");
-  const surfaces = () => home() + header() + footer();
+  const systemMap = () => read("src/lib/hami-system.ts");
+  const surfaces = () => home() + header() + footer() + systemMap();
 
   it("1. hero carries the design headline and Hami identity, in English and Nepali", () => {
     const src = home();
@@ -182,7 +183,9 @@ describe("homepage contract", () => {
     for (const phrase of banned) {
       assert.ok(!blob.includes(phrase), `banned surface reappeared: ${phrase}`);
     }
-    assert.ok(!blob.includes('"/feed"'), "/feed is linked from a public surface");
+    assert.ok(blob.includes('to: "/feed"'), "the public network must remain reachable from Hami navigation");
+    assert.ok(blob.includes('to: "/opportunities"'), "opportunities must remain reachable from the shared system map");
+    assert.ok(blob.includes('to: "/domain"'), "the public work board must remain reachable from the shared system map");
   });
 
   it("8. findings preview loads from the API with honest empty states", () => {

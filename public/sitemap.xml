@@ -1,14 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://haminp.vercel.app/</loc></url>
+  <url><loc>https://haminp.vercel.app/discoveries</loc></url>
+  <url><loc>https://haminp.vercel.app/unknowns</loc></url>
   <url><loc>https://haminp.vercel.app/feed</loc></url>
   <url><loc>https://haminp.vercel.app/opportunities</loc></url>
   <url><loc>https://haminp.vercel.app/actions</loc></url>
+  <url><loc>https://haminp.vercel.app/experiments</loc></url>
   <url><loc>https://haminp.vercel.app/services</loc></url>
+  <url><loc>https://haminp.vercel.app/services/software</loc></url>
+  <url><loc>https://haminp.vercel.app/services/automation</loc></url>
+  <url><loc>https://haminp.vercel.app/services/operations</loc></url>
+  <url><loc>https://haminp.vercel.app/services/internal-tools</loc></url>
+  <url><loc>https://haminp.vercel.app/services/workflows</loc></url>
+  <url><loc>https://haminp.vercel.app/services/support</loc></url>
+  <url><loc>https://haminp.vercel.app/group</loc></url>
+  <url><loc>https://haminp.vercel.app/group/businesses</loc></url>
+  <url><loc>https://haminp.vercel.app/process</loc></url>
+  <url><loc>https://haminp.vercel.app/technology</loc></url>
+  <url><loc>https://haminp.vercel.app/ventures</loc></url>
   <url><loc>https://haminp.vercel.app/providers</loc></url>
   <url><loc>https://haminp.vercel.app/domain</loc></url>
-  <url><loc>https://haminp.vercel.app/discoveries</loc></url>
   <url><loc>https://haminp.vercel.app/needs</loc></url>
   <url><loc>https://haminp.vercel.app/about</loc></url>
   <url><loc>https://haminp.vercel.app/contact</loc></url>
+  <url><loc>https://haminp.vercel.app/terms</loc></url>
+  <url><loc>https://haminp.vercel.app/privacy</loc></url>
 </urlset>
