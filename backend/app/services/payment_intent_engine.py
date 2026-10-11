@@ -728,12 +728,27 @@ def reconcile_checkout_by_key(
         or idempotency_key.strip() != idempotency_key
     ):
         raise ValueError("Invalid checkout idempotency key.")
-    digest = hashlib.sha256(idempotency_key.encode()).hexdigest()
-    intent = db.query(models.OpPaymentIntent).filter_by(idempotency_key_hash=digest).one_or_none()
-    if intent is None:
-        product = db.get(models.Product, product_id)
-        if product is None:
-            raise ValueError("Checkout product not found.")
+    product = db.get(models.Product, product_id)
+    if product is None:
+        raise ValueError("Checkout product not found.")
+
+    # Match the exact digest written by create_checkout. The provider and
+    # product are part of that digest; hashing the key alone falsely reports
+    # NO_ATTEMPT for an existing pending checkout.
+    matches: list[models.OpPaymentIntent] = []
+    for provider in ("esewa", "khalti"):
+        digest = hashlib.sha256(
+            f"product:{product_id}|provider:{provider}|key:{idempotency_key}".encode()
+        ).hexdigest()
+        found = db.query(models.OpPaymentIntent).filter_by(idempotency_key_hash=digest).one_or_none()
+        if found is not None:
+            matches.append(found)
+
+    if len(matches) > 1:
+        raise PaymentReconciliationRequired(
+            "Idempotency key matches more than one provider attempt; owner reconciliation is required."
+        )
+    if not matches:
         return {
             "intent": None,
             "offer_id": product.id,
@@ -747,6 +762,7 @@ def reconcile_checkout_by_key(
                 "message": "Hami has no persisted payment attempt for this key. It is safe to start a new attempt.",
             },
         }
+    intent = matches[0]
     if intent.product_id != product_id:
         raise ValueError("Checkout attempt not found.")
     return _reconcile_payment_intent(db, intent)

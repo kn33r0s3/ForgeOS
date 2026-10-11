@@ -1,3 +1,9 @@
+## [SOURCE FIX / CI PENDING] Match reconciliation lookup to provider-bound idempotency digest (2026-10-12)
+
+- The creation path hashes product ID, provider and idempotency key together. Recovery mistakenly hashed only the raw key, which could report NO_ATTEMPT while a real pending checkout existed.
+- Recovery now queries the exact digest for eSewa and Khalti and refuses automatic recovery if one raw key maps to multiple provider attempts. Added regressions for a pending saved attempt and a conflicting cross-provider key; ambiguous attempts remain blocked.
+- No checkout flag or credentials were enabled. Exact-head backend/frontend CI, build and deploy verification remain required.
+
 ## [CI FIX / SOURCE CHANGE / CI PENDING] Repair checkout retry guard regression assertion (2026-10-12)
 
 - Exact-head CI caught an unterminated string in the new checkout persistence regression assertion, causing TypeScript, lint, and frontend tests to fail at parse time. The assertion now compares against the actual checkout fetch statement using a valid quoted literal.
