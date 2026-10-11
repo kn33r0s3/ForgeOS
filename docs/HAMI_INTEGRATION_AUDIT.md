@@ -8,7 +8,7 @@ This is a living, repository-grounded audit, not a claim that every capability i
 
 ## Inventory and method
 
-At the current continuation point (`main` `60f4da29ac97600ef965b5406d59cc9ae87f46b7`, 2026-10-11 15:02:40 UTC), the recursive Git tree contains **923 tracked tree entries: 800 files and 123 directories**, including **38 frontend route files**, **25 backend API modules**, **113 backend service modules**, and **147 files under `docs/`**. These are inventory counts, not proof that every route or service is active. The pass traced the canonical navigation map, route lifecycle registry, sitemap, orphan-route scanner, route components/loaders, FastAPI router registrations, authorization middleware, owner/operations consoles, payment adapters, Better Auth and preview-specific identity/connectors, relevant tests/CI, and the commercial evidence log.
+At the current continuation point (`main` `cbb48a6dcd5fc6bbb9aeda3f29b2b4a8d076c830`, 2026-10-11 15:08:54 UTC), the recursive Git tree contains **923 tracked tree entries: 800 files and 123 directories**, including **38 frontend route files**, **25 backend API modules**, **113 backend service modules**, and **147 files under `docs/`**. These are inventory counts, not proof that every route or service is active. The pass traced the canonical navigation map, route lifecycle registry, sitemap, orphan-route scanner, route components/loaders, FastAPI router registrations, authorization middleware, owner/operations consoles, payment adapters, Better Auth and preview-specific identity/connectors, relevant tests/CI, and the commercial evidence log.
 
 Canonical constraints remain in force:
 - One product and one data substrate: reuse `ENTITY`, `RELATION`, `EVENT`, `EVIDENCE`, `CAPABILITY`, and `ACTION` through `type_registry.schema_json`.
@@ -44,12 +44,13 @@ Canonical constraints remain in force:
 - `2cab0ad2` — checks the existing booking-status signing key before any booking/rate-limit/outcome write; a missing key now fails before storing a request and falsely reporting success.
 - `11253378` — made `scripts/check_all.sh` repository-portable; the startup contract test now locks against the previous absolute dependency path.
 - `60f4da29` — runs repository guards on direct `main` pushes and recursively scans nested route modules, including the nested API-auth route.
+- `9618b43f` / `cbbb88b2` / `78e8fc9b` / `cbb48a6d` — moved the public booking-status HMAC capability from a query parameter to `X-Booking-Status-Token`; the status page still keeps it in a URL fragment so the page navigation request itself does not send the token. Backend/frontend tests now enforce header-only transmission and the same wrong-token/not-found behavior.
 
 ### Current continuation status
 
-- Inventory is pinned to `60f4da29ac97600ef965b5406d59cc9ae87f46b7`; refresh it again after the next commit.
-- On the current SHA, the secrets scan and independent deploy-verification workflow completed successfully. Root frontend tests, typecheck, lint, build, route smoke, the evidence-triage test/typecheck job, and repository guards are successful; the backend test job was still in progress at the last poll. The run is **not yet fully green until backend tests finish**.
-- The same root CI workflow successfully completed on `11253378` (including backend tests); the current `60f4da29` run must still be checked independently, not inferred from its parent.
+- Inventory is pinned to `cbb48a6dcd5fc6bbb9aeda3f29b2b4a8d076c830`; refresh it again after the next commit.
+- The latest booking-capability header commits have new CI runs queued/in progress, so their regression tests are written but are **not yet verified on the current head**. Earlier at `60f4da29`, root frontend tests, typecheck, lint, build, route smoke, evidence-triage test/typecheck, repository guards, secret scan and independent deployment verification passed; backend tests were still running at the last poll.
+- The full root CI completed successfully on `11253378` (including backend tests); that does not substitute for the current `cbb48a6d` run.
 - Production HTML/runtime log reads remain blocked by the connected Vercel scope (403). The independent verifier is SHA-aligned evidence, but direct browser/cache inspection, stable Better Auth secret configuration, private owner access, and a separate production Node triage deployment have not been established.
 
 Always inspect CI against the exact latest `main` SHA after a commit. A commit existing is not a test result; build success or a deployment badge alone is not proof every active job or runtime path is green.
