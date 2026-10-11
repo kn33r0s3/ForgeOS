@@ -18,6 +18,15 @@ from app.services import network_endpoints, public_epistemics
 _PUBLIC_OUTCOME_SOURCES = ("domain_record", "network_connection")
 
 
+def sanitize_public_text(value: str | None) -> str | None:
+    """Redact common contact details before free-form text enters public DTOs."""
+    if value is None:
+        return None
+    from app.services.demand_understanding import normalize_observation_content
+
+    return normalize_observation_content(value)
+
+
 def _idempotency_parts(outcome: models.Outcome) -> list[str] | None:
     marker = (outcome.notes or "").split(":")
     if len(marker) != 4 or marker[0] != "idempotency" or not marker[2].isdigit():
@@ -657,7 +666,7 @@ def build_public_feed(
             entity_type="network_connection",
             entity_id=connection.id,
             title=f"{left_title} · {relation_type.replace('_', ' ')} · {right_title}",
-            summary=connection.reason,
+            summary=sanitize_public_text(connection.reason) or "",
             occurred_at=connection.created_at,
             updated_at=connection.updated_at,
             status=connection.state,

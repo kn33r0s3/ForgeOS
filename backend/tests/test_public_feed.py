@@ -581,8 +581,11 @@ def test_public_feed_composes_connections_but_keeps_endpoint_visibility_gates(db
         right_kind="provider",
         right_id=provider.id,
         state="candidate",
-        reason="A hypothetical connection to a verified public actor.",
-        agreement_gap="No agreement recorded.",
+        reason="A hypothetical connection; contact buyer@example.test or call 9800000001.",
+        known="Contact buyer@example.test",
+        unknown="Call 9800000001",
+        agreement_gap="No agreement from buyer@example.test.",
+
         public_visible=True,
     )
     db.add(first)
@@ -669,6 +672,10 @@ def test_public_feed_composes_connections_but_keeps_endpoint_visibility_gates(db
     assert first_item.relation_type == "possible_match"
     assert "A public test need" in first_item.title
     assert "Verified test actor" in first_item.title
+    assert "buyer@example.test" not in first_item.summary
+    assert "9800000001" not in first_item.summary
+    assert "[redacted-email]" in first_item.summary
+    assert "[redacted-phone]" in first_item.summary
     second_item = next(item for item in feed if item.entity_id == second.id)
     assert "Recorded outcome" in second_item.title
     by_id = {item.entity_id: item for item in feed}
@@ -694,6 +701,11 @@ def test_public_feed_composes_connections_but_keeps_endpoint_visibility_gates(db
         public_connections = client.get("/public/connections")
         assert public_connections.status_code == 200, public_connections.text
         assert {item["id"] for item in public_connections.json()} == {first.id, second.id}
+        public_connections_text = public_connections.text
+        assert "buyer@example.test" not in public_connections_text
+        assert "9800000001" not in public_connections_text
+        assert "[redacted-email]" in public_connections_text
+        assert "[redacted-phone]" in public_connections_text
     finally:
         cleanup()
     all_public_evidence_ids = {

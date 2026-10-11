@@ -404,7 +404,7 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
 @router.get("/connections", response_model=list[schemas.PublicConnectionOut])
 def list_public_connections(db: Session = Depends(get_db)):
     from app.services.network_substrate_adapter import relation_read_model
-    from app.services.public_feed import build_public_feed
+    from app.services.public_feed import build_public_feed, sanitize_public_text
 
     # The Feed owns the public endpoint gate. Reuse its traversal result so a
     # visible connection row cannot make a private or dangling endpoint public.
@@ -431,10 +431,10 @@ def list_public_connections(db: Session = Depends(get_db)):
             right_kind=row.right_kind,
             right_id=row.right_id,
             state=row.state,
-            reason=row.reason,
-            known=row.known,
-            unknown=row.unknown,
-            agreement_gap=row.agreement_gap,
+            reason=sanitize_public_text(row.reason) or "",
+            known=sanitize_public_text(row.known),
+            unknown=sanitize_public_text(row.unknown),
+            agreement_gap=sanitize_public_text(row.agreement_gap) or "",
             forge_role="introducer",
             owns_either_side=False,
             latest_response=_public_connection_response(db, row),
