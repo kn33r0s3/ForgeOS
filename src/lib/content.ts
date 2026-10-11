@@ -659,13 +659,16 @@ export type BookingStatus = {
 export async function getBookingRequestStatus(id: number, statusToken: string): Promise<BookingStatus | null> {
   if (!/^[a-f0-9]{64}$/.test(statusToken)) return null;
   const candidateUrls = getPublicApiCandidates(
-    `/booking-requests/${id}?status_token=${encodeURIComponent(statusToken)}`,
+    `/booking-requests/${id}`,
   );
 
   for (const url of candidateUrls) {
     try {
       const response = await fetch(url, {
-        headers: { Accept: "application/json" },
+        headers: {
+          Accept: "application/json",
+          "X-Booking-Status-Token": statusToken,
+        },
       });
 
       if (!response.ok) {
