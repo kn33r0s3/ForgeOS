@@ -1375,6 +1375,9 @@ def test_domain_dispute_records_an_event_and_names_a_winner_nowhere(owner_client
     assert events["disputes"]
     assert "No winner is recorded" in events["disputes"][0]
     assert "8000" in events["payments"][0] or "8,000" in events["payments"][0] or "8000.0" in events["payments"][0]
+    # Free-form submitter notes remain in canonical Outcomes, not public DTOs.
+    assert "Cash handed over" not in str(events)
+    assert "The pump was not as described" not in str(events)
 
 
 def test_public_alerts_are_only_recorded_changes(owner_client_with_db, db):

@@ -848,11 +848,19 @@ def domain_record_events(record_id: int, db: Session = Depends(get_db)):
     disputes = []
     completions = 0
     for outcome in _domain_outcomes(db, record_id):
-        text = outcome.qualitative_result or ""
+        # The close/dispute note stays in the canonical Outcome for audit, but
+        # must not be echoed into a public projection where it could contain PII.
         if ":close" in (outcome.notes or "") and row.close_result == "paid" and outcome.success is True:
-            payments.append(f"{text} Amount recorded: {outcome.actual_value} {outcome.unit or 'NPR'}.")
+            if outcome.actual_value is None:
+                payment = f"Domain {row.kind} {row.id} closed as paid. Amount not recorded."
+            else:
+                payment = (
+                    f"Domain {row.kind} {row.id} closed as paid. "
+                    f"Amount recorded: {outcome.actual_value} {outcome.unit or 'NPR'}."
+                )
+            payments.append(payment)
         elif ":dispute" in (outcome.notes or ""):
-            disputes.append(text)
+            disputes.append(f"Domain {row.kind} {row.id} has a dispute. No winner is recorded.")
         elif ":close" in (outcome.notes or "") and row.close_result == "completed":
             completions += 1
     unknowns = []
