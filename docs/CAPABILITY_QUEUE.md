@@ -1,3 +1,9 @@
+## [SOURCE CHANGE / CI PENDING] Redact contact details in free-text prices (2026-10-12)
+
+- `ServiceListing.price_from` and `DomainRecord.stated_price` are text fields, not numeric amounts. Public service, domain-record, and match projections now redact embedded contact details; new work-board price text is redacted at write time, and legacy rows are sanitized at read time.
+- The regression covers both legacy and direct public projections: raw contact details must not appear, while redaction placeholders are checked on records whose public response includes the corresponding field. It includes work-board candidate prices and service-directory prices.
+- No product price model, payment, customer, or revenue state was created; structured provider phone/email fields remain the explicit public-catalog fields. Exact-head CI is required before this is marked verified.
+
 ## [SOURCE CHANGE / CI PENDING] Add durable payment-intent substrate and currency-safe revenue rollups (2026-10-12)
 
 - Added one operational `op_payment_intents` table linked to the existing Product and verified Outcome. It stores a random public reference, provider/order identity, idempotency hash, NPR paisa amount, lifecycle status, and optional Outcome reference. It stores no buyer contact data.

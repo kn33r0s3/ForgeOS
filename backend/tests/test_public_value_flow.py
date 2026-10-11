@@ -991,6 +991,7 @@ def test_public_domain_redacts_contact_details_on_write_and_legacy_reads(owner_c
             "title": "Repair help buyer@example.test",
             "detail": "Call 9800000001 to arrange a repair in Kathmandu.",
             "city": "Kathmandu",
+            "stated_price": "NPR 900 buyer-price@example.test; call 9800000005",
         },
     )
     assert created.status_code == 200, created.text
@@ -999,9 +1000,15 @@ def test_public_domain_redacts_contact_details_on_write_and_legacy_reads(owner_c
     assert "9800000001" not in created.text
     assert "[redacted-email]" in created_body["title"]
     assert "[redacted-phone]" in created_body["detail"]
+    assert "buyer-price@example.test" not in created_body["stated_price"]
+    assert "9800000005" not in created_body["stated_price"]
+    assert "[redacted-email]" in created_body["stated_price"]
+    assert "[redacted-phone]" in created_body["stated_price"]
     stored = db.get(models.DomainRecord, created_body["id"])
     assert "buyer@example.test" not in stored.title
     assert "9800000001" not in stored.detail
+    assert "buyer-price@example.test" not in stored.stated_price
+    assert "9800000005" not in stored.stated_price
 
     # Old rows may predate the write-side sanitizer, so each public projection
     # must defend itself rather than trusting stored text.
@@ -1010,10 +1017,22 @@ def test_public_domain_redacts_contact_details_on_write_and_legacy_reads(owner_c
         title="Legacy mechanic buyer@example.test",
         detail="Call 9800000002 for mechanic repair",
         city="Lalitpur",
+        stated_price="NPR 800 buyer-price@example.test; call 9800000002",
         status="open",
         close_token_hash="test-legacy-contact-hash",
     )
     db.add(legacy)
+    db.flush()
+    candidate = models.DomainRecord(
+        kind="offer",
+        title="Repair offer in Lalitpur",
+        detail="Repair service available in Lalitpur.",
+        city="Lalitpur",
+        stated_price="NPR 700 buyer-price@example.test; call 9800000006",
+        status="open",
+        close_token_hash="test-legacy-price-hash",
+    )
+    db.add(candidate)
     db.flush()
     provider = models.Provider(
         name="Repair provider buyer@example.test",
@@ -1031,6 +1050,7 @@ def test_public_domain_redacts_contact_details_on_write_and_legacy_reads(owner_c
         title="Repair service",
         description="Contact 9800000005",
         category="repair",
+        price_from="NPR 1200 buyer-price@example.test; call 9800000008",
         public_visible=True,
         is_active=True,
     ))
@@ -1040,12 +1060,14 @@ def test_public_domain_redacts_contact_details_on_write_and_legacy_reads(owner_c
     domain = owner_client_with_db.get("/public/domain")
     feed = owner_client_with_db.get("/public/feed", params={"kind": "work_item"})
     matches = owner_client_with_db.get("/public/matches")
-    for response in (domain, feed, matches):
+    provider_directory = owner_client_with_db.get("/public/providers")
+    service_directory = owner_client_with_db.get("/public/services")
+    for response in (domain, feed, matches, provider_directory, service_directory):
         assert response.status_code == 200, response.text
         assert "buyer@example.test" not in response.text
-        assert "9800000001" not in response.text
-        assert "9800000002" not in response.text
-        assert "9800000005" not in response.text
+        assert "buyer-price@example.test" not in response.text
+        for private_phone in ("9800000001", "9800000002", "9800000005", "9800000006", "9800000008"):
+            assert private_phone not in response.text
         assert "[redacted-email]" in response.text
         assert "[redacted-phone]" in response.text
 

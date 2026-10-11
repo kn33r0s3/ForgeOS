@@ -98,6 +98,7 @@ def _public_service_out(row: models.ServiceListing) -> schemas.PublicServiceList
         "description": sanitize_public_text(row.description) or "",
         "category": sanitize_public_text(row.category),
         "location": sanitize_public_text(row.location),
+        "price_from": sanitize_public_text(row.price_from),
     })
 
 
@@ -344,7 +345,10 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
                 entity_type="provider",
                 name=provider_name,
                 where=provider_city,
-                stated_price=f"{primary.price_from} {primary.currency or 'NPR'}" if primary and primary.price_from else None,
+                stated_price=(
+                    sanitize_public_text(f"{primary.price_from} {primary.currency or 'NPR'}")
+                    if primary and primary.price_from else None
+                ),
                 stated_availability=primary.availability_status if primary else None,
                 reasons=reasons,
                 unknowns=unknowns,
@@ -382,7 +386,7 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
                 entity_type="domain_record",
                 name=other_title,
                 where=other_city,
-                stated_price=other.stated_price,
+                stated_price=sanitize_public_text(other.stated_price),
                 stated_availability=None,
                 reasons=reasons,
                 unknowns=unknowns,
@@ -809,6 +813,7 @@ def _domain_out(row: models.DomainRecord) -> schemas.DomainRecordOut:
         "title": sanitize_public_text(row.title) or "",
         "detail": sanitize_public_text(row.detail) or "",
         "city": sanitize_public_text(row.city),
+        "stated_price": sanitize_public_text(row.stated_price),
         "terms_complete": terms_complete(row.terms),
     })
 
@@ -860,7 +865,7 @@ def create_domain_record(
         title=title,
         detail=detail,
         city=city,
-        stated_price=(body.stated_price or "").strip() or None,
+        stated_price=sanitize_public_text((body.stated_price or "").strip()) or None,
         terms=json.dumps(body.terms) if body.terms else None,
         status="open",
         close_token_hash=hashlib.sha256(token.encode()).hexdigest(),

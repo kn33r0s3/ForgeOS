@@ -302,6 +302,7 @@ def test_public_feed_projects_heterogeneous_records_with_evidence_and_relations(
             provider_id=provider.id,
             title="Field assessment buyer@example.test",
             description="A listed public capability. Call 9800000004 for details.",
+            price_from="NPR 1200 buyer-price@example.test; call 9800000008",
             category="research",
             public_visible=True,
             is_active=True,
@@ -419,6 +420,10 @@ def test_public_feed_projects_heterogeneous_records_with_evidence_and_relations(
         assert "9800000004" not in response.text
         assert "[redacted-email]" in response.text
         assert "[redacted-phone]" in response.text
+    assert "buyer-price@example.test" not in service_directory.text
+    assert "9800000008" not in service_directory.text
+    assert "[redacted-email]" in service_directory.text
+    assert "[redacted-phone]" in service_directory.text
     assert "buyer@example.test" not in str(discoveries_payload)
     assert "9800000003" not in str(discoveries_payload)
     assert "[redacted-email]" in str(discoveries_payload)
