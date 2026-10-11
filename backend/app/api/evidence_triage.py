@@ -13,18 +13,10 @@ router = APIRouter(
     tags=["evidence-triage"],
 )
 
-DEFAULT_LOCAL_TRIAGE_URL = "http://evidence-triage:8787"
-
-
 def _triage_service_url() -> str | None:
-    """Resolve the paid triage service without guessing a production hostname."""
+    """Return only an explicitly configured endpoint; never guess that a service is running."""
     configured = os.getenv("EVIDENCE_TRIAGE_URL", "").strip().rstrip("/")
-    if configured:
-        return configured
-    if security._deployed_runtime():
-        return None
-    # This DNS name exists only when the optional Compose service is enabled.
-    return DEFAULT_LOCAL_TRIAGE_URL
+    return configured or None
 
 HOP_BY_HOP = {
     "connection",
