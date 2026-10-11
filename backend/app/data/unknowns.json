@@ -890,6 +890,87 @@
    "state_note": "UNKNOWN",
    "cheapest_test": "Check bank/PSP product pages for QR-trail-based loan products; ask 3 merchants if offered one",
    "stake": "If real, the QR rail becomes a credit rail - banks compete for merchant float; if vapor, it is another paper product"
+  },
+  {
+   "id": "D84",
+   "category": "D",
+   "question": "Did India's ~May 2026 per-truck tea testing rule (lab report uploaded within 14 days, confiscation provision, no holding infrastructure at Panitanki) get resolved - are Nepal's tea exports moving again, or is the lane still shut? (round 17: a NPR 4.59B FY 2081/82 lane with 15,000 small farmers and ~100,000 workers brought to a standstill by a foreign testing-lab queue)",
+   "state": "UNKNOWN",
+   "state_note": "UNKNOWN",
+   "cheapest_test": "Watch trade press + association statements for post-May-2026 tea export resumption; check customs FY 2083/84 tea volumes",
+   "stake": "Decides whether the sharpest constraint found in 17 rounds is a transient shock or a structural lane closure"
+  },
+  {
+   "id": "D85",
+   "category": "D",
+   "question": "Is cross-border payment the binding constraint for small Nepali exporters selling online - before logistics or product? (round 17: third-generation Thamel handicraft exporter names high logistics costs, limited cross-border payment options, regulatory hurdles, weak digital readiness)",
+   "state": "UNKNOWN",
+   "state_note": "UNKNOWN",
+   "cheapest_test": "Ask 3 handicraft exporters who tried listing abroad: \"what stopped the first order - the buyer, the shipment, or the payment?\"",
+   "stake": "If payment binds first, the e-commerce export wedge is a payments problem, not a marketplace problem"
+  },
+  {
+   "id": "D86",
+   "category": "D",
+   "question": "How much of FY 2082/83's +18% export growth is re-processed palm oil (+246.7%) vs broad-based capacity - and what does that mean for the \"exports up\" headline? (round 17: traditional exports declined, wool carpet -2.5%)",
+   "state": "UNKNOWN",
+   "state_note": "UNKNOWN",
+   "cheapest_test": "Read customs HS data for re-export vs domestic-origin composition across the growth line items",
+   "stake": "The same headline can mean a narrowing economy, not a broadening one - changes what \"export growth\" is evidence of"
+  },
+  {
+   "id": "D87",
+   "category": "D",
+   "question": "Which exporter constraints can only be solved state-to-state (bank-guarantee provision, Nepali quarantine certificate acceptance by India, G2G initiative - per NRB's published border FGDs) vs by sellers - and does any seller-facing wedge touch them? (round 17)",
+   "state": "UNKNOWN",
+   "state_note": "UNKNOWN",
+   "cheapest_test": "Track Nepal-India G2G/bilateral meeting outcomes on the FGD asks; watch whether exporters stop naming the state as the missing negotiator",
+   "stake": "If the binding constraint sits above the seller in state-to-state negotiation, a seller-facing product must price that ceiling in, not promise through it"
+  },
+  {
+   "id": "D88",
+   "category": "D",
+   "question": "Does the Nepal-US experience (2021 merchandise exports $108.3M, below their late-1990s nominal peak, despite duty-free NTPP access for 77 products since Dec 2016) mean preference access is never the constraint - and what would falsify that? (round 17; WITS NTM data: Nepal's exports face 1.07% NTM coverage vs 33.69% on imports)",
+   "state": "UNKNOWN",
+   "state_note": "UNKNOWN",
+   "cheapest_test": "Find one product where preference access alone raised Nepali exports - if none exists, the thesis holds",
+   "stake": "Preference is not the constraint; supply capacity is - falsifying it requires a counterexample"
+  },
+  {
+   "id": "D89",
+   "category": "D",
+   "question": "Do Nepali customers forgive the unanswered call (come to the shop, call back) or defect to a competitor - what is the conversion loss on a missed inquiry in the local market? (round 18: Nepal Momo House's callers 'get upset'; UK benchmark says 62% contact a competitor immediately - not Kathmandu ground truth)",
+   "state": "UNKNOWN",
+   "state_note": "UNKNOWN",
+   "cheapest_test": "In the five conversations: \"the last time you missed a call, did that customer come back - or did they go next door?\"",
+   "stake": "Sizes the recovery number for the wedge - forgiveness means the wedge is a convenience; defection means it is survival"
+  },
+  {
+   "id": "D90",
+   "category": "D",
+   "question": "Are the coping announcements effective - do customers actually comply with \"don't call at night\" / \"visit instead\", or is the coping theater leaking sales to rivals? (round 18: shops post FAQ reels announcing the gap)",
+   "state": "UNKNOWN",
+   "state_note": "UNKNOWN",
+   "cheapest_test": "Watch comment/reply behavior on coping-announcement reels; ask 3 sellers if the announcements changed anything",
+   "stake": "If customers absorb the gap, the wedge competes with free coping; if they defect, every coping reel is a market ad for Hami's offer"
+  },
+  {
+   "id": "D91",
+   "category": "D",
+   "question": "What is a typical missed-inquiry job value in Nepali service trades (electrician, plumber, tailor, beautician) in rupees - the local price tag for the value math? (round 18: no rupee-denominated job-value figure surfaced; US/UK figures don't transfer)",
+   "state": "UNKNOWN",
+   "state_note": "UNKNOWN",
+   "cheapest_test": "In the five conversations: \"what did that one missed job pay?\" - collect 10 rupee-denominated missed-job values",
+   "stake": "Turns the directional benchmarks into a local price tag - the wedge's invoice line"
+  },
+  {
+   "id": "D92",
+   "category": "D",
+   "question": "Do micro-shops share answer-labor informally (a neighbor taking calls, a sibling running the WhatsApp) - a folk front-desk invisible to job ads? (round 18: hiring ads show formal demand only)",
+   "state": "UNKNOWN",
+   "state_note": "UNKNOWN",
+   "cheapest_test": "In the five conversations: \"when you can't answer, who does - a person, a gadget, or nobody?\"",
+   "stake": "If folk answer-labor exists, the wedge augments a human system, not an empty slot - and the price ceiling is set by free kin labor"
   }
  ],
  "last_loop": "2026-10-04"
