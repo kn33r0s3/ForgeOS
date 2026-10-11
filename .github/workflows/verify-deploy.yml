@@ -156,3 +156,9 @@ jobs:
             echo "$HTTP_BODY" | sed -E 's/(api[_-]?key|token|secret)["'\'']?\s*[:=]\s*["'\'']?[^"'\''&,} ]+/\\1=[REDACTED]/gi'
             exit 1
           fi
+
+      - name: Fail workflow when verification verdict is false
+        if: steps.result.outputs.passed != 'true'
+        run: |
+          echo "::error::Deployment verification was recorded with passed=false. Check the recorded verdict and earlier steps."
+          exit 1
