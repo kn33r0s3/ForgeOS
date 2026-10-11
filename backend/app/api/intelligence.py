@@ -48,7 +48,8 @@ def analyze_youtube_url(payload: YouTubeRequest, request: Request, db: Session =
 
 
 @router.get("/youtube/{analysis_id}")
-def get_youtube_analysis(analysis_id: int, db: Session = Depends(get_db)):
+def get_youtube_analysis(analysis_id: int, request: Request, db: Session = Depends(get_db)):
+    require_owner_api_key(request)
     analysis = db.query(models.MediaAnalysis).filter_by(id=analysis_id).first()
     if not analysis:
         raise HTTPException(status_code=404, detail="Media analysis not found")
@@ -72,10 +73,12 @@ def get_youtube_analysis(analysis_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/performance/tools/{tool_name}")
-def get_tool_performance(tool_name: str, db: Session = Depends(get_db)):
+def get_tool_performance(tool_name: str, request: Request, db: Session = Depends(get_db)):
+    require_owner_api_key(request)
     return {"tool": tool_name, "performance": tool_usefulness.tool_summary(db, tool_name)}
 
 
 @router.get("/performance/sources/{source}")
-def get_source_performance(source: str, db: Session = Depends(get_db)):
+def get_source_performance(source: str, request: Request, db: Session = Depends(get_db)):
+    require_owner_api_key(request)
     return {"source": source, "performance": tool_usefulness.source_summary(db, source)}

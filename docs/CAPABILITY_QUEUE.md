@@ -1,3 +1,12 @@
+## [IN PROGRESS] Protect private intelligence reads and close backend verification gaps (2026-10-11)
+
+- **EXISTING SEAMS INSPECTED:** `backend/app/api/intelligence.py`, `backend/tests/test_step1_router_auth.py`, `backend/app/security.py`, and the existing Linux CI logs.
+- **FIRST VERIFIED ACCESS GAP:** `POST /intelligence/youtube` already required the owner key, but `GET /intelligence/youtube/{analysis_id}` returned full transcript text/segments and document metadata without an equivalent route-level gate. The tool/source performance reads likewise exposed internal quality telemetry without a key. No frontend caller was found for these API reads; the backend can still retain their capability as owner-only endpoints.
+- **FIX IN SOURCE:** require `X-API-Key` for all three intelligence GET handlers and add regression tests for missing configuration, missing/wrong key, and an authorized request. No public projection or owner UI route is added.
+- **CI FINDING:** CI on `98ad494b8be34026ce00af84e131aac197b1e8e4` reported 1,051 passed, 2 skipped and 2 backend failures: an expected-readiness list had not been updated for the now-correct SQLite durability blocker, and the test's parallel isolated SQLite writers sometimes collide with SQLite's single-writer behavior. The readiness assertion is being made driver-aware; the concurrency test retries only the entire isolated test transaction on the specific transient `database is locked` error, with a fixed bound. Other DB errors still fail.
+- **PRODUCTION LIMITATION:** the Vercel connector returns 403 when protected deployment content/config is requested. This prevents checking actual production environment variables or replaying authenticated private route tests against production. No secrets were fetched or changed.
+- **NEXT:** rerun exact-SHA Linux tests/verifier, continue route→caller→service→model mapping (especially public task-status IDs and private transcript/task data), then extend access tests to any other unprotected private response found. Keep eSewa/Khalti status as lookup/configuration capability only; there is still no verified transaction ledger or live-revenue claim.
+
 ## [IN PROGRESS] Align eSewa lookup default with the configured ePay V2 checkout (2026-10-11)
 
 - **EXISTING SEAM INSPECTED:** `backend/app/config.py::ESEWA_FORM_URL/ESEWA_STATUS_URL`, `backend/app/services/nepal_payments.py::esewa_checkout/esewa_lookup/verify_esewa_response`, and `backend/tests/test_nepal_payments.py`.

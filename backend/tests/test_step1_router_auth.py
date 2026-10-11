@@ -96,6 +96,32 @@ def test_public_reads_stay_open(client, monkeypatch, path):
         assert res.status_code not in (401, 503), f"{path}: {res.status_code}"
 
 
+PRIVATE_INTELLIGENCE_READS = [
+    "/intelligence/youtube/999999",
+    "/intelligence/performance/tools/unknown-tool",
+    "/intelligence/performance/sources/unknown-source",
+]
+
+
+@pytest.mark.parametrize("path", PRIVATE_INTELLIGENCE_READS)
+def test_intelligence_reads_require_owner_key(client, monkeypatch, path):
+    monkeypatch.delenv("VERCEL", raising=False)
+    monkeypatch.setenv("NODE_ENV", "test")
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "")
+    unconfigured = client.get(path)
+    assert unconfigured.status_code == 503, f"{path}: {unconfigured.status_code}"
+
+    _keyed(monkeypatch)
+    missing = client.get(path)
+    wrong = client.get(path, headers={"X-API-Key": "wrong"})
+    assert missing.status_code == 401, f"{path}: {missing.status_code}"
+    assert wrong.status_code == 401, f"{path}: {wrong.status_code}"
+
+    allowed = client.get(path, headers={"X-API-Key": "step1-owner-key"})
+    assert allowed.status_code not in (401, 503), f"{path}: {allowed.status_code}"
+
+
 def test_deployed_runtime_fails_closed_for_privileged_paths_when_key_is_missing(monkeypatch):
     import asyncio
 

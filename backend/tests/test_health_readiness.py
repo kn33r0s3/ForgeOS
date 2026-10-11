@@ -206,9 +206,16 @@ def test_vercel_health_reports_safe_database_error_class(db, monkeypatch):
     assert "must-not-be-returned" not in details.text
     assert "private-credentials" not in details.text
     assert "private-cron-secret" not in details.text
+    from app import database
+
+    expected_blockers = ["database_unavailable"]
+    # This fixture runs with SQLite even when DATABASE_URL is monkeypatched to
+    # a PostgreSQL-shaped value; Vercel + SQLite remains ephemeral.
+    if database.engine.dialect.name == "sqlite":
+        expected_blockers.insert(0, "durable_database_not_configured")
     assert payload["readiness"] == {
         "ready": False,
-        "blockers": ["database_unavailable"],
+        "blockers": expected_blockers,
     }
 
 

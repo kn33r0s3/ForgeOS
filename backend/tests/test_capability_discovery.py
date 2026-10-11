@@ -1,9 +1,11 @@
 import json
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from types import SimpleNamespace
 
 from sqlalchemy import create_engine
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
 from app import models
@@ -119,21 +121,32 @@ def test_concurrent_gap_creation_is_idempotent(tmp_path):
         question_id = question.id
 
     def create_gap():
-        with factory() as session:
-            question = session.get(models.ResearchQuestion, question_id)
-            requirement = {
-                "id": "local_crop_loss",
-                "question": "What local crop loss incidence is documented?",
-                "required_evidence_type": "primary_agriculture_observation",
-                "original_research_question": question.question,
-                "geographic_qualification": "Nepal",
-                "population_qualification": "smallholder farmers",
-            }
-            gap = capability_discovery.ensure_capability_gap(
-                session, question, requirement
-            )
-            session.commit()
-            return gap.name
+        # SQLite permits one writer at a time. Concurrent read-to-write
+        # upgrades can report SQLITE_BUSY before busy_timeout can help, so
+        # retry the complete isolated transaction on that specific transient
+        # lock error. Other database errors remain failures.
+        for attempt in range(4):
+            try:
+                with factory() as session:
+                    question = session.get(models.ResearchQuestion, question_id)
+                    requirement = {
+                        "id": "local_crop_loss",
+                        "question": "What local crop loss incidence is documented?",
+                        "required_evidence_type": "primary_agriculture_observation",
+                        "original_research_question": question.question,
+                        "geographic_qualification": "Nepal",
+                        "population_qualification": "smallholder farmers",
+                    }
+                    gap = capability_discovery.ensure_capability_gap(
+                        session, question, requirement
+                    )
+                    session.commit()
+                    return gap.name
+            except OperationalError as exc:
+                if "database is locked" not in str(exc).lower() or attempt == 3:
+                    raise
+                time.sleep(0.05 * (attempt + 1))
+        raise AssertionError("transient SQLite write contention exceeded retry bound")
 
     with ThreadPoolExecutor(max_workers=3) as workers:
         names = list(workers.map(lambda _: create_gap(), range(3)))
