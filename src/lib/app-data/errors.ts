@@ -25,7 +25,7 @@ const MESSAGE_RULES: readonly MessageRule[] = [
   {
     needles: ["not_connected", "failed_precondition"],
     kind: "not_connected",
-    message: "Connect this connector in Grok to load your data.",
+    message: "This data connection isn’t configured yet.",
   },
   {
     needles: ["scope_denied"],
@@ -57,14 +57,13 @@ export function classifyCallToolError(
   if (raw.includes("missing_connector_token")) {
     return {
       kind: "error",
-      message: "Open this app from Grok to load your data.",
-      detail,
+      message: "This data connection isn’t available on this site yet.",
     };
   }
   if (isLoginRequired(result)) {
     return {
       kind: "login",
-      message: "Continue with Grok to load your data.",
+      message: "Sign in to access this data connection.",
       detail,
     };
   }

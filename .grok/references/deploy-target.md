@@ -33,8 +33,8 @@ config:
   it never runs in dev — left on in dev, nitro opens a second dev-server port,
   which breaks the single-port 8080 live preview — but still serves the built
   output under `vite preview`;
-- mounts `grokPwaPlugin()`.
+- uses Hami-owned document metadata and `/manifest.webmanifest`; production pages do not load platform branding injectors.
 
-If you edit it, preserve both port contracts, the build/preview-gated nitro
-plugin **including its `serverDir: "./server"` option** (without it the deployed
-app loses the Home Screen install page), and `grokPwaPlugin()`.
+If you edit it, preserve both port contracts and the build/preview-gated
+`nitro({ preset: "vercel" })` plugin. Do not reintroduce a platform PWA/head
+injector or platform-specific preview bridge into the deployed Hami document.

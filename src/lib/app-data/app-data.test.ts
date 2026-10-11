@@ -427,7 +427,9 @@ describe("classifyCallToolError", () => {
       errorMessage: "missing_connector_token: open this app through the edge gate",
     });
     assert.equal(state?.kind, "error");
-    assert.match(state?.detail ?? "", /missing_connector_token/);
+    assert.equal(state?.message, "This data connection isn’t available on this site yet.");
+    assert.equal(state?.detail, undefined);
+    assert.doesNotMatch(state?.message ?? "", /Grok|open this app/i);
   });
 
   it("classifies gate loginRequired without a missing-token message as login", () => {
@@ -438,26 +440,28 @@ describe("classifyCallToolError", () => {
       errorMessage: "login required",
     });
     assert.equal(state?.kind, "login");
+    assert.equal(state?.message, "Sign in to access this data connection.");
     assert.equal(state?.detail, "login required");
+    assert.doesNotMatch(state?.message, /Grok|open this app/i);
   });
 
-  it("classifies not_connected and failed_precondition", () => {
-    assert.equal(
-      classifyCallToolError({
-        ok: false,
-        data: null,
-        errorMessage: "connector_not_connected: Notion",
-      })?.kind,
-      "not_connected",
-    );
-    assert.equal(
-      classifyCallToolError({
-        ok: false,
-        data: null,
-        errorMessage: "FAILED_PRECONDITION: no connector",
-      })?.kind,
-      "not_connected",
-    );
+  it("classifies not_connected and failed_precondition without platform-specific instructions", () => {
+    const notConnected = classifyCallToolError({
+      ok: false,
+      data: null,
+      errorMessage: "connector_not_connected: Notion",
+    });
+    assert.equal(notConnected?.kind, "not_connected");
+    assert.equal(notConnected?.message, "This data connection isn’t configured yet.");
+    assert.doesNotMatch(notConnected?.message ?? "", /Grok|open this app/i);
+
+    const failedPrecondition = classifyCallToolError({
+      ok: false,
+      data: null,
+      errorMessage: "FAILED_PRECONDITION: no connector",
+    });
+    assert.equal(failedPrecondition?.kind, "not_connected");
+    assert.doesNotMatch(failedPrecondition?.message ?? "", /Grok|open this app/i);
   });
 
   it("classifies scope_denied without claiming a missing grant", () => {
