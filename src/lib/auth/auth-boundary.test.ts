@@ -50,7 +50,8 @@ describe("Hami authentication boundary", () => {
   it("requires a stable deployed signing secret and blocks the auth API when unavailable", () => {
     const server = read("./server.ts");
     assert.ok(server.includes("authSecretReady = Boolean(explicitAuthSecret) || isWorkspacePreview()"));
-    assert.ok(server.includes("!authDisabled && authSecretReady &&"));
+    assert.ok(server.includes("authDatabaseReady = Boolean(databaseUrl) || isWorkspacePreview()"));
+    assert.ok(server.includes("!authDisabled && authSecretReady && authDatabaseReady &&"));
 
     const availability = read("./availability.ts");
     assert.ok(availability.includes("authConfigured,"));
@@ -68,6 +69,9 @@ describe("Hami authentication boundary", () => {
   it("does not use the shared dev user when deployed auth is unavailable", () => {
     const verify = read("./verify.server.ts");
     assert.ok(verify.includes("authDisabled && isWorkspacePreview() && !databaseConfigured"));
+    assert.ok(verify.includes("if (!authConfigured) return null;"));
+    assert.ok(verify.includes("if (!authConfigured) {"));
+    assert.ok(!verify.includes("gateIdentityEnabled()"));
     assert.ok(verify.includes("throw new UnauthorizedError()"));
     assert.ok(verify.includes("import { isWorkspacePreview } from \"../env.server\""));
   });
