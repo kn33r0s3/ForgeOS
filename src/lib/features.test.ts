@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { FOOTER_GROUPS, NAV, PUBLIC_SYSTEM_PATHS } from "./hami-system";
+import { FOOTER_GROUPS, NAV, PUBLIC_SYSTEM_PATHS, SYSTEM_PATHWAYS } from "./hami-system.ts";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const registry = JSON.parse(
@@ -88,6 +88,57 @@ describe("feature registry", () => {
       !registry.features.some((feature: { route: string; status: string }) => feature.route === route && feature.status === "live"),
     );
     assert.deepEqual(missing, [], `public Hami pathways missing a live registry entry: ${missing.join(", ")}`);
+  });
+
+  it("every related Hami pathway points to a live registered route", () => {
+    const targets = Object.values(SYSTEM_PATHWAYS).flatMap((links) => links.map((link) => link.to));
+    const broken = [...new Set(targets)].filter(
+      (route) => !registry.features.some((feature: { route: string; status: string }) => feature.route === route && feature.status === "live"),
+    );
+    assert.deepEqual(broken, [], `pathways pointing to missing or non-live registry routes: ${broken.join(", ")}`);
+  });
+
+  it("every page pathway uses a key in the canonical pathway map", () => {
+    const routeDir = path.join(root, "routes");
+    const keys = new Set(Object.keys(SYSTEM_PATHWAYS));
+    const invalid: string[] = [];
+    for (const filename of readdirSync(routeDir).filter((name) => name.endsWith(".tsx"))) {
+      const source = readFileSync(path.join(routeDir, filename), "utf8");
+      for (const match of source.matchAll(/HamiPathways current="([^"]+)"/g)) {
+        if (!keys.has(match[1] as keyof typeof SYSTEM_PATHWAYS)) {
+          invalid.push(`${filename}: ${match[1]}`);
+        }
+      }
+    }
+    assert.deepEqual(invalid, [], `pages use undefined Hami pathway keys: ${invalid.join(", ")}`);
+  });
+
+  it("the public sitemap contains only live Hami routes", () => {
+    const sitemap = readFileSync(path.join(root, "..", "public", "sitemap.xml"), "utf8");
+    const paths = [...sitemap.matchAll(/<loc>https:\/\/haminp\.vercel\.app([^<]*)<\/loc>/g)]
+      .map((match) => match[1] || "/");
+    assert.equal(new Set(paths).size, paths.length, "sitemap contains duplicate routes");
+    const resolveFeature = (route: string) =>
+      registry.features.find((feature: { route: string }) => feature.route === route) ??
+      registry.features.find((feature: { route: string }) => {
+        const pattern = feature.route.split("/");
+        const candidate = route.split("/");
+        return pattern.length === candidate.length &&
+          pattern.every((segment, index) => segment.startsWith("$") ? candidate[index].length > 0 : segment === candidate[index]);
+      });
+    const inactive = paths.filter((route) => resolveFeature(route)?.status !== "live");
+    assert.deepEqual(inactive, [], `sitemap lists hidden/archived/unregistered paths: ${inactive.join(", ")}`);
+    assert.ok(!paths.includes("/contact"), "closed contact surface must not be presented as an active search destination");
+  });
+
+  it("owner-only, TEST-only and closed intake surfaces remain hidden", () => {
+    const status = (route: string) => registry.features.find((feature: { route: string }) => feature.route === route)?.status;
+    for (const route of ["/owner", "/operations", "/prototype/inbox", "/bot-qualification-demo", "/forge-bot-intake", "/request", "/contact"]) {
+      assert.equal(status(route), "hidden", `${route} must stay out of public discovery`);
+    }
+    for (const route of ["/climb", "/what-we-learned", "/work", "/request-a-project"]) {
+      assert.equal(status(route), "archived", `${route} should remain a compatibility redirect, not a parallel surface`);
+    }
   });
 
   it("serves the schema referenced by the public feature registry", () => {
