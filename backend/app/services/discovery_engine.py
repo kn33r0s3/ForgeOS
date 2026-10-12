@@ -720,10 +720,10 @@ def build_global_frontier(db: Session, *, limit: int = 50) -> dict[str, Any]:
         scan_limited.append("unknown_map_claims")
     for row in unknown_claims:
         provenance = str(row.provenance or "")
-        identity_match = re.search(r"UNKNOWN_MAP\\.md\\s+§([A-D])\\s+row\\s+([A-Z]+\\d+)", provenance)
+        identity_match = re.search(r"UNKNOWN_MAP\.md\s+§([A-D])\s+row\s+([A-Z]+\d+)", provenance)
         unknown_id = identity_match.group(2) if identity_match else f"claim-{row.id}"
         section = identity_match.group(1) if identity_match else "unclassified"
-        cheapest_match = re.search(r"Cheapest test:\\s*(.*)$", provenance)
+        cheapest_match = re.search(r"Cheapest test:\s*(.*)$", provenance)
         lane = f"unknown_map:{section}"
         lanes[lane].append({
             "frontier_id": f"unknown_map:{unknown_id}",
