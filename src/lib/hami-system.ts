@@ -42,7 +42,7 @@ export const FOOTER_GROUPS = [
       { label: "Hami services", to: "/services" },
       { label: "Verified providers", to: "/providers" },
       { label: "Public work board", to: "/domain" },
-      { label: "The missed inquiry", to: "/needs" },
+      { label: "Needs & offers", to: "/needs" },
     ],
   },
   {
@@ -111,9 +111,10 @@ export const SYSTEM_PATHWAYS = {
     { label: "Hami services", to: "/services" },
   ],
   needs: [
-    { label: "Experiment log", to: "/experiments" },
-    { label: "Questions to resolve", to: "/unknowns" },
-    { label: "Public work board", to: "/domain" },
+    { label: "Post a need, offer, or trade", to: "/domain" },
+    { label: "Hami's current service offers", to: "/services" },
+    { label: "Verified providers", to: "/providers" },
+    { label: "Evidence and experiments", to: "/experiments" },
   ],
   actions: [
     { label: "Opportunity hypotheses", to: "/opportunities" },

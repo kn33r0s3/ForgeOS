@@ -10,7 +10,7 @@ consumers) code against.
 from datetime import datetime
 import re
 from typing import Literal, Optional, List, Union
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, Field, ConfigDict, StrictInt, field_validator
 
 
 # ---------- Signal ----------
@@ -1468,13 +1468,33 @@ class PublicMatchOut(BaseModel):
     unknowns: list[str]
 
 
+class DomainTerms(BaseModel):
+    """Shareable economic terms for a proposed value exchange.
+
+    Fields may be omitted while someone drafts an offer. The existing
+    acceptance gate still requires every contract field and a non-negative
+    whole-NPR amount before an agreement can advance.
+    """
+    amount_npr: Optional[StrictInt] = Field(default=None, ge=0, le=1_000_000_000_000)
+    requested: Optional[str] = Field(default=None, max_length=1000)
+    who_can_submit: Optional[str] = Field(default=None, max_length=1000)
+    success: Optional[str] = Field(default=None, max_length=1000)
+    evidence_required: Optional[str] = Field(default=None, max_length=1000)
+    ownership: Optional[str] = Field(default=None, max_length=1000)
+    payment_due: Optional[str] = Field(default=None, max_length=1000)
+    partial: Optional[str] = Field(default=None, max_length=1000)
+    rejection: Optional[str] = Field(default=None, max_length=1000)
+    resale: Optional[str] = Field(default=None, max_length=1000)
+    costs: Optional[str] = Field(default=None, max_length=1000)
+
+
 class DomainRecordCreate(BaseModel):
     kind: Literal["job", "offer", "trade"]
     title: str = Field(..., min_length=1, max_length=160)
     detail: str = Field(..., min_length=1)
     city: Optional[str] = None
     stated_price: Optional[str] = None
-    terms: Optional[dict] = None
+    terms: Optional[DomainTerms] = None
 
 
 class DomainRecordOut(BaseModel):
@@ -1486,6 +1506,7 @@ class DomainRecordOut(BaseModel):
     stated_price: Optional[str] = None
     status: str
     terms_complete: bool = False
+    terms: Optional[DomainTerms] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

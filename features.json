@@ -82,10 +82,10 @@
     {
       "commit": "de6f8a6",
       "date_added": "2026-10-04",
-      "heading": "The missed inquiry",
+      "heading": "Useful offers and fair exchanges",
       "id": "page-needs",
-      "intent": "The missed-inquiry experiment surface; honestly 'not started'.",
-      "name": "Needs (Experiment 1)",
+      "intent": "Broad public entry for needs, offers, reciprocal exchanges, and Hami's existing value pathways; not an automated acceptance or fulfillment channel.",
+      "name": "Needs & offers",
       "route": "/needs",
       "selector": "main",
       "status": "live"
@@ -267,9 +267,9 @@
     {
       "commit": "7e0a9ca",
       "date_added": "2026-09-25",
-      "heading": "One path for work and needs",
+      "heading": "Needs, offers, and fair exchanges",
       "id": "page-domain",
-      "intent": "Public jobs, offers, trades, connections, trust and recorded state changes; a post or match is not a verified transaction.",
+      "intent": "Public exchange board for needs/jobs, offers, trades, sanitized shareable contract terms, match suggestions, and recorded outcomes. A post or match is not acceptance, fulfillment, or verified payment.",
       "name": "Public work board",
       "route": "/domain",
       "status": "live"

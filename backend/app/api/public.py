@@ -800,7 +800,7 @@ def terms_complete(raw: str | None) -> bool:
     if not isinstance(data, dict):
         return False
     amount = data.get("amount_npr")
-    if not isinstance(amount, int) or amount < 0:
+    if not isinstance(amount, int) or isinstance(amount, bool) or amount < 0:
         return False
     return all(str(data.get(key) or "").strip() for key in _TERM_KEYS)
 
@@ -808,14 +808,35 @@ def terms_complete(raw: str | None) -> bool:
 def _domain_out(row: models.DomainRecord) -> schemas.DomainRecordOut:
     from app.services.public_feed import sanitize_public_text
 
-    base = schemas.DomainRecordOut.model_validate(row)
-    return base.model_copy(update={
-        "title": sanitize_public_text(row.title) or "",
-        "detail": sanitize_public_text(row.detail) or "",
-        "city": sanitize_public_text(row.city),
-        "stated_price": sanitize_public_text(row.stated_price),
-        "terms_complete": terms_complete(row.terms),
-    })
+    public_terms = None
+    try:
+        raw_terms = json.loads(row.terms or "")
+    except (TypeError, ValueError, json.JSONDecodeError):
+        raw_terms = None
+    if isinstance(raw_terms, dict):
+        projected: dict[str, str | int] = {}
+        amount = raw_terms.get("amount_npr")
+        if isinstance(amount, int) and not isinstance(amount, bool) and amount >= 0:
+            projected["amount_npr"] = amount
+        for key in _TERM_KEYS:
+            value = raw_terms.get(key)
+            if isinstance(value, str) and value.strip():
+                projected[key] = sanitize_public_text(value.strip()) or ""
+        if projected:
+            public_terms = schemas.DomainTerms.model_validate(projected)
+
+    return schemas.DomainRecordOut(
+        id=row.id,
+        kind=row.kind,
+        title=sanitize_public_text(row.title) or "",
+        detail=sanitize_public_text(row.detail) or "",
+        city=sanitize_public_text(row.city),
+        stated_price=sanitize_public_text(row.stated_price),
+        status=row.status,
+        terms_complete=terms_complete(row.terms),
+        terms=public_terms,
+        created_at=row.created_at,
+    )
 
 
 @router.get("/domain", response_model=list[schemas.DomainRecordOut])
@@ -866,7 +887,7 @@ def create_domain_record(
         detail=detail,
         city=city,
         stated_price=sanitize_public_text((body.stated_price or "").strip()) or None,
-        terms=json.dumps(body.terms) if body.terms else None,
+        terms=json.dumps(body.terms.model_dump(exclude_none=True), ensure_ascii=False) if body.terms else None,
         status="open",
         close_token_hash=hashlib.sha256(token.encode()).hexdigest(),
     )

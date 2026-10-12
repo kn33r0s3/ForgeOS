@@ -91,6 +91,20 @@ export type PublicFeedItem = {
   relations: PublicFeedRelation[];
 };
 
+export type PublicDomainTerms = {
+  amount_npr?: number | null;
+  requested?: string | null;
+  who_can_submit?: string | null;
+  success?: string | null;
+  evidence_required?: string | null;
+  ownership?: string | null;
+  payment_due?: string | null;
+  partial?: string | null;
+  rejection?: string | null;
+  resale?: string | null;
+  costs?: string | null;
+};
+
 export type PublicDomainRecord = {
   id: number;
   kind: "job" | "offer" | "trade";
@@ -98,6 +112,7 @@ export type PublicDomainRecord = {
   detail: string;
   city?: string | null;
   stated_price?: string | null;
+  terms?: PublicDomainTerms | null;
   status: string;
   terms_complete?: boolean;
   created_at?: string;
@@ -456,6 +471,7 @@ export async function createPublicDomainRecord(input: {
   detail: string;
   city?: string | null;
   stated_price?: string | null;
+  terms?: PublicDomainTerms | null;
 }): Promise<(PublicDomainRecord & { close_token: string }) | null> {
   for (const url of getPublicApiCandidates("/domain")) {
     try {

@@ -2326,3 +2326,64 @@ def test_public_booking_request_fails_before_writing_when_status_signing_key_is_
     assert response.status_code == 503, response.text
     assert db.query(models.BookingRequest).count() == 0
     assert db.query(models.Outcome).count() == 0
+
+
+
+def test_public_offer_exposes_sanitized_complete_terms(client_with_db):
+    terms = {
+        "amount_npr": 5000,
+        "requested": "One laptop diagnostic; contact owner@example.com",
+        "who_can_submit": "The laptop owner or their authorized representative",
+        "success": "The agreed diagnostic checklist is completed and explained",
+        "evidence_required": "Both parties review the completed checklist",
+        "ownership": "The customer retains the laptop and their data",
+        "payment_due": "NPR 5000 after the agreed diagnostic is delivered",
+        "partial": "No partial charge unless both parties agree in writing first",
+        "rejection": "Either party may raise a dispute before closure",
+        "resale": "Customer data cannot be copied or resold",
+        "costs": "Any parts or transport cost must be agreed before work",
+        "private_extension": "must not be stored or projected",
+    }
+    created = client_with_db.post(
+        "/public/domain",
+        json={
+            "kind": "offer",
+            "title": "Laptop diagnostic offer",
+            "detail": "A clearly scoped diagnostic with agreed deliverables.",
+            "city": "Butwal",
+            "stated_price": "NPR 5000",
+            "terms": terms,
+        },
+    )
+    assert created.status_code == 200, created.text
+    created_body = created.json()
+    assert created_body["terms_complete"] is True
+
+    listed = client_with_db.get("/public/domain")
+    assert listed.status_code == 200, listed.text
+    record = next(item for item in listed.json() if item["id"] == created_body["id"])
+    assert record["terms_complete"] is True
+    assert record["terms"]["amount_npr"] == 5000
+    assert record["terms"]["success"] == terms["success"]
+    assert "private_extension" not in record["terms"]
+    assert "owner@example.com" not in str(record)
+    assert "requested" in record["terms"]
+
+
+def test_partial_public_offer_terms_stay_incomplete(client_with_db):
+    created = client_with_db.post(
+        "/public/domain",
+        json={
+            "kind": "offer",
+            "title": "Draft tutoring offer",
+            "detail": "A proposed one-hour tutoring session.",
+            "terms": {
+                "amount_npr": 1500,
+                "requested": "One hour of algebra tutoring",
+            },
+        },
+    )
+    assert created.status_code == 200, created.text
+    body = created.json()
+    assert body["terms_complete"] is False
+    assert body["terms"]["requested"] == "One hour of algebra tutoring"

@@ -70,9 +70,9 @@ Links are navigation, not evidence. A public feed relation is not proof. An oppo
 
 ### Work and value loop
 
-`/services` contains Hami's own technical/operational offers and links to `/services/$slug`. `/providers` is a separate directory for external providers that meet verification/publication requirements. `/domain` is the public work board. `/needs` remains a truthful record of the proposed missed-inquiry experiment; it is not a live intake channel. `/requests/$id` shows an actual provider request record and never treats pending as acceptance.
+`/needs` is the broad public entry for needs, offers, reciprocal exchanges, and the ways Hami can currently contribute; it is not tied to one market hypothesis. `/domain` reuses the existing `DomainRecord` and `terms` fields for public needs/jobs, offers, and trades. The ten known economic terms are now shown through the public projection after contact-detail sanitization; incomplete terms remain visible as a proposal but cannot pass the existing acceptance gate. `/services` remains Hami's own bounded catalogue and `/providers` remains the separate verified-provider path. `/requests/$id` shows an actual provider request and never treats pending as acceptance.
 
-The paths share a navigation and evidence model, but their underlying record types and permissions remain distinct. Do not collapse Hami's own services into the external provider registry or infer a completed transaction from a post, match, or request.
+The earlier missed-inquiry sprint remains an experiment hypothesis, not Hami's identity or boundary. Keep each path's record types and permissions distinct. Never infer acceptance, fulfillment, or payment from a post, match, or booking request.
 
 ## Surface lifecycle
 

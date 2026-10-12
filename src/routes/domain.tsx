@@ -21,6 +21,7 @@ import {
   type PublicConnection,
   type PublicDomainEvents,
   type PublicDomainRecord,
+  type PublicDomainTerms,
   type PublicMatch,
   type PublicTrust,
 } from "@/lib/content";
@@ -31,6 +32,28 @@ export const Route = createFileRoute("/domain")({
 });
 
 type Kind = "job" | "offer" | "trade";
+const AGREEMENT_FIELDS: Array<{
+  key: Exclude<keyof PublicDomainTerms, "amount_npr">;
+  label: string;
+  placeholder: string;
+}> = [
+  { key: "requested", label: "Exact work, good, or result", placeholder: "What exactly will be delivered or exchanged?" },
+  { key: "who_can_submit", label: "Who can take part", placeholder: "Who may offer, request, or accept this exchange?" },
+  { key: "success", label: "Definition of complete", placeholder: "How will both sides know the work or exchange is complete?" },
+  { key: "evidence_required", label: "Proof or handoff", placeholder: "What evidence or handoff confirms completion?" },
+  { key: "ownership", label: "Ownership and data", placeholder: "Who owns the result, materials, files, and data?" },
+  { key: "payment_due", label: "Payment or reciprocal value", placeholder: "When is payment due, or what will each side give in a non-cash trade?" },
+  { key: "partial", label: "Partial completion", placeholder: "What happens if only part of the work is completed?" },
+  { key: "rejection", label: "Rejection and disputes", placeholder: "How can either side reject work or raise a dispute?" },
+  { key: "resale", label: "Reuse or resale", placeholder: "May either side reuse or resell any result or materials?" },
+  { key: "costs", label: "Costs and expenses", placeholder: "Who pays for materials, transport, fees, or other costs?" },
+];
+
+function hasAgreementTerms(value: PublicDomainTerms): boolean {
+  return typeof value.amount_npr === "number" ||
+    AGREEMENT_FIELDS.some((field) => Boolean(value[field.key]?.trim()));
+}
+
 function DomainPage() {
   const [rows, setRows] = useState<PublicDomainRecord[]>([]);
   const [matches, setMatches] = useState<PublicMatch[]>([]);
@@ -38,11 +61,12 @@ function DomainPage() {
   const [connections, setConnections] = useState<PublicConnection[]>([]);
   const [events, setEvents] = useState<PublicDomainEvents | null>(null);
   const [trust, setTrust] = useState<PublicTrust | null>(null);
-  const [kind, setKind] = useState<Kind>("job");
+  const [kind, setKind] = useState<Kind>("offer");
   const [title, setTitle] = useState("");
   const [detail, setDetail] = useState("");
   const [city, setCity] = useState("");
   const [price, setPrice] = useState("");
+  const [terms, setTerms] = useState<PublicDomainTerms>({});
   const [token, setToken] = useState<string | null>(null);
   const [createdId, setCreatedId] = useState<number | null>(null);
   const [closeResult, setCloseResult] = useState<"completed" | "withdrawn" | "paid">("completed");
@@ -100,6 +124,7 @@ function DomainPage() {
       detail,
       city: city || null,
       stated_price: price || null,
+      terms: hasAgreementTerms(terms) ? terms : null,
     });
     if (!result) {
       setMessage("The post was not recorded.");
@@ -110,6 +135,7 @@ function DomainPage() {
     setTitle("");
     setDetail("");
     setPrice("");
+    setTerms({});
     // Reads after a write must reflect it, so they bypass the short read cache.
     setEvents(await loadPublicDomainEvents(result.id, { fresh: true }));
     setTrust(await loadPublicTrust("domain_record", result.id, { fresh: true }));
@@ -201,8 +227,8 @@ function DomainPage() {
     <main>
       <PageHeader
         eyebrow="Our records"
-        title="Work, offers, and trades posted here"
-        lede="A price appears only if the person stated it. Closing a post requires the token from creation and a note about what happened."
+        title="Needs, offers, and fair exchanges"
+        lede="Offer a skill, service, good, resource, or idea—or say what you need. Put the expectations on the table so both sides can judge the exchange. A post or match is only a starting point, never acceptance, payment, or proof of fulfillment."
       />
 
       <Container className="grid gap-10 py-10 sm:py-14 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start">
@@ -235,9 +261,31 @@ function DomainPage() {
                 {rows.map((row, index) => (
                   <li key={row.id} className="card card-interactive reveal flex flex-col p-5" style={{ "--i": Math.min(index, 8) } as React.CSSProperties}>
                     <article className="flex flex-1 flex-col">
-                      <span className={`status-pill self-start ${row.kind === "offer" ? "status-pill-success" : row.kind === "trade" ? "status-pill-neutral" : "status-pill-accent"}`}>{row.kind}</span>
+                      <span className={`status-pill self-start ${row.kind === "offer" ? "status-pill-success" : row.kind === "trade" ? "status-pill-neutral" : "status-pill-accent"}`}>{row.kind === "offer" ? "Offer" : row.kind === "trade" ? "Trade" : "Need / job"}</span>
                       <h3 className="mt-3 font-display text-2xl leading-tight tracking-tight text-ink">{row.title}</h3>
                       <p className="mt-2 flex-1 text-sm leading-6 text-muted">{row.detail}</p>
+                      {row.terms && Object.keys(row.terms).length > 0 ? (
+                        <details className="mt-3 rounded-card border border-line p-3">
+                          <summary className="cursor-pointer text-sm font-semibold text-ink">
+                            {row.terms_complete ? "Contract terms recorded (not acceptance)" : "Draft terms — more detail needed"}
+                          </summary>
+                          {row.terms.amount_npr != null ? <p className="mt-3 text-sm text-ink">Contract amount: NPR {row.terms.amount_npr.toLocaleString()}</p> : null}
+                          <dl className="mt-2 space-y-2">
+                            {AGREEMENT_FIELDS.map((field) => {
+                              const value = row.terms?.[field.key];
+                              return value?.trim() ? (
+                                <div key={field.key}>
+                                  <dt className="text-xs font-bold uppercase tracking-wide text-dim">{field.label}</dt>
+                                  <dd className="mt-0.5 whitespace-pre-wrap break-words text-sm text-muted">{value}</dd>
+                                </div>
+                              ) : null;
+                            })}
+                          </dl>
+                          {!row.terms_complete ? <p className="mt-3 text-xs text-muted">This is still a proposal; the existing acceptance gate requires all terms to be completed.</p> : null}
+                        </details>
+                      ) : (
+                        <p className="mt-3 text-xs text-muted">Agreement terms not yet recorded. A match alone is not permission to begin work.</p>
+                      )}
                       <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3 text-sm">
                         <span className="inline-flex items-center gap-1.5 text-muted"><MapPin className="size-4 text-accent" aria-hidden="true" />{row.city || "City not recorded"}</span>
                         <span className={row.stated_price ? "font-semibold text-ink" : "text-dim"}>{row.stated_price || "Price not recorded"}</span>
@@ -322,7 +370,7 @@ function DomainPage() {
 
         <div className="space-y-5 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)]">
           <form id="post-form" onSubmit={postRecord} className="card card-accent scroll-mt-28 space-y-3 p-5 sm:p-6">
-            <h2 className="flex items-center gap-2 font-display text-2xl tracking-tight text-ink"><PenLine className="size-5 text-accent" aria-hidden="true" /> Post in our records</h2>
+            <h2 className="flex items-center gap-2 font-display text-2xl tracking-tight text-ink"><PenLine className="size-5 text-accent" aria-hidden="true" /> Post a need, offer, or trade</h2>
             <p className="text-xs leading-5 text-muted">
               This post will be public. Do not include phone numbers, email
               addresses, identity documents, or other private information.
@@ -331,8 +379,8 @@ function DomainPage() {
             <label className="block">
               <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Kind</span>
               <select value={kind} onChange={(event) => setKind(event.target.value as Kind)} className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]">
-                <option value="job">Job</option>
-                <option value="offer">Offer</option>
+                <option value="offer">Offer something</option>
+                <option value="job">Need / job</option>
                 <option value="trade">Trade</option>
               </select>
             </label>
@@ -352,8 +400,28 @@ function DomainPage() {
               <label className="block">
                 <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Stated price</span>
                 <input value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Stated price, if any" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+                <span className="mt-1 block text-xs text-dim">A quote is not a confirmed payment. Keep this consistent with the agreement amount below.</span>
               </label>
             </div>
+            <details className="rounded-card border border-line p-3">
+              <summary className="cursor-pointer py-1 text-sm font-bold text-ink">Set clear exchange terms (needed before work can be accepted)</summary>
+              <p className="mt-2 text-xs leading-5 text-muted">
+                Be specific about what each side gives and receives. These fields can be saved as a draft, but an incomplete contract cannot pass the existing acceptance gate. For a non-cash exchange, enter NPR 0 and explain the reciprocal value under payment or reciprocal value.
+              </p>
+              <label className="mt-3 block">
+                <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Contract amount (whole NPR)</span>
+                <input type="number" min={0} step={1} inputMode="numeric" value={terms.amount_npr ?? ""} onChange={(event) => setTerms((current) => ({ ...current, amount_npr: event.target.value.trim() === "" ? undefined : Number(event.target.value) }))} placeholder="0 for a non-cash exchange" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+              </label>
+              <div className="mt-3 space-y-3">
+                {AGREEMENT_FIELDS.map((field) => (
+                  <label key={field.key} className="block">
+                    <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">{field.label}</span>
+                    <textarea maxLength={1000} value={terms[field.key] ?? ""} onChange={(event) => setTerms((current) => ({ ...current, [field.key]: event.target.value }))} placeholder={field.placeholder} className="min-h-16 w-full rounded-card border border-line bg-paper px-4 py-3 text-sm text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+                  </label>
+                ))}
+              </div>
+            </details>
+            <p className="text-xs leading-5 text-muted">A match is a suggestion, not agreement. Do not post private contact details. Both sides should understand the terms before any work, handover, or payment.</p>
             <button type="submit" className="btn-wipe btn-primary inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-card border-2 border-black/70 bg-accent px-5 text-sm font-extrabold text-black hover:text-accent focus-visible:text-accent">Post in our records</button>
           </form>
 
