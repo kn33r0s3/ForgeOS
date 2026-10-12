@@ -257,23 +257,21 @@ describe("Hami candidate needs", () => {
     }
   });
 
-  it("keeps the needs route honest: wedge, service offer, empty week log", () => {
+  it("connects needs and offers to fair exchange terms without promising fulfillment", () => {
     const sourceDir = dirname(fileURLToPath(import.meta.url));
     const route = readFileSync(join(sourceDir, "../routes/needs.tsx"), "utf8");
-    // The internal backlog is gone from the public surface.
+    // Research backlog stays internal; the public page is a broad value-exchange entrance.
     assert.doesNotMatch(route, /candidateNeeds/);
     assert.doesNotMatch(route, /@\/lib\/needs/);
-    // Hami is not a gadget: no tool/calculator framing on this page.
     assert.doesNotMatch(route, /\/prototype\/inbox/);
     assert.doesNotMatch(route, /inbox tool/i);
-    // The page states the honest position and the empty week log.
-    assert.match(route, /pre-revenue/i);
+    assert.match(route, /Make a fair exchange possible/i);
+    assert.match(route, /What could you offer—and what would help you/i);
+    assert.match(route, /incomplete terms remain a draft proposal/i);
+    assert.match(route, /not acceptance/i);
+    assert.match(route, /Hami is pre-revenue/i);
     assert.match(route, /no merchants served yet/i);
-    assert.match(route, /No week has run yet/);
-    assert.match(route, /will not be filled with\s*\n?\s*projections/);
-    // The offer is a service being tested, explicitly a hypothesis.
-    assert.match(route, /not a tool the seller operates/i);
-    assert.match(route, /hypothesis, not an established offer/i);
+    assert.match(route, /earlier missed-inquiry sprint remains a hypothesis/i);
     assert.match(route, /createFileRoute\("\/needs"\)/);
   });
 });

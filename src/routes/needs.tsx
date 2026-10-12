@@ -64,7 +64,7 @@ function NeedsPage() {
 
         <section className="mt-8 border-t border-line pt-5" aria-label="Current state">
           <p className="text-xs leading-5 text-muted">
-            This is a broad entry to Hami's existing value-exchange paths, not a claim that Hami has already matched, contacted, or fulfilled an exchange for everyone. The public board may be empty. No automatic outreach or payment is triggered by a post.
+            Hami is pre-revenue; no merchants served yet. This is a broad entry to existing value-exchange paths, not a claim that Hami has already matched, contacted, or fulfilled an exchange for everyone. The public board may be empty. No automatic outreach or payment is triggered by a post.
           </p>
           <p className="mt-2 text-xs leading-5 text-muted">
             The earlier missed-inquiry sprint remains a hypothesis in Hami's experiment history; it is not the boundary of what Hami can investigate or offer.

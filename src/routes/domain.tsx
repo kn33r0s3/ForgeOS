@@ -403,7 +403,7 @@ function DomainPage() {
                 <span className="mt-1 block text-xs text-dim">A quote is not a confirmed payment. Keep this consistent with the agreement amount below.</span>
               </label>
             </div>
-            <details className="rounded-card border border-line p-3">
+            <details open className="rounded-card border border-line p-3">
               <summary className="cursor-pointer py-1 text-sm font-bold text-ink">Set clear exchange terms (needed before work can be accepted)</summary>
               <p className="mt-2 text-xs leading-5 text-muted">
                 Be specific about what each side gives and receives. These fields can be saved as a draft, but an incomplete contract cannot pass the existing acceptance gate. For a non-cash exchange, enter NPR 0 and explain the reciprocal value under payment or reciprocal value.
