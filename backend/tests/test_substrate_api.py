@@ -373,6 +373,16 @@ def test_global_frontier_is_cross_domain_diversified_and_read_only(substrate_cli
         objective="Find attributable research on coastal groundwater salinity.",
     )
     db.add(task)
+    db.add(models.Claim(
+        statement="Which systems make cross-domain resource coordination difficult?",
+        normalized_statement="which systems make cross-domain resource coordination difficult?",
+        epistemic_state="unknown",
+        confidence=0.0,
+        provenance=(
+            "UNKNOWN_MAP.md §D row D96 (imported 2026-10-12). "
+            "Cheapest test: Compare documented coordination constraints across systems"
+        ),
+    ))
     world_graph.create_capability(
         db,
         capability_type="workflow",
@@ -394,7 +404,7 @@ def test_global_frontier_is_cross_domain_diversified_and_read_only(substrate_cli
         for model in (
             models.SubstrateEntity, models.WorldRelation, models.WorldEvent,
             models.Evidence, models.ForgeCapability, models.ResearchQuestion,
-            models.ResearchTask, models.Outcome, models.Opportunity,
+            models.ResearchTask, models.Claim, models.Outcome, models.Opportunity,
         )
     }
     response = substrate_client.get("/forge/substrate/discovery/frontier", params={"limit": 12})
@@ -411,7 +421,15 @@ def test_global_frontier_is_cross_domain_diversified_and_read_only(substrate_cli
     assert "research_question" in refs
     assert "research_task" in refs
     assert "capability" in refs
+    assert "unknown_map_entry" in refs
     assert "discovery_finding" in refs
+    assert body["source_counts_scanned"]["unknown_map_claims"] >= 1
+    assert any(
+        item["record_type"] == "unknown_map_entry"
+        and item["unknown_id"] == "D96"
+        and "Cheapest test: Compare documented coordination constraints" in item["registry_provenance"]
+        for item in body["items"]
+    )
     assert any(
         item["record_type"] == "research_question"
         and "groundwater salinity" in item["title"]
@@ -424,7 +442,7 @@ def test_global_frontier_is_cross_domain_diversified_and_read_only(substrate_cli
         for model in (
             models.SubstrateEntity, models.WorldRelation, models.WorldEvent,
             models.Evidence, models.ForgeCapability, models.ResearchQuestion,
-            models.ResearchTask, models.Outcome, models.Opportunity,
+            models.ResearchTask, models.Claim, models.Outcome, models.Opportunity,
         )
     }
     assert after == before

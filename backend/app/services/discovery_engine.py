@@ -704,6 +704,48 @@ def build_global_frontier(db: Session, *, limit: int = 50) -> dict[str, Any]:
             "created_at": stamp(row.created_at),
         })
 
+    # UNKNOWN_MAP.md is the authoritative unknown registry; Claim rows are
+    # its additive operational projection. Keep unresolved rows in the frontier
+    # with their registered IDs and cheapest-test provenance.
+    unknown_claims = (
+        db.query(models.Claim)
+        .filter(models.Claim.provenance.like("%UNKNOWN_MAP.md%"))
+        .filter(models.Claim.epistemic_state.in_(("unknown", "hypothesized", "blocked", "tested")))
+        .order_by(models.Claim.created_at.asc(), models.Claim.id.asc())
+        .limit(scan_limit)
+        .all()
+    )
+    scan_counts["unknown_map_claims"] = len(unknown_claims)
+    if len(unknown_claims) == scan_limit:
+        scan_limited.append("unknown_map_claims")
+    for row in unknown_claims:
+        provenance = str(row.provenance or "")
+        identity_match = re.search(r"UNKNOWN_MAP\\.md\\s+§([A-D])\\s+row\\s+([A-Z]+\\d+)", provenance)
+        unknown_id = identity_match.group(2) if identity_match else f"claim-{row.id}"
+        section = identity_match.group(1) if identity_match else "unclassified"
+        cheapest_match = re.search(r"Cheapest test:\\s*(.*)$", provenance)
+        lane = f"unknown_map:{section}"
+        lanes[lane].append({
+            "frontier_id": f"unknown_map:{unknown_id}",
+            "record_type": "unknown_map_entry",
+            "lane": lane,
+            "kind": "open_unknown",
+            "title": row.statement,
+            "status": row.epistemic_state,
+            "epistemic_state": row.epistemic_state,
+            "basis": [],
+            "source_refs": [{"kind": "claim", "id": row.id}],
+            "unknown_id": unknown_id,
+            "registry_provenance": provenance,
+            "recorded_cheapest_test": cheapest_match.group(1).strip() if cheapest_match else None,
+            "domain_hint": None,
+            "next_step": (
+                "Review the registered cheapest test and access boundary; "
+                "do not treat this record as authorization to perform it."
+            ),
+            "created_at": stamp(row.created_at),
+        })
+
     # Operational questions are included independently of commercial Bet
     # candidates. Their stored priority is local metadata, not a universal
     # value score and is never compared against other record types.
