@@ -89,6 +89,12 @@ Hidden does not mean delete. Archived does not mean create another page. A page 
 
 Before changing those boundaries, trace the existing endpoints and key/authentication behavior. Preserve owner approval, action envelopes, daily caps, source clearance, provenance, and evidence labels. Do not make the app automatically execute merely to make a control appear active.
 
+### Global value frontier (current owner-only implementation)
+
+The existing private `/owner` console's Orchestrator & intelligence section reads `GET /forge/substrate/discovery/frontier` with the owner API key. The endpoint is a read-only projection over existing records: dynamic-kind discovery findings, unresolved unknown-map Claim projections, open/planned research questions, unfinished research tasks, proposed/building/tested capabilities, and failed/disputed outcomes. It interleaves lanes instead of comparing unlike value dimensions on a single score, exposes bounded-scan warnings, and explicitly states that its records do not enumerate total world value.
+
+This is a **visibility and integration seam**, not autonomous discovery or action. It does not trigger discovery, promote a question, create a task, execute an action or validate a hypothesis. An item must proceed through its existing evidence, source-clearance, planning, authorization, action and outcome contracts. The unknowns markdown registry remains authoritative; its database Claim rows are a projection. The current frontier sees only recorded state and the inputs already ingested by Hami, so broader real-world awareness still requires additional permitted source capabilities.
+
 ## Required integration rule for future work
 
 Before adding a service/page/engine:
