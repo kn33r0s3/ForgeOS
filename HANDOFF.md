@@ -127,7 +127,24 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
-## Last verified state snapshot (2026-10-11)
+## Last verified state snapshot (2026-10-12)
+
+**Update 2026-10-12 (daily freshness check):** HEAD at `4987936`
+("Remove local-only handoff notes — AGENTS/HANDOFF single source",
+committed 04:33 NPT). Pull fast-forwarded `7fc2a0c..4987936` clean;
+`main` == `origin/main`. Working tree clean.
+
+- **Health:** haminp.vercel.app/api/health → **ok**
+  (`{"status":"ok","ready":true,"ok":true,"version":"2.3.0","db":"up"}`).
+  forge-os-ebon.vercel.app/api/health → ok. No blips this run.
+- **Intake:** `intake_enabled: false` (unchanged, Forge Bot closed).
+- **Unknowns:** 96 D-entries in `docs/UNKNOWN_MAP.md` (+4 since the
+  2026-10-11 snapshot — `ff20905` banked sourced cross-domain value
+  questions D93–D96).
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold: name one seller, authorize
+  first contact; company registration and payment onboarding need the
+  owner's body/identity.
 
 **Update 2026-10-11 (owner visibility & integration recovery):** Forensic
 inventory of all 113 service modules complete: 34 CONNECTED_VERIFIED, 68
