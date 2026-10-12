@@ -301,6 +301,8 @@ type GlobalFrontierItem = {
   attempts?: number;
   max_attempts?: number;
   success?: boolean | null;
+  data_scope?: string;
+  source_kind?: string;
 };
 
 type GlobalFrontierView = {
@@ -857,6 +859,10 @@ function OwnerConsolePage() {
       const updated = leads.find((lead) => lead.reference === selected.reference);
       if (!updated) setSelected(null);
     }
+    // Load this projection independently: an unavailable intelligence/cycle endpoint
+    // must not hide the frontier or convert a failed read into an empty world.
+    await refreshGlobalFrontier(ownerKey);
+
     // Intelligence section: best-effort loads against /api/forge/*. A 404
     // (backend predates the endpoint) yields null -> UNKNOWN in the UI.
     // A 401 propagates like the rest of the console.
@@ -875,9 +881,6 @@ function OwnerConsolePage() {
       throw cause;
     }
 
-    // This only reads the persisted global frontier. It never starts discovery
-    // or promotes findings to work; frontier failure stays local to this panel.
-    await refreshGlobalFrontier(ownerKey);
   }
 
   async function refreshGlobalFrontier(ownerKey = key) {
@@ -1507,13 +1510,7 @@ function OwnerConsolePage() {
                   not instrumented, not zero. Nothing here is inferred from
                   imports or tests; every number comes from a persisted record.
                 </p>
-                {intel === null ? (
-                  <p className="mt-3 rounded-card border border-line bg-card p-4 text-sm text-muted">
-                    Intelligence data unavailable — the console could not load it.
-                  </p>
-                ) : (
-                  <div className="mt-4 grid gap-6">
-                    <section aria-label="Global value frontier" className="rounded-card border-2 border-line bg-card p-4 sm:p-5">
+<section aria-label="Global value frontier" className="rounded-card border-2 border-line bg-card p-4 sm:p-5">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
                           <h3 className="text-lg font-extrabold">Global value frontier</h3>
@@ -1566,6 +1563,7 @@ function OwnerConsolePage() {
                                   <span className="rounded border border-line px-2 py-1 font-mono">{item.record_type.replace(/_/g, " ")}</span>
                                   <span className="text-muted">{item.kind.replace(/_/g, " ")}</span>
                                   <span className="text-muted">· {item.status}</span>
+                                  {item.success === false ? <span className="text-muted">· reported failure</span> : null}
                                   {item.unknown_id ? <span className="font-mono text-muted">{item.unknown_id}</span> : null}
                                 </div>
                                 <h4 className="mt-2 break-words font-bold">{item.title}</h4>
@@ -1577,6 +1575,8 @@ function OwnerConsolePage() {
                                 <p className="mt-2 text-xs text-muted">
                                   Source records: {item.source_refs.length ? item.source_refs.map((ref) => `${ref.kind} #${ref.id}`).join(", ") : "Not linked in this projection"}
                                   {item.epistemic_state ? ` · ${item.epistemic_state}` : ""}
+                                  {item.data_scope ? ` · scope ${item.data_scope}` : ""}
+                                  {item.source_kind ? ` · provenance ${item.source_kind}` : ""}
                                 </p>
                               </article>
                             ))}
@@ -1592,6 +1592,13 @@ function OwnerConsolePage() {
                         </>
                       )}
                     </section>
+                                {intel === null ? (
+                  <p className="mt-3 rounded-card border border-line bg-card p-4 text-sm text-muted">
+                    Intelligence data unavailable — the console could not load it.
+                  </p>
+                ) : (
+                  <div className="mt-4 grid gap-6">
+                    
                     {/* Canonical orchestrator: persisted stage state only, no customer/contact details. */}
                     <div>
                       <h3 className="font-extrabold">Canonical orchestration path</h3>
