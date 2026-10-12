@@ -632,6 +632,261 @@ def list_discoveries(db: Session, *, kind: str | None = None, limit: int = 100) 
     ]
 
 
+def build_global_frontier(db: Session, *, limit: int = 50) -> dict[str, Any]:
+    """Read-only, cross-domain projection of unresolved recorded work.
+
+    This deliberately does not rank every kind of value on one numeric scale.
+    It interleaves work lanes and discovery kinds so a large pool in one lane
+    cannot monopolize the whole result. Domain labels are surfaced only when
+    explicitly recorded; they are never inferred from a title. No records are
+    written, promoted, authorized, or executed by this projection.
+    """
+    if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 200:
+        raise ValueError("limit must be an integer from 1 to 200")
+    scan_limit = min(1000, limit * 4)
+    lanes: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    scan_counts: dict[str, int] = {}
+    scan_limited: list[str] = []
+
+    def stamp(value: Any) -> str | None:
+        return value.isoformat() if hasattr(value, "isoformat") else None
+
+    def recorded_hint(facets: Any) -> str | None:
+        if not isinstance(facets, dict):
+            return None
+        for key in ("domain", "territory", "geography", "geographic_scope"):
+            value = facets.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return None
+
+    # Persisted discovery findings retain their open-world kinds. A new kind
+    # automatically gets its own lane instead of requiring taxonomy code.
+    findings = (
+        db.query(models.SubstrateEntity)
+        .filter_by(source_system=ENGINE_ACTOR, status="active")
+        .order_by(models.SubstrateEntity.created_at.asc(), models.SubstrateEntity.id.asc())
+        .limit(scan_limit)
+        .all()
+    )
+    scan_counts["discovery_findings"] = len(findings)
+    if len(findings) == scan_limit:
+        scan_limited.append("discovery_findings")
+    for row in findings:
+        attrs = _load(row.attributes)
+        kind = attrs.get("discovery_kind") or row.entity_type
+        if not isinstance(kind, str) or not kind:
+            kind = "unclassified"
+        facets = attrs.get("facets")
+        basis = attrs.get("basis")
+        if not isinstance(basis, list):
+            basis = []
+        lane = f"discovery:{kind}"
+        lanes[lane].append({
+            "frontier_id": f"discovery:{row.id}",
+            "record_type": "discovery_finding",
+            "lane": lane,
+            "kind": kind,
+            "title": str(attrs.get("statement") or row.display_name),
+            "status": row.status,
+            "epistemic_state": attrs.get("epistemic_state"),
+            "basis": basis,
+            "source_refs": [{"kind": "entity", "id": row.id}],
+            "domain_hint": recorded_hint(facets),
+            "value_dimensions": (
+                [v for v in facets.get("value_dimensions", []) if isinstance(v, str)]
+                if isinstance(facets, dict) and isinstance(facets.get("value_dimensions"), list)
+                else []
+            ),
+            "next_step": str(attrs.get("next_step") or (
+                "Review the recorded finding and cited basis; investigate, refute, defer, or stop."
+            )),
+            "created_at": stamp(row.created_at),
+        })
+
+    # Operational questions are included independently of commercial Bet
+    # candidates. Their stored priority is local metadata, not a universal
+    # value score and is never compared against other record types.
+    questions = (
+        db.query(models.ResearchQuestion)
+        .filter(models.ResearchQuestion.status.in_(("open", "planned")))
+        .order_by(
+            models.ResearchQuestion.priority_score.desc(),
+            models.ResearchQuestion.created_at.asc(),
+            models.ResearchQuestion.id.asc(),
+        )
+        .limit(scan_limit)
+        .all()
+    )
+    scan_counts["research_questions"] = len(questions)
+    if len(questions) == scan_limit:
+        scan_limited.append("research_questions")
+    for row in questions:
+        source_refs = []
+        for field_name, kind in (
+            ("source_pattern_id", "pattern"),
+            ("source_belief_id", "belief"),
+            ("source_claim_id", "claim"),
+            ("source_rare_signal_id", "rare_signal_assessment"),
+        ):
+            value = getattr(row, field_name, None)
+            if value is not None:
+                source_refs.append({"kind": kind, "id": value})
+        lanes["research_questions"].append({
+            "frontier_id": f"research_question:{row.id}",
+            "record_type": "research_question",
+            "lane": "research_questions",
+            "kind": "open_question",
+            "title": row.question,
+            "status": row.status,
+            "basis": [],
+            "source_refs": source_refs,
+            "recorded_priority_score": row.priority_score,
+            "priority_scope": "research-question ordering only; not comparable across lanes",
+            "domain_hint": None,
+            "next_step": (
+                "Use the existing research planner to form a bounded plan; "
+                "check source clearance before any collection."
+            ),
+            "created_at": stamp(row.created_at),
+        })
+
+    # Existing research lifecycle states are visible here, not re-created in
+    # a new queue. Running work is shown for observability, not resubmitted.
+    tasks = (
+        db.query(models.ResearchTask)
+        .filter(models.ResearchTask.status.in_(("planned", "needs_research", "failed", "running")))
+        .order_by(models.ResearchTask.created_at.asc(), models.ResearchTask.id.asc())
+        .limit(scan_limit)
+        .all()
+    )
+    scan_counts["research_tasks"] = len(tasks)
+    if len(tasks) == scan_limit:
+        scan_limited.append("research_tasks")
+    task_next_steps = {
+        "planned": "Review prerequisites and source clearance before bounded collection.",
+        "needs_research": "Inspect unresolved requirements and plan a permitted follow-up.",
+        "failed": "Inspect the recorded failure and use the existing retry policy if eligible.",
+        "running": "Check the existing task lifecycle and stale-task recovery; do not duplicate the task.",
+    }
+    for row in tasks:
+        lanes["research_tasks"].append({
+            "frontier_id": f"research_task:{row.id}",
+            "record_type": "research_task",
+            "lane": "research_tasks",
+            "kind": "unfinished_research",
+            "title": str(row.objective or row.query),
+            "status": row.status,
+            "basis": [],
+            "source_refs": [{"kind": "research_question", "id": row.question_id}],
+            "research_source": row.source,
+            "attempts": row.attempts,
+            "max_attempts": row.max_attempts,
+            "domain_hint": None,
+            "next_step": task_next_steps.get(row.status, "Review task state."),
+            "created_at": stamp(row.created_at),
+        })
+
+    capabilities = (
+        db.query(models.ForgeCapability)
+        .filter(models.ForgeCapability.status.in_(("proposed", "building", "tested")))
+        .order_by(models.ForgeCapability.created_at.asc(), models.ForgeCapability.id.asc())
+        .limit(scan_limit)
+        .all()
+    )
+    scan_counts["capabilities"] = len(capabilities)
+    if len(capabilities) == scan_limit:
+        scan_limited.append("capabilities")
+    capability_next_steps = {
+        "proposed": "Validate the requirement and specification before starting a build.",
+        "building": "Test the implementation with attributable evidence and the existing lifecycle.",
+        "tested": "Verify the test record and complete activation only through the existing lifecycle.",
+    }
+    for row in capabilities:
+        attrs = _load(row.attributes)
+        lanes["capabilities"].append({
+            "frontier_id": f"capability:{row.id}",
+            "record_type": "capability",
+            "lane": "capabilities",
+            "kind": row.capability_type,
+            "title": row.name,
+            "description": row.description,
+            "status": row.status,
+            "basis": [],
+            "source_refs": [{"kind": "capability", "id": row.id}],
+            "provides": attrs.get("provides", []),
+            "domain_hint": recorded_hint(attrs),
+            "next_step": capability_next_steps.get(row.status, "Review capability lifecycle state."),
+            "created_at": stamp(row.created_at),
+        })
+
+    outcomes = (
+        db.query(models.Outcome)
+        .filter(
+            (models.Outcome.success.is_(False))
+            | (models.Outcome.verification_state == "DISPUTED")
+        )
+        .order_by(models.Outcome.id.asc())
+        .limit(scan_limit)
+        .all()
+    )
+    scan_counts["outcomes"] = len(outcomes)
+    if len(outcomes) == scan_limit:
+        scan_limited.append("outcomes")
+    for row in outcomes:
+        source_kind = getattr(row.source_kind, "value", row.source_kind)
+        lanes["outcomes"].append({
+            "frontier_id": f"outcome:{row.id}",
+            "record_type": "outcome",
+            "lane": "outcomes",
+            "kind": "failed_or_disputed_outcome",
+            "title": str(row.qualitative_result or row.outcome_type or f"Outcome {row.id}"),
+            "status": row.verification_state,
+            "success": row.success,
+            "actual_value": row.actual_value,
+            "unit": row.unit,
+            "data_scope": row.data_scope,
+            "source_kind": source_kind,
+            "basis": [],
+            "source_refs": [{"kind": "outcome", "id": row.id}],
+            "domain_hint": None,
+            "next_step": "Review the outcome evidence and causal assumptions before changing a belief or repeating the intervention.",
+            "created_at": None,
+        })
+
+    lane_counts = {name: len(items) for name, items in lanes.items()}
+    candidate_count = sum(lane_counts.values())
+    # Operational records appear in the first round; dynamic discovery kinds
+    # are then interleaved too. A busy lane cannot fill the entire result.
+    lane_rank = {"capabilities": 0, "outcomes": 1, "research_questions": 2, "research_tasks": 3}
+    lane_names = sorted(lanes, key=lambda name: (lane_rank.get(name, 4), name))
+    selected: list[dict[str, Any]] = []
+    while len(selected) < limit:
+        added = False
+        for lane in lane_names:
+            if lanes[lane] and len(selected) < limit:
+                selected.append(lanes[lane].pop(0))
+                added = True
+        if not added:
+            break
+
+    return {
+        "read_only": True,
+        "selection_method": "round_robin_by_record_kind",
+        "limit": limit,
+        "candidate_count_scanned": candidate_count,
+        "lane_counts_scanned": lane_counts,
+        "source_counts_scanned": scan_counts,
+        "scan_limited_sources": scan_limited,
+        "truncated": candidate_count > len(selected) or bool(scan_limited),
+        "items": selected,
+        "boundary": (
+            "Diversified view of recorded unresolved work, not a measure of total world value. "
+            "Items are proposals or operational records, not proof, authorization, or instructions to execute."
+        ),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Built-in methods (each is replaceable; none assumes a domain)
 # ---------------------------------------------------------------------------

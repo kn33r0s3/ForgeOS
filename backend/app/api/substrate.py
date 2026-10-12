@@ -627,6 +627,20 @@ def list_discovery_findings(
     return discovery_engine.list_discoveries(db, kind=kind, limit=limit)
 
 
+@router.get("/discovery/frontier")
+def get_global_frontier(
+    request: Request,
+    limit: int = Query(default=50, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
+    """Owner-only, read-only projection across Hami's existing work lanes."""
+    _owner(request)
+    try:
+        return discovery_engine.build_global_frontier(db, limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
 @router.post("/discovery/runs", status_code=201)
 def run_discovery(request: Request, body: DiscoveryRun, db: Session = Depends(get_db)):
     _owner(request)
