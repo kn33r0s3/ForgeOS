@@ -1510,89 +1510,89 @@ function OwnerConsolePage() {
                   not instrumented, not zero. Nothing here is inferred from
                   imports or tests; every number comes from a persisted record.
                 </p>
-<section aria-label="Global value frontier" className="rounded-card border-2 border-line bg-card p-4 sm:p-5">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <h3 className="text-lg font-extrabold">Global value frontier</h3>
-                          <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
-                            Recorded discoveries, unknown-map entries, research, capability gaps, and failed or disputed outcomes across distinct lanes — independent of the commercial Bet selector.
-                          </p>
+                <section aria-label="Global value frontier" className="rounded-card border-2 border-line bg-card p-4 sm:p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-lg font-extrabold">Global value frontier</h3>
+                      <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
+                        Recorded discoveries, unknown-map entries, research, capability gaps, and failed or disputed outcomes across distinct lanes — independent of the commercial Bet selector.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { void refreshGlobalFrontier(key); }}
+                      disabled={globalFrontierLoading}
+                      className="min-h-10 rounded-card border-2 border-line px-3 text-sm font-bold disabled:opacity-60"
+                    >
+                      {globalFrontierLoading ? "Refreshing…" : "Refresh frontier"}
+                    </button>
+                  </div>
+                  {globalFrontierError ? (
+                    <p role="alert" className="mt-3 rounded-card border border-line p-3 text-sm text-muted">
+                      Frontier unavailable — {globalFrontierError}. This is not an empty-world result.
+                    </p>
+                  ) : globalFrontier === null ? (
+                    <p className="mt-3 rounded-card border border-line p-3 text-sm text-muted">
+                      Frontier has not been loaded yet.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                        <div className="rounded-card border border-line p-3">
+                          <p className="text-xs font-bold uppercase tracking-wide text-muted">Recorded items scanned</p>
+                          <p className="mt-1 text-2xl font-extrabold">{globalFrontier.candidate_count_scanned}</p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => { void refreshGlobalFrontier(key); }}
-                          disabled={globalFrontierLoading}
-                          className="min-h-10 rounded-card border-2 border-line px-3 text-sm font-bold disabled:opacity-60"
-                        >
-                          {globalFrontierLoading ? "Refreshing…" : "Refresh frontier"}
-                        </button>
+                        <div className="rounded-card border border-line p-3">
+                          <p className="text-xs font-bold uppercase tracking-wide text-muted">Distinct lanes</p>
+                          <p className="mt-1 text-2xl font-extrabold">{Object.keys(globalFrontier.lane_counts_scanned).length}</p>
+                        </div>
+                        <div className="rounded-card border border-line p-3">
+                          <p className="text-xs font-bold uppercase tracking-wide text-muted">Returned for review</p>
+                          <p className="mt-1 text-2xl font-extrabold">{globalFrontier.items.length}</p>
+                        </div>
                       </div>
-                      {globalFrontierError ? (
-                        <p role="alert" className="mt-3 rounded-card border border-line p-3 text-sm text-muted">
-                          Frontier unavailable — {globalFrontierError}. This is not an empty-world result.
+                      {globalFrontier.scan_limited_sources.length ? (
+                        <p className="mt-3 text-sm text-muted">
+                          Bounded scan limit reached for: {globalFrontier.scan_limited_sources.join(", ")}. The frontier is incomplete and needs further review.
                         </p>
-                      ) : globalFrontier === null ? (
-                        <p className="mt-3 rounded-card border border-line p-3 text-sm text-muted">
-                          Frontier has not been loaded yet.
+                      ) : null}
+                      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                        {globalFrontier.items.slice(0, 16).map((item) => (
+                          <article key={item.frontier_id} className="min-w-0 rounded-card border border-line p-4">
+                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                              <span className="rounded border border-line px-2 py-1 font-mono">{item.record_type.replace(/_/g, " ")}</span>
+                              <span className="text-muted">{item.kind.replace(/_/g, " ")}</span>
+                              <span className="text-muted">· {item.status}</span>
+                              {item.success === false ? <span className="text-muted">· reported failure</span> : null}
+                              {item.unknown_id ? <span className="font-mono text-muted">{item.unknown_id}</span> : null}
+                            </div>
+                            <h4 className="mt-2 break-words font-bold">{item.title}</h4>
+                            {item.domain_hint ? <p className="mt-1 text-sm text-muted">Recorded domain: {item.domain_hint}</p> : null}
+                            {item.recorded_cheapest_test ? (
+                              <p className="mt-2 break-words text-sm"><span className="font-bold">Recorded test:</span> {item.recorded_cheapest_test}</p>
+                            ) : null}
+                            <p className="mt-2 break-words text-sm text-muted">{item.next_step}</p>
+                            <p className="mt-2 text-xs text-muted">
+                              Source records: {item.source_refs.length ? item.source_refs.map((ref) => `${ref.kind} #${ref.id}`).join(", ") : "Not linked in this projection"}
+                              {item.epistemic_state ? ` · ${item.epistemic_state}` : ""}
+                              {item.data_scope ? ` · scope ${item.data_scope}` : ""}
+                              {item.source_kind ? ` · provenance ${item.source_kind}` : ""}
+                            </p>
+                          </article>
+                        ))}
+                      </div>
+                      {globalFrontier.items.length > 16 || globalFrontier.truncated ? (
+                        <p className="mt-3 text-sm text-muted">
+                          Showing at most 16 returned records. Additional recorded work exists or one or more source scans reached its bound.
                         </p>
-                      ) : (
-                        <>
-                          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                            <div className="rounded-card border border-line p-3">
-                              <p className="text-xs font-bold uppercase tracking-wide text-muted">Recorded items scanned</p>
-                              <p className="mt-1 text-2xl font-extrabold">{globalFrontier.candidate_count_scanned}</p>
-                            </div>
-                            <div className="rounded-card border border-line p-3">
-                              <p className="text-xs font-bold uppercase tracking-wide text-muted">Distinct lanes</p>
-                              <p className="mt-1 text-2xl font-extrabold">{Object.keys(globalFrontier.lane_counts_scanned).length}</p>
-                            </div>
-                            <div className="rounded-card border border-line p-3">
-                              <p className="text-xs font-bold uppercase tracking-wide text-muted">Returned for review</p>
-                              <p className="mt-1 text-2xl font-extrabold">{globalFrontier.items.length}</p>
-                            </div>
-                          </div>
-                          {globalFrontier.scan_limited_sources.length ? (
-                            <p className="mt-3 text-sm text-muted">
-                              Bounded scan limit reached for: {globalFrontier.scan_limited_sources.join(", ")}. The frontier is incomplete and needs further review.
-                            </p>
-                          ) : null}
-                          <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                            {globalFrontier.items.slice(0, 16).map((item) => (
-                              <article key={item.frontier_id} className="min-w-0 rounded-card border border-line p-4">
-                                <div className="flex flex-wrap items-center gap-2 text-xs">
-                                  <span className="rounded border border-line px-2 py-1 font-mono">{item.record_type.replace(/_/g, " ")}</span>
-                                  <span className="text-muted">{item.kind.replace(/_/g, " ")}</span>
-                                  <span className="text-muted">· {item.status}</span>
-                                  {item.success === false ? <span className="text-muted">· reported failure</span> : null}
-                                  {item.unknown_id ? <span className="font-mono text-muted">{item.unknown_id}</span> : null}
-                                </div>
-                                <h4 className="mt-2 break-words font-bold">{item.title}</h4>
-                                {item.domain_hint ? <p className="mt-1 text-sm text-muted">Recorded domain: {item.domain_hint}</p> : null}
-                                {item.recorded_cheapest_test ? (
-                                  <p className="mt-2 break-words text-sm"><span className="font-bold">Recorded test:</span> {item.recorded_cheapest_test}</p>
-                                ) : null}
-                                <p className="mt-2 break-words text-sm text-muted">{item.next_step}</p>
-                                <p className="mt-2 text-xs text-muted">
-                                  Source records: {item.source_refs.length ? item.source_refs.map((ref) => `${ref.kind} #${ref.id}`).join(", ") : "Not linked in this projection"}
-                                  {item.epistemic_state ? ` · ${item.epistemic_state}` : ""}
-                                  {item.data_scope ? ` · scope ${item.data_scope}` : ""}
-                                  {item.source_kind ? ` · provenance ${item.source_kind}` : ""}
-                                </p>
-                              </article>
-                            ))}
-                          </div>
-                          {globalFrontier.items.length > 16 || globalFrontier.truncated ? (
-                            <p className="mt-3 text-sm text-muted">
-                              Showing at most 16 returned records. Additional recorded work exists or one or more source scans reached its bound.
-                            </p>
-                          ) : null}
-                          <p className="mt-3 border-t border-line pt-3 text-xs leading-5 text-muted">
-                            Read-only projection; not a measure of total world value, not proof that a hypothesis is true, and not authorization to run a test or action. This view does not trigger discovery or create work.
-                          </p>
-                        </>
-                      )}
-                    </section>
-                                {intel === null ? (
+                      ) : null}
+                      <p className="mt-3 border-t border-line pt-3 text-xs leading-5 text-muted">
+                        Read-only projection; not a measure of total world value, not proof that a hypothesis is true, and not authorization to run a test or action. This view does not trigger discovery or create work.
+                      </p>
+                    </>
+                  )}
+                </section>
+                {intel === null ? (
                   <p className="mt-3 rounded-card border border-line bg-card p-4 text-sm text-muted">
                     Intelligence data unavailable — the console could not load it.
                   </p>
