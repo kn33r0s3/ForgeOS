@@ -173,25 +173,47 @@ def test_supported_explicit_targets_project_by_reference(db):
 
 
 def test_unregistered_or_ambiguous_evidence_links_remain_unprojected(db):
-    _evidence, _claim, unregistered, _decision = _evidence_claim_link(
+    evidence, claim, unregistered, _decision = _evidence_claim_link(
         db, relation_type="unreviewed_link_type"
     )
     _evidence2, _claim2, ambiguous, decision = _evidence_claim_link(
         db, relation_type="derived_from", other_target=True
     )
+    # NetworkConnection is already projected as a WorldRelation, so the
+    # evidence projector must not create a second entity just to force a link.
+    connection = models.NetworkConnection(
+        left_kind="claim",
+        left_id=claim.id,
+        right_kind="opportunity",
+        right_id=1,
+        reason="Potential connection only",
+        agreement_gap="Independent confirmation is absent",
+    )
+    db.add(connection)
+    db.flush()
+    network_link = models.EvidenceRelationship(
+        evidence_id=evidence.id,
+        network_connection_id=connection.id,
+        relation_type="supports",
+        relation_key="evidence-network-connection-remains-explicit",
+    )
+    db.add(network_link)
+    db.commit()
 
     result = adapter.sync_evidence_relationships(db, limit=20)
 
-    assert result["records_seen"] == 2
+    assert result["records_seen"] == 3
     assert result["relations_created"] == 0
-    assert result["unresolved_records"] == 2
+    assert result["unresolved_records"] == 3
     assert unregistered.substrate_relation_id is None
     assert ambiguous.substrate_relation_id is None
+    assert network_link.substrate_relation_id is None
     assert decision is not None
     assert db.query(models.TypeRegistry).filter_by(
         category="relation_type", type_name="unreviewed_link_type"
     ).count() == 0
     assert db.query(models.WorldRelation).count() == 0
+
 
 
 def test_evidence_id_scope_projects_only_selected_relationships(db):
