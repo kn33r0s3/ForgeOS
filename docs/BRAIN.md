@@ -2,7 +2,7 @@
 
 Version 3, 2026-10-14 (sections 32–35 preserve the evidence/security audit and add the many-climbs operating model). Owner: Bhumadevi. Every agent reads this first, every run. Keep a copy in the repo at docs/BRAIN.md.
 
-**Content hash (Git blob SHA-1; hash line excluded from hashed text):** `gitblob:791322937c40b4cf3853dea730d429a8279ff5ba`
+**Content hash (Git blob SHA-1; hash line excluded from hashed text):** `gitblob:91eadb540931418e386e347de0334fb7c064b0a0`
 
 ## 0. How to use this document
 
@@ -309,7 +309,7 @@ A finding changes behavior only through a recorded path: finding, then proposed 
 
 ## 28. Progress waves
 
-Each wave has an objective, the autonomous work, the human touchpoints, an exit test, and a branch if the exit test fails. Agents work on the earliest wave that has not passed.
+Each wave defines readiness for a class of external activity. It does not stop independent internal research, tests, engineering, knowledge synthesis or reliability improvements on other tracks.
 
 ### Wave 0: Foundation (first days)
 
@@ -317,7 +317,7 @@ Each wave has an objective, the autonomous work, the human touchpoints, an exit 
 - **Autonomous work:** create STATE, QUEUE and LOG; decision-rights config enforced by the authorization service; Telegram owner digest/alerts/ASK with persisted HALT (digest stays OFF until authorized); secrets scan; backup and restore drill; Local Language and Culture Pack v0; data class rules in section 25.
 - **Human:** one-time account/OAuth setup and the owner-only permission decision for the allowed destination and content type. ForgeBot owns routine drafting, scheduling, publishing and ongoing management; no owner-written or hand-posted content is a standing dependency.
 - **Exit test:** an owner Telegram message is observed, HALT blocks generic customer email/SMS in a test, a restore works, no customer-facing sending is enabled.
-- **If it fails:** fix the failing item before anything goes public. Nothing else moves.
+- **If it fails:** fix the failing item before the affected capability goes public. Other safe, independent work continues; a local gate does not freeze the whole system.
 
 ### Wave 1: First signal (inbound opens)
 
