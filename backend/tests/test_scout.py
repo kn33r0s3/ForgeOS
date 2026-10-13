@@ -154,6 +154,22 @@ def test_scout_cycle_scores_and_ranks(db):
     assert sent == 0
 
 
+def test_scout_cycle_does_not_duplicate_unresolved_drafts(db):
+    """Repeated scheduled Scout cycles must not flood the owner review queue."""
+    candidate = _candidate(db, "Repeat Shop")
+    scout.record_signal(db, candidate.id, "unanswered_inquiry", "3 unanswered inquiry comments")
+    first = scout.run_scout_cycle(db)
+    assert first["drafts_generated"] == 1
+
+    second = scout.run_scout_cycle(db)
+    assert second["drafts_generated"] == 0
+    assert second["drafts_already_open"] == 1
+    assert db.query(models.OutreachDraft).filter(
+        models.OutreachDraft.candidate_entity_id == candidate.id,
+        models.OutreachDraft.status.in_(("DRAFT", "APPROVED")),
+    ).count() == 1
+
+
 def test_scout_cycle_respects_do_not_contact(db):
     """Candidates on do-not-contact are blocked, not drafted."""
     from app.services import scout
