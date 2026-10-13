@@ -509,6 +509,12 @@ These are continuity anchors, not a claim that every historic implementation is 
 - **Archived plans are not current authority:** `HAMI_CONTINUITY_MASTER.md`, `HAMI_CURRENT_CODE_AUDIT_2026-10-09.md` and `Pasted markdown(20261008-185019).md` were found in the saved file library. They help recover intent and history, but their October 8–9 snapshots, old CI states, frozen calendar and proposed workstreams must be reconciled with the current charter, current `main`, later owner decisions and fresh evidence before use.
 
 
+
+## Older end-to-end wiring audit (reconciled against current main on 2026-10-14)
+
+The saved-library file `hami_forgeos_integrity_audit_checkpoint_2026-10-11-full.md` audited HEAD `c1e3c622ddc2f9d1265feb40b81b64f4085eedf3` and explicitly said it was a checkpoint, not a full 790-file/runtime audit. Its F-01 through F-08 items have been reconciled in the existing `docs/CAPABILITY_QUEUE.md`: the old brand-check import failure is no longer in current source, the evidence-triage route now refuses to guess an endpoint, auth has source-level production guards, and the verification workflow now fails when its computed verdict is false. Remaining checks are the flattened API route table, protected proof of durable database/session readiness, and live PWA/browser behavior. Those are not declared fixed from source inspection. Keep the report in the file library as detailed evidence; do not copy it wholesale into a second ledger or blindly replay stale fixes.
+
+
 ## How you work with the user
 
 - Reason first, then act: architect + reviewer + investigator + skeptic.
