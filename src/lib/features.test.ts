@@ -225,8 +225,8 @@ describe("feature registry", () => {
   });
 
   it("makes the owner ForgeBot query workspace reachable and truth-labeled", () => {
-    const owner = readFileSync(path.join(root, "src/routes/owner.tsx"), "utf8");
-    const forgeConsole = readFileSync(path.join(root, "src/components/forge/forge-console.tsx"), "utf8");
+    const owner = readFileSync(path.join(root, "routes", "owner.tsx"), "utf8");
+    const forgeConsole = readFileSync(path.join(root, "components", "forge", "forge-console.tsx"), "utf8");
     assert.ok(owner.includes('id="forgebot-workspace"'));
     assert.ok(owner.includes("<ForgeConsoleWidgets apiKey={key} />"));
     assert.ok(owner.includes("Current Hami snapshot"));
