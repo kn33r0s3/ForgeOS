@@ -2305,7 +2305,10 @@ def _validate_substrate_evidence(db: Session, evidence: models.Evidence) -> None
     if not (evidence.claim or evidence.content or "").strip() or not evidence_source(evidence):
         raise SubstrateError("evidence source and claim are required")
     if evidence.support_level in {"tested", "supported", "refuted"}:
-        if _is_simulated_source(evidence_source(evidence)):
+        if (
+            _is_simulated_source(evidence_source(evidence))
+            or _is_simulated_provenance(evidence_provenance(evidence))
+        ):
             raise SubstrateError("simulated evidence cannot be tested, supported, or refuted")
         if not _has_test_or_source_provenance(evidence):
             raise SubstrateError("tested evidence requires provenance")

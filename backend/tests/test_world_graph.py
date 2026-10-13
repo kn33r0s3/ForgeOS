@@ -562,6 +562,27 @@ def test_registry_evidence_and_relation_validations_fail_closed(db):
                 "test_fixture": True,
             },
         )
+    # Guard the ORM boundary too: direct construction must not bypass the
+    # service-layer check with a plausible source label.
+    with pytest.raises(world_graph.SubstrateError, match="cannot be tested, supported, or refuted"):
+        db.add(models.Evidence(
+            subject_kind="entity",
+            subject_id=entity.id,
+            claim="A direct ORM row cannot promote test fixture data.",
+            support_level="supported",
+            source="field_interview",
+            provenance=json.dumps({
+                "url": "https://example.org/report",
+                "test_fixture": True,
+            }),
+            substrate_source="field_interview",
+            substrate_provenance=json.dumps({
+                "url": "https://example.org/report",
+                "test_fixture": True,
+            }),
+        ))
+        db.flush()
+    db.rollback()
     with pytest.raises(world_graph.SubstrateError, match="existing passing test reference"):
         world_graph.create_evidence(
             db,
