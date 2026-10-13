@@ -1,5 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="5" fill="#000"/>
-  <path fill="#ff9b04" d="M19 0h8a5 5 0 0 1 5 5v22a5 5 0 0 1-5 5H13z"/>
-  <path fill="#fff" stroke="#000" stroke-width="1.5" paint-order="stroke" d="M9 7h4v7h6V7h4v18h-4v-7h-6v7H9z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Hami Systems</title>
+  <rect width="64" height="64" rx="10" fill="#0B0B0B"/>
+  <circle cx="32" cy="32" r="27" fill="none" stroke="#B07800" stroke-width="1.5"/>
+  <path d="M32 13.5 48.02 22.75 48.02 41.25 32 50.5 15.98 41.25 15.98 22.75Z" fill="none" stroke="#FFB000" stroke-width="3.3" stroke-linejoin="round"/>
+  <g stroke="#B07800" stroke-width="2.3" stroke-linecap="round">
+    <path d="M32 32V13.5"/><path d="M32 32 48.02 22.75"/><path d="M32 32 48.02 41.25"/>
+    <path d="M32 32V50.5"/><path d="M32 32 15.98 41.25"/><path d="M32 32 15.98 22.75"/>
+  </g>
+  <g fill="#FFB000">
+    <circle cx="32" cy="13.5" r="3.5"/><circle cx="48.02" cy="22.75" r="3.5"/>
+    <circle cx="48.02" cy="41.25" r="3.5"/><circle cx="32" cy="50.5" r="3.5"/>
+    <circle cx="15.98" cy="41.25" r="3.5"/><circle cx="15.98" cy="22.75" r="3.5"/>
+    <circle cx="32" cy="32" r="5.1"/>
+  </g>
 </svg>
