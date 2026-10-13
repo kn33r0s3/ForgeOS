@@ -248,7 +248,7 @@ def seed_core_types(db: Session) -> int:
     open_schema = '{"type":"object"}'
     types = {
         "entity_type": {
-            "signal", "pattern", "belief", "claim", "research_question", "opportunity",
+            "signal", "pattern", "belief", "claim", "research_question", "rare_signal_assessment", "opportunity",
             "provider", "service_listing", "domain_record", "outcome", "customer", "person",
             "organization", "resource", "capability", "tool", "agent", "project", "market",
             "market_signal", "market_segment", "relation", "action", "learning_event",
