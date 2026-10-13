@@ -74,6 +74,7 @@ def _safe_source_fields(entity_type: str, row: Any) -> dict[str, Any]:
             "source_claim_id": row.source_claim_id,
             "source_rare_signal_id": row.source_rare_signal_id,
             "created_at": row.created_at,
+            "updated_at": row.updated_at,
         }
     if entity_type == "domain_record":
         return {
@@ -94,6 +95,7 @@ def _safe_source_fields(entity_type: str, row: Any) -> dict[str, Any]:
         "option_space_status": row.option_space_status,
         "created_at": row.created_at,
         "decided_at": row.decided_at,
+        "updated_at": row.updated_at,
     }
 
 
@@ -152,9 +154,35 @@ def sync_legacy_records(db: Session, *, limit: int = 500) -> dict[str, int]:
                 if timestamp_fields
                 else source_model.id
             )
+            snapshot_prefix = (
+                literal(f"legacy-source-snapshot:{source_system}:")
+                + cast(source_model.id, String)
+                + literal(":")
+            )
+            last_snapshot_at = (
+                db.query(func.max(models.WorldEvent.created_at))
+                .filter(
+                    models.WorldEvent.event_type == "entity_source_refreshed",
+                    func.substr(
+                        models.WorldEvent.idempotency_key,
+                        1,
+                        func.length(snapshot_prefix),
+                    ) == snapshot_prefix,
+                )
+                .correlate(source_model)
+                .scalar_subquery()
+            )
+            # Once a row's current digest has been recorded, it leaves the
+            # scan window. New/unsnapshotted rows and rows modified after their
+            # last snapshot remain eligible, so unchanged recent rows cannot
+            # starve other lifecycle records.
+            needs_snapshot = or_(
+                last_snapshot_at.is_(None),
+                freshness > last_snapshot_at,
+            )
             existing_rows = (
                 db.query(source_model)
-                .filter(has_entity)
+                .filter(has_entity, needs_snapshot)
                 .order_by(freshness.desc(), source_model.id.desc())
                 .limit(remaining)
                 .all()
