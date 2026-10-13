@@ -12,6 +12,8 @@ from app import models
 from app.models import utcnow
 
 
+METRICS_CONTRACT_VERSION = 2
+_CURRENT_EVENT_PREFIX = f"v{METRICS_CONTRACT_VERSION}:"
 
 
 def _event_key(
@@ -24,7 +26,7 @@ def _event_key(
     raw = f"{prefix}:{task_id}:{name}:{','.join(map(str, sorted(set(result_ids))))}"
     if attempt_number is not None:
         raw += f":attempt:{attempt_number}"
-    return hashlib.sha256(raw.encode()).hexdigest()
+    return f"{_CURRENT_EVENT_PREFIX}{hashlib.sha256(raw.encode()).hexdigest()}"
 
 
 def record_usage(
@@ -150,8 +152,20 @@ def _as_utc(value: datetime) -> datetime:
 
 
 def tool_summary(db: Session, tool_name: str) -> dict[str, Any]:
-    events = db.query(models.ToolUsageEvent).filter_by(tool_name=tool_name).order_by(models.ToolUsageEvent.created_at.asc()).all()
-    return _summary(events, useful_field="useful_result_count")
+    base = db.query(models.ToolUsageEvent).filter_by(tool_name=tool_name)
+    historical_events_excluded = base.filter(
+        models.ToolUsageEvent.event_key.is_(None)
+        | ~models.ToolUsageEvent.event_key.like(f"{_CURRENT_EVENT_PREFIX}%")
+    ).count()
+    events = (
+        base.filter(models.ToolUsageEvent.event_key.like(f"{_CURRENT_EVENT_PREFIX}%"))
+        .order_by(models.ToolUsageEvent.created_at.asc())
+        .all()
+    )
+    summary = _summary(events, useful_field="useful_result_count")
+    summary["metrics_contract_version"] = METRICS_CONTRACT_VERSION
+    summary["historical_events_excluded"] = historical_events_excluded
+    return summary
 
 
 def _sum_known(events: list[Any], field: str) -> int | None:
@@ -169,7 +183,14 @@ def source_summary(
     *,
     limit: int | None = None,
 ) -> dict[str, Any]:
-    query = db.query(models.SourceUsageEvent).filter_by(source=source).order_by(
+    base = db.query(models.SourceUsageEvent).filter_by(source=source)
+    historical_events_excluded = base.filter(
+        models.SourceUsageEvent.event_key.is_(None)
+        | ~models.SourceUsageEvent.event_key.like(f"{_CURRENT_EVENT_PREFIX}%")
+    ).count()
+    query = base.filter(
+        models.SourceUsageEvent.event_key.like(f"{_CURRENT_EVENT_PREFIX}%")
+    ).order_by(
         models.SourceUsageEvent.created_at.desc(),
         models.SourceUsageEvent.id.desc(),
     )
@@ -177,6 +198,8 @@ def source_summary(
         query = query.limit(max(1, int(limit)))
     events = list(reversed(query.all()))
     result = _summary(events, useful_field="useful_evidence_count")
+    result["metrics_contract_version"] = METRICS_CONTRACT_VERSION
+    result["historical_events_excluded"] = historical_events_excluded
     result["novel_count"] = _sum_known(events, "novel_evidence_count")
     result["corroborated_count"] = _sum_known(events, "corroborated_evidence_count")
     result["contradicted_count"] = _sum_known(events, "contradicted_claim_count")
