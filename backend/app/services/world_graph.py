@@ -287,6 +287,7 @@ def seed_core_types(db: Session) -> int:
             "forge_bot_response_action_authorization_decided",
             "outreach.sent",
             "outreach.reply",
+            "outreach.no_response",
             "standing_authorization_proposed",
             "standing_authorization_activated",
             "standing_authorization_revoked",
