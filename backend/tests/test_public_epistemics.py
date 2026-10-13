@@ -22,8 +22,16 @@ def _claim(db, *, state="observed", kind=None, statement="A stored public claim.
     return row
 
 
-def _evidence(db, claim, *, source, retrieved_at=None, relation="supports"):
-    url = f"https://{source}.example.org/report"
+def _evidence(
+    db,
+    claim,
+    *,
+    source,
+    retrieved_at=None,
+    relation="supports",
+    canonical_url=None,
+):
+    url = canonical_url or f"https://{source}.example.org/report"
     signal = models.Signal(
         source=source,
         source_type="external",
@@ -80,6 +88,32 @@ def test_public_label_mapping_covers_fact_observation_external_claim_conflict_an
     _evidence(db, corroborated, source="source-b", retrieved_at=now)
     assert derive_public_label(db, corroborated, now=now) == {
         "epistemic_state": "supported", "stale": False,
+    }
+
+    # Different ingestion labels and paths on one publisher host are not two
+    # independent sources. Corroboration must be based on actual source identity.
+    same_host = _claim(
+        db,
+        state="observed",
+        kind="EXTERNAL CLAIM",
+        statement="A second claimed fact from two adapters of the same host.",
+    )
+    _evidence(
+        db,
+        same_host,
+        source="collector-alpha",
+        retrieved_at=now,
+        canonical_url="https://publisher.example/report-a",
+    )
+    _evidence(
+        db,
+        same_host,
+        source="collector-beta",
+        retrieved_at=now,
+        canonical_url="https://publisher.example/report-b",
+    )
+    assert derive_public_label(db, same_host, now=now) == {
+        "epistemic_state": "observed", "stale": False,
     }
 
     one_source = _claim(db, state="observed", kind="EXTERNAL CLAIM")
