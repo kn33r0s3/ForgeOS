@@ -338,6 +338,97 @@ def test_unstructured_model_text_cannot_become_a_positive_or_negative_verdict():
     assert explicit["confidence"] is None
 
 
+
+def test_new_contract_versions_do_not_reuse_legacy_judgment_or_comparison_cache(db):
+    import hashlib
+    import json
+
+    evidence = evidence_fixture(db)
+    question = "Does this evidence support the exact claim?"
+    judge = spec(
+        "legacy-cache-judge",
+        lambda _question, _evidence: "The evidence is unlikely to support this claim.",
+    )
+
+    legacy_judgment_payload = {
+        "judge": judge.name,
+        "provider": judge.provider,
+        "model": judge.model,
+        "question": question.strip(),
+        "evidence_ids": [evidence.id],
+        "claim_id": None,
+        "opportunity_id": None,
+    }
+    legacy_judgment_key = hashlib.sha256(
+        json.dumps(legacy_judgment_payload, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    old_judgment = models.Judgment(
+        judge_name=judge.name,
+        provider=judge.provider,
+        model=judge.model,
+        question=question,
+        conclusion="The evidence is unlikely to support this claim.",
+        reasoning_summary="Legacy keyword inference was not a validated verdict.",
+        conclusion_label="positive",
+        evidence_ids=str(evidence.id),
+        uncertainty="Legacy cached result",
+        confidence=None,
+        status="completed",
+        judgment_key=legacy_judgment_key,
+    )
+    db.add(old_judgment)
+    db.commit()
+    db.refresh(old_judgment)
+
+    fresh_judgments = multi_judge.run_judgments(
+        db,
+        question=question,
+        evidence_ids=[evidence.id],
+        judges=[judge],
+    )
+    fresh = fresh_judgments[0]
+    assert fresh.id != old_judgment.id
+    assert fresh.judgment_key != old_judgment.judgment_key
+    assert fresh.conclusion_label == "uncertain"
+
+    # Simulate a legacy cached comparison for the new judgment IDs. Current
+    # comparison rules must not return it just because the request is repeated.
+    legacy_comparison_payload = {
+        "question": question,
+        "judgments": [fresh.id],
+        "evidence": [evidence.id],
+        "claim_id": None,
+    }
+    legacy_comparison_key = hashlib.sha256(
+        json.dumps(legacy_comparison_payload, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    old_comparison = models.JudgmentComparison(
+        question=question,
+        judgment_ids=[fresh.id],
+        evidence_ids=str(evidence.id),
+        outcome="agreement",
+        summary="Legacy cached singleton agreement is invalid under the current contract.",
+        disagreement_points=[],
+        missing_evidence=[],
+        contradictory_claims=[],
+        unsupported_conclusions=[],
+        comparison_key=legacy_comparison_key,
+    )
+    db.add(old_comparison)
+    db.commit()
+    db.refresh(old_comparison)
+
+    comparison = multi_judge.compare_judgments(
+        db,
+        question=question,
+        judgment_ids=[fresh.id],
+        evidence_ids=[evidence.id],
+    )
+    assert comparison.id != old_comparison.id
+    assert comparison.outcome == "insufficient_judges"
+    assert db.get(models.JudgmentComparison, old_comparison.id).outcome == "agreement"
+
+
 def test_new_evidence_allows_rejudgment_with_new_work_key(db):
     first = evidence_fixture(db, "https://example.test/judgment-1")
     second = evidence_fixture(db, "https://example.test/judgment-2")
