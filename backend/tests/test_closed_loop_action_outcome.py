@@ -2348,6 +2348,7 @@ def test_ollama_authenticated_https_gateway_probes_model_and_generates_with_bear
     monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
     monkeypatch.setattr(settings, "OLLAMA_HOST", "https://models.example.test")
     monkeypatch.setattr(settings, "OLLAMA_API_KEY", "test-only-gateway-token")
+    monkeypatch.setattr(settings, "HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA", False)
     monkeypatch.setattr(settings, "OLLAMA_MODEL", "qwen3-coder:latest")
     monkeypatch.setenv("VERCEL", "1")
     calls = []
