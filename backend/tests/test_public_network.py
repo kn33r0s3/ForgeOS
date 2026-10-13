@@ -50,7 +50,7 @@ def _public_signal_claim(db):
 
 
 
-def test_new_network_connections_cannot_self-declare_supported_truth(db):
+def test_new_network_connections_cannot_self_declare_supported_truth(db):
     need = models.DomainRecord(
         kind="job", title="TEST candidate request", detail="A possible need.",
         close_token_hash="test-candidate-hash", status="open",
