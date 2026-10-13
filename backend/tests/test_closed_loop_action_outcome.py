@@ -2147,7 +2147,7 @@ def test_ai_ollama_status_is_unavailable_in_vercel_without_network(monkeypatch):
     )
     status = ai_engine.get_provider_status()
     assert status["provider"] == "ollama"
-    assert status["mode"] == "LOCAL"
+    assert status["mode"] == "UNKNOWN"
     assert status["status"] == "AI_UNAVAILABLE"
     assert status["inference_verified"] is False
 

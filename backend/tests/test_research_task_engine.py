@@ -36,6 +36,7 @@ class FakeCollector:
             "external_id": raw_item["metadata"]["external_id"],
             "title": raw_item["metadata"]["title"],
             "metadata": raw_item["metadata"],
+            "provenance": raw_item.get("provenance"),
         }
 
 
@@ -152,7 +153,7 @@ def test_duplicate_evidence_is_reused_without_duplicate_work(db, monkeypatch):
     # stored source provenance explicitly instead of relying on source name.
     metadata_only_item = {
         **FakeCollector.items[0],
-        "metadata": {**FakeCollector.items[0]["metadata"], "metadata_only": True},
+        "provenance": {"metadata_only": True},
     }
     monkeypatch.setattr(FakeCollector, "items", [metadata_only_item])
     monkeypatch.setitem(collector_runner.COLLECTORS, "fake", FakeCollector)
