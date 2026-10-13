@@ -162,3 +162,10 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Updated the bounded-context fixture to use explicitly eligible REAL third-party records and expanded privacy regression coverage for an identified-but-public-looking record. Fixed the local provider test to assert the actual `script_context_hint` payload key.
 - Added State/Queue notes describing the boundary. No customer or provider actions were enabled.
 - **Verification truth:** exact-head CI has been repeatedly superseded while concurrent main commits continue. The latest known head at this entry was `a62bf98d99630a24517e852fb8dc3b1b4128949d`; tests and local-model invocation are not yet verified on the final head. Secrets scan had passed for earlier heads; the exact latest run must be checked before asserting success.
+
+
+## 2026-10-14 — provider readiness no longer inferred from configuration
+
+- Changed /ai/status so local Ollama reports MODEL_AVAILABLE only after a loopback /api/tags probe confirms the configured model is installed. Vercel, non-loopback hosts, missing models, unreachable endpoints and malformed responses do not appear ready. The probe is bounded to 1.5 seconds and hides raw exception details.
+- External provider client construction reports CONFIGURED, not READY; network reachability and inference remain unverified. Mock explicitly reports MOCK and inference_verified=false.
+- Updated owner ForgeBot chat gate and explanation. Added backend tests for Vercel, local model installed/missing, connection failure and external CONFIGURED state; frontend assertions verify the new gate/copy. Tests are committed, not yet verified green.
