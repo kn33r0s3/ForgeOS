@@ -287,11 +287,16 @@ def test_contact_state_separates_priority_from_starvation(db, monkeypatch):
         "days_since_last_contact": 1,
         "contact_priority_due": False,
         "starved": False,
+        "pending_contact_replies": 0,
+        "pending_contact_outcomes": 0,
+        "dry_wells_recorded": 0,
+        "next_priority": "evidence_and_value",
     }
 
     monkeypatch.setattr(operating_v4, "days_since_last_contact", lambda _db: 2)
     assert operating_v4.contact_state(db)["contact_priority_due"] is True
     assert operating_v4.contact_state(db)["starved"] is False
+    assert operating_v4.contact_state(db)["next_priority"] == "contact_preparation"
 
     monkeypatch.setattr(operating_v4, "days_since_last_contact", lambda _db: 14)
     assert operating_v4.contact_state(db)["contact_priority_due"] is True
@@ -301,6 +306,83 @@ def test_contact_state_separates_priority_from_starvation(db, monkeypatch):
     state = operating_v4.contact_state(db)
     assert state["contact_priority_due"] is True
     assert state["starved"] is True
+    assert state["next_priority"] == "contact_preparation"
+
+
+def test_pending_contact_outcome_outranks_recent_contact(db, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+
+    from app.services import scout
+
+    now = datetime.now(timezone.utc)
+    candidate = scout.register_candidate(
+        db,
+        display_name="Pending Outcome Shop",
+        source_url="https://example.org/pending-outcome-shop",
+        public_contact_route="public page inbox",
+        observed_signals={},
+    )
+    db.add(models.WorldEvent(
+        event_type="outreach.reply",
+        source="owner",
+        occurred_at=now - timedelta(hours=1),
+    ))
+    db.add(models.OutreachDraft(
+        candidate_entity_id=candidate.id,
+        observed_fact="Public inquiry thread had no reply",
+        message_en="A first-contact draft",
+        message_ne="पहिलो सम्पर्कको मस्यौदा",
+        status="SENT",
+        sent_at=now - timedelta(days=1),
+        send_channel="facebook",
+        reply_received=False,
+    ))
+    db.commit()
+
+    state = operating_v4.contact_state(db)
+    assert state["days_since_last_contact"] == 0
+    assert state["contact_priority_due"] is False
+    assert state["pending_contact_replies"] == 1
+    assert state["pending_contact_outcomes"] == 1
+    assert state["next_priority"] == "review_pending_contact_outcomes"
+
+
+def test_recorded_dry_well_stays_visible_without_starving_other_work(db, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+
+    from app.services import scout
+
+    now = datetime.now(timezone.utc)
+    candidate = scout.register_candidate(
+        db,
+        display_name="Dry Well Shop",
+        source_url="https://example.org/dry-well-shop",
+        public_contact_route="public page inbox",
+        observed_signals={},
+    )
+    db.add(models.WorldEvent(
+        event_type="outreach.reply",
+        source="owner",
+        occurred_at=now - timedelta(hours=1),
+    ))
+    db.add(models.OutreachDraft(
+        candidate_entity_id=candidate.id,
+        observed_fact="Public inquiry thread",
+        message_en="A first-contact draft",
+        message_ne="पहिलो सम्पर्कको मस्यौदा",
+        status="SENT",
+        sent_at=now - timedelta(days=1),
+        send_channel="facebook",
+        reply_received=False,
+        outcome_notes="No response observed as of 2026-10-14.",
+    ))
+    db.commit()
+
+    state = operating_v4.contact_state(db)
+    assert state["pending_contact_replies"] == 1
+    assert state["pending_contact_outcomes"] == 0
+    assert state["dry_wells_recorded"] == 1
+    assert state["next_priority"] == "evidence_and_value"
 
 
 def test_gate_result_requires_kill_criterion(db):
