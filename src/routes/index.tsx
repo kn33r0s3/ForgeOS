@@ -494,9 +494,9 @@ function Capabilities() {
           >
             <h3 className="font-display text-xl font-bold text-ink">The gap</h3>
             <p className="mt-3 text-sm leading-6 text-muted">
-              Engineering capability is not realized value. Hami has not yet served a real
-              merchant, recovered revenue, or validated an outcome with a real person. No
-              realization claim is made until an actual outcome is appropriately evidenced.
+              Engineering capability is not realized value. Hami has not yet produced a
+              verified real-world outcome with a participant. No value-realization claim is
+              made until an actual outcome is measurable and appropriately evidenced.
             </p>
           </div>
         </div>
