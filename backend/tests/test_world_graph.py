@@ -600,7 +600,7 @@ def test_capability_lifecycle_requires_a_passing_test_reference(db):
     )
     # Non-starved: lifecycle tests verify mechanics, not operating discipline.
     world_graph.create_event(
-        db, event_type="outreach.sent", source="test", payload={},
+        db, event_type="conversation.held", source="test", payload={},
     )
     db.commit()
     world_graph.begin_capability_build(db, capability)
