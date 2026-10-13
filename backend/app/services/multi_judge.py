@@ -249,8 +249,13 @@ def compare_judgments(
         summary = "Judges reached materially different conclusions; Forge preserves both views."
     disagreement_points = [{"labels": sorted(labels), "question": question}] if outcome in {"disagreement", "partial_agreement"} else []
     follow_up = None
+    # A failed/unavailable judge is an infrastructure/evaluation gap, not
+    # proof that the underlying evidence is missing. Do not turn failed judge
+    # calls into recursively generated research questions. Only a real
+    # missing Evidence row or substantive disagreement/uncertainty warrants
+    # new research work.
     if outcome in {"disagreement", "partial_agreement"} or (
-        outcome == "missing_evidence" and normalized_ids
+        outcome == "missing_evidence" and bool(missing_evidence)
     ):
         detail = "Resolve disagreement about" if outcome != "missing_evidence" else "Find missing evidence for"
         follow_up = _follow_up_question(db, f"{detail}: {question}", claim_id=claim_id)
