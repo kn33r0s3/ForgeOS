@@ -574,6 +574,102 @@ def _prior_observations(db: Session, question_text: str, *, limit: int = 5) -> l
     return observations
 
 
+def _claim_linked_observations(
+    db: Session,
+    claim_id: int | None,
+    *,
+    limit: int = 5,
+) -> list[dict[str, Any]]:
+    """Reuse explicit Claim↔Evidence links by reference without upgrading truth.
+
+    This is the highest-confidence *relationship* for finding candidate context
+    across questions; it is not a new assessment of the evidence. Never copy
+    evidence content into another question's plan, and do not auto-share a
+    participant-identified record unless its consent is explicitly granted.
+    """
+    if claim_id is None or limit <= 0:
+        return []
+
+    rows = (
+        db.query(models.EvidenceRelationship, models.Evidence)
+        .join(
+            models.Evidence,
+            models.Evidence.id == models.EvidenceRelationship.evidence_id,
+        )
+        .filter(
+            models.EvidenceRelationship.claim_id == claim_id,
+            models.EvidenceRelationship.relation_type.in_(
+                ("supports", "contradicts", "updates", "derived_from", "supersedes")
+            ),
+        )
+        .order_by(
+            models.EvidenceRelationship.id.desc(),
+            models.Evidence.id.desc(),
+        )
+        .limit(max(1, min(int(limit), 10)))
+        .all()
+    )
+    observations: list[dict[str, Any]] = []
+    for edge, evidence in rows:
+        if evidence.source_identity and evidence.consent_status != "granted":
+            continue
+        if evidence.consent_status in {"pending", "denied"}:
+            continue
+        signal = db.get(models.Signal, evidence.signal_id) if evidence.signal_id else None
+        observations.append(
+            {
+                "evidence_id": evidence.id,
+                "signal_id": evidence.signal_id,
+                "source": evidence.source,
+                "title": evidence.title or (signal.title if signal else None),
+                "url": evidence.canonical_url or (signal.canonical_url if signal else None),
+                "published_at": evidence.published_at.isoformat() if evidence.published_at else None,
+                "retrieved_at": evidence.retrieved_at.isoformat() if evidence.retrieved_at else None,
+                "related_claim_id": claim_id,
+                "recorded_relationship": edge.relation_type,
+                "source_kind": evidence.source_kind,
+                "proof_level": evidence.proof_level,
+                "support_level": evidence.support_level,
+                "reuse_mode": "reference_only",
+                "epistemic_status": "linked_claim_context_unverified",
+                "link_is_not_independent_verification": True,
+            }
+        )
+    return observations
+
+
+def _known_observations(
+    db: Session,
+    question: models.ResearchQuestion,
+    *,
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    """Combine explicit substrate links and lexical leads without duplicate IDs."""
+    maximum = max(0, min(int(limit), 20))
+    if maximum == 0:
+        return []
+    explicit = _claim_linked_observations(
+        db,
+        question.source_claim_id,
+        limit=min(5, maximum),
+    )
+    observations: list[dict[str, Any]] = []
+    seen_evidence_ids: set[int] = set()
+    for item in explicit + _prior_observations(
+        db,
+        question.question,
+        limit=5,
+    ):
+        evidence_id = item.get("evidence_id")
+        if not isinstance(evidence_id, int) or evidence_id in seen_evidence_ids:
+            continue
+        seen_evidence_ids.add(evidence_id)
+        observations.append(item)
+        if len(observations) >= maximum:
+            break
+    return observations
+
+
 def _orchestration_requirement_specs(
     db: Session,
     question_text: str,
@@ -818,7 +914,7 @@ def build_research_plan(db: Session, question: models.ResearchQuestion) -> dict[
         "subquestions": [item["question"] for item in requirements],
         "requirements": requirements,
         "orchestration_requirements": orchestration_requirements,
-        "known_observations": _prior_observations(db, question.question),
+        "known_observations": _known_observations(db, question),
         "assumptions": [
             "The premise and wording supplied by the requester are not external evidence.",
             "Bibliographic metadata identifies a record only; paper contents have not been retrieved or reviewed.",
