@@ -283,6 +283,46 @@ def test_contradiction_changes_claim_state_without_fabricating_confidence(db):
     assert db.query(models.EvidenceRelationship).filter_by(claim_id=claim.id).count() == 2
 
 
+
+def test_new_support_does_not_erase_existing_contradiction(db):
+    observer = ObserverEngine(db)
+    supporting_signal = observer.observe(
+        "TEST source states the claim is true.",
+        source="reviewed-support",
+        metadata={"url": "https://example.test/legacy-support"},
+    )
+    contradicting_signal = observer.observe(
+        "TEST earlier source states the claim is false.",
+        source="reviewed-contradiction",
+        metadata={"url": "https://example.test/legacy-contradiction"},
+    )
+    support = db.query(models.Evidence).filter_by(signal_id=supporting_signal.id).one()
+    contradiction = db.query(models.Evidence).filter_by(signal_id=contradicting_signal.id).one()
+    claim, _ = evidence_graph.create_or_get_claim(db, "TEST a claim with legacy contradiction.")
+
+    # Simulate an older/inconsistent graph row that predates the guarded
+    # transition logic. New support must reconcile with, not erase, that fact.
+    db.add(models.EvidenceRelationship(
+        evidence_id=contradiction.id,
+        claim_id=claim.id,
+        relation_type="contradicts",
+        relation_key="legacy-contradiction-edge",
+        idempotency_key="legacy-contradiction-edge",
+    ))
+    db.commit()
+
+    evidence_graph.link_evidence(db, support, claim=claim, relation_type="supports")
+
+    db.refresh(claim)
+    assert claim.epistemic_state == "contested"
+    assert db.query(models.EvidenceRelationship).filter_by(
+        claim_id=claim.id, relation_type="contradicts"
+    ).count() == 1
+    assert db.query(models.EvidenceRelationship).filter_by(
+        claim_id=claim.id, relation_type="supports"
+    ).count() == 1
+
+
 def test_opportunity_trace_explains_why_it_exists(db):
     observer = ObserverEngine(db)
     signal = observer.observe(
