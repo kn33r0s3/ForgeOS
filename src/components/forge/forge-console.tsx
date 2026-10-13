@@ -20,6 +20,8 @@ const inputCls =
 type ForgeProviderStatus = {
   provider: string;
   status: string;
+  mode?: string;
+  internal_context_allowed?: boolean;
 };
 
 type ForgeProviderObservation = {
@@ -89,7 +91,12 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
             typeof payload.provider !== "string" || typeof payload.status !== "string") {
           throw new Error("Provider status returned an unexpected response.");
         }
-        if (active) setProviderStatus({ provider: payload.provider, status: payload.status });
+        if (active) setProviderStatus({
+          provider: payload.provider,
+          status: payload.status,
+          mode: "mode" in payload && typeof payload.mode === "string" ? payload.mode : "UNKNOWN",
+          internal_context_allowed: "internal_context_allowed" in payload && payload.internal_context_allowed === true,
+        });
       })
       .catch((cause) => {
         if (active) {
@@ -109,8 +116,10 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
   const paidProvider = providerName === "openai";
   const mockProvider = providerName === "mock" &&
     (providerHealth === "READY" || providerHealth === "MOCK");
+  const remoteContextSharingBlocked = providerStatus?.mode === "SELF_HOSTED" &&
+    providerStatus.internal_context_allowed !== true;
   const providerCanAnswer = providerStatus !== null &&
-    providerName === "ollama" && providerHealth === "MODEL_AVAILABLE";
+    providerName === "ollama" && providerHealth === "MODEL_AVAILABLE" && !remoteContextSharingBlocked;
   const canAsk = !providerLoading && !providerError && providerCanAnswer;
 
   async function submitQuestion(event: FormEvent<HTMLFormElement>) {
@@ -226,11 +235,18 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
                   This environment is using deterministic test templates. Hami will not present them as intelligence or enable questions until a real, reachable local model is available.
                 </p>
               </>
+            ) : remoteContextSharingBlocked ? (
+              <>
+                <p className="mt-1 text-sm font-semibold text-ink">Remote inference is reachable; internal knowledge sharing is off.</p>
+                <p className="mt-1 text-sm leading-5 text-muted">
+                  For privacy, Hami will not send stored Knowledge to a self-hosted HTTPS model until the owner explicitly enables HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA after reviewing the gateway's data handling.
+                </p>
+              </>
             ) : providerHealth === "MODEL_AVAILABLE" && providerName === "ollama" ? (
               <>
-                <p className="mt-1 text-sm font-semibold text-ink">The local model is installed and reachable.</p>
+                <p className="mt-1 text-sm font-semibold text-ink">{providerStatus?.mode === "SELF_HOSTED" ? "The authenticated self-hosted model is installed and reachable." : "The local model is installed and reachable."}</p>
                 <p className="mt-1 text-sm leading-5 text-muted">
-                  This checks Ollama and the configured model, not generation quality. ForgeBot still needs to complete the request successfully and ground its answer in the knowledge shown.
+                  This checks the endpoint and configured model, not generation quality. A completed request is not proof that its claims are correct.
                 </p>
               </>
             ) : providerHealth === "READY" && !approvedZeroCostProvider ? (
@@ -283,8 +299,7 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
       <details className="mt-4 border-t border-line pt-3">
         <summary className="cursor-pointer text-sm font-semibold text-muted">Privacy and how answers work</summary>
         <p className="mt-2 text-sm leading-5 text-muted">
-          Please do not paste phone numbers, private conversations, payment details or passwords. Your question is sent to Hami's owner API
-          to produce an answer. This panel does not add the chat to Hami's knowledge records. The visible conversation stays in this page session
+          Please do not paste phone numbers, private conversations, payment details or passwords. Your question and selected Hami knowledge are sent to the configured model only when the server-side provider and data-sharing gates allow it. This panel does not add the chat text to Hami's knowledge records. The visible conversation stays in this page session
           and disappears when you lock or leave. ForgeBot's answer is a guide, not proof; it does not change Hami's records, send messages or perform actions.
         </p>
       </details>

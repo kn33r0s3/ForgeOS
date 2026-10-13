@@ -83,19 +83,34 @@ def derive_public_label(
         edge.relation_type == "contradicts" or evidence.direction == "contradicts"
         for edge, evidence in links
     )
+    # Count independent sources only when the relationship itself asserts
+    # support/update. Mere lineage or summary links show where information came
+    # from; they do not corroborate the truth of the Claim.
+    supporting_links = [
+        (edge, evidence)
+        for edge, evidence in links
+        if edge.relation_type in {"supports", "updates"}
+        and evidence.direction != "contradicts"
+    ]
+    independent_supporting_sources = _independent_external_sources(supporting_links)
 
     if conflict:
         label: PublicLabelName = "contested"
     elif declared_kind in _FACT_VALUES or internal_state == "fact":
-        label = "supported"
+        # A classification supplied in Claim provenance is not proof by
+        # itself. A fact-labelled Claim needs an explicit support/update edge
+        # backed by at least one independent external source before the public
+        # projection can label it supported.
+        if not links:
+            return None
+        label = "supported" if independent_supporting_sources >= 1 else "observed"
     elif declared_kind in _EXTERNAL_CLAIM_VALUES:
-        label = "supported" if _independent_external_sources(links) >= 2 else "observed"
+        label = "supported" if independent_supporting_sources >= 2 else "observed"
     elif declared_kind in _OBSERVATION_VALUES or internal_state in {"observed", "observation"}:
         label = "observed"
     else:
-        independent_sources = _independent_external_sources(links)
         if internal_state in {"supported", "verified"}:
-            label = "supported" if independent_sources >= 2 else "observed"
+            label = "supported" if independent_supporting_sources >= 2 else "observed"
         else:
             return None
 
@@ -158,7 +173,11 @@ def _independent_external_sources(links: list[tuple[models.EvidenceRelationship,
         url = (evidence.canonical_url or (signal.canonical_url if signal else "") or "").strip()
         if not external_signal and not url.startswith(("https://", "http://")):
             continue
-        identity = source_name or _url_host(url)
+        # The registrable evidence location is a safer independence boundary
+        # than a collector/source label: two adapters can retrieve the same
+        # publisher under different names. Prefer canonical host when present;
+        # fall back to the source name only when no URL host was recorded.
+        identity = _url_host(url).casefold() or source_name
         if identity:
             sources.add(identity)
     return len(sources)

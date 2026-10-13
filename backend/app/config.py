@@ -97,6 +97,11 @@ class Settings(BaseSettings):
     OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "qwen3-coder:latest")
     # Required for non-loopback HTTPS self-hosted gateways; never commit the secret.
     OLLAMA_API_KEY: str = os.getenv("OLLAMA_API_KEY", "")
+    # Separate authorization: gateway authentication alone does not authorize
+    # sending Hami's internal Knowledge records to a remote model host.
+    HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA: bool = os.getenv(
+        "HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA", "false"
+    ).strip().lower() in ("1", "true", "yes")
     # Compatibility settings for the standalone Qwen worker, which uses
     # Ollama's OpenAI-compatible endpoint directly.
     OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")

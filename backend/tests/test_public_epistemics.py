@@ -56,8 +56,24 @@ def _evidence(db, claim, *, source, retrieved_at=None, relation="supports"):
 def test_public_label_mapping_covers_fact_observation_external_claim_conflict_and_hidden_states(db):
     now = datetime(2026, 9, 25, tzinfo=timezone.utc)
 
-    fact = _claim(db, kind="FACT")
+    fact_without_evidence = _claim(db, kind="FACT")
+    assert derive_public_label(db, fact_without_evidence, now=now) is None
+
+    fact = _claim(db, kind="FACT", statement="A fact backed by an explicit source relation.")
+    _evidence(db, fact, source="primary-source", retrieved_at=now)
     assert derive_public_label(db, fact, now=now) == {"epistemic_state": "supported", "stale": False}
+
+    fact_lineage_only = _claim(db, kind="FACT", statement="A fact-shaped claim with lineage only.")
+    _evidence(
+        db,
+        fact_lineage_only,
+        source="lineage-source",
+        retrieved_at=now,
+        relation="derived_from",
+    )
+    assert derive_public_label(db, fact_lineage_only, now=now) == {
+        "epistemic_state": "observed", "stale": False,
+    }
 
     corroborated = _claim(db, state="observed", kind="EXTERNAL CLAIM")
     _evidence(db, corroborated, source="source-a", retrieved_at=now)
@@ -69,6 +85,22 @@ def test_public_label_mapping_covers_fact_observation_external_claim_conflict_an
     one_source = _claim(db, state="observed", kind="EXTERNAL CLAIM")
     _evidence(db, one_source, source="source-a", retrieved_at=now)
     assert derive_public_label(db, one_source, now=now) == {
+        "epistemic_state": "observed", "stale": False,
+    }
+
+    lineage_is_not_corroboration = _claim(
+        db, state="observed", kind="EXTERNAL CLAIM",
+        statement="Two source links that only establish lineage are not corroboration.",
+    )
+    _evidence(
+        db, lineage_is_not_corroboration, source="lineage-a",
+        retrieved_at=now, relation="derived_from",
+    )
+    _evidence(
+        db, lineage_is_not_corroboration, source="lineage-b",
+        retrieved_at=now, relation="derived_from",
+    )
+    assert derive_public_label(db, lineage_is_not_corroboration, now=now) == {
         "epistemic_state": "observed", "stale": False,
     }
 

@@ -442,6 +442,14 @@ def ask_forge(request: Request, payload: schemas.AskRequest, db: Session = Depen
             status_code=503,
             detail="A reachable zero-cost local model is not available. No template or paid-provider answer was generated.",
         )
+    if provider_status.get("mode") == "SELF_HOSTED" and provider_status.get("internal_context_allowed") is not True:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "The self-hosted model is reachable, but sharing Hami's internal knowledge with a remote model is disabled. "
+                "Review the data boundary before setting HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA=true."
+            ),
+        )
     try:
         result = ai_engine.answer_question(payload.question, db)
     except ai_engine.AIUnavailableError as exc:

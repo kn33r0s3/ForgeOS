@@ -365,22 +365,25 @@ def link_evidence(
             raise
         return existing, False
     if claim:
-        if relation_type in {"supports", "contradicts"} and claim.epistemic_state in {
-            "observed", "supported"
-        }:
+        prior_state = claim.epistemic_state
+        if relation_type == "contradicts":
+            # New counter-evidence invalidates an otherwise affirmative state.
+            # Rejected and superseded claims are not automatically resurrected;
+            # contested claims remain contested until an explicit review resolves them.
+            if prior_state in {"observed", "supported", "verified", "weakened"}:
+                claim.epistemic_state = "contested"
+        elif relation_type == "supports":
             has_contradiction = (
                 db.query(models.EvidenceRelationship.id)
                 .filter_by(claim_id=claim.id, relation_type="contradicts")
                 .first()
                 is not None
             )
-            if has_contradiction:
-                # Existing contradictory evidence must not be erased by a
-                # later supporting edge, including for inconsistent legacy rows.
+            if has_contradiction or prior_state in {"contested", "rejected"}:
+                # Supportive evidence cannot erase a recorded contradiction or
+                # silently overturn a previous rejection.
                 claim.epistemic_state = "contested"
-            elif relation_type == "contradicts":
-                claim.epistemic_state = "contested"
-            elif claim.epistemic_state == "observed":
+            elif prior_state == "observed":
                 claim.epistemic_state = "supported"
         elif relation_type == "supersedes":
             claim.epistemic_state = "superseded"

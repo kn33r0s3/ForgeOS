@@ -63,3 +63,8 @@ The owner `/forge/ask` path only answers with an installed, reachable, zero-cost
 ## P0 — Complete self-hosted model reachability without paid APIs
 
 The code supports an authenticated HTTPS Ollama-compatible gateway via `OLLAMA_HOST` + `OLLAMA_API_KEY`; loopback HTTP remains local-runtime-only. Direct OpenAI tools have been removed until paid inference is metered through the shared spend guard. Next: configure a real gateway and secrets in deployment settings, confirm `/api/tags`, complete one actual generation, record usage/latency, and evaluate Nepal-first answers. Adapter support is not proof the gateway exists or works.
+
+
+## P0 — Verify provider privacy boundary and actual inference
+
+Remote model transport authorization (HTTPS plus bearer token) and internal-context sharing authorization are separate. HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA remains false by default; /forge/ask must reject remote-context requests until the owner explicitly enables it. Successful calls produce sanitized request observations and a metadata-only EVENT. Next verify exact-head CI, configure a gateway only in deployment secrets, perform an actual inference, inspect the event without question/answer content, and evaluate the Nepal-first language/context set. No remote endpoint or inference is claimed live.

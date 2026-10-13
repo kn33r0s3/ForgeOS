@@ -58,6 +58,22 @@ from app.config import settings
 MAX_OLLAMA_RESPONSE_BYTES = 1_048_576
 
 
+class _RejectOllamaRedirects(urllib.request.HTTPRedirectHandler):
+    """A bearer-authenticated model gateway must not redirect credentials elsewhere."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _open_ollama_request(request, *, timeout: float, transport_mode: str):
+    if transport_mode == "SELF_HOSTED":
+        # The configured HTTPS gateway is trusted with the token. Refuse all
+        # redirects rather than risk forwarding Authorization to another host.
+        opener = urllib.request.build_opener(_RejectOllamaRedirects())
+        return opener.open(request, timeout=timeout)
+    return urllib.request.urlopen(request, timeout=timeout)
+
+
 class _OllamaResponseTooLarge(Exception):
     """Internal sentinel for bounded inference response reads."""
 
@@ -218,7 +234,7 @@ class OllamaProvider(AIProvider):
             headers=headers,
         )
         try:
-            with urllib.request.urlopen(request, timeout=60) as response:
+            with _open_ollama_request(request, timeout=60, transport_mode=self._transport_mode) as response:
                 # A configured local/self-hosted endpoint must not be able to
                 # force an unbounded body read into this process.
                 raw_response = response.read(MAX_OLLAMA_RESPONSE_BYTES + 1)
@@ -289,7 +305,7 @@ class OllamaProvider(AIProvider):
             headers["Authorization"] = f"Bearer {self._api_key}"
         request = urllib.request.Request(f"{self._host}/api/tags", headers=headers)
         try:
-            with urllib.request.urlopen(request, timeout=1.5) as response:
+            with _open_ollama_request(request, timeout=1.5, transport_mode=self._transport_mode) as response:
                 payload = json.loads(response.read().decode("utf-8"))
         except Exception as exc:
             return {**base, "status": "AI_UNAVAILABLE", "failure_type": type(exc).__name__, "note": "The configured Ollama endpoint could not be reached or returned invalid JSON."}
@@ -391,7 +407,12 @@ def get_provider_status() -> dict:
         }
     if name == "ollama":
         try:
-            return OllamaProvider().availability_status()
+            status = OllamaProvider().availability_status()
+            status["internal_context_allowed"] = (
+                status.get("mode") != "SELF_HOSTED"
+                or settings.HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA
+            )
+            return status
         except Exception as exc:
             return {"provider": name, "mode": "LOCAL", "status": "AI_UNAVAILABLE", "inference_verified": False, "failure_type": type(exc).__name__, "note": "The local Ollama adapter could not be initialized."}
     try:
