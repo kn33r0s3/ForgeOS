@@ -128,3 +128,13 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - **Verification:** exact-current-main test/build execution and the deployed page's visual/functional behavior remain **UNVERIFIED** at this log entry. Source presence is not passing tests or production proof.
 - **Next:** verify current-head frontend tests, typecheck, lint, and deployment; then obtain real consented usability feedback and measure whether visitors complete a concrete next step. Continue independent evaluator and durable-cycle work; this does not satisfy Hami's real-outcome objective.
 
+
+## 2026-10-14 — review and reversal of the generic homepage brief
+
+- **Decision:** removed the browser-only next-step brief from the active homepage and removed the test whose acceptance criterion only asserted that the brief existed. Commits: `ba774da43aad9ea9cdfdc9a1c536267041269d08` and `5cfe8e6a216bf6a1214641226ea27c9c95208cbb`. The original prototype commits remain reachable; no force-push or history deletion was done.
+- **Reason:** it was a static planning template that bypassed Hami's evidence, entity/capability relationships, authorization path, and outcome ledger. It offered a generic output but did not demonstrate a distinct Hami capability or let the system learn whether value was realized. Good local privacy alone did not make it the right product direction.
+- **Correction to earlier entries:** the prior description of the brief builder as the next public-value improvement is superseded. It is not active UI and must not be described as deployed, verified, or validated.
+- **Broader acceptance gate:** public usefulness must emerge from Hami's existing shared substrate: sourced observation → evidence/uncertainty → relevant cross-domain connection → feasible and authorized next action → observed result → updated understanding. Prove the engine path and limitations before designing its public surface. A proposal is not a match, a match is not agreement, a plan is not execution, and execution is not realized value.
+- **Work continuing in parallel:** exact-head CI, persisted scheduled-cycle/effect proof, evaluator truth boundaries, and provenance-preserving cross-climb links remain the higher-priority engineering queue. The latest exact-head workflows must be checked after these commits; no green verdict is implied by the revert.
+- **Reality unchanged:** no user study, public submission, participant, external contact, payment, transaction, verified outcome, or revenue was created by the prototype or its removal. This log corrects direction; it is not commercial evidence.
+
