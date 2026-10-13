@@ -39,9 +39,13 @@ Providers
 
 from __future__ import annotations
 
+import json
+import os
 import re
 import textwrap
+import urllib.request
 from abc import ABC, abstractmethod
+from urllib.parse import urlparse
 
 from app.config import settings
 
@@ -209,6 +213,36 @@ class OllamaProvider(AIProvider):
         })
         return data["response"].strip()
 
+    def availability_status(self) -> dict:
+        """Probe loopback Ollama/model installation without claiming successful inference."""
+        host = urlparse(self._host)
+        base = {
+            "provider": "ollama", "mode": "LOCAL", "model": self._model,
+            "inference_verified": False,
+        }
+        if os.getenv("VERCEL"):
+            return {**base, "status": "AI_UNAVAILABLE", "note": "Local Ollama is not reachable through localhost in this serverless runtime."}
+        if host.scheme != "http" or host.hostname not in {"localhost", "127.0.0.1", "::1"}:
+            return {**base, "status": "AI_UNAVAILABLE", "note": "Only loopback Ollama is supported until an authenticated remote-model transport exists."}
+        request = urllib.request.Request(f"{self._host}/api/tags", headers={"Accept": "application/json"})
+        try:
+            with urllib.request.urlopen(request, timeout=1.5) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except Exception as exc:
+            return {**base, "status": "AI_UNAVAILABLE", "failure_type": type(exc).__name__, "note": "The local Ollama endpoint could not be reached or returned invalid JSON."}
+        if not isinstance(payload, dict) or not isinstance(payload.get("models"), list):
+            return {**base, "status": "AI_UNAVAILABLE", "note": "The local Ollama endpoint returned an unexpected model-list response."}
+        installed = {
+            name for item in payload["models"] if isinstance(item, dict)
+            for name in (item.get("name"), item.get("model"))
+            if isinstance(name, str) and name.strip()
+        }
+        requested = self._model.strip()
+        canonical_requested = requested if ":" in requested else f"{requested}:latest"
+        if requested not in installed and canonical_requested not in installed:
+            return {**base, "status": "MODEL_MISSING", "note": "Ollama responds, but the configured model is not installed on this machine."}
+        return {**base, "status": "MODEL_AVAILABLE", "note": "Ollama responds and the configured model is installed. Actual generation success and answer quality are not yet verified."}
+
 
 class OpenAIProvider(AIProvider):
     """Optional, paid acceleration via the OpenAI API. Used only when
@@ -271,17 +305,22 @@ def get_provider() -> AIProvider:
 
 
 def get_provider_status() -> dict:
-    """Inspectable provider status — never claims intelligence when degraded."""
-    name = settings.AI_PROVIDER
+    """Report provider configuration and reachability without overstating readiness."""
+    name = str(settings.AI_PROVIDER).strip().lower()
     if name == "mock":
-        return {"provider": "mock", "status": "MOCK", "note": "Deterministic templates only. Not production intelligence."}
+        return {"provider": "mock", "mode": "MOCK", "status": "MOCK", "inference_verified": False, "note": "Deterministic templates only. Not real model inference or production intelligence."}
+    if name == "ollama":
+        try:
+            return OllamaProvider().availability_status()
+        except Exception as exc:
+            return {"provider": name, "mode": "LOCAL", "status": "AI_UNAVAILABLE", "inference_verified": False, "failure_type": type(exc).__name__, "note": "The local Ollama adapter could not be initialized."}
     try:
-        p = get_provider()
-        if isinstance(p, MockProvider):
-            return {"provider": name, "status": "AI_UNAVAILABLE", "note": "Configured for real provider but resolved to mock."}
-        return {"provider": name, "status": "READY", "note": "Real provider configured."}
-    except Exception as e:
-        return {"provider": name, "status": "AI_UNAVAILABLE", "note": str(e)}
+        provider = get_provider()
+        if isinstance(provider, MockProvider):
+            return {"provider": name, "mode": "UNKNOWN", "status": "AI_UNAVAILABLE", "inference_verified": False, "note": "The requested real provider did not resolve to a real adapter."}
+        return {"provider": name, "mode": "EXTERNAL", "status": "CONFIGURED", "inference_verified": False, "note": "The provider client is configured; network reachability, inference success and answer quality have not been verified. Paid calls remain subject to separate authorization gates."}
+    except Exception as exc:
+        return {"provider": name, "mode": "EXTERNAL", "status": "AI_UNAVAILABLE", "inference_verified": False, "failure_type": type(exc).__name__, "note": "The configured provider adapter could not be initialized."}
 
 
 def _complete_with_fallback(prompt: str, system: str = "", context: str = "") -> str:
