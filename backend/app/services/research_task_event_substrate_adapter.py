@@ -45,10 +45,54 @@ def sync_research_task_events(
     query = db.query(models.ResearchTaskEvent).filter(~already_projected)
     if task_id is not None:
         query = query.filter(models.ResearchTaskEvent.task_id == task_id)
-    rows = query.order_by(models.ResearchTaskEvent.id.asc()).limit(max(1, int(limit))).all()
+
+    try:
+        batch_limit = max(1, int(limit))
+    except (TypeError, ValueError):
+        batch_limit = 250
+
+    base_count = query.count()
+    task_has_question = (
+        db.query(models.ResearchTask.id)
+        .join(
+            models.ResearchQuestion,
+            models.ResearchQuestion.id == models.ResearchTask.question_id,
+        )
+        .filter(models.ResearchTask.id == models.ResearchTaskEvent.task_id)
+        .correlate(models.ResearchTaskEvent)
+        .exists()
+    )
+    required_types_active = (
+        db.query(models.TypeRegistry.id)
+        .filter(
+            models.TypeRegistry.status == "active",
+            (
+                (models.TypeRegistry.category == "entity_type")
+                & (models.TypeRegistry.type_name == "research_question")
+            )
+            | (
+                (models.TypeRegistry.category == "event_type")
+                & (models.TypeRegistry.type_name == "state_changed")
+            ),
+        )
+        .group_by(models.TypeRegistry.category)
+        .having(__import__("sqlalchemy").func.count(models.TypeRegistry.id) == 2)
+        .exists()
+    )
+    eligible_query = query.filter(task_has_question, required_types_active)
+    eligible_count = eligible_query.count()
+    # Invalid task/question references and inactive required types remain visible
+    # as unresolved, but do not consume the bounded slots meant for valid work.
+    result["unresolved_events"] = max(0, base_count - eligible_count)
+    rows = (
+        eligible_query
+        .order_by(models.ResearchTaskEvent.id.asc())
+        .limit(batch_limit)
+        .all()
+    )
+    result["events_seen"] = result["unresolved_events"] + len(rows)
 
     for source_event in rows:
-        result["events_seen"] += 1
         task = db.get(models.ResearchTask, source_event.task_id)
         question = db.get(
             models.ResearchQuestion,
