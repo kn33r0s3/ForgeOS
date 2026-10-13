@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from sqlalchemy import and_, cast, func, literal, or_, String
 from sqlalchemy.orm import Session
 
 from app import models
@@ -25,10 +26,48 @@ def sync_research_question_sources(db: Session, *, limit: int = 250) -> dict[str
         "entities_created": 0,
         "unresolved_links": 0,
     }
+    batch_limit = max(1, int(limit))
+    # Count dangling explicit FKs separately; don't let them occupy the
+    # bounded work window forever. Valid but not-yet-projected links remain
+    # eligible until an idempotent derived_from relation exists.
+    source_exists_by_field = {}
+    pending_conditions = []
+    for source_field, _entity_type, source_model in _SOURCE_FIELDS:
+        source_id_expr = getattr(models.ResearchQuestion, source_field)
+        source_exists = (
+            db.query(source_model.id)
+            .filter(source_model.id == source_id_expr)
+            .correlate(models.ResearchQuestion)
+            .exists()
+        )
+        source_exists_by_field[source_field] = source_exists
+        unresolved_count = (
+            db.query(func.count(models.ResearchQuestion.id))
+            .filter(source_id_expr.isnot(None), ~source_exists)
+            .scalar()
+        ) or 0
+        result["unresolved_links"] += int(unresolved_count)
+
+        relation_key_expr = (
+            literal(f"legacy-research-question:")
+            + cast(models.ResearchQuestion.id, String)
+            + literal(f":{source_field}:derived-from-v1")
+        )
+        relation_exists = (
+            db.query(models.WorldRelation.id)
+            .filter(models.WorldRelation.idempotency_key == relation_key_expr)
+            .correlate(models.ResearchQuestion)
+            .exists()
+        )
+        pending_conditions.append(
+            and_(source_id_expr.isnot(None), source_exists, ~relation_exists)
+        )
+
     rows = (
         db.query(models.ResearchQuestion)
+        .filter(or_(*pending_conditions))
         .order_by(models.ResearchQuestion.id.asc())
-        .limit(max(1, int(limit)))
+        .limit(batch_limit)
         .all()
     )
     entity_cache: dict[tuple[str, int], models.SubstrateEntity] = {}
@@ -37,7 +76,7 @@ def sync_research_question_sources(db: Session, *, limit: int = 250) -> dict[str
         type_validation.resolve_type(db, "relation_type", "derived_from")
     except type_validation.SubstrateError:
         result["questions_seen"] = len(rows)
-        result["unresolved_links"] = sum(
+        result["unresolved_links"] += sum(
             1 for row in rows
             for field, _entity_type, _model in _SOURCE_FIELDS
             if getattr(row, field, None) is not None
