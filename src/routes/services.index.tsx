@@ -7,7 +7,10 @@ import { PageHero } from "@/components/layout/page-hero";
 import { CtaBand } from "@/components/layout/cta-band";
 import { ProjectInquiryCta } from "@/components/pages/project-inquiry-cta";
 
-export const Route = createFileRoute("/services/")({ component: ServicesPage });
+export const Route = createFileRoute("/services/")({
+  component: ServicesPage,
+  head: () => ({ meta: [{ title: "Services — Hami" }] }),
+});
 
 function ServicesPage() {
   return (

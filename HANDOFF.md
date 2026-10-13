@@ -121,6 +121,17 @@ than a few days old, re-verify before trusting the details.
 - **Verification boundary:** GitHub status for code commit `1d4453cb9af5afd6d4c68cb8ef6df24e32177370` reported Vercel **PENDING** at the last check. The protected Vercel deployment/runtime API returned 403 for the project scope. The main CI cancellation rule was fixed, but no exact-head backend pytest result is exposed through the current connector. Production `/api/health`, durable DB readiness, scheduler invocation, deployed SHA and live flags remain unverified. Do not claim production health or green tests from source presence alone.
 - **Reality boundary unchanged:** no autonomous customer messaging, real conversation, fulfillment, payment, or revenue was created or claimed by this implementation.
 
+**Update 2026-10-14 (loop round 3 — title audit):** A per-route SSR
+title audit (the /domain fix generalized) found two more routes
+falling back to the generic site title: /services and /providers.
+Both gained their own <title> on the existing route definitions
+("Services — Hami", "Verified providers — Hami"). All other audited
+routes already declare distinct titles. Round 2's pictured audit also
+closed: the header/footer fix verified in a real browser; /operations
+and /prototype/inbox inspected in code and confirmed intentional —
+operator-key-gated and browser-local respectively, both covered by
+existing tests; no change made.
+
 **Update 2026-10-14 (public-surface QA fix):** Owner-ordered
 verify-and-fix loop over haminp.vercel.app. A pictured sweep found the
 header's Login and Join Hami CTAs land on a dead end: /login renders

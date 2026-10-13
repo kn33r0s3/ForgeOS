@@ -17,6 +17,7 @@ import {
 type ProviderSearch = { q?: string; provider?: number };
 
 export const Route = createFileRoute("/providers")({
+  head: () => ({ meta: [{ title: "Verified providers — Hami" }] }),
   validateSearch: (search: Record<string, unknown>): ProviderSearch => {
     const q = typeof search.q === "string" && search.q.trim() ? search.q.trim() : undefined;
     const raw = search.provider;
