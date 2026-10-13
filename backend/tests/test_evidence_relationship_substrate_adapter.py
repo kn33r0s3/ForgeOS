@@ -175,7 +175,10 @@ def test_supported_explicit_targets_project_by_reference(db):
 def test_evidence_to_network_connection_uses_existing_projected_relation(db):
     from app.services import network_substrate_adapter
 
-    evidence, claim, _claim_link, _decision = _evidence_claim_link(db)
+    evidence, claim, claim_link, _decision = _evidence_claim_link(db)
+    # This test is specifically about the NetworkConnection endpoint.
+    db.delete(claim_link)
+    db.commit()
     opportunity = models.Opportunity(problem="Network relation target")
     db.add(opportunity)
     db.flush()
@@ -288,7 +291,10 @@ def test_unresolved_old_links_do_not_starve_later_valid_links(db):
     _evidence2, _claim2, ambiguous, _decision2 = _evidence_claim_link(
         db, relation_type="derived_from", other_target=True
     )
-    evidence3, claim3, _link3, _decision3 = _evidence_claim_link(db)
+    evidence3, claim3, link3, _decision3 = _evidence_claim_link(db)
+    # Keep only the intentionally unprojected NetworkConnection link below.
+    db.delete(link3)
+    db.commit()
     connection = models.NetworkConnection(
         left_kind="claim",
         left_id=claim3.id,
