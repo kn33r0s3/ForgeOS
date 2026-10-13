@@ -154,8 +154,11 @@ def test_duplicate_evidence_is_reused_without_duplicate_work(db, monkeypatch):
     assert persisted.results["completion_scope"] == "source_collection_only"
     assert "offline-mock" not in (persisted.tools_used or [])
     assert steps["select_tools"].output_data["reasoning_status"] == "not_invoked"
-    assert steps["evaluate"].status == "pending"
-    assert steps["evaluate"].output_data["status"] == "not_evaluated"
+    # The returned source fixture is metadata-only. A completed collection
+    # must not be mistaken for substantive evaluation or leave the step pending.
+    assert steps["evaluate"].status == "skipped"
+    assert steps["evaluate"].output_data["status"] == "unassessed_metadata_only"
+    assert persisted.results["evaluation_status"] == "unassessed_metadata_only"
 
 
 def test_insufficient_evidence_remains_resumable(db, monkeypatch):
