@@ -82,6 +82,12 @@ def test_claim_state_cannot_be_promoted_by_claim_creation_argument(db):
             claim.statement,
             epistemic_state="contested",
         )
+    with pytest.raises(ValueError, match="matching evidence relationship"):
+        evidence_graph.set_claim_state(db, claim, "supported")
+    with pytest.raises(ValueError, match="dedicated verified-outcome"):
+        evidence_graph.set_claim_state(db, claim, "verified")
+    with pytest.raises(ValueError, match="cannot be downgraded"):
+        evidence_graph.set_claim_state(db, claim, "observed")
     db.refresh(claim)
     assert claim.epistemic_state == "observed"
 
