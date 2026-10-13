@@ -111,6 +111,48 @@ def test_provider_and_listing_project_without_copying_authority_or_visibility(db
     assert all(event["payload_copied"] is False for event in source_snapshots)
 
 
+def test_unprojected_public_services_do_not_starve_behind_old_rows(db):
+    older_provider, older_listing = _provider_and_listing(db)
+    first = adapter.sync_public_services(db, limit=1)
+    assert first["provider_entities_created"] == 1
+    assert first["listing_entities_created"] == 1
+    assert world_graph.find_canonical_entity(
+        db, "provider", older_provider.id
+    ) is not None
+    assert world_graph.find_canonical_entity(
+        db, "service_listing", older_listing.id
+    ) is not None
+
+    second_provider, second_listing = _provider_and_listing(db)
+    third_provider, third_listing = _provider_and_listing(db)
+
+    second = adapter.sync_public_services(db, limit=1)
+    assert second["provider_entities_created"] == 1
+    assert second["listing_entities_created"] == 1
+    assert world_graph.find_canonical_entity(
+        db, "provider", third_provider.id
+    ) is not None
+    assert world_graph.find_canonical_entity(
+        db, "service_listing", third_listing.id
+    ) is not None
+    assert world_graph.find_canonical_entity(
+        db, "provider", second_provider.id
+    ) is None
+    assert world_graph.find_canonical_entity(
+        db, "service_listing", second_listing.id
+    ) is None
+
+    third = adapter.sync_public_services(db, limit=1)
+    assert third["provider_entities_created"] == 1
+    assert third["listing_entities_created"] == 1
+    assert world_graph.find_canonical_entity(
+        db, "provider", second_provider.id
+    ) is not None
+    assert world_graph.find_canonical_entity(
+        db, "service_listing", second_listing.id
+    ) is not None
+
+
 def test_public_feed_links_visible_service_to_substrate_relation_and_evidence(db):
     provider, listing = _provider_and_listing(db, visible=True)
     adapter.sync_public_services(db)
