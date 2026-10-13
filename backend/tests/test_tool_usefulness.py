@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 
 from app import models
 from app.services import collector_runner, tool_usefulness, research_task_engine
@@ -76,6 +77,16 @@ def test_successful_useful_source_usage_is_persisted(db, monkeypatch):
         objective=question.question,
     )
     monkeypatch.setitem(collector_runner.COLLECTORS, "useful-source", UsefulCollector)
+    monkeypatch.setattr(
+        research_task_engine,
+        "evaluate_claim_after_research",
+        lambda *_args: {
+            "comparison": SimpleNamespace(outcome="agreement"),
+            "judgments": [
+                SimpleNamespace(status="completed", conclusion_label="positive")
+            ],
+        },
+    )
 
     result = collector_runner.execute_task(db, task)
 
@@ -88,6 +99,8 @@ def test_successful_useful_source_usage_is_persisted(db, monkeypatch):
     assert tool.novel_result_count == 1
     assert source.useful_evidence_count == 1
     assert source.contradicted_claim_count == 0
+    assert tool.verified_result_count == 1
+    assert source.corroborated_evidence_count == 1
     assert tool.cost is None
 
 
@@ -202,3 +215,44 @@ def test_registry_uses_learned_performance_and_deterministic_exploration(db):
     key = next(str(i) for i in range(1000) if int(__import__("hashlib").sha256(str(i).encode()).hexdigest()[:8], 16) % 5 == 0)
     explored = registry.select(category="collection", capability="collect", db=db, explore=True, exploration_key=key)
     assert explored.tool.capability.name in {"alpha", "beta"}
+
+
+
+def test_unanimous_negative_judgment_does_not_count_as_verified_evidence(db, monkeypatch):
+    question = models.ResearchQuestion(
+        question="Does the repair workflow have paying customers?"
+    )
+    db.add(question)
+    db.commit()
+    db.refresh(question)
+    task = research_task_engine.create_task(
+        db,
+        question_id=question.id,
+        source="useful-source",
+        query="negative-evaluation-metric-regression",
+        objective=question.question,
+    )
+    monkeypatch.setitem(collector_runner.COLLECTORS, "useful-source", UsefulCollector)
+    monkeypatch.setattr(
+        research_task_engine,
+        "evaluate_claim_after_research",
+        lambda *_args: {
+            "comparison": SimpleNamespace(outcome="agreement"),
+            "judgments": [
+                SimpleNamespace(status="completed", conclusion_label="negative"),
+                SimpleNamespace(status="completed", conclusion_label="negative"),
+            ],
+        },
+    )
+
+    result = collector_runner.execute_task(db, task)
+
+    assert result["status"] == "completed"
+    tool = db.query(models.ToolUsageEvent).filter_by(
+        tool_name="collector:useful-source"
+    ).one()
+    source = db.query(models.SourceUsageEvent).filter_by(source="useful-source").one()
+    assert tool.success is True
+    assert tool.result_count == 1
+    assert tool.verified_result_count == 0
+    assert source.corroborated_evidence_count == 0
