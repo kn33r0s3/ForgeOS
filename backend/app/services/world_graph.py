@@ -2183,7 +2183,11 @@ def _is_simulated_provenance(raw: str) -> bool:
         marker_words = {
             "fixture", "mock", "mocked", "simulated", "simulation", "synthetic",
         }
-        negators = {"not", "no", "never", "without", "isnt", "wasnt", "doesnt", "dont"}
+        negators = {
+            "not", "no", "never", "without",
+            "isnt", "wasnt", "doesnt", "dont",
+            "isn", "wasn", "doesn", "don",
+        }
         for index, token in enumerate(tokens):
             is_marker = token in marker_words or (
                 token in {"data", "only"}
@@ -2221,7 +2225,8 @@ def _is_simulated_provenance(raw: str) -> bool:
     }
     simulated_values = {
         "test", "test_fixture", "test_data", "test_only", "fixture",
-        "synthetic", "simulated", "simulation", "mock", "demo", "seed", "hypothesis",
+        "synthetic", "simulated", "simulation", "mock", "mocked", "fake",
+        "demo", "seed", "hypothesis",
     }
     true_flags = {"true", "yes", "1", "enabled", "on"}
 
