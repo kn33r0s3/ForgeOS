@@ -83,6 +83,15 @@ def sync_evidence_relationships(
         .correlate(link_model)
         .exists()
     )
+    evidence_entity_type_active = (
+        db.query(models.TypeRegistry.id)
+        .filter(
+            models.TypeRegistry.category == "entity_type",
+            models.TypeRegistry.type_name == "evidence_record",
+            models.TypeRegistry.status == "active",
+        )
+        .exists()
+    )
     target_conditions = []
     for field in _EXPLICIT_TARGET_FIELDS:
         field_expr = getattr(link_model, field)
@@ -92,6 +101,7 @@ def sync_evidence_relationships(
             if other_field != field
         ]
         if field == "network_connection_id":
+            target_type = "relation"
             target_exists = (
                 db.query(models.NetworkConnection.id)
                 .join(
@@ -103,19 +113,29 @@ def sync_evidence_relationships(
                 .exists()
             )
         else:
-            target_model = _SUPPORTED_TARGETS[field][1]
+            target_type, target_model = _SUPPORTED_TARGETS[field]
             target_exists = (
                 db.query(target_model.id)
                 .filter(target_model.id == field_expr)
                 .correlate(link_model)
                 .exists()
             )
+        active_target_type = (
+            db.query(models.TypeRegistry.id)
+            .filter(
+                models.TypeRegistry.category == "entity_type",
+                models.TypeRegistry.type_name == target_type,
+                models.TypeRegistry.status == "active",
+            )
+            .exists()
+        )
         target_conditions.append(
-            and_(field_expr.isnot(None), *other_targets_empty, target_exists)
+            and_(field_expr.isnot(None), *other_targets_empty, target_exists, active_target_type)
         )
 
     eligible_query = query.filter(
         evidence_exists,
+        evidence_entity_type_active,
         active_relation_type,
         or_(*target_conditions),
     )
