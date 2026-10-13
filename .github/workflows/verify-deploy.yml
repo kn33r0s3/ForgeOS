@@ -90,30 +90,66 @@ jobs:
           FORGE_API_KEY: ${{ secrets.FORGE_API_KEY }}
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
 
-      - name: Get deployed SHA
+      - name: Wait for exact tested SHA to reach production
         id: sha
         env:
           FORGE_API_KEY: ${{ secrets.FORGE_API_KEY }}
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
         run: |
-          set -o pipefail
-          DEPLOYED_SHA="$(curl --connect-timeout 10 --max-time 30 -fsS "$BACKEND_URL/api/forge-bot/owner/readiness" \
-            -H "X-API-Key: $FORGE_API_KEY" \
-            | node -e '
+          set -uo pipefail
+          # Production deployment can legitimately trail a push. Poll for the
+          # exact tested commit instead of recording an immediate false failure.
+          # The window is bounded; on timeout we record the last real SHA and
+          # fail closed in the existing result step.
+          MAX_ATTEMPTS=10
+          DELAY_SECONDS=15
+          LAST_VALID_SHA=""
+          DEPLOYMENT_MATCH=false
+
+          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+            RESPONSE="$(curl --connect-timeout 5 --max-time 10 -fsS \
+              "$BACKEND_URL/api/forge-bot/owner/readiness" \
+              -H "X-API-Key: $FORGE_API_KEY" 2>/dev/null || true)"
+            DEPLOYED_SHA="$(printf '%s' "$RESPONSE" | node -e '
               let body = "";
               process.stdin.setEncoding("utf8");
               process.stdin.on("data", chunk => body += chunk);
               process.stdin.on("end", () => {
-                const sha = JSON.parse(body).deployed_commit;
-                if (typeof sha !== "string" || !/^[0-9a-f]{7,40}$/i.test(sha)) {
-                  console.error("Owner readiness did not provide a valid deployed commit.");
-                  process.exitCode = 1;
-                  return;
-                }
-                process.stdout.write(sha);
+                try {
+                  const sha = JSON.parse(body).deployed_commit;
+                  if (typeof sha === "string" && /^[0-9a-f]{7,40}$/i.test(sha)) {
+                    process.stdout.write(sha.toLowerCase());
+                  }
+                } catch {}
               });
             ')"
-          echo "sha=$DEPLOYED_SHA" >> "$GITHUB_OUTPUT"
+
+            if [ -n "$DEPLOYED_SHA" ]; then
+              LAST_VALID_SHA="$DEPLOYED_SHA"
+              if [ "$DEPLOYED_SHA" = "$GITHUB_SHA" ]; then
+                DEPLOYMENT_MATCH=true
+                echo "Production reports the exact tested commit on attempt $attempt."
+                break
+              fi
+              echo "Production still reports a different commit on attempt $attempt."
+            else
+              echo "::warning::Owner readiness did not return a valid deployed commit on attempt $attempt."
+            fi
+
+            if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
+              sleep "$DELAY_SECONDS"
+            fi
+          done
+
+          if [ -z "$LAST_VALID_SHA" ]; then
+            echo "::error::Could not read a valid deployed commit after $MAX_ATTEMPTS attempts."
+            exit 1
+          fi
+          if [ "$DEPLOYMENT_MATCH" != "true" ]; then
+            echo "::warning::Production did not reach the exact tested commit within the bounded wait."
+          fi
+          echo "sha=$LAST_VALID_SHA" >> "$GITHUB_OUTPUT"
+          echo "deployment_match=$DEPLOYMENT_MATCH" >> "$GITHUB_OUTPUT"
 
       - name: Probe protected owner cycle read
         id: owner_read
@@ -159,11 +195,9 @@ jobs:
           TESTS_PASSED: ${{ steps.tests.outputs.passed }}
           OWNER_READ_PASSED: ${{ steps.owner_read.outputs.passed }}
         run: |
-          DEPLOYMENT_MATCH=false
-          if [ "$DEPLOYED_SHA" = "$GITHUB_SHA" ]; then
-            DEPLOYMENT_MATCH=true
-          else
-            echo "::warning::Production SHA does not match the tested push."
+          DEPLOYMENT_MATCH="${{ steps.sha.outputs.deployment_match }}"
+          if [ "$DEPLOYMENT_MATCH" != "true" ]; then
+            echo "::warning::Production SHA does not match the tested push after bounded deployment wait."
           fi
 
           if [ "$TESTS_PASSED" = "true" ] && [ "$DEPLOYMENT_MATCH" = "true" ] && [ "$OWNER_READ_PASSED" = "true" ]; then
