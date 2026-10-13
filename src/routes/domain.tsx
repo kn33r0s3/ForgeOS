@@ -77,6 +77,8 @@ function DomainPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [apiUnavailable, setApiUnavailable] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPosting, setIsPosting] = useState(false);
+  const [tokenCopied, setTokenCopied] = useState(false);
   const [chosenProvider, setChosenProvider] = useState<number | null>(null);
   const [requesterName, setRequesterName] = useState("");
   const [requestedService, setRequestedService] = useState("");
@@ -117,29 +119,51 @@ function DomainPage() {
 
   async function postRecord(event: React.FormEvent) {
     event.preventDefault();
+    if (isPosting) return;
+    setIsPosting(true);
     setMessage(null);
-    const result = await createPublicDomainRecord({
-      kind,
-      title,
-      detail,
-      city: city || null,
-      stated_price: price || null,
-      terms: hasAgreementTerms(terms) ? terms : null,
-    });
-    if (!result) {
-      setMessage("The post was not recorded.");
-      return;
+    try {
+      const result = await createPublicDomainRecord({
+        kind,
+        title,
+        detail,
+        city: city || null,
+        stated_price: price || null,
+        terms: hasAgreementTerms(terms) ? terms : null,
+      });
+      if (!result) {
+        setMessage("Hami could not confirm the post was recorded. Check the board before retrying; a timed-out request may still have reached the server.");
+        return;
+      }
+      setCreatedId(result.id);
+      setToken(result.close_token);
+      setTokenCopied(false);
+      setTitle("");
+      setDetail("");
+      setPrice("");
+      setTerms({});
+      setMessage(`Proposal #${result.id} was recorded. No one was contacted and no agreement or payment was created.`);
+      // Reads after a write must reflect it, so they bypass the short read cache.
+      setEvents(await loadPublicDomainEvents(result.id, { fresh: true }));
+      setTrust(await loadPublicTrust("domain_record", result.id, { fresh: true }));
+      await load({ fresh: true });
+    } catch {
+      setMessage("Hami could not confirm the post was recorded. Check the board before retrying to avoid a duplicate.");
+    } finally {
+      setIsPosting(false);
     }
-    setCreatedId(result.id);
-    setToken(result.close_token);
-    setTitle("");
-    setDetail("");
-    setPrice("");
-    setTerms({});
-    // Reads after a write must reflect it, so they bypass the short read cache.
-    setEvents(await loadPublicDomainEvents(result.id, { fresh: true }));
-    setTrust(await loadPublicTrust("domain_record", result.id, { fresh: true }));
-    await load({ fresh: true });
+  }
+
+  async function copyCloseToken() {
+    if (!token) return;
+    try {
+      await navigator.clipboard.writeText(token);
+      setTokenCopied(true);
+      setMessage("Close token copied. Save it securely; Hami cannot recover it later.");
+    } catch {
+      setTokenCopied(false);
+      setMessage("Clipboard access is unavailable. Select and copy the close token shown above before leaving this page.");
+    }
   }
 
   async function closeRecord(event: React.FormEvent) {
@@ -368,7 +392,7 @@ function DomainPage() {
           </section>
         </div>
 
-        <div className="space-y-5 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)]">
+        <div className="space-y-5">
           <form id="post-form" onSubmit={postRecord} className="card card-accent scroll-mt-28 space-y-3 p-5 sm:p-6">
             <h2 className="flex items-center gap-2 font-display text-2xl tracking-tight text-ink"><PenLine className="size-5 text-accent" aria-hidden="true" /> Post a need, offer, or trade</h2>
             <p className="text-xs leading-5 text-muted">
@@ -386,20 +410,20 @@ function DomainPage() {
             </label>
             <label className="block">
               <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Title</span>
-              <input value={title} onChange={(event) => setTitle(event.target.value)} required placeholder="Title" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+              <input value={title} onChange={(event) => setTitle(event.target.value)} required maxLength={160} placeholder="Title (max 160 characters)" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
             </label>
             <label className="block">
               <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Detail</span>
-              <textarea value={detail} onChange={(event) => setDetail(event.target.value)} required placeholder="What is actually being posted" className="min-h-28 w-full rounded-card border border-line bg-paper px-4 py-3 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+              <textarea value={detail} onChange={(event) => setDetail(event.target.value)} required maxLength={5000} placeholder="What is actually being posted (max 5,000 characters)" className="min-h-28 w-full rounded-card border border-line bg-paper px-4 py-3 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
             </label>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
               <label className="block">
                 <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">City</span>
-                <input value={city} onChange={(event) => setCity(event.target.value)} placeholder="City, if stated" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+                <input value={city} onChange={(event) => setCity(event.target.value)} maxLength={100} placeholder="City, if stated (max 100 characters)" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Stated price</span>
-                <input value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Stated price, if any" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+                <input value={price} onChange={(event) => setPrice(event.target.value)} maxLength={120} placeholder="Stated price, if any (max 120 characters)" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
                 <span className="mt-1 block text-xs text-dim">A quote is not a confirmed payment. Keep this consistent with the agreement amount below.</span>
               </label>
             </div>
@@ -410,7 +434,7 @@ function DomainPage() {
               </p>
               <label className="mt-3 block">
                 <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Contract amount (whole NPR)</span>
-                <input type="number" min={0} step={1} inputMode="numeric" value={terms.amount_npr ?? ""} onChange={(event) => setTerms((current) => ({ ...current, amount_npr: event.target.value.trim() === "" ? undefined : Number(event.target.value) }))} placeholder="0 for a non-cash exchange" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+                <input type="number" min={0} step={1} inputMode="numeric" value={terms.amount_npr ?? ""} max={1000000000000} onChange={(event) => setTerms((current) => ({ ...current, amount_npr: event.target.value.trim() === "" ? undefined : Number(event.target.value) }))} placeholder="0 for a non-cash exchange" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
               </label>
               <div className="mt-3 space-y-3">
                 {AGREEMENT_FIELDS.map((field) => (
@@ -422,12 +446,13 @@ function DomainPage() {
               </div>
             </details>
             <p className="text-xs leading-5 text-muted">A match is a suggestion, not agreement. Do not post private contact details. Both sides should understand the terms before any work, handover, or payment.</p>
-            <button type="submit" className="btn-wipe btn-primary inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-card border-2 border-black/70 bg-accent px-5 text-sm font-extrabold text-black hover:text-accent focus-visible:text-accent">Post in our records</button>
+            <button type="submit" disabled={isPosting} aria-busy={isPosting} className="btn-wipe btn-primary inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-card border-2 border-black/70 bg-accent px-5 text-sm font-extrabold text-black hover:text-accent focus-visible:text-accent disabled:cursor-wait disabled:opacity-60">{isPosting ? "Posting proposal…" : "Post proposal"}</button>
           </form>
 
           {token && createdId ? (
             <div className="card fade-in space-y-4 p-5 text-sm text-ink" role="status">
-              <p className="flex items-start gap-2"><KeyRound className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" /><span>Record #{createdId}. Close token, shown once: <code className="break-all rounded bg-paper px-1.5 py-0.5 font-mono text-accent">{token}</code></span></p>
+              <p className="flex items-start gap-2"><KeyRound className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" /><span>Record #{createdId}. Save this one-time close token before leaving: <code className="break-all rounded bg-paper px-1.5 py-0.5 font-mono text-accent">{token}</code></span></p>
+              <button type="button" onClick={() => void copyCloseToken()} className="min-h-10 rounded-card border border-line px-3 text-sm font-semibold hover:border-accent">{tokenCopied ? "Token copied" : "Copy close token"}</button>
               <p className="text-muted">Closing records what happened. It does not move money. A dispute names no winner.</p>
               <form onSubmit={closeRecord} className="space-y-3">
                 <label className="block">

@@ -1491,9 +1491,9 @@ class DomainTerms(BaseModel):
 class DomainRecordCreate(BaseModel):
     kind: Literal["job", "offer", "trade"]
     title: str = Field(..., min_length=1, max_length=160)
-    detail: str = Field(..., min_length=1)
-    city: Optional[str] = None
-    stated_price: Optional[str] = None
+    detail: str = Field(..., min_length=1, max_length=5000)
+    city: Optional[str] = Field(default=None, max_length=100)
+    stated_price: Optional[str] = Field(default=None, max_length=120)
     terms: Optional[DomainTerms] = None
 
 

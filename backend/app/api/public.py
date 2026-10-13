@@ -790,50 +790,87 @@ _TERM_KEYS = (
 )
 
 
-def terms_complete(raw: str | None) -> bool:
+def _public_domain_text(value: str | None, *, max_length: int) -> str | None:
+    from app.services.public_feed import sanitize_public_text
+
+    safe = sanitize_public_text(value)
+    if safe is None:
+        return None
+    if len(safe) <= max_length:
+        return safe
+    return safe[: max_length - 1].rstrip() + "…"
+
+
+def _public_domain_terms(raw: str | None) -> tuple[dict[str, str | int] | None, bool]:
+    """Whitelist and sanitize persisted terms once for reads and acceptance.
+
+    Old rows can predate current field/amount limits, so malformed or oversized
+    terms are omitted rather than allowed to break a public list response.
+    Redacted required terms remain visible as redactions but cannot satisfy the
+    acceptance contract.
+    """
     if not raw:
-        return False
+        return None, False
     try:
         data = json.loads(raw)
-    except json.JSONDecodeError:
-        return False
+    except (TypeError, ValueError):
+        return None, False
     if not isinstance(data, dict):
-        return False
+        return None, False
+
+    projected: dict[str, str | int] = {}
     amount = data.get("amount_npr")
-    if not isinstance(amount, int) or isinstance(amount, bool) or amount < 0:
-        return False
-    return all(str(data.get(key) or "").strip() for key in _TERM_KEYS)
+    valid_amount = (
+        isinstance(amount, int)
+        and not isinstance(amount, bool)
+        and 0 <= amount <= 1_000_000_000_000
+    )
+    if valid_amount:
+        projected["amount_npr"] = amount
+
+    from app.services.public_feed import sanitize_public_text
+
+    for key in _TERM_KEYS:
+        value = data.get(key)
+        if not isinstance(value, str):
+            continue
+        raw_value = value.strip()
+        if not raw_value or len(raw_value) > 1000:
+            continue
+        safe_value = (sanitize_public_text(raw_value) or "").strip()
+        if safe_value and len(safe_value) <= 1000:
+            projected[key] = safe_value
+
+    complete = valid_amount and all(
+        key in projected
+        and "[redacted-email]" not in str(projected[key]).lower()
+        and "[redacted-phone]" not in str(projected[key]).lower()
+        for key in _TERM_KEYS
+    )
+    return (projected or None), complete
+
+
+def terms_complete(raw: str | None) -> bool:
+    """A contract is complete only when all bounded, public-safe fields survive."""
+    return _public_domain_terms(raw)[1]
 
 
 def _domain_out(row: models.DomainRecord) -> schemas.DomainRecordOut:
-    from app.services.public_feed import sanitize_public_text
-
-    public_terms = None
-    try:
-        raw_terms = json.loads(row.terms or "")
-    except (TypeError, ValueError, json.JSONDecodeError):
-        raw_terms = None
-    if isinstance(raw_terms, dict):
-        projected: dict[str, str | int] = {}
-        amount = raw_terms.get("amount_npr")
-        if isinstance(amount, int) and not isinstance(amount, bool) and amount >= 0:
-            projected["amount_npr"] = amount
-        for key in _TERM_KEYS:
-            value = raw_terms.get(key)
-            if isinstance(value, str) and value.strip():
-                projected[key] = sanitize_public_text(value.strip()) or ""
-        if projected:
-            public_terms = schemas.DomainTerms.model_validate(projected)
-
+    public_terms_data, contract_complete = _public_domain_terms(row.terms)
+    public_terms = (
+        schemas.DomainTerms.model_validate(public_terms_data)
+        if public_terms_data is not None
+        else None
+    )
     return schemas.DomainRecordOut(
         id=row.id,
         kind=row.kind,
-        title=sanitize_public_text(row.title) or "",
-        detail=sanitize_public_text(row.detail) or "",
-        city=sanitize_public_text(row.city),
-        stated_price=sanitize_public_text(row.stated_price),
+        title=_public_domain_text(row.title, max_length=160) or "",
+        detail=_public_domain_text(row.detail, max_length=5000) or "",
+        city=_public_domain_text(row.city, max_length=100),
+        stated_price=_public_domain_text(row.stated_price, max_length=120),
         status=row.status,
-        terms_complete=terms_complete(row.terms),
+        terms_complete=contract_complete,
         terms=public_terms,
         created_at=row.created_at,
     )
@@ -880,6 +917,12 @@ def create_domain_record(
             status_code=422,
             detail="title and detail must contain text after contact-detail redaction.",
         )
+    submitted_terms = (
+        json.dumps(body.terms.model_dump(exclude_none=True), ensure_ascii=False)
+        if body.terms
+        else None
+    )
+    safe_terms, _ = _public_domain_terms(submitted_terms)
     token = secrets.token_urlsafe(24)
     row = models.DomainRecord(
         kind=body.kind,
@@ -887,7 +930,7 @@ def create_domain_record(
         detail=detail,
         city=city,
         stated_price=sanitize_public_text((body.stated_price or "").strip()) or None,
-        terms=json.dumps(body.terms.model_dump(exclude_none=True), ensure_ascii=False) if body.terms else None,
+        terms=json.dumps(safe_terms, ensure_ascii=False, sort_keys=True) if safe_terms else None,
         status="open",
         close_token_hash=hashlib.sha256(token.encode()).hexdigest(),
     )

@@ -1,4 +1,5 @@
 import asyncio
+import json
 from datetime import datetime, timezone
 import sqlite3
 
@@ -2332,7 +2333,7 @@ def test_public_booking_request_fails_before_writing_when_status_signing_key_is_
 def test_public_offer_exposes_sanitized_complete_terms(client_with_db):
     terms = {
         "amount_npr": 5000,
-        "requested": "One laptop diagnostic; contact owner@example.com",
+        "requested": "One laptop diagnostic with a written checklist",
         "who_can_submit": "The laptop owner or their authorized representative",
         "success": "The agreed diagnostic checklist is completed and explained",
         "evidence_required": "Both parties review the completed checklist",
@@ -2387,3 +2388,65 @@ def test_partial_public_offer_terms_stay_incomplete(client_with_db):
     body = created.json()
     assert body["terms_complete"] is False
     assert body["terms"]["requested"] == "One hour of algebra tutoring"
+
+
+
+def test_public_offer_redacts_contract_terms_before_storage(client_with_db, db):
+    terms = {
+        "amount_npr": 5000,
+        "requested": "Laptop diagnostic; contact owner@example.com",
+        "who_can_submit": "The laptop owner",
+        "success": "The written diagnostic checklist is delivered",
+        "evidence_required": "Both sides review the checklist",
+        "ownership": "The customer keeps the laptop and all personal data",
+        "payment_due": "NPR 5000 after delivery",
+        "partial": "No partial charge without prior agreement",
+        "rejection": "Either side may dispute the result",
+        "resale": "No customer data is copied or resold",
+        "costs": "Parts and transport require prior agreement",
+    }
+    response = client_with_db.post(
+        "/public/domain",
+        json={
+            "kind": "offer",
+            "title": "Laptop diagnostic proposal",
+            "detail": "A bounded diagnostic with a written checklist.",
+            "terms": terms,
+        },
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["terms_complete"] is False
+    assert "[redacted-email]" in body["terms"]["requested"]
+    row = db.get(models.DomainRecord, body["id"])
+    assert row is not None
+    assert "owner@example.com" not in (row.terms or "")
+    assert "[redacted-email]" in (row.terms or "")
+    # The same projection controls what may be accepted, not just what is displayed.
+    from app.api.public import terms_complete
+    assert not terms_complete(row.terms)
+
+
+def test_legacy_domain_records_cannot_break_safe_public_projection(client_with_db, db):
+    row = models.DomainRecord(
+        kind="offer",
+        title="T" * 400,
+        detail="D" * 7000,
+        city="C" * 300,
+        stated_price="P" * 400,
+        terms=json.dumps({"amount_npr": 1_000_000_000_001, "requested": "R" * 1500}),
+        close_token_hash="0" * 64,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+
+    response = client_with_db.get("/public/domain")
+    assert response.status_code == 200, response.text
+    item = next(value for value in response.json() if value["id"] == row.id)
+    assert len(item["title"]) == 160
+    assert len(item["detail"]) == 5000
+    assert len(item["city"]) == 100
+    assert len(item["stated_price"]) == 120
+    assert item["terms_complete"] is False
+    assert item["terms"] is None
