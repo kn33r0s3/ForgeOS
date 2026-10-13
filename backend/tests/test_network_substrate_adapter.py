@@ -294,6 +294,52 @@ def test_network_projection_survives_database_restart_and_remains_idempotent(tmp
     engine.dispose()
 
 
+def test_network_dependency_cycle_is_reported_not_left_silent(db):
+    _need, provider = _endpoints(db)
+    first = models.NetworkConnection(
+        left_kind="network_connection",
+        left_id=1,
+        right_kind="provider",
+        right_id=provider.id,
+        relation_type="offered_by",
+        direction="directed",
+        epistemic_state="hypothesized",
+        state="candidate",
+        reason="First side of a deliberately cyclic dependency.",
+        agreement_gap="Neither connection has a projectable root.",
+    )
+    second = models.NetworkConnection(
+        left_kind="network_connection",
+        left_id=1,
+        right_kind="provider",
+        right_id=provider.id,
+        relation_type="offered_by",
+        direction="directed",
+        epistemic_state="hypothesized",
+        state="candidate",
+        reason="Second side of a deliberately cyclic dependency.",
+        agreement_gap="Neither connection has a projectable root.",
+    )
+    db.add_all([first, second])
+    db.flush()
+    first.left_id = second.id
+    second.left_id = first.id
+    db.commit()
+
+    result = network_substrate_adapter.sync_network_connections(db, limit=2)
+
+    assert result["projected_connections"] == 0
+    assert result["unresolved_connections"] == 2
+    unresolved = db.query(models.WorldEvent).filter_by(
+        event_type="network_relation_unresolved",
+    ).all()
+    assert len(unresolved) == 2
+    assert all(
+        "possible cycle" in json.loads(event.payload)["reason"]
+        for event in unresolved
+    )
+
+
 def test_canonical_cycle_projects_existing_network_connections(db):
     from app.services import forge_loop
 
