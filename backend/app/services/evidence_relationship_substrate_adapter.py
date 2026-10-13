@@ -23,9 +23,9 @@ _EXPLICIT_TARGET_FIELDS = (
     "network_connection_id",
 )
 
-# These targets already have active canonical adapters. NetworkConnection is
-# represented as a WorldRelation by network_substrate_adapter, so it remains
-# deliberately unresolved here rather than being duplicated as an entity.
+# Ordinary targets are existing canonical entity types. NetworkConnection is
+# special: its canonical target is the already-projected WorldRelation, reached
+# through NetworkConnection.relation_id (never by guessing or copying endpoints).
 _SUPPORTED_TARGETS: dict[str, tuple[str, type]] = {
     "claim_id": ("claim", models.Claim),
     "opportunity_id": ("opportunity", models.Opportunity),
@@ -74,17 +74,35 @@ def sync_evidence_relationships(
         if len(target_values) != 1 or not source.evidence_id:
             result["unresolved_records"] += 1
             continue
-        target_field, target_id = target_values[0]
-        target_spec = _SUPPORTED_TARGETS.get(target_field)
-        if target_spec is None:
-            # Includes NetworkConnection until evidence-to-relation can be
-            # expressed without pretending a relation is an entity endpoint.
+        target_field, source_target_id = target_values[0]
+        if (
+            not isinstance(source_target_id, int)
+            or isinstance(source_target_id, bool)
+            or source_target_id < 1
+        ):
             result["unresolved_records"] += 1
             continue
-        target_type, target_model = target_spec
-        if not isinstance(target_id, int) or isinstance(target_id, bool) or target_id < 1:
-            result["unresolved_records"] += 1
-            continue
+
+        extra_target_refs: dict[str, dict[str, int | str]] = {}
+        if target_field == "network_connection_id":
+            connection = db.get(models.NetworkConnection, source_target_id)
+            if connection is None or connection.relation_id is None:
+                result["unresolved_records"] += 1
+                continue
+            target_type = "relation"
+            target_model = models.WorldRelation
+            target_id = connection.relation_id
+            extra_target_refs["network_connection_ref"] = {
+                "table": "network_connections",
+                "id": connection.id,
+            }
+        else:
+            target_spec = _SUPPORTED_TARGETS.get(target_field)
+            if target_spec is None:
+                result["unresolved_records"] += 1
+                continue
+            target_type, target_model = target_spec
+            target_id = source_target_id
         try:
             type_validation.resolve_type(db, "relation_type", source.relation_type)
         except type_validation.SubstrateError:
@@ -116,6 +134,7 @@ def sync_evidence_relationships(
                     "source_ref": {"table": "evidence_relationships", "id": source.id},
                     "evidence_ref": {"table": "evidence", "id": evidence.id},
                     f"{target_type}_ref": {"table": target_model.__tablename__, "id": target_id},
+                    **extra_target_refs,
                     "payload_copied": False,
                 },
                 direction="directed",
