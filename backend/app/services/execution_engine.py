@@ -406,6 +406,18 @@ def grant_execution_eligibility(db: Session, experiment_id: int, granted_by: str
             return None
 
     # --- Authorization basis ---
+    from app.services import decision_rights
+
+    rights = decision_rights.entry_for(grant_action_type)
+    if (
+        rights.get("requires_standing_authorization")
+        and sa_auth_id is None
+        and action.approved_at is None
+    ):
+        # Direct policy ALLOW is not a substitute for a recipient-specific,
+        # active, bounded authorization. Real dispatch still rechecks consent.
+        return None
+
     if sa_auth_id is not None:
         # Standing-authorized path: the authorization must still be
         # valid RIGHT NOW, not just at proposal time.

@@ -1085,8 +1085,11 @@ def _policy_allowing_outreach(db, **overrides):
 
 
 def _direct_allow_experiment(db, policy=None, opportunity=None, cost=10.0):
-    """Create an Experiment via create_action that gets direct policy ALLOW
-    (no SA, no owner approval needed)."""
+    """Create an internal research Experiment with direct policy ALLOW.
+
+    Consented follow-up is intentionally different: it always requires a
+    matching standing authorization or an explicit owner approval.
+    """
     from app.services import execution_engine
     if policy is None:
         policy = _policy_allowing_outreach(db)
@@ -1095,7 +1098,7 @@ def _direct_allow_experiment(db, policy=None, opportunity=None, cost=10.0):
     exp = execution_engine.create_action(
         db,
         opportunity_id=opportunity.id,
-        action_type="follow_up",
+        action_type="research",
         description="direct allow revalidation test",
         estimated_cost=cost,
         data_scope="REAL",
@@ -1139,8 +1142,8 @@ def test_revalidation_disallowed_action_type_fails(db):
     exp, policy, _ = _direct_allow_experiment(db)
     assert exp.policy_decision == "allow"
 
-    # Remove outreach from allowed types AFTER proposal.
-    policy.allowed_action_types = "research"
+    # Remove research from allowed types AFTER proposal.
+    policy.allowed_action_types = "follow_up"
     db.commit()
 
     granted = execution_engine.grant_execution_eligibility(db, exp.id)
@@ -1890,6 +1893,7 @@ def test_decision_rights_registry_is_conservative_and_unknown_types_fail_closed(
     assert decision_rights.enforcement_for("outreach")["requires_owner_approval"] is True
     follow_up = decision_rights.enforcement_for("follow_up")
     assert follow_up["right"] == decision_rights.BOT_THEN_TELL_OWNER
+    assert follow_up["requires_standing_authorization"] is True
     assert follow_up["requires_owner_approval"] is True  # active stage is still 1
     unknown = decision_rights.enforcement_for("new_unregistered_action")
     assert unknown["right"] == decision_rights.OWNER_ONLY
@@ -1957,3 +1961,36 @@ def test_stage_gate_cannot_be_bypassed_by_active_standing_authorization(db, monk
     assert action.policy_result == "REQUIRE_APPROVAL"
     assert action.status == "APPROVAL_REQUIRED"
     assert "decision_rights:stage_gate" in action.policy_reason
+
+def test_stage3_follow_up_cannot_use_generic_allow_without_standing_authorization(db, monkeypatch):
+    """An eligible stage alone must not authorize a consented external action."""
+    from app.services import decision_rights, execution_engine
+
+    monkeypatch.setattr(decision_rights, "ACTIVE_STAGE", 3)
+    monkeypatch.setattr(decision_rights, "_owner_sms_ready", lambda: True)
+    _make_autonomy_policy(db)
+    opportunity = _make_opportunity(db, confidence=100.0)
+
+    experiment = execution_engine.create_action(
+        db,
+        opportunity_id=opportunity.id,
+        action_type="follow_up",
+        description="TEST: consented follow-up without a standing envelope",
+        estimated_cost=0.0,
+        data_scope="REAL",
+    )
+    assert experiment is not None
+    assert experiment.policy_decision == "require_approval"
+    assert experiment.requires_owner_approval is True
+    assert experiment.execution_allowed is False
+
+    # Simulate a corrupted/stale projection that says ALLOW. The canonical
+    # execution gate must still require the recipient-specific authorization.
+    experiment.policy_decision = "allow"
+    experiment.requires_owner_approval = False
+    db.commit()
+
+    assert execution_engine.grant_execution_eligibility(db, experiment.id) is None
+    db.refresh(experiment)
+    assert experiment.execution_allowed is False
+

@@ -735,6 +735,29 @@ def apply_standing_authorization_to_action(db: Session, action: models.Action) -
     Returns the action (possibly modified).
     """
     import json as _json
+    from app.services import decision_rights
+
+    rights_gate = decision_rights.enforcement_for(action.action_type)
+    if rights_gate.get("requires_standing_authorization") and action.policy_result != "BLOCK":
+        if rights_gate["requires_owner_approval"]:
+            # The stage gate or unavailable owner-notification path remains
+            # non-overridable. Even a legacy ALLOW must be corrected here.
+            action.policy_result = "REQUIRE_APPROVAL"
+            action.status = "APPROVAL_REQUIRED"
+            existing_reason = action.policy_reason or ""
+            gate_reason = rights_gate["enforcement_reason"] or "decision_rights:stage_gate"
+            if gate_reason not in existing_reason:
+                action.policy_reason = (existing_reason + " " + gate_reason).strip()
+            return action
+        if action.policy_result == "ALLOW":
+            # A general policy ALLOW is not proof of a consented-response
+            # authorization. Require the matching active, bounded envelope.
+            action.policy_result = "REQUIRE_APPROVAL"
+            action.status = "APPROVAL_REQUIRED"
+            action.policy_reason = (
+                (action.policy_reason or "").rstrip()
+                + " A matching active standing authorization is required for this action type."
+            ).strip()
 
     if action.policy_result != "REQUIRE_APPROVAL":
         return action
