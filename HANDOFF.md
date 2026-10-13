@@ -121,6 +121,19 @@ than a few days old, re-verify before trusting the details.
 - **Verification boundary:** GitHub status for code commit `1d4453cb9af5afd6d4c68cb8ef6df24e32177370` reported Vercel **PENDING** at the last check. The protected Vercel deployment/runtime API returned 403 for the project scope. The main CI cancellation rule was fixed, but no exact-head backend pytest result is exposed through the current connector. Production `/api/health`, durable DB readiness, scheduler invocation, deployed SHA and live flags remain unverified. Do not claim production health or green tests from source presence alone.
 - **Reality boundary unchanged:** no autonomous customer messaging, real conversation, fulfillment, payment, or revenue was created or claimed by this implementation.
 
+**Update 2026-10-14 (loop round 4 — unknowns counts settled):** The
+/unknowns page (100 known unknowns: 96 unknown, 3 hypothesized,
+1 supported) was diffed question-by-question against
+/api/forge/unknowns (114 rows). The page is exact: B1–B4 are the
+engine's C33–C36, and all 96 D-questions match the API's current D
+rows with identical states. The API's extra 14 = 12 internal C-section
+ops questions (correctly not public) + 2 SUPERSEDED DUPLICATES: D35
+(ids 74 and 166) and D72 (ids 111 and 117) each exist as an old and a
+revised version — a discovery revision added the new row without
+retiring the old, so the forge API overcounts by 2 (112 unique
+row_ids). Backend data note for the substrate workstream: retire or
+supersede-flag ids 74 and 111. Public surface unaffected.
+
 **Update 2026-10-14 (loop round 3 — title audit):** A per-route SSR
 title audit (the /domain fix generalized) found two more routes
 falling back to the generic site title: /services and /providers.
