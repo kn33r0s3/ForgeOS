@@ -71,16 +71,17 @@ const FIVE_QUESTIONS = [
   },
 ] as const;
 
-const CLIMB = [  {
+const CLIMB = [
+  {
     n: 1,
-    title: "One seller, one week",
-    body: "Experiment 1: can faster replies recover real sales for one seller? No seller has agreed yet — it remains proposed.",
+    title: "One real-world test",
+    body: "Current proposal: test whether faster replies can recover value in one seller workflow. No seller has agreed yet; this remains proposed, not an outcome.",
     earned: true,
   },
-  { n: 2, title: "Ten sellers", earned: false },
-  { n: 3, title: "A repeatable week", earned: false },
-  { n: 4, title: "A local playbook", earned: false },
-  { n: 5, title: "Everywhere", earned: false },
+  { n: 2, title: "A verified outcome", earned: false },
+  { n: 3, title: "A repeatable transformation", earned: false },
+  { n: 4, title: "Transfer across contexts", earned: false },
+  { n: 5, title: "Value wherever it can legitimately be realized", earned: false },
 ] as const;
 
 function AboutPage() {
@@ -167,8 +168,9 @@ function AboutPage() {
           </h2>
           <p className="mt-3 max-w-2xl text-base leading-7 text-muted">
             Very big, very small. The big aim and the small aim are the same aim at
-            different scales. Each step is earned by the one before it. This first seller
-            pilot is one way to test the value loop, not a limit on Hami’s domain.
+            different scales. Each step is earned by the one before it. The current seller
+            pilot is one possible test of the value loop—not Hami’s identity or the limit
+            of its domain. A new direction earns its place through evidence, not branding.
           </p>
           <div className="mt-6">
             {CLIMB.map((s) => (
