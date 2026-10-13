@@ -547,20 +547,29 @@ def run_scheduled_intelligence(
         "days_since_last_contact": None,
         "contact_priority_due": True,
         "starved": True,
+        "pending_contact_replies": 0,
+        "pending_contact_outcomes": 0,
+        "dry_wells_recorded": 0,
+        "next_priority": "contact_preparation",
     }
     try:
         with database.SessionLocal() as db:
             from app.services import operating_v4
 
             contact_state = operating_v4.contact_state(db)
+            next_priority = contact_state.get("next_priority")
+            if not isinstance(next_priority, str):
+                next_priority = (
+                    "review_pending_contact_outcomes"
+                    if contact_state.get("pending_contact_outcomes", 0)
+                    else "contact_preparation"
+                    if contact_state.get("contact_priority_due", True)
+                    else "evidence_and_value"
+                )
+                contact_state["next_priority"] = next_priority
             intelligence["operating_priority"] = {
                 "status": "ok",
                 **contact_state,
-                "next_priority": (
-                    "contact_preparation"
-                    if contact_state["contact_priority_due"]
-                    else "evidence_and_value"
-                ),
             }
     except Exception as exc:
         # Unknown contact state fails toward contact preparation, never toward
@@ -576,7 +585,10 @@ def run_scheduled_intelligence(
     # When contact is overdue, reuse the existing Scout queue before research
     # collection. Scout only drafts; sending still requires the owner's action.
     scout_ran_early = False
-    if contact_state["contact_priority_due"]:
+    if (
+        contact_state.get("contact_priority_due", True)
+        or contact_state.get("pending_contact_outcomes", 0) > 0
+    ):
         scout_ran_early = True
         try:
             with database.SessionLocal() as db:
@@ -587,7 +599,7 @@ def run_scheduled_intelligence(
                 err_count = len(scout_result.get("errors", []))
                 intelligence["scout_cycle"] = {
                     "status": "partial" if err_count else "ok",
-                    "priority": "contact_preparation",
+                    "priority": contact_state.get("next_priority", "contact_preparation"),
                     "candidates_ranked": scout_result.get("candidates_ranked", 0),
                     "candidates_scored": scout_result.get("candidates_scored", 0),
                     "drafts_generated": scout_result.get("drafts_generated", 0),
