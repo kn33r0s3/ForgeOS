@@ -470,6 +470,11 @@ def propose_action(
     elif policy_result == "BLOCK":
         status = "CANCELLED"
 
+    stored_parameters = dict(parameters or {})
+    # Persist the canonical cost argument so a standing-authorization envelope
+    # cannot accidentally treat a cost-bearing action as zero-cost.
+    stored_parameters["estimated_cost"] = estimated_cost if estimated_cost is not None else 0.0
+
     action = models.Action(
         decision_id=decision_id,
         opportunity_id=opportunity_id,
@@ -478,7 +483,7 @@ def propose_action(
         goal_id=goal_id,
         action_type=action_type,
         objective=objective,
-        parameters_json=json.dumps(parameters or {}),
+        parameters_json=json.dumps(stored_parameters),
         status=status,
         policy_result=policy_result,
         policy_reason=policy_reason,
@@ -547,6 +552,47 @@ def start_and_execute_action(db: Session, action_id: int) -> Optional[models.Act
         db.refresh(action)
         return action
 
+    # Revalidate the active standing-authorization envelope immediately before
+    # adapter dispatch. Proposal-time ALLOW and an owner-approved status are
+    # not substitutes for a current bounded authorization for these action
+    # classes. The customer response adapter retains separate consent/template
+    # checks as a second, recipient-specific boundary.
+    params = {}
+    if rights_gate.get("requires_standing_authorization"):
+        try:
+            params = json.loads(action.parameters_json) if action.parameters_json else {}
+            if not isinstance(params, dict):
+                raise ValueError("Action parameters must be a JSON object")
+        except Exception:
+            params = {}
+        auth_id = params.get("standing_auth_id") if isinstance(params, dict) else None
+        auth = db.get(models.Action, auth_id) if type(auth_id) is int else None
+        if auth is not None and auth.status == "ACTIVE":
+            active = autonomy_engine.get_active_standing_authorizations(db, action.action_type)
+            if any(row.id == auth_id for row in active):
+                bounded_params = dict(params)
+                bounded_params["objective"] = action.objective
+                bounded_params["estimated_cost"] = bounded_params.get("estimated_cost", 0.0)
+                bounded_params["data_scope"] = bounded_params.get("data_scope") or "REAL"
+                matched, _ = autonomy_engine.matches_standing_envelope(
+                    db, auth, action.action_type, bounded_params
+                )
+                if matched:
+                    params = bounded_params
+                else:
+                    auth = None
+            else:
+                auth = None
+        if auth is None:
+            detail = "No current matching ACTIVE standing authorization; dispatch refused."
+            action.status = "APPROVAL_REQUIRED"
+            action.policy_result = "REQUIRE_APPROVAL"
+            action.policy_reason = "decision_rights:standing_authorization_required — " + detail
+            action.execution_error = detail
+            db.commit()
+            db.refresh(action)
+            return action
+
     from app.services import intervention_gate
 
     intervention_gate.assert_single_active_intervention(db, action)
@@ -555,7 +601,8 @@ def start_and_execute_action(db: Session, action_id: int) -> Optional[models.Act
     db.commit()
 
     try:
-        params = json.loads(action.parameters_json) if action.parameters_json else {}
+        if not params:
+            params = json.loads(action.parameters_json) if action.parameters_json else {}
         if not isinstance(params, dict):
             raise ValueError("Action parameters must be a JSON object")
         adapter = get_adapter(action.action_type)

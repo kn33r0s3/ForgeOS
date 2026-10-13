@@ -986,8 +986,8 @@ def test_canonical_gate_owner_approved_works(db):
     experiment = execution_engine.create_action(
         db,
         opportunity_id=opportunity.id,
-        action_type="follow_up",
-        description="owner approved outreach",
+        action_type="research",
+        description="owner approved internal research",
         estimated_cost=0.0,
         data_scope="REAL",
     )
@@ -1993,4 +1993,66 @@ def test_stage3_follow_up_cannot_use_generic_allow_without_standing_authorizatio
     assert execution_engine.grant_execution_eligibility(db, experiment.id) is None
     db.refresh(experiment)
     assert experiment.execution_allowed is False
+
+def test_follow_up_final_dispatch_requires_current_standing_authorization(db, monkeypatch):
+    """Stage 3 alone and a tampered ALLOW row must not reach an adapter."""
+    from app.services import decision_rights
+
+    monkeypatch.setattr(decision_rights, "ACTIVE_STAGE", 3)
+    monkeypatch.setattr(decision_rights, "_owner_sms_ready", lambda: True)
+    adapter_calls = []
+
+    class RecordingAdapter:
+        name = "recording"
+
+        def execute(self, action, params, db=None):
+            adapter_calls.append({"action_id": action.id, "params": params})
+            return {
+                "status": "SUCCEEDED",
+                "execution_result": "recording adapter executed",
+                "verification_state": "UNVERIFIED",
+            }
+
+    monkeypatch.setattr(action_engine, "get_adapter", lambda _action_type: RecordingAdapter())
+    action = models.Action(
+        action_type="follow_up",
+        objective="TEST: follow up without authorization",
+        parameters_json='{"data_scope":"REAL"}',
+        status="PROPOSED",
+        policy_result="ALLOW",
+        policy_reason="legacy / tampered allow",
+        adapter_name="recording",
+    )
+    db.add(action)
+    db.commit()
+    db.refresh(action)
+
+    checked = action_engine.start_and_execute_action(db, action.id)
+
+    assert adapter_calls == []
+    assert checked.status == "APPROVAL_REQUIRED"
+    assert checked.policy_result == "REQUIRE_APPROVAL"
+    assert "standing_authorization_required" in checked.policy_reason
+    assert checked.started_at is None
+
+
+def test_standing_authorization_cannot_understate_action_cost(db, monkeypatch):
+    """The actual estimated_cost argument must be enforced by the SA envelope."""
+    from app.services import decision_rights
+
+    monkeypatch.setattr(decision_rights, "ACTIVE_STAGE", 3)
+    monkeypatch.setattr(decision_rights, "_owner_sms_ready", lambda: True)
+    _make_autonomy_policy(db)
+    _authorize_outreach_standing_auth_with_bounds(db, bound_overrides={"max_spend": 0.0})
+
+    action = action_engine.propose_action(
+        db,
+        objective="bounded standing-auth cost test",
+        action_type="follow_up",
+        estimated_cost=10.0,
+    )
+
+    assert action.policy_result == "REQUIRE_APPROVAL"
+    assert action.status == "APPROVAL_REQUIRED"
+    assert "standing_auth_id" not in __import__("json").loads(action.parameters_json)
 

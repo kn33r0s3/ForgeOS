@@ -410,13 +410,10 @@ def grant_execution_eligibility(db: Session, experiment_id: int, granted_by: str
     from app.services import decision_rights
 
     rights = decision_rights.entry_for(grant_action_type)
-    if (
-        rights.get("requires_standing_authorization")
-        and sa_auth_id is None
-        and action.approved_at is None
-    ):
-        # Direct policy ALLOW is not a substitute for a recipient-specific,
-        # active, bounded authorization. Real dispatch still rechecks consent.
+    if rights.get("requires_standing_authorization") and type(sa_auth_id) is not int:
+        # A one-off approval may authorize a human's manual action, but it
+        # does not authorize unattended execution of a consented follow-up.
+        # Automated dispatch requires a current, recipient-specific envelope.
         return None
 
     if sa_auth_id is not None:
