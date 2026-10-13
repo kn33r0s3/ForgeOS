@@ -69,7 +69,7 @@ from typing import Optional
 # Action types the owner listed. Kept to this small set on purpose —
 # "do not create dozens of speculative action types."
 ACTION_TYPES = [
-    "customer_interview", "outreach", "offer", "paid_pilot",
+    "research", "customer_interview", "outreach", "offer", "paid_pilot",
     "service_delivery", "revenue_experiment", "follow_up",
     "validate_pricing", "build_mvp",
 ]
@@ -87,6 +87,7 @@ ACTION_TYPES = [
 # call, or processed a payment; nothing in this codebase can actually
 # do those things (unchanged boundary since v1.0's Strategy Engine).
 ACTION_TYPE_EXECUTION_MODE = {
+    "research": "executable_locally",
     "customer_interview": "requires_owner_action",
     "outreach": "requires_external_integration",
     "offer": "requires_external_integration",
