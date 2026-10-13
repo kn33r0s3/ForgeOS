@@ -1,3 +1,13 @@
+## [EXACT-HEAD CI FAILURE TRIAGE / SOURCE FIXES NOT VERIFIED] Backend suite diagnosis (2026-10-14)
+
+- **Observed source SHA:** 959482fdf5fc84675a2d17b453537b3944d64650. GitHub Actions run 38481970293: backend-tests failed (1,258 passed, 17 failed, 2 skipped, 21 errors); frontend tests, lint, typecheck, build, route smoke, repository guards, evidence-triage tests and secret scan passed. Vercel status was green, but independent deployment verification was cancelled on older SHA 2230472c881d860c7f4508b157f1f57305521861.
+- **First high-leverage seam:** the 21 backend errors include repeated SQLite foreign-key failures while the autouse fixture in backend/tests/test_scheduled_cycle.py drops and recreates shared database tables. Inspect backend/app/database.py, fixture engine ownership and teardown before changing application code. Confirm whether the errors are test-order/connection contamination; do not globally disable SQLite foreign keys as a shortcut.
+- **Distinct failures to triage after isolation:** 17 failures include tests feeding explicitly simulated test-fixture evidence into a gate that correctly rejects TEST as REAL; Ollama status/gateway contract mismatches; legacy substrate adapter expectations; research task evaluation-status shape; ToolUsageEvent model/API drift; and a world-graph validation-message mismatch. Do not loosen provenance, truth, privacy or authorization constraints just to satisfy stale assertions. For each, trace the test's expected invariant against current implementation and update the test only when the expectation is stale; otherwise fix the implementation.
+- **Owner action removed:** none. **Owner action remaining:** no external action is needed to investigate CI. Contact, publish, spend, production activation and paid inference remain closed. **Next removable dependency:** stable isolated backend test execution, followed by exact-head CI and independent deployment/runtime verification.
+- **Verification:** the diagnosis is from GitHub Actions logs, not a local test run. No application fix is claimed. Re-fetch main before the next change because the continuity update itself advances HEAD.
+
+---
+
 ## [REJECTED HYPOTHESIS / DO NOT SHIP] Generic browser-only brief does not embody Hami intelligence (2026-10-14)
 
 - **Review verdict:** the homepage brief utility was implemented, then removed from active source in `ba774da43aad9ea9cdfdc9a1c536267041269d08` and its existence-only tests were removed in `5cfe8e6a216bf6a1214641226ea27c9c95208cbb`. History is preserved; this is a supersession, not a history rewrite.
