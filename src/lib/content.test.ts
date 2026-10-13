@@ -313,8 +313,8 @@ describe("Hami forge console", () => {
     const marker = "{!consoleState || !readiness ? (";
     assert.ok(owner.includes(marker));
     const [locked, unlocked] = owner.split(marker);
-    assert.equal(locked.includes("<ForgeConsoleWidgets />"), false);
-    assert.equal(unlocked.includes("<ForgeConsoleWidgets />"), true);
+    assert.equal(locked.includes("<ForgeConsoleWidgets apiKey={key} />"), false);
+    assert.equal(unlocked.includes("<ForgeConsoleWidgets apiKey={key} />"), true);
     // The owner page stays unindexed and unlinked from the nav.
     assert.match(owner, /noindex/);
     assert.equal(
