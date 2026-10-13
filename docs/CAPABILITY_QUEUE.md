@@ -1871,3 +1871,15 @@ realized revenue.
 
 
 - Boundary clarification from CI regression review: outreach / first contact remains permanently OWNER_ONLY and is never made autonomous by standing authorization. Existing standing-authorization envelope tests now use the separate consented follow_up action class and explicitly simulate the eligible stage; the dedicated stage-1 regression test continues to assert that a follow-up cannot bypass its gate. Production ACTIVE_STAGE remains 1.
+
+
+### 2026-10-14 — Owner-only daily SMS digest (default OFF)
+
+- Existing seam reused: api/forge_bot_owner_notification.py, the authenticated daily /scheduled/intelligence cron, integration_outbox, and integration_dispatcher.
+- Capability: one UTC-day-idempotent, privacy-minimized digest of action counts, independently verified REAL NPR revenue outcomes, integration failures, and relevant live flags.
+- Safety: HAMI_OWNER_SMS_DIGEST_ENABLED defaults false; the destination is the configured owner's E.164 number; dispatch rechecks recipient, flag, one allowed message type, one-segment ASCII body, and Twilio credentials. It uses a distinct outbox operation from generic/customer SMS.
+- Storage boundary: digest is disabled on SQLite, including Vercel's ephemeral /tmp fallback; durable PostgreSQL is required before enqueue/send.
+- Duplicate control: per-day idempotency and a pre-send SENDING marker; ambiguous attempts are never automatically resent.
+- Truth boundary: Twilio API acceptance is not handset delivery. The message says metrics are DB-only and not reconciled with REVENUE_LOG. No customer names, phone numbers, or messages are included.
+- Default state: disabled; no SMS is sent by code changes. Customer-send, intake, checkout, and autonomy-stage flags are untouched.
+- Not implemented here: inbound commands, STOP kill switch, signed-webhook sender verification, confirmation-code approvals, or role-bounded alerts/asks.

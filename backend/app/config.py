@@ -128,6 +128,12 @@ class Settings(BaseSettings):
     TWILIO_AUTH_TOKEN: str = os.getenv("TWILIO_AUTH_TOKEN", "")
     TWILIO_FROM_NUMBER: str = os.getenv("TWILIO_FROM_NUMBER", "")
 
+    # Dedicated owner-only digest; closed unless the owner explicitly enables it.
+    HAMI_OWNER_SMS_NUMBER: str = os.getenv("HAMI_OWNER_SMS_NUMBER", "")
+    HAMI_OWNER_SMS_DIGEST_ENABLED: bool = os.getenv(
+        "HAMI_OWNER_SMS_DIGEST_ENABLED", "false"
+    ).lower() in ("1", "true", "yes")
+
     # --- Outbound Email (Standard Library SMTP over TLS) ---
     SMTP_HOST: str = os.getenv("SMTP_HOST", "")
     SMTP_PORT: int = _int_env("SMTP_PORT", 587)

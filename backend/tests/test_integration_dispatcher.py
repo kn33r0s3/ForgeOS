@@ -203,3 +203,136 @@ def test_corrupt_request_json_fails_permanent(db, monkeypatch):
     assert delivery.status == "FAILED"  # permanent, no pointless retries
     assert delivery.attempts == 1
     assert "not valid JSON" in delivery.last_error
+
+
+def test_owner_sms_digest_skips_non_postgres_database(db, monkeypatch):
+    from datetime import date
+    from app.api import forge_bot_owner_notification
+
+    monkeypatch.setattr(settings, "HAMI_OWNER_SMS_DIGEST_ENABLED", True)
+    monkeypatch.setattr(settings, "HAMI_OWNER_SMS_NUMBER", "+9779812345678")
+    monkeypatch.setattr(settings, "TWILIO_ACCOUNT_SID", "AC_FAKE")
+    monkeypatch.setattr(settings, "TWILIO_AUTH_TOKEN", "FAKE_TOKEN")
+    monkeypatch.setattr(settings, "TWILIO_FROM_NUMBER", "+19999999999")
+    assert db.get_bind().dialect.name == "sqlite"
+
+    result = forge_bot_owner_notification.send_daily_owner_status_sms(db, date(2026, 10, 14))
+
+    assert result == {"status": "skipped", "reason": "durable_postgresql_required"}
+    assert db.query(IntegrationDelivery).filter_by(integration_name="twilio_owner").count() == 0
+
+
+def test_owner_sms_digest_is_disabled_by_default_and_does_not_enqueue(db, monkeypatch):
+    from datetime import date
+    from app.api import forge_bot_owner_notification
+
+    monkeypatch.setattr(settings, "HAMI_OWNER_SMS_DIGEST_ENABLED", False)
+    monkeypatch.setattr(settings, "HAMI_OWNER_SMS_NUMBER", "+9779812345678")
+    result = forge_bot_owner_notification.send_daily_owner_status_sms(db, date(2026, 10, 14))
+
+    assert result == {"status": "skipped", "reason": "owner_sms_digest_disabled"}
+    assert db.query(IntegrationDelivery).filter_by(integration_name="twilio_owner").count() == 0
+
+
+def test_owner_sms_digest_is_private_exact_recipient_and_idempotent_per_day(db, monkeypatch):
+    from datetime import date
+    from app.api import forge_bot_owner_notification
+
+    monkeypatch.setattr(settings, "HAMI_OWNER_SMS_DIGEST_ENABLED", True)
+    monkeypatch.setattr(settings, "HAMI_OWNER_SMS_NUMBER", "+9779812345678")
+    monkeypatch.setattr(settings, "TWILIO_ACCOUNT_SID", "AC_FAKE")
+    monkeypatch.setattr(settings, "TWILIO_AUTH_TOKEN", "FAKE_TOKEN")
+    monkeypatch.setattr(settings, "TWILIO_FROM_NUMBER", "+19999999999")
+    monkeypatch.setattr(forge_bot_owner_notification, "_owner_sms_database_ready", lambda _db: True)
+
+    with patch("app.services.integration_dispatcher._send_twilio_sms", return_value={"sid": "SM_OWNER_TEST", "status": "queued"}) as send:
+        first = forge_bot_owner_notification.send_daily_owner_status_sms(db, date(2026, 10, 14))
+        second = forge_bot_owner_notification.send_daily_owner_status_sms(db, date(2026, 10, 14))
+
+    assert first["status"] == "provider_accepted"
+    assert second["status"] == "provider_accepted"
+    assert second["idempotent_replay"] is True
+    send.assert_called_once()
+    assert send.call_args.args[0] == "+9779812345678"
+    assert len(send.call_args.args[1]) <= 160
+    assert send.call_args.args[1].isascii()
+    assert "not REVENUE_LOG" in send.call_args.args[1]
+
+    rows = db.query(IntegrationDelivery).filter_by(
+        integration_name="twilio_owner",
+        operation="send_owner_sms",
+    ).all()
+    assert len(rows) == 1
+    request = json.loads(rows[0].request_json)
+    assert request["to"] == "+9779812345678"
+    assert request["message_type"] == "daily_digest"
+
+
+def test_owner_sms_dispatch_rejects_wrong_recipient_and_disabled_flag(db, monkeypatch):
+    monkeypatch.setattr(settings, "HAMI_OWNER_SMS_DIGEST_ENABLED", True)
+    monkeypatch.setattr(settings, "HAMI_OWNER_SMS_NUMBER", "+9779812345678")
+    monkeypatch.setattr(settings, "TWILIO_ACCOUNT_SID", "AC_FAKE")
+    monkeypatch.setattr(settings, "TWILIO_AUTH_TOKEN", "FAKE_TOKEN")
+    monkeypatch.setattr(settings, "TWILIO_FROM_NUMBER", "+19999999999")
+
+    def add_delivery(key, to_number):
+        row = IntegrationDelivery(
+            integration_name="twilio_owner",
+            operation="send_owner_sms",
+            idempotency_key=key,
+            request_json=json.dumps({
+                "to": to_number,
+                "body": "Hami owner status",
+                "message_type": "daily_digest",
+            }),
+            status="QUEUED",
+            attempts=0,
+        )
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+        return row
+
+    wrong = add_delivery("owner-sms-wrong-recipient-001", "+9779800000000")
+    with patch("app.services.integration_dispatcher._send_twilio_sms") as send:
+        result = integration_dispatcher.dispatch_single_delivery(db, wrong.id)
+    assert result.status == "FAILED"
+    assert "does not match" in result.last_error
+    send.assert_not_called()
+
+    monkeypatch.setattr(settings, "HAMI_OWNER_SMS_DIGEST_ENABLED", False)
+    closed = add_delivery("owner-sms-disabled-flag-001", "+9779812345678")
+    with patch("app.services.integration_dispatcher._send_twilio_sms") as send:
+        result = integration_dispatcher.dispatch_single_delivery(db, closed.id)
+    assert result.status == "FAILED"
+    assert "disabled" in result.last_error.lower()
+    send.assert_not_called()
+
+
+def test_owner_sms_dispatch_does_not_retry_ambiguous_prior_attempt(db, monkeypatch):
+    monkeypatch.setattr(settings, "HAMI_OWNER_SMS_DIGEST_ENABLED", True)
+    monkeypatch.setattr(settings, "HAMI_OWNER_SMS_NUMBER", "+9779812345678")
+    monkeypatch.setattr(settings, "TWILIO_ACCOUNT_SID", "AC_FAKE")
+    monkeypatch.setattr(settings, "TWILIO_AUTH_TOKEN", "FAKE_TOKEN")
+    monkeypatch.setattr(settings, "TWILIO_FROM_NUMBER", "+19999999999")
+    row = IntegrationDelivery(
+        integration_name="twilio_owner",
+        operation="send_owner_sms",
+        idempotency_key="owner-sms-ambiguous-prior-attempt",
+        request_json=json.dumps({
+            "to": "+9779812345678",
+            "body": "Hami owner status",
+            "message_type": "daily_digest",
+        }),
+        status="QUEUED",
+        attempts=1,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+
+    with patch("app.services.integration_dispatcher._send_twilio_sms") as send:
+        result = integration_dispatcher.dispatch_single_delivery(db, row.id)
+    assert result.status == "FAILED"
+    assert "will not be retried" in result.last_error
+    send.assert_not_called()

@@ -12,6 +12,7 @@ import email.message
 import email.utils
 import json
 import logging
+import re
 import smtplib
 import socket
 import urllib.parse
@@ -201,7 +202,40 @@ def dispatch_single_delivery(
         except forge_bot_response.ForgeBotResponseBlocked as exc:
             raise PermanentIntegrationError(str(exc)) from exc
 
-        if delivery.integration_name == "twilio" and delivery.operation == "send_sms":
+        if delivery.integration_name == "twilio_owner" and delivery.operation == "send_owner_sms":
+            # At-most-once boundary: a process crash after this marker creates an
+            # ambiguous result. Do not resend automatically and risk a duplicate.
+            if delivery.status == "SENDING":
+                return delivery
+            if delivery.status != "QUEUED":
+                raise PermanentIntegrationError("Owner SMS delivery is not queued")
+            if delivery.attempts > 0:
+                raise PermanentIntegrationError("Owner SMS will not be retried automatically after an ambiguous prior attempt")
+            if not settings.HAMI_OWNER_SMS_DIGEST_ENABLED:
+                raise PermanentIntegrationError("Owner SMS digest is disabled")
+            owner_number = (settings.HAMI_OWNER_SMS_NUMBER or "").strip()
+            if not re.fullmatch(r"\+[1-9][0-9]{7,14}", owner_number):
+                raise PermanentIntegrationError("Owner SMS destination is missing or invalid")
+            if set(request_data) != {"to", "body", "message_type"}:
+                raise PermanentIntegrationError("Owner SMS request contains unsupported fields")
+            if request_data.get("message_type") != "daily_digest":
+                raise PermanentIntegrationError("Unsupported owner SMS message type")
+            if request_data.get("to") != owner_number:
+                raise PermanentIntegrationError("Owner SMS recipient does not match the configured owner number")
+            body = request_data.get("body")
+            if not isinstance(body, str) or not body.isascii() or not body.strip() or len(body) > 160:
+                raise PermanentIntegrationError("Owner SMS digest must be 1-160 ASCII characters")
+            if not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN or not settings.TWILIO_FROM_NUMBER:
+                raise PermanentIntegrationError("Twilio credentials are not configured")
+            delivery.status = "SENDING"
+            delivery.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            db.commit()
+            db.refresh(delivery)
+            resp = _send_twilio_sms(owner_number, body)
+            delivery = integration_outbox.mark_succeeded(db, delivery.id, resp, status="SUCCEEDED")
+            logger.info("Owner-only SMS digest accepted by Twilio; delivery_id=%s", delivery.id)
+
+        elif delivery.integration_name == "twilio" and delivery.operation == "send_sms":
             req_data = request_data
             to_number = req_data.get("to")
             body = req_data.get("body")

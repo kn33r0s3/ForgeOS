@@ -459,12 +459,8 @@ def run_scheduled_intelligence(
         logger.warning("scheduled intelligence: discovery_cycle failed (%s)", type(exc).__name__)
         intelligence["discovery_cycle"] = {"status": "error", "error": type(exc).__name__}
 
-    # Stage 6: retry already-queued owner notifications (retry-only).
-    # Isolated: separate DB session, isolated exception handling. Retries
-    # only existing due queued deliveries via the existing retry helper's
-    # filters. Never constructs or enqueues a new daily digest. Does not
-    # authorize customer messages or change intake flags. A retry failure
-    # does not fail or conceal the other stages.
+    # Stage 6: retry previously queued owner emails only.
+    # This legacy email retry path does not enqueue new mail or send customer messages.
     try:
         with database.SessionLocal() as db:
             from app.api import forge_bot_owner_notification
@@ -485,6 +481,18 @@ def run_scheduled_intelligence(
     except Exception as exc:
         logger.warning("scheduled intelligence: owner_notification_retry failed (%s)", type(exc).__name__)
         intelligence["owner_notification_retry"] = {"status": "error", "error": type(exc).__name__}
+
+    # Stage 6b: separate owner-only daily SMS digest. The Vercel schedule for
+    # this authenticated intelligence cycle is 06:00 UTC; the feature flag defaults OFF.
+    try:
+        with database.SessionLocal() as db:
+            from app.api import forge_bot_owner_notification
+
+            intelligence["owner_sms_digest"] = forge_bot_owner_notification.send_daily_owner_status_sms(db)
+            db.commit()
+    except Exception as exc:
+        logger.warning("scheduled intelligence: owner_sms_digest failed (%s)", type(exc).__name__)
+        intelligence["owner_sms_digest"] = {"status": "error", "error": type(exc).__name__}
 
     # Stage 7: scout cycle — autonomous candidate processing.
     # Scores and ranks registered candidates, generates drafts for top

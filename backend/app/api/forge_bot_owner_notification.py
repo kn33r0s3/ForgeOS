@@ -8,7 +8,10 @@ This service uses the existing integration_outbox/integration_dispatcher
 infrastructure for durable, truthful SMTP delivery.
 """
 
-from datetime import date, datetime, timezone
+import json
+import re
+from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy import or_
@@ -121,6 +124,129 @@ def send_daily_owner_summary_notification(
         body=_format_daily_owner_summary_body(day, leads),
         idempotency_key=f"forge-bot-daily-owner-summary:{day.isoformat()}",
     )
+
+
+
+def _owner_sms_database_ready(db: Session) -> bool:
+    """At-most-once digest requires durable server storage; Vercel /tmp SQLite fails closed."""
+    try:
+        return db.get_bind().dialect.name == "postgresql"
+    except Exception:
+        return False
+
+
+def send_daily_owner_status_sms(
+    db: Session,
+    summary_date_utc: date | None = None,
+) -> dict:
+    """Queue and send one bounded operational digest to the configured owner only."""
+    day = summary_date_utc or datetime.now(timezone.utc).date()
+    if not settings.HAMI_OWNER_SMS_DIGEST_ENABLED:
+        return {"status": "skipped", "reason": "owner_sms_digest_disabled"}
+    owner_number = (settings.HAMI_OWNER_SMS_NUMBER or "").strip()
+    if not re.fullmatch(r"\+[1-9][0-9]{7,14}", owner_number):
+        return {"status": "skipped", "reason": "owner_sms_number_missing_or_invalid"}
+    if not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN or not settings.TWILIO_FROM_NUMBER:
+        return {"status": "skipped", "reason": "twilio_credentials_missing"}
+    if not _owner_sms_database_ready(db):
+        return {"status": "skipped", "reason": "durable_postgresql_required"}
+
+    from app.services import decision_rights
+
+    start = datetime(day.year, day.month, day.day)
+    end = start + timedelta(days=1)
+    actions = (
+        db.query(models.Action)
+        .filter(models.Action.proposed_at >= start, models.Action.proposed_at < end)
+        .all()
+    )
+    approvals = sum(
+        1 for row in actions
+        if row.policy_result == "REQUIRE_APPROVAL" or row.status == "APPROVAL_REQUIRED"
+    )
+    blocked = sum(
+        1 for row in actions
+        if row.policy_result == "BLOCK" or row.status in {"CANCELLED", "FAILED", "BLOCKED"}
+    )
+    revenue_rows = (
+        db.query(models.Outcome)
+        .filter(
+            models.Outcome.observed_at >= start,
+            models.Outcome.observed_at < end,
+            models.Outcome.outcome_type == "ACTUAL_REVENUE",
+            models.Outcome.unit == "NPR",
+            models.Outcome.actual_value.isnot(None),
+            models.Outcome.actual_value > 0,
+            models.Outcome.data_scope == "REAL",
+            models.Outcome.source_kind == "REAL",
+            models.Outcome.verification_state == "VERIFIED",
+        )
+        .all()
+    )
+    revenue_total = sum(
+        (Decimal(str(row.actual_value)).quantize(Decimal("0.01")) for row in revenue_rows),
+        Decimal("0.00"),
+    )
+    failures = (
+        db.query(models.IntegrationDelivery)
+        .filter(
+            models.IntegrationDelivery.updated_at >= start,
+            models.IntegrationDelivery.updated_at < end,
+            models.IntegrationDelivery.status == "FAILED",
+        )
+        .count()
+    )
+    intake = "ON" if settings.FORGE_BOT_INTAKE_ENABLED else "OFF"
+    checkout = "ON" if settings.FORGEOS_PUBLIC_CHECKOUT_ENABLED else "OFF"
+    customer_send = "ON" if (
+        settings.FORGE_BOT_LIVE and settings.FORGE_BOT_RESPONSE_SEND_ENABLED
+    ) else "OFF"
+    body = (
+        f"Hami {day.isoformat()} UTC S{decision_rights.ACTIVE_STAGE} "
+        f"A{len(actions)} ap{approvals} blk{blocked} "
+        f"REALrevNPR{revenue_total:.2f} n{len(revenue_rows)} "
+        f"fail{failures} intake{intake} checkout{checkout} send{customer_send} "
+        "DB-only not REVENUE_LOG"
+    )
+    if len(body) > 160 or not body.isascii():
+        raise RuntimeError("Owner SMS digest must fit one ASCII SMS segment.")
+
+    idempotency_key = f"hami-owner-daily-sms:{day.isoformat()}"
+    delivery = integration_outbox.enqueue(
+        db,
+        integration_name="twilio_owner",
+        operation="send_owner_sms",
+        idempotency_key=idempotency_key,
+        request={"to": owner_number, "body": body, "message_type": "daily_digest"},
+    )
+    if delivery.status == "SUCCEEDED":
+        return {"status": "provider_accepted", "delivery_id": delivery.id, "date_utc": day.isoformat(), "idempotent_replay": True}
+    if delivery.status == "FAILED":
+        return {"status": "failed", "delivery_id": delivery.id, "date_utc": day.isoformat(), "reason": "delivery_already_failed"}
+    if delivery.status == "SENDING" or delivery.attempts > 0:
+        return {"status": "ambiguous_not_retried", "delivery_id": delivery.id, "date_utc": day.isoformat(), "reason": "prior_attempt_not_replayed"}
+
+    dispatched = integration_dispatcher.dispatch_single_delivery(db, delivery.id)
+    if dispatched.status == "SUCCEEDED":
+        try:
+            response = json.loads(dispatched.response_json or "{}")
+        except (TypeError, ValueError):
+            response = {}
+        provider_id = response.get("sid")
+        return {
+            "status": "provider_accepted",
+            "delivery_id": dispatched.id,
+            "date_utc": day.isoformat(),
+            "provider_message_id": str(provider_id) if provider_id else None,
+            "idempotent_replay": False,
+            "delivery_claim": "Twilio accepted the API request; handset delivery is not established.",
+        }
+    return {
+        "status": dispatched.status.lower(),
+        "delivery_id": dispatched.id,
+        "date_utc": day.isoformat(),
+        "reason": dispatched.last_error or "provider_did_not_confirm_acceptance",
+    }
 
 
 def _retry_pending_owner_notifications(db: Session, recipient: str) -> None:
