@@ -68,7 +68,7 @@ def sync_public_services(db: Session, *, limit: int = 500) -> dict[str, int]:
     new_providers = (
         db.query(models.Provider)
         .filter(~provider_entity_exists)
-        .order_by(models.Provider.updated_at.desc(), models.Provider.id.desc())
+        .order_by(models.Provider.id.asc())
         .limit(batch_limit)
         .all()
     )
@@ -90,7 +90,7 @@ def sync_public_services(db: Session, *, limit: int = 500) -> dict[str, int]:
     new_listings = (
         db.query(models.ServiceListing)
         .filter(~listing_entity_exists)
-        .order_by(models.ServiceListing.updated_at.desc(), models.ServiceListing.id.desc())
+        .order_by(models.ServiceListing.id.asc())
         .limit(batch_limit)
         .all()
     )
