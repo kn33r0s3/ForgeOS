@@ -99,6 +99,87 @@ def test_remaining_canonical_legacy_rows_project_without_copy_or_guessed_edges(d
     assert db.query(models.Decision).count() == 1
 
 
+def test_rare_signal_assessment_projects_safe_lifecycle_snapshots(db):
+    assessment = models.RareSignalAssessment(
+        cluster_key="rare-coordination-shift",
+        label="Unusual coordination shift",
+        signal_ids="12,19,22",
+        frequency=3,
+        prior_frequency=1,
+        recent_frequency=2,
+        velocity=1.5,
+        acceleration=0.5,
+        source_diversity=2.0,
+        novelty=0.8,
+        specificity=0.7,
+        pain_intensity=0.4,
+        solution_scarcity=0.6,
+        economic_relevance=0.9,
+        freshness=0.8,
+        recurrence=0.7,
+        geographic_spread=0.2,
+        language_spread=0.3,
+        score=67.0,
+        status="DETECTED",
+        explanation={"sensitive_detail": "must remain in the source record"},
+    )
+    db.add(assessment)
+    db.commit()
+    db.refresh(assessment)
+
+    first = adapter.sync_legacy_records(db)
+    entity = world_graph.find_canonical_entity(
+        db, "rare_signal_assessment", assessment.id
+    )
+    assert first["records_seen"] == 1
+    assert first["entities_created"] == 1
+    assert first["events_created"] == 2
+    assert first["unresolved_records"] == 0
+    assert entity is not None
+    assert entity.identity_key == (
+        f"source:rare_signal_assessment:rare_signal_assessments:{assessment.id}"
+    )
+    assert json.loads(entity.attributes) == {
+        "canonical_ref": {
+            "entity_type": "rare_signal_assessment",
+            "entity_id": assessment.id,
+        }
+    }
+
+    snapshots = db.query(models.WorldEvent).filter_by(
+        event_type="entity_source_refreshed",
+        entity_id=entity.id,
+    ).all()
+    assert len(snapshots) == 1
+    payload = json.loads(snapshots[0].payload)
+    assert payload["source_ref"] == {
+        "table": "rare_signal_assessments",
+        "id": assessment.id,
+    }
+    assert payload["payload_copied"] is False
+    assert "score" in payload["source_fields"]
+    assert "explanation" not in payload["source_fields"]
+    assert "sensitive_detail" not in snapshots[0].payload
+
+    repeated = adapter.sync_legacy_records(db)
+    assert repeated["records_seen"] == 1
+    assert repeated["entities_created"] == 0
+    assert repeated["events_created"] == 0
+    assert repeated["unresolved_records"] == 0
+
+    assessment.score = 72.0
+    assessment.status = "REVIEWED"
+    db.commit()
+    refreshed = adapter.sync_legacy_records(db)
+    assert refreshed["entities_created"] == 0
+    assert refreshed["events_created"] == 1
+    snapshots = db.query(models.WorldEvent).filter_by(
+        event_type="entity_source_refreshed",
+        entity_id=entity.id,
+    ).all()
+    assert len(snapshots) == 2
+
+
 def test_legacy_record_projection_survives_restart(tmp_path):
     engine = create_engine(f"sqlite:///{tmp_path / 'legacy_records.sqlite'}")
     Base.metadata.create_all(engine)
