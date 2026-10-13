@@ -550,7 +550,12 @@ def _prior_observations(db: Session, question_text: str, *, limit: int = 5) -> l
     for relevance, signal in matches[:limit]:
         evidence_id = (
             db.query(models.Evidence.id)
-            .filter_by(signal_id=signal.id)
+            .filter(
+                models.Evidence.signal_id == signal.id,
+                models.Evidence.source_identity.is_(None),
+                models.Evidence.consent_status.is_(None)
+                | (~models.Evidence.consent_status.in_(("pending", "denied"))),
+            )
             .order_by(models.Evidence.id.desc())
             .limit(1)
             .scalar()
@@ -603,8 +608,7 @@ def _claim_linked_observations(
             ),
             # Apply privacy/consent filters before the SQL limit so recent
             # restricted rows cannot crowd out eligible contextual evidence.
-            models.Evidence.source_identity.is_(None)
-            | (models.Evidence.consent_status == "granted"),
+            models.Evidence.source_identity.is_(None),
             models.Evidence.consent_status.is_(None)
             | (~models.Evidence.consent_status.in_(("pending", "denied"))),
         )
