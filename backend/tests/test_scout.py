@@ -90,6 +90,61 @@ def test_approve_skip_sent_flow(db):
     assert d3.status == "DRAFT"
 
 
+def test_no_response_records_a_dry_well_without_unlocking_another_send(db):
+    candidate = _candidate(db, "No Reply Shop")
+    draft = scout.generate_draft(db, candidate.id, "2 unanswered inquiries")
+    scout.approve_draft(db, draft.id)
+    sent = scout.mark_sent(db, draft.id, channel="facebook", sent_by="owner")
+
+    closed = scout.record_no_response(
+        db,
+        sent.id,
+        "No response observed after checking the Facebook inbox on 2026-10-14.",
+    )
+    assert closed.reply_received is False
+    assert closed.status == "SENT"
+    event = db.query(models.WorldEvent).filter_by(
+        event_type="outreach.no_response"
+    ).one()
+    payload = json.loads(event.payload)
+    assert payload["outcome_type"] == "no_response_observed"
+    assert payload["verification"].startswith("owner-recorded")
+    assert payload["blocks_further_contact"] is True
+    with pytest.raises(ValueError, match="without a reply"):
+        scout.check_send_allowed(db, candidate.id)
+    with pytest.raises(ValueError, match="already recorded"):
+        scout.record_no_response(db, sent.id, "Duplicate dry-well report")
+
+
+def test_pending_reply_api_only_lists_unresolved_sent_drafts(db, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from app.config import settings
+    from app.main import app
+
+    monkeypatch.setattr(settings, "FORGE_API_KEY", "test-owner-key")
+    pending_candidate = _candidate(db, "Pending Reply Shop")
+    pending = scout.generate_draft(db, pending_candidate.id, "One unanswered inquiry")
+    scout.approve_draft(db, pending.id)
+    scout.mark_sent(db, pending.id, channel="facebook", sent_by="owner")
+
+    replied_candidate = _candidate(db, "Replied Shop")
+    replied = scout.generate_draft(db, replied_candidate.id, "Two unanswered inquiries")
+    scout.approve_draft(db, replied.id)
+    scout.mark_sent(db, replied.id, channel="facebook", sent_by="owner")
+    scout.record_reply(db, replied.id, "The owner replied and requested details.")
+
+    response = TestClient(app).get(
+        "/scout/pending-replies",
+        headers={"X-API-Key": "test-owner-key"},
+    )
+    assert response.status_code == 200, response.text
+    items = response.json()
+    assert [item["id"] for item in items] == [pending.id]
+    assert items[0]["reply_received"] is False
+    assert items[0]["send_channel"] == "facebook"
+
+
 def test_do_not_contact_blocks(db):
     c = _candidate(db)
     db.add(models.DoNotContact(candidate_entity_id=c.id, reason="asked not to be contacted"))
