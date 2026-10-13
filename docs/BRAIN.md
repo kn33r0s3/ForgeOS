@@ -650,6 +650,20 @@ This section supersedes any earlier implication in sections 5, 17, 28, 29 or 30 
 This is an initial source scan, not an exhaustive market survey, quality result or endorsement of any model or dataset. Continue source-by-source review and attach resulting claims/evidence through the existing substrate.
 This section extends the Hami direction in section 35. It does not weaken consent, privacy, truth labels, spend authority, or the single-substrate rule.
 
+## 37. Evidence truth pass: semantics cannot self-authorize (2026-10-14)
+
+This section records a cross-boundary audit, not a claim that all Hami is finished.
+
+- **Collection is not interpretation.** Raw collector text and metadata are source observations. A field such as `claim_relation: supports/contradicts` is untrusted source data and cannot attach a semantic relation or change Claim truth state. Collection links new evidence as `derived_from`; preserve original metadata and provenance.
+- **Claim creation is observation-only.** `create_or_get_claim` creates/returns an `observed` Claim and never promotes it from a caller-supplied state string. The generic state setter requires a matching existing evidence relationship; it cannot establish `verified`/`rejected`, erase contradictory history, or downgrade a stronger state to `observed`. The owner claim API checks state/relation compatibility and resolves the Evidence row before creating a Claim.
+- **Evidence relations are not interchangeable.** Explicit `supports` may promote an observed Claim only when no contradictory edge remains. A `contradicts` edge contests the Claim. New supporting material does not erase older contradiction evidence. Dedicated review/outcome paths own states that require more than a generic relation.
+- **Judgment is not reality.** Model outputs must use a validated explicit label; unstructured prose stays uncertain. “Agreement” requires at least two distinct provider/model configurations that assessed the same question and same evidence context. A failed evaluator, an absent Evidence row, no available judge, an insufficient judge count and substantive disagreement are different states. Provider-visible evidence may be privacy-filtered; the comparison records the actually evaluated subset.
+- **Historical cache rows remain history, not current truth.** Judgment/comparison cache keys are versioned when their interpretation contract changes. Old completed judgments with legacy keys are preserved and marked ineligible for current comparison; do not rewrite historical conclusions in place.
+- **Learning must respect unknowns and scope.** Source usefulness is counted only for the current task's target Claim and its returned results, not unrelated graph links. A missing/dangling target or no relevance assessment is `null`/unassessed, not a measured zero. Retrieval is not a universal freshness score; leave that score unknown until a calibrated measure exists. Usage-event idempotency distinguishes actual retry attempts while remaining stable for a replay of the same attempt.
+- **Verification rule.** Model agreement is not independent source corroboration, verified source output, customer demand, transaction or revenue. Those metrics remain zero/unknown until their own evidence path records them. TEST, MOCK, HYPOTHESIS and REAL retain distinct meaning.
+- **Operation rule.** Continue independent safe research, code review and tests while one workflow or external action is blocked. But don't call a change done because it committed: inspect exact-head CI, runtime behavior and real outcomes separately. Never infer a green suite from a prior SHA, a configured provider from real inference, or a proposed action from a completed outcome.
+
 ## Changelog (version 4)
 
 - 2026-10-14: Added the Nepal-intelligified direction and Nepal-first/world-open AI provider mandate. Nepali language and context are first-class design inputs; real provider calls remain distinct from selection, mock output, evidence and authorization.
+- 2026-10-14: Added section 37, the cross-boundary Evidence/Claim/Judgment/source-learning truth pass, including unknown-vs-zero and retry identity rules.
