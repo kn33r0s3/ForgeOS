@@ -2193,12 +2193,23 @@ def _is_simulated_provenance(raw: str) -> bool:
         "synthetic", "simulated", "simulation", "mock", "demo", "seed", "hypothesis",
     }
 
+    true_flags = {"true", "yes", "1", "enabled", "on"}
+
+    def explicit_true(item: Any) -> bool:
+        if item is True:
+            return True
+        if isinstance(item, int) and not isinstance(item, bool) and item == 1:
+            return True
+        return isinstance(item, str) and item.strip().casefold() in true_flags
+
     def marked(value: Any) -> bool:
         if isinstance(value, dict):
             for key, item in value.items():
                 normalized_key = re.sub(r"[^a-z0-9]+", "_", str(key).casefold()).strip("_")
                 if normalized_key in marker_keys:
-                    if item is True or (
+                    if explicit_true(item):
+                        return True
+                    if (
                         isinstance(item, str)
                         and item.strip().casefold().replace("-", "_") in simulated_values
                     ):
