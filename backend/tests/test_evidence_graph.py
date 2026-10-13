@@ -1,6 +1,8 @@
 import pytest
+from fastapi import HTTPException
 
-from app import models
+from app import models, schemas
+from app.api import opportunities as opportunities_api
 from app.services import evidence_graph, opportunity_engine
 from app.services.observer_engine import ObserverEngine
 
@@ -56,6 +58,89 @@ def test_claim_evidence_graph_is_persistent_and_deduplicated(db):
     restored_edge = db.get(models.EvidenceRelationship, edge_id)
     assert restored_claim.statement.startswith("Small contractors")
     assert restored_edge.relation_type == "supports"
+
+
+
+def test_claim_state_cannot_be_promoted_by_claim_creation_argument(db):
+    with pytest.raises(ValueError, match="only creates observed claims"):
+        evidence_graph.create_or_get_claim(
+            db,
+            "A claim cannot become supported from a state string alone.",
+            epistemic_state="supported",
+        )
+    assert db.query(models.Claim).count() == 0
+
+    claim, created = evidence_graph.create_or_get_claim(
+        db, "A claim cannot become supported from a state string alone."
+    )
+    assert created is True
+    assert claim.epistemic_state == "observed"
+
+    with pytest.raises(ValueError, match="only creates observed claims"):
+        evidence_graph.create_or_get_claim(
+            db,
+            claim.statement,
+            epistemic_state="contested",
+        )
+    db.refresh(claim)
+    assert claim.epistemic_state == "observed"
+
+
+def test_owner_claim_api_requires_evidence_for_semantic_state_and_checks_before_write(db, monkeypatch):
+    opportunity = models.Opportunity(
+        problem="TEST claim API must preserve epistemic evidence boundaries."
+    )
+    db.add(opportunity)
+    db.commit()
+    db.refresh(opportunity)
+    monkeypatch.setattr(opportunities_api, "require_owner_api_key", lambda _request: None)
+
+    unsupported_without_evidence = schemas.ClaimCreate(
+        statement="TEST unsupported state must not persist",
+        epistemic_state="supported",
+        relation_type="supports",
+    )
+    with pytest.raises(HTTPException) as no_evidence_error:
+        opportunities_api.create_opportunity_claim(
+            opportunity.id, unsupported_without_evidence, object(), db
+        )
+    assert no_evidence_error.value.status_code == 422
+    assert db.query(models.Claim).count() == 0
+
+    nonexistent_evidence = schemas.ClaimCreate(
+        statement="TEST missing evidence must not leave a partial claim",
+        epistemic_state="supported",
+        evidence_id=987654321,
+        relation_type="supports",
+    )
+    with pytest.raises(HTTPException) as missing_evidence_error:
+        opportunities_api.create_opportunity_claim(
+            opportunity.id, nonexistent_evidence, object(), db
+        )
+    assert missing_evidence_error.value.status_code == 404
+    assert db.query(models.Claim).count() == 0
+
+    evidence = models.Evidence(
+        source="TEST owner-reviewed source",
+        content="TEST source reviewed for this specific claim.",
+    )
+    db.add(evidence)
+    db.commit()
+    db.refresh(evidence)
+    supported_payload = schemas.ClaimCreate(
+        statement="TEST this claim has an explicit reviewed supporting relation",
+        epistemic_state="supported",
+        evidence_id=evidence.id,
+        relation_type="supports",
+    )
+    claim = opportunities_api.create_opportunity_claim(
+        opportunity.id, supported_payload, object(), db
+    )
+    assert claim.epistemic_state == "supported"
+    edge = db.query(models.EvidenceRelationship).filter_by(
+        claim_id=claim.id, evidence_id=evidence.id
+    ).one()
+    assert edge.relation_type == "supports"
 
 
 def test_provenance_keyed_evidence_creation_is_idempotent(db):
