@@ -2,12 +2,14 @@
 
 Ranked by value, critical blockers and leverage across the full Hami portfolio. This file is intentionally compact; docs/CAPABILITY_QUEUE.md remains the detailed capability ledger. Re-rank after every run based on new evidence. A blocked experiment never means unrelated safe work pauses.
 
-## P0 — Implement bounded portfolio execution across connected climbs
+## P0 — Verify and extend the multi-climb intelligence loop
 
-1. **Build a scheduler over existing persistent work.** Reuse ResearchQuestion, ResearchTask, Bet, Evidence, Capability and Action; do not add a seventh primitive or parallel work ontology. Select independent, unblocked tasks across useful directions while respecting dependencies, bounded concurrency/cost, idempotency and action-time authorization.
-2. **Make cross-climb learning traceable.** Record provenance and dependencies so supported findings can help eligible related tracks by reference. Never duplicate protected content or upgrade truth through repeated projections. Deduplicate candidates before spawning work.
-3. **Prevent global stalls.** When customer-facing, provider, legal or consent work is blocked, continue the next independent safe task. Shared/systemic incidents contain dependent paths without stopping unrelated read-only research, tests or repairs. Jobs need durable progress and resumability, not an unbounded tight loop.
-4. **Acceptance tests:** independent workstreams progress concurrently; a blocked task does not block unrelated safe work; dependencies propagate appropriately; reruns are idempotent; provenance/cost survive recovery. Separately verify real scheduler invocation, exact-head CI and production/runtime state.
+1. **Close exact-head CI first.** The bounded dispatcher, source-clearance guard and regressions are committed to `main`; confirm the exact run and repair demonstrated failures. Source presence is not a test result. Avoid rapid unnecessary commits that keep cancelling CI; batch one coherent verified change at a time.
+2. **Prove non-starvation end to end.** Confirm tests cover several independent ResearchQuestions, repeated tasks for one question, an uncleared high-priority source, bounded limits and idempotent reruns. Then observe a real persisted scheduled run and its CycleRun/effect accounting; scheduled code or Vercel READY metadata alone is insufficient.
+3. **Finish the evaluation truth boundary.** A failed/unavailable judge is not missing world evidence and must not spawn recursive research questions. Verify failed, unavailable, substantive disagreement, partial agreement and genuinely missing Evidence separately; only outcomes that warrant research create follow-ups.
+4. **Implement cross-climb learning by reference.** Trace existing Evidence/Claim/ResearchQuestion/Capability links. Let supported findings inform multiple eligible tracks without copying personal data, widening purpose/consent permissions or upgrading truth through repeated projections. Add provenance/dependency regression tests before enabling cross-track automation.
+5. **Connect a genuine evaluator to decisive tests.** Collection can be collection-only; provider/model selection is not invocation. Identify the cheapest supported non-MOCK evaluation mechanism, persist its output and limitations, and link ranked unknowns to a falsifiable test using existing records. No synthetic evidence and no broadened external permissions.
+6. **Bound and resume execution.** Preserve source gates, action-time authorization, task/run idempotency, cost/concurrency limits and recoverable partial failures. Blocked customer-facing/legal/provider actions must not freeze independent safe work; systemic incidents contain dependent tracks.
 
 ## P0 — Make research quality and execution truthful
 
@@ -15,9 +17,9 @@ Ranked by value, critical blockers and leverage across the full Hami portfolio. 
 
 2. **Stop reporting selection/collection as reasoning.** Collector tasks must list only source adapters actually used, and must say collection-only completion. The `evaluate` step stays pending/skipped unless a real claim-judge pipeline ran. Lexical overlap may triage results but never becomes semantic relevance, verified claim support, or a research conclusion.
 
-3. **Verify a complete exact-head CI run.** Run `38459590518` on `a03e95f` reported 254 frontend tests passed and 1 failed: an outdated assertion still required “One seller, one week” and “Experiment 1”, removed when the page was corrected to describe the current seller pilot as one possible bounded test of Hami’s universal value loop. This commit updates that assertion and preserves the no-seller-agreed / not-yet-earned checks. Re-run the entire suite and independent verification on the resulting exact SHA; never relax authorization, consent, privacy or epistemic states.
+3. **Historical CI note (2026-10-12):** the earlier `a03e95f` run exposed a stale linear-climb copy assertion. The assertion has since been updated for the broader About page. Do not confuse that historical finding with current-head CI status. Verify current full CI and independent deployment checks; never relax authorization, consent, privacy or epistemic states.
 
-4. **Verify current production source and runtime.** Vercel still reports the latest deployment for `f44245d` as BUILDING, while the previous READY source is `a03e95f`. The authenticated runtime/activation/scheduler checks and actual persisted scheduled-invocation evidence still need independent proof. Keep public activation closed while unknown.
+4. **Runtime verification remains open.** Recent Vercel runtime/project reads returned 403 and deployment metadata has been BUILDING while main advances. Current health, database durability, activation flags and scheduled invocation remain UNKNOWN. Recheck the exact source deployment and use an authorized route to verify health plus one persisted scheduled run. Keep external activation closed while unknown.
 
 ## P1 — Remove routine owner work by building the real ForgeBot loop
 
