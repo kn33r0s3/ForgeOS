@@ -180,6 +180,15 @@ def test_pending_reply_queue_api_preserves_dry_wells_for_late_replies(db, monkey
         json={"summary": "Recipient replied after the earlier no-response note."},
     )
     assert reply.status_code == 200, reply.text
+    duplicate = client.post(
+        f"/scout/drafts/{draft.id}/reply",
+        headers=headers,
+        json={"summary": "Duplicate submission should not create another event."},
+    )
+    assert duplicate.status_code == 422
+    assert db.query(models.WorldEvent).filter_by(
+        event_type="outreach.reply",
+    ).count() == 1
     response = client.get("/scout/pending-replies", headers=headers)
     assert all(item["id"] != draft.id for item in response.json())
 
