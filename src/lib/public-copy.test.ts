@@ -275,29 +275,6 @@ describe("homepage contract", () => {
 
 });
 
-describe("public value utility", () => {
-  it("offers an immediate, browser-only next-step brief and a real exchange path", () => {
-    const src = read("src/routes/index.tsx");
-    assert.match(src, /<ValueBrief \/>/);
-    assert.match(src, /id="value-brief"/);
-    assert.match(src, /Build your next-step brief/);
-    assert.match(src, /Post a need, offer, or trade/);
-    assert.match(src, /this tool does not send your answers to Hami or save them/i);
-    assert.match(src, /SMALLEST USEFUL TEST/);
-    assert.match(src, /EVIDENCE TO RECORD/);
-    assert.match(src, /Copy brief/);
-    assert.match(src, /Nothing is sent to an API/);
-
-    const start = src.indexOf("function ValueBrief()");
-    const end = src.indexOf("function Capabilities()");
-    const tool = src.slice(start, end);
-    assert.ok(start >= 0 && end > start, "ValueBrief component must be present");
-    assert.doesNotMatch(tool, /fetch\s*\(/, "the local brief must not submit visitor text");
-    assert.doesNotMatch(tool, /localStorage|sessionStorage/, "the brief must not persist visitor text");
-    assert.match(src, /<Link to="\/domain">/);
-  });
-});
-
 describe("information architecture", () => {
   const home = () => read("src/routes/index.tsx");
   const navRoutes = ["/", "/discoveries", "/unknowns", "/experiments", "/about"];
@@ -318,9 +295,9 @@ describe("information architecture", () => {
     }
   });
 
-  it("keeps deep system explanations on reference pages", () => {
+  it("homepage has no content of its own — only previews", () => {
     const src = home();
-    // Primitives strip moved to /about; the browser-only ValueBrief is a separate utility.
+    // Primitives strip moved to /about
     assert.doesNotMatch(src, /Six primitives|PRIMITIVES/);
     // Climb moved to /about
     assert.doesNotMatch(src, /Very big, very small|CLIMB_STEPS/);
