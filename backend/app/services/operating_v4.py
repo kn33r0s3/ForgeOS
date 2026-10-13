@@ -2361,17 +2361,51 @@ def days_since_last_contact(db: Session) -> Optional[int]:
 
 
 def contact_state(db: Session) -> dict:
-    """Return the canonical contact-priority and starvation state.
+    """Return canonical contact priority without letting dry wells starve other work.
 
-    Two days is a soft prioritization threshold for contact preparation;
-    the existing 14-day STARVED rule remains the hard build freeze.
-    Missing contact history is conservatively treated as overdue.
+    Two days is a soft priority threshold for contact preparation; the
+    existing 14-day STARVED rule remains the hard freeze. A pending contact
+    outcome needing owner review outranks both. A previously recorded dry well
+    remains available for late replies, but does not demand daily re-review.
     """
     days = days_since_last_contact(db)
+    pending_contact_replies = (
+        db.query(models.OutreachDraft)
+        .filter(
+            models.OutreachDraft.status == "SENT",
+            models.OutreachDraft.reply_received.is_(False),
+        )
+        .count()
+    )
+    pending_contact_outcomes = (
+        db.query(models.OutreachDraft)
+        .filter(
+            models.OutreachDraft.status == "SENT",
+            models.OutreachDraft.reply_received.is_(False),
+            (
+                models.OutreachDraft.outcome_notes.is_(None)
+                | (models.OutreachDraft.outcome_notes == "")
+            ),
+        )
+        .count()
+    )
+    dry_wells_recorded = max(0, pending_contact_replies - pending_contact_outcomes)
+    contact_priority_due = days is None or days >= CONTACT_PRIORITY_DAYS
+    next_priority = (
+        "review_pending_contact_outcomes"
+        if pending_contact_outcomes
+        else "contact_preparation"
+        if contact_priority_due
+        else "evidence_and_value"
+    )
     return {
         "days_since_last_contact": days,
-        "contact_priority_due": days is None or days >= CONTACT_PRIORITY_DAYS,
+        "contact_priority_due": contact_priority_due,
         "starved": days is None or days >= STARVED_DAYS,
+        "pending_contact_replies": pending_contact_replies,
+        "pending_contact_outcomes": pending_contact_outcomes,
+        "dry_wells_recorded": dry_wells_recorded,
+        "next_priority": next_priority,
     }
 
 
