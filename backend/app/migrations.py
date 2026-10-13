@@ -73,7 +73,10 @@ def _build_expected_columns(dialect=None) -> dict[str, list[tuple[str, str]]]:
     from app.database import Base
 
     expected: dict[str, list[tuple[str, str]]] = {}
-    for table in Base.metadata.sorted_tables:
+    # This is a column inventory, not DDL creation order. Walk the metadata's
+    # insertion-ordered table registry directly: cyclic foreign keys make
+    # sorted_tables warn and may become an error in future SQLAlchemy versions.
+    for table in Base.metadata.tables.values():
         column_entries: list[tuple[str, str]] = []
         for column in table.columns:
             if column.primary_key:

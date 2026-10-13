@@ -1,3 +1,12 @@
+## [MIGRATION MANIFEST HARDENING / EXACT-HEAD CI PENDING] Avoid irrelevant sorting across cyclic foreign keys (2026-10-13)
+
+- **Existing seam inspected:** `backend/app/migrations.py:_build_expected_columns` and its regression coverage in `backend/tests/test_renovation_truth_labels.py`.
+- **Weak point removed:** this function only builds an inventory of column definitions for additive migrations, yet used `Base.metadata.sorted_tables`, which asks SQLAlchemy to order cyclic foreign-key dependencies and emits a future-compatibility warning. It now iterates the metadata's existing ordered table registry; this does not create tables or alter the schema and has no dependency-order effect on an inventory.
+- **Action removed:** routine migration-manifest generation no longer triggers SQLAlchemy's unresolved-cycle warning on every test/database initialization.
+- **Owner action remaining:** none for this source-only refactor. Existing schema migration and production deployment invariants remain unchanged.
+- **What remains / next dependency:** the actual cyclic FK graph remains a legitimate cross-table schema property and is not rewritten as part of this manifest-only fix. A schema redesign would require separate migration evidence and data-preservation proof; do not opportunistically rewrite it here.
+- **Verification:** added a regression asserting the expected outcome/source-kind column is present and the inventory emits no cyclic-sort warning. Exact-head full CI, secrets scan, and deployment SHA verification required.
+
 ## [PUBLIC OFFER PRIVACY / LEGACY-SCHEMA HARDENING / EXACT-HEAD CI PENDING] Share and validate only safe contract terms (2026-10-13)
 
 - **Existing seams inspected:** `_public_domain_terms` / `terms_complete` / `_domain_out` and `create_domain_record` in `backend/app/api/public.py`, `DomainTerms` and `DomainRecordCreate`, the existing exchange-board form, and public value-flow tests.

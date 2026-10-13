@@ -4,8 +4,11 @@ evidence_source labels, source_kind migration, REAL-only public_stats,
 REAL-requires-proof refusal, NOT MEASURABLE metric, SANDBOX separation.
 """
 
+import warnings
+
 import pytest
 from sqlalchemy import MetaData, Table, create_engine, text
+from sqlalchemy.exc import SAWarning
 
 from app import evidence_source, models
 
@@ -37,6 +40,24 @@ def test_evidence_source_labels():
         evidence_source.validate("SYNTHETIC")
     with pytest.raises(ValueError):
         evidence_source.validate("")
+
+
+
+
+def test_expected_column_inventory_does_not_sort_cyclic_foreign_keys():
+    from app.migrations import _build_expected_columns
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always", SAWarning)
+        expected = _build_expected_columns()
+
+    assert "outcomes" in expected
+    assert "source_kind" in dict(expected["outcomes"])
+    assert not any(
+        issubclass(item.category, SAWarning)
+        and "Cannot correctly sort tables" in str(item.message)
+        for item in caught
+    )
 
 
 def test_source_kind_migration_is_idempotent_and_backfills_mock():
