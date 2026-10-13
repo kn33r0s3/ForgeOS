@@ -287,12 +287,19 @@ def test_daily_cycle_invokes_local_cognitive_batch_when_explicitly_enabled(db, m
     from app.config import settings
     from app.services import cognitive_provider, operating_v4
 
+    question = models.ResearchQuestion(
+        question="Can public evidence clarify this workflow?",
+        priority_score=80,
+    )
+    db.add(question)
+    db.commit()
+    db.refresh(question)
     research = research_task_engine.create_task(
         db,
-        question_id=_question(db, "Can public evidence clarify this workflow?").id,
+        question_id=question.id,
         source="test",
         query="public evidence for workflow",
-        objective="Can public evidence clarify this workflow?",
+        objective=question.question,
     )
     evidence = models.Evidence(
         source="public-source",
