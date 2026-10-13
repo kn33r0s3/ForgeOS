@@ -702,3 +702,4 @@ The aim is not to memorize everything perfectly. It is to make important knowled
 
 - 2026-10-14: Added the Nepal-intelligified direction and Nepal-first/world-open AI provider mandate. Nepali language and context are first-class design inputs; real provider calls remain distinct from selection, mock output, evidence and authorization.
 - 2026-10-14: Added section 37, the cross-boundary Evidence/Claim/Judgment/source-learning truth pass, including unknown-vs-zero and retry identity rules.
+- 2026-10-14: Added section 38, requiring proactive context recovery, source reconciliation, privacy-aware durable memory, and truthful continuous-work reporting.
