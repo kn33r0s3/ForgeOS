@@ -944,6 +944,23 @@ def test_scheduled_intelligence_includes_owner_retry_stage(monkeypatch):
 def test_scheduled_intelligence_includes_scout_stage(monkeypatch):
     """The intelligence route runs the scout cycle as Stage 7."""
     monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    from app.services import operating_v4, scout
+
+    monkeypatch.setattr(operating_v4, "contact_state", lambda _db: {
+        "days_since_last_contact": 1,
+        "contact_priority_due": False,
+        "starved": False,
+    })
+    monkeypatch.setattr(scout, "run_scout_cycle", lambda _db: {
+        "candidates_ranked": 0,
+        "candidates_scored": 0,
+        "drafts_generated": 0,
+        "drafts_already_open": 0,
+        "pending_contact_replies": 2,
+        "dry_wells_recorded": 1,
+        "blocked": 0,
+        "errors": [],
+    })
     client = TestClient(app)
 
     response = client.get(
@@ -956,6 +973,10 @@ def test_scheduled_intelligence_includes_scout_stage(monkeypatch):
     # Stage 7 present
     assert "scout_cycle" in intel
     assert intel["scout_cycle"]["status"] in ("ok", "partial", "error")
+    # Late Scout runs expose the same contact-outcome counts as early-priority runs.
+    assert intel["scout_cycle"]["pending_contact_replies"] == 2
+    assert intel["scout_cycle"]["dry_wells_recorded"] == 1
+    assert intel["cycle_effect"]["next_owner_attention"] == "review_pending_contact_outcomes"
     # Other stages still present
     assert "forge_cycle" in intel
     assert "discovery_cycle" in intel
