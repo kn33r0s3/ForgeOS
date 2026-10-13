@@ -23,6 +23,18 @@ _EXPLICIT_TARGET_FIELDS = (
     "network_connection_id",
 )
 
+# These targets already have active canonical adapters. NetworkConnection is
+# represented as a WorldRelation by network_substrate_adapter, so it remains
+# deliberately unresolved here rather than being duplicated as an entity.
+_SUPPORTED_TARGETS: dict[str, tuple[str, type]] = {
+    "claim_id": ("claim", models.Claim),
+    "opportunity_id": ("opportunity", models.Opportunity),
+    "decision_id": ("decision", models.Decision),
+    "experiment_id": ("experiment", models.Experiment),
+    "outcome_id": ("outcome", models.Outcome),
+    "judgment_id": ("judgment", models.Judgment),
+}
+
 
 def sync_evidence_relationships(
     db: Session,
@@ -59,10 +71,18 @@ def sync_evidence_relationships(
             for field in _EXPLICIT_TARGET_FIELDS
             if getattr(source, field, None) is not None
         ]
-        if len(target_values) != 1 or target_values[0][0] != "claim_id":
+        if len(target_values) != 1 or not source.evidence_id:
             result["unresolved_records"] += 1
             continue
-        if not source.evidence_id or not source.claim_id:
+        target_field, target_id = target_values[0]
+        target_spec = _SUPPORTED_TARGETS.get(target_field)
+        if target_spec is None:
+            # Includes NetworkConnection until evidence-to-relation can be
+            # expressed without pretending a relation is an entity endpoint.
+            result["unresolved_records"] += 1
+            continue
+        target_type, target_model = target_spec
+        if not isinstance(target_id, int) or isinstance(target_id, bool) or target_id < 1:
             result["unresolved_records"] += 1
             continue
         try:
@@ -72,8 +92,8 @@ def sync_evidence_relationships(
             continue
 
         evidence = db.get(models.Evidence, source.evidence_id)
-        claim = db.get(models.Claim, source.claim_id)
-        if evidence is None or claim is None:
+        target = db.get(target_model, target_id)
+        if evidence is None or target is None:
             result["unresolved_records"] += 1
             continue
 
@@ -81,7 +101,7 @@ def sync_evidence_relationships(
             db, entity_cache, "evidence_record", evidence.id
         )
         to_entity, to_created = _ensure_entity(
-            db, entity_cache, "claim", claim.id
+            db, entity_cache, target_type, target_id
         )
         result["entities_created"] += int(from_created) + int(to_created)
         relation_key = f"legacy-evidence-relationship:{source.id}:substrate-v1"
@@ -95,7 +115,7 @@ def sync_evidence_relationships(
                 attributes={
                     "source_ref": {"table": "evidence_relationships", "id": source.id},
                     "evidence_ref": {"table": "evidence", "id": evidence.id},
-                    "claim_ref": {"table": "claims", "id": claim.id},
+                    f"{target_type}_ref": {"table": target_model.__tablename__, "id": target_id},
                     "payload_copied": False,
                 },
                 direction="directed",
