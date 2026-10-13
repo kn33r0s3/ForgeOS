@@ -96,10 +96,31 @@ describe("Hami public content", () => {
 
   it("names Hami without publishing compatibility names as product identities", () => {
     assert.equal(SITE.name, "Hami");
+    assert.equal(SITE.tagline, "Discover what matters. Understand it. Act on it.");
     assert.doesNotMatch(SITE.description, /ForgeOS|Pulse/);
     assert.equal(/service marketplace|trusted service network/i.test(SITE.description), false);
     assert.match(SITE.description, /being built in Kathmandu/);
+    assert.match(SITE.description, /across domains/);
+    assert.match(SITE.description, /serves everywhere equally/i);
     assert.match(SITE.description, /Pre-revenue/);
+  });
+
+  it("keeps the Hami Systems mark, cover, and browser icon consistent", () => {
+    const mark = readFileSync(join(root, "public/favicon.svg"), "utf8");
+    const cover = readFileSync(join(root, "public/hami-cover.svg"), "utf8");
+    const brand = readFileSync(join(root, "src/components/layout/brand-mark.tsx"), "utf8");
+    const header = readFileSync(join(root, "src/components/layout/site-header.tsx"), "utf8");
+    assert.match(mark, /viewBox="0 0 64 64"/);
+    assert.match(mark, /#FFB000/i);
+    assert.match(cover, /viewBox="0 0 1640 720"/);
+    assert.match(cover, /HAMI/);
+    assert.match(cover, /SYSTEMS/);
+    assert.match(cover, /Built in Kathmandu/);
+    assert.match(cover, /Serving everywhere equally/);
+    assert.match(brand, /HAMI/);
+    assert.match(brand, /SYSTEMS/);
+    assert.match(brand, /\/favicon\.svg/);
+    assert.match(header, /#FFB000/);
   });
 
   it("exposes public-first primary destinations", () => {
