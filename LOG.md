@@ -178,3 +178,11 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Wired the batch into `scripts/run_daily_cycle.py` as Stage 1c, after collection/evaluation recovery and before the autonomy stage. Proposal output remains PROPOSED, with no ACTION, external contact, spending or publication.
 - Added tests for completed proposal persistence, idempotent reruns, explicit-provider and Vercel refusal, owner-gate refusal, and the daily-cycle handoff.
 - **Verification truth:** these changes are committed on `main`. Current-head CI and independent deployment verification have not yet completed successfully, and a real local-Ollama invocation has not been observed. Do not infer execution or model quality from source presence or test fixtures.
+
+
+## 2026-10-14 — ForgeBot real-answer contract and Nepal-native interaction
+
+- Changed the evidence-grounded answer prompt to a structured JSON envelope and language policy: preserve Nepali Devanagari, Romanized Nepali, English and code-switching; do not guess language from Latin script; distinguish stored hypotheses from verified evidence; admit when Hami's knowledge is insufficient.
+- Mock output is prohibited on this grounded-answer path even if the demo fallback flag is enabled. The owner `/forge/ask` endpoint requires a reachable installed zero-cost local model and returns 503 on unavailable inference instead of returning a template.
+- Paid OpenAI generation is blocked at the shared AI factory/status until provider usage metering and global spend enforcement are connected. Configured credentials alone do not activate calls.
+- Updated ForgeBot's existing UI for Nepal-first languages and disabled questions when the provider is MOCK, unavailable, missing, or paid-disabled. Tests are committed but CI must confirm them before they are considered verified.
