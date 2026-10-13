@@ -1360,6 +1360,7 @@ def test_rescue_week_blocks_until_lawyer_read_and_real_consented_seller_evidence
     assert "not independently verified" in legal["status"]
 
     db.add(models.Evidence(
+        linked_bet_id=rescue["bet_id"],
         perspective="SELLER",
         consent_status="granted",
         source_type="firsthand",

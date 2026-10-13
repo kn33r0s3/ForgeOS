@@ -173,18 +173,14 @@ def list_offer_queue(request: Request, db: Session = Depends(get_db)):
     _owner(request)
     from app.services import residue_engine
 
+    offers = operating_v4.list_offer_views(db)
+    rescue_offer = next((offer for offer in offers if offer["id"] == "rescue-week"), None)
     seller_evidence_count = (
-        db.query(models.Evidence)
-        .filter(
-            models.Evidence.perspective == "SELLER",
-            models.Evidence.consent_status == "granted",
-            models.Evidence.source_type == "firsthand",
-            models.Evidence.source_kind == "REAL",
-        )
-        .count()
+        operating_v4.count_linked_seller_evidence(db, rescue_offer["bet_id"])
+        if rescue_offer is not None else 0
     )
     return {
-        "offers": operating_v4.list_offer_views(db),
+        "offers": offers,
         "legal_read": operating_v4._legal_read_projection(db),
         "buyer_purchase_accounts": residue_engine.count_journeys(db),
         "real_consented_seller_evidence": seller_evidence_count,

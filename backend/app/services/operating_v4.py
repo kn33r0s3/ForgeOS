@@ -352,6 +352,21 @@ def _legal_read_projection(db: Session) -> dict:
     }
 
 
+def count_linked_seller_evidence(db: Session, bet_id: int) -> int:
+    """Only count real, consented, firsthand seller evidence linked to this Bet."""
+    return (
+        db.query(models.Evidence)
+        .filter(
+            models.Evidence.linked_bet_id == bet_id,
+            models.Evidence.perspective == "SELLER",
+            models.Evidence.consent_status == "granted",
+            models.Evidence.source_type == "firsthand",
+            models.Evidence.source_kind == "REAL",
+        )
+        .count()
+    )
+
+
 def _offer_gate_state(db: Session, bet: models.SubstrateEntity, offer: dict) -> dict:
     blockers: list[str] = []
     bet_attributes = _bet_attributes(bet)
@@ -362,16 +377,7 @@ def _offer_gate_state(db: Session, bet: models.SubstrateEntity, offer: dict) -> 
         legal = _legal_read_projection(db)
         if not legal["read_by_lawyer"]:
             blockers.append("Blocked until the Nepal personal-data/consent and online-business-registration legal read is recorded.")
-        seller_evidence = (
-            db.query(models.Evidence)
-            .filter(
-                models.Evidence.perspective == "SELLER",
-                models.Evidence.consent_status == "granted",
-                models.Evidence.source_type == "firsthand",
-                models.Evidence.source_kind == "REAL",
-            )
-            .count()
-        )
+        seller_evidence = count_linked_seller_evidence(db, bet.id)
         if seller_evidence < 1:
             blockers.append("Blocked until at least one real, firsthand, consented seller evidence record exists.")
     if offer.get("id") == "before-you-pay-card":

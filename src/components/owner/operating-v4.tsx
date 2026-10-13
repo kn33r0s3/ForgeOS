@@ -440,7 +440,7 @@ export function OperatingV4({ apiKey }: { apiKey: string }) {
 
             <p className="text-xs text-muted">
               Gate counts are real-data checks, not proof by themselves: {offerQueue.buyer_purchase_accounts} consented buyer/circle purchase accounts ·
-              {" "}{offerQueue.real_consented_seller_evidence} real firsthand consented seller evidence records.
+              {" "}{offerQueue.real_consented_seller_evidence} real firsthand consented seller evidence records linked to Rescue Week’s Bet.
             </p>
 
             {offerQueue.offers.length === 0 ? (
