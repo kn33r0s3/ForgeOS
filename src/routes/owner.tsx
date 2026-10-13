@@ -595,7 +595,11 @@ function CycleCard({ cycle }: { cycle: CycleSummary }) {
           );
         }
 
-        const rawEffect = root.cycle_effect;
+        const rawStages = root.stages;
+        const rawEffect =
+          typeof rawStages === "object" && rawStages !== null && !Array.isArray(rawStages)
+            ? (rawStages as Record<string, unknown>).cycle_effect
+            : undefined;
         if (typeof rawEffect === "object" && rawEffect !== null && !Array.isArray(rawEffect)) {
           const raw = rawEffect as Record<string, unknown>;
           const counts: Record<string, number> = {};
