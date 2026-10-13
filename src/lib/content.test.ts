@@ -352,7 +352,7 @@ describe("Hami forge console", () => {
     );
   });
 
-  it("shows verified cycle effects and the next owner action in the private cockpit", () => {
+  it("shows persisted cycle effects and the next owner action in the private cockpit", () => {
     const sourceDir = dirname(fileURLToPath(import.meta.url));
     const owner = readFileSync(join(sourceDir, "../routes/owner.tsx"), "utf8");
     const start = owner.indexOf("function CycleCard");
@@ -360,6 +360,7 @@ describe("Hami forge console", () => {
     assert.ok(start >= 0 && end > start, "CycleCard should exist");
     const card = owner.slice(start, end);
     assert.match(card, /cycle_effect/);
+    assert.match(card, /rawStages\\.cycle_effect/);
     assert.match(card, /Next owner attention/);
     assert.match(card, /reality_boundary/);
     assert.match(card, /source_data_collected/);
