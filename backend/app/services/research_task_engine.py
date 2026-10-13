@@ -347,30 +347,78 @@ def evaluate_claim_after_research(
     )
     task.judgments = [{"id": judgment.id, "status": judgment.status} for judgment in judgments]
     task.contradictions = comparison.contradictory_claims or []
+
+    successful_judgments = [
+        judgment for judgment in judgments if judgment.status == "completed"
+    ]
+    failed_judgments = [
+        judgment for judgment in judgments if judgment.status != "completed"
+    ]
+    if not judgments:
+        step_status = "skipped"
+        evaluation_status = "no_judges_available"
+        evaluation_reason = (
+            "No configured judge was available, so substantive evaluation did not run."
+        )
+    elif failed_judgments:
+        step_status = "failed"
+        evaluation_status = (
+            "judge_execution_failed"
+            if not successful_judgments
+            else "judge_execution_incomplete"
+        )
+        evaluation_reason = (
+            "One or more judge executions failed; the comparison is incomplete and "
+            "must not be treated as a substantive conclusion."
+        )
+    else:
+        step_status = "completed"
+        evaluation_status = "judge_pipeline_executed"
+        evaluation_reason = None
+
     task.results = {
         **(task.results or {}),
         "judgment_ids": [judgment.id for judgment in judgments],
         "comparison_id": comparison.id,
         "comparison_outcome": comparison.outcome,
+        "evaluation_status": evaluation_status,
         "excluded_metadata_only_evidence_ids": metadata_only_ids,
     }
+    step_output = {
+        "status": evaluation_status,
+        "judgment_ids": [judgment.id for judgment in judgments],
+        "successful_judgment_count": len(successful_judgments),
+        "failed_judgments": [
+            {
+                "id": judgment.id,
+                "judge": judgment.judge_name,
+                "error": judgment.error,
+            }
+            for judgment in failed_judgments
+        ],
+        "comparison_id": comparison.id,
+        "comparison_outcome": comparison.outcome,
+        "excluded_metadata_only_evidence_ids": metadata_only_ids,
+    }
+    if evaluation_reason:
+        step_output["reason"] = evaluation_reason
     _set_step(
         db,
         task,
         "evaluate",
-        "completed",
-        output={
-            "status": "judge_pipeline_executed",
-            "judgment_ids": [judgment.id for judgment in judgments],
-            "comparison_id": comparison.id,
-            "comparison_outcome": comparison.outcome,
-            "excluded_metadata_only_evidence_ids": metadata_only_ids,
-        },
+        step_status,
+        output=step_output,
+        error=evaluation_reason if step_status == "failed" else None,
     )
     if comparison.follow_up_question_id:
         task.remaining_questions = [comparison.summary]
     task.updated_at = utcnow()
-    _event(db, task, "judged", details=task.results)
+    _event(
+        db,
+        task,
+        "judged" if step_status == "completed" else "judgment_skipped" if step_status == "skipped" else "judgment_failed",
+        details=task.results,
+    )
     db.commit()
     db.refresh(task)
     return {"judgments": judgments, "comparison": comparison}
