@@ -1336,6 +1336,8 @@ def test_offer_seed_projection_is_idempotent_and_uses_existing_bet_entities(db):
     assert second["created"] == []
     assert len(second["offers"]) == 5
     assert result["legal_read"]["status"] == "not yet read by a lawyer"
+    events = db.query(models.WorldEvent).filter_by(event_type="state_changed").all()
+    assert any(json.loads(event.payload).get("change") == "legal_read_item_created" for event in events)
 
 
 def test_rescue_week_blocks_until_lawyer_read_and_real_consented_seller_evidence(db):

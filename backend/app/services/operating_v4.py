@@ -119,7 +119,7 @@ OFFER_SEEDS = [
             "success_signal": "At least one specific, checkable decision factor not represented in the existing record, with provenance and uncertainty retained.",
         },
         "kill_criterion": "Stop if informed consent is unclear, participants cannot share without disclosing another person's private data, or five accounts yield no specific checkable decision factor.",
-        "depends_on": ["bet:bet-c"],
+        "depends_on": [],
     },
     {
         "id": "lost-sales-check",
@@ -149,7 +149,7 @@ OFFER_SEEDS = [
             "success_signal": "A reproducible baseline with known denominators and explicit unknowns, sufficient to decide whether any further test is justified.",
         },
         "kill_criterion": "Stop if consent or lawful authority to share is unclear, records cannot be safely redacted, or the sample cannot support a reproducible count.",
-        "depends_on": ["bet:bet-a"],
+        "depends_on": [],
     },
     {
         "id": "buyer-voice-brief",
@@ -179,7 +179,7 @@ OFFER_SEEDS = [
             "success_signal": "Decision factors can be categorized without exposing identities or turning self-report into verified fact.",
         },
         "kill_criterion": "Stop if consent is missing, the account requires private third-party chat content, or reported factors cannot be separated from unsupported inference.",
-        "depends_on": ["bet:bet-c"],
+        "depends_on": [],
     },
     {
         "id": "rescue-week",
@@ -209,11 +209,7 @@ OFFER_SEEDS = [
             "success_signal": "Complete auditable baseline and outcome records; a positive result is not assumed and must meet the pre-agreed comparison rule.",
         },
         "kill_criterion": "Do not start until lawyer-read status is recorded and relevant consented real seller evidence exists; kill if consent is withdrawn, actual outcomes cannot be verified, cost/time cap is exceeded, or evidence disconfirms the intervention.",
-        "depends_on": [
-            "legal-read:personal-data-handling-and-consent-nepal",
-            "evidence:real-consented-firsthand-seller-record",
-            "bet:bet-a",
-        ],
+        "depends_on": ["evidence:real-consented-firsthand-seller-record"],
     },
     {
         "id": "before-you-pay-card",
@@ -243,7 +239,7 @@ OFFER_SEEDS = [
             "success_signal": "Each checklist item has a traceable basis and wording that does not overstate safety or detection.",
         },
         "kill_criterion": "Keep blocked until ten consented purchase accounts exist; kill if no practical checks are supported, or if users could reasonably mistake the card for merchant/payment verification.",
-        "depends_on": ["evidence:buyer-purchase-journeys>=10", "bet:bet-b"],
+        "depends_on": ["evidence:buyer-purchase-journeys>=10"],
     },
 ]
 
@@ -460,7 +456,22 @@ def seed_offer_views(db: Session) -> dict:
             )
             existing_ids.add(spec["id"])
             created.append(spec["id"])
-        _legal_read_action(db, create=True)
+        existing_legal_action = _legal_read_action(db)
+        legal_action = _legal_read_action(db, create=True)
+        if existing_legal_action is None and legal_action is not None:
+            world_graph.create_event(
+                db,
+                event_type="state_changed",
+                source="offer_legal_read",
+                entity_id=targets["A"].id,
+                payload={
+                    "change": "legal_read_item_created",
+                    "action_id": legal_action.id,
+                    "item_id": "personal-data-consent-and-online-business-registration-nepal",
+                    "status": "not yet read by a lawyer",
+                },
+                idempotency_key="hami-offer-legal-read-item-created:v1",
+            )
         db.commit()
     except Exception:
         db.rollback()
