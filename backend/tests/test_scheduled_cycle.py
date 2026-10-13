@@ -12,6 +12,30 @@ from app.main import app
 
 import inspect
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _fresh_database_for_scheduled_tests_without_db_fixture(request):
+    """The production route requires a persisted CycleRun; prepare isolated tables."""
+    if "db" in request.fixturenames:
+        yield
+        return
+
+    from app import database, models  # noqa: F401
+    from app.database import Base
+    from app.services import source_manager, world_graph
+
+    Base.metadata.drop_all(bind=database.engine)
+    Base.metadata.create_all(bind=database.engine)
+    with database.SessionLocal() as session:
+        source_manager.seed_default_sources(session)
+        world_graph.seed_core_types(session)
+        session.commit()
+    yield
+
+
+
 
 
 
