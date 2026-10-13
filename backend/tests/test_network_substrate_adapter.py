@@ -148,6 +148,40 @@ def test_network_adapter_does_not_activate_unregistered_relation_types_or_guess_
     assert db.query(models.WorldEvent).filter_by(event_type="network_relation_unresolved").count() == 2
 
 
+def test_inactive_endpoint_entity_type_does_not_starve_valid_network_connections(db):
+    need, provider = _endpoints(db)
+    opportunity = models.Opportunity(problem="This endpoint type becomes inactive.")
+    db.add(opportunity)
+    db.flush()
+    blocked = _connection(
+        need, provider, left_kind="opportunity", left_id=opportunity.id
+    )
+    db.add(blocked)
+    db.commit()
+
+    valid_need, valid_provider = _endpoints(db)
+    valid = _connection(valid_need, valid_provider)
+    db.add(valid)
+    db.commit()
+
+    opportunity_type = db.query(models.TypeRegistry).filter_by(
+        category="entity_type", type_name="opportunity"
+    ).one()
+    world_graph.set_type_status(
+        db, opportunity_type, "deprecated",
+        actor="test_agent",
+        rationale="Inactive endpoint types cannot starve valid links.",
+        evidence_ref="backend/tests/test_network_substrate_adapter.py",
+    )
+
+    result = network_substrate_adapter.sync_network_connections(db, limit=1)
+
+    assert result["projected_connections"] == 1
+    assert result["unresolved_connections"] == 1
+    assert db.get(models.NetworkConnection, valid.id).relation_id is not None
+    assert db.get(models.NetworkConnection, blocked.id).relation_id is None
+
+
 def test_old_unregistered_connection_does_not_starve_new_valid_connection(db):
     need, provider = _endpoints(db)
     invalid = _connection(need, provider, relation_type="not_registered")
