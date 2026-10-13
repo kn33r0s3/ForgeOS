@@ -117,3 +117,14 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Tightened generic customer SMS/email delivery to require durable PostgreSQL safety state when live sending is enabled. Added regression tests for rejection of an otherwise-open ephemeral SQLite state and persistence of safe mode when health readiness is degraded. Provider transport tests explicitly simulate durable backing state.
 - Found and corrected a second workflow cancellation source: `verify-deploy.yml` also shared one pending-run group across all main commits. Its concurrency is now scoped by `github.sha`, like main CI.
 - CI for the exact current revision was queued/pending when inspected; tests are **not** reported green. No production credentials, IDs or flags were changed; Telegram remains disabled, no webhook was registered, no real message/payment or revenue was created.
+
+## 2026-10-14 — public front door: an immediate useful action
+
+- **Observed gap:** the homepage foregrounded Hami's architecture and a proposed experiment. Its honest status showed no participants or verified outcomes; visitors had explanation, but no immediate practical output.
+- **Changed in place:** the homepage's primary action now jumps to a browser-only next-step brief builder; the second goes to the existing public needs/offers/trades board. No new route, ontology, database, paid dependency, provider, or narrow product identity was added.
+- **Utility behavior:** visitors enter a desired outcome, present obstacle, optional existing resources, and success condition. The page assembles a structured brief with a smallest reversible test, evidence checklist, decision rule and first action. The brief can be copied or reset. Visitor text is not posted to an API or persisted by this component. Copy failure has a manual-selection fallback.
+- **Truth and safety:** the UI identifies the result as a planning aid, not a verified answer or completed test. No visitor submission, contact, match, participant, real-world outcome, payment, or revenue was created or claimed.
+- **Source/test commits:** homepage utility db3fe74a99e76c42ef59b6ee6ced7ff91a693892; privacy/action regression contract 16a3b1e94da3139c44a5e12f54d85d00aad122eb.
+- **Verification:** exact-current-main test/build execution and the deployed page's visual/functional behavior remain **UNVERIFIED** at this log entry. Source presence is not passing tests or production proof.
+- **Next:** verify current-head frontend tests, typecheck, lint, and deployment; then obtain real consented usability feedback and measure whether visitors complete a concrete next step. Continue independent evaluator and durable-cycle work; this does not satisfy Hami's real-outcome objective.
+
