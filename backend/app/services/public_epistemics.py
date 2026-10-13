@@ -173,7 +173,11 @@ def _independent_external_sources(links: list[tuple[models.EvidenceRelationship,
         url = (evidence.canonical_url or (signal.canonical_url if signal else "") or "").strip()
         if not external_signal and not url.startswith(("https://", "http://")):
             continue
-        identity = source_name or _url_host(url)
+        # The registrable evidence location is a safer independence boundary
+        # than a collector/source label: two adapters can retrieve the same
+        # publisher under different names. Prefer canonical host when present;
+        # fall back to the source name only when no URL host was recorded.
+        identity = _url_host(url).casefold() or source_name
         if identity:
             sources.add(identity)
     return len(sources)
