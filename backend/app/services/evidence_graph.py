@@ -378,8 +378,51 @@ def link_evidence(
 
 
 def set_claim_state(db: Session, claim: models.Claim, state: str) -> models.Claim:
+    """Set a claim state only when the existing evidence graph permits it.
+
+    This is not a general-purpose string setter. "verified" and "rejected"
+    require dedicated outcome/review paths; a generic relation alone cannot
+    establish either. Transitions retain contradictory evidence rather than
+    letting a caller overwrite it.
+    """
     if state not in CLAIM_STATES:
         raise ValueError(f"invalid claim state: {state}")
+    if state == claim.epistemic_state:
+        return claim
+    if state == "observed":
+        raise ValueError("claim epistemic state cannot be downgraded by the generic setter")
+    if state in {"verified", "rejected"}:
+        raise ValueError(f"{state} requires a dedicated verified-outcome or rejection review path")
+
+    relation_types = {
+        "supported": {"supports"},
+        "contested": {"contradicts"},
+        "weakened": {"contradicts", "updates"},
+        "superseded": {"supersedes"},
+    }
+    required = relation_types.get(state)
+    if not required:
+        raise ValueError(f"no generic evidence transition is defined for claim state: {state}")
+
+    basis_edges = (
+        db.query(models.EvidenceRelationship)
+        .join(models.Evidence, models.Evidence.id == models.EvidenceRelationship.evidence_id)
+        .filter(
+            models.EvidenceRelationship.claim_id == claim.id,
+            models.EvidenceRelationship.relation_type.in_(required),
+        )
+        .all()
+    )
+    if not basis_edges:
+        raise ValueError(f"claim state {state!r} requires a matching evidence relationship")
+    if state == "supported":
+        contradictory = (
+            db.query(models.EvidenceRelationship.id)
+            .filter_by(claim_id=claim.id, relation_type="contradicts")
+            .first()
+        )
+        if contradictory:
+            raise ValueError("a claim with unresolved contradictory evidence cannot be set to supported")
     claim.epistemic_state = state
     claim.updated_at = utcnow()
     db.commit()
