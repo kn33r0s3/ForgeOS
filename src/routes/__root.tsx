@@ -6,6 +6,7 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { AuthProvider } from "@/lib/auth/provider";
+import { getAuthAvailability } from "@/lib/auth/availability";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SITE } from "@/lib/content";
@@ -22,6 +23,21 @@ const jsonLd = JSON.stringify({
 });
 
 export const Route = createRootRoute({
+  // Auth availability is loaded once at the root so the header and footer
+  // can apply the same gate as the login page: when sign-in is disabled or
+  // unconfigured, nothing may advertise it. Fails closed, like /login does.
+  loader: async () => {
+    try {
+      return await getAuthAvailability();
+    } catch {
+      return {
+        authConfigured: false,
+        googleConfigured: false,
+        termsConfigured: false,
+        termsUrl: null,
+      };
+    }
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },

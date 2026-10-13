@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { ArrowUpRight } from "lucide-react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useLoaderData, useRouterState } from "@tanstack/react-router";
 import { NAV } from "@/lib/hami-system";
 import { cn } from "@/lib/utils";
+import { authEnabled } from "@/lib/auth/client";
 import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { BrandMark } from "./brand-mark";
@@ -21,6 +22,11 @@ export function SiteHeader() {
   const { user, isPending } = useCurrentUserState();
   // Dev fallback is not a real sign-in: those visitors still see the CTA.
   const signedIn = !!user && !user.isDevFallback;
+  // Same gate the login page applies: when auth is disabled or the auth
+  // stack is unconfigured, /login is a dead end — so nothing here may
+  // advertise Login or Join Hami. Availability comes from the root loader.
+  const { authConfigured } = useLoaderData({ from: "__root__" });
+  const authAvailable = authEnabled && authConfigured;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -86,7 +92,7 @@ export function SiteHeader() {
               />
             ) : signedIn ? (
               <UserButton />
-            ) : (
+            ) : authAvailable ? (
               <>
                 <Link
                   to="/login"
@@ -109,7 +115,7 @@ export function SiteHeader() {
                   Join Hami
                 </Link>
               </>
-            )}
+            ) : null}
             <button
               type="button"
               className="group relative inline-flex size-11 flex-col items-center justify-center gap-[5px] rounded-card lg:hidden"
@@ -181,7 +187,7 @@ export function SiteHeader() {
           {/* Account actions: Join Hami and Login must remain reachable on mobile.
               The header buttons are hidden below sm: breakpoint, so the mobile
               drawer must expose them. */}
-          {!signedIn && (
+          {!signedIn && authAvailable && (
             <div className="flex flex-col gap-2 border-t-2 border-line-strong p-4">
               <Link
                 to="/login"

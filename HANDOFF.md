@@ -121,6 +121,23 @@ than a few days old, re-verify before trusting the details.
 - **Verification boundary:** GitHub status for code commit `1d4453cb9af5afd6d4c68cb8ef6df24e32177370` reported Vercel **PENDING** at the last check. The protected Vercel deployment/runtime API returned 403 for the project scope. The main CI cancellation rule was fixed, but no exact-head backend pytest result is exposed through the current connector. Production `/api/health`, durable DB readiness, scheduler invocation, deployed SHA and live flags remain unverified. Do not claim production health or green tests from source presence alone.
 - **Reality boundary unchanged:** no autonomous customer messaging, real conversation, fulfillment, payment, or revenue was created or claimed by this implementation.
 
+**Update 2026-10-14 (public-surface QA fix):** Owner-ordered
+verify-and-fix loop over haminp.vercel.app. A pictured sweep found the
+header's Login and Join Hami CTAs land on a dead end: /login renders
+only "Sign-in is unavailable in this app configuration." Production
+/login loader data confirms why — `authConfigured: false`
+(googleConfigured: false, termsConfigured: true); the login page's gate
+is `!authEnabled || !authConfigured` (src/routes/login.tsx). Fix on the
+existing seams: src/routes/__root.tsx now loads getAuthAvailability()
+once (fails closed), and SiteHeader/SiteFooter apply the same gate —
+Login, Join Hami, and the footer Sign in link render only when auth is
+enabled AND configured. Also: /domain gained its own <title>
+("Needs, offers, and fair exchanges — Hami"); it previously fell back
+to the generic site title. Enabling auth itself (provider + auth env
+in the Vercel project) remains an owner/dashboard action; until then
+the site no longer advertises a dead end. Local gate green before
+push: 257 tests, typecheck, lint (1 pre-existing warning), build.
+
 **Update 2026-10-13 (daily freshness check):** HEAD at `4d73a7a`
 ("Align needs tests and make offer terms visible by default",
 committed 2026-10-12 21:22 NPT). Pull fast-forwarded

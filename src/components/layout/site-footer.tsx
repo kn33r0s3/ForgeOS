@@ -1,6 +1,7 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useLoaderData } from "@tanstack/react-router";
 import { SITE } from "@/lib/content";
 import { FOOTER_GROUPS } from "@/lib/hami-system";
+import { authEnabled } from "@/lib/auth/client";
 import { BrandMark } from "./brand-mark";
 import { Container } from "./container";
 
@@ -9,6 +10,10 @@ const LINK =
 
 export function SiteFooter() {
   const year = new Date().getFullYear();
+  // Same gate as the header and the login page: never link to sign-in
+  // while auth is disabled or unconfigured (see the root loader).
+  const { authConfigured } = useLoaderData({ from: "__root__" });
+  const authAvailable = authEnabled && authConfigured;
   return (
     <footer
       className="mt-auto"
@@ -24,11 +29,13 @@ export function SiteFooter() {
         </div>
         {FOOTER_GROUPS.map((group) => (
           <FooterColumn key={group.title} title={group.title}>
-            {group.items.map((item) => (
-              <Link key={item.to} to={item.to} className={LINK}>
-                {item.label}
-              </Link>
-            ))}
+            {group.items
+              .filter((item) => authAvailable || item.to !== "/login")
+              .map((item) => (
+                <Link key={item.to} to={item.to} className={LINK}>
+                  {item.label}
+                </Link>
+              ))}
           </FooterColumn>
         ))}
       </Container>
