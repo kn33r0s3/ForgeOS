@@ -1,7 +1,8 @@
 # Hami Brain: Operating Charter for Agents
 
-Version 4, 2026-10-14 (sections 32–35 preserve the evidence/security audit and add the many-climbs operating model). Owner: Bhumadevi. Every agent reads this first, every run. Keep a copy in the repo at docs/BRAIN.md.
+Version 4, 2026-10-14 (sections 32–36 preserve the evidence/security audit, many-climbs operating model and Nepal-intelligified mandate). Owner: Bhumadevi. Every agent reads this first, every run. Keep a copy in the repo at docs/BRAIN.md.
 
+**Content hash (Git blob SHA-1; hash line excluded from hashed text):** `gitblob:5c7f6181f8dc26f54a3f47d4ac7f651e17ca39be`
 
 ## 0. How to use this document
 
@@ -638,6 +639,15 @@ This section supersedes any earlier implication in sections 5, 17, 28, 29 or 30 
 4. Compare the provider call's actual language, evidence references, latency and cost against a decisive test. Provider installation alone does not complete this gate.
 5. Continue verifying exact-head CI and deployed SHA while the provider work advances. Unverified deployment, provider credentials, spend approval or customer-facing permission blocks only the affected external action; independent source work, tests and safe implementation continue.
 
+### 36.3.1 Evidence-led starting landscape (reviewed 2026-10-14)
+
+- The 2025 NLUE paper in ACL Anthology expands Nepali NLU evaluation to 12 task datasets and reports that strong existing models still struggle with its added complexity; the best multilingual model outperforms the best monolingual models on most tasks. Use this as a baseline and a warning against assuming a Nepali-specific model automatically wins: [ACL Anthology, Nyachhyon et al. (2025)](https://aclanthology.org/2025.findings-ijcnlp.119/).
+- A public local-experiment candidate is [NEPALI-LLM-INSTRUCT-GGUF](https://huggingface.co/mradermacher/NEPALI-LLM-INSTRUCT-GGUF), whose model card identifies a Nepali instruction-tuning lineage. A model card is a lead, not a complete data-rights audit: verify upstream dataset provenance, licenses, supported languages, artifact integrity and local runtime compatibility before adoption.
+- The [curated Nepali NLP resources list](https://github.com/ghimiresunil/Curated-List-of-Nepali-NLP-Resources) is an index for discovery only. Assess each corpus independently for its actual license, consent/provenance, dates, dialect coverage and redistribution terms before downloading, training on, or shipping any portion.
+- Nepal's Ministry of Communication and Information Technology publishes a [National Artificial Intelligent (AI) Policy, 2082](https://mocit.gov.np/content/13111/nationalai---policy---/). Read the official policy directly for governance planning and obtain qualified Nepali legal advice about obligations; this reference alone is not a legal interpretation.
+- Ollama's [structured-output documentation](https://github.com/ollama/ollama/blob/main/docs/capabilities/structured-outputs.mdx) supports providing a JSON schema, but generation must still be validated and evaluated by Hami. The current adapter uses local Ollama only when explicitly selected. Its localhost endpoint works only where the backend can reach that host; never expose an unauthenticated model server publicly to make production calls work.
+
+This is an initial source scan, not an exhaustive market survey, quality result or endorsement of any model or dataset. Continue source-by-source review and attach resulting claims/evidence through the existing substrate.
 This section extends the Hami direction in section 35. It does not weaken consent, privacy, truth labels, spend authority, or the single-substrate rule.
 
 ## Changelog (version 4)
