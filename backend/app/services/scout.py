@@ -495,11 +495,6 @@ def run_scout_cycle(db: Session) -> dict:
             if is_do_not_contact(db, entity_id):
                 blocked += 1
                 continue
-            try:
-                check_send_allowed(db, entity_id)
-            except Exception:
-                blocked += 1
-                continue
             if drafts_generated >= 3 or (score or 0) <= 0:
                 continue
 
@@ -517,6 +512,15 @@ def run_scout_cycle(db: Session) -> dict:
             )
             if existing is not None:
                 drafts_already_open += 1
+                continue
+
+            # Check send policy only when the owner queue has no unresolved
+            # draft. This reports existing work accurately without weakening
+            # the actual send gate.
+            try:
+                check_send_allowed(db, entity_id)
+            except Exception:
+                blocked += 1
                 continue
 
             try:
