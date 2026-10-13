@@ -580,7 +580,36 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
     evidence_edges = db.query(models.EvidenceRelationship).filter(
         models.EvidenceRelationship.evidence_id.in_(evidence_ids)
     ).all() if evidence_ids else []
-    useful_count = sum(1 for edge in evidence_edges if edge.relation_type in {"supports", "contradicts", "updates"})
+    # Only relationships attached to this task's target claim may inform its
+    # usefulness score. A returned source row may already be linked to other
+    # claims; those links are not evidence of usefulness for this question.
+    evidence_signal_ids = {
+        row.id: row.signal_id for row in evidence_rows if row.signal_id is not None
+    }
+    returned_signal_ids = set(created_signal_ids)
+    relevant_edges = [
+        edge for edge in evidence_edges
+        if task.claim_id is not None and edge.claim_id == task.claim_id
+    ]
+    if task.claim_id is None:
+        # Without a target Claim, relationship-based usefulness is unassessed,
+        # not zero. Do not turn unrelated graph history into a negative score.
+        useful_count = None
+        contradicted_count = None
+    else:
+        useful_signal_ids = {
+            evidence_signal_ids[edge.evidence_id]
+            for edge in relevant_edges
+            if edge.relation_type in {"supports", "contradicts", "updates"}
+            and edge.evidence_id in evidence_signal_ids
+            and evidence_signal_ids[edge.evidence_id] in returned_signal_ids
+        }
+        useful_count = len(useful_signal_ids)
+        contradicted_count = int(any(
+            edge.relation_type == "contradicts"
+            and evidence_signal_ids.get(edge.evidence_id) in returned_signal_ids
+            for edge in relevant_edges
+        ))
     novel_count = sum(1 for signal_id in created_signal_ids if db.get(models.Signal, signal_id).is_duplicate_of is None)
     duplicate_count = len(created_signal_ids) - novel_count
     # Model judgments assess collected text; they are not independent source
@@ -588,7 +617,6 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
     # evidence path records independently sourced verification.
     verified_count = 0
     corroborated_count = 0
-    contradicted_count = sum(1 for edge in evidence_edges if edge.relation_type == "contradicts")
     tool_usefulness.record_usage(
         db, tool_name=f"collector:{task.source}", source=task.source, source_type="collector",
         query=task.query, research_task_id=task.id, claim_id=task.claim_id,
@@ -596,7 +624,9 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
         novel_result_count=novel_count, verified_result_count=verified_count,
         duplicate_result_count=duplicate_count,
         corroborated_evidence_count=corroborated_count, contradicted_claim_count=contradicted_count,
-        freshness=100.0 if created_signal_ids else None,
+        # No calibrated cross-domain freshness score exists yet; per-result publication age is
+        # preserved in source_results and must not be converted to 100 merely because it was fetched.
+        freshness=None,
         latency_ms=(monotonic() - started) * 1000,
         success=True,
         failure_kind=None,
