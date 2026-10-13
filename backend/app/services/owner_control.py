@@ -267,9 +267,9 @@ def create_ask(db: Session, *, decision_ref: str, question: str, options: Any,
 
 
 def resend_ask(db: Session, ask_ref: str) -> models.OpHamiOwnerAsk:
-
     if not durable_database(db):
-        raise OwnerControlError("durable_database_required")    ask = db.query(models.OpHamiOwnerAsk).filter_by(public_ref=ask_ref).one_or_none()
+        raise OwnerControlError("durable_database_required")
+    ask = db.query(models.OpHamiOwnerAsk).filter_by(public_ref=ask_ref).one_or_none()
     if ask is None:
         raise OwnerControlError("ask_not_found")
     expiry = normalize_dt(ask.expires_at)
@@ -297,9 +297,9 @@ def resend_ask(db: Session, ask_ref: str) -> models.OpHamiOwnerAsk:
 
 
 def answer_ask(db: Session, *, ask_ref: str, code: str, option: str, channel: str) -> dict[str, Any]:
-
     if not durable_database(db):
-        raise OwnerControlError("durable_database_required")    if channel not in {"telegram", "owner_console"}:
+        raise OwnerControlError("durable_database_required")
+    if channel not in {"telegram", "owner_console"}:
         raise OwnerControlError("answer_channel_invalid")
     ask = db.query(models.OpHamiOwnerAsk).filter_by(public_ref=ask_ref).one_or_none()
     if ask is None:
