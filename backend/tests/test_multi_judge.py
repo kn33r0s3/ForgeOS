@@ -267,29 +267,40 @@ def test_judgment_cache_is_scoped_to_claim_and_opportunity(db):
     assert judgment_a.claim_id == claim_a.id
     assert judgment_b.claim_id == claim_b.id
 
+    opportunity_a_record = models.Opportunity(
+        problem="Opportunity A: reduce scheduling overhead",
+    )
+    opportunity_b_record = models.Opportunity(
+        problem="Opportunity B: validate willingness to pay",
+    )
+    db.add_all([opportunity_a_record, opportunity_b_record])
+    db.commit()
+    db.refresh(opportunity_a_record)
+    db.refresh(opportunity_b_record)
+
     opportunity_a = multi_judge.run_judgments(
         db,
         question="Is the supplied proposition supported?",
         evidence_ids=[evidence.id],
         judges=[judge],
-        opportunity_id=101,
+        opportunity_id=opportunity_a_record.id,
     )[0]
     opportunity_a_repeat = multi_judge.run_judgments(
         db,
         question="Is the supplied proposition supported?",
         evidence_ids=[evidence.id],
         judges=[judge],
-        opportunity_id=101,
+        opportunity_id=opportunity_a_record.id,
     )[0]
     opportunity_b = multi_judge.run_judgments(
         db,
         question="Is the supplied proposition supported?",
         evidence_ids=[evidence.id],
         judges=[judge],
-        opportunity_id=202,
+        opportunity_id=opportunity_b_record.id,
     )[0]
 
     assert opportunity_a.id == opportunity_a_repeat.id
     assert opportunity_a.id != opportunity_b.id
-    assert opportunity_a.opportunity_id == 101
-    assert opportunity_b.opportunity_id == 202
+    assert opportunity_a.opportunity_id == opportunity_a_record.id
+    assert opportunity_b.opportunity_id == opportunity_b_record.id
