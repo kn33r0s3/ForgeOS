@@ -196,3 +196,65 @@ def test_new_evidence_allows_rejudgment_with_new_work_key(db):
     assert first_run[0].id != second_run[0].id
     assert db.query(models.Judgment).count() == 2
     assert second_run[0].evidence_ids == f"{first.id},{second.id}"
+
+
+
+def test_judgment_cache_is_scoped_to_claim_and_opportunity(db):
+    evidence = evidence_fixture(db)
+    claim_a, _ = evidence_graph.create_or_get_claim(db, "Claim A: recurring scheduling problem.")
+    claim_b, _ = evidence_graph.create_or_get_claim(db, "Claim B: willingness to pay.")
+
+    judge = spec("context-sensitive", positive_judge)
+    judgment_a = multi_judge.run_judgments(
+        db,
+        question="Is the supplied proposition supported?",
+        evidence_ids=[evidence.id],
+        judges=[judge],
+        claim_id=claim_a.id,
+    )[0]
+    judgment_a_repeat = multi_judge.run_judgments(
+        db,
+        question="Is the supplied proposition supported?",
+        evidence_ids=[evidence.id],
+        judges=[judge],
+        claim_id=claim_a.id,
+    )[0]
+    judgment_b = multi_judge.run_judgments(
+        db,
+        question="Is the supplied proposition supported?",
+        evidence_ids=[evidence.id],
+        judges=[judge],
+        claim_id=claim_b.id,
+    )[0]
+
+    assert judgment_a.id == judgment_a_repeat.id
+    assert judgment_a.id != judgment_b.id
+    assert judgment_a.claim_id == claim_a.id
+    assert judgment_b.claim_id == claim_b.id
+
+    opportunity_a = multi_judge.run_judgments(
+        db,
+        question="Is the supplied proposition supported?",
+        evidence_ids=[evidence.id],
+        judges=[judge],
+        opportunity_id=101,
+    )[0]
+    opportunity_a_repeat = multi_judge.run_judgments(
+        db,
+        question="Is the supplied proposition supported?",
+        evidence_ids=[evidence.id],
+        judges=[judge],
+        opportunity_id=101,
+    )[0]
+    opportunity_b = multi_judge.run_judgments(
+        db,
+        question="Is the supplied proposition supported?",
+        evidence_ids=[evidence.id],
+        judges=[judge],
+        opportunity_id=202,
+    )[0]
+
+    assert opportunity_a.id == opportunity_a_repeat.id
+    assert opportunity_a.id != opportunity_b.id
+    assert opportunity_a.opportunity_id == 101
+    assert opportunity_b.opportunity_id == 202
