@@ -12,6 +12,7 @@ _SOURCE_FIELDS: tuple[tuple[str, str, type], ...] = (
     ("source_pattern_id", "pattern", models.Pattern),
     ("source_belief_id", "belief", models.Belief),
     ("source_claim_id", "claim", models.Claim),
+    ("source_rare_signal_id", "rare_signal_assessment", models.RareSignalAssessment),
 )
 
 
@@ -45,8 +46,6 @@ def sync_research_question_sources(db: Session, *, limit: int = 250) -> dict[str
 
     for question in rows:
         result["questions_seen"] += 1
-        if question.source_rare_signal_id is not None:
-            result["unresolved_links"] += 1
         for source_field, entity_type, source_model in _SOURCE_FIELDS:
             source_id = getattr(question, source_field, None)
             if source_id is None:
