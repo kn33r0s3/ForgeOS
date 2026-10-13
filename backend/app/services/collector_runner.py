@@ -631,6 +631,148 @@ def run_pending_tasks(db: Session, limit: int = 5) -> list[dict]:
         outcomes.append(outcome)
     return outcomes
 
+def run_pending_evaluations(
+    db: Session,
+    limit: int = 2,
+    *,
+    max_retries_per_task: int = 3,
+) -> list[dict]:
+    """Retry incomplete substantive evaluation for already-collected evidence.
+
+    Collection tasks are intentionally separate from judge/model execution.
+    This bounded recovery pass resumes only existing completed tasks whose
+    evaluate step was never run or failed because evaluation was unavailable.
+    It never recollects sources, creates synthetic evidence, or performs
+    customer-facing actions. Retry counters live in the existing step JSON.
+    """
+    if limit <= 0 or max_retries_per_task <= 0:
+        return []
+
+    candidate_limit = min(max(limit * 20, 20), 200)
+    candidates = (
+        db.query(models.ResearchTask)
+        .filter(
+            models.ResearchTask.status == "completed",
+            models.ResearchTask.evidence_ids.isnot(None),
+            models.ResearchTask.evidence_ids != "",
+        )
+        .order_by(models.ResearchTask.updated_at.asc(), models.ResearchTask.id.asc())
+        .limit(candidate_limit)
+        .all()
+    )
+    retryable_statuses = {
+        "not_evaluated",
+        "no_judges_available",
+        "judge_execution_failed",
+        "judge_execution_incomplete",
+    }
+    outcomes: list[dict] = []
+
+    for task in candidates:
+        if len(outcomes) >= limit:
+            break
+        evaluate_step = next((step for step in task.steps if step.name == "evaluate"), None)
+        if evaluate_step is None or evaluate_step.status not in {"pending", "failed", "skipped"}:
+            continue
+        output = evaluate_step.output_data if isinstance(evaluate_step.output_data, dict) else {}
+        previous_status = output.get("status")
+        if previous_status not in retryable_statuses:
+            # In particular, metadata-only/unassessed evidence is not retried
+            # as though a judge could turn bibliographic metadata into proof.
+            continue
+        try:
+            retry_count = int(output.get("automatic_retry_count") or 0)
+        except (TypeError, ValueError):
+            retry_count = 0
+        if retry_count >= max_retries_per_task:
+            continue
+
+        evidence_ids = []
+        for item in (task.evidence_ids or "").split(","):
+            try:
+                evidence_id = int(item.strip())
+            except (TypeError, ValueError):
+                continue
+            if evidence_id > 0 and evidence_id not in evidence_ids:
+                evidence_ids.append(evidence_id)
+        if not evidence_ids:
+            continue
+
+        # Match first-pass semantics for claim-scoped work, but never fetch or
+        # collect new sources on this recovery path.
+        evaluation_ids = evidence_ids
+        if task.claim_id:
+            linked_ids = [
+                row.evidence_id
+                for row in db.query(models.EvidenceRelationship)
+                .filter(models.EvidenceRelationship.claim_id == task.claim_id)
+                .order_by(models.EvidenceRelationship.id.asc())
+                .all()
+            ]
+            evaluation_ids = list(dict.fromkeys(linked_ids))
+        if not evaluation_ids:
+            continue
+
+        prior_status = previous_status
+        prior_error = evaluate_step.error
+        try:
+            from app.services import research_task_engine
+
+            research_task_engine.evaluate_claim_after_research(db, task, evaluation_ids)
+            db.refresh(task)
+            refreshed_step = next((step for step in task.steps if step.name == "evaluate"), None)
+            if refreshed_step is None:
+                continue
+            updated_output = (
+                dict(refreshed_step.output_data)
+                if isinstance(refreshed_step.output_data, dict)
+                else {}
+            )
+            next_retry_count = retry_count + 1
+            updated_output["automatic_retry_count"] = next_retry_count
+            updated_output["automatic_retry_reason"] = prior_status
+            refreshed_step.output_data = updated_output
+            refreshed_step.error = refreshed_step.error or prior_error
+            task.updated_at = models.utcnow()
+            db.commit()
+            db.refresh(task)
+            db.refresh(refreshed_step)
+            outcomes.append({
+                "task_id": task.id,
+                "status": refreshed_step.status,
+                "evaluation_status": updated_output.get("status", "not_recorded"),
+                "retry_count": next_retry_count,
+                "max_retries": max_retries_per_task,
+                "evidence_count": len(evidence_ids),
+            })
+        except Exception as exc:
+            db.rollback()
+            latest = db.get(models.ResearchTask, task.id)
+            if latest is not None:
+                latest_step = next((step for step in latest.steps if step.name == "evaluate"), None)
+                if latest_step is not None:
+                    failed_output = (
+                        dict(latest_step.output_data)
+                        if isinstance(latest_step.output_data, dict)
+                        else {}
+                    )
+                    failed_output["automatic_retry_count"] = retry_count + 1
+                    failed_output["automatic_retry_reason"] = prior_status
+                    failed_output["recovery_error_type"] = type(exc).__name__
+                    latest_step.output_data = failed_output
+                    latest_step.error = f"Evaluation recovery failed: {type(exc).__name__}"
+                    latest.updated_at = models.utcnow()
+                    db.commit()
+            outcomes.append({
+                "task_id": task.id,
+                "status": "failed",
+                "evaluation_status": "evaluation_recovery_failed",
+                "retry_count": retry_count + 1,
+                "error_type": type(exc).__name__,
+            })
+    return outcomes
+
+
 def run_default_collection(db: Session) -> list[dict]:
     """Refuse standing feeds that docs/PUBLIC_SOURCES.md has not cleared.
 
