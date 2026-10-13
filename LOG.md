@@ -242,3 +242,11 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - F-02 still requires a real browser/PWA check, F-05 requires protected evidence that frontend and FastAPI use durable shared production PostgreSQL, and F-06 requires an exact route/method/endpoint inventory before any alias cleanup. F-08 remains an intentional archived local frontend path.
 - Put the complete disposition matrix into the existing `docs/CAPABILITY_QUEUE.md`, exposed follow-on work in `QUEUE.md`, and indexed it in `HANDOFF.md` and `STATE.md`. No new file/architecture, secret read, real message, spend, external activation or test claim was created.
 - Verification: source spot-read only. Current exact-head CI, production runtime, durable database and browser behavior are not verified by this log entry.
+
+## 2026-10-14 — reconcile operating scope and recovered blueprints
+
+- Removed the policy contradiction: 14 days without REAL contact now starves only the active external intervention and work dependent on it. Independent research, reusable capabilities, cross-climb integration, security/privacy, reliability, testing and System Obligations continue. The three-live-Bet and one-active-intervention limits remain for external tests.
+- Preserved the commercial evidence loop `ORIENT → DIAGNOSE → BET → PROBE → VERIFY → EARNING → AMPLIFY/DAMPEN/KILL → MAP → ORIENT AGAIN`. The October 11 “just three screens” diagnosis is historical, not the complete current roadmap; the later saved version itself noted unfinished discovery and claim/outcome loops. The 39-step playbook remains historical method material, not current operating authority.
+- Marked the Build Book D71–D83 gap resolved: `docs/UNKNOWN_MAP.md` and `src/lib/unknowns.ts` have 96 matching unique D IDs through D96, and the existing `npm test` checks generation parity.
+- Recorded global originality/no-competitor-fixation in the Brain; external products are evidence about real needs, not Hami's identity or reason to narrow the search.
+- This documentation commit does not itself prove continuous execution. No external action, spend, message, publication, production activation or secret disclosure was performed.

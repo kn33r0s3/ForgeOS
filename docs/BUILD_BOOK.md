@@ -54,7 +54,7 @@ Built and tested: consent-scoped contact record, one-time manage token (opt-out,
 ### Engine and history (from audits)
 
 - No mechanism chooses Hami's next frontier. Local rankers exist: src/lib/forge/assistant.ts::ripenessQueue() (WTP hypothesis → desk-doable → age), operating_v4.py (owner-created Bets/Probes, 3 live Bets max, kill rules, proof levels), legacy opportunity_engine/money_engine/decision_engine (speed to money, penalize uncertainty).
-- docs/UNKNOWN_MAP.md has D1–D83; src/lib/unknowns.ts is generated only to D70 (bug).
+- Historical audit note (D71–D83 projection gap): **resolved in current source**. As of 2026-10-14, `docs/UNKNOWN_MAP.md` contains 96 D-unknown rows (latest ID D96; IDs are not necessarily contiguous), and `src/lib/unknowns.ts` contains the same 96 unique D IDs. `backend/app/data/unknowns.json` includes D96 alongside other unknown categories. `scripts/sync-unknowns-json.mjs` generates these projections; `npm test` checks parity. The old 'generated only to D70' audit is stale, not a current bug.
 - Discovery machinery is duplicated and partly gated: discovery_engine.py, curiosity_engine.py, cognitive_worker, PR #15 remnants. Recovery Steps 1–2 merged (PR #18): /api/scheduled/intelligence deployed and authenticated; natural cron execution not yet observed. Step 3 (convergence) is pending.
 - The first "own intelligence" layer failed because of poor data, not missing code. External collectors (e.g. GDELT, Semantic Scholar) returned HTTP 429. Rate limits must never be recorded as "no discovery".
 - Legacy research/opportunity stack is gated off by default (FORGEOS_LEGACY_INTELLIGENCE_ENABLED). Do not delete it; archive only with proof.
@@ -224,7 +224,7 @@ Seams: discovery_engine.py (load-bearing), curiosity_engine.py, cognitive_worker
 
 Seams: operating_v4.py (Bet/Probe/Horizon), assistant.ts::ripenessQueue(), value-tiers.ts, UNKNOWN_MAP.md → unknowns.ts.
 
-- **W2-01** Fix the D71–D83 generation gap; parity test.
+- **W2-01 — RESOLVED (verified 2026-10-14):** D-unknown map/projection parity now reaches D96 (96 matching unique D IDs). Current `npm test` runs `node scripts/sync-unknowns-json.mjs --check`; frontend tests passed on main. Reopen only if a later map edit fails the generator check.
 - **W2-02** Unmapped value = UNASSESSED (never tier 1); WTP hypothesis and desk-doability alone cannot win.
 - **W2-03** Candidate admission gates (falsifiable claim, named disconfirming test, kill rule, consent/permission check, bounded cost and harm); candidates failing a gate are blocked, not low-scored.
 - **W2-04** Ranked slate (default 3 using the existing live-Bet cap: one fast test, one exploration in a new domain, one best by merit), labels High/Medium/Low/Unassessed for stake, transfer, capability gain, upside; cost, time-to-evidence, reversibility, harm. Speed floor: at least one candidate yields first evidence within 7 days. Model-proposed factors are UNCONFIRMED until the owner confirms. Owner-only endpoint and a read-only "Next experiments" panel in /owner.

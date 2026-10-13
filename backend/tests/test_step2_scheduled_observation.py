@@ -16,17 +16,40 @@ def _fresh_database_for_scheduled_observation_tests_without_db_fixture(request):
         yield
         return
 
+    from sqlalchemy import create_engine, event as sa_event
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
     from app import database, models  # noqa: F401
     from app.database import Base
     from app.services import source_manager, world_graph
 
-    Base.metadata.drop_all(bind=database.engine)
-    Base.metadata.create_all(bind=database.engine)
-    with database.SessionLocal() as session:
-        source_manager.seed_default_sources(session)
-        world_graph.seed_core_types(session)
-        session.commit()
-    yield
+    previous_engine = database.engine
+    previous_session_local = database.SessionLocal
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+
+    @sa_event.listens_for(engine, "connect")
+    def _enable_foreign_keys(dbapi_connection, _connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
+    database.engine = engine
+    database.SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+    try:
+        Base.metadata.create_all(bind=engine)
+        with database.SessionLocal() as session:
+            source_manager.seed_default_sources(session)
+            world_graph.seed_core_types(session)
+            session.commit()
+        yield
+    finally:
+        engine.dispose()
+        database.engine = previous_engine
+        database.SessionLocal = previous_session_local
 
 
 
