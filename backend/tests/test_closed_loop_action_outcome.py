@@ -2504,6 +2504,7 @@ def test_forge_ask_api_returns_observed_model_metadata(monkeypatch, db):
     monkeypatch.setattr(settings, "FORGE_API_KEY", "test-owner-key")
     monkeypatch.setattr(ai_engine, "get_provider_status", lambda: {
         "provider": "ollama", "mode": "SELF_HOSTED", "status": "MODEL_AVAILABLE",
+        "internal_context_allowed": True,
         "inference_verified": False,
     })
     monkeypatch.setattr(ai_engine, "answer_question", lambda *args, **kwargs: {
