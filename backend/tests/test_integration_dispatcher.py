@@ -194,6 +194,9 @@ def test_twilio_429_rate_limit_retries(db, monkeypatch):
 
 
 def test_customer_sms_is_blocked_by_default_safe_mode(db, monkeypatch):
+    # This test targets the safe-mode decision, not the independent durability
+    # veto exercised in the dedicated durable-database tests.
+    monkeypatch.setattr(owner_control, "durable_database", lambda _db: True)
     monkeypatch.setattr(settings, "FORGE_BOT_LIVE", True)
     delivery = integration_outbox.enqueue(db, integration_name="twilio", operation="send_sms",
         idempotency_key="test-default-safe-mode", request={"to": "+9779812345678", "body": "must not send"})
