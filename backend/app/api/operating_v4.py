@@ -161,8 +161,6 @@ class OfferLegalReadIn(BaseModel):
     summary: str = Field(min_length=10, max_length=3000)
 
 
-
-
 @router.get("/offers/public")
 def list_public_offers(db: Session = Depends(get_db)):
     """Public projection; only explicitly owner-approved, currently unblocked offer copy."""
@@ -437,7 +435,6 @@ def verify_capability_real_world(
     except SubstrateError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     return {"id": capability_id, "real_world_verified": True}
-
 
 
 @router.post("/evidence/{evidence_id}/proof")
