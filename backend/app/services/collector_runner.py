@@ -266,7 +266,7 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
         research_task_engine.fail_task(db, task, f"No collector registered for source '{task.source}'")
         tool_usefulness.record_usage(
             db, tool_name=f"collector:{task.source}", source=task.source, source_type="unavailable",
-            query=task.query, research_task_id=task.id, claim_id=task.claim_id,
+            query=task.query, research_task_id=task.id, claim_id=task.claim_id, attempt_number=task.attempts,
             result_count=None, useful_result_count=None, novel_result_count=None,
             verified_result_count=None, duplicate_result_count=None,
             corroborated_evidence_count=None, contradicted_claim_count=None,
@@ -318,7 +318,7 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
         research_task_engine.fail_task(db, task, str(exc))
         tool_usefulness.record_usage(
             db, tool_name=f"collector:{task.source}", source=task.source, source_type="collector",
-            query=task.query, research_task_id=task.id, claim_id=task.claim_id,
+            query=task.query, research_task_id=task.id, claim_id=task.claim_id, attempt_number=task.attempts,
             result_count=None, useful_result_count=None, novel_result_count=None,
             verified_result_count=None, duplicate_result_count=None,
             corroborated_evidence_count=None, contradicted_claim_count=None,
@@ -619,7 +619,7 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
     corroborated_count = 0
     tool_usefulness.record_usage(
         db, tool_name=f"collector:{task.source}", source=task.source, source_type="collector",
-        query=task.query, research_task_id=task.id, claim_id=task.claim_id,
+        query=task.query, research_task_id=task.id, claim_id=task.claim_id, attempt_number=task.attempts,
         result_count=len(created_signal_ids), useful_result_count=useful_count,
         novel_result_count=novel_count, verified_result_count=verified_count,
         duplicate_result_count=duplicate_count,
