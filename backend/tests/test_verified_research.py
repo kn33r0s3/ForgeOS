@@ -150,6 +150,31 @@ def test_empty_collection_reports_evaluation_not_invoked(db, monkeypatch):
     assert db.query(models.Judgment).count() == 0
 
 
+def test_successful_collection_without_available_judge_is_not_called_evaluated(db, monkeypatch):
+    _, task = make_claim_task(db)
+    SourceCollectorFixture.items = [{
+        "content": "Substantive source text describes a recurring paid need.",
+        "url": "https://example.test/need",
+        "external_id": "need-1",
+        "metadata": {"claim_relation": "supports"},
+    }]
+    SourceCollectorFixture.fail = False
+    monkeypatch.setitem(collector_runner.COLLECTORS, "fixture-source", SourceCollectorFixture)
+    monkeypatch.setattr(multi_judge, "_default_judges", lambda: [])
+
+    result = collector_runner.execute_task(db, task)
+
+    assert result["status"] == "completed"
+    assert result["evidence_found"] == 1
+    assert result["evaluation_status"] == "no_judges_available"
+    assert result["comparison_outcome"] in {"unassessed", "unavailable", None}
+    assert result["judgments_completed"] == 0
+    assert result["judgments_failed"] == 0
+    persisted = db.get(models.ResearchTask, task.id)
+    assert persisted.results["evaluation_status"] == "no_judges_available"
+    assert db.query(models.Judgment).count() == 0
+
+
 def test_unavailable_and_failed_sources_are_recorded_without_fabrication(db, monkeypatch):
     claim, task = make_claim_task(db)
     task.source = "missing-source"
@@ -157,6 +182,8 @@ def test_unavailable_and_failed_sources_are_recorded_without_fabrication(db, mon
     result = collector_runner.execute_task(db, task)
     assert result["status"] == "failed"
     assert "No collector registered" in result["reason"]
+    assert result["evaluation_status"] == "not_invoked_collection_failed"
+    assert result["evidence_found"] == 0
     assert db.get(models.ResearchTask, task.id).errors
 
     failing = SourceCollectorFixture
@@ -166,6 +193,8 @@ def test_unavailable_and_failed_sources_are_recorded_without_fabrication(db, mon
     failed = collector_runner.execute_task(db, failed_task)
     assert failed["status"] == "failed"
     assert "fixture source failed" in failed["reason"]
+    assert failed["evaluation_status"] == "not_invoked_collection_failed"
+    assert failed["judgments_completed"] == 0
     assert db.query(models.Evidence).count() == 0
     assert db.query(models.Judgment).count() == 0
 
@@ -185,7 +214,12 @@ def test_duplicate_research_reuses_evidence_and_new_source_rejudges(db, monkeypa
     first = collector_runner.execute_task(db, first_task)
     repeated = collector_runner.execute_task(db, db.get(models.ResearchTask, first_task.id))
     assert first["status"] == "completed"
+    assert first["evaluation_status"] == "judge_pipeline_executed"
     assert repeated["reused"] is True
+    assert repeated["evaluation_status"] == "judge_pipeline_executed"
+    assert repeated["comparison_outcome"] is not None
+    assert repeated["judgments_completed"] == 1
+    assert repeated["judgments_failed"] == 0
     assert db.query(models.Evidence).count() == 1
     assert db.query(models.Judgment).count() == 1
 
