@@ -628,13 +628,24 @@ def test_cycle_without_new_effect_is_not_marked_completed():
     effect = scheduled._cycle_effect_summary({
         "scout_cycle": {
             "pending_contact_replies": 2,
+            "pending_contact_outcomes": 1,
             "dry_wells_recorded": 1,
         },
     })
     assert effect["status"] == "no_new_effect"
     assert effect["counts"]["pending_contact_replies"] == 2
+    assert effect["counts"]["pending_contact_outcomes"] == 1
     assert effect["counts"]["dry_wells_recorded"] == 1
     assert effect["next_owner_attention"] == "review_pending_contact_outcomes"
+
+    dry_well_only = scheduled._cycle_effect_summary({
+        "scout_cycle": {
+            "pending_contact_replies": 2,
+            "pending_contact_outcomes": 0,
+            "dry_wells_recorded": 2,
+        },
+    })
+    assert dry_well_only["next_owner_attention"] == "wait_for_reply_without_repeat_contact"
 
 
 def test_scheduled_intelligence_runs_five_stages(monkeypatch):
