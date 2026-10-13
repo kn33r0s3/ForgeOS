@@ -9,6 +9,8 @@ from datetime import timedelta
 from typing import Any, Mapping, Sequence
 from urllib.parse import urlparse, urlunsplit
 
+from sqlalchemy import String, and_, cast, exists, func, literal, or_
+
 from app import evidence_source
 
 from pydantic import TypeAdapter, ValidationError
@@ -465,6 +467,73 @@ def run_pending_cognitive_tasks(
 
     now = models.utcnow()
     cap = max(1, min(int(candidate_limit), 200))
+
+    # Filter work that cannot run before limiting the ranked candidate window.
+    # Otherwise old completed or max-attempt WorkerTasks can occupy every slot
+    # and permanently hide newer questions.
+    worker_key = (
+        literal("cognitive-research-task:v1:")
+        + cast(models.ResearchTask.id, String)
+    )
+    any_worker = (
+        db.query(models.WorkerTask.id)
+        .filter(models.WorkerTask.idempotency_key == worker_key)
+        .correlate(models.ResearchTask)
+        .exists()
+    )
+    runnable_existing_worker = (
+        db.query(models.WorkerTask.id)
+        .filter(
+            models.WorkerTask.idempotency_key == worker_key,
+            models.WorkerTask.status.in_(("queued", "failed", "blocked")),
+            or_(
+                models.WorkerTask.next_run_at.is_(None),
+                models.WorkerTask.next_run_at <= now,
+            ),
+            or_(
+                models.WorkerTask.status != "failed",
+                models.WorkerTask.attempts < models.WorkerTask.max_attempts,
+            ),
+        )
+        .correlate(models.ResearchTask)
+        .exists()
+    )
+    worker_is_dispatchable = or_(~any_worker, runnable_existing_worker)
+
+    # Match comma-separated evidence IDs against persisted rows in SQL so
+    # restricted/private/TEST/MOCK tasks do not occupy slots before the Python
+    # context builder enforces the same provider-visible boundary.
+    reference_csv = func.replace(models.ResearchTask.evidence_ids, " ", "")
+    evidence_id_text = cast(models.Evidence.id, String)
+    reference_matches = or_(
+        reference_csv == evidence_id_text,
+        reference_csv.like(evidence_id_text + literal(",%")),
+        reference_csv.like(literal("%,") + evidence_id_text + literal(",%")),
+        reference_csv.like(literal("%,") + evidence_id_text),
+    )
+    safe_url = func.trim(models.Evidence.canonical_url)
+    eligible_public_evidence = (
+        db.query(models.Evidence.id)
+        .filter(
+            reference_matches,
+            func.upper(func.trim(models.Evidence.source_kind)) == "REAL",
+            func.lower(func.trim(func.coalesce(models.Evidence.source_type, ""))) == "third_party",
+            func.lower(func.trim(func.coalesce(models.Evidence.consent_status, ""))) == "not_required",
+            models.Evidence.source_identity.is_(None),
+            or_(safe_url.like("https://%"), safe_url.like("http://%")),
+            ~safe_url.like("https:///%"),
+            ~safe_url.like("http:///%"),
+            ~safe_url.like("https://%@%"),
+            ~safe_url.like("http://%@%"),
+            or_(
+                func.length(func.trim(func.coalesce(models.Evidence.title, ""))) > 0,
+                func.length(func.trim(func.coalesce(models.Evidence.claim, ""))) > 0,
+            ),
+        )
+        .correlate(models.ResearchTask)
+        .exists()
+    )
+
     research_rows = (
         db.query(models.ResearchTask)
         .join(
@@ -475,6 +544,8 @@ def run_pending_cognitive_tasks(
             models.ResearchTask.status == "completed",
             models.ResearchTask.evidence_ids.isnot(None),
             models.ResearchTask.evidence_ids != "",
+            worker_is_dispatchable,
+            eligible_public_evidence,
         )
         .order_by(
             models.ResearchQuestion.priority_score.desc(),
