@@ -2,7 +2,7 @@
 
 Version 4, 2026-10-14 (sections 32–36 preserve the evidence/security audit, many-climbs operating model and Nepal-intelligified mandate). Owner: Bhumadevi. Every agent reads this first, every run. Keep a copy in the repo at docs/BRAIN.md.
 
-**Content hash (Git blob SHA-1; hash line excluded from hashed text):** `gitblob:489e65711f108f7cd24f56728c5e11284cf05aa8`
+**Content hash (Git blob SHA-1; hash line excluded from hashed text):** `gitblob:d6339dc4c14082d5fa24356e6ebb1b5c9dc846fe`
 
 ## 0. How to use this document
 
@@ -645,7 +645,7 @@ This section supersedes any earlier implication in sections 5, 17, 28, 29 or 30 
 - A public local-experiment candidate is [NEPALI-LLM-INSTRUCT-GGUF](https://huggingface.co/mradermacher/NEPALI-LLM-INSTRUCT-GGUF), whose model card identifies a Nepali instruction-tuning lineage. A model card is a lead, not a complete data-rights audit: verify upstream dataset provenance, licenses, supported languages, artifact integrity and local runtime compatibility before adoption.
 - The [curated Nepali NLP resources list](https://github.com/ghimiresunil/Curated-List-of-Nepali-NLP-Resources) is an index for discovery only. Assess each corpus independently for its actual license, consent/provenance, dates, dialect coverage and redistribution terms before downloading, training on, or shipping any portion.
 - Nepal's Ministry of Communication and Information Technology publishes a [National Artificial Intelligent (AI) Policy, 2082](https://mocit.gov.np/content/13111/nationalai---policy---/). Read the official policy directly for governance planning and obtain qualified Nepali legal advice about obligations; this reference alone is not a legal interpretation.
-- Ollama's [structured-output documentation](https://github.com/ollama/ollama/blob/main/docs/capabilities/structured-outputs.mdx) supports providing a JSON schema, but generation must still be validated and evaluated by Hami. The current adapter uses local Ollama only when explicitly selected. Its localhost endpoint works only where the backend can reach that host; never expose an unauthenticated model server publicly to make production calls work.
+- Ollama's [structured-output documentation](https://github.com/ollama/ollama/blob/main/docs/capabilities/structured-outputs.mdx) supports providing a JSON schema, but generation must still be validated and evaluated by Hami. The current adapter uses local Ollama only when explicitly selected. Loopback HTTP is permitted only on a non-serverless local runtime. In Vercel/serverless deployments, reach a self-hosted Ollama-compatible gateway only through HTTPS with an `OLLAMA_API_KEY` bearer token; the gateway must enforce authentication before forwarding requests to Ollama. Never expose a bare Ollama endpoint publicly. `MODEL_AVAILABLE` means the endpoint responds and the model is installed—not that generation quality is proven.
 
 This is an initial source scan, not an exhaustive market survey, quality result or endorsement of any model or dataset. Continue source-by-source review and attach resulting claims/evidence through the existing substrate.
 This section extends the Hami direction in section 35. It does not weaken consent, privacy, truth labels, spend authority, or the single-substrate rule.
