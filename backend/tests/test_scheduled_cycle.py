@@ -906,6 +906,7 @@ def test_scheduled_intelligence_collection_partial_on_failed_deferred(monkeypatc
             {"task_id": 1, "source": "web", "status": "completed", "signals_created": 3},
             {"task_id": 2, "source": "rss", "status": "failed", "signals_created": 0},
             {"task_id": 3, "source": "api", "status": "deferred", "signals_created": 0},
+            {"task_id": 4, "source": "crossref", "status": "planned", "deferred": True, "signals_created": 0},
         ]
 
     monkeypatch.setattr(cr, "run_pending_tasks", mock_run_pending)
@@ -919,9 +920,12 @@ def test_scheduled_intelligence_collection_partial_on_failed_deferred(monkeypatc
     assert response.status_code == 200
     coll = response.json()["intelligence"]["collection_cycle"]
     assert coll["status"] == "partial"
-    assert coll["tasks_executed"] == 3
+    assert coll["tasks_executed"] == 4
     assert coll["tasks_failed"] == 1
-    assert coll["tasks_deferred"] == 1
+    assert coll["tasks_deferred"] == 2
+    planned_deferred = next(item for item in coll["outcomes"] if item["task_id"] == 4)
+    assert planned_deferred["status"] == "planned"
+    assert planned_deferred["deferred"] is True
 
 
 def test_scheduled_intelligence_discovery_partial_on_errors(monkeypatch):
