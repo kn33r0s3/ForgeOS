@@ -94,6 +94,84 @@ def test_explicit_legacy_evidence_claim_link_projects_to_one_relation(db):
     assert db.query(models.SubstrateEntity).filter_by(entity_type="evidence_record").count() == 1
 
 
+def test_supported_explicit_targets_project_by_reference(db):
+    evidence, claim, claim_link, _decision = _evidence_claim_link(db)
+
+    opportunity = models.Opportunity(problem="Opportunity source target")
+    decision = models.Decision(title="Decision source target", rationale="A linked decision")
+    experiment = models.Experiment(action="Run a bounded test")
+    outcome = models.Outcome(
+        outcome_type="QUALITATIVE",
+        source="owner_report",
+        qualitative_result="An observed outcome",
+    )
+    judgment = models.Judgment(
+        judge_name="fixture-judge",
+        provider="test",
+        model="deterministic",
+        question="Does the evidence support the question?",
+        evidence_ids=str(evidence.id),
+        judgment_key="target-projector-test-judgment",
+        status="completed",
+    )
+    db.add_all([opportunity, decision, experiment, outcome, judgment])
+    db.flush()
+
+    targets = [
+        ("opportunity_id", "opportunity", opportunity, "supports"),
+        ("decision_id", "decision", decision, "informs"),
+        ("experiment_id", "experiment", experiment, "derived_from"),
+        ("outcome_id", "outcome", outcome, "supports"),
+        ("judgment_id", "judgment", judgment, "supports"),
+    ]
+    rows = []
+    for index, (field, _entity_type, target, relation_type) in enumerate(targets, start=1):
+        row = models.EvidenceRelationship(
+            evidence_id=evidence.id,
+            **{field: target.id},
+            relation_type=relation_type,
+            relation_key=f"explicit-target-{index}-{target.id}",
+        )
+        db.add(row)
+        rows.append(row)
+    db.commit()
+
+    legacy_evidence_substrate_adapter.sync_legacy_evidence(db)
+    first = adapter.sync_evidence_relationships(db, limit=20)
+
+    assert first == {
+        "records_seen": 6,
+        "relations_created": 6,
+        "entities_created": 7,
+        "unresolved_records": 0,
+    }
+
+    expected_by_row = [(claim_link, "claim", claim.id, "claims")]
+    expected_by_row.extend(
+        (row, entity_type, target.id, target.__tablename__)
+        for row, (_field, entity_type, target, _relation_type) in zip(rows, targets)
+    )
+    for row, expected_type, expected_id, target_table in expected_by_row:
+        relation = db.get(models.WorldRelation, row.substrate_relation_id)
+        assert relation is not None
+        target_entity = db.get(models.SubstrateEntity, relation.to_entity_id)
+        assert target_entity is not None
+        assert target_entity.entity_type == expected_type
+        attrs = json.loads(relation.attributes)
+        assert attrs["payload_copied"] is False
+        assert attrs["evidence_ref"] == {"table": "evidence", "id": evidence.id}
+        assert attrs["source_ref"] == {"table": "evidence_relationships", "id": row.id}
+        assert attrs[f"{expected_type}_ref"] == {
+            "table": target_table,
+            "id": expected_id,
+        }
+
+    repeated = adapter.sync_evidence_relationships(db, limit=20)
+    assert repeated["records_seen"] == 0
+    assert repeated["relations_created"] == 0
+    assert db.query(models.WorldRelation).count() == 6
+
+
 def test_unregistered_or_ambiguous_evidence_links_remain_unprojected(db):
     _evidence, _claim, unregistered, _decision = _evidence_claim_link(
         db, relation_type="unreviewed_link_type"
