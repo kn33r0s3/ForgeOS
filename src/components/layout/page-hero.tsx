@@ -3,7 +3,7 @@ import { Container } from "./container";
 import { Eyebrow } from "./eyebrow";
 import { cn } from "@/lib/utils";
 
-/** Marketing-page masthead: centred, blackletter title on the 45deg sheen. */
+/** Marketing-page masthead: clear display type, warm amber accents, and the shared Hami surface system. */
 export function PageHero({
   eyebrow,
   title,
