@@ -394,6 +394,8 @@ def compare_judgments(
     judge_evidence_sets = []
     context_mismatches = []
     unsupported = []
+    missing_identity = []
+    stale_judgments = []
     for item in completed:
         linked_ids = {
             int(value)
@@ -406,6 +408,29 @@ def compare_judgments(
         if not linked_ids:
             unsupported.append(item.id)
 
+        provider = (item.provider or "").strip()
+        model = (item.model or "").strip()
+        if not provider or not model:
+            missing_identity.append(item.id)
+        else:
+            expected_key = _judgment_key(
+                JudgeSpec(
+                    name=item.judge_name,
+                    provider=provider,
+                    model=model,
+                    evaluate=lambda *_args: None,
+                ),
+                item.question,
+                linked_ids,
+                claim_id=item.claim_id,
+                opportunity_id=item.opportunity_id,
+            )
+            if item.judgment_key != expected_key:
+                # Legacy judgments may contain labels inferred by the retired
+                # free-text classifier. Preserve them, but never compare them
+                # under the current explicit-label contract.
+                stale_judgments.append(item.id)
+
     # A privacy-filtered judge may legitimately see a subset of the caller's
     # candidate rows. Judges must all assess the same subset; they may not be
     # compared when one saw a materially different context.
@@ -417,10 +442,6 @@ def compare_judgments(
             item.id for item in completed if item.id not in context_mismatches
         )
 
-    missing_identity = [
-        item.id for item in completed
-        if not (item.provider or "").strip() or not (item.model or "").strip()
-    ]
     distinct_judges = {
         ((item.provider or "").strip().casefold(), (item.model or "").strip().casefold())
         for item in completed
@@ -461,6 +482,9 @@ def compare_judgments(
     elif missing_identity:
         outcome = "evaluation_incomplete"
         summary = "One or more completed judgments lack provider/model provenance, so independence cannot be assessed."
+    elif stale_judgments:
+        outcome = "evaluation_incomplete"
+        summary = "One or more judgments were produced under an older evaluation contract and must be rerun before comparison."
     elif len(distinct_judges) < 2:
         outcome = "insufficient_judges"
         summary = "Only one distinct provider/model completed a judgment; this is a single-model assessment, not agreement."
