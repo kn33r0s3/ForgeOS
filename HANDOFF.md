@@ -121,6 +121,15 @@ than a few days old, re-verify before trusting the details.
 - **Verification boundary:** GitHub status for code commit `1d4453cb9af5afd6d4c68cb8ef6df24e32177370` reported Vercel **PENDING** at the last check. The protected Vercel deployment/runtime API returned 403 for the project scope. The main CI cancellation rule was fixed, but no exact-head backend pytest result is exposed through the current connector. Production `/api/health`, durable DB readiness, scheduler invocation, deployed SHA and live flags remain unverified. Do not claim production health or green tests from source presence alone.
 - **Reality boundary unchanged:** no autonomous customer messaging, real conversation, fulfillment, payment, or revenue was created or claimed by this implementation.
 
+**Update 2026-10-14 (loop round 10 — close read):** /about, /process,
+/technology, /ventures, /opportunities, /actions read in full: claims
+discipline holds everywhere (no manufactured outcomes; the pilot is
+framed as one candidate test; inquiries closed). One copy defect
+found in the shared strategic-area template: the hero read
+"Technology is building." / "Ventures is building." — fixed to
+"is being built." in src/components/pages/area-view.tsx, which
+carries both pages.
+
 **Update 2026-10-14 (loop round 4 — unknowns counts settled):** The
 /unknowns page (100 known unknowns: 96 unknown, 3 hypothesized,
 1 supported) was diffed question-by-question against

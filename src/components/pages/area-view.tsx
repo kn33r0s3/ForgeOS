@@ -16,7 +16,7 @@ export function AreaView({ name }: { name: "Technology" | "Ventures" }) {
           <>
             {name}
             <br />
-            <span className="text-muted">is building.</span>
+            <span className="text-muted">is being built.</span>
           </>
         }
         lede={`${area?.description ?? ""} This is a long-term direction for Hami, not a claim that a separate subsidiary or operating company exists today.`}
