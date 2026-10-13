@@ -304,3 +304,45 @@ def test_judgment_cache_is_scoped_to_claim_and_opportunity(db):
     assert opportunity_a.id != opportunity_b.id
     assert opportunity_a.opportunity_id == opportunity_a_record.id
     assert opportunity_b.opportunity_id == opportunity_b_record.id
+
+
+
+def test_unavailable_judgment_can_recover_for_same_evidence(db):
+    evidence = evidence_fixture(db)
+    availability = {"ready": False}
+    judge = multi_judge.JudgeSpec(
+        name="recovering-judge",
+        provider="test-provider",
+        model="recovering-judge-model",
+        evaluate=positive_judge,
+        available=lambda: availability["ready"],
+    )
+
+    failed = multi_judge.run_judgments(
+        db,
+        question="Does the same evidence support recurring scheduling pain?",
+        evidence_ids=[evidence.id],
+        judges=[judge],
+    )[0]
+    assert failed.status == "failed"
+    assert (failed.error or "").startswith("judge unavailable:")
+
+    availability["ready"] = True
+    recovered = multi_judge.run_judgments(
+        db,
+        question="Does the same evidence support recurring scheduling pain?",
+        evidence_ids=[evidence.id],
+        judges=[judge],
+    )[0]
+    repeated = multi_judge.run_judgments(
+        db,
+        question="Does the same evidence support recurring scheduling pain?",
+        evidence_ids=[evidence.id],
+        judges=[judge],
+    )[0]
+
+    assert recovered.status == "completed"
+    assert recovered.id != failed.id
+    assert repeated.id == recovered.id
+    assert db.query(models.Judgment).filter_by(judgment_key=recovered.judgment_key).count() == 2
+    assert db.query(models.ResearchQuestion).count() == 0
