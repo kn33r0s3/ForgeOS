@@ -501,11 +501,35 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
         failure_kind=None,
         result_ids=evidence_ids,
     )
+    task_results = final_task.results if isinstance(final_task.results, dict) else {}
+    evaluation_status = task_results.get("evaluation_status")
+    if not isinstance(evaluation_status, str):
+        if not evidence_ids:
+            evaluation_status = "not_invoked_no_evidence"
+        elif task_results.get("comparison_outcome") == "unassessed":
+            evaluation_status = "unassessed_metadata_only"
+        else:
+            evaluation_status = "not_recorded"
+
+    judgment_rows = evaluation.get("judgments", []) if isinstance(evaluation, dict) else []
+    judgments_completed = sum(
+        1 for judgment in judgment_rows
+        if getattr(judgment, "status", None) == "completed"
+    )
+    judgments_failed = sum(
+        1 for judgment in judgment_rows
+        if getattr(judgment, "status", None) != "completed"
+    )
+
     return {
         "task_id": task.id,
         "status": final_task.status,
         "signals_created": len(created_signal_ids),
         "evidence_found": len(set(evidence_ids)),
+        "evaluation_status": evaluation_status,
+        "comparison_outcome": task_results.get("comparison_outcome"),
+        "judgments_completed": judgments_completed,
+        "judgments_failed": judgments_failed,
     }
 
 
