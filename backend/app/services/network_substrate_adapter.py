@@ -52,7 +52,7 @@ def sync_network_connections(db: Session, *, limit: int = 100) -> dict[str, int]
         .exists()
     )
 
-    def endpoint_ready(kind_expr, id_expr):
+    def endpoint_ready(kind_expr, id_expr, *, require_parent_relation: bool = True):
         endpoint_models = dict(network_endpoints.ENDPOINT_ADAPTERS)
         for alias, canonical in network_endpoints.ENDPOINT_ALIASES.items():
             endpoint_models[alias] = network_endpoints.ENDPOINT_ADAPTERS[canonical]
@@ -67,16 +67,13 @@ def sync_network_connections(db: Session, *, limit: int = 100) -> dict[str, int]
                     .correlate(parent)
                     .exists()
                 )
-                target_exists = (
-                    db.query(parent.id)
-                    .filter(
-                        parent.id == id_expr,
+                parent_query = db.query(parent.id).filter(parent.id == id_expr)
+                if require_parent_relation:
+                    parent_query = parent_query.filter(
                         parent.relation_id.isnot(None),
                         parent_relation_exists,
                     )
-                    .correlate(connection_model)
-                    .exists()
-                )
+                target_exists = parent_query.correlate(connection_model).exists()
             else:
                 target_exists = (
                     db.query(endpoint_model.id)
@@ -110,6 +107,49 @@ def sync_network_connections(db: Session, *, limit: int = 100) -> dict[str, int]
         .all()
     )
     remaining = batch_limit - len(new_rows)
+    selected_ids = {row.id for row in new_rows}
+
+    # Add descendants of selected roots when capacity remains. This preserves
+    # same-run projection for short nested chains without allowing a child whose
+    # parent is missing to consume a slot.
+    while remaining > 0 and selected_ids:
+        depends_on_selected = or_(
+            and_(
+                func.lower(func.trim(connection_model.left_kind)) == "network_connection",
+                connection_model.left_id.in_(selected_ids),
+            ),
+            and_(
+                func.lower(func.trim(connection_model.right_kind)) == "network_connection",
+                connection_model.right_id.in_(selected_ids),
+            ),
+        )
+        children = (
+            unprojected
+            .filter(
+                active_relation_type,
+                depends_on_selected,
+                endpoint_ready(
+                    connection_model.left_kind,
+                    connection_model.left_id,
+                    require_parent_relation=False,
+                ),
+                endpoint_ready(
+                    connection_model.right_kind,
+                    connection_model.right_id,
+                    require_parent_relation=False,
+                ),
+                ~connection_model.id.in_(selected_ids),
+            )
+            .order_by(connection_model.updated_at.desc(), connection_model.id.desc())
+            .limit(remaining)
+            .all()
+        )
+        if not children:
+            break
+        new_rows.extend(children)
+        selected_ids.update(row.id for row in children)
+        remaining = batch_limit - len(new_rows)
+
     existing_rows = []
     if remaining > 0:
         existing_rows = (
@@ -155,6 +195,8 @@ def sync_network_connections(db: Session, *, limit: int = 100) -> dict[str, int]
         try:
             resolve_type(db, "relation_type", relation_type)
         except SubstrateError as exc:
+            if "unknown relation_type" in str(exc) or "not active" in str(exc):
+                result["unactivated_relation_types"] += 1
             reasons_by_id[connection.id] = str(exc)
         else:
             reasons_by_id[connection.id] = (
