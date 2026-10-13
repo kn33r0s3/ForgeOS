@@ -188,6 +188,41 @@ def test_unavailable_judge_retries_after_availability_recovers_without_erasing_f
     assert db.query(models.Judgment).count() == 2
 
 
+def test_openai_judge_requires_explicit_opt_in_even_when_key_is_configured(monkeypatch):
+    from app.config import settings
+
+    requested = []
+
+    class FakeTool:
+        def is_available(self):
+            return True
+
+        def execute(self, prompt):
+            raise AssertionError("availability discovery must not execute a paid judge")
+
+    tool = FakeTool()
+
+    class FakeRegistry:
+        def get(self, name):
+            requested.append(name)
+            if name == "openai-completion":
+                return tool
+            raise KeyError(name)
+
+    monkeypatch.setattr(multi_judge, "default_registry", lambda: FakeRegistry())
+    monkeypatch.setattr(settings, "OPENAI_API_KEY", "configured-for-test")
+    monkeypatch.setattr(settings, "FORGEOS_OPENAI_JUDGE_ENABLED", False)
+
+    assert multi_judge._default_judges() == []
+    assert requested == ["local-qwen3-coder"]
+
+    requested.clear()
+    monkeypatch.setattr(settings, "FORGEOS_OPENAI_JUDGE_ENABLED", True)
+    judges = multi_judge._default_judges()
+    assert [judge.name for judge in judges] == ["openai-completion"]
+    assert requested == ["local-qwen3-coder", "openai-completion"]
+
+
 def test_no_available_judges_does_not_create_recursive_research_questions(db):
     evidence = evidence_fixture(db)
     judgments = multi_judge.run_judgments(
