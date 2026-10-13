@@ -38,30 +38,42 @@ export const Route = createRootRoute({
       };
     }
   },
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: `${SITE.name} — ${SITE.tagline}` },
-      { name: "description", content: SITE.description },
-      { property: "og:title", content: SITE.name },
-      { name: "apple-mobile-web-app-title", content: SITE.name },
-      { name: "theme-color", content: SITE.themeColor },
-      { name: "color-scheme", content: "dark" },
-    ],
-    links: [
-      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
-      { rel: "stylesheet", href: appCss },
-      { rel: "manifest", href: "/manifest.webmanifest" },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700&family=Roboto+Mono:wght@400;500;700&family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap",
-      },
-      ...(SITE.url ? [{ rel: "canonical", href: SITE.url }] : []),
-    ],
-  }),
+  head: ({ matches }) => {
+    const matchedPathname = matches[matches.length - 1]?.pathname ?? "/";
+    const pathname = matchedPathname.length > 1
+      ? matchedPathname.replace(/\/+$/, "")
+      : matchedPathname;
+    const canonicalHref = SITE.url
+      ? pathname === "/"
+        ? SITE.url
+        : new URL(pathname, SITE.url).href
+      : null;
+
+    return {
+      meta: [
+        { charSet: "utf-8" },
+        { name: "viewport", content: "width=device-width, initial-scale=1" },
+        { title: `${SITE.name} — ${SITE.tagline}` },
+        { name: "description", content: SITE.description },
+        { property: "og:title", content: SITE.name },
+        { name: "apple-mobile-web-app-title", content: SITE.name },
+        { name: "theme-color", content: SITE.themeColor },
+        { name: "color-scheme", content: "dark" },
+      ],
+      links: [
+        { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+        { rel: "stylesheet", href: appCss },
+        { rel: "manifest", href: "/manifest.webmanifest" },
+        { rel: "preconnect", href: "https://fonts.googleapis.com" },
+        { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+        {
+          rel: "stylesheet",
+          href: "https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700&family=Roboto+Mono:wght@400;500;700&family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap",
+        },
+        ...(canonicalHref ? [{ rel: "canonical", href: canonicalHref }] : []),
+      ],
+    };
+  },
   component: RootDocument,
 });
 

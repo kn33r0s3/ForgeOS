@@ -1,3 +1,14 @@
+## [PUBLIC ROUTE CANONICALS / LOCAL SSR VERIFIED / DEPLOY PENDING] Emit route-specific canonical URLs
+
+- **Existing seam inspected:** `src/routes/__root.tsx` owns the shared head tags for every matched route. `git log --follow`, `git blame`, and the introducing commit `6a26b0b1` confirm the canonical link was added here as static `SITE.url`; TanStack's existing head callback already receives the active match path.
+- **Live evidence:** production HTML for `/`, `/unknowns`, `/about`, and `/services` all emitted `rel="canonical"` pointing only to `https://haminp.vercel.app`; a live browser screenshot confirmed the page itself was route-specific. Production redirects `/services/` and `/about/` to their slashless URLs, and `public/sitemap.xml` lists `/services` only.
+- **Owner action removed:** no per-route SEO edit is needed to keep canonical URLs aligned with the current matched route.
+- **What remains:** this metadata does not guarantee indexing, ranking, or customer outcomes; intentionally aliased/private routes and crawler interpretation remain separate concerns.
+- **Next removable dependency:** after deployment, compare canonical tags against all sitemap routes and confirm private/noindex routes retain their existing robots boundaries. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+- **Verification:** the existing root head seam now builds a canonical from the active route path, trims the trailing slash Vercel redirects, and preserves the homepage URL. Local SSR returned exactly one matching canonical for `/`, `/unknowns`, `/about`, `/services`, `/services/software`, `/operations`, and `/owner`; `/owner` retained its robots meta and production `/owner` and `/operations` retained their `X-Robots-Tag` noindex headers. Typecheck, lint, and safe build passed (one pre-existing lint warning). `npm test` has one unrelated ForgeBot copy assertion failure on the pre-sync tree; rerun after integrating fetched `origin/main`. Production deployment verification remains pending.
+
+---
+
 ## [PUBLIC UNKNOWN FILTERS / KEYBOARD VERIFIED LOCALLY / REPOSITORY GATES BLOCKED] Complete tab interaction
 
 - **Existing seam inspected:** `src/routes/unknowns.tsx` already owns both the public Unknowns lane selector and its state filters. `git log --follow`, `git blame`, and the introduction commit `4fb14930` show both were introduced as `role="tab"` controls.
