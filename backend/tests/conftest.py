@@ -6,6 +6,11 @@ from sqlalchemy.engine import make_url
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+# In-memory tests are not Vercel runtime tests. Specific durability-guard
+# tests set VERCEL explicitly; do not let a host-inherited deployment flag turn
+# all isolated SQLite API tests into 503 responses.
+os.environ.pop("VERCEL", None)
+
 # Override environment BEFORE any app module imports settings or database engine.
 # Keep the local-first default: tests must exercise the app without a shared
 # API secret unless they explicitly set one for a security-specific case.
