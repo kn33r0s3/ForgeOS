@@ -1859,11 +1859,28 @@ def advance_network_connection(
         raise HTTPException(422, "fulfillment requires a note of what was done")
     if next_state == "paid" and (amount_npr is None or amount_npr < 0):
         raise HTTPException(422, "moving to paid requires the amount that changed hands")
-    if next_state == "accepted" and row.left_kind == "domain_record":
+    if next_state == "accepted":
         from app.api.public import terms_complete
-        need = db.query(models.DomainRecord).filter_by(id=row.left_id).first()
-        if need is None or not terms_complete(need.terms):
-            raise HTTPException(409, "accepted work requires a complete economic contract")
+
+        # A NetworkConnection is directed for relation semantics, but either
+        # endpoint may be a DomainRecord. The acceptance gate applies to every
+        # work record involved, regardless of which side is stored as "left".
+        for endpoint_kind, endpoint_id in (
+            (row.left_kind, row.left_id),
+            (row.right_kind, row.right_id),
+        ):
+            if endpoint_kind != "domain_record":
+                continue
+            work_record = (
+                db.query(models.DomainRecord)
+                .filter_by(id=endpoint_id)
+                .first()
+            )
+            if work_record is None or not terms_complete(work_record.terms):
+                raise HTTPException(
+                    409,
+                    "accepted work requires a complete economic contract for every work-record endpoint",
+                )
     row.state = next_state
     db.commit()
     paid = next_state == "paid"

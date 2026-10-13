@@ -1,3 +1,12 @@
+## [ACCEPTANCE GATE ORIENTATION FIX / EXACT-HEAD CI PENDING] Require terms for every work-record endpoint (2026-10-13)
+
+- **Existing seam inspected:** `backend/app/api/forge.py:advance_network_connection`, the existing `DomainRecord.terms` contract validator, and its `test_accepted_work_requires_a_complete_economic_contract` regression.
+- **Weak point removed:** acceptance previously validated terms only when the connection's left endpoint was a `DomainRecord`. The relation model permits either endpoint orientation; a right-side work record could therefore advance to accepted without complete terms. The existing gate now validates every work-record endpoint on the connection. Missing records and incomplete/redacted contracts fail closed before state mutation.
+- **Action removed:** an accepted transition can no longer bypass the contract requirement by reversing left/right endpoint storage. The new regression verifies rejection leaves state at `contacted` and that the same connection can advance only after its right-side terms are completed.
+- **Owner action remaining:** the owner still must establish the actual counterparty, consent, and mutual agreement. This gate checks recorded contract completeness only; it does not prove a real person accepted.
+- **What remains / next dependency:** implement verifiable mutual acceptance only through the existing governed connection/action lifecycle. Do not turn a proposed match, a response, or a complete contract into proof of acceptance.
+- **Verification:** exact-head backend/frontend CI, secrets scan, and independent production deployment verification remain required.
+
 ## [MIGRATION MANIFEST HARDENING / EXACT-HEAD CI PENDING] Avoid irrelevant sorting across cyclic foreign keys (2026-10-13)
 
 - **Existing seam inspected:** `backend/app/migrations.py:_build_expected_columns` and its regression coverage in `backend/tests/test_renovation_truth_labels.py`.

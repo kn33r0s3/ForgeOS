@@ -1893,6 +1893,65 @@ def test_public_trust_lists_recorded_payments_without_a_score(owner_client_with_
     assert "score" not in owner_client_with_db.get(f"/public/trust/provider/{provider.id}").text
 
 
+
+
+def test_accepted_work_checks_contract_when_domain_record_is_right_endpoint(owner_client_with_db, db):
+    complete = {
+        "requested": "A bounded service exchange",
+        "who_can_submit": "Both named sides may propose terms",
+        "success": "The agreed deliverable is completed",
+        "evidence_required": "Both sides review the delivered result",
+        "ownership": "Each side retains ownership unless written terms state otherwise",
+        "payment_due": "After the agreed handoff",
+        "amount_npr": 1500,
+        "partial": "Partial delivery must be agreed before any partial charge",
+        "rejection": "Either side can reject work outside the written scope",
+        "resale": "No resale of private data or materials without permission",
+        "costs": "Additional costs need agreement before they are incurred",
+    }
+    work_record = models.DomainRecord(
+        kind="offer",
+        title="Service offer",
+        detail="A bounded proposal whose terms must be completed before acceptance.",
+        status="open",
+        close_token_hash="token-hash",
+    )
+    db.add(work_record)
+    db.commit()
+    db.refresh(work_record)
+
+    connection = models.NetworkConnection(
+        left_kind="provider",
+        left_id=1,
+        right_kind="domain_record",
+        right_id=work_record.id,
+        state="contacted",
+        reason="Recorded service match",
+        agreement_gap="The offer terms are incomplete.",
+        public_visible=False,
+    )
+    db.add(connection)
+    db.commit()
+    db.refresh(connection)
+
+    blocked = owner_client_with_db.post(
+        f"/forge/connections/{connection.id}/advance",
+        params={"next_state": "accepted"},
+    )
+    assert blocked.status_code == 409, blocked.text
+    db.refresh(connection)
+    assert connection.state == "contacted"
+
+    work_record.terms = json.dumps(complete)
+    db.commit()
+    allowed = owner_client_with_db.post(
+        f"/forge/connections/{connection.id}/advance",
+        params={"next_state": "accepted"},
+    )
+    assert allowed.status_code == 200, allowed.text
+    assert allowed.json()["state"] == "accepted"
+
+
 def test_accepted_work_requires_a_complete_economic_contract(owner_client_with_db, db):
     from app.api.public import terms_complete
     complete = {
