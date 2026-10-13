@@ -176,7 +176,7 @@ function AboutPage() {
           </div>
           <div className="mt-6 border-l-2 border-line pl-4">
             <h3 className="font-display font-bold text-ink">One pilot is one pilot.</h3>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">The missed-inquiry seller idea is one candidate economic test, not Hami’s identity, a proven need, or permission to act. No seller has agreed yet. Every real-world action still needs the right evidence, consent, legal clarity and authorization. A blocked action does not stop independent research, engineering, verification or other safe work.</p>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">The missed-inquiry seller idea is one candidate economic test, not Hami’s identity, an established need, or permission to act. No seller has agreed yet. Every real-world action still needs the right evidence, consent, legal clarity and authorization. A blocked action does not stop independent research, engineering, verification or other safe work.</p>
           </div>
           <p className="mt-6 max-w-3xl text-sm leading-6 text-muted">This is the operating direction, not a claim that every loop is already autonomous. Current discoveries, unknowns and experiments retain their own evidence and status; implemented code, successful tests, deployed behavior and real-world outcomes are reported separately.</p>
           <Button asChild variant="primary" className="mt-6"><Link to="/experiments">See experiments <ArrowRight className="size-4" aria-hidden="true" /></Link></Button>
