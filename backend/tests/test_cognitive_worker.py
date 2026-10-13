@@ -422,6 +422,107 @@ def test_ollama_cognitive_provider_refuses_serverless_loopback(monkeypatch):
         cognitive_provider.get_cognitive_provider()
 
 
+def test_completed_cognitive_tasks_do_not_starve_new_work_before_candidate_limit(db, monkeypatch):
+    def completed_research(objective, *, public=True):
+        research_task = make_research_task(db, objective=objective)
+        research_task.status = "completed"
+        evidence = models.Evidence(
+            source="public-source",
+            title="Public finding",
+            claim="A bounded claim requiring independent validation.",
+            canonical_url=f"https://example.gov.np/{research_task.id}",
+            source_kind="REAL",
+            source_type="third_party",
+            consent_status="not_required",
+            collection_status="collected",
+        )
+        db.add(evidence)
+        db.flush()
+        research_task.evidence_ids = str(evidence.id)
+        db.commit()
+        return research_task
+
+    older = completed_research("Older completed cognitive task")
+    older_worker = cognitive_worker.create_cognitive_task(db, older.id)
+    older_worker.status = "completed"
+    older_worker.outputs = {"status": "PROPOSED", "execution_allowed": False}
+    db.commit()
+
+    newer = completed_research("New question should receive a cognitive turn")
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    from app.services import operating_v4
+    monkeypatch.setattr(operating_v4, "check_agent_run_allowed", lambda _db: None)
+    provider = ReplacementProvider()
+    monkeypatch.setattr(cognitive_provider, "get_cognitive_provider", lambda: provider)
+
+    result = cognitive_worker.run_pending_cognitive_tasks(
+        db, limit=1, candidate_limit=1
+    )
+
+    assert result["completed"] == 1
+    assert result["outcomes"][0]["research_task_id"] == newer.id
+    assert db.get(models.WorkerTask, older_worker.id).status == "completed"
+    assert db.query(models.WorkerTask).filter_by(
+        idempotency_key=f"cognitive-research-task:v1:{newer.id}",
+        status="completed",
+    ).count() == 1
+
+
+def test_restricted_evidence_does_not_starve_public_cognitive_candidate(db, monkeypatch):
+    restricted = make_research_task(db, objective="Restricted first-hand source")
+    restricted.status = "completed"
+    private_evidence = models.Evidence(
+        source="private-inquiry",
+        title="Private inquiry",
+        claim="Content must never enter the local model prompt.",
+        canonical_url="https://example.com/private",
+        source_kind="REAL",
+        source_type="firsthand",
+        consent_status="granted",
+        collection_status="collected",
+    )
+    db.add(private_evidence)
+    db.flush()
+    restricted.evidence_ids = str(private_evidence.id)
+    db.commit()
+
+    eligible = make_research_task(db, objective="Public evidence should receive a turn")
+    eligible.status = "completed"
+    public_evidence = models.Evidence(
+        source="public-source",
+        title="Public finding",
+        claim="A public claim that still needs independent validation.",
+        canonical_url="https://example.gov.np/public-finding",
+        source_kind="REAL",
+        source_type="third_party",
+        consent_status="not_required",
+        collection_status="collected",
+    )
+    db.add(public_evidence)
+    db.flush()
+    eligible.evidence_ids = str(public_evidence.id)
+    db.commit()
+
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    from app.services import operating_v4
+    monkeypatch.setattr(operating_v4, "check_agent_run_allowed", lambda _db: None)
+    provider = ReplacementProvider()
+    monkeypatch.setattr(cognitive_provider, "get_cognitive_provider", lambda: provider)
+
+    result = cognitive_worker.run_pending_cognitive_tasks(
+        db, limit=1, candidate_limit=1
+    )
+
+    assert result["completed"] == 1
+    assert result["outcomes"][0]["research_task_id"] == eligible.id
+    assert "Private inquiry" not in str(provider.context.evidence_context)
+    assert db.query(models.WorkerTask).filter_by(
+        idempotency_key=f"cognitive-research-task:v1:{restricted.id}"
+    ).count() == 0
+
+
 def test_bounded_local_cognitive_batch_runs_and_reuses_proposals(db, monkeypatch):
     research_task = make_research_task(db)
     research_task.status = "completed"
