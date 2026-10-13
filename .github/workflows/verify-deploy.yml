@@ -208,7 +208,24 @@ jobs:
           echo "deployment_match=$DEPLOYMENT_MATCH" >> "$GITHUB_OUTPUT"
           echo "passed=$PASSED" >> "$GITHUB_OUTPUT"
 
+      - name: Confirm this revision is still current main
+        id: freshness
+        run: |
+          set -euo pipefail
+          CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk 'NR == 1 { print $1 }')"
+          if [ -z "$CURRENT_MAIN_SHA" ]; then
+            echo "::error::Could not resolve current main SHA; refusing to record a deployment verdict."
+            exit 1
+          fi
+          if [ "$CURRENT_MAIN_SHA" != "$GITHUB_SHA" ]; then
+            echo "current=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::This verification run was superseded by $CURRENT_MAIN_SHA; no false deployment verdict will be recorded."
+          else
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Record verification
+        if: steps.freshness.outputs.current == 'true'
         env:
           FORGE_API_KEY: ${{ secrets.FORGE_API_KEY }}
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
@@ -236,8 +253,14 @@ jobs:
             exit 1
           fi
 
-      - name: Fail workflow when verification verdict is false
-        if: steps.result.outputs.passed != 'true'
+      - name: Fail workflow when current verification verdict is false
+        if: steps.freshness.outputs.current == 'true' && steps.result.outputs.passed != 'true'
         run: |
           echo "::error::Deployment verification was recorded with passed=false. Check the recorded verdict and earlier steps."
+          exit 1
+
+      - name: Fail superseded run without recording a verdict
+        if: steps.freshness.outputs.current != 'true'
+        run: |
+          echo "::error::This run tested a superseded main revision; verification was not recorded. The current main SHA needs its own exact-SHA verification."
           exit 1
