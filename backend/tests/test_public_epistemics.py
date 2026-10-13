@@ -30,6 +30,7 @@ def _evidence(
     retrieved_at=None,
     relation="supports",
     canonical_url=None,
+    direction="supports",
 ):
     url = canonical_url or f"https://{source}.example.org/report"
     signal = models.Signal(
@@ -45,6 +46,7 @@ def _evidence(
         signal_id=signal.id,
         source=source,
         content=signal.content,
+        direction=direction,
         canonical_url=url,
         retrieved_at=retrieved_at or signal.retrieved_at,
         provenance_hash=f"test:{claim.id}:{source}",
@@ -142,6 +144,24 @@ def test_public_label_mapping_covers_fact_observation_external_claim_conflict_an
     _evidence(db, observation, source="observer", retrieved_at=now)
     _evidence(db, observation, source="second-observer", retrieved_at=now)
     assert derive_public_label(db, observation, now=now) == {
+        "epistemic_state": "observed", "stale": False,
+    }
+
+    claim_specific_lineage = _claim(
+        db,
+        state="observed",
+        kind="EXTERNAL CLAIM",
+        statement="An Evidence row can be contradictory in one legacy context but only lineage here.",
+    )
+    _evidence(
+        db,
+        claim_specific_lineage,
+        source="shared-evidence",
+        retrieved_at=now,
+        relation="derived_from",
+        direction="contradicts",
+    )
+    assert derive_public_label(db, claim_specific_lineage, now=now) == {
         "epistemic_state": "observed", "stale": False,
     }
 
