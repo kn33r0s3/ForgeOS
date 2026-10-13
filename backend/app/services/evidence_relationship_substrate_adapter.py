@@ -7,7 +7,7 @@ the source link points back to the projected relation for restart recovery.
 
 from __future__ import annotations
 
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from app import models
@@ -71,7 +71,7 @@ def sync_evidence_relationships(
         db.query(models.TypeRegistry.id)
         .filter(
             models.TypeRegistry.category == "relation_type",
-            models.TypeRegistry.type_name == link_model.relation_type,
+            models.TypeRegistry.type_name == func.lower(func.trim(link_model.relation_type)),
             models.TypeRegistry.status == "active",
         )
         .correlate(link_model)
