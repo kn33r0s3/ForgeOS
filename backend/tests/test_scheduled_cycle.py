@@ -625,6 +625,17 @@ def test_cycle_without_new_effect_is_not_marked_completed():
     assert errors == {}
     assert partials == {"cycle_effect": "internal_work_only"}
 
+    effect = scheduled._cycle_effect_summary({
+        "scout_cycle": {
+            "pending_contact_replies": 2,
+            "dry_wells_recorded": 1,
+        },
+    })
+    assert effect["status"] == "no_new_effect"
+    assert effect["counts"]["pending_contact_replies"] == 2
+    assert effect["counts"]["dry_wells_recorded"] == 1
+    assert effect["next_owner_attention"] == "review_pending_contact_outcomes"
+
 
 def test_scheduled_intelligence_runs_five_stages(monkeypatch):
     """A+B: state → work → execution → discovery. The endpoint runs all engines
