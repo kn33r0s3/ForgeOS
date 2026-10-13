@@ -482,6 +482,92 @@ def test_scheduled_intelligence_respects_dormancy_before_recording(monkeypatch, 
     assert not scheduled._intelligence_lock.locked()
 
 
+def test_scheduled_intelligence_prioritizes_contact_and_freezes_build(monkeypatch, db):
+    """When contact is overdue, Scout runs before collection and starvation freezes drafting."""
+    from app.api import forge_bot_owner_notification
+    from app.services import (
+        collector_runner,
+        content_loop,
+        discovery_engine,
+        execution_engine,
+        forge_loop,
+        operating_v4,
+        research_task_engine,
+        scout,
+    )
+
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    calls = []
+    monkeypatch.setattr(operating_v4, "contact_state", lambda _db: {
+        "days_since_last_contact": 14,
+        "contact_priority_due": True,
+        "starved": True,
+    })
+    monkeypatch.setattr(scout, "run_scout_cycle", lambda _db: (
+        calls.append("scout") or {
+            "candidates_ranked": 1,
+            "candidates_scored": 1,
+            "drafts_generated": 0,
+            "drafts_already_open": 1,
+            "blocked": 0,
+            "errors": [],
+        }
+    ))
+    monkeypatch.setattr(forge_loop, "run_cycle", lambda _db: (
+        calls.append("forge") or {
+            "cycle_id": "test-cycle",
+            "signals_processed": 0,
+            "stage_errors": {},
+        }
+    ))
+    monkeypatch.setattr(collector_runner, "run_pending_tasks", lambda _db, limit=5: (
+        calls.append("collection") or []
+    ))
+    monkeypatch.setattr(research_task_engine, "resume_running_tasks", lambda _db, limit=10: [])
+    monkeypatch.setattr(execution_engine, "run_autonomous_action_cycle", lambda _db: {
+        "proposed": 0, "allowed": 0, "blocked": 0, "require_approval": 0
+    })
+    monkeypatch.setattr(discovery_engine, "run_discovery", lambda _db, **_kwargs: {
+        "methods": [],
+        "surfaced": [],
+        "existing": [],
+        "rejected": [],
+        "deferred": [],
+        "errors": [],
+        "capability_gaps": [],
+    })
+    monkeypatch.setattr(
+        forge_bot_owner_notification,
+        "retry_queued_owner_notifications",
+        lambda _db: {"status": "skipped", "reason": "test fixture", "retried": 0},
+    )
+    monkeypatch.setattr(
+        forge_bot_owner_notification,
+        "send_daily_owner_status_sms",
+        lambda _db: {"status": "skipped", "reason": "owner_sms_digest_disabled"},
+    )
+
+    def content_must_not_run(_db):
+        raise AssertionError("STARVED must freeze non-obligatory content drafting")
+
+    monkeypatch.setattr(content_loop, "run_content_draft_cycle", content_must_not_run)
+    response = TestClient(app).get(
+        "/scheduled/intelligence",
+        headers={"Authorization": "Bearer test-cron-secret"},
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    stages = body["intelligence"]
+    assert stages["operating_priority"]["next_priority"] == "contact_preparation"
+    assert stages["scout_cycle"]["priority"] == "contact_preparation"
+    assert stages["scout_cycle"]["drafts_already_open"] == 1
+    assert calls.index("scout") < calls.index("collection")
+    assert calls.count("scout") == 1
+    assert stages["content_drafts"]["status"] == "skipped"
+    assert "STARVED" in stages["content_drafts"]["reason"]
+
+
 def test_scheduled_intelligence_runs_five_stages(monkeypatch):
     """A+B: state → work → execution → discovery. The endpoint runs all engines
     for real (they are safe: no network, no spending, no contact).
