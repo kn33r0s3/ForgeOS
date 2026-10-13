@@ -228,7 +228,7 @@ def get_cognitive_provider(provider_name: str | None = None) -> CognitiveProvide
         if transport_mode is None:
             if os.getenv("VERCEL"):
                 raise CognitiveProviderUnavailable(
-                    "Local Ollama cognition cannot use localhost in Vercel. Configure OLLAMA_HOST to an "
+                    "Local Ollama cognition is unavailable in Vercel when only localhost is configured. Set OLLAMA_HOST to an "
                     "authenticated HTTPS self-hosted gateway and set OLLAMA_API_KEY."
                 )
             raise CognitiveProviderUnavailable(
