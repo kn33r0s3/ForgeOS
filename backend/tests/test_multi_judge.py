@@ -418,6 +418,16 @@ def test_new_contract_versions_do_not_reuse_legacy_judgment_or_comparison_cache(
     db.commit()
     db.refresh(old_comparison)
 
+    legacy_judgment_comparison = multi_judge.compare_judgments(
+        db,
+        question=question,
+        judgment_ids=[old_judgment.id],
+        evidence_ids=[evidence.id],
+    )
+    assert legacy_judgment_comparison.outcome == "evaluation_incomplete"
+    assert "older evaluation contract" in legacy_judgment_comparison.summary
+    assert legacy_judgment_comparison.follow_up_question_id is None
+
     comparison = multi_judge.compare_judgments(
         db,
         question=question,
