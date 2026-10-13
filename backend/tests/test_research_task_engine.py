@@ -453,3 +453,117 @@ def test_question_without_linked_claim_still_reaches_substantive_judging(db, mon
     assert evaluate_step.status == "completed"
     assert evaluate_step.output_data["status"] == "judge_pipeline_executed"
     assert persisted.results["evaluation_status"] == "judge_pipeline_executed"
+
+
+
+def test_failed_evaluation_is_retried_from_persisted_evidence(db, monkeypatch):
+    task, evidence = _task_with_claimed_evidence(db)
+    task.status = "completed"
+    task.evidence_ids = str(evidence.id)
+    task.completed_at = models.utcnow()
+    evaluate_step = {step.name: step for step in task.steps}["evaluate"]
+    evaluate_step.status = "failed"
+    evaluate_step.output_data = {
+        "status": "judge_execution_failed",
+        "comparison_outcome": "missing_evidence",
+    }
+    evaluate_step.error = "judge unavailable"
+    db.commit()
+
+    observed = {}
+
+    def recovered(_db, persisted_task, evidence_ids):
+        observed["task_id"] = persisted_task.id
+        observed["evidence_ids"] = list(evidence_ids)
+        persisted_task.results = {
+            **(persisted_task.results or {}),
+            "evaluation_status": "judge_pipeline_executed",
+            "comparison_outcome": "agreement",
+        }
+        research_task_engine._set_step(
+            _db,
+            persisted_task,
+            "evaluate",
+            "completed",
+            output={
+                "status": "judge_pipeline_executed",
+                "comparison_outcome": "agreement",
+            },
+        )
+        _db.commit()
+        return {"judgments": [], "comparison": None}
+
+    monkeypatch.setattr(
+        research_task_engine, "evaluate_claim_after_research", recovered
+    )
+
+    outcomes = collector_runner.run_pending_evaluations(db, limit=1)
+    persisted = db.get(models.ResearchTask, task.id)
+    recovered_step = {step.name: step for step in persisted.steps}["evaluate"]
+
+    assert observed == {"task_id": task.id, "evidence_ids": [evidence.id]}
+    assert outcomes == [{
+        "task_id": task.id,
+        "status": "completed",
+        "evaluation_status": "judge_pipeline_executed",
+        "retry_count": 1,
+        "max_retries": 3,
+        "evidence_count": 1,
+    }]
+    assert recovered_step.status == "completed"
+    assert recovered_step.output_data["automatic_retry_count"] == 1
+    assert recovered_step.error is None
+
+    # Once completed, another scheduled pass is idempotent and does not
+    # re-run the same successful evaluation.
+    assert collector_runner.run_pending_evaluations(db, limit=1) == []
+    assert observed["task_id"] == task.id
+
+
+def test_failed_evaluation_retries_are_bounded_and_recorded(db, monkeypatch):
+    task, evidence = _task_with_claimed_evidence(db)
+    task.status = "completed"
+    task.evidence_ids = str(evidence.id)
+    task.completed_at = models.utcnow()
+    evaluate_step = {step.name: step for step in task.steps}["evaluate"]
+    evaluate_step.status = "failed"
+    evaluate_step.output_data = {"status": "judge_execution_failed"}
+    evaluate_step.error = "judge unavailable"
+    db.commit()
+    calls = []
+
+    def still_unavailable(_db, persisted_task, _evidence_ids):
+        calls.append(persisted_task.id)
+        research_task_engine._set_step(
+            _db,
+            persisted_task,
+            "evaluate",
+            "failed",
+            output={"status": "judge_execution_failed"},
+            error="judge unavailable",
+        )
+        _db.commit()
+        return {
+            "judgments": [],
+            "comparison": None,
+        }
+
+    monkeypatch.setattr(
+        research_task_engine, "evaluate_claim_after_research", still_unavailable
+    )
+
+    first = collector_runner.run_pending_evaluations(
+        db, limit=1, max_retries_per_task=1
+    )
+    second = collector_runner.run_pending_evaluations(
+        db, limit=1, max_retries_per_task=1
+    )
+
+    persisted = db.get(models.ResearchTask, task.id)
+    evaluate_step = {step.name: step for step in persisted.steps}["evaluate"]
+    assert first[0]["retry_count"] == 1
+    assert first[0]["status"] == "failed"
+    assert second == []
+    assert calls == [task.id]
+    assert evaluate_step.output_data["automatic_retry_count"] == 1
+    assert evaluate_step.error == "judge unavailable"
