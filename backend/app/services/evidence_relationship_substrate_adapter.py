@@ -7,6 +7,7 @@ the source link points back to the projected relation for restart recovery.
 
 from __future__ import annotations
 
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from app import models
@@ -61,11 +62,75 @@ def sync_evidence_relationships(
         limit = max(1, int(limit))
     except (TypeError, ValueError):
         limit = 250
-    rows = query.order_by(models.EvidenceRelationship.id.asc()).limit(limit).all()
+
+    # Filter permanently unresolved rows before applying the batch limit so an
+    # old ambiguous/unregistered link cannot starve later valid relationships.
+    base_count = query.count()
+    link_model = models.EvidenceRelationship
+    active_relation_type = (
+        db.query(models.TypeRegistry.id)
+        .filter(
+            models.TypeRegistry.category == "relation_type",
+            models.TypeRegistry.type_name == link_model.relation_type,
+            models.TypeRegistry.status == "active",
+        )
+        .correlate(link_model)
+        .exists()
+    )
+    evidence_exists = (
+        db.query(models.Evidence.id)
+        .filter(models.Evidence.id == link_model.evidence_id)
+        .correlate(link_model)
+        .exists()
+    )
+    target_conditions = []
+    for field in _EXPLICIT_TARGET_FIELDS:
+        field_expr = getattr(link_model, field)
+        other_targets_empty = [
+            getattr(link_model, other_field).is_(None)
+            for other_field in _EXPLICIT_TARGET_FIELDS
+            if other_field != field
+        ]
+        if field == "network_connection_id":
+            target_exists = (
+                db.query(models.NetworkConnection.id)
+                .join(
+                    models.WorldRelation,
+                    models.WorldRelation.id == models.NetworkConnection.relation_id,
+                )
+                .filter(models.NetworkConnection.id == field_expr)
+                .correlate(link_model)
+                .exists()
+            )
+        else:
+            target_model = _SUPPORTED_TARGETS[field][1]
+            target_exists = (
+                db.query(target_model.id)
+                .filter(target_model.id == field_expr)
+                .correlate(link_model)
+                .exists()
+            )
+        target_conditions.append(
+            and_(field_expr.isnot(None), *other_targets_empty, target_exists)
+        )
+
+    eligible_query = query.filter(
+        evidence_exists,
+        active_relation_type,
+        or_(*target_conditions),
+    )
+    eligible_count = eligible_query.count()
+    result["unresolved_records"] = max(0, base_count - eligible_count)
+    rows = (
+        eligible_query
+        .order_by(link_model.id.asc())
+        .limit(limit)
+        .all()
+    )
+    result["records_seen"] = result["unresolved_records"] + len(rows)
     entity_cache: dict[tuple[str, int], models.SubstrateEntity] = {}
 
     for source in rows:
-        result["records_seen"] += 1
         target_values = [
             (field, getattr(source, field, None))
             for field in _EXPLICIT_TARGET_FIELDS
