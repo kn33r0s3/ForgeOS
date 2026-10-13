@@ -98,7 +98,7 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
     (providerHealth === "READY" || providerHealth === "MOCK");
   const providerCanAnswer = providerStatus !== null &&
     ((providerName === "mock" && (providerHealth === "READY" || providerHealth === "MOCK")) ||
-      (providerName === "ollama" && providerHealth === "READY"));
+      (providerName === "ollama" && providerHealth === "MODEL_AVAILABLE"));
   const canAsk = !providerLoading && !providerError && providerCanAnswer;
 
   async function submitQuestion(event: FormEvent<HTMLFormElement>) {
@@ -195,11 +195,11 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
                   You can try the controls, but answers are templates rather than real AI reasoning. Treat them as placeholders.
                 </p>
               </>
-            ) : providerHealth === "READY" && providerName === "ollama" ? (
+            ) : providerHealth === "MODEL_AVAILABLE" && providerName === "ollama" ? (
               <>
-                <p className="mt-1 text-sm font-semibold text-ink">ForgeBot is configured.</p>
+                <p className="mt-1 text-sm font-semibold text-ink">The local model is installed and reachable.</p>
                 <p className="mt-1 text-sm leading-5 text-muted">
-                  Ask a simple test question to check that it can actually answer. If it cannot connect, the error will appear here.
+                  This checks Ollama and the configured model, not generation quality. ForgeBot still needs to complete the request successfully and ground its answer in the knowledge shown.
                 </p>
               </>
             ) : providerHealth === "READY" && !approvedZeroCostProvider ? (
