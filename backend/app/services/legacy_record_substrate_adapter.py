@@ -11,7 +11,7 @@ import hashlib
 import json
 from typing import Any
 
-from sqlalchemy import cast, func, String
+from sqlalchemy import cast, func, literal, or_, String
 from sqlalchemy.orm import Session
 
 from app import models
