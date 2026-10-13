@@ -186,3 +186,11 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Mock output is prohibited on this grounded-answer path even if the demo fallback flag is enabled. The owner `/forge/ask` endpoint requires a reachable installed zero-cost local model and returns 503 on unavailable inference instead of returning a template.
 - Paid OpenAI generation is blocked at the shared AI factory/status until provider usage metering and global spend enforcement are connected. Configured credentials alone do not activate calls.
 - Updated ForgeBot's existing UI for Nepal-first languages and disabled questions when the provider is MOCK, unavailable, missing, or paid-disabled. Tests are committed but CI must confirm them before they are considered verified.
+
+
+## 2026-10-14 — authenticated self-hosted model path and paid-tool bypass closure
+
+- Added `OLLAMA_API_KEY` configuration and a shared transport contract: loopback HTTP is local-runtime-only; remote use requires HTTPS to a token-authenticated Ollama-compatible gateway, with bearer auth on `/api/tags` and `/api/generate`. The gateway itself must enforce auth before forwarding requests to Ollama.
+- The cognitive provider reuses this transport and records SELF_HOSTED mode. Regression tests cover bearer auth, refusal without a token and cognitive mode provenance; fixtures simulate responses and are not proof of a live gateway.
+- Removed direct OpenAI tool registration so a tool call cannot bypass `ai_engine`'s PAID_PROVIDER_DISABLED gate. Corrected the old OpenAI status and template-mode UI assertions.
+- No gateway, model host, API key or paid provider has been activated. Remote readiness, a real generation and exact-head CI remain unverified.
