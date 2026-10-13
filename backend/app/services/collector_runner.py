@@ -583,18 +583,11 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
     useful_count = sum(1 for edge in evidence_edges if edge.relation_type in {"supports", "contradicts", "updates"})
     novel_count = sum(1 for signal_id in created_signal_ids if db.get(models.Signal, signal_id).is_duplicate_of is None)
     duplicate_count = len(created_signal_ids) - novel_count
-    evaluation_judgments = evaluation.get("judgments", []) if evaluation else []
-    positive_consensus = bool(evaluation_judgments) and (
-        evaluation["comparison"].outcome == "agreement"
-        and all(
-            judgment.status == "completed"
-            and (judgment.conclusion_label or "").lower() == "positive"
-            for judgment in evaluation_judgments
-        )
-    )
-    # Agreement alone is not claim support: unanimous negative/uncertain
-    # judgments must never inflate verified/corroborated result metrics.
-    verified_count = len(evidence_rows) if positive_consensus else 0
+    # Model judgments assess collected text; they are not independent source
+    # verification or corroboration. Keep these fields at zero until a separate
+    # evidence path records independently sourced verification.
+    verified_count = 0
+    corroborated_count = 0
     contradicted_count = sum(1 for edge in evidence_edges if edge.relation_type == "contradicts")
     tool_usefulness.record_usage(
         db, tool_name=f"collector:{task.source}", source=task.source, source_type="collector",
@@ -602,7 +595,7 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
         result_count=len(created_signal_ids), useful_result_count=useful_count,
         novel_result_count=novel_count, verified_result_count=verified_count,
         duplicate_result_count=duplicate_count,
-        corroborated_evidence_count=verified_count, contradicted_claim_count=contradicted_count,
+        corroborated_evidence_count=corroborated_count, contradicted_claim_count=contradicted_count,
         freshness=100.0 if created_signal_ids else None,
         latency_ms=(monotonic() - started) * 1000,
         success=True,
