@@ -92,10 +92,13 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
 
   const providerName = providerStatus?.provider.trim().toLowerCase() ?? "";
   const providerHealth = providerStatus?.status.trim().toUpperCase() ?? "";
+  const approvedZeroCostProvider = providerName === "mock" || providerName === "ollama";
   const paidProvider = providerName === "openai";
-  const mockProvider = providerName === "mock" || providerHealth === "MOCK";
+  const mockProvider = providerName === "mock" &&
+    (providerHealth === "READY" || providerHealth === "MOCK");
   const providerCanAnswer = providerStatus !== null &&
-    (providerHealth === "READY" || providerHealth === "MOCK") && !paidProvider;
+    approvedZeroCostProvider &&
+    (providerHealth === "READY" || providerHealth === "MOCK");
   const canAsk = !providerLoading && !providerError && providerCanAnswer;
 
   async function submitQuestion(event: FormEvent<HTMLFormElement>) {
@@ -167,7 +170,7 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
             You can start with an example below, or ask your own question.
           </p>
         </div>
-        <span className="rounded-full border border-line px-3 py-1 text-xs font-semibold text-muted">Not saved to Hami</span>
+        <span className="rounded-full border border-line px-3 py-1 text-xs font-semibold text-muted">Temporary chat</span>
       </div>
 
       <div className="mt-4 rounded-xl border border-line bg-background p-3 sm:p-4">
@@ -192,11 +195,18 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
                   You can try the controls, but answers are templates rather than real AI reasoning. Treat them as placeholders.
                 </p>
               </>
-            ) : providerHealth === "READY" ? (
+            ) : providerHealth === "READY" && providerName === "ollama" ? (
               <>
                 <p className="mt-1 text-sm font-semibold text-ink">ForgeBot is configured.</p>
                 <p className="mt-1 text-sm leading-5 text-muted">
                   Ask a simple test question to check that it can actually answer. If it cannot connect, the error will appear here.
+                </p>
+              </>
+            ) : providerHealth === "READY" && !approvedZeroCostProvider ? (
+              <>
+                <p className="mt-1 text-sm font-semibold text-ink">ForgeBot chat is paused.</p>
+                <p className="mt-1 text-sm leading-5 text-muted">
+                  This provider isn't on Hami's approved zero-cost list. No model request will be sent from this page.
                 </p>
               </>
             ) : (
@@ -242,9 +252,9 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
       <details className="mt-4 border-t border-line pt-3">
         <summary className="cursor-pointer text-sm font-semibold text-muted">Privacy and how answers work</summary>
         <p className="mt-2 text-sm leading-5 text-muted">
-          Please do not paste phone numbers, private conversations, payment details or passwords. Your questions and answers stay
-          in this page session and disappear when you lock or leave. ForgeBot's answer is a guide, not proof; it does not change Hami's records,
-          send messages or perform actions.
+          Please do not paste phone numbers, private conversations, payment details or passwords. Your question is sent to Hami's owner API
+          to produce an answer. This panel does not add the chat to Hami's knowledge records. The visible conversation stays in this page session
+          and disappears when you lock or leave. ForgeBot's answer is a guide, not proof; it does not change Hami's records, send messages or perform actions.
         </p>
       </details>
 
