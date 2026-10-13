@@ -249,7 +249,7 @@ def seed_core_types(db: Session) -> int:
     types = {
         "entity_type": {
             "signal", "pattern", "belief", "claim", "research_question", "rare_signal_assessment", "opportunity",
-            "provider", "service_listing", "domain_record", "outcome", "customer", "person",
+            "provider", "service_listing", "domain_record", "outcome", "judgment", "customer", "person",
             "organization", "resource", "capability", "tool", "agent", "project", "market",
             "market_signal", "market_segment", "relation", "action", "learning_event",
             "booking_request", "decision", "experiment", "scenario_prediction",
@@ -2222,6 +2222,7 @@ CANONICAL_ADAPTERS: dict[str, tuple[type, Any]] = {
     "experiment": (models.Experiment, lambda row: _canonical_display(row, "action")),
     "action": (models.Action, lambda row: f"{row.action_type or 'Action'} attempt #{row.id}"),
     "outcome": (models.Outcome, lambda row: f"{row.outcome_type or 'Outcome'} #{row.id}"),
+    "judgment": (models.Judgment, lambda row: f"Judgment #{row.id}"),
     "learning_event": (models.LearningEvent, lambda row: f"Learning event #{row.id}"),
     "product": (models.Product, lambda row: _canonical_display(row, "name")),
     "repair_work_item": (models.RepairWorkItem, lambda row: _canonical_display(row, "asset_label")),
