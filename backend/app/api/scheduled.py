@@ -625,6 +625,18 @@ def run_scheduled_intelligence(
         logger.warning("scheduled intelligence: owner_sms_digest failed (%s)", type(exc).__name__)
         intelligence["owner_sms_digest"] = {"status": "error", "error": type(exc).__name__}
 
+    # Owner inactivity is evaluated daily even when the Telegram digest flag is closed.
+    try:
+        with database.SessionLocal() as db:
+            from app.services import owner_control
+            intelligence["owner_control_safety"] = owner_control.evaluate_owner_inactivity(db)
+            intelligence["owner_telegram_digest"] = owner_control.send_daily_owner_digest(db)
+            db.commit()
+    except Exception as exc:
+        logger.warning("scheduled intelligence: owner Telegram control failed (%s)", type(exc).__name__)
+        intelligence["owner_control_safety"] = {"status": "error", "error": type(exc).__name__}
+        intelligence["owner_telegram_digest"] = {"status": "error", "error": type(exc).__name__}
+
     # Stage 7: scout cycle — autonomous candidate processing.
     # Scores and ranks registered candidates, generates drafts for top
     # eligible ones (draft only, never sends). Uses existing scout.py seams.

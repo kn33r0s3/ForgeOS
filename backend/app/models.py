@@ -2335,3 +2335,44 @@ class OpPaymentIntent(Base):
     fulfilled_at = Column(DateTime, nullable=True, index=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
     updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+
+
+class OpHamiRuntimeControl(Base):
+    """Persisted singleton safety gate for customer-facing delivery."""
+    __tablename__ = "op_hami_runtime_control"
+    id = Column(Integer, primary_key=True)
+    safe_mode_enabled = Column(Boolean, nullable=False, default=True)
+    safe_mode_reason = Column(String(80), nullable=False, default="initial_default_safe")
+    halted_at = Column(DateTime, nullable=True)
+    last_owner_contact_at = Column(DateTime, nullable=True, index=True)
+    last_telegram_update_id = Column(Integer, nullable=True)
+    updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+
+
+class OpHamiOwnerAsk(Base):
+    """Operational ASK projection; plaintext one-time confirmation codes are never stored."""
+    __tablename__ = "op_hami_owner_asks"
+    __table_args__ = (
+        CheckConstraint("status IN ('OPEN','ANSWERED','EXPIRED','LOCKED','NOTIFIED_FAILED')", name="ck_hami_owner_ask_status"),
+    )
+    id = Column(Integer, primary_key=True)
+    public_ref = Column(String(24), nullable=False, unique=True, index=True)
+    decision_ref = Column(String(200), nullable=False, index=True)
+    action_type = Column(String(100), nullable=False, default="unknown", index=True)
+    action_id = Column(Integer, ForeignKey("actions.id"), nullable=True, index=True)
+    question = Column(Text, nullable=False)
+    options_json = Column(Text, nullable=False)
+    high_impact = Column(Boolean, nullable=False, default=True)
+    code_hash = Column(String(64), nullable=True)
+    code_expires_at = Column(DateTime, nullable=True, index=True)
+    expires_at = Column(DateTime, nullable=True, index=True)
+    status = Column(String(24), nullable=False, default="OPEN", index=True)
+    failed_attempts = Column(Integer, nullable=False, default=0)
+    code_resend_count = Column(Integer, nullable=False, default=0)
+    answer_option = Column(String(32), nullable=True)
+    answer_channel = Column(String(24), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=utcnow, index=True)
+    answered_at = Column(DateTime, nullable=True)
+    telegram_message_id = Column(String(40), nullable=True)
+    notified_at = Column(DateTime, nullable=True)
+    notification_status = Column(String(24), nullable=False, default="PENDING")

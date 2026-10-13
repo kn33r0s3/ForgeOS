@@ -35,6 +35,8 @@ PUBLIC_WRITE_PATHS = {
     "/api/forge-bot/leads",
     "/api/forge-bot/leads/opt-out",
     "/api/forge-bot/leads/delete",
+    "/owner-control/telegram/webhook",
+    "/api/owner-control/telegram/webhook",
     "/signals/public-request",
     "/api/signals/public-request",
 }

@@ -122,18 +122,17 @@ def entry_for(action_type: str) -> dict[str, Any]:
 
 
 def _owner_sms_ready() -> bool:
-    # Lazy import keeps the rights registry usable before SMS configuration exists.
+    """Compatibility seam: owner-notification readiness follows Telegram now."""
     try:
         from app.config import settings
-        number = str(getattr(settings, "HAMI_OWNER_SMS_NUMBER", "") or "").strip()
-        enabled = bool(getattr(settings, "HAMI_OWNER_SMS_DIGEST_ENABLED", False))
-        return bool(
-            enabled
-            and re.fullmatch(r"\+[1-9][0-9]{7,14}", number)
-            and settings.TWILIO_ACCOUNT_SID
-            and settings.TWILIO_AUTH_TOKEN
-            and settings.TWILIO_FROM_NUMBER
-        )
+        token = str(settings.HAMI_TELEGRAM_BOT_TOKEN or "").strip()
+        secret = str(settings.HAMI_TELEGRAM_WEBHOOK_SECRET or "").strip()
+        chat = str(settings.HAMI_TELEGRAM_OWNER_CHAT_ID or "").strip()
+        user = str(settings.HAMI_TELEGRAM_OWNER_USER_ID or "").strip()
+        return bool(settings.HAMI_TELEGRAM_CONTROL_ENABLED and len(token) >= 30
+            and re.fullmatch(r"[A-Za-z0-9_-]{32,256}", secret)
+            and re.fullmatch(r"[1-9][0-9]{0,18}", chat)
+            and re.fullmatch(r"[1-9][0-9]{0,18}", user))
     except Exception:
         return False
 

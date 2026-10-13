@@ -134,6 +134,15 @@ class Settings(BaseSettings):
         "HAMI_OWNER_SMS_DIGEST_ENABLED", "false"
     ).lower() in ("1", "true", "yes")
 
+    # Single-owner Telegram control; closed by default.
+    HAMI_TELEGRAM_BOT_TOKEN: str = os.getenv("HAMI_TELEGRAM_BOT_TOKEN", "")
+    HAMI_TELEGRAM_WEBHOOK_SECRET: str = os.getenv("HAMI_TELEGRAM_WEBHOOK_SECRET", "")
+    HAMI_TELEGRAM_OWNER_CHAT_ID: str = os.getenv("HAMI_TELEGRAM_OWNER_CHAT_ID", "")
+    HAMI_TELEGRAM_OWNER_USER_ID: str = os.getenv("HAMI_TELEGRAM_OWNER_USER_ID", "")
+    HAMI_TELEGRAM_CONTROL_ENABLED: bool = os.getenv("HAMI_TELEGRAM_CONTROL_ENABLED", "false").lower() in ("1", "true", "yes")
+    HAMI_TELEGRAM_OWNER_DIGEST_ENABLED: bool = os.getenv("HAMI_TELEGRAM_OWNER_DIGEST_ENABLED", "false").lower() in ("1", "true", "yes")
+    HAMI_TELEGRAM_ASK_CODE_TTL_SECONDS: int = _int_env("HAMI_TELEGRAM_ASK_CODE_TTL_SECONDS", 600)
+
     # --- Outbound Email (Standard Library SMTP over TLS) ---
     SMTP_HOST: str = os.getenv("SMTP_HOST", "")
     SMTP_PORT: int = _int_env("SMTP_PORT", 587)

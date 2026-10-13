@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.config import settings
-from app.services import forge_bot_response, integration_outbox
+from app.services import forge_bot_response, integration_outbox, owner_control, telegram_transport
 
 logger = logging.getLogger(__name__)
 
@@ -202,6 +202,11 @@ def dispatch_single_delivery(
         except forge_bot_response.ForgeBotResponseBlocked as exc:
             raise PermanentIntegrationError(str(exc)) from exc
 
+        if (delivery.integration_name, delivery.operation) in {("twilio", "send_sms"), ("smtp", "send_email")}:
+            block_reason = owner_control.block_customer_delivery(db, integration_name=delivery.integration_name, operation=delivery.operation, request_data=request_data)
+            if block_reason:
+                raise PermanentIntegrationError(f"customer delivery blocked: {block_reason}")
+
         if delivery.integration_name == "twilio_owner" and delivery.operation == "send_owner_sms":
             # At-most-once boundary: a process crash after this marker creates an
             # ambiguous result. Do not resend automatically and risk a duplicate.
@@ -241,6 +246,9 @@ def dispatch_single_delivery(
             body = req_data.get("body")
             if not to_number or not body:
                 raise PermanentIntegrationError("Missing 'to' or 'body' in request payload")
+            block_reason = owner_control.block_customer_delivery(db, integration_name="twilio", operation="send_sms", request_data=req_data)
+            if block_reason:
+                raise PermanentIntegrationError(f"customer delivery blocked: {block_reason}")
             resp = _send_twilio_sms(to_number, body)
             delivery = integration_outbox.mark_succeeded(db, delivery.id, resp, status="SUCCEEDED")
             logger.info(f"Delivery {delivery.id} succeeded. Provider ID: {resp.get('sid')}")
@@ -252,6 +260,9 @@ def dispatch_single_delivery(
             body = req_data.get("body", "")
             if not to_email or not body:
                 raise PermanentIntegrationError("Missing 'to' or 'body' in email request payload")
+            block_reason = owner_control.block_customer_delivery(db, integration_name="smtp", operation="send_email", request_data=req_data)
+            if block_reason:
+                raise PermanentIntegrationError(f"customer delivery blocked: {block_reason}")
             if smtp_timeout_seconds is None:
                 resp = _send_smtp_email(to_email, subject, body)
             else:
@@ -264,6 +275,23 @@ def dispatch_single_delivery(
             # Explicit truthful state: ACCEPTED_BY_SMTP, never claimed as DELIVERED
             delivery = integration_outbox.mark_succeeded(db, delivery.id, resp, status="ACCEPTED_BY_SMTP")
             logger.info(f"Delivery {delivery.id} accepted by SMTP. Message-ID: {resp.get('message_id')}")
+
+        elif delivery.integration_name == "telegram_owner" and delivery.operation == "send_telegram_owner":
+            if delivery.status == "SENDING":
+                return delivery
+            if delivery.status != "QUEUED" or delivery.attempts > 0:
+                raise PermanentIntegrationError("Telegram owner delivery will not be retried after an ambiguous attempt")
+            if not owner_control.valid_owner_delivery(delivery.integration_name, delivery.operation, request_data):
+                raise PermanentIntegrationError("Telegram owner delivery failed destination/configuration validation")
+            if request_data.get("message_type") == "daily_digest" and not settings.HAMI_TELEGRAM_OWNER_DIGEST_ENABLED:
+                raise PermanentIntegrationError("Telegram owner digest is disabled")
+            delivery.status = "SENDING"
+            delivery.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            db.commit()
+            db.refresh(delivery)
+            response = telegram_transport.send_owner_message(request_data["body"], message_type=request_data["message_type"])
+            delivery = integration_outbox.mark_succeeded(db, delivery.id, response, status="SUCCEEDED")
+            logger.info("Owner-only Telegram message accepted by API; delivery_id=%s", delivery.id)
 
         else:
             raise PermanentIntegrationError(f"Unsupported integration: {delivery.integration_name}/{delivery.operation}")

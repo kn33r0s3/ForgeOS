@@ -28,7 +28,7 @@ from sqlalchemy import text
 from app.config import parse_allowed_origins, settings
 from app.settings import check_required_env
 from app.database import init_db, SessionLocal
-from app.api import signals, analyze, opportunities, observer, forge, world, workers, intelligence, rare_signals, products, lessons, orchestrator, earn, payments, repair_shop, evidence_triage, public, scheduled, substrate, forge_bot, operating_v4, scout, residue
+from app.api import signals, analyze, opportunities, observer, forge, world, workers, intelligence, rare_signals, products, lessons, orchestrator, earn, payments, repair_shop, evidence_triage, public, scheduled, substrate, forge_bot, owner_control, operating_v4, scout, residue
 from app.security import api_key_middleware, require_owner_api_key
 from app.request_limits import PublicWriteSizeLimitMiddleware
 
@@ -311,6 +311,7 @@ for _router in (
     public.router,
     scheduled.router,
     forge_bot.router,
+    owner_control.router,
 ):
     app.include_router(_router)
     # Vercel keeps the /api prefix. Same router, no second implementation.

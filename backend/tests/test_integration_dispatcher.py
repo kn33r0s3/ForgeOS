@@ -5,10 +5,19 @@ from unittest.mock import patch, MagicMock
 
 from app.config import settings
 from app.services import integration_outbox, integration_dispatcher
-from app.models import IntegrationDelivery
+from app.models import IntegrationDelivery, OpHamiRuntimeControl
+from datetime import datetime, timezone
+
+
+def _allow_customer_sends_in_transport_test(db, monkeypatch):
+    monkeypatch.setattr(settings, "FORGE_BOT_LIVE", True)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    db.add(OpHamiRuntimeControl(id=1, safe_mode_enabled=False, safe_mode_reason=None, last_owner_contact_at=now, updated_at=now))
+    db.commit()
 
 
 def test_twilio_fails_closed_without_credentials(db, monkeypatch):
+    _allow_customer_sends_in_transport_test(db, monkeypatch)
     # Ensure credentials are empty
     monkeypatch.setattr(settings, "TWILIO_ACCOUNT_SID", "")
     
@@ -32,6 +41,7 @@ def test_twilio_fails_closed_without_credentials(db, monkeypatch):
 
 
 def test_twilio_success_persists_sid(db, monkeypatch):
+    _allow_customer_sends_in_transport_test(db, monkeypatch)
     monkeypatch.setattr(settings, "TWILIO_ACCOUNT_SID", "AC_FAKE")
     monkeypatch.setattr(settings, "TWILIO_AUTH_TOKEN", "FAKE_TOKEN")
     monkeypatch.setattr(settings, "TWILIO_FROM_NUMBER", "+19999999999")
@@ -64,6 +74,7 @@ def test_twilio_success_persists_sid(db, monkeypatch):
 
 
 def test_twilio_http_error(db, monkeypatch):
+    _allow_customer_sends_in_transport_test(db, monkeypatch)
     monkeypatch.setattr(settings, "TWILIO_ACCOUNT_SID", "AC_FAKE")
     monkeypatch.setattr(settings, "TWILIO_AUTH_TOKEN", "FAKE_TOKEN")
     monkeypatch.setattr(settings, "TWILIO_FROM_NUMBER", "+19999999999")
@@ -92,6 +103,7 @@ def test_twilio_http_error(db, monkeypatch):
 
 
 def test_malformed_response_marks_failure(db, monkeypatch):
+    _allow_customer_sends_in_transport_test(db, monkeypatch)
     monkeypatch.setattr(settings, "TWILIO_ACCOUNT_SID", "AC_FAKE")
     monkeypatch.setattr(settings, "TWILIO_AUTH_TOKEN", "FAKE_TOKEN")
     monkeypatch.setattr(settings, "TWILIO_FROM_NUMBER", "+19999999999")
@@ -151,6 +163,7 @@ def test_smtp_email_action_uses_real_outbox(db):
 
 
 def test_twilio_429_rate_limit_retries(db, monkeypatch):
+    _allow_customer_sends_in_transport_test(db, monkeypatch)
     """HTTP 429 from Twilio is transient (retried), not a permanent failure."""
     monkeypatch.setattr(settings, "TWILIO_ACCOUNT_SID", "AC_FAKE")
     monkeypatch.setattr(settings, "TWILIO_AUTH_TOKEN", "FAKE_TOKEN")
@@ -177,6 +190,18 @@ def test_twilio_429_rate_limit_retries(db, monkeypatch):
     assert delivery.attempts == 1
     assert delivery.next_attempt_at is not None
     assert "HTTP 429" in delivery.last_error
+
+
+def test_customer_sms_is_blocked_by_default_safe_mode(db, monkeypatch):
+    monkeypatch.setattr(settings, "FORGE_BOT_LIVE", True)
+    delivery = integration_outbox.enqueue(db, integration_name="twilio", operation="send_sms",
+        idempotency_key="test-default-safe-mode", request={"to": "+9779812345678", "body": "must not send"})
+    with patch("app.services.integration_dispatcher._send_twilio_sms") as send:
+        result = integration_dispatcher.dispatch_single_delivery(db, delivery.id)
+    assert result.status == "FAILED"
+    assert "customer delivery blocked" in (result.last_error or "")
+    assert "safe_mode_enabled" in (result.last_error or "")
+    send.assert_not_called()
 
 
 def test_corrupt_request_json_fails_permanent(db, monkeypatch):
