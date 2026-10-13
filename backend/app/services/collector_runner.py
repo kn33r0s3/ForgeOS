@@ -722,10 +722,13 @@ def run_pending_evaluations(
     limit: int = 2,
     *,
     max_retries_per_task: int = 3,
+    exclude_task_ids: set[int] | None = None,
 ) -> list[dict]:
     """Retry incomplete substantive evaluation for already-collected evidence.
 
     Collection tasks are intentionally separate from judge/model execution.
+    Task IDs attempted in the current collection pass can be excluded so one
+    scheduled cycle does not immediately retry the same just-failed evaluation.
     This bounded recovery pass resumes only existing completed tasks whose
     evaluate step was never run or failed because evaluation was unavailable.
     It never recollects sources, creates synthetic evidence, or performs
@@ -735,14 +738,19 @@ def run_pending_evaluations(
         return []
 
     candidate_limit = min(max(limit * 20, 20), 200)
+    query = db.query(models.ResearchTask).filter(
+        models.ResearchTask.status == "completed",
+        models.ResearchTask.evidence_ids.isnot(None),
+        models.ResearchTask.evidence_ids != "",
+    )
+    excluded = {
+        value for value in (exclude_task_ids or set())
+        if isinstance(value, int) and not isinstance(value, bool) and value > 0
+    }
+    if excluded:
+        query = query.filter(~models.ResearchTask.id.in_(excluded))
     candidates = (
-        db.query(models.ResearchTask)
-        .filter(
-            models.ResearchTask.status == "completed",
-            models.ResearchTask.evidence_ids.isnot(None),
-            models.ResearchTask.evidence_ids != "",
-        )
-        .order_by(models.ResearchTask.updated_at.asc(), models.ResearchTask.id.asc())
+        query.order_by(models.ResearchTask.updated_at.asc(), models.ResearchTask.id.asc())
         .limit(candidate_limit)
         .all()
     )
