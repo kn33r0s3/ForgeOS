@@ -326,6 +326,15 @@ def run_scheduled_intelligence(
             )
         raise HTTPException(status_code=401, detail="Unauthorized")
 
+    # Vercel's default SQLite database is stored under /tmp and can disappear
+    # with the function instance. Never report an intelligence cycle as
+    # completed against storage that cannot durably retain its evidence/state.
+    if os.getenv("VERCEL") and database.engine.dialect.name == "sqlite":
+        raise HTTPException(
+            status_code=503,
+            detail="Durable database is required for scheduled intelligence",
+        )
+
     # Cross-instance PostgreSQL advisory lock in production; process-local
     # lock only for SQLite/local development. Never rely on one serverless
     # instance's memory to serialize work across replicas.
