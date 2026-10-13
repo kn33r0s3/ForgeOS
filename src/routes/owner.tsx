@@ -1295,12 +1295,11 @@ function OwnerConsolePage() {
           <p className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-accent">
             Owner tools · key-protected data
           </p>
-          <h1 className="mt-2 text-title">Owner console</h1>
+          <h1 className="mt-2 text-title">Your Hami workspace</h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-muted">
-            This noindex console is not linked from public navigation. It loads no
-            owner records until you enter the key.
-            Your key stays in this page’s memory and is sent only in the
-            X-API-Key request header; the API protects owner data and actions.
+            This is your private place to see what Hami knows and talk with ForgeBot.
+            You do not need to manage the technical details. Enter your owner key to begin;
+            it stays in this page session and is never shown back to you.
           </p>
 
           {!consoleState || !readiness ? (
@@ -1322,14 +1321,49 @@ function OwnerConsolePage() {
             </form>
           ) : (
             <div className="mt-6">
-              <nav aria-label="Owner console shortcuts" className="sticky top-2 z-20 mb-5 flex flex-wrap gap-2 rounded-card border border-line bg-card/95 p-3 backdrop-blur">
-                <a href="#forgebot-workspace" className="inline-flex min-h-10 items-center rounded-card border-2 border-accent px-3 text-sm font-bold text-accent">Try ForgeBot</a>
-                <a href="#hami-frontier" className="inline-flex min-h-10 items-center rounded-card border border-line px-3 text-sm font-semibold">Unknowns &amp; frontier</a>
-                <a href="#hami-intelligence" className="inline-flex min-h-10 items-center rounded-card border border-line px-3 text-sm font-semibold">Research &amp; runs</a>
-                <a href="#owner-inquiries" className="inline-flex min-h-10 items-center rounded-card border border-line px-3 text-sm font-semibold">Inquiries</a>
+              <section aria-label="Welcome to Hami" className="mb-5 rounded-2xl border border-line bg-card p-5 sm:p-7">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Your private workspace</p>
+                <h2 className="mt-2 max-w-2xl text-2xl font-extrabold leading-tight sm:text-3xl">Let's work through Hami together.</h2>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
+                  Start by asking ForgeBot a question in your own words. It can explain what Hami has recorded,
+                  what is still unclear, and what would be useful to investigate next. You can ignore the technical tools unless you need them.
+                </p>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-line bg-background p-4">
+                    <p className="text-sm font-semibold text-muted">New inquiry records · last 24 hours</p>
+                    <p className="mt-1 text-3xl font-extrabold tabular-nums">{readiness.new_leads_last_24h}</p>
+                    <p className="mt-1 text-xs leading-5 text-muted">These are stored inquiry records, not confirmed customers or sales.</p>
+                  </div>
+                  <div className="rounded-xl border border-line bg-background p-4">
+                    <p className="text-sm font-semibold text-muted">Can someone submit a request right now?</p>
+                    <p className="mt-1 text-xl font-extrabold">{readiness.intake_enabled ? "Requests are enabled" : "Public requests are closed"}</p>
+                    <p className="mt-1 text-xs leading-5 text-muted">This reflects the current setting; it does not claim a request was received.</p>
+                  </div>
+                </div>
+              </section>
+
+              <section id="forgebot-workspace" className="scroll-mt-24" aria-label="Talk to ForgeBot">
+                <ForgeConsoleWidgets apiKey={key} />
+              </section>
+
+              <details id="more-owner-tools" className="mt-8 rounded-2xl border border-line bg-card p-4 sm:p-5">
+                <summary className="cursor-pointer list-none">
+                  <span className="flex flex-wrap items-center justify-between gap-3">
+                    <span>
+                      <span className="block text-base font-extrabold">More owner tools</span>
+                      <span className="mt-1 block text-sm font-normal text-muted">Research, requests, products, payments and technical status. Optional — you can leave this closed.</span>
+                    </span>
+                    <span className="rounded-full border border-line px-3 py-2 text-sm font-semibold">Open tools</span>
+                  </span>
+                </summary>
+                <div className="mt-5">
+              <nav aria-label="More owner tools" className="mb-5 flex flex-wrap gap-2 rounded-card border border-line bg-background p-3">
+                <a href="#hami-frontier" className="inline-flex min-h-10 items-center rounded-card border border-line px-3 text-sm font-semibold">Research and discoveries</a>
+                <a href="#hami-intelligence" className="inline-flex min-h-10 items-center rounded-card border border-line px-3 text-sm font-semibold">Hami activity</a>
+                <a href="#owner-inquiries" className="inline-flex min-h-10 items-center rounded-card border border-line px-3 text-sm font-semibold">Requests</a>
                 <a href="#owner-products-payments" className="inline-flex min-h-10 items-center rounded-card border border-line px-3 text-sm font-semibold">Products &amp; payments</a>
                 <button type="button" onClick={() => void refreshWorkbench()} disabled={busy} className="inline-flex min-h-10 items-center rounded-card border border-line px-3 text-sm font-semibold disabled:opacity-50">
-                  {busy ? "Refreshing…" : "Refresh live snapshot"}
+                  {busy ? "Refreshing…" : "Refresh status"}
                 </button>
               </nav>
 
@@ -2330,18 +2364,6 @@ shop-03 | lead | not confirmed | uses an existing alternative`} />
 
               <PaymentFulfillmentQueue apiKey={key} />
 
-              <section id="forgebot-workspace" className="mt-10 scroll-mt-24 border-t-2 border-line pt-5" aria-label="ForgeBot">
-                <h2 className="text-xl font-extrabold">ForgeBot</h2>
-                <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
-                  The operator's console. Key-protected like everything else
-                  here — the gate, the angle guard, and the ripeness queue run
-                  the real engine code.
-                </p>
-                <div className="mt-4">
-                  <ForgeConsoleWidgets apiKey={key} />
-                </div>
-              </section>
-
               <section className="mt-10 border-t-2 border-line pt-5" aria-label="Operating model v4">
                 <h2 className="text-xl font-extrabold">Operating model v4</h2>
                 <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
@@ -2374,22 +2396,14 @@ shop-03 | lead | not confirmed | uses an existing alternative`} />
                   <PurchaseJourney apiKey={key} />
                 </div>
               </section>
+                </div>
+              </details>
             </div>
           )}
 
           {error ? <p role="alert" className="mt-5 rounded-card border-2 border-danger/70 bg-danger/10 p-4 text-sm">{error}</p> : null}
           {notice ? <p role="status" className="mt-5 rounded-card border-2 border-success/70 bg-success/10 p-4 text-sm">{notice}</p> : null}
 
-          <section className="mt-10 max-w-3xl border-t-2 border-line pt-5">
-            <h2 className="text-lg font-extrabold">A short daily routine</h2>
-            <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm leading-6 text-muted">
-              <li>Check database, schema, maintenance heartbeat, and the owner-email queue.</li>
-              <li>Review new inquiries and reply only through a channel the owner has authorized.</li>
-              <li>Record a booking only with evidence, then record completion only with an outcome note.</li>
-              <li>Erase contact details when requested; rotate keys through the approved secret manager.</li>
-              <li>Keep intake closed and LIVE off until every activation-runbook check passes.</li>
-            </ol>
-          </section>
         </div>
       </Container>
     </main>

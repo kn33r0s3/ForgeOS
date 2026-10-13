@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Bot, CheckCircle2, FlaskConical, Search, ShieldCheck, XCircle } from "lucide-react";
+import { Bot, CheckCircle2, Search, ShieldCheck, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   isAngleTried,
@@ -148,63 +148,70 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
   }
 
   const suggestions = [
-    "What does Hami's stored knowledge support, and what remains unknown?",
-    "What is the strongest contradiction in Hami's currently stored knowledge?",
-    "Which missing fact would most change a decision, and why?",
-    "What evidence is required before claiming a real economic outcome?",
+    "Give me a plain-English update on what Hami currently knows.",
+    "What important thing is still unknown?",
+    "What useful question should Hami investigate next?",
+    "What evidence would make an important claim trustworthy?",
   ];
 
   return (
-    <section aria-label="Ask Forge from stored knowledge" className="rounded-xl border-2 border-accent/70 bg-card p-4 sm:p-5">
+    <section aria-label="Talk to ForgeBot" className="rounded-2xl border border-line bg-card p-4 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="flex items-center gap-2 font-display text-lg text-ink">
             <Bot className="h-5 w-5 text-accent" aria-hidden="true" />
-            Try ForgeBot
+            Talk to ForgeBot
           </h3>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
-            Calls the existing owner-protected Forge answer endpoint. This is a live query surface over Hami's stored knowledge,
-            not proof of autonomous operation or a complete multi-turn agent.
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
+            Ask in plain English. ForgeBot answers using knowledge already stored in Hami and shows the records behind each answer.
+            You can start with an example below, or ask your own question.
           </p>
         </div>
-        <span className="rounded-full border border-line px-3 py-1 text-xs font-semibold text-muted">Page-only session</span>
+        <span className="rounded-full border border-line px-3 py-1 text-xs font-semibold text-muted">Not saved to Hami</span>
       </div>
 
-      <div className="mt-4 rounded-lg border border-line bg-background p-3">
-        <p className="text-xs font-bold uppercase tracking-wide text-muted">Configured AI provider</p>
+      <div className="mt-4 rounded-xl border border-line bg-background p-3 sm:p-4">
+        <p className="text-sm font-bold text-ink">Can ForgeBot answer right now?</p>
         {providerLoading ? (
-          <p role="status" className="mt-1 text-sm text-muted">Reading owner-protected provider status…</p>
+          <p role="status" className="mt-1 text-sm text-muted">Checking whether ForgeBot is ready…</p>
         ) : providerError ? (
-          <p role="alert" className="mt-1 text-sm text-warning">{providerError} Questions stay disabled until this check succeeds.</p>
+          <p role="alert" className="mt-1 text-sm text-warning">I couldn’t confirm ForgeBot’s status. Refresh the page and try again. {providerError}</p>
         ) : providerStatus ? (
           <>
-            <p className="mt-1 break-words text-sm font-semibold text-ink">
-              {providerStatus.provider} · {providerStatus.status}
-            </p>
             {paidProvider ? (
-              <p className="mt-1 text-sm leading-5 text-warning">
-                This is a potentially billable cloud provider. Questions are disabled here under Hami's zero-spend default;
-                no model request will be sent from this panel.
-              </p>
+              <>
+                <p className="mt-1 text-sm font-semibold text-ink">ForgeBot chat is paused to avoid charges.</p>
+                <p className="mt-1 text-sm leading-5 text-muted">
+                  Hami is configured for a paid cloud AI. To protect your budget, this page will not send a paid model request.
+                </p>
+              </>
             ) : mockProvider ? (
-              <p className="mt-1 text-sm leading-5 text-muted">
-                MOCK mode means deterministic/template output, not a genuine model answer. You can test the UI/API contract,
-                but must not treat its wording as intelligence or evidence.
-              </p>
+              <>
+                <p className="mt-1 text-sm font-semibold text-ink">ForgeBot is in simple test mode.</p>
+                <p className="mt-1 text-sm leading-5 text-muted">
+                  You can try the controls, but answers are templates rather than real AI reasoning. Treat them as placeholders.
+                </p>
+              </>
             ) : providerHealth === "READY" ? (
-              <p className="mt-1 text-sm leading-5 text-muted">
-                The API reports this provider as configured. That does not prove the model is reachable; a successful query is the end-to-end check.
-              </p>
+              <>
+                <p className="mt-1 text-sm font-semibold text-ink">ForgeBot is configured.</p>
+                <p className="mt-1 text-sm leading-5 text-muted">
+                  Ask a simple test question to check that it can actually answer. If it cannot connect, the error will appear here.
+                </p>
+              </>
             ) : (
-              <p className="mt-1 text-sm leading-5 text-warning">
-                The provider is not reported as ready. Queries are disabled rather than silently switching providers.
-              </p>
+              <>
+                <p className="mt-1 text-sm font-semibold text-ink">ForgeBot is not ready yet.</p>
+                <p className="mt-1 text-sm leading-5 text-muted">
+                  Questions are paused rather than silently switching to another provider.
+                </p>
+              </>
             )}
           </>
         ) : null}
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2" aria-label="Suggested test questions">
+      <div className="mt-4 flex flex-wrap gap-2" aria-label="Example questions you can ask">
         {suggestions.map((suggestion) => (
           <button key={suggestion} type="button" disabled={!canAsk || asking}
             onClick={() => setQuestion(suggestion)}
@@ -216,27 +223,30 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
 
       <form onSubmit={submitQuestion} className="mt-4 grid gap-3">
         <label htmlFor="forgebot-owner-question" className="text-sm font-bold text-ink">
-          Ask about Hami's actual stored knowledge
+          What would you like to know?
         </label>
         <textarea id="forgebot-owner-question" value={question}
           onChange={(event) => setQuestion(event.target.value.slice(0, 1000))}
           rows={3} maxLength={1000} required disabled={!canAsk || asking}
-          placeholder="Use a non-sensitive question. Ask Forge to separate supported records, contradictions and UNKNOWN."
+          placeholder="Type naturally, like you would ask a person. Please do not include private customer details or passwords."
           className={inputCls + " min-h-24 resize-y leading-6"} />
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs text-muted">{question.trim().length}/1000 characters · successful queries this page session: {successfulQueries}</p>
+          <p className="text-xs text-muted">Questions and answers stay on this page only.</p>
           <button type="submit" disabled={!canAsk || asking || !question.trim()}
             className="min-h-11 rounded-lg border-2 border-accent bg-accent px-4 font-bold text-black disabled:cursor-not-allowed disabled:opacity-50">
-            {asking ? "Querying Forge…" : "Ask Forge"}
+            {asking ? "Thinking…" : "Ask ForgeBot"}
           </button>
         </div>
       </form>
 
-      <p className="mt-3 text-xs leading-5 text-muted">
-        Never paste seller identities, phone numbers, raw private conversations, payment details or secrets.
-        Questions and responses remain in this component's memory and disappear when you lock or leave the console.
-        Model responses are not EVIDENCE; this panel does not write facts, change permissions, send messages or execute actions.
-      </p>
+      <details className="mt-4 border-t border-line pt-3">
+        <summary className="cursor-pointer text-sm font-semibold text-muted">Privacy and how answers work</summary>
+        <p className="mt-2 text-sm leading-5 text-muted">
+          Please do not paste phone numbers, private conversations, payment details or passwords. Your questions and answers stay
+          in this page session and disappear when you lock or leave. ForgeBot's answer is a guide, not proof; it does not change Hami's records,
+          send messages or perform actions.
+        </p>
+      </details>
 
       {askError ? <p role="alert" className="mt-4 rounded-lg border border-warning/60 bg-warning/10 p-3 text-sm text-ink">{askError}</p> : null}
 
@@ -247,12 +257,12 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
               <p className="text-xs font-bold uppercase tracking-wide text-muted">You asked · {new Date(turn.askedAt).toLocaleTimeString()}</p>
               <p className="mt-1 break-words font-semibold text-ink">{turn.question}</p>
               <div className="mt-3 border-l-2 border-accent pl-3">
-                <p className="text-xs font-bold uppercase tracking-wide text-muted">Forge response · model output, not evidence</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-muted">ForgeBot’s answer</p>
                 <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-ink">{turn.answer}</p>
               </div>
               <details className="mt-3 border-t border-line pt-3">
                 <summary className="cursor-pointer text-sm font-semibold text-ink">
-                  Related knowledge records returned by the API ({turn.records.length})
+                  See the records behind this answer ({turn.records.length})
                 </summary>
                 {turn.records.length ? (
                   <div className="mt-3 grid gap-2">
@@ -464,21 +474,20 @@ function RipenessList() {
 export function ForgeConsoleWidgets({ apiKey }: { apiKey: string }) {
   return (
     <div>
-      <div className="mb-5 flex items-start gap-3 rounded-card border-2 border-line bg-card p-4">
-        <FlaskConical className="mt-0.5 h-5 w-5 shrink-0 text-accent" aria-hidden="true" />
-        <p className="text-sm leading-6 text-muted">
-          <strong className="text-ink">ForgeBot v0 — the assistant.</strong>{" "}
-          The operator's working console: gate findings, check angles, see
-          what's ripest. Everything here runs the real engine code — the
-          same gate, unknowns, and guard the rounds use.
-        </p>
-      </div>
-      <div className="grid gap-5">
+      <div className="mt-5">
         <ForgeKnowledgeChat apiKey={apiKey} />
-        <GateTester />
-        <AngleChecker />
-        <RipenessList />
       </div>
+      <details className="mt-5 rounded-xl border border-line bg-card p-4">
+        <summary className="cursor-pointer text-sm font-bold text-ink">Advanced tools (optional)</summary>
+        <p className="mt-2 text-sm leading-5 text-muted">
+          These tools help inspect evidence checks and research prioritisation. Most days, you can leave them closed and just talk with ForgeBot.
+        </p>
+        <div className="mt-4 grid gap-5">
+          <GateTester />
+          <AngleChecker />
+          <RipenessList />
+        </div>
+      </details>
     </div>
   );
 }
