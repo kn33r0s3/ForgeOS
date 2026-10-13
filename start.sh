@@ -53,21 +53,45 @@ if [ "$FORGEOS_USE_DOCKER" = "true" ] && command -v docker >/dev/null 2>&1 && do
 fi
 
 
-PY="python3"
-if [ -x backend/venv/bin/python ]; then
-  PY="$PWD/backend/venv/bin/python"
-elif command -v python3.11 >/dev/null 2>&1; then
-  PY="$(command -v python3.11)"
-elif command -v python3.12 >/dev/null 2>&1; then
-  PY="$(command -v python3.12)"
-fi
+PY=""
+for candidate in \
+  "$PWD/backend/venv/bin/python" \
+  /opt/homebrew/bin/python3.13 \
+  /opt/homebrew/bin/python3.12 \
+  /opt/homebrew/bin/python3.11 \
+  /opt/homebrew/bin/python3.10 \
+  /usr/local/bin/python3.13 \
+  /usr/local/bin/python3.12 \
+  /usr/local/bin/python3.11 \
+  /usr/local/bin/python3.10 \
+  python3.13 python3.12 python3.11 python3.10 python3; do
+  if [ -z "$candidate" ]; then
+    continue
+  fi
+  if [ -x "$candidate" ]; then
+    py="$candidate"
+  elif command -v "$candidate" >/dev/null 2>&1; then
+    py="$(command -v "$candidate")"
+  else
+    continue
+  fi
+  if "$py" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)'; then
+    PY="$py"
+    break
+  fi
+done
 
-if ! "$PY" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 9) else 1)'; then
-  echo "❌ ForgeOS requires Python 3.9+ for the backend and scheduler (found: $("$PY" --version 2>&1))"
+if [ -z "$PY" ]; then
+  echo "❌ ForgeOS requires Python 3.10+ for the backend and scheduler."
   exit 1
 fi
 
-if [ ! -d "$FORGEOS_DEPS_DIR/sqlalchemy" ]; then
+if ! "$PY" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)'; then
+  echo "❌ ForgeOS requires Python 3.10+ for the backend and scheduler (found: $($PY --version 2>&1))"
+  exit 1
+fi
+
+if ! "$PY" -c 'import click, fastapi, uvicorn, sqlalchemy; import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)'>/dev/null 2>&1 || [ ! -d "$FORGEOS_DEPS_DIR/sqlalchemy" ]; then
   echo "Installing backend dependencies into $FORGEOS_DEPS_DIR ..."
   rm -rf "$FORGEOS_DEPS_DIR"
   "$PY" -m pip install --target "$FORGEOS_DEPS_DIR" -r backend/requirements.txt
