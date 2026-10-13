@@ -170,23 +170,29 @@ def _cycle_effect_summary(intelligence: dict) -> dict:
         observed_effects.append("actions_proposed")
     if counts["contact_drafts_prepared"]:
         observed_effects.append("contact_drafts_prepared")
-    if any(
-        counts[key]
+
+    internal_work = [
+        key
         for key in (
             "research_questions_created",
             "research_tasks_created",
             "opportunities_discovered",
             "content_drafts_prepared",
         )
-    ):
-        observed_effects.append("internal_work_created")
-
-    status = "effects_observed" if observed_effects else "no_new_effect"
+        if counts[key]
+    ]
+    status = (
+        "effects_observed"
+        if observed_effects
+        else "internal_work_only"
+        if internal_work
+        else "no_new_effect"
+    )
     if counts["contact_drafts_prepared"]:
         next_owner_attention = "review_prepared_contact_draft"
     elif counts["unresolved_contact_drafts"]:
         next_owner_attention = "review_existing_contact_draft"
-    elif status == "no_new_effect":
+    elif status in {"internal_work_only", "no_new_effect"}:
         next_owner_attention = (
             "inspect_blockers_and_choose_a_reality-linked_next_action"
         )
@@ -197,6 +203,7 @@ def _cycle_effect_summary(intelligence: dict) -> dict:
         "status": status,
         "counts": counts,
         "observed_effects": observed_effects,
+        "internal_work": internal_work,
         "next_owner_attention": next_owner_attention,
         "reality_boundary": (
             "These counts describe system outputs. They do not establish a real conversation, "
@@ -224,9 +231,9 @@ def _cycle_stage_summary(intelligence: dict) -> tuple[str, dict[str, str], dict[
         not stage_errors
         and not stage_partials
         and isinstance(effect_summary, dict)
-        and effect_summary.get("status") == "no_new_effect"
+        and effect_summary.get("status") in {"internal_work_only", "no_new_effect"}
     ):
-        stage_partials["cycle_effect"] = "no_new_effect"
+        stage_partials["cycle_effect"] = effect_summary["status"]
 
     cycle_status = (
         "FAILED" if stage_errors
