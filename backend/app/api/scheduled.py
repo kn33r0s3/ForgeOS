@@ -21,6 +21,68 @@ logger = logging.getLogger(__name__)
 _local_cycle_lock = Lock()
 _intelligence_lock = Lock()
 _POSTGRES_LOCK_ID = 4_706_539_182
+_POSTGRES_INTELLIGENCE_LOCK_ID = 4_706_539_183
+
+
+def _acquire_intelligence_lock():
+    """Serialize intelligence cycles across PostgreSQL-backed serverless replicas.
+
+    A process-local Lock remains the fallback for SQLite/local development.
+    The returned callback releases whichever lock was acquired.
+    """
+    if database.engine.dialect.name != "postgresql":
+        if not _intelligence_lock.acquire(blocking=False):
+            raise HTTPException(
+                status_code=409,
+                detail="An intelligence run is already running",
+            )
+        return _intelligence_lock.release
+
+    connection = database.engine.connect()
+    try:
+        acquired = bool(
+            connection.execute(
+                text("SELECT pg_try_advisory_lock(:lock_id)"),
+                {"lock_id": _POSTGRES_INTELLIGENCE_LOCK_ID},
+            ).scalar_one()
+        )
+        connection.commit()
+    except Exception as exc:
+        connection.close()
+        raise HTTPException(
+            status_code=503,
+            detail="Intelligence lock is unavailable",
+        ) from exc
+
+    if not acquired:
+        connection.close()
+        raise HTTPException(
+            status_code=409,
+            detail="An intelligence run is already running",
+        )
+
+    def release() -> None:
+        try:
+            unlocked = bool(
+                connection.execute(
+                    text("SELECT pg_advisory_unlock(:lock_id)"),
+                    {"lock_id": _POSTGRES_INTELLIGENCE_LOCK_ID},
+                ).scalar_one()
+            )
+            connection.commit()
+            if not unlocked:
+                logger.warning("scheduled intelligence: PostgreSQL lock was not held at release")
+        except Exception as exc:
+            # Closing the connection also releases a session-scoped lock if the
+            # database invalidated it while the run was in progress.
+            logger.warning(
+                "scheduled intelligence: PostgreSQL lock release failed (%s)",
+                type(exc).__name__,
+            )
+        finally:
+            connection.close()
+
+    return release
 
 
 def _cycle_stage_summary(intelligence: dict) -> tuple[str, dict[str, str], dict[str, str]]:
@@ -264,10 +326,10 @@ def run_scheduled_intelligence(
             )
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    # Concurrency guard: one intelligence run at a time (same pattern as the
-    # legacy cycle lock). 409 when a run is already in progress.
-    if not _intelligence_lock.acquire(blocking=False):
-        raise HTTPException(status_code=409, detail="An intelligence run is already running")
+    # Cross-instance PostgreSQL advisory lock in production; process-local
+    # lock only for SQLite/local development. Never rely on one serverless
+    # instance's memory to serialize work across replicas.
+    release_intelligence_lock = _acquire_intelligence_lock()
 
     # Observability: record this run in the existing CycleRun table. The
     # bookkeeping below never fails the intelligence work itself.
@@ -581,7 +643,7 @@ def run_scheduled_intelligence(
             "scheduled intelligence: CycleRun finalize failed (%s)", type(exc).__name__
         )
     finally:
-        _intelligence_lock.release()
+        release_intelligence_lock()
 
     # "status" describes this HTTP request; cycle_status describes the work.
     # A successful response must not disguise partial or failed cycle stages.
