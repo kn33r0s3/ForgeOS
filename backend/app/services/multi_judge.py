@@ -100,12 +100,17 @@ def _normalize_result(result: Any) -> dict[str, Any]:
 
 
 def _default_judges() -> list[JudgeSpec]:
+    from app.config import settings
+
     registry = default_registry()
     specs: list[JudgeSpec] = []
-    for name, provider, model in (
-        ("local-qwen3-coder", "ollama", "qwen3-coder:latest"),
-        ("openai-completion", "openai", "configured"),
-    ):
+    # Prefer local execution. Merely having OPENAI_API_KEY configured does not
+    # authorize paid calls from unattended scheduled collection.
+    candidates = [("local-qwen3-coder", "ollama", "qwen3-coder:latest")]
+    if settings.FORGEOS_OPENAI_JUDGE_ENABLED:
+        candidates.append(("openai-completion", "openai", "configured"))
+
+    for name, provider, model in candidates:
         try:
             tool = registry.get(name)
         except KeyError:
