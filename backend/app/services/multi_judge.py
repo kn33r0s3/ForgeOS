@@ -102,6 +102,9 @@ def _normalize_result(result: Any) -> dict[str, Any]:
             label = raw_label.strip().casefold()
         else:
             label = "uncertain" if conclusion else "unknown"
+        if label in {"positive", "negative"} and not (conclusion or "").strip():
+            # Polarity without a stated conclusion is not an interpretable verdict.
+            label = "unknown"
 
         raw_confidence = result.get("confidence")
         confidence = (
@@ -167,7 +170,7 @@ def _default_judges(evidence: list[models.Evidence] | None = None) -> list[Judge
     # authorize paid calls from unattended scheduled collection.
     candidates = [("local-qwen3-coder", "ollama", settings.OLLAMA_MODEL)]
     if settings.FORGEOS_OPENAI_JUDGE_ENABLED:
-        candidates.append(("openai-completion", "openai", "configured"))
+        candidates.append(("openai-completion", "openai", settings.OPENAI_MODEL))
 
     permitted_ids = tuple(item.id for item in permitted) if permitted is not None else None
     for name, provider, model in candidates:
@@ -473,10 +476,16 @@ def compare_judgments(
     if missing_evidence or outcome in {"disagreement", "partial_agreement"}:
         detail = "Find missing evidence for" if missing_evidence else "Resolve disagreement about"
         follow_up = _follow_up_question(db, f"{detail}: {question}", claim_id=claim_id)
+    comparison_evidence_ids: list[int] = []
+    if not context_mismatches and len(distinct_judged_contexts) == 1:
+        # Persist the context actually attached to the judges. This matters
+        # when provider privacy rules intentionally withhold requested rows.
+        comparison_evidence_ids = list(next(iter(distinct_judged_contexts)))
+
     comparison = models.JudgmentComparison(
         question=question,
         judgment_ids=normalized_ids,
-        evidence_ids=_evidence_key(evidence_ids),
+        evidence_ids=_evidence_key(comparison_evidence_ids),
         outcome=outcome,
         summary=summary,
         disagreement_points=disagreement_points,
