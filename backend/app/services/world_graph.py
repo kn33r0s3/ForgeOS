@@ -2209,6 +2209,7 @@ CANONICAL_ADAPTERS: dict[str, tuple[type, Any]] = {
     "belief": (models.Belief, lambda row: _canonical_display(row, "statement")),
     "claim": (models.Claim, lambda row: _canonical_display(row, "statement")),
     "research_question": (models.ResearchQuestion, lambda row: _canonical_display(row, "question")),
+    "rare_signal_assessment": (models.RareSignalAssessment, lambda row: _canonical_display(row, "label")),
     "opportunity": (models.Opportunity, lambda row: _canonical_display(row, "problem")),
     "provider": (models.Provider, lambda row: _canonical_display(row, "business_name", "name")),
     "service_listing": (models.ServiceListing, lambda row: _canonical_display(row, "title")),
