@@ -32,9 +32,9 @@
   --color-raised: var(--surface);
   --color-panel: var(--surface-elevated);
   --color-fg: var(--foreground);
-  --color-dim: #9b97ad;
+  --color-dim: #8c887f;
   --color-line: var(--border);
-  --color-line-strong: #6b6878;
+  --color-line-strong: #5a5140;
   --color-cyan: var(--primary);
   --color-cyan-dim: color-mix(in srgb, var(--primary) 14%, transparent);
   --color-cyan-hot: color-mix(in srgb, var(--primary) 22%, transparent);
@@ -46,7 +46,7 @@
   /* Section and card headings: Archivo. */
   --font-display: "Archivo", ui-sans-serif, system-ui, sans-serif;
   /* Hami wordmark and reality-loop center only. */
-  --font-gothic: "UnifrakturCook", "Old English Text MT", Georgia, serif;
+  --font-gothic: Georgia, "Times New Roman", serif;
   /* Nepali text. */
   --font-nepali: "Noto Sans Devanagari", "Source Sans 3", sans-serif;
 
@@ -86,32 +86,28 @@
 }
 
 /*
- * ForgeOS visual system v3: "night masthead".
- * Taken from the look of kneerose.vercel.app: ink-navy page, a dark
- * near-black masthead with an orange rule and orange type, blackletter
- * titles on a hard 45deg black/orange split plate, grey-to-black 45deg sheens, orange-ringed
- * medallions, pale slab callouts, wheat footer type, 2px borders, 6px radii
- * and hard drop shadows. Motion is short and mechanical (wipes, stamps),
- * never floaty.
+ * Hami Systems: near-black ink, precise amber, warm neutral text, connected
+ * geometry, readable type and crisp, consistent borders. Scope is universal;
+ * presentation stays calm, accessible and evidence-led.
  */
 :root {
-  --background: #0c0b0a;
-  --surface: #15130f;
-  --surface-elevated: #1e1a14;
-  --foreground: #f4efe6;
-  --muted: #bdb29f;
-  --border: #3a2e1a;
-  --primary: #f2a33a;
-  --primary-foreground: #0c0b0a;
-  --secondary: #262019;
+  --background: #0b0b0b;
+  --surface: #141412;
+  --surface-elevated: #1c1a16;
+  --foreground: #ebe8e1;
+  --muted: #aaa59b;
+  --border: #332f27;
+  --primary: #ffb000;
+  --primary-foreground: #0b0b0b;
+  --secondary: #201c14;
   --success: #72d38f;
-  --warning: #f2a33a;
+  --warning: #ffb000;
   --danger: #ff6f6f;
   --info: #9ec5ff;
-  --focus: #f2a33a;
-  --wheat: #f5deb3;
-  --slab: #d1cfcf;
-  --plate-edge: #3a2e1a;
+  --focus: #ffb000;
+  --wheat: #ebe8e1;
+  --slab: #d7d3c9;
+  --plate-edge: #332f27;
 }
 
 @layer base {
@@ -161,7 +157,7 @@
     font-weight: 800;
   }
 
-  /* UnifrakturCook ships only 700; never synthesize other weights. */
+  /* Shared wordmark uses a clean serif; never rely on decorative font loading. */
   .font-gothic {
     font-weight: 700;
     font-synthesis: none;
@@ -649,12 +645,13 @@
     color: var(--muted);
   }
 
-  /* Blackletter numerals (I, II, III …) for steps and sections. */
+  /* Clear index numerals: a restrained system accent without ornamental blackletter. */
   .gothic-num {
-    font-family: var(--font-gothic);
+    font-family: var(--font-mono);
     font-weight: 700;
     color: var(--primary);
     line-height: 1;
+    letter-spacing: -0.04em;
   }
 
   .text-gradient-gold {
@@ -695,7 +692,7 @@
   .card-interactive:focus-within {
     border-color: var(--primary);
     box-shadow:
-      0 0 0 1px rgb(255 155 4 / 0.5),
+      0 0 0 1px rgb(255 176 0 / 0.5),
       var(--shadow-md);
   }
 
