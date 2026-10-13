@@ -2179,8 +2179,27 @@ def _is_simulated_provenance(raw: str) -> bool:
         # URL hosts and paths are identities, not evidence-mode declarations.
         if value.strip().casefold().startswith(("https://", "http://")):
             return False
-        tokens = set(re.findall(r"[a-z0-9]+", value.casefold()))
-        return bool(tokens.intersection(text_markers))
+        tokens = re.findall(r"[a-z0-9]+", value.casefold())
+        marker_words = {
+            "fixture", "mock", "mocked", "simulated", "simulation", "synthetic",
+        }
+        negators = {"not", "no", "never", "without", "isnt", "wasnt", "doesnt", "dont"}
+        for index, token in enumerate(tokens):
+            is_marker = token in marker_words or (
+                token in {"data", "only"}
+                and index > 0
+                and tokens[index - 1] == "test"
+            )
+            if not is_marker:
+                continue
+            preceding = tokens[max(0, index - 3):index]
+            # Explicit negation matters: "not mock data" is not a mock marker.
+            # A standalone scalar such as "test-fixture: direct observation"
+            # still fails closed because "fixture" is unnegated.
+            if any(word in negators for word in preceding):
+                continue
+            return True
+        return False
 
     try:
         payload = json.loads(raw)
