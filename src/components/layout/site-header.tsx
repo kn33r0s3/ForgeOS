@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { Link, useLoaderData, useRouterState } from "@tanstack/react-router";
 import { NAV } from "@/lib/hami-system";
@@ -17,6 +17,11 @@ function isActive(href: string, pathname: string) {
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const closeNavigation = useCallback(() => {
+    setOpen(false);
+    menuButtonRef.current?.focus();
+  }, [setOpen]);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [scrolled, setScrolled] = useState(false);
   const { user, isPending } = useCurrentUserState();
@@ -42,7 +47,7 @@ export function SiteHeader() {
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") closeNavigation();
     };
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKey);
@@ -50,7 +55,7 @@ export function SiteHeader() {
       document.body.style.overflow = "";
       window.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [closeNavigation, open]);
 
   // The mobile panel is a sibling of <header>, not a child, so it is never
   // clipped by the header's own box.
@@ -117,6 +122,7 @@ export function SiteHeader() {
               </>
             ) : null}
             <button
+              ref={menuButtonRef}
               type="button"
               className="group relative inline-flex size-11 flex-col items-center justify-center gap-[5px] rounded-card lg:hidden"
               aria-expanded={open}
@@ -149,7 +155,7 @@ export function SiteHeader() {
           open ? "block" : "hidden",
         )}
         onClick={(event) => {
-          if (event.target === event.currentTarget) setOpen(false);
+          if (event.target === event.currentTarget) closeNavigation();
         }}
       >
         <div className="reveal mx-2 mt-2 rounded-card border-2 border-line-strong bg-card shadow-md">
@@ -165,6 +171,7 @@ export function SiteHeader() {
                   >
                     <Link
                       to={item.to}
+                      onClick={closeNavigation}
                       aria-current={active ? "page" : undefined}
                       className={cn(
                         "flex min-h-14 items-center gap-4 px-4 text-lg font-extrabold transition-colors",

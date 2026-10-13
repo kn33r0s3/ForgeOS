@@ -62,4 +62,25 @@ describe("SiteHeader responsive account actions", () => {
       );
     }
   });
+
+  it("returns focus to the menu toggle when the drawer closes", () => {
+    assert.match(
+      source,
+      /const closeNavigation = useCallback\(\(\) => \{\s*setOpen\(false\);\s*menuButtonRef\.current\?\.focus\(\);\s*\}, \[setOpen\]\)/,
+    );
+    assert.ok(
+      source.includes('if (event.key === "Escape") closeNavigation()'),
+      "Escape should close the drawer through the focus-restoring handler",
+    );
+    assert.ok(
+      source.includes("if (event.target === event.currentTarget) closeNavigation()"),
+      "Backdrop dismissal should close the drawer through the focus-restoring handler",
+    );
+    const drawerStart = source.indexOf('id="mobile-navigation"');
+    const drawerSection = source.slice(drawerStart, drawerStart + 5000);
+    assert.ok(
+      drawerSection.includes("onClick={closeNavigation}"),
+      "Navigating from the drawer should restore focus to its toggle",
+    );
+  });
 });
