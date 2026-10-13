@@ -61,7 +61,7 @@ def _create_test_task(db, name, *, claim_id=None):
     return task
 
 
-def test_successful_useful_source_usage_is_persisted(db, monkeypatch):
+def test_useful_source_usage_does_not_confuse_judgment_with_verification(db, monkeypatch):
     question = models.ResearchQuestion(question="Does the repair workflow have paying customers?")
     claim = models.Claim(statement="Businesses pay for the repair workflow.", normalized_statement="businesses pay for the repair workflow")
     db.add_all([question, claim])
@@ -83,7 +83,8 @@ def test_successful_useful_source_usage_is_persisted(db, monkeypatch):
         lambda *_args: {
             "comparison": SimpleNamespace(outcome="agreement"),
             "judgments": [
-                SimpleNamespace(status="completed", conclusion_label="positive")
+                SimpleNamespace(status="completed", conclusion_label="positive", provider="provider-a", model="model-a"),
+                SimpleNamespace(status="completed", conclusion_label="positive", provider="provider-b", model="model-b"),
             ],
         },
     )
@@ -99,8 +100,8 @@ def test_successful_useful_source_usage_is_persisted(db, monkeypatch):
     assert tool.novel_result_count == 1
     assert source.useful_evidence_count == 1
     assert source.contradicted_claim_count == 0
-    assert tool.verified_result_count == 1
-    assert source.corroborated_evidence_count == 1
+    assert tool.verified_result_count == 0
+    assert source.corroborated_evidence_count == 0
     assert tool.cost is None
 
 
