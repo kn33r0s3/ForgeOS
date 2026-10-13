@@ -23,6 +23,20 @@ def fake_send(monkeypatch):
         lambda text, message_type="alert": sent.append({"text": text, "kind": message_type}) or {"message_id": 77, "accepted": True})
     return sent
 
+
+def test_ask_lifecycle_refuses_ephemeral_database(db, monkeypatch):
+    configure(monkeypatch)
+    sent = fake_send(monkeypatch)
+    monkeypatch.setattr(owner_control, "durable_database", lambda _db: False)
+    with pytest.raises(owner_control.OwnerControlError, match="durable_database_required"):
+        owner_control.create_ask(
+            db, decision_ref="review", action_type="prepare_internal_draft",
+            question="Choose the next internal draft direction?",
+            options=[{"key": "A", "label": "Evidence first"}, {"key": "B", "label": "Compare alternatives"}],
+        )
+    assert sent == []
+    assert db.query(models.OpHamiOwnerAsk).count() == 0
+
 def test_safe_mode_starts_on_and_blocks_sends(db, monkeypatch):
     monkeypatch.setattr(settings, "FORGE_BOT_LIVE", True)
     assert owner_control.ensure_state(db).safe_mode_enabled

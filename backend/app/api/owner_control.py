@@ -34,6 +34,7 @@ def _error(exc: owner_control.OwnerControlError) -> HTTPException:
     code = exc.reason
     statuses = {
         "telegram_control_not_configured": 503, "telegram_ask_delivery_failed": 503,
+        "durable_database_required": 503,
         "action_not_eligible_for_ask": 409, "action_ask_requires_approve_reject_options": 422,
         "ask_requires_two_or_three_options": 422, "ask_option_invalid": 422,
         "ask_option_invalid_or_contains_protected_contact": 422, "ask_question_invalid": 422,

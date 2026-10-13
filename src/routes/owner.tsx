@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Container } from "@/components/layout/container";
 import { BrandMark } from "@/components/layout/brand-mark";
@@ -835,6 +835,287 @@ function PaymentFulfillmentQueue({ apiKey }: { apiKey: string }) {
   );
 }
 
+
+type OwnerControlStatusView = {
+  safe_mode_enabled: boolean;
+  safe_mode_reason: string | null;
+  last_owner_contact_at_utc: string | null;
+  owner_contact_stale: boolean | null;
+  customer_sending_effective: "ON" | "OFF";
+  active_stage: string;
+  telegram_control_configured: boolean;
+  telegram_digest_enabled: boolean;
+  sms_digest_enabled: boolean;
+  intake_enabled: boolean;
+  public_checkout_enabled: boolean;
+  note: string;
+};
+
+type OwnerControlAskView = {
+  ask_ref: string;
+  decision_ref: string;
+  action_type: string;
+  action_id: number | null;
+  question: string;
+  options: Array<{ key: string; label: string }>;
+  high_impact: boolean;
+  status: string;
+  notification_status: string;
+  code_expires_at_utc: string | null;
+  expires_at_utc: string | null;
+  answer_option: string | null;
+};
+
+async function ownerControlRequest<T>(
+  path: string,
+  ownerKey: string,
+  method = "GET",
+  body?: Record<string, unknown>,
+): Promise<T> {
+  const response = await fetch(path, {
+    method,
+    headers: {
+      "X-API-Key": ownerKey,
+      ...(body ? { "Content-Type": "application/json" } : {}),
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  if (!response.ok) {
+    const payload: unknown = await response.json().catch(() => null);
+    const detail =
+      typeof payload === "object" &&
+      payload !== null &&
+      "detail" in payload &&
+      typeof payload.detail === "string"
+        ? payload.detail
+        : "Owner control request failed (" + response.status + ").";
+    throw new Error(detail);
+  }
+  return (await response.json()) as T;
+}
+
+function OwnerControlPanel({ apiKey }: { apiKey: string }) {
+  const [status, setStatus] = useState<OwnerControlStatusView | null>(null);
+  const [asks, setAsks] = useState<OwnerControlAskView[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busyAsk, setBusyAsk] = useState<string | null>(null);
+  const [codes, setCodes] = useState<Record<string, string>>({});
+  const [choices, setChoices] = useState<Record<string, string>>({});
+
+  const refresh = useCallback(async () => {
+    if (!apiKey.trim()) return;
+    setLoading(true);
+    setLoadError("");
+    try {
+      const [nextStatus, nextAsks] = await Promise.all([
+        ownerControlRequest<OwnerControlStatusView>("/api/owner-control/status", apiKey),
+        ownerControlRequest<OwnerControlAskView[]>("/api/owner-control/asks", apiKey),
+      ]);
+      if (!nextStatus || typeof nextStatus.safe_mode_enabled !== "boolean" || !Array.isArray(nextAsks)) {
+        throw new Error("Owner control returned an unexpected response.");
+      }
+      setStatus(nextStatus);
+      setAsks(nextAsks);
+    } catch (cause) {
+      setStatus(null);
+      setAsks(null);
+      setLoadError(cause instanceof Error ? cause.message : "Owner safety status is unavailable.");
+    } finally {
+      setLoading(false);
+    }
+  }, [apiKey]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  async function submitAnswer(ask: OwnerControlAskView) {
+    const code = (codes[ask.ask_ref] ?? "").trim();
+    const option = (choices[ask.ask_ref] ?? "").trim();
+    if (!code || !option) {
+      setActionError("Enter the one-time code and choose an option before submitting.");
+      return;
+    }
+    setBusyAsk(ask.ask_ref);
+    setActionError("");
+    setNotice("");
+    try {
+      const result = await ownerControlRequest<{
+        status: string;
+        ask_ref: string;
+        option: string;
+        safe_mode_enabled: boolean;
+        action_executed: boolean;
+      }>("/api/owner-control/asks/" + encodeURIComponent(ask.ask_ref) + "/answer", apiKey, "POST", {
+        code,
+        option,
+      });
+      setCodes((current) => ({ ...current, [ask.ask_ref]: "" }));
+      setNotice(
+        "Recorded " + result.option + " for " + result.ask_ref +
+        (result.action_executed ? ". The API reports an execution; inspect the Action record." : ". No Action was executed automatically."),
+      );
+      await refresh();
+    } catch (cause) {
+      setActionError(cause instanceof Error ? cause.message : "The decision could not be recorded.");
+    } finally {
+      setBusyAsk(null);
+    }
+  }
+
+  async function requestResume() {
+    setBusyAsk("resume");
+    setActionError("");
+    setNotice("");
+    try {
+      const result = await ownerControlRequest<{ ask_ref: string; high_impact: boolean; status: string }>(
+        "/api/owner-control/resume/request", apiKey, "POST",
+      );
+      setNotice(
+        "Resume review " + result.ask_ref + " was created. Enter its one-time code here after it arrives in the private Telegram chat. Clearing safe mode alone does not enable customer sending or other flags.",
+      );
+      await refresh();
+    } catch (cause) {
+      setActionError(cause instanceof Error ? cause.message : "Resume review could not be requested.");
+    } finally {
+      setBusyAsk(null);
+    }
+  }
+
+  if (!apiKey.trim()) return null;
+
+  return (
+    <section aria-label="Owner safety and decisions" className="mt-6 rounded-2xl border-2 border-line bg-card p-4 sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Owner control</p>
+          <h2 className="mt-1 text-xl font-extrabold">Safety state &amp; pending decisions</h2>
+          <p className="mt-1 max-w-3xl text-sm leading-5 text-muted">
+            The persistent safety gate and one-time ASK approvals. Configuration is not delivery proof; this panel never executes an Action itself.
+          </p>
+        </div>
+        <button type="button" onClick={() => void refresh()} disabled={loading} className="min-h-10 rounded-card border border-line px-3 py-2 text-sm font-bold disabled:opacity-60">
+          {loading ? "Refreshing…" : "Refresh safety"}
+        </button>
+      </div>
+
+      {loadError ? <p role="alert" className="mt-4 rounded-card border border-danger/70 bg-danger/10 p-3 text-sm">{loadError}</p> : null}
+      {!status ? (
+        <p className="mt-4 rounded-card border border-line p-3 text-sm text-muted">
+          Safety state is not verified yet. Refresh after owner authentication; an unavailable read must not be interpreted as safe or live.
+        </p>
+      ) : (
+        <>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <article className={"rounded-xl border-2 p-3 " + (status.safe_mode_enabled ? "border-danger/70 bg-danger/10" : "border-line bg-background")}>
+              <p className="text-xs font-bold uppercase tracking-wide text-muted">Persistent safe mode</p>
+              <p className="mt-1 text-xl font-extrabold">{status.safe_mode_enabled ? "ON" : "OFF"}</p>
+              <p className="mt-1 break-words text-xs leading-5 text-muted">Reason: {status.safe_mode_reason ?? "not recorded"}</p>
+            </article>
+            <article className="rounded-xl border-2 border-line bg-background p-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-muted">Generic customer sending</p>
+              <p className="mt-1 text-xl font-extrabold">{status.customer_sending_effective}</p>
+              <p className="mt-1 text-xs leading-5 text-muted">Email/SMS delivery gate only; does not describe every possible integration.</p>
+            </article>
+            <article className="rounded-xl border-2 border-line bg-background p-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-muted">Last owner contact</p>
+              <p className="mt-1 text-sm font-bold">{displayTime(status.last_owner_contact_at_utc)}</p>
+              <p className="mt-1 text-xs leading-5 text-muted">{status.owner_contact_stale === null ? "Freshness UNKNOWN" : status.owner_contact_stale ? "Stale — safe mode should stay on" : "Within the 7-day window"}</p>
+            </article>
+            <article className="rounded-xl border-2 border-line bg-background p-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-muted">Telegram control</p>
+              <p className="mt-1 text-lg font-extrabold">{status.telegram_control_configured ? "Configured" : "OFF / incomplete"}</p>
+              <p className="mt-1 text-xs leading-5 text-muted">Secrets and owner IDs are never shown. Configured does not mean a handset received a message.</p>
+            </article>
+            <article className="rounded-xl border-2 border-line bg-background p-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-muted">Digest delivery</p>
+              <p className="mt-1 text-sm font-bold">Telegram {status.telegram_digest_enabled ? "enabled by configuration" : "OFF"} · SMS {status.sms_digest_enabled ? "enabled by configuration" : "OFF"}</p>
+              <p className="mt-1 text-xs leading-5 text-muted">No delivery is asserted by this setting alone.</p>
+            </article>
+            <article className="rounded-xl border-2 border-line bg-background p-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-muted">Other public gates</p>
+              <p className="mt-1 text-sm font-bold">Intake {status.intake_enabled ? "ON" : "OFF"} · Checkout {status.public_checkout_enabled ? "ON" : "OFF"}</p>
+              <p className="mt-1 text-xs leading-5 text-muted">Active stage: {status.active_stage}</p>
+            </article>
+          </div>
+          {status.owner_contact_stale ? (
+            <p role="status" className="mt-3 rounded-card border border-warning/70 bg-warning/10 p-3 text-sm">
+              Owner contact is at least seven days old or has not yet been recorded. The safety gate remains active until the state is reviewed.
+            </p>
+          ) : null}
+          {status.safe_mode_enabled && status.telegram_control_configured ? (
+            <div className="mt-4">
+              <button type="button" onClick={() => void requestResume()} disabled={busyAsk !== null} className="min-h-11 rounded-card border-2 border-accent px-4 py-2 text-sm font-bold text-accent disabled:opacity-60">
+                {busyAsk === "resume" ? "Creating request…" : "Request safe-mode review"}
+              </button>
+              <p className="mt-1 text-xs leading-5 text-muted">This sends a high-impact ASK to the configured private Telegram chat. Resuming requires this authenticated console and the one-time code; it does not turn other flags on.</p>
+            </div>
+          ) : null}
+        </>
+      )}
+
+      {notice ? <p role="status" className="mt-4 rounded-card border border-success/70 bg-success/10 p-3 text-sm">{notice}</p> : null}
+      {actionError ? <p role="alert" className="mt-4 rounded-card border border-danger/70 bg-danger/10 p-3 text-sm">{actionError}</p> : null}
+
+      <div className="mt-5 border-t border-line pt-4">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h3 className="font-extrabold">Owner decision requests</h3>
+            <p className="mt-1 text-sm leading-5 text-muted">One-time codes are entered here only for console approvals. High-impact decisions cannot be approved in Telegram alone.</p>
+          </div>
+          <span className="rounded-full border border-line px-3 py-1 text-xs font-semibold">{asks ? asks.filter((ask) => ask.status === "OPEN").length : "UNKNOWN"} open</span>
+        </div>
+        {asks === null ? (
+          <p className="mt-3 text-sm text-muted">Decision queue unavailable; it is not assumed to be empty.</p>
+        ) : asks.length === 0 ? (
+          <p className="mt-3 rounded-card border border-line p-3 text-sm text-muted">No recent decision requests are recorded.</p>
+        ) : (
+          <ul className="mt-3 grid gap-3">
+            {asks.map((ask) => (
+              <li key={ask.ask_ref} className="rounded-xl border-2 border-line p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h4 className="font-bold">{ask.question}</h4>
+                    <p className="mt-1 text-xs text-muted">{ask.ask_ref} · {ask.decision_ref} · {ask.action_type}</p>
+                  </div>
+                  <span className="rounded-full border border-line px-2 py-1 text-xs font-bold">{ask.high_impact ? "HIGH IMPACT" : "ROUTINE"} · {ask.status}</span>
+                </div>
+                {ask.status === "OPEN" ? (
+                  <form className="mt-4 grid gap-3 sm:grid-cols-2" onSubmit={(event) => { event.preventDefault(); void submitAnswer(ask); }}>
+                    <label className="grid gap-1 text-sm font-semibold">
+                      One-time code
+                      <input type="password" autoComplete="off" spellCheck={false} value={codes[ask.ask_ref] ?? ""} onChange={(event) => setCodes((current) => ({ ...current, [ask.ask_ref]: event.target.value }))} className="min-h-11 min-w-0 rounded-card border-2 border-line bg-background px-3 text-base" required />
+                    </label>
+                    <label className="grid gap-1 text-sm font-semibold">
+                      Decision
+                      <select value={choices[ask.ask_ref] ?? ""} onChange={(event) => setChoices((current) => ({ ...current, [ask.ask_ref]: event.target.value }))} className="min-h-11 min-w-0 rounded-card border-2 border-line bg-background px-3 text-base" required>
+                        <option value="" disabled>Select an option</option>
+                        {ask.options.map((option) => <option key={option.key} value={option.key}>{option.key} — {option.label}</option>)}
+                      </select>
+                    </label>
+                    <div className="sm:col-span-2">
+                      <button type="submit" disabled={busyAsk !== null || !(codes[ask.ask_ref] ?? "").trim() || !(choices[ask.ask_ref] ?? "").trim()} className="min-h-11 rounded-card border-2 border-accent px-4 py-2 text-sm font-bold text-accent disabled:opacity-60">
+                        {busyAsk === ask.ask_ref ? "Recording decision…" : "Record decision — no automatic execution"}
+                      </button>
+                      {ask.high_impact ? <p className="mt-2 text-xs leading-5 text-muted">High-impact: this authenticated owner console and the unexpired code are both required.</p> : <p className="mt-2 text-xs leading-5 text-muted">A routine decision can alternatively be submitted to Telegram as a new, unforwarded message. This form never runs an Action.</p>}
+                    </div>
+                  </form>
+                ) : (
+                  <p className="mt-2 text-sm text-muted">Status: {ask.status}{ask.answer_option ? " · recorded option: " + ask.answer_option : ""}{ask.notification_status ? " · notification: " + ask.notification_status : ""}</p>
+                )}
+                <p className="mt-2 text-xs text-muted">Code expires: {displayTime(ask.code_expires_at_utc)} · Request expires: {displayTime(ask.expires_at_utc)}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function OwnerConsolePage() {
   const [key, setKey] = useState("");
   const [consoleState, setConsoleState] = useState<OwnerConsoleState | null>(null);
@@ -1446,6 +1727,8 @@ function OwnerConsolePage() {
                   </div>
                 </div>
               </section>
+
+              <OwnerControlPanel apiKey={key} />
 
               <section id="forgebot-workspace" className="scroll-mt-24" aria-label="Talk to ForgeBot">
                 <ForgeConsoleWidgets apiKey={key} />
