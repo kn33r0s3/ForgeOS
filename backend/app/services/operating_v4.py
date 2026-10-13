@@ -2389,7 +2389,16 @@ def contact_state(db: Session) -> dict:
         )
         .count()
     )
-    dry_wells_recorded = max(0, pending_contact_replies - pending_contact_outcomes)
+    dry_wells_recorded = (
+        db.query(models.OutreachDraft)
+        .filter(
+            models.OutreachDraft.status == "SENT",
+            models.OutreachDraft.reply_received.is_(False),
+            models.OutreachDraft.outcome_notes.isnot(None),
+            models.OutreachDraft.outcome_notes != "",
+        )
+        .count()
+    )
     contact_priority_due = days is None or days >= CONTACT_PRIORITY_DAYS
     next_priority = (
         "review_pending_contact_outcomes"
