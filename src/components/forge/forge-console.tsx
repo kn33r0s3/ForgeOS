@@ -22,6 +22,17 @@ type ForgeProviderStatus = {
   status: string;
 };
 
+type ForgeProviderObservation = {
+  provider: string;
+  mode: string;
+  model: string | null;
+  status: string;
+  inference_invoked: boolean;
+  prompt_eval_tokens: number | null;
+  completion_eval_tokens: number | null;
+  total_duration_ms: number | null;
+};
+
 type ForgeKnowledgeRecord = {
   id: number;
   title: string;
@@ -38,6 +49,7 @@ type ForgeAskResponse = {
   question: string;
   answer: string;
   memories_used: ForgeKnowledgeRecord[];
+  provider_observation?: ForgeProviderObservation | null;
 };
 
 type ForgeChatTurn = {
@@ -45,6 +57,7 @@ type ForgeChatTurn = {
   question: string;
   answer: string;
   records: ForgeKnowledgeRecord[];
+  providerObservation: ForgeProviderObservation | null;
   askedAt: string;
 };
 
@@ -127,6 +140,24 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
         throw new Error("Forge returned an unexpected answer format; nothing was saved by this panel.");
       }
       const data = payload as ForgeAskResponse;
+      const rawObservation = data.provider_observation;
+      const providerObservation: ForgeProviderObservation | null =
+        typeof rawObservation === "object" && rawObservation !== null &&
+        typeof rawObservation.provider === "string" &&
+        typeof rawObservation.mode === "string" &&
+        typeof rawObservation.status === "string" &&
+        typeof rawObservation.inference_invoked === "boolean"
+          ? {
+              provider: rawObservation.provider.slice(0, 80),
+              mode: rawObservation.mode.slice(0, 40),
+              model: typeof rawObservation.model === "string" ? rawObservation.model.slice(0, 120) : null,
+              status: rawObservation.status.slice(0, 40),
+              inference_invoked: rawObservation.inference_invoked,
+              prompt_eval_tokens: Number.isInteger(rawObservation.prompt_eval_tokens) && (rawObservation.prompt_eval_tokens ?? -1) >= 0 ? rawObservation.prompt_eval_tokens : null,
+              completion_eval_tokens: Number.isInteger(rawObservation.completion_eval_tokens) && (rawObservation.completion_eval_tokens ?? -1) >= 0 ? rawObservation.completion_eval_tokens : null,
+              total_duration_ms: typeof rawObservation.total_duration_ms === "number" && Number.isFinite(rawObservation.total_duration_ms) && rawObservation.total_duration_ms >= 0 ? rawObservation.total_duration_ms : null,
+            }
+          : null;
       const records = data.memories_used.filter((record) =>
         record !== null && typeof record === "object" &&
         Number.isInteger(record.id) && typeof record.title === "string" &&
@@ -137,6 +168,7 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
         question: submittedQuestion,
         answer: data.answer,
         records,
+        providerObservation,
         askedAt: new Date().toISOString(),
       };
       setTurns((current) => [...current, turn].slice(-8));
@@ -269,6 +301,15 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
                 <p className="text-xs font-bold uppercase tracking-wide text-muted">ForgeBot’s answer</p>
                 <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-ink">{turn.answer}</p>
               </div>
+              {turn.providerObservation?.inference_invoked ? (
+                <p className="mt-2 text-xs leading-5 text-muted">
+                  Observed model call: {turn.providerObservation.mode === "SELF_HOSTED" ? "self-hosted Ollama" : "local Ollama"}
+                  {turn.providerObservation.model ? " · " + turn.providerObservation.model : ""}
+                  {typeof turn.providerObservation.total_duration_ms === "number" ? " · " + Math.round(turn.providerObservation.total_duration_ms) + " ms" : ""}
+                  {typeof turn.providerObservation.prompt_eval_tokens === "number" && typeof turn.providerObservation.completion_eval_tokens === "number" ? " · " + (turn.providerObservation.prompt_eval_tokens + turn.providerObservation.completion_eval_tokens) + " tokens" : ""}
+                  . The response was generated, but its claims are not independently verified by this telemetry.
+                </p>
+              ) : null}
               <details className="mt-3 border-t border-line pt-3">
                 <summary className="cursor-pointer text-sm font-semibold text-ink">
                   See the records behind this answer ({turn.records.length})
