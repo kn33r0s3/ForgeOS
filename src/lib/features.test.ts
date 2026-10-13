@@ -240,7 +240,7 @@ describe("feature registry", () => {
     assert.ok(forgeConsole.includes('fetch("/api/forge/ask"'));
     assert.ok(forgeConsole.includes("Talk to ForgeBot"));
     assert.ok(forgeConsole.includes("Advanced tools (optional)"));
-    assert.ok(forgeConsole.includes("ForgeBot is in simple test mode"));
+    assert.ok(forgeConsole.includes("Real inference is not enabled."));
     assert.ok(forgeConsole.includes("memories_used"));
     assert.ok(forgeConsole.includes("ForgeBot’s answer"));
     assert.ok(forgeConsole.includes("ForgeBot's answer is a guide, not proof"));
