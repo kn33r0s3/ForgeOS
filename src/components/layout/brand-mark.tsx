@@ -2,10 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
 /**
- * Stacked masthead mark: the Hami icon above a blackletter wordmark.
- * `tone="dark"` (black type) is for light/orange surfaces; `"light"` (orange
- * type) for dark surfaces such as the current night masthead and footer.
- * Only "light" is used today.
+ * One Hami Systems lockup shared by the site header and footer.
+ * The symbol is also the favicon, so the brand stays consistent at every size.
  */
 export function BrandMark({
   className,
@@ -17,27 +15,34 @@ export function BrandMark({
   return (
     <Link
       to="/"
-      className={cn("group flex items-center gap-2.5", className)}
-      aria-label="Hami home"
+      className={cn("group inline-flex min-w-0 items-center gap-2.5", className)}
+      aria-label="Hami Systems home"
     >
       <img
-        src="/hami-mark.png"
+        src="/favicon.svg"
         alt=""
-        width={32}
-        height={32}
+        width={40}
+        height={40}
         decoding="async"
-        className={cn(
-          "size-8 rounded-card border-2 object-cover transition-transform duration-150 group-hover:-rotate-6",
-          tone === "dark" ? "border-black bg-black" : "border-line bg-card",
-        )}
+        className="size-10 shrink-0 rounded-md transition-transform duration-150 group-hover:-rotate-3"
       />
-      <span
-        className={cn(
-          "font-gothic text-2xl leading-none",
-          tone === "dark" ? "text-black" : "text-accent",
-        )}
-      >
-        Hami
+      <span className="flex flex-col leading-none">
+        <span
+          className={cn(
+            "font-serif text-[1.2rem] font-bold tracking-[0.09em]",
+            tone === "dark" ? "text-black" : "text-accent",
+          )}
+        >
+          HAMI
+        </span>
+        <span
+          className={cn(
+            "mt-1 font-mono text-[0.52rem] font-bold tracking-[0.3em]",
+            tone === "dark" ? "text-black/70" : "text-muted",
+          )}
+        >
+          SYSTEMS
+        </span>
       </span>
     </Link>
   );
