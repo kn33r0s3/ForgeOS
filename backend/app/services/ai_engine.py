@@ -375,7 +375,14 @@ def get_provider_status() -> dict:
         return {"provider": name, "mode": "EXTERNAL", "status": "AI_UNAVAILABLE", "inference_verified": False, "failure_type": type(exc).__name__, "note": "The configured provider adapter could not be initialized."}
 
 
-def _complete_with_fallback(prompt: str, system: str = "", context: str = "", *, allow_mock_fallback: bool = True) -> str:
+def _complete_with_fallback(
+    prompt: str,
+    system: str = "",
+    context: str = "",
+    *,
+    allow_mock_fallback: bool = True,
+    completion_observation: dict | None = None,
+) -> str:
     """Run completion through configured provider.
 
     When AI_PROVIDER is explicitly "mock": use MockProvider (tests/demo).
@@ -388,6 +395,11 @@ def _complete_with_fallback(prompt: str, system: str = "", context: str = "", *,
     provider_name = settings.AI_PROVIDER
 
     if provider_name == "mock":
+        if completion_observation is not None:
+            completion_observation.update({
+                "provider": "mock", "mode": "MOCK", "model": None,
+                "status": "AI_UNAVAILABLE", "inference_invoked": False,
+            })
         if not allow_mock_fallback:
             raise AIUnavailableError("mock", "template output is not permitted for this evidence-grounded answer")
         return MockProvider().complete(full_prompt, system=system)
@@ -396,21 +408,80 @@ def _complete_with_fallback(prompt: str, system: str = "", context: str = "", *,
         provider = get_provider()
     except Exception as e:
         if allow_mock_fallback and getattr(settings, "AI_FALLBACK_TO_MOCK", False):
+            if completion_observation is not None:
+                completion_observation.update({
+                    "provider": "mock", "mode": "MOCK", "model": None,
+                    "status": "mock_fallback", "inference_invoked": False,
+                    "failure_type": type(e).__name__,
+                })
             return MockProvider().complete(full_prompt, system=system)
-        raise AIUnavailableError(provider_name, f"provider construction failed: {e}") from e
+        if completion_observation is not None:
+            completion_observation.update({
+                "provider": provider_name, "mode": "SELF_HOSTED" if provider_name == "ollama" and ollama_transport_mode() == "SELF_HOSTED" else ("LOCAL" if provider_name == "ollama" else "EXTERNAL"),
+                "model": settings.OLLAMA_MODEL if provider_name == "ollama" else None,
+                "status": "AI_UNAVAILABLE", "inference_invoked": False,
+                "failure_type": type(e).__name__,
+            })
+        raise AIUnavailableError(provider_name, f"provider construction failed: {type(e).__name__}") from e
 
     if isinstance(provider, MockProvider):
-        # Config asked for real provider but we only have mock path
         if allow_mock_fallback and getattr(settings, "AI_FALLBACK_TO_MOCK", False):
+            if completion_observation is not None:
+                completion_observation.update({
+                    "provider": "mock", "mode": "MOCK", "model": None,
+                    "status": "mock_fallback", "inference_invoked": False,
+                })
             return provider.complete(full_prompt, system=system)
+        if completion_observation is not None:
+            completion_observation.update({
+                "provider": provider_name, "mode": "UNKNOWN", "model": None,
+                "status": "AI_UNAVAILABLE", "inference_invoked": False,
+            })
         raise AIUnavailableError(provider_name, "real provider not available")
 
+    mode = getattr(provider, "_transport_mode", "EXTERNAL")
+    model = getattr(provider, "_model", None)
     try:
-        return provider.complete(full_prompt, system=system)
+        answer = provider.complete(full_prompt, system=system)
+        if not isinstance(answer, str) or not answer.strip():
+            if completion_observation is not None:
+                completion_observation.update({
+                    "provider": provider_name, "mode": mode, "model": model,
+                    "status": "empty_response", "inference_invoked": True,
+                })
+            raise AIUnavailableError(provider_name, "provider returned an empty completion")
+        if completion_observation is not None:
+            details = getattr(provider, "last_call_metadata", {})
+            details = details if isinstance(details, dict) else {}
+            completion_observation.update({
+                "provider": provider_name,
+                "mode": mode,
+                "model": model,
+                "status": "completed",
+                "inference_invoked": True,
+                "prompt_eval_tokens": details.get("prompt_eval_tokens"),
+                "completion_eval_tokens": details.get("completion_eval_tokens"),
+                "total_duration_ms": details.get("total_duration_ms"),
+            })
+        return answer.strip()
     except Exception as e:
         if allow_mock_fallback and getattr(settings, "AI_FALLBACK_TO_MOCK", False):
+            if completion_observation is not None:
+                completion_observation.update({
+                    "provider": "mock", "mode": "MOCK", "model": None,
+                    "status": "mock_fallback", "inference_invoked": False,
+                    "failure_type": type(e).__name__,
+                })
             return MockProvider().complete(full_prompt, system=system)
-        raise AIUnavailableError(provider_name, str(e)) from e
+        if completion_observation is not None and completion_observation.get("status") != "empty_response":
+            completion_observation.update({
+                "provider": provider_name, "mode": mode, "model": model,
+                "status": "AI_UNAVAILABLE", "inference_invoked": True,
+                "failure_type": type(e).__name__,
+            })
+        if isinstance(e, AIUnavailableError):
+            raise
+        raise AIUnavailableError(provider_name, f"provider request failed: {type(e).__name__}") from e
 
 
 def _retrieve_context(db, query: str) -> str:
@@ -544,5 +615,15 @@ def answer_question(question: str, db) -> dict:
         "Do not fill gaps with general model knowledge or invent Nepal-specific laws, prices, sources, "
         "organizations, or cultural rules. Be direct, respectful, and useful without pretending certainty."
     )
-    answer = _complete_with_fallback(prompt, system=system, allow_mock_fallback=False)
-    return {"answer": answer, "context_used": context}
+    provider_observation: dict = {}
+    answer = _complete_with_fallback(
+        prompt,
+        system=system,
+        allow_mock_fallback=False,
+        completion_observation=provider_observation,
+    )
+    return {
+        "answer": answer,
+        "context_used": context,
+        "provider_observation": provider_observation,
+    }
