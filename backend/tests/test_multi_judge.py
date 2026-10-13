@@ -153,6 +153,41 @@ def test_failed_judge_missing_evidence_and_contradiction_are_preserved(db):
     assert db.get(models.Claim, claim.id).epistemic_state == "contested"
 
 
+def test_unavailable_judge_retries_after_availability_recovers_without_erasing_failure(db):
+    evidence = evidence_fixture(db)
+    availability = {"ready": False}
+    judge = spec(
+        "recovering-judge",
+        positive_judge,
+        available=lambda: availability["ready"],
+    )
+    kwargs = {
+        "question": "Does this evidence establish recurring pain?",
+        "evidence_ids": [evidence.id],
+        "judges": [judge],
+    }
+
+    first = multi_judge.run_judgments(db, **kwargs)[0]
+    assert first.status == "failed"
+    assert first.error.startswith("judge unavailable:")
+
+    repeated_while_unavailable = multi_judge.run_judgments(db, **kwargs)[0]
+    assert repeated_while_unavailable.id == first.id
+    assert db.query(models.Judgment).count() == 1
+
+    availability["ready"] = True
+    recovered = multi_judge.run_judgments(db, **kwargs)[0]
+    assert recovered.status == "completed"
+    assert recovered.id != first.id
+    assert recovered.judgment_key == first.judgment_key
+    assert first.status == "failed"  # historical failure remains intact
+    assert db.query(models.Judgment).count() == 2
+
+    repeated_after_recovery = multi_judge.run_judgments(db, **kwargs)[0]
+    assert repeated_after_recovery.id == recovered.id
+    assert db.query(models.Judgment).count() == 2
+
+
 def test_no_available_judges_does_not_create_recursive_research_questions(db):
     evidence = evidence_fixture(db)
     judgments = multi_judge.run_judgments(
