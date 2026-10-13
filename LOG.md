@@ -223,3 +223,12 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Requested the existing enabled `Continue Hami Work` automation to run immediately. The platform confirmed the request only; completion/delivery has not been verified. Daily schedule remains separate from actual 24/7 worker execution.
 - Repository metadata currently reports `kn33r0s3/ForgeOS` as public. No private conversation dump, secret, credential, external message, spend, activation change or real-world outcome was created by this recovery pass.
 - Verification boundary: documentation changes are the only intended scope of this commit. Exact-head CI, deployment/runtime state, scheduled execution completion and external outcomes remain independently unverified.
+
+
+## 2026-10-14 — recover historical continuity outside the current repository
+
+- Searched the saved file library and read the October 9 `HAMI_CONTINUITY_MASTER.md`, `HAMI_CURRENT_CODE_AUDIT_2026-10-09.md`, and the October 8 pasted planning record. Treated them as historical context, not current main/runtime truth.
+- Verified the canonical origin anchor `07baf91a1900cf3e27ce0bae9fead126801da3b3`; the September 30 restoration commit `f99008ded95cd17ebb805b0693a59d48d708eb8d` records recovery of 2,454 tracked files deleted by `f240f3e6250c054a376fb9e2f00d7e6613bebe98`, and records the later generated-artifact commit `7a437bb`. The original open-world discovery engine was introduced by `1b1b63ad7d2f984a9f9c9615625453c202821f01`. Current implementation status is governed by today's main/queue/tests, not those historical commit messages.
+- The saved code audit mentions an owner-reported 74,637-item defect report but explicitly says its source was not located. A separate prior-context memory carries 828,649 lines / 2,472 files; that exact source was not found in the sources searched this run, and its figures do not match the commit-backed 2,454-file incident. Both remain separate unverified recovery leads. No defects were invented and no bulk fix was attempted.
+- Added the historical anchors and unresolved-source labels to the existing `HANDOFF.md`; recorded the reconciliation in `STATE.md`; no new roadmap, queue, semantic table, secret, contact, spend or activation was created.
+- The repository remains public according to GitHub metadata. These are project-history notes; do not copy private personal context or credentials into repository records.
