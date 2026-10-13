@@ -22,6 +22,7 @@ BET_ENTITY_TYPE = "bet"
 BET_STATUSES = ("candidate", "live", "paused", "amplified", "dampened", "killed")
 MAX_LIVE_BETS = 3
 STARVED_DAYS = 14
+CONTACT_PRIORITY_DAYS = 2
 
 ASSESSMENT_LEVELS = ("high", "medium", "low", "unassessed")
 ASSESSMENT_PROVENANCE = (
@@ -2354,6 +2355,21 @@ def days_since_last_contact(db: Session) -> Optional[int]:
         # SQLite returns naive datetimes; treat as UTC.
         occurred = occurred.replace(tzinfo=timezone.utc)
     return (utcnow() - occurred).days
+
+
+def contact_state(db: Session) -> dict:
+    """Return the canonical contact-priority and starvation state.
+
+    Two days is a soft prioritization threshold for contact preparation;
+    the existing 14-day STARVED rule remains the hard build freeze.
+    Missing contact history is conservatively treated as overdue.
+    """
+    days = days_since_last_contact(db)
+    return {
+        "days_since_last_contact": days,
+        "contact_priority_due": days is None or days >= CONTACT_PRIORITY_DAYS,
+        "starved": days is None or days >= STARVED_DAYS,
+    }
 
 
 def is_starved(db: Session) -> bool:
