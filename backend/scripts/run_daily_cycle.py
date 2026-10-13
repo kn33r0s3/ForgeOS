@@ -141,6 +141,29 @@ def run_once() -> dict:
             except Exception:
                 pass
 
+        # --- Stage 1b: recover evaluation on persisted evidence. ---
+        # This runs even when collection is disabled or failed. It neither
+        # recollects external sources nor executes actions; retry count and
+        # results are recorded on existing ResearchTaskStep rows.
+        try:
+            from app.services import collector_runner
+
+            record["evaluation_recovery"] = collector_runner.run_pending_evaluations(
+                db,
+                limit=2,
+                max_retries_per_task=3,
+            )
+        except Exception as exc:
+            record["evaluation_recovery_error"] = f"{type(exc).__name__}: {exc}"
+            record["evaluation_recovery_traceback"] = traceback.format_exc()
+            record["evaluation_recovery_recovered"] = True
+            _rollback_if_needed(db, "evaluation_recovery")
+        else:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+
         # --- Stage 2: Autonomy cycle, on a clean session. ---
         try:
             autonomy_summary = execution_engine.run_autonomous_action_cycle(db)
