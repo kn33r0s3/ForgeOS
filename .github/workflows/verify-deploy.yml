@@ -14,9 +14,9 @@ on:
   workflow_dispatch:
 
 concurrency:
-  # Isolate every deploy-verification run by commit. Sharing one main group
-  # allows newer pending pushes to replace verification of an earlier SHA.
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.sha }}
+  # Let active verification finish; keep only the latest pending verification
+  # for a branch so continuous commits do not create an unbounded queue.
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
