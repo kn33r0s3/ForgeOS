@@ -170,6 +170,22 @@ def run_once() -> dict:
             except Exception:
                 pass
 
+        # --- Stage 1c: proposal-only local cognition. ---
+        try:
+            from app.services import cognitive_worker
+            record["cognitive_proposals"] = cognitive_worker.run_pending_cognitive_tasks(
+                db, limit=int(os.environ.get("FORGEOS_COGNITIVE_LIMIT", "2"))
+            )
+        except Exception as exc:
+            record["cognitive_proposals_error"] = type(exc).__name__
+            record["cognitive_proposals_recovered"] = True
+            _rollback_if_needed(db, "cognitive_proposals")
+        else:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+
         # --- Stage 2: Autonomy cycle, on a clean session. ---
         try:
             autonomy_summary = execution_engine.run_autonomous_action_cycle(db)
