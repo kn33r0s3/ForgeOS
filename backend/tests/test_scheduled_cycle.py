@@ -568,27 +568,43 @@ def test_scheduled_intelligence_prioritizes_contact_and_freezes_build(monkeypatc
     assert "STARVED" in stages["content_drafts"]["reason"]
 
 
-def test_cycle_effect_summary_does_not_confuse_internal_work_with_progress():
+def test_cycle_effect_summary_keeps_world_observations_separate_from_internal_work():
     no_effect = scheduled._cycle_effect_summary({})
     assert no_effect["status"] == "no_new_effect"
-    assert no_effect["observed_effects"] == []
+    assert no_effect["source_observations"] == []
+    assert no_effect["internal_work"] == []
 
     internal_only = scheduled._cycle_effect_summary({
-        "discovery_cycle": {"questions_created": 1},
-        "forge_cycle": {"research_tasks_created": 2},
-    })
-    assert internal_only["status"] == "internal_work_only"
-    assert internal_only["internal_work"] == [
-        "research_questions_created",
-        "research_tasks_created",
-    ]
-
-    contact_prepared = scheduled._cycle_effect_summary({
+        "discovery_cycle": {"surfaced": 1, "questions_created": 1},
+        "forge_cycle": {"research_tasks_created": 2, "actions_from_decisions": 1},
+        "autonomy_cycle": {"proposed": 3},
         "scout_cycle": {"drafts_generated": 1, "drafts_already_open": 0},
     })
-    assert contact_prepared["status"] == "effects_observed"
-    assert contact_prepared["observed_effects"] == ["contact_drafts_prepared"]
-    assert "do not establish" in contact_prepared["reality_boundary"]
+    assert internal_only["status"] == "internal_work_only"
+    assert internal_only["source_observations"] == []
+    assert internal_only["internal_work"] == [
+        "discovery_proposals_surfaced",
+        "research_questions_created",
+        "research_tasks_created",
+        "autonomy_actions_proposed",
+        "decision_actions_proposed",
+        "contact_drafts_prepared",
+    ]
+    assert internal_only["next_owner_attention"] == "review_prepared_contact_draft"
+
+    source_data = scheduled._cycle_effect_summary({
+        "collection_cycle": {"outcomes": [
+            {"status": "completed", "signals_created": 2},
+            {"status": "deferred", "signals_created": 100},
+            {"status": "completed", "signals_created": True},
+        ]},
+        "scout_cycle": {"drafts_generated": 1, "drafts_already_open": 0},
+    })
+    assert source_data["status"] == "source_data_collected"
+    assert source_data["source_observations"] == ["source_signals_created"]
+    assert source_data["counts"]["source_signals_created"] == 2
+    assert source_data["internal_work"] == ["contact_drafts_prepared"]
+    assert "do not establish a real conversation" in source_data["reality_boundary"]
 
 
 def test_cycle_without_new_effect_is_not_marked_completed():

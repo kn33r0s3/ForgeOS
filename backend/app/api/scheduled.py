@@ -161,29 +161,29 @@ def _cycle_effect_summary(intelligence: dict) -> dict:
         "unresolved_contact_drafts": _count_effect(scout.get("drafts_already_open")) if isinstance(scout, dict) else 0,
         "content_drafts_prepared": _count_effect(content.get("drafts_generated")) if isinstance(content, dict) else 0,
     }
-    observed_effects = []
-    if counts["source_signals_created"]:
-        observed_effects.append("source_signals_created")
-    if counts["discovery_proposals_surfaced"]:
-        observed_effects.append("discovery_proposals_surfaced")
-    if counts["autonomy_actions_proposed"] or counts["decision_actions_proposed"]:
-        observed_effects.append("actions_proposed")
-    if counts["contact_drafts_prepared"]:
-        observed_effects.append("contact_drafts_prepared")
-
+    # Keep sourced observations separate from Hami-created work. A draft,
+    # proposal or prepared Action is not a world-level effect and must not be
+    # labeled as one merely because it was persisted successfully.
+    source_observations = (
+        ["source_signals_created"] if counts["source_signals_created"] else []
+    )
     internal_work = [
         key
         for key in (
+            "discovery_proposals_surfaced",
             "research_questions_created",
             "research_tasks_created",
             "opportunities_discovered",
+            "autonomy_actions_proposed",
+            "decision_actions_proposed",
+            "contact_drafts_prepared",
             "content_drafts_prepared",
         )
         if counts[key]
     ]
     status = (
-        "effects_observed"
-        if observed_effects
+        "source_data_collected"
+        if source_observations
         else "internal_work_only"
         if internal_work
         else "no_new_effect"
@@ -197,16 +197,16 @@ def _cycle_effect_summary(intelligence: dict) -> dict:
             "inspect_blockers_and_choose_a_reality-linked_next_action"
         )
     else:
-        next_owner_attention = "review_effects_and_choose_the_next_action"
+        next_owner_attention = "review_source_observations_and_choose_the_next_action"
 
     return {
         "status": status,
         "counts": counts,
-        "observed_effects": observed_effects,
+        "source_observations": source_observations,
         "internal_work": internal_work,
         "next_owner_attention": next_owner_attention,
         "reality_boundary": (
-            "These counts describe system outputs. They do not establish a real conversation, "
+            "Source records and internal proposals are system outputs. They do not establish a real conversation, "
             "acceptance, fulfillment, payment, or revenue."
         ),
     }
