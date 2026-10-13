@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from dataclasses import dataclass
+from urllib.parse import urlparse
 from typing import Any, Literal, Mapping, Protocol, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field, StrictInt
@@ -44,6 +46,8 @@ class CognitiveTaskContext:
     evidence_refs_truncated: bool
     max_proposals: int = MAX_COGNITIVE_PROPOSALS
     language_context: str = "unknown"
+    available_evidence_ids: tuple[int, ...] | None = None
+    evidence_context: tuple[Mapping[str, str], ...] = ()
 
 
 class CognitiveProposal(BaseModel):
@@ -160,7 +164,8 @@ class OllamaCognitiveProvider:
         prompt = json.dumps({
             "task": "propose research follow-ups",
             "objective": context.objective,
-            "linked_evidence_ids": list(context.evidence_ids),
+            "linked_evidence_ids": list(context.available_evidence_ids if context.available_evidence_ids is not None else context.evidence_ids),
+            "evidence_context": list(context.evidence_context),
             "evidence_references_truncated": context.evidence_refs_truncated,
             "script_context_hint": context.language_context,
             "maximum_proposals": min(context.max_proposals, MAX_COGNITIVE_PROPOSALS),
@@ -214,6 +219,17 @@ def get_cognitive_provider(provider_name: str | None = None) -> CognitiveProvide
         if settings.AI_PROVIDER.strip().lower() != "ollama":
             raise CognitiveProviderUnavailable(
                 "Set AI_PROVIDER=ollama and COGNITIVE_PROVIDER=ollama to enable the local cognitive adapter."
+            )
+        if os.getenv("VERCEL"):
+            raise CognitiveProviderUnavailable(
+                "Local Ollama cognition is unavailable in Vercel: localhost refers to the serverless runtime, "
+                "and an authenticated remote-model adapter is not configured."
+            )
+        ollama_host = urlparse(settings.OLLAMA_HOST)
+        if ollama_host.scheme != "http" or ollama_host.hostname not in {"localhost", "127.0.0.1", "::1"}:
+            raise CognitiveProviderUnavailable(
+                "The cognitive Ollama adapter currently permits loopback HTTP only; "
+                "an authenticated remote-model transport is not implemented."
             )
         try:
             from app.services import ai_engine

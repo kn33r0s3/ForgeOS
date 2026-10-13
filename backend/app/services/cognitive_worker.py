@@ -5,6 +5,9 @@ from __future__ import annotations
 import hashlib
 import json
 from typing import Any, Mapping, Sequence
+from urllib.parse import urlparse
+
+from app import evidence_source
 
 from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.orm import Session
@@ -87,16 +90,54 @@ def _context_for_task(
         evidence_ids = [int(token) for token in selected_tokens]
         if len(set(evidence_ids)) != len(evidence_ids):
             raise cognitive_provider.CognitiveTaskInputError("research evidence references must be unique")
-        persisted_ids = {
-            row[0]
-            for row in db.query(models.Evidence.id)
+        evidence_rows = {
+            row.id: row
+            for row in db.query(models.Evidence)
             .filter(models.Evidence.id.in_(evidence_ids))
             .all()
         }
-        if persisted_ids != set(evidence_ids):
+        if set(evidence_rows) != set(evidence_ids):
             raise cognitive_provider.CognitiveTaskInputError(
                 "research task references evidence that is not persisted"
             )
+
+    # Provider-visible context is deliberately narrower than linked provenance.
+    # Only explicitly REAL, public third-party material marked not_required for
+    # consent is passed, and only short title/claim/URL fields are exposed.
+    # Customer, private first-hand, consent-pending, TEST, MOCK and HYPOTHESIS
+    # records remain linkable but their content never enters this model prompt.
+    evidence_context: list[dict[str, str]] = []
+    available_evidence_ids: list[int] = []
+    context_chars = 0
+    max_context_chars = 6_000
+    for evidence_id in evidence_ids:
+        row = evidence_rows[evidence_id]
+        url = (row.canonical_url or "").strip()
+        parsed_url = urlparse(url)
+        if not (
+            evidence_source.is_real(row.source_kind)
+            and (row.source_type or "").strip().lower() == "third_party"
+            and (row.consent_status or "").strip().lower() == "not_required"
+            and parsed_url.scheme in {"http", "https"}
+            and parsed_url.netloc
+        ):
+            continue
+        title = " ".join((row.title or "").split())[:200]
+        claim = " ".join((row.claim or "").split())[:500]
+        if not title and not claim:
+            continue
+        item = {
+            "evidence_id": str(row.id),
+            "title": title,
+            "claim": claim,
+            "canonical_url": url[:500],
+        }
+        item_size = sum(len(value) for value in item.values())
+        if context_chars + item_size > max_context_chars:
+            break
+        evidence_context.append(item)
+        available_evidence_ids.append(row.id)
+        context_chars += item_size
 
     return research_task, cognitive_provider.CognitiveTaskContext(
         research_task_id=research_task.id,
@@ -104,6 +145,8 @@ def _context_for_task(
         evidence_ids=tuple(evidence_ids),
         evidence_refs_truncated=evidence_refs_truncated,
         language_context=cognitive_provider.script_context_hint(objective),
+        available_evidence_ids=tuple(available_evidence_ids),
+        evidence_context=tuple(evidence_context),
     )
 
 
@@ -126,7 +169,11 @@ def _validated_proposals(
             "provider output did not satisfy the proposal-only schema"
         ) from exc
 
-    allowed_evidence_ids = set(context.evidence_ids)
+    allowed_evidence_ids = set(
+        context.available_evidence_ids
+        if context.available_evidence_ids is not None
+        else context.evidence_ids
+    )
     for proposal in proposals:
         if any(evidence_id not in allowed_evidence_ids for evidence_id in proposal.evidence_ids):
             raise cognitive_provider.CognitiveProposalValidationError(
@@ -141,6 +188,8 @@ def _context_digest(context: cognitive_provider.CognitiveTaskContext) -> str:
             "research_task_id": context.research_task_id,
             "objective": context.objective,
             "evidence_ids": context.evidence_ids,
+            "available_evidence_ids": context.available_evidence_ids,
+            "evidence_context": context.evidence_context,
             "evidence_refs_truncated": context.evidence_refs_truncated,
             "language_context": context.language_context,
         },
@@ -268,6 +317,8 @@ def run_cognitive_task(
         "proposal_classification": "HYPOTHESIS",
         "context_sha256": _context_digest(context),
         "evidence_ids": list(context.evidence_ids),
+        "available_evidence_ids": list(context.available_evidence_ids or ()),
+        "evidence_context_count": len(context.evidence_context),
         "evidence_refs_truncated": context.evidence_refs_truncated,
         "proposal_count": len(proposals),
     }

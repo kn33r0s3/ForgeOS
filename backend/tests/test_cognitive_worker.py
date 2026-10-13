@@ -292,3 +292,71 @@ def test_script_context_hint_does_not_claim_language_from_latin_alone():
     assert "language not inferred" in cognitive_provider.script_context_hint("नमस्ते")
     assert "may be English, Romanized Nepali" in cognitive_provider.script_context_hint("namaste")
     assert "mixed_script_or_code_switching" in cognitive_provider.script_context_hint("नमस्ते namaste")
+
+
+
+def test_cognitive_context_exposes_only_explicitly_public_real_evidence(db):
+    research_task = make_research_task(db, objective="What does the public source establish?")
+    public_evidence = models.Evidence(
+        source="official-public-source",
+        title="Public finding",
+        claim="A bounded public claim suitable for synthesis.",
+        canonical_url="https://example.gov.np/public-report",
+        source_kind="REAL",
+        source_type="third_party",
+        consent_status="not_required",
+        collection_status="collected",
+    )
+    private_evidence = models.Evidence(
+        source="private-inquiry",
+        title="Private inquiry must not be sent",
+        claim="Sensitive customer content is withheld.",
+        canonical_url="https://example.com/private",
+        source_kind="REAL",
+        source_type="firsthand",
+        consent_status="granted",
+        collection_status="collected",
+    )
+    pending_evidence = models.Evidence(
+        source="pending-source",
+        title="Consent pending",
+        claim="This content must not enter the provider prompt.",
+        canonical_url="https://example.com/pending",
+        source_kind="REAL",
+        source_type="third_party",
+        consent_status="pending",
+        collection_status="collected",
+    )
+    db.add_all([public_evidence, private_evidence, pending_evidence])
+    db.commit()
+    db.refresh(public_evidence)
+    db.refresh(private_evidence)
+    db.refresh(pending_evidence)
+    research_task.evidence_ids = ",".join(
+        str(value) for value in (public_evidence.id, private_evidence.id, pending_evidence.id)
+    )
+    db.commit()
+    worker_task = cognitive_worker.create_cognitive_task(db, research_task.id)
+    db.flush()
+
+    _, context = cognitive_worker._context_for_task(db, worker_task)
+
+    assert context.evidence_ids == (
+        public_evidence.id,
+        private_evidence.id,
+        pending_evidence.id,
+    )
+    assert context.available_evidence_ids == (public_evidence.id,)
+    assert len(context.evidence_context) == 1
+    assert context.evidence_context[0]["claim"] == "A bounded public claim suitable for synthesis."
+    assert "Sensitive customer content" not in str(context.evidence_context)
+    assert "Consent pending" not in str(context.evidence_context)
+
+
+def test_ollama_cognitive_provider_refuses_serverless_loopback(monkeypatch):
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    monkeypatch.setenv("VERCEL", "1")
+
+    with pytest.raises(cognitive_provider.CognitiveProviderUnavailable, match="unavailable in Vercel"):
+        cognitive_provider.get_cognitive_provider()
