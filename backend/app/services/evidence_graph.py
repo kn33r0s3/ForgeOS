@@ -365,10 +365,23 @@ def link_evidence(
             raise
         return existing, False
     if claim:
-        if relation_type == "contradicts" and claim.epistemic_state in {"observed", "supported"}:
-            claim.epistemic_state = "contested"
-        elif relation_type == "supports" and claim.epistemic_state == "observed":
-            claim.epistemic_state = "supported"
+        if relation_type in {"supports", "contradicts"} and claim.epistemic_state in {
+            "observed", "supported"
+        }:
+            has_contradiction = (
+                db.query(models.EvidenceRelationship.id)
+                .filter_by(claim_id=claim.id, relation_type="contradicts")
+                .first()
+                is not None
+            )
+            if has_contradiction:
+                # Existing contradictory evidence must not be erased by a
+                # later supporting edge, including for inconsistent legacy rows.
+                claim.epistemic_state = "contested"
+            elif relation_type == "contradicts":
+                claim.epistemic_state = "contested"
+            elif claim.epistemic_state == "observed":
+                claim.epistemic_state = "supported"
         elif relation_type == "supersedes":
             claim.epistemic_state = "superseded"
         claim.updated_at = utcnow()
