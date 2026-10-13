@@ -587,6 +587,18 @@ def run_scout_cycle(db: Session) -> dict:
         )
         .count()
     )
+    pending_contact_outcomes = (
+        db.query(models.OutreachDraft)
+        .filter(
+            models.OutreachDraft.status == "SENT",
+            models.OutreachDraft.reply_received.is_(False),
+            (
+                models.OutreachDraft.outcome_notes.is_(None)
+                | (models.OutreachDraft.outcome_notes == "")
+            ),
+        )
+        .count()
+    )
     dry_wells_recorded = (
         db.query(models.OutreachDraft)
         .filter(
@@ -604,6 +616,7 @@ def run_scout_cycle(db: Session) -> dict:
         "drafts_generated": drafts_generated,
         "drafts_already_open": drafts_already_open,
         "pending_contact_replies": pending_contact_replies,
+        "pending_contact_outcomes": pending_contact_outcomes,
         "dry_wells_recorded": dry_wells_recorded,
         "blocked": blocked,
         "errors": errors,
