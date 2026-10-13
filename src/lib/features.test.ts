@@ -245,12 +245,11 @@ describe("feature registry", () => {
     assert.ok(forgeConsole.includes("ForgeBot’s answer"));
     assert.ok(forgeConsole.includes("ForgeBot's answer is a guide, not proof"));
     assert.ok(forgeConsole.includes('providerName === "openai"'));
-    assert.ok(forgeConsole.includes('providerName === "ollama" && providerHealth === "MODEL_AVAILABLE"'));
     assert.ok(forgeConsole.includes("const providerCanAnswer = providerStatus !== null &&"));
     assert.ok(forgeConsole.includes('providerName === "ollama" && providerHealth === "MODEL_AVAILABLE"'));
     assert.ok(forgeConsole.includes("Ask in Nepali (देवनागरी), Romanized Nepali, English, or a mix."));
     assert.ok(forgeConsole.includes("Real inference is not enabled."));
-    assert.ok(forgeConsole.includes('providerName === "ollama" && providerHealth === "MODEL_AVAILABLE";'));
+    assert.ok(forgeConsole.includes('providerName === "ollama" && providerHealth === "MODEL_AVAILABLE" && !remoteContextSharingBlocked;'));
     assert.ok(forgeConsole.includes("This checks Ollama and the configured model, not generation quality."));
     assert.ok(forgeConsole.includes("Observed model call:"));
     assert.ok(forgeConsole.includes("HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA"));

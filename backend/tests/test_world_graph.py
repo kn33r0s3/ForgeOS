@@ -539,6 +539,29 @@ def test_registry_evidence_and_relation_validations_fail_closed(db):
             source="simulated fixture",
             provenance={"url": "https://example.org/not-real"},
         )
+    with pytest.raises(world_graph.SubstrateError, match="cannot be tested, supported, or refuted"):
+        world_graph.create_evidence(
+            db,
+            subject_kind="entity",
+            subject_id=entity.id,
+            claim="A source label cannot disguise a test fixture.",
+            support_level="supported",
+            source="test-fixture-observer",
+            provenance={"source_url": "https://example.org/report"},
+        )
+    with pytest.raises(world_graph.SubstrateError, match="cannot be tested, supported, or refuted"):
+        world_graph.create_evidence(
+            db,
+            subject_kind="entity",
+            subject_id=entity.id,
+            claim="Provenance-marked test data cannot become real support.",
+            support_level="supported",
+            source="field_interview",
+            provenance={
+                "url": "https://example.org/report",
+                "test_fixture": True,
+            },
+        )
     with pytest.raises(world_graph.SubstrateError, match="existing passing test reference"):
         world_graph.create_evidence(
             db,

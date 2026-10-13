@@ -22,8 +22,17 @@ def _claim(db, *, state="observed", kind=None, statement="A stored public claim.
     return row
 
 
-def _evidence(db, claim, *, source, retrieved_at=None, relation="supports"):
-    url = f"https://{source}.example.org/report"
+def _evidence(
+    db,
+    claim,
+    *,
+    source,
+    retrieved_at=None,
+    relation="supports",
+    canonical_url=None,
+    direction="supports",
+):
+    url = canonical_url or f"https://{source}.example.org/report"
     signal = models.Signal(
         source=source,
         source_type="external",
@@ -37,6 +46,7 @@ def _evidence(db, claim, *, source, retrieved_at=None, relation="supports"):
         signal_id=signal.id,
         source=source,
         content=signal.content,
+        direction=direction,
         canonical_url=url,
         retrieved_at=retrieved_at or signal.retrieved_at,
         provenance_hash=f"test:{claim.id}:{source}",
@@ -82,6 +92,32 @@ def test_public_label_mapping_covers_fact_observation_external_claim_conflict_an
         "epistemic_state": "supported", "stale": False,
     }
 
+    # Different ingestion labels and paths on one publisher host are not two
+    # independent sources. Corroboration must be based on actual source identity.
+    same_host = _claim(
+        db,
+        state="observed",
+        kind="EXTERNAL CLAIM",
+        statement="A second claimed fact from two adapters of the same host.",
+    )
+    _evidence(
+        db,
+        same_host,
+        source="collector-alpha",
+        retrieved_at=now,
+        canonical_url="https://publisher.example/report-a",
+    )
+    _evidence(
+        db,
+        same_host,
+        source="collector-beta",
+        retrieved_at=now,
+        canonical_url="https://publisher.example/report-b",
+    )
+    assert derive_public_label(db, same_host, now=now) == {
+        "epistemic_state": "observed", "stale": False,
+    }
+
     one_source = _claim(db, state="observed", kind="EXTERNAL CLAIM")
     _evidence(db, one_source, source="source-a", retrieved_at=now)
     assert derive_public_label(db, one_source, now=now) == {
@@ -108,6 +144,24 @@ def test_public_label_mapping_covers_fact_observation_external_claim_conflict_an
     _evidence(db, observation, source="observer", retrieved_at=now)
     _evidence(db, observation, source="second-observer", retrieved_at=now)
     assert derive_public_label(db, observation, now=now) == {
+        "epistemic_state": "observed", "stale": False,
+    }
+
+    claim_specific_lineage = _claim(
+        db,
+        state="observed",
+        kind="EXTERNAL CLAIM",
+        statement="An Evidence row can be contradictory in one legacy context but only lineage here.",
+    )
+    _evidence(
+        db,
+        claim_specific_lineage,
+        source="shared-evidence",
+        retrieved_at=now,
+        relation="derived_from",
+        direction="contradicts",
+    )
+    assert derive_public_label(db, claim_specific_lineage, now=now) == {
         "epistemic_state": "observed", "stale": False,
     }
 

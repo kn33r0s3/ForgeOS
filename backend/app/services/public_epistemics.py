@@ -79,9 +79,12 @@ def derive_public_label(
         .filter(models.EvidenceRelationship.claim_id == claim.id)
         .all()
     )
+    # Contradiction is Claim-specific. Evidence.direction belongs to a
+    # legacy evidence row and may describe a different belief/opportunity; do
+    # not let it override this Claim's explicit EvidenceRelationship.
     conflict = internal_state == "contested" or any(
-        edge.relation_type == "contradicts" or evidence.direction == "contradicts"
-        for edge, evidence in links
+        edge.relation_type == "contradicts"
+        for edge, _evidence in links
     )
     # Count independent sources only when the relationship itself asserts
     # support/update. Mere lineage or summary links show where information came
