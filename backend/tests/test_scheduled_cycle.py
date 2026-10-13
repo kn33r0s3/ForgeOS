@@ -4,6 +4,7 @@ from threading import Event
 
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
+from starlette.requests import Request
 
 from app.api import scheduled
 from app.main import app
@@ -107,6 +108,45 @@ def test_intelligence_lock_fails_closed_when_postgres_lock_check_errors(monkeypa
         raise AssertionError("lock infrastructure failure must block the run")
 
     assert connection.closed
+
+
+
+def test_scheduled_intelligence_blocks_ephemeral_vercel_sqlite(monkeypatch):
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    monkeypatch.setenv("VERCEL", "1")
+
+    class Dialect:
+        name = "sqlite"
+
+    class Engine:
+        dialect = Dialect()
+
+    monkeypatch.setattr(scheduled.database, "engine", Engine())
+    request = Request({
+        "type": "http",
+        "http_version": "1.1",
+        "method": "GET",
+        "scheme": "https",
+        "path": "/scheduled/intelligence",
+        "raw_path": b"/scheduled/intelligence",
+        "query_string": b"",
+        "headers": [],
+        "server": ("testserver", 443),
+        "client": ("testclient", 12345),
+    })
+
+    try:
+        scheduled.run_scheduled_intelligence(
+            request,
+            authorization="Bearer test-cron-secret",
+        )
+    except HTTPException as exc:
+        assert exc.status_code == 503
+        assert exc.detail == "Durable database is required for scheduled intelligence"
+    else:
+        raise AssertionError("ephemeral Vercel SQLite must not run scheduled intelligence")
+
+    assert not scheduled._intelligence_lock.locked()
 
 
 def test_scheduled_cycle_fails_closed_without_secret(monkeypatch):
