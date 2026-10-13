@@ -2164,7 +2164,7 @@ def _is_simulated_source(source: str | None) -> bool:
     value = (source or "").strip().casefold()
     tokens = set(re.findall(r"[a-z0-9]+", value))
     return value.startswith(("simulated", "fixture", "mock", "seed", "test-data")) or bool(
-        tokens.intersection({"fixture", "mock", "mocked", "simulated", "simulation", "synthetic", "seed", "fake"})
+        tokens.intersection({"test", "fixture", "mock", "mocked", "simulated", "simulation", "synthetic", "seed", "fake"})
     )
 
 
@@ -2189,8 +2189,8 @@ def _is_simulated_provenance(raw: str) -> bool:
         "classification", "evidence_kind", "record_kind",
     }
     simulated_values = {
-        "fixture", "test_fixture", "synthetic", "simulated", "simulation",
-        "mock", "demo", "seed", "hypothesis",
+        "test", "test_fixture", "test_data", "test_only", "fixture",
+        "synthetic", "simulated", "simulation", "mock", "demo", "seed", "hypothesis",
     }
 
     def marked(value: Any) -> bool:
