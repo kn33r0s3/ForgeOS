@@ -381,3 +381,167 @@ def test_unavailable_judgment_can_recover_for_same_evidence(db):
     assert repeated.id == recovered.id
     assert db.query(models.Judgment).filter_by(judgment_key=recovered.judgment_key).count() == 2
     assert db.query(models.ResearchQuestion).count() == 0
+
+
+
+def test_default_provider_judge_sees_only_explicitly_shareable_public_evidence(db, monkeypatch):
+    from app.config import settings
+
+    public = models.Evidence(
+        source="public-test-source",
+        title="Public report title",
+        claim="Public report states a bounded factual claim.",
+        content="PUBLIC_EXCERPT_VISIBLE_TO_PROVIDER",
+        canonical_url="https://example.gov.np/report",
+        source_kind="REAL",
+        source_type="third_party",
+        consent_status="not_required",
+        collection_status="collected",
+    )
+    private = models.Evidence(
+        source="private-inquiry",
+        title="Private inquiry",
+        claim="PRIVATE_CLAIM_MUST_NEVER_LEAK",
+        content="PRIVATE_RAW_CONTENT_MUST_NEVER_LEAK",
+        canonical_url="https://example.com/private",
+        source_kind="REAL",
+        source_type="firsthand",
+        consent_status="granted",
+        collection_status="collected",
+    )
+    pending = models.Evidence(
+        source="pending-publication",
+        title="Pending consent title",
+        content="PENDING_CONSENT_CONTENT_MUST_NEVER_LEAK",
+        canonical_url="https://example.com/pending",
+        source_kind="REAL",
+        source_type="third_party",
+        consent_status="pending",
+        collection_status="collected",
+    )
+    db.add_all([public, private, pending])
+    db.commit()
+    db.refresh(public)
+    db.refresh(private)
+    db.refresh(pending)
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "FORGEOS_OPENAI_JUDGE_ENABLED", False)
+    monkeypatch.delenv("VERCEL", raising=False)
+
+    sent_prompts = []
+
+    class FakeTool:
+        def is_available(self):
+            return True
+
+        def execute(self, prompt, **kwargs):
+            sent_prompts.append(prompt)
+            return {
+                "label": "uncertain",
+                "conclusion": "The permitted metadata does not establish the broader claim.",
+                "reasoning": "Only bounded public source material was supplied.",
+                "uncertainty": "Underlying corroboration and applicability remain unassessed.",
+            }
+
+    class FakeRegistry:
+        def get(self, name):
+            assert name == "local-qwen3-coder"
+            return FakeTool()
+
+    monkeypatch.setattr(multi_judge, "default_registry", lambda: FakeRegistry())
+    specs = multi_judge._default_judges(evidence=[public, private, pending])
+
+    assert len(specs) == 1
+    assert specs[0].evidence_ids == (public.id,)
+    result = specs[0].evaluate(
+        "Does the evidence support the claim?",
+        [public, private, pending],
+    )
+    assert result["label"] == "uncertain"
+    prompt = sent_prompts[0]
+    assert "PUBLIC_EXCERPT_VISIBLE_TO_PROVIDER" in prompt
+    assert "PRIVATE_CLAIM_MUST_NEVER_LEAK" not in prompt
+    assert "PRIVATE_RAW_CONTENT_MUST_NEVER_LEAK" not in prompt
+    assert "PENDING_CONSENT_CONTENT_MUST_NEVER_LEAK" not in prompt
+
+
+def test_default_judgment_records_only_the_evidence_the_provider_received(db, monkeypatch):
+    from app.config import settings
+
+    public = models.Evidence(
+        source="public-test-source",
+        title="Public report title",
+        claim="Public report states a bounded factual claim.",
+        content="Public factual excerpt.",
+        canonical_url="https://example.gov.np/report",
+        source_kind="REAL",
+        source_type="third_party",
+        consent_status="not_required",
+        collection_status="collected",
+    )
+    private = models.Evidence(
+        source="private-inquiry",
+        title="Private inquiry",
+        content="Do not share this.",
+        canonical_url="https://example.com/private",
+        source_kind="REAL",
+        source_type="firsthand",
+        consent_status="granted",
+        collection_status="collected",
+    )
+    db.add_all([public, private])
+    db.commit()
+    db.refresh(public)
+    db.refresh(private)
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "FORGEOS_OPENAI_JUDGE_ENABLED", False)
+    monkeypatch.delenv("VERCEL", raising=False)
+
+    class FakeTool:
+        def is_available(self):
+            return True
+
+        def execute(self, prompt, **kwargs):
+            assert "Public factual excerpt." in prompt
+            assert "Do not share this." not in prompt
+            return {
+                "label": "uncertain",
+                "conclusion": "The source is insufficient for a broader conclusion.",
+                "reasoning": "Only one permitted source excerpt was evaluated.",
+                "uncertainty": "Independent corroboration is not present.",
+            }
+
+    class FakeRegistry:
+        def get(self, name):
+            return FakeTool()
+
+    monkeypatch.setattr(multi_judge, "default_registry", lambda: FakeRegistry())
+    original_default_factory = multi_judge._default_judges
+    monkeypatch.setattr(multi_judge, "_default_judges", lambda evidence=None: original_default_factory(evidence=evidence))
+
+    judgment = multi_judge.run_judgments(
+        db,
+        question="Does the source establish this claim?",
+        evidence_ids=[public.id, private.id],
+    )[0]
+
+    assert judgment.status == "completed"
+    assert judgment.evidence_ids == str(public.id)
+    assert db.query(models.EvidenceRelationship).filter_by(
+        judgment_id=judgment.id,
+        evidence_id=public.id,
+    ).count() == 1
+    assert db.query(models.EvidenceRelationship).filter_by(
+        judgment_id=judgment.id,
+        evidence_id=private.id,
+    ).count() == 0
+
+
+def test_default_judge_has_no_available_provider_context_on_vercel(monkeypatch):
+    from app.config import settings
+    from app.services.tool_registry import default_registry
+
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setenv("VERCEL", "1")
+    tool = default_registry().get("local-qwen3-coder")
+    assert tool.is_available() is False

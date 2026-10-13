@@ -54,3 +54,5 @@ Read docs/BRAIN.md, this file, QUEUE.md, AGENTS.md, HANDOFF.md, and the relevant
 - Source changes are committed, but Telegram control/digest flags remain OFF by default. No secrets/IDs or production flags were set, no webhook was registered, no real message/payment was sent, and no revenue is claimed.
 
 - **Nepal-first provider tests:** source-level tests now cover mixed Devanagari/Romanized input, the language-preservation policy and script-only hints that do not overclaim language detection. These test the contract, not real-model accuracy; no benchmark quality claim is made.
+
+- **Judgment provider boundary:** default local/owner-enabled judges now require explicitly REAL, third-party, consent-not-required evidence with a traceable HTTP(S) source; judgment rows record only the IDs actually supplied to that provider. The default Ollama tool is unavailable inside Vercel or when its host is not loopback HTTP, avoiding a false readiness signal. Regression tests are committed, not yet reported passing.

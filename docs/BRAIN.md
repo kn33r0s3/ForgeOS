@@ -2,7 +2,7 @@
 
 Version 4, 2026-10-14 (sections 32–36 preserve the evidence/security audit, many-climbs operating model and Nepal-intelligified mandate). Owner: Bhumadevi. Every agent reads this first, every run. Keep a copy in the repo at docs/BRAIN.md.
 
-**Content hash (Git blob SHA-1; hash line excluded from hashed text):** `gitblob:5c7f6181f8dc26f54a3f47d4ac7f651e17ca39be`
+**Content hash (Git blob SHA-1; hash line excluded from hashed text):** `gitblob:cca877b3e1bedca5bf32d440cb315071f475bc97`
 
 ## 0. How to use this document
 
@@ -618,7 +618,7 @@ This section supersedes any earlier implication in sections 5, 17, 28, 29 or 30 
 ### 36.2 One provider layer for the entire Hami system
 
 - Extend the existing provider seams (ai_engine for text generation and cognitive_provider for structured research proposals) rather than introducing a separate ForgeBot model stack. Any ForgeBot, research, translation, synthesis or future AI worker should identify the capability it needs and use a governed adapter behind the existing seam.
-- A provider selection is not a provider call, and a successful response is not proof that the answer is true. Record actual provider/model/version, mode (MOCK/TEST/EXTERNAL), purpose, language/task class where available, bounded usage/cost, latency/failure and output provenance through existing operational records and EVENT/EVIDENCE seams.
+- A provider selection is not a provider call, and a successful response is not proof that the answer is true. Record actual provider/model/version, mode (MOCK/TEST/LOCAL/EXTERNAL), purpose, language/task class where available, bounded usage/cost, latency/failure and output provenance through existing operational records and EVENT/EVIDENCE seams. The default judge/provider path may only inspect evidence explicitly REAL, third-party, consent-not-required and traceable to an HTTP(S) canonical URL; persist judgments against the evidence actually shown to the provider, not every linked row. Private, pending-consent, TEST, MOCK and HYPOTHESIS content stays out of provider prompts by default.
 - Keep explicit mock output distinguishable from real inference. If a requested real provider is unavailable, report AI_UNAVAILABLE and preserve retryable work; never silently substitute a mock and claim intelligent completion.
 - Prefer local inference when it meets the quality, latency and hardware requirements and the data class calls for it. External providers are selectable only through existing owner-authorized configuration, current provider terms/data settings, the applicable spend ceilings and least-privilege data sharing. Routing must not leak protected contact data or other restricted information to a provider by default.
 - Providers should implement language-aware generation and structured outputs with strict validation, size/time bounds, cancellation, retries, idempotency and explicit usage accounting. Provider output remains a proposal until its task-specific validation and evidence rules are satisfied; no model can grant itself permission or turn a suggestion into an ACTION.

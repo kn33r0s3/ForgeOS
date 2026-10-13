@@ -146,3 +146,10 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Added regression tests for Nepal script/context handling, model-visible evidence filtering, and Vercel-localhost refusal. Tests are committed but not yet confirmed passed by exact-head CI. MOCK remains the default, no real Ollama model has been invoked from this environment, and no paid provider was activated.
 - Research baseline: [2025 NLUE paper](https://aclanthology.org/2025.findings-ijcnlp.119/); [Nepali instruction-tuned GGUF candidate](https://huggingface.co/mradermacher/NEPALI-LLM-INSTRUCT-GGUF); [curated Nepali NLP resources](https://github.com/ghimiresunil/Curated-List-of-Nepali-NLP-Resources); [Nepal AI Policy 2082](https://mocit.gov.np/content/13111/nationalai---policy---/); [Ollama structured-output schema documentation](https://github.com/ollama/ollama/blob/main/docs/capabilities/structured-outputs.mdx). These are research leads, not quality results or legal conclusions.
 - Exact-head CI / deployment workflows are queued behind an earlier active verification at time of this update. Do not claim green checks or production readiness without the matching SHA's final result.
+
+
+## 2026-10-14 — default judgment evidence boundary and truthful Ollama availability
+
+- Hardened the existing multi_judge seam instead of adding another evaluator. Default provider judges only receive bounded title, attributed claim, source excerpt and canonical URL from REAL third-party rows explicitly marked consent-not-required and linked to HTTP(S) URLs.
+- Judgment cache keys and the persisted judgment evidence_ids now track only the rows actually supplied to the judge. The shared graph still preserves all original links; no private, pending-consent, TEST, MOCK or HYPOTHESIS content is added to provider prompts by default.
+- The existing local Ollama tool now reports unavailable inside Vercel and for non-loopback/non-HTTP hosts, matching the cognitive adapter's runtime boundary and avoiding false readiness. Local invocation and exact-head CI remain unverified.

@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, Protocol
 import hashlib
+import os
+from urllib.parse import urlparse
 
 
 @dataclass(frozen=True)
@@ -264,6 +266,15 @@ def default_registry() -> ToolRegistry:
         ("web", WebCollector, "web"),
     ):
         registry.register(CollectorToolAdapter(name, factory, source_type))
+    def local_ollama_is_configured_for_this_runtime() -> bool:
+        host = urlparse(str(ai_engine.settings.OLLAMA_HOST))
+        return (
+            not os.getenv("VERCEL")
+            and ai_engine.settings.AI_PROVIDER.strip().lower() == "ollama"
+            and host.scheme == "http"
+            and host.hostname in {"localhost", "127.0.0.1", "::1"}
+        )
+
     registry.register(
         ProviderAdapter(
             ToolCapability(
@@ -280,7 +291,7 @@ def default_registry() -> ToolRegistry:
                 capabilities=("completion", "reasoning", "code", "summarization"),
             ),
             ai_engine.OllamaProvider,
-            availability_check=lambda: ai_engine.settings.AI_PROVIDER == "ollama",
+            availability_check=local_ollama_is_configured_for_this_runtime,
         )
     )
     registry.register(
