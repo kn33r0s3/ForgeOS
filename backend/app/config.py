@@ -97,6 +97,8 @@ class Settings(BaseSettings):
 
     OLLAMA_HOST: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
     OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "qwen3-coder:latest")
+    # Required for non-loopback HTTPS self-hosted gateways; never commit the secret.
+    OLLAMA_API_KEY: str = os.getenv("OLLAMA_API_KEY", "")
     # Compatibility settings for the standalone Qwen worker, which uses
     # Ollama's OpenAI-compatible endpoint directly.
     OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
