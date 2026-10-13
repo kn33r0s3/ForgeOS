@@ -270,7 +270,14 @@ def default_registry() -> ToolRegistry:
         # Unlike a configuration-only check, this requires the configured local
         # or authenticated HTTPS self-hosted endpoint to answer and expose the
         # selected model. It still does not claim generation quality.
-        return ai_engine.get_provider_status().get("status") == "MODEL_AVAILABLE"
+        status = ai_engine.get_provider_status()
+        return (
+            status.get("status") == "MODEL_AVAILABLE"
+            and (
+                status.get("mode") != "SELF_HOSTED"
+                or status.get("internal_context_allowed") is True
+            )
+        )
 
     registry.register(
         ProviderAdapter(

@@ -2170,15 +2170,46 @@ def _is_simulated_source(source: str | None) -> bool:
 
 def _is_simulated_provenance(raw: str) -> bool:
     """Reject explicit simulation/test-fixture markers in structured provenance."""
+    text_markers = {
+        "fixture", "mock", "mocked", "simulated", "simulation", "synthetic",
+        "test_fixture", "test_data", "test_only",
+    }
+
+    def marked_text(value: str) -> bool:
+        # URL hosts and paths are identities, not evidence-mode declarations.
+        if value.strip().casefold().startswith(("https://", "http://")):
+            return False
+        tokens = re.findall(r"[a-z0-9]+", value.casefold())
+        marker_words = {
+            "fixture", "mock", "mocked", "simulated", "simulation", "synthetic",
+        }
+        negators = {"not", "no", "never", "without", "isnt", "wasnt", "doesnt", "dont"}
+        for index, token in enumerate(tokens):
+            is_marker = token in marker_words or (
+                token in {"data", "only"}
+                and index > 0
+                and tokens[index - 1] == "test"
+            )
+            if not is_marker:
+                continue
+            preceding = tokens[max(0, index - 3):index]
+            # Explicit negation matters: "not mock data" is not a mock marker.
+            # A standalone scalar such as "test-fixture: direct observation"
+            # still fails closed because "fixture" is unnegated.
+            if any(word in negators for word in preceding):
+                continue
+            return True
+        return False
+
     try:
         payload = json.loads(raw)
     except (TypeError, json.JSONDecodeError):
-        tokens = set(re.findall(r"[a-z0-9]+", str(raw).casefold()))
-        return bool(
-            tokens.intersection(
-                {"fixture", "mock", "mocked", "simulated", "simulation", "synthetic", "test_fixture"}
-            )
-        )
+        return marked_text(str(raw))
+    # JSON may encode a scalar string rather than an object. Treat it just as
+    # conservatively as a plain provenance string; quoting a marker must not
+    # bypass the structured-provenance guard.
+    if isinstance(payload, str):
+        return marked_text(payload)
 
     marker_keys = {
         "test_fixture", "is_test_fixture", "synthetic", "is_synthetic",
@@ -2192,13 +2223,23 @@ def _is_simulated_provenance(raw: str) -> bool:
         "test", "test_fixture", "test_data", "test_only", "fixture",
         "synthetic", "simulated", "simulation", "mock", "demo", "seed", "hypothesis",
     }
+    true_flags = {"true", "yes", "1", "enabled", "on"}
+
+    def explicit_true(item: Any) -> bool:
+        if item is True:
+            return True
+        if isinstance(item, int) and not isinstance(item, bool) and item == 1:
+            return True
+        return isinstance(item, str) and item.strip().casefold() in true_flags
 
     def marked(value: Any) -> bool:
         if isinstance(value, dict):
             for key, item in value.items():
                 normalized_key = re.sub(r"[^a-z0-9]+", "_", str(key).casefold()).strip("_")
                 if normalized_key in marker_keys:
-                    if item is True or (
+                    if explicit_true(item):
+                        return True
+                    if (
                         isinstance(item, str)
                         and item.strip().casefold().replace("-", "_") in simulated_values
                     ):
@@ -2206,11 +2247,19 @@ def _is_simulated_provenance(raw: str) -> bool:
                 if normalized_key in kind_keys and isinstance(item, str):
                     if item.strip().casefold().replace("-", "_") in simulated_values:
                         return True
-                if isinstance(item, (dict, list)) and marked(item):
+                if isinstance(item, (dict, list)):
+                    if marked(item):
+                        return True
+                elif isinstance(item, str) and marked_text(item):
                     return True
             return False
         if isinstance(value, list):
-            return any(marked(item) for item in value if isinstance(item, (dict, list)))
+            return any(
+                marked(item) if isinstance(item, (dict, list))
+                else marked_text(item) if isinstance(item, str)
+                else False
+                for item in value
+            )
         return False
 
     return marked(payload)
@@ -2305,7 +2354,10 @@ def _validate_substrate_evidence(db: Session, evidence: models.Evidence) -> None
     if not (evidence.claim or evidence.content or "").strip() or not evidence_source(evidence):
         raise SubstrateError("evidence source and claim are required")
     if evidence.support_level in {"tested", "supported", "refuted"}:
-        if _is_simulated_source(evidence_source(evidence)):
+        if (
+            _is_simulated_source(evidence_source(evidence))
+            or _is_simulated_provenance(evidence_provenance(evidence))
+        ):
             raise SubstrateError("simulated evidence cannot be tested, supported, or refuted")
         if not _has_test_or_source_provenance(evidence):
             raise SubstrateError("tested evidence requires provenance")

@@ -598,6 +598,7 @@ def test_cognitive_provider_supports_authenticated_self_hosted_mode(monkeypatch)
     monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
     monkeypatch.setattr(settings, "OLLAMA_HOST", "https://models.example.test")
     monkeypatch.setattr(settings, "OLLAMA_API_KEY", "test-only-gateway-token")
+    monkeypatch.setattr(settings, "HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA", True)
     monkeypatch.setenv("VERCEL", "1")
 
     provider = cognitive_provider.get_cognitive_provider()
@@ -640,3 +641,19 @@ def test_ollama_response_body_is_hard_bounded(monkeypatch):
         )
 
     assert observed["read_limit"] == ai_engine.MAX_OLLAMA_RESPONSE_BYTES + 1
+
+
+
+def test_cognitive_provider_blocks_self_hosted_mode_without_internal_context_opt_in(monkeypatch):
+    import pytest
+    from app.services.cognitive_provider import CognitiveProviderUnavailable
+
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "OLLAMA_HOST", "https://models.example.test")
+    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "test-only-gateway-token")
+    monkeypatch.setattr(settings, "HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA", False)
+    monkeypatch.setenv("VERCEL", "1")
+
+    with pytest.raises(CognitiveProviderUnavailable, match="Remote cognitive execution may receive Hami task context"):
+        cognitive_provider.get_cognitive_provider()

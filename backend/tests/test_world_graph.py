@@ -515,6 +515,51 @@ def test_relations_compose_and_cannot_skip_tested_evidence(db):
     assert outer.from_entity_id == relation_entity.id
 
 
+def test_truthy_string_simulation_flags_cannot_promote_evidence(db):
+    _seed(db)
+    entity = world_graph.create_entity(
+        db,
+        entity_type="resource",
+        display_name="Provenance flag test",
+        attributes={},
+        created_by="test",
+    )
+    for marker in (
+        {"is_mock": "true"},
+        {"is_test_fixture": "YES"},
+        {"synthetic": "on"},
+        {"is_simulated": 1},
+    ):
+        with pytest.raises(
+            world_graph.SubstrateError,
+            match="cannot be tested, supported, or refuted",
+        ):
+            world_graph.create_evidence(
+                db,
+                subject_kind="entity",
+                subject_id=entity.id,
+                claim="A source statement with an explicit simulation flag.",
+                support_level="supported",
+                source="reviewed-public-source",
+                provenance={"url": "https://example.org/report", **marker},
+            )
+
+    # Ordinary notes may discuss testing without relabeling the source as mock.
+    evidence = world_graph.create_evidence(
+        db,
+        subject_kind="entity",
+        subject_id=entity.id,
+        claim="The report describes a real public event.",
+        support_level="supported",
+        source="reviewed-public-source",
+        provenance={
+            "url": "https://example.org/report",
+            "notes": "This test documents why the source is not mock data.",
+        },
+    )
+    assert evidence.support_level == "supported"
+
+
 def test_registry_evidence_and_relation_validations_fail_closed(db):
     _seed(db)
     entity = world_graph.create_entity(
@@ -562,6 +607,37 @@ def test_registry_evidence_and_relation_validations_fail_closed(db):
                 "test_fixture": True,
             },
         )
+    with pytest.raises(world_graph.SubstrateError, match="cannot be tested, supported, or refuted"):
+        world_graph.create_evidence(
+            db,
+            subject_kind="entity",
+            subject_id=entity.id,
+            claim="A quoted test-fixture label is still a test fixture.",
+            support_level="supported",
+            source="field_interview",
+            provenance=json.dumps("test-fixture: direct observation"),
+        )
+    # Guard the ORM boundary too: direct construction must not bypass the
+    # service-layer check with a plausible source label.
+    with pytest.raises(world_graph.SubstrateError, match="cannot be tested, supported, or refuted"):
+        db.add(models.Evidence(
+            subject_kind="entity",
+            subject_id=entity.id,
+            claim="A direct ORM row cannot promote test fixture data.",
+            support_level="supported",
+            source="field_interview",
+            provenance=json.dumps({
+                "url": "https://example.org/report",
+                "test_fixture": True,
+            }),
+            substrate_source="field_interview",
+            substrate_provenance=json.dumps({
+                "url": "https://example.org/report",
+                "test_fixture": True,
+            }),
+        ))
+        db.flush()
+    db.rollback()
     with pytest.raises(world_graph.SubstrateError, match="existing passing test reference"):
         world_graph.create_evidence(
             db,

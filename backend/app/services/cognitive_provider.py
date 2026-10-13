@@ -225,6 +225,11 @@ def get_cognitive_provider(provider_name: str | None = None) -> CognitiveProvide
             )
         from app.services import ai_engine
         transport_mode = ai_engine.ollama_transport_mode()
+        if transport_mode == "SELF_HOSTED" and not settings.HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA:
+            raise CognitiveProviderUnavailable(
+                "Remote cognitive execution may receive Hami task context. Set "
+                "HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA=true only after approving that data boundary."
+            )
         if transport_mode is None:
             if os.getenv("VERCEL"):
                 raise CognitiveProviderUnavailable(
