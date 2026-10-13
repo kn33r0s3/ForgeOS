@@ -10,8 +10,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, Protocol
 import hashlib
-import os
-from urllib.parse import urlparse
 
 
 @dataclass(frozen=True)
@@ -311,24 +309,6 @@ def default_registry() -> ToolRegistry:
             ai_engine.MockProvider,
         )
     )
-    if ai_engine.settings.OPENAI_API_KEY:
-        registry.register(
-            ProviderAdapter(
-                ToolCapability(
-                    name="openai-completion",
-                    category="reasoning",
-                    input_types=("text", "prompt"),
-                    output_types=("text", "analysis"),
-                    cost="paid",
-                    latency="network",
-                    reliability=0.8,
-                    languages=("en",),
-                    media_support=("text",),
-                    availability="optional",
-                    capabilities=("completion", "reasoning", "summarization"),
-                ),
-                ai_engine.OpenAIProvider,
-                availability_check=lambda: ai_engine.settings.AI_PROVIDER == "openai",
-            )
-        )
+    # Do not register a direct OpenAI adapter: it would bypass ai_engine's
+    # paid-provider metering and global spend authorization boundary.
     return registry
