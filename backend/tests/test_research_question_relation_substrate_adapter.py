@@ -69,6 +69,37 @@ def test_explicit_research_question_foreign_keys_become_typed_relations(db):
     assert db.query(models.WorldRelation).count() == 3
 
 
+def test_sync_advances_past_questions_whose_links_are_already_projected(db):
+    _pattern, _belief, claim, first_question = _research_question_with_sources(db)
+    second_question = models.ResearchQuestion(
+        question="Which additional evidence can challenge coordination-delay claims?",
+        source_claim_id=claim.id,
+    )
+    db.add(second_question)
+    db.commit()
+    db.refresh(second_question)
+
+    first = adapter.sync_research_question_sources(db, limit=1)
+    assert first["questions_seen"] == 1
+    assert first["relations_created"] == 3
+
+    # The old implementation reselected the first question forever because
+    # it always queried the first N rows, even after every link was projected.
+    second = adapter.sync_research_question_sources(db, limit=1)
+    assert second["questions_seen"] == 1
+    assert second["relations_created"] == 1
+    assert second["unresolved_links"] == 0
+    assert db.query(models.WorldRelation).filter_by(
+        idempotency_key=(
+            f"legacy-research-question:{second_question.id}:source_claim_id:derived-from-v1"
+        )
+    ).count() == 1
+
+    exhausted = adapter.sync_research_question_sources(db, limit=1)
+    assert exhausted["questions_seen"] == 0
+    assert exhausted["relations_created"] == 0
+
+
 def test_explicit_rare_signal_foreign_key_becomes_typed_relation(db):
     assessment = models.RareSignalAssessment(
         cluster_key="rare-coordination-delay",
