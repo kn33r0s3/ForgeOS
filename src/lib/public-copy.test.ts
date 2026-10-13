@@ -239,12 +239,12 @@ describe("homepage contract", () => {
     assert.match(src, /redirect/);
     assert.match(src, /\/discoveries/);
   });
-  it("5. very big very small: Experiment 1 is step 1, rest when earned", () => {
+  it("keeps the seller pilot bounded without narrowing Hami's identity", () => {
     const src = read("src/routes/about.tsx");
     assert.match(src, /Very big, very small/);
-    assert.match(src, /One seller, one week/);
-    assert.match(src, /Experiment 1/);
-    assert.match(src, /No seller has agreed/);
+    assert.match(src, /One real-world test/);
+    assert.match(src, /not Hami’s identity or the limit\s+of its domain/);
+    assert.match(src, /No seller has agreed yet/);
     assert.match(src, /when earned/);
     assert.doesNotMatch(src, /\[when earned\]/);
     // Inbox prototype is historical material, NOT Hami's public identity.

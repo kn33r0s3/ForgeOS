@@ -8,9 +8,9 @@ Ranked by nearest proof gate and reliability blockers. This file is intentionall
 
 2. **Stop reporting selection/collection as reasoning.** Collector tasks must list only source adapters actually used, and must say collection-only completion. The `evaluate` step stays pending/skipped unless a real claim-judge pipeline ran. Lexical overlap may triage results but never becomes semantic relevance, verified claim support, or a research conclusion.
 
-3. **Verify a complete exact-head CI run.** The earlier verifier failed honestly on two frontend regressions; later guards landed, but exact-head full CI is still the gate. Run backend/frontend tests and independent verification on the committed SHA, and fix actual regressions without relaxing authorization, consent, privacy or epistemic states.
+3. **Verify a complete exact-head CI run.** Run `38459590518` on `a03e95f` reported 254 frontend tests passed and 1 failed: an outdated assertion still required “One seller, one week” and “Experiment 1”, removed when the page was corrected to describe the current seller pilot as one possible bounded test of Hami’s universal value loop. This commit updates that assertion and preserves the no-seller-agreed / not-yet-earned checks. Re-run the entire suite and independent verification on the resulting exact SHA; never relax authorization, consent, privacy or epistemic states.
 
-4. **Verify current production source and runtime.** A previous Vercel READY deployment referred to an older source SHA; the current source/deployment alias, live health, durable DB, scheduled execution and provider state still need independent proof. Keep public activation closed while unknown.
+4. **Verify current production source and runtime.** Vercel still reports the latest deployment for `f44245d` as BUILDING, while the previous READY source is `a03e95f`. The authenticated runtime/activation/scheduler checks and actual persisted scheduled-invocation evidence still need independent proof. Keep public activation closed while unknown.
 
 ## P1 — Remove routine owner work by building the real ForgeBot loop
 
