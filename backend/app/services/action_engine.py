@@ -493,7 +493,12 @@ def propose_action(
     # Standing authorization: if policy_result is REQUIRE_APPROVAL specifically
     # for owner approval (not a policy violation or block), an ACTIVE bounded
     # standing authorization may satisfy it. BLOCK is never touched.
-    if policy_result == "REQUIRE_APPROVAL":
+    if (
+        policy_result == "REQUIRE_APPROVAL"
+        or decision_rights.entry_for(action_type).get("requires_standing_authorization")
+    ):
+        # Consent-bound action types must always traverse the envelope check,
+        # including when generic policy evaluation initially returned ALLOW.
         action = autonomy_engine.apply_standing_authorization_to_action(db, action)
         policy_result = action.policy_result
         policy_reason = action.policy_reason
