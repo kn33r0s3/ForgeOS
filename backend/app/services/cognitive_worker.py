@@ -411,14 +411,13 @@ def run_pending_cognitive_tasks(
     limit: int = 2,
     candidate_limit: int = 80,
 ) -> dict[str, Any]:
-    """Run a small, local-only proposal batch over completed research with eligible evidence.
+    """Run a bounded proposal batch using local or owner-approved self-hosted Ollama.
 
-    This is the narrow current-intelligence path for the cognitive worker, not
-    the legacy all-purpose WorkerTask queue. It is inert unless both providers
-    explicitly select local Ollama, refuses Vercel's serverless loopback, and
-    checks the existing owner agent-run gate before claiming any work. It can
-    write only PROPOSED cognitive results; it does not mutate research truth,
-    create Actions, contact people, spend money, or publish anything.
+    Both provider selections must explicitly choose Ollama. Vercel loopback is
+    rejected; a remote HTTPS gateway requires a bearer token and separate owner
+    approval for internal task-context transfer. The existing owner agent-run
+    gate still applies. Outputs remain PROPOSED: no research truth is mutated,
+    no Actions are executed, and no contact, spending, or publication occurs.
     """
     if limit <= 0 or candidate_limit <= 0:
         return {
