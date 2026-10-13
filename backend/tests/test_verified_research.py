@@ -215,9 +215,14 @@ def test_duplicate_research_reuses_evidence_and_new_source_rejudges(db, monkeypa
     repeated = collector_runner.execute_task(db, db.get(models.ResearchTask, first_task.id))
     assert first["status"] == "completed"
     assert first["evaluation_status"] == "judge_pipeline_executed"
+    assert first["comparison_outcome"] == "insufficient_judges"
+    first_tool_usage = db.query(models.ToolUsageEvent).filter_by(research_task_id=first_task.id).one()
+    first_source_usage = db.query(models.SourceUsageEvent).filter_by(research_task_id=first_task.id).one()
+    assert first_tool_usage.verified_result_count == 0
+    assert first_source_usage.corroborated_evidence_count == 0
     assert repeated["reused"] is True
     assert repeated["evaluation_status"] == "judge_pipeline_executed"
-    assert repeated["comparison_outcome"] is not None
+    assert repeated["comparison_outcome"] == "insufficient_judges"
     assert repeated["judgments_completed"] == 1
     assert repeated["judgments_failed"] == 0
     assert db.query(models.Evidence).count() == 1
