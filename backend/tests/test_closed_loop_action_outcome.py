@@ -2440,6 +2440,7 @@ def test_completion_observation_records_actual_provider_and_usage(monkeypatch):
         "mode": "SELF_HOSTED",
         "model": "qwen3-coder:latest",
         "status": "completed",
+        "request_attempted": True,
         "inference_invoked": True,
         "prompt_eval_tokens": 100,
         "completion_eval_tokens": 35,
