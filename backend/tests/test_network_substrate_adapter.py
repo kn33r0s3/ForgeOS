@@ -150,6 +150,7 @@ def test_network_adapter_does_not_activate_unregistered_relation_types_or_guess_
 
 def test_inactive_endpoint_entity_type_does_not_starve_valid_network_connections(db):
     need, provider = _endpoints(db)
+    world_graph.seed_core_types(db)
     opportunity = models.Opportunity(problem="This endpoint type becomes inactive.")
     db.add(opportunity)
     db.flush()
