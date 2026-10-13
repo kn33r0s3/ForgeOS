@@ -87,7 +87,21 @@ def derive_public_label(
     if conflict:
         label: PublicLabelName = "contested"
     elif declared_kind in _FACT_VALUES or internal_state == "fact":
-        label = "supported"
+        # A classification supplied in Claim provenance is not proof by
+        # itself. A fact-labelled Claim needs an explicit support/update edge
+        # backed by at least one independent external source before the public
+        # projection can label it supported.
+        has_explicit_support = any(
+            edge.relation_type in {"supports", "updates"}
+            for edge, _evidence in links
+        )
+        if not links:
+            return None
+        label = (
+            "supported"
+            if has_explicit_support and _independent_external_sources(links) >= 1
+            else "observed"
+        )
     elif declared_kind in _EXTERNAL_CLAIM_VALUES:
         label = "supported" if _independent_external_sources(links) >= 2 else "observed"
     elif declared_kind in _OBSERVATION_VALUES or internal_state in {"observed", "observation"}:
