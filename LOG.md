@@ -194,3 +194,15 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - The cognitive provider reuses this transport and records SELF_HOSTED mode. Regression tests cover bearer auth, refusal without a token and cognitive mode provenance; fixtures simulate responses and are not proof of a live gateway.
 - Removed direct OpenAI tool registration so a tool call cannot bypass `ai_engine`'s PAID_PROVIDER_DISABLED gate. Corrected the old OpenAI status and template-mode UI assertions.
 - No gateway, model host, API key or paid provider has been activated. Remote readiness, a real generation and exact-head CI remain unverified.
+
+
+## 2026-10-14 — cross-boundary evidence and learning truth pass
+
+- Fixed a real import-blocking syntax error in `backend/app/services/ai_engine.py` (three missing colons in explicit mock-fallback conditions) in `04fa3e5f`. The preceding CI run showed 42 backend test modules failing during collection for this SyntaxError.
+- Fixed a stale source-shape assertion in `src/lib/features.test.ts` to check the actual Ollama model-readiness guard, instead of requiring an obsolete parenthesized expression (`8aa377ea`).
+- Made `create_or_get_claim` observation-only, guarded generic Claim state changes with existing EvidenceRelationship rows, and hardened the owner claim route: validate state/relation pairs and resolve requested Evidence before any Claim write (`8077fc92`, `2f35f0df`, `509e4ca5`, `9cd96794`).
+- Prevented collector-supplied `claim_relation` metadata from assigning `supports`/`contradicts`; raw collector ingestion creates only `derived_from` lineage (`73ab9ab5`). Existing graph relations remain available for separately assessed internal evidence.
+- Corrected evaluator semantics: explicit labels only, distinct provider/model and consistent evaluated context required for agreement, incomplete evaluation is distinct from missing world Evidence, old judgment/comparison keys are versioned and legacy judgments are not silently reused (`33fddb9c`, `8963fbf5`).
+- Corrected source-learning semantics: relevance is target-Claim-scoped, unknown usefulness stays unassessed rather than zero, fetched-at is not a fabricated 100% freshness score, and actual retries are distinct performance attempts while replaying the same attempt remains idempotent (`efc61b4e`, `af4615dd`, `97ff4993`, `9e85dedf`).
+- Added regression coverage for Claim state promotion, absent Evidence, failed judges, singleton “agreement”, old cache entries, unrelated Claim links, untrusted source relations, unknown-vs-zero metrics, retry idempotency and contradiction preservation.
+- **Verification boundary:** the inspected CI run exposed the AI fallback SyntaxError and one frontend assertion failure; both causes are fixed on main. Newer runs were queued/pending at the last check, and the subsequent regression commits have not yet been confirmed green by exact-head CI. No production deployment, real inference, source corroboration or real-world commercial outcome is claimed by this work.
