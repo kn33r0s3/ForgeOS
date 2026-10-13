@@ -141,7 +141,9 @@ def test_empty_collection_reports_evaluation_not_invoked(db, monkeypatch):
 
     result = collector_runner.execute_task(db, task)
 
-    assert result["status"] == "completed"
+    # No returned evidence is not a completed research task. It remains
+    # resumable while truthfully recording that no judge was invoked.
+    assert result["status"] == "needs_research"
     assert result["evidence_found"] == 0
     assert result["evaluation_status"] == "not_invoked_no_evidence"
     assert result["comparison_outcome"] is None
