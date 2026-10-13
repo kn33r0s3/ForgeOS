@@ -11,6 +11,7 @@ import hashlib
 import json
 from typing import Any
 
+from sqlalchemy import cast, func, String
 from sqlalchemy.orm import Session
 
 from app import models
@@ -112,12 +113,53 @@ def sync_legacy_records(db: Session, *, limit: int = 500) -> dict[str, int]:
         if registered is None or registered[0] is not source_model:
             result["unresolved_records"] += 1
             continue
-        rows = (
+        batch_limit = max(1, int(limit))
+        source_system = source_model.__tablename__
+        has_entity = (
+            db.query(models.SubstrateEntity.id)
+            .filter(
+                models.SubstrateEntity.entity_type == entity_type,
+                models.SubstrateEntity.source_system == source_system,
+                models.SubstrateEntity.source_id == cast(source_model.id, String),
+            )
+            .correlate(source_model)
+            .exists()
+        )
+
+        # New source rows always get a slot before unchanged historic rows.
+        # Remaining capacity refreshes the most recently changed existing
+        # rows so mutable lifecycle snapshots still advance without starving
+        # higher-ID records during the initial migration.
+        new_rows = (
             db.query(source_model)
+            .filter(~has_entity)
             .order_by(source_model.id.asc())
-            .limit(max(1, int(limit)))
+            .limit(batch_limit)
             .all()
         )
+        remaining = batch_limit - len(new_rows)
+        existing_rows = []
+        if remaining > 0:
+            timestamp_fields = [
+                getattr(source_model, name)
+                for name in ("updated_at", "decided_at", "last_seen", "observed_at", "created_at")
+                if hasattr(source_model, name)
+            ]
+            freshness = (
+                func.coalesce(*timestamp_fields)
+                if len(timestamp_fields) > 1
+                else timestamp_fields[0]
+                if timestamp_fields
+                else source_model.id
+            )
+            existing_rows = (
+                db.query(source_model)
+                .filter(has_entity)
+                .order_by(freshness.desc(), source_model.id.desc())
+                .limit(remaining)
+                .all()
+            )
+        rows = new_rows + existing_rows
         for source in rows:
             result["records_seen"] += 1
             existing = world_graph.find_canonical_entity(db, entity_type, source.id)
