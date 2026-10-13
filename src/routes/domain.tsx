@@ -29,6 +29,7 @@ import type { CacheScope } from "@/lib/api-cache";
 
 export const Route = createFileRoute("/domain")({
   component: DomainPage,
+  head: () => ({ meta: [{ title: "Needs, offers, and fair exchanges — Hami" }] }),
 });
 
 type Kind = "job" | "offer" | "trade";
