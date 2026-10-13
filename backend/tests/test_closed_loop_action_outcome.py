@@ -2230,3 +2230,85 @@ def test_ai_external_provider_status_is_configured_not_ready(monkeypatch):
     status = ai_engine.get_provider_status()
     assert status["status"] == "CONFIGURED"
     assert status["inference_verified"] is False
+
+
+
+def test_grounded_answer_uses_language_aware_data_envelope(monkeypatch):
+    import json
+    from app.services import ai_engine, memory_layer
+
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "AI_FALLBACK_TO_MOCK", True)
+    question = "yo kura ke ho? यो कुरा के हो?"
+    context = "Forge records one hypothesis (confidence 45%): inspect a public source."
+    monkeypatch.setattr(memory_layer, "retrieve_context_for_prompt", lambda *args, **kwargs: context)
+    captured = {}
+
+    def fake_complete(prompt, system="", context="", *, allow_mock_fallback=True):
+        captured["payload"] = json.loads(prompt)
+        captured["system"] = system
+        captured["allow_mock_fallback"] = allow_mock_fallback
+        return "Hami ko record anusar yo ajhai hypothesis ho."
+
+    monkeypatch.setattr(ai_engine, "_complete_with_fallback", fake_complete)
+    result = ai_engine.answer_question(question, db=None)
+
+    assert captured["payload"] == {"question": question, "retrieved_knowledge": context}
+    assert "Nepali in Devanagari, Romanized Nepali, English" in captured["system"]
+    assert "do not assume which one" in captured["system"]
+    assert "confidence percentage" in captured["system"]
+    assert captured["allow_mock_fallback"] is False
+    assert result["answer"] == "Hami ko record anusar yo ajhai hypothesis ho."
+
+
+def test_grounded_answer_never_uses_mock_even_when_demo_fallback_is_enabled(monkeypatch):
+    import pytest
+    from app.services import ai_engine, memory_layer
+
+    monkeypatch.setattr(settings, "AI_PROVIDER", "mock")
+    monkeypatch.setattr(settings, "AI_FALLBACK_TO_MOCK", True)
+    monkeypatch.setattr(memory_layer, "retrieve_context_for_prompt", lambda *args, **kwargs: "")
+
+    with pytest.raises(ai_engine.AIUnavailableError, match="template output is not permitted"):
+        ai_engine.answer_question("हामीलाई के थाहा छ?", db=None)
+
+
+def test_openai_provider_is_blocked_until_usage_metering_and_global_spend_enforcement(monkeypatch):
+    from app.services import ai_engine
+
+    monkeypatch.setattr(settings, "AI_PROVIDER", "openai")
+    monkeypatch.setattr(settings, "OPENAI_API_KEY", "configured-but-not-authorized")
+    status = ai_engine.get_provider_status()
+    assert status["status"] == "PAID_PROVIDER_DISABLED"
+    assert status["inference_verified"] is False
+    with pytest.raises(ai_engine.AIUnavailableError, match="usage metering"):
+        ai_engine.get_provider()
+
+
+def test_forge_ask_api_refuses_mock_provider_without_returning_template(monkeypatch, db):
+    from fastapi.testclient import TestClient
+    from app.database import get_db
+    from app.main import app
+    from app.services import ai_engine
+
+    monkeypatch.setattr(settings, "FORGE_API_KEY", "test-owner-key")
+    monkeypatch.setattr(settings, "AI_PROVIDER", "mock")
+    monkeypatch.setattr(ai_engine, "answer_question", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("must not answer with mock")))
+
+    def override_db():
+        yield db
+
+    app.dependency_overrides[get_db] = override_db
+    client = TestClient(app)
+    try:
+        response = client.post(
+            "/forge/ask",
+            headers={"X-API-Key": "test-owner-key"},
+            json={"question": "What does Hami know?"},
+        )
+    finally:
+        client.close()
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 503
+    assert "No template" in response.json()["detail"]
