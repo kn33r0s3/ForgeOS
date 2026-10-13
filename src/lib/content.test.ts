@@ -368,6 +368,18 @@ describe("Hami forge console", () => {
     assert.match(card, /internal_work_only/);
     assert.match(card, /no_new_effect/);
   });
+
+  it("keeps sent-contact outcomes visible without equating dry wells with replies", () => {
+    const sourceDir = dirname(fileURLToPath(import.meta.url));
+    const queue = readFileSync(join(sourceDir, "../components/owner/scout-queue.tsx"), "utf8");
+    assert.ok(queue.includes('scoutFetch<PendingReply[]>("pending-replies", apiKey)'));
+    assert.ok(queue.includes("`drafts/${d.id}/reply`"));
+    assert.ok(queue.includes("`drafts/${d.id}/no-response`"));
+    assert.ok(queue.includes("Recipient's actual reply"));
+    assert.ok(queue.includes("Record no response (dry well)"));
+    assert.ok(queue.includes("never unlocks another message"));
+    assert.ok(queue.includes("not independently verified"));
+  });
 });
 
 describe("Hami public root", () => {
