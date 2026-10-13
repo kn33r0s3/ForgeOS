@@ -40,7 +40,17 @@ class FakeCollector:
 
 
 def make_task(db):
-    question = models.ResearchQuestion(question="Do contractors pay for repair scheduling tools?")
+    base_question = "Do contractors pay for repair scheduling tools?"
+    existing_count = (
+        db.query(models.ResearchQuestion)
+        .filter(models.ResearchQuestion.question.like(f"{base_question}%"))
+        .count()
+    )
+    question_text = (
+        base_question if existing_count == 0
+        else f"{base_question} [fixture {existing_count + 1}]"
+    )
+    question = models.ResearchQuestion(question=question_text)
     db.add(question)
     db.commit()
     db.refresh(question)
