@@ -831,6 +831,8 @@ def run_scheduled_intelligence(
                     "candidates_scored": scout_result.get("candidates_scored", 0),
                     "drafts_generated": scout_result.get("drafts_generated", 0),
                     "drafts_already_open": scout_result.get("drafts_already_open", 0),
+                    "pending_contact_replies": scout_result.get("pending_contact_replies", 0),
+                    "dry_wells_recorded": scout_result.get("dry_wells_recorded", 0),
                     "blocked": scout_result.get("blocked", 0),
                     "errors": err_count,
                 }
