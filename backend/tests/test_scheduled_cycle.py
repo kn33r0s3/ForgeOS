@@ -425,6 +425,29 @@ def test_scheduled_intelligence_requires_bearer_secret(monkeypatch):
     assert response.status_code == 401
 
 
+def test_scheduled_intelligence_respects_dormancy_before_recording(monkeypatch, db):
+    """Dormancy blocks the scheduled loop before it creates a CycleRun or runs stages."""
+    from app import models
+    from app.services import operating_v4
+
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    operating_v4.enter_dormancy(db)
+    before = db.query(models.CycleRun).count()
+
+    response = TestClient(app).get(
+        "/scheduled/intelligence",
+        headers={"Authorization": "Bearer test-cron-secret"},
+    )
+
+    assert response.status_code == 423
+    assert response.json() == {
+        "detail": "Dormant: agent runs are stopped. Resume only from docs/RUN_STATE.md."
+    }
+    db.expire_all()
+    assert db.query(models.CycleRun).count() == before
+    assert not scheduled._intelligence_lock.locked()
+
+
 def test_scheduled_intelligence_runs_five_stages(monkeypatch):
     """A+B: state → work → execution → discovery. The endpoint runs all engines
     for real (they are safe: no network, no spending, no contact).
