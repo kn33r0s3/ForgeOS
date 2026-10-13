@@ -159,6 +159,8 @@ def _cycle_effect_summary(intelligence: dict) -> dict:
         "decision_actions_proposed": _count_effect(forge.get("actions_from_decisions")) if isinstance(forge, dict) else 0,
         "contact_drafts_prepared": _count_effect(scout.get("drafts_generated")) if isinstance(scout, dict) else 0,
         "unresolved_contact_drafts": _count_effect(scout.get("drafts_already_open")) if isinstance(scout, dict) else 0,
+        "pending_contact_replies": _count_effect(scout.get("pending_contact_replies")) if isinstance(scout, dict) else 0,
+        "dry_wells_recorded": _count_effect(scout.get("dry_wells_recorded")) if isinstance(scout, dict) else 0,
         "content_drafts_prepared": _count_effect(content.get("drafts_generated")) if isinstance(content, dict) else 0,
     }
     # Keep sourced observations separate from Hami-created work. A draft,
@@ -188,7 +190,9 @@ def _cycle_effect_summary(intelligence: dict) -> dict:
         if internal_work
         else "no_new_effect"
     )
-    if counts["contact_drafts_prepared"]:
+    if counts["pending_contact_replies"]:
+        next_owner_attention = "review_pending_contact_outcomes"
+    elif counts["contact_drafts_prepared"]:
         next_owner_attention = "review_prepared_contact_draft"
     elif counts["unresolved_contact_drafts"]:
         next_owner_attention = "review_existing_contact_draft"
@@ -585,6 +589,8 @@ def run_scheduled_intelligence(
                     "candidates_scored": scout_result.get("candidates_scored", 0),
                     "drafts_generated": scout_result.get("drafts_generated", 0),
                     "drafts_already_open": scout_result.get("drafts_already_open", 0),
+                    "pending_contact_replies": scout_result.get("pending_contact_replies", 0),
+                    "dry_wells_recorded": scout_result.get("dry_wells_recorded", 0),
                     "blocked": scout_result.get("blocked", 0),
                     "errors": err_count,
                 }
