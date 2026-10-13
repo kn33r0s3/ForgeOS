@@ -130,27 +130,28 @@ def test_unprojected_public_services_do_not_starve_behind_old_rows(db):
     assert second["provider_entities_created"] == 1
     assert second["listing_entities_created"] == 1
     assert world_graph.find_canonical_entity(
-        db, "provider", third_provider.id
-    ) is not None
-    assert world_graph.find_canonical_entity(
-        db, "service_listing", third_listing.id
-    ) is not None
-    assert world_graph.find_canonical_entity(
         db, "provider", second_provider.id
-    ) is None
+    ) is not None
     assert world_graph.find_canonical_entity(
         db, "service_listing", second_listing.id
+    ) is not None
+    assert world_graph.find_canonical_entity(
+        db, "provider", third_provider.id
+    ) is None
+    assert world_graph.find_canonical_entity(
+        db, "service_listing", third_listing.id
     ) is None
 
     third = adapter.sync_public_services(db, limit=1)
     assert third["provider_entities_created"] == 1
     assert third["listing_entities_created"] == 1
     assert world_graph.find_canonical_entity(
-        db, "provider", second_provider.id
+        db, "provider", third_provider.id
     ) is not None
     assert world_graph.find_canonical_entity(
-        db, "service_listing", second_listing.id
+        db, "service_listing", third_listing.id
     ) is not None
+
 
 
 def test_public_feed_links_visible_service_to_substrate_relation_and_evidence(db):
