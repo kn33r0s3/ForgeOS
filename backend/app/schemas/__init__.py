@@ -605,7 +605,9 @@ class ClaimCreate(BaseModel):
     statement: str = Field(..., min_length=1)
     epistemic_state: str = "observed"
     evidence_id: Optional[int] = None
-    relation_type: str = "supports"
+    # Ingestion is lineage-only by default. Semantic support or contradiction
+    # must be an explicit, evidence-backed owner-reviewed relation.
+    relation_type: str = "derived_from"
     decision_id: Optional[int] = None
     experiment_id: Optional[int] = None
     outcome_id: Optional[int] = None
