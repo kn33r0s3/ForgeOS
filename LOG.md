@@ -153,3 +153,12 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Hardened the existing multi_judge seam instead of adding another evaluator. Default provider judges only receive bounded title, attributed claim, source excerpt and canonical URL from REAL third-party rows explicitly marked consent-not-required and linked to HTTP(S) URLs.
 - Judgment cache keys and the persisted judgment evidence_ids now track only the rows actually supplied to the judge. The shared graph still preserves all original links; no private, pending-consent, TEST, MOCK or HYPOTHESIS content is added to provider prompts by default.
 - The existing local Ollama tool now reports unavailable inside Vercel and for non-loopback/non-HTTP hosts, matching the cognitive adapter's runtime boundary and avoiding false readiness. Local invocation and exact-head CI remain unverified.
+
+
+## 2026-10-14 — contain the cognitive provider context
+
+- The cognitive provider boundary now withholds linked evidence rows that carry `source_identity`, even if their other fields look like public third-party material. Provider implementations receive only `available_evidence_ids`; the complete linked set remains internal for provenance and cannot be cited by a custom provider through the context object.
+- The local prompt now treats objective and `evidence_context` fields as untrusted source data. It warns the model not to follow instructions embedded in titles/claims and not to treat source claims as independently verified facts.
+- Updated the bounded-context fixture to use explicitly eligible REAL third-party records and expanded privacy regression coverage for an identified-but-public-looking record. Fixed the local provider test to assert the actual `script_context_hint` payload key.
+- Added State/Queue notes describing the boundary. No customer or provider actions were enabled.
+- **Verification truth:** exact-head CI has been repeatedly superseded while concurrent main commits continue. The latest known head at this entry was `a62bf98d99630a24517e852fb8dc3b1b4128949d`; tests and local-model invocation are not yet verified on the final head. Secrets scan had passed for earlier heads; the exact latest run must be checked before asserting success.
