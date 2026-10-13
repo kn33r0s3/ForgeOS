@@ -1,3 +1,15 @@
+## [FORGEBOT ZERO-COST PROVIDER GUARD / CHAT PRIVACY / EXACT-HEAD TESTS UNVERIFIED] Keep the owner chat honest and fail-closed (2026-10-14)
+
+- **Existing seams inspected:** `src/components/forge/forge-console.tsx` provider status fetch and `providerCanAnswer`; owner-only `POST /api/forge/ask` in `backend/app/api/forge.py`; existing `src/lib/features.test.ts` ForgeBot workspace regression.
+- **Weak point fixed in place:** the old UI explicitly blocked OpenAI but allowed any unknown provider that reported `READY`. The existing gate now allows only `mock` with `READY`/`MOCK` or `ollama` with `READY`; an unfamiliar provider remains paused. No new route, provider, model, permission, or semantic primitive was introduced.
+- **Truth and privacy copy corrected:** the page now says chat is temporary, the question is sent to Hami's owner API, and this panel does not add the conversation to Hami's knowledge records. Existing advice not to paste personal contacts, private conversations, payment details, or passwords remains visible. Returned memories are still not independent evidence, and chat cannot create Evidence or Actions.
+- **Owner work removed:** the owner does not need to reason about arbitrary provider names to avoid accidental paid inference; the UI blocks unknown provider configurations itself. The existing owner key and noindex boundary remain.
+- **Tests:** the established feature-registry test now asserts the allowlist, Ollama-specific readiness, blocked message and privacy/storage wording. Source and test assertions were read back from main, but full test execution on the exact current SHA is **UNVERIFIED** because this run's Actions run-list/check-run view is unavailable and the most recent retrievable full suite had its backend job cancelled.
+- **Deployment/runtime:** Vercel reported the source revision deployed READY with the existing production aliases, but the connected Vercel runtime/log read was denied (403). Provider reachability, database health, live flags and scheduler invocations remain UNKNOWN. Vercel deployment readiness is not runtime readiness.
+- **What remains / next dependency:** obtain authorized exact-head CI and runtime health evidence. Keep customer messaging, public publishing, intake and spend closed. Any future provider addition must be reviewed and added explicitly to the approved zero-cost list with matching status semantics and regression coverage.
+
+---
+
 ## [OWNER WORKSPACE / HUMAN-FIRST UX / EXACT-HEAD CI PENDING] Make the private home usable without technical knowledge (2026-10-14)
 
 - **Why:** the prior owner screen led with implementation status, jargon-heavy metrics and too many sections. The owner needs a home they can use without operating the machinery.
