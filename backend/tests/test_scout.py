@@ -201,11 +201,13 @@ def test_scout_cycle_reports_pending_replies_and_dry_wells(db):
 
     before = scout.run_scout_cycle(db)
     assert before["pending_contact_replies"] == 1
+    assert before["pending_contact_outcomes"] == 1
     assert before["dry_wells_recorded"] == 0
 
     scout.record_no_response(db, draft.id, "No reply observed as of 2026-10-14.")
     after = scout.run_scout_cycle(db)
     assert after["pending_contact_replies"] == 1
+    assert after["pending_contact_outcomes"] == 0
     assert after["dry_wells_recorded"] == 1
 
 
