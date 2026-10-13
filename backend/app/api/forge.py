@@ -436,7 +436,19 @@ def ask_forge(request: Request, payload: schemas.AskRequest, db: Session = Depen
     calls (paid OpenAI path, or local Ollama compute) at the owner's
     expense, and read internal memory through the answers."""
     require_owner_api_key(request)
-    result = ai_engine.answer_question(payload.question, db)
+    provider_status = ai_engine.get_provider_status()
+    if provider_status.get("provider") != "ollama" or provider_status.get("status") != "MODEL_AVAILABLE":
+        raise HTTPException(
+            status_code=503,
+            detail="A reachable zero-cost local model is not available. No template or paid-provider answer was generated.",
+        )
+    try:
+        result = ai_engine.answer_question(payload.question, db)
+    except ai_engine.AIUnavailableError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="The configured local model could not complete this request. No template answer was substituted.",
+        ) from exc
     matches = memory_layer.search_knowledge(db, payload.question, top_k=5)
     memories_used = [knowledge for knowledge, _similarity in matches]
     return schemas.AskResponse(question=payload.question, answer=result["answer"], memories_used=memories_used)
