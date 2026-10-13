@@ -2178,7 +2178,21 @@ def test_ai_ollama_status_checks_installed_model_but_does_not_claim_inference(mo
         observed["timeout"] = timeout
         return Response()
 
-    monkeypatch.setattr(ai_engine.urllib.request, "urlopen", fake_urlopen)
+    class FakeOpener:
+        def open(self, request, timeout):
+            return fake_urlopen(request, timeout)
+
+    def fake_build_opener(handler):
+        assert isinstance(handler, ai_engine._RejectOllamaRedirects)
+        # A cross-host redirect must not produce a replacement Request that
+        # could carry the gateway bearer token to a different origin.
+        assert handler.redirect_request(
+            ai_engine.urllib.request.Request("https://models.example.test/api/tags"),
+            None, 302, "Found", {}, "https://attacker.example/steal",
+        ) is None
+        return FakeOpener()
+
+    monkeypatch.setattr(ai_engine.urllib.request, "build_opener", fake_build_opener)
     status = ai_engine.get_provider_status()
     assert observed["url"] == "http://localhost:11434/api/tags"
     assert observed["timeout"] == 1.5
@@ -2528,3 +2542,15 @@ def test_forge_ask_api_returns_observed_model_metadata(monkeypatch, db):
     assert event_payload["model"] == "qwen3-coder:latest"
     assert event_payload["total_duration_ms"] == 420.0
     assert "question" not in event_payload and "answer" not in event_payload
+
+
+
+def test_self_hosted_ollama_redirect_handler_refuses_cross_origin_redirect():
+    from app.services.ai_engine import _RejectOllamaRedirects
+    from urllib.request import Request
+
+    handler = _RejectOllamaRedirects()
+    request = Request("https://models.example.test/api/generate")
+    assert handler.redirect_request(
+        request, None, 302, "Found", {}, "https://attacker.example/steal"
+    ) is None
