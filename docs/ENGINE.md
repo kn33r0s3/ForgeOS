@@ -14,10 +14,17 @@ and outcomes, then turning that knowledge into authorized action and
 real-world value. AI is one worker; software is one instrument; humans
 are participants and partners.
 
-Everything the engine does ladders to this. The big aim and one real
-rupee are the same aim at different scales. Discovery — including
-*hidden* unknowns, the ones nobody thought to ask — is how the system
-grows toward it.
+Everything the engine does contributes to this living system. One real rupee is valuable commercial proof at one scale, not the boundary of all useful work. Discovery—including hidden unknowns nobody thought to ask—is one way the system grows toward it.
+
+## Many climbs, one shared engine
+
+Hami is a portfolio of connected work: discovering reality, exposing unknowns, building capabilities, connecting supported knowledge, improving security and reliability, testing hypotheses and measuring outcomes. Tracks can progress concurrently when dependencies and finite time, compute and cost budgets allow. A blocked customer-facing experiment must not stall independent research, maintenance, tests or capability work.
+
+Every climb reuses the six-primitives substrate and existing questions, claims, evidence, Bets, tasks, capabilities and Actions. A climb is not a new semantic primitive or parallel truth store. Record dependencies/provenance so findings help related tracks without silently transferring rights to reuse personal data. Deduplicate before spawning tasks; bound concurrency; make work resumable and idempotent; record costs, uncertainty, authorization and kill criteria.
+
+Prioritize value to affected people, costly uncertainty removed, reuse across climbs, reversibility, risk and test cost. Preserve exploratory breadth so one high-volume topic cannot starve other useful directions. If blocked, log why and continue with the highest-ranked independent safe item. A systemic privacy, security or integrity incident contains dependent paths but does not automatically prohibit unrelated read-only work.
+
+This is the target operating model, not proof that the current runtime runs infinite autonomous loops. Actual autonomy requires durable scheduling, bounded execution, a persistent portfolio, real evaluation/write-back, action-time authorization, exact-head tests and evidence of real runs. Report implementation, tests, deployment readiness, runtime behavior and real-world outcomes separately.
 
 ## The legitimacy rule (owner's standing rule, 2026-10-04)
 
@@ -33,11 +40,7 @@ grows toward it.
 
 ## Value is the method (owner-directed, 2026-10-04)
 
-**What value is:** what a real person will give something up for — money,
-time, trust, attention, a change in behavior. Nothing is valuable in
-itself; value is always *valued-by-someone*. Money changing hands is the
-observable proof. The revenue ladder (₨1 → ₨10,000 → ₨100,000 →
-recurring) is the ground truth the engine optimizes toward.
+**What value is:** a real change that matters to someone—income, time, trust, access, capability, safety, resilience, coordination, resource allocation or behavior. Value is defined by affected people and measured honestly. Money changing hands is strong proof for commercial exchange and sustainability, not the only possible measure of usefulness. The revenue ladder remains essential for commercial paths; it does not narrow the engine's domain.
 
 **More valuable:** close to survival (money in/out), scarce alternatives,
 urgent pain, measurable gain, trusted source, low friction, recurring need.

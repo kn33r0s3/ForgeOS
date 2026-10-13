@@ -14,7 +14,7 @@ export const Route = createFileRoute("/about")({
       {
         name: "description",
         content:
-          "The reality loop, the six primitives, evidence and authorization rules, and the climb.",
+          "The reality loop, six primitives, evidence rules, and many connected paths toward shared progress.",
       },
     ],
   }),
@@ -71,17 +71,13 @@ const FIVE_QUESTIONS = [
   },
 ] as const;
 
-const CLIMB = [
-  {
-    n: 1,
-    title: "One real-world test",
-    body: "Current proposal: test whether faster replies can recover value in one seller workflow. No seller has agreed yet; this remains proposed, not an outcome.",
-    earned: true,
-  },
-  { n: 2, title: "A verified outcome", earned: false },
-  { n: 3, title: "A repeatable transformation", earned: false },
-  { n: 4, title: "Transfer across contexts", earned: false },
-  { n: 5, title: "Value wherever it can legitimately be realized", earned: false },
+const CLIMBS = [
+  { title: "Understand reality", body: "Learn from lived experience, system behavior, existing resources, and what actually changes across domains and places.", feeds: "Better questions, stronger evidence, more useful decisions." },
+  { title: "Expand what is known", body: "Find missing knowledge, surface hidden constraints, test assumptions, preserve contradictions, and keep uncertainty visible.", feeds: "Every other climb gets a clearer map of what is known, unknown, or blocked." },
+  { title: "Connect what is separate", body: "Relate needs, people, capabilities, resources, knowledge, and opportunities when the connection is relevant, permitted, and useful to those involved.", feeds: "One supported discovery can unlock many paths without creating a second source of truth." },
+  { title: "Build what is missing", body: "Extend software, tools, interfaces, workflows, integrations, skills, and operating capacity where a real gap is evidenced.", feeds: "Reusable capabilities strengthen more than the one problem that revealed the gap." },
+  { title: "Test, act, and learn", body: "Turn understanding into the smallest legitimate test or authorized action, measure what changed, and keep negative results.", feeds: "Real outcomes correct the map, reprioritize work, and stop wasted effort from repeating." },
+  { title: "Strengthen shared capacity", body: "Improve trust, privacy, resilience, local knowledge, fair exchange, skills, access, and the ability for people to help one another.", feeds: "Progress should compound for participants—not depend on extracting their data or forcing one path." },
 ] as const;
 
 function AboutPage() {
@@ -161,46 +157,29 @@ function AboutPage() {
           </div>
         </section>
 
-        {/* The climb */}
+        {/* Many connected climbs */}
         <section id="climb" className="py-10 scroll-mt-24">
-          <h2 className="font-display text-3xl font-extrabold tracking-tight text-ink">
-            The climb
-          </h2>
-          <p className="mt-3 max-w-2xl text-base leading-7 text-muted">
-            Very big, very small. The big aim and the small aim are the same aim at
-            different scales. Each step is earned by the one before it. The current seller
-            pilot is one possible test of the value loop—not Hami’s identity or the limit
-            of its domain. A new direction earns its place through evidence, not branding.
-          </p>
-          <div className="mt-6">
-            {CLIMB.map((s) => (
-              <div
-                key={s.n}
-                className="flex gap-5 border-t border-line py-5"
-                style={{ opacity: s.earned ? 1 : 0.45 }}
-              >
-                <span
-                  className="font-mono text-sm font-bold"
-                  style={{ color: s.earned ? "var(--primary)" : "var(--muted)" }}
-                >
-                  {String(s.n).padStart(2, "0")}
-                </span>
-                <div>
-                  <h3 className="font-display font-bold text-ink">{s.title}</h3>
-                  {s.earned ? (
-                    <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">{s.body}</p>
-                  ) : (
-                    <p className="mt-1 text-sm italic text-muted">when earned</p>
-                  )}
-                </div>
-              </div>
+          <h2 className="font-display text-3xl font-extrabold tracking-tight text-ink">Many climbs. One living system.</h2>
+          <p className="mt-3 max-w-3xl text-base leading-7 text-muted">There is no final rung and no fixed number of paths. Reality keeps opening new questions, possibilities, relationships, capabilities, and ways to create value. These directions strengthen one another; they do not wait in one line for a single pilot to succeed.</p>
+          <div className="mt-6 rounded-2xl border border-line bg-card p-5 sm:p-6">
+            <p className="font-display text-lg font-bold text-ink">Hami · Hamro</p>
+            <p className="mt-2 text-sm leading-6 text-muted"><strong>Hami</strong> is the name of the living system. <strong>Hamro</strong> means “our/ours” and expresses the direction: knowledge and capabilities should connect so people can help one another create fair, real value. Shared progress never means shared access to private data—consent, privacy, attribution, safety and individual choice remain binding.</p>
+          </div>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            {CLIMBS.map((climb) => (
+              <article key={climb.title} className="card p-5">
+                <h3 className="font-display font-bold text-ink">{climb.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted">{climb.body}</p>
+                <p className="mt-3 border-t border-line pt-3 text-sm leading-6 text-muted"><strong className="text-ink">How it strengthens the rest:</strong>{" "}{climb.feeds}</p>
+              </article>
             ))}
           </div>
-          <Button asChild variant="primary" className="mt-6">
-            <Link to="/experiments">
-              See experiments <ArrowRight className="size-4" aria-hidden="true" />
-            </Link>
-          </Button>
+          <div className="mt-6 border-l-2 border-line pl-4">
+            <h3 className="font-display font-bold text-ink">One pilot is one pilot.</h3>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">The missed-inquiry seller idea is one candidate economic test, not Hami’s identity, a proven need, or permission to act. No seller has agreed yet. Every real-world action still needs the right evidence, consent, legal clarity and authorization. A blocked action does not stop independent research, engineering, verification or other safe work.</p>
+          </div>
+          <p className="mt-6 max-w-3xl text-sm leading-6 text-muted">This is the operating direction, not a claim that every loop is already autonomous. Current discoveries, unknowns and experiments retain their own evidence and status; implemented code, successful tests, deployed behavior and real-world outcomes are reported separately.</p>
+          <Button asChild variant="primary" className="mt-6"><Link to="/experiments">See experiments <ArrowRight className="size-4" aria-hidden="true" /></Link></Button>
         </section>
       </Container>
       <HamiPathways current="about" />

@@ -239,22 +239,19 @@ describe("homepage contract", () => {
     assert.match(src, /redirect/);
     assert.match(src, /\/discoveries/);
   });
-  it("keeps the seller pilot bounded without narrowing Hami's identity", () => {
+  it("frames Hami as many connected climbs while keeping pilot/autonomy claims honest", () => {
     const src = read("src/routes/about.tsx");
-    assert.match(src, /Very big, very small/);
-    assert.match(src, /One real-world test/);
-    assert.match(src, /not Hami’s identity or the limit\s+of its domain/);
+    assert.match(src, /Many climbs\. One living system/);
+    assert.match(src, /Hamro/);
+    assert.match(src, /knowledge and capabilities/);
+    assert.match(src, /one candidate economic test/);
     assert.match(src, /No seller has agreed yet/);
-    assert.match(src, /when earned/);
-    assert.doesNotMatch(src, /\[when earned\]/);
-    // Inbox prototype is historical material, NOT Hami's public identity.
-    // Per HAMI CONTINUITY LAW: no subordinate experiment may dominate Hami's
-    // public representation. The /prototype/inbox route exists but is unlinked.
+    assert.match(src, /not a claim that every loop is already\s+autonomous/);
+    assert.doesNotMatch(src, /Very big, very small|when earned|const CLIMB\s*=/);
     const expCard = read("src/components/experiments/experiment-card.tsx");
     assert.doesNotMatch(expCard, /Try the free inbox tool/);
     assert.doesNotMatch(expCard, /\/prototype\/inbox/);
   });
-
   it("experiment card carries the five questions with honest EXP-1 values", () => {
     const expCard = read("src/components/experiments/experiment-card.tsx");
     for (const field of ["reality", "possibility", "constraint", "intervention", "outcome"]) {
