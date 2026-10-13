@@ -192,7 +192,7 @@ def test_cleared_active_candidate_becomes_plannable_and_evidence_keeps_provenanc
 
     world_graph.seed_core_types(db)
     world_graph.create_event(
-        db, event_type="outreach.sent", source="test", payload={},
+        db, event_type="conversation.held", source="test", payload={},
     )
     db.commit()
     plan = research_planner.build_research_plan(db, question)
