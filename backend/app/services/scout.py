@@ -301,8 +301,9 @@ def mark_sent(
 def record_no_response(db: Session, draft_id: int, summary: str) -> models.OutreachDraft:
     """Record an owner-observed dry well without pretending a reply occurred.
 
-    This closes the pending-response review item but deliberately leaves
-    reply_received=False, so the no-repeat-without-reply send guard remains.
+    The owner-reported dry well is kept visible so a late reply can still be
+    captured. reply_received remains False, so the no-repeat-without-reply
+    send guard remains.
     """
     draft = db.get(models.OutreachDraft, draft_id)
     if not draft:
