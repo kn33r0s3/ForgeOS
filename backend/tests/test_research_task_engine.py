@@ -266,3 +266,41 @@ def test_tasks_endpoint_exposes_failed_and_planned_status(db, monkeypatch):
     assert response.status_code == 200
     statuses = {item["status"] for item in response.json() if item["id"] in {planned.id, failed.id}}
     assert statuses == {"planned", "failed"}
+
+
+def test_pending_task_dispatch_covers_questions_before_repeating(db, monkeypatch):
+    from types import SimpleNamespace
+    from app import models
+    from app.services import collector_runner, research_task_engine
+
+    questions = [
+        models.ResearchQuestion(question="Track alpha question", priority_score=90),
+        models.ResearchQuestion(question="Track beta question", priority_score=80),
+        models.ResearchQuestion(question="Track gamma question", priority_score=70),
+    ]
+    db.add_all(questions)
+    db.commit()
+    for q in questions:
+        db.refresh(q)
+    tasks = [
+        research_task_engine.create_task(db, question_id=questions[0].id, source="crossref", query="alpha one"),
+        research_task_engine.create_task(db, question_id=questions[0].id, source="crossref", query="alpha two"),
+        research_task_engine.create_task(db, question_id=questions[1].id, source="crossref", query="beta"),
+        research_task_engine.create_task(db, question_id=questions[2].id, source="crossref", query="gamma"),
+    ]
+    monkeypatch.setattr(collector_runner.source_clearance_registry, "source_clearances",
+        lambda: [SimpleNamespace(collector="crossref", url="https://api.crossref.org/works")])
+    monkeypatch.setattr(collector_runner.source_clearance_registry, "collector_is_cleared", lambda _name: True)
+    ids = []
+    def execute(_db, task):
+        ids.append(task.id)
+        task.status = "completed"
+        _db.commit()
+        return {"task_id": task.id, "status": "completed"}
+    monkeypatch.setattr(collector_runner, "execute_task", execute)
+    outcomes = collector_runner.run_pending_tasks(db, limit=4)
+
+    assert ids == [tasks[0].id, tasks[2].id, tasks[3].id, tasks[1].id]
+    assert [row["portfolio_dispatch"]["pass"] for row in outcomes] == [
+        "question_coverage", "question_coverage", "question_coverage", "throughput"
+    ]
