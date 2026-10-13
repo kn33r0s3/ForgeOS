@@ -12,7 +12,8 @@ import json
 from datetime import timezone
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, func, or_
+from sqlalchemy.orm import Session, aliased
 
 from app import models
 from app.services import network_endpoints, world_graph
@@ -26,21 +27,150 @@ class _DeferredEndpoint(ValueError):
 def sync_network_connections(db: Session, *, limit: int = 100) -> dict[str, int]:
     """Project registered endpoint pairs into idempotent WorldRelation rows."""
     world_graph.seed_core_types(db)
-    rows = (
-        db.query(models.NetworkConnection)
-        .order_by(models.NetworkConnection.id.asc())
-        .limit(max(1, int(limit)))
+    try:
+        batch_limit = max(1, int(limit))
+    except (TypeError, ValueError):
+        batch_limit = 100
+
+    connection_model = models.NetworkConnection
+    normalized_relation_type = func.lower(
+        func.trim(
+            func.coalesce(
+                func.nullif(connection_model.relation_type, ""),
+                "possible_match",
+            )
+        )
+    )
+    active_relation_type = (
+        db.query(models.TypeRegistry.id)
+        .filter(
+            models.TypeRegistry.category == "relation_type",
+            models.TypeRegistry.type_name == normalized_relation_type,
+            models.TypeRegistry.status == "active",
+        )
+        .correlate(connection_model)
+        .exists()
+    )
+
+    def endpoint_ready(kind_expr, id_expr):
+        endpoint_models = dict(network_endpoints.ENDPOINT_ADAPTERS)
+        for alias, canonical in network_endpoints.ENDPOINT_ALIASES.items():
+            endpoint_models[alias] = network_endpoints.ENDPOINT_ADAPTERS[canonical]
+        normalized_kind = func.lower(func.trim(kind_expr))
+        options = []
+        for endpoint_kind, endpoint_model in endpoint_models.items():
+            if endpoint_kind == "network_connection":
+                parent = aliased(models.NetworkConnection)
+                parent_relation_exists = (
+                    db.query(models.WorldRelation.id)
+                    .filter(models.WorldRelation.id == parent.relation_id)
+                    .correlate(parent)
+                    .exists()
+                )
+                target_exists = (
+                    db.query(parent.id)
+                    .filter(
+                        parent.id == id_expr,
+                        parent.relation_id.isnot(None),
+                        parent_relation_exists,
+                    )
+                    .correlate(connection_model)
+                    .exists()
+                )
+            else:
+                target_exists = (
+                    db.query(endpoint_model.id)
+                    .filter(endpoint_model.id == id_expr)
+                    .correlate(connection_model)
+                    .exists()
+                )
+            options.append(and_(normalized_kind == endpoint_kind, target_exists))
+        return or_(*options)
+
+    left_ready = endpoint_ready(connection_model.left_kind, connection_model.left_id)
+    right_ready = endpoint_ready(connection_model.right_kind, connection_model.right_id)
+    unprojected = db.query(connection_model).filter(
+        connection_model.relation_id.is_(None)
+    )
+    unprojected_count = unprojected.count()
+    eligible_unprojected = unprojected.filter(
+        active_relation_type,
+        left_ready,
+        right_ready,
+    )
+    eligible_count = eligible_unprojected.count()
+
+    # Never let old invalid rows or a nested connection whose parent has not
+    # been projected consume the bounded work slots. Among eligible new work,
+    # freshest first advances recent discoveries; stable IDs break ties.
+    new_rows = (
+        eligible_unprojected
+        .order_by(connection_model.updated_at.desc(), connection_model.id.desc())
+        .limit(batch_limit)
         .all()
     )
+    remaining = batch_limit - len(new_rows)
+    existing_rows = []
+    if remaining > 0:
+        existing_rows = (
+            db.query(connection_model)
+            .filter(connection_model.relation_id.isnot(None))
+            .order_by(connection_model.updated_at.desc(), connection_model.id.desc())
+            .limit(remaining)
+            .all()
+        )
+    rows = new_rows + existing_rows
+    unresolved_unprojected = max(0, unprojected_count - eligible_count)
+
     result = {
         "entities_created": 0,
         "relations_created": 0,
         "events_created": 0,
         "projected_connections": 0,
-        "unresolved_connections": 0,
+        "unresolved_connections": unresolved_unprojected,
         "unactivated_relation_types": 0,
         "epistemic_state_pending_evidence": 0,
     }
+    # Record unresolved source rows separately from eligible work so they
+    # remain auditable but cannot starve valid rows inside the batch limit.
+    invalid_rows = (
+        unprojected
+        .filter(~(active_relation_type), )
+        .order_by(connection_model.updated_at.desc(), connection_model.id.desc())
+        .limit(batch_limit)
+        .all()
+    )
+    invalid_ids = {row.id for row in invalid_rows}
+    endpoint_blocked_rows = (
+        unprojected
+        .filter(active_relation_type)
+        .filter(~and_(left_ready, right_ready))
+        .order_by(connection_model.updated_at.desc(), connection_model.id.desc())
+        .limit(batch_limit)
+        .all()
+    )
+    reasons_by_id: dict[int, str] = {}
+    for connection in invalid_rows:
+        relation_type = (connection.relation_type or "possible_match").strip().lower()
+        try:
+            resolve_type(db, "relation_type", relation_type)
+        except SubstrateError as exc:
+            reasons_by_id[connection.id] = str(exc)
+        else:
+            reasons_by_id[connection.id] = (
+                "relation type is not active in the canonical type registry"
+            )
+    for connection in endpoint_blocked_rows:
+        reasons_by_id[connection.id] = (
+            "one or both endpoints are missing or depend on an unprojected network relation"
+        )
+    for connection in [*invalid_rows, *endpoint_blocked_rows]:
+        result["events_created"] += _record_unresolved(
+            db,
+            connection,
+            reasons_by_id.get(connection.id, "endpoint or relation type is not ready"),
+        )
+
     relation_by_connection: dict[int, int] = {}
     pending = list(rows)
 
