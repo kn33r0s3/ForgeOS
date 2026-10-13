@@ -172,6 +172,71 @@ def test_supported_explicit_targets_project_by_reference(db):
     assert db.query(models.WorldRelation).count() == 6
 
 
+def test_evidence_to_network_connection_uses_existing_projected_relation(db):
+    from app.services import network_substrate_adapter
+
+    evidence, claim, _claim_link, _decision = _evidence_claim_link(db)
+    opportunity = models.Opportunity(problem="Network relation target")
+    db.add(opportunity)
+    db.flush()
+    connection = models.NetworkConnection(
+        left_kind="claim",
+        left_id=claim.id,
+        right_kind="opportunity",
+        right_id=opportunity.id,
+        relation_type="supports",
+        reason="The relationship is recorded but not independently verified.",
+        agreement_gap="No independent confirmation recorded.",
+    )
+    db.add(connection)
+    db.commit()
+
+    projection = network_substrate_adapter.sync_network_connections(db)
+    assert projection["projected_connections"] == 1
+    db.refresh(connection)
+    assert connection.relation_id is not None
+
+    source_link = models.EvidenceRelationship(
+        evidence_id=evidence.id,
+        network_connection_id=connection.id,
+        relation_type="supports",
+        relation_key="evidence-to-network-connection",
+    )
+    db.add(source_link)
+    db.commit()
+
+    first = adapter.sync_evidence_relationships(db)
+
+    assert first == {
+        "records_seen": 1,
+        "relations_created": 1,
+        "entities_created": 2,
+        "unresolved_records": 0,
+    }
+    edge = db.get(models.WorldRelation, source_link.substrate_relation_id)
+    assert edge is not None
+    relation_entity = world_graph.find_canonical_entity(
+        db, "relation", connection.relation_id
+    )
+    assert relation_entity is not None
+    assert edge.to_entity_id == relation_entity.id
+    attrs = json.loads(edge.attributes)
+    assert attrs["relation_ref"] == {
+        "table": "relations",
+        "id": connection.relation_id,
+    }
+    assert attrs["network_connection_ref"] == {
+        "table": "network_connections",
+        "id": connection.id,
+    }
+    assert attrs["payload_copied"] is False
+
+    again = adapter.sync_evidence_relationships(db)
+    assert again["records_seen"] == 0
+    assert again["relations_created"] == 0
+    assert db.query(models.WorldRelation).count() == 2
+
+
 def test_unregistered_or_ambiguous_evidence_links_remain_unprojected(db):
     evidence, claim, unregistered, _decision = _evidence_claim_link(
         db, relation_type="unreviewed_link_type"
@@ -179,8 +244,8 @@ def test_unregistered_or_ambiguous_evidence_links_remain_unprojected(db):
     _evidence2, _claim2, ambiguous, decision = _evidence_claim_link(
         db, relation_type="derived_from", other_target=True
     )
-    # NetworkConnection is already projected as a WorldRelation, so the
-    # evidence projector must not create a second entity just to force a link.
+    # Without an existing substrate relation pointer, the evidence projector
+    # must leave the target unresolved instead of guessing its endpoint.
     connection = models.NetworkConnection(
         left_kind="claim",
         left_id=claim.id,
