@@ -75,6 +75,119 @@ def test_market_signal_projection_uses_generic_substrate(db):
     assert repeat["evidence_created"] == 0
 
 
+def test_market_signal_projection_repairs_missing_relation_event_and_evidence(db):
+    world_graph.seed_core_types(db)
+    signal = models.Signal(
+        source="market_feed",
+        source_type="external",
+        signal_type="demand",
+        category="operations",
+        title="Repeated scheduling delays",
+        content="Several public records describe repeated scheduling delays.",
+        importance_score=55.0,
+    )
+    db.add(signal)
+    db.commit()
+    db.refresh(signal)
+
+    # Simulate a valid partial projection left by an interrupted earlier run:
+    # both source-linked entities exist, but the relation/event/evidence do not.
+    world_graph.ensure_canonical_entity(
+        db,
+        "signal",
+        signal.id,
+        created_by="market_signal_substrate_adapter",
+        source_system="signals",
+    )
+    identity = {
+        "source_system": "signals",
+        "source_id": str(signal.id),
+        "provenance": {
+            "source": signal.source or "manual",
+            "source_type": signal.source_type or "manual",
+            "signal_id": signal.id,
+            "external_id": signal.external_id,
+            "canonical_url": signal.canonical_url,
+            "title": signal.title,
+        },
+    }
+    partial = world_graph.create_entity(
+        db,
+        entity_type="market_signal",
+        display_name=signal.title,
+        attributes={
+            "signal_id": signal.id,
+            "source": signal.source or "manual",
+            "source_type": signal.source_type or "manual",
+            "signal_type": signal.signal_type or "observation",
+            "category": signal.category,
+            "importance_score": float(signal.importance_score or 0.0),
+            "content_excerpt": market_signal_substrate_adapter._signal_excerpt(signal.content),
+        },
+        created_by="market_signal_substrate_adapter",
+        identity=identity,
+    )
+    db.commit()
+
+    repaired = market_signal_substrate_adapter.sync_market_signal_signals(db, limit=10)
+
+    assert repaired["signals_seen"] == 1
+    assert repaired["entities_created"] == 0
+    assert repaired["relations_created"] == 1
+    assert repaired["events_created"] == 1
+    assert repaired["evidence_created"] == 1
+    assert db.query(models.WorldRelation).filter_by(
+        idempotency_key=f"market-signal:{signal.id}:signals:signal-v1"
+    ).one().from_entity_id == partial.id
+    assert db.query(models.WorldEvent).filter_by(
+        idempotency_key=f"market-signal-observed:{signal.id}:v1"
+    ).count() == 1
+    assert db.query(models.Evidence).filter_by(
+        idempotency_key=f"market-signal-evidence:{signal.id}:v1"
+    ).count() == 1
+
+    repeated = market_signal_substrate_adapter.sync_market_signal_signals(db, limit=10)
+    assert repeated["signals_seen"] == 0
+    assert repeated["entities_created"] == 0
+    assert repeated["relations_created"] == 0
+    assert repeated["events_created"] == 0
+    assert repeated["evidence_created"] == 0
+
+
+def test_market_signal_projection_fails_closed_when_required_type_is_inactive(db):
+    world_graph.seed_core_types(db)
+    signal = models.Signal(content="A market signal waits for the type registry.")
+    db.add(signal)
+    db.commit()
+
+    signals_type = db.query(models.TypeRegistry).filter_by(
+        category="relation_type",
+        type_name="signals",
+    ).one()
+    world_graph.set_type_status(
+        db,
+        signals_type,
+        "deprecated",
+        actor="test",
+        rationale="Test inactive relationship type handling.",
+        evidence_ref="backend/tests/test_wave2_market_signal_domain.py",
+    )
+    db.commit()
+
+    result = market_signal_substrate_adapter.sync_market_signal_signals(db, limit=10)
+
+    assert result["signals_seen"] == 0
+    assert result["unresolved_signals"] == 1
+    assert db.query(models.SubstrateEntity).filter_by(
+        entity_type="market_signal",
+        source_system="signals",
+        source_id=str(signal.id),
+    ).count() == 0
+    assert db.query(models.WorldRelation).filter_by(
+        idempotency_key=f"market-signal:{signal.id}:signals:signal-v1"
+    ).count() == 0
+
+
 def test_market_signal_projection_keeps_programming_failures_visible(db, monkeypatch):
     signal = models.Signal(content="A recorded market observation.")
     db.add(signal)
