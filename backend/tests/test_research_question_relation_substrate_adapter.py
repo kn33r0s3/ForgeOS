@@ -69,6 +69,64 @@ def test_explicit_research_question_foreign_keys_become_typed_relations(db):
     assert db.query(models.WorldRelation).count() == 3
 
 
+def test_explicit_rare_signal_foreign_key_becomes_typed_relation(db):
+    assessment = models.RareSignalAssessment(
+        cluster_key="rare-coordination-delay",
+        label="Unusual coordination delay",
+        signal_ids="11,12",
+        frequency=2,
+        score=42.0,
+        status="DETECTED",
+        explanation={"basis": "two source records; indicator only"},
+    )
+    db.add(assessment)
+    db.flush()
+    question = models.ResearchQuestion(
+        question="What explains the unusual coordination delay?",
+        source_rare_signal_id=assessment.id,
+    )
+    db.add(question)
+    db.commit()
+
+    first = adapter.sync_research_question_sources(db)
+
+    assert first == {
+        "questions_seen": 1,
+        "relations_created": 1,
+        "entities_created": 2,
+        "unresolved_links": 0,
+    }
+    question_entity = world_graph.find_canonical_entity(db, "research_question", question.id)
+    source_entity = world_graph.find_canonical_entity(
+        db, "rare_signal_assessment", assessment.id
+    )
+    assert question_entity is not None
+    assert source_entity is not None
+    relation = db.query(models.WorldRelation).filter_by(
+        idempotency_key=(
+            f"legacy-research-question:{question.id}:source_rare_signal_id:derived-from-v1"
+        )
+    ).one()
+    assert relation.from_entity_id == question_entity.id
+    assert relation.to_entity_id == source_entity.id
+    assert relation.relation_type == "derived_from"
+    assert relation.truth_state == "hypothesized"
+    attrs = json.loads(relation.attributes)
+    assert attrs["source_ref"] == {"table": "research_questions", "id": question.id}
+    assert attrs["source_field"] == "source_rare_signal_id"
+    assert attrs["target_ref"] == {
+        "table": "rare_signal_assessments",
+        "id": assessment.id,
+    }
+    assert attrs["payload_copied"] is False
+
+    repeated = adapter.sync_research_question_sources(db)
+    assert repeated["relations_created"] == 0
+    assert repeated["entities_created"] == 0
+    assert repeated["unresolved_links"] == 0
+    assert db.query(models.WorldRelation).count() == 1
+
+
 def test_text_similarity_never_creates_source_relations(db):
     question = models.ResearchQuestion(
         question="Does the phrase Pattern 42 refer to a real source?"
