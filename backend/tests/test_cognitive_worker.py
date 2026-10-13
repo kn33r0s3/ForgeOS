@@ -399,3 +399,40 @@ def test_ollama_cognitive_provider_refuses_serverless_loopback(monkeypatch):
 
     with pytest.raises(cognitive_provider.CognitiveProviderUnavailable, match="unavailable in Vercel"):
         cognitive_provider.get_cognitive_provider()
+
+
+def test_bounded_local_cognitive_batch_runs_and_reuses_proposals(db, monkeypatch):
+    research_task = make_research_task(db)
+    research_task.status = "completed"
+    evidence = models.Evidence(
+        source="public-source", title="Public finding",
+        claim="A bounded claim requiring independent validation.",
+        canonical_url="https://example.gov.np/finding",
+        source_kind="REAL", source_type="third_party",
+        consent_status="not_required",
+    )
+    db.add(evidence)
+    db.flush()
+    research_task.evidence_ids = str(evidence.id)
+    db.commit()
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    from app.services import operating_v4
+    monkeypatch.setattr(operating_v4, "check_agent_run_allowed", lambda _db: None)
+    provider = ReplacementProvider()
+    monkeypatch.setattr(cognitive_provider, "get_cognitive_provider", lambda: provider)
+
+    result = cognitive_worker.run_pending_cognitive_tasks(db, limit=1)
+    assert result["status"] == "ok"
+    assert result["completed"] == 1
+    assert result["outcomes"][0]["provider_mode"] == "TEST"
+    task = db.query(models.WorkerTask).filter_by(
+        idempotency_key=f"cognitive-research-task:v1:{research_task.id}"
+    ).one()
+    assert task.status == "completed"
+    assert task.outputs["status"] == "PROPOSED"
+    assert task.outputs["execution_allowed"] is False
+    assert db.query(models.Action).count() == 0
+    again = cognitive_worker.run_pending_cognitive_tasks(db, limit=1)
+    assert again["attempted"] == 0
+    assert db.query(models.WorkerTask).filter_by(idempotency_key=task.idempotency_key).count() == 1
