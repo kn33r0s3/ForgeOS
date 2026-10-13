@@ -309,7 +309,7 @@ def test_contact_state_separates_priority_from_starvation(db, monkeypatch):
     assert state["next_priority"] == "contact_preparation"
 
 
-def test_pending_contact_outcome_outranks_recent_contact(db, monkeypatch):
+def test_pending_contact_outcome_outranks_recent_contact(db):
     from datetime import datetime, timedelta, timezone
 
     from app.services import scout
@@ -347,7 +347,7 @@ def test_pending_contact_outcome_outranks_recent_contact(db, monkeypatch):
     assert state["next_priority"] == "review_pending_contact_outcomes"
 
 
-def test_recorded_dry_well_stays_visible_without_starving_other_work(db, monkeypatch):
+def test_recorded_dry_well_stays_visible_without_starving_other_work(db):
     from datetime import datetime, timedelta, timezone
 
     from app.services import scout
