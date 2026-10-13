@@ -591,32 +591,46 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
         row.id: row.signal_id for row in evidence_rows if row.signal_id is not None
     }
     returned_signal_ids = set(created_signal_ids)
+    returned_evidence_signal_ids = {
+        signal_id for signal_id in evidence_signal_ids.values()
+        if signal_id in returned_signal_ids
+    }
     target_claim = db.get(models.Claim, task.claim_id) if task.claim_id is not None else None
     relevant_edges = [
         edge for edge in evidence_edges
         if target_claim is not None and edge.claim_id == target_claim.id
     ]
-    if target_claim is None:
-        # A missing target Claim is not a measured zero-usefulness outcome.
-        # Keep the result unassessed so capability ranking cannot learn from a
-        # dangling task reference or unrelated graph history.
+    # Only an explicit semantic assessment of every returned Signal can produce
+    # a usefulness rate. Lineage-only edges (including raw collector metadata)
+    # are not negative assessments and must not become a zero.
+    assessed_signal_ids = {
+        evidence_signal_ids[edge.evidence_id]
+        for edge in relevant_edges
+        if edge.relation_type in {"supports", "contradicts", "updates"}
+        and edge.evidence_id in evidence_signal_ids
+        and evidence_signal_ids[edge.evidence_id] in returned_signal_ids
+    }
+    fully_assessed = (
+        target_claim is not None
+        and bool(returned_signal_ids)
+        and returned_evidence_signal_ids == returned_signal_ids
+        and assessed_signal_ids == returned_signal_ids
+    )
+    if not fully_assessed:
         useful_count = None
         contradicted_count = None
     else:
-        useful_signal_ids = {
-            evidence_signal_ids[edge.evidence_id]
-            for edge in relevant_edges
-            if edge.relation_type in {"supports", "contradicts", "updates"}
-            and edge.evidence_id in evidence_signal_ids
-            and evidence_signal_ids[edge.evidence_id] in returned_signal_ids
-        }
-        useful_count = len(useful_signal_ids)
+        useful_count = len(assessed_signal_ids)
         contradicted_count = int(any(
             edge.relation_type == "contradicts"
             and evidence_signal_ids.get(edge.evidence_id) in returned_signal_ids
             for edge in relevant_edges
         ))
-    novel_count = sum(1 for signal_id in created_signal_ids if db.get(models.Signal, signal_id).is_duplicate_of is None)
+    unique_signal_ids = set(created_signal_ids)
+    novel_count = sum(
+        1 for signal_id in unique_signal_ids
+        if db.get(models.Signal, signal_id).is_duplicate_of is None
+    )
     duplicate_count = len(created_signal_ids) - novel_count
     # Model judgments assess collected text; they are not independent source
     # verification or corroboration. Keep these fields at zero until a separate
