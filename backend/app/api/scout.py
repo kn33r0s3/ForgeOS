@@ -8,6 +8,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app import security
@@ -49,6 +50,10 @@ class SentIn(BaseModel):
 
 
 class ReplyIn(BaseModel):
+    summary: str
+
+
+class NoResponseIn(BaseModel):
     summary: str
 
 
@@ -129,6 +134,42 @@ def approval_queue(request: Request, db: Session = Depends(get_db)):
     ]
 
 
+@router.get("/pending-replies")
+def list_pending_replies(request: Request, db: Session = Depends(get_db)):
+    """Owner-only queue for sent contacts awaiting an actual reply or dry-well note."""
+    _owner(request)
+    from app import models
+
+    drafts = (
+        db.query(models.OutreachDraft)
+        .filter(
+            models.OutreachDraft.status == "SENT",
+            models.OutreachDraft.reply_received.is_(False),
+            or_(
+                models.OutreachDraft.outcome_notes.is_(None),
+                models.OutreachDraft.outcome_notes == "",
+            ),
+        )
+        .order_by(models.OutreachDraft.sent_at.asc(), models.OutreachDraft.id.asc())
+        .limit(100)
+        .all()
+    )
+    return [
+        {
+            "id": d.id,
+            "candidate_entity_id": d.candidate_entity_id,
+            "observed_fact": d.observed_fact,
+            "message_en": d.message_en,
+            "message_ne": d.message_ne,
+            "status": d.status,
+            "sent_at": d.sent_at,
+            "send_channel": d.send_channel,
+            "reply_received": d.reply_received,
+        }
+        for d in drafts
+    ]
+
+
 @router.post("/drafts/{draft_id}/edit")
 def edit_draft(draft_id: int, payload: DraftEditIn, request: Request, db: Session = Depends(get_db)):
     _owner(request)
@@ -187,6 +228,26 @@ def record_reply(draft_id: int, payload: ReplyIn, request: Request, db: Session 
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     return {"id": d.id, "reply_received": d.reply_received}
+
+
+@router.post("/drafts/{draft_id}/no-response")
+def record_no_response(
+    draft_id: int,
+    payload: NoResponseIn,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Record an owner-observed dry well; this never reauthorizes another send."""
+    _owner(request)
+    try:
+        d = scout.record_no_response(db, draft_id, payload.summary)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return {
+        "id": d.id,
+        "reply_received": d.reply_received,
+        "outcome_recorded": bool((d.outcome_notes or "").strip()),
+    }
 
 
 @router.get("/do-not-contact")
