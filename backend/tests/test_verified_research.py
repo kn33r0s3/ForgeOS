@@ -118,7 +118,9 @@ def test_successful_collection_persists_evidence_and_triggers_p3(db, monkeypatch
     assert result["judgments_failed"] == 0
     evidence = db.query(models.Evidence).filter_by(source="fixture-source").one()
     edge = db.query(models.EvidenceRelationship).filter_by(claim_id=claim.id, evidence_id=evidence.id).one()
-    assert edge.relation_type == "supports"
+    # Collector metadata is not a trusted semantic assessment.
+    assert edge.relation_type == "derived_from"
+    assert db.get(models.Claim, claim.id).epistemic_state == "observed"
     assert db.query(models.Judgment).count() == 2
     comparison = db.query(models.JudgmentComparison).one()
     assert comparison.outcome == "partial_agreement"
@@ -250,7 +252,7 @@ def test_duplicate_research_reuses_evidence_and_new_source_rejudges(db, monkeypa
     assert len(db.get(models.ResearchTask, second_task.id).results["judgment_ids"]) == 1
 
 
-def test_contradictory_evidence_preserves_contested_claim_and_no_revenue(db, monkeypatch):
+def test_source_metadata_cannot_contest_a_claim_or_create_revenue(db, monkeypatch):
     claim, task = make_claim_task(db)
     SourceCollectorFixture.items = [{
         "content": "Customers explicitly do not pay for repair scheduling services.",
@@ -263,7 +265,14 @@ def test_contradictory_evidence_preserves_contested_claim_and_no_revenue(db, mon
 
     collector_runner.execute_task(db, task)
 
-    assert db.get(models.Claim, claim.id).epistemic_state == "contested"
+    evidence = db.query(models.Evidence).filter_by(source="fixture-source").one()
+    claim_edges = db.query(models.EvidenceRelationship).filter_by(
+        claim_id=claim.id, evidence_id=evidence.id
+    ).all()
+    assert [edge.relation_type for edge in claim_edges] == ["derived_from"]
+    assert db.get(models.Claim, claim.id).epistemic_state == "observed"
+    # Validated contradiction can still be represented through the existing
+    # graph API. Raw collector metadata cannot impersonate that assessment.
     assert db.query(models.Opportunity).count() == 0
     assert db.query(models.Experiment).count() == 0
     assert db.query(models.Outcome).count() == 0
