@@ -737,11 +737,31 @@ def run_pending_evaluations(
     if limit <= 0 or max_retries_per_task <= 0:
         return []
 
+    retryable_statuses = {
+        "not_evaluated",
+        "no_judges_available",
+        "judge_execution_failed",
+        "judge_execution_incomplete",
+    }
     candidate_limit = min(max(limit * 20, 20), 200)
-    query = db.query(models.ResearchTask).filter(
-        models.ResearchTask.status == "completed",
-        models.ResearchTask.evidence_ids.isnot(None),
-        models.ResearchTask.evidence_ids != "",
+    query = (
+        db.query(models.ResearchTask)
+        .join(
+            models.ResearchTaskStep,
+            and_(
+                models.ResearchTaskStep.task_id == models.ResearchTask.id,
+                models.ResearchTaskStep.name == "evaluate",
+            ),
+        )
+        .filter(
+            models.ResearchTask.status == "completed",
+            models.ResearchTask.evidence_ids.isnot(None),
+            models.ResearchTask.evidence_ids != "",
+            models.ResearchTaskStep.status.in_(("pending", "failed", "skipped")),
+            models.ResearchTaskStep.output_data["status"].as_string().in_(
+                sorted(retryable_statuses)
+            ),
+        )
     )
     excluded = {
         value for value in (exclude_task_ids or set())
@@ -754,12 +774,6 @@ def run_pending_evaluations(
         .limit(candidate_limit)
         .all()
     )
-    retryable_statuses = {
-        "not_evaluated",
-        "no_judges_available",
-        "judge_execution_failed",
-        "judge_execution_incomplete",
-    }
     outcomes: list[dict] = []
 
     for task in candidates:
