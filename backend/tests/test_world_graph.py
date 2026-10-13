@@ -16,6 +16,22 @@ def _seed(db):
     db.flush()
 
 
+def test_conversation_held_is_active_canonical_contact_event(db):
+    _seed(db)
+    event = world_graph.create_event(
+        db,
+        event_type="conversation.held",
+        source="owner_reported_contact",
+        payload={"verification": "owner-reported", "purpose": "contact-clock-regression"},
+    )
+    assert event.event_type == "conversation.held"
+    registry = db.query(models.TypeRegistry).filter_by(
+        category="event_type",
+        type_name="conversation.held",
+    ).one()
+    assert registry.status == "active"
+
+
 def test_outreach_no_response_is_an_active_canonical_event_type(db):
     _seed(db)
     event = world_graph.create_event(
