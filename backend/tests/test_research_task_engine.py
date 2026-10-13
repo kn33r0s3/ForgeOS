@@ -148,6 +148,13 @@ def test_failed_step_can_retry_and_complete(db, monkeypatch):
 
 def test_duplicate_evidence_is_reused_without_duplicate_work(db, monkeypatch):
     task = make_task(db)
+    # This specific regression protects the metadata-only boundary; mark the
+    # stored source provenance explicitly instead of relying on source name.
+    metadata_only_item = {
+        **FakeCollector.items[0],
+        "metadata": {**FakeCollector.items[0]["metadata"], "metadata_only": True},
+    }
+    monkeypatch.setattr(FakeCollector, "items", [metadata_only_item])
     monkeypatch.setitem(collector_runner.COLLECTORS, "fake", FakeCollector)
 
     first = collector_runner.execute_task(db, task)
