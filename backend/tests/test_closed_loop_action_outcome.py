@@ -2260,10 +2260,11 @@ def test_grounded_answer_uses_language_aware_data_envelope(monkeypatch):
     monkeypatch.setattr(memory_layer, "retrieve_context_for_prompt", lambda *args, **kwargs: context)
     captured = {}
 
-    def fake_complete(prompt, system="", context="", *, allow_mock_fallback=True, completion_observation=None):
+    def fake_complete(prompt, system="", context="", *, allow_mock_fallback=True, completion_observation=None, contains_internal_context=False):
         captured["payload"] = json.loads(prompt)
         captured["system"] = system
         captured["allow_mock_fallback"] = allow_mock_fallback
+        captured["contains_internal_context"] = contains_internal_context
         if completion_observation is not None:
             completion_observation.update({
                 "provider": "ollama", "mode": "LOCAL", "model": "qwen3-coder:latest",
@@ -2280,6 +2281,7 @@ def test_grounded_answer_uses_language_aware_data_envelope(monkeypatch):
     assert "do not assume which one" in captured["system"]
     assert "confidence percentage" in captured["system"]
     assert captured["allow_mock_fallback"] is False
+    assert captured["contains_internal_context"] is True
     assert result["answer"] == "Hami ko record anusar yo ajhai hypothesis ho."
     assert result["provider_observation"]["inference_invoked"] is True
     assert result["provider_observation"]["request_attempted"] is True
@@ -2621,3 +2623,62 @@ def test_forge_ask_refuses_remote_internal_memory_without_explicit_opt_in(monkey
 
     assert response.status_code == 403
     assert "sharing Hami's internal knowledge" in response.json()["detail"]
+
+
+
+def test_self_hosted_provider_never_receives_internal_context_without_opt_in(monkeypatch):
+    from app.services import ai_engine
+
+    class RemoteProvider:
+        _transport_mode = "SELF_HOSTED"
+        _model = "qwen3-coder:latest"
+
+        def complete(self, prompt, system=""):
+            raise AssertionError("remote inference must not be invoked")
+
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA", False)
+    monkeypatch.setattr(ai_engine, "get_provider", lambda: RemoteProvider())
+    observation = {}
+
+    with pytest.raises(ai_engine.AIUnavailableError, match="internal Hami context is not authorized"):
+        ai_engine._complete_with_fallback(
+            '{"retrieved_knowledge":"owner-only records"}',
+            allow_mock_fallback=False,
+            completion_observation=observation,
+            contains_internal_context=True,
+        )
+
+    assert observation["status"] == "blocked_internal_context"
+    assert observation["request_attempted"] is False
+    assert observation["inference_invoked"] is False
+
+
+def test_self_hosted_provider_can_receive_internal_context_after_explicit_opt_in(monkeypatch):
+    from app.services import ai_engine
+
+    class RemoteProvider:
+        _transport_mode = "SELF_HOSTED"
+        _model = "qwen3-coder:latest"
+        last_call_metadata = {}
+
+        def complete(self, prompt, system=""):
+            assert "owner-only records" in prompt
+            return "bounded answer"
+
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA", True)
+    monkeypatch.setattr(ai_engine, "get_provider", lambda: RemoteProvider())
+    observation = {}
+
+    answer = ai_engine._complete_with_fallback(
+        "question",
+        context="owner-only records",
+        allow_mock_fallback=False,
+        completion_observation=observation,
+    )
+
+    assert answer == "bounded answer"
+    assert observation["status"] == "completed"
+    assert observation["request_attempted"] is True
+    assert observation["inference_invoked"] is True
