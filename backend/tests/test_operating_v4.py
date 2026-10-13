@@ -1317,3 +1317,98 @@ def test_owner_only_selection_read_is_enforced(db, monkeypatch):
     assert allowed.status_code == 200
     assert "ranked_candidates" in allowed.json()
     assert "selected_slate" in allowed.json()
+
+
+def test_offer_seed_projection_is_idempotent_and_uses_existing_bet_entities(db):
+    result = operating_v4.seed_offer_views(db)
+    assert set(result["created"]) == {
+        "how-you-decided",
+        "lost-sales-check",
+        "buyer-voice-brief",
+        "rescue-week",
+        "before-you-pay-card",
+    }
+    assert len(result["offers"]) == 5
+    assert all(offer["status"] == "draft" for offer in result["offers"])
+    assert not hasattr(models, "Offer")
+    assert db.query(models.SubstrateEntity).filter_by(entity_type="offer").count() == 0
+    second = operating_v4.seed_offer_views(db)
+    assert second["created"] == []
+    assert len(second["offers"]) == 5
+    assert result["legal_read"]["status"] == "not yet read by a lawyer"
+
+
+def test_rescue_week_blocks_until_lawyer_read_and_real_consented_seller_evidence(db):
+    operating_v4.seed_offer_views(db)
+    rescue = next(offer for offer in operating_v4.list_offer_views(db) if offer["id"] == "rescue-week")
+    assert rescue["readiness"]["blocked"] is True
+    assert any("legal read" in blocker.lower() for blocker in rescue["readiness"]["blockers"])
+    assert any("seller evidence" in blocker.lower() for blocker in rescue["readiness"]["blockers"])
+    with pytest.raises(ValueError, match="remains blocked"):
+        operating_v4.set_offer_status(db, "rescue-week", "owner-approved")
+
+    legal = operating_v4.record_offer_legal_read(
+        db,
+        lawyer_name="Test lawyer",
+        review_date="2026-10-12",
+        source_reference="private-legal-review-001",
+        summary="Reviewed the scope and recorded conditions for consent and registration.",
+    )
+    assert legal["read_by_lawyer"] is True
+    assert "not independently verified" in legal["status"]
+
+    db.add(models.Evidence(
+        perspective="SELLER",
+        consent_status="granted",
+        source_type="firsthand",
+        source_kind="REAL",
+        claim="Owner-consented firsthand seller evidence",
+        content="Redacted, first-person observation used only in the regression fixture.",
+        source="test fixture",
+        provenance="TEST fixture; not production evidence",
+    ))
+    db.commit()
+    rescue = next(offer for offer in operating_v4.list_offer_views(db) if offer["id"] == "rescue-week")
+    assert rescue["readiness"]["blocked"] is False
+
+
+def test_before_you_pay_card_waits_for_ten_consent_gated_purchase_accounts(db):
+    from app.services import residue_engine
+
+    operating_v4.seed_offer_views(db)
+    card = next(offer for offer in operating_v4.list_offer_views(db) if offer["id"] == "before-you-pay-card")
+    assert card["readiness"]["blocked"] is True
+    assert "0/10" in card["readiness"]["blockers"][0]
+
+    for number in range(10):
+        residue_engine.record_purchase_journey(
+            db,
+            perspective="BUYER",
+            consulted_who_where=f"TEST consultation location {number}",
+            what_was_said="TEST first-person account for the threshold regression.",
+            what_was_checked="TEST public listing and payment method.",
+            what_almost_stopped="TEST uncertainty about the purchase.",
+            what_decided_it="TEST outcome factor for threshold verification.",
+            consent_given=True,
+        )
+    card = next(offer for offer in operating_v4.list_offer_views(db) if offer["id"] == "before-you-pay-card")
+    assert card["readiness"]["blocked"] is False
+
+
+def test_public_offer_projection_requires_owner_approval_and_gates(db):
+    operating_v4.seed_offer_views(db)
+    assert operating_v4.list_offer_views(db, public_only=True) == []
+    approved = operating_v4.set_offer_status(db, "how-you-decided", "owner-approved")
+    assert approved["status"] == "owner-approved"
+    assert approved["public_copy"] is True
+    public = operating_v4.list_offer_views(db, public_only=True)
+    assert [offer["id"] for offer in public] == ["how-you-decided"]
+    with pytest.raises(ValueError, match="cannot go live"):
+        operating_v4.set_offer_status(db, "how-you-decided", "live")
+    with pytest.raises(ValueError, match="requires a non-empty reason"):
+        operating_v4.set_offer_status(db, "how-you-decided", "killed")
+    killed = operating_v4.set_offer_status(
+        db, "how-you-decided", "killed", kill_reason="TEST kill-rule regression"
+    )
+    assert killed["status"] == "killed"
+    assert operating_v4.list_offer_views(db, public_only=True) == []
