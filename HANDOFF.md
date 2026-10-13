@@ -127,7 +127,26 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
-## Last verified state snapshot (2026-10-12)
+## Last verified state snapshot (2026-10-13)
+
+**Update 2026-10-13 (daily freshness check):** HEAD at `4d73a7a`
+("Align needs tests and make offer terms visible by default",
+committed 2026-10-12 21:22 NPT). Pull fast-forwarded
+`4987936..4d73a7a` clean (11 commits, needs/offers fair-exchange work);
+`main` == `origin/main`. Working tree clean.
+
+- **Health:** haminp.vercel.app/api/health → **DEGRADED** — `ok: false`,
+  `status: "degraded"`, `db: "down"` (v2.3.0, checked 2026-10-13 ~06:23
+  NPT). This is a change from yesterday's ok. The standby
+  forge-os-ebon.vercel.app/api/health → ok (`db: up`). No further
+  repair action taken — read-only check per standing constraints.
+- **Intake:** `intake_enabled: false` (unchanged, Forge Bot closed).
+- **Unknowns:** 96 D-entries in `docs/UNKNOWN_MAP.md` (unchanged since
+  2026-10-12).
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold: name one seller, authorize
+  first contact; company registration and payment onboarding need the
+  owner's body/identity.
 
 **Update 2026-10-12 (daily freshness check):** HEAD at `4987936`
 ("Remove local-only handoff notes — AGENTS/HANDOFF single source",
