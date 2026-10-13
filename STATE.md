@@ -2,9 +2,16 @@
 
 **Snapshot date:** 2026-10-14 (Asia/Kathmandu). This file records verified facts and known unknowns; it is not a claim that unattended operation is already live.
 
+## Current operating direction
+
+- No single seller test, market, product, revenue milestone or finite roadmap defines Hami. Internal research, code, security, knowledge, engineering and capability tracks can progress in parallel.
+- A blocked external action is not a global stop. Continue independent safe work unless evidence shows a shared/systemic risk.
+- The public About page and Brain now describe direction, not proof of full autonomy. Source code, CI, deployment status, runtime behavior and real-world outcomes remain separate truth claims.
+- Current implementation priority: a bounded multi-climb scheduler using existing persistent research/task/evidence/action seams. Do not add a seventh semantic primitive or parallel ontology.
+
 ## Current truth
 
-- **Mission:** one Hami system for discovering real needs, capabilities, relationships and outcomes, then creating authorized action and measurable value. Preserve the six substrate primitives: ENTITY, RELATION, EVENT, EVIDENCE, CAPABILITY, ACTION. Do not build parallel semantic tables or a seller-only product identity.
+- **Mission:** one Hami system for understanding and acting across domains, with Nepal as origin and the world in scope. Many connected climbs build shared knowledge and capability. Hamro expresses shared progress; consent, privacy, attribution, choice and authorization remain binding. Preserve the six primitives: ENTITY, RELATION, EVENT, EVIDENCE, CAPABILITY, ACTION.
 - **Repository:** `kn33r0s3/ForgeOS`, canonical branch `main` (no branches/PRs). Latest loop changes: `fd31e282` (effect accounting), `091704a4` (Scout unresolved-draft visibility), and `57c6bbae` (outbound attempts no longer reset real-contact clock); regression tests committed through `4c3a0fbd`. Continuity updates preserve source history.
 - **Deployment:** GitHub reported the Vercel status as **PENDING** for source/test commit `cc3871a5436bdc3f2b370ab9e890ff1d4d380348` at the last check. The connected Vercel deployment/runtime API returned 403 for the project scope, so a current production `/api/health` fetch, durable database health, live flags and scheduler execution remain UNKNOWN. A green Vercel status is not a substitute for those checks.
 - **CI:** Regression tests cover contact priority, rejection of outbound-only events as real contact, duplicate Scout drafts and visibility of existing drafts when another send is blocked, the STARVED content freeze, CycleRun effect classification and rejection of deferred collector output as collected source signals. Exact-head backend pytest execution could not be verified through the available connected Actions interface; do not claim the backend suite is green. The Vercel status is tracked separately from pytest.
@@ -24,7 +31,7 @@ REAL requires traceable evidence. REQUESTED is not BOOKED. ESTIMATED is not ACTU
 
 ## Required per-run behavior
 
-Read docs/BRAIN.md, this file, QUEUE.md, AGENTS.md, HANDOFF.md, and the relevant existing subsystem docs. Refresh main, production deployment SHA, exact-commit CI, activation flags, cron execution evidence and provider readiness. Take the highest-ranked unblocked QUEUE item. Verify changes with tests/readbacks, then append to LOG.md and update this snapshot. Never report a deployment, message, revenue, or autonomous run that was not observed.
+Read docs/BRAIN.md, this file, QUEUE.md, AGENTS.md, HANDOFF.md, and the relevant existing subsystem docs. Refresh main, production deployment SHA, exact-commit CI, activation flags, cron execution evidence and provider readiness. Review the portfolio and take the highest-leverage unblocked item; continue with other independent safe items when possible. Verify changes with tests/readbacks, then append to LOG.md and update this snapshot. Never report a deployment, message, revenue, or autonomous run that was not observed.
 
 - **Research integrity (2026-10-14):** Pattern Engine was clustering quality-passing Crossref/OpenAlex metadata into problem-looking patterns; the old background classifier could miss publisher terms without “metadata” words. Research tasks also marked `evaluate` complete from an evidence count and recorded a selected reasoning provider even though the collector path never invoked it. The research-integrity commit excludes bibliographic/explicit metadata-only signals from new problem patterns, labels legacy metadata-derived patterns without deleting history, records collection-only completion, leaves evaluate pending/skipped unless a judge pipeline actually runs, and removes phantom model usage. The next required advance is a genuinely invoked non-MOCK evaluator and a ranked unknown-to-decisive-test loop. These code changes remain unverified until exact-head CI finishes.
 

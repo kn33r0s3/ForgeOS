@@ -1,6 +1,13 @@
 # Hami Execution Queue
 
-Ranked by nearest proof gate and reliability blockers. This file is intentionally compact; docs/CAPABILITY_QUEUE.md remains the detailed capability ledger. Re-rank after every run based on new evidence.
+Ranked by value, critical blockers and leverage across the full Hami portfolio. This file is intentionally compact; docs/CAPABILITY_QUEUE.md remains the detailed capability ledger. Re-rank after every run based on new evidence. A blocked experiment never means unrelated safe work pauses.
+
+## P0 — Implement bounded portfolio execution across connected climbs
+
+1. **Build a scheduler over existing persistent work.** Reuse ResearchQuestion, ResearchTask, Bet, Evidence, Capability and Action; do not add a seventh primitive or parallel work ontology. Select independent, unblocked tasks across useful directions while respecting dependencies, bounded concurrency/cost, idempotency and action-time authorization.
+2. **Make cross-climb learning traceable.** Record provenance and dependencies so supported findings can help eligible related tracks by reference. Never duplicate protected content or upgrade truth through repeated projections. Deduplicate candidates before spawning work.
+3. **Prevent global stalls.** When customer-facing, provider, legal or consent work is blocked, continue the next independent safe task. Shared/systemic incidents contain dependent paths without stopping unrelated read-only research, tests or repairs. Jobs need durable progress and resumability, not an unbounded tight loop.
+4. **Acceptance tests:** independent workstreams progress concurrently; a blocked task does not block unrelated safe work; dependencies propagate appropriately; reruns are idempotent; provenance/cost survive recovery. Separately verify real scheduler invocation, exact-head CI and production/runtime state.
 
 ## P0 — Make research quality and execution truthful
 
@@ -28,7 +35,7 @@ Ranked by nearest proof gate and reliability blockers. This file is intentionall
 ## P2 — Advance the nearest commercial proof gate
 
 11. **Measure the first REAL recovered sale.** The Phase 1 kill criterion is ten genuine seller conversations with no recovered sale. Do not fabricate conversations to satisfy it. Track actual owner minutes, consent, reply time, recovered sale, costs and independently supported REAL rupees. If the thesis dies, record it and pivot to the evidence from discovery.
-12. **Defer expansion.** No new marketplace/resource hub or unrelated platform expansion until the current phase gate is passed. Keep the broad economic-intelligence mission; narrow only the next experiment, never Hami's identity.
+12. **Gate external expansion; not internal progress.** New live markets, transaction paths and customer-facing actions need their own evidence and owner authorization. Internal research, capability construction, reuse, reliability work and exploration of other domains continue in parallel. Keep the broad intelligence mission; narrow only each test, never Hami's identity.
 
 ## Global stop conditions
 

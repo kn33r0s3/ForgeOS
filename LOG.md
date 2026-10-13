@@ -79,3 +79,11 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - GitHub Actions for the exact source SHA started; results were pending at this snapshot. Tests are not yet claimed green. Production config, webhook registration, PostgreSQL durability and real handset delivery are unverified.
 - No production flags/credentials changed; no Telegram, seller or buyer message was sent; no sale or revenue is claimed.
 - Next action: inspect exact-head CI results and repair demonstrated failures without enabling production sending.
+
+
+## 2026-10-14 — many climbs, one Hami (state/queue alignment)
+
+- Updated STATE, QUEUE and HANDOFF to agree with Brain v3 and the public About page: many connected workstreams can progress concurrently; a local external gate is not a system-wide pause.
+- Added portfolio-scheduler implementation and acceptance criteria to QUEUE using current research/task/evidence/action seams. No new semantic primitive or duplicate subsystem is authorized.
+- The broader mission does not prove unattended execution: exact-head CI, scheduler invocation, durable state and runtime effects must be observed independently.
+- No customer contact, publishing, spend, credentials, permissions, payment, or revenue was created or changed by this source update.

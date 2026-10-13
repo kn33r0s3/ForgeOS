@@ -78,38 +78,15 @@ to explain anything — everything you need is here or in the files it points to
 
 ## THE MOST IMPORTANT PART
 
-Real human contact. The five discovery conversations with real business
-owners are the center of this project; the research loops, the unknowns
-map, the specs are scaffolding around them. Research sharpens those
-conversations' questions — it never replaces them, and no finding from
-online discourse may ever be presented as a substitute for a real voice.
+Firsthand conversations and field checks are indispensable evidence sources, not the sole center of Hami's work. Research, capability-building, reliability, knowledge synthesis and connection work continue in parallel and make real-world tests more useful. Online discourse never substitutes for a real voice where firsthand experience is required. No contact occurs without required authority and consent.
 
 ## What Hami is
 
-A living system for understanding and acting upon the real world —
-Nepali-originated, world-facing. It continuously builds knowledge of
-people, places, needs, opportunities, capabilities, resources,
-relationships, and outcomes, and turns that understanding into authorized
-action and real-world value. AI is one of its workers; software is one of
-its instruments; humans are participants and partners. Not a SaaS product,
-not a marketplace, chatbot, lead-gen bot, or "just a feed." No geographic
-priority or discrimination: origin is identity, not privilege.
-Exactly six primitives: ENTITY, RELATION, EVENT, EVIDENCE, CAPABILITY,
-ACTION. `op_` tables are projections, not source of truth. Meaningful
-transitions emit events. `type_registry` is authoritative. Truth:
-possible → hypothesized → tested → supported (supported requires
-evidence). Identity: candidate → corroborated → canonical. No casual
-deletion of meaningful history — archive or merge.
-Discovery philosophy: REALITY → OBSERVATION → EVIDENCE → UNDERSTANDING →
-UNKNOWN → QUESTION → TEST/ACTION → NEW REALITY. Surprise
-(OBSERVED ≠ EXPECTED) generates new unknowns. The user’s stance:
-"everything is known and everyone knows" — Hami's value lies beyond the
-known, in specific, local, real-world unknowns found only through contact
-with reality. **Origin positioning (owner-set):** Hami is visibly Nepali-originated —
-built in Kathmandu, representing Nepal worldwide — and serves everywhere
-equally. Origin is identity, not priority: no geographic discrimination,
-no priority lane. The product must *behave* Nepali (conversational,
-phone-first, honest about cash), not just look it — see `docs/ORIGIN.md`.
+A living system for understanding and acting across domains—Nepali-originated, world-facing. It continuously builds knowledge of people, places, needs, opportunities, capabilities, resources, relationships, constraints and outcomes, then turns that understanding into authorized action and fair, measurable value. Hami is the system name; Hamro (our/ours) expresses shared progress. No single customer type, product, market, pilot or fixed roadmap defines it. Multiple discovery, research, engineering, reliability, connection and outcome tracks can progress in parallel, coordinating through shared evidence and explicit dependencies. A blocked external action must not stop unrelated safe work; this direction is not proof that unattended autonomy is already live.
+
+Not a SaaS product, marketplace, chatbot, lead-gen bot or just a feed. Exactly six primitives: ENTITY, RELATION, EVENT, EVIDENCE, CAPABILITY, ACTION. `op_` tables are projections, not source of truth. Meaningful transitions emit events. `type_registry` is authoritative. Truth: possible → hypothesized → tested → supported (supported requires evidence). Identity: candidate → corroborated → canonical. Archive or merge useful history; do not casually delete it.
+
+Discovery: REALITY → OBSERVATION → EVIDENCE → UNDERSTANDING → UNKNOWN → QUESTION → TEST/ACTION → NEW REALITY. Surprise (OBSERVED ≠ EXPECTED) creates new unknowns. Online research generates hypotheses but does not substitute for firsthand evidence when a question requires a real human voice. Built in Kathmandu, representing Nepal worldwide, and serving everywhere equally; origin is identity, not privilege.
 
 ## Keeping this file fresh
 
