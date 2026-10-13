@@ -121,6 +121,10 @@ def test_failed_judge_missing_evidence_and_contradiction_are_preserved(db):
     assert failed.status == "failed"
     assert failed.error
     assert comparison.outcome == "missing_evidence"
+    # The data exists; the judge failed. Fix evaluation availability instead
+    # of spawning a new evidence-search question from an infrastructure fault.
+    assert comparison.follow_up_question_id is None
+    assert db.query(models.ResearchQuestion).count() == 0
 
     claim, _ = evidence_graph.create_or_get_claim(db, "Contractors have a recurring scheduling problem.")
     evidence_graph.link_evidence(db, evidence, claim=claim, relation_type="contradicts")
