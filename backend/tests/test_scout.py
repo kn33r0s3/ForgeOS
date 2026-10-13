@@ -170,6 +170,22 @@ def test_scout_cycle_does_not_duplicate_unresolved_drafts(db):
     ).count() == 1
 
 
+def test_scout_cycle_reports_open_draft_before_unreplied_send_block(db):
+    """An existing owner draft remains visible even when another send is not allowed."""
+    candidate = _candidate(db, "Followup Shop")
+    scout.record_signal(db, candidate.id, "unanswered_inquiry", "3 unanswered inquiry comments")
+
+    sent = scout.generate_draft(db, candidate.id, "First observed fact")
+    scout.approve_draft(db, sent.id)
+    scout.mark_sent(db, sent.id, channel="facebook", sent_by="owner")
+    scout.generate_draft(db, candidate.id, "Follow-up observation")
+
+    result = scout.run_scout_cycle(db)
+    assert result["drafts_generated"] == 0
+    assert result["drafts_already_open"] == 1
+    assert result["blocked"] == 0
+
+
 def test_scout_cycle_respects_do_not_contact(db):
     """Candidates on do-not-contact are blocked, not drafted."""
     from app.services import scout
