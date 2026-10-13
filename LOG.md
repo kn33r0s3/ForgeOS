@@ -169,3 +169,12 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Changed /ai/status so local Ollama reports MODEL_AVAILABLE only after a loopback /api/tags probe confirms the configured model is installed. Vercel, non-loopback hosts, missing models, unreachable endpoints and malformed responses do not appear ready. The probe is bounded to 1.5 seconds and hides raw exception details.
 - External provider client construction reports CONFIGURED, not READY; network reachability and inference remain unverified. Mock explicitly reports MOCK and inference_verified=false.
 - Updated owner ForgeBot chat gate and explanation. Added backend tests for Vercel, local model installed/missing, connection failure and external CONFIGURED state; frontend assertions verify the new gate/copy. Tests are committed, not yet verified green.
+
+
+## 2026-10-14 — connect bounded local cognition to the daily loop
+
+- Added `run_pending_cognitive_tasks` to the existing cognitive worker. It considers only completed ResearchTasks with persisted, provider-eligible evidence; uses the existing idempotent WorkerTask record; selects one research question per coverage slot before repeating; and bounds both scan and execution sizes.
+- It is inert unless both `AI_PROVIDER` and `COGNITIVE_PROVIDER` explicitly select Ollama, returns unavailable in Vercel, and checks the existing owner agent-run gate before queuing/executing and immediately before inference. A late owner-gate block returns the task to queued state without spending retry budget; invalid/oversized context does not abort the whole batch. Provider failures retain bounded retry history.
+- Wired the batch into `scripts/run_daily_cycle.py` as Stage 1c, after collection/evaluation recovery and before the autonomy stage. Proposal output remains PROPOSED, with no ACTION, external contact, spending or publication.
+- Added tests for completed proposal persistence, idempotent reruns, explicit-provider and Vercel refusal, owner-gate refusal, and the daily-cycle handoff.
+- **Verification truth:** these changes are committed on `main`. Current-head CI and independent deployment verification have not yet completed successfully, and a real local-Ollama invocation has not been observed. Do not infer execution or model quality from source presence or test fixtures.
