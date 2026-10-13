@@ -86,10 +86,20 @@ def test_claim_state_cannot_be_promoted_by_claim_creation_argument(db):
         evidence_graph.set_claim_state(db, claim, "supported")
     with pytest.raises(ValueError, match="dedicated verified-outcome"):
         evidence_graph.set_claim_state(db, claim, "verified")
+
+    evidence = models.Evidence(
+        source="TEST reviewed assessment",
+        content="TEST separately assessed evidence for the claim.",
+    )
+    db.add(evidence)
+    db.commit()
+    db.refresh(evidence)
+    evidence_graph.link_evidence(db, evidence, claim=claim, relation_type="supports")
+    assert claim.epistemic_state == "supported"
     with pytest.raises(ValueError, match="cannot be downgraded"):
         evidence_graph.set_claim_state(db, claim, "observed")
     db.refresh(claim)
-    assert claim.epistemic_state == "observed"
+    assert claim.epistemic_state == "supported"
 
 
 def test_owner_claim_api_requires_evidence_for_semantic_state_and_checks_before_write(db, monkeypatch):
