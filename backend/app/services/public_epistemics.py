@@ -171,18 +171,18 @@ def _independent_external_sources(links: list[tuple[models.EvidenceRelationship,
     sources: set[str] = set()
     for _edge, evidence in links:
         signal = evidence.signal
-        external_signal = bool(signal and signal.source_type == "external")
-        source_name = (evidence.source or (signal.source if signal else "") or "").strip().casefold()
         url = (evidence.canonical_url or (signal.canonical_url if signal else "") or "").strip()
-        if not external_signal and not url.startswith(("https://", "http://")):
+        # A collector label is not proof of an independent publisher. Only
+        # an explicit HTTP(S) source location can contribute to corroboration.
+        if not url.casefold().startswith(("https://", "http://")):
             continue
-        # The registrable evidence location is a safer independence boundary
-        # than a collector/source label: two adapters can retrieve the same
-        # publisher under different names. Prefer canonical host when present;
-        # fall back to the source name only when no URL host was recorded.
-        identity = _url_host(url).casefold() or source_name
-        if identity:
-            sources.add(identity)
+        host = _url_host(url).casefold()
+        if not host:
+            continue
+        # These host variants generally identify the same web origin.
+        if host.startswith("www."):
+            host = host[4:]
+        sources.add(host)
     return len(sources)
 
 
