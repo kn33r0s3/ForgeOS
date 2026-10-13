@@ -87,3 +87,15 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Added portfolio-scheduler implementation and acceptance criteria to QUEUE using current research/task/evidence/action seams. No new semantic primitive or duplicate subsystem is authorized.
 - The broader mission does not prove unattended execution: exact-head CI, scheduler invocation, durable state and runtime effects must be observed independently.
 - No customer contact, publishing, spend, credentials, permissions, payment, or revenue was created or changed by this source update.
+
+## 2026-10-14 — contact loop truth, owner outcome lane and cycle effect
+
+- Reused the existing Operating Model clock, Scout queue and `CycleRun`; no parallel engine, ontology, or contact queue was introduced.
+- The contact clock now resets on an owner-recorded recipient reply or held conversation, not merely on `outreach.sent` (which does not prove receipt). Contact preparation remains a soft priority after 2 days/no history; the existing 14-day STARVED freeze remains the hard build boundary.
+- The canonical priority distinguishes (1) an unreviewed sent contact needing an owner outcome note, (2) a recorded dry well still open to a late reply, and (3) ordinary evidence/value work. A dry well remains visible but cannot monopolize the scheduler; no-response does not permit another outbound message.
+- Added owner-only pending-reply API/UI. Replies and no-response notes write through `world_graph.create_event` with stable idempotency keys; `outreach.no_response` is in the core event registry. Duplicate reply recording is rejected. All contact outcomes remain owner-reported unless independently verified.
+- Scout avoids duplicate unresolved drafts, surfaces existing work before the send guard, and reports pending replies, unreviewed outcomes and recorded dry wells. Both early-priority and ordinary scheduled Scout paths persist those fields.
+- Existing `CycleRun.summary_json` records cycle effects separately from stage status. Only completed collection outcomes contribute source-signal counts; internal work is not treated as external proof. No-effect/internal-work-only cycles are PARTIAL and include a next-owner-attention cue. The owner cockpit renders that summary.
+- Regression tests added/updated for the contact clock, contact priority vs starvation, dry-well continuity, late replies, duplicate reply guards, canonical event registration, both Scout schedule paths and honest effect classification. They were inspected in source but not executed in this environment; exact-head backend pytest/CI remains unverified.
+- Latest fetched commit at this log update was `b042755c942ca944b2d87bce3adce1c0e8a06d15`; Vercel status was PENDING and protected runtime reads returned 403. Production health, durable database, deployed SHA, scheduler invocation, active flags and provider delivery remain UNKNOWN.
+- No outbound message was sent, no customer reply was fabricated, no production flag/credential/permission was changed, and no revenue or fulfillment is claimed.
