@@ -206,3 +206,10 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Corrected source-learning semantics: relevance is target-Claim-scoped, unknown usefulness stays unassessed rather than zero, fetched-at is not a fabricated 100% freshness score, and actual retries are distinct performance attempts while replaying the same attempt remains idempotent (`efc61b4e`, `af4615dd`, `97ff4993`, `9e85dedf`).
 - Added regression coverage for Claim state promotion, absent Evidence, failed judges, singleton “agreement”, old cache entries, unrelated Claim links, untrusted source relations, unknown-vs-zero metrics, retry idempotency and contradiction preservation.
 - **Verification boundary:** the inspected CI run exposed the AI fallback SyntaxError and one frontend assertion failure; both causes are fixed on main. Newer runs were queued/pending at the last check, and the subsequent regression commits have not yet been confirmed green by exact-head CI. No production deployment, real inference, source corroboration or real-world commercial outcome is claimed by this work.
+
+
+## 2026-10-14 — remote internal-context opt-in and measured inference events
+
+- Added a separate HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA setting (default false); bearer authentication does not by itself authorize sending internal Hami Knowledge to a remote model. The API returns 403 before generating, and the owner UI explains the disabled sharing boundary. LOCAL inference is unaffected.
+- The successful ForgeBot answer path returns provider/mode/model and sanitized token/duration observations and writes only non-content telemetry into the existing EVENT substrate. The event has no question, answer or retrieved memory text; telemetry failure is best-effort and must not discard a successful answer.
+- Added regression tests for remote sharing disabled/enabled, endpoint refusal before generation, token-authenticated gateway and redirect rejection. Secrets scan passed on preceding commits, but the latest exact-head ForgeOS CI and deployment verification are pending; actual model invocation is not claimed.
