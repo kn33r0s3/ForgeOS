@@ -443,11 +443,28 @@ def run_pending_cognitive_tasks(
             "outcomes": [],
         }
     import os
+    from app.services import ai_engine
 
-    if os.getenv("VERCEL"):
+    transport_mode = ai_engine.ollama_transport_mode()
+    if transport_mode is None:
         return {
             "status": "unavailable",
-            "reason": "local_ollama_is_not_available_in_vercel_runtime",
+            "reason": (
+                "local_ollama_is_not_available_in_vercel_runtime"
+                if os.getenv("VERCEL")
+                else "ollama_transport_not_safely_configured"
+            ),
+            "attempted": 0,
+            "completed": 0,
+            "outcomes": [],
+        }
+    if (
+        transport_mode == "SELF_HOSTED"
+        and not settings.HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA
+    ):
+        return {
+            "status": "blocked",
+            "reason": "remote_internal_context_not_authorized",
             "attempted": 0,
             "completed": 0,
             "outcomes": [],
