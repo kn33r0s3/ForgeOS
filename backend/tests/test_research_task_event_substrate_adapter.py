@@ -115,6 +115,49 @@ def test_lifecycle_events_are_projected_with_safe_provenance_and_truthful_failur
     )
 
 
+def test_orphaned_research_events_do_not_starve_later_valid_events(db):
+    # SQLite fixtures preserve the legacy/orphaned reference for this recovery
+    # case; the projector must skip it while still reporting it unresolved.
+    orphan = models.ResearchTaskEvent(
+        task_id=999999,
+        event_type="legacy_orphaned_transition",
+        details={"source": "historic orphan"},
+    )
+    db.add(orphan)
+    db.commit()
+    db.refresh(orphan)
+
+    _question, task = _failed_research_task(db)
+    valid_event_ids = {
+        row.id
+        for row in db.query(models.ResearchTaskEvent)
+        .filter_by(task_id=task.id)
+        .all()
+    }
+    assert valid_event_ids
+
+    first = adapter.sync_research_task_events(db, limit=1)
+
+    assert first["events_seen"] == 2
+    assert first["events_projected"] == 1
+    assert first["unresolved_events"] == 1
+    assert db.query(models.WorldEvent).filter_by(
+        idempotency_key=f"research-task-event:{orphan.id}:state-changed-v1"
+    ).count() == 0
+    projected_valid = [
+        event_id for event_id in valid_event_ids
+        if db.query(models.WorldEvent).filter_by(
+            idempotency_key=f"research-task-event:{event_id}:state-changed-v1"
+        ).count()
+    ]
+    assert projected_valid
+
+    repeated = adapter.sync_research_task_events(db, limit=1)
+    assert repeated["events_seen"] == 2
+    assert repeated["events_projected"] == 1
+    assert repeated["unresolved_events"] == 1
+
+
 def test_event_projection_is_bounded_and_retries_without_starvation(db):
     _question, task = _failed_research_task(db)
     for index in range(3):
