@@ -580,7 +580,11 @@ def start_and_execute_action(db: Session, action_id: int) -> Optional[models.Act
                 bounded_params["estimated_cost"] = bounded_params.get("estimated_cost", 0.0)
                 bounded_params["data_scope"] = bounded_params.get("data_scope") or "REAL"
                 matched, _ = autonomy_engine.matches_standing_envelope(
-                    db, auth, action.action_type, bounded_params
+                    db,
+                    auth,
+                    action.action_type,
+                    bounded_params,
+                    exclude_action_id=action.id,
                 )
                 if matched:
                     params = bounded_params

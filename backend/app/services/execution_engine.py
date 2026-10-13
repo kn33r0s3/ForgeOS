@@ -428,7 +428,11 @@ def grant_execution_eligibility(db: Session, experiment_id: int, granted_by: str
         if not any(a.id == sa_auth_id for a in active):
             return None
         matched, _ = autonomy_engine.matches_standing_envelope(
-            db, sa, linked.action_type, linked_params
+            db,
+            sa,
+            linked.action_type,
+            linked_params,
+            exclude_action_id=linked.id if linked is not None else None,
         )
         if not matched:
             return None

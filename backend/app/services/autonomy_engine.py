@@ -572,16 +572,21 @@ def get_active_standing_authorizations(db: Session, action_type: str | None = No
     return live
 
 
-def _count_matching_actions_today(db: Session, auth: models.Action, envelope: dict) -> int:
-    """Count Actions of the enveloped type created today (UTC) that were
-    authorized under this standing authorization. Uses existing Action rows —
-    no counter table."""
+def _count_matching_actions_today(
+    db: Session,
+    auth: models.Action,
+    envelope: dict,
+    *,
+    exclude_action_id: int | None = None,
+) -> int:
+    """Count authorized Actions created today, optionally excluding the action
+    being revalidated at its own grant/dispatch boundary."""
     import json as _json
     from datetime import datetime, timezone
 
     now = datetime.now(timezone.utc)
     day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    actions = db.query(models.Action).filter(
+    query = db.query(models.Action).filter(
         models.Action.action_type == envelope.get("action_type"),
         models.Action.action_type != STANDING_AUTH_ACTION_TYPE,
         models.Action.proposed_at >= day_start,
@@ -591,7 +596,10 @@ def _count_matching_actions_today(db: Session, auth: models.Action, envelope: di
         # apply_standing_authorization_to_action) — merely proposed
         # actions without that stamp are not counted.
         models.Action.status.in_(["PROPOSED", "APPROVED", "RUNNING", "SUCCEEDED", "VERIFIED"]),
-    ).all()
+    )
+    if exclude_action_id is not None:
+        query = query.filter(models.Action.id != exclude_action_id)
+    actions = query.all()
     # Only count those whose parameters match the envelope's channel/scope.
     count = 0
     for a in actions:
@@ -613,7 +621,12 @@ def _count_matching_actions_today(db: Session, auth: models.Action, envelope: di
 
 
 def matches_standing_envelope(
-    db: Session, auth: models.Action, proposed_action_type: str, proposed_params: dict | None
+    db: Session,
+    auth: models.Action,
+    proposed_action_type: str,
+    proposed_params: dict | None,
+    *,
+    exclude_action_id: int | None = None,
 ) -> tuple[bool, list[str]]:
     """Fail-closed envelope check. Every bound must hold. Unenforceable
     fields fail closed rather than being silently ignored."""
@@ -692,7 +705,9 @@ def matches_standing_envelope(
         max_per_day_i = int(max_per_day)
     except (TypeError, ValueError):
         return False, ["Rate bound unreadable — failed closed."]
-    used_today = _count_matching_actions_today(db, auth, envelope)
+    used_today = _count_matching_actions_today(
+        db, auth, envelope, exclude_action_id=exclude_action_id
+    )
     if used_today >= max_per_day_i:
         reasons.append(f"Daily limit reached: {used_today}/{max_per_day_i} used today.")
 

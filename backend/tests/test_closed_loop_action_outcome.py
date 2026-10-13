@@ -2056,3 +2056,74 @@ def test_standing_authorization_cannot_understate_action_cost(db, monkeypatch):
     assert action.status == "APPROVAL_REQUIRED"
     assert "standing_auth_id" not in __import__("json").loads(action.parameters_json)
 
+def test_standing_authorization_daily_cap_excludes_action_being_dispatched(db, monkeypatch):
+    """An action does not consume its own daily quota twice at grant and dispatch."""
+    from app.services import decision_rights, execution_engine
+
+    monkeypatch.setattr(decision_rights, "ACTIVE_STAGE", 3)
+    monkeypatch.setattr(decision_rights, "_owner_sms_ready", lambda: True)
+    _make_autonomy_policy(db)
+    _authorize_outreach_standing_auth_with_bounds(db, bound_overrides={"max_per_day": 1})
+    _deactivate_policy(db)
+    opportunity = _make_opportunity(db, confidence=100.0)
+
+    experiment = execution_engine.create_action(
+        db,
+        opportunity_id=opportunity.id,
+        action_type="follow_up",
+        description="bounded standing-auth first daily action",
+        estimated_cost=0.0,
+        data_scope="REAL",
+    )
+    assert experiment is not None
+    assert experiment.policy_decision == "allow"
+
+    granted = execution_engine.grant_execution_eligibility(db, experiment.id)
+    assert granted is not None
+    assert granted.execution_allowed is True
+
+
+def test_standing_authorization_daily_cap_allows_first_dispatch_and_blocks_second(db, monkeypatch):
+    """The cap permits one actual dispatch, then denies a second same-day action."""
+    from app.services import decision_rights
+
+    monkeypatch.setattr(decision_rights, "ACTIVE_STAGE", 3)
+    monkeypatch.setattr(decision_rights, "_owner_sms_ready", lambda: True)
+    _make_autonomy_policy(db)
+    _authorize_outreach_standing_auth_with_bounds(db, bound_overrides={"max_per_day": 1})
+
+    adapter_calls = []
+
+    class RecordingAdapter:
+        name = "recording"
+
+        def execute(self, action, params, db=None):
+            adapter_calls.append(action.id)
+            return {
+                "status": "SUCCEEDED",
+                "execution_result": "recording adapter executed",
+                "verification_state": "UNVERIFIED",
+            }
+
+    monkeypatch.setattr(action_engine, "get_adapter", lambda _action_type: RecordingAdapter())
+    first = action_engine.propose_action(
+        db,
+        objective="bounded standing-auth first dispatch",
+        action_type="follow_up",
+        estimated_cost=0.0,
+    )
+    assert first.policy_result == "ALLOW"
+
+    executed = action_engine.start_and_execute_action(db, first.id)
+    assert executed.status == "SUCCEEDED"
+    assert adapter_calls == [first.id]
+
+    second = action_engine.propose_action(
+        db,
+        objective="bounded standing-auth second dispatch",
+        action_type="follow_up",
+        estimated_cost=0.0,
+    )
+    assert second.policy_result == "REQUIRE_APPROVAL"
+    assert "standing_auth_id" not in __import__("json").loads(second.parameters_json)
+
