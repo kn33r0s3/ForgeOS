@@ -167,7 +167,7 @@ def test_successful_collection_without_available_judge_is_not_called_evaluated(d
     assert result["status"] == "completed"
     assert result["evidence_found"] == 1
     assert result["evaluation_status"] == "no_judges_available"
-    assert result["comparison_outcome"] in {"unassessed", "unavailable", None}
+    assert result["comparison_outcome"] == "missing_evidence"
     assert result["judgments_completed"] == 0
     assert result["judgments_failed"] == 0
     persisted = db.get(models.ResearchTask, task.id)
