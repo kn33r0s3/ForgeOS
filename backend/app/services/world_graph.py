@@ -288,6 +288,7 @@ def seed_core_types(db: Session) -> int:
             "outreach.sent",
             "outreach.reply",
             "outreach.no_response",
+            "conversation.held",
             "standing_authorization_proposed",
             "standing_authorization_activated",
             "standing_authorization_revoked",
