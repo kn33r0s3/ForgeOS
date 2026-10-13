@@ -616,6 +616,15 @@ def test_cycle_without_new_effect_is_not_marked_completed():
     assert errors == {}
     assert partials == {"cycle_effect": "no_new_effect"}
 
+    status, errors, partials = scheduled._cycle_stage_summary({
+        "forge_cycle": {"status": "ok"},
+        "scout_cycle": {"status": "ok", "drafts_generated": 1},
+        "cycle_effect": {"status": "internal_work_only"},
+    })
+    assert status == "PARTIAL"
+    assert errors == {}
+    assert partials == {"cycle_effect": "internal_work_only"}
+
 
 def test_scheduled_intelligence_runs_five_stages(monkeypatch):
     """A+B: state → work → execution → discovery. The endpoint runs all engines
