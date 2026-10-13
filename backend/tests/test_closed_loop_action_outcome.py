@@ -2477,6 +2477,7 @@ def test_empty_provider_response_is_not_reported_as_an_answer(monkeypatch):
 
 
 def test_forge_ask_api_returns_observed_model_metadata(monkeypatch, db):
+    import json
     from fastapi.testclient import TestClient
     from app.database import get_db
     from app.main import app
@@ -2517,3 +2518,13 @@ def test_forge_ask_api_returns_observed_model_metadata(monkeypatch, db):
     assert body["provider_observation"]["model"] == "qwen3-coder:latest"
     assert body["provider_observation"]["inference_invoked"] is True
     assert body["provider_observation"]["total_duration_ms"] == 420.0
+
+    events = db.query(models.WorldEvent).filter_by(
+        event_type="state_changed", source="hami_ai_provider"
+    ).all()
+    assert len(events) == 1
+    event_payload = json.loads(events[0].payload)
+    assert event_payload["transition"] == "inference_completed"
+    assert event_payload["model"] == "qwen3-coder:latest"
+    assert event_payload["total_duration_ms"] == 420.0
+    assert "question" not in event_payload and "answer" not in event_payload
