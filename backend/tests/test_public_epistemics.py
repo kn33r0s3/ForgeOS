@@ -88,6 +88,22 @@ def test_public_label_mapping_covers_fact_observation_external_claim_conflict_an
         "epistemic_state": "observed", "stale": False,
     }
 
+    lineage_is_not_corroboration = _claim(
+        db, state="observed", kind="EXTERNAL CLAIM",
+        statement="Two source links that only establish lineage are not corroboration.",
+    )
+    _evidence(
+        db, lineage_is_not_corroboration, source="lineage-a",
+        retrieved_at=now, relation="derived_from",
+    )
+    _evidence(
+        db, lineage_is_not_corroboration, source="lineage-b",
+        retrieved_at=now, relation="derived_from",
+    )
+    assert derive_public_label(db, lineage_is_not_corroboration, now=now) == {
+        "epistemic_state": "observed", "stale": False,
+    }
+
     observation = _claim(db, kind="OBSERVATION")
     _evidence(db, observation, source="observer", retrieved_at=now)
     _evidence(db, observation, source="second-observer", retrieved_at=now)
