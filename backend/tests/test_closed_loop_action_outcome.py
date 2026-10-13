@@ -2246,10 +2246,16 @@ def test_grounded_answer_uses_language_aware_data_envelope(monkeypatch):
     monkeypatch.setattr(memory_layer, "retrieve_context_for_prompt", lambda *args, **kwargs: context)
     captured = {}
 
-    def fake_complete(prompt, system="", context="", *, allow_mock_fallback=True):
+    def fake_complete(prompt, system="", context="", *, allow_mock_fallback=True, completion_observation=None):
         captured["payload"] = json.loads(prompt)
         captured["system"] = system
         captured["allow_mock_fallback"] = allow_mock_fallback
+        if completion_observation is not None:
+            completion_observation.update({
+                "provider": "ollama", "mode": "LOCAL", "model": "qwen3-coder:latest",
+                "status": "completed", "inference_invoked": True,
+                "prompt_eval_tokens": 10, "completion_eval_tokens": 5, "total_duration_ms": 120.0,
+            })
         return "Hami ko record anusar yo ajhai hypothesis ho."
 
     monkeypatch.setattr(ai_engine, "_complete_with_fallback", fake_complete)
@@ -2261,6 +2267,9 @@ def test_grounded_answer_uses_language_aware_data_envelope(monkeypatch):
     assert "confidence percentage" in captured["system"]
     assert captured["allow_mock_fallback"] is False
     assert result["answer"] == "Hami ko record anusar yo ajhai hypothesis ho."
+    assert result["provider_observation"]["inference_invoked"] is True
+    assert result["provider_observation"]["model"] == "qwen3-coder:latest"
+    assert result["provider_observation"]["total_duration_ms"] == 120.0
 
 
 def test_grounded_answer_never_uses_mock_even_when_demo_fallback_is_enabled(monkeypatch):
@@ -2394,3 +2403,71 @@ def test_ollama_https_gateway_without_token_fails_closed_before_network(monkeypa
     assert status["status"] == "AI_UNAVAILABLE"
     with pytest.raises(ai_engine.AIUnavailableError, match="token-authenticated HTTPS self-hosted gateway"):
         ai_engine.get_provider()
+
+
+
+def test_completion_observation_records_actual_provider_and_usage(monkeypatch):
+    from app.services import ai_engine
+
+    class LocalProvider:
+        _transport_mode = "SELF_HOSTED"
+        _model = "qwen3-coder:latest"
+        last_call_metadata = {
+            "prompt_eval_tokens": 100,
+            "completion_eval_tokens": 35,
+            "total_duration_ms": 640.0,
+        }
+
+        def complete(self, prompt, system=""):
+            assert "PRIVATE" not in prompt
+            return "यसको उत्तर प्रमाणमा आधारित हुनुपर्छ।"
+
+    provider = LocalProvider()
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(ai_engine, "get_provider", lambda: provider)
+    observation = {}
+
+    answer = ai_engine._complete_with_fallback(
+        '{"question":"हामीलाई के थाहा छ?"}',
+        system="Nepal-first evidence policy",
+        allow_mock_fallback=False,
+        completion_observation=observation,
+    )
+
+    assert answer == "यसको उत्तर प्रमाणमा आधारित हुनुपर्छ।"
+    assert observation == {
+        "provider": "ollama",
+        "mode": "SELF_HOSTED",
+        "model": "qwen3-coder:latest",
+        "status": "completed",
+        "inference_invoked": True,
+        "prompt_eval_tokens": 100,
+        "completion_eval_tokens": 35,
+        "total_duration_ms": 640.0,
+    }
+
+
+def test_empty_provider_response_is_not_reported_as_an_answer(monkeypatch):
+    from app.services import ai_engine
+
+    class EmptyProvider:
+        _transport_mode = "LOCAL"
+        _model = "qwen3-coder:latest"
+        last_call_metadata = {}
+
+        def complete(self, prompt, system=""):
+            return "   "
+
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(ai_engine, "get_provider", lambda: EmptyProvider())
+    observation = {}
+
+    with pytest.raises(ai_engine.AIUnavailableError, match="empty completion"):
+        ai_engine._complete_with_fallback(
+            "Question",
+            allow_mock_fallback=False,
+            completion_observation=observation,
+        )
+
+    assert observation["status"] == "empty_response"
+    assert observation["inference_invoked"] is True
