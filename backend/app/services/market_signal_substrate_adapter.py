@@ -124,7 +124,7 @@ def sync_market_signal_signals(db: Session, *, limit: int = 250) -> dict[str, in
     signals = (
         db.query(models.Signal)
         .filter(needs_projection)
-        .order_by(models.Signal.updated_at.desc(), models.Signal.id.desc())
+        .order_by(models.Signal.id.asc())
         .limit(batch_limit)
         .all()
     )
