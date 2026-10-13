@@ -264,7 +264,7 @@ def test_event_and_capability_api_enforce_lifecycle_and_idempotency(substrate_cl
     # Production STARVED enforcement is correct; this test verifies API mechanics.
     world_graph.create_event(
         db,
-        event_type="outreach.sent",
+        event_type="conversation.held",
         source="test",
         payload={"note": "substrate API test contact"},
     )
