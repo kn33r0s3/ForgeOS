@@ -83,6 +83,16 @@ def derive_public_label(
         edge.relation_type == "contradicts" or evidence.direction == "contradicts"
         for edge, evidence in links
     )
+    # Count independent sources only when the relationship itself asserts
+    # support/update. Mere lineage or summary links show where information came
+    # from; they do not corroborate the truth of the Claim.
+    supporting_links = [
+        (edge, evidence)
+        for edge, evidence in links
+        if edge.relation_type in {"supports", "updates"}
+        and evidence.direction != "contradicts"
+    ]
+    independent_supporting_sources = _independent_external_sources(supporting_links)
 
     if conflict:
         label: PublicLabelName = "contested"
@@ -91,25 +101,16 @@ def derive_public_label(
         # itself. A fact-labelled Claim needs an explicit support/update edge
         # backed by at least one independent external source before the public
         # projection can label it supported.
-        has_explicit_support = any(
-            edge.relation_type in {"supports", "updates"}
-            for edge, _evidence in links
-        )
         if not links:
             return None
-        label = (
-            "supported"
-            if has_explicit_support and _independent_external_sources(links) >= 1
-            else "observed"
-        )
+        label = "supported" if independent_supporting_sources >= 1 else "observed"
     elif declared_kind in _EXTERNAL_CLAIM_VALUES:
-        label = "supported" if _independent_external_sources(links) >= 2 else "observed"
+        label = "supported" if independent_supporting_sources >= 2 else "observed"
     elif declared_kind in _OBSERVATION_VALUES or internal_state in {"observed", "observation"}:
         label = "observed"
     else:
-        independent_sources = _independent_external_sources(links)
         if internal_state in {"supported", "verified"}:
-            label = "supported" if independent_sources >= 2 else "observed"
+            label = "supported" if independent_supporting_sources >= 2 else "observed"
         else:
             return None
 
