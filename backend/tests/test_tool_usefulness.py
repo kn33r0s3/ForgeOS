@@ -201,6 +201,47 @@ def test_duplicate_performance_event_is_ignored(db):
     assert db.query(models.SourceUsageEvent).count() == 1
 
 
+
+def test_distinct_retry_attempts_are_counted_but_replays_are_idempotent(db):
+    task = _create_test_task(db, "collector retries with empty failure results")
+    invocation = dict(
+        tool_name="collector:retry",
+        source="retry",
+        source_type="web",
+        query="retry failure accounting",
+        research_task_id=task.id,
+        claim_id=None,
+        result_count=None,
+        useful_result_count=None,
+        novel_result_count=None,
+        verified_result_count=None,
+        duplicate_result_count=None,
+        corroborated_evidence_count=None,
+        contradicted_claim_count=None,
+        freshness=None,
+        latency_ms=25.0,
+        success=False,
+        failure_kind="timeout",
+        result_ids=[],
+        attempt_number=1,
+    )
+
+    first = tool_usefulness.record_usage(db, **invocation)
+    replay = tool_usefulness.record_usage(db, **invocation)
+    second = tool_usefulness.record_usage(
+        db, **{**invocation, "attempt_number": 2}
+    )
+
+    assert first is not None
+    assert replay is None
+    assert second is not None
+    assert db.query(models.ToolUsageEvent).filter_by(tool_name="collector:retry").count() == 2
+    assert db.query(models.SourceUsageEvent).filter_by(source="retry").count() == 2
+    summary = tool_usefulness.source_summary(db, "retry")
+    assert summary["attempts"] == 2
+    assert summary["failures"] == 2
+
+
 def test_recent_performance_and_task_specific_source_history(db):
     old = models.ToolUsageEvent(
         tool_name="tool-a", result_count=10, useful_result_count=1,
