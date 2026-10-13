@@ -85,6 +85,43 @@ def _acquire_intelligence_lock():
     return release
 
 
+def _normalize_owner_sms_digest_result(result: dict) -> dict:
+    """Make non-delivery outcomes visible to the cycle classifier.
+
+    The raw delivery/provider state is preserved separately. In particular,
+    provider acceptance is not evidence of handset delivery.
+    """
+    if not isinstance(result, dict):
+        return {
+            "status": "partial",
+            "delivery_status": "unknown",
+            "reason": "invalid_digest_result",
+        }
+
+    raw_status = str(result.get("status") or "").strip().lower()
+    reason = str(result.get("reason") or "")
+    normalized = dict(result)
+
+    if raw_status == "provider_accepted":
+        normalized["status"] = "ok"
+        normalized["delivery_status"] = raw_status
+        return normalized
+
+    if raw_status == "skipped" and reason == "owner_sms_digest_disabled":
+        return normalized
+
+    if raw_status in {"skipped", "failed", "ambiguous_not_retried", "queued", "sending"}:
+        normalized["status"] = "partial"
+        normalized["delivery_status"] = raw_status or "unknown"
+        return normalized
+
+    # Unknown outcomes fail closed so new provider states cannot disappear
+    # behind a COMPLETED cycle status.
+    normalized["status"] = "partial"
+    normalized["delivery_status"] = raw_status or "unknown"
+    return normalized
+
+
 def _cycle_stage_summary(intelligence: dict) -> tuple[str, dict[str, str], dict[str, str]]:
     """Use one classification for both persisted CycleRun state and API output."""
     stage_errors = {
@@ -568,7 +605,8 @@ def run_scheduled_intelligence(
         with database.SessionLocal() as db:
             from app.api import forge_bot_owner_notification
 
-            intelligence["owner_sms_digest"] = forge_bot_owner_notification.send_daily_owner_status_sms(db)
+            sms_result = forge_bot_owner_notification.send_daily_owner_status_sms(db)
+            intelligence["owner_sms_digest"] = _normalize_owner_sms_digest_result(sms_result)
             db.commit()
     except Exception as exc:
         logger.warning("scheduled intelligence: owner_sms_digest failed (%s)", type(exc).__name__)
