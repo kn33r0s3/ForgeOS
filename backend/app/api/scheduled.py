@@ -660,6 +660,11 @@ def run_scheduled_intelligence(
                     "source": o.get("source"),
                     "status": o.get("status"),
                     "signals_created": o.get("signals_created", 0),
+                    "evidence_found": o.get("evidence_found", 0),
+                    "evaluation_status": o.get("evaluation_status", "not_recorded"),
+                    "comparison_outcome": o.get("comparison_outcome"),
+                    "judgments_completed": o.get("judgments_completed", 0),
+                    "judgments_failed": o.get("judgments_failed", 0),
                 }
                 for o in collection_outcomes
             ]
@@ -670,12 +675,28 @@ def run_scheduled_intelligence(
                 o for o in outcomes_list
                 if o.get("status") in ("failed", "deferred")
             ]
-            stage2_status = "partial" if failed_or_deferred else "ok"
+            evaluation_problem_statuses = {
+                "no_judges_available",
+                "judge_execution_failed",
+                "judge_execution_incomplete",
+                "unassessed_metadata_only",
+                "not_recorded",
+            }
+            evaluation_incomplete = [
+                o for o in outcomes_list
+                if o.get("evaluation_status") in evaluation_problem_statuses
+            ]
+            stage2_status = "partial" if (failed_or_deferred or evaluation_incomplete) else "ok"
             intelligence["collection_cycle"] = {
                 "status": stage2_status,
                 "tasks_executed": len(outcomes_list),
                 "tasks_failed": len([o for o in outcomes_list if o.get("status") == "failed"]),
                 "tasks_deferred": len([o for o in outcomes_list if o.get("status") == "deferred"]),
+                "evaluations_completed": sum(_count_effect(o.get("judgments_completed")) for o in outcomes_list),
+                "judgments_failed": sum(_count_effect(o.get("judgments_failed")) for o in outcomes_list),
+                "evaluations_unavailable": len([o for o in outcomes_list if o.get("evaluation_status") == "no_judges_available"]),
+                "metadata_only_unassessed": len([o for o in outcomes_list if o.get("evaluation_status") == "unassessed_metadata_only"]),
+                "evaluation_incomplete": len(evaluation_incomplete),
                 "outcomes": outcomes_list,
             }
     except Exception as exc:
