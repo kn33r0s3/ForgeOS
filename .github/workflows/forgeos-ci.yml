@@ -12,9 +12,10 @@ permissions:
   contents: read
 
 concurrency:
-  # Scope verification to a commit: a shared main group can retain only one
-  # pending run and drop intermediate commits before they are tested.
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.sha }}
+  # Let an active main run finish, while newer pushes replace the single
+  # pending main run. This avoids an unbounded queue of stale SHA checks.
+  # Pull requests have their own refs, so their runs remain isolated.
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
