@@ -72,19 +72,96 @@ def _web_clearance_error(value: str, *, today: date | None = None) -> str | None
     return source_clearance_registry.clearance_error(value, today=today)
 
 
+def _evaluation_result_fields(
+    db: Session,
+    task: models.ResearchTask,
+    *,
+    outcome_status: str,
+    deferred: bool = False,
+) -> dict:
+    """Return honest evaluation metadata for every collection exit path."""
+    results = task.results if isinstance(task.results, dict) else {}
+    evidence_ids = results.get("evidence_ids")
+    if not isinstance(evidence_ids, list):
+        evidence_ids = [
+            int(value)
+            for value in (task.evidence_ids or "").split(",")
+            if value.strip().isdigit()
+        ]
+    evidence_count = len(set(value for value in evidence_ids if isinstance(value, int)))
+
+    if outcome_status == "failed":
+        evaluation_status = "not_invoked_collection_failed"
+    elif deferred or outcome_status in {"planned", "deferred"}:
+        evaluation_status = "not_invoked_deferred"
+    elif outcome_status not in {"completed", "needs_research"}:
+        evaluation_status = "not_invoked_task_not_claimed"
+    else:
+        raw_status = results.get("evaluation_status")
+        if isinstance(raw_status, str) and raw_status:
+            evaluation_status = raw_status
+        elif not evidence_count:
+            evaluation_status = "not_invoked_no_evidence"
+        elif results.get("comparison_outcome") == "unassessed":
+            evaluation_status = "unassessed_metadata_only"
+        else:
+            evaluation_status = "not_recorded"
+
+    raw_judgment_ids = results.get("judgment_ids", [])
+    if not isinstance(raw_judgment_ids, list):
+        raw_judgment_ids = []
+    judgment_ids = [
+        value for value in raw_judgment_ids
+        if isinstance(value, int) and not isinstance(value, bool)
+    ]
+    judgments = (
+        db.query(models.Judgment).filter(models.Judgment.id.in_(judgment_ids)).all()
+        if judgment_ids
+        else []
+    )
+    return {
+        "evidence_found": evidence_count,
+        "evaluation_status": evaluation_status,
+        "comparison_outcome": results.get("comparison_outcome"),
+        "judgments_completed": sum(1 for row in judgments if row.status == "completed"),
+        "judgments_failed": sum(1 for row in judgments if row.status != "completed"),
+    }
+
+
 def execute_task(db: Session, task: models.ResearchTask) -> dict:
     """Run one ResearchTask through its matching collector, observe
     every result as a Signal, and mark the task completed/failed."""
     if task.status == "completed":
-        return {"task_id": task.id, "status": "completed", "reused": True, "signals_created": 0}
+        return {
+            "task_id": task.id,
+            "status": "completed",
+            "reused": True,
+            "signals_created": 0,
+            **_evaluation_result_fields(db, task, outcome_status="completed"),
+        }
     if not research_task_engine.begin_task(db, task):
-        return {"task_id": task.id, "status": task.status, "reused": task.status == "completed", "signals_created": 0}
+        deferred = task.status not in {"completed", "needs_research", "failed"}
+        return {
+            "task_id": task.id,
+            "status": task.status,
+            "reused": task.status == "completed",
+            "deferred": deferred,
+            "signals_created": 0,
+            **_evaluation_result_fields(
+                db, task, outcome_status=task.status, deferred=deferred
+            ),
+        }
 
     started = monotonic()
     if task.source in UNCLEARED_DEFAULT_SOURCES:
         reason = f"Source '{task.source}' is not cleared for collection"
         research_task_engine.fail_task(db, task, reason)
-        return {"task_id": task.id, "status": "failed", "reason": reason}
+        return {
+            "task_id": task.id,
+            "status": "failed",
+            "reason": reason,
+            **_evaluation_result_fields(db, task, outcome_status="failed"),
+        }
 
     authorization = None
     if task.source == "web":
@@ -101,6 +178,7 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
                 "status": "planned",
                 "deferred": True,
                 "reason": str(exc),
+                **_evaluation_result_fields(db, task, outcome_status="planned", deferred=True),
             }
         except Exception as exc:
             research_task_engine.fail_task(db, task, str(exc))
@@ -176,6 +254,7 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
             "task_id": task.id,
             "status": "failed",
             "reason": f"No collector registered for source '{task.source}'",
+            **_evaluation_result_fields(db, task, outcome_status="failed"),
         }
 
     collector = collector_cls()
@@ -210,6 +289,7 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
             "status": "planned",
             "deferred": True,
             "reason": str(exc),
+                **_evaluation_result_fields(db, task, outcome_status="planned", deferred=True),
         }
     except Exception as exc:
         research_task_engine.fail_task(db, task, str(exc))
@@ -501,35 +581,13 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
         failure_kind=None,
         result_ids=evidence_ids,
     )
-    task_results = final_task.results if isinstance(final_task.results, dict) else {}
-    evaluation_status = task_results.get("evaluation_status")
-    if not isinstance(evaluation_status, str):
-        if not evidence_ids:
-            evaluation_status = "not_invoked_no_evidence"
-        elif task_results.get("comparison_outcome") == "unassessed":
-            evaluation_status = "unassessed_metadata_only"
-        else:
-            evaluation_status = "not_recorded"
-
-    judgment_rows = evaluation.get("judgments", []) if isinstance(evaluation, dict) else []
-    judgments_completed = sum(
-        1 for judgment in judgment_rows
-        if getattr(judgment, "status", None) == "completed"
-    )
-    judgments_failed = sum(
-        1 for judgment in judgment_rows
-        if getattr(judgment, "status", None) != "completed"
-    )
-
     return {
         "task_id": task.id,
         "status": final_task.status,
         "signals_created": len(created_signal_ids),
-        "evidence_found": len(set(evidence_ids)),
-        "evaluation_status": evaluation_status,
-        "comparison_outcome": task_results.get("comparison_outcome"),
-        "judgments_completed": judgments_completed,
-        "judgments_failed": judgments_failed,
+        **_evaluation_result_fields(
+            db, final_task, outcome_status=final_task.status
+        ),
     }
 
 
