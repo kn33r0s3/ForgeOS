@@ -137,6 +137,11 @@ def _cycle_effect_summary(intelligence: dict) -> dict:
     autonomy = intelligence.get("autonomy_cycle", {})
     scout = intelligence.get("scout_cycle", {})
     content = intelligence.get("content_drafts", {})
+    recovery = intelligence.get("evaluation_recovery", {})
+    recovery_outcomes = (
+        recovery.get("outcomes", []) if isinstance(recovery, dict) else []
+    )
+    recovery_outcomes = recovery_outcomes if isinstance(recovery_outcomes, list) else []
 
     outcomes = collection.get("outcomes", []) if isinstance(collection, dict) else []
     source_signals = sum(
@@ -152,6 +157,28 @@ def _cycle_effect_summary(intelligence: dict) -> dict:
         "evaluations_unavailable": _count_effect(collection.get("evaluations_unavailable")) if isinstance(collection, dict) else 0,
         "metadata_only_unassessed": _count_effect(collection.get("metadata_only_unassessed")) if isinstance(collection, dict) else 0,
         "evaluation_incomplete": _count_effect(collection.get("evaluation_incomplete")) if isinstance(collection, dict) else 0,
+        "evaluation_recovery_attempted": _count_effect(recovery.get("tasks_attempted")) if isinstance(recovery, dict) else 0,
+        "evaluations_recovered": sum(
+            1 for item in recovery_outcomes
+            if isinstance(item, dict)
+            and item.get("status") == "completed"
+            and item.get("evaluation_status") == "judge_pipeline_executed"
+        ),
+        "evaluation_recovery_unavailable": sum(
+            1 for item in recovery_outcomes
+            if isinstance(item, dict)
+            and item.get("evaluation_status") == "no_judges_available"
+        ),
+        "evaluation_recovery_failed": sum(
+            1 for item in recovery_outcomes
+            if isinstance(item, dict)
+            and (
+                item.get("status") == "failed"
+                or item.get("evaluation_status") in {
+                    "judge_execution_failed", "judge_execution_incomplete"
+                }
+            )
+        ),
         "discovery_proposals_surfaced": _count_effect(discovery.get("surfaced")) if isinstance(discovery, dict) else 0,
         "research_questions_created": (
             _count_effect(forge.get("questions_created")) if isinstance(forge, dict) else 0
@@ -184,6 +211,7 @@ def _cycle_effect_summary(intelligence: dict) -> dict:
             "opportunities_discovered",
             "autonomy_actions_proposed",
             "decision_actions_proposed",
+            "evaluations_recovered",
             "contact_drafts_prepared",
             "content_drafts_prepared",
         )
@@ -204,12 +232,14 @@ def _cycle_effect_summary(intelligence: dict) -> dict:
         next_owner_attention = "review_existing_contact_draft"
     elif counts["pending_contact_replies"]:
         next_owner_attention = "wait_for_reply_without_repeat_contact"
-    elif counts["evaluations_unavailable"]:
+    elif counts["evaluations_unavailable"] or counts["evaluation_recovery_unavailable"]:
         next_owner_attention = "connect_or_repair_non_paid_judge"
-    elif counts["judgments_failed"]:
+    elif counts["judgments_failed"] or counts["evaluation_recovery_failed"]:
         next_owner_attention = "repair_judge_execution"
     elif counts["metadata_only_unassessed"]:
         next_owner_attention = "retrieve_substantive_source_content"
+    elif counts["evaluations_recovered"]:
+        next_owner_attention = "review_recovered_evaluation"
     elif status in {"internal_work_only", "no_new_effect"}:
         next_owner_attention = (
             "inspect_blockers_and_choose_a_reality-linked_next_action"
