@@ -232,3 +232,13 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - The saved code audit mentions an owner-reported 74,637-item defect report but explicitly says its source was not located. A separate prior-context memory carries 828,649 lines / 2,472 files; that exact source was not found in the sources searched this run, and its figures do not match the commit-backed 2,454-file incident. Both remain separate unverified recovery leads. No defects were invented and no bulk fix was attempted.
 - Added the historical anchors and unresolved-source labels to the existing `HANDOFF.md`; recorded the reconciliation in `STATE.md`; no new roadmap, queue, semantic table, secret, contact, spend or activation was created.
 - The repository remains public according to GitHub metadata. These are project-history notes; do not copy private personal context or credentials into repository records.
+
+
+## 2026-10-14 — reconcile saved single-instance wiring audit
+
+- Retrieved the saved `hami_forgeos_integrity_audit_checkpoint_2026-10-11-full.md` from the Library and checked its eight findings against current `main` sources.
+- F-01's missing import is not present in the current brand-check source; the missing helper remains absent. Some Grok-era comments/path conventions remain and need deliberate identity/usage classification, not restoration of deleted machinery.
+- F-03 is now fail-closed when `EVIDENCE_TRIAGE_URL` is empty. F-04 has production auth guards requiring explicit configuration outside workspace preview. F-07 has an explicit workflow-fail step if a current verification verdict is false.
+- F-02 still requires a real browser/PWA check, F-05 requires protected evidence that frontend and FastAPI use durable shared production PostgreSQL, and F-06 requires an exact route/method/endpoint inventory before any alias cleanup. F-08 remains an intentional archived local frontend path.
+- Put the complete disposition matrix into the existing `docs/CAPABILITY_QUEUE.md`, exposed follow-on work in `QUEUE.md`, and indexed it in `HANDOFF.md` and `STATE.md`. No new file/architecture, secret read, real message, spend, external activation or test claim was created.
+- Verification: source spot-read only. Current exact-head CI, production runtime, durable database and browser behavior are not verified by this log entry.
