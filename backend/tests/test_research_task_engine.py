@@ -452,7 +452,7 @@ def test_question_without_linked_claim_still_reaches_substantive_judging(db, mon
     assert judgment.status == "completed"
     assert judgment.claim_id is None
     assert judgment.research_task_id == task.id
-    assert result["comparison"].outcome == "agreement"
+    assert result["comparison"].outcome == "insufficient_judges"
     assert evaluate_step.status == "completed"
     assert evaluate_step.output_data["status"] == "judge_pipeline_executed"
     assert persisted.results["evaluation_status"] == "judge_pipeline_executed"
