@@ -625,39 +625,38 @@ def run_scheduled_intelligence(
         intelligence["content_drafts"] = {"status": "error", "error": type(exc).__name__}
 
     # Finalize the CycleRun observability record with per-stage outcomes.
-    # This bookkeeping never fails the intelligence response itself.
+    # A response is successful only when its run record is finalized durably.
     try:
         if cycle_run_id is None:
             raise RuntimeError("scheduled_cycle_run_not_started")
         with database.SessionLocal() as odb:
             row = odb.get(models.CycleRun, cycle_run_id)
-            if row is not None:
-                ended_at = datetime.now(timezone.utc)
-                    row.ended_at = ended_at
-                    start = row.started_at
-                    if start is not None:
-                        if start.tzinfo is None:
-                            start = start.replace(tzinfo=timezone.utc)
-                        row.duration_ms = int((ended_at - start).total_seconds() * 1000)
-                    # One classifier drives persisted state and API response.
-                    row.status, stage_errors, stage_partials = _cycle_stage_summary(intelligence)
-                    row.summary_json = json.dumps(
-                        {
-                            "stages": intelligence,
-                            "stage_errors": stage_errors,
-                            "stage_partials": stage_partials,
-                        },
-                        default=str,
-                    )
-                    run_notes = [
-                        *(f"{key}: {value}" for key, value in stage_errors.items()),
-                        *(f"{key}: partial" for key in stage_partials),
-                    ]
-                    if run_notes:
-                        row.error = "; ".join(run_notes)
-                odb.commit()
-            else:
+            if row is None:
                 raise RuntimeError("scheduled_cycle_run_missing")
+            ended_at = datetime.now(timezone.utc)
+            row.ended_at = ended_at
+            start = row.started_at
+            if start is not None:
+                if start.tzinfo is None:
+                    start = start.replace(tzinfo=timezone.utc)
+                row.duration_ms = int((ended_at - start).total_seconds() * 1000)
+            # One classifier drives persisted state and API response.
+            row.status, stage_errors, stage_partials = _cycle_stage_summary(intelligence)
+            row.summary_json = json.dumps(
+                {
+                    "stages": intelligence,
+                    "stage_errors": stage_errors,
+                    "stage_partials": stage_partials,
+                },
+                default=str,
+            )
+            run_notes = [
+                *(f"{key}: {value}" for key, value in stage_errors.items()),
+                *(f"{key}: partial" for key in stage_partials),
+            ]
+            if run_notes:
+                row.error = "; ".join(run_notes)
+            odb.commit()
     except Exception as exc:
         logger.warning(
             "scheduled intelligence: CycleRun finalize failed (%s)", type(exc).__name__
