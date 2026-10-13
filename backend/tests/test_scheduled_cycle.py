@@ -2,12 +2,111 @@ import time
 from datetime import datetime, timedelta, timezone
 from threading import Event
 
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app.api import scheduled
 from app.main import app
 
 import inspect
+
+
+
+def _fake_postgres_lock_engine(*, lock_acquired=True, fail_on_lock=False):
+    class Result:
+        def __init__(self, value):
+            self.value = value
+
+        def scalar_one(self):
+            return self.value
+
+    class Connection:
+        def __init__(self):
+            self.statements = []
+            self.commit_count = 0
+            self.closed = False
+
+        def execute(self, statement, params):
+            sql = str(statement)
+            self.statements.append((sql, params))
+            if "pg_try_advisory_lock" in sql:
+                if fail_on_lock:
+                    raise RuntimeError("simulated database lock failure")
+                return Result(lock_acquired)
+            if "pg_advisory_unlock" in sql:
+                return Result(True)
+            raise AssertionError(f"unexpected SQL: {sql}")
+
+        def commit(self):
+            self.commit_count += 1
+
+        def close(self):
+            self.closed = True
+
+    class Dialect:
+        name = "postgresql"
+
+    class Engine:
+        dialect = Dialect()
+
+        def __init__(self, connection):
+            self.connection = connection
+
+        def connect(self):
+            return self.connection
+
+    connection = Connection()
+    return Engine(connection), connection
+
+
+def test_intelligence_lock_uses_postgres_advisory_lock_and_releases(monkeypatch):
+    engine, connection = _fake_postgres_lock_engine()
+    monkeypatch.setattr(scheduled.database, "engine", engine)
+
+    release = scheduled._acquire_intelligence_lock()
+
+    assert connection.statements[0][0].startswith("SELECT pg_try_advisory_lock")
+    assert connection.statements[0][1] == {
+        "lock_id": scheduled._POSTGRES_INTELLIGENCE_LOCK_ID
+    }
+    assert scheduled._POSTGRES_INTELLIGENCE_LOCK_ID != scheduled._POSTGRES_LOCK_ID
+
+    release()
+
+    assert any("pg_advisory_unlock" in sql for sql, _ in connection.statements)
+    assert connection.commit_count == 2
+    assert connection.closed
+
+
+def test_intelligence_lock_rejects_a_concurrent_postgres_run(monkeypatch):
+    engine, connection = _fake_postgres_lock_engine(lock_acquired=False)
+    monkeypatch.setattr(scheduled.database, "engine", engine)
+
+    try:
+        scheduled._acquire_intelligence_lock()
+    except HTTPException as exc:
+        assert exc.status_code == 409
+        assert exc.detail == "An intelligence run is already running"
+    else:
+        raise AssertionError("a second intelligence run must not acquire the held lock")
+
+    assert connection.closed
+    assert not any("pg_advisory_unlock" in sql for sql, _ in connection.statements)
+
+
+def test_intelligence_lock_fails_closed_when_postgres_lock_check_errors(monkeypatch):
+    engine, connection = _fake_postgres_lock_engine(fail_on_lock=True)
+    monkeypatch.setattr(scheduled.database, "engine", engine)
+
+    try:
+        scheduled._acquire_intelligence_lock()
+    except HTTPException as exc:
+        assert exc.status_code == 503
+        assert exc.detail == "Intelligence lock is unavailable"
+    else:
+        raise AssertionError("lock infrastructure failure must block the run")
+
+    assert connection.closed
 
 
 def test_scheduled_cycle_fails_closed_without_secret(monkeypatch):
