@@ -145,10 +145,6 @@ def list_pending_replies(request: Request, db: Session = Depends(get_db)):
         .filter(
             models.OutreachDraft.status == "SENT",
             models.OutreachDraft.reply_received.is_(False),
-            or_(
-                models.OutreachDraft.outcome_notes.is_(None),
-                models.OutreachDraft.outcome_notes == "",
-            ),
         )
         .order_by(models.OutreachDraft.sent_at.asc(), models.OutreachDraft.id.asc())
         .limit(100)
@@ -165,6 +161,7 @@ def list_pending_replies(request: Request, db: Session = Depends(get_db)):
             "sent_at": d.sent_at,
             "send_channel": d.send_channel,
             "reply_received": d.reply_received,
+            "outcome_notes": d.outcome_notes,
         }
         for d in drafts
     ]
