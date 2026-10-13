@@ -12,10 +12,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  # A main run must finish even if more commits arrive. GitHub will keep only
-  # the latest pending run for this group; superseded PR checks may be cancelled.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # Scope verification to a commit: a shared main group can retain only one
+  # pending run and drop intermediate commits before they are tested.
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   backend-tests:
