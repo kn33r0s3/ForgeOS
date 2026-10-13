@@ -20,11 +20,9 @@ Record the elapsed time since the last real-world contact.
 
 Real-world contact means interaction with an external person, organization, transaction, behavior, or other independently observable reality relevant to the frontier.
 
-At 14 days without real contact:
+At 14 days without recorded REAL contact, mark the active intervention frontier `STARVED` and review access, legitimacy, doability, cost, falsifier and kill criterion.
 
-**All non-obligatory building freezes.**
-
-Only contact preparation, sensing, verification, and System Obligations may continue.
+**Freeze only building that depends on that starved intervention.** Do not manufacture contact or keep adding features to avoid missing real-world evidence. Independent safe Hami work continues: public-source research, unknown/evidence quality, reusable capabilities, cross-climb integration, reliability, security/privacy, testing and System Obligations. Each continuation needs a canonical queue rationale and acceptance check; a blocked frontier does not authorize a new external intervention merely to reset the clock.
 
 ---
 
@@ -134,11 +132,9 @@ The single intervention may involve multiple consenting participants.
 
 System Obligations are exempt.
 
-Build work is permitted only when it unblocks a live Bet or satisfies a System Obligation.
+Internal work must be recorded in the canonical queue and justify at least one of: unblocking a live Bet or bounded test; resolving a mapped unknown or improving evidence quality; creating a reusable capability or hardening with value across climbs; connecting existing canonical records/capabilities or closing a verified integration gap; or satisfying a System Obligation/reducing security, privacy or reliability risk. A one-off vertical build cannot bypass evidence gates or be justified only by adding activity. Mark direct intervention dependency explicitly with `depends_on_active_intervention: true` (or an active/frontier Bet identifier) so the STARVED gate blocks only work tied to that frontier; absent that dependency, generic reusable/internal work remains eligible.
 
-Parallel reasoning is allowed.
-
-Parallel intervention programs are not.
+Parallel reasoning, research and internal build tracks are allowed. Parallel real-world intervention programs are not. The three-live-Bet and one-active-intervention limits bound external tests, not Hami's internal exploration or the ability to work on unrelated climbs.
 
 ---
 
@@ -237,14 +233,16 @@ Review the chosen intervention at least every 30 days and earlier when:
 - its registered kill criterion is met or new evidence materially contradicts it;
 - a different candidate has materially stronger evidence and a more viable,
   safer, or more consequential test;
-- the 14-day no-contact tripwire freezes non-obligatory building.
+- the 14-day no-contact tripwire marks the active intervention STARVED and freezes only building dependent on that intervention; unrelated safe climbs continue.
 
-At a no-contact tripwire, do not preserve the frontier through inertia or
-respond by building more. Reassess access, the legitimacy and doability of the
-test, and competing value candidates. Keep the current frontier only when the
-evidence and real constraints still justify it. A frontier can be revised,
-paused, or killed through the existing decision/evidence path; the calendar is
-not proof that it is correct.
+At a no-contact tripwire, do not preserve the starved frontier through inertia
+or respond by building more for that same intervention. Reassess access, the
+legitimacy and doability of the test, and competing value candidates. Keep the
+current intervention only when evidence and real constraints still justify it.
+Independent Hami research, reliability, security/privacy, testing and reusable
+capability work continues through the canonical portfolio queue. A frontier can
+be revised, paused, or killed through the existing decision/evidence path; the
+calendar is not proof that it is correct.
 
 ---
 
@@ -320,7 +318,7 @@ When the scaffolding is active:
 
 ### Reality starvation
 
-14 days without real contact freezes building.
+14 days without recorded REAL contact marks the active intervention STARVED and freezes only dependent intervention work, not Hami-wide internal progress.
 
 ### Proof inflation
 

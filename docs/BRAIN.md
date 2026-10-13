@@ -599,9 +599,14 @@ The missed-inquiry seller test remains one candidate economic proof path. Its fa
 
 This section supersedes any earlier implication in sections 5, 17, 28, 29 or 30 that one revenue hypothesis, one active wave or one pilot must freeze every other climb. It does not supersede safety invariants or owner-only decision rights.
 
+### 35.5 Originality without competitor fixation
+
+Study the world broadly, but do not define Hami primarily against another company, product, industry category or incumbent. Existing systems are sources of evidence about what people need, what works, what fails, which capabilities exist, and where value or trust is lost—not automatic competitors to imitate or defeat. Hami's path is a compounding shared substrate that discovers, connects, composes, acts with authorization, learns from outcomes and transfers capabilities across domains. Treat unmatched capability and global adoption as aspirations to earn through comparative real-world usefulness, reliability, trust, fair outcomes and cross-domain transfer—not claims to publish before evidence. Never let competitor framing narrow the search space or turn Hami into a clone of a category.
+
 ## Changelog (version 3)
 
 - 2026-10-14: Replaced the linear-ladder interpretation with many connected, ongoing climbs on one shared evidence/authorization substrate. Hami remains the name; Hamro expresses shared progress. Parallel internal work does not relax external action gates.
+- 2026-10-14: Recorded originality without competitor fixation: learn from the world without defining Hami as a clone or claiming unverified global superiority.
 - 2026-10-14: Extended Telegram owner control with the authenticated cockpit and durable-PostgreSQL delivery gate; degraded health now attempts to persist safe mode. Exact-head tests, production setup and message delivery remain unverified.
 
 ## 36. Owner direction: Nepal intelligified, globally useful (2026-10-14)
@@ -674,7 +679,7 @@ At the start of a run, and whenever a contradiction or missing thread appears:
 
 1. Read the latest explicit owner instruction and applicable safety/authorization boundaries.
 2. Inspect the actual canonical `main` head and recent commit lineage; inspect diffs and relevant history rather than trusting a stale snapshot.
-3. Read this Brain, `AGENTS.md`, `HANDOFF.md`, `STATE.md`, `QUEUE.md`, `LOG.md`, `docs/CAPABILITY_QUEUE.md`, `docs/UNKNOWN_MAP.md`, the system map, and the relevant existing subsystem contracts/tests. Use the documented registry and data sources instead of creating a competing memory system.
+3. Read this Brain, `AGENTS.md`, `HANDOFF.md`, `STATE.md`, `QUEUE.md`, `LOG.md`, `docs/CAPABILITY_QUEUE.md`, `docs/UNKNOWN_MAP.md`, `docs/OPERATING_MODEL.md`, `docs/BUILD_BOOK.md`, the system map, and relevant subsystem contracts/tests. Treat older plans as leads to reconcile, not current authority; the latest Brain/owner direction governs scope while code, tests and direct runtime evidence govern implementation claims. Use documented registries and sources rather than creating a competing memory system.
 4. Recover relevant context from accessible earlier conversation, saved project memory, available file/library sources, existing automations and connected tools. Search before asking for repetition; a source that cannot be reached must be marked unavailable, not treated as empty.
 5. When the answer depends on current external reality, verify it against primary/current sources where possible and record the source and observation time.
 6. Follow references outward: prior commits, reverted/removed implementations, archived notes, related tests, deployment history, and linked workstreams. Preserve useful history and recover a valuable implementation in place; never reconstruct deleted content from guesswork or treat an unverified memory as a historical fact.
