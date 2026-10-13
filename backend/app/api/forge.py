@@ -451,11 +451,47 @@ def ask_forge(request: Request, payload: schemas.AskRequest, db: Session = Depen
         ) from exc
     matches = memory_layer.search_knowledge(db, payload.question, top_k=5)
     memories_used = [knowledge for knowledge, _similarity in matches]
+
+    # Persist non-content provider telemetry in Hami's existing EVENT substrate.
+    # Never store the question, generated answer, or retrieved memory text here.
+    observation = result.get("provider_observation")
+    if isinstance(observation, dict) and observation.get("status") == "completed" and observation.get("inference_invoked") is True:
+        try:
+            from app.services import world_graph
+            import uuid
+
+            world_graph.seed_core_types(db)
+            world_graph.create_event(
+                db,
+                event_type="state_changed",
+                source="hami_ai_provider",
+                payload={
+                    "subsystem": "ai_provider",
+                    "transition": "inference_completed",
+                    "provider": str(observation.get("provider") or "")[:80],
+                    "mode": str(observation.get("mode") or "")[:40],
+                    "model": str(observation.get("model") or "")[:120],
+                    "status": "completed",
+                    "request_attempted": True,
+                    "inference_invoked": True,
+                    "prompt_eval_tokens": observation.get("prompt_eval_tokens"),
+                    "completion_eval_tokens": observation.get("completion_eval_tokens"),
+                    "total_duration_ms": observation.get("total_duration_ms"),
+                    "knowledge_context_used": bool(result.get("context_used")),
+                },
+                idempotency_key=f"hami-ai-call:{uuid.uuid4().hex}",
+            )
+            db.commit()
+        except Exception:
+            # Telemetry must not turn an otherwise successful answer into a 500.
+            # Roll back this best-effort logging transaction and return the answer.
+            db.rollback()
+
     return schemas.AskResponse(
         question=payload.question,
         answer=result["answer"],
         memories_used=memories_used,
-        provider_observation=result.get("provider_observation"),
+        provider_observation=observation,
     )
 
 
