@@ -88,8 +88,10 @@ def test_useful_source_usage_does_not_confuse_judgment_with_verification(db, mon
         result = original_link(session, evidence, **kwargs)
         linked_claim = kwargs.get("claim")
         if linked_claim is not None and linked_claim.id == claim.id:
-            # The same source row is also linked to another claim, including a
-            # contradiction there. Neither relation should contaminate this task.
+            # Simulate a separately validated internal assessment for this
+            # task's own claim, then add unrelated graph history for another
+            # claim. Only the target assessment belongs in this usefulness score.
+            original_link(session, evidence, claim=claim, relation_type="supports")
             original_link(session, evidence, claim=other_claim, relation_type="supports")
             original_link(session, evidence, claim=other_claim, relation_type="contradicts")
         return result
