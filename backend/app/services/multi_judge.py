@@ -161,10 +161,25 @@ def run_judgments(
             claim_id=claim_id,
             opportunity_id=opportunity_id,
         )
-        existing = db.query(models.Judgment).filter_by(judgment_key=key).first()
+        existing = (
+            db.query(models.Judgment)
+            .filter_by(judgment_key=key)
+            .order_by(models.Judgment.id.desc())
+            .first()
+        )
         if existing:
-            results.append(existing)
-            continue
+            retryable_unavailable = (existing.error or "").startswith("judge unavailable:")
+            retryable_missing = (existing.error or "").startswith("missing evidence ids:")
+            retry_ready = False
+            if existing.status == "failed" and (retryable_unavailable or retryable_missing):
+                try:
+                    judge_available = bool(spec.available())
+                except Exception:
+                    judge_available = False
+                retry_ready = judge_available and (not retryable_missing or not missing_ids)
+            if not retry_ready:
+                results.append(existing)
+                continue
         status = "completed"
         error = None
         normalized = {"conclusion": None, "reasoning_summary": None, "conclusion_label": "uncertain", "uncertainty": None, "confidence": None}
