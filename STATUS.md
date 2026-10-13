@@ -6,6 +6,8 @@ state is not assumed current unless explicitly identified as a dated observation
 
 ## Current integration snapshot — 2026-10-14
 
+- **Version 2 charter / latest exact-head observation (2026-10-14):** docs/BRAIN.md was Version 1 and stopped at section 14. This sync restores the owner-supplied Version 2 through section 33, the amendments to sections 4/8/13/16/21/24/28, and a verified Git blob content hash. Base main before the change: 6f080dad3cfea3db2c55e4a2317f9d0081d0ff7c. The prior deployment reported READY at a generated hostname, but current deployed SHA, haminp.vercel.app assignment and runtime health are not independently verified. CI on the parent passed frontend, typecheck, evidence triage, route smoke, secret scan, lint, build and repository guards while backend tests were running. Full exact-head CI and customer-facing readiness are not claimed.
+
 - **Owner ForgeBot workspace — source change awaiting exact-head verification:** \`/owner\` now exposes section shortcuts, a read-only snapshot from existing protected APIs, and a query panel calling the existing owner-protected \`/api/forge/ask\` endpoint. The panel shows related knowledge records returned by the API and reads provider configuration from \`/api/ai/status\`. OpenAI calls are disabled in this panel to preserve the zero-spend default. Questions and answers remain in page memory; the panel does not create Evidence, execute Actions or activate customer messaging. Provider configuration status is not proof of a successful query. Exact-head CI and deployed SHA are not yet verified for this change.
 
 
