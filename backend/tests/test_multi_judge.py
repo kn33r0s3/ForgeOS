@@ -90,17 +90,23 @@ def test_agreement_and_disagreement_create_durable_comparisons(db):
         evidence_ids=[evidence.id],
         judges=[spec("b1", positive_judge), spec("b2", negative_judge)],
     )
+    claim, _ = evidence_graph.create_or_get_claim(
+        db,
+        "Customers will pay for the service.",
+    )
     disagreement = multi_judge.compare_judgments(
         db,
         question="Will customers pay?",
         judgment_ids=[item.id for item in disagreement_judgments],
         evidence_ids=[evidence.id],
+        claim_id=claim.id,
     )
 
     assert disagreement.outcome == "disagreement"
     assert disagreement.follow_up_question_id is not None
     follow_up = db.get(models.ResearchQuestion, disagreement.follow_up_question_id)
     assert follow_up.question == "Resolve disagreement about: Will customers pay?"
+    assert follow_up.source_claim_id == claim.id
     assert db.query(models.ResearchTask).filter_by(question_id=follow_up.id).count() >= 1
 
 
