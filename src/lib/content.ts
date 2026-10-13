@@ -2,14 +2,14 @@ import { cachedRead, type CacheScope } from "./api-cache.ts";
 
 export const SITE = {
   name: "Hami",
-  themeColor: "#0C0B0A",
+  themeColor: "#0B0B0B",
   domain: "haminp.vercel.app",
   url: "https://haminp.vercel.app",
   email: "",
   location: "Built in Kathmandu",
-  tagline: "Understanding what people need — with evidence.",
+  tagline: "Discover what matters. Understand it. Act on it.",
   description:
-    "Hami is being built in Kathmandu: a system for finding real needs, building evidence for them, and turning understanding into action with humans as partners. Pre-revenue; no merchants served yet; intake closed.",
+    "Hami is being built in Kathmandu as a living system for understanding needs, knowledge, capabilities, resources, and outcomes across domains. It serves everywhere equally, keeps uncertainty visible, and acts within evidence, authorization, and safety boundaries. Pre-revenue; no merchants served yet; public intake is currently closed.",
 } as const;
 
 export const providerCategories = ["All"] as const;
