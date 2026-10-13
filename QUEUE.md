@@ -58,3 +58,8 @@ Reuse the existing ai_engine and cognitive_provider seams; no parallel model sta
 ## P0 — Nepal-native real ForgeBot answers and metered provider expansion
 
 The owner `/forge/ask` path only answers with an installed, reachable, zero-cost local Ollama model. Mock output cannot be returned as intelligence; inference failure returns unavailable rather than silently falling back to templates; paid OpenAI completions remain blocked until usage metering is connected to the shared global spend guard. The answer contract supports Nepali Devanagari, Romanized Nepali, English and code-switching, and treats retrieved knowledge as data rather than instructions. Next prove one real local inference, verify exact-head CI, then evaluate retrieval and answer quality on Nepal-first cases.
+
+
+## P0 — Complete self-hosted model reachability without paid APIs
+
+The code supports an authenticated HTTPS Ollama-compatible gateway via `OLLAMA_HOST` + `OLLAMA_API_KEY`; loopback HTTP remains local-runtime-only. Direct OpenAI tools have been removed until paid inference is metered through the shared spend guard. Next: configure a real gateway and secrets in deployment settings, confirm `/api/tags`, complete one actual generation, record usage/latency, and evaluate Nepal-first answers. Adapter support is not proof the gateway exists or works.
