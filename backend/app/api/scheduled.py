@@ -370,6 +370,14 @@ def run_scheduled_intelligence(
             cycle_run_id = row.id
     except Exception as exc:
         logger.warning("scheduled intelligence: CycleRun record failed (%s)", type(exc).__name__)
+        # Evidence and state work must never run without a durable run record.
+        # Release here because the main execution/finalization finally block
+        # has not been entered yet.
+        release_intelligence_lock()
+        raise HTTPException(
+            status_code=503,
+            detail="Scheduled intelligence run could not be recorded",
+        ) from exc
 
     intelligence: dict = {}
 
@@ -619,11 +627,12 @@ def run_scheduled_intelligence(
     # Finalize the CycleRun observability record with per-stage outcomes.
     # This bookkeeping never fails the intelligence response itself.
     try:
-        if cycle_run_id is not None:
-            with database.SessionLocal() as odb:
-                row = odb.get(models.CycleRun, cycle_run_id)
-                if row is not None:
-                    ended_at = datetime.now(timezone.utc)
+        if cycle_run_id is None:
+            raise RuntimeError("scheduled_cycle_run_not_started")
+        with database.SessionLocal() as odb:
+            row = odb.get(models.CycleRun, cycle_run_id)
+            if row is not None:
+                ended_at = datetime.now(timezone.utc)
                     row.ended_at = ended_at
                     start = row.started_at
                     if start is not None:
@@ -646,11 +655,17 @@ def run_scheduled_intelligence(
                     ]
                     if run_notes:
                         row.error = "; ".join(run_notes)
-                    odb.commit()
+                odb.commit()
+            else:
+                raise RuntimeError("scheduled_cycle_run_missing")
     except Exception as exc:
         logger.warning(
             "scheduled intelligence: CycleRun finalize failed (%s)", type(exc).__name__
         )
+        raise HTTPException(
+            status_code=503,
+            detail="Scheduled intelligence results could not be persisted",
+        ) from exc
     finally:
         release_intelligence_lock()
 
@@ -659,6 +674,7 @@ def run_scheduled_intelligence(
     cycle_status, stage_errors, stage_partials = _cycle_stage_summary(intelligence)
     return {
         "status": "completed",
+        "cycle_run_id": cycle_run_id,
         "cycle_status": cycle_status,
         "stage_errors": stage_errors,
         "stage_partials": stage_partials,
