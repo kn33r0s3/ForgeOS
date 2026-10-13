@@ -1,5 +1,7 @@
 """Scout + Draft + Approval Queue: registry, scoring, drafts, guards."""
 
+import json
+
 import pytest
 
 from app import models
@@ -65,6 +67,11 @@ def test_approve_skip_sent_flow(db):
     # And as an Action.
     actions = db.query(models.Action).filter_by(action_type="outreach").all()
     assert len(actions) >= 1
+    linked_action = db.query(models.Action).filter_by(external_ref=f"outreach_draft:{d.id}").one()
+    action_parameters = json.loads(linked_action.parameters_json)
+    assert action_parameters["authorized_by"] == "owner"
+    assert action_parameters["outcome_status"] == "contact reported sent; response pending"
+    assert json.loads(events[0].payload)["authorized_by"] == "owner"
 
     # Never message twice without a reply.
     d2 = scout.generate_draft(db, c.id, "another fact")
@@ -75,6 +82,10 @@ def test_approve_skip_sent_flow(db):
     # After a reply, contact is allowed again.
     scout.record_reply(db, d.id, "Seller replied: interested, call Thursday.")
     assert db.get(models.OutreachDraft, d.id).reply_received is True
+    linked_action = db.query(models.Action).filter_by(external_ref=f"outreach_draft:{d.id}").one()
+    assert json.loads(linked_action.parameters_json)["outcome"]["type"] == "reply_received"
+    reply_event = db.query(models.WorldEvent).filter_by(event_type="outreach.reply").one()
+    assert json.loads(reply_event.payload)["authorized_by"] == "owner"
     d3 = scout.generate_draft(db, c.id, "follow-up fact")
     assert d3.status == "DRAFT"
 

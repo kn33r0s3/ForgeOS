@@ -149,6 +149,87 @@ class WatchHorizonIn(BaseModel):
     frontier: str
 
 
+class OfferStatusIn(BaseModel):
+    status: Literal["owner-approved", "live", "killed"]
+    kill_reason: Optional[str] = Field(default=None, max_length=1000)
+
+
+class OfferLegalReadIn(BaseModel):
+    lawyer_name: str = Field(min_length=2, max_length=200)
+    review_date: str = Field(min_length=10, max_length=30)
+    source_reference: str = Field(min_length=4, max_length=500)
+    summary: str = Field(min_length=10, max_length=3000)
+
+
+@router.get("/offers/public")
+def list_public_offers(db: Session = Depends(get_db)):
+    """Public projection; only explicitly owner-approved, currently unblocked offer copy."""
+    return {"offers": operating_v4.list_offer_views(db, public_only=True)}
+
+
+@router.get("/offers")
+def list_offer_queue(request: Request, db: Session = Depends(get_db)):
+    """Owner-only draft and approval queue; reading it never makes an offer public."""
+    _owner(request)
+    from app.services import residue_engine
+
+    offers = operating_v4.list_offer_views(db)
+    rescue_offer = next((offer for offer in offers if offer["id"] == "rescue-week"), None)
+    seller_evidence_count = (
+        operating_v4.count_linked_seller_evidence(db, rescue_offer["bet_id"])
+        if rescue_offer is not None else 0
+    )
+    return {
+        "offers": offers,
+        "legal_read": operating_v4._legal_read_projection(db),
+        "buyer_purchase_accounts": residue_engine.count_journeys(db),
+        "real_consented_seller_evidence": seller_evidence_count,
+        "outreach_boundary": "Outreach drafts stay in the existing owner-only Scout queue; agents never send.",
+    }
+
+
+@router.post("/offers/seed")
+def seed_offer_queue(request: Request, db: Session = Depends(get_db)):
+    """Idempotently seed the five drafts and the explicit legal-read Action."""
+    _owner(request)
+    try:
+        return operating_v4.seed_offer_views(db)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+
+@router.post("/offers/legal-read")
+def record_offer_legal_read(
+    payload: OfferLegalReadIn, request: Request, db: Session = Depends(get_db)
+):
+    """Owner records a lawyer's read; Hami does not claim independent legal verification."""
+    _owner(request)
+    try:
+        return operating_v4.record_offer_legal_read(
+            db,
+            lawyer_name=payload.lawyer_name,
+            review_date=payload.review_date,
+            source_reference=payload.source_reference,
+            summary=payload.summary,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+
+@router.post("/offers/{offer_id}/status")
+def change_offer_status(
+    offer_id: str, payload: OfferStatusIn, request: Request, db: Session = Depends(get_db)
+):
+    """Only an owner may approve, activate, or kill an Offer view."""
+    _owner(request)
+    try:
+        return operating_v4.set_offer_status(
+            db, offer_id, payload.status, kill_reason=payload.kill_reason
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+
 @router.get(
     "/selection",
     description=(
@@ -350,7 +431,6 @@ def verify_capability_real_world(
     except SubstrateError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     return {"id": capability_id, "real_world_verified": True}
-
 
 
 @router.post("/evidence/{evidence_id}/proof")

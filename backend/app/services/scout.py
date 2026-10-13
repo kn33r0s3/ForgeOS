@@ -233,43 +233,64 @@ def mark_sent(
     db: Session, draft_id: int, channel: str, sent_by: str = "owner"
 ) -> models.OutreachDraft:
     """Owner confirms they sent the message from their own account.
-    Logs the send as a WorldEvent + Action with authorization.
-    This function never sends anything itself."""
+    Logs the contact as a WorldEvent + authorized Action. Never sends."""
     draft = db.get(models.OutreachDraft, draft_id)
     if not draft:
         raise ValueError("Draft not found.")
     if draft.status != "APPROVED":
         raise ValueError("Only APPROVED drafts can be marked sent.")
     check_send_allowed(db, draft.candidate_entity_id)
+    sent_actor = (sent_by or "").strip()
+    sent_channel = (channel or "").strip()
+    if not sent_actor or len(sent_actor) > 200:
+        raise ValueError("sent_by must identify the owner-operated account (1–200 characters).")
+    if not sent_channel or len(sent_channel) > 80:
+        raise ValueError("channel must identify the contact channel (1–80 characters).")
     draft.status = "SENT"
     draft.sent_at = utcnow()
-    draft.sent_by = sent_by
-    draft.send_channel = channel
-    # Log as Event with authorization.
+    draft.sent_by = sent_actor
+    draft.send_channel = sent_channel
+    # The owner reports the contact happened; the event does not verify the
+    # counterparty saw it. Response/outcome stays pending until actually logged.
     event = models.WorldEvent(
         event_type="outreach.sent",
         entity_id=draft.candidate_entity_id,
         payload=json.dumps(
             {
                 "draft_id": draft.id,
-                "channel": channel,
-                "sent_by": sent_by,
+                "channel": sent_channel,
+                "sent_by": sent_actor,
                 "authorized_by": "owner",
                 "message_en": draft.message_en,
-            }
+                "outcome_status": "contact reported sent; response pending",
+            },
+            ensure_ascii=False,
         ),
         source="owner",
+        idempotency_key=f"outreach-sent:{draft.id}",
     )
     db.add(event)
-    # Log as Action (requires owner approval type).
     action = models.Action(
         action_type="outreach",
-        objective=f"First contact with {draft.candidate_entity_id}: {draft.observed_fact}",
+        objective=f"First contact with entity {draft.candidate_entity_id}: {draft.observed_fact}",
+        parameters_json=json.dumps(
+            {
+                "outreach_draft_id": draft.id,
+                "authorized_by": "owner",
+                "sent_by": sent_actor,
+                "channel": sent_channel,
+                "message_language": ["en", "ne"],
+                "outcome_status": "contact reported sent; response pending",
+            },
+            ensure_ascii=False,
+        ),
         status="SUCCEEDED",
         policy_result="ALLOW",
-        policy_reason="Owner-approved draft, sent by owner from own account.",
-        approved_at=utcnow(),
+        policy_reason="Owner-approved draft, sent by owner from their own account; no agent send.",
+        approved_at=draft.approved_at or utcnow(),
+        execution_result="Owner reported the contact sent; counterparty receipt and outcome are unverified.",
         verification_state="UNVERIFIED",
+        external_ref=f"outreach_draft:{draft.id}",
     )
     db.add(action)
     db.commit()
@@ -278,16 +299,71 @@ def mark_sent(
 
 
 def record_reply(db: Session, draft_id: int, summary: str) -> models.OutreachDraft:
+    """Append an owner-recorded contact outcome to the canonical Event/Action trail."""
     draft = db.get(models.OutreachDraft, draft_id)
     if not draft:
         raise ValueError("Draft not found.")
+    if draft.status != "SENT":
+        raise ValueError("A response outcome can only be recorded for a contact the owner marked sent.")
+    clean_summary = (summary or "").strip()
+    if not clean_summary or len(clean_summary) > 3000:
+        raise ValueError("Reply/outcome summary must contain 1–3000 characters.")
     draft.reply_received = True
     draft.reply_at = utcnow()
-    draft.reply_summary = summary
+    draft.reply_summary = clean_summary
+    draft.outcome_notes = clean_summary
+    action = (
+        db.query(models.Action)
+        .filter(
+            models.Action.action_type == "outreach",
+            models.Action.external_ref == f"outreach_draft:{draft.id}",
+        )
+        .order_by(models.Action.id.desc())
+        .first()
+    )
+    if action is None:
+        # Compatibility for historic SENT drafts that predate the linked Action.
+        action = models.Action(
+            action_type="outreach",
+            objective=f"First contact with entity {draft.candidate_entity_id}: {draft.observed_fact}",
+            status="SUCCEEDED",
+            policy_result="ALLOW",
+            policy_reason="Legacy owner-reported SENT contact; response captured by owner.",
+            approved_at=draft.approved_at or utcnow(),
+            verification_state="UNVERIFIED",
+            external_ref=f"outreach_draft:{draft.id}",
+            parameters_json=json.dumps({"outreach_draft_id": draft.id, "authorized_by": "owner"}),
+        )
+        db.add(action)
+        db.flush()
+    try:
+        parameters = json.loads(action.parameters_json or "{}")
+    except (TypeError, ValueError):
+        parameters = {}
+    parameters["outcome"] = {
+        "type": "reply_received",
+        "summary": clean_summary,
+        "recorded_by": "owner",
+        "recorded_at": utcnow().isoformat(),
+        "verification": "owner-recorded; not independently verified",
+    }
+    action.parameters_json = json.dumps(parameters, ensure_ascii=False)
+    action.execution_result = "Owner-recorded recipient response; content and resulting business outcome are not independently verified."
+    db.add(action)
     event = models.WorldEvent(
         event_type="outreach.reply",
         entity_id=draft.candidate_entity_id,
-        payload=json.dumps({"draft_id": draft.id, "summary": summary}),
+        payload=json.dumps(
+            {
+                "draft_id": draft.id,
+                "contact_action_id": action.id,
+                "outcome_type": "reply_received",
+                "summary": clean_summary,
+                "authorized_by": "owner",
+                "verification": "owner-recorded; not independently verified",
+            },
+            ensure_ascii=False,
+        ),
         source="owner",
     )
     db.add(event)

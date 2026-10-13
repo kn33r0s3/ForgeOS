@@ -79,6 +79,569 @@ def _bet_attributes(bet: models.SubstrateEntity) -> dict:
     return json.loads(bet.attributes or "{}")
 
 
+# Offers are projections stored on their existing Bet entity. They are not
+# rows in a new table and do not extend Hami's six canonical primitives.
+OFFER_STATUSES = ("draft", "owner-approved", "live", "killed")
+OFFER_LEGAL_ACTION_OBJECTIVE = (
+    "Lawyer read: Nepal personal-data handling and consent; online-business registration"
+)
+OFFER_LEGAL_ACTION_KIND = "hami_offer_legal_read"
+OFFER_LEGAL_TOPICS = [
+    "Personal-data handling and consent in Nepal, including what may be collected, retained, shared, and deleted.",
+    "Online-business registration and any registration, tax, licensing, or disclosure duties that apply to the actual offer.",
+]
+OFFER_SEEDS = [
+    {
+        "id": "how-you-decided",
+        "title": "How you decided",
+        "linked_bet_code": "C",
+        "audience": "CONTRIBUTOR",
+        "one_sentence_offer": "Share how you decided on one recent purchase and receive a short, anonymized map of the factors you say mattered.",
+        "they_give": "One voluntary first-person account of a recent decision, about 10 minutes; no screenshots or private chat quotes.",
+        "they_get": "A short summary for review, with personal identifiers removed before any public learning is shared.",
+        "cost_to_hami": {
+            "cash_estimate_npr": 0,
+            "owner_time_minutes_estimate": 20,
+            "assumptions": "Estimate includes consent, a short conversation, preparing the summary, and checking that it is de-identified. Actual owner time must be recorded during the test.",
+        },
+        "consent_text": {
+            "en": "Taking part is voluntary. You may skip any question or stop at any time. Please share only your own experience, not another person's private messages or identifying details. Hami will use your account to prepare a short summary; we will not publish your name or identifying details.",
+            "ne": "सहभागिता स्वेच्छिक हो। तपाईंले कुनै प्रश्न छोड्न वा जुनसुकै बेला रोक्न सक्नुहुन्छ। आफ्नो अनुभव मात्र साझा गर्नुहोस्; अरूको निजी सन्देश वा पहिचान खुल्ने विवरण नदिनुहोस्। हामिले छोटो सारांश बनाउन तपाईंको विवरण प्रयोग गर्नेछ र तपाईंको नाम वा पहिचान खुल्ने विवरण सार्वजनिक गर्ने छैन।",
+        },
+        "terms_text": {
+            "en": "This is an exploratory research exchange, not professional, financial, or purchasing advice. There is no fee and no promised result. You can decline or withdraw before the summary is anonymized. Hami will not claim your account represents other buyers.",
+            "ne": "यो प्रारम्भिक अनुसन्धानका लागि गरिएको आदानप्रदान हो; व्यावसायिक, वित्तीय वा खरिदसम्बन्धी सल्लाह होइन। कुनै शुल्क छैन र निश्चित नतिजाको वाचा छैन। सारांशबाट पहिचान हटाइनुअघि तपाईं सहभागी नहुने वा सहभागिता फिर्ता लिन सक्नुहुन्छ। हामिले तपाईंको अनुभवलाई सबै खरिदकर्ताको प्रतिनिधि प्रमाण मान्ने छैन।",
+        },
+        "test": {
+            "question": "Can a first-person decision account reveal a checkable step that existing seller-visible records miss?",
+            "method": "Invite up to five consented contributors; record the decision sequence and what evidence they personally checked; compare each claim to what can be independently checked without retaining private messages.",
+            "sample_size": "Up to 5 accounts; exploratory only",
+            "success_signal": "At least one specific, checkable decision factor not represented in the existing record, with provenance and uncertainty retained.",
+        },
+        "kill_criterion": "Stop if informed consent is unclear, participants cannot share without disclosing another person's private data, or five accounts yield no specific checkable decision factor.",
+        "depends_on": [],
+    },
+    {
+        "id": "lost-sales-check",
+        "title": "Lost-sales check",
+        "linked_bet_code": "A",
+        "audience": "SELLER",
+        "one_sentence_offer": "Share a small, consented count of recent inquiries and get a simple reply-and-outcome audit without labelling unanswered inquiries as lost revenue.",
+        "they_give": "A redacted count or owner-prepared summary of recent inquiries, replies, and known outcomes; no customer names, screenshots, or private message exports.",
+        "they_get": "A short audit separating observed counts, unknown outcomes, and hypotheses for a next test.",
+        "cost_to_hami": {
+            "cash_estimate_npr": 0,
+            "owner_time_minutes_estimate": 45,
+            "assumptions": "Estimate includes agreeing the scope, reviewing a small redacted sample, and returning the audit. Actual owner time must be recorded.",
+        },
+        "consent_text": {
+            "en": "You decide what to share and may stop at any time. Share only information you are permitted to share and remove buyer names, phone numbers, handles, message contents, and other identifying details. Hami will not contact your buyers.",
+            "ne": "के साझा गर्ने भन्ने निर्णय तपाईंको हो र तपाईं जुनसुकै बेला रोक्न सक्नुहुन्छ। साझा गर्न अनुमति भएको जानकारी मात्र दिनुहोस् र खरिदकर्ताका नाम, फोन नम्बर, ह्यान्डल, सन्देशको सामग्री तथा पहिचान खुल्ने विवरण हटाउनुहोस्। हामिले तपाईंका खरिदकर्तालाई सम्पर्क गर्ने छैन।",
+        },
+        "terms_text": {
+            "en": "This is a bounded diagnostic, not a promise to recover sales. Unanswered inquiries are not counted as lost sales unless an actual lost outcome is evidenced. No software installation, buyer contact, payment, or operational change is included in this check.",
+            "ne": "यो सीमित जाँच हो; बिक्री फर्काउने वाचा होइन। वास्तविक बिक्री गुमेको प्रमाण नभएसम्म जवाफ नआएका सोधपुछलाई गुमेको बिक्री मानिने छैन। यस जाँचमा सफ्टवेयर जडान, खरिदकर्तासँग सम्पर्क, भुक्तानी वा सञ्चालन परिवर्तन समावेश छैन।",
+        },
+        "test": {
+            "question": "Do the seller's records show an observable response/presence constraint, or are outcomes mostly unknown?",
+            "method": "Review one agreed, redacted sample; count inquiries, replies, response latency where available, and known paid outcomes separately. Keep estimates separate from actual outcomes.",
+            "sample_size": "One small seller-approved sample",
+            "success_signal": "A reproducible baseline with known denominators and explicit unknowns, sufficient to decide whether any further test is justified.",
+        },
+        "kill_criterion": "Stop if consent or lawful authority to share is unclear, records cannot be safely redacted, or the sample cannot support a reproducible count.",
+        "depends_on": [],
+    },
+    {
+        "id": "buyer-voice-brief",
+        "title": "Buyer-voice brief",
+        "linked_bet_code": "C",
+        "audience": "BUYER",
+        "one_sentence_offer": "Describe your own recent purchase decision and receive a short summary of the checks, doubts, and factors you report as decisive.",
+        "they_give": "One consented first-person account of a purchase decision, using their own words without private chat transcripts or other people's identifying details.",
+        "they_get": "A concise, de-identified brief separating what the buyer reported from what is independently supported.",
+        "cost_to_hami": {
+            "cash_estimate_npr": 0,
+            "owner_time_minutes_estimate": 25,
+            "assumptions": "Estimate includes consent, recording structured notes, de-identifying, and preparing the brief. Actual owner time must be recorded.",
+        },
+        "consent_text": {
+            "en": "Participation is voluntary. Share only your own experience and do not provide private messages, screenshots, account credentials, or another person's identifying information. You may stop at any time before your account is anonymized.",
+            "ne": "सहभागिता स्वेच्छिक हो। आफ्नो अनुभव मात्र साझा गर्नुहोस्; निजी सन्देश, स्क्रिनसट, खाताको पासवर्ड वा अरूको पहिचान खुल्ने जानकारी नदिनुहोस्। तपाईंको विवरणबाट पहिचान हटाइनुअघि जुनसुकै बेला रोक्न सक्नुहुन्छ।",
+        },
+        "terms_text": {
+            "en": "The brief is a research summary, not a recommendation to buy from any particular seller and not a guarantee of safety or quality. Hami will not present one account as representative of all buyers.",
+            "ne": "यो संक्षिप्त विवरण अनुसन्धानका लागि हो; कुनै निश्चित विक्रेताबाट किन्न सिफारिस वा सुरक्षा/गुणस्तरको ग्यारेन्टी होइन। हामिले एउटा अनुभवलाई सबै खरिदकर्ताको प्रतिनिधि मानेर प्रस्तुत गर्ने छैन।",
+        },
+        "test": {
+            "question": "Which checks and concerns do buyers themselves say changed a purchase decision?",
+            "method": "Collect consented first-person accounts; code reported decision factors separately from independently checkable facts; note contradictions and missing evidence.",
+            "sample_size": "One account per participant; exploratory until the 10-account threshold",
+            "success_signal": "Decision factors can be categorized without exposing identities or turning self-report into verified fact.",
+        },
+        "kill_criterion": "Stop if consent is missing, the account requires private third-party chat content, or reported factors cannot be separated from unsupported inference.",
+        "depends_on": [],
+    },
+    {
+        "id": "rescue-week",
+        "title": "Rescue week",
+        "linked_bet_code": "A",
+        "audience": "SELLER",
+        "one_sentence_offer": "For one consenting seller, run a bounded human-led one-week response test and report observed inquiry and paid-outcome counts without promising recovered sales.",
+        "they_give": "Written agreement to a defined scope, a lawful and consented baseline, and only the minimum de-identified records needed to measure actual outcomes.",
+        "they_get": "A dated before/after report separating observed facts, unknowns, costs, and any counterparty-confirmed paid outcomes.",
+        "cost_to_hami": {
+            "cash_estimate_npr": 0,
+            "owner_time_minutes_estimate": 420,
+            "assumptions": "Planning estimate: up to 7 owner hours across setup, daily monitoring, and close-out. No software or cash spend assumed; record actual hours and stop if the cap is exceeded.",
+        },
+        "consent_text": {
+            "en": "No activity starts until a lawyer has reviewed the relevant data/consent and registration questions and both parties agree to the written scope. Buyer data is minimized; Hami will not claim a sale was recovered without evidence of an actual paid outcome and a defensible comparison.",
+            "ne": "सम्बन्धित डेटा/सहमति र दर्ताका विषयमा वकिलले समीक्षा नगरेसम्म तथा दुवै पक्षले लिखित दायरामा सहमति नदिएसम्म काम सुरु हुँदैन। खरिदकर्ताको डेटा न्यूनतम राखिनेछ; वास्तविक भुक्तानीको प्रमाण र उचित तुलना नभएसम्म बिक्री फर्किएको दाबी गरिने छैन।",
+        },
+        "terms_text": {
+            "en": "A one-week observational/operational test with an agreed time cap; no guaranteed sales, recovery, or revenue. No messages are sent by agents. The owner conducts and records any authorized contact. Stop immediately if consent is withdrawn, legal permission is unclear, data handling is unsafe, or the cost cap is reached.",
+            "ne": "सहमत समयसीमाभित्र एक हप्ताको अवलोकन/सञ्चालन परीक्षण हुनेछ; बिक्री, बिक्री पुनःप्राप्ति वा आम्दानीको ग्यारेन्टी छैन। एजेन्टले सन्देश पठाउँदैन। अनुमति प्राप्त सम्पर्क मालिकले स्वयं गर्छ र अभिलेख राख्छ। सहमति फिर्ता भए, कानुनी अनुमति अस्पष्ट भए, डेटा सुरक्षित राख्न नसकिए वा लागत सीमा पुगेमा तुरुन्त रोक्नुहोस्।",
+        },
+        "test": {
+            "question": "Does a bounded response intervention change measured response and paid-outcome rates for this consenting seller?",
+            "method": "Only after approval gates pass: define a baseline and denominator in advance; log each authorized contact as Event + Action; measure response and actual paid outcomes separately; record owner time and all costs. Do not infer recovered sales from unanswered inquiries.",
+            "sample_size": "One seller, seven days, only after prerequisites are verified",
+            "success_signal": "Complete auditable baseline and outcome records; a positive result is not assumed and must meet the pre-agreed comparison rule.",
+        },
+        "kill_criterion": "Do not start until lawyer-read status is recorded and relevant consented real seller evidence exists; kill if consent is withdrawn, actual outcomes cannot be verified, cost/time cap is exceeded, or evidence disconfirms the intervention.",
+        "depends_on": ["evidence:real-consented-firsthand-seller-record"],
+    },
+    {
+        "id": "before-you-pay-card",
+        "title": "Before you pay card",
+        "linked_bet_code": "B",
+        "audience": "BUYER",
+        "one_sentence_offer": "Use a concise pre-payment check card to review the seller, terms, and payment confirmation steps before deciding whether to pay.",
+        "they_give": "Nothing beyond choosing to read the checklist; any feedback is optional and must be consented.",
+        "they_get": "A plain-language checklist of practical checks and uncertainty signals, not a guarantee that a seller or payment is safe.",
+        "cost_to_hami": {
+            "cash_estimate_npr": 0,
+            "owner_time_minutes_estimate": 180,
+            "assumptions": "Planning estimate for reviewing ten consented purchase accounts and drafting a checklist. Actual owner time and any external costs must be recorded.",
+        },
+        "consent_text": {
+            "en": "Reading the checklist does not require sharing personal data. Do not send Hami your payment PIN, password, OTP, full receipt, card details, or private messages. Optional feedback is voluntary.",
+            "ne": "यो सूची पढ्न व्यक्तिगत डेटा साझा गर्नु पर्दैन। हामिलाई भुक्तानी PIN, पासवर्ड, OTP, पूरा रसिद, कार्ड विवरण वा निजी सन्देश नपठाउनुहोस्। वैकल्पिक प्रतिक्रिया स्वेच्छिक हो।",
+        },
+        "terms_text": {
+            "en": "The card is informational and does not verify a merchant, payment, product, or transaction. Check the official payment app/account yourself and never rely on screenshots alone. This offer stays unavailable until at least ten consented purchase-journey accounts exist and the owner approves the public copy.",
+            "ne": "यो कार्ड जानकारीका लागि हो; यसले व्यापारी, भुक्तानी, सामान वा कारोबार प्रमाणित गर्दैन। आधिकारिक भुक्तानी एप/खाता आफैं जाँच्नुहोस् र स्क्रिनसटलाई मात्र आधार नमान्नुहोस्। कम्तीमा दस सहमतिप्राप्त खरिद-अनुभव अभिलेख नभएसम्म र मालिकले सार्वजनिक सामग्री स्वीकृत नगरेसम्म यो उपलब्ध हुँदैन।",
+        },
+        "test": {
+            "question": "Do ten consented purchase accounts support a checklist with specific, understandable checks that do not imply verification?",
+            "method": "Wait for at least ten existing consented buyer/circle journey records; distinguish repeated reported concerns from independently verifiable payment controls; owner-review copy before it is shown publicly.",
+            "sample_size": "At least 10 consented purchase-journey accounts",
+            "success_signal": "Each checklist item has a traceable basis and wording that does not overstate safety or detection.",
+        },
+        "kill_criterion": "Keep blocked until ten consented purchase accounts exist; kill if no practical checks are supported, or if users could reasonably mistake the card for merchant/payment verification.",
+        "depends_on": ["evidence:buyer-purchase-journeys>=10"],
+    },
+]
+
+
+def _offer_seed_bet(db: Session, bet_code: str) -> models.SubstrateEntity:
+    """Return the existing founding Bet projection, creating a paused founding
+    projection only when that specific known seed is absent. Never revive a
+    killed Bet and never consume a live-Bet slot just to attach an offer."""
+    prefix = f"Bet {bet_code} —"
+    candidates = (
+        db.query(models.SubstrateEntity)
+        .filter(models.SubstrateEntity.entity_type == BET_ENTITY_TYPE)
+        .order_by(models.SubstrateEntity.id.asc())
+        .all()
+    )
+    for candidate in candidates:
+        claim = _bet_attributes(candidate).get("claim") or ""
+        if claim.startswith(prefix):
+            return candidate
+    spec = next((item for item in SEED_FOUNDING_BETS if (item.get("claim") or "").startswith(prefix)), None)
+    if spec is None:
+        raise ValueError(f"Existing founding Bet {bet_code} is unavailable; offer was not seeded.")
+    return create_bet(
+        db,
+        claim=spec["claim"],
+        constraint=spec["constraint"],
+        test=spec["test"],
+        kill_criterion=spec["kill_criterion"],
+        decision_rule=spec["decision_rule"],
+        skeptic_case=spec["skeptic_case"],
+        owner_time=spec.get("owner_time"),
+        money_at_risk=spec.get("money_at_risk"),
+        trust_at_risk=spec.get("trust_at_risk"),
+        deadline=spec.get("deadline"),
+        initial_status="paused",
+    )
+
+
+def _offer_records(db: Session) -> list[tuple[models.SubstrateEntity, dict, dict]]:
+    records: list[tuple[models.SubstrateEntity, dict, dict]] = []
+    bets = (
+        db.query(models.SubstrateEntity)
+        .filter(models.SubstrateEntity.entity_type == BET_ENTITY_TYPE)
+        .order_by(models.SubstrateEntity.id.asc())
+        .all()
+    )
+    for bet in bets:
+        attributes = _bet_attributes(bet)
+        offers = attributes.get("offers", [])
+        if not isinstance(offers, list):
+            continue
+        for offer in offers:
+            if isinstance(offer, dict) and isinstance(offer.get("id"), str):
+                records.append((bet, attributes, offer))
+    return records
+
+
+def _legal_read_action(db: Session, *, create: bool = False) -> models.Action | None:
+    action = (
+        db.query(models.Action)
+        .filter(
+            models.Action.action_type == OFFER_LEGAL_ACTION_KIND,
+            models.Action.objective == OFFER_LEGAL_ACTION_OBJECTIVE,
+        )
+        .order_by(models.Action.id.asc())
+        .first()
+    )
+    if action is not None or not create:
+        return action
+    from app import models as _models
+    action = _models.Action(
+        action_type=OFFER_LEGAL_ACTION_KIND,
+        objective=OFFER_LEGAL_ACTION_OBJECTIVE,
+        parameters_json=json.dumps({
+            "item_id": "personal-data-consent-and-online-business-registration-nepal",
+            "status": "not yet read by a lawyer",
+            "topics": OFFER_LEGAL_TOPICS,
+            "review_record": None,
+        }, ensure_ascii=False),
+        status="PROPOSED",
+        policy_result="REQUIRE_APPROVAL",
+        policy_reason="A qualified Nepal-lawyer review is required; Hami has not established legal compliance.",
+        verification_state="UNVERIFIED",
+    )
+    db.add(action)
+    db.flush()
+    return action
+
+
+def _legal_read_projection(db: Session) -> dict:
+    action = _legal_read_action(db)
+    parameters = {}
+    if action and action.parameters_json:
+        try:
+            parameters = json.loads(action.parameters_json)
+        except (TypeError, ValueError):
+            parameters = {}
+    recorded = parameters.get("status") == "read-by-lawyer" and isinstance(parameters.get("review_record"), dict)
+    return {
+        "item_id": "personal-data-consent-and-online-business-registration-nepal",
+        "action_id": action.id if action else None,
+        "title": "Nepal legal read: personal-data handling, consent, and online-business registration",
+        "topics": OFFER_LEGAL_TOPICS,
+        "status": (
+            "recorded as read by a lawyer (owner-reported; not independently verified)"
+            if recorded else "not yet read by a lawyer"
+        ),
+        "read_by_lawyer": bool(recorded),
+        "review_record": parameters.get("review_record") if recorded else None,
+    }
+
+
+def count_linked_seller_evidence(db: Session, bet_id: int) -> int:
+    """Only count real, consented, firsthand seller evidence linked to this Bet."""
+    return (
+        db.query(models.Evidence)
+        .filter(
+            models.Evidence.linked_bet_id == bet_id,
+            models.Evidence.perspective == "SELLER",
+            models.Evidence.consent_status == "granted",
+            models.Evidence.source_type == "firsthand",
+            models.Evidence.source_kind == "REAL",
+        )
+        .count()
+    )
+
+
+def _offer_gate_state(db: Session, bet: models.SubstrateEntity, offer: dict) -> dict:
+    blockers: list[str] = []
+    bet_attributes = _bet_attributes(bet)
+    bet_status = bet_attributes.get("status", "unknown")
+    if bet_status == "killed":
+        blockers.append("The linked Bet is killed; this offer cannot be activated.")
+    if offer.get("id") == "rescue-week":
+        legal = _legal_read_projection(db)
+        if not legal["read_by_lawyer"]:
+            blockers.append("Blocked until the Nepal personal-data/consent and online-business-registration legal read is recorded.")
+        seller_evidence = count_linked_seller_evidence(db, bet.id)
+        if seller_evidence < 1:
+            blockers.append("Blocked until at least one real, firsthand, consented seller evidence record exists.")
+    if offer.get("id") == "before-you-pay-card":
+        from app.services import residue_engine
+        journey_count = residue_engine.count_journeys(db)
+        if journey_count < 10:
+            blockers.append(f"Blocked until at least 10 consented purchase-journey accounts exist ({journey_count}/10 recorded).")
+    return {
+        "blocked": bool(blockers),
+        "blockers": blockers,
+        "linked_bet_status": bet_status,
+    }
+
+
+def list_offer_views(db: Session, *, public_only: bool = False) -> list[dict]:
+    """Return the Offer projection from existing Bet attributes and current gates."""
+    rows = []
+    for bet, _attributes, offer in _offer_records(db):
+        gates = _offer_gate_state(db, bet, offer)
+        approved = bool(offer.get("owner_approved_at"))
+        if public_only and not (
+            offer.get("status") in ("owner-approved", "live") and approved and not gates["blocked"]
+        ):
+            continue
+        rows.append({
+            **offer,
+            "bet_id": bet.id,
+            "bet_name": bet.display_name,
+            "readiness": gates,
+            "public_copy": bool(offer.get("status") in ("owner-approved", "live") and approved and not gates["blocked"]),
+        })
+    return rows
+
+
+def seed_offer_views(db: Session) -> dict:
+    """Idempotently seed five drafts as views of founding Bet projections.
+    Adds no table or primitive; every seeded record lives on its existing Bet."""
+    # Reuse the founding Bet seam. Missing seeds are created PAUSED and are
+    # never silently promoted into the active operating slate.
+    targets = {code: _offer_seed_bet(db, code) for code in ("A", "B", "C")}
+    existing_ids = {offer["id"] for _bet, _attrs, offer in _offer_records(db)}
+    created: list[str] = []
+    now = utcnow().isoformat()
+    from app.services import world_graph
+    try:
+        for spec in OFFER_SEEDS:
+            if spec["id"] in existing_ids:
+                continue
+            bet = targets[spec["linked_bet_code"]]
+            attributes = _bet_attributes(bet)
+            stored_offers = attributes.get("offers", [])
+            if not isinstance(stored_offers, list):
+                raise ValueError(f"Bet {bet.id} has malformed offer projection; review before seeding.")
+            record = {
+                **spec,
+                "status": "draft",
+                "created_at": now,
+                "updated_at": now,
+                "owner_approved_at": None,
+                "owner_approved_by": None,
+                "live_at": None,
+                "killed_at": None,
+                "kill_reason": None,
+                "status_history": [{"status": "draft", "actor": "seed", "at": now}],
+            }
+            stored_offers.append(record)
+            attributes["offers"] = stored_offers
+            bet.attributes = json.dumps(attributes, ensure_ascii=False, sort_keys=True)
+            db.add(bet)
+            world_graph.create_event(
+                db,
+                event_type="state_changed",
+                source="offer_projection",
+                entity_id=bet.id,
+                payload={
+                    "change": "offer_seeded",
+                    "offer_id": spec["id"],
+                    "offer_status": "draft",
+                    "owner_approval_required": True,
+                },
+                idempotency_key=f"hami-offer-seeded:{spec['id']}",
+            )
+            existing_ids.add(spec["id"])
+            created.append(spec["id"])
+        existing_legal_action = _legal_read_action(db)
+        legal_action = _legal_read_action(db, create=True)
+        if existing_legal_action is None and legal_action is not None:
+            world_graph.create_event(
+                db,
+                event_type="state_changed",
+                source="offer_legal_read",
+                entity_id=targets["A"].id,
+                payload={
+                    "change": "legal_read_item_created",
+                    "action_id": legal_action.id,
+                    "item_id": "personal-data-consent-and-online-business-registration-nepal",
+                    "status": "not yet read by a lawyer",
+                },
+                idempotency_key="hami-offer-legal-read-item-created:v1",
+            )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return {
+        "created": created,
+        "offers": list_offer_views(db),
+        "legal_read": _legal_read_projection(db),
+    }
+
+
+def set_offer_status(
+    db: Session,
+    offer_id: str,
+    status: str,
+    *,
+    kill_reason: str | None = None,
+    actor: str = "owner",
+) -> dict:
+    if status not in ("owner-approved", "live", "killed"):
+        raise ValueError("status must be owner-approved|live|killed")
+    entry = next((row for row in _offer_records(db) if row[2].get("id") == offer_id), None)
+    if entry is None:
+        raise ValueError("Offer not found.")
+    bet, attributes, offer = entry
+    current = offer.get("status", "draft")
+    allowed = {
+        "draft": {"owner-approved", "killed"},
+        "owner-approved": {"live", "killed"},
+        "live": {"killed"},
+        "killed": set(),
+    }
+    if status not in allowed.get(current, set()):
+        raise ValueError(f"Invalid offer transition: {current} -> {status}.")
+    gates = _offer_gate_state(db, bet, offer)
+    if status == "owner-approved" and gates["blocked"]:
+        raise ValueError("Offer remains blocked: " + " ".join(gates["blockers"]))
+    if status == "live":
+        if not offer.get("owner_approved_at"):
+            raise ValueError("Offer must be explicitly owner-approved before it can go live.")
+        if gates["blocked"]:
+            raise ValueError("Offer remains blocked: " + " ".join(gates["blockers"]))
+        if gates.get("linked_bet_status") != "live":
+            raise ValueError("Offer cannot go live until its linked Bet is live.")
+    if status == "killed" and not (kill_reason or "").strip():
+        raise ValueError("Killing an offer requires a non-empty reason.")
+    now = utcnow().isoformat()
+    offer["status"] = status
+    offer["updated_at"] = now
+    offer.setdefault("status_history", []).append({
+        "status": status,
+        "actor": actor,
+        "at": now,
+        "reason": (kill_reason or "").strip() or None,
+    })
+    if status == "owner-approved":
+        offer["owner_approved_at"] = now
+        offer["owner_approved_by"] = actor
+    elif status == "live":
+        offer["live_at"] = now
+    elif status == "killed":
+        offer["killed_at"] = now
+        offer["kill_reason"] = (kill_reason or "").strip()
+    attributes["offers"] = [
+        offer if item.get("id") == offer_id else item
+        for item in attributes.get("offers", [])
+    ]
+    bet.attributes = json.dumps(attributes, ensure_ascii=False, sort_keys=True)
+    db.add(bet)
+    from app.services import world_graph
+    world_graph.create_event(
+        db,
+        event_type="state_changed",
+        source="offer_projection",
+        entity_id=bet.id,
+        payload={
+            "change": "offer_status_changed",
+            "offer_id": offer_id,
+            "from_status": current,
+            "to_status": status,
+            "authorized_by": actor,
+            "kill_reason": (kill_reason or "").strip() or None,
+        },
+        idempotency_key=f"hami-offer-status:{offer_id}:{status}:{now}",
+    )
+    db.commit()
+    return next(item for item in list_offer_views(db) if item["id"] == offer_id)
+
+
+def record_offer_legal_read(
+    db: Session,
+    *,
+    lawyer_name: str,
+    review_date: str,
+    source_reference: str,
+    summary: str,
+    actor: str = "owner",
+) -> dict:
+    lawyer = (lawyer_name or "").strip()
+    reference = (source_reference or "").strip()
+    note = (summary or "").strip()
+    date_value = (review_date or "").strip()
+    if len(lawyer) < 2 or len(lawyer) > 200:
+        raise ValueError("Provide the reviewing lawyer's name (2–200 characters).")
+    if len(reference) < 4 or len(reference) > 500:
+        raise ValueError("Provide a retrievable review/evidence reference (4–500 characters).")
+    if len(note) < 10 or len(note) > 3000:
+        raise ValueError("Provide a concise review summary (10–3000 characters).")
+    try:
+        parsed_date = datetime.fromisoformat(date_value)
+    except ValueError as exc:
+        raise ValueError("review_date must be an ISO date or datetime.") from exc
+    if parsed_date.date() > utcnow().date():
+        raise ValueError("review_date cannot be in the future.")
+    action = _legal_read_action(db, create=True)
+    assert action is not None
+    parameters = {}
+    try:
+        parameters = json.loads(action.parameters_json or "{}")
+    except (TypeError, ValueError):
+        parameters = {}
+    now = utcnow().isoformat()
+    record = {
+        "lawyer_name": lawyer,
+        "review_date": parsed_date.date().isoformat(),
+        "source_reference": reference,
+        "summary": note,
+        "recorded_by": actor,
+        "recorded_at": now,
+        "verification": "owner-reported; not independently verified",
+    }
+    parameters.update({
+        "item_id": "personal-data-consent-and-online-business-registration-nepal",
+        "status": "read-by-lawyer",
+        "topics": OFFER_LEGAL_TOPICS,
+        "review_record": record,
+    })
+    action.parameters_json = json.dumps(parameters, ensure_ascii=False)
+    action.status = "SUCCEEDED"
+    action.execution_result = "Owner recorded a lawyer-read report; identity/content not independently verified."
+    action.verification_state = "UNVERIFIED"
+    db.add(action)
+    from app.services import world_graph
+    bet = _offer_seed_bet(db, "A")
+    world_graph.create_event(
+        db,
+        event_type="state_changed",
+        source="offer_legal_read",
+        entity_id=bet.id,
+        payload={
+            "change": "legal_read_recorded",
+            "action_id": action.id,
+            "status": "read-by-lawyer",
+            "review_date": record["review_date"],
+            "source_reference": reference,
+            "recorded_by": actor,
+            "verification": record["verification"],
+        },
+        idempotency_key=f"hami-offer-legal-read:{action.id}:{record['review_date']}",
+    )
+    db.commit()
+    return _legal_read_projection(db)
+
+
 def live_bets(db: Session) -> list:
     bets = (
         db.query(models.SubstrateEntity)
