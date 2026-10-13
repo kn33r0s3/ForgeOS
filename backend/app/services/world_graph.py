@@ -499,28 +499,35 @@ def create_entity(
         or "Real-world identity is not independently corroborated."
     )
     identity_provenance = _dump_json(identity.get("provenance", {}), "identity provenance")
+    expected = (
+        kind,
+        source_system,
+        source_id,
+        name,
+        attributes_json,
+        canonical_identifier,
+        normalized_identity,
+        identity_uncertainty,
+        identity_provenance,
+    )
+
+    def matches_existing(existing: models.SubstrateEntity) -> bool:
+        return (
+            existing.entity_type,
+            existing.source_system,
+            existing.source_id,
+            existing.display_name,
+            existing.attributes,
+            existing.canonical_identifier,
+            existing.normalized_identity,
+            existing.identity_uncertainty,
+            existing.identity_provenance,
+        ) == expected
+
     if identity_key:
         existing = db.query(models.SubstrateEntity).filter_by(identity_key=identity_key).one_or_none()
         if existing is not None:
-            expected = (
-                name,
-                attributes_json,
-                canonical_identifier,
-                normalized_identity,
-                identity_uncertainty,
-                identity_provenance,
-            )
-            actual = (
-                existing.display_name,
-                existing.attributes,
-                existing.canonical_identifier,
-                existing.normalized_identity,
-                existing.identity_uncertainty,
-                existing.identity_provenance,
-            )
-            if (existing.entity_type, existing.source_system, existing.source_id) != (
-                kind, source_system, source_id
-            ) or actual != expected:
+            if not matches_existing(existing):
                 raise SubstrateError(
                     "source identity already exists with a different payload; "
                     "use its registered adapter to refresh it"
@@ -540,8 +547,25 @@ def create_entity(
         identity_provenance=identity_provenance,
         created_by=owner,
     )
-    db.add(entity)
-    db.flush()
+    if identity_key:
+        db.flush()
+        try:
+            with db.begin_nested():
+                db.add(entity)
+                db.flush()
+        except IntegrityError:
+            existing = db.query(models.SubstrateEntity).filter_by(identity_key=identity_key).one_or_none()
+            if existing is None:
+                raise
+            if not matches_existing(existing):
+                raise SubstrateError(
+                    "source identity already exists with a different payload; "
+                    "use its registered adapter to refresh it"
+                )
+            return existing
+    else:
+        db.add(entity)
+        db.flush()
     _record_event(
         db, event_type="entity_created", entity_id=entity.id, source=owner,
         payload={"entity_type": kind}, idempotency_key=f"entity-created:{entity.id}",

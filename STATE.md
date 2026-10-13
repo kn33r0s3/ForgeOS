@@ -2,6 +2,15 @@
 
 **Snapshot:** 2026-10-14, Kathmandu time. Distinguishes source changes from CI, deployed runtime, scheduled execution and actual outcomes.
 
+## 2026-10-14 — backend gate restored locally after main sync
+
+- Fetched `origin/main` at `0c1b41e6` and completed its merge on the single `main` branch as `795d7f6`. The exact-head Actions run for that upstream base (38484732591) failed; do not describe GitHub CI as green.
+- Fixed the demonstrated `world_graph.create_entity` concurrent source-identity race in place: insert under a nested savepoint and recover only when the competing row has the same full canonical payload. Updated three stale/test-double expectations without weakening the TEST-vs-REAL evidence gate.
+- Verification on the local merged tree: four targeted backend tests passed; full backend suite **1,296 passed, 2 skipped, 18 warnings**. `npm test`, `npm run typecheck`, `npm run lint`, and `DATABASE_URL= npm run build` all exited successfully. Lint still reports one pre-existing Fast Refresh warning in `src/components/experiments/experiment-card.tsx:108`.
+- The local code and continuity updates are not yet pushed, so exact-head CI and deployment status for them are **UNVERIFIED**. The earlier route-canonical and keyboard changes remain deployment-pending. No auth, privacy/legal approval, intake, outreach, spend, provider activation, production flag, or database state was changed.
+- The change removes only manual retry/reconciliation for this same-payload identity race; it does not establish fewer owner actions per real transaction. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+- Next: commit the verified changes, fetch `main` again, and push directly only if upstream is unchanged; then verify exact-SHA CI and production canonical/noindex behavior. No production result or customer/revenue outcome is claimed.
+
 
 ## 2026-10-14 — exact-head CI diagnosis (main: 959482fdf5fc84675a2d17b453537b3944d64650)
 

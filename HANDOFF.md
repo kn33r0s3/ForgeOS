@@ -544,3 +544,11 @@ Flip intake/send flags without owner approval · spend money · message or
 contact anyone on the user's behalf · fabricate any user, lead, outcome,
 or evidence · treat local test results as production proof · claim reach
 or adoption the repo doesn't have · go around a safeguard.
+
+## Latest verified checkpoint — 2026-10-14
+
+- Current repo: one `main` branch; upstream `origin/main` was fetched at `0c1b41e6`, and its merge is `795d7f6`. Local fixes and continuity updates still require a commit and have not been pushed.
+- The known backend failures were resolved locally: `create_entity` now handles the demonstrated same-payload concurrent identity insert through a nested savepoint, and three stale test/test-double contracts were corrected without changing production truth gates.
+- Verified locally: four targeted backend tests; full backend suite (**1,296 passed, 2 skipped, 18 warnings**); `npm test`; typecheck; lint; and safe build. Lint has one pre-existing warning at `src/components/experiments/experiment-card.tsx:108`.
+- Do not claim GitHub CI is green: Actions run 38484732591 failed for upstream SHA `0c1b41e6`; the local fix has not yet run on GitHub. Do not claim deployment: route-canonical and keyboard changes remain pending production verification.
+- Next: commit, fetch latest `main`, and push directly only if the fetched head has not advanced. Then verify exact-SHA Actions and live canonical tags/noindex headers. No real customer outcome or revenue is verified; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.

@@ -250,3 +250,12 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Marked the Build Book D71–D83 gap resolved: `docs/UNKNOWN_MAP.md` and `src/lib/unknowns.ts` have 96 matching unique D IDs through D96, and the existing `npm test` checks generation parity.
 - Recorded global originality/no-competitor-fixation in the Brain; external products are evidence about real needs, not Hami's identity or reason to narrow the search.
 - This documentation commit does not itself prove continuous execution. No external action, spend, message, publication, production activation or secret disclosure was performed.
+
+## 2026-10-14 — synchronize main and restore the local backend gate
+
+- Fetched `origin/main` at `0c1b41e6` and completed the in-progress merge as `795d7f6` on the existing `main` branch. The GitHub Actions run for that base, 38484732591, failed; this is not a green-CI claim.
+- The failing concurrent canonical-entity test demonstrated a check-then-insert race in `backend/app/services/world_graph.py:create_entity`. The existing identity key and full-payload contract are preserved; a nested savepoint isolates the insert, and a duplicate is treated as idempotent only after the competing row matches the complete payload. The caller's earlier pending work is flushed outside the savepoint and is not rolled back by this recovery.
+- Corrected three test-only mismatches: the synthetic-evidence test now uses a non-TEST event so it reaches the intended evidence-source guard; the Ollama fake response honors bounded reads; and the legacy projection count includes the Claim identity-refresh event plus four snapshots.
+- Verification: all four targeted backend tests passed; full backend suite **1,296 passed, 2 skipped, 18 warnings**. `npm test`, `npm run typecheck`, `npm run lint`, and `DATABASE_URL= npm run build` passed. Lint retains one pre-existing warning at `src/components/experiments/experiment-card.tsx:108`.
+- Changes remain local as of this entry. No production deployment, exact-head CI for the local changes, real-world outcome, owner authorization, external contact, spending or provider activation is claimed. Owner interventions per real transaction remain **NOT MEASURABLE**.
+- Next: commit the changes, re-fetch `main`, push only if it has not advanced, then verify exact-head CI and deployed public canonicals/private noindex boundaries.

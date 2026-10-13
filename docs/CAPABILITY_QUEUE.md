@@ -9,6 +9,17 @@
 
 ---
 
+## [CANONICAL ENTITY RACE / LOCAL GATES GREEN / PUSH AND DEPLOY PENDING] Make concurrent source-identity creation idempotent
+
+- **Existing seam and history inspected:** `backend/app/services/world_graph.py:create_entity` is the shared canonical entity creation path. `git log -S`, `git blame`, and the restoration history show the source-identity preflight and payload-match contract were restored with the canonical substrate in `f99008de`; no parallel entity path or new primitive was added.
+- **Observed defect:** the exact-head backend suite exposed a race in which two callers passed the identity lookup before either insert, then one failed on the unique `identity_key` constraint. The local regression `test_concurrent_gap_creation_is_idempotent` reproduced it.
+- **Owner action removed:** a human no longer needs to rerun/reconcile a same-payload canonical creation solely because concurrent adapters raced on the identity insert. This internal reliability change does not prove an economic outcome or reduce measured owner interventions.
+- **What remains:** a duplicate key with a different payload still fails explicitly; unrelated flush and database errors still propagate. Exact-head CI for this local change and production behavior are not yet verified; authorization, privacy, evidence, intake, and external-action boundaries are unchanged.
+- **Next removable dependency:** commit the locally green changes, fetch `main` again, then push only if upstream has not advanced; verify exact-head CI and deployed route-specific canonicals plus private/noindex boundaries. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+- **Verification:** four targeted backend regressions passed; the full backend suite passed (1,296 passed, 2 skipped, 18 warnings). `npm test`, `npm run typecheck`, `npm run lint`, and `DATABASE_URL= npm run build` passed; lint retains one pre-existing warning in `src/components/experiments/experiment-card.tsx`. The latest observed Actions run, 38484732591 for base SHA `0c1b41e6`, failed; no CI or deployment success is claimed for the local changes.
+
+---
+
 ## [PUBLIC UNKNOWN FILTERS / KEYBOARD VERIFIED LOCALLY / REPOSITORY GATES BLOCKED] Complete tab interaction
 
 - **Existing seam inspected:** `src/routes/unknowns.tsx` already owns both the public Unknowns lane selector and its state filters. `git log --follow`, `git blame`, and the introduction commit `4fb14930` show both were introduced as `role="tab"` controls.

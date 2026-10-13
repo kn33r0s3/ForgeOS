@@ -2358,8 +2358,9 @@ def test_ollama_authenticated_https_gateway_probes_model_and_generates_with_bear
         def __exit__(self, *args):
             return False
 
-        def read(self):
-            return json.dumps(self.payload).encode("utf-8")
+        def read(self, size=-1):
+            response = json.dumps(self.payload).encode("utf-8")
+            return response if size is None or size < 0 else response[:size]
 
     def fake_urlopen(request, timeout):
         headers = {key.lower(): value for key, value in request.header_items()}

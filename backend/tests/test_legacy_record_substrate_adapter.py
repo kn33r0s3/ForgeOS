@@ -91,7 +91,8 @@ def test_remaining_canonical_legacy_rows_project_without_copy_or_guessed_edges(d
     db.commit()
     refreshed = adapter.sync_legacy_records(db)
     assert refreshed["entities_created"] == 0
-    assert refreshed["events_created"] == 4
+    # The changed Claim display name emits an identity refresh in addition to four snapshots.
+    assert refreshed["events_created"] == 5
     assert world_graph.find_canonical_entity(db, "claim", claim.id).display_name == claim.statement
     assert db.query(models.Claim).count() == 1
     assert db.query(models.ResearchQuestion).count() == 1

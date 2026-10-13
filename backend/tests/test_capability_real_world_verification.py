@@ -132,7 +132,7 @@ def test_synthetic_evidence_rejected(db):
     """Agent-written/synthetic/mock evidence cannot establish verification."""
     cap = _make_capability(db)
     subject = _make_subject(db)
-    evt = _make_test_event(db, subject.id)
+    evt = _make_test_event(db, subject.id, source="manual")
     for bad_source in ["agent_written", "synthetic", "mock"]:
         ev = _make_test_evidence(db, subject.id, source_type=bad_source)
         with pytest.raises(SubstrateError, match="not synthetic or mock"):
