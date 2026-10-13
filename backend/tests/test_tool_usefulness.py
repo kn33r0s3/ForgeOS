@@ -126,6 +126,54 @@ def test_useful_source_usage_does_not_confuse_judgment_with_verification(db, mon
     assert tool.cost is None
 
 
+
+def test_repeated_returned_signal_is_not_counted_as_novel_twice(db, monkeypatch):
+    question = models.ResearchQuestion(question="TEST repeated collector item counting")
+    claim = models.Claim(
+        statement="TEST repeated source claim.",
+        normalized_statement="test repeated source claim",
+        epistemic_state="observed",
+    )
+    db.add_all([question, claim])
+    db.commit()
+    db.refresh(question)
+    db.refresh(claim)
+    task = research_task_engine.create_task(
+        db,
+        question_id=question.id,
+        claim_id=claim.id,
+        source="useful-source",
+        query=question.question,
+        objective=question.question,
+    )
+
+    class RepeatingCollector(UsefulCollector):
+        def collect(self, query=None):
+            item = super().collect(query)[0]
+            return [item, dict(item)]
+
+    monkeypatch.setitem(collector_runner.COLLECTORS, "useful-source", RepeatingCollector)
+    monkeypatch.setattr(
+        research_task_engine,
+        "evaluate_claim_after_research",
+        lambda *_args: {
+            "judgments": [],
+            "comparison": SimpleNamespace(outcome="evaluation_incomplete"),
+        },
+    )
+
+    collector_runner.execute_task(db, task)
+
+    tool = db.query(models.ToolUsageEvent).filter_by(
+        tool_name="collector:useful-source"
+    ).one()
+    assert tool.result_count == 2
+    assert tool.novel_result_count == 1
+    assert tool.duplicate_result_count == 1
+    assert db.query(models.Signal).filter_by(source="useful-source").count() == 1
+    assert db.query(models.Evidence).filter_by(source="useful-source").count() == 1
+
+
 def test_failed_tool_usage_records_failure_without_fabricated_results(db):
     task = _create_test_task(db, "blocked collector timeout")
     event = tool_usefulness.record_usage(
@@ -152,6 +200,56 @@ def test_failed_tool_usage_records_failure_without_fabricated_results(db):
     assert event[0].result_count is None
     assert tool_usefulness.tool_summary(db, "collector:blocked")["failures"] == 1
 
+
+
+
+def test_lineage_only_target_claim_does_not_become_zero_usefulness(db, monkeypatch):
+    question = models.ResearchQuestion(
+        question="Does this workflow have a recurring paying customer?"
+    )
+    claim = models.Claim(
+        statement="TEST workflow has recurring paying customers.",
+        normalized_statement="test workflow has recurring paying customers",
+        epistemic_state="observed",
+    )
+    db.add_all([question, claim])
+    db.commit()
+    db.refresh(question)
+    db.refresh(claim)
+    task = research_task_engine.create_task(
+        db,
+        question_id=question.id,
+        claim_id=claim.id,
+        source="useful-source",
+        query=question.question,
+        objective=question.question,
+    )
+    monkeypatch.setitem(collector_runner.COLLECTORS, "useful-source", UsefulCollector)
+    monkeypatch.setattr(
+        research_task_engine,
+        "evaluate_claim_after_research",
+        lambda *_args: {
+            "judgments": [],
+            "comparison": SimpleNamespace(outcome="evaluation_incomplete"),
+        },
+    )
+
+    result = collector_runner.execute_task(db, task)
+
+    assert result["status"] == "completed"
+    edge = db.query(models.EvidenceRelationship).filter_by(claim_id=claim.id).one()
+    assert edge.relation_type == "derived_from"
+    tool = db.query(models.ToolUsageEvent).filter_by(
+        tool_name="collector:useful-source"
+    ).one()
+    source = db.query(models.SourceUsageEvent).filter_by(source="useful-source").one()
+    assert tool.result_count == 1
+    assert tool.useful_result_count is None
+    assert source.useful_evidence_count is None
+    summary = tool_usefulness.source_summary(db, "useful-source")
+    assert summary["useful_count"] is None
+    assert summary["useful_rate"] is None
+    assert tool_usefulness.learned_score(summary) is None
 
 
 def test_unassessed_usefulness_is_not_a_zero_score(db):
