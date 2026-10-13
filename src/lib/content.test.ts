@@ -113,6 +113,8 @@ describe("Hami public content", () => {
     const cover = readFileSync(join(root, "public/hami-cover.svg"), "utf8");
     const brand = readFileSync(join(root, "src/components/layout/brand-mark.tsx"), "utf8");
     const header = readFileSync(join(root, "src/components/layout/site-header.tsx"), "utf8");
+    const owner = readFileSync(join(root, "src/routes/owner.tsx"), "utf8");
+    const home = readFileSync(join(root, "src/routes/index.tsx"), "utf8");
     assert.match(mark, /viewBox="0 0 64 64"/);
     assert.match(mark, /#FFB000/i);
     assert.match(cover, /viewBox="0 0 1640 720"/);
@@ -124,6 +126,9 @@ describe("Hami public content", () => {
     assert.match(brand, /SYSTEMS/);
     assert.match(brand, /\/favicon\.svg/);
     assert.match(header, /#FFB000/);
+    assert.match(owner, /<BrandMark tone="light" \/>/);
+    assert.match(owner, /Private owner workspace/);
+    assert.doesNotMatch(home, /className="border-b border-line bg-surface" aria-hidden="true"/);
   });
 
   it("exposes public-first primary destinations", () => {
