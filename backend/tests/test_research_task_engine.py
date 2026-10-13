@@ -268,6 +268,101 @@ def test_tasks_endpoint_exposes_failed_and_planned_status(db, monkeypatch):
     assert statuses == {"planned", "failed"}
 
 
+
+
+
+def _task_with_claimed_evidence(db):
+    from app.services import evidence_graph
+    from app.services.observer_engine import ObserverEngine
+
+    task = make_task(db)
+    signal = ObserverEngine(db).observe(
+        "Repair contractors report recurring manual scheduling work.",
+        source="rss",
+        metadata={
+            "url": "https://example.test/research-evaluation/evidence",
+            "external_id": "research-evaluation-evidence",
+            "title": "Repair scheduling observation",
+        },
+    )
+    evidence = (
+        db.query(models.Evidence)
+        .filter_by(signal_id=signal.id)
+        .order_by(models.Evidence.id.desc())
+        .first()
+    )
+    assert evidence is not None
+    claim, _ = evidence_graph.create_or_get_claim(
+        db,
+        "Repair contractors have recurring manual scheduling work.",
+    )
+    evidence_graph.link_evidence(
+        db, evidence, claim=claim, relation_type="supports"
+    )
+    task.claim_id = claim.id
+    db.commit()
+    db.refresh(task)
+    return task, evidence
+
+
+def test_evaluation_is_skipped_when_no_judge_is_available(db, monkeypatch):
+    from app.services import multi_judge
+
+    task, evidence = _task_with_claimed_evidence(db)
+    monkeypatch.setattr(multi_judge, "_default_judges", lambda: [])
+
+    result = research_task_engine.evaluate_claim_after_research(
+        db, task, [evidence.id]
+    )
+    persisted = db.get(models.ResearchTask, task.id)
+    evaluate_step = {step.name: step for step in persisted.steps}["evaluate"]
+
+    assert result is not None
+    assert result["judgments"] == []
+    assert result["comparison"].outcome == "missing_evidence"
+    assert result["comparison"].follow_up_question_id is None
+    assert evaluate_step.status == "skipped"
+    assert evaluate_step.output_data["status"] == "no_judges_available"
+    assert persisted.results["evaluation_status"] == "no_judges_available"
+    assert db.query(models.ResearchQuestion).count() == 1
+
+
+def test_evaluation_fails_when_every_judge_execution_fails(db, monkeypatch):
+    from app.services import multi_judge
+
+    task, evidence = _task_with_claimed_evidence(db)
+    failed_judge = multi_judge.JudgeSpec(
+        name="unavailable-regression-judge",
+        provider="test",
+        model="unavailable",
+        evaluate=lambda _question, _evidence: {
+            "label": "positive",
+            "conclusion": "Should never be accepted.",
+        },
+        available=lambda: False,
+    )
+    monkeypatch.setattr(
+        multi_judge, "_default_judges", lambda: [failed_judge]
+    )
+
+    result = research_task_engine.evaluate_claim_after_research(
+        db, task, [evidence.id]
+    )
+    persisted = db.get(models.ResearchTask, task.id)
+    evaluate_step = {step.name: step for step in persisted.steps}["evaluate"]
+
+    assert result is not None
+    assert len(result["judgments"]) == 1
+    assert result["judgments"][0].status == "failed"
+    assert result["comparison"].outcome == "missing_evidence"
+    assert result["comparison"].follow_up_question_id is None
+    assert evaluate_step.status == "failed"
+    assert evaluate_step.output_data["status"] == "judge_execution_failed"
+    assert evaluate_step.output_data["successful_judgment_count"] == 0
+    assert persisted.results["evaluation_status"] == "judge_execution_failed"
+    assert db.query(models.ResearchQuestion).count() == 1
+
+
 def test_pending_task_dispatch_covers_questions_before_repeating(db, monkeypatch):
     from types import SimpleNamespace
     from app import models
