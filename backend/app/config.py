@@ -104,6 +104,10 @@ class Settings(BaseSettings):
 
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    # Paid judgment calls are opt-in; an API key alone is not authorization.
+    FORGEOS_OPENAI_JUDGE_ENABLED: bool = os.getenv(
+        "FORGEOS_OPENAI_JUDGE_ENABLED", "false"
+    ).lower() in ("1", "true", "yes")
 
     # The proposal-only cognitive worker is offline by default. External
     # providers require a separate adapter and explicit configuration.
