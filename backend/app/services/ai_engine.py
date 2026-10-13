@@ -7,13 +7,17 @@ market analysis, business ideas, MVP plans, validation steps, and
 marketing strategy snippets.
 
 $0 OPERATING COST IS A HARD CONSTRAINT, NOT A DEFAULT TO OVERRIDE:
-Forge must run completely free, with no required credit card,
-subscription, or paid inference, on the user's own hardware. Paid AI
-(OpenAI) is optional acceleration only — never a dependency. Every
-high-level generate_*() function below routes through
-_complete_with_fallback(), which guarantees that even a fully broken
-or unreachable paid/local provider degrades to the free MockProvider
-instead of failing the request.
+The default AI_PROVIDER is the deterministic MockProvider for offline
+development; that is not model inference and must never be counted as
+evidence. Real local inference requires explicit Ollama configuration.
+Paid completions remain disabled until per-call metering and a global
+spend guard are enforced at the call boundary.
+
+Real-provider failures raise AIUnavailableError by default. Mock
+fallback is possible only when the caller allows it AND
+AI_FALLBACK_TO_MOCK=true is explicitly configured. Any such fallback
+must stay labeled MOCK and must never be presented as model-derived
+knowledge, supported evidence, or a real-world outcome.
 
 Design goal: the rest of the app (opportunity_engine, api/analyze)
 never talks to a specific provider directly. It calls functions on
@@ -84,11 +88,11 @@ class AIProvider(ABC):
 
 class MockProvider(AIProvider):
     """
-    Offline provider used when AI_PROVIDER=mock (the default) or when
-    no OpenAI key is configured. Produces reasonable, readable output
-    using simple heuristics/templates instead of a real model call, so
-    the full Forge loop (signal -> pattern -> opportunity -> analysis)
-    works with zero setup and zero cost.
+    Deterministic offline templates used only when AI_PROVIDER=mock
+    (the default) or after an explicit, permitted MOCK fallback. This is
+    not model inference and does not establish facts or support claims.
+    Consumers must preserve MOCK provenance and must not count template
+    output as evidence or a real-world result.
     """
 
     def complete(self, prompt: str, system: str = "") -> str:
@@ -340,17 +344,19 @@ def _extract_idea_text(prompt: str) -> str:
 
 def get_provider() -> AIProvider:
     """
-    Factory: returns the active AI provider based on settings.
+    Construct the configured provider without fabricating successful inference.
 
-    AI_PROVIDER=openai and a real key -> OpenAIProvider (optional, paid)
-    AI_PROVIDER=ollama                 -> OllamaProvider (free, local)
-    anything else                       -> MockProvider (free, offline, always works)
+    AI_PROVIDER=mock   -> deterministic templates, explicitly MOCK
+    AI_PROVIDER=ollama -> Ollama only with an allowed loopback or
+                          token-authenticated HTTPS transport
+    AI_PROVIDER=openai -> AIUnavailableError until paid-call metering and
+                          global spend enforcement are enabled
+    unknown selections never count as real inference; callers must
+    surface unavailable state unless an explicit demo fallback is allowed.
 
-    Construction failures (missing `openai` package, bad key) fall back
-    to MockProvider immediately. Runtime failures (Ollama not running,
-    OpenAI network error) are handled separately by
-    _complete_with_fallback() below, since those only surface once
-    .complete() is actually called.
+    Construction and invocation failures are translated into an explicit
+    unavailable result by _complete_with_fallback(); mock output is never
+    silently substituted for a requested real-provider answer.
     """
     if settings.AI_PROVIDER == "openai":
         raise AIUnavailableError(
