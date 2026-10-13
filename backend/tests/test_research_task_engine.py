@@ -523,6 +523,65 @@ def test_failed_evaluation_is_retried_from_persisted_evidence(db, monkeypatch):
     assert observed["task_id"] == task.id
 
 
+def test_recovery_excludes_tasks_attempted_by_current_collection_pass(db, monkeypatch):
+    attempted, attempted_evidence = _task_with_claimed_evidence(db)
+    older, older_evidence = _task_with_claimed_evidence(db)
+
+    for task, evidence in (
+        (attempted, attempted_evidence),
+        (older, older_evidence),
+    ):
+        task.status = "completed"
+        task.evidence_ids = str(evidence.id)
+        task.completed_at = models.utcnow()
+        evaluate_step = {step.name: step for step in task.steps}["evaluate"]
+        evaluate_step.status = "failed"
+        evaluate_step.output_data = {"status": "judge_execution_failed"}
+        evaluate_step.error = "judge unavailable"
+    db.commit()
+
+    calls = []
+
+    def recovered(_db, persisted_task, evidence_ids):
+        calls.append(persisted_task.id)
+        persisted_task.results = {
+            **(persisted_task.results or {}),
+            "evaluation_status": "judge_pipeline_executed",
+            "comparison_outcome": "agreement",
+        }
+        research_task_engine._set_step(
+            _db,
+            persisted_task,
+            "evaluate",
+            "completed",
+            output={
+                "status": "judge_pipeline_executed",
+                "comparison_outcome": "agreement",
+            },
+        )
+        _db.commit()
+        return {"judgments": [], "comparison": None}
+
+    monkeypatch.setattr(
+        research_task_engine, "evaluate_claim_after_research", recovered
+    )
+
+    outcomes = collector_runner.run_pending_evaluations(
+        db, limit=2, exclude_task_ids={attempted.id}
+    )
+
+    assert calls == [older.id]
+    assert [outcome["task_id"] for outcome in outcomes] == [older.id]
+    attempted_step = {
+        step.name: step for step in db.get(models.ResearchTask, attempted.id).steps
+    }["evaluate"]
+    older_step = {
+        step.name: step for step in db.get(models.ResearchTask, older.id).steps
+    }["evaluate"]
+    assert attempted_step.status == "failed"
+    assert older_step.status == "completed"
+
+
 def test_failed_evaluation_retries_are_bounded_and_recorded(db, monkeypatch):
     task, evidence = _task_with_claimed_evidence(db)
     task.status = "completed"
