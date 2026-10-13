@@ -50,7 +50,17 @@ def make_research_task(db, objective="What evidence answers this research questi
 def test_worker_dispatch_uses_replaceable_provider_and_records_provenance(db, monkeypatch):
     research_task = make_research_task(db)
     evidence_rows = [
-        models.Evidence(source="TEST", content=f"test-only evidence {index}")
+        models.Evidence(
+            source="public-third-party",
+            content=f"test-only evidence content {index}",
+            title=f"Evidence {index}",
+            claim=f"Public claim {index}",
+            canonical_url=f"https://example.gov.np/evidence/{index}",
+            source_kind="REAL",
+            source_type="third_party",
+            consent_status="not_required",
+            collection_status="collected",
+        )
         for index in range(cognitive_provider.MAX_COGNITIVE_EVIDENCE_IDS + 1)
     ]
     db.add_all(evidence_rows)
@@ -82,6 +92,7 @@ def test_worker_dispatch_uses_replaceable_provider_and_records_provenance(db, mo
     assert worker_task.outputs["provenance"]["proposal_classification"] == "HYPOTHESIS"
     assert replacement.context.max_proposals == cognitive_provider.MAX_COGNITIVE_PROPOSALS
     assert len(replacement.context.evidence_ids) == cognitive_provider.MAX_COGNITIVE_EVIDENCE_IDS
+    assert replacement.context.available_evidence_ids == replacement.context.evidence_ids
     assert replacement.context.evidence_refs_truncated is True
     assert research_task.status == "planned"
     assert research_task.evidence_ids == ",".join(map(str, original_evidence_ids))
