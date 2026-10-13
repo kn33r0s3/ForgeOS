@@ -13,8 +13,9 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  # Cancel superseded main runs so a hung test cannot block the latest source from being verified.
-  cancel-in-progress: true
+  # A main run must finish even if more commits arrive. GitHub will keep only
+  # the latest pending run for this group; superseded PR checks may be cancelled.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   backend-tests:
