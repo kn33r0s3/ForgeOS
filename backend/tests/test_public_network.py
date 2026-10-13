@@ -1,9 +1,10 @@
 from fastapi.testclient import TestClient
+import pytest
 
 from app import models
 from app.database import get_db
 from app.main import app
-from app.services import network_substrate_adapter, public_network, world_graph
+from app.services import network_connections, network_substrate_adapter, public_network, world_graph
 
 
 def _client(db):
@@ -46,6 +47,58 @@ def _public_signal_claim(db):
     ))
     db.flush()
     return signal, evidence
+
+
+
+def test_new_network_connections_cannot_self-declare_supported_truth(db):
+    need = models.DomainRecord(
+        kind="job", title="TEST candidate request", detail="A possible need.",
+        close_token_hash="test-candidate-hash", status="open",
+    )
+    provider = models.Provider(
+        name="TEST possible provider", country="Nepal",
+        public_visible=True, is_active=True, verification_status="verified",
+    )
+    evidence = models.Evidence(
+        source="test_fixture_observation",
+        content="A row existing in the database is not, by itself, a reviewed support assessment.",
+        canonical_url="https://example.test/network-evidence",
+        provenance='{"test_fixture": true}',
+    )
+    db.add_all([need, provider, evidence])
+    db.commit()
+    before = db.query(models.NetworkConnection).count()
+
+    for asserted_state in ("tested", "supported", "refuted"):
+        with pytest.raises(
+            ValueError,
+            match="new connections must begin possible or hypothesized",
+        ):
+            network_connections.create_connection(
+                db,
+                left_kind="domain_record",
+                left_id=need.id,
+                right_kind="provider",
+                right_id=provider.id,
+                relation_type="possible_match",
+                reason="TEST a state string cannot authenticate its own evidence.",
+                epistemic_state=asserted_state,
+                evidence_ids=[evidence.id],
+            )
+        assert db.query(models.NetworkConnection).count() == before
+
+    candidate = network_connections.create_connection(
+        db,
+        left_kind="domain_record",
+        left_id=need.id,
+        right_kind="provider",
+        right_id=provider.id,
+        relation_type="possible_match",
+        reason="A candidate that remains a hypothesis.",
+        epistemic_state="hypothesized",
+    )
+    assert candidate.epistemic_state == "hypothesized"
+    assert candidate.state == "candidate"
 
 
 def test_public_network_traverses_intelligence_relations_with_evidence_and_events(db):
