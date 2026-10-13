@@ -1082,6 +1082,14 @@ def get_execution_recommendation(request: Request, db: Session = Depends(get_db)
     )
 
 
+@router.get("/autonomy/decision-rights")
+def get_autonomy_decision_rights(request: Request):
+    """Read-only decision-rights matrix and evidence gates. Owner-only."""
+    require_owner_api_key(request)
+    from app.services import decision_rights
+    return decision_rights.describe_registry()
+
+
 @router.get("/autonomy/policy", response_model=schemas.AutonomyPolicyOut)
 def get_autonomy_policy(request: Request, db: Session = Depends(get_db)):
     """

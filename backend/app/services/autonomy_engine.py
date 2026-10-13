@@ -66,6 +66,7 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.models import utcnow
+from app.services import decision_rights
 
 # Conservative seed — "do not create unlimited real-world authority
 # without safeguards" enforced by what this actually seeds to, not
@@ -225,16 +226,21 @@ def evaluate_action(
     grant time, exclude it from the duplicate-pending check (it is not
     a duplicate of itself).
     """
+    rights_gate = decision_rights.enforcement_for(action_type)
     policy = get_active_policy(db)
     if not policy:
         # No policy configured at all — the safest possible default is
         # to require approval for everything rather than silently
         # allowing anything. Never bypass policy by having none.
+        reasons = ["No autonomy policy is configured — every action requires approval until one is set."]
+        if rights_gate["requires_owner_approval"]:
+            reasons.append(rights_gate["enforcement_reason"])
         return {
             "decision": "require_approval",
-            "reasons": ["No autonomy policy is configured — every action requires approval until one is set."],
+            "reasons": reasons,
             "risk_score": 100.0,
             "attempt_number": 1,
+            "decision_rights": rights_gate,
         }
 
     reasons: list[str] = []
@@ -248,6 +254,9 @@ def evaluate_action(
                 decision = "block"
             elif decision == "allow":
                 decision = "require_approval"
+
+    if rights_gate["requires_owner_approval"]:
+        escalate("require_approval", rights_gate["enforcement_reason"])
 
     allowed_types = set(parse_allowed_action_types(policy))
     if action_type not in allowed_types:
@@ -309,7 +318,13 @@ def evaluate_action(
             f"confidence and risk within bounds (risk {risk_score:.0f}/{policy.max_risk_threshold:.0f})."
         )
 
-    return {"decision": decision, "reasons": reasons, "risk_score": risk_score, "attempt_number": attempt_number}
+    return {
+        "decision": decision,
+        "reasons": reasons,
+        "risk_score": risk_score,
+        "attempt_number": attempt_number,
+        "decision_rights": rights_gate,
+    }
 
 
 
@@ -726,6 +741,9 @@ def apply_standing_authorization_to_action(db: Session, action: models.Action) -
     # Only the simple "requires owner approval" reason qualifies — not
     # policy-violation reasons from evaluate_action().
     reason = (action.policy_reason or "").lower()
+    # Decision-rights boundaries cannot be covered by broad standing authorization.
+    if "decision_rights:" in reason:
+        return action
     if "policy evaluation" in reason or "policy violation" in reason or "limit" in reason or "exceeds" in reason:
         # This REQUIRE_APPROVAL comes from a policy check — standing auth
         # must not override policy boundaries.

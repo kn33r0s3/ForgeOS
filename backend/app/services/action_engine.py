@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.models import utcnow
-from app.services import autonomy_engine
+from app.services import autonomy_engine, decision_rights
 
 
 
@@ -455,6 +455,15 @@ def propose_action(
             policy_result = "BLOCK"
             policy_reason = f"Policy evaluation failed closed: {exc}"
 
+    # Central rights guard is stricter than generic risk policy. It runs after
+    # policy evaluation so no ALLOW can erase owner-only rights.
+    rights_gate = decision_rights.enforcement_for(action_type)
+    if rights_gate["requires_owner_approval"] and policy_result != "BLOCK":
+        policy_result = "REQUIRE_APPROVAL"
+        existing_reason = policy_reason or ""
+        if rights_gate["enforcement_reason"] not in existing_reason:
+            policy_reason = (existing_reason + " " + rights_gate["enforcement_reason"]).strip()
+
     status = "PROPOSED"
     if policy_result == "REQUIRE_APPROVAL":
         status = "APPROVAL_REQUIRED"
@@ -523,6 +532,19 @@ def start_and_execute_action(db: Session, action_id: int) -> Optional[models.Act
         action.status = "CANCELLED"
         action.execution_error = action.policy_reason
         db.commit()
+        return action
+
+    # Recheck rights at the final execution boundary. Legacy or directly-mutated
+    # ALLOW rows cannot bypass current owner-only or stage-gated rights.
+    rights_gate = decision_rights.enforcement_for(action.action_type)
+    explicitly_approved = action.status == "APPROVED" and action.approved_at is not None
+    if rights_gate["requires_owner_approval"] and not explicitly_approved:
+        action.status = "APPROVAL_REQUIRED"
+        action.policy_result = "REQUIRE_APPROVAL"
+        action.policy_reason = rights_gate["enforcement_reason"]
+        action.execution_error = "Decision-rights gate requires explicit owner approval."
+        db.commit()
+        db.refresh(action)
         return action
 
     from app.services import intervention_gate

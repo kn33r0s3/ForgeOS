@@ -1855,3 +1855,61 @@ def test_k1_authorization_status_alone_insufficient(db):
     # execute_experiment must refuse.
     with pytest.raises(ValueError, match="canonical execution gate"):
         experiment_service.execute_experiment(db, exp.id)
+
+
+def test_decision_rights_registry_is_conservative_and_unknown_types_fail_closed():
+    from app.services import decision_rights
+
+    assert decision_rights.enforcement_for("manual_note")["right"] == decision_rights.BOT
+    assert decision_rights.enforcement_for("outreach")["right"] == decision_rights.OWNER_ONLY
+    assert decision_rights.enforcement_for("outreach")["requires_owner_approval"] is True
+    follow_up = decision_rights.enforcement_for("follow_up")
+    assert follow_up["right"] == decision_rights.BOT_THEN_TELL_OWNER
+    assert follow_up["requires_owner_approval"] is True  # active stage is still 1
+    unknown = decision_rights.enforcement_for("new_unregistered_action")
+    assert unknown["right"] == decision_rights.OWNER_ONLY
+    assert unknown["requires_owner_approval"] is True
+    snapshot = decision_rights.describe_registry()
+    assert snapshot["active_stage"] == 1
+    assert snapshot["bot_can_promote_itself"] is False
+
+
+def test_decision_rights_guard_overrides_generic_allow_and_standing_authorization(db):
+    from app.services import autonomy_engine, decision_rights
+
+    action = action_engine.propose_action(
+        db,
+        objective="Contact a new seller",
+        action_type="customer_interview",
+    )
+    assert action.policy_result == "REQUIRE_APPROVAL"
+    assert action.status == "APPROVAL_REQUIRED"
+    assert "decision_rights:owner_only" in action.policy_reason.lower()
+
+    # Even an existing broad standing authorization cannot clear this marker.
+    action.policy_result = "REQUIRE_APPROVAL"
+    action.policy_reason = decision_rights.enforcement_for("outreach")["enforcement_reason"]
+    db.commit()
+    autonomy_engine.apply_standing_authorization_to_action(db, action)
+    assert action.policy_result == "REQUIRE_APPROVAL"
+
+
+def test_execution_boundary_rechecks_rights_for_legacy_or_tampered_allow_rows(db):
+    legacy = models.Action(
+        action_type="follow_up",
+        objective="Send a customer follow-up",
+        parameters_json="{}",
+        status="PROPOSED",
+        policy_result="ALLOW",
+        policy_reason="legacy allow",
+        adapter_name="unsupported",
+    )
+    db.add(legacy)
+    db.commit()
+    db.refresh(legacy)
+
+    checked = action_engine.start_and_execute_action(db, legacy.id)
+    assert checked.status == "APPROVAL_REQUIRED"
+    assert checked.policy_result == "REQUIRE_APPROVAL"
+    assert "decision_rights:stage_gate" in checked.policy_reason
+    assert checked.started_at is None
