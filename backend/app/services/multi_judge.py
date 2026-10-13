@@ -31,7 +31,15 @@ def _evidence_key(evidence_ids: Iterable[int]) -> str:
     return ",".join(str(value) for value in sorted(set(evidence_ids)))
 
 
-def _judgment_key(spec: JudgeSpec, question: str, evidence_ids: Iterable[int]) -> str:
+def _judgment_key(
+    spec: JudgeSpec,
+    question: str,
+    evidence_ids: Iterable[int],
+    *,
+    claim_id: int | None = None,
+    opportunity_id: int | None = None,
+) -> str:
+    """Identity includes the semantic context where this evidence is judged."""
     raw = json.dumps(
         {
             "judge": spec.name,
@@ -39,6 +47,8 @@ def _judgment_key(spec: JudgeSpec, question: str, evidence_ids: Iterable[int]) -
             "model": spec.model,
             "question": question.strip(),
             "evidence_ids": sorted(set(evidence_ids)),
+            "claim_id": claim_id,
+            "opportunity_id": opportunity_id,
         },
         sort_keys=True,
     )
@@ -144,7 +154,13 @@ def run_judgments(
     selected_judges = judges if judges is not None else _default_judges()
     results: list[models.Judgment] = []
     for spec in selected_judges:
-        key = _judgment_key(spec, question, evidence_ids)
+        key = _judgment_key(
+            spec,
+            question,
+            evidence_ids,
+            claim_id=claim_id,
+            opportunity_id=opportunity_id,
+        )
         existing = db.query(models.Judgment).filter_by(judgment_key=key).first()
         if existing:
             results.append(existing)
@@ -225,7 +241,15 @@ def compare_judgments(
     """Compare judgments without collapsing disagreement into a score."""
     normalized_ids = sorted(set(judgment_ids))
     comparison_key = hashlib.sha256(
-        json.dumps({"question": question, "judgments": normalized_ids, "evidence": sorted(set(evidence_ids))}, sort_keys=True).encode("utf-8")
+        json.dumps(
+            {
+                "question": question,
+                "judgments": normalized_ids,
+                "evidence": sorted(set(evidence_ids)),
+                "claim_id": claim_id,
+            },
+            sort_keys=True,
+        ).encode("utf-8")
     ).hexdigest()
     existing = db.query(models.JudgmentComparison).filter_by(comparison_key=comparison_key).first()
     if existing:
