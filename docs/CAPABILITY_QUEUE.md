@@ -1,3 +1,14 @@
+## [PUBLIC FRONT DOOR / EXACT-HEAD VERIFICATION PENDING] Give a stranger an immediate useful action (2026-10-14)
+
+- **Observed problem:** the homepage led with system explanation and a proposed experiment log; its honest public status shows no participants and no verified outcomes. Explanation alone gives a new visitor little to do.
+- **Changed in place:** the existing homepage now opens two clear paths: build a next-step brief immediately, or post a need, offer, or trade on the existing public exchange board. No new route, database, semantic primitive, external provider, or product-specific funnel.
+- **Public utility:** the browser-only brief structures a visitor's own stated outcome, constraint, resources, success condition, smallest reversible test, evidence to capture, and decision rule. It can be copied or reset. The builder sends no answers to an API and does not persist visitor text; it explicitly says the brief is a planning aid, not a verified finding or completed test.
+- **Owner dependency removed:** a visitor no longer has to read Hami's architecture or wait for an active pilot to leave with a structured, reusable brief. The existing board remains a possible real exchange path, not a promise of matching or fulfilment.
+- **Verification:** source and regression-test commits are present on main (db3fe74a99e76c42ef59b6ee6ced7ff91a693892, 16a3b1e94da3139c44a5e12f54d85d00aad122eb). The exact current-main frontend test/build and deployed public UX remain **UNVERIFIED** at this entry. No visitor input, participant, match, experiment outcome, external contact, payment, or revenue was created or claimed.
+- **Next dependency:** verify exact-head typecheck, lint, frontend tests, and deployment; then collect real usability feedback through a consented route and make changes only from observed friction. Keep working on the evaluator and durable scheduled cycle in parallel; do not confuse this utility with realized value.
+
+---
+
 ## [FORGEBOT ZERO-COST PROVIDER GUARD / CHAT PRIVACY / EXACT-HEAD TESTS UNVERIFIED] Keep the owner chat honest and fail-closed (2026-10-14)
 
 - **Existing seams inspected:** `src/components/forge/forge-console.tsx` provider status fetch and `providerCanAnswer`; owner-only `POST /api/forge/ask` in `backend/app/api/forge.py`; existing `src/lib/features.test.ts` ForgeBot workspace regression.
