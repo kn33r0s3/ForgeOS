@@ -544,10 +544,15 @@ def run_pending_tasks(db: Session, limit: int = 5) -> list[dict]:
         )
         if attempted_task_ids:
             query = query.filter(models.ResearchTask.id.notin_(attempted_task_ids))
-        if unserved_question_only and served_question_ids:
-            query = query.filter(
-                models.ResearchTask.question_id.notin_(served_question_ids)
-            )
+        if unserved_question_only:
+            # A question with only uncleared source work is not eligible to
+            # consume a coverage slot. It remains queued for the normal
+            # clearance/error handling pass after other eligible tracks turn.
+            query = query.filter(currently_clearable)
+            if served_question_ids:
+                query = query.filter(
+                    models.ResearchTask.question_id.notin_(served_question_ids)
+                )
         return query.order_by(
             case((currently_clearable, 0), else_=1),
             models.ResearchQuestion.priority_score.desc(),
