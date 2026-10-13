@@ -96,7 +96,10 @@ describe("Hami public content", () => {
 
   it("names Hami without publishing compatibility names as product identities", () => {
     assert.equal(SITE.name, "Hami");
+    assert.equal(SITE.themeColor, "#0B0B0B");
     assert.equal(SITE.tagline, "Discover what matters. Understand it. Act on it.");
+    const rootRoute = readFileSync(join(root, "src/routes/__root.tsx"), "utf8");
+    assert.match(rootRoute, /areaServed: "Worldwide"/);
     assert.doesNotMatch(SITE.description, /ForgeOS|Pulse/);
     assert.equal(/service marketplace|trusted service network/i.test(SITE.description), false);
     assert.match(SITE.description, /being built in Kathmandu/);
