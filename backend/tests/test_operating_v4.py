@@ -244,6 +244,43 @@ def test_scoreboard_readonly_shape(db):
     assert board["verified_rupees"] == 0.0
 
 
+def test_outbound_attempt_does_not_reset_real_contact_clock(db):
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    db.add_all([
+        models.WorldEvent(
+            event_type="outreach.reply",
+            source="owner",
+            occurred_at=now - timedelta(days=10),
+        ),
+        models.WorldEvent(
+            event_type="outreach.sent",
+            source="owner",
+            occurred_at=now - timedelta(days=1),
+        ),
+    ])
+    db.commit()
+
+    days = operating_v4.days_since_last_contact(db)
+    assert days is not None and 9 <= days <= 11
+    assert operating_v4.is_starved(db) is False
+
+
+def test_outbound_attempt_alone_does_not_count_as_real_contact(db):
+    from datetime import datetime, timedelta, timezone
+
+    db.add(models.WorldEvent(
+        event_type="outreach.sent",
+        source="owner",
+        occurred_at=datetime.now(timezone.utc) - timedelta(days=1),
+    ))
+    db.commit()
+
+    assert operating_v4.days_since_last_contact(db) is None
+    assert operating_v4.is_starved(db) is True
+
+
 def test_contact_state_separates_priority_from_starvation(db, monkeypatch):
     monkeypatch.setattr(operating_v4, "days_since_last_contact", lambda _db: 1)
     assert operating_v4.contact_state(db) == {
