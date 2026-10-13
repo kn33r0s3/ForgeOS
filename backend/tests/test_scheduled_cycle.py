@@ -648,6 +648,59 @@ def test_cycle_without_new_effect_is_not_marked_completed():
     assert dry_well_only["next_owner_attention"] == "wait_for_reply_without_repeat_contact"
 
 
+def test_cycle_effect_exposes_judging_unavailable_and_metadata_only_outcomes():
+    effect = scheduled._cycle_effect_summary({
+        "collection_cycle": {
+            "evaluations_completed": 1,
+            "judgments_failed": 0,
+            "evaluations_unavailable": 1,
+            "metadata_only_unassessed": 1,
+            "evaluation_incomplete": 2,
+            "outcomes": [
+                {
+                    "status": "completed",
+                    "signals_created": 2,
+                    "evaluation_status": "no_judges_available",
+                    "judgments_completed": 0,
+                    "judgments_failed": 0,
+                },
+                {
+                    "status": "completed",
+                    "signals_created": 0,
+                    "evaluation_status": "judge_pipeline_executed",
+                    "judgments_completed": 1,
+                    "judgments_failed": 0,
+                },
+                {
+                    "status": "completed",
+                    "signals_created": 0,
+                    "evaluation_status": "unassessed_metadata_only",
+                    "judgments_completed": 0,
+                    "judgments_failed": 0,
+                },
+            ],
+        },
+    })
+
+    assert effect["status"] == "source_data_collected"
+    assert effect["counts"]["source_signals_created"] == 2
+    assert effect["counts"]["judgments_completed"] == 1
+    assert effect["counts"]["evaluations_unavailable"] == 1
+    assert effect["counts"]["metadata_only_unassessed"] == 1
+    assert effect["counts"]["evaluation_incomplete"] == 2
+    assert effect["next_owner_attention"] == "connect_or_repair_non_paid_judge"
+
+
+def test_cycle_stage_is_partial_when_collection_runs_but_judging_is_unavailable():
+    status, errors, partials = scheduled._cycle_stage_summary({
+        "collection_cycle": {"status": "partial", "evaluations_unavailable": 1},
+        "cycle_effect": {"status": "source_data_collected"},
+    })
+    assert status == "PARTIAL"
+    assert errors == {}
+    assert partials == {"collection_cycle": "partial"}
+
+
 def test_scheduled_intelligence_runs_five_stages(monkeypatch):
     """A+B: state → work → execution → discovery. The endpoint runs all engines
     for real (they are safe: no network, no spending, no contact).
