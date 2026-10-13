@@ -568,6 +568,39 @@ def test_scheduled_intelligence_prioritizes_contact_and_freezes_build(monkeypatc
     assert "STARVED" in stages["content_drafts"]["reason"]
 
 
+def test_cycle_effect_summary_does_not_confuse_internal_work_with_progress():
+    no_effect = scheduled._cycle_effect_summary({})
+    assert no_effect["status"] == "no_new_effect"
+    assert no_effect["observed_effects"] == []
+
+    internal_only = scheduled._cycle_effect_summary({
+        "discovery_cycle": {"questions_created": 1},
+        "forge_cycle": {"research_tasks_created": 2},
+    })
+    assert internal_only["status"] == "internal_work_only"
+    assert internal_only["internal_work"] == [
+        "research_questions_created",
+        "research_tasks_created",
+    ]
+
+    contact_prepared = scheduled._cycle_effect_summary({
+        "scout_cycle": {"drafts_generated": 1, "drafts_already_open": 0},
+    })
+    assert contact_prepared["status"] == "effects_observed"
+    assert contact_prepared["observed_effects"] == ["contact_drafts_prepared"]
+    assert "do not establish" in contact_prepared["reality_boundary"]
+
+
+def test_cycle_without_new_effect_is_not_marked_completed():
+    status, errors, partials = scheduled._cycle_stage_summary({
+        "forge_cycle": {"status": "ok"},
+        "cycle_effect": {"status": "no_new_effect"},
+    })
+    assert status == "PARTIAL"
+    assert errors == {}
+    assert partials == {"cycle_effect": "no_new_effect"}
+
+
 def test_scheduled_intelligence_runs_five_stages(monkeypatch):
     """A+B: state → work → execution → discovery. The endpoint runs all engines
     for real (they are safe: no network, no spending, no contact).
