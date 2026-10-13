@@ -47,3 +47,13 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - The proposed HALT/STOP correction and verifier timeout guard are not recorded as implemented unless the corresponding BRAIN/workflow blobs are present at the resulting main commit.
 - No secrets, spend, OAuth grants, activation flags, sender permissions, intake state or customer dispatch were changed. No public post, customer message, real seller conversation, recovered sale, payment or revenue was created or claimed.
 - Next action: land the charter/timeout safety update only on an exact main-head lease, then verify the new commit's checks and deployed source before enabling any publishing.
+
+
+## 2026-10-14 — research-integrity correction
+
+- The last console snapshot was evidence of stored records and run logs, not proof of a self-directed reasoning loop. The user-reported `business, llc, media, science, springer, systematic` cluster traced to a real weakness: the Pattern Engine included metadata-origin signals and its background-label condition depended on certain keywords appearing.
+- Added Pattern Engine filtering for Crossref/OpenAlex and explicitly metadata-only signals. It now annotates legacy patterns only when every recorded origin resolves to research metadata; records and their provenance are retained, never casually deleted.
+- Corrected the research task state machine: the source collection step is recorded as collection-only; the evaluation step begins as pending with an explicit not-evaluated reason. Metadata-only claim evaluation is skipped with an explicit reason. Only invocation of the judgment/comparison pipeline marks evaluation completed.
+- Removed phantom model selection from the collection worker. A selected tool-registry entry did not mean a model was invoked; the step now records `reasoning_status=not_invoked` and only records the source collector as used.
+- Added regression tests for the metadata pattern false positive / historic annotation and for collection-only vs uninvoked reasoning/evaluation. Code was prepared from exact-main file blobs; execution is pending. No real external research request, human conversation, customer send, payment or revenue was created by this patch.
+- Next required steps: guard-write to the exact current main head, inspect the exact commit's CI, and implement a genuinely invoked non-MOCK evaluation provider followed by the unknown-to-decisive-test mechanism.

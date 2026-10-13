@@ -577,36 +577,42 @@ def test_pr15_empty_sources_yield_no_findings(db):
 # Relevance gate regression tests (Section 2: strengthened qualification)
 
 
-def test_bibliographic_pattern_cannot_generate_commercial_questions(db):
-    """Bibliographic metadata patterns are classified as background, not commercial."""
+def test_bibliographic_metadata_never_seeds_problem_patterns_and_legacy_rows_are_annotated(db):
+    """Metadata stays available for research but is not represented as economic pain."""
     from app.services import pattern_engine, curiosity_engine
 
     world_graph.seed_core_types(db)
-    # Create signals from scholarly source with bibliographic keywords
+    signals = []
     for i in range(5):
-        sig = models.Signal(
+        signal = models.Signal(
             source="crossref",
-            content=f"Crossref metadata record {i} with bibliographic evidence",
+            source_type="external",
+            content=f"Springer Science and Business Media LLC systematic review record {i}",
             signal_type="observation",
+            provenance='{"metadata_only": true, "source_registry_id": "crossref-public-works-metadata"}',
         )
-        db.add(sig)
+        db.add(signal)
+        signals.append(signal)
     db.flush()
 
+    legacy = models.Pattern(
+        title="Recurring theme: business, llc, media, science, springer, systematic",
+        description="5 signals repeatedly mention publisher and citation words.",
+        origin_signal_ids=",".join(str(signal.id) for signal in signals),
+    )
+    db.add(legacy)
+    db.commit()
+
     patterns = pattern_engine.run_pattern_detection(db)
-    # At least one pattern should be detected
-    assert len(patterns) >= 1
 
-    # Check that bibliographic patterns are marked
-    biblio_patterns = [p for p in patterns if "[BIBLIOGRAPHIC BACKGROUND]" in (p.description or "")]
-    # If patterns were created from this data, they should be marked
-    # (may be 0 if keywords don't cluster, which is also fine)
+    assert patterns == []
+    assert db.query(models.Signal).count() == 5
+    db.refresh(legacy)
+    assert "[BIBLIOGRAPHIC BACKGROUND]" in legacy.description
+    assert db.query(models.Pattern).count() == 1
 
-    # Curiosity should not generate questions from bibliographic patterns
-    ce = curiosity_engine.CuriosityEngine(db)
-    unexplored = ce.find_unexplored_patterns()
-    for pattern in unexplored:
-        assert "[BIBLIOGRAPHIC BACKGROUND]" not in (pattern.description or ""), \
-            "Bibliographic pattern leaked into commercial question generation"
+    curiosity = curiosity_engine.CuriosityEngine(db)
+    assert curiosity.find_unexplored_patterns() == []
 
 
 def test_observation_only_pattern_cannot_bypass_qualification(db):

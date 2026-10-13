@@ -149,6 +149,14 @@ def test_duplicate_evidence_is_reused_without_duplicate_work(db, monkeypatch):
     assert db.query(models.Evidence).count() == 1
     assert db.query(models.ResearchTaskEvent).filter_by(task_id=task.id, event_type="completed").count() == 1
 
+    persisted = db.get(models.ResearchTask, task.id)
+    steps = {step.name: step for step in persisted.steps}
+    assert persisted.results["completion_scope"] == "source_collection_only"
+    assert "offline-mock" not in (persisted.tools_used or [])
+    assert steps["select_tools"].output_data["reasoning_status"] == "not_invoked"
+    assert steps["evaluate"].status == "pending"
+    assert steps["evaluate"].output_data["status"] == "not_evaluated"
+
 
 def test_insufficient_evidence_remains_resumable(db, monkeypatch):
     class EmptyCollector(FakeCollector):

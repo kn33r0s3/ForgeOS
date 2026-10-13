@@ -145,8 +145,10 @@ def _set_step(
     now = utcnow()
     if status == "running" and step.started_at is None:
         step.started_at = now
-    if status in {"completed", "failed"}:
+    if status in {"completed", "failed", "skipped"}:
         step.completed_at = now
+    else:
+        step.completed_at = None
     step.status = status
     if output is not None:
         step.output_data = output
@@ -195,24 +197,20 @@ def begin_task(db: Session, task: models.ResearchTask) -> bool:
     if previous_status == "failed":
         _event(db, task, "retry_requested", details={"attempt": task.attempts})
     _set_step(db, task, "plan", "completed", output={"objective": task.objective or task.query})
-    from app.services.tool_registry import default_registry
-
-    selection = default_registry().select(
-        category="reasoning",
-        capability="completion",
-        preferred=("local-qwen3-coder",),
-        fallback="offline-mock",
-        db=db,
-        exploration_key=f"research:{task.id}:{task.query}",
-    )
-    selected_tools = sorted(set((task.tools_used or []) + [task.source, selection.tool.capability.name]))
-    task.tools_used = selected_tools
+    # This path invokes a source collector only. Selection metadata is not
+    # model execution; record only tools that actually perform work.
+    task.tools_used = sorted(set((task.tools_used or []) + [task.source]))
     _set_step(
         db,
         task,
         "select_tools",
         "completed",
-        output={"source": task.source, "reasoning_tool": selection.tool.capability.name, "reason": selection.reason},
+        output={
+            "source": task.source,
+            "reasoning_tool": None,
+            "reasoning_status": "not_invoked",
+            "reason": "This worker retrieves source records; no reasoning-provider call is wired into this path.",
+        },
     )
     _set_step(db, task, "execute", "running", output={"query": task.query})
     _event(db, task, "started", details={"attempt": task.attempts})
@@ -242,6 +240,7 @@ def finish_task(
     task.contradictions = explicit_contradiction_edges(db, unique_evidence)
     task.results = {
         **(task.results or {}),
+        "completion_scope": "source_collection_only",
         "signal_ids": signal_ids,
         "evidence_ids": unique_evidence,
         **(
@@ -251,7 +250,18 @@ def finish_task(
         ),
     }
     _set_step(db, task, "execute", "completed", output=task.results)
-    _set_step(db, task, "evaluate", "completed", output=task.judgments[0])
+    _set_step(
+        db,
+        task,
+        "evaluate",
+        "pending",
+        output={
+            "status": "not_evaluated",
+            "reason": "Collection finished; substantive relevance or claim evaluation was not run here.",
+            "evidence_count": len(unique_evidence),
+            "claim_id": task.claim_id,
+        },
+    )
     if unique_evidence:
         task.status = "completed"
         task.remaining_questions = []
@@ -303,6 +313,17 @@ def evaluate_claim_after_research(
             "excluded_metadata_only_evidence_ids": metadata_only_ids,
             "contradictions": [],
         }
+        _set_step(
+            db,
+            task,
+            "evaluate",
+            "skipped",
+            output={
+                "status": "unassessed_metadata_only",
+                "reason": "Bibliographic metadata cannot establish claim support; no substantive judge was run.",
+                "evidence_ids": metadata_only_ids,
+            },
+        )
         _event(db, task, "judgment_skipped", details=task.results)
         db.commit()
         db.refresh(task)
@@ -333,6 +354,19 @@ def evaluate_claim_after_research(
         "comparison_outcome": comparison.outcome,
         "excluded_metadata_only_evidence_ids": metadata_only_ids,
     }
+    _set_step(
+        db,
+        task,
+        "evaluate",
+        "completed",
+        output={
+            "status": "judge_pipeline_executed",
+            "judgment_ids": [judgment.id for judgment in judgments],
+            "comparison_id": comparison.id,
+            "comparison_outcome": comparison.outcome,
+            "excluded_metadata_only_evidence_ids": metadata_only_ids,
+        },
+    )
     if comparison.follow_up_question_id:
         task.remaining_questions = [comparison.summary]
     task.updated_at = utcnow()

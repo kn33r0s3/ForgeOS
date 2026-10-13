@@ -29,6 +29,7 @@ swapped for an embedding-based clustering approach later without
 changing its public function signature (`run_pattern_detection`).
 """
 
+import json
 import re
 from collections import defaultdict
 from itertools import combinations
@@ -94,6 +95,57 @@ def tokenize(text: str) -> set[str]:
 _tokenize = tokenize
 
 
+_NON_PROBLEM_RESEARCH_SOURCES = frozenset({
+    "crossref",
+    "crossref-public-works-metadata",
+    "openalex",
+    "openalex-public-works-cc0",
+})
+
+
+def _is_research_metadata_signal(signal: models.Signal) -> bool:
+    """Research metadata is useful for research, but is not an expressed economic problem."""
+    source = (signal.source or "").casefold().strip()
+    if source.startswith("crossref") or source.startswith("openalex"):
+        return True
+    try:
+        provenance = json.loads(signal.provenance) if signal.provenance else {}
+    except (TypeError, json.JSONDecodeError):
+        provenance = {}
+    if not isinstance(provenance, dict):
+        return False
+    return (
+        provenance.get("metadata_only") is True
+        or provenance.get("source_registry_id") in _NON_PROBLEM_RESEARCH_SOURCES
+    )
+
+
+def _annotate_historical_research_patterns(
+    db: Session,
+    signals: list[models.Signal],
+) -> int:
+    """Retain legacy rows but mark patterns whose complete origin is research metadata."""
+    by_id = {signal.id: signal for signal in signals}
+    changed = 0
+    for pattern in db.query(models.Pattern).all():
+        ids = [
+            int(value.strip())
+            for value in (pattern.origin_signal_ids or "").split(",")
+            if value.strip().isdigit()
+        ]
+        if not ids or any(signal_id not in by_id for signal_id in ids):
+            continue
+        if not all(_is_research_metadata_signal(by_id[signal_id]) for signal_id in ids):
+            continue
+        description = pattern.description or ""
+        if "[BIBLIOGRAPHIC BACKGROUND]" not in description:
+            pattern.description = "[BIBLIOGRAPHIC BACKGROUND] " + description
+            changed += 1
+    if changed:
+        db.commit()
+    return changed
+
+
 def run_pattern_detection(db: Session) -> list[models.Pattern]:
     """
     Analyze QUALITY-GATED signals, detect repeated themes, and persist
@@ -117,15 +169,19 @@ def run_pattern_detection(db: Session) -> list[models.Pattern]:
     no confidence refresh); retiring stale rows is a separate policy
     decision, not done here.
     """
-    signals = (
-        db.query(models.Signal)
-        .filter(
-            models.Signal.is_duplicate_of.is_(None),
-            (models.Signal.quality_score.is_(None))
-            | (models.Signal.quality_score >= MIN_QUALITY_FOR_PATTERN),
+    all_signals = db.query(models.Signal).order_by(models.Signal.id.asc()).all()
+    # Annotate old false discoveries without deleting their origin or audit history.
+    _annotate_historical_research_patterns(db, all_signals)
+    signals = [
+        signal
+        for signal in all_signals
+        if signal.is_duplicate_of is None
+        and (
+            signal.quality_score is None
+            or signal.quality_score >= MIN_QUALITY_FOR_PATTERN
         )
-        .all()
-    )
+        and not _is_research_metadata_signal(signal)
+    ]
     if len(signals) < MIN_CLUSTER_SIZE:
         return []
 
