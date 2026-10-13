@@ -1882,29 +1882,34 @@ def advance_network_connection(
                     "accepted work requires a complete economic contract for every work-record endpoint",
                 )
     row.state = next_state
-    db.commit()
     paid = next_state == "paid"
-    action_engine.record_domain_event(
-        db,
-        idempotency_key=f"network-connection:{row.id}:{next_state}",
-        source="network_connection",
-        success=False if next_state == "failed" else (True if paid else None),
-        actual_value=float(amount_npr) if paid else None,
-        unit="NPR" if paid else None,
-        qualitative_result=(
-            f"Connection {row.id} from {row.left_kind}:{row.left_id} to {row.right_kind}:{row.right_id} "
-            f"is now {next_state}. "
-            + (
-                f"Amount recorded: {amount_npr} NPR. Not yet confirmed by the other side."
-                if paid
-                else (
-                    f"Work recorded: {(note or '').strip()}. This is not a payment."
-                    if next_state == "fulfilled"
-                    else "This state is not a later state."
+    try:
+        action_engine.record_domain_event(
+            db,
+            idempotency_key=f"network-connection:{row.id}:{next_state}",
+            source="network_connection",
+            success=False if next_state == "failed" else (True if paid else None),
+            actual_value=float(amount_npr) if paid else None,
+            unit="NPR" if paid else None,
+            qualitative_result=(
+                f"Connection {row.id} from {row.left_kind}:{row.left_id} to {row.right_kind}:{row.right_id} "
+                f"is now {next_state}. "
+                + (
+                    f"Amount recorded: {amount_npr} NPR. Not yet confirmed by the other side."
+                    if paid
+                    else (
+                        f"Work recorded: {(note or '').strip()}. This is not a payment."
+                        if next_state == "fulfilled"
+                        else "This state is not a later state."
+                    )
                 )
-            )
-        ),
-    )
+            ),
+            commit=False,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     return {"id": row.id, "state": row.state, "public_visible": row.public_visible, "payment": "reported" if paid else None}
 
 

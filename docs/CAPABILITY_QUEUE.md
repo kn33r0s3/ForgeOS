@@ -1,3 +1,12 @@
+## [PUBLIC EXCHANGE TRANSACTION ATOMICITY / EXACT-HEAD CI PENDING] Persist state with its canonical event (2026-10-13)
+
+- **Existing seams inspected:** `action_engine.record_domain_event` / `record_outcome(commit=...)`, `create_domain_record`, `close_domain_record`, and `advance_network_connection`.
+- **Weak point removed:** the public post, close, and connection transition paths committed state before writing the associated canonical Outcome/event. If the second write failed, the caller could receive an error while the state had already changed; a newly created post could remain open without returning its one-time token. The existing event writer now supports caller-owned transactions, and these paths flush their generated IDs, write the event with `commit=False`, then commit the state/event together. Any failure rolls the transaction back.
+- **Action removed:** callers cannot be left with a new public record, closed status, or advanced connection from these paths without its canonical event write succeeding.
+- **Owner action remaining:** inspect actual proposals and consent before commitments; successful DB atomicity does not establish the truth of submitted details, mutual acceptance, fulfillment, or payment.
+- **What remains / why:** the public board still has no independent counterparty authentication or mutual acceptance protocol. Those are separate identity/consent requirements, not something an Outcome can prove by itself.
+- **Verification:** failure-injection regressions cover create, close, and connection-transition rollback. Exact-head full CI, secrets scan, and production SHA verification required.
+
 ## [ACCEPTANCE GATE ORIENTATION FIX / EXACT-HEAD CI PENDING] Require terms for every work-record endpoint (2026-10-13)
 
 - **Existing seam inspected:** `backend/app/api/forge.py:advance_network_connection`, the existing `DomainRecord.terms` contract validator, and its `test_accepted_work_requires_a_complete_economic_contract` regression.

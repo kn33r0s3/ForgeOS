@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 from datetime import datetime, timezone
 import sqlite3
@@ -2509,3 +2510,122 @@ def test_legacy_domain_records_cannot_break_safe_public_projection(client_with_d
     assert len(item["stated_price"]) == 120
     assert item["terms_complete"] is False
     assert item["terms"] is None
+
+
+def test_public_domain_post_rolls_back_when_open_event_write_fails(client_with_db, db, monkeypatch):
+    from app.services import action_engine
+
+    def fail_event(*args, **kwargs):
+        raise RuntimeError("simulated event write failure")
+
+    monkeypatch.setattr(action_engine, "record_domain_event", fail_event)
+    with pytest.raises(RuntimeError, match="simulated event write failure"):
+        client_with_db.post(
+            "/public/domain",
+            json={
+                "kind": "offer",
+                "title": "Atomic post fixture",
+                "detail": "A proposal that must not exist without its opening event.",
+            },
+        )
+
+    assert db.query(models.DomainRecord).filter_by(title="Atomic post fixture").count() == 0
+    assert db.query(models.Outcome).filter(
+        models.Outcome.notes.like("idempotency:domain-record:%:open")
+    ).count() == 0
+
+
+def test_public_domain_close_rolls_back_when_close_event_write_fails(client_with_db, db, monkeypatch):
+    from app.services import action_engine
+
+    token = "atomic-close-test-token"
+    row = models.DomainRecord(
+        kind="offer",
+        title="Atomic close fixture",
+        detail="This record stays open when its close event fails.",
+        status="open",
+        close_token_hash=hashlib.sha256(token.encode()).hexdigest(),
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+
+    def fail_event(*args, **kwargs):
+        raise RuntimeError("simulated event write failure")
+
+    monkeypatch.setattr(action_engine, "record_domain_event", fail_event)
+    with pytest.raises(RuntimeError, match="simulated event write failure"):
+        client_with_db.post(
+            f"/public/domain/{row.id}/close",
+            json={
+                "close_token": token,
+                "result": "completed",
+                "note": "Attempted closure for atomicity test",
+            },
+        )
+
+    db.refresh(row)
+    assert row.status == "open"
+    assert row.closed_at is None
+    assert db.query(models.Outcome).filter_by(
+        notes=f"idempotency:domain-record:{row.id}:close"
+    ).count() == 0
+
+
+def test_connection_state_rolls_back_when_transition_event_write_fails(owner_client_with_db, db, monkeypatch):
+    from app.services import action_engine
+
+    complete_terms = {
+        "requested": "A bounded service exchange",
+        "who_can_submit": "Both named sides may propose terms",
+        "success": "The agreed deliverable is completed",
+        "evidence_required": "Both sides review the delivered result",
+        "ownership": "Each side retains ownership unless written terms state otherwise",
+        "payment_due": "After the agreed handoff",
+        "amount_npr": 1500,
+        "partial": "Partial delivery must be agreed before any partial charge",
+        "rejection": "Either side can reject work outside the written scope",
+        "resale": "No resale of private data or materials without permission",
+        "costs": "Additional costs need agreement before they are incurred",
+    }
+    work_record = models.DomainRecord(
+        kind="offer",
+        title="Atomic transition fixture",
+        detail="Complete terms are present, so only the event write should block acceptance.",
+        terms=json.dumps(complete_terms),
+        status="open",
+        close_token_hash="atomic-transition-token-hash",
+    )
+    db.add(work_record)
+    db.commit()
+    db.refresh(work_record)
+
+    row = models.NetworkConnection(
+        left_kind="provider",
+        left_id=1,
+        right_kind="domain_record",
+        right_id=work_record.id,
+        state="contacted",
+        reason="Atomic transition fixture",
+        agreement_gap="Event failure must not leave an accepted transition.",
+        public_visible=False,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+
+    def fail_event(*args, **kwargs):
+        raise RuntimeError("simulated event write failure")
+
+    monkeypatch.setattr(action_engine, "record_domain_event", fail_event)
+    with pytest.raises(RuntimeError, match="simulated event write failure"):
+        owner_client_with_db.post(
+            f"/forge/connections/{row.id}/advance",
+            params={"next_state": "accepted"},
+        )
+
+    db.refresh(row)
+    assert row.state == "contacted"
+    assert db.query(models.Outcome).filter_by(
+        notes=f"idempotency:network-connection:{row.id}:accepted"
+    ).count() == 0

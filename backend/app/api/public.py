@@ -935,18 +935,25 @@ def create_domain_record(
         close_token_hash=hashlib.sha256(token.encode()).hexdigest(),
     )
     db.add(row)
-    db.commit()
-    db.refresh(row)
+    db.flush()
     from app.services import action_engine
-    action_engine.record_domain_event(
-        db,
-        idempotency_key=f"domain-record:{row.id}:open",
-        source="domain_record",
-        qualitative_result=(
-            f"Domain {row.kind} {row.id} opened: {row.title}. "
-            "This is a post in our records, not a completed trade or a payment."
-        ),
-    )
+
+    try:
+        action_engine.record_domain_event(
+            db,
+            idempotency_key=f"domain-record:{row.id}:open",
+            source="domain_record",
+            qualitative_result=(
+                f"Domain {row.kind} {row.id} opened: {row.title}. "
+                "This is a post in our records, not a completed trade or a payment."
+            ),
+            commit=False,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    db.refresh(row)
     created = _domain_out(row)
     return schemas.DomainRecordCreated(**created.model_dump(), close_token=token)
 
@@ -975,21 +982,26 @@ def close_domain_record(
     row.close_result = body.result
     row.close_note = body.note.strip()
     row.closed_at = models.utcnow()
-    db.commit()
-    db.refresh(row)
     from app.services import action_engine
     paid = body.result == "paid"
-    action_engine.record_domain_event(
-        db,
-        idempotency_key=f"domain-record:{row.id}:close",
-        source="domain_record",
-        success=True if paid else (False if body.result == "withdrawn" else None),
-        actual_value=float(body.amount_npr) if paid else None,
-        unit="NPR" if paid else None,
-        qualitative_result=(
-            f"Domain {row.kind} {row.id} closed as {body.result}. Note: {row.close_note}"
-        ),
-    )
+    try:
+        action_engine.record_domain_event(
+            db,
+            idempotency_key=f"domain-record:{row.id}:close",
+            source="domain_record",
+            success=True if paid else (False if body.result == "withdrawn" else None),
+            actual_value=float(body.amount_npr) if paid else None,
+            unit="NPR" if paid else None,
+            qualitative_result=(
+                f"Domain {row.kind} {row.id} closed as {body.result}. Note: {row.close_note}"
+            ),
+            commit=False,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    db.refresh(row)
     return _domain_out(row)
 
 

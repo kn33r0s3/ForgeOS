@@ -670,8 +670,13 @@ def record_domain_event(
     success: Optional[bool] = None,
     actual_value: Optional[float] = None,
     unit: Optional[str] = None,
+    commit: bool = True,
 ) -> models.Outcome:
-    """Write one of our own events into the existing outcome record. No revenue is inferred."""
+    """Write one of our own events into the existing outcome record. No revenue is inferred.
+
+    Set commit=False when a caller must commit the state transition and this
+    event as one transaction. The default preserves existing call semantics.
+    """
     return record_outcome(
         db,
         outcome_type="QUALITATIVE",
@@ -682,6 +687,7 @@ def record_domain_event(
         unit=unit,
         idempotency_key=idempotency_key,
         data_scope="REAL",
+        commit=commit,
     )
 
 
