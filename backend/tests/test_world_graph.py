@@ -515,6 +515,51 @@ def test_relations_compose_and_cannot_skip_tested_evidence(db):
     assert outer.from_entity_id == relation_entity.id
 
 
+def test_truthy_string_simulation_flags_cannot_promote_evidence(db):
+    _seed(db)
+    entity = world_graph.create_entity(
+        db,
+        entity_type="resource",
+        display_name="Provenance flag test",
+        attributes={},
+        created_by="test",
+    )
+    for marker in (
+        {"is_mock": "true"},
+        {"is_test_fixture": "YES"},
+        {"synthetic": "on"},
+        {"is_simulated": 1},
+    ):
+        with pytest.raises(
+            world_graph.SubstrateError,
+            match="cannot be tested, supported, or refuted",
+        ):
+            world_graph.create_evidence(
+                db,
+                subject_kind="entity",
+                subject_id=entity.id,
+                claim="A source statement with an explicit simulation flag.",
+                support_level="supported",
+                source="reviewed-public-source",
+                provenance={"url": "https://example.org/report", **marker},
+            )
+
+    # Ordinary notes may discuss testing without relabeling the source as mock.
+    evidence = world_graph.create_evidence(
+        db,
+        subject_kind="entity",
+        subject_id=entity.id,
+        claim="The report describes a real public event.",
+        support_level="supported",
+        source="reviewed-public-source",
+        provenance={
+            "url": "https://example.org/report",
+            "notes": "This test documents why the source is not mock data.",
+        },
+    )
+    assert evidence.support_level == "supported"
+
+
 def test_registry_evidence_and_relation_validations_fail_closed(db):
     _seed(db)
     entity = world_graph.create_entity(
