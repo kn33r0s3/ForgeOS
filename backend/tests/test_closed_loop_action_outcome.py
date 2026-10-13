@@ -185,7 +185,7 @@ def test_approval_required_before_execute(db):
     a = action_engine.propose_action(
         db,
         objective="Email 20 restaurants",
-        action_type="outreach",
+        action_type="follow_up",
         estimated_cost=0.0,
     )
     assert a.status == "APPROVAL_REQUIRED"
@@ -302,7 +302,7 @@ def _make_autonomy_policy(db, **overrides):
     values = {
         "name": "standing-auth-regression-policy",
         "active": True,
-        "allowed_action_types": "research,outreach",
+        "allowed_action_types": "research,follow_up",
         "max_experiment_spend": 0.0,
         "max_concurrent_experiments": 10,
         "max_daily_actions": 10,
@@ -336,7 +336,7 @@ def _authorize_outreach_standing_auth(db):
     source = action_engine.propose_action(
         db,
         objective="Standing authorization source",
-        action_type="outreach",
+        action_type="follow_up",
         estimated_cost=0,
     )
     assert source.policy_result == "REQUIRE_APPROVAL"
@@ -370,7 +370,7 @@ def test_standing_authorization_replaces_owner_approval_for_matching_action(db):
     action = action_engine.propose_action(
         db,
         objective="Standing authorization matching action",
-        action_type="outreach",
+        action_type="follow_up",
         estimated_cost=0,
     )
 
@@ -443,7 +443,7 @@ def test_standing_authorization_does_not_bypass_action_type_boundary(db):
     decision = autonomy_engine.evaluate_action(
         db,
         opportunity,
-        "outreach",
+        "follow_up",
         0,
     )
 
@@ -474,7 +474,7 @@ def _authorize_outreach_standing_auth_with_bounds(db, bound_overrides=None, expi
     source = action_engine.propose_action(
         db,
         objective="bounded standing-auth source",
-        action_type="outreach",
+        action_type="follow_up",
         estimated_cost=0.0,
     )
     assert source.policy_result == "REQUIRE_APPROVAL"
@@ -521,7 +521,7 @@ def test_standing_authorization_flows_through_execution_engine(db):
     experiment = execution_engine.create_action(
         db,
         opportunity_id=opportunity.id,
-        action_type="outreach",
+        action_type="follow_up",
         description="execution seam standing authorization",
         estimated_cost=None,
         data_scope="REAL",
@@ -559,7 +559,7 @@ def test_expired_standing_authorization_is_not_used(db):
 
     result = autonomy_engine.check_standing_authorization(
         db,
-        "outreach",
+        "follow_up",
         {
             "data_scope": "REAL",
         },
@@ -587,7 +587,7 @@ def test_revoked_standing_authorization_is_not_used(db):
 
     result = autonomy_engine.check_standing_authorization(
         db,
-        "outreach",
+        "follow_up",
         {
             "data_scope": "REAL",
         },
@@ -610,7 +610,7 @@ def test_standing_authorization_max_per_day_envelope_is_enforced(db):
     first = action_engine.propose_action(
         db,
         objective="first bounded outreach",
-        action_type="outreach",
+        action_type="follow_up",
         estimated_cost=0.0,
     )
     assert first.policy_result == "ALLOW"
@@ -636,7 +636,7 @@ def test_standing_authorization_max_per_day_envelope_is_enforced(db):
     allowed, reasons = autonomy_engine.matches_standing_envelope(
         db,
         auth,
-        "outreach",
+        "follow_up",
         {
             "data_scope": "REAL",
         },
@@ -660,7 +660,7 @@ def test_standing_authorization_envelope_field_mismatch_is_not_allowed(db):
 
     mismatch = autonomy_engine.check_standing_authorization(
         db,
-        "outreach",
+        "follow_up",
         {
             "channel": "sms",
             "data_scope": "REAL",
@@ -670,7 +670,7 @@ def test_standing_authorization_envelope_field_mismatch_is_not_allowed(db):
 
     match = autonomy_engine.check_standing_authorization(
         db,
-        "outreach",
+        "follow_up",
         {
             "channel": "email",
             "data_scope": "REAL",
@@ -712,7 +712,7 @@ def _sa_authorized_experiment(db, description="Standing authorization test outre
     experiment = execution_engine.create_action(
         db,
         opportunity_id=opportunity.id,
-        action_type="outreach",
+        action_type="follow_up",
         description=description,
         estimated_cost=0.0,
         data_scope="REAL",
@@ -773,7 +773,7 @@ def test_canonical_gate_nonmatching_envelope_never_eligible(db):
     action = action_engine.propose_action(
         db,
         objective="mismatched channel action",
-        action_type="outreach",
+        action_type="follow_up",
         estimated_cost=0.0,
         parameters={"channel": "sms", "data_scope": "REAL"},
     )
@@ -783,7 +783,7 @@ def test_canonical_gate_nonmatching_envelope_never_eligible(db):
     experiment = execution_engine.create_action(
         db,
         opportunity_id=opportunity.id,
-        action_type="outreach",
+        action_type="follow_up",
         description="mismatched channel action",
         estimated_cost=0.0,
         data_scope="REAL",
@@ -811,7 +811,7 @@ def test_canonical_gate_expired_sa_never_eligible(db):
     experiment = execution_engine.create_action(
         db,
         opportunity_id=opportunity.id,
-        action_type="outreach",
+        action_type="follow_up",
         description="bounded standing-auth pre-expiry test",
         estimated_cost=0.0,
         data_scope="REAL",
@@ -843,7 +843,7 @@ def test_canonical_gate_revoked_sa_never_eligible(db):
     experiment = execution_engine.create_action(
         db,
         opportunity_id=opportunity.id,
-        action_type="outreach",
+        action_type="follow_up",
         description="bounded standing-auth pre-revocation test",
         estimated_cost=0.0,
         data_scope="REAL",
@@ -986,7 +986,7 @@ def test_canonical_gate_owner_approved_works(db):
     experiment = execution_engine.create_action(
         db,
         opportunity_id=opportunity.id,
-        action_type="outreach",
+        action_type="follow_up",
         description="owner approved outreach",
         estimated_cost=0.0,
         data_scope="REAL",
@@ -1013,7 +1013,7 @@ def test_canonical_gate_max_per_day_counts_sa_authorized(db):
     first = action_engine.propose_action(
         db,
         objective="bounded standing-auth first daily",
-        action_type="outreach",
+        action_type="follow_up",
         estimated_cost=0.0,
     )
     assert first.policy_result == "ALLOW"
@@ -1024,7 +1024,7 @@ def test_canonical_gate_max_per_day_counts_sa_authorized(db):
     second = action_engine.propose_action(
         db,
         objective="bounded standing-auth second daily",
-        action_type="outreach",
+        action_type="follow_up",
         estimated_cost=0.0,
     )
     assert second.policy_result != "ALLOW"
@@ -1069,7 +1069,7 @@ def _policy_allowing_outreach(db, **overrides):
     values = {
         "name": "revalidation-test-policy",
         "active": True,
-        "allowed_action_types": "research,outreach",
+        "allowed_action_types": "research,follow_up",
         "max_experiment_spend": 100.0,
         "max_concurrent_experiments": 10,
         "max_daily_actions": 10,
@@ -1095,7 +1095,7 @@ def _direct_allow_experiment(db, policy=None, opportunity=None, cost=10.0):
     exp = execution_engine.create_action(
         db,
         opportunity_id=opportunity.id,
-        action_type="outreach",
+        action_type="follow_up",
         description="direct allow revalidation test",
         estimated_cost=cost,
         data_scope="REAL",
@@ -1217,7 +1217,7 @@ def test_revalidation_sa_revoked_still_fails(db):
     exp = execution_engine.create_action(
         db,
         opportunity_id=opportunity.id,
-        action_type="outreach",
+        action_type="follow_up",
         description="bounded standing-auth revalidation test",
         estimated_cost=0.0,
         data_scope="REAL",
@@ -1453,7 +1453,7 @@ def _sa_with_source(db):
     _make_autonomy_policy(db)
     source = action_engine.propose_action(
         db, objective="source continuity test source",
-        action_type="outreach", estimated_cost=0,
+        action_type="follow_up", estimated_cost=0,
     )
     source = action_engine.approve_action(db, source.id)
     assert source.status == "APPROVED"
@@ -1473,7 +1473,7 @@ def _try_sa_authorized_action(db, description="source continuity test action"):
     _deactivate_policy(db)  # Force SA path (no policy ALLOW)
     return action_engine.propose_action(
         db, objective=description,
-        action_type="outreach", estimated_cost=0.0,
+        action_type="follow_up", estimated_cost=0.0,
     )
 
 
@@ -1558,7 +1558,7 @@ def test_source_guard_missing_source_id_fails_closed(db):
     db.commit()
 
     matched, reasons = autonomy_engine.matches_standing_envelope(
-        db, auth, "outreach", {"objective": "source continuity test action", "data_scope": "REAL"}
+        db, auth, "follow_up", {"objective": "source continuity test action", "data_scope": "REAL"}
     )
     assert matched is False
     assert any("source" in r.lower() for r in reasons)
@@ -1577,7 +1577,7 @@ def test_source_guard_nonexistent_source_fails_closed(db):
     db.commit()
 
     matched, reasons = autonomy_engine.matches_standing_envelope(
-        db, auth, "outreach", {"objective": "source continuity test action", "data_scope": "REAL"}
+        db, auth, "follow_up", {"objective": "source continuity test action", "data_scope": "REAL"}
     )
     assert matched is False
     assert any("not found" in r.lower() for r in reasons)
@@ -1596,7 +1596,7 @@ def test_source_guard_canonical_path_not_test_precondition(db):
 
     # Create an SA-authorized Experiment while source is valid.
     exp = execution_engine.create_action(
-        db, opportunity_id=opportunity.id, action_type="outreach",
+        db, opportunity_id=opportunity.id, action_type="follow_up",
         description="source continuity canonical test",
         estimated_cost=0.0, data_scope="REAL",
     )
@@ -1626,7 +1626,7 @@ def test_source_guard_full_lifecycle(db):
     # 1. Valid source (APPROVED).
     source = action_engine.propose_action(
         db, objective="lifecycle source action",
-        action_type="outreach", estimated_cost=0,
+        action_type="follow_up", estimated_cost=0,
     )
     source = action_engine.approve_action(db, source.id)
     assert source.status == "APPROVED"
@@ -1649,7 +1649,7 @@ def test_source_guard_full_lifecycle(db):
     _deactivate_policy(db)
     new_action = action_engine.propose_action(
         db, objective="lifecycle new action",
-        action_type="outreach", estimated_cost=0.0,
+        action_type="follow_up", estimated_cost=0.0,
     )
     # Not ALLOW — source guard blocked the SA.
     assert new_action.policy_result != "ALLOW"
@@ -1811,7 +1811,7 @@ def test_k1_revoked_sa_cannot_execute(db):
     opportunity = _make_opportunity(db, confidence=100.0)
 
     exp = execution_engine.create_action(
-        db, opportunity_id=opportunity.id, action_type="outreach",
+        db, opportunity_id=opportunity.id, action_type="follow_up",
         description="bounded standing-auth k1 test",
         estimated_cost=0.0, data_scope="REAL",
     )
@@ -1951,7 +1951,7 @@ def test_stage_gate_cannot_be_bypassed_by_active_standing_authorization(db, monk
     action = action_engine.propose_action(
         db,
         objective="Attempt a second outreach inside an existing standing envelope",
-        action_type="outreach",
+        action_type="follow_up",
         estimated_cost=0.0,
     )
     assert action.policy_result == "REQUIRE_APPROVAL"
