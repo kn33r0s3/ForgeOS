@@ -349,6 +349,8 @@ def record_reply(db: Session, draft_id: int, summary: str) -> models.OutreachDra
         raise ValueError("Draft not found.")
     if draft.status != "SENT":
         raise ValueError("A response outcome can only be recorded for a contact the owner marked sent.")
+    if draft.reply_received:
+        raise ValueError("A reply is already recorded for this contact.")
     clean_summary = (summary or "").strip()
     if not clean_summary or len(clean_summary) > 3000:
         raise ValueError("Reply/outcome summary must contain 1–3000 characters.")
