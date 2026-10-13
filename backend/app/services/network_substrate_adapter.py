@@ -81,7 +81,22 @@ def sync_network_connections(db: Session, *, limit: int = 100) -> dict[str, int]
                     .correlate(connection_model)
                     .exists()
                 )
-            options.append(and_(normalized_kind == endpoint_kind, target_exists))
+            canonical_kind = network_endpoints.ENDPOINT_ALIASES.get(
+                endpoint_kind, endpoint_kind
+            )
+            entity_type = "relation" if endpoint_kind == "network_connection" else canonical_kind
+            active_entity_type = (
+                db.query(models.TypeRegistry.id)
+                .filter(
+                    models.TypeRegistry.category == "entity_type",
+                    models.TypeRegistry.type_name == entity_type,
+                    models.TypeRegistry.status == "active",
+                )
+                .exists()
+            )
+            options.append(
+                and_(normalized_kind == endpoint_kind, target_exists, active_entity_type)
+            )
         return or_(*options)
 
     left_ready = endpoint_ready(connection_model.left_kind, connection_model.left_id)
@@ -263,7 +278,7 @@ def sync_network_connections(db: Session, *, limit: int = 100) -> dict[str, int]
             )
     for connection in endpoint_blocked_rows:
         reasons_by_id[connection.id] = (
-            "one or both endpoints are missing from their canonical source tables"
+            "one or both endpoint rows are missing or their canonical entity type is inactive"
         )
     for connection in blocked_nested_rows:
         reasons_by_id[connection.id] = (
