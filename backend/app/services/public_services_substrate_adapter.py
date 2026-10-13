@@ -12,6 +12,7 @@ import hashlib
 import json
 from typing import Any
 
+from sqlalchemy import String, and_, cast, func, literal, or_
 from sqlalchemy.orm import Session
 
 from app import models
@@ -46,18 +47,132 @@ def sync_public_services(db: Session, *, limit: int = 500) -> dict[str, int]:
     except type_validation.SubstrateError:
         offered_by_active = False
 
-    providers = (
+    try:
+        batch_limit = max(1, int(limit))
+    except (TypeError, ValueError):
+        batch_limit = 500
+
+    def has_entity(entity_type: str, source_model: type, source_id_expr):
+        return (
+            db.query(models.SubstrateEntity.id)
+            .filter(
+                models.SubstrateEntity.entity_type == entity_type,
+                models.SubstrateEntity.source_system == source_model.__tablename__,
+                models.SubstrateEntity.source_id == cast(source_id_expr, String),
+            )
+            .correlate(source_model)
+            .exists()
+        )
+
+    provider_entity_exists = has_entity("provider", models.Provider, models.Provider.id)
+    new_providers = (
         db.query(models.Provider)
-        .order_by(models.Provider.id.asc())
-        .limit(max(1, int(limit)))
+        .filter(~provider_entity_exists)
+        .order_by(models.Provider.updated_at.desc(), models.Provider.id.desc())
+        .limit(batch_limit)
         .all()
     )
-    listings = (
+    provider_remaining = batch_limit - len(new_providers)
+    existing_providers = []
+    if provider_remaining > 0:
+        existing_providers = (
+            db.query(models.Provider)
+            .filter(provider_entity_exists)
+            .order_by(models.Provider.updated_at.desc(), models.Provider.id.desc())
+            .limit(provider_remaining)
+            .all()
+        )
+    providers = new_providers + existing_providers
+
+    listing_entity_exists = has_entity(
+        "service_listing", models.ServiceListing, models.ServiceListing.id
+    )
+    new_listings = (
         db.query(models.ServiceListing)
-        .order_by(models.ServiceListing.id.asc())
-        .limit(max(1, int(limit)))
+        .filter(~listing_entity_exists)
+        .order_by(models.ServiceListing.updated_at.desc(), models.ServiceListing.id.desc())
+        .limit(batch_limit)
         .all()
     )
+    listing_remaining = batch_limit - len(new_listings)
+    selected_listing_ids = {listing.id for listing in new_listings}
+    repairable_listings = []
+    if listing_remaining > 0 and offered_by_active:
+        provider_source_exists = (
+            db.query(models.Provider.id)
+            .filter(models.Provider.id == models.ServiceListing.provider_id)
+            .correlate(models.ServiceListing)
+            .exists()
+        )
+        provider_entity_for_listing = (
+            db.query(models.SubstrateEntity.id)
+            .filter(
+                models.SubstrateEntity.entity_type == "provider",
+                models.SubstrateEntity.source_system == models.Provider.__tablename__,
+                models.SubstrateEntity.source_id == cast(models.ServiceListing.provider_id, String),
+            )
+            .correlate(models.ServiceListing)
+            .exists()
+        )
+        relation_key_expr = (
+            literal("public-service-listing:")
+            + cast(models.ServiceListing.id, String)
+            + literal(":provider:")
+            + cast(models.ServiceListing.provider_id, String)
+            + literal(":offered-by-v1")
+        )
+        evidence_key_expr = (
+            literal("public-service-listing:")
+            + cast(models.ServiceListing.id, String)
+            + literal(":provider:")
+            + cast(models.ServiceListing.provider_id, String)
+            + literal(":offered-by-evidence-v1")
+        )
+        relation_exists = (
+            db.query(models.WorldRelation.id)
+            .filter(models.WorldRelation.idempotency_key == relation_key_expr)
+            .correlate(models.ServiceListing)
+            .exists()
+        )
+        evidence_exists = (
+            db.query(models.Evidence.id)
+            .filter(models.Evidence.idempotency_key == evidence_key_expr)
+            .correlate(models.ServiceListing)
+            .exists()
+        )
+        repairable_listings = (
+            db.query(models.ServiceListing)
+            .filter(
+                listing_entity_exists,
+                provider_source_exists,
+                or_(
+                    ~provider_entity_for_listing,
+                    ~relation_exists,
+                    ~evidence_exists,
+                ),
+            )
+            .order_by(models.ServiceListing.updated_at.desc(), models.ServiceListing.id.desc())
+            .limit(listing_remaining)
+            .all()
+        )
+        selected_listing_ids.update(listing.id for listing in repairable_listings)
+        listing_remaining -= len(repairable_listings)
+
+    existing_listings = []
+    if listing_remaining > 0:
+        existing_query = db.query(models.ServiceListing)
+        if selected_listing_ids:
+            existing_query = existing_query.filter(
+                models.ServiceListing.id.notin_(selected_listing_ids)
+            )
+        existing_listings = (
+            existing_query
+            .filter(listing_entity_exists)
+            .order_by(models.ServiceListing.updated_at.desc(), models.ServiceListing.id.desc())
+            .limit(listing_remaining)
+            .all()
+        )
+    listings = new_listings + repairable_listings + existing_listings
 
     provider_entities: dict[int, models.SubstrateEntity] = {}
     for provider in providers:
