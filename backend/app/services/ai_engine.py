@@ -395,20 +395,20 @@ def _complete_with_fallback(prompt: str, system: str = "", context: str = "", *,
     try:
         provider = get_provider()
     except Exception as e:
-        if allow_mock_fallback and getattr(settings, "AI_FALLBACK_TO_MOCK", False)
+        if allow_mock_fallback and getattr(settings, "AI_FALLBACK_TO_MOCK", False):
             return MockProvider().complete(full_prompt, system=system)
         raise AIUnavailableError(provider_name, f"provider construction failed: {e}") from e
 
     if isinstance(provider, MockProvider):
         # Config asked for real provider but we only have mock path
-        if allow_mock_fallback and getattr(settings, "AI_FALLBACK_TO_MOCK", False)
+        if allow_mock_fallback and getattr(settings, "AI_FALLBACK_TO_MOCK", False):
             return provider.complete(full_prompt, system=system)
         raise AIUnavailableError(provider_name, "real provider not available")
 
     try:
         return provider.complete(full_prompt, system=system)
     except Exception as e:
-        if allow_mock_fallback and getattr(settings, "AI_FALLBACK_TO_MOCK", False)
+        if allow_mock_fallback and getattr(settings, "AI_FALLBACK_TO_MOCK", False):
             return MockProvider().complete(full_prompt, system=system)
         raise AIUnavailableError(provider_name, str(e)) from e
 
