@@ -213,3 +213,13 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Added a separate HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA setting (default false); bearer authentication does not by itself authorize sending internal Hami Knowledge to a remote model. The API returns 403 before generating, and the owner UI explains the disabled sharing boundary. LOCAL inference is unaffected.
 - The successful ForgeBot answer path returns provider/mode/model and sanitized token/duration observations and writes only non-content telemetry into the existing EVENT substrate. The event has no question, answer or retrieved memory text; telemetry failure is best-effort and must not discard a successful answer.
 - Added regression tests for remote sharing disabled/enabled, endpoint refusal before generation, token-authenticated gateway and redirect rejection. Secrets scan passed on preceding commits, but the latest exact-head ForgeOS CI and deployment verification are pending; actual model invocation is not claimed.
+
+
+## 2026-10-14 — proactive context recovery and memory stewardship
+
+- Read the live `docs/BRAIN.md`, `AGENTS.md`, `HANDOFF.md`, `STATE.md`, `QUEUE.md`, `LOG.md`, `docs/CAPABILITY_QUEUE.md`, `docs/HAMI_SYSTEM_MAP.md`, `docs/UNKNOWN_MAP.md` and portable discovery/health specs from canonical `main`.
+- Confirmed the existing architecture already defines one Hami, a ranked queue, detailed capability dependencies, an unknowns map and continuous-work rules. The improvement was to connect context recovery to these existing sources rather than create another roadmap or memory file.
+- Added Brain section 38: proactive retrieval from accessible conversations, saved context, repository history, connected files/tools and fresh sources; conflict/provenance labels; safe recording of durable decisions; source-visibility checks; recovery routes for missing history; and a hard distinction between continuous-work intent and observed scheduler/runtime execution.
+- Requested the existing enabled `Continue Hami Work` automation to run immediately. The platform confirmed the request only; completion/delivery has not been verified. Daily schedule remains separate from actual 24/7 worker execution.
+- Repository metadata currently reports `kn33r0s3/ForgeOS` as public. No private conversation dump, secret, credential, external message, spend, activation change or real-world outcome was created by this recovery pass.
+- Verification boundary: documentation changes are the only intended scope of this commit. Exact-head CI, deployment/runtime state, scheduled execution completion and external outcomes remain independently unverified.
