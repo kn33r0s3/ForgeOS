@@ -240,6 +240,37 @@ def test_evidence_to_network_connection_uses_existing_projected_relation(db):
     assert db.query(models.WorldRelation).count() == 2
 
 
+def test_inactive_target_entity_type_does_not_starve_valid_evidence_links(db):
+    world_graph.seed_core_types(db)
+    evidence, claim, valid_link, _decision = _evidence_claim_link(db)
+    opportunity = models.Opportunity(problem="Inactive target must stay unresolved.")
+    db.add(opportunity)
+    db.flush()
+    blocked_link = models.EvidenceRelationship(
+        evidence_id=evidence.id,
+        opportunity_id=opportunity.id,
+        relation_type="supports",
+        relation_key="inactive-opportunity-target",
+    )
+    db.add(blocked_link)
+    db.commit()
+    opportunity_type = db.query(models.TypeRegistry).filter_by(
+        category="entity_type", type_name="opportunity"
+    ).one()
+    world_graph.set_type_status(
+        db, opportunity_type, "deprecated",
+        actor="test_agent",
+        rationale="Inactive evidence targets cannot starve valid links.",
+        evidence_ref="backend/tests/test_evidence_relationship_substrate_adapter.py",
+    )
+    result = adapter.sync_evidence_relationships(db, limit=1)
+    assert result["records_seen"] == 2
+    assert result["relations_created"] == 1
+    assert result["unresolved_records"] == 1
+    assert valid_link.substrate_relation_id is not None
+    assert blocked_link.substrate_relation_id is None
+
+
 def test_unregistered_or_ambiguous_evidence_links_remain_unprojected(db):
     evidence, claim, unregistered, _decision = _evidence_claim_link(
         db, relation_type="unreviewed_link_type"
