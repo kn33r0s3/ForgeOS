@@ -16,6 +16,26 @@ def _seed(db):
     db.flush()
 
 
+def test_outreach_no_response_is_an_active_canonical_event_type(db):
+    _seed(db)
+    event = world_graph.create_event(
+        db,
+        event_type="outreach.no_response",
+        source="owner",
+        payload={
+            "outcome_type": "no_response_observed",
+            "verification": "owner-reported",
+            "blocks_further_contact": True,
+        },
+    )
+    assert event.event_type == "outreach.no_response"
+    registry = db.query(models.TypeRegistry).filter_by(
+        category="event_type",
+        type_name="outreach.no_response",
+    ).one()
+    assert registry.status == "active"
+
+
 def test_type_registry_validates_open_domain_attributes(db):
     _seed(db)
     with pytest.raises(world_graph.SubstrateError, match="unknown entity_type"):
