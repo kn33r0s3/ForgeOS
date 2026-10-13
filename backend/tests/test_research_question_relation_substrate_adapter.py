@@ -167,7 +167,9 @@ def test_text_similarity_never_creates_source_relations(db):
 
     result = adapter.sync_research_question_sources(db)
 
-    assert result["questions_seen"] == 1
+    # There is no explicit source FK, so this question is not work for this
+    # adapter to inspect or project.
+    assert result["questions_seen"] == 0
     assert result["relations_created"] == 0
     assert result["unresolved_links"] == 0
     assert db.query(models.WorldRelation).count() == 0
