@@ -436,3 +436,19 @@ def test_bounded_local_cognitive_batch_runs_and_reuses_proposals(db, monkeypatch
     again = cognitive_worker.run_pending_cognitive_tasks(db, limit=1)
     assert again["attempted"] == 0
     assert db.query(models.WorkerTask).filter_by(idempotency_key=task.idempotency_key).count() == 1
+
+
+
+def test_bounded_local_cognitive_batch_is_gated_and_vetoes_vercel(db, monkeypatch):
+    monkeypatch.setattr(settings, "AI_PROVIDER", "mock")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "mock")
+    disabled = cognitive_worker.run_pending_cognitive_tasks(db, limit=1)
+    assert disabled["status"] == "disabled"
+    assert db.query(models.WorkerTask).filter_by(worker_type="cognitive").count() == 0
+
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    monkeypatch.setenv("VERCEL", "1")
+    unavailable = cognitive_worker.run_pending_cognitive_tasks(db, limit=1)
+    assert unavailable["status"] == "unavailable"
+    assert db.query(models.WorkerTask).filter_by(worker_type="cognitive").count() == 0
