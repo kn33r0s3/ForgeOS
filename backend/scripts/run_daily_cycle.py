@@ -148,10 +148,16 @@ def run_once() -> dict:
         try:
             from app.services import collector_runner
 
+            collection_outcomes = record.get("collection", [])
             record["evaluation_recovery"] = collector_runner.run_pending_evaluations(
                 db,
                 limit=2,
                 max_retries_per_task=3,
+                exclude_task_ids={
+                    item.get("task_id")
+                    for item in collection_outcomes
+                    if isinstance(item, dict) and isinstance(item.get("task_id"), int)
+                } if isinstance(collection_outcomes, list) else set(),
             )
         except Exception as exc:
             record["evaluation_recovery_error"] = f"{type(exc).__name__}: {exc}"
