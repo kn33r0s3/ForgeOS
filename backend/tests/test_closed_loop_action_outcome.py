@@ -2168,6 +2168,7 @@ def test_ai_ollama_status_checks_installed_model_but_does_not_claim_inference(mo
 
     monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
     monkeypatch.setattr(settings, "OLLAMA_HOST", "http://localhost:11434")
+    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "")
     monkeypatch.setattr(settings, "OLLAMA_MODEL", "qwen3-coder:latest")
     monkeypatch.delenv("VERCEL", raising=False)
     observed = {}
@@ -2203,6 +2204,7 @@ def test_ai_ollama_status_distinguishes_missing_model_and_unreachable_endpoint(m
 
     monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
     monkeypatch.setattr(settings, "OLLAMA_HOST", "http://localhost:11434")
+    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "")
     monkeypatch.setattr(settings, "OLLAMA_MODEL", "qwen3-coder:latest")
     monkeypatch.delenv("VERCEL", raising=False)
     monkeypatch.setattr(ai_engine.urllib.request, "urlopen", lambda *args, **kwargs: Response())
@@ -2219,7 +2221,7 @@ def test_ai_ollama_status_distinguishes_missing_model_and_unreachable_endpoint(m
     assert "private endpoint detail" not in str(status)
 
 
-def test_ai_external_provider_status_is_configured_not_ready(monkeypatch):
+def test_ai_external_provider_status_is_disabled_until_metered(monkeypatch):
     from app.services import ai_engine
 
     class ExternalProvider:
@@ -2228,7 +2230,7 @@ def test_ai_external_provider_status_is_configured_not_ready(monkeypatch):
     monkeypatch.setattr(settings, "AI_PROVIDER", "openai")
     monkeypatch.setattr(ai_engine, "get_provider", lambda: ExternalProvider())
     status = ai_engine.get_provider_status()
-    assert status["status"] == "CONFIGURED"
+    assert status["status"] == "PAID_PROVIDER_DISABLED"
     assert status["inference_verified"] is False
 
 
@@ -2312,3 +2314,83 @@ def test_forge_ask_api_refuses_mock_provider_without_returning_template(monkeypa
 
     assert response.status_code == 503
     assert "No template" in response.json()["detail"]
+
+
+
+def test_ollama_authenticated_https_gateway_probes_model_and_generates_with_bearer(monkeypatch):
+    import json
+    from app.services import ai_engine
+
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "OLLAMA_HOST", "https://models.example.test")
+    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "test-only-gateway-token")
+    monkeypatch.setattr(settings, "OLLAMA_MODEL", "qwen3-coder:latest")
+    monkeypatch.setenv("VERCEL", "1")
+    calls = []
+
+    class Response:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps(self.payload).encode("utf-8")
+
+    def fake_urlopen(request, timeout):
+        headers = {key.lower(): value for key, value in request.header_items()}
+        calls.append({
+            "url": request.full_url,
+            "authorization": headers.get("authorization"),
+            "timeout": timeout,
+        })
+        if request.full_url.endswith("/api/tags"):
+            return Response({"models": [{"name": "qwen3-coder:latest", "model": "qwen3-coder:latest"}]})
+        if request.full_url.endswith("/api/generate"):
+            return Response({
+                "response": "नमस्ते",
+                "prompt_eval_count": 3,
+                "eval_count": 2,
+                "total_duration": 1_230_000,
+            })
+        raise AssertionError("Unexpected Ollama endpoint")
+
+    monkeypatch.setattr(ai_engine.urllib.request, "urlopen", fake_urlopen)
+    status = ai_engine.get_provider_status()
+
+    assert status["provider"] == "ollama"
+    assert status["mode"] == "SELF_HOSTED"
+    assert status["status"] == "MODEL_AVAILABLE"
+    assert status["inference_verified"] is False
+    answer = ai_engine.get_provider().complete("नमस्ते")
+
+    assert answer == "नमस्ते"
+    assert [item["url"] for item in calls] == [
+        "https://models.example.test/api/tags",
+        "https://models.example.test/api/generate",
+    ]
+    assert all(item["authorization"] == "Bearer test-only-gateway-token" for item in calls)
+
+
+def test_ollama_https_gateway_without_token_fails_closed_before_network(monkeypatch):
+    from app.services import ai_engine
+
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "OLLAMA_HOST", "https://models.example.test")
+    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "")
+    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.setattr(
+        ai_engine.urllib.request,
+        "urlopen",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("No unauthenticated remote request is permitted")),
+    )
+
+    status = ai_engine.get_provider_status()
+
+    assert status["status"] == "AI_UNAVAILABLE"
+    with pytest.raises(ai_engine.AIUnavailableError, match="token-authenticated HTTPS self-hosted gateway"):
+        ai_engine.get_provider()
