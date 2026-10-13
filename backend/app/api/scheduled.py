@@ -340,8 +340,9 @@ def run_scheduled_intelligence(
     # instance's memory to serialize work across replicas.
     release_intelligence_lock = _acquire_intelligence_lock()
 
-    # Observability: record this run in the existing CycleRun table. The
-    # bookkeeping below never fails the intelligence work itself.
+    # Observability: record this run in the existing CycleRun table.
+    # A durable RUNNING record is required before work can begin, and failure
+    # to finalize it is surfaced rather than disguised as a successful run.
     cycle_run_id: int | None = None
     cycle_started_at = datetime.now(timezone.utc)
     try:
