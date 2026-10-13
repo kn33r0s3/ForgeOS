@@ -158,20 +158,15 @@ class OllamaProvider(AIProvider):
     def __init__(self):
         self._host = settings.OLLAMA_HOST.rstrip("/")
         self._model = settings.OLLAMA_MODEL
+        self.last_call_metadata = {}
 
-    def complete(self, prompt: str, system: str = "") -> str:
+    def _generate(self, payload: dict) -> dict:
         import json
         import urllib.request
 
-        payload = {
-            "model": self._model,
-            "prompt": prompt,
-            "system": system,
-            "stream": False,
-        }
         request = urllib.request.Request(
             f"{self._host}/api/generate",
-            data=json.dumps(payload).encode("utf-8"),
+            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
             headers={"Content-Type": "application/json"},
         )
         try:
@@ -180,9 +175,39 @@ class OllamaProvider(AIProvider):
         except Exception as exc:
             raise RuntimeError(
                 f"Ollama request failed — is `ollama serve` running with "
-                f"model '{self._model}' pulled? ({exc})"
+                f"model '{self._model}' pulled? ({type(exc).__name__})"
             ) from exc
-        return (data.get("response") or "").strip()
+        if not isinstance(data, dict) or not isinstance(data.get("response"), str):
+            raise RuntimeError("Ollama returned an invalid generation response")
+        self.last_call_metadata = {
+            "prompt_eval_tokens": data.get("prompt_eval_count"),
+            "completion_eval_tokens": data.get("eval_count"),
+            "total_duration_ms": round(data["total_duration"] / 1_000_000, 2)
+            if isinstance(data.get("total_duration"), (int, float)) and data["total_duration"] >= 0
+            else None,
+        }
+        return data
+
+    def complete(self, prompt: str, system: str = "") -> str:
+        data = self._generate({
+            "model": self._model,
+            "prompt": prompt,
+            "system": system,
+            "stream": False,
+        })
+        return data["response"].strip()
+
+    def complete_json(self, prompt: str, *, system: str = "", schema: dict) -> str:
+        """Use Ollama's native JSON-schema constrained generation; caller still validates output."""
+        data = self._generate({
+            "model": self._model,
+            "prompt": prompt,
+            "system": system,
+            "format": schema,
+            "stream": False,
+            "options": {"temperature": 0},
+        })
+        return data["response"].strip()
 
 
 class OpenAIProvider(AIProvider):

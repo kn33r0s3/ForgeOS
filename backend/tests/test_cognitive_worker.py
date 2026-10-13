@@ -220,3 +220,75 @@ def test_proposal_schema_rejects_execution_or_unlinked_evidence(db, change):
 
     assert db.query(models.Action).count() == 0
     assert db.query(models.WorldEvent).filter_by(source="cognitive_worker").count() == 0
+
+
+
+def test_local_ollama_provider_uses_shared_ai_engine_and_nepal_language_policy(monkeypatch):
+    import json
+
+    from app.services import ai_engine
+
+    class FakeLocalModel:
+        _model = "test-local-nepali-model"
+
+        def __init__(self):
+            self.prompt = None
+            self.system = None
+            self.schema = None
+            self.last_call_metadata = {
+                "prompt_eval_tokens": 120,
+                "completion_eval_tokens": 42,
+                "total_duration_ms": 321.5,
+            }
+
+        def complete_json(self, prompt, *, system, schema):
+            self.prompt, self.system, self.schema = prompt, system, schema
+            return json.dumps({
+                "proposals": [{
+                    "kind": "research_follow_up",
+                    "title": "Verify the local question",
+                    "rationale": "The objective alone is not evidence.",
+                    "next_step": "Select a source and test the claim.",
+                    "evidence_ids": [],
+                    "status": "PROPOSED",
+                    "execution_authorized": False,
+                }]
+            })
+
+    model = FakeLocalModel()
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    monkeypatch.setattr(ai_engine, "get_provider", lambda: model)
+
+    provider = cognitive_provider.get_cognitive_provider()
+    context = cognitive_provider.CognitiveTaskContext(
+        research_task_id=1,
+        objective="यो समस्या के हो? / yo samasya ke ho?",
+        evidence_ids=(),
+        evidence_refs_truncated=False,
+        language_context="mixed_script_or_code_switching",
+    )
+    proposals = provider.propose(context)
+
+    assert provider.mode == "LOCAL"
+    assert provider.version == "test-local-nepali-model"
+    assert proposals[0]["execution_authorized"] is False
+    assert "Nepali in Devanagari, Romanized Nepali, English" in model.system
+    assert "do not infer language from Latin script alone" in model.system
+    assert json.loads(model.prompt)["language_context"] == "mixed_script_or_code_switching"
+    assert model.schema["properties"]["proposals"]["maxItems"] == cognitive_provider.MAX_COGNITIVE_PROPOSALS
+    assert provider.last_call_metadata["total_duration_ms"] == 321.5
+
+
+def test_local_cognitive_provider_requires_matching_explicit_ai_configuration(monkeypatch):
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "AI_PROVIDER", "mock")
+
+    with pytest.raises(cognitive_provider.CognitiveProviderUnavailable, match="AI_PROVIDER=ollama"):
+        cognitive_provider.get_cognitive_provider()
+
+
+def test_script_context_hint_does_not_claim_language_from_latin_alone():
+    assert "language not inferred" in cognitive_provider.script_context_hint("नमस्ते")
+    assert "may be English, Romanized Nepali" in cognitive_provider.script_context_hint("namaste")
+    assert "mixed_script_or_code_switching" in cognitive_provider.script_context_hint("नमस्ते namaste")

@@ -103,6 +103,7 @@ def _context_for_task(
         objective=objective,
         evidence_ids=tuple(evidence_ids),
         evidence_refs_truncated=evidence_refs_truncated,
+        language_context=cognitive_provider.script_context_hint(objective),
     )
 
 
@@ -141,6 +142,7 @@ def _context_digest(context: cognitive_provider.CognitiveTaskContext) -> str:
             "objective": context.objective,
             "evidence_ids": context.evidence_ids,
             "evidence_refs_truncated": context.evidence_refs_truncated,
+            "language_context": context.language_context,
         },
         sort_keys=True,
         separators=(",", ":"),
@@ -219,7 +221,7 @@ def run_cognitive_task(
             )
             raise
 
-    if configured_provider.mode not in {"MOCK", "TEST", "EXTERNAL"}:
+    if configured_provider.mode not in {"MOCK", "TEST", "LOCAL", "EXTERNAL"}:
         raise cognitive_provider.CognitiveProviderError("provider mode is invalid")
     if not configured_provider.name.strip() or not configured_provider.version.strip():
         raise cognitive_provider.CognitiveProviderError("provider identity is incomplete")
@@ -248,12 +250,21 @@ def run_cognitive_task(
         raise
 
     proposal_dicts = [proposal.model_dump(mode="json") for proposal in proposals]
+    raw_provider_metadata = getattr(configured_provider, "last_call_metadata", {})
+    provider_metadata = {}
+    if isinstance(raw_provider_metadata, dict):
+        for key in ("prompt_eval_tokens", "completion_eval_tokens", "total_duration_ms"):
+            value = raw_provider_metadata.get(key)
+            if value is None or (type(value) in {int, float} and value >= 0):
+                provider_metadata[key] = value
     provenance = {
         "worker_task_id": worker_task.id,
         "research_task_id": research_task.id,
         "provider": configured_provider.name,
         "provider_version": configured_provider.version,
         "provider_mode": configured_provider.mode,
+        "provider_metadata": provider_metadata,
+        "language_context": context.language_context,
         "proposal_classification": "HYPOTHESIS",
         "context_sha256": _context_digest(context),
         "evidence_ids": list(context.evidence_ids),
