@@ -322,7 +322,7 @@ def test_evaluation_is_skipped_when_no_judge_is_available(db, monkeypatch):
     from app.services import multi_judge
 
     task, evidence = _task_with_claimed_evidence(db)
-    monkeypatch.setattr(multi_judge, "_default_judges", lambda: [])
+    monkeypatch.setattr(multi_judge, "_default_judges", lambda evidence=None: [])
 
     result = research_task_engine.evaluate_claim_after_research(
         db, task, [evidence.id]
@@ -356,7 +356,7 @@ def test_evaluation_fails_when_every_judge_execution_fails(db, monkeypatch):
         available=lambda: False,
     )
     monkeypatch.setattr(
-        multi_judge, "_default_judges", lambda: [failed_judge]
+        multi_judge, "_default_judges", lambda evidence=None: [failed_judge]
     )
 
     result = research_task_engine.evaluate_claim_after_research(
@@ -442,7 +442,7 @@ def test_question_without_linked_claim_still_reaches_substantive_judging(db, mon
     monkeypatch.setattr(
         multi_judge,
         "_default_judges",
-        lambda: [
+        lambda evidence=None: [
             multi_judge.JudgeSpec(
                 name="question-only-test-judge",
                 provider="test",
