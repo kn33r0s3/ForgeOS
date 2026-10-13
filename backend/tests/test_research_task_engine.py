@@ -322,7 +322,8 @@ def test_evaluation_is_skipped_when_no_judge_is_available(db, monkeypatch):
 
     assert result is not None
     assert result["judgments"] == []
-    assert result["comparison"].outcome == "missing_evidence"
+    assert result["comparison"].outcome == "evaluation_incomplete"
+    assert result["comparison"].missing_evidence == []
     assert result["comparison"].follow_up_question_id is None
     assert evaluate_step.status == "skipped"
     assert evaluate_step.output_data["status"] == "no_judges_available"
@@ -357,7 +358,8 @@ def test_evaluation_fails_when_every_judge_execution_fails(db, monkeypatch):
     assert result is not None
     assert len(result["judgments"]) == 1
     assert result["judgments"][0].status == "failed"
-    assert result["comparison"].outcome == "missing_evidence"
+    assert result["comparison"].outcome == "evaluation_incomplete"
+    assert result["comparison"].missing_evidence == []
     assert result["comparison"].follow_up_question_id is None
     assert evaluate_step.status == "failed"
     assert evaluate_step.output_data["status"] == "judge_execution_failed"
