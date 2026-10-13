@@ -158,11 +158,15 @@ def block_customer_delivery(db: Session, *, integration_name: str, operation: st
         return "durable_database_required"
     try:
         row = ensure_state(db)
+        # The explicit persisted safety mode is the active blocker. The
+        # inactivity evaluator separately records owner_inactive when needed.
+        if row.safe_mode_enabled:
+            return "safe_mode_enabled"
         last = normalize_dt(row.last_owner_contact_at)
         if last is None or now() - last >= timedelta(days=INACTIVITY_DAYS):
             set_safe_mode(db, "owner_inactive")
             return "owner_inactive"
-        return "safe_mode_enabled" if row.safe_mode_enabled else None
+        return None
     except Exception:
         return "runtime_control_unavailable"
 
@@ -346,7 +350,7 @@ def answer_ask(db: Session, *, ask_ref: str, code: str, option: str, channel: st
     state = ensure_state(db)
     if ask.decision_ref == RESUME_REF:
         if choice == "RESUME":
-            state.safe_mode_enabled, state.safe_mode_reason, state.halted_at = False, None, None
+            state.safe_mode_enabled, state.safe_mode_reason, state.halted_at = False, "owner_resumed", None
         elif choice == "KEEP_HALTED":
             state.safe_mode_enabled = True
             state.safe_mode_reason = state.safe_mode_reason or "halt_command"
