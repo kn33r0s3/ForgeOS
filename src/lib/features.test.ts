@@ -250,7 +250,7 @@ describe("feature registry", () => {
     assert.ok(forgeConsole.includes("isn't on Hami's approved zero-cost list"));
     assert.ok(forgeConsole.includes("Your question is sent to Hami's owner API"));
     assert.ok(forgeConsole.includes("This panel does not add the chat to Hami's knowledge records"));
-    assert.ok(forgeConsole.includes("zero-spend default"));
+    assert.ok(forgeConsole.includes("No model request will be sent from this page"));
     assert.ok(!forgeConsole.includes("localStorage"));
     assert.ok(!forgeConsole.includes("sessionStorage"));
     assert.ok(owner.includes('id="hami-frontier"'));
