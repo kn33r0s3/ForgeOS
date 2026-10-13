@@ -591,13 +591,15 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
         row.id: row.signal_id for row in evidence_rows if row.signal_id is not None
     }
     returned_signal_ids = set(created_signal_ids)
+    target_claim = db.get(models.Claim, task.claim_id) if task.claim_id is not None else None
     relevant_edges = [
         edge for edge in evidence_edges
-        if task.claim_id is not None and edge.claim_id == task.claim_id
+        if target_claim is not None and edge.claim_id == target_claim.id
     ]
-    if task.claim_id is None:
-        # Without a target Claim, relationship-based usefulness is unassessed,
-        # not zero. Do not turn unrelated graph history into a negative score.
+    if target_claim is None:
+        # A missing target Claim is not a measured zero-usefulness outcome.
+        # Keep the result unassessed so capability ranking cannot learn from a
+        # dangling task reference or unrelated graph history.
         useful_count = None
         contradicted_count = None
     else:
