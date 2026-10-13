@@ -40,7 +40,7 @@ def _non_starved(db):
     world_graph.seed_core_types(db)
     world_graph.create_event(
         db,
-        event_type="outreach.sent",
+        event_type="conversation.held",
         source="test",
         payload={"note": "lifecycle test contact"},
     )
