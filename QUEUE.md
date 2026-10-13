@@ -53,3 +53,8 @@ Reuse the existing ai_engine and cognitive_provider seams; no parallel model sta
 ## P0 — Make provider readiness reflect reality
 
 `/ai/status` distinguishes MOCK, CONFIGURED, MODEL_AVAILABLE, MODEL_MISSING and AI_UNAVAILABLE. Ollama status requires a reachable loopback tags endpoint and installed configured model, but still does not prove generation; owner chat enables Ollama only on MODEL_AVAILABLE. Next prove one actual generation from a reachable local runtime and save measured latency/token metadata, then evaluate on Nepal-first tasks. Provider existence is not validated intelligence.
+
+
+## P0 — Nepal-native real ForgeBot answers and metered provider expansion
+
+The owner `/forge/ask` path only answers with an installed, reachable, zero-cost local Ollama model. Mock output cannot be returned as intelligence; inference failure returns unavailable rather than silently falling back to templates; paid OpenAI completions remain blocked until usage metering is connected to the shared global spend guard. The answer contract supports Nepali Devanagari, Romanized Nepali, English and code-switching, and treats retrieved knowledge as data rather than instructions. Next prove one real local inference, verify exact-head CI, then evaluate retrieval and answer quality on Nepal-first cases.
