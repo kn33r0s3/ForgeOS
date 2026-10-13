@@ -196,6 +196,50 @@ def test_scheduled_intelligence_stops_when_run_record_cannot_be_created(monkeypa
     assert not scheduled._intelligence_lock.locked()
 
 
+
+def test_owner_sms_digest_failures_and_ambiguity_mark_cycle_partial():
+    failed = scheduled._normalize_owner_sms_digest_result({
+        "status": "failed",
+        "reason": "provider_did_not_confirm_acceptance",
+    })
+    assert failed["status"] == "partial"
+    assert failed["delivery_status"] == "failed"
+    assert scheduled._cycle_stage_summary({"owner_sms_digest": failed})[0] == "PARTIAL"
+
+    ambiguous = scheduled._normalize_owner_sms_digest_result({
+        "status": "ambiguous_not_retried",
+        "reason": "prior_attempt_not_replayed",
+    })
+    assert ambiguous["status"] == "partial"
+    assert ambiguous["delivery_status"] == "ambiguous_not_retried"
+
+    misconfigured = scheduled._normalize_owner_sms_digest_result({
+        "status": "skipped",
+        "reason": "twilio_credentials_missing",
+    })
+    assert misconfigured["status"] == "partial"
+    assert misconfigured["delivery_status"] == "skipped"
+
+    disabled = scheduled._normalize_owner_sms_digest_result({
+        "status": "skipped",
+        "reason": "owner_sms_digest_disabled",
+    })
+    assert disabled["status"] == "skipped"
+    assert scheduled._cycle_stage_summary({"owner_sms_digest": disabled})[0] == "COMPLETED"
+
+    accepted = scheduled._normalize_owner_sms_digest_result({
+        "status": "provider_accepted",
+        "delivery_claim": "handset delivery is not established",
+    })
+    assert accepted["status"] == "ok"
+    assert accepted["delivery_status"] == "provider_accepted"
+    assert "handset delivery is not established" in accepted["delivery_claim"]
+
+    unknown = scheduled._normalize_owner_sms_digest_result({"status": "new_provider_state"})
+    assert unknown["status"] == "partial"
+    assert unknown["delivery_status"] == "new_provider_state"
+
+
 def test_scheduled_cycle_fails_closed_without_secret(monkeypatch):
     monkeypatch.delenv("CRON_SECRET", raising=False)
     client = TestClient(app)
