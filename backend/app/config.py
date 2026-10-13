@@ -82,14 +82,12 @@ class Settings(BaseSettings):
     # acceleration, never a dependency. Three interchangeable providers:
     #   "mock"   -> deterministic offline templates. Default. Zero cost,
     #                zero setup, zero external calls of any kind.
-    #   "ollama" -> a real local open-source model via Ollama
-    #                (https://ollama.com), running entirely on the
-    #                user's own hardware. Free, no API key, no internet
-    #                required once the model is pulled.
-    #   "openai" -> optional paid acceleration via the OpenAI API, for
-    #                anyone who wants it. Never required — if this is
-    #                misconfigured or unreachable, Forge automatically
-    #                falls back to "mock" rather than failing a request.
+    #   "ollama" -> real local/self-hosted inference through ai_engine:
+    #                loopback HTTP on a non-serverless runtime, or an
+    #                authenticated HTTPS gateway with OLLAMA_API_KEY.
+    #   "openai" -> deliberately blocked until each paid call records
+    #                usage and the shared global spend guard is enforced.
+    # The default "mock" is deterministic template behavior, not intelligence.
     AI_PROVIDER: str = os.getenv("AI_PROVIDER", "mock")
     # Explicit opt-in only: when True, real-provider failures may use MockProvider.
     # Default False so production never silently fabricates intelligence.
