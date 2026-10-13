@@ -16,6 +16,12 @@ from app.services import evidence_graph
 from app.services.tool_registry import ToolUnavailableError, default_registry
 
 
+# Bump when judgment interpretation or comparison eligibility changes. Old
+# cached rows remain historical but must not bypass the new contract.
+JUDGMENT_CONTRACT_VERSION = 2
+COMPARISON_CONTRACT_VERSION = 2
+
+
 @dataclass(frozen=True)
 class JudgeSpec:
     name: str
@@ -45,6 +51,7 @@ def _judgment_key(
     """Identity includes the semantic context where this evidence is judged."""
     raw = json.dumps(
         {
+            "contract_version": JUDGMENT_CONTRACT_VERSION,
             "judge": spec.name,
             "provider": spec.provider,
             "model": spec.model,
@@ -359,6 +366,7 @@ def compare_judgments(
     comparison_key = hashlib.sha256(
         json.dumps(
             {
+                "contract_version": COMPARISON_CONTRACT_VERSION,
                 "question": question,
                 "judgments": normalized_ids,
                 "evidence": sorted(set(evidence_ids)),
