@@ -2338,11 +2338,14 @@ def flag_proof_violations(db: Session) -> list:
 # ---------------------------------------------------------------------
 
 def days_since_last_contact(db: Session) -> Optional[int]:
+    # A sent outbound message is only an owner-reported attempt: Scout records
+    # that the counterparty's receipt is unverified. Do not reset the real
+    # contact clock until a reply or held conversation is recorded.
     latest = (
         db.query(models.WorldEvent)
         .filter(
             models.WorldEvent.event_type.in_(
-                ["outreach.sent", "outreach.reply", "conversation.held"]
+                ["outreach.reply", "conversation.held"]
             )
         )
         .order_by(models.WorldEvent.occurred_at.desc())
