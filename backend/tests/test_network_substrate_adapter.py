@@ -148,6 +148,74 @@ def test_network_adapter_does_not_activate_unregistered_relation_types_or_guess_
     assert db.query(models.WorldEvent).filter_by(event_type="network_relation_unresolved").count() == 2
 
 
+def test_old_unregistered_connection_does_not_starve_new_valid_connection(db):
+    need, provider = _endpoints(db)
+    invalid = _connection(need, provider, relation_type="not_registered")
+    db.add(invalid)
+    db.commit()
+
+    valid_need, valid_provider = _endpoints(db)
+    valid = _connection(valid_need, valid_provider)
+    db.add(valid)
+    db.commit()
+
+    result = network_substrate_adapter.sync_network_connections(db, limit=1)
+
+    assert result["projected_connections"] == 1
+    assert result["unresolved_connections"] == 1
+    assert result["unactivated_relation_types"] == 1
+    assert db.get(models.NetworkConnection, valid.id).relation_id is not None
+    assert db.get(models.NetworkConnection, invalid.id).relation_id is None
+    assert db.query(models.WorldEvent).filter_by(
+        event_type="network_relation_unresolved"
+    ).count() == 1
+    assert db.query(models.WorldEvent).filter_by(
+        event_type="network_relation_projected"
+    ).count() == 1
+
+
+def test_small_network_batch_projects_parent_before_nested_child(db):
+    need, provider = _endpoints(db)
+    outcome = models.Outcome(
+        source="human_report",
+        outcome_type="ACTUAL_RESPONSE",
+        qualitative_result="A response was recorded.",
+    )
+    db.add(outcome)
+    db.flush()
+    parent = _connection(need, provider)
+    db.add(parent)
+    db.flush()
+    child = models.NetworkConnection(
+        left_kind="network_connection",
+        left_id=parent.id,
+        right_kind="outcome",
+        right_id=outcome.id,
+        relation_type="derived_from",
+        direction="directed",
+        epistemic_state="hypothesized",
+        state="candidate",
+        reason="The outcome is related to the parent connection.",
+        agreement_gap="The causal link is still unverified.",
+    )
+    db.add(child)
+    db.commit()
+
+    first = network_substrate_adapter.sync_network_connections(db, limit=1)
+    assert first["projected_connections"] == 1
+    assert db.get(models.NetworkConnection, parent.id).relation_id is not None
+    assert db.get(models.NetworkConnection, child.id).relation_id is None
+
+    second = network_substrate_adapter.sync_network_connections(db, limit=1)
+    assert second["projected_connections"] == 1
+    assert db.get(models.NetworkConnection, child.id).relation_id is not None
+    parent_relation_entity = world_graph.find_canonical_entity(
+        db, "relation", parent.relation_id
+    )
+    child_relation = db.get(models.WorldRelation, child.relation_id)
+    assert child_relation.from_entity_id == parent_relation_entity.id
+
+
 def test_nested_network_connection_uses_its_substrate_relation_as_endpoint(db):
     need, provider = _endpoints(db)
     outcome = models.Outcome(
