@@ -27,6 +27,36 @@ export const Route = createFileRoute("/unknowns")({
 
 type StateFilter = "all" | UnknownState;
 
+function moveTabOnKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
+  const tabs = Array.from(
+    event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]') ?? [],
+  );
+  const currentIndex = tabs.indexOf(event.currentTarget);
+  if (currentIndex < 0 || tabs.length === 0) return;
+
+  let nextIndex: number;
+  switch (event.key) {
+    case "ArrowRight":
+      nextIndex = (currentIndex + 1) % tabs.length;
+      break;
+    case "ArrowLeft":
+      nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+      break;
+    case "Home":
+      nextIndex = 0;
+      break;
+    case "End":
+      nextIndex = tabs.length - 1;
+      break;
+    default:
+      return;
+  }
+
+  event.preventDefault();
+  tabs[nextIndex].focus();
+  tabs[nextIndex].click();
+}
+
 function UnknownsPage() {
   const [items, setItems] = useState<PublicUnknown[] | null>(null);
   const [unavailable, setUnavailable] = useState(false);
@@ -103,9 +133,13 @@ function UnknownsPage() {
           ).map((lane) => (
             <button
               key={lane.id}
+              id={`unknown-lane-${lane.id}`}
               role="tab"
               aria-selected={activeLane === lane.id}
+              aria-controls="unknown-lane-panel"
+              tabIndex={activeLane === lane.id ? 0 : -1}
               onClick={() => setActiveLane(lane.id)}
+              onKeyDown={moveTabOnKeyDown}
               className={`min-h-10 rounded-full border-2 px-4 text-sm font-bold ${
                 activeLane === lane.id
                   ? "border-accent bg-accent text-black"
@@ -120,37 +154,54 @@ function UnknownsPage() {
           ))}
         </div>
 
-        {activeLane === "tensions" && <TensionsLane />}
-        {activeLane === "surprises" && <SurprisesLane />}
+        <div
+          id="unknown-lane-panel"
+          role="tabpanel"
+          aria-labelledby={`unknown-lane-${activeLane}`}
+          tabIndex={0}
+        >
+          {activeLane === "tensions" && <TensionsLane />}
+          {activeLane === "surprises" && <SurprisesLane />}
 
-        {activeLane === "known" && !unavailable && items !== null && items.length > 0 && (
-          <>
-            <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filter by state">
-              {states.map((s) => (
-                <button
-                  key={s}
-                  role="tab"
-                  aria-selected={state === s}
-                  onClick={() => setState(s)}
-                  className={`min-h-10 rounded-full border-2 px-4 text-sm font-bold ${
-                    state === s
-                      ? "border-accent bg-accent text-black"
-                      : "border-line bg-card text-muted hover:border-accent"
-                  }`}
-                >
-                  {s === "all" ? "All" : UNKNOWN_STATE_LABELS[s as UnknownState]} (
-                  {s === "all" ? items.length : items.filter((u) => u.state === s).length})
-                </button>
-              ))}
-            </div>
+          {activeLane === "known" && !unavailable && items !== null && items.length > 0 && (
+            <>
+              <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filter by state">
+                {states.map((s) => (
+                  <button
+                    key={s}
+                    id={`unknown-state-${s}`}
+                    role="tab"
+                    aria-selected={state === s}
+                    aria-controls="unknown-state-panel"
+                    tabIndex={state === s ? 0 : -1}
+                    onClick={() => setState(s)}
+                    onKeyDown={moveTabOnKeyDown}
+                    className={`min-h-10 rounded-full border-2 px-4 text-sm font-bold ${
+                      state === s
+                        ? "border-accent bg-accent text-black"
+                        : "border-line bg-card text-muted hover:border-accent"
+                    }`}
+                  >
+                    {s === "all" ? "All" : UNKNOWN_STATE_LABELS[s as UnknownState]} (
+                    {s === "all" ? items.length : items.filter((u) => u.state === s).length})
+                  </button>
+                ))}
+              </div>
 
-            <div className="mt-6 grid gap-4">
-              {filtered.map((u) => (
-                <UnknownCard key={u.id} unknown={u} />
-              ))}
-            </div>
-          </>
-        )}
+              <div
+                id="unknown-state-panel"
+                role="tabpanel"
+                aria-labelledby={`unknown-state-${state}`}
+                tabIndex={0}
+                className="mt-6 grid gap-4"
+              >
+                {filtered.map((u) => (
+                  <UnknownCard key={u.id} unknown={u} />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
 
         <p className="mt-8 border-t border-line pt-4 text-xs leading-5 text-dim">
           Unknowns are banked by the discovery rounds from real observations. World unknowns (about

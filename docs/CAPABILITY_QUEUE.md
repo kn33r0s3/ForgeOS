@@ -1,3 +1,14 @@
+## [PUBLIC UNKNOWN FILTERS / KEYBOARD VERIFIED LOCALLY / DEPLOYMENT CHECK PENDING] Complete tab interaction
+
+- **Existing seam inspected:** `src/routes/unknowns.tsx` already owns both the public Unknowns lane selector and its state filters. `git log --follow`, `git blame`, and the introduction commit `4fb14930` show both were introduced as `role="tab"` controls.
+- **Live evidence:** on production `/unknowns`, focusing `Hypothesized (3)` and pressing ArrowRight left focus on that button and kept `All (100)` selected. The browser screenshot showed the focused filter while the selected filter remained unchanged.
+- **Owner/user action removed:** keyboard users no longer need pointer-only navigation (or another person operating a pointer) to move among existing unknown views.
+- **What remains:** API availability and existing unknown evidence remain independent dependencies; this UI change does not make data available or alter its epistemic state. Screen-reader interoperability still needs deployed verification.
+- **Next removable dependency:** verify screen-reader interoperability and the deployed keyboard flow. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**; no real transaction evidence is involved.
+- **Verification:** local backend health and Unknowns data loaded. Browser checks passed for ArrowLeft/ArrowRight/Home/End across both tablists, wraparound navigation, one roving tab stop per list, matching `aria-controls`/`aria-labelledby` references, and state result counts (100/96). `npm test`, `npm run typecheck`, `npm run lint`, and `npm run build` passed; lint retains one unrelated warning in `src/components/experiments/experiment-card.tsx`. Production post-deploy browser verification remains pending.
+
+---
+
 ## [REJECTED HYPOTHESIS / DO NOT SHIP] Generic browser-only brief does not embody Hami intelligence (2026-10-14)
 
 - **Review verdict:** the homepage brief utility was implemented, then removed from active source in `ba774da43aad9ea9cdfdc9a1c536267041269d08` and its existence-only tests were removed in `5cfe8e6a216bf6a1214641226ea27c9c95208cbb`. History is preserved; this is a supersession, not a history rewrite.
