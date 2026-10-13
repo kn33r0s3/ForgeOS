@@ -2,7 +2,7 @@
 
 Version 4, 2026-10-14 (sections 32–36 preserve the evidence/security audit, many-climbs operating model and Nepal-intelligified mandate). Owner: Bhumadevi. Every agent reads this first, every run. Keep a copy in the repo at docs/BRAIN.md.
 
-**Content hash (Git blob SHA-1; hash line excluded from hashed text):** `gitblob:cca877b3e1bedca5bf32d440cb315071f475bc97`
+**Content hash (Git blob SHA-1; hash line excluded from hashed text):** `gitblob:9c2da06ebefef5b4d6d40c3d4504163e15037309`
 
 ## 0. How to use this document
 
@@ -621,7 +621,7 @@ This section supersedes any earlier implication in sections 5, 17, 28, 29 or 30 
 - A provider selection is not a provider call, and a successful response is not proof that the answer is true. Record actual provider/model/version, mode (MOCK/TEST/LOCAL/EXTERNAL), purpose, language/task class where available, bounded usage/cost, latency/failure and output provenance through existing operational records and EVENT/EVIDENCE seams. The default judge/provider path may only inspect evidence explicitly REAL, third-party, consent-not-required and traceable to an HTTP(S) canonical URL; persist judgments against the evidence actually shown to the provider, not every linked row. Private, pending-consent, TEST, MOCK and HYPOTHESIS content stays out of provider prompts by default.
 - Keep explicit mock output distinguishable from real inference. If a requested real provider is unavailable, report AI_UNAVAILABLE and preserve retryable work; never silently substitute a mock and claim intelligent completion.
 - Prefer local inference when it meets the quality, latency and hardware requirements and the data class calls for it. External providers are selectable only through existing owner-authorized configuration, current provider terms/data settings, the applicable spend ceilings and least-privilege data sharing. Routing must not leak protected contact data or other restricted information to a provider by default.
-- Providers should implement language-aware generation and structured outputs with strict validation, size/time bounds, cancellation, retries, idempotency and explicit usage accounting. Provider output remains a proposal until its task-specific validation and evidence rules are satisfied; no model can grant itself permission or turn a suggestion into an ACTION.
+- Providers should implement language-aware generation and structured outputs with strict validation, size/time bounds, cancellation, retries, idempotency and explicit usage accounting. Provider output remains a proposal until its task-specific validation and evidence rules are satisfied; no model can grant itself permission or turn a suggestion into an ACTION. Provider readiness is staged: MOCK means deterministic templates; CONFIGURED means a provider client exists; MODEL_AVAILABLE means the local Ollama endpoint responds and the configured model is installed; MODEL_MISSING and AI_UNAVAILABLE are blockers. None of these status labels alone proves successful inference or trustworthy answers. Never report READY from configuration alone.
 
 ### 36.3 Nepal-first quality proof, global portability
 
