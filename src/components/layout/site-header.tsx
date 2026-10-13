@@ -56,8 +56,8 @@ export function SiteHeader() {
           scrolled || open ? "shadow-[0_4px_0_0_rgb(0_0_0/0.45)]" : "",
         )}
         style={{
-          background: "linear-gradient(180deg, #241d16 0%, #171310 100%)",
-          borderBottom: "2px solid #F2A33A",
+          background: "linear-gradient(180deg, #181713 0%, #0B0B0B 100%)",
+          borderBottom: "2px solid #FFB000",
         }}
       >
         <Container className="relative flex h-full items-stretch justify-between gap-4">
@@ -92,7 +92,7 @@ export function SiteHeader() {
                   to="/login"
                   search={{ mode: "sign-in" }}
                   className="hidden min-h-12 items-center rounded-card px-3 text-sm font-bold transition-colors sm:inline-flex"
-                  style={{ color: "#F2A33A" }}
+                  style={{ color: "#FFB000" }}
                 >
                   Login
                 </Link>
@@ -101,8 +101,8 @@ export function SiteHeader() {
                   search={{ mode: "sign-up" }}
                   className="hidden min-h-12 items-center rounded-card border-2 px-4 text-sm font-extrabold transition-colors sm:inline-flex"
                   style={{
-                    borderColor: "#F2A33A",
-                    background: "#F2A33A",
+                    borderColor: "#FFB000",
+                    background: "#FFB000",
                     color: "#0C0B0A",
                   }}
                 >
@@ -128,7 +128,7 @@ export function SiteHeader() {
                     open && bar === 1 && "scale-x-0",
                     open && bar === 2 && "-translate-y-2 -rotate-45",
                   )}
-                  style={{ background: "#F2A33A" }}
+                  style={{ background: "#FFB000" }}
                 />
               ))}
             </button>
@@ -188,8 +188,8 @@ export function SiteHeader() {
                 search={{ mode: "sign-up" }}
                 className="flex min-h-12 items-center justify-center rounded-card border-2 px-4 text-base font-extrabold transition-colors"
                 style={{
-                  borderColor: "#F2A33A",
-                  background: "#F2A33A",
+                  borderColor: "#FFB000",
+                  background: "#FFB000",
                   color: "#0C0B0A",
                 }}
               >
@@ -199,7 +199,7 @@ export function SiteHeader() {
                 to="/login"
                 search={{ mode: "sign-in" }}
                 className="flex min-h-12 items-center justify-center rounded-card px-4 text-base font-bold transition-colors"
-                style={{ color: "#F2A33A" }}
+                style={{ color: "#FFB000" }}
               >
                 Login
               </Link>
