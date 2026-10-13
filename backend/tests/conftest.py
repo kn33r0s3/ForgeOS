@@ -49,6 +49,12 @@ def db():
     import app.database as database
     from app.database import Base
     from app import models  # noqa: F401 — register models
+
+    # This fixture swaps module-global handles that scheduled handlers use.
+    # Restore the originals after each test so a disposed test engine cannot
+    # leak an empty database into later TestClient requests.
+    previous_engine = database.engine
+    previous_session_local = database.SessionLocal
     from app.services import source_manager
 
     postgres_test_url = os.getenv("FORGEOS_TEST_DATABASE_URL")
@@ -62,24 +68,29 @@ def db():
         )
     database.engine = engine
     database.SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+    session = None
+    try:
+        Base.metadata.create_all(bind=engine)
+        if postgres_test_url:
+            from sqlalchemy import text
 
-    Base.metadata.create_all(bind=engine)
-    if postgres_test_url:
-        from sqlalchemy import text
-
-        quote = engine.dialect.identifier_preparer.quote
-        tables = ", ".join(quote(table.name) for table in Base.metadata.tables.values())
-        with engine.begin() as connection:
-            connection.execute(
-                text(f"TRUNCATE TABLE {tables} RESTART IDENTITY CASCADE")
-            )
-    session = database.SessionLocal()
-    source_manager.seed_default_sources(session)
-    from app.services import world_graph
-    world_graph.seed_core_types(session)
-    yield session
-    session.close()
-    engine.dispose()
+            quote = engine.dialect.identifier_preparer.quote
+            tables = ", ".join(quote(table.name) for table in Base.metadata.tables.values())
+            with engine.begin() as connection:
+                connection.execute(
+                    text(f"TRUNCATE TABLE {tables} RESTART IDENTITY CASCADE")
+                )
+        session = database.SessionLocal()
+        source_manager.seed_default_sources(session)
+        from app.services import world_graph
+        world_graph.seed_core_types(session)
+        yield session
+    finally:
+        if session is not None:
+            session.close()
+        engine.dispose()
+        database.engine = previous_engine
+        database.SessionLocal = previous_session_local
 
 
 @pytest.fixture

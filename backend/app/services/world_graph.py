@@ -294,16 +294,29 @@ def seed_core_types(db: Session) -> int:
         },
         "capability_type": {"tool", "workflow", "integration", "agent", "model", "market_signal_analysis"},
     }
+    # Query existing core types once. The seed may run during startup and
+    # again when recording an observation; a SELECT for every type turns
+    # ordinary ingestion into hundreds of redundant database round trips.
+    all_names = set().union(*types.values())
+    existing_rows = (
+        db.query(models.TypeRegistry)
+        .filter(
+            models.TypeRegistry.category.in_(tuple(types)),
+            models.TypeRegistry.type_name.in_(all_names),
+        )
+        .all()
+    )
+    existing_by_key = {
+        (row.category, row.type_name): row
+        for row in existing_rows
+    }
+
     inserted = 0
     db.info[_CORE_SEED_AUTH_KEY] = True
     try:
         for category, names in types.items():
             for name in sorted(names):
-                existing = (
-                    db.query(models.TypeRegistry)
-                    .filter_by(category=category, type_name=name)
-                    .first()
-                )
+                existing = existing_by_key.get((category, name))
                 if existing is not None:
                     # Older deterministic core rows predate lifecycle evidence.
                     if existing.owner_agent == "forge_system" and not existing.status_evidence:

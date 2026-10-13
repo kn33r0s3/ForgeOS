@@ -1,4 +1,5 @@
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from threading import Event
 
@@ -11,6 +12,39 @@ from app.main import app
 
 import inspect
 
+
+
+
+def test_in_memory_sqlite_database_is_shared_across_threads(monkeypatch):
+    from sqlalchemy import text
+    from sqlalchemy.pool import StaticPool
+    from app import database
+
+    previous_engine = database.engine
+    previous_session_local = database.SessionLocal
+    engine = None
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///:memory:")
+    try:
+        database.engine = None
+        database._configure_engine()
+        engine = database.engine
+        assert isinstance(engine.pool, StaticPool)
+
+        with engine.begin() as connection:
+            connection.execute(text("CREATE TABLE thread_probe (value INTEGER NOT NULL)"))
+            connection.execute(text("INSERT INTO thread_probe (value) VALUES (7)"))
+
+        def read_probe():
+            with engine.connect() as connection:
+                return connection.execute(text("SELECT value FROM thread_probe")).scalar_one()
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            assert executor.submit(read_probe).result() == 7
+    finally:
+        if engine is not None:
+            engine.dispose()
+        database.engine = previous_engine
+        database.SessionLocal = previous_session_local
 
 
 def _fake_postgres_lock_engine(*, lock_acquired=True, fail_on_lock=False):

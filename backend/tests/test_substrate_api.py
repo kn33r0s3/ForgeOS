@@ -1,4 +1,5 @@
 import pytest
+from sqlalchemy import event
 from fastapi.testclient import TestClient
 
 from app import models
@@ -30,6 +31,30 @@ def substrate_client(db, monkeypatch):
     yield client
     app.dependency_overrides.clear()
     client.close()
+
+
+
+def test_seed_core_types_uses_one_registry_select(db):
+    statements = []
+    bind = db.get_bind()
+
+    def count_statement(connection, cursor, statement, parameters, context, executemany):
+        statements.append(statement)
+
+    event.listen(bind, "before_cursor_execute", count_statement)
+    try:
+        inserted = world_graph.seed_core_types(db)
+    finally:
+        event.remove(bind, "before_cursor_execute", count_statement)
+
+    assert inserted == 0
+    registry_selects = [
+        statement
+        for statement in statements
+        if statement.lstrip().upper().startswith("SELECT")
+        and "TYPE_REGISTRY" in statement.upper()
+    ]
+    assert len(registry_selects) == 1
 
 
 def test_type_entity_and_identity_api_use_canonical_services(substrate_client, db):

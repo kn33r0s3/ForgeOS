@@ -11,7 +11,9 @@ sqlite-only connect_args below.
 import os
 import sys
 from sqlalchemy import create_engine, event
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.pool import StaticPool
 
 from app.config import settings
 
@@ -55,7 +57,18 @@ def _configure_engine() -> None:
         print(f"[database] resolved SQLite path: {os.path.abspath(db_path)}", file=sys.stderr)
 
     connect_args = ({"check_same_thread": False} if database_url.startswith("sqlite") else {})
-    engine = create_engine(database_url, connect_args=connect_args)
+    engine_options = {"connect_args": connect_args}
+    parsed_url = make_url(database_url)
+    if (
+        parsed_url.get_backend_name() == "sqlite"
+        and parsed_url.database in (None, "", ":memory:")
+    ):
+        # In-memory SQLite databases are connection-local by default. FastAPI's
+        # TestClient executes handlers on a worker thread, so a per-thread pool
+        # would silently give handlers a different, empty database. A single
+        # connection is correct for this explicitly in-memory development DB.
+        engine_options["poolclass"] = StaticPool
+    engine = create_engine(database_url, **engine_options)
 
     if database_url.startswith("sqlite"):
         # WAL journal mode lets readers and a writer work concurrently instead
