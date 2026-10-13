@@ -12,6 +12,7 @@ import hashlib
 import json
 from typing import Any
 
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from app import models
@@ -38,11 +39,102 @@ def sync_legacy_evidence(
         if not evidence_ids:
             return result
         query = query.filter(models.Evidence.id.in_(evidence_ids))
-    rows = query.order_by(models.Evidence.id.asc()).limit(max(1, int(limit))).all()
+    try:
+        batch_limit = max(1, int(limit))
+    except (TypeError, ValueError):
+        batch_limit = 500
+
+    explicit_fields = ("belief_id", "scenario_prediction_id", "opportunity_id")
+    target_specs = (
+        ("belief_id", "belief", models.Belief),
+        ("scenario_prediction_id", "scenario_prediction", models.ScenarioPrediction),
+        ("opportunity_id", "opportunity", models.Opportunity),
+    )
+    eligible_targets = []
+    active_types = {
+        entity_type: (
+            db.query(models.TypeRegistry.id)
+            .filter(
+                models.TypeRegistry.category == "entity_type",
+                models.TypeRegistry.type_name == entity_type,
+                models.TypeRegistry.status == "active",
+            )
+            .exists()
+        )
+        for entity_type in ("belief", "scenario_prediction", "opportunity", "signal")
+    }
+    for field, entity_type, source_model in target_specs:
+        target_id = getattr(models.Evidence, field)
+        other_targets_empty = [
+            getattr(models.Evidence, other_field).is_(None)
+            for other_field in explicit_fields
+            if other_field != field
+        ]
+        target_exists = (
+            db.query(source_model.id)
+            .filter(source_model.id == target_id)
+            .correlate(models.Evidence)
+            .exists()
+        )
+        eligible_targets.append(
+            and_(
+                target_id.isnot(None),
+                *other_targets_empty,
+                target_exists,
+                active_types[entity_type],
+            )
+        )
+
+    signal_exists = (
+        db.query(models.Signal.id)
+        .filter(models.Signal.id == models.Evidence.signal_id)
+        .correlate(models.Evidence)
+        .exists()
+    )
+    signal_source_exists = (
+        db.query(models.Signal.id)
+        .filter(
+            models.Signal.id == models.Evidence.signal_id,
+            func.nullif(func.trim(models.Signal.source), "").isnot(None),
+        )
+        .correlate(models.Evidence)
+        .exists()
+    )
+    eligible_targets.append(
+        and_(
+            models.Evidence.signal_id.isnot(None),
+            *[getattr(models.Evidence, field).is_(None) for field in explicit_fields],
+            signal_exists,
+            active_types["signal"],
+        )
+    )
+    effective_source_exists = or_(
+        func.nullif(func.trim(models.Evidence.source), "").isnot(None),
+        signal_source_exists,
+    )
+    nonempty_content = func.length(
+        func.trim(func.coalesce(models.Evidence.content, ""))
+    ) > 0
+    base_count = query.count()
+    eligible_query = query.filter(
+        effective_source_exists,
+        nonempty_content,
+        or_(*eligible_targets),
+    )
+    eligible_count = eligible_query.count()
+    result["unresolved_records"] = max(0, base_count - eligible_count)
+    rows = (
+        eligible_query
+        .order_by(models.Evidence.id.asc())
+        .limit(batch_limit)
+        .all()
+    )
+    # Report permanently unprojectable rows separately, but don't let them
+    # occupy bounded batch slots ahead of valid evidence records.
+    result["records_seen"] = result["unresolved_records"] + len(rows)
     entity_cache: dict[tuple[str, int], models.SubstrateEntity] = {}
 
     for evidence in rows:
-        result["records_seen"] += 1
         target = _resolve_legacy_target(evidence)
         if target is None:
             result["unresolved_records"] += 1

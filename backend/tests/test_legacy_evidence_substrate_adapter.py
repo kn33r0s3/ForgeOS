@@ -164,6 +164,58 @@ def test_ambiguous_or_incomplete_legacy_evidence_stays_unmapped(db):
     assert all(row.subject_id is None for row in (ambiguous, no_target, no_content))
 
 
+def test_old_unresolvable_evidence_does_not_starve_valid_rows(db):
+    world_graph.seed_core_types(db)
+    signal = models.Signal(
+        source="reviewed archive",
+        content="A persisted source record.",
+    )
+    belief = models.Belief(statement="An existing belief.")
+    opportunity = models.Opportunity(problem="An existing opportunity.")
+    db.add_all([signal, belief, opportunity])
+    db.flush()
+
+    ambiguous = models.Evidence(
+        belief_id=belief.id,
+        opportunity_id=opportunity.id,
+        signal_id=signal.id,
+        source="archive",
+        content="This old row has more than one explicit target.",
+    )
+    no_target = models.Evidence(
+        source="archive",
+        content="This old row has no explicit target.",
+    )
+    empty_content = models.Evidence(
+        signal_id=signal.id,
+        source="archive",
+        content="   ",
+    )
+    valid = models.Evidence(
+        signal_id=signal.id,
+        source="reviewed archive",
+        content="A later valid evidence row.",
+    )
+    db.add_all([ambiguous, no_target, empty_content, valid])
+    db.commit()
+
+    result = adapter.sync_legacy_evidence(db, limit=1)
+
+    assert result["records_seen"] == 4
+    assert result["records_mapped"] == 1
+    assert result["unresolved_records"] == 3
+    assert valid.subject_kind == "entity"
+    assert all(
+        row.subject_kind is None and row.subject_id is None
+        for row in (ambiguous, no_target, empty_content)
+    )
+    # The next invocation remains idempotent and does not revisit the mapped row.
+    repeated = adapter.sync_legacy_evidence(db, limit=1)
+    assert repeated["records_seen"] == 3
+    assert repeated["records_mapped"] == 0
+    assert repeated["unresolved_records"] == 3
+
+
 def test_legacy_evidence_mapping_survives_restart_without_duplicate_rows(tmp_path):
     engine = create_engine(f"sqlite:///{tmp_path / 'legacy_evidence.sqlite'}")
     Base.metadata.create_all(engine)
