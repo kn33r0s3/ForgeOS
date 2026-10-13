@@ -452,3 +452,19 @@ def test_bounded_local_cognitive_batch_is_gated_and_vetoes_vercel(db, monkeypatc
     unavailable = cognitive_worker.run_pending_cognitive_tasks(db, limit=1)
     assert unavailable["status"] == "unavailable"
     assert db.query(models.WorkerTask).filter_by(worker_type="cognitive").count() == 0
+
+
+
+def test_bounded_local_cognitive_batch_obeys_owner_gate(db, monkeypatch):
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    from app.services import operating_v4
+    def blocked(_db):
+        raise ValueError("blocked by owner safety state")
+    monkeypatch.setattr(operating_v4, "check_agent_run_allowed", blocked)
+
+    result = cognitive_worker.run_pending_cognitive_tasks(db, limit=1)
+
+    assert result["status"] == "blocked"
+    assert result["reason"] == "owner_agent_run_gate"
+    assert db.query(models.WorkerTask).filter_by(worker_type="cognitive").count() == 0
