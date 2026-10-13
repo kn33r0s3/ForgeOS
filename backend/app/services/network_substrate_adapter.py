@@ -141,7 +141,7 @@ def sync_network_connections(db: Session, *, limit: int = 100) -> dict[str, int]
     # freshest first advances recent discoveries; stable IDs break ties.
     new_rows = (
         eligible_unprojected
-        .order_by(connection_model.updated_at.desc(), connection_model.id.desc())
+        .order_by(connection_model.id.asc())
         .limit(batch_limit)
         .all()
     )
@@ -202,7 +202,7 @@ def sync_network_connections(db: Session, *, limit: int = 100) -> dict[str, int]
                 ),
                 ~connection_model.id.in_(selected_ids),
             )
-            .order_by(connection_model.updated_at.desc(), connection_model.id.desc())
+            .order_by(connection_model.id.asc())
             .limit(remaining)
             .all()
         )
