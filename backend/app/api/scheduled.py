@@ -670,6 +670,7 @@ def run_scheduled_intelligence(
                     "task_id": o.get("task_id"),
                     "source": o.get("source"),
                     "status": o.get("status"),
+                    "deferred": bool(o.get("deferred")),
                     "signals_created": o.get("signals_created", 0),
                     "evidence_found": o.get("evidence_found", 0),
                     "evaluation_status": o.get("evaluation_status", "not_recorded"),
@@ -684,7 +685,7 @@ def run_scheduled_intelligence(
             # of success — check each outcome's status.
             failed_or_deferred = [
                 o for o in outcomes_list
-                if o.get("status") in ("failed", "deferred")
+                if o.get("status") in ("failed", "deferred") or o.get("deferred") is True
             ]
             evaluation_problem_statuses = {
                 "no_judges_available",
@@ -702,7 +703,10 @@ def run_scheduled_intelligence(
                 "status": stage2_status,
                 "tasks_executed": len(outcomes_list),
                 "tasks_failed": len([o for o in outcomes_list if o.get("status") == "failed"]),
-                "tasks_deferred": len([o for o in outcomes_list if o.get("status") == "deferred"]),
+                "tasks_deferred": len([
+                    o for o in outcomes_list
+                    if o.get("status") == "deferred" or o.get("deferred") is True
+                ]),
                 "evaluations_completed": sum(_count_effect(o.get("judgments_completed")) for o in outcomes_list),
                 "judgments_failed": sum(_count_effect(o.get("judgments_failed")) for o in outcomes_list),
                 "evaluations_unavailable": len([o for o in outcomes_list if o.get("evaluation_status") == "no_judges_available"]),
