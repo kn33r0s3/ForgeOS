@@ -968,6 +968,7 @@ def test_scheduled_intelligence_includes_scout_stage(monkeypatch):
         "drafts_generated": 0,
         "drafts_already_open": 0,
         "pending_contact_replies": 2,
+        "pending_contact_outcomes": 1,
         "dry_wells_recorded": 1,
         "blocked": 0,
         "errors": [],
