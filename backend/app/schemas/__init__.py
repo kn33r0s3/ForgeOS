@@ -787,10 +787,23 @@ class AskRequest(BaseModel):
     question: str = Field(..., min_length=1, description="A question for Forge to answer from its own accumulated knowledge")
 
 
+class ProviderObservation(BaseModel):
+    """Safe, per-request provider telemetry; never represents answer correctness."""
+    provider: str
+    mode: str
+    model: Optional[str] = None
+    status: str
+    inference_invoked: bool
+    prompt_eval_tokens: Optional[int] = None
+    completion_eval_tokens: Optional[int] = None
+    total_duration_ms: Optional[float] = None
+
+
 class AskResponse(BaseModel):
     question: str
     answer: str
     memories_used: List[KnowledgeOut]
+    provider_observation: Optional[ProviderObservation] = None
 
 
 # ---------- Goal Engine ----------
