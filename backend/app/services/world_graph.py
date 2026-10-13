@@ -21,7 +21,7 @@ from sqlalchemy import event, inspect as sqlalchemy_inspect
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app import models
+from app import evidence_source as evidence_source_labels, models
 from app.services.type_validation import (
     SubstrateError,
     resolve_type as _resolve_type,
@@ -1374,33 +1374,54 @@ def record_capability_verification(
     """
     from app import models as _models
 
-    # --- Event gate: must exist and not be from a test/synthetic source ---
+    # Resolve IDs first so missing-record errors remain specific.
     event = db.get(_models.WorldEvent, event_id)
     if not event:
         raise SubstrateError(
             "Event not found — real-world verification requires a real recorded event."
         )
-    # WorldEvent has no evidence_class column; the REAL authority is the source.
-    # Test/synthetic sources cannot establish real-world outcomes.
-    blocked_event_sources = {"test", "synthetic", "mock", "test-fixture"}
-    if (event.source or "").lower() in blocked_event_sources:
-        raise SubstrateError(
-            f"Event {event_id} has source='{event.source}' — "
-            "real-world verification requires a real-world source, not TEST."
-        )
-
-    # --- Evidence gate: must exist and not be synthetic ---
     evidence = db.get(_models.Evidence, evidence_id)
     if not evidence:
         raise SubstrateError(
             "Evidence not found — real-world verification requires real recorded evidence."
         )
+
+    # Reject explicitly simulated events.
+    blocked_event_sources = {"test", "synthetic", "mock", "test-fixture"}
+    if (
+        (event.source or "").strip().casefold() in blocked_event_sources
+        or _is_simulated_source(event.source)
+    ):
+        raise SubstrateError(
+            f"Event {event_id} has source='{event.source}' — "
+            "real-world verification requires a real-world source, not TEST."
+        )
+
+    # Keep specific evidence source-type diagnostics before the REAL-class gate.
     blocked_sources = {"agent_written", "synthetic", "mock", "hypothesis", "test"}
-    if (evidence.source_type or "").lower() in blocked_sources:
+    if (evidence.source_type or "").strip().casefold() in blocked_sources:
         raise SubstrateError(
             f"Evidence {evidence_id} has source_type='{evidence.source_type}' — "
             "real-world verification requires firsthand/secondhand/sensor/third_party, "
             "not synthetic or mock evidence."
+        )
+    if not evidence_source_labels.is_real(evidence.source_kind):
+        raise SubstrateError(
+            f"Evidence {evidence_id} has source_kind='{evidence.source_kind}' — "
+            "real-world verification requires explicit REAL evidence."
+        )
+    if (evidence.support_level or "").strip().casefold() != "supported":
+        raise SubstrateError(
+            f"Evidence {evidence_id} must have support_level='supported' "
+            "before it can verify a real-world capability outcome."
+        )
+    if (
+        _is_simulated_source(evidence_source(evidence))
+        or _is_simulated_provenance(evidence_provenance(evidence))
+    ):
+        raise SubstrateError(
+            f"Evidence {evidence_id} has simulated source/provenance and cannot "
+            "verify a real-world outcome."
         )
 
     # --- Relatedness gate: event and evidence must share a subject ---

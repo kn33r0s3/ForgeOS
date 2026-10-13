@@ -353,7 +353,6 @@ def test_legacy_usage_history_is_preserved_but_excluded_from_current_learning(db
         result_count=100,
         useful_result_count=100,
         verified_result_count=100,
-        corroborated_evidence_count=100,
         success=True,
         event_key="f" * 64,
         created_at=now,

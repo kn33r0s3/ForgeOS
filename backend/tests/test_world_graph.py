@@ -638,6 +638,13 @@ def test_registry_evidence_and_relation_validations_fail_closed(db):
         ))
         db.flush()
     db.rollback()
+    # Rollback removes the uncommitted subject too. Re-seed registered types
+    # and create a fresh subject to exercise the missing-test-reference gate.
+    _seed(db)
+    entity = world_graph.create_entity(
+        db, entity_type="resource", display_name="Temporary concept after rollback",
+        attributes={}, created_by="test",
+    )
     with pytest.raises(world_graph.SubstrateError, match="existing passing test reference"):
         world_graph.create_evidence(
             db,
