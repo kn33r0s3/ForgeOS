@@ -32,6 +32,9 @@
 - **Deployment/runtime:** recent Vercel metadata reported BUILDING and the connected protected runtime API returned 403. Current `/api/health`, durable database readiness, active flags, scheduler invocation and provider delivery remain UNKNOWN. Do not enable external activity to work around access restrictions.
 - **Real-world outcomes:** these source/vision changes created no real conversation, contact, publication, payment, recovered sale or revenue. Commits and test fixtures are not outcome proof.
 - **Next engineering gate:** confirm a full exact-head CI result now that main runs are allowed to finish, repair demonstrated failures, then verify a persisted scheduled run/effect accounting. Continue mapping other explicit cross-climb dependencies and connect a genuinely invoked non-MOCK evaluator to decisive tests. Keep tool selection, collection, evaluation, supported evidence and real outcomes distinct.
+
+- **Prior wiring-audit reconciliation (2026-10-14):** spot-checked F-01–F-08 from the saved 2026-10-11 single-instance integrity audit against current main and recorded each disposition in `docs/CAPABILITY_QUEUE.md`. The old missing-import symptom and false-green verification-workflow concern have source-level corrections; evidence-triage now fails closed without an explicit URL; production auth has explicit secret/durable-Postgres guards. The full route alias inventory, live browser/PWA behavior, actual durable DB/session readiness, exact-head CI and runtime checks remain open/unverified as specified in the ledger. No credentials or external systems were mutated.
+
 ## Truth labels
 
 REAL requires traceable evidence. REQUESTED is not BOOKED. ESTIMATED is not ACTUAL. TEST/MOCK/HYPOTHESIS must not be represented as REAL. Owner-reported evidence must remain labeled as owner-reported unless independently verified.
