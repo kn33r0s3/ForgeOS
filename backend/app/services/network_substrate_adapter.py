@@ -89,13 +89,28 @@ def sync_network_connections(db: Session, *, limit: int = 100) -> dict[str, int]
     unprojected = db.query(connection_model).filter(
         connection_model.relation_id.is_(None)
     )
-    unprojected_count = unprojected.count()
+    left_source_exists = endpoint_ready(
+        connection_model.left_kind,
+        connection_model.left_id,
+        require_parent_relation=False,
+    )
+    right_source_exists = endpoint_ready(
+        connection_model.right_kind,
+        connection_model.right_id,
+        require_parent_relation=False,
+    )
+    unresolved_unprojected = unprojected.filter(
+        or_(
+            ~active_relation_type,
+            ~left_source_exists,
+            ~right_source_exists,
+        )
+    ).count()
     eligible_unprojected = unprojected.filter(
         active_relation_type,
         left_ready,
         right_ready,
     )
-    eligible_count = eligible_unprojected.count()
 
     # Never let old invalid rows or a nested connection whose parent has not
     # been projected consume the bounded work slots. Among eligible new work,
@@ -123,20 +138,43 @@ def sync_network_connections(db: Session, *, limit: int = 100) -> dict[str, int]
                 connection_model.right_id.in_(selected_ids),
             ),
         )
+        def dependency_satisfied(kind_expr, id_expr):
+            normalized_kind = func.lower(func.trim(kind_expr))
+            parent = aliased(models.NetworkConnection)
+            parent_relation_exists = (
+                db.query(models.WorldRelation.id)
+                .filter(models.WorldRelation.id == parent.relation_id)
+                .correlate(parent)
+                .exists()
+            )
+            parent_projected = (
+                db.query(parent.id)
+                .filter(
+                    parent.id == id_expr,
+                    parent.relation_id.isnot(None),
+                    parent_relation_exists,
+                )
+                .correlate(connection_model)
+                .exists()
+            )
+            return or_(
+                normalized_kind != "network_connection",
+                id_expr.in_(selected_ids),
+                parent_projected,
+            )
+
         children = (
             unprojected
             .filter(
                 active_relation_type,
                 depends_on_selected,
-                endpoint_ready(
-                    connection_model.left_kind,
-                    connection_model.left_id,
-                    require_parent_relation=False,
+                left_source_exists,
+                right_source_exists,
+                dependency_satisfied(
+                    connection_model.left_kind, connection_model.left_id
                 ),
-                endpoint_ready(
-                    connection_model.right_kind,
-                    connection_model.right_id,
-                    require_parent_relation=False,
+                dependency_satisfied(
+                    connection_model.right_kind, connection_model.right_id
                 ),
                 ~connection_model.id.in_(selected_ids),
             )
@@ -160,8 +198,6 @@ def sync_network_connections(db: Session, *, limit: int = 100) -> dict[str, int]
             .all()
         )
     rows = new_rows + existing_rows
-    unresolved_unprojected = max(0, unprojected_count - eligible_count)
-
     result = {
         "entities_created": 0,
         "relations_created": 0,
@@ -180,11 +216,10 @@ def sync_network_connections(db: Session, *, limit: int = 100) -> dict[str, int]
         .limit(batch_limit)
         .all()
     )
-    invalid_ids = {row.id for row in invalid_rows}
     endpoint_blocked_rows = (
         unprojected
         .filter(active_relation_type)
-        .filter(~and_(left_ready, right_ready))
+        .filter(~and_(left_source_exists, right_source_exists))
         .order_by(connection_model.updated_at.desc(), connection_model.id.desc())
         .limit(batch_limit)
         .all()
