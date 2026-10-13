@@ -314,7 +314,7 @@ def test_cognitive_context_exposes_only_explicitly_public_real_evidence(db):
         source="official-public-source",
         title="Public finding",
         claim="A bounded public claim suitable for synthesis.",
-        canonical_url="https://example.gov.np/public-report",
+        canonical_url="https://example.gov.np/public-report?access_token=do-not-expose#private-fragment",
         source_kind="REAL",
         source_type="third_party",
         consent_status="not_required",
@@ -340,6 +340,16 @@ def test_cognitive_context_exposes_only_explicitly_public_real_evidence(db):
         consent_status="pending",
         collection_status="collected",
     )
+    credential_url_evidence = models.Evidence(
+        source="third-party-credential-url",
+        title="Credential URL must not enter the provider prompt",
+        claim="This record has URL userinfo and query credentials.",
+        canonical_url="https://account:secret@example.gov.np/private?token=credential-secret#fragment",
+        source_kind="REAL",
+        source_type="third_party",
+        consent_status="not_required",
+        collection_status="collected",
+    )
     identified_public_evidence = models.Evidence(
         source="third-party-with-source-identity",
         title="Identified publisher contact must not be sent",
@@ -351,18 +361,23 @@ def test_cognitive_context_exposes_only_explicitly_public_real_evidence(db):
         source_identity="identified publisher contact",
         collection_status="collected",
     )
-    db.add_all([public_evidence, private_evidence, pending_evidence, identified_public_evidence])
+    db.add_all([
+        public_evidence, private_evidence, pending_evidence,
+        identified_public_evidence, credential_url_evidence,
+    ])
     db.commit()
     db.refresh(public_evidence)
     db.refresh(private_evidence)
     db.refresh(pending_evidence)
     db.refresh(identified_public_evidence)
+    db.refresh(credential_url_evidence)
     research_task.evidence_ids = ",".join(
         str(value) for value in (
             public_evidence.id,
             private_evidence.id,
             pending_evidence.id,
             identified_public_evidence.id,
+            credential_url_evidence.id,
         )
     )
     db.commit()
@@ -376,10 +391,16 @@ def test_cognitive_context_exposes_only_explicitly_public_real_evidence(db):
         private_evidence.id,
         pending_evidence.id,
         identified_public_evidence.id,
+        credential_url_evidence.id,
     )
     assert context.available_evidence_ids == (public_evidence.id,)
     assert len(context.evidence_context) == 1
     assert context.evidence_context[0]["claim"] == "A bounded public claim suitable for synthesis."
+    assert context.evidence_context[0]["canonical_url"] == "https://example.gov.np/public-report"
+    assert "do-not-expose" not in str(context.evidence_context)
+    assert "private-fragment" not in str(context.evidence_context)
+    assert "credential-secret" not in str(context.evidence_context)
+    assert "account:secret" not in str(context.evidence_context)
     assert "Sensitive customer content" not in str(context.evidence_context)
     assert "Consent pending" not in str(context.evidence_context)
     assert "identified publisher contact" not in str(context.evidence_context)
