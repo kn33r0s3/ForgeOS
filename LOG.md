@@ -35,3 +35,15 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Vercel runtime/log fetch returned 403 for the protected project/team scope. A separate live `/api/health`, database-readiness, activation-flag, scheduler-execution and provider-reachability read therefore remains unavailable. Vercel READY/alias metadata is not runtime proof. Latest observed Vercel deployment for `1e6875d` was `dpl_8YLQQE2sroyVSaqp8pEnd53njNbX`, READY, aliasError null.
 - No environment flag, credential, permission, owner stage, provider send, public publishing, paid inference, intake, outbound message or customer-facing action was changed or invoked. No actual lead, conversation, sale, payment or revenue was created or claimed.
 - Next work: regain verifiable exact-head CI/runtime results, and keep moving on safe internal capability work while those access issues are documented. Intake, publishing, customer contact and spend remain gated.
+
+
+## 2026-10-14 — hands-off ForgeBot and verification integrity
+
+- Refreshed the current main head before writing: `751d5851f9c4142627d048a129c751376b8ade0e`; target BRAIN and verifier workflow blobs were re-read and match the versions audited here.
+- The bilingual content loop is still draft-only and provenance-linked: open persisted research questions create bilingual `content_asset` ENTITY records with a `derived_from` RELATION and `content_draft_created` EVENT. Tests cover idempotency and exclusion of contact/private-number material; no publication or customer message was created by that loop.
+- The earlier independent verifier for `b47f7ba` honestly recorded failure with 252/254 frontend tests passing; deployed SHA match and authenticated owner-cycle read passed. Follow-up commits updated copy guards and added provider/privacy safety checks. Exact-head full CI remains unverified.
+- The last specifically verified Vercel source/alias metadata was READY for source `1e6875d88e5011f464bafbfb1f45e9c59d3599ea`; main later advanced beyond it. Protected runtime reads returned 403, so latest-source deployment, live flags, cron execution, persistence and provider delivery remain unknown.
+- This update documents the owner operating target: ForgeBot handles routine planning, content, scheduling, officially supported posting, inbound messages, monitoring and learning. No owner hand-posting or routine approval loop. The only continuing owner dependencies are hard owner-authority decisions and one-time integrations; the relevant dispatch stays closed until verified.
+- The proposed HALT/STOP correction and verifier timeout guard are not recorded as implemented unless the corresponding BRAIN/workflow blobs are present at the resulting main commit.
+- No secrets, spend, OAuth grants, activation flags, sender permissions, intake state or customer dispatch were changed. No public post, customer message, real seller conversation, recovered sale, payment or revenue was created or claimed.
+- Next action: land the charter/timeout safety update only on an exact main-head lease, then verify the new commit's checks and deployed source before enabling any publishing.

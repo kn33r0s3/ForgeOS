@@ -2,7 +2,7 @@
 
 Version 2, 2026-10-14 (audited against real sources; sections 32 and 33 amend earlier sections where they conflict). Owner: Bhumadevi. Every agent reads this first, every run. Keep a copy in the repo at docs/BRAIN.md.
 
-**Content hash (Git blob SHA-1; hash line excluded from hashed text):** `gitblob:1610bdfe15898925f1b7e7678bdcb38cbd10d401`
+**Content hash (Git blob SHA-1; hash line excluded from hashed text):** `gitblob:3c72eb5171501fbb6164a5e7d29af23d8fa9c3c7`
 
 ## 0. How to use this document
 
@@ -88,7 +88,7 @@ Every blocker gets a legitimate workaround the same day. Write the blocker, the 
 - **ALERT** (only when needed): failures, blocked actions, anything near a limit.
 - **ASK:** the decision, two or three options, the bot's recommendation, and what happens by default if the owner does not reply (the default is always do nothing).
 
-Only the owner's number plus a confirmation code can approve an ASK. Texting STOP halts all customer-facing actions immediately.
+Only the owner's number plus a confirmation code can approve an ASK. Texting HALT from the verified owner number halts all customer-facing actions immediately. STOP remains a recipient-level SMS opt-out and is never the owner's global command.
 
 ## 10. Agent roles
 
@@ -314,16 +314,16 @@ Each wave has an objective, the autonomous work, the human touchpoints, an exit 
 ### Wave 0: Foundation (first days)
 
 - **Objective:** make the system able to run without drifting or breaking rules.
-- **Autonomous work:** create STATE, QUEUE and LOG; decision-rights config enforced by the authorization service; SMS digest, alert and ask with STOP; secrets scan; backup and restore drill; Local Language and Culture Pack v0; data class rules in section 25.
-- **Human:** one session to set up accounts, the inbound route and SMS number, and approve the first posts.
-- **Exit test:** the SMS digest arrives, STOP halts customer-facing actions in a test, a restore works, no customer-facing sending is enabled.
+- **Autonomous work:** create STATE, QUEUE and LOG; decision-rights config enforced by the authorization service; SMS digest, alert and ask with HALT; secrets scan; backup and restore drill; Local Language and Culture Pack v0; data class rules in section 25.
+- **Human:** one-time account/OAuth setup and the owner-only permission decision for the allowed destination and content type. ForgeBot owns routine drafting, scheduling, publishing and ongoing management; no owner-written or hand-posted content is a standing dependency.
+- **Exit test:** the SMS digest arrives, HALT halts customer-facing actions in a test, a restore works, no customer-facing sending is enabled.
 - **If it fails:** fix the failing item before anything goes public. Nothing else moves.
 
 ### Wave 1: First signal (inbound opens)
 
 - **Objective:** find out whether anyone responds and what they need.
-- **Autonomous work:** publish the three first experiments to Hami's own Page and channels through the approved route (posts into Facebook groups are made by a human, because Meta no longer lets tools post there; see section 32); test variants; log every reply as EVIDENCE; answer PILOT messages with approved templates in draft mode; produce the weekly value review.
-- **Human:** approve the first drafts; native reviewer checks Nepali wording.
+- **Autonomous work:** publish approved experiments to Hami-owned Pages and channels through verified official routes; test variants; log replies as EVIDENCE; answer consenting PILOT inquiries within the allowed reply window using approved templates; produce the weekly value review. Do not post to Facebook Groups through unsupported automation. If no official publisher is verified, keep preparing drafts and resolving the integration dependency—never assign routine posting to the owner.
+- **Owner:** no routine draft approval or manual posting. A new destination or customer-facing content type remains owner-only until explicitly allowed; after that, ForgeBot operates within the approved allowlist and reports outcomes. Claims about local language, customs or trust are not marked SUPPORTED without the native review required by section 27.4.
 - **Exit test:** at least five real, consenting sellers have described a real problem in their own words.
 - **If it fails:** change the message, the group, the platform or the audience (new experiment set), and keep a log of what did not work. After a defined number of rounds with no real response, run the pivot review from discovery evidence.
 
@@ -489,7 +489,7 @@ The source check changed the plan in five places. Two matter most: Nepal's e-com
 | **Privacy law** | The [Individual Privacy Act 2075 (2018)](https://lawcommission.gov.np/content/12261/the-privacy-act-2075/) protects personal information. [DLA Piper's Nepal summary](https://www.dlapiperdataprotection.com/?c=NP%26t=law) describes consent and purpose limitations. [A Nepal privacy review](https://ksandk.com/privacy-review/map/nepal/) reports limited enforcement and no dedicated privacy authority/breach-notification regime; that report is not a substitute for the statute or legal advice. | The consent and purpose rules in section 25 are legally grounded, not only good practice. A breach is still an incident whether or not a statutory notice obligation applies. Counsel verifies retention, erasure and any current notification requirements. |
 | **Payments** | [Nepal Rastra Bank's Payment Systems Department](https://www.nrb.org.np/departments/psd) says it issues and regulates Payment Service Provider and Payment System Operator licences. Its [licensing policy](https://www.nrb.org.np/psd/licensing-policy-for-payment-related-institutions-2016-unofficial-translation/) defines regulated intermediating and money-transfer activities. That does not by itself decide whether Hami may lawfully receive its own service fee in a personal wallet before company registration. | Hami never holds or moves anyone else's money (L6). A seller pays Hami's own fee directly to Hami. Whether Hami may receive that fee in a personal wallet before registration is not confirmed, so an accountant answers it first. |
 | **WhatsApp** | [Meta's WhatsApp Business Messaging Policy, updated September 23, 2026](https://whatsappbusiness.com/policy/) allows free-form customer-service replies within the 24-hour window, requires approved templates outside it, requires opt-in for subsequent messaging, and requires clear/direct human escalation for automation. It prohibits speaking in another business's voice without permission and sharing one customer's chat with another customer. | Replies in a seller's name need the seller's recorded permission (L4). The gold set cannot reuse chat content across sellers. An inbound-first design fits the 24-hour window, but all further messages still need the relevant opt-in. |
-| **Facebook groups** | Meta's Groups API was [announced for retirement in Graph API v19](https://techcrunch.com/2024/02/05/meta-cuts-off-third-party-access-to-facebook-groups-leaving-developers-and-customers-in-disarray/); third-party group posting and related permissions were removed in 2024. Page publishing remains a separate API/app-review question and is not verified for Hami. | ForgeBot publishes automatically only to Hami's own Page if its official API permissions and credentials are verified. Group posts are made by a human, varied per group, and only where group rules allow. Wave 1 is changed accordingly. |
+| **Facebook groups** | Meta's Groups API was [announced for retirement in Graph API v19](https://techcrunch.com/2024/02/05/meta-cuts-off-third-party-access-to-facebook-groups-leaving-developers-and-customers-in-disarray/); third-party group posting and related permissions were removed in 2024. Page publishing remains a separate API/app-review question and is not verified for Hami. | ForgeBot must not ask the owner to post manually in Groups. Exclude that channel from the autonomous plan until an official, compliant route exists; focus on Hami-owned Pages and other verified channels. |
 | **SMS in Nepal** | [Sparrow SMS](https://sparrowsms.com/services/sms-gateway-api/) advertises an API and two-way SMS on NTC/Ncell. This is the provider's own claim; a public website does not establish delivery to the owner's number or price under Hami's account. | Test with the owner's number before relying on it. Use a second channel for high-impact approvals (L8). Any paid service remains blocked by L11 until written spend caps are set. |
 | **Agent security** | [OWASP's GenAI Top 10](https://genai.owasp.org/llm-top-10/) identifies prompt injection and excessive agency among the significant risks. A system prompt alone does not stop injection. | Untrusted-input rule and least privilege are binding in section 33 (L1); a real-world action still requires authorization. |
 
@@ -523,7 +523,7 @@ The audit of sections 0 to 31 found these gaps. Each rule below is binding, and 
 6. **L6, other people's money.** Hami never holds, pools or transfers money that belongs to a seller, buyer or helper. Sellers pay Hami's fee directly to Hami, and helpers are paid from Hami's own funds for work done.
 7. **L7, ledger integrity.** A REAL entry needs a transaction reference or screenshot, the date and amount, the payer, and the owner's SMS confirmation. A refund reduces revenue on the day it happens. A sale counts as recovered only if all four hold: the inquiry arrived when the seller could not reply, a Hami-assisted reply went out within the agreed time, the buyer actually bought, and the seller confirms with order evidence. In a dispute, the seller's account wins and the sale is not counted.
 8. **L8, hardened owner approvals.** SMS can be spoofed or taken over (for example by SIM swap). High-impact asks (spending above the cap, permission changes, a new sending type, anything legal, anything touching the ledger rules) need a second factor: the owner signed in to the owner console plus a one-time code. Asks are limited per day so the owner does not approve by habit. No approval is accepted through a forwarded or quoted message.
-9. **L9, safe mode and the owner going quiet.** Safe mode means all customer-facing sending is off while research and logging continue. It starts on STOP, any incident, a failed health check, a spend cap reached, or no contact from the owner for 7 days. Leaving safe mode is owner-only.
+9. **L9, safe mode and the owner going quiet.** Safe mode means all customer-facing sending is off while research and logging continue. It starts on a verified owner HALT, any incident, a failed health check, a spend cap reached, or no contact from the owner for 7 days. A recipient's STOP keyword immediately opts that recipient out and must never be interpreted as the owner's global command. Leaving safe mode is owner-only.
 10. **L10, one canonical copy.** This document is the source. The repo copy at docs/BRAIN.md carries the version number and a content hash. At the start of each run an agent compares them. If they differ, it stops, flags it, and continues only with bot-alone work.
 11. **L11, money limits.** Before Wave 1 the owner sets in writing: the monthly cap on every recurring cost (hosting, SMS, tools, compute), the cap per single purchase, and the list of standing approved costs. Until set, the cap is zero and every purchase is an ASK.
 12. **L12, evidence classes.** OBSERVED means an agent saw it in a source or log. REPORTED means a person or source stated it and nothing independent confirms it. VERIFIED means independent evidence confirms it: a transaction record, a second independent source, or a field check.
@@ -543,3 +543,4 @@ The audit of sections 0 to 31 found these gaps. Each rule below is binding, and 
 ## Changelog (version 2)
 
 - 2026-10-14: Audited sections 0 to 31 against real sources. Added sections 32 (research findings) and 33 (17 loophole fixes). Amended sections 4, 8, 13, 16, 21, 24, 28 and the version line to match.
+- 2026-10-14: Aligned hands-off operation with the owner-authorized HALT command. STOP is reserved for recipient-level opt-out, not the owner's global kill command; unsupported Group posting is excluded rather than assigned to the owner.
