@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import replace
+from datetime import timedelta
 from typing import Any, Mapping, Sequence
 from urllib.parse import urlparse
 
@@ -387,6 +388,257 @@ def run_cognitive_task(
         "research_task_id": research_task.id,
         "proposals": proposal_dicts,
         "provenance": provenance,
+    }
+
+
+def run_pending_cognitive_tasks(
+    db: Session,
+    *,
+    limit: int = 2,
+    candidate_limit: int = 80,
+) -> dict[str, Any]:
+    """Run a small, local-only proposal batch over completed research with eligible evidence.
+
+    This is the narrow current-intelligence path for the cognitive worker, not
+    the legacy all-purpose WorkerTask queue. It is inert unless both providers
+    explicitly select local Ollama, refuses Vercel's serverless loopback, and
+    checks the existing owner agent-run gate before claiming any work. It can
+    write only PROPOSED cognitive results; it does not mutate research truth,
+    create Actions, contact people, spend money, or publish anything.
+    """
+    if limit <= 0 or candidate_limit <= 0:
+        return {
+            "status": "skipped",
+            "reason": "non_positive_batch_limit",
+            "attempted": 0,
+            "completed": 0,
+            "outcomes": [],
+        }
+
+    from app.config import settings
+
+    if (
+        settings.AI_PROVIDER.strip().lower() != "ollama"
+        or settings.COGNITIVE_PROVIDER.strip().lower() != "ollama"
+    ):
+        return {
+            "status": "disabled",
+            "reason": "explicit_local_ollama_selection_required",
+            "attempted": 0,
+            "completed": 0,
+            "outcomes": [],
+        }
+    import os
+
+    if os.getenv("VERCEL"):
+        return {
+            "status": "unavailable",
+            "reason": "local_ollama_is_not_available_in_vercel_runtime",
+            "attempted": 0,
+            "completed": 0,
+            "outcomes": [],
+        }
+
+    from app.services import operating_v4
+
+    try:
+        operating_v4.check_agent_run_allowed(db)
+    except ValueError:
+        return {
+            "status": "blocked",
+            "reason": "owner_agent_run_gate",
+            "attempted": 0,
+            "completed": 0,
+            "outcomes": [],
+        }
+
+    now = models.utcnow()
+    cap = max(1, min(int(candidate_limit), 200))
+    research_rows = (
+        db.query(models.ResearchTask)
+        .join(
+            models.ResearchQuestion,
+            models.ResearchQuestion.id == models.ResearchTask.question_id,
+        )
+        .filter(
+            models.ResearchTask.status == "completed",
+            models.ResearchTask.evidence_ids.isnot(None),
+            models.ResearchTask.evidence_ids != "",
+        )
+        .order_by(
+            models.ResearchQuestion.priority_score.desc(),
+            models.ResearchTask.updated_at.asc(),
+            models.ResearchTask.id.asc(),
+        )
+        .limit(cap)
+        .all()
+    )
+
+    eligible: list[tuple[models.ResearchTask, models.WorkerTask | None]] = []
+    for research_task in research_rows:
+        key = f"cognitive-research-task:v1:{research_task.id}"
+        worker_task = (
+            db.query(models.WorkerTask)
+            .filter_by(idempotency_key=key)
+            .one_or_none()
+        )
+        if worker_task is not None:
+            if worker_task.status in {"completed", "running"}:
+                continue
+            if worker_task.status == "failed" and worker_task.attempts >= worker_task.max_attempts:
+                continue
+            if worker_task.next_run_at is not None and worker_task.next_run_at > now:
+                continue
+            if worker_task.status not in {"queued", "failed", "blocked"}:
+                continue
+
+        # Check provider-visible evidence before creating/claiming work. This
+        # lets metadata-only or restricted rows wait without filling the queue.
+        preview = models.WorkerTask(
+            worker_type="cognitive",
+            task_name="preview_research_followups",
+            inputs={"research_task_id": research_task.id},
+        )
+        try:
+            _, context = _context_for_task(db, preview)
+        except cognitive_provider.CognitiveTaskInputError:
+            continue
+        if not context.available_evidence_ids:
+            continue
+        eligible.append((research_task, worker_task))
+
+    # Coverage pass: one research question gets a turn before a second task
+    # from that same question consumes the finite batch. Remaining slots then
+    # follow the same ranked priority order.
+    outcomes: list[dict[str, Any]] = []
+    attempted_ids: set[int] = set()
+    served_question_ids: set[int] = set()
+    completed = 0
+    coverage_pass = True
+
+    def select_next(unserved_only: bool) -> tuple[models.ResearchTask, models.WorkerTask | None] | None:
+        for candidate in eligible:
+            research_task, existing_worker = candidate
+            if research_task.id in attempted_ids:
+                continue
+            if unserved_only and research_task.question_id in served_question_ids:
+                continue
+            return candidate
+        return None
+
+    while len(outcomes) < limit:
+        selected = select_next(coverage_pass)
+        if selected is None and coverage_pass:
+            coverage_pass = False
+            selected = select_next(False)
+        if selected is None:
+            break
+
+        research_task, worker_task = selected
+        attempted_ids.add(research_task.id)
+        served_question_ids.add(research_task.question_id)
+        dispatch_pass = "question_coverage" if coverage_pass else "throughput"
+        key = f"cognitive-research-task:v1:{research_task.id}"
+        try:
+            if worker_task is None:
+                try:
+                    worker_task = create_cognitive_task(db, research_task.id)
+                except Exception as exc:
+                    # Another invocation may have inserted the unique key
+                    # between selection and creation. Roll back, then reuse it.
+                    db.rollback()
+                    worker_task = (
+                        db.query(models.WorkerTask)
+                        .filter_by(idempotency_key=key)
+                        .one_or_none()
+                    )
+                    if worker_task is None:
+                        raise exc
+            if worker_task.status in {"failed", "blocked"}:
+                worker_task.status = "queued"
+                worker_task.next_run_at = None
+                worker_task.error = None
+                db.commit()
+
+            claim = db.query(models.WorkerTask).filter(
+                models.WorkerTask.id == worker_task.id,
+                models.WorkerTask.worker_type == "cognitive",
+                models.WorkerTask.status == "queued",
+                (models.WorkerTask.next_run_at.is_(None))
+                | (models.WorkerTask.next_run_at <= models.utcnow()),
+            )
+            claimed = claim.update(
+                {"status": "running", "updated_at": models.utcnow()},
+                synchronize_session=False,
+            )
+            db.commit()
+            if not claimed:
+                outcomes.append({
+                    "research_task_id": research_task.id,
+                    "worker_task_id": worker_task.id,
+                    "status": "skipped",
+                    "reason": "task_not_claimable",
+                    "dispatch_pass": dispatch_pass,
+                })
+                continue
+
+            db.expire_all()
+            worker_task = db.get(models.WorkerTask, worker_task.id)
+            if worker_task is None:
+                outcomes.append({
+                    "research_task_id": research_task.id,
+                    "status": "failed",
+                    "reason": "claimed_task_disappeared",
+                    "dispatch_pass": dispatch_pass,
+                })
+                continue
+            # Recheck safety immediately before the local provider call.
+            operating_v4.check_agent_run_allowed(db)
+            result = run_cognitive_task(db, worker_task)
+            worker_task.outputs = result
+            worker_task.status = "completed"
+            worker_task.error = None
+            worker_task.next_run_at = None
+            worker_task.updated_at = models.utcnow()
+            db.commit()
+            completed += 1
+            outcomes.append({
+                "research_task_id": research_task.id,
+                "worker_task_id": worker_task.id,
+                "status": "completed",
+                "proposal_count": len(result.get("proposals", [])),
+                "provider_mode": result.get("provenance", {}).get("provider_mode"),
+                "dispatch_pass": dispatch_pass,
+            })
+        except Exception as exc:
+            db.rollback()
+            failed = db.get(models.WorkerTask, worker_task.id) if worker_task is not None else None
+            if failed is not None:
+                failed.attempts += 1
+                failed.error = type(exc).__name__
+                failed.updated_at = models.utcnow()
+                if failed.attempts >= failed.max_attempts:
+                    failed.status = "failed"
+                    failed.next_run_at = None
+                else:
+                    failed.status = "queued"
+                    failed.next_run_at = models.utcnow() + timedelta(minutes=min(2 ** failed.attempts, 60))
+                db.commit()
+            outcomes.append({
+                "research_task_id": research_task.id,
+                "worker_task_id": worker_task.id if worker_task is not None else None,
+                "status": "failed",
+                "error_type": type(exc).__name__,
+                "dispatch_pass": dispatch_pass,
+            })
+
+    failures = sum(1 for item in outcomes if item.get("status") == "failed")
+    return {
+        "status": "partial" if failures else "ok",
+        "attempted": len(outcomes),
+        "completed": completed,
+        "failed": failures,
+        "outcomes": outcomes,
     }
 
 
