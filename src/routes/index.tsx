@@ -35,12 +35,12 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Hami is a living system that understands what people need and turns understanding into real value. Built in Kathmandu. Serving everywhere equally.",
+          "Hami is a living system for understanding needs, knowledge, capabilities, resources, and outcomes across domains. Built in Kathmandu. Serving everywhere equally; action stays evidence-led and authorized.",
       },
       { property: "og:title", content: "Hami" },
       {
         property: "og:description",
-        content: "Discover value in every form. Understand it. Act on it.",
+        content: "Discover what matters. Understand it. Act on it. Built in Kathmandu; serving everywhere equally.",
       },
       { name: "apple-mobile-web-app-title", content: "Hami" },
     ],
@@ -593,10 +593,10 @@ function RealityLoop() {
         textAnchor="middle"
         fill="var(--foreground)"
         fontSize="30"
-        fontFamily="UnifrakturCook, serif"
+        fontFamily="Georgia, 'Times New Roman', serif"
         fontWeight={700}
       >
-        Hami
+        HAMI
       </text>
       <text
         x={cx}
@@ -639,7 +639,7 @@ function Hero() {
       <div className="border-b border-line bg-surface" aria-hidden="true">
         <Container className="flex items-center justify-between py-2">
           <span className="font-mono text-micro font-bold uppercase tracking-[0.2em] text-muted">
-            Hami Operating System
+            HAMI SYSTEMS
           </span>
           <span className="hidden font-mono text-micro uppercase tracking-[0.2em] text-muted sm:block">
             Reality → Evidence → Action
@@ -658,11 +658,16 @@ function Hero() {
           <div className="reveal" style={{ "--i": 0 } as React.CSSProperties}>
             <Eyebrow tone="amber">A living system</Eyebrow>
             <div className="mt-2 flex flex-wrap items-end gap-x-6 gap-y-4">
-              <span className="plate text-[clamp(3.2rem,9vw,6rem)] leading-none">
-                Hami
+              <span className="flex flex-col">
+                <span className="font-serif text-[clamp(3.2rem,9vw,6rem)] font-bold uppercase leading-[0.95] tracking-[0.035em] text-accent">
+                  HAMI
+                </span>
+                <span className="mt-3 font-mono text-xs font-bold uppercase tracking-[0.32em] text-foreground">
+                  SYSTEMS
+                </span>
               </span>
               <span
-                className="pb-2 text-[clamp(1.6rem,4vw,2.6rem)] text-muted"
+                className="pb-1 text-[clamp(1.6rem,4vw,2.6rem)] text-muted"
                 style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
               >
                 हामी
@@ -687,8 +692,12 @@ function Hero() {
               बुझाइलाई वास्तविक मूल्यमा बदल्छ।
             </p>
             <p className="mt-4 max-w-xl text-sm leading-6 text-muted">
-              Value itself is Hami’s domain: in every form and possible transformation.
-              Today’s sources, tools, and pilots are instruments—not limits on what Hami may investigate.
+              Value itself is Hami’s domain: needs, knowledge, people, resources, and
+              possibilities across fields. Its scope is universal; actions remain bounded
+              by evidence, authorization, safety, and fair value-sharing.
+            </p>
+            <p className="mt-4 max-w-xl font-mono text-[0.68rem] font-bold uppercase leading-6 tracking-[0.12em] text-muted">
+              People · Work · Knowledge · Resources · Opportunities · Outcomes
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4">
               <p className="text-sm font-extrabold uppercase tracking-[0.18em] text-accent">
@@ -704,7 +713,7 @@ function Hero() {
               </Button>
               <Button asChild variant="secondary" size="lg">
                 <Link to="/experiments">
-                  The real log <ArrowRight aria-hidden="true" />
+                  See what Hami is testing <ArrowRight aria-hidden="true" />
                 </Link>
               </Button>
             </div>
