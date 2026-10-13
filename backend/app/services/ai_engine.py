@@ -407,7 +407,12 @@ def get_provider_status() -> dict:
         }
     if name == "ollama":
         try:
-            return OllamaProvider().availability_status()
+            status = OllamaProvider().availability_status()
+            status["internal_context_allowed"] = (
+                status.get("mode") != "SELF_HOSTED"
+                or settings.HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA
+            )
+            return status
         except Exception as exc:
             return {"provider": name, "mode": "LOCAL", "status": "AI_UNAVAILABLE", "inference_verified": False, "failure_type": type(exc).__name__, "note": "The local Ollama adapter could not be initialized."}
     try:
