@@ -2170,15 +2170,27 @@ def _is_simulated_source(source: str | None) -> bool:
 
 def _is_simulated_provenance(raw: str) -> bool:
     """Reject explicit simulation/test-fixture markers in structured provenance."""
+    text_markers = {
+        "fixture", "mock", "mocked", "simulated", "simulation", "synthetic",
+        "test_fixture", "test_data", "test_only",
+    }
+
+    def marked_text(value: str) -> bool:
+        # URL hosts and paths are identities, not evidence-mode declarations.
+        if value.strip().casefold().startswith(("https://", "http://")):
+            return False
+        tokens = set(re.findall(r"[a-z0-9]+", value.casefold()))
+        return bool(tokens.intersection(text_markers))
+
     try:
         payload = json.loads(raw)
     except (TypeError, json.JSONDecodeError):
-        tokens = set(re.findall(r"[a-z0-9]+", str(raw).casefold()))
-        return bool(
-            tokens.intersection(
-                {"fixture", "mock", "mocked", "simulated", "simulation", "synthetic", "test_fixture"}
-            )
-        )
+        return marked_text(str(raw))
+    # JSON may encode a scalar string rather than an object. Treat it just as
+    # conservatively as a plain provenance string; quoting a marker must not
+    # bypass the structured-provenance guard.
+    if isinstance(payload, str):
+        return marked_text(payload)
 
     marker_keys = {
         "test_fixture", "is_test_fixture", "synthetic", "is_synthetic",
@@ -2192,7 +2204,6 @@ def _is_simulated_provenance(raw: str) -> bool:
         "test", "test_fixture", "test_data", "test_only", "fixture",
         "synthetic", "simulated", "simulation", "mock", "demo", "seed", "hypothesis",
     }
-
     true_flags = {"true", "yes", "1", "enabled", "on"}
 
     def explicit_true(item: Any) -> bool:
@@ -2217,11 +2228,19 @@ def _is_simulated_provenance(raw: str) -> bool:
                 if normalized_key in kind_keys and isinstance(item, str):
                     if item.strip().casefold().replace("-", "_") in simulated_values:
                         return True
-                if isinstance(item, (dict, list)) and marked(item):
+                if isinstance(item, (dict, list)):
+                    if marked(item):
+                        return True
+                elif isinstance(item, str) and marked_text(item):
                     return True
             return False
         if isinstance(value, list):
-            return any(marked(item) for item in value if isinstance(item, (dict, list)))
+            return any(
+                marked(item) if isinstance(item, (dict, list))
+                else marked_text(item) if isinstance(item, str)
+                else False
+                for item in value
+            )
         return False
 
     return marked(payload)
