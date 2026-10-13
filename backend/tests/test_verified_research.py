@@ -52,7 +52,7 @@ def make_claim_task(db, suffix=""):
     return claim, task
 
 
-def judge_specs():
+def judge_specs(evidence=None):
     return [
         multi_judge.JudgeSpec(
             name="judge-support",
@@ -160,7 +160,7 @@ def test_successful_collection_without_available_judge_is_not_called_evaluated(d
     }]
     SourceCollectorFixture.fail = False
     monkeypatch.setitem(collector_runner.COLLECTORS, "fixture-source", SourceCollectorFixture)
-    monkeypatch.setattr(multi_judge, "_default_judges", lambda: [])
+    monkeypatch.setattr(multi_judge, "_default_judges", lambda evidence=None: [])
 
     result = collector_runner.execute_task(db, task)
 
@@ -210,7 +210,7 @@ def test_duplicate_research_reuses_evidence_and_new_source_rejudges(db, monkeypa
         "metadata": {"claim_relation": "supports"},
     }]
     monkeypatch.setitem(collector_runner.COLLECTORS, "fixture-source", SourceCollectorFixture)
-    monkeypatch.setattr(multi_judge, "_default_judges", lambda: judge_specs()[:1])
+    monkeypatch.setattr(multi_judge, "_default_judges", lambda evidence=None: judge_specs(evidence)[:1])
 
     first = collector_runner.execute_task(db, first_task)
     repeated = collector_runner.execute_task(db, db.get(models.ResearchTask, first_task.id))
