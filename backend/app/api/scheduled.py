@@ -160,6 +160,7 @@ def _cycle_effect_summary(intelligence: dict) -> dict:
         "contact_drafts_prepared": _count_effect(scout.get("drafts_generated")) if isinstance(scout, dict) else 0,
         "unresolved_contact_drafts": _count_effect(scout.get("drafts_already_open")) if isinstance(scout, dict) else 0,
         "pending_contact_replies": _count_effect(scout.get("pending_contact_replies")) if isinstance(scout, dict) else 0,
+        "pending_contact_outcomes": _count_effect(scout.get("pending_contact_outcomes")) if isinstance(scout, dict) else 0,
         "dry_wells_recorded": _count_effect(scout.get("dry_wells_recorded")) if isinstance(scout, dict) else 0,
         "content_drafts_prepared": _count_effect(content.get("drafts_generated")) if isinstance(content, dict) else 0,
     }
@@ -190,12 +191,14 @@ def _cycle_effect_summary(intelligence: dict) -> dict:
         if internal_work
         else "no_new_effect"
     )
-    if counts["pending_contact_replies"]:
+    if counts["pending_contact_outcomes"]:
         next_owner_attention = "review_pending_contact_outcomes"
     elif counts["contact_drafts_prepared"]:
         next_owner_attention = "review_prepared_contact_draft"
     elif counts["unresolved_contact_drafts"]:
         next_owner_attention = "review_existing_contact_draft"
+    elif counts["pending_contact_replies"]:
+        next_owner_attention = "wait_for_reply_without_repeat_contact"
     elif status in {"internal_work_only", "no_new_effect"}:
         next_owner_attention = (
             "inspect_blockers_and_choose_a_reality-linked_next_action"
