@@ -244,6 +244,28 @@ def test_scoreboard_readonly_shape(db):
     assert board["verified_rupees"] == 0.0
 
 
+def test_contact_state_separates_priority_from_starvation(db, monkeypatch):
+    monkeypatch.setattr(operating_v4, "days_since_last_contact", lambda _db: 1)
+    assert operating_v4.contact_state(db) == {
+        "days_since_last_contact": 1,
+        "contact_priority_due": False,
+        "starved": False,
+    }
+
+    monkeypatch.setattr(operating_v4, "days_since_last_contact", lambda _db: 2)
+    assert operating_v4.contact_state(db)["contact_priority_due"] is True
+    assert operating_v4.contact_state(db)["starved"] is False
+
+    monkeypatch.setattr(operating_v4, "days_since_last_contact", lambda _db: 14)
+    assert operating_v4.contact_state(db)["contact_priority_due"] is True
+    assert operating_v4.contact_state(db)["starved"] is True
+
+    monkeypatch.setattr(operating_v4, "days_since_last_contact", lambda _db: None)
+    state = operating_v4.contact_state(db)
+    assert state["contact_priority_due"] is True
+    assert state["starved"] is True
+
+
 def test_gate_result_requires_kill_criterion(db):
     operating_v4.upsert_gate(db, 14, "Day 14: contact check")
     with pytest.raises(ValueError, match="BEFORE any result"):
