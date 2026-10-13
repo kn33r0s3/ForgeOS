@@ -154,6 +154,8 @@ def block_customer_delivery(db: Session, *, integration_name: str, operation: st
             return None
     if not settings.FORGE_BOT_LIVE:
         return "customer_sending_disabled"
+    if not durable_database(db):
+        return "durable_database_required"
     try:
         row = ensure_state(db)
         last = normalize_dt(row.last_owner_contact_at)

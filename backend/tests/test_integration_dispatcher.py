@@ -4,13 +4,14 @@ from unittest.mock import patch, MagicMock
 
 
 from app.config import settings
-from app.services import integration_outbox, integration_dispatcher
+from app.services import integration_outbox, integration_dispatcher, owner_control
 from app.models import IntegrationDelivery, OpHamiRuntimeControl
 from datetime import datetime, timezone
 
 
 def _allow_customer_sends_in_transport_test(db, monkeypatch):
     monkeypatch.setattr(settings, "FORGE_BOT_LIVE", True)
+    monkeypatch.setattr(owner_control, "durable_database", lambda _db: True)
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     db.add(OpHamiRuntimeControl(id=1, safe_mode_enabled=False, safe_mode_reason=None, last_owner_contact_at=now, updated_at=now))
     db.commit()

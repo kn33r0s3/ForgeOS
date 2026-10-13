@@ -46,6 +46,25 @@ def test_local_health_is_ok_and_ready_without_vercel_requirements(db, monkeypatc
     _assert_health_contract(response.json(), status="ok", ready=True)
 
 
+
+def test_degraded_health_persists_global_safe_mode(db, monkeypatch):
+    import app.main as main
+    from app import models
+
+    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.delenv("CRON_SECRET", raising=False)
+    monkeypatch.setattr(main, "SessionLocal", lambda: db)
+
+    response = _health()
+    assert response.status_code == 200
+    assert response.json()["ready"] is False
+
+    state = db.get(models.OpHamiRuntimeControl, 1)
+    assert state is not None
+    assert state.safe_mode_enabled is True
+    assert state.safe_mode_reason == "health_check_failed"
+
+
 def test_health_details_requires_owner_key_and_preserves_diagnostics(db, monkeypatch):
     from app import security
 

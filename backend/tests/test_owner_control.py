@@ -39,12 +39,31 @@ def test_ask_lifecycle_refuses_ephemeral_database(db, monkeypatch):
 
 def test_safe_mode_starts_on_and_blocks_sends(db, monkeypatch):
     monkeypatch.setattr(settings, "FORGE_BOT_LIVE", True)
+    monkeypatch.setattr(owner_control, "durable_database", lambda _db: True)
     assert owner_control.ensure_state(db).safe_mode_enabled
     assert owner_control.block_customer_delivery(db, integration_name="twilio", operation="send_sms",
         request_data={"to": "+9779812345678", "body": "test"}) == "safe_mode_enabled"
 
+
+def test_customer_delivery_requires_durable_database_even_if_state_is_open(db, monkeypatch):
+    monkeypatch.setattr(settings, "FORGE_BOT_LIVE", True)
+    fresh = owner_control.now()
+    db.add(models.OpHamiRuntimeControl(
+        id=1, safe_mode_enabled=False, safe_mode_reason=None,
+        last_owner_contact_at=fresh, updated_at=fresh,
+    ))
+    db.commit()
+    monkeypatch.setattr(owner_control, "durable_database", lambda _db: False)
+    reason = owner_control.block_customer_delivery(
+        db, integration_name="twilio", operation="send_sms",
+        request_data={"to": "+9779800000000", "body": "test"},
+    )
+    assert reason == "durable_database_required"
+
+
 def test_seven_days_inactive_enables_safe_mode(db, monkeypatch):
     monkeypatch.setattr(settings, "FORGE_BOT_LIVE", True)
+    monkeypatch.setattr(owner_control, "durable_database", lambda _db: True)
     old = owner_control.now() - timedelta(days=8)
     db.add(models.OpHamiRuntimeControl(id=1, safe_mode_enabled=False, safe_mode_reason=None, last_owner_contact_at=old, updated_at=old))
     db.commit()
@@ -54,6 +73,7 @@ def test_seven_days_inactive_enables_safe_mode(db, monkeypatch):
 
 def test_runtime_state_error_fails_closed(db, monkeypatch):
     monkeypatch.setattr(settings, "FORGE_BOT_LIVE", True)
+    monkeypatch.setattr(owner_control, "durable_database", lambda _db: True)
     monkeypatch.setattr(owner_control, "ensure_state", lambda _db: (_ for _ in ()).throw(RuntimeError("redacted")))
     assert owner_control.block_customer_delivery(db, integration_name="twilio", operation="send_sms", request_data={"to": "+9779812345678", "body": "test"}) == "runtime_control_unavailable"
 

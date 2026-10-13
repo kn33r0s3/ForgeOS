@@ -31,6 +31,7 @@ from app.database import init_db, SessionLocal
 from app.api import signals, analyze, opportunities, observer, forge, world, workers, intelligence, rare_signals, products, lessons, orchestrator, earn, payments, repair_shop, evidence_triage, public, scheduled, substrate, forge_bot, owner_control, operating_v4, scout, residue
 from app.security import api_key_middleware, require_owner_api_key
 from app.request_limits import PublicWriteSizeLimitMiddleware
+from app.services import owner_control as owner_control_service
 
 logger = logging.getLogger(__name__)
 
@@ -240,6 +241,21 @@ def _health_details() -> dict[str, Any]:
 @app.get("/health")
 def health():
     details = _health_details()
+    if details["status"] != "ok":
+        # Health probes are a safety signal: persist the global halt before
+        # reporting degraded readiness. If the database is itself down, the
+        # send gate independently fails closed when runtime state cannot be read.
+        try:
+            control_db = SessionLocal()
+            try:
+                owner_control_service.set_safe_mode(control_db, "health_check_failed")
+            finally:
+                control_db.close()
+        except Exception as exc:
+            logger.warning(
+                "Degraded health could not persist owner safe mode; error_type=%s",
+                type(exc).__name__,
+            )
     db_info = details["database"]
     if not db_info["url_configured"] and db_info["durability"] == "ephemeral":
         db_state = "not_configured"
