@@ -298,6 +298,49 @@ def mark_sent(
     return draft
 
 
+def record_no_response(db: Session, draft_id: int, summary: str) -> models.OutreachDraft:
+    """Record an owner-observed dry well without pretending a reply occurred.
+
+    This closes the pending-response review item but deliberately leaves
+    reply_received=False, so the no-repeat-without-reply send guard remains.
+    """
+    draft = db.get(models.OutreachDraft, draft_id)
+    if not draft:
+        raise ValueError("Draft not found.")
+    if draft.status != "SENT":
+        raise ValueError("A no-response outcome can only be recorded for a contact the owner marked sent.")
+    if draft.reply_received:
+        raise ValueError("This contact already has a recorded reply.")
+    if (draft.outcome_notes or "").strip():
+        raise ValueError("An outcome is already recorded for this contact.")
+    clean_summary = (summary or "").strip()
+    if not clean_summary or len(clean_summary) > 3000:
+        raise ValueError("No-response summary must contain 1–3000 characters.")
+
+    draft.outcome_notes = clean_summary
+    event = models.WorldEvent(
+        event_type="outreach.no_response",
+        entity_id=draft.candidate_entity_id,
+        payload=json.dumps(
+            {
+                "draft_id": draft.id,
+                "outcome_type": "no_response_observed",
+                "summary": clean_summary,
+                "recorded_by": "owner",
+                "verification": "owner-recorded; absence of a response is not independently verified",
+                "blocks_further_contact": True,
+            },
+            ensure_ascii=False,
+        ),
+        source="owner",
+        idempotency_key=f"outreach-no-response:{draft.id}",
+    )
+    db.add(event)
+    db.commit()
+    db.refresh(draft)
+    return draft
+
+
 def record_reply(db: Session, draft_id: int, summary: str) -> models.OutreachDraft:
     """Append an owner-recorded contact outcome to the canonical Event/Action trail."""
     draft = db.get(models.OutreachDraft, draft_id)
