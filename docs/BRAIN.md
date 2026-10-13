@@ -663,6 +663,41 @@ This section records a cross-boundary audit, not a claim that all Hami is finish
 - **Verification rule.** Model agreement is not independent source corroboration, verified source output, customer demand, transaction or revenue. Those metrics remain zero/unknown until their own evidence path records them. TEST, MOCK, HYPOTHESIS and REAL retain distinct meaning.
 - **Operation rule.** Continue independent safe research, code review and tests while one workflow or external action is blocked. But don't call a change done because it committed: inspect exact-head CI, runtime behavior and real outcomes separately. Never infer a green suite from a prior SHA, a configured provider from real inference, or a proposed action from a completed outcome.
 
+
+## 38. Proactive context reconstruction and memory stewardship (2026-10-14)
+
+The owner is not the system's external hard drive. Do not make progress depend on the owner remembering every decision, file, previous failure, useful idea, open loop, or possible next direction. Reconstruct context proactively before asking the owner to repeat anything.
+
+### 38.1 Retrieval order
+
+At the start of a run, and whenever a contradiction or missing thread appears:
+
+1. Read the latest explicit owner instruction and applicable safety/authorization boundaries.
+2. Inspect the actual canonical `main` head and recent commit lineage; inspect diffs and relevant history rather than trusting a stale snapshot.
+3. Read this Brain, `AGENTS.md`, `HANDOFF.md`, `STATE.md`, `QUEUE.md`, `LOG.md`, `docs/CAPABILITY_QUEUE.md`, `docs/UNKNOWN_MAP.md`, the system map, and the relevant existing subsystem contracts/tests. Use the documented registry and data sources instead of creating a competing memory system.
+4. Recover relevant context from accessible earlier conversation, saved project memory, available file/library sources, existing automations and connected tools. Search before asking for repetition; a source that cannot be reached must be marked unavailable, not treated as empty.
+5. When the answer depends on current external reality, verify it against primary/current sources where possible and record the source and observation time.
+6. Follow references outward: prior commits, reverted/removed implementations, archived notes, related tests, deployment history, and linked workstreams. Preserve useful history and recover a valuable implementation in place; never reconstruct deleted content from guesswork or treat an unverified memory as a historical fact.
+
+### 38.2 Reconcile rather than accumulate
+
+For every consequential item recovered, distinguish: **owner-directed decision**, **verified fact**, **source observation**, **inference**, **hypothesis**, **unknown**, **superseded instruction**, and **permission still required**. Record enough provenance to revisit the judgment. Prefer newer direct evidence for current state, but do not erase earlier history or assume the newest code expresses every lasting intention. If sources conflict, retain the conflict and resolve it through evidence; do not silently choose whichever note is easiest.
+
+Keep the existing files in their proper roles: Brain/AGENTS define mission and governing rules; STATE describes the best-known current reality and verification freshness; QUEUE ranks executable next work; CAPABILITY_QUEUE holds detailed dependencies and owner-action reduction; UNKNOWN_MAP banks questions and tests; LOG records durable changes and findings; HANDOFF supports takeover. Code and tests show implementation/expected behavior, not by themselves production operation or real-world success. User memory and earlier conversations supply context and leads, not independent proof of external reality.
+
+### 38.3 Carry forward what matters
+
+Extract durable project decisions, rationale, constraints, rejected approaches, unresolved questions, cross-climb dependencies, failure learnings, next tests, and the reason a thread stopped. Update the existing canonical file(s) where the information belongs, then update STATE and append LOG at the end of the run. Do not make duplicate roadmaps, dump entire conversations, store credentials/secrets, or copy private personal details into repository material. Check destination visibility before writing anything sensitive; the current repository is public unless independently changed and verified private.
+
+Search history before creating a new artifact. If a historical claim has not been corroborated, label it as a remembered/owner-reported lead and trace it before relying on it. If an expected source cannot be found after a bounded search, record the exact gap, what was checked, and the next recovery route. Do not tell the owner to repeat information already retrievable from accessible sources.
+
+### 38.4 Continuous work without false promises
+
+No session boundary, checkpoint, response timeout, blocked API, unavailable model, or unfinished verification declares Hami's overall mission complete. Continue the highest-value unblocked work and independent safe tracks. A blocked path receives a concrete workaround or a clearly recorded dependency; it does not freeze unrelated work. However, the principle of continuous work is not proof that a worker is executing 24/7: scheduled runs, deliveries, tests, deployments, provider calls and real outcomes must each be observed independently before being reported as operating.
+
+The aim is not to memorize everything perfectly. It is to make important knowledge findable, contradictions visible, history recoverable, and the next justified action clear—without forcing one human to narrate the whole universe or asking the owner to trust unsupported claims of recall.
+
+
 ## Changelog (version 4)
 
 - 2026-10-14: Added the Nepal-intelligified direction and Nepal-first/world-open AI provider mandate. Nepali language and context are first-class design inputs; real provider calls remain distinct from selection, mock output, evidence and authorization.
