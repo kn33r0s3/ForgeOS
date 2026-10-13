@@ -281,6 +281,46 @@ def test_unregistered_or_ambiguous_evidence_links_remain_unprojected(db):
 
 
 
+def test_unresolved_old_links_do_not_starve_later_valid_links(db):
+    _evidence1, _claim1, invalid_type, _decision1 = _evidence_claim_link(
+        db, relation_type="unreviewed_link_type"
+    )
+    _evidence2, _claim2, ambiguous, _decision2 = _evidence_claim_link(
+        db, relation_type="derived_from", other_target=True
+    )
+    evidence3, claim3, _link3, _decision3 = _evidence_claim_link(db)
+    connection = models.NetworkConnection(
+        left_kind="claim",
+        left_id=claim3.id,
+        right_kind="opportunity",
+        right_id=1,
+        reason="Not yet projected",
+        agreement_gap="Endpoint relation is not available yet.",
+    )
+    db.add(connection)
+    db.flush()
+    waiting_network_link = models.EvidenceRelationship(
+        evidence_id=evidence3.id,
+        network_connection_id=connection.id,
+        relation_type="supports",
+        relation_key="old-network-link-waits-for-projection",
+    )
+    db.add(waiting_network_link)
+    db.commit()
+
+    _evidence4, _claim4, valid, _decision4 = _evidence_claim_link(db)
+
+    result = adapter.sync_evidence_relationships(db, limit=1)
+
+    assert result["records_seen"] == 4
+    assert result["relations_created"] == 1
+    assert result["unresolved_records"] == 3
+    assert valid.substrate_relation_id is not None
+    assert invalid_type.substrate_relation_id is None
+    assert ambiguous.substrate_relation_id is None
+    assert waiting_network_link.substrate_relation_id is None
+
+
 def test_evidence_id_scope_projects_only_selected_relationships(db):
     _evidence, _claim, selected, _decision = _evidence_claim_link(db)
     _other_evidence, _other_claim, other, _other_decision = _evidence_claim_link(db)
