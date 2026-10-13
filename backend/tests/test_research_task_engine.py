@@ -277,6 +277,7 @@ def test_pending_task_dispatch_covers_questions_before_repeating(db, monkeypatch
         models.ResearchQuestion(question="Track alpha question", priority_score=90),
         models.ResearchQuestion(question="Track beta question", priority_score=80),
         models.ResearchQuestion(question="Track gamma question", priority_score=70),
+        models.ResearchQuestion(question="Track delta question has no cleared source", priority_score=100),
     ]
     db.add_all(questions)
     db.commit()
@@ -287,6 +288,7 @@ def test_pending_task_dispatch_covers_questions_before_repeating(db, monkeypatch
         research_task_engine.create_task(db, question_id=questions[0].id, source="crossref", query="alpha two"),
         research_task_engine.create_task(db, question_id=questions[1].id, source="crossref", query="beta"),
         research_task_engine.create_task(db, question_id=questions[2].id, source="crossref", query="gamma"),
+        research_task_engine.create_task(db, question_id=questions[3].id, source="openalex", query="delta without source clearance"),
     ]
     monkeypatch.setattr(collector_runner.source_clearance_registry, "source_clearances",
         lambda: [SimpleNamespace(collector="crossref", url="https://api.crossref.org/works")])
@@ -304,3 +306,5 @@ def test_pending_task_dispatch_covers_questions_before_repeating(db, monkeypatch
     assert [row["portfolio_dispatch"]["pass"] for row in outcomes] == [
         "question_coverage", "question_coverage", "question_coverage", "throughput"
     ]
+    # The highest-priority but uncleared track did not consume a coverage slot.
+    assert db.get(models.ResearchTask, tasks[4].id).status == "planned"
