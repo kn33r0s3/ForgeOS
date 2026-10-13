@@ -105,7 +105,7 @@ def test_verify_pr_merge_status_open():
         assert res["status"] == "OPEN"
 
 
-def test_action_engine_github_bounty_claim_fails_closed_without_token(db, monkeypatch):
+def test_action_engine_github_bounty_claim_requires_owner_approval(db, monkeypatch):
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
 
     action = action_engine.propose_action(
@@ -115,10 +115,11 @@ def test_action_engine_github_bounty_claim_fails_closed_without_token(db, monkey
         parameters={"owner": "testorg", "repo": "testrepo", "issue_number": 42},
     )
 
+    assert action.policy_result == "REQUIRE_APPROVAL"
+    assert action.status == "APPROVAL_REQUIRED"
     executed = action_engine.start_and_execute_action(db, action.id)
-    assert executed.status == "FAILED"
-    assert "GITHUB_TOKEN is not configured" in executed.execution_error
-    assert executed.verification_state == "CREDENTIALS_REQUIRED"
+    assert executed.status == "APPROVAL_REQUIRED"
+    assert "owner approval" in executed.execution_error.lower()
 
 
 def test_action_engine_github_bounty_verify(db):

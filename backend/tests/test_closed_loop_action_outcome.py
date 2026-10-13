@@ -22,6 +22,31 @@ from app.services import (
 from app.services.ai_engine import AIUnavailableError, get_provider_status
 from app.config import settings
 
+@pytest.fixture(autouse=True)
+def _eligible_stage_for_standing_authorization_mechanics(monkeypatch, request):
+    """Exercise existing bounded-authorization mechanics at an eligible stage.
+
+    Production remains stage 1. These legacy tests validate scope, expiry,
+    revocation, and rate bounds after the relevant staged gate is unlocked.
+    Dedicated decision-rights tests below keep stage 1 explicit.
+    """
+    eligible_prefixes = (
+        "test_standing_authorization_replaces_owner_approval_for_matching_action",
+        "test_standing_authorization_flows_through_execution_engine",
+        "test_standing_authorization_max_per_day_envelope_is_enforced",
+        "test_canonical_gate_",
+        "test_revalidation_",
+        "test_input_integrity_",
+        "test_source_guard_",
+        "test_k1_stale_policy_cannot_execute",
+        "test_k1_revoked_sa_cannot_execute",
+    )
+    if request.node.name.startswith(eligible_prefixes):
+        from app.services import decision_rights
+        monkeypatch.setattr(decision_rights, "ACTIVE_STAGE", 3)
+        monkeypatch.setattr(decision_rights, "_owner_sms_ready", lambda: True)
+
+
 
 
 
@@ -1913,3 +1938,22 @@ def test_execution_boundary_rechecks_rights_for_legacy_or_tampered_allow_rows(db
     assert checked.policy_result == "REQUIRE_APPROVAL"
     assert "decision_rights:stage_gate" in checked.policy_reason
     assert checked.started_at is None
+
+
+def test_stage_gate_cannot_be_bypassed_by_active_standing_authorization(db, monkeypatch):
+    from app.services import decision_rights
+
+    monkeypatch.setattr(decision_rights, "ACTIVE_STAGE", 1)
+    monkeypatch.setattr(decision_rights, "_owner_sms_ready", lambda: False)
+    _make_autonomy_policy(db)
+    _authorize_outreach_standing_auth_with_bounds(db)
+
+    action = action_engine.propose_action(
+        db,
+        objective="Attempt a second outreach inside an existing standing envelope",
+        action_type="outreach",
+        estimated_cost=0.0,
+    )
+    assert action.policy_result == "REQUIRE_APPROVAL"
+    assert action.status == "APPROVAL_REQUIRED"
+    assert "decision_rights:stage_gate" in action.policy_reason
