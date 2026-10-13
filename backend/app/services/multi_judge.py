@@ -191,12 +191,19 @@ def run_judgments(
 def _follow_up_question(db: Session, text: str, *, claim_id: int | None = None) -> models.ResearchQuestion:
     existing = db.query(models.ResearchQuestion).filter_by(question=text).first()
     if existing:
+        # Backfill a missing lineage link but never overwrite an explicit
+        # different claim association on an already-shared question.
+        if claim_id is not None and existing.source_claim_id is None:
+            existing.source_claim_id = claim_id
+            db.commit()
+            db.refresh(existing)
         return existing
     question = models.ResearchQuestion(
         question=text,
         priority_score=85.0,
         status="open",
         source_belief_id=None,
+        source_claim_id=claim_id,
     )
     db.add(question)
     db.commit()
