@@ -213,3 +213,32 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Added a separate HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA setting (default false); bearer authentication does not by itself authorize sending internal Hami Knowledge to a remote model. The API returns 403 before generating, and the owner UI explains the disabled sharing boundary. LOCAL inference is unaffected.
 - The successful ForgeBot answer path returns provider/mode/model and sanitized token/duration observations and writes only non-content telemetry into the existing EVENT substrate. The event has no question, answer or retrieved memory text; telemetry failure is best-effort and must not discard a successful answer.
 - Added regression tests for remote sharing disabled/enabled, endpoint refusal before generation, token-authenticated gateway and redirect rejection. Secrets scan passed on preceding commits, but the latest exact-head ForgeOS CI and deployment verification are pending; actual model invocation is not claimed.
+
+
+## 2026-10-14 — proactive context recovery and memory stewardship
+
+- Read the live `docs/BRAIN.md`, `AGENTS.md`, `HANDOFF.md`, `STATE.md`, `QUEUE.md`, `LOG.md`, `docs/CAPABILITY_QUEUE.md`, `docs/HAMI_SYSTEM_MAP.md`, `docs/UNKNOWN_MAP.md` and portable discovery/health specs from canonical `main`.
+- Confirmed the existing architecture already defines one Hami, a ranked queue, detailed capability dependencies, an unknowns map and continuous-work rules. The improvement was to connect context recovery to these existing sources rather than create another roadmap or memory file.
+- Added Brain section 38: proactive retrieval from accessible conversations, saved context, repository history, connected files/tools and fresh sources; conflict/provenance labels; safe recording of durable decisions; source-visibility checks; recovery routes for missing history; and a hard distinction between continuous-work intent and observed scheduler/runtime execution.
+- Requested the existing enabled `Continue Hami Work` automation to run immediately. The platform confirmed the request only; completion/delivery has not been verified. Daily schedule remains separate from actual 24/7 worker execution.
+- Repository metadata currently reports `kn33r0s3/ForgeOS` as public. No private conversation dump, secret, credential, external message, spend, activation change or real-world outcome was created by this recovery pass.
+- Verification boundary: documentation changes are the only intended scope of this commit. Exact-head CI, deployment/runtime state, scheduled execution completion and external outcomes remain independently unverified.
+
+
+## 2026-10-14 — recover historical continuity outside the current repository
+
+- Searched the saved file library and read the October 9 `HAMI_CONTINUITY_MASTER.md`, `HAMI_CURRENT_CODE_AUDIT_2026-10-09.md`, and the October 8 pasted planning record. Treated them as historical context, not current main/runtime truth.
+- Verified the canonical origin anchor `07baf91a1900cf3e27ce0bae9fead126801da3b3`; the September 30 restoration commit `f99008ded95cd17ebb805b0693a59d48d708eb8d` records recovery of 2,454 tracked files deleted by `f240f3e6250c054a376fb9e2f00d7e6613bebe98`, and records the later generated-artifact commit `7a437bb`. The original open-world discovery engine was introduced by `1b1b63ad7d2f984a9f9c9615625453c202821f01`. Current implementation status is governed by today's main/queue/tests, not those historical commit messages.
+- The saved code audit mentions an owner-reported 74,637-item defect report but explicitly says its source was not located. A separate prior-context memory carries 828,649 lines / 2,472 files; that exact source was not found in the sources searched this run, and its figures do not match the commit-backed 2,454-file incident. Both remain separate unverified recovery leads. No defects were invented and no bulk fix was attempted.
+- Added the historical anchors and unresolved-source labels to the existing `HANDOFF.md`; recorded the reconciliation in `STATE.md`; no new roadmap, queue, semantic table, secret, contact, spend or activation was created.
+- The repository remains public according to GitHub metadata. These are project-history notes; do not copy private personal context or credentials into repository records.
+
+
+## 2026-10-14 — reconcile saved single-instance wiring audit
+
+- Retrieved the saved `hami_forgeos_integrity_audit_checkpoint_2026-10-11-full.md` from the Library and checked its eight findings against current `main` sources.
+- F-01's missing import is not present in the current brand-check source; the missing helper remains absent. Some Grok-era comments/path conventions remain and need deliberate identity/usage classification, not restoration of deleted machinery.
+- F-03 is now fail-closed when `EVIDENCE_TRIAGE_URL` is empty. F-04 has production auth guards requiring explicit configuration outside workspace preview. F-07 has an explicit workflow-fail step if a current verification verdict is false.
+- F-02 still requires a real browser/PWA check, F-05 requires protected evidence that frontend and FastAPI use durable shared production PostgreSQL, and F-06 requires an exact route/method/endpoint inventory before any alias cleanup. F-08 remains an intentional archived local frontend path.
+- Put the complete disposition matrix into the existing `docs/CAPABILITY_QUEUE.md`, exposed follow-on work in `QUEUE.md`, and indexed it in `HANDOFF.md` and `STATE.md`. No new file/architecture, secret read, real message, spend, external activation or test claim was created.
+- Verification: source spot-read only. Current exact-head CI, production runtime, durable database and browser behavior are not verified by this log entry.

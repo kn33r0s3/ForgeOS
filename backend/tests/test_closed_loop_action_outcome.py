@@ -2178,21 +2178,14 @@ def test_ai_ollama_status_checks_installed_model_but_does_not_claim_inference(mo
         observed["timeout"] = timeout
         return Response()
 
-    class FakeOpener:
-        def open(self, request, timeout):
-            return fake_urlopen(request, timeout)
-
-    def fake_build_opener(handler):
-        assert isinstance(handler, ai_engine._RejectOllamaRedirects)
-        # A cross-host redirect must not produce a replacement Request that
-        # could carry the gateway bearer token to a different origin.
-        assert handler.redirect_request(
-            ai_engine.urllib.request.Request("https://models.example.test/api/tags"),
-            None, 302, "Found", {}, "https://attacker.example/steal",
-        ) is None
-        return FakeOpener()
-
-    monkeypatch.setattr(ai_engine.urllib.request, "build_opener", fake_build_opener)
+    # Local loopback uses urlopen. Keep explicit regression coverage that the
+    # hardened remote transport refuses to carry bearer credentials cross-origin.
+    handler = ai_engine._RejectOllamaRedirects()
+    assert handler.redirect_request(
+        ai_engine.urllib.request.Request("https://models.example.test/api/tags"),
+        None, 302, "Found", {}, "https://attacker.example/steal",
+    ) is None
+    monkeypatch.setattr(ai_engine.urllib.request, "urlopen", fake_urlopen)
     status = ai_engine.get_provider_status()
     assert observed["url"] == "http://localhost:11434/api/tags"
     assert observed["timeout"] == 1.5
@@ -2386,7 +2379,19 @@ def test_ollama_authenticated_https_gateway_probes_model_and_generates_with_bear
             })
         raise AssertionError("Unexpected Ollama endpoint")
 
-    monkeypatch.setattr(ai_engine.urllib.request, "urlopen", fake_urlopen)
+    class FakeOpener:
+        def open(self, request, timeout):
+            return fake_urlopen(request, timeout)
+
+    def fake_build_opener(handler):
+        assert isinstance(handler, ai_engine._RejectOllamaRedirects)
+        assert handler.redirect_request(
+            ai_engine.urllib.request.Request("https://models.example.test/api/tags"),
+            None, 302, "Found", {}, "https://attacker.example/steal",
+        ) is None
+        return FakeOpener()
+
+    monkeypatch.setattr(ai_engine.urllib.request, "build_opener", fake_build_opener)
     status = ai_engine.get_provider_status()
 
     assert status["provider"] == "ollama"

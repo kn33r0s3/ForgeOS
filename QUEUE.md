@@ -68,3 +68,8 @@ The code supports an authenticated HTTPS Ollama-compatible gateway via `OLLAMA_H
 ## P0 — Verify provider privacy boundary and actual inference
 
 Remote model transport authorization (HTTPS plus bearer token) and internal-context sharing authorization are separate. HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA remains false by default; /forge/ask must reject remote-context requests until the owner explicitly enables it. Successful calls produce sanitized request observations and a metadata-only EVENT. Next verify exact-head CI, configure a gateway only in deployment secrets, perform an actual inference, inspect the event without question/answer content, and evaluate the Nepal-first language/context set. No remote endpoint or inference is claimed live.
+
+
+## P1 — Reconcile prior end-to-end wiring audit without replaying stale fixes
+
+The 2026-10-11 single-instance integrity audit has now been spot-checked against current source and its F-01–F-08 dispositions are recorded in `docs/CAPABILITY_QUEUE.md`. After the current P0 exact-head CI and persisted scheduler gates, continue with the still-open route-alias inventory/test (F-06), authorized durable-PostgreSQL/auth readiness checks (F-04/F-05), and browser/runtime PWA verification (F-02). The old missing-import symptom (F-01), evidence-triage Docker-host default (F-03), and false-green verification workflow behavior (F-07) have corresponding source-level corrections now; re-open only if current tests/runtime reproduce a failure. Do not restore removed Grok machinery or revive the archived frontend.

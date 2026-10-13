@@ -259,8 +259,8 @@ describe("feature registry", () => {
     assert.ok(forgeConsole.includes("providerObservation"));
     assert.ok(forgeConsole.includes("not independently verified by this telemetry."));
     assert.ok(forgeConsole.includes("isn't on Hami's approved zero-cost list"));
-    assert.ok(forgeConsole.includes("Your question is sent to Hami's owner API"));
-    assert.ok(forgeConsole.includes("This panel does not add the chat to Hami's knowledge records"));
+    assert.ok(forgeConsole.includes("Please do not paste phone numbers, private conversations, payment details or passwords."));
+    assert.ok(forgeConsole.includes("This panel does not add the chat text to Hami's knowledge records"));
     assert.ok(forgeConsole.includes("No model request will be sent from this page"));
     assert.ok(!forgeConsole.includes("localStorage"));
     assert.ok(!forgeConsole.includes("sessionStorage"));

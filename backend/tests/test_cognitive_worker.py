@@ -676,7 +676,10 @@ def test_bounded_cognitive_worker_allows_approved_self_hosted_gateway_in_vercel(
     # There is no eligible task in this clean fixture, but the worker must get
     # past the old blanket-Vercel veto when a remote gateway is configured and
     # the owner has separately authorized internal-context transfer.
-    assert result["reason"] != "local_ollama_is_not_available_in_vercel_runtime"
+    assert result["status"] == "ok"
+    assert result.get("reason") != "local_ollama_is_not_available_in_vercel_runtime"
+    assert result.get("attempted", 0) == 0
+    assert result.get("completed", 0) == 0
     assert db.query(models.WorkerTask).filter_by(worker_type="cognitive").count() == 0
 
 

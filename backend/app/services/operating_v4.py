@@ -2423,12 +2423,18 @@ def is_starved(db: Session) -> bool:
     return days is None or days >= STARVED_DAYS
 
 
-def check_build_allowed(db: Session, is_system_obligation: bool = False) -> None:
-    """STARVED blocks build tasks except System Obligations."""
-    if is_starved(db) and not is_system_obligation:
+def check_build_allowed(
+    db: Session,
+    is_system_obligation: bool = False,
+    *,
+    depends_on_active_intervention: bool = False,
+) -> None:
+    """Gate only work dependent on the starved external intervention."""
+    if is_starved(db) and depends_on_active_intervention and not is_system_obligation:
         raise ValueError(
-            "STARVED: no real contact for 14+ days. Build tasks are blocked "
-            "until a real conversation happens (System Obligations exempt)."
+            "STARVED: this build depends on the active intervention with no recorded "
+            "REAL contact for 14+ days. Revise or kill that frontier; independent "
+            "Hami work remains eligible."
         )
 
 

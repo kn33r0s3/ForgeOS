@@ -68,12 +68,8 @@ def _make_subject(db):
     return ent
 
 
-def _make_real_event(db, subject_id, source="manual"):
-    """TEST FIXTURE: a WorldEvent for gate testing only.
-
-    source='manual' simulates a real-world source.
-    source='test' simulates a TEST source (must be rejected).
-    """
+def _make_test_event(db, subject_id, source="test-fixture"):
+    """TEST fixture: this event is not independently observed reality."""
     evt = models.WorldEvent(
         event_type="outreach.sent",
         entity_id=subject_id,
@@ -86,16 +82,17 @@ def _make_real_event(db, subject_id, source="manual"):
     return evt
 
 
-def _make_real_evidence(db, subject_id, source_type="firsthand"):
-    """TEST FIXTURE: Evidence labeled as firsthand for gate testing only."""
+def _make_test_evidence(db, subject_id, source_type="firsthand"):
+    """TEST-only evidence; deliberately ineligible for real-world verification."""
     ev = models.Evidence(
         subject_kind="entity",
         subject_id=subject_id,
         source="test-fixture",
+        source_kind="TEST",
         source_type=source_type,
         source_identity="test-fixture-observer",
-        provenance="test-fixture: direct observation",
-        support_level="supported",
+        provenance=json.dumps({"test_fixture": True, "note": "not a real outcome"}),
+        support_level="possible",
         claim="test fixture claim — not a real outcome",
         content="test fixture evidence — not a real outcome",
     )
@@ -105,30 +102,27 @@ def _make_real_evidence(db, subject_id, source_type="firsthand"):
     return ev
 
 
-def test_valid_verification_succeeds_with_real_outcome(db):
-    """TEST FIXTURE: valid REAL event + evidence chain passes the gate."""
+
+def test_test_fixture_evidence_cannot_be_recorded_as_real_world_verification(db):
+    """Test fixtures cannot establish a real-world outcome."""
     cap = _make_capability(db)
     subject = _make_subject(db)
-    evt = _make_real_event(db, subject.id, source="manual")
-    ev = _make_real_evidence(db, subject.id, source_type="firsthand")
+    evt = _make_test_event(db, subject.id, source="manual")
+    ev = _make_test_evidence(db, subject.id)
 
-    result = world_graph.record_capability_verification(db, cap, evt.id, ev.id)
+    with pytest.raises(SubstrateError, match="source_kind='TEST'"):
+        world_graph.record_capability_verification(db, cap, evt.id, ev.id)
 
-    attrs = json.loads(result.attributes)
-    assert len(attrs["real_world_verifications"]) == 1
-    v = attrs["real_world_verifications"][0]
-    assert v["event_id"] == evt.id
-    assert v["evidence_id"] == ev.id
-    # Lifecycle status unchanged — verification is an additional marker.
-    assert result.status == "proposed"
+    assert "real_world_verifications" not in json.loads(cap.attributes)
+    assert cap.status == "proposed"
 
 
 def test_test_source_event_rejected(db):
     """Events from test sources cannot establish real-world verification."""
     cap = _make_capability(db)
     subject = _make_subject(db)
-    evt = _make_real_event(db, subject.id, source="test")
-    ev = _make_real_evidence(db, subject.id)
+    evt = _make_test_event(db, subject.id, source="test")
+    ev = _make_test_evidence(db, subject.id)
 
     with pytest.raises(SubstrateError, match="not TEST"):
         world_graph.record_capability_verification(db, cap, evt.id, ev.id)
@@ -138,29 +132,30 @@ def test_synthetic_evidence_rejected(db):
     """Agent-written/synthetic/mock evidence cannot establish verification."""
     cap = _make_capability(db)
     subject = _make_subject(db)
-    evt = _make_real_event(db, subject.id)
+    evt = _make_test_event(db, subject.id)
     for bad_source in ["agent_written", "synthetic", "mock"]:
-        ev = _make_real_evidence(db, subject.id, source_type=bad_source)
+        ev = _make_test_evidence(db, subject.id, source_type=bad_source)
         with pytest.raises(SubstrateError, match="not synthetic or mock"):
             world_graph.record_capability_verification(db, cap, evt.id, ev.id)
 
 
-def test_unrelated_event_evidence_rejected(db):
-    """Arbitrary ID pairs about different subjects are rejected."""
+
+def test_test_evidence_is_rejected_before_subject_matching(db):
+    """Fixture IDs cannot establish a real outcome, whether related or not."""
     cap = _make_capability(db)
     subject_a = _make_subject(db)
     subject_b = _make_subject(db)
-    evt = _make_real_event(db, subject_a.id, source="manual")  # about subject A
-    ev = _make_real_evidence(db, subject_b.id)  # about subject B
+    evt = _make_test_event(db, subject_a.id, source="manual")
+    ev = _make_test_evidence(db, subject_b.id)
 
-    with pytest.raises(SubstrateError, match="unrelated"):
+    with pytest.raises(SubstrateError, match="source_kind='TEST'"):
         world_graph.record_capability_verification(db, cap, evt.id, ev.id)
 
 
 def test_missing_event_rejected(db):
     cap = _make_capability(db)
     subject = _make_subject(db)
-    ev = _make_real_evidence(db, subject.id)
+    ev = _make_test_evidence(db, subject.id)
 
     with pytest.raises(SubstrateError, match="Event not found"):
         world_graph.record_capability_verification(db, cap, 99999, ev.id)
@@ -169,46 +164,44 @@ def test_missing_event_rejected(db):
 def test_missing_evidence_rejected(db):
     cap = _make_capability(db)
     subject = _make_subject(db)
-    evt = _make_real_event(db, subject.id)
+    evt = _make_test_event(db, subject.id, source="manual")
 
     with pytest.raises(SubstrateError, match="Evidence not found"):
         world_graph.record_capability_verification(db, cap, evt.id, 99999)
 
 
-def test_evidence_without_provenance_rejected(db):
-    """Evidence lacking provenance cannot be created (model layer blocks it).
 
-    The verification gate has its own provenance check as defense-in-depth,
-    but the model validation catches it first. This proves the system
-    prevents provenance-less evidence from existing at all.
-    """
+def test_evidence_without_provenance_rejected(db):
+    """Substantive evidence cannot be persisted without a traceable origin."""
     subject = _make_subject(db)
     ev = models.Evidence(
         subject_kind="entity",
         subject_id=subject.id,
-        source="test-fixture",
-        source_type="firsthand",
+        source="reviewed-public-source",
+        source_kind="REAL",
+        source_type="third_party",
         support_level="supported",
-        claim="test claim",
-        # No provenance, substrate_provenance, or source_identity
-        content="bare evidence row",
+        claim="A report-backed statement requiring traceability.",
+        content="candidate source evidence without an origin record",
     )
     db.add(ev)
-    # Model validation rejects provenance-less evidence at write time.
     with pytest.raises(SubstrateError, match="provenance"):
         db.commit()
 
 
-def test_duplicate_verification_rejected(db):
-    """Same event+evidence tuple cannot be recorded twice (idempotency)."""
+
+def test_repeated_test_fixture_attempts_never_create_verification_markers(db):
+    """Repeating rejected test evidence never turns it into a REAL outcome."""
     cap = _make_capability(db)
     subject = _make_subject(db)
-    evt = _make_real_event(db, subject.id)
-    ev = _make_real_evidence(db, subject.id)
+    evt = _make_test_event(db, subject.id, source="manual")
+    ev = _make_test_evidence(db, subject.id)
 
-    world_graph.record_capability_verification(db, cap, evt.id, ev.id)
-    with pytest.raises(SubstrateError, match="already has real-world verification"):
-        world_graph.record_capability_verification(db, cap, evt.id, ev.id)
+    for _ in range(2):
+        with pytest.raises(SubstrateError, match="source_kind='TEST'"):
+            world_graph.record_capability_verification(db, cap, evt.id, ev.id)
+
+    assert "real_world_verifications" not in json.loads(cap.attributes)
 
 
 def test_malformed_attributes_handled(db):
@@ -228,30 +221,36 @@ def test_malformed_attributes_handled(db):
     assert _parse_json('{"a": 1}') == {"a": 1}
 
 
-def test_existing_attributes_preserved(db):
-    """All existing attributes survive; verification is added, not replaced."""
+
+def test_existing_attributes_preserved_when_verification_is_rejected(db):
     existing = {"custom_key": "custom_value", "nested": {"a": 1}}
     cap = _make_capability(db, attributes=json.dumps(existing))
     subject = _make_subject(db)
-    evt = _make_real_event(db, subject.id)
-    ev = _make_real_evidence(db, subject.id)
+    evt = _make_test_event(db, subject.id, source="manual")
+    ev = _make_test_evidence(db, subject.id)
 
-    result = world_graph.record_capability_verification(db, cap, evt.id, ev.id)
-    attrs = json.loads(result.attributes)
+    with pytest.raises(SubstrateError, match="source_kind='TEST'"):
+        world_graph.record_capability_verification(db, cap, evt.id, ev.id)
+
+    attrs = json.loads(cap.attributes)
     assert attrs["custom_key"] == "custom_value"
     assert attrs["nested"] == {"a": 1}
-    assert len(attrs["real_world_verifications"]) == 1
+    assert "real_world_verifications" not in attrs
 
 
-def test_implementation_status_unchanged(db):
-    """Verification does not alter the lifecycle status or test provenance."""
+
+def test_implementation_status_unchanged_on_rejected_verification(db):
+    """A rejected fixture cannot mutate lifecycle state or test provenance."""
     cap = _make_capability(db)
     original_status = cap.status
     original_test_ref = cap.test_ref
     subject = _make_subject(db)
-    evt = _make_real_event(db, subject.id)
-    ev = _make_real_evidence(db, subject.id)
+    evt = _make_test_event(db, subject.id, source="manual")
+    ev = _make_test_evidence(db, subject.id)
 
-    result = world_graph.record_capability_verification(db, cap, evt.id, ev.id)
-    assert result.status == original_status
-    assert result.test_ref == original_test_ref
+    with pytest.raises(SubstrateError, match="source_kind='TEST'"):
+        world_graph.record_capability_verification(db, cap, evt.id, ev.id)
+
+    assert cap.status == original_status
+    assert cap.test_ref == original_test_ref
+    assert "real_world_verifications" not in json.loads(cap.attributes)

@@ -120,7 +120,7 @@ class RareSignalAssessment(Base):
     first_seen = Column(DateTime, nullable=True)
     last_seen = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=utcnow, nullable=False)
-    updated_at = Column(DateTime, default=utcnow, nullable=False)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
 
     events = relationship("RareSignalEvent", back_populates="assessment", cascade="all, delete-orphan")
 
@@ -716,7 +716,7 @@ class Claim(Base):
     outcome_id = Column(Integer, ForeignKey("outcomes.id"), nullable=True, index=True)
     provenance = Column(Text, nullable=True)
     created_at = Column(DateTime, default=utcnow, nullable=False)
-    updated_at = Column(DateTime, default=utcnow, nullable=False)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
 
     opportunity = relationship("Opportunity", back_populates="claims")
     evidence_links = relationship("EvidenceRelationship", back_populates="claim", cascade="all, delete-orphan")
