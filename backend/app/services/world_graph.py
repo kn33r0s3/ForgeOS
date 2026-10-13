@@ -1043,7 +1043,9 @@ def create_evidence(
     if confidence is not None and (not math.isfinite(float(confidence)) or not 0 <= float(confidence) <= 1):
         raise SubstrateError("evidence confidence must be between 0 and 1")
     provenance_json = provenance if isinstance(provenance, str) else _dump_json(dict(provenance), "provenance")
-    if state in {"tested", "supported", "refuted"} and _is_simulated_source(clean_source):
+    if state in {"tested", "supported", "refuted"} and (
+        _is_simulated_source(clean_source) or _is_simulated_provenance(provenance_json)
+    ):
         raise SubstrateError("simulated evidence cannot be tested, supported, or refuted")
     if state in {"tested", "supported", "refuted"} and not provenance_json.strip():
         raise SubstrateError("tested evidence requires provenance")
@@ -2159,8 +2161,59 @@ def evidence_provenance(evidence: models.Evidence) -> str:
 
 
 def _is_simulated_source(source: str | None) -> bool:
-    value = (source or "").strip().lower()
-    return value.startswith(("simulated", "fixture", "mock", "seed", "test-data"))
+    value = (source or "").strip().casefold()
+    tokens = set(re.findall(r"[a-z0-9]+", value))
+    return value.startswith(("simulated", "fixture", "mock", "seed", "test-data")) or bool(
+        tokens.intersection({"fixture", "mock", "mocked", "simulated", "simulation", "synthetic", "seed", "fake"})
+    )
+
+
+def _is_simulated_provenance(raw: str) -> bool:
+    """Reject explicit simulation/test-fixture markers in structured provenance."""
+    try:
+        payload = json.loads(raw)
+    except (TypeError, json.JSONDecodeError):
+        tokens = set(re.findall(r"[a-z0-9]+", str(raw).casefold()))
+        return bool(
+            tokens.intersection(
+                {"fixture", "mock", "mocked", "simulated", "simulation", "synthetic", "test_fixture"}
+            )
+        )
+
+    marker_keys = {
+        "test_fixture", "is_test_fixture", "synthetic", "is_synthetic",
+        "simulated", "is_simulated", "mock", "is_mock", "demo", "is_demo",
+    }
+    kind_keys = {
+        "source_type", "source_kind", "data_scope", "environment", "mode",
+        "classification", "evidence_kind", "record_kind",
+    }
+    simulated_values = {
+        "fixture", "test_fixture", "synthetic", "simulated", "simulation",
+        "mock", "demo", "seed", "hypothesis",
+    }
+
+    def marked(value: Any) -> bool:
+        if isinstance(value, dict):
+            for key, item in value.items():
+                normalized_key = re.sub(r"[^a-z0-9]+", "_", str(key).casefold()).strip("_")
+                if normalized_key in marker_keys:
+                    if item is True or (
+                        isinstance(item, str)
+                        and item.strip().casefold().replace("-", "_") in simulated_values
+                    ):
+                        return True
+                if normalized_key in kind_keys and isinstance(item, str):
+                    if item.strip().casefold().replace("-", "_") in simulated_values:
+                        return True
+                if isinstance(item, (dict, list)) and marked(item):
+                    return True
+            return False
+        if isinstance(value, list):
+            return any(marked(item) for item in value if isinstance(item, (dict, list)))
+        return False
+
+    return marked(payload)
 
 
 def _repo_file_exists(reference: str) -> bool:
