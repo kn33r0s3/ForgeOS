@@ -17,7 +17,7 @@ const jsonLd = JSON.stringify({
   name: SITE.name,
   ...(SITE.url ? { url: SITE.url } : {}),
   ...(SITE.email ? { email: SITE.email } : {}),
-  areaServed: "NP",
+  areaServed: "Worldwide",
   description: SITE.description,
 });
 
