@@ -112,6 +112,10 @@ def test_successful_collection_persists_evidence_and_triggers_p3(db, monkeypatch
 
     assert result["status"] == "completed"
     assert result["evidence_found"] == 1
+    assert result["evaluation_status"] == "judge_pipeline_executed"
+    assert result["comparison_outcome"] == "partial_agreement"
+    assert result["judgments_completed"] == 2
+    assert result["judgments_failed"] == 0
     evidence = db.query(models.Evidence).filter_by(source="fixture-source").one()
     edge = db.query(models.EvidenceRelationship).filter_by(claim_id=claim.id, evidence_id=evidence.id).one()
     assert edge.relation_type == "supports"
@@ -120,6 +124,30 @@ def test_successful_collection_persists_evidence_and_triggers_p3(db, monkeypatch
     assert comparison.outcome == "partial_agreement"
     assert comparison.follow_up_question_id is not None
     assert db.get(models.ResearchTask, task.id).results["comparison_id"] == comparison.id
+
+
+def test_empty_collection_reports_evaluation_not_invoked(db, monkeypatch):
+    _, task = make_claim_task(db)
+    SourceCollectorFixture.items = []
+    SourceCollectorFixture.fail = False
+    monkeypatch.setitem(collector_runner.COLLECTORS, "fixture-source", SourceCollectorFixture)
+    monkeypatch.setattr(
+        multi_judge,
+        "_default_judges",
+        lambda: (_ for _ in ()).throw(AssertionError("no judge should run without evidence")),
+    )
+
+    result = collector_runner.execute_task(db, task)
+
+    assert result["status"] == "completed"
+    assert result["evidence_found"] == 0
+    assert result["evaluation_status"] == "not_invoked_no_evidence"
+    assert result["comparison_outcome"] is None
+    assert result["judgments_completed"] == 0
+    assert result["judgments_failed"] == 0
+    persisted = db.get(models.ResearchTask, task.id)
+    assert persisted.results.get("comparison_id") is None
+    assert db.query(models.Judgment).count() == 0
 
 
 def test_unavailable_and_failed_sources_are_recorded_without_fabrication(db, monkeypatch):
