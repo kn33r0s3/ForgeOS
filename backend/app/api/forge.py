@@ -451,7 +451,12 @@ def ask_forge(request: Request, payload: schemas.AskRequest, db: Session = Depen
         ) from exc
     matches = memory_layer.search_knowledge(db, payload.question, top_k=5)
     memories_used = [knowledge for knowledge, _similarity in matches]
-    return schemas.AskResponse(question=payload.question, answer=result["answer"], memories_used=memories_used)
+    return schemas.AskResponse(
+        question=payload.question,
+        answer=result["answer"],
+        memories_used=memories_used,
+        provider_observation=result.get("provider_observation"),
+    )
 
 
 @router.get("/world/beliefs/{belief_id}", response_model=schemas.BeliefGraph)
