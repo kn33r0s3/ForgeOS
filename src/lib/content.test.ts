@@ -360,7 +360,8 @@ describe("Hami forge console", () => {
     assert.ok(start >= 0 && end > start, "CycleCard should exist");
     const card = owner.slice(start, end);
     assert.match(card, /cycle_effect/);
-    assert.match(card, /rawStages\.cycle_effect/);
+    assert.match(card, /const rawStages = root\.stages/);
+    assert.match(card, /if \(name === "cycle_effect"\) continue/);
     assert.match(card, /Next owner attention/);
     assert.match(card, /reality_boundary/);
     assert.match(card, /source_data_collected/);
