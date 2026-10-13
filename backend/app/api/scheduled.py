@@ -714,6 +714,41 @@ def run_scheduled_intelligence(
         logger.warning("scheduled intelligence: collection_cycle failed (%s)", type(exc).__name__)
         intelligence["collection_cycle"] = {"status": "error", "error": type(exc).__name__}
 
+    # Stage 2b: recover evaluation that was not substantively completed.
+    # This uses persisted evidence only; it does not recollect sources or
+    # take external actions. Each retry is bounded and recorded on the
+    # existing ResearchTaskStep, with failed attempts kept in history.
+    try:
+        with database.SessionLocal() as db:
+            from app.services import collector_runner
+
+            evaluation_retries = collector_runner.run_pending_evaluations(
+                db, limit=2, max_retries_per_task=3
+            )
+            retry_failures = [
+                item for item in evaluation_retries
+                if item.get("status") in {"failed", "skipped"}
+            ]
+            intelligence["evaluation_recovery"] = {
+                "status": "partial" if retry_failures else "ok",
+                "tasks_attempted": len(evaluation_retries),
+                "tasks_completed": sum(
+                    1 for item in evaluation_retries
+                    if item.get("status") == "completed"
+                ),
+                "tasks_failed_or_skipped": len(retry_failures),
+                "outcomes": evaluation_retries,
+            }
+    except Exception as exc:
+        logger.warning(
+            "scheduled intelligence: evaluation recovery failed (%s)",
+            type(exc).__name__,
+        )
+        intelligence["evaluation_recovery"] = {
+            "status": "error",
+            "error": type(exc).__name__,
+        }
+
     # Stage 3: requeue stale research tasks so eligible work is not stuck.
     try:
         with database.SessionLocal() as db:
