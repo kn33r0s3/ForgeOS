@@ -432,6 +432,69 @@ def run_scheduled_intelligence(
 
     intelligence: dict = {}
 
+    # Orient from the existing Operating Model contact clock. This is a soft
+    # two-day priority signal; the existing 14-day STARVED threshold remains
+    # the hard freeze for non-obligatory building.
+    contact_state: dict = {
+        "days_since_last_contact": None,
+        "contact_priority_due": True,
+        "starved": True,
+    }
+    try:
+        with database.SessionLocal() as db:
+            from app.services import operating_v4
+
+            contact_state = operating_v4.contact_state(db)
+            intelligence["operating_priority"] = {
+                "status": "ok",
+                **contact_state,
+                "next_priority": (
+                    "contact_preparation"
+                    if contact_state["contact_priority_due"]
+                    else "evidence_and_value"
+                ),
+            }
+    except Exception as exc:
+        # Unknown contact state fails toward contact preparation, never toward
+        # more building. The stage error remains visible in cycle status.
+        logger.warning("scheduled intelligence: contact orientation failed (%s)", type(exc).__name__)
+        intelligence["operating_priority"] = {
+            "status": "error",
+            "error": type(exc).__name__,
+            **contact_state,
+            "next_priority": "contact_preparation",
+        }
+
+    # When contact is overdue, reuse the existing Scout queue before research
+    # collection. Scout only drafts; sending still requires the owner's action.
+    scout_ran_early = False
+    if contact_state["contact_priority_due"]:
+        scout_ran_early = True
+        try:
+            with database.SessionLocal() as db:
+                from app.services import scout
+
+                scout_result = scout.run_scout_cycle(db)
+                db.commit()
+                err_count = len(scout_result.get("errors", []))
+                intelligence["scout_cycle"] = {
+                    "status": "partial" if err_count else "ok",
+                    "priority": "contact_preparation",
+                    "candidates_ranked": scout_result.get("candidates_ranked", 0),
+                    "candidates_scored": scout_result.get("candidates_scored", 0),
+                    "drafts_generated": scout_result.get("drafts_generated", 0),
+                    "drafts_already_open": scout_result.get("drafts_already_open", 0),
+                    "blocked": scout_result.get("blocked", 0),
+                    "errors": err_count,
+                }
+        except Exception as exc:
+            logger.warning("scheduled intelligence: priority scout failed (%s)", type(exc).__name__)
+            intelligence["scout_cycle"] = {
+                "status": "error",
+                "priority": "contact_preparation",
+                "error": type(exc).__name__,
+            }
+
     # Stage 1: reasoning cycle — plans questions/tasks/opportunities/proposals.
     try:
         with database.SessionLocal() as db:
@@ -637,56 +700,73 @@ def run_scheduled_intelligence(
         intelligence["owner_control_safety"] = {"status": "error", "error": type(exc).__name__}
         intelligence["owner_telegram_digest"] = {"status": "error", "error": type(exc).__name__}
 
-    # Stage 7: scout cycle — autonomous candidate processing.
-    # Scores and ranks registered candidates, generates drafts for top
-    # eligible ones (draft only, never sends). Uses existing scout.py seams.
-    # Isolated: separate DB session, isolated exception handling.
-    # A scout failure does not fail or conceal the other stages.
-    try:
-        with database.SessionLocal() as db:
-            from app.services import scout
+    if not scout_ran_early:
+        # Stage 7: scout cycle — autonomous candidate processing.
+        # Scores and ranks registered candidates, generates drafts for top
+        # eligible ones (draft only, never sends). Uses existing scout.py seams.
+        # Isolated: separate DB session, isolated exception handling.
+        # A scout failure does not fail or conceal the other stages.
+        try:
+            with database.SessionLocal() as db:
+                from app.services import scout
+    
+                scout_result = scout.run_scout_cycle(db)
+                db.commit()
+                err_count = len(scout_result.get("errors", []))
+                stage7_status = "partial" if err_count else "ok"
+                intelligence["scout_cycle"] = {
+                    "status": stage7_status,
+                    "candidates_ranked": scout_result.get("candidates_ranked", 0),
+                    "candidates_scored": scout_result.get("candidates_scored", 0),
+                    "drafts_generated": scout_result.get("drafts_generated", 0),
+                    "blocked": scout_result.get("blocked", 0),
+                    "errors": err_count,
+                }
+        except Exception as exc:
+            logger.warning("scheduled intelligence: scout_cycle failed (%s)", type(exc).__name__)
+            intelligence["scout_cycle"] = {"status": "error", "error": type(exc).__name__}
 
-            scout_result = scout.run_scout_cycle(db)
-            db.commit()
-            err_count = len(scout_result.get("errors", []))
-            stage7_status = "partial" if err_count else "ok"
-            intelligence["scout_cycle"] = {
-                "status": stage7_status,
-                "candidates_ranked": scout_result.get("candidates_ranked", 0),
-                "candidates_scored": scout_result.get("candidates_scored", 0),
-                "drafts_generated": scout_result.get("drafts_generated", 0),
-                "blocked": scout_result.get("blocked", 0),
-                "errors": err_count,
-            }
-    except Exception as exc:
-        logger.warning("scheduled intelligence: scout_cycle failed (%s)", type(exc).__name__)
-        intelligence["scout_cycle"] = {"status": "error", "error": type(exc).__name__}
-
-    # Stage 8: evidence-grounded public-content drafting. This writes only
-    # DRAFT content assets into the six-primitive substrate; it never publishes
-    # or sends. Publishing remains blocked until an official destination and
-    # the corresponding authorization are verified.
-    try:
-        with database.SessionLocal() as db:
-            from app.services import content_loop
-
-            content_result = content_loop.run_content_draft_cycle(db)
-            db.commit()
-            content_status = "partial" if content_result.get("errors") else "ok"
-            intelligence["content_drafts"] = {
-                "status": content_status,
-                "source_questions_scanned": content_result.get("source_questions_scanned", 0),
-                "drafts_generated": content_result.get("drafts_generated", 0),
-                "existing_drafts": content_result.get("existing_drafts", 0),
-                "skipped_private_or_sensitive": content_result.get("skipped_private_or_sensitive", 0),
-                "published": 0,
-                "publish_status": content_result.get("publish_status", "blocked"),
-                "publish_blockers": content_result.get("publish_blockers", []),
-                "errors": len(content_result.get("errors", [])),
-            }
-    except Exception as exc:
-        logger.warning("scheduled intelligence: content_drafts failed (%s)", type(exc).__name__)
-        intelligence["content_drafts"] = {"status": "error", "error": type(exc).__name__}
+    # At the hard starvation threshold, non-obligatory building freezes.
+    # Public-content drafting is build work, so preserve the gap and report it
+    # as intentionally skipped while contact preparation and sensing continue.
+    if contact_state["starved"]:
+        intelligence["content_drafts"] = {
+            "status": "skipped",
+            "reason": "STARVED freeze: contact preparation, sensing, verification, and System Obligations only",
+            "source_questions_scanned": 0,
+            "drafts_generated": 0,
+            "existing_drafts": 0,
+            "skipped_private_or_sensitive": 0,
+            "published": 0,
+            "publish_status": "blocked",
+            "publish_blockers": ["STARVED operating-model freeze"],
+            "errors": 0,
+        }
+    else:
+        # DRAFT content assets into the six-primitive substrate; it never publishes
+        # or sends. Publishing remains blocked until an official destination and
+        # the corresponding authorization are verified.
+        try:
+            with database.SessionLocal() as db:
+                from app.services import content_loop
+    
+                content_result = content_loop.run_content_draft_cycle(db)
+                db.commit()
+                content_status = "partial" if content_result.get("errors") else "ok"
+                intelligence["content_drafts"] = {
+                    "status": content_status,
+                    "source_questions_scanned": content_result.get("source_questions_scanned", 0),
+                    "drafts_generated": content_result.get("drafts_generated", 0),
+                    "existing_drafts": content_result.get("existing_drafts", 0),
+                    "skipped_private_or_sensitive": content_result.get("skipped_private_or_sensitive", 0),
+                    "published": 0,
+                    "publish_status": content_result.get("publish_status", "blocked"),
+                    "publish_blockers": content_result.get("publish_blockers", []),
+                    "errors": len(content_result.get("errors", [])),
+                }
+        except Exception as exc:
+            logger.warning("scheduled intelligence: content_drafts failed (%s)", type(exc).__name__)
+            intelligence["content_drafts"] = {"status": "error", "error": type(exc).__name__}
 
     # Finalize the CycleRun observability record with per-stage outcomes.
     # A response is successful only when its run record is finalized durably.
