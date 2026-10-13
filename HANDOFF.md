@@ -129,12 +129,13 @@ than a few days old, re-verify before trusting the details.
 
 ## Last verified state snapshot (2026-10-14)
 
-**Update 2026-10-14 (scheduled-loop integration; implementation commits `fd31e282` / `091704a4`, regression coverage through `cc3871a`):**
+**Update 2026-10-14 (scheduled-loop integration; implementation commits `fd31e282` / `091704a4` / `57c6bbae`, regression coverage through `4c3a0fbd`):**
 - The scheduled intelligence path now reads the existing Operating Model contact state. Missing contact history or at least 2 days without a recorded contact prioritizes the existing Scout draft queue before research collection. The hard 14-day STARVED rule remains separate; non-obligatory public-content drafting is skipped while starved.
+- The contact clock now excludes `outreach.sent`: `mark_sent()` explicitly records only an owner-reported send, not verified recipient receipt or interaction. Replies and held conversations continue to reset the clock. Regression tests ensure a recent unanswered send cannot hide a 10-day-old reply or suppress STARVED when no reply/conversation exists.
 - Scout no longer creates repeated `DRAFT`/`APPROVED` messages for a candidate that already has an unresolved draft. It still never sends; owner authorization and contact gates remain unchanged.
 - When an unresolved draft already exists for a candidate, Scout reports that queued owner work before evaluating whether a new send could be allowed; this does not relax the no-repeat-without-reply send guard.
 - The existing `CycleRun.summary_json` now includes a `cycle_effect` assessment. Only signals reported by completed collector tasks count as collected source signals. Proposals, questions, action proposals and drafts are classified as Hami-created internal work, not proof of real-world effect. A cycle with only internal work or no new effect is recorded as PARTIAL instead of silently COMPLETED.
-- Regression tests were added for contact-priority thresholds, duplicate-draft prevention, contact-first ordering, STARVED content freeze, no-effect classification, and exclusion of deferred collector output from source-signal counts.
+- Regression tests were added for contact-priority thresholds, the rule that outbound attempts do not reset real contact, duplicate-draft prevention/visibility, contact-first ordering, STARVED content freeze, no-effect/internal-work classification, and exclusion of deferred collector output from source-signal counts.
 - **Verification boundary:** Vercel's GitHub status for `fd31e282` was PENDING at the last check. The connected Vercel deployment/runtime API returned 403 for the project scope; exact-head backend pytest execution and live health are unverified. Do not claim this code is production-healthy from the source commit alone.
 - **Reality boundary unchanged:** no autonomous customer messaging, real conversation, fulfillment, payment, or revenue was created or claimed by this implementation.
 
