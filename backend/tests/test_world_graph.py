@@ -658,6 +658,62 @@ def test_registry_evidence_and_relation_validations_fail_closed(db):
         )
 
 
+
+def test_mapped_evidence_support_and_subject_are_immutable(db):
+    _seed(db)
+    original = world_graph.create_entity(
+        db,
+        entity_type="resource",
+        display_name="Evidence subject one",
+        attributes={},
+        created_by="test",
+    )
+    other = world_graph.create_entity(
+        db,
+        entity_type="resource",
+        display_name="Evidence subject two",
+        attributes={},
+        created_by="test",
+    )
+    evidence = world_graph.create_evidence(
+        db,
+        subject_kind="entity",
+        subject_id=original.id,
+        claim="A possible statement with preserved lineage.",
+        support_level="possible",
+        source="reviewed_source",
+        provenance={"url": "https://example.org/possible"},
+    )
+    db.commit()
+    evidence_id = evidence.id
+    original_id = original.id
+    other_id = other.id
+
+    evidence.support_level = "supported"
+    with pytest.raises(
+        world_graph.SubstrateError,
+        match="mapped Evidence substrate fields are immutable",
+    ):
+        db.flush()
+    db.rollback()
+
+    evidence = db.get(models.Evidence, evidence_id)
+    assert evidence.support_level == "possible"
+    assert evidence.subject_id == original_id
+
+    evidence.subject_id = other_id
+    with pytest.raises(
+        world_graph.SubstrateError,
+        match="mapped Evidence substrate fields are immutable",
+    ):
+        db.flush()
+    db.rollback()
+
+    evidence = db.get(models.Evidence, evidence_id)
+    assert evidence.subject_id == original_id
+    assert evidence.support_level == "possible"
+
+
 def test_substrate_evidence_idempotency_returns_original_and_rejects_key_reuse(db):
     _seed(db)
     entity = world_graph.create_entity(

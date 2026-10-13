@@ -342,14 +342,90 @@ def test_distinct_retry_attempts_are_counted_but_replays_are_idempotent(db):
     assert summary["failures"] == 2
 
 
+
+def test_legacy_usage_history_is_preserved_but_excluded_from_current_learning(db):
+    task = _create_test_task(db, "legacy performance history")
+    now = datetime.now(timezone.utc)
+    db.add(models.ToolUsageEvent(
+        tool_name="collector:legacy-source",
+        research_task_id=task.id,
+        query="legacy metrics contract",
+        result_count=100,
+        useful_result_count=100,
+        verified_result_count=100,
+        corroborated_evidence_count=100,
+        success=True,
+        event_key="f" * 64,
+        created_at=now,
+    ))
+    db.add(models.SourceUsageEvent(
+        source="legacy-source",
+        source_type="web",
+        query="legacy metrics contract",
+        research_task_id=task.id,
+        result_count=100,
+        useful_evidence_count=100,
+        novel_evidence_count=100,
+        corroborated_evidence_count=100,
+        contradicted_claim_count=0,
+        duplicate_result_count=0,
+        freshness=100.0,
+        success=True,
+        event_key="e" * 64,
+        created_at=now,
+    ))
+    db.commit()
+
+    # A current-contract attempt has no target-claim relevance assessment.
+    tool_usefulness.record_usage(
+        db,
+        tool_name="collector:legacy-source",
+        source="legacy-source",
+        source_type="web",
+        query="current metrics contract",
+        research_task_id=task.id,
+        claim_id=None,
+        result_count=1,
+        useful_result_count=None,
+        novel_result_count=1,
+        verified_result_count=0,
+        duplicate_result_count=0,
+        corroborated_evidence_count=0,
+        contradicted_claim_count=None,
+        freshness=None,
+        latency_ms=8.0,
+        success=True,
+        result_ids=[777],
+        attempt_number=1,
+    )
+
+    tool = tool_usefulness.tool_summary(db, "collector:legacy-source")
+    source = tool_usefulness.source_summary(db, "legacy-source")
+
+    assert tool["metrics_contract_version"] == 2
+    assert source["metrics_contract_version"] == 2
+    assert tool["historical_events_excluded"] == 1
+    assert source["historical_events_excluded"] == 1
+    assert tool["attempts"] == 1
+    assert source["attempts"] == 1
+    assert tool["result_count"] == 1
+    assert source["result_count"] == 1
+    assert tool["useful_count"] is None
+    assert source["useful_count"] is None
+    assert tool_usefulness.learned_score(source) is None
+    # Historical rows remain in storage; scoring simply refuses their old semantics.
+    assert db.query(models.ToolUsageEvent).filter_by(event_key="f" * 64).count() == 1
+    assert db.query(models.SourceUsageEvent).filter_by(event_key="e" * 64).count() == 1
+
+
 def test_recent_performance_and_task_specific_source_history(db):
     old = models.ToolUsageEvent(
         tool_name="tool-a", result_count=10, useful_result_count=1,
-        success=True, event_key="old", created_at=datetime.now(timezone.utc) - timedelta(days=90),
+        success=True, event_key="v2:old", created_at=datetime.now(timezone.utc) - timedelta(days=90),
     )
     recent = models.ToolUsageEvent(
         tool_name="tool-a", result_count=2, useful_result_count=2,
-        success=True, event_key="recent", created_at=datetime.now(timezone.utc),
+        success=True, event_key="v2:recent", created_at=datetime.now(timezone.utc),
     )
     db.add_all([old, recent])
     db.commit()

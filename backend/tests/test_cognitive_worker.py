@@ -570,9 +570,12 @@ def test_bounded_local_cognitive_batch_is_gated_and_vetoes_vercel(db, monkeypatc
 
     monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
     monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "OLLAMA_HOST", "http://localhost:11434")
+    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "")
     monkeypatch.setenv("VERCEL", "1")
     unavailable = cognitive_worker.run_pending_cognitive_tasks(db, limit=1)
     assert unavailable["status"] == "unavailable"
+    assert unavailable["reason"] == "local_ollama_is_not_available_in_vercel_runtime"
     assert db.query(models.WorkerTask).filter_by(worker_type="cognitive").count() == 0
 
 
@@ -657,3 +660,36 @@ def test_cognitive_provider_blocks_self_hosted_mode_without_internal_context_opt
 
     with pytest.raises(CognitiveProviderUnavailable, match="Remote cognitive execution may receive Hami task context"):
         cognitive_provider.get_cognitive_provider()
+
+
+
+def test_bounded_cognitive_worker_allows_approved_self_hosted_gateway_in_vercel(db, monkeypatch):
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "OLLAMA_HOST", "https://models.example.test")
+    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "test-only-gateway-token")
+    monkeypatch.setattr(settings, "HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA", True)
+    monkeypatch.setenv("VERCEL", "1")
+
+    result = cognitive_worker.run_pending_cognitive_tasks(db, limit=1)
+
+    # There is no eligible task in this clean fixture, but the worker must get
+    # past the old blanket-Vercel veto when a remote gateway is configured and
+    # the owner has separately authorized internal-context transfer.
+    assert result["reason"] != "local_ollama_is_not_available_in_vercel_runtime"
+    assert db.query(models.WorkerTask).filter_by(worker_type="cognitive").count() == 0
+
+
+def test_bounded_cognitive_worker_blocks_self_hosted_gateway_without_data_opt_in(db, monkeypatch):
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "OLLAMA_HOST", "https://models.example.test")
+    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "test-only-gateway-token")
+    monkeypatch.setattr(settings, "HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA", False)
+    monkeypatch.setenv("VERCEL", "1")
+
+    result = cognitive_worker.run_pending_cognitive_tasks(db, limit=1)
+
+    assert result["status"] == "blocked"
+    assert result["reason"] == "remote_internal_context_not_authorized"
+    assert db.query(models.WorkerTask).filter_by(worker_type="cognitive").count() == 0

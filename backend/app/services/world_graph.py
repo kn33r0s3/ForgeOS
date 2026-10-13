@@ -46,6 +46,7 @@ _ENTITY_MERGE_AUTH_KEY = "forgeos.entity_merge"
 _ENTITY_ARCHIVE_AUTH_KEY = "forgeos.entity_archive"
 _ENTITY_SOURCE_REFRESH_AUTH_KEY = "forgeos.entity_source_refresh"
 _CAPABILITY_LIFECYCLE_AUTH_KEY = "forgeos.capability_lifecycle_transition"
+_LEGACY_EVIDENCE_ATTACH_AUTH_KEY = "forgeos.legacy_evidence_attach"
 _CAPABILITY_TRANSITIONS = {"proposed": {"building"}, "building": {"tested"}, "tested": {"active"}}
 _REVISION = re.compile(r"^[0-9a-f]{7,40}$")
 
@@ -1149,16 +1150,24 @@ def attach_legacy_evidence(
     if evidence.subject_id is not None:
         raise SubstrateError("legacy evidence has a dangling substrate subject id")
 
-    evidence.subject_kind = "entity"
-    evidence.subject_id = subject_id
-    evidence.support_level = "unknown"
-    evidence.substrate_source = clean_source
-    evidence.substrate_confidence = None
-    evidence.substrate_provenance = provenance_json
-    evidence.recorded_at = recorded_at
-    _validate_substrate_evidence(db, evidence)
-    db.flush()
-    return evidence
+    previous_auth = db.info.get(_LEGACY_EVIDENCE_ATTACH_AUTH_KEY)
+    db.info[_LEGACY_EVIDENCE_ATTACH_AUTH_KEY] = evidence
+    try:
+        evidence.subject_kind = "entity"
+        evidence.subject_id = subject_id
+        evidence.support_level = "unknown"
+        evidence.substrate_source = clean_source
+        evidence.substrate_confidence = None
+        evidence.substrate_provenance = provenance_json
+        evidence.recorded_at = recorded_at
+        _validate_substrate_evidence(db, evidence)
+        db.flush()
+        return evidence
+    finally:
+        if previous_auth is None:
+            db.info.pop(_LEGACY_EVIDENCE_ATTACH_AUTH_KEY, None)
+        else:
+            db.info[_LEGACY_EVIDENCE_ATTACH_AUTH_KEY] = previous_auth
 
 
 def create_event(
@@ -2183,7 +2192,11 @@ def _is_simulated_provenance(raw: str) -> bool:
         marker_words = {
             "fixture", "mock", "mocked", "simulated", "simulation", "synthetic",
         }
-        negators = {"not", "no", "never", "without", "isnt", "wasnt", "doesnt", "dont"}
+        negators = {
+            "not", "no", "never", "without",
+            "isnt", "wasnt", "doesnt", "dont",
+            "isn", "wasn", "doesn", "don",
+        }
         for index, token in enumerate(tokens):
             is_marker = token in marker_words or (
                 token in {"data", "only"}
@@ -2221,7 +2234,8 @@ def _is_simulated_provenance(raw: str) -> bool:
     }
     simulated_values = {
         "test", "test_fixture", "test_data", "test_only", "fixture",
-        "synthetic", "simulated", "simulation", "mock", "demo", "seed", "hypothesis",
+        "synthetic", "simulated", "simulation", "mock", "mocked", "fake",
+        "demo", "seed", "hypothesis",
     }
     true_flags = {"true", "yes", "1", "enabled", "on"}
 
@@ -2496,4 +2510,37 @@ def _enforce_substrate_write_contract(session: Session, flush_context: Any, inst
             elif state.attrs.attributes.history.has_changes():
                 _validate_attributes(session, "capability_type", obj.capability_type, _json_object(obj.attributes, "capability attributes"))
         if isinstance(obj, models.Evidence) and obj.subject_kind is not None:
+            if not is_new:
+                substrate_fields = (
+                    "subject_kind",
+                    "subject_id",
+                    "support_level",
+                    "substrate_source",
+                    "substrate_confidence",
+                    "substrate_provenance",
+                    "recorded_at",
+                )
+                changed_substrate_fields = [
+                    field for field in substrate_fields
+                    if state.attrs[field].history.has_changes()
+                ]
+                if changed_substrate_fields:
+                    kind_history = state.attrs.subject_kind.history
+                    id_history = state.attrs.subject_id.history
+                    authorized_legacy_attach = (
+                        session.info.get(_LEGACY_EVIDENCE_ATTACH_AUTH_KEY) is obj
+                        and kind_history.has_changes()
+                        and bool(kind_history.deleted)
+                        and kind_history.deleted[0] is None
+                        and id_history.has_changes()
+                        and bool(id_history.deleted)
+                        and id_history.deleted[0] is None
+                        and obj.subject_kind == "entity"
+                        and obj.support_level == "unknown"
+                    )
+                    if not authorized_legacy_attach:
+                        raise SubstrateError(
+                            "mapped Evidence substrate fields are immutable; "
+                            "attach legacy rows or add a new Evidence record instead"
+                        )
             _validate_substrate_evidence(session, obj)
