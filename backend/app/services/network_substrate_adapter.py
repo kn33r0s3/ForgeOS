@@ -111,6 +111,30 @@ def sync_network_connections(db: Session, *, limit: int = 100) -> dict[str, int]
         left_ready,
         right_ready,
     )
+    eligible_root_count = eligible_unprojected.count()
+    blocked_nested_rows = []
+    if eligible_root_count == 0:
+        # A dependency cycle (or a child whose parent is permanently invalid)
+        # has no root that can make progress. Surface it rather than silently
+        # leaving a valid-looking but impossible chain in the queue.
+        nested_dependency = or_(
+            func.lower(func.trim(connection_model.left_kind)) == "network_connection",
+            func.lower(func.trim(connection_model.right_kind)) == "network_connection",
+        )
+        blocked_nested_rows = (
+            unprojected
+            .filter(
+                active_relation_type,
+                left_source_exists,
+                right_source_exists,
+                nested_dependency,
+                ~and_(left_ready, right_ready),
+            )
+            .order_by(connection_model.updated_at.desc(), connection_model.id.desc())
+            .limit(batch_limit)
+            .all()
+        )
+        unresolved_unprojected += len(blocked_nested_rows)
 
     # Never let old invalid rows or a nested connection whose parent has not
     # been projected consume the bounded work slots. Among eligible new work,
@@ -239,9 +263,13 @@ def sync_network_connections(db: Session, *, limit: int = 100) -> dict[str, int]
             )
     for connection in endpoint_blocked_rows:
         reasons_by_id[connection.id] = (
-            "one or both endpoints are missing or depend on an unprojected network relation"
+            "one or both endpoints are missing from their canonical source tables"
         )
-    for connection in [*invalid_rows, *endpoint_blocked_rows]:
+    for connection in blocked_nested_rows:
+        reasons_by_id[connection.id] = (
+            "nested network dependency has no projectable root; possible cycle or unresolved parent chain"
+        )
+    for connection in [*invalid_rows, *endpoint_blocked_rows, *blocked_nested_rows]:
         result["events_created"] += _record_unresolved(
             db,
             connection,
