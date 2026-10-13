@@ -30,7 +30,6 @@ def sync_research_question_sources(db: Session, *, limit: int = 250) -> dict[str
     # Count dangling explicit FKs separately; don't let them occupy the
     # bounded work window forever. Valid but not-yet-projected links remain
     # eligible until an idempotent derived_from relation exists.
-    source_exists_by_field = {}
     pending_conditions = []
     for source_field, _entity_type, source_model in _SOURCE_FIELDS:
         source_id_expr = getattr(models.ResearchQuestion, source_field)
@@ -40,7 +39,6 @@ def sync_research_question_sources(db: Session, *, limit: int = 250) -> dict[str
             .correlate(models.ResearchQuestion)
             .exists()
         )
-        source_exists_by_field[source_field] = source_exists
         unresolved_count = (
             db.query(func.count(models.ResearchQuestion.id))
             .filter(source_id_expr.isnot(None), ~source_exists)
