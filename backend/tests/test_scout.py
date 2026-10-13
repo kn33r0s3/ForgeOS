@@ -1,5 +1,7 @@
 """Scout + Draft + Approval Queue: registry, scoring, drafts, guards."""
 
+import json
+
 import pytest
 
 from app import models
