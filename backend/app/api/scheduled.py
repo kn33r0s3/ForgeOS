@@ -147,6 +147,11 @@ def _cycle_effect_summary(intelligence: dict) -> dict:
 
     counts = {
         "source_signals_created": source_signals,
+        "judgments_completed": _count_effect(collection.get("evaluations_completed")) if isinstance(collection, dict) else 0,
+        "judgments_failed": _count_effect(collection.get("judgments_failed")) if isinstance(collection, dict) else 0,
+        "evaluations_unavailable": _count_effect(collection.get("evaluations_unavailable")) if isinstance(collection, dict) else 0,
+        "metadata_only_unassessed": _count_effect(collection.get("metadata_only_unassessed")) if isinstance(collection, dict) else 0,
+        "evaluation_incomplete": _count_effect(collection.get("evaluation_incomplete")) if isinstance(collection, dict) else 0,
         "discovery_proposals_surfaced": _count_effect(discovery.get("surfaced")) if isinstance(discovery, dict) else 0,
         "research_questions_created": (
             _count_effect(forge.get("questions_created")) if isinstance(forge, dict) else 0
@@ -199,6 +204,12 @@ def _cycle_effect_summary(intelligence: dict) -> dict:
         next_owner_attention = "review_existing_contact_draft"
     elif counts["pending_contact_replies"]:
         next_owner_attention = "wait_for_reply_without_repeat_contact"
+    elif counts["evaluations_unavailable"]:
+        next_owner_attention = "connect_or_repair_non_paid_judge"
+    elif counts["judgments_failed"]:
+        next_owner_attention = "repair_judge_execution"
+    elif counts["metadata_only_unassessed"]:
+        next_owner_attention = "retrieve_substantive_source_content"
     elif status in {"internal_work_only", "no_new_effect"}:
         next_owner_attention = (
             "inspect_blockers_and_choose_a_reality-linked_next_action"
