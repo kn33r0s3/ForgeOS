@@ -2253,7 +2253,7 @@ def test_grounded_answer_uses_language_aware_data_envelope(monkeypatch):
         if completion_observation is not None:
             completion_observation.update({
                 "provider": "ollama", "mode": "LOCAL", "model": "qwen3-coder:latest",
-                "status": "completed", "inference_invoked": True,
+                "status": "completed", "request_attempted": True, "inference_invoked": True,
                 "prompt_eval_tokens": 10, "completion_eval_tokens": 5, "total_duration_ms": 120.0,
             })
         return "Hami ko record anusar yo ajhai hypothesis ho."
@@ -2268,6 +2268,7 @@ def test_grounded_answer_uses_language_aware_data_envelope(monkeypatch):
     assert captured["allow_mock_fallback"] is False
     assert result["answer"] == "Hami ko record anusar yo ajhai hypothesis ho."
     assert result["provider_observation"]["inference_invoked"] is True
+    assert result["provider_observation"]["request_attempted"] is True
     assert result["provider_observation"]["model"] == "qwen3-coder:latest"
     assert result["provider_observation"]["total_duration_ms"] == 120.0
 
@@ -2472,3 +2473,47 @@ def test_empty_provider_response_is_not_reported_as_an_answer(monkeypatch):
 
     assert observation["status"] == "empty_response"
     assert observation["inference_invoked"] is True
+
+
+
+def test_forge_ask_api_returns_observed_model_metadata(monkeypatch, db):
+    from fastapi.testclient import TestClient
+    from app.database import get_db
+    from app.main import app
+    from app.services import ai_engine, memory_layer
+
+    monkeypatch.setattr(settings, "FORGE_API_KEY", "test-owner-key")
+    monkeypatch.setattr(ai_engine, "get_provider_status", lambda: {
+        "provider": "ollama", "mode": "SELF_HOSTED", "status": "MODEL_AVAILABLE",
+        "inference_verified": False,
+    })
+    monkeypatch.setattr(ai_engine, "answer_question", lambda *args, **kwargs: {
+        "answer": "यो अझै परिकल्पना हो।",
+        "context_used": "One stored hypothesis.",
+        "provider_observation": {
+            "provider": "ollama", "mode": "SELF_HOSTED", "model": "qwen3-coder:latest",
+            "status": "completed", "request_attempted": True, "inference_invoked": True,
+            "prompt_eval_tokens": 21, "completion_eval_tokens": 12, "total_duration_ms": 420.0,
+        },
+    })
+    monkeypatch.setattr(memory_layer, "search_knowledge", lambda *args, **kwargs: [])
+    def override_db():
+        yield db
+    app.dependency_overrides[get_db] = override_db
+    client = TestClient(app)
+    try:
+        response = client.post(
+            "/forge/ask",
+            headers={"X-API-Key": "test-owner-key"},
+            json={"question": "यो के हो?"},
+        )
+    finally:
+        client.close()
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["provider_observation"]["mode"] == "SELF_HOSTED"
+    assert body["provider_observation"]["model"] == "qwen3-coder:latest"
+    assert body["provider_observation"]["inference_invoked"] is True
+    assert body["provider_observation"]["total_duration_ms"] == 420.0
