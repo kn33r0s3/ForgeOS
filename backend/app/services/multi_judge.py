@@ -173,11 +173,10 @@ def _default_judges(evidence: list[models.Evidence] | None = None) -> list[Judge
 
     registry = default_registry()
     specs: list[JudgeSpec] = []
-    # Prefer local execution. Merely having OPENAI_API_KEY configured does not
-    # authorize paid calls from unattended scheduled collection.
+    # Prefer local execution. Paid judge calls remain blocked even if the old
+    # opt-in flag or an API key is set: this route has no per-call usage ledger
+    # connected to the global spend guard. Do not add a direct paid adapter here.
     candidates = [("local-qwen3-coder", "ollama", settings.OLLAMA_MODEL)]
-    if settings.FORGEOS_OPENAI_JUDGE_ENABLED:
-        candidates.append(("openai-completion", "openai", settings.OPENAI_MODEL))
 
     permitted_ids = tuple(item.id for item in permitted) if permitted is not None else None
     for name, provider, model in candidates:
