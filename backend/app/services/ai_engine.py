@@ -40,6 +40,7 @@ Providers
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import textwrap
@@ -213,11 +214,14 @@ class OllamaProvider(AIProvider):
             ) from exc
         if not isinstance(data, dict) or not isinstance(data.get("response"), str):
             raise RuntimeError("Ollama returned an invalid generation response")
+        prompt_tokens = data.get("prompt_eval_count")
+        completion_tokens = data.get("eval_count")
+        duration_ns = data.get("total_duration")
         self.last_call_metadata = {
-            "prompt_eval_tokens": data.get("prompt_eval_count"),
-            "completion_eval_tokens": data.get("eval_count"),
-            "total_duration_ms": round(data["total_duration"] / 1_000_000, 2)
-            if isinstance(data.get("total_duration"), (int, float)) and data["total_duration"] >= 0
+            "prompt_eval_tokens": prompt_tokens if type(prompt_tokens) is int and prompt_tokens >= 0 else None,
+            "completion_eval_tokens": completion_tokens if type(completion_tokens) is int and completion_tokens >= 0 else None,
+            "total_duration_ms": round(duration_ns / 1_000_000, 2)
+            if type(duration_ns) in {int, float} and math.isfinite(duration_ns) and duration_ns >= 0
             else None,
         }
         return data
@@ -398,7 +402,7 @@ def _complete_with_fallback(
         if completion_observation is not None:
             completion_observation.update({
                 "provider": "mock", "mode": "MOCK", "model": None,
-                "status": "AI_UNAVAILABLE", "inference_invoked": False,
+                "status": "AI_UNAVAILABLE", "request_attempted": False, "inference_invoked": False,
             })
         if not allow_mock_fallback:
             raise AIUnavailableError("mock", "template output is not permitted for this evidence-grounded answer")
@@ -435,33 +439,44 @@ def _complete_with_fallback(
         if completion_observation is not None:
             completion_observation.update({
                 "provider": provider_name, "mode": "UNKNOWN", "model": None,
-                "status": "AI_UNAVAILABLE", "inference_invoked": False,
+                "status": "AI_UNAVAILABLE", "request_attempted": False, "inference_invoked": False,
             })
         raise AIUnavailableError(provider_name, "real provider not available")
 
     mode = getattr(provider, "_transport_mode", "EXTERNAL")
     model = getattr(provider, "_model", None)
     try:
+        if completion_observation is not None:
+            completion_observation.update({
+                "provider": provider_name, "mode": mode, "model": model,
+                "status": "requesting", "request_attempted": True, "inference_invoked": False,
+            })
         answer = provider.complete(full_prompt, system=system)
         if not isinstance(answer, str) or not answer.strip():
             if completion_observation is not None:
                 completion_observation.update({
                     "provider": provider_name, "mode": mode, "model": model,
-                    "status": "empty_response", "inference_invoked": True,
+                    "status": "empty_response", "request_attempted": True, "inference_invoked": True,
                 })
             raise AIUnavailableError(provider_name, "provider returned an empty completion")
         if completion_observation is not None:
             details = getattr(provider, "last_call_metadata", {})
             details = details if isinstance(details, dict) else {}
+            prompt_tokens = details.get("prompt_eval_tokens")
+            completion_tokens = details.get("completion_eval_tokens")
+            duration_ms = details.get("total_duration_ms")
             completion_observation.update({
                 "provider": provider_name,
                 "mode": mode,
                 "model": model,
                 "status": "completed",
+                "request_attempted": True,
                 "inference_invoked": True,
-                "prompt_eval_tokens": details.get("prompt_eval_tokens"),
-                "completion_eval_tokens": details.get("completion_eval_tokens"),
-                "total_duration_ms": details.get("total_duration_ms"),
+                "prompt_eval_tokens": prompt_tokens if type(prompt_tokens) is int and prompt_tokens >= 0 else None,
+                "completion_eval_tokens": completion_tokens if type(completion_tokens) is int and completion_tokens >= 0 else None,
+                "total_duration_ms": duration_ms
+                if type(duration_ms) in {int, float} and math.isfinite(duration_ms) and duration_ms >= 0
+                else None,
             })
         return answer.strip()
     except Exception as e:
@@ -476,7 +491,7 @@ def _complete_with_fallback(
         if completion_observation is not None and completion_observation.get("status") != "empty_response":
             completion_observation.update({
                 "provider": provider_name, "mode": mode, "model": model,
-                "status": "AI_UNAVAILABLE", "inference_invoked": True,
+                "status": "AI_UNAVAILABLE", "request_attempted": True, "inference_invoked": False,
                 "failure_type": type(e).__name__,
             })
         if isinstance(e, AIUnavailableError):
