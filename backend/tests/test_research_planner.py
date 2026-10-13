@@ -93,6 +93,93 @@ def test_prior_external_evidence_is_reused_as_unverified_context(db):
     assert observation["epistemic_status"] == "prior_observation_unverified"
 
 
+def test_linked_claim_evidence_is_reused_by_reference_without_truth_upgrade(db):
+    from app.services import research_planner
+
+    claim = models.Claim(
+        statement="Repair shops repeatedly reschedule appointments.",
+        normalized_statement="repair shops repeatedly reschedule appointments",
+        epistemic_state="contested",
+    )
+    public_signal = models.Signal(
+        source="crossref",
+        source_type="external",
+        content="A study describes scheduling constraints in repair businesses.",
+        title="Scheduling constraints",
+        canonical_url="https://doi.org/10.1234/scheduling",
+        retrieved_at=models.utcnow(),
+    )
+    restricted_signal = models.Signal(
+        source="rss",
+        source_type="external",
+        content="A participant describes scheduling constraints in repair businesses.",
+        title="Participant scheduling account",
+        canonical_url="https://example.test/restricted-scheduling",
+        retrieved_at=models.utcnow(),
+    )
+    db.add_all([claim, public_signal, restricted_signal])
+    db.flush()
+
+    reusable = models.Evidence(
+        signal_id=public_signal.id,
+        source="crossref",
+        content=public_signal.content,
+        title=public_signal.title,
+        canonical_url=public_signal.canonical_url,
+        source_kind="MOCK",
+    )
+    restricted = models.Evidence(
+        signal_id=restricted_signal.id,
+        source="rss",
+        content=restricted_signal.content,
+        title=restricted_signal.title,
+        canonical_url=restricted_signal.canonical_url,
+        source_identity="identified-participant",
+        consent_status="granted",
+        source_kind="REAL",
+    )
+    db.add_all([reusable, restricted])
+    db.flush()
+    db.add_all([
+        models.EvidenceRelationship(
+            evidence_id=reusable.id,
+            claim_id=claim.id,
+            relation_type="supports",
+            relation_key="test-linked-reusable-evidence",
+        ),
+        models.EvidenceRelationship(
+            evidence_id=restricted.id,
+            claim_id=claim.id,
+            relation_type="supports",
+            relation_key="test-linked-restricted-evidence",
+        ),
+    ])
+    question = models.ResearchQuestion(
+        question="What further evidence tests appointment rescheduling constraints?",
+        source_claim_id=claim.id,
+    )
+    db.add(question)
+    db.commit()
+    db.refresh(question)
+
+    plan = research_planner.build_research_plan(db, question)
+    linked = [
+        item for item in plan["known_observations"]
+        if item.get("reuse_mode") == "reference_only"
+    ]
+
+    assert len(linked) == 1
+    assert linked[0]["evidence_id"] == reusable.id
+    assert linked[0]["related_claim_id"] == claim.id
+    assert linked[0]["recorded_relationship"] == "supports"
+    assert linked[0]["source_kind"] == "MOCK"
+    assert linked[0]["epistemic_status"] == "linked_claim_context_unverified"
+    assert linked[0]["link_is_not_independent_verification"] is True
+    assert "content" not in linked[0]
+    assert all(item.get("evidence_id") != restricted.id for item in plan["known_observations"])
+    assert db.get(models.Claim, claim.id).epistemic_state == "contested"
+
+
 def test_gap_questions_are_not_planned_for_external_collectors(db):
     gap = models.ResearchQuestion(
         question='Gap: open job #1 "repair" has no recorded counterparty.'
