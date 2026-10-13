@@ -727,7 +727,14 @@ def run_scheduled_intelligence(
             from app.services import collector_runner
 
             evaluation_retries = collector_runner.run_pending_evaluations(
-                db, limit=2, max_retries_per_task=3
+                db,
+                limit=2,
+                max_retries_per_task=3,
+                exclude_task_ids={
+                    item.get("task_id")
+                    for item in intelligence.get("collection_cycle", {}).get("outcomes", [])
+                    if isinstance(item, dict) and isinstance(item.get("task_id"), int)
+                },
             )
             retry_failures = [
                 item for item in evaluation_retries
