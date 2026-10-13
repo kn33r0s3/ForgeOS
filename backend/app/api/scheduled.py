@@ -384,6 +384,16 @@ def run_scheduled_intelligence(
     cycle_started_at = datetime.now(timezone.utc)
     try:
         with database.SessionLocal() as odb:
+            # Operating Model v4: dormancy freezes scheduled agent runs too.
+            # Check in the same durable session before creating a CycleRun or
+            # allowing any reasoning, collection, discovery, or draft work.
+            try:
+                from app.services import operating_v4
+
+                operating_v4.check_agent_run_allowed(odb)
+            except ValueError as exc:
+                raise HTTPException(status_code=423, detail=str(exc)) from exc
+
             # Recover abandoned history before recording a fresh run. Keep the
             # new run usable even if reconciliation itself is unavailable.
             try:
@@ -406,6 +416,9 @@ def run_scheduled_intelligence(
             odb.commit()
             odb.refresh(row)
             cycle_run_id = row.id
+    except HTTPException:
+        release_intelligence_lock()
+        raise
     except Exception as exc:
         logger.warning("scheduled intelligence: CycleRun record failed (%s)", type(exc).__name__)
         # Evidence and state work must never run without a durable run record.
