@@ -188,7 +188,7 @@ def test_missing_input_becomes_capability_gap_closed_only_by_the_verified_lifecy
 
     # Building the gap row itself through the hardened lifecycle closes it.
     # Non-starved: lifecycle tests verify mechanics, not operating discipline.
-    world_graph.create_event(db, event_type="outreach.sent", source="test", payload={})
+    world_graph.create_event(db, event_type="conversation.held", source="test", payload={})
     db.commit()
     world_graph.begin_capability_build(db, gap)
     world_graph.mark_capability_tested(
