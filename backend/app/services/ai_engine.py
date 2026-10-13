@@ -35,10 +35,10 @@ Providers
                     No API key, no per-token cost, no internet required
                     once a model is pulled. The intended "better than
                     mock, still $0" path.
-- OpenAIProvider : OPTIONAL paid acceleration via the OpenAI API. Only
-                    used if explicitly configured; never required, and
-                    the `openai` package itself is an optional install
-                    (see requirements-optional.txt).
+- OpenAIProvider : legacy adapter class kept for compatibility; the
+                    shared provider factory deliberately refuses paid calls
+                    until per-call usage metering and the global spend guard
+                    are enforced. Tool/judge registries must not call it directly.
 """
 
 from __future__ import annotations
@@ -67,8 +67,9 @@ class AIUnavailableError(RuntimeError):
     """Raised when a real AI provider was configured but is unavailable.
 
     Production code must surface this as AI_UNAVAILABLE / degraded —
-    never silently replace with fabricated MockProvider output unless
-    AI_PROVIDER is explicitly set to "mock" or DEMO_MODE is on.
+    never silently replace a grounded answer with fabricated MockProvider
+    output. A mock fallback is only permitted when the individual caller
+    allows it and AI_FALLBACK_TO_MOCK is explicitly enabled.
     """
     def __init__(self, provider: str, reason: str):
         self.provider = provider
