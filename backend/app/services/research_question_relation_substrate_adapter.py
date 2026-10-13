@@ -31,6 +31,15 @@ def sync_research_question_sources(db: Session, *, limit: int = 250) -> dict[str
     # bounded work window forever. Valid but not-yet-projected links remain
     # eligible until an idempotent derived_from relation exists.
     pending_conditions = []
+    question_type_active = (
+        db.query(models.TypeRegistry.id)
+        .filter(
+            models.TypeRegistry.category == "entity_type",
+            models.TypeRegistry.type_name == "research_question",
+            models.TypeRegistry.status == "active",
+        )
+        .exists()
+    )
     for source_field, _entity_type, source_model in _SOURCE_FIELDS:
         source_id_expr = getattr(models.ResearchQuestion, source_field)
         source_exists = (
@@ -57,8 +66,24 @@ def sync_research_question_sources(db: Session, *, limit: int = 250) -> dict[str
             .correlate(models.ResearchQuestion)
             .exists()
         )
+        source_type_active = (
+            db.query(models.TypeRegistry.id)
+            .filter(
+                models.TypeRegistry.category == "entity_type",
+                models.TypeRegistry.type_name == _entity_type,
+                models.TypeRegistry.status == "active",
+            )
+            .exists()
+        )
+        pending_link = and_(source_id_expr.isnot(None), source_exists, ~relation_exists)
+        blocked_by_type = (
+            db.query(func.count(models.ResearchQuestion.id))
+            .filter(pending_link, or_(~source_type_active, ~question_type_active))
+            .scalar()
+        ) or 0
+        result["unresolved_links"] += int(blocked_by_type)
         pending_conditions.append(
-            and_(source_id_expr.isnot(None), source_exists, ~relation_exists)
+            and_(pending_link, source_type_active, question_type_active)
         )
 
     rows = (
