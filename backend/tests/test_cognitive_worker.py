@@ -4,7 +4,7 @@ import pytest
 
 from app import models
 from app.config import settings
-from app.services import cognitive_provider, cognitive_worker
+from app.services import ai_engine, cognitive_provider, cognitive_worker
 from app.services import research_task_engine
 from app.services.worker_manager import process_worker_task_by_id
 
@@ -605,3 +605,38 @@ def test_cognitive_provider_supports_authenticated_self_hosted_mode(monkeypatch)
     assert provider.name == "ollama"
     assert provider.mode == "SELF_HOSTED"
     assert provider.version == settings.OLLAMA_MODEL
+
+
+
+def test_ollama_response_body_is_hard_bounded(monkeypatch):
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "OLLAMA_HOST", "http://localhost:11434")
+    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "")
+    monkeypatch.delenv("VERCEL", raising=False)
+    provider = ai_engine.OllamaProvider()
+    observed = {}
+
+    class OversizedResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self, size=-1):
+            observed["read_limit"] = size
+            return b"x" * size
+
+    monkeypatch.setattr(
+        ai_engine.urllib.request,
+        "urlopen",
+        lambda _request, timeout=60: OversizedResponse(),
+    )
+
+    with pytest.raises(RuntimeError, match="Ollama response exceeded 1048576 bytes"):
+        provider.complete_json(
+            '{"task":"test"}',
+            schema={"type": "object", "properties": {}, "additionalProperties": False},
+        )
+
+    assert observed["read_limit"] == ai_engine.MAX_OLLAMA_RESPONSE_BYTES + 1

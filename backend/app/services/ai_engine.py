@@ -51,6 +51,14 @@ from urllib.parse import urlparse
 from app.config import settings
 
 
+MAX_OLLAMA_RESPONSE_BYTES = 1_048_576
+
+
+class _OllamaResponseTooLarge(Exception):
+    """Internal sentinel for bounded inference response reads."""
+
+
+
 class AIUnavailableError(RuntimeError):
     """Raised when a real AI provider was configured but is unavailable.
 
@@ -206,7 +214,16 @@ class OllamaProvider(AIProvider):
         )
         try:
             with urllib.request.urlopen(request, timeout=60) as response:
-                data = json.loads(response.read().decode("utf-8"))
+                # A configured local/self-hosted endpoint must not be able to
+                # force an unbounded body read into this process.
+                raw_response = response.read(MAX_OLLAMA_RESPONSE_BYTES + 1)
+                if len(raw_response) > MAX_OLLAMA_RESPONSE_BYTES:
+                    raise _OllamaResponseTooLarge()
+                data = json.loads(raw_response.decode("utf-8"))
+        except _OllamaResponseTooLarge as exc:
+            raise RuntimeError(
+                f"Ollama response exceeded {MAX_OLLAMA_RESPONSE_BYTES} bytes"
+            ) from exc
         except Exception as exc:
             raise RuntimeError(
                 f"Ollama request failed — is `ollama serve` running with "
