@@ -581,18 +581,18 @@ function CycleCard({ cycle }: { cycle: CycleSummary }) {
       if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
         const root = parsed as Record<string, unknown>;
         if (typeof root.stages === "object" && root.stages !== null && !Array.isArray(root.stages)) {
-          stages = Object.fromEntries(
-            Object.entries(root.stages as Record<string, unknown>)
-              .filter(([name]) => name !== "cycle_effect")
-              .map(([name, value]) => [
-                name,
-                typeof value === "object" && value !== null && "status" in value
-                  ? { status: typeof (value as { status?: unknown }).status === "string"
-                      ? (value as { status: string }).status
-                      : "unknown" }
-                  : { status: "unknown" },
-              ]),
-          );
+          const stageMap: Record<string, { status?: string }> = {};
+          for (const [name, value] of Object.entries(root.stages as Record<string, unknown>)) {
+            if (name === "cycle_effect") continue;
+            const rawStatus =
+              typeof value === "object" && value !== null && "status" in value
+                ? (value as { status?: unknown }).status
+                : undefined;
+            stageMap[name] = {
+              status: typeof rawStatus === "string" ? rawStatus : "unknown",
+            };
+          }
+          stages = stageMap;
         }
 
         const rawStages = root.stages;
