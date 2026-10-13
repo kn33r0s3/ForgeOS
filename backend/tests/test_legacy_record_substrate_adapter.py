@@ -180,6 +180,55 @@ def test_rare_signal_assessment_projects_safe_lifecycle_snapshots(db):
     assert len(snapshots) == 2
 
 
+def test_unprojected_rare_signals_are_not_starved_by_old_snapshots(db):
+    older = models.RareSignalAssessment(
+        cluster_key="older-rare-signal",
+        label="Older assessment",
+        signal_ids="1",
+        frequency=1,
+        score=10.0,
+        status="DETECTED",
+    )
+    db.add(older)
+    db.commit()
+    db.refresh(older)
+
+    first = adapter.sync_legacy_records(db, limit=1)
+    assert first["entities_created"] == 1
+    assert world_graph.find_canonical_entity(
+        db, "rare_signal_assessment", older.id
+    ) is not None
+
+    newer = [
+        models.RareSignalAssessment(
+            cluster_key=f"new-rare-signal-{index}",
+            label=f"New assessment {index}",
+            signal_ids=str(index + 2),
+            frequency=1,
+            score=20.0 + index,
+            status="DETECTED",
+        )
+        for index in range(2)
+    ]
+    db.add_all(newer)
+    db.commit()
+
+    one = adapter.sync_legacy_records(db, limit=1)
+    assert one["entities_created"] == 1
+    assert world_graph.find_canonical_entity(
+        db, "rare_signal_assessment", newer[0].id
+    ) is not None
+    assert world_graph.find_canonical_entity(
+        db, "rare_signal_assessment", newer[1].id
+    ) is None
+
+    two = adapter.sync_legacy_records(db, limit=1)
+    assert two["entities_created"] == 1
+    assert world_graph.find_canonical_entity(
+        db, "rare_signal_assessment", newer[1].id
+    ) is not None
+
+
 def test_legacy_record_projection_survives_restart(tmp_path):
     engine = create_engine(f"sqlite:///{tmp_path / 'legacy_records.sqlite'}")
     Base.metadata.create_all(engine)
