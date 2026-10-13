@@ -32,7 +32,7 @@ def _evidence(
     canonical_url=None,
     direction="supports",
 ):
-    url = canonical_url or f"https://{source}.example.org/report"
+    url = f"https://{source}.example.org/report" if canonical_url is None else canonical_url
     signal = models.Signal(
         source=source,
         source_type="external",
@@ -115,6 +115,24 @@ def test_public_label_mapping_covers_fact_observation_external_claim_conflict_an
         canonical_url="https://publisher.example/report-b",
     )
     assert derive_public_label(db, same_host, now=now) == {
+        "epistemic_state": "observed", "stale": False,
+    }
+
+    unnamed_sources = _claim(
+        db,
+        state="observed",
+        kind="EXTERNAL CLAIM",
+        statement="Two labels without URLs cannot independently corroborate this.",
+    )
+    _evidence(
+        db, unnamed_sources, source="source-alpha", retrieved_at=now,
+        canonical_url="",
+    )
+    _evidence(
+        db, unnamed_sources, source="source-beta", retrieved_at=now,
+        canonical_url="",
+    )
+    assert derive_public_label(db, unnamed_sources, now=now) == {
         "epistemic_state": "observed", "stale": False,
     }
 
