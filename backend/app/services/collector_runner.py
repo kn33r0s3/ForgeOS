@@ -709,7 +709,7 @@ def run_pending_evaluations(
                 .order_by(models.EvidenceRelationship.id.asc())
                 .all()
             ]
-            evaluation_ids = list(dict.fromkeys(linked_ids))
+            evaluation_ids = list(dict.fromkeys(evidence_ids + linked_ids))
         if not evaluation_ids:
             continue
 
@@ -732,7 +732,10 @@ def run_pending_evaluations(
             updated_output["automatic_retry_count"] = next_retry_count
             updated_output["automatic_retry_reason"] = prior_status
             refreshed_step.output_data = updated_output
-            refreshed_step.error = refreshed_step.error or prior_error
+            if refreshed_step.status in {"completed", "skipped"}:
+                refreshed_step.error = None
+            elif not refreshed_step.error:
+                refreshed_step.error = prior_error
             task.updated_at = models.utcnow()
             db.commit()
             db.refresh(task)
