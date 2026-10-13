@@ -512,7 +512,10 @@ def run_pending_cognitive_tasks(
         )
         try:
             _, context = _context_for_task(db, preview)
-        except cognitive_provider.CognitiveTaskInputError:
+        except (
+            cognitive_provider.CognitiveTaskInputError,
+            cognitive_provider.CognitiveTaskBoundsError,
+        ):
             continue
         if not context.available_evidence_ids:
             continue
@@ -604,7 +607,24 @@ def run_pending_cognitive_tasks(
                 })
                 continue
             # Recheck safety immediately before the local provider call.
-            operating_v4.check_agent_run_allowed(db)
+            try:
+                operating_v4.check_agent_run_allowed(db)
+            except ValueError:
+                # A changed owner gate is not a model/provider failure. Return
+                # the lease to the queue without spending its retry budget.
+                worker_task.status = "queued"
+                worker_task.error = None
+                worker_task.next_run_at = None
+                worker_task.updated_at = models.utcnow()
+                db.commit()
+                outcomes.append({
+                    "research_task_id": research_task.id,
+                    "worker_task_id": worker_task.id,
+                    "status": "blocked",
+                    "reason": "owner_agent_run_gate",
+                    "dispatch_pass": dispatch_pass,
+                })
+                continue
             result = run_cognitive_task(db, worker_task)
             worker_task.outputs = result
             worker_task.status = "completed"
