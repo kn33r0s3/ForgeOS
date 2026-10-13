@@ -14,8 +14,16 @@ from app.models import utcnow
 
 
 
-def _event_key(prefix: str, task_id: int | None, name: str, result_ids: list[int]) -> str:
+def _event_key(
+    prefix: str,
+    task_id: int | None,
+    name: str,
+    result_ids: list[int],
+    attempt_number: int | None = None,
+) -> str:
     raw = f"{prefix}:{task_id}:{name}:{','.join(map(str, sorted(set(result_ids))))}"
+    if attempt_number is not None:
+        raw += f":attempt:{attempt_number}"
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
@@ -41,11 +49,12 @@ def record_usage(
     failure_kind: str | None = None,
     cost: float | None = None,
     result_ids: list[int] | None = None,
+    attempt_number: int | None = None,
 ) -> tuple[models.ToolUsageEvent, models.SourceUsageEvent] | None:
-    """Record one measured invocation; repeated processing of the same result is ignored."""
+    """Record one invocation; replay of the same result and attempt is idempotent."""
     result_ids = result_ids or []
-    tool_key = _event_key("tool", research_task_id, tool_name, result_ids)
-    source_key = _event_key("source", research_task_id, source, result_ids)
+    tool_key = _event_key("tool", research_task_id, tool_name, result_ids, attempt_number)
+    source_key = _event_key("source", research_task_id, source, result_ids, attempt_number)
     if db.query(models.ToolUsageEvent).filter_by(event_key=tool_key).first():
         return None
     tool_event = models.ToolUsageEvent(
