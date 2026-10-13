@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowRight, Copy, RotateCcw } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Container } from "@/components/layout/container";
 import { HamiPathways } from "@/components/layout/hami-pathways";
 import { Button } from "@/components/ui/button";
@@ -416,7 +416,6 @@ function HomePage() {
   return (
     <main className="bg-background text-ink">
       <Hero />
-      <ValueBrief />
       <PublicOffers />
       <Capabilities />
       <FindingsPreview />
@@ -430,176 +429,6 @@ function HomePage() {
   );
 }
 
-
-type ValueBriefFields = {
-  outcome: string;
-  obstacle: string;
-  resources: string;
-  success: string;
-};
-
-const EMPTY_VALUE_BRIEF: ValueBriefFields = {
-  outcome: "",
-  obstacle: "",
-  resources: "",
-  success: "",
-};
-
-function ValueBrief() {
-  const [fields, setFields] = useState<ValueBriefFields>(EMPTY_VALUE_BRIEF);
-  const [brief, setBrief] = useState<string | null>(null);
-  const [copyMessage, setCopyMessage] = useState("");
-
-  function updateField(field: keyof ValueBriefFields, value: string) {
-    setFields((current) => ({ ...current, [field]: value }));
-    setBrief(null);
-    setCopyMessage("");
-  }
-
-  function buildBrief(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const outcome = fields.outcome.trim();
-    const obstacle = fields.obstacle.trim();
-    if (!outcome || !obstacle) return;
-
-    const resources = fields.resources.trim()
-      || "Not recorded. List existing skills, people, information, tools, and resources before buying or building anything.";
-    const success = fields.success.trim()
-      || "Not defined yet. Set a specific, observable threshold before the test; avoid using only “better” as the measure.";
-    setBrief([
-      "HAMI · NEXT-STEP BRIEF",
-      "",
-      "OUTCOME SOUGHT",
-      outcome,
-      "",
-      "CURRENT CONSTRAINT",
-      obstacle,
-      "",
-      "EXISTING RESOURCES / WHAT HAS BEEN TRIED",
-      resources,
-      "",
-      "SUCCESS CONDITION",
-      success,
-      "",
-      "KEY UNCERTAINTY",
-      "Does the stated constraint materially prevent the intended outcome, or is another constraint more important?",
-      "",
-      "SMALLEST USEFUL TEST",
-      `Choose one reversible check in the next 24–48 hours—or your next available work window—that tests “${obstacle}” against the intended outcome. Reuse existing resources first; do not spend money or contact anyone without the required authorization and consent.`,
-      "",
-      "EVIDENCE TO RECORD",
-      "Capture the starting state, source, date, time or cost, action taken, and observed result. Keep observation separate from interpretation, and write down what remains unknown.",
-      "",
-      "DECISION RULE",
-      "Compare the result with the success condition set above. Continue only when the evidence supports it; otherwise revise the explanation or stop the test. A plan is not a result.",
-      "",
-      "FIRST ACTION",
-      "Choose one concrete step you can take now, with a clear owner and stop condition. If it depends on another person, identify the permission or agreement needed before acting.",
-    ].join("\n"));
-    setCopyMessage("");
-  }
-
-  async function copyBrief() {
-    if (!brief) return;
-    try {
-      if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
-      await navigator.clipboard.writeText(brief);
-      setCopyMessage("Brief copied. You can paste it into your notes or share it yourself.");
-    } catch {
-      setCopyMessage("Copy is unavailable in this browser. Select the brief text and copy it manually.");
-    }
-  }
-
-  function resetBrief() {
-    setFields(EMPTY_VALUE_BRIEF);
-    setBrief(null);
-    setCopyMessage("");
-  }
-
-  const fieldClass = "mt-2 w-full rounded-card border-2 border-line bg-background px-3 py-3 text-sm leading-6 text-ink placeholder:text-dim focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
-
-  return (
-    <section id="value-brief" className="scroll-mt-24 border-b border-line bg-surface" aria-labelledby="value-brief-heading">
-      <Container className="py-12 sm:py-16 lg:py-20">
-        <div className="max-w-3xl">
-          <Eyebrow tone="amber">Use Hami now · no account</Eyebrow>
-          <h2 id="value-brief-heading" className="mt-4 font-display text-title font-extrabold tracking-tight text-ink">
-            Leave with a clearer next step.
-          </h2>
-          <p className="mt-3 text-base leading-7 text-muted">
-            Start with a real problem, a goal, or something you want to understand. This browser-only builder turns your answers into a practical brief: what you want, what is blocking it, the smallest useful test, and the evidence that would help you decide what to do next.
-          </p>
-          <p className="mt-2 text-sm leading-6 text-muted">
-            Works for personal, technical, work, community, and commercial situations. This is a structured thinking aid—not a claim that Hami has verified your situation or run the test.
-          </p>
-          <p className="mt-2 text-xs font-semibold text-accent">
-            Privacy: this tool does not send your answers to Hami or save them. Your draft stays in this page until you leave or reset it.
-          </p>
-        </div>
-
-        <div className="mt-8 grid items-start gap-5 lg:grid-cols-2 lg:gap-8">
-          <form onSubmit={buildBrief} className="rounded-card border-2 border-line bg-background p-5 sm:p-6">
-            <div>
-              <label htmlFor="brief-outcome" className="text-sm font-bold text-ink">1. What are you trying to make happen? <span className="text-accent">Required</span></label>
-              <textarea id="brief-outcome" name="outcome" required maxLength={1000} rows={3} value={fields.outcome} onChange={(event) => updateField("outcome", event.target.value)} placeholder="Describe the result you want—not just the task." className={fieldClass} />
-            </div>
-            <div className="mt-4">
-              <label htmlFor="brief-obstacle" className="text-sm font-bold text-ink">2. What is getting in the way today? <span className="text-accent">Required</span></label>
-              <textarea id="brief-obstacle" name="obstacle" required maxLength={1000} rows={3} value={fields.obstacle} onChange={(event) => updateField("obstacle", event.target.value)} placeholder="What is slow, missing, uncertain, costly, or failing?" className={fieldClass} />
-            </div>
-            <div className="mt-4">
-              <label htmlFor="brief-resources" className="text-sm font-bold text-ink">3. What do you already have or have you tried? <span className="text-muted">Optional</span></label>
-              <textarea id="brief-resources" name="resources" maxLength={1000} rows={2} value={fields.resources} onChange={(event) => updateField("resources", event.target.value)} placeholder="Skills, people, records, tools, previous attempts…" className={fieldClass} />
-            </div>
-            <div className="mt-4">
-              <label htmlFor="brief-success" className="text-sm font-bold text-ink">4. What would count as a good result? <span className="text-muted">Optional</span></label>
-              <textarea id="brief-success" name="success" maxLength={1000} rows={2} value={fields.success} onChange={(event) => updateField("success", event.target.value)} placeholder="Name a visible change, number, deadline, or condition." className={fieldClass} />
-            </div>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <Button type="submit" variant="primary" size="lg">Build my brief <ArrowRight aria-hidden="true" /></Button>
-              <Button type="button" variant="ghost" onClick={resetBrief} size="lg"><RotateCcw aria-hidden="true" /> Reset</Button>
-            </div>
-          </form>
-
-          <div className="min-w-0 rounded-card border-2 border-line bg-background p-5 sm:p-6" aria-live="polite" aria-atomic="true">
-            {brief ? (
-              <>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h3 className="font-display text-xl font-bold text-ink">Your next-step brief</h3>
-                  <Button type="button" variant="secondary" size="sm" onClick={() => void copyBrief()}><Copy aria-hidden="true" /> Copy brief</Button>
-                </div>
-                <pre className="mt-4 max-h-[36rem] overflow-auto whitespace-pre-wrap break-words rounded-card border border-line bg-surface p-4 text-sm leading-6 text-ink">{brief}</pre>
-                <p role="status" className="mt-3 text-sm text-muted">{copyMessage}</p>
-              </>
-            ) : (
-              <>
-                <h3 className="font-display text-xl font-bold text-ink">Your brief will include</h3>
-                <p className="mt-2 text-sm leading-6 text-muted">Your answers produce a working draft instantly in this browser. Nothing is sent to an API.</p>
-                <ol className="mt-5 space-y-3 text-sm leading-6 text-ink">
-                  {[
-                    "The outcome and current constraint",
-                    "Resources worth reusing before buying or building",
-                    "One low-cost, reversible test",
-                    "The evidence to capture",
-                    "A decision rule: continue, revise, or stop",
-                  ].map((item, index) => (
-                    <li key={item} className="flex gap-3">
-                      <span className="font-mono text-accent">{String(index + 1).padStart(2, "0")}</span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ol>
-                <p className="mt-5 border-t border-line pt-4 text-xs leading-5 text-muted">
-                  You can copy the brief into your own notes or share it yourself. No submission, account, or follow-up is required.
-                </p>
-              </>
-            )}
-          </div>
-        </div>
-      </Container>
-    </section>
-  );
-}
 
 function Capabilities() {
   const capabilities = [
@@ -879,13 +708,13 @@ function Hero() {
             </div>
             <div className="mt-8 flex flex-wrap gap-4">
               <Button asChild variant="primary" size="lg">
-                <a href="#value-brief">
-                  Build your next-step brief <ArrowRight aria-hidden="true" />
-                </a>
+                <Link to="/about">
+                  How Hami works <ArrowRight aria-hidden="true" />
+                </Link>
               </Button>
               <Button asChild variant="secondary" size="lg">
-                <Link to="/domain">
-                  Post a need, offer, or trade <ArrowRight aria-hidden="true" />
+                <Link to="/experiments">
+                  See what Hami is testing <ArrowRight aria-hidden="true" />
                 </Link>
               </Button>
             </div>
