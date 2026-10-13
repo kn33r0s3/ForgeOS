@@ -49,7 +49,7 @@ def test_customer_delivery_requires_durable_database_even_if_state_is_open(db, m
     monkeypatch.setattr(settings, "FORGE_BOT_LIVE", True)
     fresh = owner_control.now()
     db.add(models.OpHamiRuntimeControl(
-        id=1, safe_mode_enabled=False, safe_mode_reason=None,
+        id=1, safe_mode_enabled=False, safe_mode_reason="initial_default_safe",
         last_owner_contact_at=fresh, updated_at=fresh,
     ))
     db.commit()
