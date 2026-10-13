@@ -576,7 +576,7 @@ function RealityLoop() {
               y={y}
               textAnchor="middle"
               dominantBaseline="central"
-              fill={highlighted ? "#0c0b0a" : "var(--foreground)"}
+              fill={highlighted ? "#0b0b0b" : "var(--foreground)"}
               fontSize="8.5"
               fontWeight={highlighted ? 700 : 500}
               fontFamily="Archivo, sans-serif"
@@ -636,7 +636,7 @@ function Hero() {
     <section className="relative overflow-hidden border-b border-line">
       <div className="hero-grain" aria-hidden="true" />
       {/* System strip: architectural instrument header */}
-      <div className="border-b border-line bg-surface" aria-hidden="true">
+      <div className="border-b border-line bg-surface">
         <Container className="flex items-center justify-between py-2">
           <span className="font-mono text-micro font-bold uppercase tracking-[0.2em] text-muted">
             HAMI SYSTEMS
