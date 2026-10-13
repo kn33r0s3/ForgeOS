@@ -182,7 +182,12 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
             }
         except Exception as exc:
             research_task_engine.fail_task(db, task, str(exc))
-            return {"task_id": task.id, "status": "failed", "reason": str(exc)}
+            return {
+                "task_id": task.id,
+                "status": "failed",
+                "reason": str(exc),
+                **_evaluation_result_fields(db, task, outcome_status="failed"),
+            }
     elif task.source == "crossref":
         try:
             authorization = source_clearance_registry.authorize_request(
@@ -197,10 +202,16 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
                 "status": "planned",
                 "deferred": True,
                 "reason": str(exc),
+                **_evaluation_result_fields(db, task, outcome_status="planned", deferred=True),
             }
         except Exception as exc:
             research_task_engine.fail_task(db, task, str(exc))
-            return {"task_id": task.id, "status": "failed", "reason": str(exc)}
+            return {
+                "task_id": task.id,
+                "status": "failed",
+                "reason": str(exc),
+                **_evaluation_result_fields(db, task, outcome_status="failed"),
+            }
     elif task.source == "gdelt_doc":
         try:
             authorization = source_clearance_registry.authorize_request(
@@ -215,10 +226,16 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
                 "status": "planned",
                 "deferred": True,
                 "reason": str(exc),
+                **_evaluation_result_fields(db, task, outcome_status="planned", deferred=True),
             }
         except Exception as exc:
             research_task_engine.fail_task(db, task, str(exc))
-            return {"task_id": task.id, "status": "failed", "reason": str(exc)}
+            return {
+                "task_id": task.id,
+                "status": "failed",
+                "reason": str(exc),
+                **_evaluation_result_fields(db, task, outcome_status="failed"),
+            }
     elif task.source == "openalex":
         try:
             authorization = source_clearance_registry.authorize_request(
@@ -233,10 +250,16 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
                 "status": "planned",
                 "deferred": True,
                 "reason": str(exc),
+                **_evaluation_result_fields(db, task, outcome_status="planned", deferred=True),
             }
         except Exception as exc:
             research_task_engine.fail_task(db, task, str(exc))
-            return {"task_id": task.id, "status": "failed", "reason": str(exc)}
+            return {
+                "task_id": task.id,
+                "status": "failed",
+                "reason": str(exc),
+                **_evaluation_result_fields(db, task, outcome_status="failed"),
+            }
 
     collector_cls = COLLECTORS.get(task.source)
     if not collector_cls:
@@ -302,7 +325,12 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
             freshness=None, latency_ms=(monotonic() - started) * 1000,
             success=False, failure_kind="collection_failure",
         )
-        return {"task_id": task.id, "status": "failed", "reason": str(exc)}
+        return {
+            "task_id": task.id,
+            "status": "failed",
+            "reason": str(exc),
+            **_evaluation_result_fields(db, task, outcome_status="failed"),
+        }
 
     created_signal_ids = []
     evidence_ids = []
