@@ -108,3 +108,12 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Added regressions for typed rare-signal relation provenance/idempotency, safe rare-signal snapshot continuity and refresh, and unavailable-judge recovery with preserved failure history.
 - Main CI concurrency was adjusted so a running `main` verification is not cancelled by each newer push. This should permit a full verification run to finish, but the available connected workflow tool does not expose push-triggered runs.
 - **Verification remains unconfirmed:** Vercel status for code commit `1d4453cb9af5afd6d4c68cb8ef6df24e32177370` was PENDING at the last check; the connected Vercel project/runtime API returned 403. The backend pytest suite was not run in this tool environment. Source/test presence is not a passed test, and no live health, scheduled production execution, external contact, payment or revenue is claimed.
+
+
+## 2026-10-14 — owner-control safety hardening
+
+- Continued from the Telegram setup checkpoint rather than stopping at implementation notes.
+- Wired the owner-control API into the existing authenticated owner cockpit: persistent safe mode, recent owner contact, Telegram/digest config visibility (not delivery proof), public gates, pending ASK choices, code entry, and a resume-review request that does not automatically execute anything.
+- Tightened generic customer SMS/email delivery to require durable PostgreSQL safety state when live sending is enabled. Added regression tests for rejection of an otherwise-open ephemeral SQLite state and persistence of safe mode when health readiness is degraded. Provider transport tests explicitly simulate durable backing state.
+- Found and corrected a second workflow cancellation source: `verify-deploy.yml` also shared one pending-run group across all main commits. Its concurrency is now scoped by `github.sha`, like main CI.
+- CI for the exact current revision was queued/pending when inspected; tests are **not** reported green. No production credentials, IDs or flags were changed; Telegram remains disabled, no webhook was registered, no real message/payment or revenue was created.

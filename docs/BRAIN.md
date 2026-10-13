@@ -2,7 +2,7 @@
 
 Version 3, 2026-10-14 (sections 32–35 preserve the evidence/security audit and add the many-climbs operating model). Owner: Bhumadevi. Every agent reads this first, every run. Keep a copy in the repo at docs/BRAIN.md.
 
-**Content hash (Git blob SHA-1; hash line excluded from hashed text):** `gitblob:91eadb540931418e386e347de0334fb7c064b0a0`
+**Content hash (Git blob SHA-1; hash line excluded from hashed text):** `gitblob:d0f06bf092d8812bcb510d06f568e7c0ed4803a8`
 
 ## 0. How to use this document
 
@@ -554,6 +554,8 @@ The owner selected Telegram for Hami's single-owner control channel. It is not a
 - **Webhook authentication:** Telegram's HTTPS Bot API webhook supplies `X-Telegram-Bot-Api-Secret-Token`. Hami compares this shared secret in constant time, then requires the exact configured private chat ID and user ID. This is a shared-secret header check, not a per-body HMAC signature. See the [official Telegram Bot API](https://core.telegram.org/bots/api#setwebhook).
 - **Secret handling:** bot token, webhook secret and owner IDs stay in environment variables and are never written to Git, logs, issue comments or third-party chats. Group chats and other accounts are ignored.
 - **HALT:** persisted safe mode starts ON and is stored in Hami's own database. Generic customer email/SMS delivery checks it immediately before provider I/O; an unreadable state blocks delivery. The seven-day owner-inactivity rule is evaluated by the daily loop and before customer delivery.
+- **Fail-closed storage and health:** live generic customer email/SMS requires durable PostgreSQL; a readable but ephemeral SQLite state is not sufficient. A degraded `/health` result attempts to persist `health_check_failed` safe mode before responding. If the database itself is unavailable, persistence may fail, while delivery independently fails closed on an unreadable state.
+- **Owner cockpit:** the existing authenticated owner workspace displays safe mode, last-owner-contact freshness, Telegram/digest configuration status (not message receipt), and pending ASKs. Routine answers require the expiring code; high-impact answers require both the authenticated owner console and code. Recording a decision never automatically executes an Action.
 - **ASK:** two or three options, a decision reference, an expiry and a daily rate limit. One-time codes are sent directly to Telegram and stored only as hashes. Codes expire, are single-use, and repeated failures lock the ASK. No answer means DO NOTHING.
 - **High-impact decisions:** the owner signs in to the authenticated owner console and submits the code delivered by Telegram. Telegram alone cannot approve these decisions. Approving an Action changes its state only; it never executes the Action automatically, and final authorization checks remain binding.
 - **Digest:** Telegram daily digest is OFF by default and requires durable PostgreSQL. Provider API acceptance is not handset-delivery proof. The old Twilio sender and `HAMI_OWNER_SMS_DIGEST_ENABLED` remain untouched.
@@ -600,3 +602,4 @@ This section supersedes any earlier implication in sections 5, 17, 28, 29 or 30 
 ## Changelog (version 3)
 
 - 2026-10-14: Replaced the linear-ladder interpretation with many connected, ongoing climbs on one shared evidence/authorization substrate. Hami remains the name; Hamro expresses shared progress. Parallel internal work does not relax external action gates.
+- 2026-10-14: Extended Telegram owner control with the authenticated cockpit and durable-PostgreSQL delivery gate; degraded health now attempts to persist safe mode. Exact-head tests, production setup and message delivery remain unverified.

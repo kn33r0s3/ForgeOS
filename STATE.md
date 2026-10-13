@@ -38,3 +38,12 @@ Read docs/BRAIN.md, this file, QUEUE.md, AGENTS.md, HANDOFF.md, and the relevant
 - **Verification status:** GitHub Actions for this exact source SHA started but had not completed at the time of this snapshot. Do not call tests green or claim the source is deployed/live until exact-head verification finishes.
 - **Production:** Telegram credentials, owner IDs, PostgreSQL durability, webhook registration and handset receipt remain UNVERIFIED. No production flags or credentials were changed and no real Telegram/customer message was sent.
 - **Next:** fix evidenced exact-head CI failures, then verify deployment SHA and durable PostgreSQL before owner-authorized Telegram setup.
+
+
+## 2026-10-14 — owner-control safety hardening
+
+- The existing private owner workspace now exposes persisted safe-mode state, contact freshness, Telegram/digest configuration (not receipt proof), intake/checkout flags, pending ASKs and console-side approval with expiring codes. Resume is a high-impact ASK and does not enable other flags.
+- Generic customer SMS/email delivery now fails closed unless runtime-control state is stored in durable PostgreSQL; a readable ephemeral SQLite row is insufficient. The dispatcher retains both pre-dispatch and immediate-before-provider checks.
+- A degraded `/health` readiness result attempts to persist `health_check_failed` safe mode. If the database is itself unavailable this transition cannot be promised; delivery independently fails closed when state cannot be read.
+- GitHub workflow concurrency is now scoped by commit SHA in both `.github/workflows/forgeos-ci.yml` and `.github/workflows/verify-deploy.yml`; the older shared pending-run groups had cancelled deployment-verifier checks. Exact-head CI and deployment verification are queued/pending at last observation; no green result is claimed.
+- Source changes are committed, but Telegram control/digest flags remain OFF by default. No secrets/IDs or production flags were set, no webhook was registered, no real message/payment was sent, and no revenue is claimed.
