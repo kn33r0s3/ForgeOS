@@ -142,7 +142,7 @@ def _cycle_effect_summary(intelligence: dict) -> dict:
     source_signals = sum(
         _count_effect(item.get("signals_created"))
         for item in outcomes
-        if isinstance(item, dict)
+        if isinstance(item, dict) and item.get("status") == "completed"
     ) if isinstance(outcomes, list) else 0
 
     counts = {
