@@ -2132,3 +2132,101 @@ def test_standing_authorization_daily_cap_allows_first_dispatch_and_blocks_secon
     assert second.policy_result == "REQUIRE_APPROVAL"
     assert "standing_auth_id" not in __import__("json").loads(second.parameters_json)
 
+
+
+
+def test_ai_ollama_status_is_unavailable_in_vercel_without_network(monkeypatch):
+    from app.services import ai_engine
+
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.setattr(
+        ai_engine.urllib.request,
+        "urlopen",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("serverless probe must not call localhost")),
+    )
+    status = ai_engine.get_provider_status()
+    assert status["provider"] == "ollama"
+    assert status["mode"] == "LOCAL"
+    assert status["status"] == "AI_UNAVAILABLE"
+    assert status["inference_verified"] is False
+
+
+def test_ai_ollama_status_checks_installed_model_but_does_not_claim_inference(monkeypatch):
+    import json
+    from app.services import ai_engine
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps({"models": [{"name": "qwen3-coder:latest", "model": "qwen3-coder:latest"}]}).encode("utf-8")
+
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "OLLAMA_HOST", "http://localhost:11434")
+    monkeypatch.setattr(settings, "OLLAMA_MODEL", "qwen3-coder:latest")
+    monkeypatch.delenv("VERCEL", raising=False)
+    observed = {}
+
+    def fake_urlopen(request, timeout):
+        observed["url"] = request.full_url
+        observed["timeout"] = timeout
+        return Response()
+
+    monkeypatch.setattr(ai_engine.urllib.request, "urlopen", fake_urlopen)
+    status = ai_engine.get_provider_status()
+    assert observed["url"] == "http://localhost:11434/api/tags"
+    assert observed["timeout"] == 1.5
+    assert status["status"] == "MODEL_AVAILABLE"
+    assert status["model"] == "qwen3-coder:latest"
+    assert status["inference_verified"] is False
+    assert "answer quality are not yet verified" in status["note"]
+
+
+def test_ai_ollama_status_distinguishes_missing_model_and_unreachable_endpoint(monkeypatch):
+    import json
+    from app.services import ai_engine
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps({"models": []}).encode("utf-8")
+
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "OLLAMA_HOST", "http://localhost:11434")
+    monkeypatch.setattr(settings, "OLLAMA_MODEL", "qwen3-coder:latest")
+    monkeypatch.delenv("VERCEL", raising=False)
+    monkeypatch.setattr(ai_engine.urllib.request, "urlopen", lambda *args, **kwargs: Response())
+    assert ai_engine.get_provider_status()["status"] == "MODEL_MISSING"
+
+    monkeypatch.setattr(
+        ai_engine.urllib.request,
+        "urlopen",
+        lambda *args, **kwargs: (_ for _ in ()).throw(ConnectionError("private endpoint detail")),
+    )
+    status = ai_engine.get_provider_status()
+    assert status["status"] == "AI_UNAVAILABLE"
+    assert status["failure_type"] == "ConnectionError"
+    assert "private endpoint detail" not in str(status)
+
+
+def test_ai_external_provider_status_is_configured_not_ready(monkeypatch):
+    from app.services import ai_engine
+
+    class ExternalProvider:
+        pass
+
+    monkeypatch.setattr(settings, "AI_PROVIDER", "openai")
+    monkeypatch.setattr(ai_engine, "get_provider", lambda: ExternalProvider())
+    status = ai_engine.get_provider_status()
+    assert status["status"] == "CONFIGURED"
+    assert status["inference_verified"] is False
