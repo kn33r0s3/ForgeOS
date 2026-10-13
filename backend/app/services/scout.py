@@ -319,24 +319,23 @@ def record_no_response(db: Session, draft_id: int, summary: str) -> models.Outre
         raise ValueError("No-response summary must contain 1–3000 characters.")
 
     draft.outcome_notes = clean_summary
-    event = models.WorldEvent(
+    from app.services import world_graph
+
+    world_graph.create_event(
+        db,
         event_type="outreach.no_response",
         entity_id=draft.candidate_entity_id,
-        payload=json.dumps(
-            {
-                "draft_id": draft.id,
-                "outcome_type": "no_response_observed",
-                "summary": clean_summary,
-                "recorded_by": "owner",
-                "verification": "owner-recorded; absence of a response is not independently verified",
-                "blocks_further_contact": True,
-            },
-            ensure_ascii=False,
-        ),
         source="owner",
+        payload={
+            "draft_id": draft.id,
+            "outcome_type": "no_response_observed",
+            "summary": clean_summary,
+            "recorded_by": "owner",
+            "verification": "owner-recorded; absence of a response is not independently verified",
+            "blocks_further_contact": True,
+        },
         idempotency_key=f"outreach-no-response:{draft.id}",
     )
-    db.add(event)
     db.commit()
     db.refresh(draft)
     return draft
@@ -396,23 +395,23 @@ def record_reply(db: Session, draft_id: int, summary: str) -> models.OutreachDra
     action.parameters_json = json.dumps(parameters, ensure_ascii=False)
     action.execution_result = "Owner-recorded recipient response; content and resulting business outcome are not independently verified."
     db.add(action)
-    event = models.WorldEvent(
+    from app.services import world_graph
+
+    world_graph.create_event(
+        db,
         event_type="outreach.reply",
         entity_id=draft.candidate_entity_id,
-        payload=json.dumps(
-            {
-                "draft_id": draft.id,
-                "contact_action_id": action.id,
-                "outcome_type": "reply_received",
-                "summary": clean_summary,
-                "authorized_by": "owner",
-                "verification": "owner-recorded; not independently verified",
-            },
-            ensure_ascii=False,
-        ),
         source="owner",
+        payload={
+            "draft_id": draft.id,
+            "contact_action_id": action.id,
+            "outcome_type": "reply_received",
+            "summary": clean_summary,
+            "authorized_by": "owner",
+            "verification": "owner-recorded; not independently verified",
+        },
+        idempotency_key=f"outreach-reply:{draft.id}",
     )
-    db.add(event)
     db.commit()
     db.refresh(draft)
     return draft
