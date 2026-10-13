@@ -110,7 +110,7 @@ def test_agreement_and_disagreement_create_durable_comparisons(db):
     assert db.query(models.ResearchTask).filter_by(question_id=follow_up.id).count() >= 1
 
 
-def test_failed_judge_missing_evidence_and_contradiction_are_preserved(db):
+def test_failed_judge_is_evaluation_incomplete_not_missing_evidence(db):
     evidence = evidence_fixture(db)
     failed = multi_judge.run_judgments(
         db,
@@ -126,7 +126,8 @@ def test_failed_judge_missing_evidence_and_contradiction_are_preserved(db):
     )
     assert failed.status == "failed"
     assert failed.error
-    assert comparison.outcome == "missing_evidence"
+    assert comparison.outcome == "evaluation_incomplete"
+    assert comparison.missing_evidence == []
     # The data exists; the judge failed. Fix evaluation availability instead
     # of spawning a new evidence-search question from an infrastructure fault.
     assert comparison.follow_up_question_id is None
@@ -240,9 +241,100 @@ def test_no_available_judges_does_not_create_recursive_research_questions(db):
     )
 
     assert judgments == []
-    assert comparison.outcome == "missing_evidence"
+    assert comparison.outcome == "evaluation_incomplete"
+    assert comparison.missing_evidence == []
     assert comparison.follow_up_question_id is None
     assert db.query(models.ResearchQuestion).count() == 0
+
+
+def test_one_distinct_model_cannot_create_agreement(db):
+    evidence = evidence_fixture(db)
+    judgment = multi_judge.run_judgments(
+        db,
+        question="Does this evidence establish recurring pain?",
+        evidence_ids=[evidence.id],
+        judges=[spec("solo", positive_judge)],
+    )[0]
+
+    comparison = multi_judge.compare_judgments(
+        db,
+        question="Does this evidence establish recurring pain?",
+        judgment_ids=[judgment.id],
+        evidence_ids=[evidence.id],
+    )
+
+    assert judgment.status == "completed"
+    assert comparison.outcome == "insufficient_judges"
+    assert "single-model assessment" in comparison.summary
+    assert comparison.follow_up_question_id is None
+    assert db.query(models.ResearchQuestion).count() == 0
+
+
+def test_missing_evidence_state_requires_an_absent_referenced_row(db):
+    missing_id = 987654321
+    judgment = models.Judgment(
+        judge_name="fixture-judge",
+        provider="fixture-provider",
+        model="fixture-model",
+        question="Does the referenced evidence exist?",
+        conclusion="A row is referenced but absent.",
+        reasoning_summary="The record must be found before it can be judged.",
+        conclusion_label="positive",
+        evidence_ids=str(missing_id),
+        status="completed",
+        judgment_key="missing-evidence-row-fixture",
+    )
+    db.add(judgment)
+    db.commit()
+    db.refresh(judgment)
+
+    comparison = multi_judge.compare_judgments(
+        db,
+        question="Does the referenced evidence exist?",
+        judgment_ids=[judgment.id],
+        evidence_ids=[missing_id],
+    )
+
+    assert comparison.outcome == "missing_evidence"
+    assert comparison.missing_evidence == [missing_id]
+    assert comparison.follow_up_question_id is not None
+
+
+def test_judgment_for_another_evidence_set_is_not_compared(db):
+    first = evidence_fixture(db, "https://example.test/judgment-context-1")
+    second = evidence_fixture(db, "https://example.test/judgment-context-2")
+    judgment = multi_judge.run_judgments(
+        db,
+        question="Does this evidence establish recurring pain?",
+        evidence_ids=[first.id],
+        judges=[spec("context", positive_judge)],
+    )[0]
+
+    comparison = multi_judge.compare_judgments(
+        db,
+        question="Does this evidence establish recurring pain?",
+        judgment_ids=[judgment.id],
+        evidence_ids=[second.id],
+    )
+
+    assert comparison.outcome == "evaluation_incomplete"
+    assert "different question or evidence set" in comparison.summary
+    assert comparison.follow_up_question_id is None
+
+
+def test_unstructured_model_text_cannot_become_a_positive_or_negative_verdict():
+    result = multi_judge._normalize_result(
+        "The evidence does not establish demand; a likely explanation is missing data."
+    )
+    explicit = multi_judge._normalize_result({
+        "label": "POSITIVE",
+        "conclusion": "The source directly documents the claimed event.",
+        "confidence": 1.7,
+    })
+
+    assert result["conclusion_label"] == "uncertain"
+    assert explicit["conclusion_label"] == "positive"
+    assert explicit["confidence"] is None
 
 
 def test_new_evidence_allows_rejudgment_with_new_work_key(db):
