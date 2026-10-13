@@ -40,7 +40,17 @@ def test_intelligence_invokes_collection_stage(monkeypatch):
     def fake_run_pending_tasks(db, limit=5):
         called["limit"] = limit
         return [
-            {"task_id": 1, "source": "web", "status": "completed", "signals_created": 3},
+            {
+                "task_id": 1,
+                "source": "web",
+                "status": "completed",
+                "signals_created": 3,
+                "evidence_found": 1,
+                "evaluation_status": "judge_pipeline_executed",
+                "comparison_outcome": "partial_agreement",
+                "judgments_completed": 1,
+                "judgments_failed": 0,
+            },
         ]
 
     # Stub out the other stages to isolate the collection stage.
@@ -53,9 +63,10 @@ def test_intelligence_invokes_collection_stage(monkeypatch):
     monkeypatch.setattr(collector_runner, "run_pending_tasks", fake_run_pending_tasks)
     evaluation_calls = {}
 
-    def fake_run_pending_evaluations(db, limit=2, max_retries_per_task=3):
+    def fake_run_pending_evaluations(db, limit=2, max_retries_per_task=3, exclude_task_ids=None):
         evaluation_calls["limit"] = limit
         evaluation_calls["max_retries_per_task"] = max_retries_per_task
+        evaluation_calls["exclude_task_ids"] = exclude_task_ids
         return [
             {
                 "task_id": 9,
@@ -86,7 +97,11 @@ def test_intelligence_invokes_collection_stage(monkeypatch):
     assert recovery["status"] == "ok"
     assert recovery["tasks_attempted"] == 1
     assert recovery["tasks_completed"] == 1
-    assert evaluation_calls == {"limit": 2, "max_retries_per_task": 3}
+    assert evaluation_calls == {
+        "limit": 2,
+        "max_retries_per_task": 3,
+        "exclude_task_ids": {1},
+    }
 
 
 def test_intelligence_collection_failure_does_not_kill_cycle(monkeypatch):
@@ -104,7 +119,8 @@ def test_intelligence_collection_failure_does_not_kill_cycle(monkeypatch):
     monkeypatch.setattr(forge_loop, "run_cycle", lambda db: {"cycle_id": 2, "signals_processed": 0, "stage_errors": {}})
     monkeypatch.setattr(collector_runner, "run_pending_tasks", boom)
     monkeypatch.setattr(
-        collector_runner, "run_pending_evaluations", lambda db, limit=2, max_retries_per_task=3: []
+        collector_runner, "run_pending_evaluations",
+        lambda db, limit=2, max_retries_per_task=3, exclude_task_ids=None: []
     )
     monkeypatch.setattr(rte, "resume_running_tasks", lambda db, limit=10: [])
     monkeypatch.setattr(ee, "run_autonomous_action_cycle", lambda db: {"proposed": 0, "allowed": 0, "blocked": 0, "require_approval": 0})
