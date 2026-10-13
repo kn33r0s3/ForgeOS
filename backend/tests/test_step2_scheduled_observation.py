@@ -6,6 +6,30 @@ intelligence endpoint, with failure isolation preserving the other stages.
 """
 from fastapi.testclient import TestClient
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _fresh_database_for_scheduled_observation_tests_without_db_fixture(request):
+    """Prepare the isolated SQLite schema required to persist a CycleRun."""
+    if "db" in request.fixturenames:
+        yield
+        return
+
+    from app import database, models  # noqa: F401
+    from app.database import Base
+    from app.services import source_manager, world_graph
+
+    Base.metadata.drop_all(bind=database.engine)
+    Base.metadata.create_all(bind=database.engine)
+    with database.SessionLocal() as session:
+        source_manager.seed_default_sources(session)
+        world_graph.seed_core_types(session)
+        session.commit()
+    yield
+
+
+
 from app.api import scheduled
 from app.main import app
 
