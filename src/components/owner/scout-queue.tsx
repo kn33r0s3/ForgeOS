@@ -31,6 +31,18 @@ interface Draft {
   status: string;
 }
 
+interface PendingReply {
+  id: number;
+  candidate_entity_id: number;
+  observed_fact: string;
+  message_en: string;
+  message_ne: string;
+  status: string;
+  sent_at: string | null;
+  send_channel: string | null;
+  reply_received: boolean;
+}
+
 interface RegistryExperiment {
   id: number;
   action: string;
@@ -48,6 +60,8 @@ interface RegistryExperiment {
 
 export function ScoutQueue({ apiKey }: { apiKey: string }) {
   const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [pendingReplies, setPendingReplies] = useState<PendingReply[]>([]);
+  const [outcomeNotes, setOutcomeNotes] = useState<Record<number, string>>({});
   const [experiments, setExperiments] = useState<RegistryExperiment[]>([]);
   const [config, setConfig] = useState<{ daily_cap: number; sent_today: number } | null>(null);
   const [dnc, setDnc] = useState<{ entity_id: number; reason: string }[]>([]);
@@ -59,13 +73,15 @@ export function ScoutQueue({ apiKey }: { apiKey: string }) {
 
   const load = useCallback(async () => {
     try {
-      const [d, e, c, n] = await Promise.all([
+      const [d, p, e, c, n] = await Promise.all([
         scoutFetch<Draft[]>("drafts", apiKey),
+        scoutFetch<PendingReply[]>("pending-replies", apiKey),
         scoutFetch<RegistryExperiment[]>("experiments", apiKey),
         scoutFetch<{ daily_cap: number; sent_today: number }>("config", apiKey),
         scoutFetch<{ entity_id: number; reason: string }[]>("do-not-contact", apiKey),
       ]);
       setDrafts(d);
+      setPendingReplies(p);
       setExperiments(e);
       setConfig(c);
       setDnc(n);
@@ -191,6 +207,84 @@ export function ScoutQueue({ apiKey }: { apiKey: string }) {
                 )}
               </article>
             ))}
+          </div>
+        )}
+      </section>
+
+      {/* Sent contacts: record a real reply or an honest dry well. */}
+      <section aria-label="Sent contacts awaiting response">
+        <h3 className="text-lg font-extrabold">Sent — awaiting response</h3>
+        <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
+          These messages were marked sent by the owner; recipient receipt is not independently verified.
+          Record a reply only if one actually arrived. A no-response note is a dry well, not evidence of demand,
+          and it never unlocks another message to the same person.
+        </p>
+        {pendingReplies.length === 0 ? (
+          <p className="mt-3 rounded-card border border-line bg-card p-4 text-sm text-muted">
+            No sent contacts are awaiting an outcome note.
+          </p>
+        ) : (
+          <div className="mt-4 space-y-4">
+            {pendingReplies.map((d) => {
+              const note = outcomeNotes[d.id] ?? "";
+              return (
+                <article key={d.id} className="rounded-card border-2 border-line bg-card p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted">
+                    Draft #{d.id} · owner-marked SENT · {d.send_channel || "channel unknown"}
+                  </p>
+                  <p className="mt-1 text-xs text-muted">
+                    Sent: {d.sent_at ? new Date(d.sent_at).toLocaleString() : "time unknown"} · Entity #{d.candidate_entity_id}
+                  </p>
+                  <p className="mt-2 text-sm font-semibold">{d.observed_fact}</p>
+                  <p className="mt-2 text-sm leading-6">{d.message_en}</p>
+                  <label className="mt-3 block text-sm">
+                    <span className="font-bold">Owner-reported outcome note</span>
+                    <textarea
+                      className="mt-1 w-full rounded-card border border-line bg-background p-2 text-sm"
+                      rows={3}
+                      value={note}
+                      placeholder="Reply: summarize what the recipient actually said. Dry well: note what you checked and when."
+                      onChange={(event) =>
+                        setOutcomeNotes((current) => ({ ...current, [d.id]: event.target.value }))
+                      }
+                    />
+                  </label>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      disabled={!note.trim()}
+                      onClick={() =>
+                        act(
+                          () => scoutFetch(`drafts/${d.id}/reply`, apiKey, {
+                            method: "POST",
+                            body: JSON.stringify({ summary: note }),
+                          }),
+                          "Recipient response recorded as owner-reported; not independently verified.",
+                        )
+                      }
+                    >
+                      Record reply received
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={!note.trim()}
+                      onClick={() =>
+                        act(
+                          () => scoutFetch(`drafts/${d.id}/no-response`, apiKey, {
+                            method: "POST",
+                            body: JSON.stringify({ summary: note }),
+                          }),
+                          "No response recorded as an owner-reported dry well. Further contact remains blocked.",
+                        )
+                      }
+                    >
+                      Record no response (dry well)
+                    </Button>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
       </section>
