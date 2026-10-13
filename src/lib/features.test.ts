@@ -253,6 +253,9 @@ describe("feature registry", () => {
     assert.ok(forgeConsole.includes('providerName === "ollama" && providerHealth === "MODEL_AVAILABLE";'));
     assert.ok(forgeConsole.includes("This checks Ollama and the configured model, not generation quality."));
     assert.ok(forgeConsole.includes("Observed model call:"));
+    assert.ok(forgeConsole.includes("HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA"));
+    assert.ok(forgeConsole.includes("remoteContextSharingBlocked"));
+    assert.ok(forgeConsole.includes("Your question and selected Hami knowledge are sent to the configured model only when the server-side provider and data-sharing gates allow it."));
     assert.ok(forgeConsole.includes("providerObservation"));
     assert.ok(forgeConsole.includes("not independently verified by this telemetry."));
     assert.ok(forgeConsole.includes("isn't on Hami's approved zero-cost list"));
