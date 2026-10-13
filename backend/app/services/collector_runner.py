@@ -499,7 +499,14 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
 
 
 def run_pending_tasks(db: Session, limit: int = 5) -> list[dict]:
-    """Execute bounded, currently cleared and high-priority work first."""
+    """Run a bounded batch: cover open questions before deepening one.
+
+    Existing ResearchQuestion records provide work-track identity. Source
+    clearance, idempotency, and per-task authorization checks remain intact.
+    The first pass gives one eligible task from each question a turn before
+    any question gets a second task. Remaining budget then follows normal
+    priority order; this is bounded work scheduling, not an infinite loop.
+    """
     if limit <= 0:
         return []
 
@@ -523,9 +530,13 @@ def run_pending_tasks(db: Session, limit: int = 5) -> list[dict]:
             models.ResearchTask.query.in_(cleared_web_urls),
         ),
     )
-    outcomes = []
-    attempted_task_ids = set()
-    while len(outcomes) < limit:
+
+    outcomes: list[dict] = []
+    attempted_task_ids: set[int] = set()
+    served_question_ids: set[int] = set()
+    coverage_pass = True
+
+    def next_task(*, unserved_question_only: bool) -> models.ResearchTask | None:
         query = (
             db.query(models.ResearchTask)
             .join(models.ResearchQuestion)
@@ -533,7 +544,11 @@ def run_pending_tasks(db: Session, limit: int = 5) -> list[dict]:
         )
         if attempted_task_ids:
             query = query.filter(models.ResearchTask.id.notin_(attempted_task_ids))
-        task = query.order_by(
+        if unserved_question_only and served_question_ids:
+            query = query.filter(
+                models.ResearchTask.question_id.notin_(served_question_ids)
+            )
+        return query.order_by(
             case((currently_clearable, 0), else_=1),
             models.ResearchQuestion.priority_score.desc(),
             case(
@@ -546,12 +561,35 @@ def run_pending_tasks(db: Session, limit: int = 5) -> list[dict]:
             ),
             models.ResearchTask.id.asc(),
         ).first()
+
+    while len(outcomes) < limit:
+        task = next_task(unserved_question_only=coverage_pass)
+        if task is None and coverage_pass:
+            coverage_pass = False
+            task = next_task(unserved_question_only=False)
         if task is None:
             break
-        attempted_task_ids.add(task.id)
-        outcomes.append(execute_task(db, task))
-    return outcomes
 
+        attempted_task_ids.add(task.id)
+        question_id = task.question_id
+        priority_score = float(task.question.priority_score) if task.question is not None else None
+        dispatch_pass = "question_coverage" if coverage_pass else "throughput"
+        if coverage_pass:
+            served_question_ids.add(question_id)
+
+        outcome = execute_task(db, task)
+        # Operational metadata explains scheduling; it is not evidence by itself.
+        if isinstance(outcome, dict):
+            outcome = dict(outcome)
+            outcome["portfolio_dispatch"] = {
+                "policy": "one_task_per_question_before_repeat",
+                "pass": dispatch_pass,
+                "question_id": question_id,
+                "priority_score": priority_score,
+                "slot": len(outcomes) + 1,
+            }
+        outcomes.append(outcome)
+    return outcomes
 
 def run_default_collection(db: Session) -> list[dict]:
     """Refuse standing feeds that docs/PUBLIC_SOURCES.md has not cleared.
