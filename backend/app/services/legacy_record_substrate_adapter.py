@@ -18,6 +18,7 @@ from app.services import world_graph
 
 
 _RECORD_TYPES: tuple[tuple[str, type], ...] = (
+    ("rare_signal_assessment", models.RareSignalAssessment),
     ("claim", models.Claim),
     ("research_question", models.ResearchQuestion),
     ("domain_record", models.DomainRecord),
@@ -27,6 +28,27 @@ _RECORD_TYPES: tuple[tuple[str, type], ...] = (
 
 def _safe_source_fields(entity_type: str, row: Any) -> dict[str, Any]:
     """Select lifecycle/link metadata only; raw statements and private notes stay in source tables."""
+    if entity_type == "rare_signal_assessment":
+        # Keep source lineage and lifecycle metrics only. The label, source
+        # signal IDs and explanation payload remain in the source record.
+        return {
+            "status": row.status,
+            "frequency": row.frequency,
+            "prior_frequency": row.prior_frequency,
+            "recent_frequency": row.recent_frequency,
+            "score": row.score,
+            "novelty": row.novelty,
+            "specificity": row.specificity,
+            "pain_intensity": row.pain_intensity,
+            "solution_scarcity": row.solution_scarcity,
+            "economic_relevance": row.economic_relevance,
+            "pattern_id": row.pattern_id,
+            "opportunity_id": row.opportunity_id,
+            "research_question_id": row.research_question_id,
+            "first_seen": row.first_seen,
+            "last_seen": row.last_seen,
+            "updated_at": row.updated_at,
+        }
     if entity_type == "claim":
         return {
             "epistemic_state": row.epistemic_state,
@@ -68,7 +90,7 @@ def _safe_source_fields(entity_type: str, row: Any) -> dict[str, Any]:
 
 
 def sync_legacy_records(db: Session, *, limit: int = 500) -> dict[str, int]:
-    """Refresh stable entity references for Claim, ResearchQuestion, DomainRecord, and Decision."""
+    """Refresh stable references for claims, research questions, rare signals, domains, and decisions."""
     world_graph.seed_core_types(db)
     initial_event_count = db.query(models.WorldEvent).count()
     result: dict[str, int] = {
