@@ -744,6 +744,9 @@ def run_pending_evaluations(
         "judge_execution_incomplete",
     }
     candidate_limit = min(max(limit * 20, 20), 200)
+    stored_retry_count = models.ResearchTaskStep.output_data[
+        "automatic_retry_count"
+    ].as_integer()
     query = (
         db.query(models.ResearchTask)
         .join(
@@ -760,6 +763,12 @@ def run_pending_evaluations(
             models.ResearchTaskStep.status.in_(("pending", "failed", "skipped")),
             models.ResearchTaskStep.output_data["status"].as_string().in_(
                 sorted(retryable_statuses)
+            ),
+            # Exhausted retry rows stay in history but cannot occupy the
+            # bounded scan window ahead of work that still deserves a retry.
+            or_(
+                stored_retry_count.is_(None),
+                stored_retry_count < max_retries_per_task,
             ),
         )
     )
