@@ -162,7 +162,9 @@ def test_rare_signal_assessment_projects_safe_lifecycle_snapshots(db):
     assert "sensitive_detail" not in snapshots[0].payload
 
     repeated = adapter.sync_legacy_records(db)
-    assert repeated["records_seen"] == 1
+    # Unchanged rows with a current digest are not work for the next bounded
+    # pass, so they cannot monopolize the projection budget.
+    assert repeated["records_seen"] == 0
     assert repeated["entities_created"] == 0
     assert repeated["events_created"] == 0
     assert repeated["unresolved_records"] == 0
@@ -244,7 +246,7 @@ def test_legacy_record_projection_survives_restart(tmp_path):
     result = adapter.sync_legacy_records(restarted)
     restarted.commit()
 
-    assert result["records_seen"] == 4
+    assert result["records_seen"] == 0
     assert result["entities_created"] == 0
     assert result["events_created"] == 0
     assert result["unresolved_records"] == 0
