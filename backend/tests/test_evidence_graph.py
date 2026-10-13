@@ -323,6 +323,50 @@ def test_new_support_does_not_erase_existing_contradiction(db):
     ).count() == 1
 
 
+
+def test_new_contradiction_contests_verified_claim_and_support_challenges_rejection(db):
+    verified, _ = evidence_graph.create_or_get_claim(
+        db, "TEST a claim that had previously been verified."
+    )
+    verified.epistemic_state = "verified"
+    rejected, _ = evidence_graph.create_or_get_claim(
+        db, "TEST a different claim that had previously been rejected."
+    )
+    rejected.epistemic_state = "rejected"
+    db.commit()
+
+    counter_evidence = models.Evidence(
+        source="reviewed-counter-source",
+        content="TEST evidence contradicts the previously verified statement.",
+        direction="contradicts",
+    )
+    support_evidence = models.Evidence(
+        source="reviewed-support-source",
+        content="TEST evidence supports the previously rejected statement.",
+        direction="supports",
+    )
+    db.add_all([counter_evidence, support_evidence])
+    db.commit()
+
+    evidence_graph.link_evidence(
+        db, counter_evidence, claim=verified, relation_type="contradicts"
+    )
+    evidence_graph.link_evidence(
+        db, support_evidence, claim=rejected, relation_type="supports"
+    )
+
+    db.refresh(verified)
+    db.refresh(rejected)
+    assert verified.epistemic_state == "contested"
+    assert rejected.epistemic_state == "contested"
+    assert db.query(models.EvidenceRelationship).filter_by(
+        claim_id=verified.id, relation_type="contradicts"
+    ).count() == 1
+    assert db.query(models.EvidenceRelationship).filter_by(
+        claim_id=rejected.id, relation_type="supports"
+    ).count() == 1
+
+
 def test_opportunity_trace_explains_why_it_exists(db):
     observer = ObserverEngine(db)
     signal = observer.observe(
