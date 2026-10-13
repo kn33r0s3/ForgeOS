@@ -437,12 +437,16 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
                 )
                 evidence_graph.link_evidence(db, evidence, claim=claim, relation_type="derived_from")
             if task.claim_id:
-                relation = (normalized.get("metadata") or {}).get("claim_relation", "derived_from")
-                if relation not in evidence_graph.RELATION_TYPES:
-                    relation = "derived_from"
+                # Collector metadata is source material, not a trusted semantic
+                # assessment. A payload-supplied "claim_relation" must not mark
+                # its own evidence as supporting/contradicting a Claim. Keep
+                # lineage here; a validated internal assessment may later add
+                # an explicit semantic relation through the existing graph seam.
                 claim = db.query(models.Claim).filter_by(id=task.claim_id).first()
                 if claim:
-                    evidence_graph.link_evidence(db, evidence, claim=claim, relation_type=relation)
+                    evidence_graph.link_evidence(
+                        db, evidence, claim=claim, relation_type="derived_from"
+                    )
 
     retrieval_observation = None
     if not raw_items:
