@@ -14,8 +14,9 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  # Let active tests finish; newer pending pushes replace superseded queued runs.
+  # Isolate every deploy-verification run by commit. Sharing one main group
+  # allows newer pending pushes to replace verification of an earlier SHA.
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
