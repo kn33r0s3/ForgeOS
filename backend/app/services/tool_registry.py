@@ -267,13 +267,12 @@ def default_registry() -> ToolRegistry:
     ):
         registry.register(CollectorToolAdapter(name, factory, source_type))
     def local_ollama_is_configured_for_this_runtime() -> bool:
-        host = urlparse(str(ai_engine.settings.OLLAMA_HOST))
-        return (
-            not os.getenv("VERCEL")
-            and ai_engine.settings.AI_PROVIDER.strip().lower() == "ollama"
-            and host.scheme == "http"
-            and host.hostname in {"localhost", "127.0.0.1", "::1"}
-        )
+        if ai_engine.settings.AI_PROVIDER.strip().lower() != "ollama":
+            return False
+        # Unlike a configuration-only check, this requires the configured local
+        # or authenticated HTTPS self-hosted endpoint to answer and expose the
+        # selected model. It still does not claim generation quality.
+        return ai_engine.get_provider_status().get("status") == "MODEL_AVAILABLE"
 
     registry.register(
         ProviderAdapter(
