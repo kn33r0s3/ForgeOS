@@ -158,6 +158,43 @@ def test_explicit_rare_signal_foreign_key_becomes_typed_relation(db):
     assert db.query(models.WorldRelation).count() == 1
 
 
+def test_inactive_source_entity_type_does_not_starve_later_question_links(db):
+    pattern = models.Pattern(title="Blocked target", description="Its type will be inactive.")
+    belief = models.Belief(statement="A separate source remains eligible.")
+    db.add_all([pattern, belief])
+    db.flush()
+    blocked_question = models.ResearchQuestion(
+        question="Question linked to inactive pattern",
+        source_pattern_id=pattern.id,
+    )
+    valid_question = models.ResearchQuestion(
+        question="Question linked to active belief",
+        source_belief_id=belief.id,
+    )
+    db.add_all([blocked_question, valid_question])
+    db.commit()
+    world_graph.seed_core_types(db)
+    pattern_type = db.query(models.TypeRegistry).filter_by(
+        category="entity_type", type_name="pattern"
+    ).one()
+    world_graph.set_type_status(
+        db, pattern_type, "deprecated",
+        actor="test_agent",
+        rationale="Inactive target rows cannot starve bounded projection.",
+        evidence_ref="backend/tests/test_research_question_relation_substrate_adapter.py",
+    )
+    result = adapter.sync_research_question_sources(db, limit=1)
+    assert result["questions_seen"] == 1
+    assert result["relations_created"] == 1
+    assert result["unresolved_links"] == 1
+    assert db.query(models.WorldRelation).filter_by(
+        idempotency_key=f"legacy-research-question:{blocked_question.id}:source_pattern_id:derived-from-v1"
+    ).count() == 0
+    assert db.query(models.WorldRelation).filter_by(
+        idempotency_key=f"legacy-research-question:{valid_question.id}:source_belief_id:derived-from-v1"
+    ).count() == 1
+
+
 def test_text_similarity_never_creates_source_relations(db):
     question = models.ResearchQuestion(
         question="Does the phrase Pattern 42 refer to a real source?"
