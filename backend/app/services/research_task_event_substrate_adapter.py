@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 
-from sqlalchemy import String, cast, exists, literal
+from sqlalchemy import String, and_, cast, exists, literal
 from sqlalchemy.orm import Session
 
 from app import models
@@ -62,23 +62,25 @@ def sync_research_task_events(
         .correlate(models.ResearchTaskEvent)
         .exists()
     )
-    required_types_active = (
+    question_type_active = (
         db.query(models.TypeRegistry.id)
         .filter(
+            models.TypeRegistry.category == "entity_type",
+            models.TypeRegistry.type_name == "research_question",
             models.TypeRegistry.status == "active",
-            (
-                (models.TypeRegistry.category == "entity_type")
-                & (models.TypeRegistry.type_name == "research_question")
-            )
-            | (
-                (models.TypeRegistry.category == "event_type")
-                & (models.TypeRegistry.type_name == "state_changed")
-            ),
         )
-        .group_by(models.TypeRegistry.category)
-        .having(__import__("sqlalchemy").func.count(models.TypeRegistry.id) == 2)
         .exists()
     )
+    event_type_active = (
+        db.query(models.TypeRegistry.id)
+        .filter(
+            models.TypeRegistry.category == "event_type",
+            models.TypeRegistry.type_name == "state_changed",
+            models.TypeRegistry.status == "active",
+        )
+        .exists()
+    )
+    required_types_active = and_(question_type_active, event_type_active)
     eligible_query = query.filter(task_has_question, required_types_active)
     eligible_count = eligible_query.count()
     # Invalid task/question references and inactive required types remain visible
