@@ -590,3 +590,18 @@ def test_bounded_local_cognitive_batch_obeys_owner_gate(db, monkeypatch):
     assert result["status"] == "blocked"
     assert result["reason"] == "owner_agent_run_gate"
     assert db.query(models.WorkerTask).filter_by(worker_type="cognitive").count() == 0
+
+
+
+def test_cognitive_provider_supports_authenticated_self_hosted_mode(monkeypatch):
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "OLLAMA_HOST", "https://models.example.test")
+    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "test-only-gateway-token")
+    monkeypatch.setenv("VERCEL", "1")
+
+    provider = cognitive_provider.get_cognitive_provider()
+
+    assert provider.name == "ollama"
+    assert provider.mode == "SELF_HOSTED"
+    assert provider.version == settings.OLLAMA_MODEL
