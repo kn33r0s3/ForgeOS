@@ -7,7 +7,7 @@ import json
 from dataclasses import replace
 from datetime import timedelta
 from typing import Any, Mapping, Sequence
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunsplit
 
 from app import evidence_source
 
@@ -123,9 +123,20 @@ def _context_for_task(
             and row.source_identity is None
             and parsed_url.scheme in {"http", "https"}
             and parsed_url.netloc
+            and parsed_url.username is None
+            and parsed_url.password is None
         ):
             continue
         title = " ".join((row.title or "").split())[:200]
+        # Canonical URLs are untrusted input. Never pass query strings,
+        # fragments or userinfo-like credential material into the model prompt.
+        safe_url = urlunsplit((
+            parsed_url.scheme.lower(),
+            parsed_url.netloc,
+            parsed_url.path or "/",
+            "",
+            "",
+        ))
         claim = " ".join((row.claim or "").split())[:500]
         if not title and not claim:
             continue
@@ -133,7 +144,7 @@ def _context_for_task(
             "evidence_id": str(row.id),
             "title": title,
             "claim": claim,
-            "canonical_url": url[:500],
+            "canonical_url": safe_url[:500],
         }
         item_size = sum(len(value) for value in item.values())
         if context_chars + item_size > max_context_chars:
