@@ -280,3 +280,74 @@ def test_daily_cycle_structures_collected_external_signals_in_same_run(db, monke
         for item in projected
         if item.kind == "signal"
     )
+
+
+
+def test_daily_cycle_invokes_local_cognitive_batch_when_explicitly_enabled(db, monkeypatch):
+    from app.config import settings
+    from app.services import cognitive_provider, operating_v4
+
+    research = research_task_engine.create_task(
+        db,
+        question_id=_question(db, "Can public evidence clarify this workflow?").id,
+        source="test",
+        query="public evidence for workflow",
+        objective="Can public evidence clarify this workflow?",
+    )
+    evidence = models.Evidence(
+        source="public-source",
+        title="Public workflow report",
+        claim="The report describes a workflow constraint to verify.",
+        canonical_url="https://example.gov.np/workflow-report",
+        source_kind="REAL",
+        source_type="third_party",
+        consent_status="not_required",
+    )
+    db.add(evidence)
+    db.flush()
+    research.status = "completed"
+    research.evidence_ids = str(evidence.id)
+    db.commit()
+
+    class Provider:
+        name = "daily-cycle-test"
+        version = "test-v1"
+        mode = "TEST"
+        last_call_metadata = {}
+
+        def propose(self, context):
+            return [{
+                "kind": "research_follow_up",
+                "title": "Verify workflow constraint",
+                "rationale": "The public source is a lead, not proof.",
+                "next_step": "Compare with an independent permitted source.",
+                "evidence_ids": list(context.available_evidence_ids or ()),
+                "status": "PROPOSED",
+                "execution_authorized": False,
+            }]
+
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    monkeypatch.setattr(cognitive_provider, "get_cognitive_provider", lambda: Provider())
+    monkeypatch.setattr(operating_v4, "check_agent_run_allowed", lambda _db: None)
+    monkeypatch.setattr(run_daily_cycle, "SessionLocal", lambda: db)
+    monkeypatch.setattr(run_daily_cycle.forge_loop, "run_cycle", lambda _db: {
+        "claims_linked": [], "network_connection_ids": [], "source_addresses_restored": 0,
+    })
+    monkeypatch.setenv("FORGEOS_COLLECT_LIMIT", "0")
+    monkeypatch.setattr(
+        run_daily_cycle.execution_engine,
+        "run_autonomous_action_cycle",
+        lambda _db: {"proposed": 0, "allowed": 0, "blocked": 0, "require_approval": 0},
+    )
+
+    record = run_daily_cycle.run_once()
+
+    assert record["cognitive_proposals"]["status"] == "ok"
+    assert record["cognitive_proposals"]["completed"] == 1
+    worker_task = db.query(models.WorkerTask).filter_by(
+        idempotency_key=f"cognitive-research-task:v1:{research.id}"
+    ).one()
+    assert worker_task.status == "completed"
+    assert worker_task.outputs["status"] == "PROPOSED"
+    assert db.query(models.Action).count() == 0
