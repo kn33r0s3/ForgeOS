@@ -145,6 +145,61 @@ def test_pending_reply_api_only_lists_unresolved_sent_drafts(db, monkeypatch):
     assert items[0]["send_channel"] == "facebook"
 
 
+def test_pending_reply_queue_api_preserves_dry_wells_for_late_replies(db, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from app.config import settings
+    from app.main import app
+
+    monkeypatch.setattr(settings, "FORGE_API_KEY", "test-owner-key")
+    candidate = _candidate(db, "Late Reply Shop")
+    draft = scout.generate_draft(db, candidate.id, "One unanswered inquiry")
+    scout.approve_draft(db, draft.id)
+    scout.mark_sent(db, draft.id, channel="facebook", sent_by="owner")
+
+    client = TestClient(app)
+    headers = {"X-API-Key": "test-owner-key"}
+    dry_well = client.post(
+        f"/scout/drafts/{draft.id}/no-response",
+        headers=headers,
+        json={"summary": "No reply observed after checking messages on 2026-10-14."},
+    )
+    assert dry_well.status_code == 200, dry_well.text
+    assert dry_well.json()["reply_received"] is False
+
+    response = client.get("/scout/pending-replies", headers=headers)
+    assert response.status_code == 200, response.text
+    item = next(item for item in response.json() if item["id"] == draft.id)
+    assert item["reply_received"] is False
+    assert "No reply observed" in item["outcome_notes"]
+
+    # A late reply remains recordable and does not get mislabeled as a new lead.
+    reply = client.post(
+        f"/scout/drafts/{draft.id}/reply",
+        headers=headers,
+        json={"summary": "Recipient replied after the earlier no-response note."},
+    )
+    assert reply.status_code == 200, reply.text
+    response = client.get("/scout/pending-replies", headers=headers)
+    assert all(item["id"] != draft.id for item in response.json())
+
+
+def test_scout_cycle_reports_pending_replies_and_dry_wells(db):
+    candidate = _candidate(db, "Outcome Queue Shop")
+    draft = scout.generate_draft(db, candidate.id, "One unanswered inquiry")
+    scout.approve_draft(db, draft.id)
+    scout.mark_sent(db, draft.id, channel="facebook", sent_by="owner")
+
+    before = scout.run_scout_cycle(db)
+    assert before["pending_contact_replies"] == 1
+    assert before["dry_wells_recorded"] == 0
+
+    scout.record_no_response(db, draft.id, "No reply observed as of 2026-10-14.")
+    after = scout.run_scout_cycle(db)
+    assert after["pending_contact_replies"] == 1
+    assert after["dry_wells_recorded"] == 1
+
+
 def test_do_not_contact_blocks(db):
     c = _candidate(db)
     db.add(models.DoNotContact(candidate_entity_id=c.id, reason="asked not to be contacted"))
