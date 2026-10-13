@@ -149,6 +149,53 @@ def test_scheduled_intelligence_blocks_ephemeral_vercel_sqlite(monkeypatch):
     assert not scheduled._intelligence_lock.locked()
 
 
+
+def test_scheduled_intelligence_stops_when_run_record_cannot_be_created(monkeypatch):
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    monkeypatch.delenv("VERCEL", raising=False)
+
+    class Dialect:
+        name = "sqlite"
+
+    class Engine:
+        dialect = Dialect()
+
+    class BrokenSession:
+        def __enter__(self):
+            raise RuntimeError("simulated database write failure")
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    monkeypatch.setattr(scheduled.database, "engine", Engine())
+    monkeypatch.setattr(scheduled.database, "SessionLocal", lambda: BrokenSession())
+    request = Request({
+        "type": "http",
+        "http_version": "1.1",
+        "method": "GET",
+        "scheme": "http",
+        "path": "/scheduled/intelligence",
+        "raw_path": b"/scheduled/intelligence",
+        "query_string": b"",
+        "headers": [],
+        "server": ("testserver", 80),
+        "client": ("testclient", 12345),
+    })
+
+    try:
+        scheduled.run_scheduled_intelligence(
+            request,
+            authorization="Bearer test-cron-secret",
+        )
+    except HTTPException as exc:
+        assert exc.status_code == 503
+        assert exc.detail == "Scheduled intelligence run could not be recorded"
+    else:
+        raise AssertionError("intelligence work must not start without its run record")
+
+    assert not scheduled._intelligence_lock.locked()
+
+
 def test_scheduled_cycle_fails_closed_without_secret(monkeypatch):
     monkeypatch.delenv("CRON_SECRET", raising=False)
     client = TestClient(app)
@@ -765,6 +812,7 @@ def test_scheduled_intelligence_persists_cycle_run(monkeypatch, db):
         None,
     )
     assert row is not None, "no CycleRun with 7-stage summary found"
+    assert response.json()["cycle_run_id"] == row.id
     assert row.status in ("COMPLETED", "PARTIAL", "FAILED")
     assert row.started_at is not None
     assert row.ended_at is not None
