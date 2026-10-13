@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Container } from "@/components/layout/container";
+import { BrandMark } from "@/components/layout/brand-mark";
 import { ForgeConsoleWidgets } from "@/components/forge/forge-console";
 import { OperatingV4 } from "@/components/owner/operating-v4";
 import { ScoutQueue } from "@/components/owner/scout-queue";
@@ -1292,6 +1293,13 @@ function OwnerConsolePage() {
     <main className="flex-1">
       <Container className="py-8 sm:py-12">
         <div className="mx-auto max-w-5xl">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+            <BrandMark tone="light" />
+            <span className="inline-flex min-h-10 items-center gap-2 rounded-full border border-line px-3 py-2 text-xs font-semibold text-muted">
+              <span className="size-2 rounded-full bg-success" aria-hidden="true" />
+              Private owner workspace
+            </span>
+          </div>
           <p className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-accent">
             Owner tools · key-protected data
           </p>
