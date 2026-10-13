@@ -1029,7 +1029,7 @@ class JudgmentComparison(Base):
     question = Column(Text, nullable=False)
     judgment_ids = Column(JSON, nullable=False)
     evidence_ids = Column(Text, nullable=False, default="")
-    outcome = Column(String, nullable=False)  # agreement | partial_agreement | disagreement | missing_evidence
+    outcome = Column(String, nullable=False)  # agreement | partial_agreement | disagreement | missing_evidence | evaluation_incomplete | insufficient_evidence | insufficient_judges
     summary = Column(Text, nullable=False)
     disagreement_points = Column(JSON, nullable=True)
     missing_evidence = Column(JSON, nullable=True)
