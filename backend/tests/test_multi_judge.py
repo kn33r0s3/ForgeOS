@@ -221,6 +221,7 @@ def test_openai_judge_requires_explicit_opt_in_even_when_key_is_configured(monke
     monkeypatch.setattr(settings, "FORGEOS_OPENAI_JUDGE_ENABLED", True)
     judges = multi_judge._default_judges()
     assert [judge.name for judge in judges] == ["openai-completion"]
+    assert judges[0].model == settings.OPENAI_MODEL
     assert requested == ["local-qwen3-coder", "openai-completion"]
 
 
@@ -627,6 +628,15 @@ def test_default_judgment_records_only_the_evidence_the_provider_received(db, mo
         judgment_id=judgment.id,
         evidence_id=private.id,
     ).count() == 0
+
+    comparison = multi_judge.compare_judgments(
+        db,
+        question="Does the source establish this claim?",
+        judgment_ids=[judgment.id],
+        evidence_ids=[public.id, private.id],
+    )
+    assert comparison.outcome == "insufficient_judges"
+    assert comparison.evidence_ids == str(public.id)
 
 
 def test_default_judge_has_no_available_provider_context_on_vercel(monkeypatch):
