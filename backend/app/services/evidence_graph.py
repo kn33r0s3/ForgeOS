@@ -128,6 +128,12 @@ def create_or_get_claim(
 ) -> tuple[models.Claim, bool]:
     if epistemic_state not in CLAIM_STATES:
         raise ValueError(f"invalid claim state: {epistemic_state}")
+    if epistemic_state != "observed":
+        raise ValueError(
+            "create_or_get_claim only creates observed claims; epistemic state "
+            "transitions require an explicit evidence_graph relation or a "
+            "dedicated verified outcome transition"
+        )
     normalized = normalize_statement(statement)
     if not normalized:
         raise ValueError("claim statement required")
@@ -147,8 +153,9 @@ def create_or_get_claim(
             query = query.filter(column.is_(None))
     claim = query.first()
     if claim:
-        if claim.epistemic_state == "observed" and epistemic_state != "observed":
-            claim.epistemic_state = epistemic_state
+        # Identity lookup may return a stronger existing canonical Claim, but
+        # this helper never promotes it. Only explicit evidence/outcome paths
+        # may change epistemic state.
         claim.updated_at = utcnow()
         db.commit()
         db.refresh(claim)
