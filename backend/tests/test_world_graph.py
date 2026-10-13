@@ -607,6 +607,16 @@ def test_registry_evidence_and_relation_validations_fail_closed(db):
                 "test_fixture": True,
             },
         )
+    with pytest.raises(world_graph.SubstrateError, match="cannot be tested, supported, or refuted"):
+        world_graph.create_evidence(
+            db,
+            subject_kind="entity",
+            subject_id=entity.id,
+            claim="A quoted test-fixture label is still a test fixture.",
+            support_level="supported",
+            source="field_interview",
+            provenance=json.dumps("test-fixture: direct observation"),
+        )
     # Guard the ORM boundary too: direct construction must not bypass the
     # service-layer check with a plausible source label.
     with pytest.raises(world_graph.SubstrateError, match="cannot be tested, supported, or refuted"):
