@@ -438,6 +438,7 @@ class ResearchQuestion(Base):
     source_rare_signal_id = Column(Integer, ForeignKey("rare_signal_assessments.id"), nullable=True, index=True)
     research_plan = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, nullable=True, default=utcnow, onupdate=utcnow)
 
 
 class ResearchTask(Base):
@@ -1546,6 +1547,7 @@ class Decision(Base):
     status = Column(String, nullable=False, default="proposed")  # proposed | accepted | rejected | superseded
     created_at = Column(DateTime, default=utcnow)
     decided_at = Column(DateTime, nullable=True)
+    updated_at = Column(DateTime, nullable=True, default=utcnow, onupdate=utcnow)
 
 
 class LearningEvent(Base):
