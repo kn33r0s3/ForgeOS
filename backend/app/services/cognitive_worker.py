@@ -122,6 +122,7 @@ def _context_for_task(
             evidence_source.is_real(row.source_kind)
             and (row.source_type or "").strip().lower() == "third_party"
             and (row.consent_status or "").strip().lower() == "not_required"
+            and (row.collection_status or "").strip().lower() == "collected"
             and row.source_identity is None
             and parsed_url.scheme in {"http", "https"}
             and parsed_url.netloc
@@ -519,6 +520,7 @@ def run_pending_cognitive_tasks(
             func.upper(func.trim(models.Evidence.source_kind)) == "REAL",
             func.lower(func.trim(func.coalesce(models.Evidence.source_type, ""))) == "third_party",
             func.lower(func.trim(func.coalesce(models.Evidence.consent_status, ""))) == "not_required",
+            func.lower(func.trim(func.coalesce(models.Evidence.collection_status, ""))) == "collected",
             models.Evidence.source_identity.is_(None),
             or_(safe_url.like("https://%"), safe_url.like("http://%")),
             ~safe_url.like("https:///%"),
