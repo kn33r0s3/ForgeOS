@@ -96,6 +96,11 @@ def create_connection(
     relation_type = normalize_relation_type(relation_type)
     if epistemic_state not in RELATION_EPISTEMIC_STATES:
         raise ValueError("invalid relation epistemic_state")
+    if epistemic_state not in {"possible", "hypothesized"}:
+        raise ValueError(
+            "new connections must begin possible or hypothesized; stronger truth "
+            "states require an explicit evidence-backed substrate transition"
+        )
     if direction not in RELATION_DIRECTIONS:
         raise ValueError("direction must be directed or bidirectional")
     if not (reason or "").strip():
@@ -106,9 +111,6 @@ def create_connection(
     stored_evidence = [db.get(models.Evidence, evidence_id) for evidence_id in evidence_ids or []]
     if any(evidence is None for evidence in stored_evidence):
         raise ValueError("every evidence_id must identify stored evidence")
-    if epistemic_state in {"tested", "supported", "refuted"} and not stored_evidence:
-        raise ValueError(f"{epistemic_state} relations require stored evidence")
-
     connection = models.NetworkConnection(
         left_kind=left_kind,
         left_id=left_id,
