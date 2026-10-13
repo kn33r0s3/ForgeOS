@@ -97,8 +97,7 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
   const mockProvider = providerName === "mock" &&
     (providerHealth === "READY" || providerHealth === "MOCK");
   const providerCanAnswer = providerStatus !== null &&
-    ((providerName === "mock" && (providerHealth === "READY" || providerHealth === "MOCK")) ||
-      (providerName === "ollama" && providerHealth === "MODEL_AVAILABLE"));
+    providerName === "ollama" && providerHealth === "MODEL_AVAILABLE";
   const canAsk = !providerLoading && !providerError && providerCanAnswer;
 
   async function submitQuestion(event: FormEvent<HTMLFormElement>) {
@@ -151,9 +150,9 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
   }
 
   const suggestions = [
-    "Give me a plain-English update on what Hami currently knows.",
+    "हामीलाई अहिले के थाहा छ?",
+    "Hami le ke kura ajhai janchna baaki chha?",
     "What important thing is still unknown?",
-    "What useful question should Hami investigate next?",
     "What evidence would make an important claim trustworthy?",
   ];
 
@@ -166,8 +165,8 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
             Talk to ForgeBot
           </h3>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
-            Ask in plain English. ForgeBot answers using knowledge already stored in Hami and shows the records behind each answer.
-            You can start with an example below, or ask your own question.
+            Ask in Nepali (देवनागरी), Romanized Nepali, English, or a mix. ForgeBot should answer in your language and show the Hami knowledge records used.
+            When the stored evidence is insufficient, it should say so instead of guessing. You can start with an example below or ask your own question.
           </p>
         </div>
         <span className="rounded-full border border-line px-3 py-1 text-xs font-semibold text-muted">Temporary chat</span>
@@ -190,9 +189,9 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
               </>
             ) : mockProvider ? (
               <>
-                <p className="mt-1 text-sm font-semibold text-ink">ForgeBot is in simple test mode.</p>
+                <p className="mt-1 text-sm font-semibold text-ink">Real inference is not enabled.</p>
                 <p className="mt-1 text-sm leading-5 text-muted">
-                  You can try the controls, but answers are templates rather than real AI reasoning. Treat them as placeholders.
+                  This environment is using deterministic test templates. Hami will not present them as intelligence or enable questions until a real, reachable local model is available.
                 </p>
               </>
             ) : providerHealth === "MODEL_AVAILABLE" && providerName === "ollama" ? (
