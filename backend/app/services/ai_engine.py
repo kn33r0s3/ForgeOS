@@ -431,14 +431,15 @@ def _complete_with_fallback(
     *,
     allow_mock_fallback: bool = True,
     completion_observation: dict | None = None,
+    contains_internal_context: bool = False,
 ) -> str:
     """Run completion through configured provider.
 
-    When AI_PROVIDER is explicitly "mock": use MockProvider (tests/demo).
-    When AI_PROVIDER is ollama/openai and fails: raise AIUnavailableError
-    unless settings.AI_FALLBACK_TO_MOCK is True (explicit opt-in for demos).
-
-    Never silently fabricate intelligence when the user asked for a real model.
+    When AI_PROVIDER is explicitly "mock": deterministic templates only.
+    Paid OpenAI calls are blocked in get_provider until global metering exists.
+    For a remote self-hosted Ollama endpoint, internal Hami context is blocked
+    unless HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA is explicitly set.
+    Mock fallback additionally requires both caller permission and the demo flag.
     """
     full_prompt = f"{context}\n\n{prompt}" if context else prompt
     provider_name = settings.AI_PROVIDER
@@ -490,6 +491,24 @@ def _complete_with_fallback(
 
     mode = getattr(provider, "_transport_mode", "EXTERNAL")
     model = getattr(provider, "_model", None)
+    if (
+        mode == "SELF_HOSTED"
+        and (bool(context.strip()) or contains_internal_context)
+        and not settings.HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA
+    ):
+        if completion_observation is not None:
+            completion_observation.update({
+                "provider": provider_name,
+                "mode": mode,
+                "model": model,
+                "status": "blocked_internal_context",
+                "request_attempted": False,
+                "inference_invoked": False,
+            })
+        raise AIUnavailableError(
+            provider_name,
+            "internal Hami context is not authorized for remote transfer; configure the owner-approved data boundary first",
+        )
     try:
         if completion_observation is not None:
             completion_observation.update({
@@ -681,6 +700,7 @@ def answer_question(question: str, db) -> dict:
         system=system,
         allow_mock_fallback=False,
         completion_observation=provider_observation,
+        contains_internal_context=bool(context),
     )
     return {
         "answer": answer,
