@@ -80,6 +80,7 @@ function DomainPage() {
   const [isPosting, setIsPosting] = useState(false);
   const [tokenCopied, setTokenCopied] = useState(false);
   const [chosenProvider, setChosenProvider] = useState<number | null>(null);
+  const [isBooking, setIsBooking] = useState(false);
   const [requesterName, setRequesterName] = useState("");
   const [requestedService, setRequestedService] = useState("");
   const navigate = useNavigate();
@@ -234,17 +235,25 @@ function DomainPage() {
 
   async function book(event: React.FormEvent) {
     event.preventDefault();
-    if (!chosenProvider) return;
-    const result = await createBookingRequest({
-      provider_id: chosenProvider,
-      requester_name: requesterName,
-      requested_service: requestedService,
-    });
-    if (!result) {
-      setMessage("The request was not recorded. Only a verified public provider can receive one.");
-      return;
+    if (!chosenProvider || isBooking) return;
+    setIsBooking(true);
+    setMessage(null);
+    try {
+      const result = await createBookingRequest({
+        provider_id: chosenProvider,
+        requester_name: requesterName,
+        requested_service: requestedService,
+      });
+      if (!result) {
+        setMessage("Hami could not confirm this request was recorded. Check before retrying; a timed-out request may still have reached the server.");
+        return;
+      }
+      await navigate({ to: "/requests/$id", params: { id: String(result.id) } });
+    } catch {
+      setMessage("Hami could not confirm this request. Check your request status before trying again.");
+    } finally {
+      setIsBooking(false);
     }
-    await navigate({ to: "/requests/$id", params: { id: String(result.id) } });
   }
 
   return (
@@ -376,7 +385,8 @@ function DomainPage() {
                             value={responseNote}
                             onChange={(event) => setResponseNote(event.target.value)}
                             required
-                            placeholder="Record the response you received"
+                            maxLength={2000}
+                            placeholder="Record the response you received (max 2,000 characters)"
                             className="min-h-20 w-full rounded-card border border-line bg-paper px-4 py-3 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)] text-sm"
                           />
                         </label>
@@ -466,19 +476,19 @@ function DomainPage() {
                 {closeResult === "paid" ? (
                   <label className="block">
                     <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Amount received</span>
-                    <input value={paidAmount} onChange={(event) => setPaidAmount(event.target.value)} inputMode="numeric" required placeholder="Amount received, whole NPR" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+                    <input value={paidAmount} onChange={(event) => setPaidAmount(event.target.value)} inputMode="numeric" type="number" min={0} max={1000000000000} step={1} required placeholder="Amount received, whole NPR" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
                   </label>
                 ) : null}
                 <label className="block">
                   <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">What happened</span>
-                  <textarea value={closeNote} onChange={(event) => setCloseNote(event.target.value)} required minLength={3} placeholder="What actually happened" className="min-h-20 w-full rounded-card border border-line bg-paper px-4 py-3 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+                  <textarea value={closeNote} onChange={(event) => setCloseNote(event.target.value)} required minLength={3} maxLength={2000} placeholder="What actually happened (max 2,000 characters)" className="min-h-20 w-full rounded-card border border-line bg-paper px-4 py-3 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
                 </label>
                 <button type="submit" className="btn-wipe btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-card border-2 border-black/70 bg-accent px-5 text-sm font-extrabold text-black hover:text-accent focus-visible:text-accent">Record the close</button>
               </form>
               <form onSubmit={disputeRecord} className="space-y-3 border-t border-line pt-4">
                 <label className="block">
                   <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Dispute</span>
-                  <textarea value={disputeNote} onChange={(event) => setDisputeNote(event.target.value)} required minLength={3} placeholder="What is disputed" className="min-h-20 w-full rounded-card border border-line bg-paper px-4 py-3 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+                  <textarea value={disputeNote} onChange={(event) => setDisputeNote(event.target.value)} required minLength={3} maxLength={2000} placeholder="What is disputed (max 2,000 characters)" className="min-h-20 w-full rounded-card border border-line bg-paper px-4 py-3 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
                 </label>
                 <button type="submit" className="btn-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-card border border-line bg-card px-5 text-sm font-semibold text-ink hover:border-accent focus-visible:border-accent">Record a dispute</button>
               </form>
@@ -489,13 +499,13 @@ function DomainPage() {
               <p className="text-sm text-ink">Request provider #{chosenProvider}. This records a request. It does not accept the work or record a payment.</p>
               <label className="block">
                 <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Your name</span>
-                <input value={requesterName} onChange={(event) => setRequesterName(event.target.value)} required placeholder="Your name" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+                <input value={requesterName} onChange={(event) => setRequesterName(event.target.value)} required maxLength={160} placeholder="Your name (max 160 characters)" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-micro font-extrabold uppercase tracking-[0.1em] text-dim">Request</span>
-                <input value={requestedService} onChange={(event) => setRequestedService(event.target.value)} required placeholder="What you are requesting" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
+                <input value={requestedService} onChange={(event) => setRequestedService(event.target.value)} required maxLength={2000} placeholder="What you are requesting (max 2,000 characters)" className="min-h-12 w-full rounded-card border border-line bg-paper px-4 text-ink placeholder:text-dim transition-[border-color,box-shadow] focus-visible:border-accent focus-visible:shadow-[var(--shadow-glow)]" />
               </label>
-              <button type="submit" className="btn-wipe btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-card border-2 border-black/70 bg-accent px-5 text-sm font-extrabold text-black hover:text-accent focus-visible:text-accent">Record the request</button>
+              <button type="submit" disabled={isBooking} aria-busy={isBooking} className="btn-wipe btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-card border-2 border-black/70 bg-accent px-5 text-sm font-extrabold text-black hover:text-accent focus-visible:text-accent disabled:cursor-wait disabled:opacity-60">{isBooking ? "Recording request…" : "Record the request"}</button>
             </form>
           ) : null}
           {message ? <p role="status" className="rounded-card border border-line bg-card px-4 py-3 text-sm text-muted">{message}</p> : null}

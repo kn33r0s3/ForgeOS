@@ -2629,3 +2629,73 @@ def test_connection_state_rolls_back_when_transition_event_write_fails(owner_cli
     assert db.query(models.Outcome).filter_by(
         notes=f"idempotency:network-connection:{row.id}:accepted"
     ).count() == 0
+
+
+def test_public_booking_request_rolls_back_when_event_write_fails(owner_client_with_db, db, monkeypatch):
+    from app.services import action_engine
+
+    provider = models.Provider(
+        name="Atomic booking provider",
+        category="Repair",
+        country="Nepal",
+        public_visible=True,
+        is_active=True,
+        verification_status="verified",
+    )
+    db.add(provider)
+    db.commit()
+    db.refresh(provider)
+
+    def fail_event(*args, **kwargs):
+        raise RuntimeError("simulated event write failure")
+
+    monkeypatch.setattr(action_engine, "record_domain_event", fail_event)
+    with pytest.raises(RuntimeError, match="simulated event write failure"):
+        owner_client_with_db.post(
+            "/public/booking-requests",
+            json={
+                "provider_id": provider.id,
+                "requester_name": "Atomic fixture",
+                "requested_service": "A bounded diagnostic",
+            },
+        )
+
+    assert db.query(models.BookingRequest).filter_by(
+        requester_name="Atomic fixture"
+    ).count() == 0
+    assert db.query(models.Outcome).filter_by(source="booking_request").count() == 0
+
+
+def test_public_write_schemas_reject_unbounded_free_text():
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        schemas.DomainRecordClose.model_validate({
+            "close_token": "token",
+            "result": "completed",
+            "note": "x" * 2001,
+        })
+    with pytest.raises(ValidationError):
+        schemas.DomainDisputeCreate.model_validate({
+            "close_token": "token",
+            "note": "x" * 2001,
+        })
+    with pytest.raises(ValidationError):
+        schemas.BookingRequestCreate.model_validate({
+            "provider_id": 1,
+            "requester_name": "x" * 161,
+            "requested_service": "Repair",
+        })
+    with pytest.raises(ValidationError):
+        schemas.BookingRequestCreate.model_validate({
+            "provider_id": 1,
+            "requester_name": "A",
+            "requested_service": "x" * 2001,
+        })
+    with pytest.raises(ValidationError):
+        schemas.DomainRecordClose.model_validate({
+            "close_token": "token",
+            "result": "paid",
+            "note": "Paid according to requester",
+            "amount_npr": True,
+        })

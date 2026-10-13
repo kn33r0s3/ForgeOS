@@ -1,3 +1,12 @@
+## [BOOKING ATOMICITY + PUBLIC INPUT BOUNDS / EXACT-HEAD CI PENDING] Finish the same governed write contract (2026-10-13)
+
+- **Existing seams inspected:** `BookingRequestCreate`, `DomainRecordClose`, `DomainDisputeCreate`, `PublicConnectionResponseCreate`, `create_booking_request`, the existing booking request form, and the shared `record_domain_event(commit=...)` writer.
+- **Weak points removed:** the verified-provider booking endpoint committed a request before writing its canonical Outcome, which could leave a stored request without returning its status token if event persistence failed. Booking and event are now one transaction with the status token prepared before commit; event failure rolls back the request. Public close/dispute/response notes and booking payload strings now have explicit Pydantic length bounds, and recorded NPR close amounts are strict integers within the same upper bound as offer terms.
+- **UI alignment:** browser max lengths and paid-amount range mirror server validation; booking submit now disables while pending and an uncertain failure tells the person to check status before trying again.
+- **Owner action remaining:** a verified provider listing and request do not establish availability, provider acceptance, fulfillment, or payment; no actual provider was contacted by this change.
+- **What remains / why:** external provider response and mutually agreed scope still must be recorded through the existing lifecycle; unverified or private contact data must not become public evidence.
+- **Verification:** added a failure-injection test requiring booking row and Outcome to roll back together, plus schema tests for oversized notes/name/service and boolean masquerading as a paid integer. Exact-head full CI, secrets scan, and production SHA verification required.
+
 ## [PUBLIC EXCHANGE TRANSACTION ATOMICITY / EXACT-HEAD CI PENDING] Persist state with its canonical event (2026-10-13)
 
 - **Existing seams inspected:** `action_engine.record_domain_event` / `record_outcome(commit=...)`, `create_domain_record`, `close_domain_record`, and `advance_network_connection`.

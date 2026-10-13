@@ -1541,8 +1541,8 @@ class PublicConnectionOut(BaseModel):
 
 
 class PublicConnectionResponseCreate(BaseModel):
-    close_token: str = Field(..., min_length=1)
-    note: str = Field(..., min_length=1)
+    close_token: str = Field(..., min_length=1, max_length=256)
+    note: str = Field(..., min_length=1, max_length=2000)
 
 
 class RecordedPaymentOut(BaseModel):
@@ -1580,8 +1580,8 @@ class PublicRevenueMinerOut(BaseModel):
 
 
 class DomainDisputeCreate(BaseModel):
-    close_token: str = Field(..., min_length=1)
-    note: str = Field(..., min_length=3)
+    close_token: str = Field(..., min_length=1, max_length=256)
+    note: str = Field(..., min_length=3, max_length=2000)
 
 
 class DomainRecordEventsOut(BaseModel):
@@ -1593,22 +1593,22 @@ class DomainRecordEventsOut(BaseModel):
 
 
 class DomainRecordClose(BaseModel):
-    close_token: str = Field(..., min_length=1)
+    close_token: str = Field(..., min_length=1, max_length=256)
     result: Literal["completed", "withdrawn", "paid"]
-    note: str = Field(..., min_length=3)
-    amount_npr: Optional[int] = None
+    note: str = Field(..., min_length=3, max_length=2000)
+    amount_npr: Optional[StrictInt] = Field(default=None, ge=0, le=1_000_000_000_000)
 
 
 class BookingRequestCreate(BaseModel):
     provider_id: int
     service_listing_id: Optional[int] = None
-    requester_name: str = Field(..., min_length=1)
-    requester_phone: Optional[str] = None
-    requester_email: Optional[str] = None
-    requested_service: str = Field(..., min_length=1)
-    requested_date: Optional[str] = None
-    requested_time: Optional[str] = None
-    notes: Optional[str] = None
+    requester_name: str = Field(..., min_length=1, max_length=160)
+    requester_phone: Optional[str] = Field(default=None, max_length=64)
+    requester_email: Optional[str] = Field(default=None, max_length=254)
+    requested_service: str = Field(..., min_length=1, max_length=2000)
+    requested_date: Optional[str] = Field(default=None, max_length=80)
+    requested_time: Optional[str] = Field(default=None, max_length=80)
+    notes: Optional[str] = Field(default=None, max_length=2000)
 
 
 class BookingRequestOut(BaseModel):

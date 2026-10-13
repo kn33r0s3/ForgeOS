@@ -1123,20 +1123,28 @@ def create_booking_request(
         status="pending",
     )
     db.add(request)
-    db.commit()
-    db.refresh(request)
+    db.flush()
     from app.services import action_engine
-    action_engine.record_domain_event(
-        db,
-        idempotency_key=f"booking-request:{request.id}",
-        source="booking_request",
-        qualitative_result=(
-            f"Booking request {request.id} stored for provider {request.provider_id}. "
-            "Status is pending. This is not acceptance and not payment."
-        ),
-    )
+
+    try:
+        status_token = _booking_status_token(request.id)
+        action_engine.record_domain_event(
+            db,
+            idempotency_key=f"booking-request:{request.id}",
+            source="booking_request",
+            qualitative_result=(
+                f"Booking request {request.id} stored for provider {request.provider_id}. "
+                "Status is pending. This is not acceptance and not payment."
+            ),
+            commit=False,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    db.refresh(request)
     return schemas.BookingRequestOut.model_validate(request).model_copy(
-        update={"status_token": _booking_status_token(request.id)}
+        update={"status_token": status_token}
     )
 
 
