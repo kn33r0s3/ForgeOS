@@ -51,6 +51,23 @@ def test_intelligence_invokes_collection_stage(monkeypatch):
 
     monkeypatch.setattr(forge_loop, "run_cycle", lambda db: {"cycle_id": 1, "signals_processed": 0, "stage_errors": {}})
     monkeypatch.setattr(collector_runner, "run_pending_tasks", fake_run_pending_tasks)
+    evaluation_calls = {}
+
+    def fake_run_pending_evaluations(db, limit=2, max_retries_per_task=3):
+        evaluation_calls["limit"] = limit
+        evaluation_calls["max_retries_per_task"] = max_retries_per_task
+        return [
+            {
+                "task_id": 9,
+                "status": "completed",
+                "evaluation_status": "judge_pipeline_executed",
+                "retry_count": 1,
+            }
+        ]
+
+    monkeypatch.setattr(
+        collector_runner, "run_pending_evaluations", fake_run_pending_evaluations
+    )
     monkeypatch.setattr(rte, "resume_running_tasks", lambda db, limit=10: [])
     monkeypatch.setattr(ee, "run_autonomous_action_cycle", lambda db: {"proposed": 0, "allowed": 0, "blocked": 0, "require_approval": 0})
 
@@ -65,6 +82,11 @@ def test_intelligence_invokes_collection_stage(monkeypatch):
     assert collection["tasks_executed"] == 1
     assert collection["outcomes"][0]["task_id"] == 1
     assert collection["outcomes"][0]["signals_created"] == 3
+    recovery = body["intelligence"]["evaluation_recovery"]
+    assert recovery["status"] == "ok"
+    assert recovery["tasks_attempted"] == 1
+    assert recovery["tasks_completed"] == 1
+    assert evaluation_calls == {"limit": 2, "max_retries_per_task": 3}
 
 
 def test_intelligence_collection_failure_does_not_kill_cycle(monkeypatch):
@@ -81,6 +103,9 @@ def test_intelligence_collection_failure_does_not_kill_cycle(monkeypatch):
 
     monkeypatch.setattr(forge_loop, "run_cycle", lambda db: {"cycle_id": 2, "signals_processed": 0, "stage_errors": {}})
     monkeypatch.setattr(collector_runner, "run_pending_tasks", boom)
+    monkeypatch.setattr(
+        collector_runner, "run_pending_evaluations", lambda db, limit=2, max_retries_per_task=3: []
+    )
     monkeypatch.setattr(rte, "resume_running_tasks", lambda db, limit=10: [])
     monkeypatch.setattr(ee, "run_autonomous_action_cycle", lambda db: {"proposed": 0, "allowed": 0, "blocked": 0, "require_approval": 0})
 
