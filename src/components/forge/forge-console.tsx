@@ -97,8 +97,8 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
   const mockProvider = providerName === "mock" &&
     (providerHealth === "READY" || providerHealth === "MOCK");
   const providerCanAnswer = providerStatus !== null &&
-    approvedZeroCostProvider &&
-    (providerHealth === "READY" || providerHealth === "MOCK");
+    ((providerName === "mock" && (providerHealth === "READY" || providerHealth === "MOCK")) ||
+      (providerName === "ollama" && providerHealth === "READY"));
   const canAsk = !providerLoading && !providerError && providerCanAnswer;
 
   async function submitQuestion(event: FormEvent<HTMLFormElement>) {
