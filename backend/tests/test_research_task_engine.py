@@ -403,3 +403,53 @@ def test_pending_task_dispatch_covers_questions_before_repeating(db, monkeypatch
     ]
     # The highest-priority but uncleared track did not consume a coverage slot.
     assert db.get(models.ResearchTask, tasks[4].id).status == "planned"
+
+
+
+def test_question_without_linked_claim_still_reaches_substantive_judging(db, monkeypatch):
+    from app.services import multi_judge
+
+    task, evidence = _task_with_claimed_evidence(db)
+    # Evidence exists in the shared substrate, but this task was scheduled from
+    # a ResearchQuestion and has no explicit Claim foreign key.
+    task.claim_id = None
+    db.commit()
+
+    def positive_result(_question, _evidence):
+        return {
+            "label": "positive",
+            "conclusion": "The supplied evidence supports the question's narrow observation.",
+            "reasoning": "The test judge was actually invoked with the supplied evidence.",
+            "uncertainty": "External generalizability remains unknown.",
+            "confidence": 0.8,
+        }
+
+    monkeypatch.setattr(
+        multi_judge,
+        "_default_judges",
+        lambda: [
+            multi_judge.JudgeSpec(
+                name="question-only-test-judge",
+                provider="test",
+                model="deterministic-fixture",
+                evaluate=positive_result,
+            )
+        ],
+    )
+
+    result = research_task_engine.evaluate_claim_after_research(
+        db, task, [evidence.id]
+    )
+    persisted = db.get(models.ResearchTask, task.id)
+    evaluate_step = {step.name: step for step in persisted.steps}["evaluate"]
+
+    assert result is not None
+    assert len(result["judgments"]) == 1
+    judgment = result["judgments"][0]
+    assert judgment.status == "completed"
+    assert judgment.claim_id is None
+    assert judgment.research_task_id == task.id
+    assert result["comparison"].outcome == "agreement"
+    assert evaluate_step.status == "completed"
+    assert evaluate_step.output_data["status"] == "judge_pipeline_executed"
+    assert persisted.results["evaluation_status"] == "judge_pipeline_executed"
