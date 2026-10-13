@@ -577,11 +577,32 @@ def run_scout_cycle(db: Session) -> dict:
         except Exception as exc:
             errors.append(f"score_{entity_id}: {type(exc).__name__}")
 
+    pending_contact_replies = (
+        db.query(models.OutreachDraft)
+        .filter(
+            models.OutreachDraft.status == "SENT",
+            models.OutreachDraft.reply_received.is_(False),
+        )
+        .count()
+    )
+    dry_wells_recorded = (
+        db.query(models.OutreachDraft)
+        .filter(
+            models.OutreachDraft.status == "SENT",
+            models.OutreachDraft.reply_received.is_(False),
+            models.OutreachDraft.outcome_notes.isnot(None),
+            models.OutreachDraft.outcome_notes != "",
+        )
+        .count()
+    )
+
     return {
         "candidates_ranked": len(ranked),
         "candidates_scored": scored,
         "drafts_generated": drafts_generated,
         "drafts_already_open": drafts_already_open,
+        "pending_contact_replies": pending_contact_replies,
+        "dry_wells_recorded": dry_wells_recorded,
         "blocked": blocked,
         "errors": errors,
     }
