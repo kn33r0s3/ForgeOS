@@ -793,6 +793,7 @@ class ProviderObservation(BaseModel):
     mode: str
     model: Optional[str] = None
     status: str
+    request_attempted: bool = False
     inference_invoked: bool
     prompt_eval_tokens: Optional[int] = None
     completion_eval_tokens: Optional[int] = None
