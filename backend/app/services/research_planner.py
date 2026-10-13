@@ -601,6 +601,12 @@ def _claim_linked_observations(
             models.EvidenceRelationship.relation_type.in_(
                 ("supports", "contradicts", "updates", "derived_from", "supersedes")
             ),
+            # Apply privacy/consent filters before the SQL limit so recent
+            # restricted rows cannot crowd out eligible contextual evidence.
+            models.Evidence.source_identity.is_(None)
+            | (models.Evidence.consent_status == "granted"),
+            models.Evidence.consent_status.is_(None)
+            | (~models.Evidence.consent_status.in_(("pending", "denied"))),
         )
         .order_by(
             models.EvidenceRelationship.id.desc(),
