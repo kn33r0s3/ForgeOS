@@ -176,12 +176,14 @@ def test_flag_proof_violations(db):
     assert flags[0]["proof_level"] == 2
 
 
-def test_starved_blocks_builds_except_obligations(db):
+def test_starved_blocks_only_builds_dependent_on_active_intervention(db):
     assert operating_v4.is_starved(db) is True
+    operating_v4.check_build_allowed(db)
     with pytest.raises(ValueError, match="STARVED"):
-        operating_v4.check_build_allowed(db)
-    # System Obligations exempt.
-    operating_v4.check_build_allowed(db, is_system_obligation=True)
+        operating_v4.check_build_allowed(db, depends_on_active_intervention=True)
+    operating_v4.check_build_allowed(
+        db, is_system_obligation=True, depends_on_active_intervention=True
+    )
 
 
 def test_verification_rejects_incomplete(db):

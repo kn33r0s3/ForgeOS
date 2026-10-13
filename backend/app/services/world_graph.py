@@ -1303,16 +1303,24 @@ def begin_capability_build(
     capability: models.ForgeCapability,
     *,
     is_system_obligation: bool = False,
+    depends_on_active_intervention: bool | None = None,
 ) -> models.ForgeCapability:
     if capability.status != "proposed":
         raise SubstrateError(f"cannot begin build from {capability.status}")
-    # STARVED freeze: no capability builds without real-world contact in
-    # 14+ days, unless a System Obligation. Single enforcement point —
-    # all build pathways flow through here.
+    attrs = _parse_json(capability.attributes)
+    if depends_on_active_intervention is None:
+        depends_on_active_intervention = (
+            attrs.get("depends_on_active_intervention") is True
+            or any(attrs.get(key) not in (None, "", False, 0) for key in (
+                "active_intervention_id", "active_bet_id", "frontier_bet_id"
+            ))
+        )
     from app.services import operating_v4  # local import to avoid cycles
-
     try:
-        operating_v4.check_build_allowed(db, is_system_obligation=is_system_obligation)
+        operating_v4.check_build_allowed(
+            db, is_system_obligation=is_system_obligation,
+            depends_on_active_intervention=bool(depends_on_active_intervention),
+        )
     except ValueError as exc:
         raise SubstrateError(str(exc)) from exc
     _set_capability_lifecycle(db, capability, "building")

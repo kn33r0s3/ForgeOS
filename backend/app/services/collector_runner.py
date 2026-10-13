@@ -652,13 +652,21 @@ def execute_task(db: Session, task: models.ResearchTask) -> dict:
         failure_kind=None,
         result_ids=evidence_ids,
     )
+    evaluation_fields = _evaluation_result_fields(
+        db, final_task, outcome_status=final_task.status
+    )
+    persisted_results = dict(final_task.results or {})
+    persisted_results["evaluation_status"] = evaluation_fields["evaluation_status"]
+    if evaluation_fields["comparison_outcome"] is not None:
+        persisted_results["comparison_outcome"] = evaluation_fields["comparison_outcome"]
+    final_task.results = persisted_results
+    db.add(final_task)
+    db.commit()
     return {
         "task_id": task.id,
         "status": final_task.status,
         "signals_created": len(created_signal_ids),
-        **_evaluation_result_fields(
-            db, final_task, outcome_status=final_task.status
-        ),
+        **evaluation_fields,
     }
 
 

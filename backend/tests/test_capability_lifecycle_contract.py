@@ -200,16 +200,18 @@ def test_substrate_api_rejects_unattributed_passes_and_reports_verification(db, 
         app.dependency_overrides.clear()
 
 
-def test_starved_blocks_capability_build(db):
-    """STARVED freeze is authoritative over begin_capability_build."""
+def test_starved_blocks_only_capability_builds_dependent_on_intervention(db):
+    """Only work tied to the starved intervention remains blocked."""
     from app.services import operating_v4
 
-    capability = _proposed(db)
     assert operating_v4.is_starved(db) is True
+    independent = _proposed(db)
+    world_graph.begin_capability_build(db, independent)
+    assert independent.status == "building"
+    dependent = _proposed(db, name="starved-dependent-capability")
     with pytest.raises(world_graph.SubstrateError, match="STARVED"):
-        world_graph.begin_capability_build(db, capability)
+        world_graph.begin_capability_build(db, dependent, depends_on_active_intervention=True)
     db.rollback()
-    assert capability.status == "proposed"
 
 
 def test_system_obligation_bypasses_starved(db):
