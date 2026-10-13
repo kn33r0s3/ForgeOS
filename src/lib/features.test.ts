@@ -247,6 +247,9 @@ describe("feature registry", () => {
     assert.ok(forgeConsole.includes('providerName === "openai"'));
     assert.ok(forgeConsole.includes('providerName === "mock" || providerName === "ollama"'));
     assert.ok(forgeConsole.includes('(providerName === "ollama" && providerHealth === "MODEL_AVAILABLE")'));
+    assert.ok(forgeConsole.includes("Ask in Nepali (देवनागरी), Romanized Nepali, English, or a mix."));
+    assert.ok(forgeConsole.includes("Real inference is not enabled."));
+    assert.ok(forgeConsole.includes('providerName === "ollama" && providerHealth === "MODEL_AVAILABLE";'));
     assert.ok(forgeConsole.includes("This checks Ollama and the configured model, not generation quality."));
     assert.ok(forgeConsole.includes("isn't on Hami's approved zero-cost list"));
     assert.ok(forgeConsole.includes("Your question is sent to Hami's owner API"));
