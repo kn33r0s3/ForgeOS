@@ -93,22 +93,45 @@ def _summary(events: list[Any], *, useful_field: str) -> dict[str, Any]:
     attempts = len(events)
     successes = sum(1 for event in events if event.success)
     results = sum((getattr(event, "result_count", 0) or 0) for event in events)
-    useful = sum((getattr(event, useful_field, 0) or 0) for event in events)
+
+    # Nullable usefulness is an epistemic boundary: no target claim, missing
+    # relevance assessment, or failed collection is not a measured zero.
+    assessed_events = [
+        event for event in events if getattr(event, useful_field, None) is not None
+    ]
+    assessed_results = sum(
+        (getattr(event, "result_count", 0) or 0) for event in assessed_events
+    )
+    useful = sum((getattr(event, useful_field) or 0) for event in assessed_events)
+
     failures = attempts - successes
     cutoff = utcnow() - timedelta(days=30)
     recent_events = [event for event in events if _as_utc(event.created_at) >= cutoff]
-    recent_results = sum((getattr(event, "result_count", 0) or 0) for event in recent_events)
-    recent_useful = sum((getattr(event, useful_field, 0) or 0) for event in recent_events)
+    recent_assessed_events = [
+        event for event in recent_events
+        if getattr(event, useful_field, None) is not None
+    ]
+    recent_assessed_results = sum(
+        (getattr(event, "result_count", 0) or 0) for event in recent_assessed_events
+    )
+    recent_useful = sum(
+        (getattr(event, useful_field) or 0) for event in recent_assessed_events
+    )
     return {
         "attempts": attempts,
         "successes": successes,
         "failures": failures,
         "result_count": results,
-        "useful_count": useful,
+        "useful_count": useful if assessed_events else None,
+        "usefulness_assessed_result_count": assessed_results,
         "success_rate": round(successes / attempts, 4) if attempts else None,
-        "useful_rate": round(useful / results, 4) if results else None,
+        "useful_rate": round(useful / assessed_results, 4) if assessed_results else None,
         "recent_attempts": len(recent_events),
-        "recent_useful_rate": round(recent_useful / recent_results, 4) if recent_results else None,
+        "recent_useful_rate": (
+            round(recent_useful / recent_assessed_results, 4)
+            if recent_assessed_results else None
+        ),
+        "recent_usefulness_assessed_result_count": recent_assessed_results,
         "last_used": max((event.created_at for event in events), default=None),
     }
 
@@ -120,6 +143,15 @@ def _as_utc(value: datetime) -> datetime:
 def tool_summary(db: Session, tool_name: str) -> dict[str, Any]:
     events = db.query(models.ToolUsageEvent).filter_by(tool_name=tool_name).order_by(models.ToolUsageEvent.created_at.asc()).all()
     return _summary(events, useful_field="useful_result_count")
+
+
+def _sum_known(events: list[Any], field: str) -> int | None:
+    values = [
+        getattr(event, field, None)
+        for event in events
+        if getattr(event, field, None) is not None
+    ]
+    return sum(values) if values else None
 
 
 def source_summary(
@@ -136,20 +168,26 @@ def source_summary(
         query = query.limit(max(1, int(limit)))
     events = list(reversed(query.all()))
     result = _summary(events, useful_field="useful_evidence_count")
-    result["novel_count"] = sum((event.novel_evidence_count or 0) for event in events)
-    result["corroborated_count"] = sum((event.corroborated_evidence_count or 0) for event in events)
-    result["contradicted_count"] = sum((event.contradicted_claim_count or 0) for event in events)
-    result["duplicate_count"] = sum((event.duplicate_result_count or 0) for event in events)
+    result["novel_count"] = _sum_known(events, "novel_evidence_count")
+    result["corroborated_count"] = _sum_known(events, "corroborated_evidence_count")
+    result["contradicted_count"] = _sum_known(events, "contradicted_claim_count")
+    result["duplicate_count"] = _sum_known(events, "duplicate_result_count")
     return result
 
 
 def learned_score(summary: dict[str, Any]) -> float | None:
-    """Use only observed rates; return None when there is no history."""
+    """Rank only when there is measured relevance; unknown is not a zero score."""
     if summary["attempts"] == 0:
         return None
+    useful_rate = summary.get("useful_rate")
+    recent_useful = summary.get("recent_useful_rate")
+    if useful_rate is None and recent_useful is None:
+        return None
+    if useful_rate is None:
+        useful = recent_useful
+    elif recent_useful is not None:
+        useful = useful_rate * 0.35 + recent_useful * 0.65
+    else:
+        useful = useful_rate
     success = summary["success_rate"] or 0.0
-    useful = summary["useful_rate"] or 0.0
-    recent_useful = summary["recent_useful_rate"]
-    if recent_useful is not None:
-        useful = useful * 0.35 + recent_useful * 0.65
-    return round(success * 0.35 + useful * 0.65, 6)
+    return round(success * 0.35 + (useful or 0.0) * 0.65, 6)
