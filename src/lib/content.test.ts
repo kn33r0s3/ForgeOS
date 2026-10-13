@@ -351,6 +351,21 @@ describe("Hami forge console", () => {
       false,
     );
   });
+
+  it("shows verified cycle effects and the next owner action in the private cockpit", () => {
+    const sourceDir = dirname(fileURLToPath(import.meta.url));
+    const owner = readFileSync(join(sourceDir, "../routes/owner.tsx"), "utf8");
+    const start = owner.indexOf("function CycleCard");
+    const end = owner.indexOf("function PaymentFulfillmentQueue", start);
+    assert.ok(start >= 0 && end > start, "CycleCard should exist");
+    const card = owner.slice(start, end);
+    assert.match(card, /cycle_effect/);
+    assert.match(card, /Next owner attention/);
+    assert.match(card, /reality_boundary/);
+    assert.match(card, /source_data_collected/);
+    assert.match(card, /internal_work_only/);
+    assert.match(card, /no_new_effect/);
+  });
 });
 
 describe("Hami public root", () => {
