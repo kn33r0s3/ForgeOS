@@ -242,7 +242,8 @@ describe("feature registry", () => {
     assert.ok(forgeConsole.includes("Advanced tools (optional)"));
     assert.ok(forgeConsole.includes("ForgeBot is in simple test mode"));
     assert.ok(forgeConsole.includes("memories_used"));
-    assert.ok(forgeConsole.includes("model output, not evidence"));
+    assert.ok(forgeConsole.includes("ForgeBot’s answer"));
+    assert.ok(forgeConsole.includes("ForgeBot's answer is a guide, not proof"));
     assert.ok(forgeConsole.includes('providerName === "openai"'));
     assert.ok(forgeConsole.includes("zero-spend default"));
     assert.ok(!forgeConsole.includes("localStorage"));

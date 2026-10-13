@@ -486,7 +486,8 @@ describe("Hami public root", () => {
     assert.match(owner, /X-API-Key/);
     assert.doesNotMatch(owner, /localStorage|sessionStorage|dangerouslySetInnerHTML/);
     assert.match(owner, /to="\/operations"/);
-    assert.match(owner, /the API protects owner data and actions/i);
+    assert.match(owner, /private place to see what Hami knows and talk with ForgeBot/i);
+    assert.match(owner, /it stays in this page session and is never shown back to you/i);
     assert.match(demandForm, /availability !== "open"/);
     assert.match(demandForm, /Online inquiries are not open yet/);
     assert.match(demandForm, /This page does not collect or submit a note/);
