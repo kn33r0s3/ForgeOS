@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import replace
 from typing import Any, Mapping, Sequence
 from urllib.parse import urlparse
 
@@ -118,6 +119,7 @@ def _context_for_task(
             evidence_source.is_real(row.source_kind)
             and (row.source_type or "").strip().lower() == "third_party"
             and (row.consent_status or "").strip().lower() == "not_required"
+            and row.source_identity is None
             and parsed_url.scheme in {"http", "https"}
             and parsed_url.netloc
         ):
@@ -275,8 +277,21 @@ def run_cognitive_task(
     if not configured_provider.name.strip() or not configured_provider.version.strip():
         raise cognitive_provider.CognitiveProviderError("provider identity is incomplete")
 
+    provider_evidence_ids = tuple(
+        context.available_evidence_ids
+        if context.available_evidence_ids is not None
+        else context.evidence_ids
+    )
+    provider_context = replace(
+        context,
+        evidence_ids=provider_evidence_ids,
+        available_evidence_ids=provider_evidence_ids,
+    )
     try:
-        proposals = _validated_proposals(configured_provider.propose(context), context)
+        proposals = _validated_proposals(
+            configured_provider.propose(provider_context),
+            context,
+        )
     except cognitive_provider.CognitiveProposalValidationError:
         _record_failure(
             db,
