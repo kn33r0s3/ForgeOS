@@ -629,3 +629,58 @@ def test_failed_evaluation_retries_are_bounded_and_recorded(db, monkeypatch):
     assert calls == [task.id]
     assert evaluate_step.output_data["automatic_retry_count"] == 1
     assert evaluate_step.error == "judge unavailable"
+
+
+
+def test_evaluation_retry_scan_skips_large_unassessed_backlog(db, monkeypatch):
+    from datetime import timedelta
+
+    eligible, evidence = _task_with_claimed_evidence(db)
+    now = models.utcnow()
+    eligible.status = "completed"
+    eligible.evidence_ids = str(evidence.id)
+    eligible.completed_at = now
+    eligible.updated_at = now
+    eligible_step = {step.name: step for step in eligible.steps}["evaluate"]
+    eligible_step.status = "failed"
+    eligible_step.output_data = {"status": "judge_execution_failed"}
+    eligible_step.error = "judge unavailable"
+
+    # More ineligible rows than the old scan's candidate limit. They should be
+    # filtered in SQL so they cannot starve the later retryable task forever.
+    for index in range(25):
+        task = make_task(db)
+        task.status = "completed"
+        task.evidence_ids = str(evidence.id)
+        task.completed_at = now
+        task.updated_at = now - timedelta(minutes=index + 1)
+        step = {item.name: item for item in task.steps}["evaluate"]
+        step.status = "skipped"
+        step.output_data = {"status": "unassessed_metadata_only"}
+    db.commit()
+
+    calls = []
+
+    def recovered(_db, task, evidence_ids):
+        calls.append(task.id)
+        research_task_engine._set_step(
+            _db, task, "evaluate", "completed",
+            output={"status": "judge_pipeline_executed"},
+        )
+        task.results = {
+            **(task.results or {}),
+            "evaluation_status": "judge_pipeline_executed",
+        }
+        _db.commit()
+        return {"judgments": [], "comparison": None}
+
+    monkeypatch.setattr(
+        research_task_engine, "evaluate_claim_after_research", recovered
+    )
+    outcomes = collector_runner.run_pending_evaluations(db, limit=1)
+
+    assert calls == [eligible.id]
+    assert len(outcomes) == 1
+    assert outcomes[0]["task_id"] == eligible.id
+    assert outcomes[0]["status"] == "completed"
+    assert outcomes[0]["retry_count"] == 1
