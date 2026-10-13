@@ -13,7 +13,7 @@ def _allow_customer_sends_in_transport_test(db, monkeypatch):
     monkeypatch.setattr(settings, "FORGE_BOT_LIVE", True)
     monkeypatch.setattr(owner_control, "durable_database", lambda _db: True)
     now = datetime.now(timezone.utc).replace(tzinfo=None)
-    db.add(OpHamiRuntimeControl(id=1, safe_mode_enabled=False, safe_mode_reason=None, last_owner_contact_at=now, updated_at=now))
+    db.add(OpHamiRuntimeControl(id=1, safe_mode_enabled=False, safe_mode_reason="owner_resumed", last_owner_contact_at=now, updated_at=now))
     db.commit()
 
 
