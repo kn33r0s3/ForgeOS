@@ -10,11 +10,11 @@ from __future__ import annotations
 
 import json
 
-from sqlalchemy import cast, String
+from sqlalchemy import String, cast, literal, or_
 from sqlalchemy.orm import Session
 
 from app import models
-from app.services import world_graph
+from app.services import type_validation, world_graph
 
 
 def _signal_excerpt(content: str | None, limit: int = 140) -> str:
@@ -43,15 +43,89 @@ def sync_market_signal_signals(db: Session, *, limit: int = 250) -> dict[str, in
         "unresolved_signals": 0,
     }
 
-    projected_source_ids = (
-        db.query(models.SubstrateEntity.source_id)
-        .filter_by(entity_type="market_signal", source_system="signals")
+    try:
+        batch_limit = max(1, int(limit))
+    except (TypeError, ValueError):
+        batch_limit = 250
+
+    # Do not begin or resume a partial projection when any required type is
+    # inactive. In particular, a missing source relation must remain retryable
+    # after an owner restores the type, not disappear because the entity exists.
+    pending_market_entities = (
+        db.query(models.SubstrateEntity.id)
+        .filter(
+            models.SubstrateEntity.entity_type == "market_signal",
+            models.SubstrateEntity.source_system == "signals",
+            models.SubstrateEntity.source_id == cast(models.Signal.id, String),
+        )
+        .correlate(models.Signal)
+        .exists()
     )
+    pending_signal_entities = (
+        db.query(models.SubstrateEntity.id)
+        .filter(
+            models.SubstrateEntity.entity_type == "signal",
+            models.SubstrateEntity.source_system == "signals",
+            models.SubstrateEntity.source_id == cast(models.Signal.id, String),
+        )
+        .correlate(models.Signal)
+        .exists()
+    )
+    relation_key_expr = (
+        literal("market-signal:")
+        + cast(models.Signal.id, String)
+        + literal(":signals:signal-v1")
+    )
+    event_key_expr = (
+        literal("market-signal-observed:")
+        + cast(models.Signal.id, String)
+        + literal(":v1")
+    )
+    evidence_key_expr = (
+        literal("market-signal-evidence:")
+        + cast(models.Signal.id, String)
+        + literal(":v1")
+    )
+    pending_relations = (
+        db.query(models.WorldRelation.id)
+        .filter(models.WorldRelation.idempotency_key == relation_key_expr)
+        .correlate(models.Signal)
+        .exists()
+    )
+    pending_events = (
+        db.query(models.WorldEvent.id)
+        .filter(models.WorldEvent.idempotency_key == event_key_expr)
+        .correlate(models.Signal)
+        .exists()
+    )
+    pending_evidence = (
+        db.query(models.Evidence.id)
+        .filter(models.Evidence.idempotency_key == evidence_key_expr)
+        .correlate(models.Signal)
+        .exists()
+    )
+    needs_projection = or_(
+        ~pending_market_entities,
+        ~pending_signal_entities,
+        ~pending_relations,
+        ~pending_events,
+        ~pending_evidence,
+    )
+    try:
+        type_validation.resolve_type(db, "entity_type", "signal")
+        type_validation.resolve_type(db, "entity_type", "market_signal")
+        type_validation.resolve_type(db, "relation_type", "signals")
+    except type_validation.SubstrateError:
+        result["unresolved_signals"] = (
+            db.query(models.Signal).filter(needs_projection).count()
+        )
+        return result
+
     signals = (
         db.query(models.Signal)
-        .filter(~cast(models.Signal.id, String).in_(projected_source_ids))
-        .order_by(models.Signal.id.asc())
-        .limit(max(1, int(limit)))
+        .filter(needs_projection)
+        .order_by(models.Signal.updated_at.desc(), models.Signal.id.desc())
+        .limit(batch_limit)
         .all()
     )
 
