@@ -283,8 +283,14 @@ def evaluate_claim_after_research(
     task: models.ResearchTask,
     evidence_ids: list[int],
 ) -> dict[str, Any] | None:
-    """Re-run P3 against all evidence currently linked to this claim."""
-    if task.claim_id is None or not evidence_ids:
+    """Evaluate substantive evidence against the task question, with optional claim linking.
+
+    Research tasks created from open questions often have no pre-linked Claim.
+    That must not prevent evaluation: the question/objective is the evaluation
+    prompt, while claim_id only controls whether judgments also attach to a
+    canonical Claim record.
+    """
+    if not evidence_ids:
         return None
 
     requested_evidence_ids = sorted(set(evidence_ids))
