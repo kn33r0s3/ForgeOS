@@ -972,6 +972,21 @@ function OwnerConsolePage() {
     }
   }
 
+  async function refreshWorkbench() {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await refresh(key);
+      setNotice("Read-only refresh finished. Check each section for UNKNOWN or unavailable-source labels.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "The owner snapshot could not be refreshed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function loadLead(reference: string) {
     setError("");
     try {
@@ -1307,6 +1322,73 @@ function OwnerConsolePage() {
             </form>
           ) : (
             <div className="mt-6">
+              <nav aria-label="Owner console shortcuts" className="sticky top-2 z-20 mb-5 flex flex-wrap gap-2 rounded-card border border-line bg-card/95 p-3 backdrop-blur">
+                <a href="#forgebot-workspace" className="inline-flex min-h-10 items-center rounded-card border-2 border-accent px-3 text-sm font-bold text-accent">Try ForgeBot</a>
+                <a href="#hami-frontier" className="inline-flex min-h-10 items-center rounded-card border border-line px-3 text-sm font-semibold">Unknowns &amp; frontier</a>
+                <a href="#hami-intelligence" className="inline-flex min-h-10 items-center rounded-card border border-line px-3 text-sm font-semibold">Research &amp; runs</a>
+                <a href="#owner-inquiries" className="inline-flex min-h-10 items-center rounded-card border border-line px-3 text-sm font-semibold">Inquiries</a>
+                <a href="#owner-products-payments" className="inline-flex min-h-10 items-center rounded-card border border-line px-3 text-sm font-semibold">Products &amp; payments</a>
+                <button type="button" onClick={() => void refreshWorkbench()} disabled={busy} className="inline-flex min-h-10 items-center rounded-card border border-line px-3 text-sm font-semibold disabled:opacity-50">
+                  {busy ? "Refreshing…" : "Refresh live snapshot"}
+                </button>
+              </nav>
+
+              <section aria-label="Current Hami snapshot" className="mb-8 rounded-card border-2 border-accent/50 bg-card p-4 sm:p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-extrabold">Current Hami snapshot</h2>
+                    <p className="mt-1 max-w-3xl text-sm leading-5 text-muted">
+                      Read-only values returned by existing owner APIs. Missing data stays UNKNOWN or unavailable; it is not converted to zero.
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-line px-3 py-1 text-xs font-semibold text-muted">Live read · no actions executed</span>
+                </div>
+                <dl className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  <div className="min-w-0 rounded-card border border-line p-3">
+                    <dt className="text-xs font-bold uppercase tracking-wide text-muted">Inquiry records created · last 24 hours</dt>
+                    <dd className="mt-1 text-2xl font-extrabold">{readiness.new_leads_last_24h}</dd>
+                    <p className="mt-1 text-xs leading-5 text-muted">Records only; not confirmed people, conversions, or recovered sales.</p>
+                  </div>
+                  <div className="min-w-0 rounded-card border border-line p-3">
+                    <dt className="text-xs font-bold uppercase tracking-wide text-muted">Stored inquiry evidence classes</dt>
+                    <dd className="mt-1 text-2xl font-extrabold">REAL {readiness.lead_counts_by_evidence_class.REAL} · TEST {readiness.lead_counts_by_evidence_class.TEST}</dd>
+                    <p className="mt-1 text-xs leading-5 text-muted">Stored labels, not independent proof that a transaction occurred.</p>
+                  </div>
+                  <div className="min-w-0 rounded-card border border-line p-3">
+                    <dt className="text-xs font-bold uppercase tracking-wide text-muted">Intake / LIVE flags</dt>
+                    <dd className="mt-1 text-lg font-extrabold">Intake {readiness.intake_enabled ? "ON" : "OFF"} · LIVE {readiness.live_enabled ? "ON" : "OFF"}</dd>
+                    <p className="mt-1 text-xs leading-5 text-muted">Configuration flags only; they do not prove a message was sent.</p>
+                  </div>
+                  <div className="min-w-0 rounded-card border border-line p-3">
+                    <dt className="text-xs font-bold uppercase tracking-wide text-muted">Recorded open research questions</dt>
+                    <dd className="mt-1 text-2xl font-extrabold">{intel === null || intel.questions === null ? "UNKNOWN" : intel.questions.length}</dd>
+                    <p className="mt-1 text-xs leading-5 text-muted">Current owner-only question endpoint; not an exhaustive map of reality.</p>
+                  </div>
+                  <div className="min-w-0 rounded-card border border-line p-3">
+                    <dt className="text-xs font-bold uppercase tracking-wide text-muted">Last recorded intelligence cycle</dt>
+                    <dd className="mt-1 break-words text-sm font-extrabold">
+                      {intel === null || intel.runtime === null
+                        ? "UNKNOWN"
+                        : intel.runtime.cycles.last
+                          ? (intel.runtime.cycles.last.status || "STATUS UNKNOWN") + " · " + displayTime(intel.runtime.cycles.last.started_at)
+                          : "No cycle recorded"}
+                    </dd>
+                    <p className="mt-1 text-xs leading-5 text-muted">A stored cycle does not prove a real-world action or outcome occurred.</p>
+                  </div>
+                  <div className="min-w-0 rounded-card border border-line p-3">
+                    <dt className="text-xs font-bold uppercase tracking-wide text-muted">Recorded-work frontier scan</dt>
+                    <dd className="mt-1 break-words text-sm font-extrabold">
+                      {globalFrontierLoading
+                        ? "Refreshing…"
+                        : globalFrontier
+                          ? globalFrontier.items.length + " returned · " + globalFrontier.candidate_count_scanned + " scanned" + (globalFrontier.truncated ? " · truncated" : "")
+                          : "UNKNOWN"}
+                    </dd>
+                    <p className="mt-1 text-xs leading-5 text-muted">Bounded scan of existing records, not all possible value in reality.</p>
+                  </div>
+                </dl>
+              </section>
+
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-xl font-extrabold">Readiness</h2>
                 <div className="flex flex-wrap gap-2">
@@ -1401,7 +1483,7 @@ function OwnerConsolePage() {
                 </dl>
               </section>
 
-              <section className="mt-8">
+              <section id="owner-inquiries" className="mt-8 scroll-mt-24">
                 <h2 className="text-lg font-extrabold">Inquiries</h2>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
                   These controls record owner-reported milestones only. They do
@@ -1502,7 +1584,7 @@ function OwnerConsolePage() {
                 </section>
               ) : null}
 
-              <section className="mt-10 border-t-2 border-line pt-5" aria-label="Intelligence">
+              <section id="hami-intelligence" className="mt-10 scroll-mt-24 border-t-2 border-line pt-5" aria-label="Intelligence">
                 <h2 className="text-xl font-extrabold">Orchestrator &amp; intelligence</h2>
                 <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
                   What Hami&apos;s engines actually did — last runs, per-stage
@@ -1510,7 +1592,7 @@ function OwnerConsolePage() {
                   not instrumented, not zero. Nothing here is inferred from
                   imports or tests; every number comes from a persisted record.
                 </p>
-                <section aria-label="Global value frontier" className="rounded-card border-2 border-line bg-card p-4 sm:p-5">
+                <section id="hami-frontier" aria-label="Global value frontier" className="scroll-mt-24 rounded-card border-2 border-line bg-card p-4 sm:p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <h3 className="text-lg font-extrabold">Global value frontier</h3>
@@ -2045,7 +2127,7 @@ shop-03 | lead | not confirmed | uses an existing alternative`} />
                 )}
               </section>
 
-              <section className="mt-10 border-t-2 border-line pt-5" aria-label="Products and payments">
+              <section id="owner-products-payments" className="mt-10 scroll-mt-24 border-t-2 border-line pt-5" aria-label="Products and payments">
                 <h2 className="text-xl font-extrabold">Products &amp; payments</h2>
                 <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
                   Commercial visibility from the existing product ledger. Provider callbacks only
@@ -2248,7 +2330,7 @@ shop-03 | lead | not confirmed | uses an existing alternative`} />
 
               <PaymentFulfillmentQueue apiKey={key} />
 
-              <section className="mt-10 border-t-2 border-line pt-5" aria-label="ForgeBot">
+              <section id="forgebot-workspace" className="mt-10 scroll-mt-24 border-t-2 border-line pt-5" aria-label="ForgeBot">
                 <h2 className="text-xl font-extrabold">ForgeBot</h2>
                 <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
                   The operator's console. Key-protected like everything else
@@ -2256,7 +2338,7 @@ shop-03 | lead | not confirmed | uses an existing alternative`} />
                   the real engine code.
                 </p>
                 <div className="mt-4">
-                  <ForgeConsoleWidgets />
+                  <ForgeConsoleWidgets apiKey={key} />
                 </div>
               </section>
 

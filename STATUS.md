@@ -1,10 +1,13 @@
 # Hami current status (ForgeOS technical lineage)
 
-**Updated:** 2026-10-11 (Nepal time)
+**Updated:** 2026-10-14 (Nepal time)
 **Evidence boundary:** repository and CI observations below are dated; external
 state is not assumed current unless explicitly identified as a dated observation.
 
-## Current integration snapshot — 2026-10-11
+## Current integration snapshot — 2026-10-14
+
+- **Owner ForgeBot workspace — source change awaiting exact-head verification:** \`/owner\` now exposes section shortcuts, a read-only snapshot from existing protected APIs, and a query panel calling the existing owner-protected \`/api/forge/ask\` endpoint. The panel shows related knowledge records returned by the API and reads provider configuration from \`/api/ai/status\`. OpenAI calls are disabled in this panel to preserve the zero-spend default. Questions and answers remain in page memory; the panel does not create Evidence, execute Actions or activate customer messaging. Provider configuration status is not proof of a successful query. Exact-head CI and deployed SHA are not yet verified for this change.
+
 
 - **Production alias:** Vercel reports `haminp.vercel.app` READY for commit `82297e49e1640bd84cedac291bb4eb2fede8eae8` (deployment `dpl_HQLMWrauSmRQfsbwMsHuvVUX6p3H`). This is a deployment/alias observation, not proof that API credentials, durable persistence, scheduled work or economic outcomes are ready.
 - **One Hami product surface:** the public NAV/footer/pathway source remains `src/lib/hami-system.ts`; `features.json` remains the route/API lifecycle registry; the reverse-link regression now requires every live page to have a deliberate entry path, with `/requests/$id` documented as a workflow-only route created by an actual provider request.

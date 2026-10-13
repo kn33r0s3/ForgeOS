@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Bot, CheckCircle2, FlaskConical, Search, ShieldCheck, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +15,280 @@ const CONFIDENCES: Confidence[] = ["high", "medium", "low"];
 
 const inputCls =
   "w-full rounded-lg border border-line bg-background px-3 py-2 text-sm text-ink placeholder:text-muted/60";
+
+
+type ForgeProviderStatus = {
+  provider: string;
+  status: string;
+};
+
+type ForgeKnowledgeRecord = {
+  id: number;
+  title: string;
+  content: string;
+  category: string | null;
+  source_type: string;
+  source_id: number;
+  confidence_score: number;
+  created_at: string;
+  updated_at: string;
+};
+
+type ForgeAskResponse = {
+  question: string;
+  answer: string;
+  memories_used: ForgeKnowledgeRecord[];
+};
+
+type ForgeChatTurn = {
+  id: string;
+  question: string;
+  answer: string;
+  records: ForgeKnowledgeRecord[];
+  askedAt: string;
+};
+
+function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
+  const [providerStatus, setProviderStatus] = useState<ForgeProviderStatus | null>(null);
+  const [providerLoading, setProviderLoading] = useState(true);
+  const [providerError, setProviderError] = useState("");
+  const [question, setQuestion] = useState("");
+  const [asking, setAsking] = useState(false);
+  const [askError, setAskError] = useState("");
+  const [successfulQueries, setSuccessfulQueries] = useState(0);
+  const [turns, setTurns] = useState<ForgeChatTurn[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    setProviderLoading(true);
+    setProviderError("");
+    setProviderStatus(null);
+    fetch("/api/ai/status", { headers: { "X-API-Key": apiKey } })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(response.status === 401
+            ? "Owner authentication failed. Re-open the console with the correct key."
+            : "Provider configuration could not be read (HTTP " + response.status + ").");
+        }
+        const payload: unknown = await response.json();
+        if (typeof payload !== "object" || payload === null ||
+            !("provider" in payload) || !("status" in payload) ||
+            typeof payload.provider !== "string" || typeof payload.status !== "string") {
+          throw new Error("Provider status returned an unexpected response.");
+        }
+        if (active) setProviderStatus({ provider: payload.provider, status: payload.status });
+      })
+      .catch((cause) => {
+        if (active) {
+          setProviderStatus(null);
+          setProviderError(cause instanceof Error ? cause.message : "Provider status is unavailable.");
+        }
+      })
+      .finally(() => {
+        if (active) setProviderLoading(false);
+      });
+    return () => { active = false; };
+  }, [apiKey]);
+
+  const providerName = providerStatus?.provider.trim().toLowerCase() ?? "";
+  const providerHealth = providerStatus?.status.trim().toUpperCase() ?? "";
+  const paidProvider = providerName === "openai";
+  const mockProvider = providerName === "mock" || providerHealth === "MOCK";
+  const providerCanAnswer = providerStatus !== null &&
+    (providerHealth === "READY" || providerHealth === "MOCK") && !paidProvider;
+  const canAsk = !providerLoading && !providerError && providerCanAnswer;
+
+  async function submitQuestion(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const submittedQuestion = question.trim();
+    if (!submittedQuestion || submittedQuestion.length > 1000 || asking || !canAsk) return;
+    setAsking(true);
+    setAskError("");
+    try {
+      const response = await fetch("/api/forge/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-API-Key": apiKey },
+        body: JSON.stringify({ question: submittedQuestion }),
+      });
+      if (!response.ok) {
+        const payload: unknown = await response.json().catch(() => null);
+        const detail = typeof payload === "object" && payload !== null &&
+          "detail" in payload && typeof payload.detail === "string"
+          ? payload.detail.slice(0, 220)
+          : "Forge could not answer this request (HTTP " + response.status + ").";
+        throw new Error(detail);
+      }
+      const payload: unknown = await response.json();
+      if (typeof payload !== "object" || payload === null ||
+          !("answer" in payload) || typeof payload.answer !== "string" ||
+          !("memories_used" in payload) || !Array.isArray(payload.memories_used)) {
+        throw new Error("Forge returned an unexpected answer format; nothing was saved by this panel.");
+      }
+      const data = payload as ForgeAskResponse;
+      const records = data.memories_used.filter((record) =>
+        record !== null && typeof record === "object" &&
+        Number.isInteger(record.id) && typeof record.title === "string" &&
+        typeof record.content === "string" && typeof record.source_type === "string" &&
+        Number.isInteger(record.source_id));
+      const turn: ForgeChatTurn = {
+        id: Date.now().toString() + "-" + (successfulQueries + 1).toString(),
+        question: submittedQuestion,
+        answer: data.answer,
+        records,
+        askedAt: new Date().toISOString(),
+      };
+      setTurns((current) => [...current, turn].slice(-8));
+      setSuccessfulQueries((count) => count + 1);
+      setQuestion("");
+    } catch (cause) {
+      setAskError(cause instanceof Error ? cause.message : "Forge could not answer this request.");
+    } finally {
+      setAsking(false);
+    }
+  }
+
+  const suggestions = [
+    "What does Hami's stored knowledge support, and what remains unknown?",
+    "What is the strongest contradiction in Hami's currently stored knowledge?",
+    "Which missing fact would most change a decision, and why?",
+    "What evidence is required before claiming a real economic outcome?",
+  ];
+
+  return (
+    <section aria-label="Ask Forge from stored knowledge" className="rounded-xl border-2 border-accent/70 bg-card p-4 sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="flex items-center gap-2 font-display text-lg text-ink">
+            <Bot className="h-5 w-5 text-accent" aria-hidden="true" />
+            Try ForgeBot
+          </h3>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
+            Calls the existing owner-protected Forge answer endpoint. This is a live query surface over Hami's stored knowledge,
+            not proof of autonomous operation or a complete multi-turn agent.
+          </p>
+        </div>
+        <span className="rounded-full border border-line px-3 py-1 text-xs font-semibold text-muted">Page-only session</span>
+      </div>
+
+      <div className="mt-4 rounded-lg border border-line bg-background p-3">
+        <p className="text-xs font-bold uppercase tracking-wide text-muted">Configured AI provider</p>
+        {providerLoading ? (
+          <p role="status" className="mt-1 text-sm text-muted">Reading owner-protected provider status…</p>
+        ) : providerError ? (
+          <p role="alert" className="mt-1 text-sm text-warning">{providerError} Questions stay disabled until this check succeeds.</p>
+        ) : providerStatus ? (
+          <>
+            <p className="mt-1 break-words text-sm font-semibold text-ink">
+              {providerStatus.provider} · {providerStatus.status}
+            </p>
+            {paidProvider ? (
+              <p className="mt-1 text-sm leading-5 text-warning">
+                This is a potentially billable cloud provider. Questions are disabled here under Hami's zero-spend default;
+                no model request will be sent from this panel.
+              </p>
+            ) : mockProvider ? (
+              <p className="mt-1 text-sm leading-5 text-muted">
+                MOCK mode means deterministic/template output, not a genuine model answer. You can test the UI/API contract,
+                but must not treat its wording as intelligence or evidence.
+              </p>
+            ) : providerHealth === "READY" ? (
+              <p className="mt-1 text-sm leading-5 text-muted">
+                The API reports this provider as configured. That does not prove the model is reachable; a successful query is the end-to-end check.
+              </p>
+            ) : (
+              <p className="mt-1 text-sm leading-5 text-warning">
+                The provider is not reported as ready. Queries are disabled rather than silently switching providers.
+              </p>
+            )}
+          </>
+        ) : null}
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2" aria-label="Suggested test questions">
+        {suggestions.map((suggestion) => (
+          <button key={suggestion} type="button" disabled={!canAsk || asking}
+            onClick={() => setQuestion(suggestion)}
+            className="min-h-9 rounded-full border border-line px-3 py-1 text-left text-xs font-semibold text-ink hover:border-accent disabled:cursor-not-allowed disabled:opacity-50">
+            {suggestion}
+          </button>
+        ))}
+      </div>
+
+      <form onSubmit={submitQuestion} className="mt-4 grid gap-3">
+        <label htmlFor="forgebot-owner-question" className="text-sm font-bold text-ink">
+          Ask about Hami's actual stored knowledge
+        </label>
+        <textarea id="forgebot-owner-question" value={question}
+          onChange={(event) => setQuestion(event.target.value.slice(0, 1000))}
+          rows={3} maxLength={1000} required disabled={!canAsk || asking}
+          placeholder="Use a non-sensitive question. Ask Forge to separate supported records, contradictions and UNKNOWN."
+          className={inputCls + " min-h-24 resize-y leading-6"} />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-muted">{question.trim().length}/1000 characters · successful queries this page session: {successfulQueries}</p>
+          <button type="submit" disabled={!canAsk || asking || !question.trim()}
+            className="min-h-11 rounded-lg border-2 border-accent bg-accent px-4 font-bold text-black disabled:cursor-not-allowed disabled:opacity-50">
+            {asking ? "Querying Forge…" : "Ask Forge"}
+          </button>
+        </div>
+      </form>
+
+      <p className="mt-3 text-xs leading-5 text-muted">
+        Never paste seller identities, phone numbers, raw private conversations, payment details or secrets.
+        Questions and responses remain in this component's memory and disappear when you lock or leave the console.
+        Model responses are not EVIDENCE; this panel does not write facts, change permissions, send messages or execute actions.
+      </p>
+
+      {askError ? <p role="alert" className="mt-4 rounded-lg border border-warning/60 bg-warning/10 p-3 text-sm text-ink">{askError}</p> : null}
+
+      {turns.length ? (
+        <div className="mt-5 grid gap-4" aria-label="ForgeBot query results" aria-live="polite">
+          {[...turns].reverse().map((turn) => (
+            <article key={turn.id} className="min-w-0 rounded-lg border border-line bg-background p-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-muted">You asked · {new Date(turn.askedAt).toLocaleTimeString()}</p>
+              <p className="mt-1 break-words font-semibold text-ink">{turn.question}</p>
+              <div className="mt-3 border-l-2 border-accent pl-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-muted">Forge response · model output, not evidence</p>
+                <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-ink">{turn.answer}</p>
+              </div>
+              <details className="mt-3 border-t border-line pt-3">
+                <summary className="cursor-pointer text-sm font-semibold text-ink">
+                  Related knowledge records returned by the API ({turn.records.length})
+                </summary>
+                {turn.records.length ? (
+                  <div className="mt-3 grid gap-2">
+                    {turn.records.map((record) => (
+                      <div key={record.id} className="rounded-md border border-line p-3">
+                        <p className="break-words text-sm font-bold">{record.title}</p>
+                        <p className="mt-1 text-xs text-muted">
+                          Record #{record.id} · {record.source_type} #{record.source_id}
+                          {record.updated_at ? " · updated " + new Date(record.updated_at).toLocaleString() : ""}
+                          {typeof record.confidence_score === "number" ? " · stored confidence " + record.confidence_score : ""}
+                        </p>
+                        <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-5 text-muted">
+                          {record.content.length > 500 ? record.content.slice(0, 500) + "…" : record.content}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm text-warning">
+                    No related knowledge records were returned. Treat claims as UNKNOWN unless separately supported.
+                  </p>
+                )}
+              </details>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-4 rounded-lg border border-dashed border-line p-4 text-sm text-muted">
+          No queries in this page session. Start with one of the suggestions; Forge's response and returned records will appear here.
+        </p>
+      )}
+    </section>
+  );
+}
+
+
 
 function GateTester() {
   const [statement, setStatement] = useState("");
@@ -187,7 +461,7 @@ function RipenessList() {
   );
 }
 
-export function ForgeConsoleWidgets() {
+export function ForgeConsoleWidgets({ apiKey }: { apiKey: string }) {
   return (
     <div>
       <div className="mb-5 flex items-start gap-3 rounded-card border-2 border-line bg-card p-4">
@@ -200,6 +474,7 @@ export function ForgeConsoleWidgets() {
         </p>
       </div>
       <div className="grid gap-5">
+        <ForgeKnowledgeChat apiKey={apiKey} />
         <GateTester />
         <AngleChecker />
         <RipenessList />

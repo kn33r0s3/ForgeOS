@@ -224,6 +224,27 @@ describe("feature registry", () => {
     assert.ok(readFileSync(path.join(root, "..", "src/components/pages/project-inquiry-cta.tsx"), "utf8").includes('to="/domain"'));
   });
 
+  it("makes the owner ForgeBot query workspace reachable and truth-labeled", () => {
+    const owner = readFileSync(join(root, "src/routes/owner.tsx"), "utf8");
+    const forgeConsole = readFileSync(join(root, "src/components/forge/forge-console.tsx"), "utf8");
+    assert.ok(owner.includes('id="forgebot-workspace"'));
+    assert.ok(owner.includes("<ForgeConsoleWidgets apiKey={key} />"));
+    assert.ok(owner.includes("Current Hami snapshot"));
+    assert.ok(owner.includes("Refresh live snapshot"));
+    assert.ok(forgeConsole.includes('fetch("/api/ai/status"'));
+    assert.ok(forgeConsole.includes('fetch("/api/forge/ask"'));
+    assert.ok(forgeConsole.includes("memories_used"));
+    assert.ok(forgeConsole.includes("model output, not evidence"));
+    assert.ok(forgeConsole.includes('providerName === "openai"'));
+    assert.ok(forgeConsole.includes("zero-spend default"));
+    assert.ok(!forgeConsole.includes("localStorage"));
+    assert.ok(!forgeConsole.includes("sessionStorage"));
+    assert.ok(owner.includes('id="hami-frontier"'));
+    assert.ok(owner.includes('id="hami-intelligence"'));
+    assert.ok(owner.includes('id="owner-inquiries"'));
+    assert.ok(owner.includes('id="owner-products-payments"'));
+  });
+
   it("connects the private owner and operating consoles without adding them to public navigation", () => {
     const owner = readFileSync(path.join(root, "routes", "owner.tsx"), "utf8");
     const operations = readFileSync(path.join(root, "routes", "operations.tsx"), "utf8");
