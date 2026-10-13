@@ -2,7 +2,7 @@
 
 Version 2, 2026-10-14 (audited against real sources; sections 32 and 33 amend earlier sections where they conflict). Owner: Bhumadevi. Every agent reads this first, every run. Keep a copy in the repo at docs/BRAIN.md.
 
-**Content hash (Git blob SHA-1; hash line excluded from hashed text):** `gitblob:3c72eb5171501fbb6164a5e7d29af23d8fa9c3c7`
+**Content hash (Git blob SHA-1; hash line excluded from hashed text):** `gitblob:639f1845d3653231218b49d878c79c57322bfee4`
 
 ## 0. How to use this document
 
@@ -41,9 +41,9 @@ Hami is a living system for understanding and acting on the real world of Nepal'
 
 **Bot acts, then tells the owner (daily digest):** publishing pre-approved content types, replying to consenting inbound sellers with approved templates, scheduling follow-ups, choosing the next discovery angle, small changes to copy or scripts.
 
-**Owner only (SMS ask):** any spend; prices or revenue share; legal, company or tax matters; a new market or customer type; contacting people who have not opted in; taking money or investment from others; any change to permissions; switching on a new customer-facing sending type; speaking in a seller's name; holding or moving anyone else's money; public claims about results.
+**Owner only (authenticated owner-console ASK):** any spend; prices or revenue share; legal, company or tax matters; a new market or customer type; contacting people who have not opted in; taking money or investment from others; any change to permissions; switching on a new customer-facing sending type; speaking in a seller's name; holding or moving anyone else's money; public claims about results.
 
-Anything not listed is owner only. A category moves to a more autonomous tier only when the owner approves by SMS after seeing gate evidence.
+Anything not listed is owner only. A category moves to a more autonomous tier only when the owner explicitly approves after seeing gate evidence. Telegram changes the control transport, not the authorization tier; high-impact ASKs require the authenticated owner console plus a one-time code.
 
 ## 5. Phases and gates
 
@@ -66,13 +66,13 @@ Rule: no platform expansion until the current phase gate has passed.
 
 **E. Company and payments.** Registration, PAN and business credentials, then merchant onboarding, then payment verification. Runs in the background. Never blocks Workstream A: the first payment can go person to person and be logged honestly.
 
-**F. Operations, security and QA.** Health watch, backup and restore drills, secrets scan of repo history, spend caps, adversarial tests of the authorization service, the kill switch and the SMS reply path. QA is a separate agent from the builder.
+**F. Operations, security and QA.** Health watch, backup and restore drills, secrets scan of repo history, spend caps, adversarial tests of the authorization service, persisted HALT safe mode and Telegram owner-control path. QA is a separate agent from the builder.
 
 ## 7. Loops
 
 **Every run:** read the charter, STATE and QUEUE. Take the top unblocked item. Do it. Verify with evidence. Update STATE and LOG. If nothing is unblocked, apply section 8.
 
-**Daily:** send the digest SMS. Re-rank QUEUE by what moves the nearest gate.
+**Daily:** send the owner digest through Telegram only when its separate feature flag is explicitly enabled. Re-rank QUEUE by what moves the nearest gate.
 
 **Weekly:** review what moved a gate, what was software excess, what was learned. Produce a short proposal list for the owner.
 
@@ -80,15 +80,15 @@ Rule: no platform expansion until the current phase gate has passed.
 
 ## 8. No-blocker rule
 
-Every blocker gets a legitimate workaround the same day. Write the blocker, the workaround, and who or what resolves it. A workaround never bypasses an invariant, a decision right, a platform rule or the law; if the only workaround would, the answer is an ASK. If no legitimate workaround exists, send the owner an SMS ask. Never go idle, but never fake progress either. A task counts as progress only if it moves a gate or resolves an unknown with evidence.
+Every blocker gets a legitimate workaround the same day. Write the blocker, the workaround, and who or what resolves it. A workaround never bypasses an invariant, a decision right, a platform rule or the law; if the only workaround would, the answer is an ASK. If no legitimate workaround exists, create an owner ASK through the authenticated owner-control path. Never go idle, but never fake progress either. A task counts as progress only if it moves a gate or resolves an unknown with evidence.
 
-## 9. Owner interface (SMS)
+## 9. Owner interface (Telegram)
 
-- **DIGEST** (daily): what was done, what is blocked, one number that matters.
+- **DIGEST** (daily): what was done, what is blocked, one number that matters; disabled until separately authorized.
 - **ALERT** (only when needed): failures, blocked actions, anything near a limit.
-- **ASK:** the decision, two or three options, the bot's recommendation, and what happens by default if the owner does not reply (the default is always do nothing).
+- **ASK:** the decision, two or three options, the recommendation, and what happens by default if the owner does not reply (always do nothing).
 
-Only the owner's number plus a confirmation code can approve an ASK. Texting HALT from the verified owner number halts all customer-facing actions immediately. STOP remains a recipient-level SMS opt-out and is never the owner's global command.
+The control bot accepts commands only from one configured private owner chat and user ID and checks Telegram's webhook secret header. Routine ASK replies need an expiring one-time code and a new, unforwarded message. High-impact ASKs require the authenticated owner console plus that code; Telegram alone cannot approve them. HALT persists safe mode in Hami's database and is checked immediately before generic customer email/SMS provider calls. A failed state read blocks delivery. Resume is owner-console only. STOP remains a recipient-level SMS opt-out, never the owner's global command.
 
 ## 10. Agent roles
 
@@ -189,7 +189,7 @@ Results go into the evidence log whether they are good or bad. Negative results 
 An incident is anything that sent or nearly sent an unauthorized message, lost data, exposed a secret, counted unverified money, or took production down.
 
 1. **Contain:** switch off the affected action or sending type.
-2. **Tell:** ALERT SMS to the owner with what happened and what is already contained.
+2. **Tell:** send an ALERT to the owner through Telegram with what happened and what is already contained.
 3. **Fix:** reverse what can be reversed.
 4. **Record:** write the incident in LOG.md with cause, impact and the test or rule added so it cannot repeat.
 5. **Resume** only when the new test passes.
@@ -314,9 +314,9 @@ Each wave has an objective, the autonomous work, the human touchpoints, an exit 
 ### Wave 0: Foundation (first days)
 
 - **Objective:** make the system able to run without drifting or breaking rules.
-- **Autonomous work:** create STATE, QUEUE and LOG; decision-rights config enforced by the authorization service; SMS digest, alert and ask with HALT; secrets scan; backup and restore drill; Local Language and Culture Pack v0; data class rules in section 25.
+- **Autonomous work:** create STATE, QUEUE and LOG; decision-rights config enforced by the authorization service; Telegram owner digest/alerts/ASK with persisted HALT (digest stays OFF until authorized); secrets scan; backup and restore drill; Local Language and Culture Pack v0; data class rules in section 25.
 - **Human:** one-time account/OAuth setup and the owner-only permission decision for the allowed destination and content type. ForgeBot owns routine drafting, scheduling, publishing and ongoing management; no owner-written or hand-posted content is a standing dependency.
-- **Exit test:** the SMS digest arrives, HALT halts customer-facing actions in a test, a restore works, no customer-facing sending is enabled.
+- **Exit test:** an owner Telegram message is observed, HALT blocks generic customer email/SMS in a test, a restore works, no customer-facing sending is enabled.
 - **If it fails:** fix the failing item before anything goes public. Nothing else moves.
 
 ### Wave 1: First signal (inbound opens)
@@ -521,9 +521,9 @@ The audit of sections 0 to 31 found these gaps. Each rule below is binding, and 
 4. **L4, speaking in a seller's name.** Only with the seller's recorded permission, with a clear path to a human, and with the seller knowing which replies are AI-drafted. A buyer can always ask for a person.
 5. **L5, seller registration check.** Before onboarding a seller, record whether they are registered under the E-commerce Act. If not, the agent does not onboard them as a paid sprint seller. It tells them plainly, shares public information on how to register, and sends the owner an ASK.
 6. **L6, other people's money.** Hami never holds, pools or transfers money that belongs to a seller, buyer or helper. Sellers pay Hami's fee directly to Hami, and helpers are paid from Hami's own funds for work done.
-7. **L7, ledger integrity.** A REAL entry needs a transaction reference or screenshot, the date and amount, the payer, and the owner's SMS confirmation. A refund reduces revenue on the day it happens. A sale counts as recovered only if all four hold: the inquiry arrived when the seller could not reply, a Hami-assisted reply went out within the agreed time, the buyer actually bought, and the seller confirms with order evidence. In a dispute, the seller's account wins and the sale is not counted.
+7. **L7, ledger integrity.** A REAL entry needs a transaction reference or screenshot, the date and amount, the payer, and the owner's authenticated confirmation. A refund reduces revenue on the day it happens. A sale counts as recovered only if all four hold: the inquiry arrived when the seller could not reply, a Hami-assisted reply went out within the agreed time, the buyer actually bought, and the seller confirms with order evidence. In a dispute, the seller's account wins and the sale is not counted.
 8. **L8, hardened owner approvals.** SMS can be spoofed or taken over (for example by SIM swap). High-impact asks (spending above the cap, permission changes, a new sending type, anything legal, anything touching the ledger rules) need a second factor: the owner signed in to the owner console plus a one-time code. Asks are limited per day so the owner does not approve by habit. No approval is accepted through a forwarded or quoted message.
-9. **L9, safe mode and the owner going quiet.** Safe mode means all customer-facing sending is off while research and logging continue. It starts on a verified owner HALT, any incident, a failed health check, a spend cap reached, or no contact from the owner for 7 days. A recipient's STOP keyword immediately opts that recipient out and must never be interpreted as the owner's global command. Leaving safe mode is owner-only.
+9. **L9, safe mode and the owner going quiet.** Safe mode means all customer-facing sending is off while research and logging continue. It starts on HALT from the allowlisted owner Telegram account, any incident, a failed health check, a spend cap reached, or no contact from the owner for 7 days. A recipient's STOP keyword immediately opts that recipient out and must never be interpreted as the owner's global command. Leaving safe mode is owner-only through the authenticated owner console plus a one-time code.
 10. **L10, one canonical copy.** This document is the source. The repo copy at docs/BRAIN.md carries the version number and a content hash. At the start of each run an agent compares them. If they differ, it stops, flags it, and continues only with bot-alone work.
 11. **L11, money limits.** Before Wave 1 the owner sets in writing: the monthly cap on every recurring cost (hosting, SMS, tools, compute), the cap per single purchase, and the list of standing approved costs. Until set, the cap is zero and every purchase is an ASK.
 12. **L12, evidence classes.** OBSERVED means an agent saw it in a source or log. REPORTED means a person or source stated it and nothing independent confirms it. VERIFIED means independent evidence confirms it: a transaction record, a second independent source, or a field check.
@@ -544,3 +544,20 @@ The audit of sections 0 to 31 found these gaps. Each rule below is binding, and 
 
 - 2026-10-14: Audited sections 0 to 31 against real sources. Added sections 32 (research findings) and 33 (17 loophole fixes). Amended sections 4, 8, 13, 16, 21, 24, 28 and the version line to match.
 - 2026-10-14: Aligned hands-off operation with the owner-authorized HALT command. STOP is reserved for recipient-level opt-out, not the owner's global kill command; unsupported Group posting is excluded rather than assigned to the owner.
+
+
+## 34. Owner control channel: Telegram first (2026-10-14)
+
+The owner selected Telegram for Hami's single-owner control channel. It is not a downgrade: with one user, reliability and security matter more than broad reach. This choice does not determine the channels Hami uses with sellers and buyers; their preferences and behavior decide that separately.
+
+- **Webhook authentication:** Telegram's HTTPS Bot API webhook supplies `X-Telegram-Bot-Api-Secret-Token`. Hami compares this shared secret in constant time, then requires the exact configured private chat ID and user ID. This is a shared-secret header check, not a per-body HMAC signature. See the [official Telegram Bot API](https://core.telegram.org/bots/api#setwebhook).
+- **Secret handling:** bot token, webhook secret and owner IDs stay in environment variables and are never written to Git, logs, issue comments or third-party chats. Group chats and other accounts are ignored.
+- **HALT:** persisted safe mode starts ON and is stored in Hami's own database. Generic customer email/SMS delivery checks it immediately before provider I/O; an unreadable state blocks delivery. The seven-day owner-inactivity rule is evaluated by the daily loop and before customer delivery.
+- **ASK:** two or three options, a decision reference, an expiry and a daily rate limit. One-time codes are sent directly to Telegram and stored only as hashes. Codes expire, are single-use, and repeated failures lock the ASK. No answer means DO NOTHING.
+- **High-impact decisions:** the owner signs in to the authenticated owner console and submits the code delivered by Telegram. Telegram alone cannot approve these decisions. Approving an Action changes its state only; it never executes the Action automatically, and final authorization checks remain binding.
+- **Digest:** Telegram daily digest is OFF by default and requires durable PostgreSQL. Provider API acceptance is not handset-delivery proof. The old Twilio sender and `HAMI_OWNER_SMS_DIGEST_ENABLED` remain untouched.
+- **Setup and proof:** see `docs/OWNER_CONTROL_TELEGRAM.md`. A code change or webhook registration is not delivery evidence. Log observed tests without secrets, IDs, codes, phone numbers or message contents. No production variable or credential is changed by source edits alone.
+
+## Changelog (version 2, continued)
+
+- 2026-10-14: recorded Telegram as the owner-control channel, aligned the operating interface and HALT rule, and added persisted safe-mode and ASK controls with a setup checklist. Seller/buyer channels remain a separate evidence-led decision.

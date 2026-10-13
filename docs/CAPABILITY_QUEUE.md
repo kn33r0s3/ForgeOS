@@ -1904,4 +1904,5 @@ realized revenue.
 - Duplicate control: per-day idempotency and a pre-send SENDING marker; ambiguous attempts are never automatically resent.
 - Truth boundary: Twilio API acceptance is not handset delivery. The message says metrics are DB-only and not reconciled with REVENUE_LOG. No customer names, phone numbers, or messages are included.
 - Default state: disabled; no SMS is sent by code changes. Customer-send, intake, checkout, and autonomy-stage flags are untouched.
-- Not implemented here: inbound commands, STOP kill switch, signed-webhook sender verification, confirmation-code approvals, or role-bounded alerts/asks.
+- Superseded by Telegram owner-control source commit `b43241ff0a5388e28cfb4b0fc31ba736469b460f`: private owner commands, persisted HALT safe mode, Telegram secret-header verification plus chat/user allowlist, hashed expiring ASK codes, and owner-console second factor for high-impact decisions now have source and regression coverage. Production configuration and delivery remain unverified.
+- Unchanged SMS boundary: the Twilio sender implementation was not edited; `HAMI_OWNER_SMS_DIGEST_ENABLED` stays false by default. No actual SMS handset test or delivery is claimed.

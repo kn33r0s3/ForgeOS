@@ -68,3 +68,14 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Scheduled-intelligence safety changes remain on main: PostgreSQL cross-replica locking; Vercel/SQLite durable-storage rejection; mandatory initial/final `CycleRun` persistence; explicit non-completion for failed/ambiguous/unexpected owner-SMS outcomes; and scheduled dormancy handling. Added backend regressions cover lock acquisition/contention/failure, ephemeral SQLite, missing run records and SMS status classification. Exact current-head backend result remains unverified.
 - No credentials, flags, permissions, spending, publication, customer messaging, intake, external research requests, seller conversations, sales or revenue were changed, invoked or claimed by this source/copy update.
 - Next: refresh current `main`, let the new exact-head root/backend jobs and independent verifier finish, then fix only evidenced failures and reconcile deployment/runtime truth.
+
+
+## 2026-10-14 — Telegram owner control source and setup checklist
+
+- Added `docs/OWNER_CONTROL_TELEGRAM.md` (commit `56d91fae64f206db53200a4f4084a25bf1d28105`).
+- Committed source in `b43241ff0a5388e28cfb4b0fc31ba736469b460f`: Telegram owner transport and webhook, secret-header comparison plus exact private chat/user allowlist, runtime safe-mode and ASK operational projections, owner-console ASK routes, Telegram outbox delivery, and a daily owner-inactivity check.
+- Generic customer SMS/email sends check `FORGE_BOT_LIVE`, persisted safe mode and the seven-day authenticated-owner-contact rule before dispatch and immediately before provider I/O. An unreadable state blocks dispatch. Existing Twilio sender implementation/config was not changed.
+- One-time ASK codes are random, delivered directly and stored only as hashes; expiry/failure limits apply. High-impact ASKs require owner-console authentication plus the code. Approved Actions do not execute automatically. Telegram digest is OFF by default and PostgreSQL-only.
+- GitHub Actions for the exact source SHA started; results were pending at this snapshot. Tests are not yet claimed green. Production config, webhook registration, PostgreSQL durability and real handset delivery are unverified.
+- No production flags/credentials changed; no Telegram, seller or buyer message was sent; no sale or revenue is claimed.
+- Next action: inspect exact-head CI results and repair demonstrated failures without enabling production sending.
