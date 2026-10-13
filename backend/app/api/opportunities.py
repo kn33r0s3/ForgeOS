@@ -175,24 +175,55 @@ def create_opportunity_claim(
     opportunity = db.query(models.Opportunity).filter_by(id=opportunity_id).first()
     if not opportunity:
         raise HTTPException(status_code=404, detail="Opportunity not found")
+
+    # This endpoint can record an observed claim or an explicit, evidence-backed
+    # support/contradiction relation. Other states (verified, rejected, etc.)
+    # require their dedicated transition paths and are not accepted as strings.
+    relation_for_state = {
+        "observed": "derived_from",
+        "supported": "supports",
+        "contested": "contradicts",
+    }
+    expected_relation = relation_for_state.get(payload.epistemic_state)
+    if expected_relation is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Claim state must be observed, supported, or contested; stronger transitions require their dedicated evidence/outcome path.",
+        )
+    if payload.relation_type != expected_relation:
+        raise HTTPException(
+            status_code=422,
+            detail=f"epistemic_state={payload.epistemic_state!r} requires relation_type={expected_relation!r}.",
+        )
+    if payload.epistemic_state != "observed" and payload.evidence_id is None:
+        raise HTTPException(
+            status_code=422,
+            detail=f"epistemic_state={payload.epistemic_state!r} requires an existing evidence_id.",
+        )
+
+    # Resolve the optional foreign record before creating a Claim. A 404 must
+    # not leave behind a durable claim row as a side effect.
+    evidence = None
+    if payload.evidence_id is not None:
+        evidence = db.query(models.Evidence).filter_by(id=payload.evidence_id).first()
+        if not evidence:
+            raise HTTPException(status_code=404, detail="Evidence not found")
+
     claim, _ = evidence_graph.create_or_get_claim(
         db,
         payload.statement,
-        epistemic_state=payload.epistemic_state,
+        epistemic_state="observed",
         opportunity_id=opportunity_id,
         decision_id=payload.decision_id,
         experiment_id=payload.experiment_id,
         outcome_id=payload.outcome_id,
     )
-    if payload.evidence_id is not None:
-        evidence = db.query(models.Evidence).filter_by(id=payload.evidence_id).first()
-        if not evidence:
-            raise HTTPException(status_code=404, detail="Evidence not found")
+    if evidence is not None:
         evidence_graph.link_evidence(
             db,
             evidence,
             claim=claim,
-            relation_type=payload.relation_type,
+            relation_type=expected_relation,
         )
     return claim
 
