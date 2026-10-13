@@ -154,6 +154,15 @@ type CycleSummary = {
   summary: string | null;
 };
 
+type CycleEffectSummary = {
+  status?: string;
+  counts?: Record<string, number>;
+  source_observations?: string[];
+  internal_work?: string[];
+  next_owner_attention?: string;
+  reality_boundary?: string;
+};
+
 type RuntimeWindow = {
   signals: number | null;
   evidence: number | null;
@@ -565,17 +574,59 @@ function signalFor(
 // Anything unparseable renders as UNKNOWN, never as green.
 function CycleCard({ cycle }: { cycle: CycleSummary }) {
   let stages: Record<string, { status?: string }> | null = null;
+  let effect: CycleEffectSummary | null = null;
   if (cycle.summary) {
     try {
       const parsed: unknown = JSON.parse(cycle.summary);
-      if (typeof parsed === "object" && parsed !== null && "stages" in parsed) {
-        const raw = (parsed as { stages: unknown }).stages;
-        if (typeof raw === "object" && raw !== null) {
-          stages = raw as Record<string, { status?: string }>;
+      if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+        const root = parsed as Record<string, unknown>;
+        if (typeof root.stages === "object" && root.stages !== null && !Array.isArray(root.stages)) {
+          stages = Object.fromEntries(
+            Object.entries(root.stages as Record<string, unknown>)
+              .filter(([name]) => name !== "cycle_effect")
+              .map(([name, value]) => [
+                name,
+                typeof value === "object" && value !== null && "status" in value
+                  ? { status: typeof (value as { status?: unknown }).status === "string"
+                      ? (value as { status: string }).status
+                      : "unknown" }
+                  : { status: "unknown" },
+              ]),
+          );
+        }
+
+        const rawEffect = root.cycle_effect;
+        if (typeof rawEffect === "object" && rawEffect !== null && !Array.isArray(rawEffect)) {
+          const raw = rawEffect as Record<string, unknown>;
+          const counts: Record<string, number> = {};
+          if (typeof raw.counts === "object" && raw.counts !== null && !Array.isArray(raw.counts)) {
+            for (const [name, count] of Object.entries(raw.counts as Record<string, unknown>)) {
+              if (typeof count === "number" && Number.isFinite(count) && count >= 0) {
+                counts[name] = count;
+              }
+            }
+          }
+          effect = {
+            status: typeof raw.status === "string" ? raw.status : "unknown",
+            counts,
+            source_observations: Array.isArray(raw.source_observations)
+              ? raw.source_observations.filter((item): item is string => typeof item === "string")
+              : [],
+            internal_work: Array.isArray(raw.internal_work)
+              ? raw.internal_work.filter((item): item is string => typeof item === "string")
+              : [],
+            next_owner_attention: typeof raw.next_owner_attention === "string"
+              ? raw.next_owner_attention
+              : undefined,
+            reality_boundary: typeof raw.reality_boundary === "string"
+              ? raw.reality_boundary
+              : undefined,
+          };
         }
       }
     } catch {
       stages = null;
+      effect = null;
     }
   }
   const stateColor =
@@ -590,6 +641,15 @@ function CycleCard({ cycle }: { cycle: CycleSummary }) {
       : cycle.status === "FAILED"
         ? "text-danger"
         : "text-muted";
+  const effectColor =
+    effect?.status === "source_data_collected"
+      ? "text-success"
+      : effect?.status === "internal_work_only" || effect?.status === "no_new_effect"
+        ? "text-warning"
+        : "text-muted";
+  const humanize = (value: string) => value.replace(/_/g, " ");
+  const visibleCounts = Object.entries(effect?.counts ?? {}).filter(([, count]) => count > 0);
+
   return (
     <article className={`rounded-card border-2 ${stateColor} bg-card p-4`}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -604,6 +664,39 @@ function CycleCard({ cycle }: { cycle: CycleSummary }) {
       {cycle.error ? (
         <p className={`mt-1 break-words text-sm ${noteColor}`}>{cycle.error}</p>
       ) : null}
+
+      {effect ? (
+        <section className="mt-3 rounded-card border border-line bg-surface p-3" aria-label="Cycle effect">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="font-bold">Cycle effect</p>
+            <p className={`text-sm font-extrabold capitalize ${effectColor}`}>
+              {humanize(effect.status || "unknown")}
+            </p>
+          </div>
+          {visibleCounts.length ? (
+            <dl className="mt-2 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
+              {visibleCounts.map(([name, count]) => (
+                <div key={name} className="flex justify-between gap-2">
+                  <dt className="break-words text-muted">{humanize(name)}</dt>
+                  <dd className="font-bold tabular-nums">{count}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : (
+            <p className="mt-2 text-sm text-muted">No positive effect counts recorded.</p>
+          )}
+          {effect.next_owner_attention ? (
+            <p className="mt-3 text-sm">
+              <span className="font-bold">Next owner attention: </span>
+              {humanize(effect.next_owner_attention)}
+            </p>
+          ) : null}
+          {effect.reality_boundary ? (
+            <p className="mt-2 text-xs leading-5 text-muted">{effect.reality_boundary}</p>
+          ) : null}
+        </section>
+      ) : null}
+
       {stages ? (
         <dl className="mt-3 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
           {Object.entries(stages).map(([name, info]) => {
