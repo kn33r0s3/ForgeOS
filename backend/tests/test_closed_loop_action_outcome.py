@@ -191,10 +191,15 @@ def test_approval_required_before_execute(db):
     assert a.status == "APPROVAL_REQUIRED"
     executed = action_engine.start_and_execute_action(db, a.id)
     assert executed.status == "APPROVAL_REQUIRED" or executed.execution_error
-    # After approve
+
+    # A one-off owner approval may authorize a human to act, but must not
+    # turn a follow-up into an unattended dispatch. That requires a current
+    # bounded standing authorization and recipient-level consent.
     action_engine.approve_action(db, a.id)
     executed = action_engine.start_and_execute_action(db, a.id)
-    assert executed.status in ("SUCCEEDED", "FAILED")
+    assert executed.status == "APPROVAL_REQUIRED"
+    assert "standing_authorization_required" in executed.policy_reason
+    assert executed.started_at is None
 
 
 def test_unsupported_adapter(db):

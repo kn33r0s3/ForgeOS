@@ -93,8 +93,9 @@ def test_final_action_execution_rechecks_owner_only_rights(db, monkeypatch):
 
 
 def test_owner_sms_digest_is_closed_by_default_and_creates_no_delivery(db, monkeypatch):
-    monkeypatch.setattr(settings, "HAMI_OWNER_SMS_DIGEST_ENABLED", False)
     _configure_owner_sms(monkeypatch)
+    # Apply the condition under test AFTER the fixture helper has set defaults.
+    monkeypatch.setattr(settings, "HAMI_OWNER_SMS_DIGEST_ENABLED", False)
     monkeypatch.setattr(forge_bot_owner_notification, "_owner_sms_database_ready", lambda _: True)
 
     result = forge_bot_owner_notification.send_daily_owner_status_sms(db, date(2026, 10, 14))
