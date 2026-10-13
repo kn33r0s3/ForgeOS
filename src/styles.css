@@ -223,7 +223,7 @@
     max-width: var(--max-width-site);
   }
 
-  /* Faint 45deg hairlines, the same angle as the split plate. */
+  /* A quiet system grid: texture supports the message without competing with it. */
   .site-grid,
   .hero-grain {
     background-image: repeating-linear-gradient(
@@ -523,7 +523,7 @@
   /* Grey-to-black 45deg sheen, used for bands and the top of pages. */
   .sheen,
   .hero-glow {
-    background: linear-gradient(45deg, #45444f 0%, #000 50% 100%);
+    background: radial-gradient(ellipse at 76% 28%, rgb(255 176 0 / 0.055), transparent 45%), linear-gradient(135deg, #17150f 0%, #0b0b0b 68%);
   }
 
   .hero-glow {
@@ -533,7 +533,7 @@
   }
 
   .sheen-crimson {
-    background: linear-gradient(45deg, #000, rgb(163 2 2 / 0.16) 50% 100%);
+    background: linear-gradient(135deg, #0b0b0b, rgb(255 176 0 / 0.055) 50% 100%);
   }
 
   /* Pinstripe frame: orange rules down both sides and fading along top and bottom. */
@@ -658,12 +658,12 @@
     color: var(--primary);
   }
 
-  /* Card: black-to-crimson 45deg sheen, 2px grey border that ignites orange. */
+  /* Cards use a quiet amber undertone; interaction is communicated by border and focus. */
   .card {
     position: relative;
     border: 2px solid rgb(128 128 128 / 0.4);
     border-radius: var(--radius-card);
-    background: linear-gradient(45deg, #000, rgb(163 2 2 / 0.1) 50% 100%), var(--surface);
+    background: linear-gradient(135deg, #0b0b0b, rgb(255 176 0 / 0.045) 50% 100%), var(--surface);
     box-shadow: var(--shadow-md);
     transition:
       border-color 150ms var(--ease-out),
@@ -671,7 +671,7 @@
       transform 150ms var(--ease-out);
   }
 
-  /* An orange corner cut appears on hover, echoing the split plate. */
+  /* A small amber corner signals interaction without overpowering the content. */
   .card-interactive::before {
     content: "";
     position: absolute;
@@ -835,7 +835,7 @@
     transform: translate(2px, -2px);
   }
 
-  /* Numbered steps use Roman numerals in blackletter. */
+  /* Numbered steps use the shared system numeral style. */
   .step-rail {
     counter-reset: step;
   }
