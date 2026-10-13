@@ -519,6 +519,32 @@ def run_scheduled_intelligence(
         logger.warning("scheduled intelligence: scout_cycle failed (%s)", type(exc).__name__)
         intelligence["scout_cycle"] = {"status": "error", "error": type(exc).__name__}
 
+    # Stage 8: evidence-grounded public-content drafting. This writes only
+    # DRAFT content assets into the six-primitive substrate; it never publishes
+    # or sends. Publishing remains blocked until an official destination and
+    # the corresponding authorization are verified.
+    try:
+        with database.SessionLocal() as db:
+            from app.services import content_loop
+
+            content_result = content_loop.run_content_draft_cycle(db)
+            db.commit()
+            content_status = "partial" if content_result.get("errors") else "ok"
+            intelligence["content_drafts"] = {
+                "status": content_status,
+                "source_questions_scanned": content_result.get("source_questions_scanned", 0),
+                "drafts_generated": content_result.get("drafts_generated", 0),
+                "existing_drafts": content_result.get("existing_drafts", 0),
+                "skipped_private_or_sensitive": content_result.get("skipped_private_or_sensitive", 0),
+                "published": 0,
+                "publish_status": content_result.get("publish_status", "blocked"),
+                "publish_blockers": content_result.get("publish_blockers", []),
+                "errors": len(content_result.get("errors", [])),
+            }
+    except Exception as exc:
+        logger.warning("scheduled intelligence: content_drafts failed (%s)", type(exc).__name__)
+        intelligence["content_drafts"] = {"status": "error", "error": type(exc).__name__}
+
     # Finalize the CycleRun observability record with per-stage outcomes.
     # This bookkeeping never fails the intelligence response itself.
     try:

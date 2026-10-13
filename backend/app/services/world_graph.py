@@ -193,6 +193,50 @@ def _schema_for_horizon_domain() -> dict[str, Any]:
     }
 
 
+def _schema_for_content_asset() -> dict[str, Any]:
+    """Validate persisted public-content drafts without creating a content table."""
+    return {
+        "type": "object",
+        "properties": {
+            "content_type": {"type": "string", "enum": ["question_invitation"]},
+            "status": {
+                "type": "string",
+                "enum": ["draft", "preapproved", "queued", "published", "rejected"],
+            },
+            "content_en": {"type": "string", "minLength": 50, "maxLength": 1800},
+            "content_ne": {"type": "string", "minLength": 50, "maxLength": 1800},
+            "source_record": {
+                "type": "object",
+                "properties": {
+                    "table": {"type": "string", "enum": ["research_questions"]},
+                    "id": {"type": "integer", "minimum": 1},
+                },
+                "required": ["table", "id"],
+                "additionalProperties": False,
+            },
+            "source_question": {"type": "string", "minLength": 1, "maxLength": 800},
+            "source_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "source_kind": {"type": "string", "enum": ["HYPOTHESIS"]},
+            "language_codes": {
+                "type": "array",
+                "items": {"type": "string", "enum": ["en", "ne"]},
+                "minItems": 2,
+                "maxItems": 2,
+            },
+            "publish_status": {"type": "string", "enum": ["blocked", "not_requested", "queued", "published"]},
+            "publish_blockers": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+            "generator_version": {"type": "string", "enum": ["1"]},
+            "truth_note": {"type": "string", "minLength": 1, "maxLength": 200},
+        },
+        "required": [
+            "content_type", "status", "content_en", "content_ne", "source_record",
+            "source_question", "source_fingerprint", "source_kind", "language_codes",
+            "publish_status", "publish_blockers", "generator_version", "truth_note",
+        ],
+        "additionalProperties": False,
+    }
+
+
 def seed_core_types(db: Session) -> int:
     """Install the stable substrate vocabulary as registry rows, idempotently."""
     canonical_schema = json.dumps(_schema_for_canonical_ref(), sort_keys=True, separators=(",", ":"))
@@ -200,6 +244,7 @@ def seed_core_types(db: Session) -> int:
     orientation_schema = json.dumps(_schema_for_orientation(), sort_keys=True, separators=(",", ":"))
     diagnosis_schema = json.dumps(_schema_for_constraint_diagnosis(), sort_keys=True, separators=(",", ":"))
     horizon_schema = json.dumps(_schema_for_horizon_domain(), sort_keys=True, separators=(",", ":"))
+    content_schema = json.dumps(_schema_for_content_asset(), sort_keys=True, separators=(",", ":"))
     open_schema = '{"type":"object"}'
     types = {
         "entity_type": {
@@ -213,7 +258,7 @@ def seed_core_types(db: Session) -> int:
             "bet", "scout_candidate",
             "probe", "assumption",
             "orientation", "constraint_diagnosis",
-            "horizon_domain",
+            "horizon_domain", "content_asset",
         },
         "relation_type": {
             "derived_from", "supports", "possible_match", "co_occurs_with", "informs", "informed_by",
@@ -245,7 +290,7 @@ def seed_core_types(db: Session) -> int:
             "standing_authorization_proposed",
             "standing_authorization_activated",
             "standing_authorization_revoked",
-            "standing_authorization_expired",
+            "standing_authorization_expired", "content_draft_created",
         },
         "capability_type": {"tool", "workflow", "integration", "agent", "model", "market_signal_analysis"},
     }
@@ -277,6 +322,8 @@ def seed_core_types(db: Session) -> int:
                     schema_json = diagnosis_schema
                 elif category == "entity_type" and name == "horizon_domain":
                     schema_json = horizon_schema
+                elif category == "entity_type" and name == "content_asset":
+                    schema_json = content_schema
                 elif category == "entity_type" and name in {
                     "signal", "pattern", "belief", "claim", "research_question", "opportunity",
                     "provider", "service_listing", "domain_record", "outcome", "customer",
