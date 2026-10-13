@@ -4,6 +4,9 @@
 
 ## Current operating direction
 
+- **Nepal-intelligified direction:** Nepal-native and world-open, not merely a Nepali theme or English-first product. Prioritize Nepali Devanagari, Romanized Nepali, English and code-switching; Nepal-aware context, source quality, low-bandwidth/local-first operation and explicit provider/cost governance. Treat global adoption as an ambition earned by measured quality and trust, not a current claim.
+- **AI provider seam:** ai_engine already offers Mock/Ollama/OpenAI paths, while cognitive_provider is still mock-only and explicitly rejects uninstalled real adapters. The gap is connecting the structured cognitive worker to a real adapter with validated structured output, provider provenance and a Nepal-first evaluation lane; selecting a provider is not evidence that it was invoked.
+
 - **Mission:** one Hami system for understanding and acting across domains, with Nepal as origin and the world in scope. Hami/Hamro means many connected, mutually useful climbs—not one SaaS funnel, one seller pilot or a finite ladder.
 - **Parallel progress:** research, engineering, evidence quality, reliability, capability development and cross-climb connection continue concurrently where independent. A blocked external action is not a global stop; unrelated safe work continues unless the risk is systemic.
 - **Shared substrate:** six primitives only—ENTITY, RELATION, EVENT, EVIDENCE, CAPABILITY, ACTION. Existing ResearchQuestion, ResearchTask, Evidence, Claim, Bet, Capability and Action records remain the shared substrate; no Climb primitive/table or parallel ontology.

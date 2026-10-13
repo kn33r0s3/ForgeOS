@@ -42,3 +42,8 @@ Ranked by value, critical blockers and leverage across the full Hami portfolio. 
 ## Global stop conditions
 
 No non-consensual contact, no spend without approval, no legal/company/tax commitment without the owner, no invented results, no permission self-escalation, no casual deletion, no public activation while tests or live readiness are unknown. When blocked, record the legitimate workaround and keep moving on unblocked internal work. Do not stop merely because a verification gate is blocked; continue source audits, non-external fixes, regression coverage and queue maintenance without claiming runtime success.
+
+
+## P0 — Nepal-intelligified AI provider layer
+
+Reuse the existing ai_engine and cognitive_provider seams; no parallel model stack. Connect the bounded cognitive worker to a real local adapter first where viable, then owner-configured external adapters. Add strict structured-output validation and honest provider/model/mode/latency/cost provenance; retain explicit MOCK behavior and never treat selection as invocation. Add a small auditable Nepal-first evaluation lane spanning Nepali Devanagari, Romanized Nepali, English and code-switching, plus source fidelity, uncertainty, local-context handling, privacy and cost. Provider quality claims wait for measured results. Paid inference waits for the existing owner spend authorization. This engineering climb proceeds alongside CI repair and does not wait for one seller pilot.

@@ -1,8 +1,7 @@
 # Hami Brain: Operating Charter for Agents
 
-Version 3, 2026-10-14 (sections 32–35 preserve the evidence/security audit and add the many-climbs operating model). Owner: Bhumadevi. Every agent reads this first, every run. Keep a copy in the repo at docs/BRAIN.md.
+Version 4, 2026-10-14 (sections 32–35 preserve the evidence/security audit and add the many-climbs operating model). Owner: Bhumadevi. Every agent reads this first, every run. Keep a copy in the repo at docs/BRAIN.md.
 
-**Content hash (Git blob SHA-1; hash line excluded from hashed text):** `gitblob:d0f06bf092d8812bcb510d06f568e7c0ed4803a8`
 
 ## 0. How to use this document
 
@@ -603,3 +602,44 @@ This section supersedes any earlier implication in sections 5, 17, 28, 29 or 30 
 
 - 2026-10-14: Replaced the linear-ladder interpretation with many connected, ongoing climbs on one shared evidence/authorization substrate. Hami remains the name; Hamro expresses shared progress. Parallel internal work does not relax external action gates.
 - 2026-10-14: Extended Telegram owner control with the authenticated cockpit and durable-PostgreSQL delivery gate; degraded health now attempts to persist safe mode. Exact-head tests, production setup and message delivery remain unverified.
+
+## 36. Owner direction: Nepal intelligified, globally useful (2026-10-14)
+
+**Ambition: Nepal intelligified; the world can follow through demonstrated usefulness.** Hami is Nepal-origin and world-open. It should represent Nepal in what it understands, how it communicates, how it tests claims and how it connects people and capabilities—not merely by displaying Nepali words, flags or design motifs. Build from Nepal's real languages, workflows, constraints, knowledge and ambitions, then make the underlying capabilities useful across regions. This is a long-range design mandate, not a claim that Nepal or Hami has already been “intelligified” or that global adoption is guaranteed.
+
+### 36.1 Nepali-native, not Nepali-themed
+
+- Treat Nepali (Devanagari), English, Romanized Nepali, code-switching and mixed-script input as first-class interaction forms. Preserve a person's preferred language and script where practical; do not force every message through English or assume Romanized Nepali is malformed text.
+- Model Nepal context explicitly where it matters: place and administrative hierarchy, local availability and infrastructure, NPR-denominated amounts, local time, calendars and date conventions, network/device limits, accessibility, and locally relevant sources. Normalize carefully while preserving the original user wording and provenance. Never infer a legal, financial, cultural or regional fact from a language cue alone.
+- Nepal is not culturally uniform. Record the relevant place/community/context and its evidence; do not flatten regional, caste, ethnic, linguistic or personal differences into a single “Nepali behavior” rule. Cultural assumptions stay hypotheses until supported by suitable evidence and review.
+- Useful intelligence must work within actual constraints: a low-bandwidth web experience, modest hardware, optional local inference, clear failure states and a $0-capable path where feasible. A paid model may improve a capability, but cannot become a hidden requirement or silently create spend.
+
+### 36.2 One provider layer for the entire Hami system
+
+- Extend the existing provider seams (ai_engine for text generation and cognitive_provider for structured research proposals) rather than introducing a separate ForgeBot model stack. Any ForgeBot, research, translation, synthesis or future AI worker should identify the capability it needs and use a governed adapter behind the existing seam.
+- A provider selection is not a provider call, and a successful response is not proof that the answer is true. Record actual provider/model/version, mode (MOCK/TEST/EXTERNAL), purpose, language/task class where available, bounded usage/cost, latency/failure and output provenance through existing operational records and EVENT/EVIDENCE seams.
+- Keep explicit mock output distinguishable from real inference. If a requested real provider is unavailable, report AI_UNAVAILABLE and preserve retryable work; never silently substitute a mock and claim intelligent completion.
+- Prefer local inference when it meets the quality, latency and hardware requirements and the data class calls for it. External providers are selectable only through existing owner-authorized configuration, current provider terms/data settings, the applicable spend ceilings and least-privilege data sharing. Routing must not leak protected contact data or other restricted information to a provider by default.
+- Providers should implement language-aware generation and structured outputs with strict validation, size/time bounds, cancellation, retries, idempotency and explicit usage accounting. Provider output remains a proposal until its task-specific validation and evidence rules are satisfied; no model can grant itself permission or turn a suggestion into an ACTION.
+
+### 36.3 Nepal-first quality proof, global portability
+
+- Build an evaluation lane for real Nepal-relevant work: Nepali script, Romanized Nepali, English, code-switching, locally grounded questions, source fidelity, respectful language, numerical/currency accuracy, ambiguity handling, privacy and safe refusal. Separate language fluency from factual correctness and action safety.
+- Use consented, privacy-minimized or properly licensed evaluation material. Keep train/evaluation boundaries explicit; TEST material never becomes customer evidence. Track failures and unsupported language/context coverage instead of advertising Nepali-native quality from a few successful examples.
+- Compare providers on measured task quality, total cost, latency, availability, data handling and performance on constrained hardware—not benchmark prestige alone. Keep a documented free/local route alongside explicitly enabled external adapters. Do not buy infrastructure before the bootstrap gate.
+- Keep the interface culturally grounded and the substrate interoperable. Language, location and cultural context should enrich existing ENTITY, RELATION, EVENT, EVIDENCE, CAPABILITY and ACTION records, not create a separate Nepal ontology or duplicate network. The design must support other languages and regions without erasing Nepal's origin or making Nepal a mere translation layer.
+- Our distinctive aim is to make Nepal a place from which useful intelligence is built—not just a market that imports it. Global adoption must be earned through observed usefulness, reliability, trust, fairness and real outcomes, never assumed in advance.
+
+### 36.4 Immediate implementation obligations
+
+1. Connect the existing cognitive_provider seam to at least one explicitly configured real provider by reusing the existing AI adapter; add strict JSON/proposal validation and regression tests. Keep MOCK explicit and default-safe until real provider readiness is deliberately configured.
+2. Add an explicit language/context contract and a small, auditable Nepal-first test set to the existing provider tests. Never use synthetic answers as factual benchmark truth.
+3. Expose configured provider status, mode and failure honestly in the existing owner/intelligence cockpit where it fits; do not reveal secrets or protected prompts.
+4. Compare the provider call's actual language, evidence references, latency and cost against a decisive test. Provider installation alone does not complete this gate.
+5. Continue verifying exact-head CI and deployed SHA while the provider work advances. Unverified deployment, provider credentials, spend approval or customer-facing permission blocks only the affected external action; independent source work, tests and safe implementation continue.
+
+This section extends the Hami direction in section 35. It does not weaken consent, privacy, truth labels, spend authority, or the single-substrate rule.
+
+## Changelog (version 4)
+
+- 2026-10-14: Added the Nepal-intelligified direction and Nepal-first/world-open AI provider mandate. Nepali language and context are first-class design inputs; real provider calls remain distinct from selection, mock output, evidence and authorization.
