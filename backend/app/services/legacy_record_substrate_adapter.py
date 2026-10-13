@@ -160,7 +160,7 @@ def sync_legacy_records(db: Session, *, limit: int = 500) -> dict[str, int]:
                 + literal(":")
             )
             last_snapshot_at = (
-                db.query(func.max(models.WorldEvent.created_at))
+                db.query(func.max(models.WorldEvent.occurred_at))
                 .filter(
                     models.WorldEvent.event_type == "entity_source_refreshed",
                     func.substr(
