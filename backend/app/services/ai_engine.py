@@ -143,6 +143,29 @@ class MockProvider(AIProvider):
         )
 
 
+def ollama_transport_mode(
+    host: str | None = None,
+    api_key: str | None = None,
+    *,
+    vercel: bool | None = None,
+) -> str | None:
+    """Permit loopback HTTP locally or a token-authenticated HTTPS gateway remotely."""
+    configured_host = (host if host is not None else settings.OLLAMA_HOST).strip().rstrip("/")
+    configured_key = (api_key if api_key is not None else settings.OLLAMA_API_KEY).strip()
+    parsed = urlparse(configured_host)
+    if not parsed.hostname or parsed.username or parsed.password:
+        return None
+
+    hostname = parsed.hostname.lower()
+    loopback = hostname in {"localhost", "127.0.0.1", "::1"}
+    running_on_vercel = bool(os.getenv("VERCEL")) if vercel is None else vercel
+    if parsed.scheme == "http" and loopback and not running_on_vercel:
+        return "LOCAL"
+    if parsed.scheme == "https" and not loopback and configured_key:
+        return "SELF_HOSTED"
+    return None
+
+
 class OllamaProvider(AIProvider):
     """
     Real, free, local model provider via Ollama (https://ollama.com) —
@@ -162,16 +185,23 @@ class OllamaProvider(AIProvider):
     def __init__(self):
         self._host = settings.OLLAMA_HOST.rstrip("/")
         self._model = settings.OLLAMA_MODEL
+        self._api_key = settings.OLLAMA_API_KEY.strip()
+        self._transport_mode = ollama_transport_mode(self._host, self._api_key)
         self.last_call_metadata = {}
 
     def _generate(self, payload: dict) -> dict:
         import json
         import urllib.request
 
+        if self._transport_mode is None:
+            raise RuntimeError("Ollama transport is not safely configured")
+        headers = {"Content-Type": "application/json"}
+        if self._transport_mode == "SELF_HOSTED":
+            headers["Authorization"] = f"Bearer {self._api_key}"
         request = urllib.request.Request(
             f"{self._host}/api/generate",
             data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
+            headers=headers,
         )
         try:
             with urllib.request.urlopen(request, timeout=60) as response:
@@ -214,22 +244,29 @@ class OllamaProvider(AIProvider):
         return data["response"].strip()
 
     def availability_status(self) -> dict:
-        """Probe loopback Ollama/model installation without claiming successful inference."""
-        host = urlparse(self._host)
+        """Probe a permitted local/self-hosted endpoint and model installation; not answer quality."""
+        self._transport_mode = ollama_transport_mode(self._host, self._api_key)
         base = {
-            "provider": "ollama", "mode": "LOCAL", "model": self._model,
+            "provider": "ollama",
+            "mode": self._transport_mode or "UNKNOWN",
+            "model": self._model,
             "inference_verified": False,
         }
-        if os.getenv("VERCEL"):
-            return {**base, "status": "AI_UNAVAILABLE", "note": "Local Ollama is not reachable through localhost in this serverless runtime."}
-        if host.scheme != "http" or host.hostname not in {"localhost", "127.0.0.1", "::1"}:
-            return {**base, "status": "AI_UNAVAILABLE", "note": "Only loopback Ollama is supported until an authenticated remote-model transport exists."}
-        request = urllib.request.Request(f"{self._host}/api/tags", headers={"Accept": "application/json"})
+        if self._transport_mode is None:
+            if os.getenv("VERCEL"):
+                note = "Vercel cannot reach the owner's localhost model. Configure OLLAMA_HOST as an authenticated HTTPS self-hosted gateway and OLLAMA_API_KEY."
+            else:
+                note = "Use loopback HTTP on a local runtime, or an authenticated HTTPS self-hosted gateway with OLLAMA_API_KEY."
+            return {**base, "status": "AI_UNAVAILABLE", "note": note}
+        headers = {"Accept": "application/json"}
+        if self._transport_mode == "SELF_HOSTED":
+            headers["Authorization"] = f"Bearer {self._api_key}"
+        request = urllib.request.Request(f"{self._host}/api/tags", headers=headers)
         try:
             with urllib.request.urlopen(request, timeout=1.5) as response:
                 payload = json.loads(response.read().decode("utf-8"))
         except Exception as exc:
-            return {**base, "status": "AI_UNAVAILABLE", "failure_type": type(exc).__name__, "note": "The local Ollama endpoint could not be reached or returned invalid JSON."}
+            return {**base, "status": "AI_UNAVAILABLE", "failure_type": type(exc).__name__, "note": "The configured Ollama endpoint could not be reached or returned invalid JSON."}
         if not isinstance(payload, dict) or not isinstance(payload.get("models"), list):
             return {**base, "status": "AI_UNAVAILABLE", "note": "The local Ollama endpoint returned an unexpected model-list response."}
         installed = {
@@ -300,7 +337,10 @@ def get_provider() -> AIProvider:
             "Paid external completions are disabled until per-call usage metering and global spend enforcement are connected.",
         )
     if settings.AI_PROVIDER == "ollama":
-        return OllamaProvider()
+        provider = OllamaProvider()
+        if provider._transport_mode is None:
+            raise AIUnavailableError("ollama", "Use local loopback HTTP or a token-authenticated HTTPS self-hosted gateway.")
+        return provider
     if settings.AI_PROVIDER == "mock":
         return MockProvider()
     # Unknown provider name: explicit mock only when requested; otherwise unavailable
