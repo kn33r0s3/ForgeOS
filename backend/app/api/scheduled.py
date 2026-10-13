@@ -122,6 +122,89 @@ def _normalize_owner_sms_digest_result(result: dict) -> dict:
     return normalized
 
 
+def _count_effect(value) -> int:
+    """Normalize a persisted count without accepting bools, strings, or negatives."""
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        return 0
+    return value
+
+
+def _cycle_effect_summary(intelligence: dict) -> dict:
+    """Report real stage effects separately from job completion and real-world proof."""
+    forge = intelligence.get("forge_cycle", {})
+    collection = intelligence.get("collection_cycle", {})
+    discovery = intelligence.get("discovery_cycle", {})
+    autonomy = intelligence.get("autonomy_cycle", {})
+    scout = intelligence.get("scout_cycle", {})
+    content = intelligence.get("content_drafts", {})
+
+    outcomes = collection.get("outcomes", []) if isinstance(collection, dict) else []
+    source_signals = sum(
+        _count_effect(item.get("signals_created"))
+        for item in outcomes
+        if isinstance(item, dict)
+    ) if isinstance(outcomes, list) else 0
+
+    counts = {
+        "source_signals_created": source_signals,
+        "discovery_proposals_surfaced": _count_effect(discovery.get("surfaced")) if isinstance(discovery, dict) else 0,
+        "research_questions_created": (
+            _count_effect(forge.get("questions_created")) if isinstance(forge, dict) else 0
+        ) + (
+            _count_effect(discovery.get("questions_created")) if isinstance(discovery, dict) else 0
+        ),
+        "research_tasks_created": _count_effect(forge.get("research_tasks_created")) if isinstance(forge, dict) else 0,
+        "opportunities_discovered": _count_effect(forge.get("opportunities_discovered")) if isinstance(forge, dict) else 0,
+        "autonomy_actions_proposed": _count_effect(autonomy.get("proposed")) if isinstance(autonomy, dict) else 0,
+        "decision_actions_proposed": _count_effect(forge.get("actions_from_decisions")) if isinstance(forge, dict) else 0,
+        "contact_drafts_prepared": _count_effect(scout.get("drafts_generated")) if isinstance(scout, dict) else 0,
+        "unresolved_contact_drafts": _count_effect(scout.get("drafts_already_open")) if isinstance(scout, dict) else 0,
+        "content_drafts_prepared": _count_effect(content.get("drafts_generated")) if isinstance(content, dict) else 0,
+    }
+    observed_effects = []
+    if counts["source_signals_created"]:
+        observed_effects.append("source_signals_created")
+    if counts["discovery_proposals_surfaced"]:
+        observed_effects.append("discovery_proposals_surfaced")
+    if counts["autonomy_actions_proposed"] or counts["decision_actions_proposed"]:
+        observed_effects.append("actions_proposed")
+    if counts["contact_drafts_prepared"]:
+        observed_effects.append("contact_drafts_prepared")
+    if any(
+        counts[key]
+        for key in (
+            "research_questions_created",
+            "research_tasks_created",
+            "opportunities_discovered",
+            "content_drafts_prepared",
+        )
+    ):
+        observed_effects.append("internal_work_created")
+
+    status = "effects_observed" if observed_effects else "no_new_effect"
+    if counts["contact_drafts_prepared"]:
+        next_owner_attention = "review_prepared_contact_draft"
+    elif counts["unresolved_contact_drafts"]:
+        next_owner_attention = "review_existing_contact_draft"
+    elif status == "no_new_effect":
+        next_owner_attention = (
+            "inspect_blockers_and_choose_a_reality-linked_next_action"
+        )
+    else:
+        next_owner_attention = "review_effects_and_choose_the_next_action"
+
+    return {
+        "status": status,
+        "counts": counts,
+        "observed_effects": observed_effects,
+        "next_owner_attention": next_owner_attention,
+        "reality_boundary": (
+            "These counts describe system outputs. They do not establish a real conversation, "
+            "acceptance, fulfillment, payment, or revenue."
+        ),
+    }
+
+
 def _cycle_stage_summary(intelligence: dict) -> tuple[str, dict[str, str], dict[str, str]]:
     """Use one classification for both persisted CycleRun state and API output."""
     stage_errors = {
@@ -134,6 +217,17 @@ def _cycle_stage_summary(intelligence: dict) -> tuple[str, dict[str, str], dict[
         for key, val in intelligence.items()
         if isinstance(val, dict) and val.get("status") == "partial"
     }
+    # A technically successful run with no recorded effect is not presented as
+    # fully successful. Preserve real stage failures/partials as the primary reason.
+    effect_summary = intelligence.get("cycle_effect", {})
+    if (
+        not stage_errors
+        and not stage_partials
+        and isinstance(effect_summary, dict)
+        and effect_summary.get("status") == "no_new_effect"
+    ):
+        stage_partials["cycle_effect"] = "no_new_effect"
+
     cycle_status = (
         "FAILED" if stage_errors
         else "PARTIAL" if stage_partials
@@ -509,6 +603,10 @@ def run_scheduled_intelligence(
                 "status": stage1_status,
                 "cycle_id": summary.get("cycle_id"),
                 "signals_processed": summary.get("signals_processed", 0),
+                "questions_created": summary.get("questions_created", 0),
+                "research_tasks_created": summary.get("research_tasks_created", 0),
+                "opportunities_discovered": summary.get("opportunities_discovered", 0),
+                "actions_from_decisions": summary.get("actions_from_decisions", 0),
                 "stage_errors": stage_errors,
             }
     except Exception as exc:
@@ -768,6 +866,10 @@ def run_scheduled_intelligence(
         except Exception as exc:
             logger.warning("scheduled intelligence: content_drafts failed (%s)", type(exc).__name__)
             intelligence["content_drafts"] = {"status": "error", "error": type(exc).__name__}
+
+    # Record the cycle's actual outputs before finalizing status. A job run is not
+    # proof of demand, contact, fulfillment, or revenue.
+    intelligence["cycle_effect"] = _cycle_effect_summary(intelligence)
 
     # Finalize the CycleRun observability record with per-stage outcomes.
     # A response is successful only when its run record is finalized durably.
