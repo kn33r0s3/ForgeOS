@@ -287,7 +287,7 @@ def run_cognitive_task(
             )
             raise
 
-    if configured_provider.mode not in {"MOCK", "TEST", "LOCAL", "EXTERNAL"}:
+    if configured_provider.mode not in {"MOCK", "TEST", "LOCAL", "SELF_HOSTED", "EXTERNAL"}:
         raise cognitive_provider.CognitiveProviderError("provider mode is invalid")
     if not configured_provider.name.strip() or not configured_provider.version.strip():
         raise cognitive_provider.CognitiveProviderError("provider identity is incomplete")
