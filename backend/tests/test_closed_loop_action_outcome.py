@@ -2389,6 +2389,7 @@ def test_ollama_authenticated_https_gateway_probes_model_and_generates_with_bear
     assert status["provider"] == "ollama"
     assert status["mode"] == "SELF_HOSTED"
     assert status["status"] == "MODEL_AVAILABLE"
+    assert status["internal_context_allowed"] is False
     assert status["inference_verified"] is False
     answer = ai_engine.get_provider().complete("नमस्ते")
 
@@ -2554,3 +2555,68 @@ def test_self_hosted_ollama_redirect_handler_refuses_cross_origin_redirect():
     assert handler.redirect_request(
         request, None, 302, "Found", {}, "https://attacker.example/steal"
     ) is None
+
+
+
+def test_self_hosted_model_context_requires_separate_owner_opt_in(monkeypatch):
+    import json
+    from app.services import ai_engine
+
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "OLLAMA_HOST", "https://models.example.test")
+    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "test-only-gateway-token")
+    monkeypatch.setattr(settings, "OLLAMA_MODEL", "qwen3-coder:latest")
+    monkeypatch.setattr(settings, "HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA", True)
+    monkeypatch.setenv("VERCEL", "1")
+
+    class Response:
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            return False
+        def read(self):
+            return json.dumps({"models": [{"name": "qwen3-coder:latest"}]}).encode("utf-8")
+
+    class FakeOpener:
+        def open(self, request, timeout):
+            return Response()
+
+    monkeypatch.setattr(ai_engine.urllib.request, "build_opener", lambda handler: FakeOpener())
+    status = ai_engine.get_provider_status()
+
+    assert status["status"] == "MODEL_AVAILABLE"
+    assert status["mode"] == "SELF_HOSTED"
+    assert status["internal_context_allowed"] is True
+
+
+def test_forge_ask_refuses_remote_internal_memory_without_explicit_opt_in(monkeypatch, db):
+    from fastapi.testclient import TestClient
+    from app.database import get_db
+    from app.main import app
+    from app.services import ai_engine
+
+    monkeypatch.setattr(settings, "FORGE_API_KEY", "test-owner-key")
+    monkeypatch.setattr(ai_engine, "get_provider_status", lambda: {
+        "provider": "ollama", "mode": "SELF_HOSTED", "status": "MODEL_AVAILABLE",
+        "internal_context_allowed": False, "inference_verified": False,
+    })
+    monkeypatch.setattr(
+        ai_engine, "answer_question",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("internal context must not be sent")),
+    )
+    def override_db():
+        yield db
+    app.dependency_overrides[get_db] = override_db
+    client = TestClient(app)
+    try:
+        response = client.post(
+            "/forge/ask",
+            headers={"X-API-Key": "test-owner-key"},
+            json={"question": "हामीलाई के थाहा छ?"},
+        )
+    finally:
+        client.close()
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 403
+    assert "sharing Hami's internal knowledge" in response.json()["detail"]
