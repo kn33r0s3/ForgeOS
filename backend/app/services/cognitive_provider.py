@@ -6,7 +6,6 @@ import json
 import os
 import re
 from dataclasses import dataclass
-from urllib.parse import urlparse
 from typing import Any, Literal, Mapping, Protocol, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field, StrictInt
@@ -69,7 +68,7 @@ class CognitiveProvider(Protocol):
 
     name: str
     version: str
-    mode: Literal["MOCK", "TEST", "LOCAL", "EXTERNAL"]
+    mode: Literal["MOCK", "TEST", "LOCAL", "SELF_HOSTED", "EXTERNAL"]
 
     def propose(self, context: CognitiveTaskContext) -> Sequence[Mapping[str, Any]]:
         """Return candidate proposals; callers validate them before persistence."""
@@ -149,10 +148,11 @@ _PROPOSAL_ENVELOPE_SCHEMA = {
 class OllamaCognitiveProvider:
     """Real local-model adapter reusing ai_engine's Ollama client, never the mock path."""
 
-    mode: Literal["LOCAL"] = "LOCAL"
+    mode: Literal["LOCAL", "SELF_HOSTED"] = "LOCAL"
 
-    def __init__(self, implementation: Any):
+    def __init__(self, implementation: Any, *, mode: Literal["LOCAL", "SELF_HOSTED"] = "LOCAL"):
         self._implementation = implementation
+        self.mode = mode
         self.name = "ollama"
         model = str(getattr(implementation, "_model", "")).strip()
         if not model:
@@ -223,19 +223,18 @@ def get_cognitive_provider(provider_name: str | None = None) -> CognitiveProvide
             raise CognitiveProviderUnavailable(
                 "Set AI_PROVIDER=ollama and COGNITIVE_PROVIDER=ollama to enable the local cognitive adapter."
             )
-        if os.getenv("VERCEL"):
+        from app.services import ai_engine
+        transport_mode = ai_engine.ollama_transport_mode()
+        if transport_mode is None:
+            if os.getenv("VERCEL"):
+                raise CognitiveProviderUnavailable(
+                    "Local Ollama cognition cannot use localhost in Vercel. Configure OLLAMA_HOST to an "
+                    "authenticated HTTPS self-hosted gateway and set OLLAMA_API_KEY."
+                )
             raise CognitiveProviderUnavailable(
-                "Local Ollama cognition is unavailable in Vercel: localhost refers to the serverless runtime, "
-                "and an authenticated remote-model adapter is not configured."
-            )
-        ollama_host = urlparse(settings.OLLAMA_HOST)
-        if ollama_host.scheme != "http" or ollama_host.hostname not in {"localhost", "127.0.0.1", "::1"}:
-            raise CognitiveProviderUnavailable(
-                "The cognitive Ollama adapter currently permits loopback HTTP only; "
-                "an authenticated remote-model transport is not implemented."
+                "Configure loopback HTTP locally or an authenticated HTTPS self-hosted Ollama gateway with OLLAMA_API_KEY."
             )
         try:
-            from app.services import ai_engine
             implementation = ai_engine.get_provider()
         except Exception as exc:
             raise CognitiveProviderUnavailable(
@@ -249,7 +248,7 @@ def get_cognitive_provider(provider_name: str | None = None) -> CognitiveProvide
             raise CognitiveProviderUnavailable(
                 "The selected AI adapter does not support schema-constrained JSON output."
             )
-        return OllamaCognitiveProvider(implementation)
+        return OllamaCognitiveProvider(implementation, mode=transport_mode)
     if selected in {"gemini", "google"}:
         raise CognitiveProviderUnavailable(
             "Gemini cognitive provider is unavailable: the repository has no "
