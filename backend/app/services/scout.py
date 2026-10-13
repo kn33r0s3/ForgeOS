@@ -473,24 +473,15 @@ def seed_registry_experiments(db: Session) -> list:
 
 
 def run_scout_cycle(db: Session) -> dict:
-    """Autonomous scout cycle: score, rank, and queue candidates.
+    """Rank candidates and prepare at most one unresolved draft per candidate.
 
-    Runs without owner input. For each registered candidate:
-    - Scores via score_candidate (evidence-weighted)
-    - Ranks via rank_candidates
-    - Checks send authorization (do-not-contact, daily cap)
-    - Generates drafts for top eligible candidates (draft only, never sends)
-
-    Returns operational summary with counts. Never sends messages;
-    drafts require explicit owner approval via approve_draft.
-
-    This is the bot owning the research loop: it processes what exists,
-    prioritizes by evidence, and prepares the action queue. It does not
-    invent candidates or fabricate outreach.
+    This is safe to rerun on every scheduled cycle: an existing DRAFT or
+    APPROVED draft is reused rather than duplicated. Nothing is sent.
     """
     ranked = rank_candidates(db)
     scored = 0
     drafts_generated = 0
+    drafts_already_open = 0
     blocked = 0
     errors = []
 
@@ -501,7 +492,6 @@ def run_scout_cycle(db: Session) -> dict:
         try:
             if score is not None:
                 scored += 1
-            # Check if eligible for draft generation
             if is_do_not_contact(db, entity_id):
                 blocked += 1
                 continue
@@ -510,16 +500,33 @@ def run_scout_cycle(db: Session) -> dict:
             except Exception:
                 blocked += 1
                 continue
-            # Generate draft for top candidates (limit to 3 per cycle)
-            if drafts_generated < 3 and (score or 0) > 0:
-                try:
-                    attrs = json.loads(entity.attributes or "{}")
-                    observed = attrs.get("observed_signals", {})
-                    fact = observed.get("primary_fact", "your business operations")
-                    generate_draft(db, entity_id, observed_fact=fact)
-                    drafts_generated += 1
-                except Exception as exc:
-                    errors.append(f"draft_{entity_id}: {type(exc).__name__}")
+            if drafts_generated >= 3 or (score or 0) <= 0:
+                continue
+
+            # A repeated scheduled run must not flood the owner queue.
+            # Keep this scoped to unresolved drafts; a skipped or sent draft
+            # does not permanently suppress future legitimate contact work.
+            existing = (
+                db.query(models.OutreachDraft)
+                .filter(
+                    models.OutreachDraft.candidate_entity_id == entity_id,
+                    models.OutreachDraft.status.in_(( "DRAFT", "APPROVED" )),
+                )
+                .order_by(models.OutreachDraft.created_at.desc())
+                .first()
+            )
+            if existing is not None:
+                drafts_already_open += 1
+                continue
+
+            try:
+                attrs = json.loads(entity.attributes or "{}")
+                observed = attrs.get("observed_signals", {})
+                fact = observed.get("primary_fact", "your business operations")
+                generate_draft(db, entity_id, observed_fact=fact)
+                drafts_generated += 1
+            except Exception as exc:
+                errors.append(f"draft_{entity_id}: {type(exc).__name__}")
         except Exception as exc:
             errors.append(f"score_{entity_id}: {type(exc).__name__}")
 
@@ -527,6 +534,7 @@ def run_scout_cycle(db: Session) -> dict:
         "candidates_ranked": len(ranked),
         "candidates_scored": scored,
         "drafts_generated": drafts_generated,
+        "drafts_already_open": drafts_already_open,
         "blocked": blocked,
         "errors": errors,
     }
