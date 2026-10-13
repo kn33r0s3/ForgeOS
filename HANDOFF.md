@@ -496,6 +496,19 @@ Working tree clean; `main` == `origin/main`. Push landed as `eaae141`.
   Research-capability spec: `docs/CAPABILITY_RESEARCH.md` (spec, not built;
   code stays frozen).
 
+
+## Historical recovery anchors and unreconciled source leads (checked 2026-10-14)
+
+These are continuity anchors, not a claim that every historic implementation is current. Their source-level status must be rechecked before changing code.
+
+- **Canonical origin:** `hami-origin`, commit [`07baf91a1900cf3e27ce0bae9fead126801da3b3`](https://github.com/kn33r0s3/ForgeOS/commit/07baf91a1900cf3e27ce0bae9fead126801da3b3). Preserve this lineage; never reset Hami to a convenient snapshot or recreate it as a second system.
+- **September 30 destructive-history incident:** the restoration commit [`f99008ded95cd17ebb805b0693a59d48d708eb8d`](https://github.com/kn33r0s3/ForgeOS/commit/f99008ded95cd17ebb805b0693a59d48d708eb8d) states that [`f240f3e6250c054a376fb9e2f00d7e6613bebe98`](https://github.com/kn33r0s3/ForgeOS/commit/f240f3e6250c054a376fb9e2f00d7e6613bebe98) deleted 2,454 tracked files, including backend source, all then-existing 88 backend test modules, documentation, verification evidence and services. The restoration was additive from `bf8546e`; it intentionally retained the newer root app. The same restoration message records that `7a437bb` added approximately 6,950 generated artifacts. The detailed capability-ledger reconstruction remains at [`docs/CAPABILITY_QUEUE.md`](https://github.com/kn33r0s3/ForgeOS/blob/main/docs/CAPABILITY_QUEUE.md#L1033). This is historical damage and recovery, not evidence that those files are currently missing.
+- **Discovery engine lineage:** [`1b1b63ad7d2f984a9f9c9615625453c202821f01`](https://github.com/kn33r0s3/ForgeOS/commit/1b1b63ad7d2f984a9f9c9615625453c202821f01) introduced the open-world discovery method registry over the existing six primitives. Its statement that discovery was explicitly invoked and not yet scheduled describes that commit's state only. Current call sites, queue entries, tests and runtime evidence decide today's integration status.
+- **Separate unreconciled loss-count memory:** prior conversation context contains a separate figure of 828,649 lines across 2,472 files. That exact report/count was not located in the current files and saved-library sources searched on 2026-10-14. Do not merge it with the commit-backed 2,454-file incident, assert it as verified, or discard it; keep it as an owner-context lead until its source is recovered.
+- **Separate missing findings report:** `HAMI_CURRENT_CODE_AUDIT_2026-10-09.md` in the saved library explicitly records an owner-reported 74,637-item defect report whose source was not located during that audit. The source was still not identified in this retrieval pass. This number is not evidence of 74,637 active defects. If the original artifact is recovered, preserve its original finding IDs and reconcile each item in the existing capability ledger; do not bulk-fix a count or fabricate missing entries.
+- **Archived plans are not current authority:** `HAMI_CONTINUITY_MASTER.md`, `HAMI_CURRENT_CODE_AUDIT_2026-10-09.md` and `Pasted markdown(20261008-185019).md` were found in the saved file library. They help recover intent and history, but their October 8–9 snapshots, old CI states, frozen calendar and proposed workstreams must be reconciled with the current charter, current `main`, later owner decisions and fresh evidence before use.
+
+
 ## How you work with the user
 
 - Reason first, then act: architect + reviewer + investigator + skeptic.
