@@ -250,7 +250,8 @@ describe("feature registry", () => {
     assert.ok(forgeConsole.includes("Ask in Nepali (देवनागरी), Romanized Nepali, English, or a mix."));
     assert.ok(forgeConsole.includes("Real inference is not enabled."));
     assert.ok(forgeConsole.includes('providerName === "ollama" && providerHealth === "MODEL_AVAILABLE" && !remoteContextSharingBlocked;'));
-    assert.ok(forgeConsole.includes("This checks Ollama and the configured model, not generation quality."));
+    assert.ok(forgeConsole.includes("This checks the endpoint and configured model, not generation quality."));
+    assert.ok(forgeConsole.includes("A completed request is not proof that its claims are correct."));
     assert.ok(forgeConsole.includes("Observed model call:"));
     assert.ok(forgeConsole.includes("HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA"));
     assert.ok(forgeConsole.includes("remoteContextSharingBlocked"));
