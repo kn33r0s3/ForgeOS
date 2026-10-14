@@ -2,9 +2,7 @@
 
 ## Current verification gate — 2026-10-15 NPT
 
-Production deployment identity matches main at `014287fb6c952088537b822337248cf7c841168b` and Vercel reports the deployment `READY`. This does **not** satisfy exact-head CI or health/runtime verification: the current connector exposes only Vercel's combined-status context and returns 403 for health/runtime log access. Last known full CI pass is on older SHA `4f44cffe727113a8a406ea3652c60c3a33580a74`. Keep current-head CI, health, database durability and persisted scheduled-cycle effects UNKNOWN until directly observed. The next action is authorized exact-head CI + runtime verification; while blocked, continue independent privacy review, research-quality checks and source-grounded research. External contact, intake, model-provider requests and live payments remain inactive.
-
-Ranked by value, critical blockers and leverage across the full Hami portfolio. This file is intentionally compact; docs/CAPABILITY_QUEUE.md remains the detailed capability ledger. Re-rank after every run based on new evidence. A blocked experiment never means unrelated safe work pauses.
+Before this documentation correction, main was `2359f91affa8fd6207f192579dc273f4cd6f4336`; production deployment `dpl_3vyt5c1EkFx5287q6LHfXwrKH6cg` reported READY on the same SHA. Its code source remains `014287f`; changes since then are continuity documentation only. An unfiltered branch listing found `feature/governed-offers` in addition to main. Comparison confirms it is 554 behind, 0 ahead, with no unique commits; it is redundant but not removed because this session lacks a branch-delete operation. Vercel health/runtime reads return 403 before target data; full push-triggered GitHub Actions jobs are not exposed by available reads. Thus exact-head CI execution, health, database durability and natural persisted scheduled-cycle effects remain NOT VERIFIED. Continue read-only/source/test review and research while access is resolved; do not open customer-facing activity, provider calls or live payments.
 
 ## P0 — Complete CAS payment-to-work-item integration
 
