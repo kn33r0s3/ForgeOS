@@ -1,5 +1,9 @@
 # Hami Execution Queue
 
+## P0 — Verify the new multilingual prior-evidence retrieval path
+
+Implementation and regression tests are now on `main`: Unicode/NFC tokenization for Devanagari and short terms; IDF-weighted lexical ranking so distinctive query terms count more; and evidence-slot recovery so Signals without eligible linked Evidence do not consume the output limit. Test cases are committed for script support, ranking and no-evidence top hits. The current connector cannot supply the full push-triggered Python test matrix, so repository tests are **NOT VERIFIED** despite targeted standalone smoke assertions passing. Next: run the two focused backend test files and full backend suite on the exact current SHA; do not weaken the evidence/consent gates to make ranking look better. Then measure top-k evidence recall and irrelevant-hit rate on a fixed, source-grounded multilingual query set.
+
 ## Current verification gate — 2026-10-15 NPT
 
 Before this documentation correction, main was `2359f91affa8fd6207f192579dc273f4cd6f4336`; production deployment `dpl_3vyt5c1EkFx5287q6LHfXwrKH6cg` reported READY on the same SHA. Its code source remains `014287f`; changes since then are continuity documentation only. An unfiltered branch listing found `feature/governed-offers` in addition to main. Comparison confirms it is 554 behind, 0 ahead, with no unique commits; it is redundant but not removed because this session lacks a branch-delete operation. Vercel health/runtime reads return 403 before target data; full push-triggered GitHub Actions jobs are not exposed by available reads. Thus exact-head CI execution, health, database durability and natural persisted scheduled-cycle effects remain NOT VERIFIED. Continue read-only/source/test review and research while access is resolved; do not open customer-facing activity, provider calls or live payments.
