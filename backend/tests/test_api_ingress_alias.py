@@ -71,3 +71,22 @@ def test_api_prefix_routes_stay_out_of_the_published_schema(db):
     paths = client.get("/api/openapi.json").json()["paths"]
 
     assert not any(path.startswith("/api/") for path in paths)
+
+
+def test_api_ingress_has_no_exact_duplicate_route_registrations():
+    from app.main import app
+
+    seen = set()
+    duplicates = []
+    for route in app.routes:
+        path = getattr(route, "path", None)
+        endpoint = getattr(route, "endpoint", None)
+        if not path or not path.startswith("/api/") or endpoint is None:
+            continue
+        for method in getattr(route, "methods", None) or {"GET"}:
+            key = (path, method, endpoint)
+            if key in seen:
+                duplicates.append((path, method, getattr(route, "name", None)))
+            seen.add(key)
+
+    assert duplicates == []
