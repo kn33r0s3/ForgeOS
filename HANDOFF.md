@@ -1,11 +1,10 @@
-## Current live observation — 2026-10-15 NPT (not a full verification pass)
+## Current reconciliation — 2026-10-15 NPT (not a full CI/runtime pass)
 
-- Main SHA: `014287fb6c952088537b822337248cf7c841168b`; the repository branch list shows only `main`.
-- Production deployment: `dpl_FX9mbbf2C9MrnqHQEyg4hiX3sNZY`, state `READY`, source SHA matches main; aliases include `haminp.vercel.app`, `forge-os-ebon.vercel.app`, and `pulsenp.vercel.app`.
-- The connected Vercel integration currently returns 403 when attempting to read either `/api/health` endpoint through its protected-fetch path and when querying runtime logs/errors. These are access failures before the target health/runtime result, not failed health checks and not evidence of healthy runtime.
-- GitHub combined status currently exposes a Vercel success context only. Full GitHub Actions exact-head CI is not accessible through the current tool result. Last known full pass: `4f44cffe727113a8a406ea3652c60c3a33580a74`, CI `38562997328`; subsequent privacy/discovery code commits are not verified by that pass.
-- The newest discovery implementation and its regression test were read back on main, but neither the test nor a natural scheduled run was executed/observed in this run. No real model inference, customer interaction, checkout/payment, recovered sale or revenue is verified.
-- **Resume from:** restore authorized read access to the existing Vercel project/team and exact-head CI results; confirm health and deployed SHA, inspect the durable scheduler/effect evidence, and obtain a full CI pass for the current source. Until then, no live activation or customer-facing action. Continue unrelated safe source review/research; do not wait for the blocked read path to resolve.
+- Before this documentation correction, main was `2359f91affa8fd6207f192579dc273f4cd6f4336`; code changes are last present in `014287fb6c952088537b822337248cf7c841168b`, with intervening continuity-only commits. Production Vercel deployment `dpl_3vyt5c1EkFx5287q6LHfXwrKH6cg` reports READY on SHA `2359f91affa8fd6207f192579dc273f4cd6f4336`.
+- **Branch correction:** the unfiltered branch listing contains `main` and `feature/governed-offers`. The feature branch is 554 commits behind, 0 ahead, and has no unique commits/files; all its history is reachable from main. The available GitHub connector has no branch deletion operation, so the obsolete ref remains to be removed through an authorized path.
+- Attempts to read both production `/api/health` endpoints and runtime logs/errors return 403 at the Vercel connector's access/protection layer. This is not a health result. GitHub combined status exposes only a Vercel success context; the available workflow-run fetch is PR-only and returns no push-triggered run. Full exact-head CI, runtime health, DB durability and natural scheduler effects remain NOT VERIFIED.
+- The privacy/discovery source change at `014287f` and its test were read back but not run here; last full CI pass is older SHA `4f44cffe727113a8a406ea3652c60c3a33580a74` (run `38562997328`). No real inference, customer contact, checkout/payment, recovered sale or revenue was observed.
+- Resume: exact current main + deployment lookup; regain authorized workflow/runtime access; complete the full CI and runtime gate; remove the redundant feature ref after confirming zero unique commits. Keep intake, messages, model-provider requests and payments inactive absent their distinct authorization/readiness evidence.
 
 ---
 
