@@ -1007,6 +1007,24 @@
    "state_note": "UNKNOWN (L1 global orientation only: the aggregate queue and modeled potential do not identify a specific place, counterparty, feasible Hami capability, or captured value. Sources: [IEA, Electricity 2026](https://www.iea.org/reports/electricity-2026/executive-summary); [IEA, Scaling Up Demand Flexibility, 2026](https://www.iea.org/reports/scaling-up-demand-flexibility/executive-summary))",
    "cheapest_test": "Separate queue causes described in existing IEA case studies—physical capacity, process, contractual rules, missing data, or inflexible demand—and find a specific independently verifiable, lawful, low-cost coordination problem before ranking an intervention",
    "stake": "Possible value includes earlier use of energy capacity, reduced delay, and lower system cost; it may be far outside Hami's current technical or authority boundary. Do not infer that a general AI tool can solve grid constraints from the global estimate."
+  },
+  {
+   "id": "D97",
+   "category": "D",
+   "question": "Do Nepali distributors/wholesalers accept post-festival returns or issue credit notes on unsold seasonal stock — or does the unsold-stock risk land entirely on the retailer? (round 19: standard trade doctrine says title + obsolescence risk pass on delivery, and round 4 N1's verbal-agreement norm makes any return a relationship favor, not a contract right — but no observed Nepali post-festival return negotiation surfaced; FMCG expiry-return norms may differ from fashion carryover)",
+   "state": "UNKNOWN",
+   "state_note": "UNKNOWN",
+   "cheapest_test": "Observe one post-festival return negotiation; ask 3 retailers: \"when the season failed, could you send anything back?\"",
+   "stake": "Decides whether the merchant eats the miss alone or has an upstream release valve — the inverse of the \"10 new customers\" question is who absorbs the season that never came"
+  },
+  {
+   "id": "D98",
+   "category": "D",
+   "question": "How did festival-stock borrowers cope with the broken 2026 season — did lenders defer, or did missed installments start? (round 19: Chaurasiya's Rs 4.5 crore uninsured festival stock destroyed while loans/bills remain due; round 8's kharchapatra Dashain-borrowing piece; NRB's subsidized-loan infographic met with commenter skepticism about collateral demands Oct 2026)",
+   "state": "UNKNOWN",
+   "state_note": "UNKNOWN",
+   "cheapest_test": "Watch banking press for post-Dashain NPL/seasonal-loan mentions; ask 3 borrowers: \"who called you first after Dashain — the supplier or the bank?\"",
+   "stake": "Sizes the second-order hit of a broken season — the stock loss is only the first ledger line; the loan ledger is the one that kills the next season's stocking"
   }
  ],
  "last_loop": "2026-10-04"
