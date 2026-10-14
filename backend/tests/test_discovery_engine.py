@@ -404,6 +404,7 @@ def test_numeric_divergence_never_uses_coordinates_or_postal_codes_as_measures(d
         for measure in ("latitude", "longitude", "postal_code")
     )
 
+
 def test_fabricated_or_overclaiming_findings_are_rejected_and_broken_plugins_isolated(db, world):
     def fabricate(ctx):
         yield engine.Finding(kind="observation", key="ghost", statement="Invented.",
