@@ -2019,3 +2019,12 @@ Do not reopen findings already corrected in source as if still live bugs. Do not
 - Reuse: no new primitive, table, engine, source adapter, permission, or output surface. The same exact-source rules still govern later external research.
 - Remaining: cross-domain match quality is still a hypothesis generator, not a semantic judge; generic scalar/list matching needs validation against adversarial false connections and larger-substrate cost before widening its breadth. Current natural production scheduler invocation is still UNVERIFIED.
 
+
+
+### 2026-10-15 — reconcile current production identity and access blocker
+
+- **Owner action still required:** restore authorized read access for the existing Vercel project/team runtime diagnostics and expose the current GitHub Actions exact-head result; no credentials need to be copied into the public repository.
+- **Action removed:** resolved whether production metadata points at the currently inspected source. Vercel reports production deployment `dpl_FX9mbbf2C9MrnqHQEyg4hiX3sNZY` as READY on main SHA `014287fb6c952088537b822337248cf7c841168b`, with Hami aliases attached.
+- **Remaining boundary:** Vercel health/runtime reads are blocked with 403 before returning the requested health/log data. The GitHub combined-status read exposes only a Vercel status context, not full workflow jobs. Therefore app readiness, durable database state, natural scheduler invocation/effects and exact-head test results remain UNKNOWN/NOT VERIFIED; deployment READY is not a substitute.
+- **Verification:** one active branch (`main`) was observed; the production deployment source SHA matched it. Current discovery code and tests were read back, but tests were not run. The last full CI run (`38562997328`) applies to older SHA `4f44cffe727113a8a406ea3652c60c3a33580a74`.
+- **Next removable dependency:** authorize and run exact-head checks, then fetch both health endpoints and runtime evidence for one persisted scheduled cycle. In parallel, continue independent source review/research without turning a missing result into a successful or failed runtime claim. Leave externally consequential paths closed while their evidence is unavailable. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
