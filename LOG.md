@@ -313,3 +313,9 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Documentation snapshot `b33f5870` is pushed on the single `main` branch with a clean worktree. Exact-SHA ForgeOS CI 38490541787, independent deployment verification 38490541717, and secrets scan 38490541705 completed successfully.
 - The only application-source change in this QA sequence remains `a5da9a74`, already tested and deployed; subsequent commits record observed QA results only. No auth activation, external contact, spend, provider fabrication, or customer/revenue outcome is claimed.
 - Continue with real screen-reader/device interoperability when available, then use a different QA method. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
+## 2026-10-14 — Reduced-motion behavior (no defect)
+
+- Inspected the existing `src/styles.css` `prefers-reduced-motion` rule, then emulated the preference on production `/unknowns` at 320px. The query matched; root scroll behavior was `auto`; `.reveal` and `.skeleton` animation names were `none`; the menu transition resolved to `0.01ms`; and the drawer opened with `aria-expanded=true` and its panel visible.
+- Restored the browser to `no-preference`, 390px, and the closed-drawer state. This validates emulated CSS behavior only, not a physical OS preference or screen-reader interoperability. No code change was needed.
+- Documentation snapshot `a7700032` is pushed on `main`; exact-SHA ForgeOS CI 38491112725, independent deployment verification 38491112775, and secrets scan 38491112685 succeeded. Next: actual screen-reader/device coverage and a different QA method.
