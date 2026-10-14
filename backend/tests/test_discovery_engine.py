@@ -306,12 +306,16 @@ def test_disconnection_joins_shared_tags_but_excludes_contact_attributes_and_val
     assert engine._SENSITIVE_DISCOVERY_ATTRIBUTE.search("home_address")
     assert engine._SENSITIVE_DISCOVERY_ATTRIBUTE.search("postal_code")
     assert engine._SENSITIVE_DISCOVERY_ATTRIBUTE.search("latitude")
+    assert engine._SENSITIVE_DISCOVERY_ATTRIBUTE.search("pin_code")
+    assert engine._PRECISE_ADDRESS_VALUE.search("घर नं ५, कालोपुल")
+    assert engine._PRECISE_ADDRESS_VALUE.search("कालोपुल मार्ग ४")
     organization = _entity(
         db,
         "organization",
         "owner@example.test",
         capability_tags=[
-            "same-day-repair", "owner@example.test", "Lakeside Road 6", "27.7172, 85.3240"
+            "same-day-repair", "owner@example.test", "Lakeside Road 6",
+            "27.7172, 85.3240", "घर नं ५, कालोपुल"
         ],
         street_address="Lakeside Road 6",
         latitude=27.7172,
@@ -322,7 +326,9 @@ def test_disconnection_joins_shared_tags_but_excludes_contact_attributes_and_val
         db,
         "need",
         "Same-day equipment repair",
-        required_tags=["same-day-repair", "Lakeside Road 6", "27.7172, 85.3240"],
+        required_tags=[
+            "same-day-repair", "Lakeside Road 6", "27.7172, 85.3240", "घर नं ५, कालोपुल"
+        ],
         home_address="Lakeside Road 6",
         owner_email="owner@example.test",
         phone="+977 9800000000",
@@ -338,6 +344,7 @@ def test_disconnection_joins_shared_tags_but_excludes_contact_attributes_and_val
     assert "+977 9800000000" not in hypothesis["statement"]
     assert "Lakeside Road 6" not in json.dumps(report, sort_keys=True)
     assert "27.7172, 85.3240" not in json.dumps(report, sort_keys=True)
+    assert "घर नं ५" not in json.dumps(report, sort_keys=True)
     assert "organization #" in hypothesis["statement"]
     assert "owner@example.test" not in json.dumps(report, sort_keys=True)
     assert hypothesis["epistemic_state"] == "possible"
