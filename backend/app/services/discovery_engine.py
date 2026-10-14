@@ -1238,8 +1238,11 @@ _SENSITIVE_DISCOVERY_ATTRIBUTE = re.compile(
     r"password|secret|token|credential|api[_\s-]?key|"
     r"account[_\s-]?(?:number|details?)|bank[_\s-]?(?:account|details?)|wallet|"
     r"payment[_\s-]?(?:reference|ref|id|details?)|transaction[_\s-]?(?:reference|ref|id)|"
-    r"national[_\s-]?(?:id|identity)|citizenship|street|address|postal[_\s-]?code|postcode|"
-    r"zip[_\s-]?code|latitude|longitude|coordinates?|geolocation|gps)(?:$|[_\W])",
+    r"national[_\s-]?(?:id|identity)|citizenship|street|address|road|"
+    r"house[_\s-]?(?:number|no|num)|flat[_\s-]?(?:number|no|num)|building[_\s-]?(?:number|no|num)|"
+    r"postal[_\s-]?code|postcode|zip[_\s-]?code|pin(?:[_\s-]?code)?|"
+    r"latitude|longitude|lat|lon|lng|geo[_\s-]?(?:lat(?:itude)?|lon(?:gitude)?)|"
+    r"coordinates?|geolocation|gps)(?:$|[_\W])",
     re.IGNORECASE,
 )
 _PRIVATE_DISCOVERY_ENTITY_TYPE_TOKENS = frozenset({
@@ -1254,11 +1257,15 @@ _PRIVATE_DISCOVERY_ENTITY_TYPE_TOKENS = frozenset({
 # a source placed them in a generic field or a list of tags.
 _PRECISE_ADDRESS_VALUE = re.compile(
     r"(?i)(?:"
-    r"\b\d{1,5}\s+(?:[a-z0-9.'-]+\s+){0,4}"
-    r"(?:road|rd|street|st|avenue|ave|lane|ln|marg|marga|sadak|galli|tole|chowk|chok|path|highway|hwy)\b"
-    r"|\b(?:[a-z0-9.'-]+\s+){1,4}"
-    r"(?:road|rd|street|st|avenue|ave|lane|ln|marg|marga|sadak|galli|tole|chowk|chok|path|highway|hwy)"
-    r"\s*#?\s*\d{1,5}\b"
+    r"\b[0-9०-९]{1,5}\s+(?:[\w.'-]+\s+){0,4}"
+    r"(?:road|rd|street|st|avenue|ave|lane|ln|marg|marga|sadak|galli|tole|chowk|chok|path|highway|hwy|"
+    r"सडक|मार्ग|गल्ली|गल्लि|टोल|चोक|चौक|घर)\b"
+    r"|\b(?:[\w.'-]+\s+){1,4}"
+    r"(?:road|rd|street|st|avenue|ave|lane|ln|marg|marga|sadak|galli|tole|chowk|chok|path|highway|hwy|"
+    r"सडक|मार्ग|गल्ली|गल्लि|टोल|चोक|चौक)"
+    r"\s*#?\s*[0-9०-९]{1,5}\b"
+    r"|(?:घर(?:\s*(?:नं|नम्बर|number))?|टोल|गल्ली|गल्लि|मार्ग|सडक|चोक|चौक)"
+    r"\s*[-:#.\s]*[0-9०-९]{1,5}\b"
     r")"
 )
 _PRECISE_COORDINATE_PAIR = re.compile(
