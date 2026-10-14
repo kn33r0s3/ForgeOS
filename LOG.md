@@ -340,3 +340,10 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Added work-item detail fields for linked payment intent status and explicit fulfillment-linked Outcome references; did not add a new revenue or payment ledger.
 - Added TEST-only regression coverage for idempotent linking, rejection of unverified intent/Opportunity mismatch, and payment-intent callback verification → owner-confirmed fulfillment → one repair audit event. External provider calls are mocked and no checkout/payment is initiated.
 - Verification remains pending for the new exact head: focused tests, full backend CI and independent deployment verification. The prior head's green checks are not proof for this change. No customer contact, live provider call, spend or revenue claim was made.
+
+## 2026-10-14 — emit canonical substrate events for repair transitions
+
+- Extended the existing repair-shop transition seam so each new WorkItemEvent is paired with an idempotent canonical WorldEvent of type state_changed in the same transaction. The canonical payload carries the work-item ID, work-item-event ID, transition type, from/to states and data scope; customer free-text and arbitrary metadata remain only in the protected operational audit.
+- Repeated transition calls reuse the same WorkItemEvent and ensure the matching canonical EVENT exists by its deterministic idempotency key.
+- Added a regression test asserting every transition in a work item's audit has its corresponding canonical substrate event and that the shared payload remains scoped/minimal.
+- Exact-head CI and deployment verification for these pending source additions must finish before they are declared verified.

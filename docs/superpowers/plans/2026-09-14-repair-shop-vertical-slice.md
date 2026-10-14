@@ -17,13 +17,13 @@
 - Actual revenue is recorded only from verified real payment evidence and linked `Outcome` rows with `ACTUAL_REVENUE`; test data must use `SANDBOX`.
 - Customer communication defaults to `DRAFT`; the system must not automatically contact a customer.
 - Migrations are additive-only and must preserve existing ForgeOS rows, including the 11,847-signal baseline.
-- Every transition must retain an ID, timestamp, actor, state, reason, evidence linkage, previous state, and next state.
+- Every transition must retain an ID, timestamp, actor, state, reason, evidence linkage, previous state, and next state, and emit a matching canonical state_changed EVENT through the shared substrate. The canonical event carries references/state/scope, not free-text customer content.
 - Unapproved actions cannot execute; failed payments cannot become actual revenue; customer acceptance is not payment; payment is not a successful outcome.
 
 
 ### Current payment-truth amendment (2026-10-14)
 
-The original manual payment step below is superseded for REAL scope. The manual repair-shop payment endpoint rejects REAL scope and remains available only for SANDBOX/test entries. A REAL repair payment must use the existing provider-verified OpPaymentIntent flow and owner-confirmed fulfillment before any REAL/VERIFIED ACTUAL_REVENUE Outcome exists. The matching RepairWorkItem may link to that canonical intent through WorkItemEvent and reference its existing Outcome by ID. The link must match the work item's canonical Opportunity/Product and validate the intent state, exact amount/currency, REAL/VERIFIED Outcome and idempotency. A verified-but-unfulfilled intent is not revenue. Never add a repair-only payment/revenue ledger or start checkout from the link endpoint. Customer communication remains separately authorized and is not initiated by this bridge.
+The original manual payment step below is superseded for REAL scope. The manual repair-shop payment endpoint rejects REAL scope and remains available only for SANDBOX/test entries. A REAL repair payment must use the existing provider-verified OpPaymentIntent flow and owner-confirmed fulfillment before any REAL/VERIFIED ACTUAL_REVENUE Outcome exists. The matching RepairWorkItem may link to that canonical intent through WorkItemEvent and reference its existing Outcome by ID. The link must match the work item's canonical Opportunity/Product and validate the intent state, exact amount/currency, REAL/VERIFIED Outcome and idempotency. Work-item transitions must also emit a minimal canonical state_changed EVENT through the existing substrate. A verified-but-unfulfilled intent is not revenue. Never add a repair-only payment/revenue ledger or start checkout from the link endpoint. Customer communication remains separately authorized and is not initiated by this bridge.
 
 ---
 

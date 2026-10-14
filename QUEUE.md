@@ -4,7 +4,7 @@ Ranked by value, critical blockers and leverage across the full Hami portfolio. 
 
 ## P0 — Complete CAS payment-to-work-item integration
 
-The manual repair-shop payment endpoint remains fail-closed for REAL scope. The existing provider-verified payment-intent and owner-confirmed fulfillment path is now linked to RepairWorkItem through the existing WorkItemEvent audit/idempotency seam: link only an already VERIFIED REAL intent whose Product belongs to the work item's canonical Opportunity; mirror fulfillment only when the canonical REAL/VERIFIED Outcome matches amount/currency/product; do not start checkout from this endpoint or add a second revenue ledger. Focused regressions and full exact-head CI are pending. No live provider transaction or customer contact is initiated by this work.
+The manual repair-shop payment endpoint remains fail-closed for REAL scope. The existing provider-verified payment-intent and owner-confirmed fulfillment path is now linked to RepairWorkItem through the existing WorkItemEvent audit/idempotency seam and a matching canonical state_changed EVENT: link only an already VERIFIED REAL intent whose Product belongs to the work item's canonical Opportunity; mirror fulfillment only when the canonical REAL/VERIFIED Outcome matches amount/currency/product; do not start checkout from this endpoint or add a second revenue ledger. Focused regressions and full exact-head CI are pending. No live provider transaction or customer contact is initiated by this work.
 
 ## P0 — Verify and extend the multi-climb intelligence loop
 
