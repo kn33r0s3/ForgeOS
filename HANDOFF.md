@@ -547,7 +547,7 @@ or adoption the repo doesn't have · go around a safeguard.
 
 ## Latest verified checkpoint — 2026-10-14
 
-- Current repo: one `main` branch, clean at `2566aa5e`. That documentation-only commit is pushed; exact-SHA ForgeOS CI run 38489894101, independent deploy verification run 38489894102, and secrets scan 38489894137 all succeeded. The live application fix remains `a5da9a74`, whose exact-SHA CI, deployment verification, and secrets scan also succeeded.
+- Current repo: one `main` branch, clean at `b33f5870`. That documentation-only commit is pushed; exact-SHA ForgeOS CI run 38490541787, independent deploy verification run 38490541717, and secrets scan 38490541705 all succeeded. The live application fix remains `a5da9a74`, whose exact-SHA CI, deployment verification, and secrets scan also succeeded.
 - The backend identity race is fixed in the existing `world_graph.create_entity` seam. Targeted tests passed; full backend suite: **1,296 passed, 2 skipped, 18 warnings**. `npm test`, typecheck, lint, and safe build passed. Lint retains one pre-existing warning at `src/components/experiments/experiment-card.tsx:108`.
 - Production: the canonical `haminp.vercel.app/api/health` returned `ready: true`, `db: up` on three retries and one final check after a single degraded sample; no persistent outage is asserted. Route-specific canonical tags are correct for the homepage, public routes and nested service route. `/operations` and `/owner` retain noindex headers; `/owner` retains its robots meta.
 - Auth is still not enabled: `/api/auth/get-session` returns 503 `Authentication is unavailable.` The live header/footer expose no Login/Join CTAs after the temporary pending state settles. No auth configuration or owner-only setting was changed.

@@ -307,3 +307,9 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - These samples exceed WCAG AA text contrast thresholds. Scope is the sampled page elements only—not a site-wide certification. No CSS change was justified.
 - Latest verified head `2566aa5e` is pushed on `main`; exact-SHA ForgeOS CI 38489894101, independent deployment verification 38489894102, and secrets scan 38489894137 succeeded.
 - Next: screen-reader/device interoperability and then another distinct QA method. Auth remains unchanged; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
+## 2026-10-14 — Exact-head verification follow-up
+
+- Documentation snapshot `b33f5870` is pushed on the single `main` branch with a clean worktree. Exact-SHA ForgeOS CI 38490541787, independent deployment verification 38490541717, and secrets scan 38490541705 completed successfully.
+- The only application-source change in this QA sequence remains `a5da9a74`, already tested and deployed; subsequent commits record observed QA results only. No auth activation, external contact, spend, provider fabrication, or customer/revenue outcome is claimed.
+- Continue with real screen-reader/device interoperability when available, then use a different QA method. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
