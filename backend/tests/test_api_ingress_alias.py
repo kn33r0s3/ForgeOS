@@ -90,3 +90,25 @@ def test_api_ingress_has_no_exact_duplicate_route_registrations():
             seen.add(key)
 
     assert duplicates == []
+
+
+
+def test_api_ingress_has_no_ambiguous_path_method_dispatch():
+    """No two different handlers should compete for one API path and method."""
+    from app.main import app
+
+    handlers_by_route = {}
+    for route in app.routes:
+        path = getattr(route, "path", None)
+        endpoint = getattr(route, "endpoint", None)
+        if not path or not path.startswith("/api/") or endpoint is None:
+            continue
+        for method in getattr(route, "methods", None) or {"GET"}:
+            handlers_by_route.setdefault((path, method), set()).add(endpoint)
+
+    collisions = [
+        (path, method, sorted(getattr(handler, "__qualname__", repr(handler)) for handler in handlers))
+        for (path, method), handlers in handlers_by_route.items()
+        if len(handlers) > 1
+    ]
+    assert collisions == []
