@@ -151,6 +151,70 @@ def test_runs_are_idempotent(db, world):
     }
 
 
+def test_persisted_discovery_cursor_prevents_fixed_window_starvation(db):
+    """Repeated runs advance through a stable method stream instead of replaying page one."""
+    world_graph.seed_core_types(db)
+    sources = [
+        _entity(db, "resource", f"Cursor source {index}", source_index=index)
+        for index in range(1, 6)
+    ]
+
+    def candidates(ctx):
+        for index, source in enumerate(sources, start=1):
+            yield engine.Finding(
+                kind="observation",
+                key=f"cursor-probe:{index}",
+                statement=f"Candidate {index} has an untested possible use.",
+                basis=(engine.BasisRef("entity", source.id),),
+                subject_entity_ids=(source.id,),
+                facets={"candidate_index": index},
+            )
+
+    registry = engine.DiscoveryMethodRegistry([
+        engine.DiscoveryMethod("cursor_probe", "1", "Stable candidates for cursor testing.", candidates)
+    ])
+    windows = []
+    cursor_digests = []
+    for _ in range(3):
+        report = engine.run_discovery(
+            db, registry=registry, methods=["cursor_probe"], max_findings_per_method=2
+        )
+        db.commit()
+        windows.append([row["statement"] for row in report["surfaced"]])
+        latest = (
+            db.query(models.WorldEvent)
+            .filter_by(event_type="discovery_run_completed")
+            .order_by(models.WorldEvent.id.desc())
+            .one()
+        )
+        payload = json.loads(latest.payload)
+        cursor_digests.append(payload["discovery_cursors"]["cursor_probe"]["last_key_digest"])
+
+    assert windows == [
+        [
+            "Candidate 1 has an untested possible use.",
+            "Candidate 2 has an untested possible use.",
+        ],
+        [
+            "Candidate 3 has an untested possible use.",
+            "Candidate 4 has an untested possible use.",
+        ],
+        ["Candidate 5 has an untested possible use."],
+    ]
+    assert all(len(digest) == 32 for digest in cursor_digests)
+    assert all(f"cursor-probe:{index}" not in str(cursor_digests) for index in range(1, 6))
+
+    before = db.query(models.SubstrateEntity).filter_by(source_system=engine.ENGINE_ACTOR).count()
+    wrapped = engine.run_discovery(
+        db, registry=registry, methods=["cursor_probe"], max_findings_per_method=2
+    )
+    db.commit()
+    after = db.query(models.SubstrateEntity).filter_by(source_system=engine.ENGINE_ACTOR).count()
+    assert wrapped["surfaced"] == []
+    assert len(wrapped["existing"]) == 2
+    assert after == before
+
+
 def test_missing_input_becomes_capability_gap_closed_only_by_the_verified_lifecycle(db, world):
     seen = []
 

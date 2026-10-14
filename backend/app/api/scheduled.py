@@ -820,15 +820,14 @@ def run_scheduled_intelligence(
         intelligence["autonomy_cycle"] = {"status": "error", "error": type(exc).__name__}
 
     # Stage 5: discovery — run the generalized discovery engine over the substrate.
-    # Uses app.services.discovery_engine.run_discovery with the DEFAULT_REGISTRY
-    # (14 methods including curiosity_questions). Each method runs with per-method
-    # failure isolation; findings are validated and persisted via the existing
-    # discovery lifecycle (idempotent by fingerprint). Findings are emitted with
-    # honest epistemic states (hypothesized/possible) — never as validated.
-    # Bounded: max_findings_per_method=10 uses itertools.islice for genuine
-    # early-stop (does not materialize the full iterable first). This bounds
-    # findings consumed, not DB rows scanned or time spent — see method
-    # docstrings for per-method work characteristics.
+    # DEFAULT_REGISTRY contains 15 methods. The optional curiosity_questions
+    # method is selected only when automatic question generation is enabled.
+    # Each selected method has failure isolation; findings use the existing
+    # evidence/provenance/event lifecycle and remain possible/hypothesized.
+    # Persisted discovery_run_completed EVENTs store opaque per-method cursors,
+    # so bounded windows advance across runs rather than replaying the same
+    # first findings forever. The cursor bounds result windows, not DB rows
+    # scanned or execution time; see method docstrings for work characteristics.
     # Separate DB session; commit only on success, rollback on failure.
     # Returns only an operational summary (counts), never raw internal details
     # or private records.

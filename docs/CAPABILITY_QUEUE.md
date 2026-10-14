@@ -1,4 +1,4 @@
-## [CAS / REPAIR-SHOP PAYMENT LINKAGE IMPLEMENTED IN SOURCE — EXACT-HEAD VERIFICATION PENDING]
+## [CAS / REPAIR-SHOP PAYMENT LINKAGE IMPLEMENTED; PRIOR CI/DEPLOY VERIFIED AT d15d706; CURRENT-HEAD VERIFICATION PENDING]
 
 - **Original truth defect and retained guard:** the manual endpoint accepted caller-supplied provider/reference text and promoted it to REAL/VERIFIED revenue. It now continues to reject REAL scope. SANDBOX-only manual/test behavior remains; do not remove the guard.
 - **Canonical cross-domain link:** added an owner-key-gated operation that links an already provider-verified REAL payment intent to a triaged REAL RepairWorkItem only when the existing Product belongs to the same canonical Opportunity. The relationship and provenance live in the existing unique WorkItemEvent stream plus a matching canonical WorldEvent state_changed event; the shared payload contains only IDs, transition type/state and data scope, not free-text customer notes. No new payment, revenue, experiment, or semantic ledger exists.
@@ -2001,3 +2001,13 @@ Source: saved-library report `hami_forgeos_integrity_audit_checkpoint_2026-10-11
 | F-08 — archived local web stack mistaken for production | **Intentional distinction remains documented**: root Vite is canonical; archived Next.js frontend is an explicit optional local Compose surface. | Keep it visibly archived/optional and do not reconnect or promote it without a specific evidence-backed need. |
 
 Do not reopen findings already corrected in source as if still live bugs. Do not mark runtime-dependent findings resolved from static code alone. Any new failure should be reproduced on current main, fixed at the existing seam, tested, and dispositioned here or in the existing root queue; preserve this original audit's F-ID for traceability.
+
+## 2026-10-14 — prevent fixed-window discovery starvation (source change; exact-head verification pending)
+
+- Existing seam inspected: backend/app/services/discovery_engine.py::run_discovery, WorldEvent, and the existing discovery_run_completed EVENT. The engine previously consumed the same first max_findings_per_method outputs on every run; idempotency made those rows existing, but they still exhausted the window, so later stable findings could be starved indefinitely.
+- Change: persist versioned, opaque per-method cursor digests inside the existing discovery_run_completed EVENT. Persisted runs resume after the last consumed finding and wrap when they reach the end; a missing cursor resets the method safely. Preview remains read-only. Cursor state never stores the raw finding key and creates no table, new primitive, side ledger, or external permission.
+- Test: added a deterministic five-candidate / two-per-run regression. It verifies three runs surface candidates 1–5 in order, cursor values are digests rather than raw keys, and wraparound is idempotent.
+- Owner action removed: no new routine action is needed to advance a method beyond its initial output window. The change does not contact people, spend money, activate a provider, or declare outcomes.
+- Remaining: finding generators can still be expensive to scan, and methods with nondeterministic ordering can cause cursor resets. Production scheduling/run persistence must be independently observed; source and tests alone do not prove natural cron execution.
+- Next verification: exact-head backend/frontend CI and independent deployment verification. If the new regression fails, fix the existing continuation seam before claiming non-starvation.
+

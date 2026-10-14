@@ -420,6 +420,61 @@ def fingerprint(method: DiscoveryMethod, finding: Finding) -> str:
     return _hash("discovery-v1", method.name, finding.kind, finding.key, basis)[:32]
 
 
+def _finding_cursor_digest(method: DiscoveryMethod, finding: Finding) -> str:
+    """Opaque, versioned cursor for resuming a deterministic method stream.
+
+    Do not persist raw finding keys: they can contain user-supplied domain
+    values. Hashing also keeps cursor records compact and non-content-bearing.
+    """
+    basis = sorted((ref.kind, ref.id) for ref in finding.basis)
+    return _hash(
+        "discovery-cursor-v1", method.name, method.version,
+        finding.kind, finding.key, basis,
+    )[:32]
+
+
+def _next_method_page(
+    method: DiscoveryMethod,
+    ctx: DiscoveryContext,
+    cursor_digest: str | None,
+    limit: int,
+) -> tuple[list[Finding], str | None]:
+    """Take the next bounded window, resuming after the last persisted finding.
+
+    If the cursor disappeared because the method's output changed, restart from
+    the beginning. If the cursor is at the end of the current stream, wrap to
+    the beginning. That prevents deterministic first-N output from monopolizing
+    every run while preserving lazy iteration and bounded result windows.
+    """
+    if limit <= 0:
+        return [], cursor_digest
+
+    def first_page() -> tuple[list[Finding], str | None]:
+        rows = list(itertools.islice(method.run(ctx), limit))
+        return rows, _finding_cursor_digest(method, rows[-1]) if rows else None
+
+    if not cursor_digest:
+        return first_page()
+
+    cursor_found = False
+    rows: list[Finding] = []
+    for finding in method.run(ctx):
+        if not cursor_found:
+            if _finding_cursor_digest(method, finding) == cursor_digest:
+                cursor_found = True
+            continue
+        rows.append(finding)
+        if len(rows) >= limit:
+            break
+
+    if cursor_found and rows:
+        return rows, _finding_cursor_digest(method, rows[-1])
+
+    # A missing cursor means the stream changed; an exhausted cursor means the
+    # previous window reached the end. In both cases take a fresh leading page.
+    return first_page()
+
+
 def _persist(db: Session, method: DiscoveryMethod, finding: Finding, actor: str, report: dict[str, Any]) -> models.SubstrateEntity | None:
     fp = fingerprint(method, finding)
     kind = finding.kind
@@ -539,6 +594,22 @@ def run_discovery(
     selected = [registry.get(name) for name in methods] if methods is not None else registry.methods()
     if persist:
         ensure_discovery_types(db)
+
+    # Resume each method from the last persisted cursor. The EVENT itself is
+    # the durable continuation state; no new table or parallel queue is needed.
+    cursors: dict[str, Any] = {}
+    if persist:
+        previous_run = (
+            db.query(models.WorldEvent)
+            .filter_by(event_type="discovery_run_completed")
+            .order_by(models.WorldEvent.id.desc())
+            .first()
+        )
+        previous_payload = _load(previous_run.payload) if previous_run is not None else {}
+        previous_cursors = previous_payload.get("discovery_cursors", {})
+        if isinstance(previous_cursors, dict):
+            cursors = dict(previous_cursors)
+
     report: dict[str, Any] = {
         "engine_version": ENGINE_VERSION, "persisted": persist,
         "methods": [], "surfaced": [], "existing": [], "deferred": [],
@@ -583,18 +654,31 @@ def run_discovery(
                 report["capability_gaps"].append(gap_report)
             continue
         ctx = DiscoveryContext(db=db, inputs=inputs, actor=actor)
+        next_cursor_digest: str | None = None
         try:
-            # Genuine early-stop: islice consumes the lazy iterator without
-            # materializing the entire result set first. This bounds the number
-            # of findings CONSUMED from the method, not the DB rows scanned or
-            # time spent — methods that eagerly build large lists before their
-            # first yield are not bounded by this. See method docstrings for
-            # per-method work characteristics.
-            findings = list(itertools.islice(method.run(ctx), max_findings_per_method))
+            if persist:
+                saved = cursors.get(method.name)
+                cursor_digest = None
+                if isinstance(saved, dict) and saved.get("version") == method.version:
+                    candidate_digest = saved.get("last_key_digest")
+                    if isinstance(candidate_digest, str) and re.fullmatch(r"[0-9a-f]{32}", candidate_digest):
+                        cursor_digest = candidate_digest
+                findings, next_cursor_digest = _next_method_page(
+                    method, ctx, cursor_digest, max_findings_per_method
+                )
+            else:
+                # Preview remains a read-only first-page view and does not move
+                # the durable cursor.
+                findings = list(itertools.islice(method.run(ctx), max_findings_per_method))
         except Exception as exc:  # a broken plugin must not stop the others
             entry["status"] = "error"
             report["errors"].append({"method": method.name, "error": f"{type(exc).__name__}: {exc}"})
             continue
+        if persist:
+            cursors[method.name] = {
+                "version": method.version,
+                "last_key_digest": next_cursor_digest,
+            }
         for finding in findings:
             problem = _validate_finding(db, finding)
             if problem:
@@ -612,10 +696,14 @@ def run_discovery(
                 continue
             _persist(db, method, finding, actor, report)
     if persist:
+        event_payload = {
+            key: (value if key == "methods" else len(value))
+            for key, value in report.items() if isinstance(value, list) and key != "preview"
+        }
+        event_payload["discovery_cursors"] = cursors
         world_graph.create_event(
             db, event_type="discovery_run_completed", source=actor,
-            payload={key: (value if key == "methods" else len(value))
-                     for key, value in report.items() if isinstance(value, list) and key != "preview"},
+            payload=event_payload,
         )
     return report
 
