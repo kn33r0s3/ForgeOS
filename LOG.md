@@ -272,3 +272,10 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Local verification passed: `npm test` (163 script tests and 258 TypeScript tests, including the new focus assertion), `npm run typecheck`, `npm run lint`, `DATABASE_URL= npm run build`, and `git diff --check`. Pylance/VS Code Problems reported no errors in either edited TypeScript file. One pre-existing Fast Refresh lint warning remains in `src/components/experiments/experiment-card.tsx:108`.
 - Not yet committed, pushed, or live. Current production still has the confirmed defect; exact-SHA CI, deployment verification, and post-deploy focus checks are pending. Auth was not enabled.
 - Owner action removed in production: none yet. Once deployed, the change removes manual keyboard focus recovery after drawer close. The next dependency is push verification and a production keyboard retest; screen-reader interoperability remains unverified. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
+## 2026-10-14 — Mobile navigation focus restoration follow-up
+
+- Pushed the existing-header fix as `a5da9a74` on `main`. Exact-SHA ForgeOS CI run 38487413250, independent deployment verification 38487413510, and secrets scan 38487413032 all completed successfully.
+- Production browser verification at 320px passed: Enter opened the drawer, Tab focused its first link, and Escape restored focus to the visible toggle with `aria-expanded=false` and the panel hidden. Backdrop dismissal did the same. Selecting a drawer link navigated from `/unknowns` to `/` and restored focus to the toggle. Screenshots captured the Escape and post-navigation states.
+- Canonical production health had one degraded sample, then three healthy retries and a final healthy check (`ready: true`, `db: up`). No persistent outage is asserted. Auth remains unavailable/owner-only; no Login/Join gate was changed.
+- Owner action removed: routine keyboard focus recovery on the verified drawer close paths. Screen-reader interoperability and additional real device/browser coverage remain open; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE**.

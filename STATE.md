@@ -13,13 +13,14 @@
 - The change removes only manual retry/reconciliation for this same-payload identity race; it does not establish fewer owner actions per real transaction. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
 - Next: verify production keyboard focus order and screen-reader interoperability. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
 
-## 2026-10-14 — mobile navigation focus defect confirmed and fixed locally
+## 2026-10-14 — mobile navigation focus restored in production
 
 - Live production interaction at 320px: Enter opened the existing mobile drawer; Tab moved to its first link; Escape closed it while focus remained on the now-hidden link. Navigating to `/unknowns` from the drawer closed it with focus reset to `BODY`, not the toggle or destination. Browser screenshots captured the post-close states; DOM evidence confirmed both focus failures.
 - Traced the existing `SiteHeader` Escape/backdrop seam and its history to `6a26b0b1`. The fix uses the same component and routes Escape, backdrop dismissal, and drawer-link navigation through a callback that returns focus to the existing toggle. Added a regression assertion to the existing `src/lib/site-header.test.ts`; no new component/file or auth setting.
-- Local `npm test`, typecheck, lint, and `DATABASE_URL= npm run build` passed. Problems reports no errors in the edited TypeScript files; the one lint warning remains pre-existing.
-- This focus change is not yet committed/pushed or live; exact-SHA CI and post-deploy browser verification remain pending. Current production still has the focus defect. Auth remains owner-only and unchanged; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE**.
-- Next: fetch latest `main`, push only if unchanged, then verify keyboard focus after Escape, backdrop dismissal, and drawer-link navigation. Screen-reader interoperability remains open.
+- Local `npm test` (163 script tests and 258 TypeScript tests), typecheck, lint, and `DATABASE_URL= npm run build` passed. Problems reports no errors in the edited TypeScript files; the one lint warning remains pre-existing.
+- Pushed as `a5da9a74`. Exact-SHA ForgeOS CI run 38487413250, independent deployment verification 38487413510, and secrets scan 38487413032 succeeded. Production retests at 320px confirmed visible focus restoration after Escape, backdrop dismissal, and drawer-link navigation (`/unknowns` to `/`); screenshots captured the Escape and post-navigation states.
+- The canonical `haminp.vercel.app/api/health` had one degraded sample, then three healthy retries and a final healthy check (`ready: true`, `db: up`); no persistent outage is asserted. Auth remains owner-only and unchanged. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE**.
+- Next: verify screen-reader interoperability and keyboard behavior on additional mobile browser/device combinations.
 
 
 ## 2026-10-14 — exact-head CI diagnosis (main: 959482fdf5fc84675a2d17b453537b3944d64650)

@@ -20,15 +20,15 @@
 
 ---
 
-## [MOBILE NAV FOCUS RESTORE / SOURCE FIXED LOCALLY / PUSH AND DEPLOY PENDING] Return keyboard focus when the drawer closes
+## [MOBILE NAV FOCUS RESTORE / PUSHED / EXACT-SHA CI AND PRODUCTION VERIFIED] Return keyboard focus when the drawer closes
 
 - **Existing seam and history inspected:** `src/components/layout/site-header.tsx` owns the mobile drawer, its Escape listener, and backdrop dismissal. `git blame` and history trace the current close path to `6a26b0b1`; it closes the drawer but does not return focus to its trigger. No new navigation component or subsystem is needed.
 - **Live evidence:** at 320px, Enter opened the drawer and Tab focused its first link. Escape closed the drawer, but the active element remained that hidden link (`getClientRects().length === 0`). A keyboard-selected route also closed the drawer with `document.activeElement` reset to `BODY`, not the toggle or destination heading. Production screenshots captured both post-close states. Login/Join remained absent while auth was unavailable.
-- **Owner/user action still required:** until deployment, keyboard users must manually recover focus and re-enter navigation after dismissing the drawer.
-- **Action this change removes:** the local source now returns focus to the existing menu toggle on Escape, backdrop dismissal, and drawer-link navigation.
-- **What remains:** screen-reader interoperability and the full production keyboard path still need verification. Auth configuration remains owner-only and unchanged; this interaction does not authorize or initiate external actions.
-- **Next removable dependency:** fetch `main` and push only if unchanged; then verify production Escape/backdrop and route-navigation behavior. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
-- **Verification:** `SiteHeader` now routes all three dismissal paths through a shared focus-restoring callback with a regression assertion in the existing header test. `npm test`, typecheck, lint, and safe build passed locally; lint retains one pre-existing warning. The production defect is pictured and was confirmed by DOM state; this local fix has not yet been pushed, run on exact-SHA CI, or verified in production.
+- **Owner/user action removed:** keyboard users no longer need to recover focus manually after closing the drawer through Escape, backdrop dismissal, or a navigation link.
+- **Action this change removes:** `SiteHeader` returns focus to the existing visible menu toggle and exposes the closed state on all three paths.
+- **What remains:** screen-reader interoperability and keyboard behavior on additional real devices remain unverified. Auth configuration remains owner-only and unchanged; this interaction does not authorize or initiate external actions.
+- **Next removable dependency:** verify the same behavior with screen readers and on additional mobile browser/device combinations. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+- **Verification:** production at 320px: keyboard Enter opened the drawer, Tab focused its first link, and Escape closed it with `aria-expanded=false`, the panel hidden, and focus on the visible toggle. Backdrop dismissal and selecting a drawer link from `/unknowns` to `/` produced the same closed/focus state. Screenshots captured the Escape and post-navigation states. Local `npm test` (163 script tests and 258 TypeScript tests), typecheck, lint, safe build, and editor diagnostics passed; lint retains one pre-existing warning. Commit `a5da9a74` is pushed to `main`; exact-SHA ForgeOS CI run 38487413250, independent deployment verification 38487413510, and secrets scan 38487413032 succeeded. The canonical `haminp.vercel.app/api/health` returned `ready: true`, `db: up` on three retries and a final check after one initial degraded sample. No auth setting changed.
 
 ---
 
