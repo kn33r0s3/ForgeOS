@@ -71,6 +71,28 @@ def test_failed_or_unverified_payment_cannot_be_actual_revenue(db):
     assert db.query(models.Outcome).count() == 0
 
 
+def test_real_payment_cannot_be_verified_from_manual_provider_reference(db):
+    item = make_item(db, scope="REAL")
+    repair_shop.create_triage(
+        db, item.id, rationale="Inspect", expected_outcome="Inspection complete", confidence=50
+    )
+    try:
+        repair_shop.record_verified_payment(
+            db,
+            item.id,
+            amount=100,
+            unit="NPR",
+            provider="esewa",
+            provider_reference="caller-supplied-reference",
+            data_scope="REAL",
+        )
+    except ValueError as exc:
+        assert "provider-verified payment-intent" in str(exc)
+    else:
+        raise AssertionError("a caller-supplied reference must not create verified REAL revenue")
+    assert db.query(models.Outcome).filter_by(data_scope="REAL").count() == 0
+
+
 def test_verified_payment_is_not_successful_outcome(db):
     item = make_item(db)
     repair_shop.create_triage(db, item.id, rationale="Inspect", expected_outcome="Inspection complete", confidence=50)
