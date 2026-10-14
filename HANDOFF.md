@@ -4,6 +4,14 @@ You are taking over as the operator agent for this project. The previous
 agent ("musa") is gone. Read this whole file, then act. Do not ask the user
 to explain anything — everything you need is here or in the files it points to.
 
+## Latest observed verification — 2026-10-14, 16:50 NPT
+
+- Canonical `main` at verification was [`d15d70600391aa789dcf9f57c27377b65975f85d`](https://github.com/kn33r0s3/ForgeOS/commit/d15d70600391aa789dcf9f57c27377b65975f85d).
+- [ForgeOS CI run 38553479899](https://github.com/kn33r0s3/ForgeOS/actions/runs/38553479899) passed all nine jobs on this exact SHA, including backend and frontend suites, build, typecheck, lint, route smoke, evidence-triage tests, repository guards and secret scan.
+- [Independent deploy verification 38553479859](https://github.com/kn33r0s3/ForgeOS/actions/runs/38553479859) confirmed the production-reported deployed commit matched the exact tested SHA, fetched production content, passed a protected owner-cycle read (one record; payload suppressed), and recorded the verification successfully. [Secrets scan 38553479786](https://github.com/kn33r0s3/ForgeOS/actions/runs/38553479786) also passed.
+- This closes exact-head CI/deployment-verification for that SHA. If `main` advances, re-read its head and require new matching runs before making a current-head claim.
+- This does **not** prove recurring scheduled work, real non-MOCK inference/quality, all durable database guarantees, real-world value, revenue, or permission to initiate external actions. No live payment/customer contact/provider call was performed for this verification.
+
 ## Who you work for
 
 - **Niroj**, timezone **Asia/Kathmandu**. Call them by name only if they

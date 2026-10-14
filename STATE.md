@@ -1,6 +1,18 @@
 # Hami Operating State
 
-## 2026-10-14 — discovery map/projection drift repaired in source (verification pending)
+## Latest observed verification — 2026-10-14, 16:50 NPT
+
+- **Canonical main at verification:** `d15d70600391aa789dcf9f57c27377b65975f85d` ([commit](https://github.com/kn33r0s3/ForgeOS/commit/d15d70600391aa789dcf9f57c27377b65975f85d)).
+- **Exact-head ForgeOS CI:** [run 38553479899](https://github.com/kn33r0s3/ForgeOS/actions/runs/38553479899) completed successfully on that SHA. All nine jobs passed: backend-tests, frontend-tests, build, typecheck, route-smoke, evidence-triage-tests, lint, repository-guards and gitleaks.
+- **Production SHA verification:** [independent verifier run 38553479859](https://github.com/kn33r0s3/ForgeOS/actions/runs/38553479859) succeeded on the same SHA. Its log records production's deployed SHA matched `d15d70600391aa789dcf9f57c27377b65975f85d`, production content was fetched, the protected owner-cycle read succeeded (one record; payload suppressed), and the verification result was recorded via HTTP 200.
+- **Secrets scan:** [run 38553479786](https://github.com/kn33r0s3/ForgeOS/actions/runs/38553479786) passed on the same SHA.
+- These results supersede older notes below that said this exact-head CI/deployment result was pending or unverified. Those notes remain historical for their earlier SHAs.
+- **Not established by those checks:** recurring/natural scheduler invocation, a genuine non-MOCK local-model inference or answer quality, full durable-PostgreSQL readiness beyond the tested endpoint path, any real customer/provider transaction, verified economic value, or revenue. No live checkout, customer contact or paid provider action was made by this verification.
+- The STARVED build gate is scoped to explicitly intervention-dependent work; the same exact-head backend suite passed. A blocked intervention is not a Hami-wide pause. External actions remain under their existing authorization gates.
+
+---
+
+## Historical verification snapshot — discovery map/projection drift (status later superseded)
 
 - Fresh main inspection found HEAD `003e7e18c029c07373f115baef6a1e84e50a8ce6` had D97 and D98 in authoritative `docs/UNKNOWN_MAP.md`, while `backend/app/data/unknowns.json` and `src/lib/unknowns.ts` were stale. Exact-head ForgeOS CI run `38507489394` failed because the generated projections were out of sync; backend tests also failed only at `tests/test_import_unknowns.py::test_parses_all_sections`, which still asserted D96 (1,295 passed, 1 failed, 2 skipped). Frontend test command and repository guard failed at the same projection check. This is an additive discovery-history drift, not grounds to delete D97/D98 or shrink the map.
 - Applied the existing generator's transformation to the authoritative map and committed the generated JSON projection (`db34adff`), generated TypeScript projection (`ffdf451a`), and importer inventory regression (`aade3056`) directly to `main`. The test now expects 98 D rows and explicitly requires D97 and D98. No new files, no production behavior changes, no truth/authorization gate changes.

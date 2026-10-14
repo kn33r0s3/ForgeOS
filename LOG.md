@@ -347,3 +347,11 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Repeated transition calls reuse the same WorkItemEvent and ensure the matching canonical EVENT exists by its deterministic idempotency key.
 - Added a regression test asserting every transition in a work item's audit has its corresponding canonical substrate event and that the shared payload remains scoped/minimal.
 - Exact-head CI and deployment verification for these pending source additions must finish before they are declared verified.
+
+## 2026-10-14 — refresh current truth after exact-head CI and production verification
+
+- Re-read actual latest `main` at `d15d70600391aa789dcf9f57c27377b65975f85d` after the Actions queue advanced; did not rely on the earlier pending run that had no attached jobs.
+- ForgeOS CI run `38553479899` passed all nine jobs on this exact SHA: backend-tests, frontend-tests, build, typecheck, route-smoke, evidence-triage-tests, lint, repository-guards and gitleaks.
+- Independent deploy verifier `38553479859` matched production's reported deployed commit to the same SHA, fetched production content, passed the protected owner-cycle read (one record; payload suppressed), and received HTTP 200 recording the verification. Secrets scan `38553479786` also passed.
+- Refreshed STATE/HANDOFF/QUEUE so older pending-run notes remain traceable history but no longer misrepresent the latest verification. CAS payment-to-work-item code and regression tests are verified at this SHA; the real provider/customer transaction remains unexercised, and REAL financial execution remains authorization-gated.
+- Still unresolved: recurring natural scheduler evidence and persisted cycle-effect accounting, genuine non-MOCK local inference/quality, wider durable-PostgreSQL readiness, remaining route-alias/PWA checks, and real-world outcomes. Green CI or a protected read does not imply those happened. No external contact, live payment, spend, paid inference or activation change was made.
