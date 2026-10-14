@@ -1,5 +1,68 @@
+from datetime import datetime, timezone
+
+import pytest
+
 from app import models
 from app.services import execution_engine, repair_shop
+
+
+
+def make_real_item(db, *, suffix="one"):
+    item = repair_shop.create_work_item(
+        db,
+        customer_name="TEST: repair shop",
+        contact_identifier=None,
+        consent_state="NOT_REQUIRED",
+        asset_label=f"TEST-device-{suffix}",
+        reported_problem="TEST: device does not boot",
+        data_scope="REAL",
+        actor="test",
+        idempotency_key=f"repair-item-{suffix}-real",
+    )
+    repair_shop.create_triage(
+        db, item.id,
+        rationale="TEST: link a verified payment to the matching Opportunity",
+        expected_outcome="TEST: payment and service outcome remain distinct",
+        confidence=50,
+        actor="test",
+        idempotency_key=f"repair-triage-{suffix}",
+    )
+    return item
+
+
+def make_payment_intent_for_item(db, item, *, suffix="one", status="VERIFIED"):
+    product = models.Product(
+        opportunity_id=item.opportunity_id,
+        name=f"TEST: repair offer {suffix}",
+        offer="TEST: repair-shop workflow",
+        target_customer="TEST: independent repair shop",
+        pricing="NPR 5000 one-time",
+        mvp_scope="TEST-only provider-fulfillment regression",
+        status="launched",
+        launch_state="public",
+        approval_status="APPROVED",
+        approved_at=datetime.now(timezone.utc),
+        data_scope="REAL",
+    )
+    db.add(product)
+    db.flush()
+    intent = models.OpPaymentIntent(
+        public_ref=f"repair-{item.id}-{suffix}-public-reference",
+        product_id=product.id,
+        provider="esewa",
+        status=status,
+        amount_paisa=500000,
+        currency="NPR",
+        merchant_order_id=f"repair-{item.id}-{suffix}-merchant-order",
+        idempotency_key_hash=("a" if suffix == "one" else "b") * 64,
+        provider_reference=f"TEST-provider-reference-{suffix}" if status == "VERIFIED" else None,
+        data_scope="REAL",
+    )
+    db.add(intent)
+    db.commit()
+    db.refresh(intent)
+    db.refresh(product)
+    return product, intent
 
 
 def test_repair_shop_tables_exist(db):
@@ -132,3 +195,47 @@ def test_sandbox_payment_does_not_roll_into_real_product(db):
 
 
 
+
+
+def test_verified_payment_intent_links_to_work_item_idempotently(db):
+    item = make_real_item(db)
+    product, intent = make_payment_intent_for_item(db, item)
+
+    first = repair_shop.link_verified_payment_intent(db, item.id, intent.id)
+    second = repair_shop.link_verified_payment_intent(db, item.id, intent.id)
+
+    db.refresh(item)
+    assert first["link_event_id"] == second["link_event_id"]
+    assert first["payment_intent"]["id"] == intent.id
+    assert item.product_id == product.id
+    assert item.status == "PAYMENT_PENDING"
+    assert db.query(models.WorkItemEvent).filter_by(
+        work_item_id=item.id, event_type="PAYMENT_INTENT_LINKED"
+    ).count() == 1
+
+    detail = repair_shop.get_work_item_detail(db, item.id)
+    assert [row["id"] for row in detail["payment_intents"]] == [intent.id]
+    assert detail["outcomes"] == []  # VERIFIED alone is not fulfilled revenue.
+
+
+def test_repair_work_item_link_rejects_unverified_intent_and_wrong_opportunity(db):
+    item = make_real_item(db, suffix="left")
+    _product, intent = make_payment_intent_for_item(db, item, suffix="left", status="INITIATED")
+
+    with pytest.raises(ValueError, match="provider-verified"):
+        repair_shop.link_verified_payment_intent(db, item.id, intent.id)
+    db.refresh(item)
+    assert item.product_id is None
+    assert db.query(models.WorkItemEvent).filter_by(event_type="PAYMENT_INTENT_LINKED").count() == 0
+
+    other_item = make_real_item(db, suffix="right")
+    intent.status = "VERIFIED"
+    intent.provider_reference = "TEST-provider-reference-left"
+    db.commit()
+    with pytest.raises(ValueError, match="canonical opportunity"):
+        repair_shop.link_verified_payment_intent(db, other_item.id, intent.id)
+    db.refresh(other_item)
+    assert other_item.product_id is None
+    assert db.query(models.WorkItemEvent).filter_by(
+        work_item_id=other_item.id, event_type="PAYMENT_INTENT_LINKED"
+    ).count() == 0

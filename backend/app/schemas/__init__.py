@@ -1914,6 +1914,11 @@ class RepairPaymentCreate(BaseModel):
     idempotency_key: Optional[str] = Field(default=None, min_length=4, max_length=160)
 
 
+class RepairPaymentIntentLinkCreate(BaseModel):
+    payment_intent_id: int = Field(..., gt=0)
+    actor: str = Field(default="operator", min_length=1, max_length=120)
+
+
 class RepairOutcomeCreate(BaseModel):
     actual: str = Field(..., min_length=1, max_length=10000)
     success: Optional[bool] = None
@@ -1991,5 +1996,6 @@ class RepairWorkItemDetail(BaseModel):
     experiment: Optional[dict] = None
     outcomes: List[dict] = []
     learning_events: List[dict] = []
+    payment_intents: List[dict] = Field(default_factory=list)
 
 from .experiment import ExperimentProposalCreate, ExperimentAuthorize, ExperimentOutcomeCreate, ExperimentRead

@@ -911,6 +911,11 @@ def fulfill_verified_intent(db: Session, intent_id: int) -> dict:
             },
             idempotency_key=f"payment-intent:{intent.id}:fulfilled",
         )
+        # Keep any linked repair work-item audit in the same transaction.
+        # The existing intent/Outcome remain the only payment/revenue ledger.
+        from app.services import repair_shop
+        db.flush()
+        repair_shop.record_provider_payment_fulfillment(db, intent.id)
         db.commit()
         db.refresh(intent)
     except Exception:

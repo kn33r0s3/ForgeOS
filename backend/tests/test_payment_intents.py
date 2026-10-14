@@ -10,20 +10,25 @@ import pytest
 
 from app import models
 from app.config import settings
-from app.services import payment_intent_engine, product_engine, orchestrator, nepal_payments, world_graph
+from app.services import payment_intent_engine, product_engine, orchestrator, nepal_payments, world_graph, repair_shop
 
 
-def _published_product(db):
+def _published_product(db, *, opportunity_id: int | None = None):
     world_graph.seed_core_types(db)
-    opportunity = models.Opportunity(
-        problem="TEST: independent shops lose time on repeated status calls",
-        target_customer="TEST: independent repair shops",
-        solution="TEST: status visibility service",
-        score=70.0,
-        status="validated",
-    )
-    db.add(opportunity)
-    db.flush()
+    if opportunity_id is None:
+        opportunity = models.Opportunity(
+            problem="TEST: independent shops lose time on repeated status calls",
+            target_customer="TEST: independent repair shops",
+            solution="TEST: status visibility service",
+            score=70.0,
+            status="validated",
+        )
+        db.add(opportunity)
+        db.flush()
+    else:
+        opportunity = db.get(models.Opportunity, opportunity_id)
+        if opportunity is None:
+            raise AssertionError("expected a canonical Opportunity in the test fixture")
     product = models.Product(
         opportunity_id=opportunity.id,
         name="TEST: shop status service",
@@ -196,7 +201,27 @@ def test_khalti_minimum_amount_rejected_before_intent_creation(db, monkeypatch):
 
 
 def test_esewa_server_lookup_verifies_payment_then_owner_fulfillment_records_revenue(db, monkeypatch):
-    product = _published_product(db)
+    work_item = repair_shop.create_work_item(
+        db,
+        customer_name="TEST: repair shop",
+        contact_identifier=None,
+        consent_state="NOT_REQUIRED",
+        asset_label="TEST: device",
+        reported_problem="TEST: device does not boot",
+        data_scope="REAL",
+        actor="test",
+        idempotency_key="payment-intent-linked-repair-work-item",
+    )
+    repair_shop.create_triage(
+        db,
+        work_item.id,
+        rationale="TEST: payment must link to the canonical repair Opportunity",
+        expected_outcome="TEST: payment and service outcome remain distinct",
+        confidence=50,
+        actor="test",
+        idempotency_key="payment-intent-linked-repair-triage",
+    )
+    product = _published_product(db, opportunity_id=work_item.opportunity_id)
     intent = models.OpPaymentIntent(
         public_ref="public-test-ref-0123456789ABCDEFG",
         product_id=product.id,
@@ -249,6 +274,15 @@ def test_esewa_server_lookup_verifies_payment_then_owner_fulfillment_records_rev
     assert retried.id == intent.id
     assert retried.outcome_id is None
 
+    linked = repair_shop.link_verified_payment_intent(db, work_item.id, intent.id)
+    assert linked["payment_intent"]["status"] == "VERIFIED"
+    db.refresh(work_item)
+    assert work_item.product_id == product.id
+    assert work_item.status == "PAYMENT_PENDING"
+    assert db.query(models.Outcome).filter_by(
+        product_id=product.id, outcome_type="ACTUAL_REVENUE"
+    ).count() == 0
+
     fulfilled = payment_intent_engine.fulfill_verified_intent(db, intent.id)
     assert fulfilled["fulfilled"] is True
     assert fulfilled["outcome_id"] is not None
@@ -264,6 +298,14 @@ def test_esewa_server_lookup_verifies_payment_then_owner_fulfillment_records_rev
     assert customer_event.event_type == "purchase"
     assert customer_event.outcome_id == outcome.id
     assert customer_event.contact_identifier is None
+    db.refresh(work_item)
+    assert work_item.status == "PAYMENT_CONFIRMED"
+    detail = repair_shop.get_work_item_detail(db, work_item.id)
+    assert [row["id"] for row in detail["payment_intents"]] == [intent.id]
+    assert any(row.id == outcome.id for row in detail["outcomes"])
+    assert db.query(models.WorkItemEvent).filter_by(
+        work_item_id=work_item.id, event_type="PAYMENT_INTENT_FULFILLED"
+    ).count() == 1
     after = product_engine.product_summary(db, product)
     assert after["actual_revenue"] == 0.0
     assert after["actual_revenue_by_currency"] == {"USD": 0.0, "NPR": 5000.0}
@@ -274,6 +316,9 @@ def test_esewa_server_lookup_verifies_payment_then_owner_fulfillment_records_rev
         product_id=product.id, outcome_type="ACTUAL_REVENUE", unit="NPR"
     ).count() == 1
     assert db.query(models.CustomerEvent).filter_by(outcome_id=fulfilled["outcome_id"]).count() == 1
+    assert db.query(models.WorkItemEvent).filter_by(
+        work_item_id=work_item.id, event_type="PAYMENT_INTENT_FULFILLED"
+    ).count() == 1  # A retry cannot duplicate the repair-side fulfillment event.
 
 
 @pytest.mark.parametrize("terminal_status", ["VERIFIED", "FAILED", "CANCELLED", "DISPUTED", "REFUNDED"])

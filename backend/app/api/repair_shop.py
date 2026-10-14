@@ -27,6 +27,7 @@ def _detail(db: Session, work_item_id: int) -> dict:
         "experiment": detail["experiment"].__dict__ if detail["experiment"] else None,
         "outcomes": [row.__dict__ for row in detail["outcomes"]],
         "learning_events": [row.__dict__ for row in detail["learning_events"]],
+        "payment_intents": detail["payment_intents"],
     }
 
 
@@ -96,6 +97,23 @@ def record_response(communication_id: int, body: schemas.CustomerResponseCreate,
     require_owner_api_key(request)
     try:
         return repair_shop.record_customer_response(db, communication_id, **body.model_dump())
+    except ValueError as exc:
+        raise _error(exc) from exc
+
+
+@router.post("/work-items/{work_item_id}/payment-intent-link", status_code=200)
+def link_payment_intent(
+    work_item_id: int,
+    body: schemas.RepairPaymentIntentLinkCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Owner-only link to an existing verified payment; never initiates checkout."""
+    require_owner_api_key(request)
+    try:
+        return repair_shop.link_verified_payment_intent(
+            db, work_item_id, **body.model_dump()
+        )
     except ValueError as exc:
         raise _error(exc) from exc
 

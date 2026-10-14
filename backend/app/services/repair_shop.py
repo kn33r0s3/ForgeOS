@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import math
+from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -352,6 +353,232 @@ def record_verified_payment(
     return outcome
 
 
+
+
+def _payment_intent_snapshot(intent: models.OpPaymentIntent) -> dict:
+    """Expose non-sensitive status fields for a linked canonical payment attempt."""
+    return {
+        "id": intent.id,
+        "product_id": intent.product_id,
+        "provider": intent.provider,
+        "status": intent.status,
+        "amount_paisa": intent.amount_paisa,
+        "currency": intent.currency,
+        "data_scope": intent.data_scope,
+        "fulfilled": intent.fulfilled_at is not None,
+        "fulfilled_at": intent.fulfilled_at.isoformat() if intent.fulfilled_at else None,
+        "outcome_id": intent.outcome_id,
+    }
+
+
+def _payment_intent_link_key(payment_intent_id: int) -> str:
+    return f"repair-payment-intent-link:{payment_intent_id}"
+
+
+def _payment_intent_fulfillment_key(payment_intent_id: int) -> str:
+    return f"repair-payment-intent-fulfilled:{payment_intent_id}"
+
+
+def link_verified_payment_intent(
+    db: Session,
+    work_item_id: int,
+    payment_intent_id: int,
+    *,
+    actor: str = "operator",
+) -> dict:
+    """Link a REAL repair work item to an existing, provider-verified payment intent.
+
+    This operation never initiates checkout or writes revenue. The existing
+    OpPaymentIntent and Outcome remain canonical; WorkItemEvent stores only the
+    relationship and its audit trail.
+    """
+    item = _item(db, work_item_id)
+    if item.data_scope != "REAL":
+        raise ValueError("Only REAL repair work items can link REAL payment intents.")
+
+    intent = db.get(models.OpPaymentIntent, payment_intent_id)
+    if intent is None:
+        raise ValueError("Payment intent not found.")
+    if intent.data_scope != "REAL":
+        raise ValueError("Only REAL provider payment intents can be linked to repair work.")
+    if intent.status != "VERIFIED":
+        raise ValueError("Only provider-verified payment intents can be linked to a repair work item.")
+    if not intent.provider_reference:
+        raise ValueError("Verified payment intent has no provider transaction reference.")
+
+    link_key = _payment_intent_link_key(intent.id)
+    existing_link = db.query(models.WorkItemEvent).filter_by(idempotency_key=link_key).one_or_none()
+    if existing_link is not None and existing_link.work_item_id != item.id:
+        raise ValueError("Payment intent is already linked to another repair work item.")
+
+    product = db.get(models.Product, intent.product_id)
+    if product is None or product.data_scope != "REAL":
+        raise ValueError("Payment intent must reference an existing REAL product.")
+    if item.product_id not in (None, product.id):
+        raise ValueError("Repair work item is already linked to a different product.")
+    if item.opportunity_id is None or item.opportunity_id != product.opportunity_id:
+        raise ValueError("Payment product must belong to the repair work item's canonical opportunity.")
+    if item.status in {"INTAKE", "EVIDENCE_CAPTURED", "TRIAGE_PROPOSED"}:
+        raise ValueError("Repair work item must be triaged before a payment intent can be linked.")
+
+    if existing_link is not None:
+        metadata = existing_link.metadata_json or {}
+        if metadata.get("payment_intent_id") != intent.id or metadata.get("product_id") != product.id:
+            raise ValueError("Existing payment-intent link provenance conflicts with canonical records.")
+    else:
+        # Do not attach another unresolved attempt to the same work item. Only a
+        # provider-confirmed FAILED/CANCELLED attempt permits a fresh intent;
+        # disputed/refunded states require reconciliation.
+        prior_links = (
+            db.query(models.WorkItemEvent)
+            .filter_by(work_item_id=item.id, event_type="PAYMENT_INTENT_LINKED")
+            .order_by(models.WorkItemEvent.id.asc())
+            .all()
+        )
+        for prior_event in prior_links:
+            prior_metadata = prior_event.metadata_json or {}
+            prior_id = prior_metadata.get("payment_intent_id")
+            if not isinstance(prior_id, int):
+                raise ValueError("Existing payment-intent link has incomplete provenance; reconcile before retrying.")
+            prior_intent = db.get(models.OpPaymentIntent, prior_id)
+            if prior_intent is None:
+                raise ValueError("A linked payment-intent record is missing; reconcile before linking another attempt.")
+            if prior_intent.fulfilled_at is not None or prior_intent.status not in {"FAILED", "CANCELLED"}:
+                raise ValueError("Another payment attempt is unresolved or verified for this work item.")
+
+    item.product_id = product.id
+    if existing_link is None:
+        next_state = (
+            item.status
+            if item.status in {"OUTCOME_RECORDED", "LEARNING_RECORDED", "CLOSED"}
+            else "PAYMENT_PENDING"
+        )
+        existing_link = _transition(
+            db,
+            item,
+            next_state,
+            event_type="PAYMENT_INTENT_LINKED",
+            actor=actor,
+            reason="Linked to the canonical provider-verified payment intent; revenue still requires owner-confirmed fulfillment.",
+            metadata={
+                "payment_intent_id": intent.id,
+                "product_id": product.id,
+                "provider": intent.provider,
+                "provider_status": intent.status,
+                "amount_paisa": intent.amount_paisa,
+                "currency": intent.currency,
+                "data_scope": "REAL",
+                "epistemic_state": "VERIFIED_PAYMENT_PENDING_FULFILLMENT",
+            },
+            idempotency_key=link_key,
+        )
+
+    # Recovery case: fulfillment may have occurred before this relationship was
+    # repaired. Bring the work-item audit current without duplicating revenue.
+    if intent.fulfilled_at is not None:
+        record_provider_payment_fulfillment(db, intent.id)
+    db.commit()
+    db.refresh(item)
+    return {
+        "work_item_id": item.id,
+        "work_item_status": item.status,
+        "link_event_id": existing_link.id,
+        "payment_intent": _payment_intent_snapshot(intent),
+    }
+
+
+def record_provider_payment_fulfillment(
+    db: Session,
+    payment_intent_id: int,
+) -> models.WorkItemEvent | None:
+    """Mirror canonical fulfillment into a linked work item's audit, never revenue."""
+    intent = db.get(models.OpPaymentIntent, payment_intent_id)
+    if intent is None:
+        raise RuntimeError("Linked provider payment intent disappeared during fulfillment.")
+    link_event = (
+        db.query(models.WorkItemEvent)
+        .filter_by(idempotency_key=_payment_intent_link_key(intent.id))
+        .one_or_none()
+    )
+    if link_event is None:
+        return None
+    link_metadata = link_event.metadata_json or {}
+    if link_metadata.get("payment_intent_id") != intent.id:
+        raise RuntimeError("Repair work-item payment link does not match its idempotency identity.")
+
+    item = db.get(models.RepairWorkItem, link_event.work_item_id)
+    product = db.get(models.Product, intent.product_id)
+    outcome = db.get(models.Outcome, intent.outcome_id) if intent.outcome_id else None
+    if item is None or product is None or outcome is None:
+        raise RuntimeError("Linked provider fulfillment is missing its work item, product, or canonical Outcome.")
+    if (
+        intent.status != "VERIFIED"
+        or intent.data_scope != "REAL"
+        or intent.fulfilled_at is None
+        or not intent.provider_reference
+    ):
+        raise RuntimeError("Repair work-item completion requires a provider-verified and owner-fulfilled REAL intent.")
+    if (
+        item.data_scope != "REAL"
+        or item.product_id != product.id
+        or item.opportunity_id != product.opportunity_id
+        or product.data_scope != "REAL"
+        or link_metadata.get("product_id") != product.id
+    ):
+        raise RuntimeError("Linked repair work item does not match the canonical payment product/opportunity.")
+
+    expected_amount = float(Decimal(intent.amount_paisa) / Decimal(100))
+    if not (
+        outcome.product_id == product.id
+        and outcome.outcome_type == "ACTUAL_REVENUE"
+        and outcome.actual_value == expected_amount
+        and outcome.unit == "NPR"
+        and outcome.data_scope == "REAL"
+        and outcome.source_kind == evidence_source.REAL
+        and outcome.verification_state == "VERIFIED"
+    ):
+        raise RuntimeError("Repair fulfillment refuses an Outcome that differs from canonical verified payment evidence.")
+
+    fulfillment_key = _payment_intent_fulfillment_key(intent.id)
+    existing = db.query(models.WorkItemEvent).filter_by(idempotency_key=fulfillment_key).one_or_none()
+    if existing is not None:
+        metadata = existing.metadata_json or {}
+        if (
+            existing.work_item_id != item.id
+            or metadata.get("payment_intent_id") != intent.id
+            or metadata.get("outcome_id") != outcome.id
+        ):
+            raise RuntimeError("Existing repair payment-fulfillment event conflicts with canonical payment records.")
+        return existing
+
+    next_state = item.status
+    if item.status in {
+        "APPROVAL_REQUIRED", "APPROVED", "STATUS_DRAFT", "STATUS_APPROVED",
+        "CUSTOMER_RESPONDED", "PAYMENT_PENDING", "PAYMENT_FAILED",
+    }:
+        next_state = "PAYMENT_CONFIRMED"
+    return _transition(
+        db,
+        item,
+        next_state,
+        event_type="PAYMENT_INTENT_FULFILLED",
+        actor="payment_intent_engine",
+        reason="The canonical payment intent is provider-verified and owner-confirmed fulfilled; linked revenue remains in the existing Outcome ledger.",
+        metadata={
+            "payment_intent_id": intent.id,
+            "product_id": product.id,
+            "outcome_id": outcome.id,
+            "provider": intent.provider,
+            "amount_paisa": intent.amount_paisa,
+            "currency": intent.currency,
+            "fulfilled_at": intent.fulfilled_at.isoformat(),
+            "data_scope": "REAL",
+            "epistemic_state": "ACTUAL",
+        },
+        idempotency_key=fulfillment_key,
+    )
+
+
 def record_work_outcome(
     db: Session,
     work_item_id: int,
@@ -396,21 +623,60 @@ def record_work_outcome(
 
 def get_work_item_detail(db: Session, work_item_id: int) -> dict:
     item = _item(db, work_item_id)
+    events = sorted(item.events, key=lambda event: (event.created_at, event.id))
     evidence_ids = []
-    for event in item.events:
+    for event in events:
         if event.evidence_ids:
             evidence_ids.extend(int(value) for value in event.evidence_ids.split(",") if value)
     evidence = db.query(models.Evidence).filter(models.Evidence.id.in_(sorted(set(evidence_ids)))).all() if evidence_ids else []
+
+    # Provider revenue is product-linked. Include it in this work-item view only
+    # when the canonical fulfillment event explicitly references the Outcome.
+    outcomes = (
+        db.query(models.Outcome)
+        .filter(models.Outcome.experiment_id == item.experiment_id)
+        .order_by(models.Outcome.id.asc())
+        .all()
+        if item.experiment_id else []
+    )
+    outcome_ids = {row.id for row in outcomes}
+    payment_intents = []
+    seen_intents = set()
+    for event in events:
+        metadata = event.metadata_json or {}
+        if event.event_type == "PAYMENT_INTENT_FULFILLED" and metadata.get("outcome_id") is not None:
+            try:
+                outcome_id = int(metadata["outcome_id"])
+            except (TypeError, ValueError):
+                outcome_id = None
+            if outcome_id is not None and outcome_id not in outcome_ids:
+                outcome = db.get(models.Outcome, outcome_id)
+                if outcome is not None:
+                    outcomes.append(outcome)
+                    outcome_ids.add(outcome.id)
+        if event.event_type == "PAYMENT_INTENT_LINKED":
+            try:
+                intent_id = int(metadata["payment_intent_id"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if intent_id in seen_intents:
+                continue
+            intent = db.get(models.OpPaymentIntent, intent_id)
+            if intent is not None:
+                payment_intents.append(_payment_intent_snapshot(intent))
+                seen_intents.add(intent_id)
+
     return {
         "work_item": item,
         "customer": item.customer,
-        "events": sorted(item.events, key=lambda event: (event.created_at, event.id)),
+        "events": events,
         "communications": sorted(item.communications, key=lambda communication: (communication.created_at, communication.id)),
         "evidence": evidence,
         "decision": db.get(models.Decision, item.decision_id) if item.decision_id else None,
         "experiment": db.get(models.Experiment, item.experiment_id) if item.experiment_id else None,
-        "outcomes": db.query(models.Outcome).filter(models.Outcome.experiment_id == item.experiment_id).order_by(models.Outcome.id.asc()).all() if item.experiment_id else [],
+        "outcomes": outcomes,
         "learning_events": db.query(models.LearningEvent).filter(models.LearningEvent.experiment_id == item.experiment_id).order_by(models.LearningEvent.id.asc()).all() if item.experiment_id else [],
+        "payment_intents": payment_intents,
     }
 
 
