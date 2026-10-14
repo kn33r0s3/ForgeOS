@@ -1,3 +1,16 @@
+## Current observation — 2026-10-15, Kathmandu time (verification incomplete)
+
+- Canonical `main` was observed at `014287fb6c952088537b822337248cf7c841168b`; branch search shows only the active `main` branch.
+- Vercel deployment `dpl_FX9mbbf2C9MrnqHQEyg4hiX3sNZY` reports `READY`, production target, and Git source SHA `014287fb6c952088537b822337248cf7c841168b`. Its aliases include `haminp.vercel.app`, `forge-os-ebon.vercel.app`, and `pulsenp.vercel.app`. This verifies deployment identity and provider build state only.
+- Live `/api/health` reads and Vercel runtime-log/error reads were attempted, but the connected Vercel integration returned 403 at its access/protection layer. This is **BLOCKED_BY_MISSING_ACCESS**, not evidence that health is down or up. Do not infer database readiness or scheduled execution.
+- GitHub combined status exposes only a Vercel success status context for this SHA; it did not provide the full GitHub Actions matrix. The last observed full CI pass remains SHA `4f44cffe727113a8a406ea3652c60c3a33580a74` (CI `38562997328`, 1,303 passed / 2 skipped), before commits `123b84d` and `014287f`. Current-head tests are **NOT VERIFIED**.
+- Read back the latest privacy-sensitive discovery implementation and its regression: shared enumerated string tags are compared, sensitive-named fields are excluded, email/phone-shaped values are withheld, person-like entity types receive ID-only labels, and surfaced links stay `possible`. Source/test inspection is not test execution.
+- No natural scheduled intelligence invocation, persisted successful production cycle, real non-MOCK inference, live provider/payment transaction, customer conversation, recovered sale, or REAL revenue was independently observed. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
+**Next:** recover authorized access for exact-head GitHub Actions and Vercel health/runtime reads, then verify the exact SHA and one persisted scheduled cycle. Keep intake, outbound messaging, provider calls and payment activation closed while their authorization/readiness evidence is unavailable. Continue independent read-only research and source/test review without claiming unseen execution.
+
+---
+
 # Hami Operating State
 
 ## Latest completed verification snapshot — 2026-10-14, 18:10 NPT (pre-follow-up main)
