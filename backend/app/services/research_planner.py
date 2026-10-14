@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 from hashlib import sha256
 import json
+import math
 import re
 import unicodedata
 from datetime import date
@@ -164,6 +165,8 @@ def _tokens(text: str) -> set[str]:
             flush()
     flush()
     return tokens
+
+
 def _topic(question_text: str) -> str:
     return " ".join(question_text.split()).rstrip("?.! ")
 
@@ -586,16 +589,33 @@ def _prior_observations(db: Session, question_text: str, *, limit: int = 5) -> l
         .limit(300)
         .all()
     )
-    matches: list[tuple[float, models.Signal]] = []
-    for signal in rows:
-        signal_terms = _tokens(f"{signal.title or ''} {signal.content or ''}")
+    # Use IDF weighting so distinctive query terms outrank generic overlap.
+    # Score remains lexical only; it never establishes semantic relevance.
+    tokenized_rows = [
+        (signal, _tokens(f"{signal.title or ''} {signal.content or ''}"))
+        for signal in rows
+    ]
+    document_frequency: dict[str, int] = {}
+    for _, signal_terms in tokenized_rows:
+        for term in terms & signal_terms:
+            document_frequency[term] = document_frequency.get(term, 0) + 1
+    term_weights = {
+        term: math.log((len(tokenized_rows) + 1) / (document_frequency.get(term, 0) + 1)) + 1.0
+        for term in terms
+    }
+    total_weight = sum(term_weights.values())
+
+    matches: list[tuple[float, float, models.Signal]] = []
+    for signal, signal_terms in tokenized_rows:
         overlap = terms & signal_terms
         if overlap:
-            matches.append((len(overlap) / len(terms), signal))
-    matches.sort(key=lambda item: (-item[0], item[1].id))
+            term_fraction = len(overlap) / len(terms)
+            weighted_score = sum(term_weights[term] for term in overlap) / total_weight
+            matches.append((weighted_score, term_fraction, signal))
+    matches.sort(key=lambda item: (-item[0], -item[1], item[2].id))
 
     observations: list[dict[str, Any]] = []
-    for relevance, signal in matches[:limit]:
+    for weighted_score, relevance, signal in matches[:limit]:
         evidence_id = (
             db.query(models.Evidence.id)
             .filter(
@@ -620,6 +640,8 @@ def _prior_observations(db: Session, question_text: str, *, limit: int = 5) -> l
                 "published_at": signal.published_at.isoformat() if signal.published_at else None,
                 "retrieved_at": signal.retrieved_at.isoformat() if signal.retrieved_at else None,
                 "matched_term_fraction": round(relevance, 3),
+                "weighted_match_score": round(weighted_score, 3),
+                "ranking_method": "inverse_document_frequency_weighted_lexical",
                 "epistemic_status": "prior_observation_unverified",
                 "matching_is_not_semantic_relevance": True,
             }
