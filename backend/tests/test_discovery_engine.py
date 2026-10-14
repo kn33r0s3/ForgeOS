@@ -299,10 +299,13 @@ def test_an_unknown_kind_is_proposed_as_a_type_and_deferred_until_activated(db, 
 
 def test_disconnection_joins_shared_tags_but_excludes_contact_attributes_and_values(db):
     world_graph.seed_core_types(db)
+    assert not engine._SENSITIVE_DISCOVERY_ATTRIBUTE.search("withdrawal_type")
+    assert engine._SENSITIVE_DISCOVERY_ATTRIBUTE.search("contact_email")
+    assert engine._SENSITIVE_DISCOVERY_ATTRIBUTE.search("payment_reference")
     organization = _entity(
         db,
         "organization",
-        "Repair collective",
+        "owner@example.test",
         capability_tags=["same-day-repair", "owner@example.test"],
         contact_email="owner@example.test",
         support_phone="+977 9800000000",
@@ -324,6 +327,8 @@ def test_disconnection_joins_shared_tags_but_excludes_contact_attributes_and_val
     assert "same-day-repair" in hypothesis["statement"]
     assert "owner@example.test" not in hypothesis["statement"]
     assert "+977 9800000000" not in hypothesis["statement"]
+    assert "organization #" in hypothesis["statement"]
+    assert "owner@example.test" not in json.dumps(report, sort_keys=True)
     assert hypothesis["epistemic_state"] == "possible"
 
     entity = db.get(models.SubstrateEntity, hypothesis["entity_id"])

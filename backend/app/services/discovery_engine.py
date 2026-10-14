@@ -1221,7 +1221,7 @@ def _numeric_divergence(ctx: DiscoveryContext, *, ratio_threshold: float = 2.0) 
 
 _IGNORED_VALUES = {"true", "false", "none", "null", "yes", "no", "unknown", "active", "open", "closed"}
 _SENSITIVE_DISCOVERY_ATTRIBUTE = re.compile(
-    r"(?:email|e-mail|phone|telephone|mobile|contact|recipient|"
+    r"(?:^|[_\W])(?:email|e-mail|phone|telephone|mobile|contact|recipient|"
     r"person[_\s-]?name|customer[_\s-]?name|seller[_\s-]?name|owner[_\s-]?name|"
     r"full[_\s-]?name|first[_\s-]?name|last[_\s-]?name|display[_\s-]?name|"
     r"message|notes?|content|transcript|conversation|description|summary|body|"
@@ -1229,9 +1229,16 @@ _SENSITIVE_DISCOVERY_ATTRIBUTE = re.compile(
     r"password|secret|token|credential|api[_\s-]?key|"
     r"account[_\s-]?(?:number|details?)|bank[_\s-]?(?:account|details?)|wallet|"
     r"payment[_\s-]?(?:reference|ref|id|details?)|transaction[_\s-]?(?:reference|ref|id)|"
-    r"national[_\s-]?(?:id|identity)|citizenship)",
+    r"national[_\s-]?(?:id|identity)|citizenship)(?:$|[_\W])",
     re.IGNORECASE,
 )
+_PRIVATE_DISCOVERY_ENTITY_TYPE_TOKENS = frozenset({
+    "person", "people", "individual", "customer", "customers", "seller", "sellers",
+    "buyer", "buyers", "owner", "owners", "contact", "contacts", "member", "members",
+    "lead", "leads", "applicant", "applicants", "subscriber", "subscribers", "worker",
+    "workers", "employee", "employees", "user", "users", "recipient", "requester",
+    "client", "patient", "student", "students",
+})
 
 
 def _non_engine_relation_pairs(db: Session) -> set[tuple[int, int]]:
@@ -1251,6 +1258,23 @@ def _non_engine_relation_pairs(db: Session) -> set[tuple[int, int]]:
 def _disconnection(ctx: DiscoveryContext, *, max_holders: int = 4) -> Iterable[Finding]:
     """Find unrecorded cross-type connections from comparable, privacy-screened attributes."""
     from app.services.demand_understanding import normalize_observation_content
+
+    def safe_label(row: models.SubstrateEntity) -> str:
+        entity_type = str(row.entity_type or "entity")
+        type_tokens = {
+            token for token in re.split(r"[^a-z0-9]+", entity_type.casefold()) if token
+        }
+        if type_tokens & _PRIVATE_DISCOVERY_ENTITY_TYPE_TOKENS:
+            return f"{entity_type} #{row.id}"
+        display_name = " ".join((row.display_name or "").split())
+        sanitized_name = normalize_observation_content(display_name)
+        if (
+            not display_name
+            or sanitized_name.casefold() != display_name.casefold()
+            or "[redacted-" in sanitized_name.casefold()
+        ):
+            return f"{entity_type} #{row.id}"
+        return f"{display_name} ({entity_type} #{row.id})"
 
     db = ctx.db
     holders: dict[str, dict[int, tuple[models.SubstrateEntity, str]]] = defaultdict(dict)
@@ -1303,7 +1327,7 @@ def _disconnection(ctx: DiscoveryContext, *, max_holders: int = 4) -> Iterable[F
                 yield Finding(
                     kind="hypothesis",
                     key=f"disconnection:{left.id}:{right.id}:{value}",
-                    statement=(f"{_label(left)} and {_label(right)} both record {value!r} "
+                    statement=(f"{safe_label(left)} and {safe_label(right)} both record {value!r} "
                                f"({left_key} / {right_key}) but have no recorded relation; they may be connected."),
                     basis=(BasisRef("entity", left.id), BasisRef("entity", right.id)),
                     epistemic_state="possible",
@@ -1317,7 +1341,7 @@ def _disconnection(ctx: DiscoveryContext, *, max_holders: int = 4) -> Iterable[F
                         from_entity_id=left.id, to_entity_id=right.id, direction="bidirectional",
                     ),),
                     follow_up_questions=(
-                        f"What evidence would show whether {left.display_name} and {right.display_name} are "
+                        f"What evidence would show whether {safe_label(left)} and {safe_label(right)} are "
                         f"actually connected through {value!r}, and what would that connection make possible?",
                     ),
                 )
