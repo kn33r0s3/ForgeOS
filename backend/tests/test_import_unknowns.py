@@ -25,14 +25,16 @@ def test_state_mapping():
 def test_parses_all_sections():
     unknowns = parse_unknown_map(read_map())
     ids = [u.row_id for u in unknowns]
-    # Keep the per-section inventory explicit; D rows now run through D96.
+    # Keep the per-section inventory explicit; D rows now run through D98.
     from collections import Counter
-    assert Counter(u.section for u in unknowns) == {"A": 9, "B": 4, "C": 3, "D": 96}, f"got {len(unknowns)} records"
+    assert Counter(u.section for u in unknowns) == {"A": 9, "B": 4, "C": 3, "D": 98}, f"got {len(unknowns)} records"
     assert len(ids) == len(set(ids)), "row IDs must remain unique"
     assert ids[0] == "A1"
     assert "D70" in ids
     assert "D78" in ids
     assert "D96" in ids
+    assert "D97" in ids
+    assert "D98" in ids
     sections = {u.row_id: u.section for u in unknowns}
     assert sections["A1"] == "A"
     assert sections["B2"] == "B"
