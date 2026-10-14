@@ -93,6 +93,52 @@ def test_prior_external_evidence_is_reused_as_unverified_context(db):
     assert observation["epistemic_status"] == "prior_observation_unverified"
 
 
+
+
+def test_tokens_support_devanagari_romanized_nepali_short_terms_and_unicode_normalization():
+    devanagari = research_planner._tokens("नेपालको कृषि बजारमा QR भुक्तानी")
+    assert {"नेपालको", "कृषि", "बजारमा", "qr", "भुक्तानी"} <= devanagari
+    assert "qr" in research_planner._tokens("Nepali QR payments")
+    assert {"nepal", "krishi", "bazar", "qr"} <= research_planner._tokens("Nepal ko krishi bazar QR")
+    assert not ({"the", "and", "to", "मा", "र", "को", "ko", "ra"} &
+                research_planner._tokens("the and to मा र को ko ra"))
+    # CJK/Japanese/Korean runs use bigrams so longer source text can overlap a query.
+    assert {"世界", "物流"} <= (
+        research_planner._tokens("世界物流") & research_planner._tokens("世界经济物流")
+    )
+    assert research_planner._tokens("नेपाल  कृषि") == research_planner._tokens("नेपाल कृषि")
+
+
+def test_prior_external_evidence_matches_devanagari_and_short_terms(db):
+    text = "नेपालको कृषि बजार QR भुक्तानी"
+    signal = models.Signal(
+        source="public_web",
+        source_type="external",
+        content=f"{text} सम्बन्धी सार्वजनिक अवलोकन।",
+        title=text,
+        canonical_url="https://example.test/nepali-market",
+        retrieved_at=models.utcnow(),
+    )
+    db.add(signal)
+    db.flush()
+    evidence = models.Evidence(
+        signal_id=signal.id,
+        source=signal.source,
+        content=signal.content,
+        canonical_url=signal.canonical_url,
+    )
+    db.add(evidence)
+    db.commit()
+
+    observations = research_planner._prior_observations(db, text, limit=5)
+
+    assert len(observations) == 1
+    assert observations[0]["signal_id"] == signal.id
+    assert observations[0]["evidence_id"] == evidence.id
+    assert observations[0]["matched_term_fraction"] == 1.0
+    assert observations[0]["epistemic_status"] == "prior_observation_unverified"
+    assert observations[0]["matching_is_not_semantic_relevance"] is True
+
 def test_linked_claim_evidence_is_reused_by_reference_without_truth_upgrade(db):
     from app.services import research_planner
 
