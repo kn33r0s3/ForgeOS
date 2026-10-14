@@ -1,3 +1,15 @@
+## [CAS / REPAIR-SHOP PAYMENT TRUTH GAP / SOURCE DEFECT CONFIRMED — FIX NEXT]
+
+- **Existing seam inspected:** `backend/app/services/repair_shop.py:record_verified_payment`, exposed by `backend/app/api/repair_shop.py:/work-items/{work_item_id}/payment`; existing canonical provider verification lives in `backend/app/services/payment_intent_engine.py` and `backend/app/api/payments.py`. No new payment table or parallel payment system is needed.
+- **Observed source defect:** the repair-shop writer accepts caller-provided `provider` and `provider_reference` strings, then creates an `Outcome` with `outcome_type="ACTUAL_REVENUE"` and `verification_state="VERIFIED"`. It does not itself resolve a canonical verified payment intent, validate provider-side evidence, or link a pre-existing independently classified REAL Evidence record. For `data_scope="REAL"`, this allows an owner-key caller's unverified assertion to be represented as verified revenue. The response's claim that revenue is recorded only after verified provider evidence is therefore stronger than the implementation.
+- **Owner action still required:** genuine payment must be verified using the existing provider/evidence path; no real customer, payment, or revenue is asserted here.
+- **Action this fix must remove:** the ability for a free-text provider name/reference alone to promote a repair-shop payment into REAL/VERIFIED revenue.
+- **What remains:** keep SANDBOX test workflows usable, preserve existing repair-shop history and all shared payment records, and ensure customer acceptance, provider reference, payment verification, service outcome, and learning remain distinct. Never weaken the existing payment-intent flow or introduce a second ledger.
+- **Next removable dependency:** adapt the existing repair-shop payment seam to require a canonical verified payment intent or an existing Evidence record that satisfies the established REAL proof contract; reject unsupported REAL confirmations, add regression tests for forged references, wrong scope, duplicate/idempotent writes, and valid verified proof. Inspect the full existing evidence/payment contracts before editing. Then run focused and full backend tests, exact-head CI, and independent deployment verification.
+- **Verification status:** source inspection only; no code changed and no tests run for this finding in this pass. This is a source-level defect, not evidence that any real payment was fabricated or that the endpoint was exploited. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
+---
+
 ## [PUBLIC ROUTE CANONICALS / PRODUCTION VERIFIED] Emit route-specific canonical URLs
 
 - **Existing seam inspected:** `src/routes/__root.tsx` owns the shared head tags for every matched route. `git log --follow`, `git blame`, and the introducing commit `6a26b0b1` confirm the canonical link was added here as static `SITE.url`; TanStack's existing head callback already receives the active match path.
