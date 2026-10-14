@@ -399,10 +399,8 @@ def test_numeric_divergence_never_uses_coordinates_or_postal_codes_as_measures(d
     report = engine.run_discovery(db, methods=["numeric_divergence"], persist=False)
 
     assert report["preview"] == []
-    assert not any(
+    assert all(
         engine._SENSITIVE_DISCOVERY_ATTRIBUTE.search(measure)
-        for method in engine.DEFAULT_REGISTRY.methods()
-        if method.name == "numeric_divergence"
         for measure in ("latitude", "longitude", "postal_code")
     )
 
