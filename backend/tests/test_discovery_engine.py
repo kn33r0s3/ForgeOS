@@ -309,6 +309,7 @@ def test_disconnection_joins_shared_tags_but_excludes_contact_attributes_and_val
     assert engine._SENSITIVE_DISCOVERY_ATTRIBUTE.search("pin_code")
     assert engine._PRECISE_ADDRESS_VALUE.search("घर नं ५, कालोपुल")
     assert engine._PRECISE_ADDRESS_VALUE.search("कालोपुल मार्ग ४")
+    assert engine._PRECISE_ADDRESS_VALUE.search("१२ मुख्य सडक")
     organization = _entity(
         db,
         "organization",
