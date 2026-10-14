@@ -615,7 +615,11 @@ def _prior_observations(db: Session, question_text: str, *, limit: int = 5) -> l
     matches.sort(key=lambda item: (-item[0], -item[1], item[2].id))
 
     observations: list[dict[str, Any]] = []
-    for weighted_score, relevance, signal in matches[:limit]:
+    # Fill the requested result count with evidence-backed candidates. A ranked
+    # text hit without eligible Evidence must not consume a result slot.
+    for weighted_score, relevance, signal in matches:
+        if len(observations) >= max(0, limit):
+            break
         evidence_id = (
             db.query(models.Evidence.id)
             .filter(
