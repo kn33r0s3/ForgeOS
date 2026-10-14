@@ -335,29 +335,42 @@ for _router in (
 
 
 def _alias_app_routes_under_api() -> None:
-    """Mirror every root route under /api for the Vercel service ingress.
+    """Mirror root-only routes under /api without duplicating router mirrors.
 
-    Only `/api/*` reaches the Python service on Vercel, so the machine-readable
-    contract must answer there too. The interactive docs UIs are deliberately
-    left unaliased: their HTML points at `/openapi.json`, which the frontend
-    rewrite answers with the SPA, so aliasing them would ship a broken page.
+    Routers are registered at both root and /api above. This fallback is for
+    app-level routes that were not registered through those routers. Exact
+    path/method/endpoint duplicates are skipped; distinct endpoints are not
+    silently hidden because they may represent a real ingress collision.
     """
+    existing = {
+        (getattr(route, "path", None), method, getattr(route, "endpoint", None))
+        for route in app.routes
+        if getattr(route, "path", None)
+        and getattr(route, "endpoint", None) is not None
+        for method in (getattr(route, "methods", None) or {"GET"})
+    }
     for route in list(app.routes):
         path = getattr(route, "path", None)
         endpoint = getattr(route, "endpoint", None)
-        methods = getattr(route, "methods", None)
+        methods = methods_set = getattr(route, "methods", None) or {"GET"}
         if not path or endpoint is None or not path.startswith("/") or path.startswith("/api"):
             continue
         if path in {"/docs", "/docs/oauth2-redirect", "/redoc"}:
             continue
         alias = "/api" if path == "/" else f"/api{path}"
+        missing_methods = sorted(
+            method for method in methods_set if (alias, method, endpoint) not in existing
+        )
+        if not missing_methods:
+            continue
         app.add_api_route(
             alias,
             endpoint,
-            methods=sorted(methods) if methods else ["GET"],
+            methods=missing_methods,
             include_in_schema=False,
             name=f"vercel_{getattr(route, 'name', alias)}",
         )
+        existing.update((alias, method, endpoint) for method in missing_methods)
 
 
 _alias_app_routes_under_api()
