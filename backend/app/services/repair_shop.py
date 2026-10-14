@@ -310,6 +310,11 @@ def record_verified_payment(
     scope = _scope(data_scope)
     if item.data_scope != scope:
         raise ValueError("Payment scope must match work-item scope")
+    if scope == "REAL":
+        raise ValueError(
+            "REAL repair-shop payments must use the existing provider-verified payment-intent "
+            "and fulfillment path; a manually supplied provider reference cannot establish verified revenue."
+        )
     if not math.isfinite(amount) or amount <= 0:
         raise ValueError("Payment amount must be a positive finite amount")
     if not provider.strip() or not provider_reference.strip():
