@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from app import evidence_source, models
 from app.models import utcnow
-from app.services import execution_engine
+from app.services import execution_engine, world_graph
 
 
 WORK_ITEM_STATES = {
@@ -45,6 +45,35 @@ def _item(db: Session, work_item_id: int) -> models.RepairWorkItem:
     return item
 
 
+def _emit_work_item_substrate_event(
+    db: Session,
+    work_item_event: models.WorkItemEvent,
+) -> models.WorldEvent:
+    """Project each operational work-item transition onto the canonical EVENT seam.
+
+    Keep sensitive free text and arbitrary metadata in the work-item audit only;
+    the shared substrate event carries IDs, transition type/state and scope.
+    """
+    item = db.get(models.RepairWorkItem, work_item_event.work_item_id)
+    if item is None:
+        raise RuntimeError("Repair work-item transition references a missing work item.")
+    return world_graph.create_event(
+        db,
+        event_type="state_changed",
+        source="repair_shop",
+        payload={
+            "domain": "repair_work_item",
+            "work_item_id": item.id,
+            "work_item_event_id": work_item_event.id,
+            "transition_type": work_item_event.event_type,
+            "from": work_item_event.previous_state,
+            "to": work_item_event.next_state,
+            "data_scope": item.data_scope,
+        },
+        idempotency_key=f"repair-work-item-event:{work_item_event.id}",
+    )
+
+
 def _transition(
     db: Session,
     item: models.RepairWorkItem,
@@ -62,6 +91,9 @@ def _transition(
     if idempotency_key:
         existing = db.query(models.WorkItemEvent).filter_by(idempotency_key=idempotency_key).first()
         if existing:
+            # Backfill/verify the canonical event for older transition rows on a
+            # retry; create_event is idempotent on the stable work-item-event ID.
+            _emit_work_item_substrate_event(db, existing)
             return existing
     event = models.WorkItemEvent(
         work_item_id=item.id,
@@ -79,6 +111,7 @@ def _transition(
     item.updated_at = utcnow()
     db.add(event)
     db.flush()
+    _emit_work_item_substrate_event(db, event)
     return event
 
 

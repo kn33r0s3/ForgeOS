@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import json
 
 import pytest
 
@@ -239,3 +240,37 @@ def test_repair_work_item_link_rejects_unverified_intent_and_wrong_opportunity(d
     assert db.query(models.WorkItemEvent).filter_by(
         work_item_id=other_item.id, event_type="PAYMENT_INTENT_LINKED"
     ).count() == 0
+
+
+def test_work_item_transitions_emit_canonical_substrate_events(db):
+    item = make_item(db)
+    repair_shop.attach_evidence(
+        db,
+        item.id,
+        content="TEST: operator observed no power",
+        source="manual",
+        data_scope="SANDBOX",
+        actor="tester",
+        idempotency_key="substrate-event-evidence-1",
+    )
+
+    transitions = (
+        db.query(models.WorkItemEvent)
+        .filter_by(work_item_id=item.id)
+        .order_by(models.WorkItemEvent.id.asc())
+        .all()
+    )
+    assert len(transitions) == 2
+    for transition in transitions:
+        canonical = db.query(models.WorldEvent).filter_by(
+            idempotency_key=f"repair-work-item-event:{transition.id}"
+        ).one()
+        assert canonical.event_type == "state_changed"
+        payload = json.loads(canonical.payload)
+        assert payload["domain"] == "repair_work_item"
+        assert payload["work_item_id"] == item.id
+        assert payload["work_item_event_id"] == transition.id
+        assert payload["transition_type"] == transition.event_type
+        assert payload["from"] == transition.previous_state
+        assert payload["to"] == transition.next_state
+        assert payload["data_scope"] == "SANDBOX"
