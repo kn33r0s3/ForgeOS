@@ -287,3 +287,9 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - At 320px the navigation toggle was 44×44 CSS px and the Unknowns tabs were 40px high, all above the 24×24 CSS-pixel target-size minimum. At 280px, `/`, `/unknowns`, `/domain`, and `/services` had no horizontal overflow.
 - Documentation commit `502668c1` records this verified pass. Its exact-SHA ForgeOS CI 38487975947, independent deploy verifier 38487975939, and secrets scan 38487975982 succeeded. The code fix remains `a5da9a74`, also independently green and live.
 - Next: actual screen-reader/device interoperability checks; auth remains owner-only/unavailable. No owner-intervention-per-transaction metric or real outcome is inferred.
+
+## 2026-10-14 — Public image alternatives (no defect)
+
+- Swept rendered images on `/`, `/about`, `/services`, `/domain`, and `/providers`. Each page exposed the same two 40×40 brand-mark images with `alt=""`; accessibility snapshots show the containing header/footer links named “Hami Systems home,” so the images are decorative and the links remain named.
+- No image-alternative defect was observed; no code changed. Latest continuity update `ed233d02` is pushed on `main`; exact-SHA ForgeOS CI 38488692413, independent deployment verification 38488692419, and secrets scan 38488692494 all succeeded.
+- Next: actual screen-reader/device interoperability and then a different QA method. Auth remains owner-only/unavailable; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
