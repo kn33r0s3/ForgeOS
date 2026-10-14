@@ -185,7 +185,7 @@ def test_persisted_discovery_cursor_prevents_fixed_window_starvation(db):
             db.query(models.WorldEvent)
             .filter_by(event_type="discovery_run_completed")
             .order_by(models.WorldEvent.id.desc())
-            .one()
+            .first()
         )
         payload = json.loads(latest.payload)
         cursor_digests.append(payload["discovery_cursors"]["cursor_probe"]["last_key_digest"])
