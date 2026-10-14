@@ -22,6 +22,14 @@
 - The canonical `haminp.vercel.app/api/health` had one degraded sample, then three healthy retries and a final healthy check (`ready: true`, `db: up`); no persistent outage is asserted. Auth remains owner-only and unchanged. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE**.
 - Next: verify screen-reader interoperability and keyboard behavior on additional mobile browser/device combinations.
 
+## 2026-10-14 — public metadata, landmarks, and narrow-layout QA
+
+- Against current production, titles and route canonicals matched current route definitions for `/`, `/unknowns`, `/domain`, `/services`, `/providers`, and `/services/software`. `/owner` retained both robots meta and the `X-Robots-Tag` noindex header; `/operations` retained its noindex header; `/privacy` and `/terms` retained noindex meta.
+- Browser DOM checks at 390px found exactly one `<main>` and one `<h1>` on each of `/`, `/unknowns`, `/domain`, `/services`, and `/providers`. The provider loading state settled to the page's explicit no-matching-verified-providers copy. The only 503 in the captured response set was `/api/auth/get-session`; auth remains deliberately unavailable and gated.
+- At 320px, the menu toggle measured 44×44 CSS px and the Unknowns tab targets measured 146×40, 211×40, and 190×40 CSS px. All exceed the 24×24 CSS-pixel target-size minimum. At 280px, `/`, `/unknowns`, `/domain`, and `/services` each had `scrollWidth === clientWidth`; no overflow defect was observed.
+- These were QA-only checks; no source change or provider/revenue claim was made. Main was clean and synchronized at `502668c1`; its exact-SHA ForgeOS CI run 38487975947, independent deployment verification 38487975939, and secrets scan 38487975982 succeeded. The application change remains the separately verified `a5da9a74`.
+- Next: use an actual screen reader or additional mobile browser/device to verify announcement/interoperability, then keep broadening QA with a different method. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
 
 ## 2026-10-14 — exact-head CI diagnosis (main: 959482fdf5fc84675a2d17b453537b3944d64650)
 

@@ -279,3 +279,11 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Production browser verification at 320px passed: Enter opened the drawer, Tab focused its first link, and Escape restored focus to the visible toggle with `aria-expanded=false` and the panel hidden. Backdrop dismissal did the same. Selecting a drawer link navigated from `/unknowns` to `/` and restored focus to the toggle. Screenshots captured the Escape and post-navigation states.
 - Canonical production health had one degraded sample, then three healthy retries and a final healthy check (`ready: true`, `db: up`). No persistent outage is asserted. Auth remains unavailable/owner-only; no Login/Join gate was changed.
 - Owner action removed: routine keyboard focus recovery on the verified drawer close paths. Screen-reader interoperability and additional real device/browser coverage remain open; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE**.
+
+## 2026-10-14 — Route metadata, landmarks, and narrow-screen sweep (no new defect)
+
+- Current production titles and canonicals matched route definitions for `/`, `/unknowns`, `/domain`, `/services`, `/providers`, and `/services/software`. `/owner` retained robots meta and the noindex response header, `/operations` retained its noindex header, and `/privacy` plus `/terms` retained noindex meta.
+- Live DOM checks at 390px found one `<main>` and one `<h1>` on each of five public routes. `/providers` transitioned from loading to its explicit empty state; captured HTTP errors were limited to the expected unavailable-auth endpoint `/api/auth/get-session`. No provider record was fabricated or changed.
+- At 320px the navigation toggle was 44×44 CSS px and the Unknowns tabs were 40px high, all above the 24×24 CSS-pixel target-size minimum. At 280px, `/`, `/unknowns`, `/domain`, and `/services` had no horizontal overflow.
+- Documentation commit `502668c1` records this verified pass. Its exact-SHA ForgeOS CI 38487975947, independent deploy verifier 38487975939, and secrets scan 38487975982 succeeded. The code fix remains `a5da9a74`, also independently green and live.
+- Next: actual screen-reader/device interoperability checks; auth remains owner-only/unavailable. No owner-intervention-per-transaction metric or real outcome is inferred.
