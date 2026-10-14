@@ -6,6 +6,7 @@ import copy
 from hashlib import sha256
 import json
 import re
+import unicodedata
 from datetime import date
 from typing import Any
 
@@ -84,6 +85,19 @@ _STOP_WORDS = {
     "most", "other", "should", "some", "than", "that", "their", "there",
     "these", "they", "this", "through", "under", "using", "what", "when",
     "where", "which", "while", "with", "would", "your",
+    # Short English terms become useful once tokenization supports 2-char terms.
+    "and", "are", "but", "can", "for", "not", "the", "you", "in", "to", "on", "of",
+    "at", "an", "it", "is", "or", "as", "be", "by", "we", "he", "me", "my", "do",
+    "if", "up", "no", "so", "us", "per",
+    # Common Nepali/Romanized Nepali function words are poor evidence matches.
+    "ko", "ka", "ki", "ke", "ma", "le", "lai", "bat", "ra", "cha", "chha", "ho",
+    "yo", "tyo", "pani", "tatha", "ek", "kun", "kasari", "kina", "kaha", "kahile",
+    "kati", "garne", "garna",
+    "को", "की", "का", "के", "मा", "ले", "लाई", "बाट", "र", "छ", "छन्", "हो", "हुन्छ",
+    "यो", "त्यो", "पनि", "तथा", "एक", "कुन", "कसरी", "किन", "कहाँ", "कहिले", "कति",
+    "गर्ने", "गर्न", "भएको", "थियो",
+    # Hindi function words are common in code-switched Nepal-originated material.
+    "में", "से", "और", "है", "हैं", "यह", "वह", "भी", "कैसे", "क्यों", "कब", "क्या",
 }
 
 _REFERENCED_DATA_SOURCE = re.compile(
@@ -109,13 +123,47 @@ _UNCERTAINTIES = [
 
 
 def _tokens(text: str) -> set[str]:
-    return {
-        token
-        for token in re.findall(r"[a-z0-9]{4,}", text.casefold())
-        if token not in _STOP_WORDS
-    }
+    """Tokenize text without making Latin script the language boundary.
 
+    NFC normalization makes canonically equivalent text comparable. Letters,
+    combining marks and numbers stay together, so Devanagari vowel signs are not
+    split out of words. Scripts commonly written without whitespace (CJK and
+    Japanese/Korean syllabic scripts) contribute overlapping bigrams instead
+    of one entire sentence becoming a single token. This remains lexical
+    matching—not semantic relevance or claim verification.
+    """
+    normalized = unicodedata.normalize("NFC", (text or "")).casefold()
+    tokens: set[str] = set()
+    current: list[str] = []
 
+    def flush() -> None:
+        if not current:
+            return
+        token = "".join(current)
+        current.clear()
+        if not token or token in _STOP_WORDS:
+            return
+        unspaced_script = any(
+            unicodedata.name(char, "").startswith(
+                ("CJK", "HIRAGANA", "KATAKANA", "HANGUL")
+            )
+            for char in token
+        )
+        if unspaced_script:
+            # A word run from a no-space script needs sub-word overlap to
+            # match a shorter query against longer source text.
+            if len(token) > 1:
+                tokens.update(token[index:index + 2] for index in range(len(token) - 1))
+        elif len(token) >= 2:
+            tokens.add(token)
+
+    for char in normalized:
+        if unicodedata.category(char)[0] in {"L", "M", "N"}:
+            current.append(char)
+        else:
+            flush()
+    flush()
+    return tokens
 def _topic(question_text: str) -> str:
     return " ".join(question_text.split()).rstrip("?.! ")
 
