@@ -591,3 +591,11 @@ The original manual REAL-payment truth defect remains guarded: repair_shop.recor
 - New endpoint: POST /repair-shop/work-items/{work_item_id}/payment-intent-link. It never initiates checkout; all external payment activity remains on existing, separately authorized routes.
 - TEST-only regressions cover idempotent link, rejecting unverified intents and mismatched Opportunities, canonical provider-verification/owner-fulfillment propagation, and one canonical state_changed event per transition. Provider calls are mocked.
 - **Not yet verified:** run the focused repair-shop and payment-intent regressions, then confirm the exact-head full backend/frontend CI and independent deployment verification. The prior head af85e99 passed CI/deployment/secrets checks; that result does not certify these new changes. No actual provider transaction, customer contact or real revenue is claimed. OWNER_INTERVENTIONS_PER_REAL_TRANSACTION remains NOT MEASURABLE.
+
+
+## Public-surface loop — 2026-10-14 (later)
+
+Two small coherence fixes from the verify-all/fix-all loop's human round (round 16: three first-time-visitor walkthroughs) and the share-preview check that followed it:
+
+- **Share previews carried no image.** `public/og.jpg` (1200×630, purpose-built) existed and served 200, but `src/routes/__root.tsx` emitted only `og:title` — no `og:image`, no Twitter card — so links shared into Facebook/WhatsApp groups rendered text-only. The root head now also emits `og:image` (+ width/height) and `twitter:card=summary_large_image` with `twitter:image`, both pointing at the existing `${SITE.url}/og.jpg`. Existing seam only; no new asset.
+- **/discoveries answered to a different name than its nav.** Nav, homepage section, and pathways all call the page "Findings"; its document title said "Discoveries — Hami". Title aligned to "Findings — Hami" in `src/routes/discoveries.tsx` (route path and code identifiers unchanged). A first-time reader in the human round tripped on the mismatch.
