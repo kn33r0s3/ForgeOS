@@ -584,10 +584,10 @@ or adoption the repo doesn't have · go around a safeguard.
 
 ## CAS continuation update — 2026-10-14
 
-The Continuous Assignment System continues from the existing repair-shop work-item slice; it is not a new application. Review of `backend/app/services/repair_shop.py:record_verified_payment` found a truth-boundary defect: a caller-supplied provider/reference could be written as REAL/VERIFIED revenue without canonical provider verification. The current main branch now fails closed for `data_scope="REAL"` in this manual endpoint and includes a regression test proving no REAL Outcome is written. SANDBOX behavior and the existing payment-intent engine are unchanged.
+The original manual REAL-payment truth defect remains guarded: repair_shop.record_verified_payment rejects REAL scope and cannot promote caller-supplied references into revenue. The current continuation connects the existing repair work-item slice to the canonical provider-verified payment-intent and owner-confirmed fulfillment path without creating a second ledger.
 
-- Source guard: `68d35826ddf7f76ee5030ae8a9b8a1671a7b3156`
-- Regression: `a1834f255718e61f46781b307633550738d3c14d`
-- Ledger updated: `d8f4ef84a4bdc29f52110b89ada3fe5c2704b9ce`
-- **Not yet verified:** focused/full tests, exact-head CI, deployment identity, and live repair-shop payment behavior.
-- **Next:** execute the focused regression and full backend suite, then connect repair work items to the existing provider-verified payment-intent and fulfillment records without creating a parallel ledger. No customer contact or real payment was initiated; revenue remains unclaimed.
+- Owner-key-gated link operation accepts only an existing VERIFIED/REAL intent whose REAL Product matches the work item's existing Opportunity. The unique WorkItemEvent idempotency key makes repeated linking stable and prevents one payment intent being linked to two work items.
+- Canonical fulfillment writes the existing Outcome and CustomerEvent, then appends one linked repair-side PAYMENT_INTENT_FULFILLED event in the same transaction. The repair bridge verifies the existing Outcome's exact product, amount (paisa/NPR), REAL source kind, scope and verification state; no revenue is created by the bridge.
+- New endpoint: POST /repair-shop/work-items/{work_item_id}/payment-intent-link. It never initiates checkout; all external payment activity remains on existing, separately authorized routes.
+- TEST-only regressions cover idempotent link, rejecting unverified intents and mismatched Opportunities, and canonical provider-verification/owner-fulfillment propagation. Provider calls are mocked.
+- **Not yet verified:** run the focused repair-shop and payment-intent regressions, then confirm the exact-head full backend/frontend CI and independent deployment verification. The prior head af85e99 passed CI/deployment/secrets checks; that result does not certify these new changes. No actual provider transaction, customer contact or real revenue is claimed. OWNER_INTERVENTIONS_PER_REAL_TRANSACTION remains NOT MEASURABLE.

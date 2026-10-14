@@ -2,6 +2,10 @@
 
 Ranked by value, critical blockers and leverage across the full Hami portfolio. This file is intentionally compact; docs/CAPABILITY_QUEUE.md remains the detailed capability ledger. Re-rank after every run based on new evidence. A blocked experiment never means unrelated safe work pauses.
 
+## P0 — Complete CAS payment-to-work-item integration
+
+The manual repair-shop payment endpoint remains fail-closed for REAL scope. The existing provider-verified payment-intent and owner-confirmed fulfillment path is now linked to RepairWorkItem through the existing WorkItemEvent audit/idempotency seam: link only an already VERIFIED REAL intent whose Product belongs to the work item's canonical Opportunity; mirror fulfillment only when the canonical REAL/VERIFIED Outcome matches amount/currency/product; do not start checkout from this endpoint or add a second revenue ledger. Focused regressions and full exact-head CI are pending. No live provider transaction or customer contact is initiated by this work.
+
 ## P0 — Verify and extend the multi-climb intelligence loop
 
 1. **[VERIFIED 2026-10-14] Close exact-head CI and test failures.** On `main` SHA `6ca45ea44081b49285c411298c6422f0b47b3bbb`, ForgeOS CI run [38519959847](https://github.com/kn33r0s3/ForgeOS/actions/runs/38519959847) passed build, backend-tests, frontend-tests, lint, typecheck, evidence-triage-tests, secret-scan, repository-guards and route-smoke; [independent deployment verification 38519959631](https://github.com/kn33r0s3/ForgeOS/actions/runs/38519959631) and [secrets scan 38519959683](https://github.com/kn33r0s3/ForgeOS/actions/runs/38519959683) also passed on that exact SHA. This closes the projection-drift CI failure at that commit; it does not prove live runtime health, scheduled execution, real-world outcomes or revenue. Reopen only on new contradictory evidence.

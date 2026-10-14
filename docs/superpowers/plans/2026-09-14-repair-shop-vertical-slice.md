@@ -20,6 +20,11 @@
 - Every transition must retain an ID, timestamp, actor, state, reason, evidence linkage, previous state, and next state.
 - Unapproved actions cannot execute; failed payments cannot become actual revenue; customer acceptance is not payment; payment is not a successful outcome.
 
+
+### Current payment-truth amendment (2026-10-14)
+
+The original manual payment step below is superseded for REAL scope. The manual repair-shop payment endpoint rejects REAL scope and remains available only for SANDBOX/test entries. A REAL repair payment must use the existing provider-verified OpPaymentIntent flow and owner-confirmed fulfillment before any REAL/VERIFIED ACTUAL_REVENUE Outcome exists. The matching RepairWorkItem may link to that canonical intent through WorkItemEvent and reference its existing Outcome by ID. The link must match the work item's canonical Opportunity/Product and validate the intent state, exact amount/currency, REAL/VERIFIED Outcome and idempotency. A verified-but-unfulfilled intent is not revenue. Never add a repair-only payment/revenue ledger or start checkout from the link endpoint. Customer communication remains separately authorized and is not initiated by this bridge.
+
 ---
 
 ### Task 1: Add repair-shop domain records with additive migrations
@@ -129,7 +134,7 @@ Create a `Decision` with status `proposed`, then create an `Experiment` action w
 
 - [ ] **Step 7: Implement payment truth boundary.**
 
-Manual payment confirmation requires provider/reference evidence and creates an `Outcome` with `outcome_type="ACTUAL_REVENUE"`, `verification_state="VERIFIED"`, and explicit `data_scope`. A rejected/failed payment creates no actual-revenue outcome. Customer acceptance alone cannot confirm payment.
+- Manual payment confirmation is SANDBOX-only. REAL payments use the existing provider-verified payment-intent path and owner-confirmed fulfillment; only that canonical path can write REAL/VERIFIED revenue. The work-item bridge adds only an idempotent relationship/event and references the existing Outcome.
 
 - [ ] **Step 8: Implement outcome and learning recording.**
 
@@ -159,7 +164,7 @@ Expected: PASS.
 - `POST /repair-shop/work-items/{id}/triage` creates a proposed decision/action.
 - `POST /repair-shop/communications/{id}/approve` approves a draft without sending it.
 - `POST /repair-shop/communications/{id}/response` records customer acceptance/rejection.
-- `POST /repair-shop/work-items/{id}/payment` records only verified manual/provider payment evidence.
+- `POST /repair-shop/work-items/{id}/payment` is SANDBOX-only for manual/test evidence; it rejects REAL scope. `POST /repair-shop/work-items/{id}/payment-intent-link` links an already provider-verified REAL intent to the matching triaged work item's canonical Opportunity/Product; it never initiates checkout.
 - `POST /repair-shop/work-items/{id}/outcome` records outcome and learning.
 
 - [ ] **Step 1: Write failing API tests.**
