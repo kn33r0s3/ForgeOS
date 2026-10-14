@@ -1252,7 +1252,7 @@ _PRIVATE_DISCOVERY_ENTITY_TYPE_TOKENS = frozenset({
 # Precise locations are too identifying for an open-ended join key, even when
 # a source placed them in a generic field or a list of tags.
 _PRECISE_ADDRESS_VALUE = re.compile(
-    r"(?ix)(?:"
+    r"(?i)(?:"
     r"\b\d{1,5}\s+(?:[a-z0-9.'-]+\s+){0,4}"
     r"(?:road|rd|street|st|avenue|ave|lane|ln|marg|marga|sadak|galli|tole|chowk|chok|path|highway|hwy)\b"
     r"|\b(?:[a-z0-9.'-]+\s+){1,4}"
