@@ -319,3 +319,10 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Inspected the existing `src/styles.css` `prefers-reduced-motion` rule, then emulated the preference on production `/unknowns` at 320px. The query matched; root scroll behavior was `auto`; `.reveal` and `.skeleton` animation names were `none`; the menu transition resolved to `0.01ms`; and the drawer opened with `aria-expanded=true` and its panel visible.
 - Restored the browser to `no-preference`, 390px, and the closed-drawer state. This validates emulated CSS behavior only, not a physical OS preference or screen-reader interoperability. No code change was needed.
 - Documentation snapshot `a7700032` is pushed on `main`; exact-SHA ForgeOS CI 38491112725, independent deployment verification 38491112775, and secrets scan 38491112685 succeeded. Next: actual screen-reader/device coverage and a different QA method.
+
+## 2026-10-14 — Production health and auth-gate recheck (no defect)
+
+- On the synchronized `main` snapshot `4ac350f7`, the canonical `/api/health` returned degraded once at 00:51:55 UTC (`db: down`), then returned healthy on three spaced retries from 00:52:06–00:52:10 UTC (`db: up`). Treat this as a transient sample, not a persistent outage.
+- `/api/auth/get-session` returned HTTP 503 with `Authentication is unavailable.` The production homepage DOM contained no Login, Join Hami, or Sign in links/buttons. This matches the intentional fail-closed auth gate; no auth configuration or owner-only setting was changed. The browser showed only the expected auth-endpoint 503; no UI defect was confirmed, so no defect screenshot was needed.
+- Exact-SHA checks for `4ac350f7` succeeded: ForgeOS CI 38491698493 (all jobs), independent deployment verification 38491698382, and secrets scan 38491698409; the Vercel status context also succeeded. No application source changed and no customer, provider, or revenue outcome is claimed.
+- Next: screen-reader/device interoperability when an actual reader/device is available, then continue with a distinct QA method. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
