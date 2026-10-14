@@ -395,3 +395,14 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Ran 11 targeted standalone Python smoke assertions against reproduced tokenization, IDF ranking and address/coordinate-pattern behavior; all passed. This did not import the repository module, exercise SQLAlchemy, or execute pytest. The current-head integration/full test result remains **NOT VERIFIED**: the available commit-status read exposes Vercel only, and its status on `8d25072` was pending when checked. Vercel frontend READY/build state must not be conflated with backend Python test execution.
 - No public activation, source ingestion, customer contact, external model-provider call, payment or revenue claim occurred.
 - **Next:** obtain an authorized exact-head backend test run; fix real failures in place. Then evaluate known relevant source retrieval on a fixed Nepal-first multilingual query set with expected evidence links and measure top-k evidence recall, irrelevant-hit rate and script-wise performance. Do not call the lexical score a semantic model or a truth score.
+
+
+## 2026-10-15 — extend cross-domain privacy guard to precise Nepali addresses
+
+- Followed the shared-tag matching path and numerical-divergence method through the existing `discovery_engine` implementation. It now rejects named address/contact fields, coordinate/house/postal-code measurements, address-shaped strings even when carried in a generic list/tag field, and common English/Nepali address forms with ASCII or Devanagari numerals. Coarse place labels and ordinary operational tags are intentionally retained.
+- Added regression assertions for English address text, Devanagari house/road forms, Devanagari combining marks, coordinate pairs, postal/coordinate keys as numeric measures, and one coarse locality match that must remain useful. Existing discovery method versions were bumped for changed cursor behavior.
+- Code commits: `4590d02`, `76670d9`, `84a53da`, `55f2c80`; related test commits: `eb8f696`, `3553816`, `f6ad09e`.
+- Corrected two implementation issues found by targeted smoke testing before treating this as complete: an unescaped regex-mode `#` had broken the original address pattern, and a later escaped Unicode range did not capture Devanagari combining marks. The current source uses a literal Devanagari Unicode block range. Standalone Python smoke checks now pass for 11 location/field cases. Repository integration tests remain **NOT RUN / NOT VERIFIED**; the available GitHub status exposes Vercel pending only, and Vercel deployment readiness is not backend pytest evidence.
+- No personal production records, external messages, provider calls, payment, or revenue were used or claimed.
+- Next: run both focused Python regression files and full backend CI on exact main, then measure false-positive/false-negative behavior on safe synthetic fixtures plus public/coarse non-sensitive examples.
+
