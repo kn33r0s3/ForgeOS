@@ -1,5 +1,9 @@
 # Hami Execution Queue
 
+## Current verification gate — 2026-10-15 NPT
+
+Production deployment identity matches main at `014287fb6c952088537b822337248cf7c841168b` and Vercel reports the deployment `READY`. This does **not** satisfy exact-head CI or health/runtime verification: the current connector exposes only Vercel's combined-status context and returns 403 for health/runtime log access. Last known full CI pass is on older SHA `4f44cffe727113a8a406ea3652c60c3a33580a74`. Keep current-head CI, health, database durability and persisted scheduled-cycle effects UNKNOWN until directly observed. The next action is authorized exact-head CI + runtime verification; while blocked, continue independent privacy review, research-quality checks and source-grounded research. External contact, intake, model-provider requests and live payments remain inactive.
+
 Ranked by value, critical blockers and leverage across the full Hami portfolio. This file is intentionally compact; docs/CAPABILITY_QUEUE.md remains the detailed capability ledger. Re-rank after every run based on new evidence. A blocked experiment never means unrelated safe work pauses.
 
 ## P0 — Complete CAS payment-to-work-item integration
