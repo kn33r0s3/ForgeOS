@@ -302,11 +302,19 @@ def test_disconnection_joins_shared_tags_but_excludes_contact_attributes_and_val
     assert not engine._SENSITIVE_DISCOVERY_ATTRIBUTE.search("withdrawal_type")
     assert engine._SENSITIVE_DISCOVERY_ATTRIBUTE.search("contact_email")
     assert engine._SENSITIVE_DISCOVERY_ATTRIBUTE.search("payment_reference")
+    assert engine._SENSITIVE_DISCOVERY_ATTRIBUTE.search("street_address")
+    assert engine._SENSITIVE_DISCOVERY_ATTRIBUTE.search("home_address")
+    assert engine._SENSITIVE_DISCOVERY_ATTRIBUTE.search("postal_code")
+    assert engine._SENSITIVE_DISCOVERY_ATTRIBUTE.search("latitude")
     organization = _entity(
         db,
         "organization",
         "owner@example.test",
-        capability_tags=["same-day-repair", "owner@example.test"],
+        capability_tags=[
+            "same-day-repair", "owner@example.test", "Lakeside Road 6", "27.7172, 85.3240"
+        ],
+        street_address="Lakeside Road 6",
+        latitude=27.7172,
         contact_email="owner@example.test",
         support_phone="+977 9800000000",
     )
@@ -314,7 +322,8 @@ def test_disconnection_joins_shared_tags_but_excludes_contact_attributes_and_val
         db,
         "need",
         "Same-day equipment repair",
-        required_tags=["same-day-repair"],
+        required_tags=["same-day-repair", "Lakeside Road 6", "27.7172, 85.3240"],
+        home_address="Lakeside Road 6",
         owner_email="owner@example.test",
         phone="+977 9800000000",
     )
@@ -327,6 +336,8 @@ def test_disconnection_joins_shared_tags_but_excludes_contact_attributes_and_val
     assert "same-day-repair" in hypothesis["statement"]
     assert "owner@example.test" not in hypothesis["statement"]
     assert "+977 9800000000" not in hypothesis["statement"]
+    assert "Lakeside Road 6" not in json.dumps(report, sort_keys=True)
+    assert "27.7172, 85.3240" not in json.dumps(report, sort_keys=True)
     assert "organization #" in hypothesis["statement"]
     assert "owner@example.test" not in json.dumps(report, sort_keys=True)
     assert hypothesis["epistemic_state"] == "possible"
@@ -354,6 +365,24 @@ def test_disconnection_joins_shared_tags_but_excludes_contact_attributes_and_val
     assert "owner@example.test" not in serialized_engine_output
     assert "+977 9800000000" not in serialized_engine_output
 
+
+
+
+def test_numeric_divergence_never_uses_precise_address_as_comparison_dimension(db):
+    world_graph.seed_core_types(db)
+    _entity(db, "resource", "Repair unit A", price_npr=100, city="Kathmandu",
+            street_address="12 Main Road")
+    _entity(db, "resource", "Repair unit B", price_npr=100, city="Kathmandu",
+            street_address="12 Main Road")
+    _entity(db, "resource", "Repair unit C", price_npr=1200, city="Kathmandu",
+            street_address="99 Lake Street 4")
+    db.commit()
+
+    report = engine.run_discovery(db, methods=["numeric_divergence"], persist=False)
+    serialized = json.dumps(report, sort_keys=True)
+    assert report["preview"] == []
+    assert "12 Main Road" not in serialized
+    assert "99 Lake Street 4" not in serialized
 
 def test_fabricated_or_overclaiming_findings_are_rejected_and_broken_plugins_isolated(db, world):
     def fabricate(ctx):
@@ -387,8 +416,8 @@ def test_value_hypotheses_are_possible_and_advance_or_stop_only_through_evidence
                  for i, p in enumerate((1500, 1800, 1600))]
     pokhara = [_entity(db, "resource", f"Laptop repair bench P{i}", city="pokhara", price_npr=p)
                for i, p in enumerate((4200, 4800))]
-    shop = _entity(db, "organization", "Lakeside Electronics", street="lakeside road 6")
-    need = _entity(db, "need", "Tourists need same-day charger replacement", location="lakeside road 6")
+    shop = _entity(db, "organization", "Lakeside Electronics", street="lakeside road 6", location="lakeside")
+    need = _entity(db, "need", "Tourists need same-day charger replacement", location="lakeside")
     report = engine.run_discovery(db)
     db.commit()
 
@@ -402,7 +431,8 @@ def test_value_hypotheses_are_possible_and_advance_or_stop_only_through_evidence
     assert len(divergence_question) == 1 and "could it be used" in divergence_question[0]["statement"]
 
     hypothesis = [row for row in _by_kind(report, "hypothesis") if row["method"] == "disconnection"]
-    assert len(hypothesis) == 1 and "lakeside road 6" in hypothesis[0]["statement"]
+    assert len(hypothesis) == 1 and "lakeside" in hypothesis[0]["statement"]
+    assert "lakeside road 6" not in hypothesis[0]["statement"]
     relation = db.query(models.WorldRelation).filter_by(relation_type="may_relate").one()
     assert {relation.from_entity_id, relation.to_entity_id} == {shop.id, need.id}
     assert relation.truth_state == "possible"
