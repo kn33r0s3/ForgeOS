@@ -384,6 +384,28 @@ def test_numeric_divergence_never_uses_precise_address_as_comparison_dimension(d
     assert "12 Main Road" not in serialized
     assert "99 Lake Street 4" not in serialized
 
+
+
+def test_numeric_divergence_never_uses_coordinates_or_postal_codes_as_measures(db):
+    world_graph.seed_core_types(db)
+    _entity(db, "resource", "Unit A", latitude=10.0, longitude=80.0,
+            postal_code=10000, city="Kathmandu")
+    _entity(db, "resource", "Unit B", latitude=10.0, longitude=80.0,
+            postal_code=10000, city="Kathmandu")
+    _entity(db, "resource", "Unit C", latitude=30.0, longitude=160.0,
+            postal_code=30000, city="Pokhara")
+    db.commit()
+
+    report = engine.run_discovery(db, methods=["numeric_divergence"], persist=False)
+
+    assert report["preview"] == []
+    assert not any(
+        engine._SENSITIVE_DISCOVERY_ATTRIBUTE.search(measure)
+        for method in engine.DEFAULT_REGISTRY.methods()
+        if method.name == "numeric_divergence"
+        for measure in ("latitude", "longitude", "postal_code")
+    )
+
 def test_fabricated_or_overclaiming_findings_are_rejected_and_broken_plugins_isolated(db, world):
     def fabricate(ctx):
         yield engine.Finding(kind="observation", key="ghost", statement="Invented.",
