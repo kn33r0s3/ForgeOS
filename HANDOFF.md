@@ -580,3 +580,14 @@ or adoption the repo doesn't have · go around a safeguard.
 - Sampled production contrast at `/unknowns` was 16.09:1 for the 40px heading, 8.03:1 for introductory body text, 11.46:1 for the selected tab, and 7.52:1 for unselected tabs. All sampled styles had opacity 1 and exceed WCAG AA text thresholds; this was a sample, not a site-wide certification.
 - Reduced-motion emulation on production matched `src/styles.css`: `prefers-reduced-motion` matched, scrolling became `auto`, reveal/skeleton animations became `none`, the menu transition became `0.01ms`, and the drawer still opened with correct expanded/visible state. Browser preference was restored afterward. This verifies the browser-emulated CSS path, not a screen reader or physical OS setting.
 - Next: screen-reader interoperability and additional real mobile browser/device checks, then continue with another distinct QA method. Auth remains unavailable/owner-only. No customer/revenue outcome is verified; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
+
+## CAS continuation update — 2026-10-14
+
+The Continuous Assignment System continues from the existing repair-shop work-item slice; it is not a new application. Review of `backend/app/services/repair_shop.py:record_verified_payment` found a truth-boundary defect: a caller-supplied provider/reference could be written as REAL/VERIFIED revenue without canonical provider verification. The current main branch now fails closed for `data_scope="REAL"` in this manual endpoint and includes a regression test proving no REAL Outcome is written. SANDBOX behavior and the existing payment-intent engine are unchanged.
+
+- Source guard: `68d35826ddf7f76ee5030ae8a9b8a1671a7b3156`
+- Regression: `a1834f255718e61f46781b307633550738d3c14d`
+- Ledger updated: `d8f4ef84a4bdc29f52110b89ada3fe5c2704b9ce`
+- **Not yet verified:** focused/full tests, exact-head CI, deployment identity, and live repair-shop payment behavior.
+- **Next:** execute the focused regression and full backend suite, then connect repair work items to the existing provider-verified payment-intent and fulfillment records without creating a parallel ledger. No customer contact or real payment was initiated; revenue remains unclaimed.
