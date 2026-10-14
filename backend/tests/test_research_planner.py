@@ -194,6 +194,47 @@ def test_prior_observations_rank_distinctive_terms_above_common_overlap(db):
     assert observations[0]["weighted_match_score"] > observations[1]["weighted_match_score"]
     assert observations[0]["matching_is_not_semantic_relevance"] is True
 
+
+
+def test_prior_observations_skip_evidence_less_top_hits_to_fill_limit(db):
+    question = "Nepal outage"
+
+    for index in range(5):
+        db.add(models.Signal(
+            source="public_web",
+            source_type="external",
+            content="Nepal outage reported",
+            title=f"Nepal outage result {index}",
+            canonical_url=f"https://example.test/no-evidence-{index}",
+            retrieved_at=models.utcnow(),
+        ))
+
+    eligible = models.Signal(
+        source="public_web",
+        source_type="external",
+        content="Nepal outage reported",
+        title="Nepal outage with linked evidence",
+        canonical_url="https://example.test/eligible-evidence",
+        retrieved_at=models.utcnow(),
+    )
+    db.add(eligible)
+    db.flush()
+    evidence = models.Evidence(
+        signal_id=eligible.id,
+        source=eligible.source,
+        content=eligible.content,
+        canonical_url=eligible.canonical_url,
+    )
+    db.add(evidence)
+    db.commit()
+
+    observations = research_planner._prior_observations(db, question, limit=1)
+
+    assert len(observations) == 1
+    assert observations[0]["signal_id"] == eligible.id
+    assert observations[0]["evidence_id"] == evidence.id
+    assert observations[0]["epistemic_status"] == "prior_observation_unverified"
+
 def test_linked_claim_evidence_is_reused_by_reference_without_truth_upgrade(db):
     from app.services import research_planner
 
