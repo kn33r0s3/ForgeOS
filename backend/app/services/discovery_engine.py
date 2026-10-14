@@ -1182,7 +1182,8 @@ def _numeric_divergence(ctx: DiscoveryContext, *, ratio_threshold: float = 2.0) 
         if len(rows) < 3:
             continue
         numeric_keys = sorted({key for _, attrs in rows for key, value in attrs.items()
-                               if _is_number(value) and key != "id" and not key.endswith("_id")})
+                               if _is_number(value) and key != "id" and not key.endswith("_id")
+                               and not _SENSITIVE_DISCOVERY_ATTRIBUTE.search(str(key))})
         group_keys = sorted({key for _, attrs in rows for key, value in attrs.items()
                              if isinstance(value, str) and 0 < len(value) <= 80
                              and not _SENSITIVE_DISCOVERY_ATTRIBUTE.search(str(key))})
