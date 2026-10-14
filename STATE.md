@@ -1,3 +1,14 @@
+## 2026-10-15 — Nepal-aware discovery privacy guard (backend test run still outstanding)
+
+- Tightened the existing `discovery_engine` seams so shared-value joins exclude address/contact-bearing fields, precise location text from generic tags, coordinate pairs, and sensitive numeric measurements such as latitude/longitude and postal codes. The guard recognizes English street/house patterns and common Nepali/Devanagari address forms, including house/road numbers written with Devanagari digits and combining marks. Coarse locality clues such as `Lakeside` and ordinary capability tags remain eligible.
+- Regression coverage now includes private English and Nepali addresses in generic list-tag fields, coordinate leakage, sensitive numeric comparisons, English/Devanagari address recognition, and preservation of coarse locality matches. Discovery method versions were bumped where the logic changed, preserving the existing cursor model.
+- Commits: source `4590d02`, `76670d9`, `84a53da`, `55f2c80`; tests `eb8f696`, `3553816`, `f6ad09e`. The related research retrieval upgrade is recorded immediately below.
+- **Verification boundary:** standalone Python smoke checks passed for 11 address/key/coordinate cases after correcting regex escaping and Devanagari combining-mark handling. These checks reproduced the relevant patterns; they did not import the application, use its database, or execute the regression tests. The latest combined commit status is Vercel **PENDING**, and the available workflow-run connector returns only PR-triggered runs, not a full push-triggered backend CI matrix. Do not claim pytest passed.
+- No production personal records were inspected, no public activation or ingestion setting was changed, and no external contact/provider/payment path was used.
+- **Next:** run `backend/tests/test_discovery_engine.py`, `backend/tests/test_research_planner.py`, and the full backend suite on exact main. Fix any actual failures without relaxing the privacy or evidence gate. Then evaluate multilingual retrieval and discovery precision on a fixed non-sensitive fixture/source set.
+
+---
+
 ## 2026-10-15 — research retrieval upgrade (repository tests not yet run)
 
 - **Unicode-aware retrieval:** `backend/app/services/research_planner.py::_tokens` no longer restricts prior-evidence retrieval to ASCII Latin letters and tokens at least four characters long. It NFC-normalizes text; keeps Devanagari combining marks attached; supports short tokens such as `QR`; removes common English/Nepali/Romanized-Nepali/Hindi function words; and uses character bigrams for common no-space scripts. This improves query↔prior-observation matching across Nepal-originated and other multilingual research without introducing another engine.
