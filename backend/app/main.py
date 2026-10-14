@@ -352,7 +352,7 @@ def _alias_app_routes_under_api() -> None:
     for route in list(app.routes):
         path = getattr(route, "path", None)
         endpoint = getattr(route, "endpoint", None)
-        methods = methods_set = getattr(route, "methods", None) or {"GET"}
+        methods_set = getattr(route, "methods", None) or {"GET"}
         if not path or endpoint is None or not path.startswith("/") or path.startswith("/api"):
             continue
         if path in {"/docs", "/docs/oauth2-redirect", "/redoc"}:
