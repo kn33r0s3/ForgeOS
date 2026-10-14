@@ -1,5 +1,16 @@
 # Hami Operating State
 
+## 2026-10-14 — discovery map/projection drift repaired in source (verification pending)
+
+- Fresh main inspection found HEAD `003e7e18c029c07373f115baef6a1e84e50a8ce6` had D97 and D98 in authoritative `docs/UNKNOWN_MAP.md`, while `backend/app/data/unknowns.json` and `src/lib/unknowns.ts` were stale. Exact-head ForgeOS CI run `38507489394` failed because the generated projections were out of sync; backend tests also failed only at `tests/test_import_unknowns.py::test_parses_all_sections`, which still asserted D96 (1,295 passed, 1 failed, 2 skipped). Frontend test command and repository guard failed at the same projection check. This is an additive discovery-history drift, not grounds to delete D97/D98 or shrink the map.
+- Applied the existing generator's transformation to the authoritative map and committed the generated JSON projection (`db34adff`), generated TypeScript projection (`ffdf451a`), and importer inventory regression (`aade3056`) directly to `main`. The test now expects 98 D rows and explicitly requires D97 and D98. No new files, no production behavior changes, no truth/authorization gate changes.
+- Source-level confirmation after the commits: current `main` was `aade3056c41c13026d6fe63ba9d95235b154e612`; JSON contains D98, TS contains D97 and D98, and the test asserts D98. This confirms presence only, not execution of the generator check or tests.
+- Exact-head ForgeOS CI run `38519905325` and independent deployment verification run `38519905190` were pending at the last check; secrets scan `38519905238` was in progress. No test pass or deployment result is claimed yet.
+- Next: fetch the newest main SHA and its exact-head CI logs. Confirm `node scripts/sync-unknowns-json.mjs --check`, the unknown importer test, frontend tests, repository guards, full backend suite, and independent deployment verification pass on the same SHA. If projection check still fails, compare the script output byte-for-byte before any further edit; do not hand-maintain generated files. The prior backend/database failure clusters documented earlier are superseded only where newer exact-head CI evidence proves otherwise.
+
+---
+
+
 **Snapshot:** 2026-10-14, Kathmandu time. Distinguishes source changes from CI, deployed runtime, scheduled execution and actual outcomes.
 
 ## 2026-10-14 — backend gate restored locally after main sync
