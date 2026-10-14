@@ -176,6 +176,24 @@ in the Vercel project) remains an owner/dashboard action; until then
 the site no longer advertises a dead end. Local gate green before
 push: 257 tests, typecheck, lint (1 pre-existing warning), build.
 
+**Update 2026-10-14 (daily freshness check):** HEAD at `a770003`
+("docs: update verified QA checkpoint"). Pull fast-forwarded
+`25d4e3a..a770003` clean (37 commits: QA doc trail, mobile nav
+focus fix, concurrent canonical-entity fix); `main` ==
+`origin/main`. Working tree clean.
+
+- **Health:** haminp.vercel.app/api/health → ok (`status: ok`,
+  `db: up`, v2.3.0, checked 2026-10-14 ~06:23 NPT) — recovered from
+  yesterday's DEGRADED (db: down). forge-os-ebon.vercel.app/api/health
+  → ok (`db: up`).
+- **Intake:** `intake_enabled: false` (unchanged, Forge Bot closed).
+- **Unknowns:** 96 D-entries in `docs/UNKNOWN_MAP.md` (unchanged since
+  2026-10-12).
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold: name one seller, authorize
+  first contact; company registration and payment onboarding need the
+  owner's body/identity.
+
 **Update 2026-10-13 (daily freshness check):** HEAD at `4d73a7a`
 ("Align needs tests and make offer terms visible by default",
 committed 2026-10-12 21:22 NPT). Pull fast-forwarded
