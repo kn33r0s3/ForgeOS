@@ -136,7 +136,62 @@ def test_prior_external_evidence_matches_devanagari_and_short_terms(db):
     assert observations[0]["signal_id"] == signal.id
     assert observations[0]["evidence_id"] == evidence.id
     assert observations[0]["matched_term_fraction"] == 1.0
+    assert observations[0]["weighted_match_score"] == 1.0
+    assert observations[0]["ranking_method"] == "inverse_document_frequency_weighted_lexical"
     assert observations[0]["epistemic_status"] == "prior_observation_unverified"
+    assert observations[0]["matching_is_not_semantic_relevance"] is True
+
+
+
+def test_prior_observations_rank_distinctive_terms_above_common_overlap(db):
+    question = "Nepal agriculture QR outage"
+    signals = []
+    # Several recent records share three broad terms but not the decisive term.
+    for index in range(12):
+        signal = models.Signal(
+            source="public_web",
+            source_type="external",
+            content="Nepal agriculture QR",
+            title=f"Nepal agriculture QR record {index}",
+            canonical_url=f"https://example.test/common-{index}",
+            retrieved_at=models.utcnow(),
+        )
+        db.add(signal)
+        db.flush()
+        db.add(models.Evidence(
+            signal_id=signal.id,
+            source=signal.source,
+            content=signal.content,
+            canonical_url=signal.canonical_url,
+        ))
+        signals.append(signal)
+
+    distinctive = models.Signal(
+        source="public_web",
+        source_type="external",
+        content="Nepal outage",
+        title="Nepal outage",
+        canonical_url="https://example.test/distinctive-outage",
+        retrieved_at=models.utcnow(),
+    )
+    db.add(distinctive)
+    db.flush()
+    distinctive_evidence = models.Evidence(
+        signal_id=distinctive.id,
+        source=distinctive.source,
+        content=distinctive.content,
+        canonical_url=distinctive.canonical_url,
+    )
+    db.add(distinctive_evidence)
+    db.commit()
+
+    observations = research_planner._prior_observations(db, question, limit=5)
+
+    assert observations
+    assert observations[0]["signal_id"] == distinctive.id
+    assert observations[0]["evidence_id"] == distinctive_evidence.id
+    assert observations[0]["matched_term_fraction"] == 0.5
+    assert observations[0]["weighted_match_score"] > observations[1]["weighted_match_score"]
     assert observations[0]["matching_is_not_semantic_relevance"] is True
 
 def test_linked_claim_evidence_is_reused_by_reference_without_truth_upgrade(db):
