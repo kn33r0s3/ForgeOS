@@ -1,3 +1,14 @@
+## Current live observation — 2026-10-15 NPT (not a full verification pass)
+
+- Main SHA: `014287fb6c952088537b822337248cf7c841168b`; the repository branch list shows only `main`.
+- Production deployment: `dpl_FX9mbbf2C9MrnqHQEyg4hiX3sNZY`, state `READY`, source SHA matches main; aliases include `haminp.vercel.app`, `forge-os-ebon.vercel.app`, and `pulsenp.vercel.app`.
+- The connected Vercel integration currently returns 403 when attempting to read either `/api/health` endpoint through its protected-fetch path and when querying runtime logs/errors. These are access failures before the target health/runtime result, not failed health checks and not evidence of healthy runtime.
+- GitHub combined status currently exposes a Vercel success context only. Full GitHub Actions exact-head CI is not accessible through the current tool result. Last known full pass: `4f44cffe727113a8a406ea3652c60c3a33580a74`, CI `38562997328`; subsequent privacy/discovery code commits are not verified by that pass.
+- The newest discovery implementation and its regression test were read back on main, but neither the test nor a natural scheduled run was executed/observed in this run. No real model inference, customer interaction, checkout/payment, recovered sale or revenue is verified.
+- **Resume from:** restore authorized read access to the existing Vercel project/team and exact-head CI results; confirm health and deployed SHA, inspect the durable scheduler/effect evidence, and obtain a full CI pass for the current source. Until then, no live activation or customer-facing action. Continue unrelated safe source review/research; do not wait for the blocked read path to resolve.
+
+---
+
 # AGENT HANDOFF — read this first, then take over
 
 You are taking over as the operator agent for this project. The previous
