@@ -300,3 +300,10 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Source inspection confirms the catch-all route throws `notFound()` and defines `noindex`; the service loader calls `getService()` and throws `notFound()` when its slug is absent. No code change was justified: production status and current route behavior agree. Whether all nested 404s should also carry `noindex` is not an established requirement; no indexing defect is claimed.
 - Latest verified head `f42ec153` is pushed on `main`; exact-SHA ForgeOS CI 38489348246, independent deployment verification 38489348239, and secrets scan 38489348274 succeeded.
 - Next: verify the verified focus behavior with screen-reader/device interoperability, then continue with another QA method. Auth remains unchanged and `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
+## 2026-10-14 — Sampled text contrast on Unknowns (no defect)
+
+- On production `/unknowns`, computed foreground/background contrast measured 16.09:1 for the 40px heading, 8.03:1 for introductory 16.8px body copy, 11.46:1 for the selected tab, and 7.52:1 for unselected tabs. The inspected elements had opacity 1; remaining lane/filter tabs shared the same foreground/background styles.
+- These samples exceed WCAG AA text contrast thresholds. Scope is the sampled page elements only—not a site-wide certification. No CSS change was justified.
+- Latest verified head `2566aa5e` is pushed on `main`; exact-SHA ForgeOS CI 38489894101, independent deployment verification 38489894102, and secrets scan 38489894137 succeeded.
+- Next: screen-reader/device interoperability and then another distinct QA method. Auth remains unchanged; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
