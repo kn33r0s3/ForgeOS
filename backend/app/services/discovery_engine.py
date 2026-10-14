@@ -1173,6 +1173,8 @@ def _question_reframe(ctx: DiscoveryContext) -> Iterable[Finding]:
 
 
 def _numeric_divergence(ctx: DiscoveryContext, *, ratio_threshold: float = 2.0) -> Iterable[Finding]:
+    from app.services.demand_understanding import normalize_observation_content
+
     by_type: dict[str, list[tuple[models.SubstrateEntity, dict[str, Any]]]] = defaultdict(list)
     for row in ctx.entities():
         by_type[row.entity_type].append((row, ctx.attributes(row)))
@@ -1182,13 +1184,19 @@ def _numeric_divergence(ctx: DiscoveryContext, *, ratio_threshold: float = 2.0) 
         numeric_keys = sorted({key for _, attrs in rows for key, value in attrs.items()
                                if _is_number(value) and key != "id" and not key.endswith("_id")})
         group_keys = sorted({key for _, attrs in rows for key, value in attrs.items()
-                             if isinstance(value, str) and 0 < len(value) <= 80})
+                             if isinstance(value, str) and 0 < len(value) <= 80
+                             and not _SENSITIVE_DISCOVERY_ATTRIBUTE.search(str(key))})
         for number_key in numeric_keys:
             for group_key in group_keys:
                 groups: dict[str, list[tuple[models.SubstrateEntity, float]]] = defaultdict(list)
                 for row, attrs in rows:
-                    if _is_number(attrs.get(number_key)) and isinstance(attrs.get(group_key), str):
-                        groups[attrs[group_key]].append((row, float(attrs[number_key])))
+                    group_value = attrs.get(group_key)
+                    if (
+                        _is_number(attrs.get(number_key))
+                        and isinstance(group_value, str)
+                        and _safe_discovery_join_value(group_key, group_value, normalize_observation_content)
+                    ):
+                        groups[group_value].append((row, float(attrs[number_key])))
                 if len(groups) < 2 or sum(len(items) for items in groups.values()) < 3:
                     continue
                 medians = {name: statistics.median(value for _, value in items) for name, items in groups.items()}
@@ -1229,7 +1237,8 @@ _SENSITIVE_DISCOVERY_ATTRIBUTE = re.compile(
     r"password|secret|token|credential|api[_\s-]?key|"
     r"account[_\s-]?(?:number|details?)|bank[_\s-]?(?:account|details?)|wallet|"
     r"payment[_\s-]?(?:reference|ref|id|details?)|transaction[_\s-]?(?:reference|ref|id)|"
-    r"national[_\s-]?(?:id|identity)|citizenship)(?:$|[_\W])",
+    r"national[_\s-]?(?:id|identity)|citizenship|street|address|postal[_\s-]?code|postcode|"
+    r"zip[_\s-]?code|latitude|longitude|coordinates?|geolocation|gps)(?:$|[_\W])",
     re.IGNORECASE,
 )
 _PRIVATE_DISCOVERY_ENTITY_TYPE_TOKENS = frozenset({
@@ -1239,6 +1248,45 @@ _PRIVATE_DISCOVERY_ENTITY_TYPE_TOKENS = frozenset({
     "workers", "employee", "employees", "user", "users", "recipient", "requester",
     "client", "patient", "student", "students",
 })
+
+# Precise locations are too identifying for an open-ended join key, even when
+# a source placed them in a generic field or a list of tags.
+_PRECISE_ADDRESS_VALUE = re.compile(
+    r"(?ix)(?:"
+    r"\b\d{1,5}\s+(?:[a-z0-9.'-]+\s+){0,4}"
+    r"(?:road|rd|street|st|avenue|ave|lane|ln|marg|marga|sadak|galli|tole|chowk|chok|path|highway|hwy)\b"
+    r"|\b(?:[a-z0-9.'-]+\s+){1,4}"
+    r"(?:road|rd|street|st|avenue|ave|lane|ln|marg|marga|sadak|galli|tole|chowk|chok|path|highway|hwy)"
+    r"\s*#?\s*\d{1,5}\b"
+    r")"
+)
+_PRECISE_COORDINATE_PAIR = re.compile(
+    r"(?<!\d)-?\d{1,3}\.\d{3,}\s*[,/]\s*-?\d{1,3}\.\d{3,}(?!\d)"
+)
+
+
+def _safe_discovery_join_value(
+    attribute: str,
+    candidate: str,
+    normalizer: Callable[[str], str],
+) -> bool:
+    """Whether a value is safe to persist as an open-ended discovery join key.
+
+    Attribute names alone cannot identify every private field: arbitrary tags
+    may themselves contain a home address or precise coordinates. Keep the
+    location clues useful at a coarse level, but reject precise/address-shaped
+    values before they become statements, facets, relations, or follow-up text.
+    """
+    if _SENSITIVE_DISCOVERY_ATTRIBUTE.search(str(attribute)):
+        return False
+    collapsed = " ".join((candidate or "").split())
+    if not collapsed:
+        return False
+    if _PRECISE_ADDRESS_VALUE.search(collapsed) or _PRECISE_COORDINATE_PAIR.search(collapsed):
+        return False
+    normalized = collapsed.casefold()
+    safe_value = normalizer(collapsed).casefold()
+    return safe_value == normalized and "[redacted-" not in normalized
 
 
 def _non_engine_relation_pairs(db: Session) -> set[tuple[int, int]]:
@@ -1303,11 +1351,10 @@ def _disconnection(ctx: DiscoveryContext, *, max_holders: int = 4) -> Iterable[F
                     continue
                 if normalized in _IGNORED_VALUES or normalized.replace(".", "").isdigit():
                     continue
-                # Reuse Hami's established email/phone redaction rules. A value
-                # that would redact is omitted completely, not stored as a redacted
-                # placeholder that could create false commonality.
-                safe_value = normalize_observation_content(collapsed).casefold()
-                if safe_value != normalized or "[redacted-" in normalized:
+                # Screen both the source field and the value. Precise addresses
+                # can arrive through generic tag/list attributes, not only fields
+                # explicitly named "address".
+                if not _safe_discovery_join_value(str(key), candidate, normalize_observation_content):
                     continue
                 holders[normalized].setdefault(row.id, (row, field_name))
     linked_pairs = _non_engine_relation_pairs(db)
@@ -1963,11 +2010,11 @@ DEFAULT_REGISTRY = DiscoveryMethodRegistry([
     DiscoveryMethod("question_reframe", "1",
                     "Questions whose premise is refuted, or that repeated research could not answer.",
                     _question_reframe, emits=("question",), requires=_SUBSTRATE + ("substrate.research",)),
-    DiscoveryMethod("numeric_divergence", "1",
-                    "Large differences in any recorded measure across any recorded dimension (price, time, place, ...).",
+    DiscoveryMethod("numeric_divergence", "2",
+                    "Large differences in recorded measures across non-sensitive dimensions; precise addresses and coordinates are excluded.",
                     _numeric_divergence, emits=("observation", "question"), requires=("substrate.entities",)),
-    DiscoveryMethod("disconnection", "1",
-                    "Entities of different kinds sharing a distinctive scalar or list-tag value without a recorded relation; contact-bearing/free-text fields and email/phone values are excluded.",
+    DiscoveryMethod("disconnection", "2",
+                    "Entities of different kinds sharing a distinctive scalar or list-tag value without a recorded relation; contact-bearing fields, precise addresses, coordinates and email/phone values are excluded.",
                     _disconnection, emits=("hypothesis", "question"), requires=("substrate.entities", "substrate.relations")),
     DiscoveryMethod("isolation", "1",
                     "Entities left unconnected while their peers are connected (neglect, unused capacity, missing data).",
