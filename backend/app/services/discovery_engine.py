@@ -1257,10 +1257,10 @@ _PRIVATE_DISCOVERY_ENTITY_TYPE_TOKENS = frozenset({
 # a source placed them in a generic field or a list of tags.
 _PRECISE_ADDRESS_VALUE = re.compile(
     r"(?i)(?:"
-    r"\b[0-9०-९]{1,5}\s+(?:[\w\\u0900-\\u097F.'-]+\s+){0,4}"
+    r"\b[0-9०-९]{1,5}\s+(?:[\wऀ-ॿ.'-]+\s+){0,4}"
     r"(?:road|rd|street|st|avenue|ave|lane|ln|marg|marga|sadak|galli|tole|chowk|chok|path|highway|hwy|"
     r"सडक|मार्ग|गल्ली|गल्लि|टोल|चोक|चौक|घर)\b"
-    r"|\b(?:[\w\\u0900-\\u097F.'-]+\s+){1,4}"
+    r"|\b(?:[\wऀ-ॿ.'-]+\s+){1,4}"
     r"(?:road|rd|street|st|avenue|ave|lane|ln|marg|marga|sadak|galli|tole|chowk|chok|path|highway|hwy|"
     r"सडक|मार्ग|गल्ली|गल्लि|टोल|चोक|चौक)"
     r"\s*#?\s*[0-9०-९]{1,5}\b"
