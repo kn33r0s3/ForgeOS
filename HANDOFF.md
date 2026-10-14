@@ -4,13 +4,13 @@ You are taking over as the operator agent for this project. The previous
 agent ("musa") is gone. Read this whole file, then act. Do not ask the user
 to explain anything — everything you need is here or in the files it points to.
 
-## Latest observed verification — 2026-10-14, 16:50 NPT
+## Latest completed verification snapshot — 2026-10-14, 18:10 NPT (pre-follow-up main)
 
-- Canonical `main` at verification was [`d15d70600391aa789dcf9f57c27377b65975f85d`](https://github.com/kn33r0s3/ForgeOS/commit/d15d70600391aa789dcf9f57c27377b65975f85d).
-- [ForgeOS CI run 38553479899](https://github.com/kn33r0s3/ForgeOS/actions/runs/38553479899) passed all nine jobs on this exact SHA, including backend and frontend suites, build, typecheck, lint, route smoke, evidence-triage tests, repository guards and secret scan.
-- [Independent deploy verification 38553479859](https://github.com/kn33r0s3/ForgeOS/actions/runs/38553479859) confirmed the production-reported deployed commit matched the exact tested SHA, fetched production content, passed a protected owner-cycle read (one record; payload suppressed), and recorded the verification successfully. [Secrets scan 38553479786](https://github.com/kn33r0s3/ForgeOS/actions/runs/38553479786) also passed.
-- This closes exact-head CI/deployment-verification for that SHA. If `main` advances, re-read its head and require new matching runs before making a current-head claim.
-- This does **not** prove recurring scheduled work, real non-MOCK inference/quality, all durable database guarantees, real-world value, revenue, or permission to initiate external actions. No live payment/customer contact/provider call was performed for this verification.
+- The last fully verified source snapshot was `4f44cffe727113a8a406ea3652c60c3a33580a74` ([commit](https://github.com/kn33r0s3/ForgeOS/commit/4f44cffe727113a8a406ea3652c60c3a33580a74)).
+- [ForgeOS CI run 38562997328](https://github.com/kn33r0s3/ForgeOS/actions/runs/38562997328) passed all nine jobs on that exact SHA: **1,303 backend tests passed, 2 skipped**; frontend tests, build, typecheck, lint, route smoke, evidence-triage tests, repository guards and Gitleaks all passed.
+- [Independent deploy verification run 38562997410](https://github.com/kn33r0s3/ForgeOS/actions/runs/38562997410) succeeded for the same SHA. The verifier fetched production content, confirmed the deployed SHA matched, passed the protected owner-cycle read (one record; payload suppressed), and recorded its result. [Secrets scan 38562997219](https://github.com/kn33r0s3/ForgeOS/actions/runs/38562997219) also passed.
+- The commits in the current follow-up modify cross-domain discovery, tests and continuity records after that verified snapshot. Re-read actual `main` and check new exact-head CI/deploy runs before calling the newer SHA verified.
+- **Still unproven:** a natural production invocation of `/scheduled/intelligence`, a persisted successful production intelligence cycle, real non-MOCK model inference/quality, live provider/payment readiness, any genuine customer transaction or revenue. No live customer contact, external message, real checkout/payment or paid provider request occurred in the above verification. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
 
 ## Who you work for
 

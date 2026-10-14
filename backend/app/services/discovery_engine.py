@@ -1220,6 +1220,18 @@ def _numeric_divergence(ctx: DiscoveryContext, *, ratio_threshold: float = 2.0) 
 
 
 _IGNORED_VALUES = {"true", "false", "none", "null", "yes", "no", "unknown", "active", "open", "closed"}
+_SENSITIVE_DISCOVERY_ATTRIBUTE = re.compile(
+    r"(?:email|e-mail|phone|telephone|mobile|contact|recipient|"
+    r"person[_\s-]?name|customer[_\s-]?name|seller[_\s-]?name|owner[_\s-]?name|"
+    r"full[_\s-]?name|first[_\s-]?name|last[_\s-]?name|display[_\s-]?name|"
+    r"message|notes?|content|transcript|conversation|description|summary|body|"
+    r"statement|claim|comment|raw|payload|provenance|"
+    r"password|secret|token|credential|api[_\s-]?key|"
+    r"account[_\s-]?(?:number|details?)|bank[_\s-]?(?:account|details?)|wallet|"
+    r"payment[_\s-]?(?:reference|ref|id|details?)|transaction[_\s-]?(?:reference|ref|id)|"
+    r"national[_\s-]?(?:id|identity)|citizenship)",
+    re.IGNORECASE,
+)
 
 
 def _non_engine_relation_pairs(db: Session) -> set[tuple[int, int]]:
@@ -1237,17 +1249,43 @@ def _non_engine_relation_pairs(db: Session) -> set[tuple[int, int]]:
 
 
 def _disconnection(ctx: DiscoveryContext, *, max_holders: int = 4) -> Iterable[Finding]:
+    """Find unrecorded cross-type connections from comparable, privacy-screened attributes."""
+    from app.services.demand_understanding import normalize_observation_content
+
     db = ctx.db
     holders: dict[str, dict[int, tuple[models.SubstrateEntity, str]]] = defaultdict(dict)
     for row in ctx.entities():
         for key, value in ctx.attributes(row).items():
-            if not isinstance(value, str):
+            # Avoid joining free-form/private fields into durable discovery output.
+            if _SENSITIVE_DISCOVERY_ATTRIBUTE.search(str(key)):
                 continue
-            normalized = " ".join(value.split()).casefold()
-            if len(normalized) < 3 or len(normalized) > 120 or normalized in _IGNORED_VALUES \
-                    or normalized.replace(".", "").isdigit():
+            if isinstance(value, str):
+                candidates = ((value, str(key)),)
+            elif isinstance(value, list):
+                # Tags and other enumerated values are useful cross-domain clues.
+                # Ignore nested structures and numbers; don't stringify whole lists.
+                candidates = (
+                    (item, f"{key}[]")
+                    for item in value
+                    if isinstance(item, str)
+                )
+            else:
                 continue
-            holders[normalized].setdefault(row.id, (row, key))
+
+            for candidate, field_name in candidates:
+                collapsed = " ".join(candidate.split())
+                normalized = collapsed.casefold()
+                if len(normalized) < 3 or len(normalized) > 120:
+                    continue
+                if normalized in _IGNORED_VALUES or normalized.replace(".", "").isdigit():
+                    continue
+                # Reuse Hami's established email/phone redaction rules. A value
+                # that would redact is omitted completely, not stored as a redacted
+                # placeholder that could create false commonality.
+                safe_value = normalize_observation_content(collapsed).casefold()
+                if safe_value != normalized or "[redacted-" in normalized:
+                    continue
+                holders[normalized].setdefault(row.id, (row, field_name))
     linked_pairs = _non_engine_relation_pairs(db)
     for value, members in sorted(holders.items()):
         if not 2 <= len(members) <= max_holders:
@@ -1905,7 +1943,7 @@ DEFAULT_REGISTRY = DiscoveryMethodRegistry([
                     "Large differences in any recorded measure across any recorded dimension (price, time, place, ...).",
                     _numeric_divergence, emits=("observation", "question"), requires=("substrate.entities",)),
     DiscoveryMethod("disconnection", "1",
-                    "Entities of different kinds sharing a distinctive value with no recorded relation.",
+                    "Entities of different kinds sharing a distinctive scalar or list-tag value without a recorded relation; contact-bearing/free-text fields and email/phone values are excluded.",
                     _disconnection, emits=("hypothesis", "question"), requires=("substrate.entities", "substrate.relations")),
     DiscoveryMethod("isolation", "1",
                     "Entities left unconnected while their peers are connected (neglect, unused capacity, missing data).",

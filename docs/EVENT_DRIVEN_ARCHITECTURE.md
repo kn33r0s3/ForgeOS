@@ -2,16 +2,15 @@
 
 ## Status: Legacy OFF, Production Intelligence Seam Active
 
-**FORGEOS_LEGACY_INTELLIGENCE_ENABLED remains OFF** (default `false`, not set in production).
-The legacy WorkerTask queue, legacy API endpoints, and legacy scheduled cycle are disabled by design.
+**The legacy intelligence path remains fail-closed by default** (`FORGEOS_LEGACY_INTELLIGENCE_ENABLED=false` in code defaults). The production environment value is not independently proven by this source document; do not infer activation from code. The midnight `/scheduled/cycle` path is a privacy-maintenance endpoint and must not be expanded to run intelligence.
 
 ## What Triggers Work in Production
 
-**Production Vercel cron** (daily midnight UTC) → `/api/scheduled/cycle`:
+**Configured Vercel cron** (daily midnight UTC) → `/api/scheduled/cycle`:
 1. Privacy maintenance (`run_daily_maintenance`) — erases old inquiries, always runs
 2. Returns `{"status": "disabled", "reason": "legacy cycle disabled"}` — no work generation
 
-**Production Vercel cron** (daily 06:00 UTC) → `/api/scheduled/intelligence` (NEW 2026-10-07):
+**Configured Vercel cron** (daily 06:00 UTC) → `/api/scheduled/intelligence` (source path present since 2026-10-07):
 1. `forge_loop.run_cycle` — DB reasoning: signals → patterns → beliefs → questions → tasks
 2. `collector_runner.run_pending_tasks` — executes planned research tasks via collectors
 3. `research_task_engine.resume_running_tasks` — requeues stale running tasks
@@ -24,15 +23,13 @@ The legacy WorkerTask queue, legacy API endpoints, and legacy scheduled cycle ar
 7. `scout.run_scout_cycle` — scores/ranks candidates, generates drafts (never sends) (NEW 2026-10-10)
 8. Returns `{"status": "completed", "intelligence": {...}}` with per-engine results
 
-**Production now generates non-legacy work automatically** via the intelligence seam.
-This uses existing engines only — no legacy flag, no WorkerTask, no new scheduler.
+**Source wiring:** the existing intelligence endpoint calls the listed engines without enabling the legacy flag or adding a second scheduler. Discovery runs in Stage 5, persists through the current EVENT/EVIDENCE/RELATION lifecycle, and can promote question findings only under the existing automatic-question-generation setting. The discovery route also remains available for explicit owner-triggered runs.
 
-**Note:** "Configured in code" is distinct from "independently proven to have run in production."
-The Vercel cron configuration exists; a fresh production run log has not been independently verified in this document.
+**Runtime proof boundary:** `vercel.json` declares the daily schedule, and exact-SHA deploy verification confirms which source is deployed. Neither proves that Vercel naturally invoked the intelligence cron, that a scheduled run committed successfully, or that all collection sources were authorized and usable at that time. Those require a persisted `CycleRun` and corroborating runtime evidence. Treat natural scheduled invocation as UNVERIFIED until that evidence is available.
 
-## What Triggers Work via Hatch (External Continuity)
+## External continuity paths (runtime verification separate)
 
-**Hatch weekly discovery cron** (`hami-discovery-round`, Wed 09:23 NPT):
+**Recorded handoff configuration for a Hatch weekly discovery cron** (`hami-discovery-round`, Wed 09:23 NPT; current live status not verified in this audit):
 - Event: Cron fires
 - Work: Agent researches one untried angle from UNKNOWN_MAP.md
 - Engine: `forge angles` CLI ranks unknowns by value; agent picks one
@@ -47,75 +44,63 @@ The Vercel cron configuration exists; a fresh production run log has not been in
 - Result: Update HANDOFF.md if state changed
 - Evidence: Commit + push if materially changed
 
-## Current Hami Seams (Non-Legacy, Available)
+## Current Hami Seams — source-wired versus runtime-proven
 
-These engines exist and are NOT gated by the legacy flag:
+The source paths below are present in `backend/app/api/scheduled.py` and are invoked by `GET /scheduled/intelligence`; that endpoint is configured for the daily 06:00 UTC cron. Exact-head CI verifies code and tests. It does **not** prove that the natural cron has executed against the production database.
 
-### forge_loop.run_cycle
-- **What**: Observes signals → detects patterns → updates beliefs → generates research questions (curiosity scan) → plans tasks
-- **Trigger**: Manual via `backend/scripts/run_daily_cycle.py`, or API `/forge/cycle` (but API is legacy-gated)
-- **Safety**: Internal reasoning only; no network, no spending, no contact
-- **Status**: READY, not scheduled in production
+### `forge_loop.run_cycle`
+- **What:** reads recorded signals, detects patterns, updates beliefs, generates questions and plans research tasks.
+- **Trigger:** called as part of the scheduled intelligence path; also has a local runner. The legacy `/forge/cycle` endpoint remains separately gated.
+- **Safety:** internal reasoning/planning; no customer messaging or autonomous real-world commitment from this call alone.
+- **Runtime state:** invocation and persisted side effects from a natural production cron remain UNVERIFIED.
 
-### research_task_engine
-- **What**: Research task lifecycle — create, begin, finish, fail, defer, retry, resume stale
-- **Trigger**: Tasks created by forge_loop (not running) or manually
-- **Safety**: Resume only touches stale "running" tasks; no automatic execution of new work
-- **Status**: READY, dormant (no tasks created in production)
+### `collector_runner.run_pending_tasks` and `research_task_engine`
+- **What:** executes bounded planned research tasks through exact-source-clearance adapters and repairs stale running tasks; failures are isolated and recorded.
+- **Trigger:** collector execution and stale-task recovery are wired into the scheduled intelligence endpoint.
+- **Safety:** source clearance, field purpose, rate reservations, task identity and existing retry limits remain required. A collected result is not by itself a semantic evaluation or supported claim.
+- **Runtime state:** actual production collection, source authorization freshness and durable task effects require a run record and per-stage evidence; they are not proven by source presence.
 
-### execution_engine.run_autonomous_action_cycle
-- **What**: Proposes (never executes) actions for opportunities via policy gate
-- **Trigger**: Called from forge_loop (not running) or manually
-- **Safety**: Creates actions at status="ready"; never calls start_action(); policy enforces ALLOW/REQUIRE_APPROVAL/BLOCK
-- **Status**: READY, dormant
+### `execution_engine.run_autonomous_action_cycle`
+- **What:** proposes actions under the existing decision-rights/autonomy policy; a proposal or policy ALLOW is not proof of execution.
+- **Trigger:** wired into the scheduled intelligence endpoint.
+- **Safety:** action-time rights and approval gates remain in force; this cycle does not by itself establish a completed real-world action.
+- **Runtime state:** proposal effects and any subsequent action execution must be verified from their own EVENT/outcome lineage.
 
-### discovery_engine.run_discovery
-- **What**: Runs discovery methods over substrate
-- **Trigger**: Explicit API call `/forge/substrate/discovery/runs` (not scheduled by design)
-- **Safety**: Read-only by default (`persist=False`); explicit persist requires API call
-- **Status**: READY, explicit-only (intentional)
+### `discovery_engine.run_discovery`
+- **What:** runs the current 15-method registry against Hami's recorded substrate. Findings are proposed hypotheses/questions, not external observations; every persisted finding cites basis rows and creates provenance-bearing EVIDENCE. Candidate relationships remain `possible` until the normal evidence lifecycle justifies more.
+- **Trigger:** wired into Stage 5 of scheduled intelligence, as well as the owner-guarded explicit discovery endpoint.
+- **Continuation:** per-method cursors are stored as opaque digests in the existing `discovery_run_completed` EVENT, so bounded windows advance rather than repeatedly consuming the same first findings. Preview remains read-only.
+- **Runtime state:** the path is implemented and current tests pass; natural scheduler invocation and production persistence remain UNVERIFIED.
 
 ## How Dependencies Operate
 
-**Research tasks**: Have `dependencies` field (list of prerequisite task IDs), but no automatic dependency resolution in production (engine dormant).
+**Research tasks:** the model includes prerequisite task IDs, and the scheduled path executes planned tasks and resumes stale running tasks. This document does not claim that every dependency is automatically resolved in production; validate the exact task transitions and persisted effects from a real `CycleRun`.
 
-**Hatch discovery**: Angles are independent; no dependencies between weekly runs. Each run picks an untried angle; blocked angles are skipped, not queued.
+**External/Hatch discovery:** the historic operating notes describe independent angles. Confirm the currently active scheduler and its run log before treating weekly cadence or untried-angle selection as a live guarantee. A blocked real-world angle must not block safe internal research or capability work.
 
-## How Downstream Work Is Generated
+## How Downstream Work Is Intended to Generate
 
-**In production**: The daily intelligence cron runs the three engines. Each run:
-- Reads current DB state (signals, questions, tasks, opportunities)
-- Generates new questions/tasks/proposals via forge_loop
-- Requeues stale tasks via resume_running_tasks
-- Proposes actions via autonomy cycle
-- Next day's run builds on the new state (idempotent re-planning)
+**When `GET /scheduled/intelligence` executes successfully**, the existing path calls:
+- the forge reasoning loop for patterns, beliefs, questions and task planning;
+- bounded collection through cleared source adapters;
+- stale research-task recovery and proposal-only autonomy reasoning;
+- the substrate discovery engine, including cross-domain candidate connections and follow-up questions;
+- existing owner-notification retry and Scout draft preparation paths.
 
-**Via Hatch**: 
-- Weekly discovery banks unknowns → next weekly run may pick them up
-- No automatic chaining within a single run; each run is one angle
+The design gives the next run recorded state to build on, but only source-level tests and a real persisted `CycleRun` can establish which stages actually executed. Collection is not evaluation, a question is not an answer, a possible relation is not a fact, and a proposed action is not completed work. Failures are meant to be isolated and visible, not converted to green status or fabricated learning.
 
-**Manual**: 
-- `python -m scripts.run_daily_cycle` runs forge_loop + resume + autonomy (not scheduled)
-- API calls can trigger discovery (explicit)
+**Local/manual runners** can exercise selected existing engines, but they do not count as evidence that production cron or a durable production database ran them.
 
-## Which Branches Are Autonomous
+## Automation versus verified operation
 
-- **Hatch weekly discovery**: Autonomous (runs weekly, picks angles, banks results)
-- **Hatch daily handoff**: Autonomous (runs daily, updates docs)
-- **Production privacy maintenance**: Autonomous (runs daily via Vercel cron)
+- **Configured source automation:** Vercel declares a daily privacy-maintenance route and a daily scheduled-intelligence route.
+- **Code-wired execution:** the intelligence route calls the reasoning, collection, recovery, proposal, discovery, owner-notification retry and Scout paths.
+- **Natural runtime execution:** UNVERIFIED in this audit. Require a persisted `CycleRun`, per-stage outcomes and deployed-SHA correlation.
+- **External action:** remains governed by the existing authorization, consent, decision-rights, source and action-time gates. Internal automation does not authorize customer contact, publishing, spending or payments.
 
-## Which Remain Owner-Gated
+## Evidence-gated commercial questions (not Hami-wide blockers)
 
-- **Seller contact**: Owner must name seller + authorize first contact
-- **Legacy intelligence**: Flag must be set to `true` (forbidden by standing order)
-- **Intake/send flags**: Owner must explicitly enable
-- **Production DB access**: Owner must define credential procedure
-
-## Which Are Genuinely Blocked
-
-- **B1–B4, D1–D10 unknowns**: Require real human conversations with business owners
-- **C3** (what breaks on real lead): Requires authorized pilot transaction
-- **First Rupee Sprint**: Blocked on owner naming seller
+Some specific claims cannot be resolved without firsthand human evidence or an authorized real-world transaction. That blocks only the dependent claim/experiment. It does not block broad investigation, source verification, cross-domain connection discovery, model/tool capability work, security, testing, or other independent work. Commercial work may remain a hypothesis; it does not define Hami's identity or the boundary of the system.
 
 ## Architectural Decision (2026-10-07)
 
@@ -129,9 +114,7 @@ This preserves the privacy endpoint's contract, uses the existing scheduled boun
 (Vercel cron), calls existing non-legacy engines directly (no new abstraction), and
 keeps the legacy flag OFF.
 
-**Conclusion**: Hami's production now has a real work-generation seam. The intelligence
-cron runs daily, generating questions/tasks/proposals from current state. Hatch
-provides weekly discovery continuity; production provides daily reasoning continuity.
+**Conclusion:** Hami has a source-wired work-generation seam with daily cron configuration. The current repository and verified tests show the intended path is connected; they do not establish a natural production cron invocation or successful persistent effects. Do not report the cron as operational until a real `CycleRun` and stage outcomes are observed.
 
 ## The Continuous Loop (Hatch)
 
@@ -151,4 +134,4 @@ NEXT WEEK: NEW ANGLE (follow-on work)
 
 Multiple independent angles coexist in UNKNOWN_MAP.md. Blocked angles (requiring contact) are skipped, not queued. The loop continues without human intervention.
 
-This is the living system: not production event-driven, but Hatch-driven continuity.
+This diagram describes the intended Hatch continuity protocol, not a verified claim that the external scheduler is currently running. Production scheduled intelligence is a separate, source-wired daily path whose natural invocation must be evidenced independently.

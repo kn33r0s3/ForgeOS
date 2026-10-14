@@ -1,14 +1,12 @@
 # Hami Operating State
 
-## Latest observed verification — 2026-10-14, 16:50 NPT
+## Latest completed verification snapshot — 2026-10-14, 18:10 NPT (pre-follow-up main)
 
-- **Canonical main at verification:** `d15d70600391aa789dcf9f57c27377b65975f85d` ([commit](https://github.com/kn33r0s3/ForgeOS/commit/d15d70600391aa789dcf9f57c27377b65975f85d)).
-- **Exact-head ForgeOS CI:** [run 38553479899](https://github.com/kn33r0s3/ForgeOS/actions/runs/38553479899) completed successfully on that SHA. All nine jobs passed: backend-tests, frontend-tests, build, typecheck, route-smoke, evidence-triage-tests, lint, repository-guards and gitleaks.
-- **Production SHA verification:** [independent verifier run 38553479859](https://github.com/kn33r0s3/ForgeOS/actions/runs/38553479859) succeeded on the same SHA. Its log records production's deployed SHA matched `d15d70600391aa789dcf9f57c27377b65975f85d`, production content was fetched, the protected owner-cycle read succeeded (one record; payload suppressed), and the verification result was recorded via HTTP 200.
-- **Secrets scan:** [run 38553479786](https://github.com/kn33r0s3/ForgeOS/actions/runs/38553479786) passed on the same SHA.
-- These results supersede older notes below that said this exact-head CI/deployment result was pending or unverified. Those notes remain historical for their earlier SHAs.
-- **Not established by those checks:** recurring/natural scheduler invocation, a genuine non-MOCK local-model inference or answer quality, full durable-PostgreSQL readiness beyond the tested endpoint path, any real customer/provider transaction, verified economic value, or revenue. No live checkout, customer contact or paid provider action was made by this verification.
-- The STARVED build gate is scoped to explicitly intervention-dependent work; the same exact-head backend suite passed. A blocked intervention is not a Hami-wide pause. External actions remain under their existing authorization gates.
+- Last fully verified source snapshot: `4f44cffe727113a8a406ea3652c60c3a33580a74`. [ForgeOS CI 38562997328](https://github.com/kn33r0s3/ForgeOS/actions/runs/38562997328) passed all nine jobs; backend suite: **1,303 passed, 2 skipped, 18 warnings**.
+- [Independent deploy verification 38562997410](https://github.com/kn33r0s3/ForgeOS/actions/runs/38562997410) and [secrets scan 38562997219](https://github.com/kn33r0s3/ForgeOS/actions/runs/38562997219) passed on that same SHA. Deployment check proves deployed revision/content and a protected owner read, not natural cron execution or actual economic outcomes.
+- The discovery starvation fix is in that verified snapshot: bounded persistent runs retain opaque per-method cursors inside the existing `discovery_run_completed` EVENT. It advances across method outputs without creating a new table or primitive.
+- The current follow-up changes `discovery_engine._disconnection` to consider direct list-tag values while excluding contact-bearing/free-text fields and email/phone-shaped join keys, and reconciles this document's scheduler descriptions with current source. Its new SHA requires fresh exact-head verification.
+- Runtime boundary remains: the source wires `GET /scheduled/intelligence` to the daily 06:00 UTC cron, but the natural invocation and persisted production effects have not been independently verified. No real external contact, checkout/payment, provider request or revenue claim occurred. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
 
 ---
 

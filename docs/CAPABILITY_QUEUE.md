@@ -1,11 +1,11 @@
-## [CAS / REPAIR-SHOP PAYMENT LINKAGE IMPLEMENTED; PRIOR CI/DEPLOY VERIFIED AT d15d706; CURRENT-HEAD VERIFICATION PENDING]
+## [CAS / REPAIR-SHOP PAYMENT LINKAGE — VERIFIED IN TESTS ON MAIN; REAL PROVIDER/REVENUE UNVERIFIED]
 
 - **Original truth defect and retained guard:** the manual endpoint accepted caller-supplied provider/reference text and promoted it to REAL/VERIFIED revenue. It now continues to reject REAL scope. SANDBOX-only manual/test behavior remains; do not remove the guard.
 - **Canonical cross-domain link:** added an owner-key-gated operation that links an already provider-verified REAL payment intent to a triaged REAL RepairWorkItem only when the existing Product belongs to the same canonical Opportunity. The relationship and provenance live in the existing unique WorkItemEvent stream plus a matching canonical WorldEvent state_changed event; the shared payload contains only IDs, transition type/state and data scope, not free-text customer notes. No new payment, revenue, experiment, or semantic ledger exists.
 - **Fulfillment connection:** the existing payment-intent engine records the repair-side fulfillment event inside the same transaction that writes the canonical Outcome after owner-confirmed fulfillment. The bridge verifies intent state, REAL scope, product/opportunity identity, exact amount in paisa converted to NPR, and the existing Outcome’s product/type/value/unit/source/verification fields. A deterministic event key prevents duplicate repair-side fulfillment.
 - **Owner API and detail:** added an owner-key-gated link endpoint for an existing intent; it never starts checkout. Repair work-item detail shows linked intent status and includes the canonical Outcome only when the explicit fulfillment event references it.
 - **Regression coverage:** TEST-only service tests cover idempotent linking, unverified-intent rejection, mismatched Opportunity rejection, provider-verified → owner-confirmed fulfillment → one repair audit event, and a canonical state_changed EVENT for each work-item transition. Provider requests remain mocked; no payment is made.
-- **Verification still required:** focused repair-shop/payment-intent tests, the full backend suite, exact-head CI, and independent deploy verification for the resulting commit. Source changes do not establish live provider readiness or real revenue. The original fail-closed commits remain part of history. OWNER_INTERVENTIONS_PER_REAL_TRANSACTION remains NOT MEASURABLE.
+- **Verification at main snapshot `4f44cffe727113a8a406ea3652c60c3a33580a74`:** exact-head ForgeOS CI passed (1,303 backend passed, 2 skipped; all nine jobs succeeded), independent deploy verification succeeded for the same SHA, and the secrets scan passed. Those regressions use mocked provider calls: this does not establish live provider readiness, a real payment, or revenue. The original fail-closed commits remain in history. OWNER_INTERVENTIONS_PER_REAL_TRANSACTION remains NOT MEASURABLE.
 ---
 
 ## [PUBLIC ROUTE CANONICALS / PRODUCTION VERIFIED] Emit route-specific canonical URLs
@@ -2002,12 +2002,20 @@ Source: saved-library report `hami_forgeos_integrity_audit_checkpoint_2026-10-11
 
 Do not reopen findings already corrected in source as if still live bugs. Do not mark runtime-dependent findings resolved from static code alone. Any new failure should be reproduced on current main, fixed at the existing seam, tested, and dispositioned here or in the existing root queue; preserve this original audit's F-ID for traceability.
 
-## 2026-10-14 — prevent fixed-window discovery starvation (source change; exact-head verification pending)
+## 2026-10-14 — prevent fixed-window discovery starvation (verified at main snapshot 4f44cffe)
 
 - Existing seam inspected: backend/app/services/discovery_engine.py::run_discovery, WorldEvent, and the existing discovery_run_completed EVENT. The engine previously consumed the same first max_findings_per_method outputs on every run; idempotency made those rows existing, but they still exhausted the window, so later stable findings could be starved indefinitely.
 - Change: persist versioned, opaque per-method cursor digests inside the existing discovery_run_completed EVENT. Persisted runs resume after the last consumed finding and wrap when they reach the end; a missing cursor resets the method safely. Preview remains read-only. Cursor state never stores the raw finding key and creates no table, new primitive, side ledger, or external permission.
 - Test: added a deterministic five-candidate / two-per-run regression. It verifies three runs surface candidates 1–5 in order, cursor values are digests rather than raw keys, and wraparound is idempotent.
 - Owner action removed: no new routine action is needed to advance a method beyond its initial output window. The change does not contact people, spend money, activate a provider, or declare outcomes.
 - Remaining: finding generators can still be expensive to scan, and methods with nondeterministic ordering can cause cursor resets. Production scheduling/run persistence must be independently observed; source and tests alone do not prove natural cron execution.
-- Next verification: exact-head backend/frontend CI and independent deployment verification. If the new regression fails, fix the existing continuation seam before claiming non-starvation.
+- Verification: exact-head CI passed with the cursor regression included (1,303 backend passed, 2 skipped); all nine jobs succeeded, independent deployment verification passed for the same SHA, and secrets scan passed. Natural scheduled execution remains unverified.
+
+## 2026-10-14 — cross-domain discovery: tags plus contact-safe attributes (source change; exact-head verification pending)
+
+- Existing seam inspected: `discovery_engine._disconnection` and its existing `Finding → EVIDENCE / RELATION / EVENT` lifecycle.
+- Change: compare direct string attributes and direct lists of string tags using the same bounded candidate process. Skip contact-bearing/free-text attribute names and any value that the existing `demand_understanding.normalize_observation_content` helper would redact. No placeholder redaction markers become join keys. Each result remains a `possible` hypothesis with source entity basis and a `may_relate` proposal, never a supported relationship.
+- Regression: organization capability tags intersect a need's required tags to surface a candidate connection; embedded email/phone values and contact-bearing fields must not appear in discovery statements, facets or engine-created entities.
+- Reuse: no new primitive, table, engine, source adapter, permission, or output surface. The same exact-source rules still govern later external research.
+- Remaining: cross-domain match quality is still a hypothesis generator, not a semantic judge; generic scalar/list matching needs validation against adversarial false connections and larger-substrate cost before widening its breadth. Current natural production scheduler invocation is still UNVERIFIED.
 

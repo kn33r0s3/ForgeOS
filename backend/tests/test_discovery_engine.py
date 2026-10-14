@@ -297,6 +297,59 @@ def test_an_unknown_kind_is_proposed_as_a_type_and_deferred_until_activated(db, 
     assert json.loads(entity.attributes)["epistemic_state"] == "possible"
 
 
+def test_disconnection_joins_shared_tags_but_excludes_contact_attributes_and_values(db):
+    world_graph.seed_core_types(db)
+    organization = _entity(
+        db,
+        "organization",
+        "Repair collective",
+        capability_tags=["same-day-repair", "owner@example.test"],
+        contact_email="owner@example.test",
+        support_phone="+977 9800000000",
+    )
+    need = _entity(
+        db,
+        "need",
+        "Same-day equipment repair",
+        required_tags=["same-day-repair"],
+        owner_email="owner@example.test",
+        phone="+977 9800000000",
+    )
+    db.commit()
+
+    report = engine.run_discovery(db, methods=["disconnection"], max_findings_per_method=50)
+    hypotheses = [row for row in report["surfaced"] if row["kind"] == "hypothesis"]
+    assert len(hypotheses) == 1
+    hypothesis = hypotheses[0]
+    assert "same-day-repair" in hypothesis["statement"]
+    assert "owner@example.test" not in hypothesis["statement"]
+    assert "+977 9800000000" not in hypothesis["statement"]
+    assert hypothesis["epistemic_state"] == "possible"
+
+    entity = db.get(models.SubstrateEntity, hypothesis["entity_id"])
+    attributes = json.loads(entity.attributes)
+    facets = attributes["facets"]
+    assert facets["shared_value"] == "same-day-repair"
+    assert facets["attributes"] == ["capability_tags[]", "required_tags[]"]
+    assert db.query(models.WorldRelation).filter_by(
+        relation_type="may_relate",
+        from_entity_id=organization.id,
+        to_entity_id=need.id,
+    ).one().truth_state == "possible"
+
+    # Contact values are omitted, not rewritten into a shared redaction marker.
+    engine_rows = (
+        db.query(models.SubstrateEntity)
+        .filter_by(source_system=engine.ENGINE_ACTOR)
+        .all()
+    )
+    serialized_engine_output = json.dumps(
+        [json.loads(row.attributes) for row in engine_rows], sort_keys=True
+    )
+    assert "owner@example.test" not in serialized_engine_output
+    assert "+977 9800000000" not in serialized_engine_output
+
+
 def test_fabricated_or_overclaiming_findings_are_rejected_and_broken_plugins_isolated(db, world):
     def fabricate(ctx):
         yield engine.Finding(kind="observation", key="ghost", statement="Invented.",
