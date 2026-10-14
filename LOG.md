@@ -293,3 +293,10 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Swept rendered images on `/`, `/about`, `/services`, `/domain`, and `/providers`. Each page exposed the same two 40×40 brand-mark images with `alt=""`; accessibility snapshots show the containing header/footer links named “Hami Systems home,” so the images are decorative and the links remain named.
 - No image-alternative defect was observed; no code changed. Latest continuity update `ed233d02` is pushed on `main`; exact-SHA ForgeOS CI 38488692413, independent deployment verification 38488692419, and secrets scan 38488692494 all succeeded.
 - Next: actual screen-reader/device interoperability and then a different QA method. Auth remains owner-only/unavailable; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
+## 2026-10-14 — Unknown-route behavior (no confirmed defect)
+
+- Live probes of `/__qa-missing-route-20261014` and `/services/__qa-missing-service-20261014` both returned HTTP 404 with HTML content. The unmatched-route response carried `noindex`; the invalid service slug used the current `"Service — Hami"` fallback and a route-specific canonical.
+- Source inspection confirms the catch-all route throws `notFound()` and defines `noindex`; the service loader calls `getService()` and throws `notFound()` when its slug is absent. No code change was justified: production status and current route behavior agree. Whether all nested 404s should also carry `noindex` is not an established requirement; no indexing defect is claimed.
+- Latest verified head `f42ec153` is pushed on `main`; exact-SHA ForgeOS CI 38489348246, independent deployment verification 38489348239, and secrets scan 38489348274 succeeded.
+- Next: verify the verified focus behavior with screen-reader/device interoperability, then continue with another QA method. Auth remains unchanged and `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
