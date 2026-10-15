@@ -1,3 +1,12 @@
+## [PUBLIC DISCOVERY LABEL BATCHING — VERIFICATION PENDING]
+
+- Verified parent `55e2dd0`: 1,319 backend tests passed, 2 skipped; all nine CI jobs, secrets scan and independent deployment verifier passed.
+- `list_public_discoveries` still called the scalar labeler for every source-linked Claim. It now preloads unique Claims and calls `public_claim_labels` once, with a route-level query-count regression for three sourced Claims.
+- The existing scalar policy remains authoritative for contradictions, independent-source support, freshness and regulated-asset publication compliance; this is only batched retrieval.
+- Exact-head CI, secret scan and deployment verification for the current change are pending.
+
+---
+
 ## [PUBLIC CLAIM LABEL BATCHING — VERIFICATION PENDING] Reuse evidence links across matched claims
 
 - **Existing seam inspected:** `public_epistemics.derive_public_label` queried EvidenceRelationship/Evidence per Claim. The matching catalogue can contain repeated rows for one Claim when multiple source records refer to it.

@@ -212,10 +212,13 @@ def list_public_discoveries(limit: int = Query(default=20, ge=1, le=50), db: Ses
     )
     from app.services.public_feed import sanitize_public_text
 
+    claims_by_id = {claim.id: claim for claim, _signal in rows}
+    claim_labels = public_epistemics.public_claim_labels(db, list(claims_by_id.values()))
+
     discoveries = []
     seen = set()
     for claim, signal in rows:
-        label = public_epistemics.public_claim_label(db, claim)
+        label = claim_labels.get(claim.id)
         if label is None:
             continue
         if claim.id in seen:

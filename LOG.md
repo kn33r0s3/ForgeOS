@@ -453,3 +453,12 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - **Fix on this commit:** restore scalar `public_epistemics.public_claim_label(db, claim)` in `list_public_discoveries`; switch the call in `_match_for_need` alone to `claim_labels.get(claim.id)`. Static checks assert the two call sites are now distinct and correct.
 - **Verification:** corrected commit requires its own exact-head CI/deploy/secrets checks. No claim of local pytest execution. No external contact, payment, feature activation or public-claim policy change.
 
+
+
+## 2026-10-15 — batch public discovery claim labels
+
+- Verified base `55e2dd0`: 1,319 backend tests passed, 2 skipped; all nine CI jobs, secrets scan and exact-SHA deployment verification passed.
+- `/public/discoveries` still performed a scalar public-claim label lookup per Claim. It now builds a unique Claim map and calls the existing `public_claim_labels` batch helper once per response.
+- Added a route-level query-count regression over three source-backed observation Claims. Claim-label semantics, contradiction handling, independent source identity, freshness and publication-compliance checks are unchanged.
+- Product gap for next work: Rescue Week readiness requires linked Seller/firsthand/consented/REAL Evidence, but the present interview-results form intentionally stores MOCK/REPORTED notes and the generic substrate evidence writer does not expose required gate metadata. Investigate a governed owner-only Evidence + Event flow for a real consented account. No external contact or payment occurred.
+

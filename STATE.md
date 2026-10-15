@@ -1,5 +1,14 @@
 ## Live resume point — 2026-10-15 NPT
 
+- Verified baseline: `55e2dd09b63bc87a5de1224914fe974e0cd2751e` passed all nine CI jobs; backend **1,319 passed, 2 skipped**. Secrets scan and exact-SHA deployment verification also passed.
+- Current change batches Claim labels on `/public/discoveries`, matching the existing shared-label approach used by `_match_for_need`. A route-level query-count regression covers three sourced Claims. Existing claim-label, visibility and publication-compliance rules remain the authority.
+- Next high-value product gap: Rescue Week readiness requires linked firsthand, consented, seller-side REAL Evidence, but the owner interview form deliberately records MOCK/REPORTED notes and the generic substrate evidence endpoint cannot set the legacy gate fields. Next investigate an owner-only idempotent Evidence + Event recording path for an actual consented account. It must not contact anyone, claim sales, or mark the account independently verified.
+- This change's exact-head CI, secrets scan and deployment verification are pending. No local pytest run is claimed; no external message, activation, checkout, payment or revenue record was created.
+
+---
+
+## Live resume point — 2026-10-15 NPT
+
 - Canonical `main` before the current correction: `90fd1d052fea32b1ec9795fceafcd9da49f18437`. Its exact-SHA deployment verifier and secrets scan passed; eight other CI jobs passed, but backend suite finished **4 failed, 1,312 passed, 2 skipped**.
 - Root cause: `claim_labels.get(claim.id)` was inserted into the unrelated `list_public_discoveries` route, where the variable is undefined, while `_match_for_need` still called the scalar labeler. Four existing discovery-route tests caught it. The new batched label equivalence/query-count test passed.
 - Current correction restores the scalar label call in `/public/discoveries` and switches only `_match_for_need` to the already computed catalogue label map. Next commit requires fresh exact-head full CI, secret scan and independent deployment verification. No local pytest run is claimed.

@@ -1,12 +1,11 @@
 # Hami Execution Queue
 
-## P0 — Correctly scope batched public Claim labels (verification pending)
+## P0 — Batch public discovery labels and close the owner-evidence capture gap (verification pending)
 
-- The shared-catalog query-count optimization is verified on prior commit `ffc387fc` (1,315 backend tests passed, 2 skipped; all nine CI jobs, secrets scan and exact-SHA deployment verifier passed).
-- The next change on `90fd1d0` added bounded batch reads for Claim evidence links and its batch-vs-scalar regression passed, but four existing tests failed because the edit accidentally changed the separate `/public/discoveries` route to read an undefined `claim_labels` variable. That route does not use the matching catalogue.
-- Correction: retain `public_epistemics.public_claim_label(db, claim)` for the discoveries route; use `claim_labels.get(claim.id)` only inside `_match_for_need`, whose catalogue explicitly provides the precomputed map.
-- The exact-head deployment verifier and secrets scan for `90fd1d0` passed, but its complete backend suite did not. Correction commit needs its own exact-head CI and deployment verification. No local test execution is claimed.
-- The map contains the same scalar public-label result; contradiction, independent publisher, freshness, unknown/inference and regulated-asset gates are unchanged. After it verifies, inspect per-candidate connection/response query fan-out only if it helps existing load; the real seller conversation remains the business-critical evidence gap.
+- Verified baseline `55e2dd0`: backend 1,319 passed / 2 skipped; all nine CI jobs, secrets scan and exact-SHA deployment verification green.
+- `/public/discoveries` still label-checked each unique Claim by fetching EvidenceRelationship rows separately. It now uses the established batched label helper once per response and a route-level query-count test.
+- Next: add an owner-only, consent-attested record path for the Rescue Week gate using existing Evidence + Event primitives. It must be idempotent, keep L3 consented account evidence distinct from externally verified facts, and never trigger outbound contact. Do not create a new evidence table or turn owner-entered notes into evidence without a real consented account.
+- This commit's exact-head CI, secret scan and independent deployment verification remain pending.
 
 ## P1 — Evaluate multilingual retrieval quality
 

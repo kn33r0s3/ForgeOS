@@ -1,5 +1,13 @@
 ## Live resume point — 2026-10-15 NPT
 
+Canonical branch is `main`. Recovery commit `55e2dd0` passed all nine CI jobs (backend 1,319 passed, 2 skipped), the secrets scan and the independent deployment verifier. This follow-up removes the remaining N+1 public Claim-label reads in `list_public_discoveries`: unique Claims are passed to the existing `public_claim_labels` batch helper and the route consumes that map. A route-level query-count regression is added; exact-head CI/deploy/secrets results are pending.
+
+The next product issue is not another dashboard: Rescue Week readiness requires an Evidence row marked seller-side + firsthand + consented + REAL and linked to its Bet. The current owner interview form explicitly stores MOCK/REPORTED notes and the generic substrate writer cannot set these gate-specific metadata fields. Build an owner-only, privacy-minimizing, idempotent Evidence/Event path for a real consented seller account, preserving the distinction between a reported account (L3) and independently verified outcomes. No outbound contact is authorized by that work.
+
+---
+
+## Live resume point — 2026-10-15 NPT
+
 Canonical branch is `main`; no PR or parallel checkout. Prior code `90fd1d0` deployed and passed its secrets scan, but full backend CI failed four existing public-discovery tests because an undefined `claim_labels` reference was put in `list_public_discoveries`. The new batch-label equivalence/query-count regression passed. The corrected code restores scalar labels in public discoveries and uses the precomputed map only in `_match_for_need`. **Do not call this corrected change verified until its new exact-head full CI, secrets scan and deploy verifier are green.** No local pytest is claimed.
 
 The catalogue reuse change from `ffc387fc` was independently verified (1,315 passed, 2 skipped, all 9 CI jobs, secrets and deployment checks green). Preserve all public epistemic rules and keep public matching distinct from acceptance, agreement, fulfillment and revenue. The next business-critical event remains a real, consented seller conversation; no outreach is authorized by these code changes.
