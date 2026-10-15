@@ -1,3 +1,201 @@
+import hashlib
+import hmac
+import json
+import math
+import os
+import secrets
+from datetime import datetime, timezone
+from typing import Literal
+
+from pydantic import BaseModel
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
+from sqlalchemy import or_
+from sqlalchemy.orm import Session, selectinload
+
+from app import evidence_source, models, schemas
+from app.database import get_db
+from app.services import public_epistemics, public_stats
+from app.config import settings
+from app.services import forge_bot_privacy
+from app.services.text_matching import tokenize_match_terms
+
+router = APIRouter(prefix="/public", tags=["public"])
+
+
+@router.get("/feed", response_model=list[schemas.PublicFeedItem])
+def list_public_feed(
+    limit: int = Query(default=30, ge=1, le=100),
+    kind: str | None = Query(default=None, min_length=1, max_length=32),
+    entity_type: str | None = Query(default=None, min_length=1, max_length=64),
+    entity_id: int | None = Query(default=None, ge=1),
+    db: Session = Depends(get_db),
+):
+    """Chronological public projection of canonical Forge evidence and network records."""
+    from app.services.public_feed import build_public_feed
+
+    if (entity_type is None) != (entity_id is None):
+        raise HTTPException(status_code=422, detail="entity_type and entity_id must be provided together")
+    return build_public_feed(
+        db,
+        limit=limit,
+        kind=kind,
+        entity_type=entity_type,
+        entity_id=entity_id,
+    )
+
+
+def evidence_freshness(when: datetime | None) -> str:
+    """fresh, stale, or unknown. Age never becomes a new fact."""
+    if when is None:
+        return "unknown"
+    observed = when if when.tzinfo else when.replace(tzinfo=timezone.utc)
+    days = int(os.environ.get("FORGEOS_EVIDENCE_FRESH_DAYS", "90"))
+    age = datetime.now(timezone.utc) - observed
+    return "stale" if age.days > days else "fresh"
+
+
+def _public_provider_query(db: Session):
+    return (
+        db.query(models.Provider)
+        .filter(models.Provider.public_visible.is_(True))
+        .filter(models.Provider.is_active.is_(True))
+        .filter(models.Provider.verification_status == "verified")
+    )
+
+
+def _public_service_query(db: Session):
+    return (
+        db.query(models.ServiceListing)
+        .join(models.Provider)
+        .filter(models.Provider.public_visible.is_(True))
+        .filter(models.Provider.is_active.is_(True))
+        .filter(models.Provider.verification_status == "verified")
+        .filter(models.ServiceListing.public_visible.is_(True))
+        .filter(models.ServiceListing.is_active.is_(True))
+    )
+
+def _public_provider_out(row: models.Provider) -> schemas.PublicProviderOut:
+    """Sanitize free-form provider fields; explicit phone/email fields remain opt-in catalog fields."""
+    from app.services.public_feed import sanitize_public_text
+
+    base = schemas.PublicProviderOut.model_validate(row)
+    return base.model_copy(update={
+        "name": sanitize_public_text(row.name) or "",
+        "business_name": sanitize_public_text(row.business_name),
+        "category": sanitize_public_text(row.category),
+        "summary": sanitize_public_text(row.summary),
+        "region": sanitize_public_text(row.region),
+        "city": sanitize_public_text(row.city),
+        "country": sanitize_public_text(row.country) or "",
+    })
+
+
+def _public_service_out(row: models.ServiceListing) -> schemas.PublicServiceListingOut:
+    """Sanitize free-form public listing text while preserving structured price/status fields."""
+    from app.services.public_feed import sanitize_public_text
+
+    base = schemas.PublicServiceListingOut.model_validate(row)
+    return base.model_copy(update={
+        "title": sanitize_public_text(row.title) or "",
+        "description": sanitize_public_text(row.description) or "",
+        "category": sanitize_public_text(row.category),
+        "location": sanitize_public_text(row.location),
+        "price_from": sanitize_public_text(row.price_from),
+    })
+
+
+def _like(value: str) -> str:
+    return f"%{value.strip()}%"
+
+
+def _matching_listing_provider_ids(db: Session, q: str):
+    like = _like(q)
+    return (
+        db.query(models.ServiceListing.provider_id)
+        .filter(models.ServiceListing.public_visible.is_(True))
+        .filter(models.ServiceListing.is_active.is_(True))
+        .filter(
+            or_(
+                models.ServiceListing.title.ilike(like),
+                models.ServiceListing.description.ilike(like),
+                models.ServiceListing.category.ilike(like),
+                models.ServiceListing.location.ilike(like),
+            )
+        )
+    )
+
+
+@router.get("/providers", response_model=list[schemas.PublicProviderOut])
+def list_public_providers(
+    q: str | None = Query(default=None),
+    category: str | None = Query(default=None),
+    city: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    query = _public_provider_query(db)
+    if category and category.strip() and category.strip().lower() != "all":
+        query = query.filter(models.Provider.category.ilike(category.strip()))
+    if city and city.strip():
+        query = query.filter(models.Provider.city.ilike(_like(city)))
+    if q and q.strip():
+        like = _like(q)
+        query = query.filter(
+            or_(
+                models.Provider.name.ilike(like),
+                models.Provider.business_name.ilike(like),
+                models.Provider.summary.ilike(like),
+                models.Provider.category.ilike(like),
+                models.Provider.city.ilike(like),
+                models.Provider.region.ilike(like),
+                models.Provider.id.in_(_matching_listing_provider_ids(db, q)),
+            )
+        )
+    return [_public_provider_out(row) for row in query.order_by(models.Provider.created_at.desc()).all()]
+
+
+@router.get("/providers/{provider_id}", response_model=schemas.PublicProviderOut)
+def get_public_provider(provider_id: int, db: Session = Depends(get_db)):
+    row = (
+        _public_provider_query(db)
+        .filter(models.Provider.id == provider_id)
+        .first()
+    )
+    if row is None:
+        raise HTTPException(404, "provider not found")
+    return _public_provider_out(row)
+
+
+@router.get("/services", response_model=list[schemas.PublicServiceListingOut])
+def list_public_services(
+    q: str | None = Query(default=None),
+    category: str | None = Query(default=None),
+    city: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    query = _public_service_query(db)
+    if category and category.strip() and category.strip().lower() != "all":
+        query = query.filter(models.ServiceListing.category.ilike(category.strip()))
+    if city and city.strip():
+        like = _like(city)
+        query = query.filter(
+            or_(models.ServiceListing.location.ilike(like), models.Provider.city.ilike(like))
+        )
+    if q and q.strip():
+        like = _like(q)
+        query = query.filter(
+            or_(
+                models.ServiceListing.title.ilike(like),
+                models.ServiceListing.description.ilike(like),
+                models.ServiceListing.category.ilike(like),
+                models.ServiceListing.location.ilike(like),
+                models.Provider.name.ilike(like),
+                models.Provider.city.ilike(like),
+            )
+        )
+    return [_public_service_out(row) for row in query.order_by(models.ServiceListing.created_at.desc()).all()]
+
+
+@router.get("/discoveries", response_model=list[schemas.PublicDiscoveryOut])
 def list_public_discoveries(limit: int = Query(default=20, ge=1, le=50), db: Session = Depends(get_db)):
     """Claims the evidence graph already holds. Internal scores stay off this response."""
     rows = (
@@ -14,8 +212,6 @@ def list_public_discoveries(limit: int = Query(default=20, ge=1, le=50), db: Ses
     )
     from app.services.public_feed import sanitize_public_text
 
-    claims_by_id = {claim.id: claim for claim, _signal in rows}
-    claim_labels = public_epistemics.public_claim_labels(db, list(claims_by_id.values()))
     discoveries = []
     seen = set()
     for claim, signal in rows:
