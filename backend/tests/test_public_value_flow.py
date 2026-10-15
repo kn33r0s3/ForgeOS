@@ -1629,8 +1629,8 @@ def test_scan_candidates_reuses_connection_catalog_and_preserves_private_duplica
 def test_owner_only_seller_account_route_records_l3_evidence_idempotently(owner_client_with_db, db):
     from app.services import operating_v4
 
-    offers = operating_v4.seed_offer_views(db)
-    assert any(item["id"] == "rescue-week" for item in offers)
+    operating_v4.seed_offer_views(db)
+    assert any(item["id"] == "rescue-week" for item in operating_v4.list_offer_views(db))
     body = {
         "participant_ref": "seller-api-ref-001",
         "claim": "Seller reports evening inquiry responses sometimes wait until morning.",
