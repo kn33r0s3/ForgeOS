@@ -1,3 +1,5 @@
+from sqlalchemy import event
+
 from app import models
 from app.services import research_planner
 
@@ -228,9 +230,21 @@ def test_prior_observations_skip_evidence_less_top_hits_to_fill_limit(db):
     db.add(evidence)
     db.commit()
 
-    observations = research_planner._prior_observations(db, question, limit=1)
+    evidence_selects = {"count": 0}
+
+    def count_evidence_selects(conn, cursor, statement, parameters, context, executemany):
+        normalized_sql = " ".join(statement.casefold().split())
+        if normalized_sql.startswith("select") and " from evidence" in normalized_sql:
+            evidence_selects["count"] += 1
+
+    event.listen(db.get_bind(), "before_cursor_execute", count_evidence_selects)
+    try:
+        observations = research_planner._prior_observations(db, question, limit=1)
+    finally:
+        event.remove(db.get_bind(), "before_cursor_execute", count_evidence_selects)
 
     assert len(observations) == 1
+    assert evidence_selects["count"] == 1
     assert observations[0]["signal_id"] == eligible.id
     assert observations[0]["evidence_id"] == evidence.id
     assert observations[0]["epistemic_status"] == "prior_observation_unverified"
