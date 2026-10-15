@@ -1,10 +1,12 @@
 import json
+
+from sqlalchemy import event
 from datetime import datetime, timedelta, timezone
 
 from app import models
 from app.api.public import _match_for_need, _match_tokens, list_public_discoveries
 from app.services.public_feed import build_public_feed
-from app.services.public_epistemics import derive_public_label, public_claim_label
+from app.services.public_epistemics import derive_public_label, public_claim_label, public_claim_labels
 
 
 def _claim(db, *, state="observed", kind=None, statement="A stored public claim.", extra=None):
@@ -329,6 +331,65 @@ def test_public_label_mapping_covers_fact_observation_external_claim_conflict_an
     unknown = _claim(db, kind="UNKNOWN")
     assert derive_public_label(db, inference, now=now) is None
     assert derive_public_label(db, unknown, now=now) is None
+
+
+def test_public_claim_labels_batch_evidence_reads_without_changing_public_labels(db):
+    now = datetime(2026, 9, 25, tzinfo=timezone.utc)
+
+    fact = _claim(db, kind="FACT", statement="The sourced repair figure is observed.")
+    _evidence(db, fact, source="repair-primary", retrieved_at=now)
+
+    conflict = _claim(
+        db,
+        state="contested",
+        kind="EXTERNAL CLAIM",
+        statement="The repair availability claim has conflicting evidence.",
+    )
+    _evidence(db, conflict, source="repair-source-a", retrieved_at=now)
+    _evidence(
+        db,
+        conflict,
+        source="repair-source-b",
+        retrieved_at=now,
+        relation="contradicts",
+    )
+
+    hidden = _claim(db, kind="INFERENCE", statement="An internal inference must stay hidden.")
+    _evidence(db, hidden, source="inference-source", retrieved_at=now)
+
+    regulated = _claim(
+        db,
+        kind="OBSERVATION",
+        statement="Stock market conditions are noted in a background report.",
+    )
+    _evidence(db, regulated, source="regulated-source", retrieved_at=now)
+
+    claims = [fact, conflict, hidden, regulated]
+    queries = {"evidence_relationships": 0}
+
+    def count_evidence_link_queries(conn, cursor, statement, parameters, context, executemany):
+        normalized = " ".join(statement.casefold().split())
+        if normalized.startswith("select") and " from evidence_relationships " in normalized:
+            queries["evidence_relationships"] += 1
+
+    event.listen(db.get_bind(), "before_cursor_execute", count_evidence_link_queries)
+    try:
+        batched = public_claim_labels(db, claims, now=now)
+    finally:
+        event.remove(db.get_bind(), "before_cursor_execute", count_evidence_link_queries)
+
+    scalar = {}
+    for claim in claims:
+        label = public_claim_label(db, claim, now=now)
+        if label is not None:
+            scalar[claim.id] = label
+
+    assert batched == scalar
+    assert queries["evidence_relationships"] == 1
+    assert batched[fact.id]["epistemic_state"] == "supported"
+    assert batched[conflict.id]["epistemic_state"] == "contested"
+    assert hidden.id not in batched
+    assert regulated.id not in batched
 
 
 def test_staleness_is_separate_from_the_public_epistemic_label(db):

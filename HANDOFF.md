@@ -1,5 +1,14 @@
 ## Live resume point — 2026-10-15 NPT
 
+Canonical branch is `main`; no PR, branch, second checkout or parallel engine is being used. `ffc387fc409592f997b6a795bf7e994eda6e653a` has passed its independent deploy verifier and secrets scan; its full CI matrix was still finishing its backend run when this follow-up was prepared. The original `ed2d8c2` run failed one added test because the initial counter used the wrong physical table name; the corrected fixture/counter is committed in `ffc387fc`.
+
+Current follow-up batches evidence-link reads for public Claim labels in groups of 400, eager-loads related Signals, and calls the existing scalar label rules using supplied links. A regression compares batched labels with scalar results and asserts one evidence-link SELECT. **Do not mark this source change verified until its own exact-head backend/full CI, secrets scan and independent deployment verifier are checked.** Local pytest is unavailable in this environment.
+
+Next engineering seam after verification: batch latest connection rows and their response/fulfillment Outcomes while retaining latest-row privacy visibility and the generic public response wording. Do not activate intake, messages, model-provider requests, checkout/payment, or any new external action.
+
+---
+
+
 Canonical branch is `main`; no branch, PR, second checkout or parallel implementation was created. Before the current patch, main was `3292fbe2acc38c1ba199b91725514ad6ffd8ffb6`. Its full CI, secrets scan and independent deploy verification passed. The code revision with multilingual/distinctive-overlap ranking also passed all nine CI jobs.
 
 Current patch reuses the existing public matching catalogue once per `/public/matches` request and once per bounded network candidate scan, using batched provider-listing loading. A query-count regression was added to the existing `backend/tests/test_public_value_flow.py`; source inspection caught and corrected its initial mismatch between ORM class names and physical table names, and the regression now includes a verified provider plus listing to exercise eager loading. **Do not claim this code is verified until the new exact-head CI and independent deploy verification results are read.** Local test execution was not available in this environment.

@@ -1,5 +1,13 @@
 ## Live resume point — 2026-10-15 NPT
 
+- Canonical main remains the sole implementation line. Prior source commit `ffc387fc409592f997b6a795bf7e994eda6e653a` passed the independent deployment verifier (exact SHA + protected owner-cycle read) and secrets scan; its complete 9-job CI matrix was still running when this follow-up was prepared.
+- New code batches EvidenceRelationship/Evidence reads for unique Claims while computing public matching labels and eager-loads Signals used by publisher/freshness calculations. The exact single-Claim policy and publication gates are reused; a regression compares batched output to scalar output and counts relationship SELECTs.
+- **This follow-up's exact-head CI, secrets scan and deployment verification are pending.** No local pytest execution is claimed. Prior CI failure on `ed2d8c2` was isolated to its flawed SQL table-name counter; the corrected fixture/counter is in `ffc387fc`, not the failed version.
+- The catalogue optimization does not establish match quality, scheduled runtime behavior, genuine model quality or REAL customer/payment/revenue outcomes. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**. No intake, send, model-provider, checkout or payment permission changed.
+
+---
+
+
 - Baseline main before this change: `3292fbe2acc38c1ba199b91725514ad6ffd8ffb6`. The prior source commit `7e56d1bb748dfc27ff272d20c76db1874a9fd9f5` passed all nine CI jobs; documentation-only baseline main also passed exact-head CI, secrets scan and independent deploy verification.
 - Current code change reuses the existing public matching catalogue within a single `/public/matches` response and a bounded `scan_candidates` pass, and batch-loads provider listings. A two-need query-count regression was added to the existing public value-flow tests.
 - **Verification state at commit preparation:** source CI/deployment verification were still running when the query-count regression's database table-name mismatch was identified. The regression is corrected and now exercises a verified provider/listing fixture; the next commit's exact-head CI/deployment results are authoritative. No local pytest execution is claimed because the local network path to GitHub is unavailable.

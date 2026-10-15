@@ -1,13 +1,13 @@
 # Hami Execution Queue
 
-## P0 — Reuse the public matching catalog across needs (verification pending)
+## P0 — Batch public Claim evidence reads (verification pending)
 
-- Existing matcher/query pattern: `backend/app/api/public.py::_match_for_need` repeated verified-provider, open-domain-record and linked-knowledge queries for every need. Provider listings could also load lazily per provider.
-- Reuse one read-only catalog within `/public/matches` and the existing `network_connections.scan_candidates` pass, with SQLAlchemy's batched provider-listing loading.
-- Existing lexical ranking, public provider gate, public claim label check, duplicate-signal filter, per-candidate connection visibility, and “not acceptance/fulfillment/payment” wording remain unchanged.
-- Added a query-count regression for two unrelated needs; it expects a single provider query and a single linked-knowledge query for the whole public match response, plus the request and shared open-record queries.
-- Exact-head test/deploy verification is pending. This is a query-planning optimization, not evidence of successful matches or real-world value.
-- After CI passes, next inspect/batch per-candidate NetworkConnection and Outcome response lookups without changing visibility or truth labels.
+- The public match catalogue is now reused across needs and provider listings are batch-loaded. The next repeated query was in `public_epistemics.public_claim_label`, which loaded EvidenceRelationship rows separately for each Claim.
+- Reuse one batched evidence-link read for the unique Claims in the catalogue, in chunks of 400 IDs, and eagerly load each linked Signal used to calculate publisher identity/freshness.
+- The batch path calls the existing single-Claim label policy with preloaded links. It does not invent labels or skip contradiction, independent-publisher, stale-evidence, unknown-state or regulated-asset gates.
+- Added a regression that compares batch labels against scalar output for supported, contested, hidden-inference and regulated Claims and asserts one evidence-link query for four Claims.
+- Exact-head CI/deploy verification for this source change is pending. The latest prior head `ffc387fc` already passed independent deployment verification and secrets scan; its full suite was still running when the new change was prepared.
+- Next optimize per-candidate connection/response lookups after these semantics and query counts pass.
 
 ## P1 — Evaluate multilingual retrieval quality
 

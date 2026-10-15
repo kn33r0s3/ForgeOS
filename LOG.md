@@ -434,3 +434,13 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - During exact-head CI review of `ed2d8c2`, source inspection confirmed the ORM maps Provider/ServiceListing to `public_providers`/`public_service_listings`. The new query counter initially used the short class names rather than the actual database table names; corrected it before accepting test results.
 - The regression now creates one verified public provider and active public listing, then asserts one provider query, one listing relationship query, one linked-knowledge query, and two domain-record queries for two needs. This exercises batched relationship loading rather than passing when the provider table is empty.
 - The preceding commit's CI was in progress; this focused follow-up requires its own exact-head full CI and deployment verification. No production flags, external actions or reality/economic claims changed.
+
+
+## 2026-10-15 — batch evidence relationships during public matching
+
+- **Audit:** `_match_for_need` consumes a joined Claim/Signal catalogue, but called `public_claim_label` for each row; that scalar function loaded EvidenceRelationship/Evidence and associated Signal identities independently. Duplicate source rows could repeat a Claim's evidence read.
+- **Change:** the existing epistemic service accepts optional preloaded evidence links, exposes a batch helper that reads links for unique Claims in chunks of 400 and joined-loads each Evidence's Signal, then invokes the same scalar labeling + publication-compliance implementation. The existing public matching catalogue now precomputes a label map and uses it, removing repeated evidence-link reads without changing public labels.
+- **Regression:** compare set-based labels to scalar output for a supported fact, a contested claim, a hidden inference and an unreviewed regulated-asset observation; count one EvidenceRelationship SELECT for the four-Claim batch.
+- **Prior verification state:** SHA `ffc387fc409592f997b6a795bf7e994eda6e653a` had successful secrets and independent deployment checks; its full CI backend job was still in progress at the time this follow-up was prepared. The source/test change in this entry is not yet verified.
+- No new table or file, no production setting or activation change, and no external contact/payment/revenue action occurred. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+

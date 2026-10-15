@@ -1,3 +1,14 @@
+## [PUBLIC CLAIM LABEL BATCHING — VERIFICATION PENDING] Reuse evidence links across matched claims
+
+- **Existing seam inspected:** `public_epistemics.derive_public_label` queried EvidenceRelationship/Evidence per Claim. The matching catalogue can contain repeated rows for one Claim when multiple source records refer to it.
+- **Change prepared in existing code:** preload Claim evidence links in bounded groups of 400 IDs; eager-load the related Signal needed for source-host and freshness calculations; supply those exact links to the existing scalar label rules.
+- **Truth/visibility contract:** keep conflict relationships claim-specific; count only support/update edges from distinct external hosts; use the same observed/supported/contested vocabulary and freshness bit; preserve the regulated-asset publication check. Missing, inference, unknown, superseded and rejected Claims remain hidden as before.
+- **Regression:** compare batch results against each existing scalar label for supported, contested, hidden and regulated Claims; assert only one EvidenceRelationship query for a batch smaller than 400.
+- **Verification:** full CI for catalogue reuse is running on prior source SHA `ffc387fc409592f997b6a795bf7e994eda6e653a`; this source change requires its own exact-head CI plus secrets and deploy verification. No local pytest run is claimed.
+- **Next:** measure real-source top-k ranking, then batch per-candidate connection and response reads. A public lexical match is not acceptance, a verified counterparty or a REAL outcome.
+
+---
+
 ## [PUBLIC MATCH CATALOG REUSE — VERIFICATION PENDING] Avoid repeated catalog loads per need
 
 - **Existing seam inspected:** `backend/app/api/public.py::_match_for_need`, `list_public_matches`, and `backend/app/services/network_connections.py::scan_candidates`; these already own the public match and candidate scan paths. No new table or parallel matching engine is required.

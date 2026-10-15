@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Literal, TypedDict
 from urllib.parse import urlsplit
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app import models
 
@@ -57,6 +57,7 @@ def derive_public_label(
     claim: models.Claim,
     *,
     now: datetime | None = None,
+    evidence_links: list[tuple[models.EvidenceRelationship, models.Evidence]] | None = None,
 ) -> PublicClaimLabel | None:
     """Map one claim and its stored evidence to a safe public label.
 
@@ -73,12 +74,15 @@ def derive_public_label(
     if internal_state in {"superseded", "rejected", "weakened"}:
         return None
 
-    links = (
-        db.query(models.EvidenceRelationship, models.Evidence)
-        .join(models.Evidence, models.Evidence.id == models.EvidenceRelationship.evidence_id)
-        .filter(models.EvidenceRelationship.claim_id == claim.id)
-        .all()
-    )
+    links = evidence_links
+    if links is None:
+        links = (
+            db.query(models.EvidenceRelationship, models.Evidence)
+            .join(models.Evidence, models.Evidence.id == models.EvidenceRelationship.evidence_id)
+            .filter(models.EvidenceRelationship.claim_id == claim.id)
+            .options(joinedload(models.Evidence.signal))
+            .all()
+        )
     # Contradiction is Claim-specific. Evidence.direction belongs to a
     # legacy evidence row and may describe a different belief/opportunity; do
     # not let it override this Claim's explicit EvidenceRelationship.
@@ -129,12 +133,61 @@ def public_claim_label(
     claim: models.Claim,
     *,
     now: datetime | None = None,
+    evidence_links: list[tuple[models.EvidenceRelationship, models.Evidence]] | None = None,
 ) -> PublicClaimLabel | None:
     """Apply epistemic labeling and the regulated-asset publication gate."""
-    label = derive_public_label(db, claim, now=now)
+    label = derive_public_label(db, claim, now=now, evidence_links=evidence_links)
     if label is None or not publication_compliance_allowed(claim):
         return None
     return label
+
+
+def public_claim_labels(
+    db: Session,
+    claims: list[models.Claim],
+    *,
+    now: datetime | None = None,
+) -> dict[int, PublicClaimLabel]:
+    """Evaluate many public Claim labels using bounded, batched Evidence reads.
+
+    This is the set-based equivalent of calling the scalar public label
+    function for every claim. It preserves the same contradiction, independent
+    source, freshness and regulated-asset publication rules.
+    """
+    claims_by_id = {claim.id: claim for claim in claims if claim.id is not None}
+    if not claims_by_id:
+        return {}
+
+    links_by_claim: dict[int, list[tuple[models.EvidenceRelationship, models.Evidence]]] = {
+        claim_id: [] for claim_id in claims_by_id
+    }
+    claim_ids = list(claims_by_id)
+    # 400 ids remain below SQLite's traditional bind-parameter limits while
+    # normal public-match batches use a single round trip.
+    batch_size = 400
+    for offset in range(0, len(claim_ids), batch_size):
+        batch_ids = claim_ids[offset : offset + batch_size]
+        linked_rows = (
+            db.query(models.EvidenceRelationship, models.Evidence)
+            .join(models.Evidence, models.Evidence.id == models.EvidenceRelationship.evidence_id)
+            .filter(models.EvidenceRelationship.claim_id.in_(batch_ids))
+            .options(joinedload(models.Evidence.signal))
+            .all()
+        )
+        for edge, evidence in linked_rows:
+            links_by_claim[edge.claim_id].append((edge, evidence))
+
+    labels: dict[int, PublicClaimLabel] = {}
+    for claim_id, claim in claims_by_id.items():
+        label = public_claim_label(
+            db,
+            claim,
+            now=now,
+            evidence_links=links_by_claim[claim_id],
+        )
+        if label is not None:
+            labels[claim_id] = label
+    return labels
 
 
 def publication_compliance_required(claim: models.Claim) -> bool:

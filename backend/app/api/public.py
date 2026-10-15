@@ -215,7 +215,7 @@ def list_public_discoveries(limit: int = Query(default=20, ge=1, le=50), db: Ses
     discoveries = []
     seen = set()
     for claim, signal in rows:
-        label = public_epistemics.public_claim_label(db, claim)
+        label = claim_labels.get(claim.id)
         if label is None:
             continue
         if claim.id in seen:
@@ -324,7 +324,9 @@ def _public_matching_catalog(db: Session):
         .filter(models.Signal.is_duplicate_of.is_(None))
         .all()
     )
-    return providers, other_records, knowledge
+    claims_by_id = {claim.id: claim for claim, _signal in knowledge}
+    claim_labels = public_epistemics.public_claim_labels(db, list(claims_by_id.values()))
+    return providers, other_records, knowledge, claim_labels
 
 
 def _match_for_need(db: Session, need: models.DomainRecord, *, matching_catalog=None) -> schemas.PublicMatchOut:
@@ -336,7 +338,7 @@ def _match_for_need(db: Session, need: models.DomainRecord, *, matching_catalog=
     need_tokens = _match_tokens(f"{need_title} {need_detail}")
     if matching_catalog is None:
         matching_catalog = _public_matching_catalog(db)
-    providers, other_records, knowledge = matching_catalog
+    providers, other_records, knowledge, claim_labels = matching_catalog
     candidates: list[schemas.PublicMatchCandidate] = []
     match_terms_by_candidate: dict[tuple[str, int], set[str]] = {}
     same_city_by_candidate: dict[tuple[str, int], bool] = {}
