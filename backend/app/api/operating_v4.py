@@ -5,6 +5,7 @@ from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import models, security
@@ -161,6 +162,13 @@ class OfferLegalReadIn(BaseModel):
     summary: str = Field(min_length=10, max_length=3000)
 
 
+class SellerAccountEvidenceIn(BaseModel):
+    participant_ref: str = Field(min_length=3, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$")
+    claim: str = Field(min_length=12, max_length=1500)
+    consent_confirmed: Literal[True]
+    idempotency_key: str = Field(min_length=16, max_length=128, pattern=r"^[A-Za-z0-9_-]{16,128}$")
+
+
 @router.get("/offers/public")
 def list_public_offers(db: Session = Depends(get_db)):
     """Public projection; only explicitly owner-approved, currently unblocked offer copy."""
@@ -185,6 +193,50 @@ def list_offer_queue(request: Request, db: Session = Depends(get_db)):
         "buyer_purchase_accounts": residue_engine.count_journeys(db),
         "real_consented_seller_evidence": seller_evidence_count,
         "outreach_boundary": "Outreach drafts stay in the existing owner-only Scout queue; agents never send.",
+    }
+
+
+@router.post("/seller-evidence")
+def record_seller_evidence(
+    payload: SellerAccountEvidenceIn,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Owner-only record of a directly obtained, consented seller account; not transaction proof."""
+    _owner(request)
+    try:
+        result = operating_v4.record_seller_account_evidence(
+            db,
+            participant_ref=payload.participant_ref,
+            claim=payload.claim,
+            idempotency_key=payload.idempotency_key,
+            consent_confirmed=payload.consent_confirmed,
+        )
+        db.commit()
+    except ValueError as exc:
+        db.rollback()
+        detail = str(exc)
+        status = 409 if "idempotency key collision" in detail else 422
+        raise HTTPException(status_code=status, detail=detail) from exc
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Evidence/event conflict; retry with the same key after checking capture status.") from exc
+
+    evidence = result["evidence"]
+    event = result["event"]
+    return {
+        "evidence_id": evidence.id,
+        "event_id": event.id,
+        "bet_id": result["bet_id"],
+        "participant_ref": evidence.source_identity,
+        "proof_level": evidence.proof_level,
+        "source_kind": evidence.source_kind,
+        "perspective": evidence.perspective,
+        "source_type": evidence.source_type,
+        "consent_status": evidence.consent_status,
+        "idempotent_replay": result["idempotent_replay"],
+        "transaction_verified": False,
+        "note": "L3 seller account only; no recovered sale, fulfillment, or payment was verified. No message was sent.",
     }
 
 

@@ -1626,6 +1626,51 @@ def test_scan_candidates_reuses_connection_catalog_and_preserves_private_duplica
     assert db.query(models.NetworkConnection).count() == 1
 
 
+def test_owner_only_seller_account_route_records_l3_evidence_idempotently(owner_client_with_db, db):
+    from app.services import operating_v4
+
+    offers = operating_v4.seed_offer_views(db)
+    assert any(item["id"] == "rescue-week" for item in offers)
+    body = {
+        "participant_ref": "seller-api-ref-001",
+        "claim": "Seller reports evening inquiry responses sometimes wait until morning.",
+        "consent_confirmed": True,
+        "idempotency_key": "seller-api-capture-key-00001",
+    }
+    first = owner_client_with_db.post("/opv4/seller-evidence", json=body)
+    assert first.status_code == 200, first.text
+    result = first.json()
+    assert result["proof_level"] == 3
+    assert result["source_kind"] == "REAL"
+    assert result["consent_status"] == "granted"
+    assert result["perspective"] == "SELLER"
+    assert result["transaction_verified"] is False
+    assert result["idempotent_replay"] is False
+    repeated = owner_client_with_db.post("/opv4/seller-evidence", json=body)
+    assert repeated.status_code == 200, repeated.text
+    assert repeated.json()["evidence_id"] == result["evidence_id"]
+    assert repeated.json()["event_id"] == result["event_id"]
+    assert repeated.json()["idempotent_replay"] is True
+    assert operating_v4.count_linked_seller_evidence(db, result["bet_id"]) == 1
+
+
+def test_owner_only_seller_account_route_rejects_missing_consent(client_with_db, db, monkeypatch):
+    from app import security
+    from app.services import operating_v4
+
+    monkeypatch.setattr(security.settings, "FORGE_API_KEY", "seller-evidence-route-key")
+    client_with_db.headers.update({"X-API-Key": "seller-evidence-route-key"})
+    operating_v4.seed_offer_views(db)
+    response = client_with_db.post("/opv4/seller-evidence", json={
+        "participant_ref": "seller-api-ref-002",
+        "claim": "Seller reports an inquiry response was delayed until morning.",
+        "consent_confirmed": False,
+        "idempotency_key": "seller-api-capture-key-00002",
+    })
+    assert response.status_code == 422, response.text
+    assert db.query(models.Evidence).count() == 0
+
+
 def test_public_match_uses_recorded_terms_and_names_unknowns(owner_client_with_db, db):
     provider = models.Provider(
         name="Hill Repair",

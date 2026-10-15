@@ -4,9 +4,11 @@ Bet is a PROJECTION over SubstrateEntity (entity_type="bet") — not a new
 primitive. All v4 rules enforced here.
 """
 
+import hashlib
 import json
 import logging
 import os
+import re
 from functools import cmp_to_key
 from datetime import datetime, timezone
 from typing import Optional
@@ -366,6 +368,155 @@ def count_linked_seller_evidence(db: Session, bet_id: int) -> int:
         )
         .count()
     )
+
+
+
+def record_seller_account_evidence(
+    db: Session,
+    *,
+    participant_ref: str,
+    claim: str,
+    idempotency_key: str,
+    consent_confirmed: bool,
+) -> dict:
+    """Record a directly obtained, consented seller account at L3, not a transaction outcome."""
+    if consent_confirmed is not True:
+        raise ValueError("Explicit seller-discovery consent must be confirmed before recording.")
+    ref = (participant_ref or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{2,63}", ref):
+        raise ValueError("Use a pseudonymous participant reference (3–64 letters, digits, _ or -); never a name, phone, or email.")
+    key = (idempotency_key or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]{16,128}", key):
+        raise ValueError("idempotency_key must be a stable 16–128 character request key.")
+
+    from app.services.demand_understanding import normalize_observation_content
+
+    raw_claim = " ".join((claim or "").split())
+    clean_claim = normalize_observation_content(raw_claim)
+    if not 12 <= len(clean_claim) <= 1500:
+        raise ValueError("Provide a concise, de-identified seller account (12–1500 characters).")
+    if clean_claim != raw_claim:
+        raise ValueError("Remove phone numbers and email addresses; record a de-identified summary, not raw contact details.")
+    if any(marker in clean_claim.casefold() for marker in ("password:", "otp:", "api key:", "access token:")):
+        raise ValueError("Do not record credentials, tokens or private customer messages.")
+
+    rescue = next((row for row in _offer_records(db) if row[2].get("id") == "rescue-week"), None)
+    if rescue is None:
+        raise ValueError("Rescue Week draft is not seeded; no evidence was written.")
+    bet = rescue[0]
+    if _bet_attributes(bet).get("status", "unknown") == "killed":
+        raise ValueError("Rescue Week Bet is killed; record no new evidence against it.")
+
+    from app.services import world_graph
+
+    world_graph.seed_core_types(db)
+    evidence_key = f"rescue-week-seller-account-v1:{key}"
+    event_key = f"rescue-week-seller-account-event-v1:{key}"
+    claim_digest = hashlib.sha256(clean_claim.encode("utf-8")).hexdigest()
+    provenance_base = {
+        "capture": "owner_rescue_week_seller_account_v1",
+        "participant_ref": ref,
+        "consent": {
+            "confirmed": True,
+            "purpose": "seller_discovery",
+            "attested_by": "authenticated_owner",
+        },
+        "proof_level": 3,
+        "perspective": "SELLER",
+        "source_type": "firsthand",
+        "source_kind": "REAL",
+        "consent_status": "granted",
+        "directness": "direct",
+        "linked_bet_id": bet.id,
+        "claim_sha256": claim_digest,
+        "transaction_verified": False,
+    }
+
+    existing = db.query(models.Evidence).filter_by(idempotency_key=evidence_key).one_or_none()
+    replayed = existing is not None
+    captured_at = utcnow()
+    if existing is not None:
+        try:
+            saved_provenance = json.loads(existing.substrate_provenance or existing.provenance or "{}")
+        except (TypeError, ValueError):
+            saved_provenance = {}
+        comparable_provenance = {k: v for k, v in saved_provenance.items() if k != "captured_at"}
+        matches = (
+            existing.subject_kind == "entity"
+            and existing.subject_id == bet.id
+            and existing.claim == clean_claim
+            and existing.support_level == "hypothesized"
+            and existing.source == "owner_rescue_week_seller_account"
+            and comparable_provenance == provenance_base
+            and existing.content == clean_claim
+            and existing.source_kind == evidence_source.REAL
+            and existing.proof_level == 3
+            and existing.perspective == "SELLER"
+            and existing.source_type == "firsthand"
+            and existing.source_identity == ref
+            and existing.consent_status == "granted"
+            and existing.directness == "direct"
+            and existing.linked_bet_id == bet.id
+            and existing.proof_capped_reason == "L3 seller-reported account only; no transaction is independently verified."
+        )
+        if not matches:
+            raise ValueError("Evidence idempotency key collision; use a new key only for a genuinely new capture.")
+        evidence = existing
+    else:
+        provenance = {**provenance_base, "captured_at": captured_at.isoformat()}
+        evidence = world_graph.create_evidence(
+            db,
+            subject_kind="entity",
+            subject_id=bet.id,
+            claim=clean_claim,
+            support_level="hypothesized",
+            source="owner_rescue_week_seller_account",
+            provenance=provenance,
+            confidence=0.0,
+            idempotency_key=evidence_key,
+        )
+        evidence.content = clean_claim
+        evidence.source_kind = evidence_source.REAL
+        evidence.proof_level = 3
+        evidence.proof_capped_reason = "L3 seller-reported account only; no transaction is independently verified."
+        evidence.perspective = "SELLER"
+        evidence.source_type = "firsthand"
+        evidence.source_identity = ref
+        evidence.consent_status = "granted"
+        evidence.observed_at = captured_at
+        evidence.directness = "direct"
+        evidence.linked_bet_id = bet.id
+        evidence.verifier = None
+        db.add(evidence)
+        db.flush()
+
+    event = world_graph.create_event(
+        db,
+        event_type="seller_account_evidence_recorded",
+        source="owner_rescue_week_seller_account",
+        entity_id=bet.id,
+        payload={
+            "bet_id": bet.id,
+            "evidence_id": evidence.id,
+            "participant_ref": ref,
+            "consent_status": "granted",
+            "consent_purpose": "seller_discovery",
+            "perspective": "SELLER",
+            "source_type": "firsthand",
+            "source_kind": "REAL",
+            "proof_level": 3,
+            "claim_sha256": claim_digest,
+            "transaction_verified": False,
+        },
+        idempotency_key=event_key,
+    )
+    return {
+        "evidence": evidence,
+        "event": event,
+        "bet_id": bet.id,
+        "idempotent_replay": replayed,
+        "transaction_verified": False,
+    }
 
 
 def _offer_gate_state(db: Session, bet: models.SubstrateEntity, offer: dict) -> dict:

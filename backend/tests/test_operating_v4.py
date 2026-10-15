@@ -811,6 +811,72 @@ def test_no_dedicated_orientation_diagnosis_models(db):
     assert hasattr(operating_v4, "diagnose_constraints")
 
 
+def test_seller_account_evidence_is_l3_idempotent_and_not_transaction_proof(db):
+    operating_v4.seed_offer_views(db)
+    payload = {
+        "participant_ref": "seller-ref-001",
+        "claim": "Seller reports evening inquiries sometimes receive replies the next morning.",
+        "idempotency_key": "seller-account-capture-key-0001",
+        "consent_confirmed": True,
+    }
+    first = operating_v4.record_seller_account_evidence(db, **payload)
+    db.commit()
+    second = operating_v4.record_seller_account_evidence(db, **payload)
+    db.commit()
+
+    evidence = db.get(models.Evidence, first["evidence"].id)
+    event = db.get(models.WorldEvent, first["event"].id)
+    assert evidence is not None and event is not None
+    assert first["idempotent_replay"] is False
+    assert second["idempotent_replay"] is True
+    assert second["evidence"].id == evidence.id
+    assert second["event"].id == event.id
+    assert evidence.linked_bet_id == first["bet_id"]
+    assert evidence.perspective == "SELLER"
+    assert evidence.consent_status == "granted"
+    assert evidence.source_type == "firsthand"
+    assert evidence.source_kind == "REAL"
+    assert evidence.proof_level == 3
+    assert evidence.support_level == "hypothesized"
+    assert evidence.directness == "direct"
+    assert evidence.source_identity == "seller-ref-001"
+    assert evidence.verifier is None
+    assert event.event_type == "seller_account_evidence_recorded"
+    event_payload = json.loads(event.payload)
+    assert event_payload["evidence_id"] == evidence.id
+    assert event_payload["proof_level"] == 3
+    assert event_payload["transaction_verified"] is False
+    assert operating_v4.count_linked_seller_evidence(db, first["bet_id"]) == 1
+    assert db.query(models.Evidence).filter_by(idempotency_key="rescue-week-seller-account-v1:seller-account-capture-key-0001").count() == 1
+    assert db.query(models.WorldEvent).filter_by(idempotency_key="rescue-week-seller-account-event-v1:seller-account-capture-key-0001").count() == 1
+    assert db.query(models.Outcome).filter(models.Outcome.outcome_type == "ACTUAL_REVENUE").count() == 0
+
+
+def test_seller_account_evidence_rejects_consent_false_pii_and_key_reuse(db):
+    operating_v4.seed_offer_views(db)
+    common = {
+        "participant_ref": "seller-ref-002",
+        "claim": "Seller reports that some inquiry replies are delayed until evening.",
+        "idempotency_key": "seller-account-capture-key-0002",
+        "consent_confirmed": True,
+    }
+    with pytest.raises(ValueError, match="consent"):
+        operating_v4.record_seller_account_evidence(db, **{**common, "consent_confirmed": False})
+    with pytest.raises(ValueError, match="Remove phone numbers and email"):
+        operating_v4.record_seller_account_evidence(
+            db, **{**common, "claim": "Seller reports inquiry from buyer@example.com was delayed."}
+        )
+    first = operating_v4.record_seller_account_evidence(db, **common)
+    db.commit()
+    with pytest.raises(ValueError, match="idempotency key collision"):
+        operating_v4.record_seller_account_evidence(
+            db, **{**common, "claim": "Seller reports a different inquiry problem the next morning."}
+        )
+    assert db.query(models.Evidence).count() == 1
+    assert first["evidence"].source_kind == "REAL"
+    assert first["evidence"].proof_level == 3
+
+
 def test_contributor_consent_defaults_false(db):
     c = operating_v4.add_contributor(db, "Seller A", notes="Kathmandu")
     assert c.consent_given is False

@@ -144,6 +144,21 @@ interface OfferQueue {
   outreach_boundary: string;
 }
 
+interface SellerAccountEvidenceResult {
+  evidence_id: number;
+  event_id: number;
+  bet_id: number;
+  participant_ref: string;
+  proof_level: number;
+  source_kind: string;
+  perspective: string;
+  source_type: string;
+  consent_status: string;
+  idempotent_replay: boolean;
+  transaction_verified: false;
+  note: string;
+}
+
 export function OperatingV4({ apiKey }: { apiKey: string }) {
   const [board, setBoard] = useState<Scoreboard | null>(null);
   const [frontier, setFrontier] = useState<Frontier | null>(null);
@@ -153,6 +168,8 @@ export function OperatingV4({ apiKey }: { apiKey: string }) {
   const [offerBusy, setOfferBusy] = useState<string | null>(null);
   const [killReasons, setKillReasons] = useState<Record<string, string>>({});
   const [legalForm, setLegalForm] = useState({ lawyer_name: "", review_date: "", source_reference: "", summary: "" });
+  const [sellerCaptureForm, setSellerCaptureForm] = useState({ participant_ref: "", claim: "", consent_confirmed: false });
+  const [sellerCaptureKey, setSellerCaptureKey] = useState<string | null>(null);
   const [savingHorizon, setSavingHorizon] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -240,6 +257,41 @@ export function OperatingV4({ apiKey }: { apiKey: string }) {
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Legal-read item could not be recorded.");
+    } finally {
+      setOfferBusy(null);
+    }
+  }
+
+  async function recordSellerAccount() {
+    if (!offerQueue?.offers.some((offer) => offer.id === "rescue-week")) {
+      setError("Seed the Rescue Week draft before recording linked seller evidence.");
+      return;
+    }
+    if (!sellerCaptureForm.consent_confirmed) {
+      setError("Explicit seller-discovery consent must be confirmed before recording.");
+      return;
+    }
+    const idempotency_key = sellerCaptureKey ?? crypto.randomUUID().replace(/-/g, "");
+    setSellerCaptureKey(idempotency_key);
+    setOfferBusy("seller-evidence");
+    setError(null);
+    setNotice(null);
+    try {
+      const saved = await v4Fetch<SellerAccountEvidenceResult>("seller-evidence", apiKey, {
+        method: "POST",
+        body: JSON.stringify({ ...sellerCaptureForm, idempotency_key }),
+      });
+      setSellerCaptureForm({ participant_ref: "", claim: "", consent_confirmed: false });
+      setSellerCaptureKey(null);
+      setNotice(
+        `Seller account ${saved.idempotent_replay ? "already existed" : "recorded"} as consented L3 evidence #${saved.evidence_id}. It does not verify a recovered sale or payment, and no message was sent.`,
+      );
+      await load();
+    } catch (err) {
+      // Preserve the request key across an ambiguous response so retrying the
+      // unchanged form cannot silently create a second Evidence/Event pair.
+      setSellerCaptureKey(idempotency_key);
+      setError(err instanceof Error ? err.message : "Seller account could not be recorded.");
     } finally {
       setOfferBusy(null);
     }
@@ -442,6 +494,66 @@ export function OperatingV4({ apiKey }: { apiKey: string }) {
               Gate counts are real-data checks, not proof by themselves: {offerQueue.buyer_purchase_accounts} consented buyer/circle purchase accounts ·
               {" "}{offerQueue.real_consented_seller_evidence} real firsthand consented seller evidence records linked to Rescue Week’s Bet.
             </p>
+
+            <section aria-label="Capture seller account evidence" className="rounded-card border border-line bg-card p-4">
+              <h4 className="font-bold">Record a seller’s own account · L3 only</h4>
+              <p className="mt-1 text-sm leading-6 text-muted">
+                Owner-only, idempotent capture after a real conversation. It records a consented first-person account;
+                it does not establish a recovered sale, activate the pilot, or authorize customer-message handling.
+              </p>
+              <p className="mt-2 text-xs text-muted">
+                Use a pseudonymous reference, not a real name, phone, or email. Write a de-identified summary, not a
+                customer message, payment reference, credential, or verbatim chat log. Only record after consent was
+                actually given for seller-discovery notes.
+              </p>
+              {!offerQueue.offers.some((offer) => offer.id === "rescue-week") ? (
+                <p className="mt-3 text-sm text-muted">Seed / refresh drafts above first to link evidence to the existing Rescue Week Bet.</p>
+              ) : (
+                <form
+                  className="mt-4 grid gap-3"
+                  onSubmit={(event) => { event.preventDefault(); void recordSellerAccount(); }}
+                >
+                  <label className="block text-sm">
+                    Pseudonymous participant reference
+                    <input required minLength={3} maxLength={64}
+                      pattern="[A-Za-z0-9][A-Za-z0-9_-]{2,63}"
+                      value={sellerCaptureForm.participant_ref}
+                      onChange={(event) => {
+                        setSellerCaptureKey(null);
+                        setSellerCaptureForm((current) => ({ ...current, participant_ref: event.target.value }));
+                      }}
+                      placeholder="seller-ref-001"
+                      className="mt-1 w-full rounded-lg border border-line bg-background px-3 py-2 text-ink" />
+                  </label>
+                  <label className="block text-sm">
+                    De-identified seller account
+                    <textarea required minLength={12} maxLength={1500} rows={3}
+                      value={sellerCaptureForm.claim}
+                      onChange={(event) => {
+                        setSellerCaptureKey(null);
+                        setSellerCaptureForm((current) => ({ ...current, claim: event.target.value }));
+                      }}
+                      placeholder="Seller reports that evening inquiries sometimes receive replies the next morning."
+                      className="mt-1 w-full rounded-lg border border-line bg-background px-3 py-2 text-ink" />
+                  </label>
+                  <label className="flex items-start gap-2 text-sm leading-6">
+                    <input type="checkbox" required checked={sellerCaptureForm.consent_confirmed}
+                      onChange={(event) => {
+                        setSellerCaptureKey(null);
+                        setSellerCaptureForm((current) => ({ ...current, consent_confirmed: event.target.checked }));
+                      }}
+                      className="mt-1" />
+                    <span>I confirm a real seller gave this account directly and explicitly consented to Hami recording a de-identified statement for seller-discovery research. This does not authorize processing customer data or running a pilot.</span>
+                  </label>
+                  <button type="submit"
+                    disabled={offerBusy !== null || !sellerCaptureForm.participant_ref.trim() || sellerCaptureForm.claim.trim().length < 12 || !sellerCaptureForm.consent_confirmed}
+                    className="min-h-10 rounded-lg bg-accent px-4 py-2 text-sm font-bold text-black disabled:opacity-50">
+                    {offerBusy === "seller-evidence" ? "Recording…" : "Record consented seller account"}
+                  </button>
+                </form>
+              )}
+            </section>
+
 
             {offerQueue.offers.length === 0 ? (
               <p className="rounded-card border border-line bg-card p-4 text-sm text-muted">
