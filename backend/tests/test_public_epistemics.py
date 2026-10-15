@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timedelta, timezone
 
 from app import models
-from app.api.public import _match_for_need, list_public_discoveries
+from app.api.public import _match_for_need, _match_tokens, list_public_discoveries
 from app.services.public_feed import build_public_feed
 from app.services.public_epistemics import derive_public_label, public_claim_label
 
@@ -62,6 +62,17 @@ def _evidence(
     db.flush()
     return evidence
 
+
+
+
+def test_public_need_matching_uses_shared_multilingual_terms():
+    devanagari = _match_tokens("नेपालको कृषि बजारमा QR भुक्तानी")
+    assert {"नेपालको", "कृषि", "बजारमा", "qr", "भुक्तानी"} <= devanagari
+    assert {"nepal", "krishi", "bazar", "qr"} <= _match_tokens("Nepal ko krishi bazar QR")
+    assert {"世界", "物流"} <= (_match_tokens("世界物流") & _match_tokens("世界经济物流"))
+    assert not ({"the", "and", "to", "मा", "र", "को", "ko", "ra"} &
+                _match_tokens("the and to मा र को ko ra"))
+    assert _match_tokens("नेपाल  कृषि") == _match_tokens("नेपाल कृषि")
 
 def test_public_label_mapping_covers_fact_observation_external_claim_conflict_and_hidden_states(db):
     now = datetime(2026, 9, 25, tzinfo=timezone.utc)

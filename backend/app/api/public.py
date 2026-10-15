@@ -16,6 +16,7 @@ from app.database import get_db
 from app.services import public_epistemics, public_stats
 from app.config import settings
 from app.services import forge_bot_privacy
+from app.services.text_matching import tokenize_match_terms
 
 router = APIRouter(prefix="/public", tags=["public"])
 
@@ -254,9 +255,6 @@ def list_public_discoveries(limit: int = Query(default=20, ge=1, le=50), db: Ses
     return discoveries
 
 
-_MATCH_STOP = {"the", "and", "for", "with", "that", "this", "from", "into", "your", "need", "someone"}
-
-
 def _consume_public_write_limit(
     db: Session,
     request: Request,
@@ -295,12 +293,8 @@ def _booking_status_token(booking_id: int) -> str:
 
 
 def _match_tokens(text: str) -> set[str]:
-    words = []
-    for raw in (text or "").lower().replace(",", " ").split():
-        word = "".join(ch for ch in raw if ch.isalnum())
-        if len(word) >= 4 and word not in _MATCH_STOP:
-            words.append(word)
-    return set(words)
+    """Shared Unicode-aware terms for the public need/provider matching path."""
+    return tokenize_match_terms(text)
 
 
 def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMatchOut:
