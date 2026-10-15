@@ -11,6 +11,7 @@ import unicodedata
 from datetime import date
 from typing import Any
 
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -614,24 +615,40 @@ def _prior_observations(db: Session, question_text: str, *, limit: int = 5) -> l
             matches.append((weighted_score, term_fraction, signal))
     matches.sort(key=lambda item: (-item[0], -item[1], item[2].id))
 
+    # Batch the latest eligible Evidence lookup once for the complete ranked
+    # candidate set. The former per-Signal query could issue up to 300 SELECTs
+    # for a single planning request, especially when early text hits had no
+    # Evidence. Preserve the existing source-identity and consent eligibility
+    # rules; ordering still comes exclusively from the lexical ranking above.
+    signal_ids = [signal.id for _, _, signal in matches]
+    evidence_by_signal: dict[int, int] = {}
+    if signal_ids:
+        evidence_rows = (
+            db.query(
+                models.Evidence.signal_id,
+                func.max(models.Evidence.id).label("evidence_id"),
+            )
+            .filter(
+                models.Evidence.signal_id.in_(signal_ids),
+                models.Evidence.source_identity.is_(None),
+                models.Evidence.consent_status.is_(None)
+                | (~models.Evidence.consent_status.in_(("pending", "denied"))),
+            )
+            .group_by(models.Evidence.signal_id)
+            .all()
+        )
+        evidence_by_signal = {
+            signal_id: evidence_id for signal_id, evidence_id in evidence_rows
+            if signal_id is not None and evidence_id is not None
+        }
+
     observations: list[dict[str, Any]] = []
     # Fill the requested result count with evidence-backed candidates. A ranked
     # text hit without eligible Evidence must not consume a result slot.
     for weighted_score, relevance, signal in matches:
         if len(observations) >= max(0, limit):
             break
-        evidence_id = (
-            db.query(models.Evidence.id)
-            .filter(
-                models.Evidence.signal_id == signal.id,
-                models.Evidence.source_identity.is_(None),
-                models.Evidence.consent_status.is_(None)
-                | (~models.Evidence.consent_status.in_(("pending", "denied"))),
-            )
-            .order_by(models.Evidence.id.desc())
-            .limit(1)
-            .scalar()
-        )
+        evidence_id = evidence_by_signal.get(signal.id)
         if evidence_id is None:
             continue
         observations.append(
