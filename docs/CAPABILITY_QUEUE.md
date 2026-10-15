@@ -1,3 +1,11 @@
+## [PUBLIC DISCOVERY LABEL BATCHING — TEST SETUP CORRECTION PENDING]
+
+- The source query optimization is in place, but the first exact-head run `38665333005` had **1,319 passed, 2 skipped, 1 setup error**. The error was the regression's missing `owner_client_with_db` fixture in the unit-test module; it did not execute or report a source-code failure.
+- Move the query-count test to `backend/tests/test_public_value_flow.py`, where the fixture is defined; retain pure batch/scalar equivalence tests in `test_public_epistemics.py`.
+- The deployment verifier and secrets scan for `d72e24c` passed. The corrected head requires its own exact-head full CI and deployment verification.
+
+---
+
 ## [PUBLIC DISCOVERY LABEL BATCHING — VERIFICATION PENDING]
 
 - Verified parent `55e2dd0`: 1,319 backend tests passed, 2 skipped; all nine CI jobs, secrets scan and independent deployment verifier passed.

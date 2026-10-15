@@ -1,5 +1,13 @@
 ## Live resume point — 2026-10-15 NPT
 
+`d72e24c` added batched labels for `/public/discoveries`. Its deployment verifier and secret scan passed, and all non-backend CI jobs passed; the backend suite recorded **1,319 passed, 2 skipped, 1 test setup error** because the new route-level query test asked for `owner_client_with_db` from a module where that fixture is not defined. It did not run the assertion. The current correction moves that regression into `test_public_value_flow.py`, which owns the fixture, and removes it from the epistemic unit module. Re-run exact-head CI before claiming the route optimization verified.
+
+Next after this test correction verifies: build the owner-only Rescue Week consented seller Evidence/Event capture flow against the existing Bet and Evidence primitives, with idempotency and L3 proof semantics; no messaging, offer activation, checkout, or revenue claim.
+
+---
+
+## Live resume point — 2026-10-15 NPT
+
 Canonical branch is `main`. Recovery commit `55e2dd0` passed all nine CI jobs (backend 1,319 passed, 2 skipped), the secrets scan and the independent deployment verifier. This follow-up removes the remaining N+1 public Claim-label reads in `list_public_discoveries`: unique Claims are passed to the existing `public_claim_labels` batch helper and the route consumes that map. A route-level query-count regression is added; exact-head CI/deploy/secrets results are pending.
 
 The next product issue is not another dashboard: Rescue Week readiness requires an Evidence row marked seller-side + firsthand + consented + REAL and linked to its Bet. The current owner interview form explicitly stores MOCK/REPORTED notes and the generic substrate writer cannot set these gate-specific metadata fields. Build an owner-only, privacy-minimizing, idempotent Evidence/Event path for a real consented seller account, preserving the distinction between a reported account (L3) and independently verified outcomes. No outbound contact is authorized by that work.

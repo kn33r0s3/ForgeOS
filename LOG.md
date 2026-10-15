@@ -462,3 +462,11 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Added a route-level query-count regression over three source-backed observation Claims. Claim-label semantics, contradiction handling, independent source identity, freshness and publication-compliance checks are unchanged.
 - Product gap for next work: Rescue Week readiness requires linked Seller/firsthand/consented/REAL Evidence, but the present interview-results form intentionally stores MOCK/REPORTED notes and the generic substrate evidence writer does not expose required gate metadata. Investigate a governed owner-only Evidence + Event flow for a real consented account. No external contact or payment occurred.
 
+
+
+## 2026-10-15 — correct discovery batching regression fixture placement
+
+- Exact-head CI run `38665333005` for `d72e24c`: 1,319 passed, 2 skipped, 1 setup error. The error was `fixture 'owner_client_with_db' not found` because that fixture is declared in `test_public_value_flow.py`, not shared `tests/conftest.py`. No assertion ran and no production failure was reported.
+- Moved the route-level SQL query-count regression to `test_public_value_flow.py`, created three source-backed Claims/Evidence/Signals in its own fixture scope, and removed the misplaced copy from `test_public_epistemics.py`. The source batching itself is unchanged.
+- The exact SHA's deployment verifier and secrets scan passed. New full exact-head CI/deploy/secrets verification is pending. No local pytest run is claimed.
+

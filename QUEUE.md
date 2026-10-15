@@ -1,11 +1,11 @@
 # Hami Execution Queue
 
-## P0 — Batch public discovery labels and close the owner-evidence capture gap (verification pending)
+## P0 — Verify discovery-label batching after fixture correction
 
-- Verified baseline `55e2dd0`: backend 1,319 passed / 2 skipped; all nine CI jobs, secrets scan and exact-SHA deployment verification green.
-- `/public/discoveries` still label-checked each unique Claim by fetching EvidenceRelationship rows separately. It now uses the established batched label helper once per response and a route-level query-count test.
-- Next: add an owner-only, consent-attested record path for the Rescue Week gate using existing Evidence + Event primitives. It must be idempotent, keep L3 consented account evidence distinct from externally verified facts, and never trigger outbound contact. Do not create a new evidence table or turn owner-entered notes into evidence without a real consented account.
-- This commit's exact-head CI, secret scan and independent deployment verification remain pending.
+- `d72e24c` has green secret scan, deployment verifier and eight non-backend jobs. Backend result: 1,319 passed, 2 skipped, one setup error. The added query-count test used a module-local fixture from another test file, so the test never ran.
+- Move the route-level regression into `test_public_value_flow.py`, which owns `owner_client_with_db`; keep `test_public_epistemics.py` focused on scalar/batch label semantics.
+- Exact-head CI/deploy/secrets checks for this correction are pending.
+- Next after verification: add owner-only, consent-attested L3 seller-evidence capture via existing Evidence + Event primitives; no outbound contact or activation.
 
 ## P1 — Evaluate multilingual retrieval quality
 

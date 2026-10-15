@@ -1326,6 +1326,71 @@ def test_approved_actions_onboard_verify_and_publish_without_auto_public(owner_c
     assert "phone" not in services.json()[0]
 
 
+def test_public_discoveries_batch_evidence_reads_for_multiple_claims(owner_client_with_db, db):
+    now = datetime.now(timezone.utc)
+    claims = []
+    for index in range(3):
+        source = f"seller-observer-{index}"
+        url = f"https://{source}.example.org/report"
+        signal = models.Signal(
+            source=source,
+            source_type="external",
+            title=f"Seller journey observation {index}",
+            content=f"An anonymized seller account describes journey stage {index}.",
+            canonical_url=url,
+            retrieved_at=now,
+        )
+        db.add(signal)
+        db.flush()
+        claim = models.Claim(
+            statement=f"Seller journey observation {index} was directly reported.",
+            normalized_statement=f"seller journey observation {index} was directly reported.",
+            epistemic_state="observed",
+            provenance=json.dumps({"epistemic_type": "OBSERVATION"}),
+        )
+        db.add(claim)
+        db.flush()
+        evidence = models.Evidence(
+            signal_id=signal.id,
+            source=source,
+            content=signal.content,
+            canonical_url=url,
+            retrieved_at=now,
+            provenance_hash=f"test-public-discovery-batch:{claim.id}",
+        )
+        db.add(evidence)
+        db.flush()
+        db.add(models.EvidenceRelationship(
+            evidence_id=evidence.id,
+            claim_id=claim.id,
+            relation_type="supports",
+            relation_key=f"test-public-discovery-batch:{claim.id}:{evidence.id}",
+        ))
+        db.flush()
+        claims.append(claim)
+    db.commit()
+
+    queries = {"evidence_links": 0}
+
+    def count_evidence_link_queries(conn, cursor, statement, parameters, context, executemany):
+        normalized = " ".join(statement.casefold().split())
+        if normalized.startswith("select") and " from evidence_relationships " in normalized:
+            queries["evidence_links"] += 1
+
+    event.listen(db.get_bind(), "before_cursor_execute", count_evidence_link_queries)
+    try:
+        response = owner_client_with_db.get("/public/discoveries")
+    finally:
+        event.remove(db.get_bind(), "before_cursor_execute", count_evidence_link_queries)
+
+    assert response.status_code == 200, response.text
+    returned_ids = {item["id"] for item in response.json()}
+    assert {claim.id for claim in claims} <= returned_ids
+    # The list query joins evidence; claim labels should need one separate
+    # batched relationship query, not one query per Claim.
+    assert queries["evidence_links"] == 1
+
+
 def test_public_discoveries_are_sourced_observations_without_internal_scores(owner_client_with_db, db):
     visible = models.Signal(
         source="rss",

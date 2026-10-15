@@ -1,5 +1,14 @@
 ## Live resume point — 2026-10-15 NPT
 
+- Verified code baseline before the current test correction: `d72e24c7af9228815a087216c318032df8a28257`. Production deployment verifier and secrets scan passed; eight non-backend CI jobs passed. Backend reported **1,319 passed, 2 skipped, 1 setup error**.
+- The only error was test setup: the new route-level query-count regression was placed in `test_public_epistemics.py`, but `owner_client_with_db` exists only in `test_public_value_flow.py`. The test did not execute, so no functional failure is inferred. Move the regression to the module owning that fixture; production source remains unchanged in this correction.
+- Fresh exact-head full CI, secrets scan and deployment verification are pending. No local pytest is claimed.
+- The next high-value product blocker is Rescue Week seller evidence capture: gate requires linked firsthand/consented/seller-side/REAL Evidence; existing interview notes intentionally remain MOCK/REPORTED. Next build an owner-only idempotent Evidence + Event recording path, proof level L3, de-identified, no outbound contact or sale claim.
+
+---
+
+## Live resume point — 2026-10-15 NPT
+
 - Verified baseline: `55e2dd09b63bc87a5de1224914fe974e0cd2751e` passed all nine CI jobs; backend **1,319 passed, 2 skipped**. Secrets scan and exact-SHA deployment verification also passed.
 - Current change batches Claim labels on `/public/discoveries`, matching the existing shared-label approach used by `_match_for_need`. A route-level query-count regression covers three sourced Claims. Existing claim-label, visibility and publication-compliance rules remain the authority.
 - Next high-value product gap: Rescue Week readiness requires linked firsthand, consented, seller-side REAL Evidence, but the owner interview form deliberately records MOCK/REPORTED notes and the generic substrate evidence endpoint cannot set the legacy gate fields. Next investigate an owner-only idempotent Evidence + Event recording path for an actual consented account. It must not contact anyone, claim sales, or mark the account independently verified.

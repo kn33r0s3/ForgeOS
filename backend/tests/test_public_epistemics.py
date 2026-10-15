@@ -473,46 +473,6 @@ def test_public_claim_labels_batch_evidence_reads_without_changing_public_labels
     assert regulated.id not in batched
 
 
-def test_public_discoveries_batch_evidence_reads_for_multiple_claims(owner_client_with_db, db):
-    now = datetime.now(timezone.utc)
-    claims = [
-        _claim(
-            db,
-            kind="OBSERVATION",
-            statement=f"Seller journey observation {index} was directly reported.",
-        )
-        for index in range(3)
-    ]
-    for index, claim in enumerate(claims):
-        _evidence(
-            db,
-            claim,
-            source=f"seller-observer-{index}",
-            retrieved_at=now,
-        )
-    db.commit()
-
-    queries = {"evidence_links": 0}
-
-    def count_evidence_link_queries(conn, cursor, statement, parameters, context, executemany):
-        normalized = " ".join(statement.casefold().split())
-        if normalized.startswith("select") and " from evidence_relationships " in normalized:
-            queries["evidence_links"] += 1
-
-    event.listen(db.get_bind(), "before_cursor_execute", count_evidence_link_queries)
-    try:
-        response = owner_client_with_db.get("/public/discoveries")
-    finally:
-        event.remove(db.get_bind(), "before_cursor_execute", count_evidence_link_queries)
-
-    assert response.status_code == 200, response.text
-    returned_ids = {item["id"] for item in response.json()}
-    assert {claim.id for claim in claims} <= returned_ids
-    # The route's evidence join is part of the listing query; label evidence is
-    # loaded once for all returned Claims rather than queried once per Claim.
-    assert queries["evidence_links"] == 1
-
-
 def test_staleness_is_separate_from_the_public_epistemic_label(db):
     now = datetime(2026, 9, 25, tzinfo=timezone.utc)
     claim = _claim(db, state="supported", kind="EXTERNAL CLAIM")
