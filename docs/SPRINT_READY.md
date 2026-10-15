@@ -1,55 +1,32 @@
 # Sprint Ready Package — First Rupee
 
-**Status: PENDING_REAL_WORLD_AUTHORIZATION.** Everything below is
-prepared. Nothing here contacts anyone, moves money, or starts the week.
-One human action unlocks it all (see §1).
+**Status: NOT CLEARED FOR OPERATION.** This draft does not contact anyone, move money, start the week, or constitute legal/accounting clearance. Discovery requires a separate owner-authorized contact; an operational/paid sprint requires additional legal, eligibility, consent/data and commercial approvals.
 
 ## 1. The single real-world action (needs the owner)
 
-**Name one social seller you can reach personally, and authorize the
-first contact.**
+**For discovery only:** the owner may name a seller and authorize the exact first contact through a genuine warm introduction.
 
-That is the whole action: a name + "yes, send the first message." The
-first-contact script is in `docs/SPRINT_BRIEF.md` — honest, no pitch, no
-fake identity. Everything else in the sprint (the week, the replies, the
-log, the count, the price talk) is prepared below and in the brief.
+That starts a discovery conversation, not a pilot. It does not approve customer-message handling, customer data collection, publication, pricing/revenue share, a payment request, or seller onboarding.
 
-No agent can take this step: it needs a human in Kathmandu with a real
-relationship or a real introduction. Until it happens, the sprint is
-pending — not blocked-by-process, just waiting on a person.
+Before an operational pilot, record seller eligibility/registration evidence as counsel directs; qualified legal/accounting answers on Hami's role, contracts, privacy, tax and payment; seller authorization/consent and approved communication scope; then a separate owner ASK for exact price, terms, spend, channel and customer-facing actions. If any gate remains unresolved, continue discovery only.
 
-## 2. Offer text (final)
+## 2. Discovery script and inactive pilot draft
 
-> "Hey — I see you sell through [TikTok/WhatsApp]. I'm testing an idea:
-> for one week, I handle your customer replies fast. Free test — you
-> only pay if it actually recovers sales. Want the 2-minute version?"
+**Discovery script (only under an owner-authorized warm introduction):**
 
-End of week:
+> "Namaste — I'm learning how online sellers manage customer inquiries
+> and what makes it difficult to reply on time. Would you be open to a
+> 10-minute conversation? I'm not asking for account access or offering a service."
 
-> "This week the fast replies recovered ₨X in sales that would have
-> died. My cut is 10%. If you don't feel it was worth it, pay nothing."
+**Operational offer draft: INACTIVE.** The prior “free test / pay only on recovery / 10% cut” wording is not approved for use. Price, revenue share, service promises and terms remain owner-only decisions. Do not use a commercial offer until qualified counsel/accountant reviews the legal/payment model and the owner approves the exact text.
 
-Terms: one week, agreed hours (e.g. 9am–9pm), replies within 15 minutes
-inside hours. The human never takes over the seller's account — added to
-DMs by the seller, replies as a helper, never pretends to be staff.
-Recovered = a sale that would have died without the fast reply;
-conservative counting — when in doubt, don't count it.
+A seller's belief that a sale would otherwise have been lost remains reported evidence, separate from independently verified transaction proof.
 
-## 3. Payment path (first rupee rails)
+## 3. Payment path — unresolved and disabled
 
-No business payment rails exist (company registration pending, only a
-personal PAN). The first rupee moves on personal rails:
+Company registration is still in progress and the current record says only a personal PAN exists. Do not request, receive or route a seller fee through the owner's personal eSewa/Khalti account based on this package. Qualified legal/accounting advice must resolve whether Hami may receive its own fee before company registration, tax/invoice requirements and the lawful payment method; the owner must approve the exact path. The NRB licensing framework alone does not decide this question.
 
-- Seller pays Hami's cut via **eSewa/Khalti transfer to the owner's
-  personal account** — the same rails every Nepali social seller already
-  uses (D14).
-- Record the transfer ID, amount, date. That record is the
-  verified-payment evidence (see §4).
-- Migrate to business rails after company registration + PAN + merchant
-  onboarding. The first rupee proves the mechanism; the rails get
-  formalized before rupee #100.
-
-No donations, no advance fees, no payment before recovered sales exist.
+No donations, advance fees, deposits or fee requests. A transfer ID or owner-reported payment is not, by itself, independently verified REAL payment evidence.
 
 ## 4. Evidence-capture events (six primitives)
 
@@ -71,16 +48,10 @@ earns a tier instead of "unscored."
 
 ## 5. What happens after authorization
 
-1. Owner names the seller → first contact sent (human).
-2. Week runs per `docs/SPRINT_BRIEF.md` (human).
-3. Events logged per §4 → the week log fills on `/needs`.
-4. Price talk → first rupee or honest zero.
-5. Report back: one page, exactly as it happened.
+1. Conduct owner-authorized, warm-introduction discovery; obtain consent for notes separately.
+2. Record de-identified workflow facts and the seller's own account with source/proof level explicit.
+3. Obtain/read the official Act and current listing notice; qualified Nepali counsel records answers on seller eligibility, Hami's possible intermediary/platform status, agreements, complaints and data/privacy. A qualified accountant/legal adviser reviews tax, invoices and payment path.
+4. Only after these gates are recorded can the owner decide whether to authorize an operational sprint and approve exact price/terms. This package does not activate those actions.
+5. Report findings as REPORTED/TEST unless independently supported; never count interest as a customer or a reported sale/payment as verified REAL outcome.
 
-**The legal note (D72):** work ONLY with a seller already registered
-under the reported e-commerce registration law (act name and compliance
-figures are REPORTED, not verified against the Department's own notice).
-Helping sellers register is a scope jump — regulatory education Hami
-will not pioneer. The real legal read (including whether Hami-as-platform
-needs registration when it takes a cut) comes with company registration,
-not from the agent.
+**Primary-source update (D72, checked 2026-10-15):** the Department lists the [Electronic Business (E-Commerce) Act, 2081](https://doc.gov.np/content/324/electronic-business--e-commerce--act--2081/) and an [Urgent Notice Regarding Mandatory Listing](https://doc.gov.np/content/470/urgent-notice-regarding-mandatory-listing-e-commerce-2083-05-01/) dated 2 Bhadra, 2083. This confirms that the official materials exist; it does not settle legal application to Hami.

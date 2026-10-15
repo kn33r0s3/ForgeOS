@@ -25,11 +25,13 @@ never as interrogation. Let them teach; their struggles surface on their own.
 4. Who else do you ask when you're stuck?
 5. If you had a free week of help, what would you hand off?
 
+If it comes up naturally and the seller is comfortable, ask separately: “Have you completed the registration or listing steps that apply to your online business? Which part was confusing or costly?” Record this as the seller's report, not proof of legal compliance. Do not offer registration help or a commercial service in this discovery round.
+
 ## Hard rules
 
-- No pitching. No promises. You are there to learn, not to sell.
-- Warmth before questions: visit 2–3 times as a genuine customer first where
-  possible, or arrive via a mutual contact's introduction.
+- No pitching, promises, account access, customer-data access, free-service promises, prices or revenue-share discussion. You are there to learn, not to sell.
+- These are non-commercial discovery conversations only; they do not onboard sellers or authorize a paid/operational sprint.
+- Use a genuine warm introduction and explain why you are asking. Never pretend to be a customer or make repeated visits just to gain trust.
 - In person, at their place, mid-afternoon (roughly 2–4pm, the slow hours).
   15–20 minutes. Accept tea if offered — declining is a small insult.
 - Consent before notes: *"Is it okay if I jot this down so I remember it

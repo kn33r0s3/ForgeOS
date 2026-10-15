@@ -1,8 +1,13 @@
 ## Live resume point — 2026-10-15 NPT
 
-`d72e24c` added batched labels for `/public/discoveries`. Its deployment verifier and secret scan passed, and all non-backend CI jobs passed; the backend suite recorded **1,319 passed, 2 skipped, 1 test setup error** because the new route-level query test asked for `owner_client_with_db` from a module where that fixture is not defined. It did not run the assertion. The current correction moves that regression into `test_public_value_flow.py`, which owns the fixture, and removes it from the epistemic unit module. Re-run exact-head CI before claiming the route optimization verified.
+Canonical branch is `main`. Current verified source SHA: `5b1f8ee9f1ed05c28bc446367d8d8ae34f894a4c`. Exact-head [CI 38665976043](https://github.com/kn33r0s3/ForgeOS/actions/runs/38665976043) passed all nine jobs (backend **1,320 passed, 2 skipped, 18 warnings in 194.39s**); [secret scan 38665975827](https://github.com/kn33r0s3/ForgeOS/actions/runs/38665975827) and [independent deployment verifier 38665976364](https://github.com/kn33r0s3/ForgeOS/actions/runs/38665976364) passed.
 
-Next after this test correction verifies: build the owner-only Rescue Week consented seller Evidence/Event capture flow against the existing Bet and Evidence primitives, with idempotency and L3 proof semantics; no messaging, offer activation, checkout, or revenue claim.
+Intermediate `ce9994b` truncated public.py and was cancelled/superseded; `55e2dd0` restored the full file and put label batching only in matching. Current tests cover discovery query batching, scalar-versus-batch label equivalence, matching catalogue query counts, response batching, private-newest-row masking and six-language TEST-only ranking. Current source is intact.
+
+The sprint/legal contradiction is corrected. The Department lists the [E-Commerce Act, 2081](https://doc.gov.np/content/324/electronic-business--e-commerce--act--2081/) and an [Urgent Notice Regarding Mandatory Listing](https://doc.gov.np/content/470/urgent-notice-regarding-mandatory-listing-e-commerce-2083-05-01/) dated 2 Bhadra, 2083. The old “No regulator” assumption and exclusion of registered sellers were withdrawn. Source existence does not settle Hami's intermediary status, contract/complaint duties, data/privacy, tax or fee collection; qualified counsel/accounting review plus a separate owner ASK remain necessary.
+
+Next: build owner-authenticated, idempotent Evidence + Event recording in existing seams for a real consented seller account. Preserve seller perspective/firsthand/consent/provenance and proof-level semantics. It may record a seller's report; it must not mark a recovered sale independently verified, create a commercial transaction, contact customers or enable the pilot. Inspect `backend/app/api/operating_v4.py`, `backend/app/services/operating_v4.py`, the owner interview form and substrate Evidence/Event paths before coding.
+
 
 ---
 

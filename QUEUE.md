@@ -1,11 +1,29 @@
 # Hami Execution Queue
 
-## P0 — Verify discovery-label batching after fixture correction
+## P0 — Build owner-only Rescue Week evidence capture without activating a pilot
 
-- `d72e24c` has green secret scan, deployment verifier and eight non-backend jobs. Backend result: 1,319 passed, 2 skipped, one setup error. The added query-count test used a module-local fixture from another test file, so the test never ran.
-- Move the route-level regression into `test_public_value_flow.py`, which owns `owner_client_with_db`; keep `test_public_epistemics.py` focused on scalar/batch label semantics.
-- Exact-head CI/deploy/secrets checks for this correction are pending.
-- Next after verification: add owner-only, consent-attested L3 seller-evidence capture via existing Evidence + Event primitives; no outbound contact or activation.
+- **Verified main SHA:** `5b1f8ee9f1ed05c28bc446367d8d8ae34f894a4c`. [CI 38665976043](https://github.com/kn33r0s3/ForgeOS/actions/runs/38665976043) passed all nine jobs, backend **1,320 passed, 2 skipped, 18 warnings in 194.39s**. Secret scan [38665975827](https://github.com/kn33r0s3/ForgeOS/actions/runs/38665975827) and exact-SHA deployment verification [38665976364](https://github.com/kn33r0s3/ForgeOS/actions/runs/38665976364) passed.
+- Existing problem: the owner interview-results form intentionally writes MOCK/REPORTED outcomes; it must never manufacture seller-side, firsthand, consented REAL evidence. Rescue Week's gate expects Evidence linked to the existing Bet plus seller perspective, consent and source type.
+- Next: inspect existing `backend/app/api/operating_v4.py`, `backend/app/services/operating_v4.py`, `backend/app/api/substrate.py`, Evidence/Event models and the owner interview form. Implement the smallest owner-authenticated, idempotent path on existing primitives; preserve reported-versus-independent proof tiers, create no parallel table/primitive, store no customer message bodies/phone numbers/credentials, and make duplicates harmless.
+- A consented firsthand seller statement may establish a reported seller-side account at the existing L3/proof standard, not an independently verified recovered sale/payment. Transaction claims require their own evidence; tests never count as REAL.
+- Keep external-action flags, message delivery, checkout/payment and public activation untouched. This is internal evidence capture for a human-run, consented account, not permission to contact a seller or start Rescue Week.
+
+## P1 — Resolve legal/operational eligibility before any paid sprint
+
+- The old “No regulator” statement and the exclusion of registered sellers are corrected. The Department lists the [Electronic Business (E-Commerce) Act, 2081](https://doc.gov.np/content/324/electronic-business--e-commerce--act--2081/) and an [Urgent Notice Regarding Mandatory Listing](https://doc.gov.np/content/470/urgent-notice-regarding-mandatory-listing-e-commerce-2083-05-01/) dated 2 Bhadra, 2083. The sources' existence does not settle application to Hami.
+- Obtain qualified Nepali lawyer/accountant answers on seller registration/listing, Hami's potential intermediary/platform status, contractual and complaint duties, privacy/data handling, tax/invoicing, and whether/where Hami may receive fees before company registration.
+- Price/revenue share, legal/company/tax matters, contact with non-opted-in people, spend and new customer-facing sending types remain owner-only. No commercial offer, customer DM handling or fee request before review and explicit owner approval.
+- Exploratory interviews remain non-commercial discovery; seller self-report is not legal proof. If the legal route cannot be cleared, continue other value research rather than simulate compliance.
+
+## P2 — Evaluate multilingual matching relevance
+
+- Shared Unicode tokenization and IDF/distinctive-overlap ranking are implemented and green under exact-head CI above.
+- The six-language benchmark's Precision@1/MRR assertions are synthetic TEST-only metrics, not production semantic relevance. Later evaluation needs appropriately consented/source-grounded examples and known outcome labels.
+
+## Verification boundary — 2026-10-15 NPT
+
+- The `ce9994b` route truncation is retained in history; current exact head follows restoration at `55e2dd0` and passed CI, secret scan and deployment verification.
+- No external contact, publication, commercial offer, payment or REAL revenue occurred. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
 
 ## P1 — Evaluate multilingual retrieval quality
 

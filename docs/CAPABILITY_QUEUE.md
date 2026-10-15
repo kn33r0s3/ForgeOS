@@ -1,4 +1,13 @@
-## [PUBLIC DISCOVERY LABEL BATCHING — TEST SETUP CORRECTION PENDING]
+## [PUBLIC MATCHING AND CLAIM-LABEL BATCHING — EXACT-HEAD VERIFIED, 2026-10-15]
+
+- **Verified main SHA:** `5b1f8ee9f1ed05c28bc446367d8d8ae34f894a4c`. All nine jobs passed in [CI 38665976043](https://github.com/kn33r0s3/ForgeOS/actions/runs/38665976043), backend **1,320 passed, 2 skipped, 18 warnings in 194.39s**. Secret scan [38665975827](https://github.com/kn33r0s3/ForgeOS/actions/runs/38665975827) and independent deployment verification [38665976364](https://github.com/kn33r0s3/ForgeOS/actions/runs/38665976364) passed.
+- Existing shared seams batch provider listings, public Claim/Evidence labels, latest connection lookup and response flags. Candidate scanning and gap bookkeeping reuse the connection catalogue; newest-row selection precedes visibility filtering, preserving private-over-public masking. Query-count and scalar/batch-equivalence regressions pass.
+- The six-language strong/weak benchmark covers English, Devanagari Nepali, Romanized Nepali, code-switching, Hindi and CJK. Precision@1/MRR are synthetic TEST-only metrics, not real-world accuracy.
+- Current non-code blocker: the sprint brief's “No regulator” claim was wrong. The Department lists the E-Commerce Act 2081 and an urgent mandatory-listing notice dated 2 Bhadra 2083. Exact application to Hami is unresolved. Paid onboarding, price/revenue share and customer-message handling remain gated on qualified legal/accounting review and explicit owner approval.
+- Next dependency: owner-only, idempotent Evidence + Event capture through existing primitives, recording a real consented seller's account at proper reported/L3 level without fabricating independent transaction proof. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+---
+
+## [HISTORICAL: PUBLIC DISCOVERY LABEL BATCHING — TEST SETUP CORRECTION PENDING; resolved at 5b1f8ee]
 
 - The source query optimization is in place, but the first exact-head run `38665333005` had **1,319 passed, 2 skipped, 1 setup error**. The error was the regression's missing `owner_client_with_db` fixture in the unit-test module; it did not execute or report a source-code failure.
 - Move the query-count test to `backend/tests/test_public_value_flow.py`, where the fixture is defined; retain pure batch/scalar equivalence tests in `test_public_epistemics.py`.
@@ -6,7 +15,7 @@
 
 ---
 
-## [PUBLIC DISCOVERY LABEL BATCHING — VERIFICATION PENDING]
+## [HISTORICAL: PUBLIC DISCOVERY LABEL BATCHING — VERIFICATION PENDING; resolved at 5b1f8ee]
 
 - Verified parent `55e2dd0`: 1,319 backend tests passed, 2 skipped; all nine CI jobs, secrets scan and independent deployment verifier passed.
 - `list_public_discoveries` still called the scalar labeler for every source-linked Claim. It now preloads unique Claims and calls `public_claim_labels` once, with a route-level query-count regression for three sourced Claims.
@@ -15,7 +24,7 @@
 
 ---
 
-## [PUBLIC CLAIM LABEL BATCHING — VERIFICATION PENDING] Reuse evidence links across matched claims
+## [HISTORICAL: PUBLIC CLAIM LABEL BATCHING — VERIFICATION PENDING; resolved at 5b1f8ee] Reuse evidence links across matched claims
 
 - **Existing seam inspected:** `public_epistemics.derive_public_label` queried EvidenceRelationship/Evidence per Claim. The matching catalogue can contain repeated rows for one Claim when multiple source records refer to it.
 - **Change prepared in existing code:** preload Claim evidence links in bounded groups of 400 IDs; eager-load the related Signal needed for source-host and freshness calculations; supply those exact links to the existing scalar label rules.

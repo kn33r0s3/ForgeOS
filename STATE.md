@@ -1,9 +1,15 @@
 ## Live resume point — 2026-10-15 NPT
 
-- Verified code baseline before the current test correction: `d72e24c7af9228815a087216c318032df8a28257`. Production deployment verifier and secrets scan passed; eight non-backend CI jobs passed. Backend reported **1,319 passed, 2 skipped, 1 setup error**.
-- The only error was test setup: the new route-level query-count regression was placed in `test_public_epistemics.py`, but `owner_client_with_db` exists only in `test_public_value_flow.py`. The test did not execute, so no functional failure is inferred. Move the regression to the module owning that fixture; production source remains unchanged in this correction.
-- Fresh exact-head full CI, secrets scan and deployment verification are pending. No local pytest is claimed.
-- The next high-value product blocker is Rescue Week seller evidence capture: gate requires linked firsthand/consented/seller-side/REAL Evidence; existing interview notes intentionally remain MOCK/REPORTED. Next build an owner-only idempotent Evidence + Event recording path, proof level L3, de-identified, no outbound contact or sale claim.
+- **Canonical main:** `5b1f8ee9f1ed05c28bc446367d8d8ae34f894a4c`.
+- **Exact-head verification:** [CI 38665976043](https://github.com/kn33r0s3/ForgeOS/actions/runs/38665976043) passed all nine jobs: backend **1,320 passed, 2 skipped, 18 warnings in 194.39s**; lint, frontend tests, typecheck, build, route smoke, evidence-triage tests, repository guards and Gitleaks passed. [Independent deployment verification 38665976364](https://github.com/kn33r0s3/ForgeOS/actions/runs/38665976364) and [secrets scan 38665975827](https://github.com/kn33r0s3/ForgeOS/actions/runs/38665975827) passed for this SHA.
+- **Code work verified:** shared Unicode matching, public matching catalogue reuse/eager listing load, batched public Claim labels/Evidence links and latest-connection/response lookup tests. The discovery query regression lives in fixture-owning `test_public_value_flow.py`; the six-language benchmark is synthetic TEST-only, not production relevance accuracy.
+- **Source recovery:** intermediate `ce9994b` truncated public.py and its CI/deploy were cancelled/superseded; `55e2dd0` restored the complete route file and scoped label batching. Current exact-head tests, secret scan and deployment verifier are green.
+- **Legal/reality correction:** D72 now links the Department's [E-Commerce Act page](https://doc.gov.np/content/324/electronic-business--e-commerce--act--2081/) and [Urgent Notice Regarding Mandatory Listing](https://doc.gov.np/content/470/urgent-notice-regarding-mandatory-listing-e-commerce-2083-05-01/) dated 2 Bhadra, 2083. “No regulator” and the exclusion of registered sellers were inaccurate. Primary pages verify the Act/notice exist; Hami's intermediary status, seller duties, data/privacy role, pricing/revenue share, tax and personal-wallet fee receipt still require qualified review.
+- **Next:** inspect the existing owner interview/Evidence/BET/operating-gate seams and build an owner-only, idempotent Evidence + Event capture path for a real consented seller account, using minimal de-identified data and explicit source/proof level. A reported seller account is not independent transaction proof.
+- **External boundary:** no seller contacted, no service offered, no content published, no payment requested/received, no REAL sale/revenue created and no activation flag changed. Price/revenue share, legal/tax, channel permissions and customer-facing action require explicit owner approval. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
+---
+
 
 ---
 
