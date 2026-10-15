@@ -15,7 +15,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app import evidence_source, models
-from app.api.public import _match_for_need
+from app.api.public import _match_for_need, _public_matching_catalog
 from app.services import evidence_graph
 from app.services.network_endpoints import (
     canonical_endpoint_type,
@@ -342,10 +342,11 @@ def scan_candidates(db: Session, limit: int = 50) -> list[models.NetworkConnecti
         .order_by(models.DomainRecord.id.desc())
         .all()
     )
+    matching_catalog = _public_matching_catalog(db) if needs and limit > 0 else None
     for need in needs:
         if len(created) >= limit:
             break
-        match = _match_for_need(db, need)
+        match = _match_for_need(db, need, matching_catalog=matching_catalog)
         for candidate in match.candidates:
             if len(created) >= limit:
                 break

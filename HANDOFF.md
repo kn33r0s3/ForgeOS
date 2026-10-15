@@ -1,3 +1,13 @@
+## Live resume point — 2026-10-15 NPT
+
+Canonical branch is `main`; no branch, PR, second checkout or parallel implementation was created. Before the current patch, main was `3292fbe2acc38c1ba199b91725514ad6ffd8ffb6`. Its full CI, secrets scan and independent deploy verification passed. The code revision with multilingual/distinctive-overlap ranking also passed all nine CI jobs.
+
+Current patch reuses the existing public matching catalogue once per `/public/matches` request and once per bounded network candidate scan, using batched provider-listing loading. A query-count regression was added to the existing `backend/tests/test_public_value_flow.py`. **Do not claim this new code is verified until its exact-head CI and independent deploy verification results are read.** Local test execution was not available in this environment.
+
+After exact-head CI, verify all nine jobs and secret scan, then check independent deploy verification. If tests pass, update the status below to the observed exact SHA/results. Keep per-candidate connection/response batching as the next engineering seam; do not enable intake, sends, model-provider requests, checkout/payment, or other external actions as part of performance work.
+
+---
+
 ## Exact-head CI correction — 2026-10-15 NPT
 
 The previous top-of-file note said full CI and the privacy regressions were not verified. That was accurate when written but has been superseded by GitHub Actions run [38656943577](https://github.com/kn33r0s3/ForgeOS/actions/runs/38656943577) on exact source-tree head `66cdba6cded0fd558a1783abfeb14d8554333b50`: all 9 jobs passed; backend pytest reported **1,310 passed, 2 skipped, 18 warnings**. The Unicode/Nepali planner improvements and Devanagari discovery-privacy regressions are included. Independent deploy verification [38656943524](https://github.com/kn33r0s3/ForgeOS/actions/runs/38656943524) also succeeded and verified production against that SHA. Commits after source/test changes were documentation-only.

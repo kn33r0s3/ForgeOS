@@ -1,3 +1,12 @@
+## Live resume point — 2026-10-15 NPT
+
+- Baseline main before this change: `3292fbe2acc38c1ba199b91725514ad6ffd8ffb6`. The prior source commit `7e56d1bb748dfc27ff272d20c76db1874a9fd9f5` passed all nine CI jobs; documentation-only baseline main also passed exact-head CI, secrets scan and independent deploy verification.
+- Current code change reuses the existing public matching catalogue within a single `/public/matches` response and a bounded `scan_candidates` pass, and batch-loads provider listings. A two-need query-count regression was added to the existing public value-flow tests.
+- **Verification state at commit preparation:** new-source exact-head CI and deployment verification still pending. The environment did not provide a working local GitHub DNS path, so no local pytest execution is claimed. Use GitHub Actions exact-head results.
+- Per-candidate connection and response reads remain; no matching-quality benchmark, natural scheduler effect, non-MOCK inference quality, REAL customer/payment/revenue outcome, or owner-intervention ratio is established by this change. Intake and external action settings are unchanged.
+
+---
+
 ## Exact-head CI reconciliation — 2026-10-15 NPT
 
 - **Confirmed full CI:** GitHub Actions run [38656943577](https://github.com/kn33r0s3/ForgeOS/actions/runs/38656943577), workflow run #1299, push event, exact head SHA `66cdba6cded0fd558a1783abfeb14d8554333b50`, completed successfully. All nine jobs passed: backend-tests, frontend-tests, build, typecheck, lint, route-smoke, evidence-triage-tests, repository-guards, and secret-scan/gitleaks.

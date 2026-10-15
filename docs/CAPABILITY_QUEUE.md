@@ -1,3 +1,15 @@
+## [PUBLIC MATCH CATALOG REUSE — VERIFICATION PENDING] Avoid repeated catalog loads per need
+
+- **Existing seam inspected:** `backend/app/api/public.py::_match_for_need`, `list_public_matches`, and `backend/app/services/network_connections.py::scan_candidates`; these already own the public match and candidate scan paths. No new table or parallel matching engine is required.
+- **Observed cost:** each open need repeated the full verified-provider, open-domain-record, and Claim/Evidence/Signal join reads; provider listing relationships were then lazily loaded.
+- **Owner action still required:** review whether suggested counterparties fit the real need; a lexical ranking is not acceptance, availability, verified fit or a completed outcome.
+- **Action this change removes:** repeated full catalog queries for every need in the same public list request or candidate scan, and per-provider listing lazy loads.
+- **What remains:** per-candidate connection/response lookups remain; match quality has no frozen real-source evaluation yet. All public-visibility and epistemic gates remain intact; this does not authorize outreach or create connections by public browsing.
+- **Next removable dependency:** batch the existing candidate connection/response read path if the query-level regression and exact-head CI confirm this catalog optimization.
+- **Verification:** query-count regression added; exact-head CI/deploy verification pending for this code change. No external contact, payment, intake, customer data or activation changed. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
+---
+
 ## [CAS / REPAIR-SHOP PAYMENT LINKAGE — VERIFIED IN TESTS ON MAIN; REAL PROVIDER/REVENUE UNVERIFIED]
 
 - **Original truth defect and retained guard:** the manual endpoint accepted caller-supplied provider/reference text and promoted it to REAL/VERIFIED revenue. It now continues to reject REAL scope. SANDBOX-only manual/test behavior remains; do not remove the guard.

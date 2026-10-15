@@ -416,3 +416,14 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Independent deploy verification run [38656943524](https://github.com/kn33r0s3/ForgeOS/actions/runs/38656943524) succeeded; its verification job completed all steps, including fetching production content, waiting for exact tested SHA, reading the protected owner cycle and accepting the verification.
 - Do not overclaim beyond these results: this validates source/test state and deployment verification for SHA `66cdba6`; it does not prove recurring scheduler effects, non-MOCK model quality, a recovered customer sale or REAL revenue.
 - Next code improvement identified: `research_planner._prior_observations` now correctly scans ranked candidates until it fills the requested number of eligible evidence-backed observations, but issues a separate Evidence SELECT per Signal. Batch this lookup to reduce worst-case query count (up to the scanned 300 signals) while preserving the exact source-identity/consent filters. Add regression and run full CI rather than writing another status-only update.
+
+
+## 2026-10-15 — reuse public matching catalogue across needs
+
+- **Existing seam inspected:** the existing `_match_for_need` in `backend/app/api/public.py` repeated provider, open DomainRecord and linked Claim/Evidence/Signal reads for every need. Provider listings could lazy-load individually. The same matcher is called inside `network_connections.scan_candidates`.
+- **Change:** the existing matcher accepts an optional shared read-only catalogue; `/public/matches` and the bounded candidate scanner now load it once for their pass. Provider listings use `selectinload`. The existing privacy, public-visibility, duplicate-signal, epistemic-state, and response wording gates remain in place. The existing public value-flow test file now asserts catalog query counts for two needs.
+- **Owner action removed:** repeated database loading for the same candidate corpus within one request/pass. Review of counterparty fit remains a real-world judgment; this code does not accept a match or initiate contact.
+- **What remains:** per-candidate NetworkConnection/Outcome reads remain; multilingual match quality is not yet measured against a frozen source-grounded set.
+- **Verification:** baseline main `3292fbe2acc38c1ba199b91725514ad6ffd8ffb6` had successful full CI, secret scan and independent deploy verification. New-source exact-head CI/deployment checks are pending at the time of this entry. No local test run is claimed.
+- No new files or domain primitives; no environment flags, permissions, intake, external message, customer/provider contact, payment, or revenue record was changed. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+

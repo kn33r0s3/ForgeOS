@@ -7,7 +7,7 @@ import sqlite3
 import pytest
 from fastapi import BackgroundTasks, Request, Response
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 
 from app import models, schemas
 from app.api.analyze import _research_status_token, analyze_idea, get_analyze_status
@@ -1367,6 +1367,55 @@ def test_public_discoveries_are_sourced_observations_without_internal_scores(own
     assert "quality_score" not in body[0]
     assert "confidence" not in body[0]
     assert "Hidden" not in response.text
+
+
+def test_public_matches_load_shared_catalog_once_for_multiple_needs(owner_client_with_db, db):
+    db.add_all(
+        [
+            models.DomainRecord(
+                kind="job",
+                title="Quartz widget sourcing",
+                detail="Find a supplier for quartz parts.",
+                status="open",
+                close_token_hash="test-quartz",
+            ),
+            models.DomainRecord(
+                kind="job",
+                title="Marigold ferry repair",
+                detail="Repair ferry equipment with marigold coating.",
+                status="open",
+                close_token_hash="test-marigold",
+            ),
+        ]
+    )
+    db.commit()
+
+    queries = {"providers": 0, "domain_records": 0, "claims": 0}
+
+    def count_catalog_queries(conn, cursor, statement, parameters, context, executemany):
+        normalized = " ".join(statement.casefold().split())
+        if not normalized.startswith("select"):
+            return
+        if " from providers " in normalized:
+            queries["providers"] += 1
+        if " from domain_records " in normalized:
+            queries["domain_records"] += 1
+        if " from claims " in normalized:
+            queries["claims"] += 1
+
+    event.listen(db.get_bind(), "before_cursor_execute", count_catalog_queries)
+    try:
+        response = owner_client_with_db.get("/public/matches")
+    finally:
+        event.remove(db.get_bind(), "before_cursor_execute", count_catalog_queries)
+
+    assert response.status_code == 200, response.text
+    assert len(response.json()) == 2
+    # One query retrieves the request's needs; one loads other open records.
+    assert queries["domain_records"] == 2
+    # The common provider and linked-knowledge catalogs are not reloaded per need.
+    assert queries["providers"] == 1
+    assert queries["claims"] == 1
 
 
 def test_public_match_uses_recorded_terms_and_names_unknowns(owner_client_with_db, db):

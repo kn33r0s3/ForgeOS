@@ -10,7 +10,7 @@ from typing import Literal
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from sqlalchemy import or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app import evidence_source, models, schemas
 from app.database import get_db
@@ -298,17 +298,48 @@ def _match_tokens(text: str) -> set[str]:
     return tokenize_match_terms(text)
 
 
-def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMatchOut:
+def _public_matching_catalog(db: Session):
+    """Load the public matching corpus once per request or bounded scan.
+
+    Reusing this catalog avoids repeating full provider, open-record, and
+    linked-knowledge reads for every need. Candidate order and eligibility
+    remain the responsibility of the existing per-need matcher.
+    """
+    providers = (
+        _public_provider_query(db)
+        .options(selectinload(models.Provider.listings))
+        .all()
+    )
+    other_records = (
+        db.query(models.DomainRecord)
+        .filter(models.DomainRecord.status == "open")
+        .all()
+    )
+    knowledge = (
+        db.query(models.Claim, models.Signal)
+        .join(models.EvidenceRelationship, models.EvidenceRelationship.claim_id == models.Claim.id)
+        .join(models.Evidence, models.Evidence.id == models.EvidenceRelationship.evidence_id)
+        .join(models.Signal, models.Signal.id == models.Evidence.signal_id)
+        .filter(models.Signal.canonical_url.isnot(None))
+        .filter(models.Signal.is_duplicate_of.is_(None))
+        .all()
+    )
+    return providers, other_records, knowledge
+
+
+def _match_for_need(db: Session, need: models.DomainRecord, *, matching_catalog=None) -> schemas.PublicMatchOut:
     from app.services.public_feed import sanitize_public_text
 
     need_title = sanitize_public_text(need.title) or ""
     need_detail = sanitize_public_text(need.detail) or ""
     need_city = sanitize_public_text(need.city)
     need_tokens = _match_tokens(f"{need_title} {need_detail}")
+    if matching_catalog is None:
+        matching_catalog = _public_matching_catalog(db)
+    providers, other_records, knowledge = matching_catalog
     candidates: list[schemas.PublicMatchCandidate] = []
     match_terms_by_candidate: dict[tuple[str, int], set[str]] = {}
     same_city_by_candidate: dict[tuple[str, int], bool] = {}
-    providers = _public_provider_query(db).all()
     for provider in providers:
         provider_name = sanitize_public_text(provider.name) or ""
         provider_summary = sanitize_public_text(provider.summary) or ""
@@ -356,12 +387,9 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
         match_key = ("provider", provider.id)
         match_terms_by_candidate[match_key] = set(shared)
         same_city_by_candidate[match_key] = same_city
-    others = (
-        db.query(models.DomainRecord)
-        .filter(models.DomainRecord.status == "open", models.DomainRecord.id != need.id)
-        .all()
-    )
-    for other in others:
+    for other in other_records:
+        if other.id == need.id:
+            continue
         other_title = sanitize_public_text(other.title) or ""
         other_detail = sanitize_public_text(other.detail) or ""
         other_city = sanitize_public_text(other.city)
@@ -397,15 +425,6 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
         match_key = ("post", other.id)
         match_terms_by_candidate[match_key] = set(shared)
         same_city_by_candidate[match_key] = same_city
-    knowledge = (
-        db.query(models.Claim, models.Signal)
-        .join(models.EvidenceRelationship, models.EvidenceRelationship.claim_id == models.Claim.id)
-        .join(models.Evidence, models.Evidence.id == models.EvidenceRelationship.evidence_id)
-        .join(models.Signal, models.Signal.id == models.Evidence.signal_id)
-        .filter(models.Signal.canonical_url.isnot(None))
-        .filter(models.Signal.is_duplicate_of.is_(None))
-        .all()
-    )
     seen_claims = set()
     for claim, signal in knowledge:
         label = public_epistemics.public_claim_label(db, claim)
@@ -816,7 +835,13 @@ def list_public_matches(db: Session = Depends(get_db)):
         .order_by(models.DomainRecord.created_at.desc())
         .all()
     )
-    return [_match_for_need(db, need) for need in needs]
+    if not needs:
+        return []
+    matching_catalog = _public_matching_catalog(db)
+    return [
+        _match_for_need(db, need, matching_catalog=matching_catalog)
+        for need in needs
+    ]
 
 
 _TERM_KEYS = (

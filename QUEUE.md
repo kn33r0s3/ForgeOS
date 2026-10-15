@@ -1,18 +1,25 @@
 # Hami Execution Queue
 
-## P0 — Finish the multilingual retrieval performance path
+## P0 — Reuse the public matching catalog across needs (verification pending)
 
-The Unicode/Nepali prior-evidence upgrade and discovery privacy fixes are present in the tested source tree. Exact-head CI run [38656943577](https://github.com/kn33r0s3/ForgeOS/actions/runs/38656943577) passed all 9 jobs, including backend pytest (**1,310 passed, 2 skipped, 18 warnings**); independent deployed-SHA verification [38656943524](https://github.com/kn33r0s3/ForgeOS/actions/runs/38656943524) also passed. The earlier “not verified” gate is superseded for source-tree SHA `66cdba6`.
+- Existing matcher/query pattern: `backend/app/api/public.py::_match_for_need` repeated verified-provider, open-domain-record and linked-knowledge queries for every need. Provider listings could also load lazily per provider.
+- Reuse one read-only catalog within `/public/matches` and the existing `network_connections.scan_candidates` pass, with SQLAlchemy's batched provider-listing loading.
+- Existing lexical ranking, public provider gate, public claim label check, duplicate-signal filter, per-candidate connection visibility, and “not acceptance/fulfillment/payment” wording remain unchanged.
+- Added a query-count regression for two unrelated needs; it expects a single provider query and a single linked-knowledge query for the whole public match response, plus the request and shared open-record queries.
+- Exact-head test/deploy verification is pending. This is a query-planning optimization, not evidence of successful matches or real-world value.
+- After CI passes, next inspect/batch per-candidate NetworkConnection and Outcome response lookups without changing visibility or truth labels.
 
-**Next code improvement:** remove the N+1 Evidence query in `_prior_observations` by batching eligible latest Evidence IDs for ranked signal IDs. Preserve `source_identity IS NULL`, consent not pending/denied, evidence-backed result filling, IDF ranking and epistemic labels. Add a regression proving the batch path doesn't admit restricted evidence and fills the result limit. Run the full CI after this change, then measure top-k evidence recall by language/script on a frozen, source-grounded query set.
+## P1 — Evaluate multilingual retrieval quality
+
+- Unicode Nepali/Devanagari, Romanized Nepali, short terms, CJK bigrams, IDF-weighted retrieval and distinctive-overlap public ranking are implemented in source revision `7e56d1bb`. Full CI run [38660540063](https://github.com/kn33r0s3/ForgeOS/actions/runs/38660540063) passed all nine jobs; the follow-up continuity-only main head `3292fbe2` also has successful CI [38661260750](https://github.com/kn33r0s3/ForgeOS/actions/runs/38661260750) and independent deploy verification [38661260867](https://github.com/kn33r0s3/ForgeOS/actions/runs/38661260867).
+- Next measure top-k ranking against a frozen set of permitted, source-grounded examples across Nepali, Romanized Nepali, English, code-switching and a no-space script. Lexical rank must not be described as semantic relevance or proof.
 
 ## Current verification gate — 2026-10-15 NPT
 
-- Last confirmed complete CI head: `66cdba6cded0fd558a1783abfeb14d8554333b50`; 9/9 jobs passed, backend 1,310 passed / 2 skipped / 18 warnings. The current continuity edit is documentation-only; its push-triggered run must be checked if it is to be called exact-head verified.
-- Production verification run `38656943524` succeeded for that SHA. It checked tested-vs-deployed identity and a protected owner-cycle read; this is not proof of recurring scheduled work, non-MOCK inference, any customer action, or revenue.
-- The connector provides public REST reads for workflow runs and job logs; use those rather than the earlier PR-only wrapper for exact push-triggered verification.
-- `feature/governed-offers` remains an obsolete, zero-ahead / 554-behind branch ref; it has no unique commits, but deletion remains open because the current connected GitHub action set has no delete-branch operation.
-- Vercel runtime log and health reads through the separate Vercel connector still need proper authorized scope; do not confuse the GitHub deploy-verification workflow with unrestricted runtime observability.
+- Baseline before this patch: main `3292fbe2acc38c1ba199b91725514ad6ffd8ffb6`; exact-head CI, secret scan and independent deploy verification were successful.
+- The shared-catalog optimization and query-count regression are committed directly on the existing `main` line; confirm full exact-head CI and deploy verification before calling the patch verified. No local test run is claimed.
+- Recurring natural scheduler effects, genuine model-inference quality and REAL customer/payment/revenue outcomes remain unverified. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE** until a qualifying real transaction is verified.
+- `feature/governed-offers` remains a zero-ahead, 554-behind reference with no unique commits; the available connected actions do not expose branch deletion.
 
 ## P0 — Complete CAS payment-to-work-item integration
 
