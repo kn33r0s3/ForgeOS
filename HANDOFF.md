@@ -1,13 +1,10 @@
 ## Live resume point — 2026-10-15 NPT
 
-Canonical branch is `main`; no PR, branch, second checkout or parallel engine is being used. `ffc387fc409592f997b6a795bf7e994eda6e653a` has passed its independent deploy verifier and secrets scan; its full CI matrix was still finishing its backend run when this follow-up was prepared. The original `ed2d8c2` run failed one added test because the initial counter used the wrong physical table name; the corrected fixture/counter is committed in `ffc387fc`.
+Canonical branch is `main`; no PR or parallel checkout. Prior code `90fd1d0` deployed and passed its secrets scan, but full backend CI failed four existing public-discovery tests because an undefined `claim_labels` reference was put in `list_public_discoveries`. The new batch-label equivalence/query-count regression passed. The corrected code restores scalar labels in public discoveries and uses the precomputed map only in `_match_for_need`. **Do not call this corrected change verified until its new exact-head full CI, secrets scan and deploy verifier are green.** No local pytest is claimed.
 
-Current follow-up batches evidence-link reads for public Claim labels in groups of 400, eager-loads related Signals, and calls the existing scalar label rules using supplied links. A regression compares batched labels with scalar results and asserts one evidence-link SELECT. **Do not mark this source change verified until its own exact-head backend/full CI, secrets scan and independent deployment verifier are checked.** Local pytest is unavailable in this environment.
-
-Next engineering seam after verification: batch latest connection rows and their response/fulfillment Outcomes while retaining latest-row privacy visibility and the generic public response wording. Do not activate intake, messages, model-provider requests, checkout/payment, or any new external action.
+The catalogue reuse change from `ffc387fc` was independently verified (1,315 passed, 2 skipped, all 9 CI jobs, secrets and deployment checks green). Preserve all public epistemic rules and keep public matching distinct from acceptance, agreement, fulfillment and revenue. The next business-critical event remains a real, consented seller conversation; no outreach is authorized by these code changes.
 
 ---
-
 
 Canonical branch is `main`; no branch, PR, second checkout or parallel implementation was created. Before the current patch, main was `3292fbe2acc38c1ba199b91725514ad6ffd8ffb6`. Its full CI, secrets scan and independent deploy verification passed. The code revision with multilingual/distinctive-overlap ranking also passed all nine CI jobs.
 

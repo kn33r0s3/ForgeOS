@@ -1,12 +1,12 @@
 ## Live resume point — 2026-10-15 NPT
 
-- Canonical main remains the sole implementation line. Prior source commit `ffc387fc409592f997b6a795bf7e994eda6e653a` passed the independent deployment verifier (exact SHA + protected owner-cycle read) and secrets scan; its complete 9-job CI matrix was still running when this follow-up was prepared.
-- New code batches EvidenceRelationship/Evidence reads for unique Claims while computing public matching labels and eager-loads Signals used by publisher/freshness calculations. The exact single-Claim policy and publication gates are reused; a regression compares batched output to scalar output and counts relationship SELECTs.
-- **This follow-up's exact-head CI, secrets scan and deployment verification are pending.** No local pytest execution is claimed. Prior CI failure on `ed2d8c2` was isolated to its flawed SQL table-name counter; the corrected fixture/counter is in `ffc387fc`, not the failed version.
-- The catalogue optimization does not establish match quality, scheduled runtime behavior, genuine model quality or REAL customer/payment/revenue outcomes. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**. No intake, send, model-provider, checkout or payment permission changed.
+- Canonical `main` before the current correction: `90fd1d052fea32b1ec9795fceafcd9da49f18437`. Its exact-SHA deployment verifier and secrets scan passed; eight other CI jobs passed, but backend suite finished **4 failed, 1,312 passed, 2 skipped**.
+- Root cause: `claim_labels.get(claim.id)` was inserted into the unrelated `list_public_discoveries` route, where the variable is undefined, while `_match_for_need` still called the scalar labeler. Four existing discovery-route tests caught it. The new batched label equivalence/query-count test passed.
+- Current correction restores the scalar label call in `/public/discoveries` and switches only `_match_for_need` to the already computed catalogue label map. Next commit requires fresh exact-head full CI, secret scan and independent deployment verification. No local pytest run is claimed.
+- The prior catalogue-only optimization `ffc387fc` remains verified: 1,315 backend tests passed, 2 skipped, all nine CI jobs green, secrets scan and deployment verification green.
+- No intake, external messaging, provider call, checkout/payment flag or other permission was changed. Match quality and real customer/payment/revenue results remain unproven; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE**.
 
 ---
-
 
 - Baseline main before this change: `3292fbe2acc38c1ba199b91725514ad6ffd8ffb6`. The prior source commit `7e56d1bb748dfc27ff272d20c76db1874a9fd9f5` passed all nine CI jobs; documentation-only baseline main also passed exact-head CI, secrets scan and independent deploy verification.
 - Current code change reuses the existing public matching catalogue within a single `/public/matches` response and a bounded `scan_candidates` pass, and batch-loads provider listings. A two-need query-count regression was added to the existing public value-flow tests.

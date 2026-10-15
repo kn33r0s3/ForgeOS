@@ -4,7 +4,7 @@
 - **Change prepared in existing code:** preload Claim evidence links in bounded groups of 400 IDs; eager-load the related Signal needed for source-host and freshness calculations; supply those exact links to the existing scalar label rules.
 - **Truth/visibility contract:** keep conflict relationships claim-specific; count only support/update edges from distinct external hosts; use the same observed/supported/contested vocabulary and freshness bit; preserve the regulated-asset publication check. Missing, inference, unknown, superseded and rejected Claims remain hidden as before.
 - **Regression:** compare batch results against each existing scalar label for supported, contested, hidden and regulated Claims; assert only one EvidenceRelationship query for a batch smaller than 400.
-- **Verification:** full CI for catalogue reuse is running on prior source SHA `ffc387fc409592f997b6a795bf7e994eda6e653a`; this source change requires its own exact-head CI plus secrets and deploy verification. No local pytest run is claimed.
+- **Verification:** exact-head CI for `90fd1d0` found an integration-point replacement error: four existing public-discovery tests failed because the separate `/public/discoveries` handler referred to `claim_labels` without creating a catalogue. The new batch equivalence/query-count test itself passed. This correction restores the existing scalar label call on public discoveries and applies the precomputed label map only within `_match_for_need`. Corrected exact-head CI is pending; no local pytest run is claimed.
 - **Next:** measure real-source top-k ranking, then batch per-candidate connection and response reads. A public lexical match is not acceptance, a verified counterparty or a REAL outcome.
 
 ---

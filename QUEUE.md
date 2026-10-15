@@ -1,13 +1,12 @@
 # Hami Execution Queue
 
-## P0 — Batch public Claim evidence reads (verification pending)
+## P0 — Correctly scope batched public Claim labels (verification pending)
 
-- The public match catalogue is now reused across needs and provider listings are batch-loaded. The next repeated query was in `public_epistemics.public_claim_label`, which loaded EvidenceRelationship rows separately for each Claim.
-- Reuse one batched evidence-link read for the unique Claims in the catalogue, in chunks of 400 IDs, and eagerly load each linked Signal used to calculate publisher identity/freshness.
-- The batch path calls the existing single-Claim label policy with preloaded links. It does not invent labels or skip contradiction, independent-publisher, stale-evidence, unknown-state or regulated-asset gates.
-- Added a regression that compares batch labels against scalar output for supported, contested, hidden-inference and regulated Claims and asserts one evidence-link query for four Claims.
-- Exact-head CI/deploy verification for this source change is pending. The latest prior head `ffc387fc` already passed independent deployment verification and secrets scan; its full suite was still running when the new change was prepared.
-- Next optimize per-candidate connection/response lookups after these semantics and query counts pass.
+- The shared-catalog query-count optimization is verified on prior commit `ffc387fc` (1,315 backend tests passed, 2 skipped; all nine CI jobs, secrets scan and exact-SHA deployment verifier passed).
+- The next change on `90fd1d0` added bounded batch reads for Claim evidence links and its batch-vs-scalar regression passed, but four existing tests failed because the edit accidentally changed the separate `/public/discoveries` route to read an undefined `claim_labels` variable. That route does not use the matching catalogue.
+- Correction: retain `public_epistemics.public_claim_label(db, claim)` for the discoveries route; use `claim_labels.get(claim.id)` only inside `_match_for_need`, whose catalogue explicitly provides the precomputed map.
+- The exact-head deployment verifier and secrets scan for `90fd1d0` passed, but its complete backend suite did not. Correction commit needs its own exact-head CI and deployment verification. No local test execution is claimed.
+- The map contains the same scalar public-label result; contradiction, independent publisher, freshness, unknown/inference and regulated-asset gates are unchanged. After it verifies, inspect per-candidate connection/response query fan-out only if it helps existing load; the real seller conversation remains the business-critical evidence gap.
 
 ## P1 — Evaluate multilingual retrieval quality
 

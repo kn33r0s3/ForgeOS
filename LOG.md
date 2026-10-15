@@ -444,3 +444,12 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - **Prior verification state:** SHA `ffc387fc409592f997b6a795bf7e994eda6e653a` had successful secrets and independent deployment checks; its full CI backend job was still in progress at the time this follow-up was prepared. The source/test change in this entry is not yet verified.
 - No new table or file, no production setting or activation change, and no external contact/payment/revenue action occurred. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
 
+
+
+## 2026-10-15 — fix public-label batching integration point
+
+- **Verification result:** commit `90fd1d0` exact-head backend CI ended `4 failed, 1312 passed, 2 skipped`. The failing existing tests all hit `/public/discoveries` and raised `NameError: claim_labels is not defined`. The newly added batched label-vs-scalar regression passed.
+- **Root cause:** a text replacement selected the first scalar `public_claim_label(db, claim)` occurrence in the file, which belonged to `list_public_discoveries`; it did not select the later call inside `_match_for_need`. That put a matching-catalog variable in an unrelated route and left the intended matching loop unoptimized.
+- **Fix on this commit:** restore scalar `public_epistemics.public_claim_label(db, claim)` in `list_public_discoveries`; switch the call in `_match_for_need` alone to `claim_labels.get(claim.id)`. Static checks assert the two call sites are now distinct and correct.
+- **Verification:** corrected commit requires its own exact-head CI/deploy/secrets checks. No claim of local pytest execution. No external contact, payment, feature activation or public-claim policy change.
+
