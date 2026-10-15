@@ -1,3 +1,11 @@
+## Exact-head CI correction — 2026-10-15 NPT
+
+The previous top-of-file note said full CI and the privacy regressions were not verified. That was accurate when written but has been superseded by GitHub Actions run [38656943577](https://github.com/kn33r0s3/ForgeOS/actions/runs/38656943577) on exact source-tree head `66cdba6cded0fd558a1783abfeb14d8554333b50`: all 9 jobs passed; backend pytest reported **1,310 passed, 2 skipped, 18 warnings**. The Unicode/Nepali planner improvements and Devanagari discovery-privacy regressions are included. Independent deploy verification [38656943524](https://github.com/kn33r0s3/ForgeOS/actions/runs/38656943524) also succeeded and verified production against that SHA. Commits after source/test changes were documentation-only.
+
+Current code-quality focus: batch the per-Signal Evidence lookup in `research_planner._prior_observations` into one eligible-Evidence aggregation, preserving consent/source-identity gates and continuing past Signals without eligible Evidence. Add focused regression and rerun exact-head CI. Recurring scheduler execution, live model-quality results and REAL customer/revenue outcomes remain separate unverified claims.
+
+---
+
 ## Current reconciliation — 2026-10-15 NPT (not a full CI/runtime pass)
 
 - Before this documentation correction, main was `2359f91affa8fd6207f192579dc273f4cd6f4336`; code changes are last present in `014287fb6c952088537b822337248cf7c841168b`, with intervening continuity-only commits. Production Vercel deployment `dpl_3vyt5c1EkFx5287q6LHfXwrKH6cg` reports READY on SHA `2359f91affa8fd6207f192579dc273f4cd6f4336`.

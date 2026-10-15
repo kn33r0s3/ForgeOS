@@ -406,3 +406,13 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - No personal production records, external messages, provider calls, payment, or revenue were used or claimed.
 - Next: run both focused Python regression files and full backend CI on exact main, then measure false-positive/false-negative behavior on safe synthetic fixtures plus public/coarse non-sensitive examples.
 
+
+
+## 2026-10-15 — supersede stale test gap with exact-head GitHub Actions result
+
+- Queried the public GitHub Actions REST collection directly for head `66cdba6cded0fd558a1783abfeb14d8554333b50`; it exposes the full push-triggered workflow records (the specialized connector wrapper had filtered only PR-triggered runs and had been too narrow).
+- ForgeOS CI run [38656943577](https://github.com/kn33r0s3/ForgeOS/actions/runs/38656943577) succeeded on that exact head, with 9/9 jobs complete-success: backend-tests, frontend-tests, build, typecheck, lint, route-smoke, evidence-triage-tests, repository-guards and secret-scan/gitleaks.
+- Retrieved backend job log [116169131055](https://github.com/kn33r0s3/ForgeOS/actions/runs/38656943577/job/116169131055): `1,310 passed, 2 skipped, 18 warnings in 231.13s`. This includes the committed research planner Unicode/Nepali retrieval tests and the discovery address/privacy regression tests. Prior statements saying these were unverified have been superseded for this code revision.
+- Independent deploy verification run [38656943524](https://github.com/kn33r0s3/ForgeOS/actions/runs/38656943524) succeeded; its verification job completed all steps, including fetching production content, waiting for exact tested SHA, reading the protected owner cycle and accepting the verification.
+- Do not overclaim beyond these results: this validates source/test state and deployment verification for SHA `66cdba6`; it does not prove recurring scheduler effects, non-MOCK model quality, a recovered customer sale or REAL revenue.
+- Next code improvement identified: `research_planner._prior_observations` now correctly scans ranked candidates until it fills the requested number of eligible evidence-backed observations, but issues a separate Evidence SELECT per Signal. Batch this lookup to reduce worst-case query count (up to the scanned 300 signals) while preserving the exact source-identity/consent filters. Add regression and run full CI rather than writing another status-only update.
