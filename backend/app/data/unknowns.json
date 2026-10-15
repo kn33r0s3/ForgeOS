@@ -786,11 +786,11 @@
   {
    "id": "D72",
    "category": "D",
-   "question": "Does the reported e-commerce registration law (REPORTED: \"E-commerce Act 2025\", in force 2025-04-15; mandatory registration for ALL online sellers incl. FB/IG/TikTok/WhatsApp; fine up to Rs200,000; REPORTED ~950 registered by 2025-07-18 deadline; REPORTED E-Commerce Directive 2082 adds NRB-gateway-only payments + e-invoicing — act name and 950 figure NOT verified against the Department's own notice) constrain the sprint — and does Hami-as-platform need registration if it takes a cut of recovered sales?",
+   "question": "What duties apply now to individual online sellers and to Hami if its paid reply-rescue service influences or intermediates online transactions?",
    "state": "UNKNOWN",
-   "state_note": "UNKNOWN",
-   "cheapest_test": "Legal read alongside company registration: (1) is Hami a \"platform\" under the Act when it takes a revenue share but sells nothing itself? (2) sprint works ONLY with already-registered sellers (registration help is a scope jump — regulatory education Hami will not pioneer; separate unknown for later). NOT legal advice from the agent — needs a real read",
-   "stake": "Most social sellers operate unregistered = illegally. The sprint can't ignore this: it filters to already-registered sellers. Registration help is out of scope for the sprint. The law is also a possible value angle — but only with a real legal read"
+   "state_note": "UNKNOWN (primary-source confirmation improved 2026-10-15: the Department lists the [Electronic Business (E-Commerce) Act, 2081](https://doc.gov.np/content/324/electronic-business--e-commerce--act--2081/) and an official [Urgent Notice Regarding Mandatory Listing](https://doc.gov.np/content/470/urgent-notice-regarding-mandatory-listing-e-commerce-2083-05-01/) dated 2 Bhadra, 2083. Secondary reporting describes registration/listing requirements for social sellers, but the current operative rules and their application to Hami are not decided here.)",
+   "cheapest_test": "Retrieve/read the complete official Act, notice and current guidelines; obtain qualified Nepali counsel's written response on seller eligibility and required registration/listing proof, Hami's intermediary/platform status, seller agreement/commission, complaint/transaction duties, privacy and customer-message handling. Obtain accounting/legal advice on tax, invoices and whether/where Hami may receive its own fee before company registration. Continue non-commercial discovery; no paid/operational sprint until decisions and owner approval are recorded.",
+   "stake": "Prevents treating a low-tech experiment as legally exempt, onboarding an ineligible seller, making an unapproved revenue-share promise, or collecting money via an unresolved path. Keep the missed-inquiry hypothesis alive while legal and economic viability are tested independently."
   },
   {
    "id": "D73",
@@ -1027,5 +1027,5 @@
    "stake": "Sizes the second-order hit of a broken season — the stock loss is only the first ledger line; the loan ledger is the one that kills the next season's stocking"
   }
  ],
- "last_loop": "2026-10-04"
+ "last_loop": "2026-10-15"
 }
