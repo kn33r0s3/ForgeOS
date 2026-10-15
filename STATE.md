@@ -1,12 +1,14 @@
 ## Live resume point — 2026-10-15 NPT
 
-- **Canonical main:** `5b1f8ee9f1ed05c28bc446367d8d8ae34f894a4c`.
-- **Exact-head verification:** [CI 38665976043](https://github.com/kn33r0s3/ForgeOS/actions/runs/38665976043) passed all nine jobs: backend **1,320 passed, 2 skipped, 18 warnings in 194.39s**; lint, frontend tests, typecheck, build, route smoke, evidence-triage tests, repository guards and Gitleaks passed. [Independent deployment verification 38665976364](https://github.com/kn33r0s3/ForgeOS/actions/runs/38665976364) and [secrets scan 38665975827](https://github.com/kn33r0s3/ForgeOS/actions/runs/38665975827) passed for this SHA.
-- **Code work verified:** shared Unicode matching, public matching catalogue reuse/eager listing load, batched public Claim labels/Evidence links and latest-connection/response lookup tests. The discovery query regression lives in fixture-owning `test_public_value_flow.py`; the six-language benchmark is synthetic TEST-only, not production relevance accuracy.
-- **Source recovery:** intermediate `ce9994b` truncated public.py and its CI/deploy were cancelled/superseded; `55e2dd0` restored the complete route file and scoped label batching. Current exact-head tests, secret scan and deployment verifier are green.
-- **Legal/reality correction:** D72 now links the Department's [E-Commerce Act page](https://doc.gov.np/content/324/electronic-business--e-commerce--act--2081/) and [Urgent Notice Regarding Mandatory Listing](https://doc.gov.np/content/470/urgent-notice-regarding-mandatory-listing-e-commerce-2083-05-01/) dated 2 Bhadra, 2083. “No regulator” and the exclusion of registered sellers were inaccurate. Primary pages verify the Act/notice exist; Hami's intermediary status, seller duties, data/privacy role, pricing/revenue share, tax and personal-wallet fee receipt still require qualified review.
-- **Next:** inspect the existing owner interview/Evidence/BET/operating-gate seams and build an owner-only, idempotent Evidence + Event capture path for a real consented seller account, using minimal de-identified data and explicit source/proof level. A reported seller account is not independent transaction proof.
-- **External boundary:** no seller contacted, no service offered, no content published, no payment requested/received, no REAL sale/revenue created and no activation flag changed. Price/revenue share, legal/tax, channel permissions and customer-facing action require explicit owner approval. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+- Canonical main: 5c1c07713984a8c364229444685a84f7c064ef42.
+- Exact-head CI 38755037753 passed all nine jobs: 1,324 backend passed, 2 skipped, 18 warnings in 324.85s. Independent deployment verification 38755037371 and secrets scan 38755036960 passed for the same SHA.
+- Implemented owner-key-protected POST /opv4/seller-evidence. It records an already-obtained, explicitly consented, de-identified seller account against the existing Rescue Week Bet through existing Evidence/Event primitives. Requires pseudonymous participant ref and stable idempotency key; rejects email/phone details; Event stores a claim hash, not the statement.
+- Proof boundary: REAL source-kind, L3, SELLER perspective, firsthand, consent granted, support level hypothesized, no verifier. API states transaction_verified=false; this is a seller account, not proof of a recovered sale, fulfillment or payment. Replays return the same IDs; changed payload with same key is rejected.
+- The service creates no Outcome/revenue, starts no pilot and sends no message. Rescue Week still requires the separate legal read/owner gate. D72 links the Department's E-Commerce Act 2081 and Urgent Notice Regarding Mandatory Listing; application to Hami and any commercial model remain unresolved pending qualified review.
+- No real seller has used this path. No seller was contacted, no service offered, no content published, no payment requested/received, and no REAL sale/revenue was created by this engineering pass. Next external dependency is owner-authorized warm-introduction discovery and the actual consented statement. OWNER_INTERVENTIONS_PER_REAL_TRANSACTION remains NOT MEASURABLE.
+
+---
+
 
 ---
 

@@ -1,4 +1,13 @@
-## [PUBLIC MATCHING AND CLAIM-LABEL BATCHING — EXACT-HEAD VERIFIED, 2026-10-15]
+## [CONSENTED SELLER ACCOUNT EVIDENCE — IMPLEMENTED / EXACT-HEAD VERIFIED, 2026-10-15]
+
+- Verified source: 5c1c07713984a8c364229444685a84f7c064ef42. Exact-head CI 38755037753 passed all nine jobs; 1,324 backend passed, 2 skipped, 18 warnings in 324.85s. Deployment verification 38755037371 and secret scan 38755036960 passed.
+- Reuses owner-gated /opv4, the existing Rescue Week Bet, world_graph.create_evidence, world_graph.create_event and the existing Event registry. No new table or semantic primitive.
+- Requires explicit consent attestation, pseudonymous participant ref, de-identified seller account and idempotency key; phone/email details are rejected. Writes one linked Evidence row and an Event with metadata plus the claim digest.
+- Evidence is L3 / SELLER / firsthand / consent-granted / REAL source-kind, support_level hypothesized, no verifier, and explicitly capped at a seller account only. API returns transaction_verified=false; no message, pilot, Outcome, payment or revenue is created.
+- No actual seller has used this path. The next dependency is an owner-authorized, consented real discovery account; legal and paid-pilot gates remain unresolved. OWNER_INTERVENTIONS_PER_REAL_TRANSACTION is NOT MEASURABLE.
+---
+
+## [HISTORICAL: PUBLIC MATCHING AND CLAIM-LABEL BATCHING — EXACT-HEAD VERIFIED, 2026-10-15]
 
 - **Verified main SHA:** `5b1f8ee9f1ed05c28bc446367d8d8ae34f894a4c`. All nine jobs passed in [CI 38665976043](https://github.com/kn33r0s3/ForgeOS/actions/runs/38665976043), backend **1,320 passed, 2 skipped, 18 warnings in 194.39s**. Secret scan [38665975827](https://github.com/kn33r0s3/ForgeOS/actions/runs/38665975827) and independent deployment verification [38665976364](https://github.com/kn33r0s3/ForgeOS/actions/runs/38665976364) passed.
 - Existing shared seams batch provider listings, public Claim/Evidence labels, latest connection lookup and response flags. Candidate scanning and gap bookkeeping reuse the connection catalogue; newest-row selection precedes visibility filtering, preserving private-over-public masking. Query-count and scalar/batch-equivalence regressions pass.

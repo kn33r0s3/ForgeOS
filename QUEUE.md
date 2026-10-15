@@ -1,12 +1,12 @@
 # Hami Execution Queue
 
-## P0 — Build owner-only Rescue Week evidence capture without activating a pilot
+## P0 — Obtain a real, owner-authorized seller discovery account (no pilot activation)
 
-- **Verified main SHA:** `5b1f8ee9f1ed05c28bc446367d8d8ae34f894a4c`. [CI 38665976043](https://github.com/kn33r0s3/ForgeOS/actions/runs/38665976043) passed all nine jobs, backend **1,320 passed, 2 skipped, 18 warnings in 194.39s**. Secret scan [38665975827](https://github.com/kn33r0s3/ForgeOS/actions/runs/38665975827) and exact-SHA deployment verification [38665976364](https://github.com/kn33r0s3/ForgeOS/actions/runs/38665976364) passed.
-- Existing problem: the owner interview-results form intentionally writes MOCK/REPORTED outcomes; it must never manufacture seller-side, firsthand, consented REAL evidence. Rescue Week's gate expects Evidence linked to the existing Bet plus seller perspective, consent and source type.
-- Next: inspect existing `backend/app/api/operating_v4.py`, `backend/app/services/operating_v4.py`, `backend/app/api/substrate.py`, Evidence/Event models and the owner interview form. Implement the smallest owner-authenticated, idempotent path on existing primitives; preserve reported-versus-independent proof tiers, create no parallel table/primitive, store no customer message bodies/phone numbers/credentials, and make duplicates harmless.
-- A consented firsthand seller statement may establish a reported seller-side account at the existing L3/proof standard, not an independently verified recovered sale/payment. Transaction claims require their own evidence; tests never count as REAL.
-- Keep external-action flags, message delivery, checkout/payment and public activation untouched. This is internal evidence capture for a human-run, consented account, not permission to contact a seller or start Rescue Week.
+- Capture path implemented and verified: POST /opv4/seller-evidence records an already-obtained, explicitly consented, de-identified seller account against the existing Rescue Week Bet. Reuses Evidence/Event; no new table or primitive.
+- Verified SHA 5c1c07713984a8c364229444685a84f7c064ef42. CI 38755037753 passed all nine jobs; 1,324 backend passed, 2 skipped, 18 warnings in 324.85s. Deploy verification 38755037371 and secrets scan 38755036960 passed.
+- Next real-world step requires the owner: authorize a genuine warm introduction/contact for non-commercial discovery and conduct the conversation. Do not pitch the rescue service, promise a free week, discuss price, request account access or copy customer information. Public listings are not permission to contact.
+- After an actual conversation and explicit consent for de-identified discovery notes, enter only the statement truly provided. It is L3 seller-reported evidence, not independently verified transaction evidence. No real seller account has yet been recorded by this agent.
+- Legal eligibility, privacy/data handling, price/revenue share, tax and fee collection remain separate owner/legal gates. Recording a seller statement does not activate a pilot.
 
 ## P1 — Resolve legal/operational eligibility before any paid sprint
 
