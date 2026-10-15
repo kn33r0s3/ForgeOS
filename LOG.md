@@ -427,3 +427,10 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - **Verification:** baseline main `3292fbe2acc38c1ba199b91725514ad6ffd8ffb6` had successful full CI, secret scan and independent deploy verification. New-source exact-head CI/deployment checks are pending at the time of this entry. No local test run is claimed.
 - No new files or domain primitives; no environment flags, permissions, intake, external message, customer/provider contact, payment, or revenue record was changed. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
 
+
+
+## 2026-10-15 — strengthen public catalogue query-count regression
+
+- During exact-head CI review of `ed2d8c2`, source inspection confirmed the ORM maps Provider/ServiceListing to `public_providers`/`public_service_listings`. The new query counter initially used the short class names rather than the actual database table names; corrected it before accepting test results.
+- The regression now creates one verified public provider and active public listing, then asserts one provider query, one listing relationship query, one linked-knowledge query, and two domain-record queries for two needs. This exercises batched relationship loading rather than passing when the provider table is empty.
+- The preceding commit's CI was in progress; this focused follow-up requires its own exact-head full CI and deployment verification. No production flags, external actions or reality/economic claims changed.

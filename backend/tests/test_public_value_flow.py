@@ -1370,6 +1370,27 @@ def test_public_discoveries_are_sourced_observations_without_internal_scores(own
 
 
 def test_public_matches_load_shared_catalog_once_for_multiple_needs(owner_client_with_db, db):
+    provider = models.Provider(
+        name="Quartz Widget Supply",
+        category="Parts",
+        summary="Sourcing quartz widget parts for local repair work.",
+        country="Nepal",
+        is_active=True,
+        public_visible=True,
+        verification_status="verified",
+    )
+    db.add(provider)
+    db.flush()
+    db.add(
+        models.ServiceListing(
+            provider_id=provider.id,
+            title="Quartz widgets",
+            description="Supply quartz widget parts.",
+            availability_status="weekdays",
+            is_active=True,
+            public_visible=True,
+        )
+    )
     db.add_all(
         [
             models.DomainRecord(
@@ -1390,14 +1411,21 @@ def test_public_matches_load_shared_catalog_once_for_multiple_needs(owner_client
     )
     db.commit()
 
-    queries = {"providers": 0, "domain_records": 0, "claims": 0}
+    queries = {
+        "providers": 0,
+        "listings": 0,
+        "domain_records": 0,
+        "claims": 0,
+    }
 
     def count_catalog_queries(conn, cursor, statement, parameters, context, executemany):
         normalized = " ".join(statement.casefold().split())
         if not normalized.startswith("select"):
             return
-        if " from providers " in normalized:
+        if " from public_providers " in normalized:
             queries["providers"] += 1
+        if " from public_service_listings " in normalized:
+            queries["listings"] += 1
         if " from domain_records " in normalized:
             queries["domain_records"] += 1
         if " from claims " in normalized:
@@ -1411,10 +1439,11 @@ def test_public_matches_load_shared_catalog_once_for_multiple_needs(owner_client
 
     assert response.status_code == 200, response.text
     assert len(response.json()) == 2
-    # One query retrieves the request's needs; one loads other open records.
+    # One query retrieves the needs; one loads all other open records.
     assert queries["domain_records"] == 2
-    # The common provider and linked-knowledge catalogs are not reloaded per need.
+    # Provider plus its listing relationship are each loaded once for the request.
     assert queries["providers"] == 1
+    assert queries["listings"] == 1
     assert queries["claims"] == 1
 
 

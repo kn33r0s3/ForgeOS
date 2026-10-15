@@ -2,7 +2,7 @@
 
 - Baseline main before this change: `3292fbe2acc38c1ba199b91725514ad6ffd8ffb6`. The prior source commit `7e56d1bb748dfc27ff272d20c76db1874a9fd9f5` passed all nine CI jobs; documentation-only baseline main also passed exact-head CI, secrets scan and independent deploy verification.
 - Current code change reuses the existing public matching catalogue within a single `/public/matches` response and a bounded `scan_candidates` pass, and batch-loads provider listings. A two-need query-count regression was added to the existing public value-flow tests.
-- **Verification state at commit preparation:** new-source exact-head CI and deployment verification still pending. The environment did not provide a working local GitHub DNS path, so no local pytest execution is claimed. Use GitHub Actions exact-head results.
+- **Verification state at commit preparation:** source CI/deployment verification were still running when the query-count regression's database table-name mismatch was identified. The regression is corrected and now exercises a verified provider/listing fixture; the next commit's exact-head CI/deployment results are authoritative. No local pytest execution is claimed because the local network path to GitHub is unavailable.
 - Per-candidate connection and response reads remain; no matching-quality benchmark, natural scheduler effect, non-MOCK inference quality, REAL customer/payment/revenue outcome, or owner-intervention ratio is established by this change. Intake and external action settings are unchanged.
 
 ---
