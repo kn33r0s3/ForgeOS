@@ -1391,31 +1391,43 @@ def test_public_matches_load_shared_catalog_once_for_multiple_needs(owner_client
             public_visible=True,
         )
     )
-    db.add_all(
-        [
-            models.DomainRecord(
-                kind="job",
-                title="Quartz widget sourcing",
-                detail="Find a supplier for quartz parts.",
-                status="open",
-                close_token_hash="test-quartz",
-            ),
-            models.DomainRecord(
-                kind="job",
-                title="Marigold ferry repair",
-                detail="Repair ferry equipment with marigold coating.",
-                status="open",
-                close_token_hash="test-marigold",
-            ),
-        ]
+    quartz_need = models.DomainRecord(
+        kind="job",
+        title="Quartz widget sourcing",
+        detail="Find a supplier for quartz parts.",
+        status="open",
+        close_token_hash="test-quartz",
     )
+    marigold_need = models.DomainRecord(
+        kind="job",
+        title="Marigold ferry repair",
+        detail="Repair ferry equipment with marigold coating.",
+        status="open",
+        close_token_hash="test-marigold",
+    )
+    db.add_all([quartz_need, marigold_need])
+    db.flush()
+    connection = models.NetworkConnection(
+        left_kind="domain_record", left_id=quartz_need.id,
+        right_kind="provider", right_id=provider.id,
+        relation_type="possible_match", direction="directed",
+        epistemic_state="hypothesized", state="candidate",
+        reason="Existing candidate link for query-count regression.",
+        agreement_gap="No agreement is implied by this link.", public_visible=True,
+    )
+    db.add(connection)
+    db.flush()
+    db.add(models.Outcome(
+        outcome_type="ACTUAL_RESPONSE", source="network_connection",
+        qualitative_result="TEST response fixture.",
+        notes=f"idempotency:network-connection:{connection.id}:response:test-fixture",
+        verification_state="REPORTED", data_scope="SANDBOX", source_kind="TEST",
+    ))
     db.commit()
 
     queries = {
-        "providers": 0,
-        "listings": 0,
-        "domain_records": 0,
-        "claims": 0,
+        "providers": 0, "listings": 0, "domain_records": 0, "claims": 0,
+        "network_connections": 0, "outcomes": 0,
     }
 
     def count_catalog_queries(conn, cursor, statement, parameters, context, executemany):
@@ -1430,6 +1442,10 @@ def test_public_matches_load_shared_catalog_once_for_multiple_needs(owner_client
             queries["domain_records"] += 1
         if " from claims " in normalized:
             queries["claims"] += 1
+        if " from network_connections " in normalized:
+            queries["network_connections"] += 1
+        if " from outcomes " in normalized:
+            queries["outcomes"] += 1
 
     event.listen(db.get_bind(), "before_cursor_execute", count_catalog_queries)
     try:
@@ -1445,6 +1461,104 @@ def test_public_matches_load_shared_catalog_once_for_multiple_needs(owner_client
     assert queries["providers"] == 1
     assert queries["listings"] == 1
     assert queries["claims"] == 1
+    assert queries["network_connections"] == 1
+    assert queries["outcomes"] == 1
+    quartz_result = next(item for item in response.json() if item["need_id"] == quartz_need.id)
+    quartz_match = next(
+        item for item in quartz_result["candidates"]
+        if item["kind"] == "provider" and item["id"] == provider.id
+    )
+    assert quartz_match["connection_id"] == connection.id
+    assert quartz_match["latest_response"] == (
+        "A response was recorded. It is not acceptance, fulfillment, or payment."
+    )
+
+
+def test_public_matches_newer_private_connection_masks_older_public_response(owner_client_with_db, db):
+    need = models.DomainRecord(
+        kind="job", title="Need refrigerator repair",
+        detail="The refrigerator is not cooling and needs a repair technician.",
+        city="Kathmandu", close_token_hash="private-mask-test", status="open",
+    )
+    provider = models.Provider(
+        name="Kathmandu refrigerator repair",
+        summary="Refrigerator appliance repair service",
+        city="Kathmandu", country="Nepal",
+        public_visible=True, is_active=True, verification_status="verified",
+    )
+    db.add_all([need, provider])
+    db.flush()
+    older_public = models.NetworkConnection(
+        left_kind="domain_record", left_id=need.id, right_kind="provider", right_id=provider.id,
+        relation_type="possible_match", direction="directed", epistemic_state="hypothesized",
+        state="candidate", reason="Older public candidate.",
+        agreement_gap="No agreement is implied by this link.", public_visible=True,
+    )
+    db.add(older_public)
+    db.flush()
+    db.add(models.Outcome(
+        outcome_type="ACTUAL_RESPONSE", source="network_connection",
+        qualitative_result="TEST response fixture.",
+        notes=f"idempotency:network-connection:{older_public.id}:response:test-private-mask",
+        verification_state="REPORTED", data_scope="SANDBOX", source_kind="TEST",
+    ))
+    db.flush()
+    newest_private = models.NetworkConnection(
+        left_kind="domain_record", left_id=need.id, right_kind="provider", right_id=provider.id,
+        relation_type="possible_match", direction="directed", epistemic_state="hypothesized",
+        state="candidate", reason="Newer private candidate masks the older public row.",
+        agreement_gap="No agreement is implied by this link.", public_visible=False,
+    )
+    db.add(newest_private)
+    db.commit()
+    response = owner_client_with_db.get("/public/matches")
+    assert response.status_code == 200, response.text
+    match = next(item for item in response.json() if item["need_id"] == need.id)
+    candidate = next(item for item in match["candidates"] if item["kind"] == "provider" and item["id"] == provider.id)
+    assert newest_private.id > older_public.id
+    assert candidate["connection_id"] is None
+    assert candidate["latest_response"] is None
+
+
+def test_scan_candidates_reuses_connection_catalog_and_preserves_private_duplicates(owner_client_with_db, db):
+    from app.services import network_connections
+    need = models.DomainRecord(
+        kind="job", title="Need a quartz supplier",
+        detail="Find a supplier of quartz widget parts for a repair job.",
+        city="Kathmandu", close_token_hash="scan-catalog-test", status="open",
+    )
+    provider = models.Provider(
+        name="Quartz widget supplier", summary="Supplier of quartz parts",
+        city="Kathmandu", country="Nepal",
+        public_visible=True, is_active=True, verification_status="verified",
+    )
+    db.add_all([need, provider])
+    db.flush()
+    db.add(models.ServiceListing(
+        provider_id=provider.id, title="Quartz widget parts",
+        description="Supply quartz components to repair shops.",
+        availability_status="weekdays", is_active=True, public_visible=True,
+    ))
+    db.add(models.NetworkConnection(
+        left_kind="domain_record", left_id=need.id, right_kind="provider", right_id=provider.id,
+        relation_type="possible_match", direction="directed", epistemic_state="hypothesized",
+        state="candidate", reason="Existing private candidate.",
+        agreement_gap="No agreement is implied by this link.", public_visible=False,
+    ))
+    db.commit()
+    queries = {"network_connections": 0}
+    def count_connection_selects(conn, cursor, statement, parameters, context, executemany):
+        normalized = " ".join(statement.casefold().split())
+        if normalized.startswith("select") and " from network_connections " in normalized:
+            queries["network_connections"] += 1
+    event.listen(db.get_bind(), "before_cursor_execute", count_connection_selects)
+    try:
+        created = network_connections.scan_candidates(db, limit=10)
+    finally:
+        event.remove(db.get_bind(), "before_cursor_execute", count_connection_selects)
+    assert created == []
+    assert queries["network_connections"] == 1
+    assert db.query(models.NetworkConnection).count() == 1
 
 
 def test_public_match_uses_recorded_terms_and_names_unknowns(owner_client_with_db, db):

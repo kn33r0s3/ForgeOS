@@ -200,6 +200,87 @@ def test_public_need_matching_ranks_romanized_nepali_overlap_above_qr_only(db):
     ]
 
 
+def test_public_matching_frozen_multilingual_synthetic_benchmark_metrics(db):
+    """TEST-only ranking benchmark; these metrics are not production accuracy."""
+    cases = [
+        {
+            "language": "English", "need_title": "QR payment reconciliation for merchant orders",
+            "need_detail": "Help sellers match payment settlements to orders",
+            "strong_name": "Merchant QR payment reconciliation",
+            "strong_summary": "Reconcile merchant orders and QR settlement errors",
+            "weak_name": "QR poster printing", "weak_summary": "Shop posters and signage",
+        },
+        {
+            "language": "Devanagari Nepali", "need_title": "नेपाल कृषि बजार QR भुक्तानी",
+            "need_detail": "साना व्यापारीका अर्डर र भुक्तानी मिलान",
+            "strong_name": "नेपाल कृषि QR भुक्तानी सहयोग",
+            "strong_summary": "बजारका अर्डर र भुक्तानी मिलान",
+            "weak_name": "QR पोस्टर डिजाइन", "weak_summary": "पसल बोर्ड र छपाइ",
+        },
+        {
+            "language": "Romanized Nepali", "need_title": "Nepal ko krishi bazar QR bhuktani milan",
+            "need_detail": "Help seller order milan",
+            "strong_name": "Nepal krishi bazar QR bhuktani sahayata",
+            "strong_summary": "Milan seller order",
+            "weak_name": "QR poster design", "weak_summary": "Shop signage",
+        },
+        {
+            "language": "Code-switched", "need_title": "Facebook seller ko QR bhuktani order milan",
+            "need_detail": "Facebook commerce payment matching",
+            "strong_name": "Facebook QR bhuktani support",
+            "strong_summary": "Seller order milan payment",
+            "weak_name": "QR poster printing", "weak_summary": "Shop signage and design",
+        },
+        {
+            "language": "CJK", "need_title": "二维码支付商户订单对账",
+            "need_detail": "二维码订单支付对账",
+            "strong_name": "二维码支付订单对账服务",
+            "strong_summary": "商户支付对账",
+            "weak_name": "二维码海报设计", "weak_summary": "广告设计",
+        },
+        {
+            "language": "Hindi", "need_title": "छोटे व्यापारी QR भुगतान मिलान",
+            "need_detail": "आदेश और भुगतान की जांच",
+            "strong_name": "व्यापारी QR भुगतान सहायता",
+            "strong_summary": "भुगतान मिलान और आदेश जांच",
+            "weak_name": "QR पोस्टर डिजाइन", "weak_summary": "दुकान प्रचार",
+        },
+    ]
+    reciprocal_ranks = []
+    precision_at_one_hits = 0
+    for index, case in enumerate(cases):
+        need = models.DomainRecord(
+            kind="job", title=case["need_title"], detail=case["need_detail"],
+            close_token_hash=f"benchmark-need-{index}", status="open",
+        )
+        db.add(need)
+        db.flush()
+        strong = _verified_public_provider(
+            db, name=case["strong_name"], summary=case["strong_summary"], city="Kathmandu"
+        )
+        weak = _verified_public_provider(
+            db, name=case["weak_name"], summary=case["weak_summary"], city="Kathmandu"
+        )
+        db.commit()
+        match = _match_for_need(db, need)
+        pair_ranking = [
+            candidate.id for candidate in match.candidates
+            if candidate.kind == "provider" and candidate.id in {strong.id, weak.id}
+        ]
+        assert set(pair_ranking) == {strong.id, weak.id}, case["language"]
+        strong_rank = pair_ranking.index(strong.id) + 1
+        reciprocal_ranks.append(1 / strong_rank)
+        precision_at_one_hits += int(strong_rank == 1)
+        db.delete(need)
+        db.delete(strong)
+        db.delete(weak)
+        db.commit()
+    precision_at_one = precision_at_one_hits / len(cases)
+    mean_reciprocal_rank = sum(reciprocal_ranks) / len(reciprocal_ranks)
+    assert precision_at_one == 1.0
+    assert mean_reciprocal_rank == 1.0
+
+
 def test_public_label_mapping_covers_fact_observation_external_claim_conflict_and_hidden_states(db):
     now = datetime(2026, 9, 25, tzinfo=timezone.utc)
 

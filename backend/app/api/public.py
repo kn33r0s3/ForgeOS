@@ -212,6 +212,8 @@ def list_public_discoveries(limit: int = Query(default=20, ge=1, le=50), db: Ses
     )
     from app.services.public_feed import sanitize_public_text
 
+    claims_by_id = {claim.id: claim for claim, _signal in rows}
+    claim_labels = public_epistemics.public_claim_labels(db, list(claims_by_id.values()))
     discoveries = []
     seen = set()
     for claim, signal in rows:
@@ -299,12 +301,7 @@ def _match_tokens(text: str) -> set[str]:
 
 
 def _public_matching_catalog(db: Session):
-    """Load the public matching corpus once per request or bounded scan.
-
-    Reusing this catalog avoids repeating full provider, open-record, and
-    linked-knowledge reads for every need. Candidate order and eligibility
-    remain the responsibility of the existing per-need matcher.
-    """
+    """Load shared matching records and connection/response projections once."""
     providers = (
         _public_provider_query(db)
         .options(selectinload(models.Provider.listings))
@@ -326,8 +323,57 @@ def _public_matching_catalog(db: Session):
     )
     claims_by_id = {claim.id: claim for claim, _signal in knowledge}
     claim_labels = public_epistemics.public_claim_labels(db, list(claims_by_id.values()))
-    return providers, other_records, knowledge, claim_labels
 
+    # Keep newest row by exact endpoint key; visibility is checked only after
+    # selecting it, so a newer private row masks older public history.
+    record_ids = {row.id for row in other_records}
+    connections_by_key: dict[tuple[str, int, str, int], models.NetworkConnection] = {}
+    live_connection_need_ids: set[int] = set()
+    if record_ids:
+        connection_rows = (
+            db.query(models.NetworkConnection)
+            .filter(models.NetworkConnection.left_kind == "domain_record")
+            .filter(models.NetworkConnection.left_id.in_(record_ids))
+            .order_by(models.NetworkConnection.id.desc())
+            .all()
+        )
+        for row in connection_rows:
+            if row.state != "failed":
+                live_connection_need_ids.add(row.left_id)
+            connections_by_key.setdefault(
+                (row.left_kind, row.left_id, row.right_kind, row.right_id), row
+            )
+
+    visible_latest_ids = {row.id for row in connections_by_key.values() if row.public_visible}
+    response_connection_ids: set[int] = set()
+    if visible_latest_ids:
+        notes_rows = (
+            db.query(models.Outcome.notes)
+            .filter(models.Outcome.notes.like("idempotency:network-connection:%:response:%"))
+            .all()
+        )
+        for (notes,) in notes_rows:
+            if not isinstance(notes, str):
+                continue
+            parts = notes.split(":")
+            if len(parts) < 5 or parts[:2] != ["idempotency", "network-connection"] or parts[3] != "response":
+                continue
+            try:
+                connection_id = int(parts[2])
+            except (TypeError, ValueError):
+                continue
+            if connection_id in visible_latest_ids:
+                response_connection_ids.add(connection_id)
+
+    return {
+        "providers": providers,
+        "other_records": other_records,
+        "knowledge": knowledge,
+        "claim_labels": claim_labels,
+        "connections_by_key": connections_by_key,
+        "live_connection_need_ids": live_connection_need_ids,
+        "response_connection_ids": response_connection_ids,
+    }
 
 def _match_for_need(db: Session, need: models.DomainRecord, *, matching_catalog=None) -> schemas.PublicMatchOut:
     from app.services.public_feed import sanitize_public_text
@@ -338,7 +384,10 @@ def _match_for_need(db: Session, need: models.DomainRecord, *, matching_catalog=
     need_tokens = _match_tokens(f"{need_title} {need_detail}")
     if matching_catalog is None:
         matching_catalog = _public_matching_catalog(db)
-    providers, other_records, knowledge, claim_labels = matching_catalog
+    providers = matching_catalog["providers"]
+    other_records = matching_catalog["other_records"]
+    knowledge = matching_catalog["knowledge"]
+    claim_labels = matching_catalog["claim_labels"]
     candidates: list[schemas.PublicMatchCandidate] = []
     match_terms_by_candidate: dict[tuple[str, int], set[str]] = {}
     same_city_by_candidate: dict[tuple[str, int], bool] = {}
@@ -356,7 +405,9 @@ def _match_for_need(db: Session, need: models.DomainRecord, *, matching_catalog=
         if not shared and not same_city:
             continue
         primary = listings[0] if listings else None
-        connection = _public_candidate_connection(db, need.id, "provider", provider.id)
+        connection = _public_candidate_connection(
+            db, need.id, "provider", provider.id, matching_catalog=matching_catalog
+        )
         reasons = []
         if same_city:
             reasons.append("same city")
@@ -383,7 +434,12 @@ def _match_for_need(db: Session, need: models.DomainRecord, *, matching_catalog=
                 reasons=reasons,
                 unknowns=unknowns,
                 connection_id=connection.id if connection else None,
-                latest_response=_public_connection_response(db, connection) if connection else None,
+                latest_response=(
+                    _public_connection_response(
+                        db, connection,
+                        response_connection_ids=matching_catalog["response_connection_ids"],
+                    ) if connection else None
+                ),
             )
         )
         match_key = ("provider", provider.id)
@@ -408,7 +464,9 @@ def _match_for_need(db: Session, need: models.DomainRecord, *, matching_catalog=
         if not other.stated_price:
             unknowns.append("price not stated")
         unknowns.append("no completed outcome is tied to this post")
-        connection = _public_candidate_connection(db, need.id, "post", other.id)
+        connection = _public_candidate_connection(
+            db, need.id, "post", other.id, matching_catalog=matching_catalog
+        )
         candidates.append(
             schemas.PublicMatchCandidate(
                 kind="post",
@@ -421,7 +479,12 @@ def _match_for_need(db: Session, need: models.DomainRecord, *, matching_catalog=
                 reasons=reasons,
                 unknowns=unknowns,
                 connection_id=connection.id if connection else None,
-                latest_response=_public_connection_response(db, connection) if connection else None,
+                latest_response=(
+                    _public_connection_response(
+                        db, connection,
+                        response_connection_ids=matching_catalog["response_connection_ids"],
+                    ) if connection else None
+                ),
             )
         )
         match_key = ("post", other.id)
@@ -569,24 +632,45 @@ def get_public_network(
     return build_public_network(db, limit=limit)
 
 
-def _public_connection_response(db: Session, row: models.NetworkConnection) -> str | None:
+def _public_connection_response(
+    db: Session,
+    row: models.NetworkConnection,
+    *,
+    response_connection_ids: set[int] | None = None,
+) -> str | None:
     if not row.public_visible:
         return None
-    outcome = (
-        db.query(models.Outcome)
-        .filter(models.Outcome.notes.like(f"idempotency:network-connection:{row.id}:response:%"))
-        .order_by(models.Outcome.id.desc())
-        .first()
-    )
-    return "A response was recorded. It is not acceptance, fulfillment, or payment." if outcome else None
+    if response_connection_ids is None:
+        outcome = (
+            db.query(models.Outcome)
+            .filter(models.Outcome.notes.like(f"idempotency:network-connection:{row.id}:response:%"))
+            .order_by(models.Outcome.id.desc())
+            .first()
+        )
+        has_response = outcome is not None
+    else:
+        has_response = row.id in response_connection_ids
+    return "A response was recorded. It is not acceptance, fulfillment, or payment." if has_response else None
 
 
 def _public_candidate_connection(
-    db: Session, record_id: int, right_kind: str, right_id: int
+    db: Session,
+    record_id: int,
+    right_kind: str,
+    right_id: int,
+    *,
+    matching_catalog: dict | None = None,
 ) -> models.NetworkConnection | None:
     from app.services import network_connections
 
-    row = network_connections.find_connection(db, "domain_record", record_id, right_kind, right_id)
+    if matching_catalog is None:
+        row = network_connections.find_connection(db, "domain_record", record_id, right_kind, right_id)
+    else:
+        right_type = network_connections.canonical_endpoint_type(right_kind)
+        row = matching_catalog["connections_by_key"].get(
+            ("domain_record", record_id, right_type, right_id)
+        )
+    # Never fall back to an older public row after a newer private row.
     return row if row is not None and row.public_visible else None
 
 

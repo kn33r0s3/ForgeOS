@@ -353,9 +353,13 @@ def scan_candidates(db: Session, limit: int = 50) -> list[models.NetworkConnecti
             candidate_type = candidate.entity_type or candidate.kind
             left_kind, _left = resolve_endpoint(db, "domain_record", need.id)
             candidate_type, _candidate = resolve_endpoint(db, candidate_type, candidate.id)
-            exists = find_connection(
-                db, left_kind, need.id, candidate_type, candidate.id
-            )
+            connection_key = (left_kind, need.id, candidate_type, candidate.id)
+            if matching_catalog is not None:
+                exists = matching_catalog["connections_by_key"].get(connection_key)
+            else:
+                exists = find_connection(
+                    db, left_kind, need.id, candidate_type, candidate.id
+                )
             if exists is not None and exists.state != "failed":
                 continue
             row = models.NetworkConnection(
@@ -384,13 +388,16 @@ def scan_candidates(db: Session, limit: int = 50) -> list[models.NetworkConnecti
             )
             db.add(row)
             db.flush()
+            if matching_catalog is not None:
+                matching_catalog["connections_by_key"][connection_key] = row
+                matching_catalog["live_connection_need_ids"].add(need.id)
             _hypothesis(db, row, need)
             created.append(row)
     if created:
         db.commit()
         for row in created:
             db.refresh(row)
-    record_unmatched_gaps(db)
+    record_unmatched_gaps(db, matching_catalog=matching_catalog)
     return created
 
 
@@ -403,7 +410,11 @@ def gap_question(need: models.DomainRecord) -> str:
     )
 
 
-def record_unmatched_gaps(db: Session) -> list[models.ResearchQuestion]:
+def record_unmatched_gaps(
+    db: Session,
+    *,
+    matching_catalog: dict | None = None,
+) -> list[models.ResearchQuestion]:
     """Turn an open need with no live candidate into one research question.
 
     A later candidate closes that question. If every candidate fails, the
@@ -418,18 +429,22 @@ def record_unmatched_gaps(db: Session) -> list[models.ResearchQuestion]:
     )
     for need in needs:
         text = gap_question(need)
-        live = (
-            db.query(models.NetworkConnection)
-            .filter_by(left_kind="domain_record", left_id=need.id)
-            .filter(models.NetworkConnection.state != "failed")
-            .first()
-        )
+        if matching_catalog is not None:
+            has_live_connection = need.id in matching_catalog["live_connection_need_ids"]
+        else:
+            live = (
+                db.query(models.NetworkConnection)
+                .filter_by(left_kind="domain_record", left_id=need.id)
+                .filter(models.NetworkConnection.state != "failed")
+                .first()
+            )
+            has_live_connection = live is not None
         existing = (
             db.query(models.ResearchQuestion)
             .filter(models.ResearchQuestion.question == text)
             .first()
         )
-        if live is not None:
+        if has_live_connection:
             if existing is not None and existing.status == "open":
                 existing.status = "closed"
                 changed.append(existing)
