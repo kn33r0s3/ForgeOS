@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import math
 import os
 import secrets
 from datetime import datetime, timezone
@@ -305,6 +306,8 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
     need_city = sanitize_public_text(need.city)
     need_tokens = _match_tokens(f"{need_title} {need_detail}")
     candidates: list[schemas.PublicMatchCandidate] = []
+    match_terms_by_candidate: dict[tuple[str, int], set[str]] = {}
+    same_city_by_candidate: dict[tuple[str, int], bool] = {}
     providers = _public_provider_query(db).all()
     for provider in providers:
         provider_name = sanitize_public_text(provider.name) or ""
@@ -350,6 +353,9 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
                 latest_response=_public_connection_response(db, connection) if connection else None,
             )
         )
+        match_key = ("provider", provider.id)
+        match_terms_by_candidate[match_key] = set(shared)
+        same_city_by_candidate[match_key] = same_city
     others = (
         db.query(models.DomainRecord)
         .filter(models.DomainRecord.status == "open", models.DomainRecord.id != need.id)
@@ -388,6 +394,9 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
                 latest_response=_public_connection_response(db, connection) if connection else None,
             )
         )
+        match_key = ("post", other.id)
+        match_terms_by_candidate[match_key] = set(shared)
+        same_city_by_candidate[match_key] = same_city
     knowledge = (
         db.query(models.Claim, models.Signal)
         .join(models.EvidenceRelationship, models.EvidenceRelationship.claim_id == models.Claim.id)
@@ -429,6 +438,46 @@ def _match_for_need(db: Session, need: models.DomainRecord) -> schemas.PublicMat
                 ],
             )
         )
+        match_key = ("knowledge", claim.id)
+        match_terms_by_candidate[match_key] = set(shared)
+        same_city_by_candidate[match_key] = False
+    # Rank only candidates that already passed the existing public/epistemic
+    # eligibility gates. Query-local IDF rewards distinctive overlap; it remains
+    # lexical triage, not semantic relevance, availability, or proof.
+    matched_document_count = sum(bool(terms) for terms in match_terms_by_candidate.values())
+    document_frequency: dict[str, int] = {}
+    for matched_terms in match_terms_by_candidate.values():
+        for term in matched_terms:
+            document_frequency[term] = document_frequency.get(term, 0) + 1
+    term_weights = {
+        term: math.log(
+            (matched_document_count + 1) / (document_frequency.get(term, 0) + 1)
+        ) + 1.0
+        for term in need_tokens
+    }
+    total_weight = sum(term_weights.values())
+
+    def candidate_rank(candidate: schemas.PublicMatchCandidate) -> tuple[float, ...]:
+        match_key = (candidate.kind, candidate.id)
+        shared_terms = match_terms_by_candidate.get(match_key, set())
+        weighted_overlap = (
+            sum(term_weights[term] for term in shared_terms) / total_weight
+            if total_weight else 0.0
+        )
+        term_coverage = len(shared_terms) / len(need_tokens) if need_tokens else 0.0
+        # Prefer textual overlap to a city-only candidate; exact city is a
+        # tie-breaker, never a substitute for a stronger lexical match.
+        kind_priority = {"provider": 0, "post": 1, "knowledge": 2}.get(candidate.kind, 3)
+        return (
+            -float(bool(shared_terms)),
+            -weighted_overlap,
+            -term_coverage,
+            -float(same_city_by_candidate.get(match_key, False)),
+            float(kind_priority),
+            float(candidate.id),
+        )
+
+    candidates.sort(key=candidate_rank)
     need_unknowns = []
     if not need.city:
         need_unknowns.append("city not stated")

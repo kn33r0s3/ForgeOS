@@ -74,6 +74,130 @@ def test_public_need_matching_uses_shared_multilingual_terms():
                 _match_tokens("the and to मा र को ko ra"))
     assert _match_tokens("नेपाल  कृषि") == _match_tokens("नेपाल कृषि")
 
+def _verified_public_provider(db, *, name, summary, city):
+    provider = models.Provider(
+        name=name,
+        summary=summary,
+        city=city,
+        country="Nepal",
+        is_active=True,
+        public_visible=True,
+        verification_status="verified",
+    )
+    db.add(provider)
+    db.flush()
+    return provider
+
+
+def test_public_need_matching_ranks_distinctive_english_overlap_first(db):
+    need = models.DomainRecord(
+        kind="job",
+        title="QR payment reconciliation for small merchants",
+        detail="Help social sellers reconcile QR settlements and unpaid orders.",
+        city="Butwal",
+        close_token_hash="test-only",
+        status="open",
+    )
+    db.add(need)
+    strong = _verified_public_provider(
+        db,
+        name="Merchant QR Settlement Support",
+        summary="Reconcile QR payment settlements, unpaid orders, and social sellers.",
+        city="Kathmandu",
+    )
+    weak = _verified_public_provider(
+        db,
+        name="QR Payment Poster Printing",
+        summary="Print QR payment posters and shop signage.",
+        city="Butwal",
+    )
+    city_only = _verified_public_provider(
+        db,
+        name="Motorcycle Repair",
+        summary="Motorcycle tyre puncture repair and oil changes.",
+        city="Butwal",
+    )
+    unrelated = _verified_public_provider(
+        db,
+        name="Water Pump Technician",
+        summary="Plumbing and pump maintenance.",
+        city="Kathmandu",
+    )
+    db.commit()
+
+    match = _match_for_need(db, need)
+    ranked_provider_ids = [
+        candidate.id for candidate in match.candidates if candidate.kind == "provider"
+    ]
+
+    assert ranked_provider_ids[:3] == [strong.id, weak.id, city_only.id]
+    assert unrelated.id not in ranked_provider_ids
+    # A lexical match is still not a completed transaction or a quality verdict.
+    assert "no completed outcome is tied to this provider" in match.candidates[0].unknowns
+
+
+def test_public_need_matching_ranks_devanagari_overlap_above_qr_only(db):
+    need = models.DomainRecord(
+        kind="job",
+        title="नेपाल कृषि बजार QR भुक्तानी",
+        detail="साना व्यापारी QR भुक्तानी मिलान",
+        close_token_hash="test-only",
+        status="open",
+    )
+    db.add(need)
+    strong = _verified_public_provider(
+        db,
+        name="नेपाल QR भुक्तानी सहयोग",
+        summary="कृषि बजार QR भुक्तानी मिलान",
+        city="Butwal",
+    )
+    weak = _verified_public_provider(
+        db,
+        name="QR पोस्टर छपाइ",
+        summary="QR कोड डिजाइन",
+        city="Butwal",
+    )
+    db.commit()
+
+    match = _match_for_need(db, need)
+
+    assert [candidate.id for candidate in match.candidates if candidate.kind == "provider"] == [
+        strong.id,
+        weak.id,
+    ]
+
+
+def test_public_need_matching_ranks_romanized_nepali_overlap_above_qr_only(db):
+    need = models.DomainRecord(
+        kind="job",
+        title="Nepal ko krishi bazar QR bhuktani",
+        detail="Help sellers match QR bhuktani to orders",
+        close_token_hash="test-only",
+        status="open",
+    )
+    db.add(need)
+    strong = _verified_public_provider(
+        db,
+        name="Nepal QR bhuktani sahayata",
+        summary="krishi bazar QR bhuktani orders",
+        city="Kathmandu",
+    )
+    weak = _verified_public_provider(
+        db,
+        name="QR poster design",
+        summary="Shop signage and printing",
+        city="Butwal",
+    )
+    db.commit()
+
+    match = _match_for_need(db, need)
+
+    assert [candidate.id for candidate in match.candidates if candidate.kind == "provider"] == [
+        strong.id,
+        weak.id,
+    ]
+
+
 def test_public_label_mapping_covers_fact_observation_external_claim_conflict_and_hidden_states(db):
     now = datetime(2026, 9, 25, tzinfo=timezone.utc)
 
