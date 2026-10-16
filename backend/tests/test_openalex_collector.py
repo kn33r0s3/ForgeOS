@@ -167,7 +167,7 @@ def test_openalex_clearance_registers_exact_https_scope_and_pacing(db, monkeypat
     assert entry.hostname == "api.openalex.org"
     assert entry.min_interval_seconds == 1
     assert entry.allowed_operation == (
-        "search_or_exact_doi_lookup_cc0_work_metadata_and_abstracts"
+        "search_or_exact_doi_lookup_cc0_metadata_and_license_gated_abstracts"
     )
     assert "abstract_inverted_index" in entry.allowed_fields
     assert entry.license_tag == "CC0 Public Domain Dedication (OpenAlex Dataset Metadata)"
@@ -547,6 +547,11 @@ def test_openalex_abstracts_satisfy_scholarly_only_and_not_local_or_commercial_c
         "title": "Postharvest storage research",
         "abstract": "This study describes a storage intervention.",
         "abstract_reconstructed": True,
+        "abstract_content_license": "cc-by",
+        "abstract_license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "abstract_reuse_permitted": True,
+        "primary_location": {"license": "cc-by"},
+        "authorships": [{"author_name": "Example Researcher"}],
         "query": QUERY,
         "geographic_scope_status": "not_assessed_from_affiliations_or_retrieval_relevance",
         "temporal_scope_status": "publication_year_only_not_study_period",
@@ -557,6 +562,24 @@ def test_openalex_abstracts_satisfy_scholarly_only_and_not_local_or_commercial_c
     assert openalex_requirement_eligibility("literature_existence", {
         **provenance, "abstract": None, "abstract_reconstructed": False
     })[0] is True
+    unlicensed_abstract = {
+        **provenance,
+        "abstract_content_license": None,
+        "abstract_license_url": None,
+        "abstract_reuse_permitted": False,
+        "primary_location": {"license": None},
+    }
+    assert openalex_requirement_eligibility("prior_research", unlicensed_abstract) == (
+        False, "openalex_work_abstract_reuse_license_unconfirmed"
+    )
+    assert openalex_requirement_eligibility("literature_existence", unlicensed_abstract)[0] is True
+    unattributed_cc_by = {
+        **provenance,
+        "authorships": [],
+    }
+    assert openalex_requirement_eligibility("scholarly_evidence", unattributed_cc_by) == (
+        False, "openalex_ccby_abstract_attribution_missing"
+    )
     for requirement in (
         "buyer_willingness_to_pay",
         "customer_pain",
