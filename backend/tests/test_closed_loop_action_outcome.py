@@ -2242,6 +2242,111 @@ def test_ai_external_provider_status_is_disabled_until_metered(monkeypatch):
 
 
 
+def test_prompt_context_includes_only_provenance_verified_openalex_cc0_abstract_excerpt(db, monkeypatch):
+    import json
+    from datetime import datetime, timezone
+
+    from app import models
+    from app.services import memory_layer, source_clearance_registry
+
+    entry = source_clearance_registry.clearance_for_url("https://api.openalex.org/works")
+    assert entry is not None
+    retrieved_at = datetime(2026, 10, 16, 12, 0, tzinfo=timezone.utc)
+    abstract = "A study describes an intervention for smallholders. " * 18
+    canonical_url = "https://openalex.org/W1234567890"
+    allowed_content = f"Scholarly work: Postharvest storage research\nPublication year: 2024\nAbstract: {abstract[:3000]}"
+    allowed_provenance = {
+        "source_registry_id": entry.registry_id,
+        "source_type": "openalex",
+        "license": "CC0",
+        "license_tag": entry.license_tag,
+        "traceable": True,
+        "abstract_reconstructed": True,
+        "metadata_only": False,
+        "retrieved_content_kind": "work_metadata_and_reconstructed_abstract",
+        "openalex_id": canonical_url,
+        "canonical_url": canonical_url,
+        "publisher_page_fetched": False,
+        "external_pdf_fetched": False,
+        "retrieved_fields": list(entry.allowed_fields),
+        "abstract": abstract,
+        "title": "Postharvest storage research",
+        "publication_year": 2024,
+        "geographic_scope_status": "not_assessed_from_affiliations_or_retrieval_relevance",
+        "temporal_scope_status": "publication_year_only_not_study_period",
+        "retrieval_relevance_is_not_empirical_support": True,
+    }
+    permitted = models.Signal(
+        source="openalex",
+        content=allowed_content,
+        source_type="external",
+        canonical_url=canonical_url,
+        title="Postharvest storage research",
+        retrieved_at=retrieved_at,
+        collection_status="collected",
+        provenance=json.dumps(allowed_provenance),
+    )
+
+    bad_url = "https://openalex.org/W9876543210"
+    bad_abstract = "PRIVATE_UNCLEARED_ABSTRACT_BODY_MUST_NOT_ENTER_PROMPT"
+    disallowed = models.Signal(
+        source="openalex",
+        content=f"Scholarly work: Other paper\nAbstract: {bad_abstract}",
+        source_type="external",
+        canonical_url=bad_url,
+        title="Other paper",
+        retrieved_at=retrieved_at,
+        collection_status="collected",
+        provenance=json.dumps({
+            **allowed_provenance,
+            "openalex_id": bad_url,
+            "canonical_url": bad_url,
+            "title": "Other paper",
+            "abstract": bad_abstract,
+            "license": "unknown",
+        }),
+    )
+    db.add_all([permitted, disallowed])
+    db.flush()
+
+    pattern = models.Pattern(
+        title="Scholarly research pattern",
+        description="A pattern that needs source-scoped literature context.",
+        confidence_score=55.0,
+        origin_signal_ids=f"{permitted.id},{disallowed.id}",
+    )
+    db.add(pattern)
+    db.flush()
+    knowledge = models.Knowledge(
+        title="Scholarly research pattern",
+        content="This is a research pattern, not a local outcome.",
+        source_type="pattern",
+        source_id=pattern.id,
+        confidence_score=55.0,
+        embedding="[]",
+        embedding_model="test-fixture",
+    )
+    db.add(knowledge)
+    db.flush()
+    monkeypatch.setattr(
+        memory_layer,
+        "search_knowledge",
+        lambda *args, **kwargs: [(knowledge, 0.88)],
+    )
+
+    context = memory_layer.retrieve_context_for_prompt(db, "smallholder intervention", top_k=5)
+
+    assert "linked_external_sources=" in context
+    assert '"source_content_included":true' in context
+    assert '"excerpt_kind":"reconstructed_scholarly_abstract"' in context
+    assert '"license":"CC0"' in context
+    assert '"publication_year":2024' in context
+    assert "A study describes an intervention for smallholders." in context
+    assert "Scholarly literature only" in context
+    assert "PRIVATE_UNCLEARED_ABSTRACT_BODY_MUST_NOT_ENTER_PROMPT" not in context
+    assert not db.new and not db.dirty and not db.deleted
+
+
 def test_grounded_answer_uses_language_aware_data_envelope(monkeypatch):
     import json
     from app.services import ai_engine, memory_layer
@@ -2771,7 +2876,8 @@ def test_prompt_context_exposes_bounded_external_source_metadata_without_source_
     assert "2026-08-02" in context
     assert "2026-08-03" in context
     assert '"source_content_included":false' in context
-    assert "source bodies are not included" in context
+    assert "linked_external_sources=" in context
+    assert "All other source contents remain excluded" in context
     assert "PRIVATE_RAW_SOURCE_BODY_MUST_NOT_BE_INCLUDED" not in context
     assert "SYNTHETIC_FIXTURE_BODY_MUST_NOT_BE_INCLUDED" not in context
     assert "secret-value" not in context
