@@ -1,3 +1,13 @@
+## Live resumption point — evidence-first portfolio sweep, 2026-10-16 NPT
+
+Base main SHA checked: `92dbd1f3f00ed7cb8f33c3b3345a5a0c5086c34d`. Exact-head ForgeOS CI `38830657519` passed all nine jobs (backend 1,324 passed / 2 skipped); secret scan `38830657639` and independent deploy verification `38830657531` succeeded on that SHA. D96's source-grounded documentation correction is commit `ce576599774a5ce33b9733745f1ec3f8e0a13c8b`; continuity updates followed as separate docs commits and their newest-head checks must be read before any verification claim.
+
+D96 in `docs/UNKNOWN_MAP.md` now separates global mechanisms in three official IEA reports from an unresolved site diagnosis. No specific project's queue cause was classified as information/process-limited; project-level evidence is missing. See D96 and the current `docs/CAPABILITY_QUEUE.md` entry for citations and a low-cost public-record test.
+
+Intelligence coverage seam: `research_planner.plan_tasks_for_open_questions` plans at most 20 open questions per cycle; `collector_runner.run_pending_tasks` executes up to five cleared tasks and first serves eligible question tracks. This is multi-pass portfolio coverage, not proof that all markdown D-items are in the operational database. Do not inflate one run to hundreds of tasks. Next: refresh exact main, verify CI/secrets/deploy results for the docs commits, and broaden the existing daily `Continue Hami Work` automation to review up to 100 existing questions before selecting one real, source-checked deep-dive. Daily automation is not 24/7 execution; natural backend cron, grid interventions, customer transactions and REAL revenue remain unverified. Intake remains closed; no contact or grid action is authorized.
+
+---
+
 ## Live resume point — 2026-10-15 NPT
 
 Canonical main is 5c1c07713984a8c364229444685a84f7c064ef42. Exact-head CI 38755037753 passed all nine jobs, backend 1,324 passed / 2 skipped / 18 warnings in 324.85s. Secret scan 38755036960 and independent deployment verifier 38755037371 passed.
