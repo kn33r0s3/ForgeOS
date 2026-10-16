@@ -248,8 +248,35 @@ def retrieve_context_for_prompt(db: Session, query_text: str, top_k: int = 3) ->
             return None
         abstract = provenance.get("abstract")
         retrieved_fields = provenance.get("retrieved_fields")
+        abstract_license = provenance.get("abstract_content_license")
+        location = provenance.get("primary_location")
+        license_url_by_name = {
+            "cc0": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "public-domain": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "cc-by": "https://creativecommons.org/licenses/by/4.0/",
+        }
+        allowed_abstract_license = (
+            abstract_license in {"cc0", "public-domain", "cc-by"}
+            and isinstance(location, dict)
+            and location.get("license") == abstract_license
+            and provenance.get("abstract_license_url") == license_url_by_name.get(abstract_license)
+            and provenance.get("abstract_reuse_permitted") is True
+        )
+        authorships = provenance.get("authorships")
+        has_attribution_authors = (
+            isinstance(authorships, list)
+            and any(
+                isinstance(author, dict) and isinstance(author.get("author_name"), str)
+                and author["author_name"].strip()
+                for author in authorships
+            )
+        )
+        if abstract_license == "cc-by" and not has_attribution_authors:
+            allowed_abstract_license = False
         if not (
-            signal.collection_status == "collected"
+            signal.source == "openalex"
+            and signal.collection_status == "collected"
+            and allowed_abstract_license
             and provenance.get("source_registry_id") == openalex_entry.registry_id
             and provenance.get("source_type") == "openalex"
             and provenance.get("license") == "CC0"
@@ -275,17 +302,33 @@ def retrieve_context_for_prompt(db: Session, query_text: str, top_k: int = 3) ->
         if isinstance(year, bool) or not isinstance(year, int) or not 1400 <= year <= 2100:
             year = None
         excerpt = abstract[:1000].strip()
+        license_name = {
+            "cc0": "CC0",
+            "public-domain": "Public domain",
+            "cc-by": "CC BY 4.0",
+        }[abstract_license]
+        author_names = [
+            author["author_name"].strip()[:200]
+            for author in authorships
+            if isinstance(author, dict)
+            and isinstance(author.get("author_name"), str)
+            and author["author_name"].strip()
+        ][:10] if isinstance(authorships, list) else []
         return {
             "source_content_included": True,
             "source_registry_id": openalex_entry.registry_id,
             "record_id": raw_url,
             "excerpt_kind": "reconstructed_scholarly_abstract",
-            "license": "CC0",
-            "license_tag": openalex_entry.license_tag,
+            "dataset_license": "CC0",
+            "dataset_license_tag": openalex_entry.license_tag,
+            "work_content_license": license_name,
+            "work_content_license_url": provenance.get("abstract_license_url"),
+            "attribution_authors": author_names,
             "publication_year": year,
             "permitted_excerpt": excerpt,
             "scope_warning": (
-                "Scholarly literature only; search relevance and an abstract do not prove "
+                "Scholarly literature only; source license applies to the work-location declaration, "
+                "not to unrelated linked content. Search relevance and an abstract do not prove "
                 "primary-source truth, current status, Nepal/local applicability, or demand."
             ),
         }
@@ -340,8 +383,10 @@ def retrieve_context_for_prompt(db: Session, query_text: str, top_k: int = 3) ->
         "Forge's relevant existing knowledge. Belief/pattern entries are not automatically verified facts. "
         "The linked_external_sources field contains bounded metadata for linked external Signals. "
         "Only a short reconstructed scholarly abstract may be included when the exact OpenAlex registry, "
-        "CC0 license tag, source identity, allowed abstract field, stored body match, and current registry "
-        "review all validate. All other source contents remain excluded. A source excerpt, URL, title, date, "
+        "dataset license tag, explicit work-location license, attribution conditions for CC BY, source identity, "
+        "allowed abstract field, stored body match, collected status, and current registry review all validate. "
+        "Unknown, noncommercial, no-derivatives, share-alike, or mismatched work licenses must be withheld. "
+        "All other source contents remain excluded. A source excerpt, URL, title, date, "
         "collection status, confidence score, or multiple linked records alone does not prove claim truth, "
         "primary-source status, freshness of underlying facts, source independence, or local applicability. "
         "Scholarly excerpts are not evidence of current law, policy, prices, availability, or local demand. "
