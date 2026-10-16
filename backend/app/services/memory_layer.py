@@ -221,7 +221,7 @@ def retrieve_context_for_prompt(db: Session, query_text: str, top_k: int = 3) ->
 
     lines = []
     for knowledge, _similarity in matches:
-        public_sources: list[dict[str, str | None]] = []
+        public_sources: list[dict[str, object]] = []
         for signal_id in signal_ids_by_knowledge.get(knowledge.id, []):
             signal = signal_by_id.get(signal_id)
             if signal is None or signal.source_type != "external":
@@ -249,7 +249,7 @@ def retrieve_context_for_prompt(db: Session, query_text: str, top_k: int = 3) ->
                 "published_at": signal.published_at.isoformat() if signal.published_at else None,
                 "retrieved_at": signal.retrieved_at.isoformat() if signal.retrieved_at else None,
                 "collection_status": str(signal.collection_status or "")[:60] or None,
-                "source_content_included": "false",
+                "source_content_included": False,
             })
             if len(public_sources) >= 3:
                 break
