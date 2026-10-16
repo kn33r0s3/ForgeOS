@@ -2273,6 +2273,15 @@ def test_grounded_answer_uses_language_aware_data_envelope(monkeypatch):
     assert "Nepali in Devanagari, Romanized Nepali, English" in captured["system"]
     assert "do not assume which one" in captured["system"]
     assert "confidence percentage" in captured["system"]
+    assert "Run a Nepal-context check for every question" in captured["system"]
+    assert "do not force a Nepal-centered answer" in captured["system"]
+    assert "federal, provincial, district, municipal or rural-municipal context" in captured["system"]
+    assert "UTC+05:45" in captured["system"]
+    assert "Bikram Sambat versus Gregorian" in captured["system"]
+    assert "Do not infer caste, ethnicity, religion" in captured["system"]
+    assert "general model knowledge only when you clearly label it as general background" in captured["system"]
+    assert "do not rely on model memory alone" in captured["system"]
+    assert "Never imply that you browsed or checked a live source when you did not" in captured["system"]
     assert captured["allow_mock_fallback"] is False
     assert captured["contains_internal_context"] is True
     assert result["answer"] == "Hami ko record anusar yo ajhai hypothesis ho."
