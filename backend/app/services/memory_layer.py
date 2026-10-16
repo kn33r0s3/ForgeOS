@@ -249,7 +249,8 @@ def retrieve_context_for_prompt(db: Session, query_text: str, top_k: int = 3) ->
         abstract = provenance.get("abstract")
         retrieved_fields = provenance.get("retrieved_fields")
         if not (
-            provenance.get("source_registry_id") == openalex_entry.registry_id
+            signal.collection_status == "collected"
+            and provenance.get("source_registry_id") == openalex_entry.registry_id
             and provenance.get("source_type") == "openalex"
             and provenance.get("license") == "CC0"
             and provenance.get("license_tag") == openalex_entry.license_tag
