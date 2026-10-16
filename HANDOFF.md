@@ -162,7 +162,24 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
-## Last verified state snapshot (2026-10-14)
+## Last verified state snapshot (2026-10-16)
+
+**Update 2026-10-16 (daily freshness check):** HEAD at `9c8af561`
+("docs(hami): record verified seller evidence capture and next gate",
+committed 2026-10-15 NPT). Pull fast-forwarded `5b1f8ee9..9c8af561`
+clean (seller-evidence capture API + tests, sprint doc corrections);
+`main` == `origin/main`. Working tree clean.
+
+- **Health:** haminp.vercel.app/api/health → ok (`status: ok`, `db: up`,
+  v2.3.0, checked 2026-10-16 ~06:23 NPT). forge-os-ebon.vercel.app/api/health
+  → ok (`db: up`).
+- **Intake:** `intake_enabled: false` (unchanged, Forge Bot closed).
+- **Unknowns:** 98 D-entries in `docs/UNKNOWN_MAP.md` (changed from 96 on
+  2026-10-15 — UNKNOWN_MAP.md grew by 2 entries in the pulled commits).
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold: name one seller, authorize
+  first contact; company registration and payment onboarding need the
+  owner's body/identity.
 
 **Update 2026-10-14 (scheduled loop, owner outcome lane + cross-climb links; regression additions through `1d4453cb`):**
 - The scheduled intelligence path reads the canonical Operating Model contact state. It prioritizes unreviewed sent-contact outcomes before research even if a reply was recently recorded; otherwise missing contact history or at least 2 days without contact prioritizes existing Scout preparation. The 14-day STARVED tripwire blocks only builds/public-content drafting dependent on the starved intervention; it must not halt independent safe research, reliability, security/privacy, testing or reusable-capability work. No contact is fabricated or initiated merely to reset the clock.
