@@ -628,7 +628,8 @@ def test_planner_keeps_local_geographic_claim_unresolved_with_openalex_literatur
     )
     assert result["status"] == "completed"
     assert scholarly["status"] == "satisfied"
-    assert len(scholarly["evidence_ids"]) == 2
+    # Only the work with an explicitly permitted abstract license qualifies as abstract-backed evidence.
+    assert len(scholarly["evidence_ids"]) == 1
     assert buyer["status"] == "terminal_unresolved"
     assert "local_applicability" in scholarly_node["unresolved_dimensions"]
     assert "study_period" in scholarly_node["unresolved_dimensions"]
