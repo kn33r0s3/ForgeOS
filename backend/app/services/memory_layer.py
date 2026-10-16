@@ -23,6 +23,8 @@ knowledge base, and keeps the $0/no-new-dependency principle intact
 """
 
 
+import json
+
 from sqlalchemy.orm import Session
 
 from app import models
