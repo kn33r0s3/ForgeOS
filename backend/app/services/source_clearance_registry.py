@@ -297,7 +297,7 @@ SOURCE_CLEARANCES: tuple[SourceClearance, ...] = (
         terms_url=_OPENALEX_TERMS,
         required_terms_phrases=("all data is cc0",),
         redirect_urls=(_OPENALEX_WORKS_URL,),
-        allowed_operation="search_or_exact_doi_lookup_cc0_work_metadata_and_abstracts",
+        allowed_operation="search_or_exact_doi_lookup_cc0_metadata_and_license_gated_abstracts",
         allowed_fields=(
             "id",
             "doi",
