@@ -2770,7 +2770,7 @@ def test_prompt_context_exposes_bounded_external_source_metadata_without_source_
     assert "Recovery situation report" in context
     assert "2026-08-02" in context
     assert "2026-08-03" in context
-    assert '"source_content_included":"false"' in context
+    assert '"source_content_included":false' in context
     assert "source bodies are not included" in context
     assert "PRIVATE_RAW_SOURCE_BODY_MUST_NOT_BE_INCLUDED" not in context
     assert "SYNTHETIC_FIXTURE_BODY_MUST_NOT_BE_INCLUDED" not in context
