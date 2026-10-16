@@ -112,3 +112,13 @@ Remote model transport authorization (HTTPS plus bearer token) and internal-cont
 ## P1 — Reconcile prior end-to-end wiring audit without replaying stale fixes
 
 The 2026-10-11 single-instance integrity audit has now been spot-checked against current source and its F-01–F-08 dispositions are recorded in `docs/CAPABILITY_QUEUE.md`. After the current P0 exact-head CI and persisted scheduler gates, continue with the still-open route-alias inventory/test (F-06), authorized durable-PostgreSQL/auth readiness checks (F-04/F-05), and browser/runtime PWA verification (F-02). The old missing-import symptom (F-01), evidence-triage Docker-host default (F-03), and false-green verification workflow behavior (F-07) have corresponding source-level corrections now; re-open only if current tests/runtime reproduce a failure. Do not restore removed Grok machinery or revive the archived frontend.
+
+
+## P1 — Forge Intelligence: evidence-first portfolio sweep (2026-10-16)
+
+- Survey up to 100 **existing** UNKNOWN_MAP and open ResearchQuestion items for evidence freshness, source independence, contradiction, age, authorized source availability, local applicability, testability and blockers. A portfolio sweep is not a claim that 100 questions were independently researched in depth.
+- Deeply investigate one highest-value untried item per run, then update the existing unknown/capability/continuity records with source URLs, certainty boundary and next test. No new watchlist or parallel intelligence engine.
+- Existing execution is bounded: planner up to 20 open questions per cycle, collector up to five tasks per scheduled pass, with governed source checks and an eligible-question coverage pass. Do not blindly create hundreds of tasks; improve selection only with measured regression evidence.
+- D96 has global mechanism evidence from official IEA reports but no specific project, jurisdiction, local relevance or proven Hami intervention. Next: one public operator queue + independent regulator/operator constraint record; if project-level evidence is unavailable, keep UNKNOWN.
+- Baseline evidence: CI `38830657519`, secrets `38830657639`, independent deploy verifier `38830657531` were green for base `92dbd1f`; re-verify the new docs commit separately.
+- No simulated data counts as real evidence; no one contacted, no content sent, no intake/activation/money action and no grid intervention. Natural scheduler effects and REAL customer revenue remain separate unverified claims.
