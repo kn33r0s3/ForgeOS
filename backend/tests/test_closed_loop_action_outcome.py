@@ -2340,6 +2340,8 @@ def test_prompt_context_includes_only_provenance_verified_openalex_cc0_abstract_
     assert '"source_content_included":true' in context
     assert '"excerpt_kind":"reconstructed_scholarly_abstract"' in context
     assert '"license":"CC0"' in context
+    assert '"source_registry_id":"openalex-public-works-cc0"' in context
+    assert "CC0 Public Domain Dedication (OpenAlex Dataset Metadata)" in context
     assert '"publication_year":2024' in context
     assert "A study describes an intervention for smallholders." in context
     assert "Scholarly literature only" in context
