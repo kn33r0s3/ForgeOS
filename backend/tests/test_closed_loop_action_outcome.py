@@ -2242,7 +2242,7 @@ def test_ai_external_provider_status_is_disabled_until_metered(monkeypatch):
 
 
 
-def test_prompt_context_includes_only_provenance_verified_openalex_cc0_abstract_excerpt(db, monkeypatch):
+def test_prompt_context_includes_only_provenance_verified_work_licensed_abstract_excerpt(db, monkeypatch):
     import json
     from datetime import datetime, timezone
 
@@ -2260,6 +2260,11 @@ def test_prompt_context_includes_only_provenance_verified_openalex_cc0_abstract_
         "source_type": "openalex",
         "license": "CC0",
         "license_tag": entry.license_tag,
+        "abstract_content_license": "cc-by",
+        "abstract_license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "abstract_reuse_permitted": True,
+        "primary_location": {"license": "cc-by"},
+        "authorships": [{"author_name": "Example Researcher"}],
         "traceable": True,
         "abstract_reconstructed": True,
         "metadata_only": False,
@@ -2303,7 +2308,11 @@ def test_prompt_context_includes_only_provenance_verified_openalex_cc0_abstract_
             "canonical_url": bad_url,
             "title": "Other paper",
             "abstract": bad_abstract,
-            "license": "unknown",
+            "license": "CC0",
+            "abstract_content_license": "cc-by-nc-nd",
+            "abstract_license_url": None,
+            "abstract_reuse_permitted": False,
+            "primary_location": {"license": "cc-by-nc-nd"},
         }),
     )
     db.add_all([permitted, disallowed])
@@ -2339,7 +2348,9 @@ def test_prompt_context_includes_only_provenance_verified_openalex_cc0_abstract_
     assert "linked_external_sources=" in context
     assert '"source_content_included":true' in context
     assert '"excerpt_kind":"reconstructed_scholarly_abstract"' in context
-    assert '"license":"CC0"' in context
+    assert '"dataset_license":"CC0"' in context
+    assert '"work_content_license":"CC BY 4.0"' in context
+    assert '"attribution_authors":["Example Researcher"]' in context
     assert '"source_registry_id":"openalex-public-works-cc0"' in context
     assert "CC0 Public Domain Dedication (OpenAlex Dataset Metadata)" in context
     assert '"publication_year":2024' in context
