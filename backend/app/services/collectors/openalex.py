@@ -268,10 +268,11 @@ def _normalize_work(
         "abstract_reconstructed": abstract is not None,
         "abstract_content_license": abstract_content_license,
         "abstract_license_url": abstract_license_url,
-        "abstract_reuse_permitted": abstract_reuse_permitted and abstract is not None,
+        "abstract_reuse_permitted": abstract_reuse_permitted,
         "abstract_rejected_reason": (
             None if abstract is not None
-            else "no_abstract" if not record.get("abstract_inverted_index")
+            else "no_abstract" if record.get("abstract_inverted_index") is None
+            else "abstract_reconstruction_unavailable" if abstract_reuse_permitted
             else "work_location_license_missing_or_not_permitted"
         ),
         "query": query,
