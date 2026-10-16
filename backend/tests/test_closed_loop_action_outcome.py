@@ -2315,14 +2315,33 @@ def test_prompt_context_includes_only_provenance_verified_work_licensed_abstract
             "primary_location": {"license": "cc-by-nc-nd"},
         }),
     )
-    db.add_all([permitted, disallowed])
+    no_author_url = "https://openalex.org/W1122334455"
+    no_author_abstract = "PRIVATE_CC_BY_WITHOUT_ATTRIBUTION_MUST_NOT_ENTER_PROMPT"
+    cc_by_without_attribution = models.Signal(
+        source="openalex",
+        content=f"Scholarly work: Unattributed paper\nAbstract: {no_author_abstract}",
+        source_type="external",
+        canonical_url=no_author_url,
+        title="Unattributed paper",
+        retrieved_at=retrieved_at,
+        collection_status="collected",
+        provenance=json.dumps({
+            **allowed_provenance,
+            "openalex_id": no_author_url,
+            "canonical_url": no_author_url,
+            "title": "Unattributed paper",
+            "abstract": no_author_abstract,
+            "authorships": [],
+        }),
+    )
+    db.add_all([permitted, disallowed, cc_by_without_attribution])
     db.flush()
 
     pattern = models.Pattern(
         title="Scholarly research pattern",
         description="A pattern that needs source-scoped literature context.",
         confidence_score=55.0,
-        origin_signal_ids=f"{permitted.id},{disallowed.id}",
+        origin_signal_ids=f"{permitted.id},{disallowed.id},{cc_by_without_attribution.id}",
     )
     db.add(pattern)
     db.flush()
@@ -2357,6 +2376,7 @@ def test_prompt_context_includes_only_provenance_verified_work_licensed_abstract
     assert "A study describes an intervention for smallholders." in context
     assert "Scholarly literature only" in context
     assert "PRIVATE_UNCLEARED_ABSTRACT_BODY_MUST_NOT_ENTER_PROMPT" not in context
+    assert "PRIVATE_CC_BY_WITHOUT_ATTRIBUTION_MUST_NOT_ENTER_PROMPT" not in context
     assert not db.new and not db.dirty and not db.deleted
 
 
