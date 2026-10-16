@@ -1,3 +1,14 @@
+## Research correction — Gorkha/Budhigandaki report sequence vs data cutoff (2026-10-16 NPT)
+
+- **Correction to the previous D93 note:** a later-numbered NDRRMA report does exist in the indexed official source. Report #1 is listed at https://ndrrma.gov.np/en/situation-report/461 (dated 11 October 2026, as of 10:00 pm). NDRRMA's Nepali page for report #2 is https://ndrrma.gov.np/np/situation-report/464, listed as 2083-06-27 (12 October 2026), but the indexed page text itself says the report is **as of Asoj 26 (11 October) at 10:00 pm**—the same effective cutoff shown by report #1.
+- Therefore the earlier sentence “no later Gorkha-specific situation report” was too broad and is superseded. Accurate claim: report #2 is listed later by page date/sequence, but this pass has not verified its PDF contents and has not established a later effective observation cutoff or a restoration/status update. Do not assume report #2 is merely a duplicate, and do not claim it contains fresher field facts. The exact unknown is whether the report body has new information, and whether any official later report/status notice has a later effective cutoff.
+- Official Nepal Police's Gorkha/Budhigandaki update https://nepalpolice.gov.np/news/10718/ and UN Nepal's statement https://nepal.un.org/en/324212-un-nepal-statement-budhi-gandaki-river-flooding corroborate initial reporting around 11 October, but do not establish current road, bridge, hydropower, or service-restoration status.
+- Hami-specific capability implication: keep publication/version date, report sequence, effective data cutoff, incident/geography, source identity, and restoration status as separate sourced attributes using the existing evidence/provenance substrate. This is a candidate for existing source-freshness/temporal-provenance work, **not** a basis for a new emergency service or alert, and not proof of a coordination failure.
+- Next lawful check: obtain the official report #2 PDF through its page only if a direct public link is available, inspect it page-by-page, compare its cut-off and facts with #1, then search for any official report #3 or later restoration notice and retain UNKNOWN where no dated authoritative status exists. Do not infer absence from search failure.
+- Sources checked in this pass: official NDRRMA search result for report #2, official NDRRMA report #1 metadata, and the official Police/UN coverage above. The report #2 PDF body was not read. No external contact, alert, publication, service action, or source-code change occurred.
+
+---
+
 ## Continuation update — exact-head verification reconciled and public incident-source audit (2026-10-16 NPT)
 
 - **Canonical main:** `c50b0ed0513b08076b1434502eb3640ba21c488f` (`docs(log): record D96 source evidence and portfolio implementation blocker`). Repository metadata confirms the default branch remains `main`.

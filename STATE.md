@@ -1,3 +1,12 @@
+## Evidence correction — D93 source freshness (2026-10-16 NPT)
+
+- Report #2 is listed by NDRRMA at https://ndrrma.gov.np/np/situation-report/464, page date 2083-06-27 (12 October 2026), but its indexed report text says the data are as of Asoj 26 (11 October) at 10:00 pm—the same cutoff shown on NDRRMA report #1 at https://ndrrma.gov.np/en/situation-report/461. Thus report #2's existence corrects the prior “no later report” statement; a later field-data cutoff and restoration state remain unverified because the PDF body was not inspected.
+- Keep report publication/version date separate from effective data cutoff. Nepal Police's 11 October Gorkha update and UN Nepal's 11 October statement support the initial event record only; they do not establish current restoration. Previous D93 note saying no later Gorkha-specific report is superseded and should be read as “no later effective cutoff or restoration update established in that pass.”
+- Next: inspect public Report #2 PDF with screenshots if retrievable, compare substantive facts and cutoffs to #1; search later official reports/road-power/local notices. Never infer no report exists from failed search. The reusable Hami capability candidate is temporal/source-scope reconciliation over existing evidence, not a live emergency alert.
+- No customer data, messages, external contact, public emergency advice, payments, or service actions were involved.
+
+---
+
 ## Live state — exact-head verification reconciled and current public-source hunt (2026-10-16 NPT)
 
 - The current continuity record was refreshed in HANDOFF at commit `f10601826324a151c2dbfd6fb81008522b8869eb`, based on direct reads of GitHub Actions and production-verifier logs.
