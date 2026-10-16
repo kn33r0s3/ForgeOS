@@ -81,6 +81,34 @@ def openalex_requirement_eligibility(
         or not provenance["abstract"].strip()
     ):
         return False, "openalex_abstract_not_available_for_scholarly_observation"
+    if requirement_id != "literature_existence":
+        work_license = provenance.get("abstract_content_license")
+        work_location = provenance.get("primary_location")
+        license_urls = {
+            "cc0": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "public-domain": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "cc-by": "https://creativecommons.org/licenses/by/4.0/",
+        }
+        if not (
+            work_license in license_urls
+            and isinstance(work_location, dict)
+            and work_location.get("license") == work_license
+            and provenance.get("abstract_license_url") == license_urls.get(work_license)
+            and provenance.get("abstract_reuse_permitted") is True
+        ):
+            return False, "openalex_work_abstract_reuse_license_unconfirmed"
+        authorships = provenance.get("authorships")
+        has_attribution_authors = (
+            isinstance(authorships, list)
+            and any(
+                isinstance(author, dict)
+                and isinstance(author.get("author_name"), str)
+                and author["author_name"].strip()
+                for author in authorships
+            )
+        )
+        if work_license == "cc-by" and not has_attribution_authors:
+            return False, "openalex_ccby_abstract_attribution_missing"
     if provenance.get("geographic_scope_status") != "not_assessed_from_affiliations_or_retrieval_relevance":
         return False, "openalex_geographic_alignment_must_remain_unassessed"
     if provenance.get("temporal_scope_status") != "publication_year_only_not_study_period":
