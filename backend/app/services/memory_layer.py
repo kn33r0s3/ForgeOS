@@ -277,8 +277,11 @@ def retrieve_context_for_prompt(db: Session, query_text: str, top_k: int = 3) ->
         excerpt = abstract[:1000].strip()
         return {
             "source_content_included": True,
+            "source_registry_id": openalex_entry.registry_id,
+            "record_id": raw_url,
             "excerpt_kind": "reconstructed_scholarly_abstract",
             "license": "CC0",
+            "license_tag": openalex_entry.license_tag,
             "publication_year": year,
             "permitted_excerpt": excerpt,
             "scope_warning": (
