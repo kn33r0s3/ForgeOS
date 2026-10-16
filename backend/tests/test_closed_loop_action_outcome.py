@@ -2378,6 +2378,8 @@ def test_grounded_answer_uses_language_aware_data_envelope(monkeypatch):
     assert "Nepali in Devanagari, Romanized Nepali, English" in captured["system"]
     assert "do not assume which one" in captured["system"]
     assert "confidence percentage" in captured["system"]
+    assert "The only source-text excerpt retrieval currently permits" in captured["system"]
+    assert "not primary-source authority" in captured["system"]
     assert "Run a Nepal-context check for every question" in captured["system"]
     assert "do not force a Nepal-centered answer" in captured["system"]
     assert "federal, provincial, district, municipal or rural-municipal context" in captured["system"]
