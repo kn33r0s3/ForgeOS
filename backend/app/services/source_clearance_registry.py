@@ -289,6 +289,8 @@ SOURCE_CLEARANCES: tuple[SourceClearance, ...] = (
             _OPENALEX_ROBOTS,
             _OPENALEX_TERMS,
             "https://help.openalex.org/data/works/",
+            "https://help.openalex.org/data/licenses/",
+            "https://help.openalex.org/access/fulltext/",
             "https://creativecommons.org/publicdomain/zero/1.0/",
         ),
         reviewed_on=date(2026, 9, 27),
