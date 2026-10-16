@@ -2698,3 +2698,83 @@ def test_self_hosted_provider_can_receive_internal_context_after_explicit_opt_in
     assert observation["status"] == "completed"
     assert observation["request_attempted"] is True
     assert observation["inference_invoked"] is True
+
+
+def test_prompt_context_exposes_bounded_external_source_metadata_without_source_bodies(db, monkeypatch):
+    from datetime import datetime, timezone
+
+    from app import models
+    from app.services import memory_layer
+
+    published_at = datetime(2026, 8, 2, 10, 0, tzinfo=timezone.utc)
+    retrieved_at = datetime(2026, 8, 3, 11, 0, tzinfo=timezone.utc)
+    public_source = models.Signal(
+        source="official_portal",
+        content="PRIVATE_RAW_SOURCE_BODY_MUST_NOT_BE_INCLUDED",
+        source_type="external",
+        canonical_url="https://example.gov.np/recovery/report-1",
+        title="Recovery situation report",
+        published_at=published_at,
+        retrieved_at=retrieved_at,
+        collection_status="observed",
+    )
+    credentialed_source = models.Signal(
+        source="official_portal",
+        content="SENSITIVE_URL_FIXTURE",
+        source_type="external",
+        canonical_url="https://example.gov.np/report?access_token=secret-value",
+        title="Credentialed link must be withheld",
+        published_at=published_at,
+        retrieved_at=retrieved_at,
+    )
+    synthetic_source = models.Signal(
+        source="test_fixture",
+        content="SYNTHETIC_FIXTURE_BODY_MUST_NOT_BE_INCLUDED",
+        source_type="synthetic",
+        canonical_url="https://example.test/fictional",
+        title="Synthetic fixture must be withheld",
+    )
+    db.add_all([public_source, credentialed_source, synthetic_source])
+    db.flush()
+
+    pattern = models.Pattern(
+        title="Recovery-status hypothesis",
+        description="A hypothesis about how restoration status is recorded.",
+        confidence_score=64.0,
+        origin_signal_ids=",".join(
+            str(row.id) for row in (public_source, credentialed_source, synthetic_source)
+        ),
+    )
+    db.add(pattern)
+    db.flush()
+    knowledge = models.Knowledge(
+        title="Recovery-status hypothesis",
+        content="This stored pattern remains a hypothesis, not a verified outcome.",
+        source_type="pattern",
+        source_id=pattern.id,
+        confidence_score=64.0,
+        embedding="[]",
+        embedding_model="test-fixture",
+    )
+    db.add(knowledge)
+    db.flush()
+
+    monkeypatch.setattr(
+        memory_layer,
+        "search_knowledge",
+        lambda *args, **kwargs: [(knowledge, 0.91)],
+    )
+    context = memory_layer.retrieve_context_for_prompt(db, "recovery status", top_k=5)
+
+    assert "https://example.gov.np/recovery/report-1" in context
+    assert "Recovery situation report" in context
+    assert "2026-08-02" in context
+    assert "2026-08-03" in context
+    assert '"source_content_included":"false"' in context
+    assert "source bodies are not included" in context
+    assert "PRIVATE_RAW_SOURCE_BODY_MUST_NOT_BE_INCLUDED" not in context
+    assert "SYNTHETIC_FIXTURE_BODY_MUST_NOT_BE_INCLUDED" not in context
+    assert "secret-value" not in context
+    assert "Credentialed link must be withheld" not in context
+    assert "https://example.test/fictional" not in context
+    assert not db.new and not db.dirty and not db.deleted
