@@ -60,6 +60,7 @@ WORKS = {
             "primary_location": {
                 "is_oa": True,
                 "pdf_url": "https://publisher.example/article.pdf",
+                "license": "cc-by",
                 "source": {"display_name": "Journal of Example Research"},
             },
             "open_access": {
@@ -305,7 +306,11 @@ def test_openalex_reconstructs_abstract_and_projects_only_safe_metadata(db, monk
     assert provenance["retrieval_relevance_is_not_empirical_support"] is True
     assert provenance["external_pdf_fetched"] is False
     assert provenance["publisher_page_fetched"] is False
-    assert provenance["license"] == "CC0"
+    assert provenance["license"] == "CC0"  # OpenAlex dataset metadata license, not work-text license
+    assert provenance["primary_location"]["license"] == "cc-by"
+    assert provenance["abstract_content_license"] == "cc-by"
+    assert provenance["abstract_reuse_permitted"] is True
+    assert provenance["abstract_license_url"] == "https://creativecommons.org/licenses/by/4.0/"
     assert "publisher.example" not in json.dumps(item)
     assert "relevance_score" not in json.dumps(item)
     metadata_only = openalex._normalize_work(
@@ -344,6 +349,46 @@ def test_openalex_reconstructs_abstract_and_projects_only_safe_metadata(db, monk
     assert "abstract_inverted_index" in params["select"][0].split(",")
     assert request.get_header("User-agent") == openalex.USER_AGENT
     assert "mailto:research@forgeos.local" in request.get_header("User-agent")
+
+
+
+def test_openalex_abstract_is_not_stored_without_explicit_per_work_license():
+    from datetime import datetime, timezone
+
+    entry = source_clearance_registry.clearance_for_url(openalex.API_URL)
+    assert entry is not None
+    record = dict(WORKS["results"][0])
+    request_url = "https://api.openalex.org/works?search=license%20check"
+    now = datetime.now(timezone.utc).isoformat()
+
+    for license_value, expected_label in ((None, None), ("cc-by-nc-nd", "cc-by-nc-nd"), ("unknown", "other")):
+        row = dict(record)
+        location = dict(row["primary_location"])
+        if license_value is None:
+            location.pop("license", None)
+        else:
+            location["license"] = license_value
+        row["primary_location"] = location
+        item = openalex._normalize_work(
+            row,
+            query=QUERY,
+            search_mode="keyword",
+            request_url=request_url,
+            retrieved_at=now,
+            entry=entry,
+        )
+
+        provenance = item["provenance"]
+        assert provenance["abstract"] is None
+        assert provenance["abstract_reconstructed"] is False
+        assert provenance["metadata_only"] is True
+        assert provenance["abstract_reuse_permitted"] is False
+        assert "Abstract:" not in item["content"]
+        assert "This study describes a storage intervention" not in json.dumps(item)
+        assert provenance["abstract_content_license"] == expected_label
+        assert provenance["abstract_rejected_reason"] == "work_location_license_missing_or_not_permitted"
+
+
 
 
 def test_openalex_keyword_and_semantic_use_correct_endpoints_and_caps(db, monkeypatch):
