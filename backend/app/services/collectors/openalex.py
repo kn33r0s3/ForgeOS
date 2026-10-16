@@ -210,7 +210,24 @@ def _normalize_work(
         raise RuntimeError("OpenAlex work is missing a title")
     title = title.strip()[:1000]
 
-    abstract = reconstruct_abstract(record.get("abstract_inverted_index"))
+    location = _location_summary(record.get("primary_location"))
+    abstract_content_license = location.get("license") if isinstance(location, dict) else None
+    permitted_abstract_licenses = {"cc0", "public-domain", "cc-by"}
+    abstract_reuse_permitted = abstract_content_license in permitted_abstract_licenses
+    # The OpenAlex dataset is CC0, but the text of an individual work is not
+    # automatically licensed by that dataset-level fact. Do not reconstruct
+    # or persist abstract text unless the exact primary-location license is
+    # explicit and permits commercial reuse. Unknown/NC/ND/SA licenses fail closed.
+    abstract = (
+        reconstruct_abstract(record.get("abstract_inverted_index"))
+        if abstract_reuse_permitted
+        else None
+    )
+    abstract_license_url = {
+        "cc0": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "public-domain": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "cc-by": "https://creativecommons.org/licenses/by/4.0/",
+    }.get(abstract_content_license)
     year = record.get("publication_year")
     if isinstance(year, bool) or not isinstance(year, int) or not 1400 <= year <= datetime.now(timezone.utc).year + 2:
         year = None
@@ -221,7 +238,6 @@ def _normalize_work(
     doi = doi.strip() if isinstance(doi, str) and _DOI_URL.fullmatch(doi.strip()) else None
     authorships = _authorship_summary(record.get("authorships"))
     concepts = _concept_summary(record.get("concepts"))
-    location = _location_summary(record.get("primary_location"))
     open_access = _open_access_summary(record.get("open_access"))
     published_at = None
 
@@ -250,6 +266,14 @@ def _normalize_work(
         "open_access": open_access,
         "abstract": abstract,
         "abstract_reconstructed": abstract is not None,
+        "abstract_content_license": abstract_content_license,
+        "abstract_license_url": abstract_license_url,
+        "abstract_reuse_permitted": abstract_reuse_permitted and abstract is not None,
+        "abstract_rejected_reason": (
+            None if abstract is not None
+            else "no_abstract" if not record.get("abstract_inverted_index")
+            else "work_location_license_missing_or_not_permitted"
+        ),
         "query": query,
         "search_mode": search_mode,
         "retrieved_at": retrieved_at,
@@ -475,7 +499,69 @@ def _location_summary(value: Any) -> dict[str, Any] | None:
     return {
         "source_name": _bounded_text(source.get("display_name"), 300) if isinstance(source, dict) else None,
         "is_oa": value.get("is_oa") if isinstance(value.get("is_oa"), bool) else None,
+        "license": _normalize_location_license(value.get("license")),
     }
+
+
+def _normalize_location_license(value: Any) -> str | None:
+    """Normalize recognized OpenAlex work-location licenses; unknown stays non-permitted."""
+    text = _bounded_text(value, 200)
+    if text is None:
+        return None
+    normalized = text.casefold().strip().rstrip("/")
+    # OpenAlex may expose either the short license key or its canonical ID.
+    if normalized in {
+        "cc0",
+        "public-domain",
+        "public_domain",
+        "https://creativecommons.org/publicdomain/zero/1.0",
+        "https://openalex.org/licenses/cc0",
+        "https://openalex.org/licenses/public-domain",
+    }:
+        return "public-domain" if "public-domain" in normalized or "public_domain" in normalized else "cc0"
+    if normalized in {
+        "cc-by",
+        "cc-by-4.0",
+        "https://creativecommons.org/licenses/by/4.0",
+        "https://openalex.org/licenses/cc-by",
+    }:
+        return "cc-by"
+    if normalized in {
+        "cc-by-sa",
+        "cc-by-sa-4.0",
+        "https://creativecommons.org/licenses/by-sa/4.0",
+        "https://openalex.org/licenses/cc-by-sa",
+    }:
+        return "cc-by-sa"
+    if normalized in {
+        "cc-by-nc",
+        "cc-by-nc-4.0",
+        "https://creativecommons.org/licenses/by-nc/4.0",
+        "https://openalex.org/licenses/cc-by-nc",
+    }:
+        return "cc-by-nc"
+    if normalized in {
+        "cc-by-nd",
+        "cc-by-nd-4.0",
+        "https://creativecommons.org/licenses/by-nd/4.0",
+        "https://openalex.org/licenses/cc-by-nd",
+    }:
+        return "cc-by-nd"
+    if normalized in {
+        "cc-by-nc-sa",
+        "cc-by-nc-sa-4.0",
+        "https://creativecommons.org/licenses/by-nc-sa/4.0",
+        "https://openalex.org/licenses/cc-by-nc-sa",
+    }:
+        return "cc-by-nc-sa"
+    if normalized in {
+        "cc-by-nc-nd",
+        "cc-by-nc-nd-4.0",
+        "https://creativecommons.org/licenses/by-nc-nd/4.0",
+        "https://openalex.org/licenses/cc-by-nc-nd",
+    }:
+        return "cc-by-nc-nd"
+    return "other"
 
 
 def _open_access_summary(value: Any) -> dict[str, Any] | None:
