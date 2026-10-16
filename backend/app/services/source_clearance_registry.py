@@ -274,9 +274,11 @@ SOURCE_CLEARANCES: tuple[SourceClearance, ...] = (
         geographies=("GLOBAL",),
         categories=("scholarly_evidence", "research_discovery"),
         allowed_need=(
-            "Search OpenAlex work records and persist CC0 scholarly metadata plus reconstructed "
-            "abstracts, including exact DOI filters derived from persisted bibliographic leads. Do "
-            "not fetch publisher pages or external PDFs, or treat retrieval relevance as empirical "
+            "Search OpenAlex work records and persist CC0 dataset metadata, including exact DOI filters "
+            "derived from persisted bibliographic leads. Reconstruct/store an abstract only when that "
+            "work's primary_location carries an explicit CC0, public-domain, or CC BY 4.0 license; "
+            "unknown, non-commercial, no-derivatives, share-alike and other licenses are metadata-only. "
+            "Do not fetch publisher pages or external PDFs, or treat retrieval relevance as empirical "
             "truth or local market validation. Keyword queries are capped at 100 works; semantic "
             "queries are capped at 50 works and 2,000 query characters; DOI lookups return at most "
             "one work."
@@ -305,6 +307,7 @@ SOURCE_CLEARANCES: tuple[SourceClearance, ...] = (
             "authorships",
             "concepts",
             "primary_location",
+            "primary_location.license",
             "open_access",
             "abstract_inverted_index",
         ),
@@ -324,6 +327,9 @@ SOURCE_CLEARANCES: tuple[SourceClearance, ...] = (
             "openalex_id",
             "license",
             "abstract_reconstructed",
+            "abstract_content_license",
+            "abstract_license_url",
+            "abstract_reuse_permitted",
             "geographic_scope_status",
         ),
         min_interval_seconds=1,
