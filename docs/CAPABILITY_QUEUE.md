@@ -2122,3 +2122,17 @@ Do not reopen findings already corrected in source as if still live bugs. Do not
 - Supersedes earlier capability-queue notes that stated repository tests were not run; that statement was true before the result became available. Do not reuse as current status for this source revision.
 - Next capability improvement: replace the per-Signal evidence query in `research_planner._prior_observations` with one batch aggregation returning latest eligible Evidence per Signal, preserving privacy/consent filters, ranked ordering, output limit semantics and epistemic state. Validate with a regression and full backend CI.
 - Real recurring schedule effects, local/self-hosted model evaluation, customer outcomes and revenue remain separately unverified.
+
+
+---
+
+## [FORGE INTELLIGENCE PORTFOLIO SWEEP + D96 GRID RESEARCH — SOURCE-GROUNDED, 2026-10-16]
+
+- **Existing seam inspected:** `docs/UNKNOWN_MAP.md` (D96), `backend/app/services/research_planner.py::plan_tasks_for_open_questions`, `backend/app/services/collector_runner.py::run_pending_tasks`, `backend/app/api/scheduled.py::run_scheduled_intelligence`, and `vercel.json`. No new engine, table, primitive, or ledger is justified.
+- **Base verification:** `92dbd1f3f00ed7cb8f33c3b3345a5a0c5086c34d`; ForgeOS CI `38830657519` green on all nine jobs (backend 1,324 passed / 2 skipped), secret scan `38830657639` passed, and deployment verification `38830657531` passed for that SHA. This proves source/test/deployment identity, not natural scheduled execution or grid outcomes.
+- **Research increment:** D96 now cites three official IEA 2026 reports. *Electricity 2026* reports >2,500 GW queued worldwide and estimates global measures might enable 1,200–1,600 GW of advanced-stage projects, including 750–900 GW via non-firm connections and 450–700 GW via grid technologies and upgrades. The separate *Modernising Grids* estimate of up to 330 GW without reinforcement is different in scope and is not additive. Demand-flex case studies have their own country/time assumptions. None diagnoses an unnamed queued project's actual blocker.
+- **Owner action still required for real grid work:** none for read-only public-document research. No operator contacted, protected/operational grid data accessed, intervention executed or money spent.
+- **Capability boundary:** Hami may structure and cross-check public queue/process records. It cannot calculate safe hosting capacity, infer stability from prose, or issue operational recommendations without operator-authorized data and qualified power-system review.
+- **Next removable dependency:** project-level queue cause plus same-project/operator constraint evidence from one jurisdiction, independently corroborated. If unavailable, record the missing evidence and move on rather than guessing.
+- **Portfolio rule:** inspect existing UNKNOWN_MAP/ResearchQuestion inventory broadly (up to 100 existing entries), preserve a coverage trail in existing ledgers, then investigate one highest-value untried item per run using actual sources only. Never seed hypothetical findings or classify simulation output as reality.
+- Sources: https://www.iea.org/reports/electricity-2026/executive-summary ; https://www.iea.org/reports/modernising-grids-in-the-age-of-electricity/executive-summary ; https://www.iea.org/reports/scaling-up-demand-flexibility/executive-summary
