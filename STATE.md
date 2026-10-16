@@ -1,3 +1,12 @@
+## Live state — Forge Intelligence portfolio sweep + D96 update (2026-10-16 NPT)
+
+- Current source base for this research: `92dbd1f3f00ed7cb8f33c3b3345a5a0c5086c34d`; D96's source-grounded documentation update is commit `ce576599774a5ce33b9733745f1ec3f8e0a13c8b`. Before that update, exact-head ForgeOS CI `38830657519` passed all nine jobs (backend 1,324 passed / 2 skipped); secret scan `38830657639` and independent deploy verification `38830657531` passed on `92dbd1f`. New documentation commit checks must be re-verified.
+- Reviewed the discovery engine, scheduled intelligence stages, planner, collector fairness and source-clearance registry. Current design plans at most 20 open ResearchQuestions per Forge cycle and executes at most five cleared ResearchTasks per scheduled pass, with a coverage pass across eligible questions before deepening one track. This is bounded staged coverage, not a one-pass audit of all 98 documentary unknowns; their ingestion into the operational ResearchQuestion queue is not established.
+- D96 now distinguishes source-grounded global mechanisms from an unresolved site diagnosis using three official IEA 2026 reports. Estimates from differing report scopes are non-additive; no conclusion that information fixes any particular queue without project-level evidence.
+- Existing `Continue Hami Work` automation is enabled on a daily recurrence, but a chat is not a 24/7 worker. The instructions are being broadened to survey up to 100 existing portfolio items before choosing a deep-dive; the scheduler itself supports daily rather than hourly execution.
+- Runtime health was recorded in HEAD freshness commit `92dbd1f` around 06:23 NPT on 2026-10-16 as OK/db-up for `haminp.vercel.app` and `forge-os-ebon.vercel.app`, intake off. It was not re-probed during this research pass. Natural production cron execution, operational grid capacity and real economic outcomes remain unverified.
+- No application code, source authorization, intake/send flag, payment setting, public activation, model-provider setting or customer-facing action changed. No new file was created. TEST fixtures remain test-only and are not real-world evidence.
+
 ## Live resume point — 2026-10-15 NPT
 
 - Canonical main: 5c1c07713984a8c364229444685a84f7c064ef42.
