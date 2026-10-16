@@ -29,6 +29,7 @@ from app import models
 from app.models import utcnow
 from app.services import embedding_engine
 from typing import Optional
+from urllib.parse import parse_qsl, urlsplit
 
 
 
@@ -152,19 +153,120 @@ def search_knowledge(
 
 
 def retrieve_context_for_prompt(db: Session, query_text: str, top_k: int = 3) -> str:
-    """Format the top matching Knowledge entries as a short context
-    block ready to prepend to an AI prompt. Empty string if nothing
-    relevant is found (e.g. an empty knowledge base) — callers should
-    treat that as "no memory available", not an error."""
+    """Return retrieved beliefs/patterns with bounded public-source provenance metadata.
+
+    This remains read-only. Source metadata is not source content, claim proof,
+    primary-source classification, or independent corroboration.
+    """
     matches = search_knowledge(db, query_text, top_k=top_k)
     if not matches:
         return ""
 
-    lines = [
-        f"- ({knowledge.source_type}, confidence {knowledge.confidence_score:.0f}%) {knowledge.content}"
+    def parse_signal_ids(raw: str | None) -> list[int]:
+        parsed: list[int] = []
+        for piece in (raw or "").split(",")[:20]:
+            try:
+                value = int(piece.strip())
+            except (TypeError, ValueError):
+                continue
+            if value > 0 and value not in parsed:
+                parsed.append(value)
+        return parsed
+
+    belief_ids = {
+        int(knowledge.source_id)
         for knowledge, _similarity in matches
-    ]
-    return "Forge's relevant existing knowledge:\n" + "\n".join(lines)
+        if knowledge.source_type == "belief" and knowledge.source_id is not None
+    }
+    pattern_ids = {
+        int(knowledge.source_id)
+        for knowledge, _similarity in matches
+        if knowledge.source_type == "pattern" and knowledge.source_id is not None
+    }
+    beliefs = (
+        db.query(models.Belief).filter(models.Belief.id.in_(belief_ids)).all()
+        if belief_ids else []
+    )
+    patterns = (
+        db.query(models.Pattern).filter(models.Pattern.id.in_(pattern_ids)).all()
+        if pattern_ids else []
+    )
+    belief_by_id = {row.id: row for row in beliefs}
+    pattern_by_id = {row.id: row for row in patterns}
+
+    signal_ids_by_knowledge: dict[int, list[int]] = {}
+    all_signal_ids: set[int] = set()
+    for knowledge, _similarity in matches:
+        basis_ids: list[int] = []
+        if knowledge.source_type == "belief":
+            source = belief_by_id.get(knowledge.source_id)
+            basis_ids = parse_signal_ids(source.supporting_signal_ids if source else None)
+        elif knowledge.source_type == "pattern":
+            source = pattern_by_id.get(knowledge.source_id)
+            basis_ids = parse_signal_ids(source.origin_signal_ids if source else None)
+        signal_ids_by_knowledge[knowledge.id] = basis_ids
+        all_signal_ids.update(basis_ids)
+
+    signals = (
+        db.query(models.Signal).filter(models.Signal.id.in_(all_signal_ids)).all()
+        if all_signal_ids else []
+    )
+    signal_by_id = {row.id: row for row in signals}
+    sensitive_query_keys = {
+        "token", "access_token", "api_key", "apikey", "key", "signature",
+        "sig", "auth", "authorization", "secret", "password", "session",
+    }
+
+    lines = []
+    for knowledge, _similarity in matches:
+        public_sources: list[dict[str, str | None]] = []
+        for signal_id in signal_ids_by_knowledge.get(knowledge.id, []):
+            signal = signal_by_id.get(signal_id)
+            if signal is None or signal.source_type != "external":
+                continue
+            raw_url = (signal.canonical_url or "").strip()
+            if not raw_url or len(raw_url) > 2048:
+                continue
+            try:
+                parsed = urlsplit(raw_url)
+                query_keys = {key.lower() for key, _value in parse_qsl(parsed.query, keep_blank_values=True)}
+            except ValueError:
+                continue
+            if (
+                parsed.scheme.lower() not in {"http", "https"}
+                or not parsed.hostname
+                or parsed.username is not None
+                or parsed.password is not None
+                or query_keys.intersection(sensitive_query_keys)
+            ):
+                continue
+            public_sources.append({
+                "source": str(signal.source or "")[:100] or None,
+                "title": str(signal.title or "")[:240] or None,
+                "url": raw_url,
+                "published_at": signal.published_at.isoformat() if signal.published_at else None,
+                "retrieved_at": signal.retrieved_at.isoformat() if signal.retrieved_at else None,
+                "collection_status": str(signal.collection_status or "")[:60] or None,
+                "source_content_included": "false",
+            })
+            if len(public_sources) >= 3:
+                break
+
+        lines.append(
+            f"- ({knowledge.source_type}, confidence {knowledge.confidence_score:.0f}%) "
+            f"{knowledge.content}\n"
+            f"  linked_external_source_metadata_only="
+            f"{json.dumps(public_sources, ensure_ascii=False, separators=(',', ':')) if public_sources else '[]'}"
+        )
+
+    return (
+        "Forge's relevant existing knowledge. Belief/pattern entries are not automatically verified facts. "
+        "The linked_external_source_metadata_only field contains bounded metadata from linked external Signals "
+        "only; source bodies are not included. A URL, title, date, collection status, confidence score, or "
+        "multiple linked records alone does not prove claim truth, primary-source status, freshness of the "
+        "underlying facts, or source independence. Missing metadata must remain unknown.\n"
+        + "\n".join(lines)
+    )
 
 
 def list_knowledge(db: Session, source_type: Optional[str] = None, limit: int = 100) -> list[models.Knowledge]:
