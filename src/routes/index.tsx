@@ -741,7 +741,7 @@ function Hero() {
               Discover what matters.
               <br />
               Understand it.{" "}
-              <span className="text-gradient-gold">Act on it.</span>
+              <span className="text-accent">Act on it.</span>
             </h1>
             <div className="cut-rule mt-8" aria-hidden="true" />
             <p className="mt-6 max-w-xl font-sans text-lede leading-relaxed text-ink">
@@ -756,12 +756,7 @@ function Hero() {
               बुझाइलाई वास्तविक मूल्यमा बदल्छ।
             </p>
             <p className="mt-4 max-w-xl text-sm leading-6 text-muted">
-              Value itself is Hami’s domain: needs, knowledge, people, resources, and
-              possibilities across fields. Its scope is universal; actions remain bounded
-              by evidence, authorization, safety, and fair value-sharing.
-            </p>
-            <p className="mt-4 max-w-xl font-mono text-[0.68rem] font-bold uppercase leading-6 tracking-[0.12em] text-muted">
-              People · Work · Knowledge · Resources · Opportunities · Outcomes
+              From a practical problem to a bigger possibility, Hami helps make the next useful step clearer. We show what is known, what is uncertain, and what still needs to happen.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4">
               <p className="text-sm font-extrabold uppercase tracking-[0.18em] text-accent">
@@ -769,15 +764,15 @@ function Hero() {
                 <br className="sm:hidden" /> Serving everywhere equally.
               </p>
             </div>
-            <div className="mt-8 flex flex-wrap gap-4">
+            <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild variant="primary" size="lg">
-                <Link to="/about">
-                  How Hami works <ArrowRight aria-hidden="true" />
+                <Link to="/needs">
+                  Find help or offer something <ArrowRight aria-hidden="true" />
                 </Link>
               </Button>
               <Button asChild variant="secondary" size="lg">
-                <Link to="/experiments">
-                  See what Hami is testing <ArrowRight aria-hidden="true" />
+                <Link to="/about">
+                  Meet Hami <ArrowRight aria-hidden="true" />
                 </Link>
               </Button>
             </div>
