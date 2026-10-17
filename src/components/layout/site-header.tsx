@@ -67,8 +67,8 @@ export function SiteHeader() {
           scrolled || open ? "shadow-[0_4px_0_0_rgb(0_0_0/0.45)]" : "",
         )}
         style={{
-          background: "linear-gradient(180deg, #181713 0%, #0B0B0B 100%)",
-          borderBottom: "2px solid #FFB000",
+          background: "#ffffff",
+          borderBottom: "1px solid #dce5dc",
         }}
       >
         <Container className="relative flex h-full items-stretch justify-between gap-4">
@@ -103,7 +103,7 @@ export function SiteHeader() {
                   to="/login"
                   search={{ mode: "sign-in" }}
                   className="hidden min-h-12 items-center rounded-card px-3 text-sm font-bold transition-colors sm:inline-flex"
-                  style={{ color: "#FFB000" }}
+                  style={{ color: "#176b4d" }}
                 >
                   Login
                 </Link>
@@ -112,9 +112,9 @@ export function SiteHeader() {
                   search={{ mode: "sign-up" }}
                   className="hidden min-h-12 items-center rounded-card border-2 px-4 text-sm font-extrabold transition-colors sm:inline-flex"
                   style={{
-                    borderColor: "#FFB000",
-                    background: "#FFB000",
-                    color: "#0C0B0A",
+                    borderColor: "#176b4d",
+                    background: "#176b4d",
+                    color: "#ffffff",
                   }}
                 >
                   Join Hami
@@ -151,14 +151,14 @@ export function SiteHeader() {
         id="mobile-navigation"
         hidden={!open}
         className={cn(
-          "fixed inset-x-0 bottom-0 top-[var(--header-h)] z-40 overflow-y-auto bg-black/70 lg:hidden",
+          "fixed inset-x-0 bottom-0 top-[var(--header-h)] z-40 overflow-y-auto bg-emerald-950/30 backdrop-blur-sm lg:hidden",
           open ? "block" : "hidden",
         )}
         onClick={(event) => {
           if (event.target === event.currentTarget) closeNavigation();
         }}
       >
-        <div className="reveal mx-2 mt-2 rounded-card border-2 border-line-strong bg-card shadow-md">
+        <div className="reveal mx-2 mt-3 rounded-2xl border border-line bg-card shadow-lg">
           <nav aria-label="Mobile navigation">
             <ol className="flex flex-col">
               {NAV.map((item, index) => {
@@ -166,7 +166,7 @@ export function SiteHeader() {
                 return (
                   <li
                     key={item.to}
-                    className="reveal border-b-2 border-line last:border-b-0"
+                    className="reveal border-b border-line last:border-b-0"
                     style={{ "--i": index + 1 } as React.CSSProperties}
                   >
                     <Link
@@ -174,10 +174,10 @@ export function SiteHeader() {
                       onClick={closeNavigation}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "flex min-h-14 items-center gap-4 px-4 text-lg font-extrabold transition-colors",
+                        "flex min-h-14 items-center gap-4 px-5 text-base font-bold transition-colors",
                         active
-                          ? "bg-black text-accent"
-                          : "text-wheat hover:bg-secondary hover:text-white",
+                          ? "bg-secondary text-accent"
+                          : "text-ink hover:bg-secondary hover:text-accent",
                       )}
                     >
                       <span className="gothic-num w-8 text-right text-xl" aria-hidden="true">
@@ -201,9 +201,9 @@ export function SiteHeader() {
                 search={{ mode: "sign-up" }}
                 className="flex min-h-12 items-center justify-center rounded-card border-2 px-4 text-base font-extrabold transition-colors"
                 style={{
-                  borderColor: "#FFB000",
-                  background: "#FFB000",
-                  color: "#0C0B0A",
+                  borderColor: "#176b4d",
+                  background: "#176b4d",
+                  color: "#ffffff",
                 }}
               >
                 Join Hami
@@ -212,7 +212,7 @@ export function SiteHeader() {
                 to="/login"
                 search={{ mode: "sign-in" }}
                 className="flex min-h-12 items-center justify-center rounded-card px-4 text-base font-bold transition-colors"
-                style={{ color: "#FFB000" }}
+                style={{ color: "#176b4d" }}
               >
                 Login
               </Link>
