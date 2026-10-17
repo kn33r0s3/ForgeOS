@@ -13,9 +13,9 @@ function NeedsPage() {
   return (
     <main>
       <PageHeader
-        eyebrow="Hami · needs, offers, and exchange"
+        eyebrow="Find help · share what you can do"
         title="Make a fair exchange possible."
-        lede="People have needs, skills, time, goods, knowledge, capacity, relationships, and ideas. Hami helps make those possibilities legible so people can propose value and review what each side gives and receives—across domains, not just one industry or idea. A public post records a proposal; it does not establish mutual acceptance."
+        lede="Need something? Have a skill, product, idea, or time to share? Hami helps people describe an exchange clearly: what each side gives, what each side gets, and what still needs agreement. A listing is a proposal, not a confirmed match."
         containerClassName="max-w-4xl"
       />
       <Container className="max-w-5xl py-10 sm:py-14">
