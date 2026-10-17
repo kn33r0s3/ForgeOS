@@ -416,6 +416,7 @@ function HomePage() {
   return (
     <main className="bg-background text-ink">
       <Hero />
+      <QuickStart />
       <PublicOffers />
       <Capabilities />
       <FindingsPreview />
@@ -429,6 +430,68 @@ function HomePage() {
   );
 }
 
+
+
+function QuickStart() {
+  const paths = [
+    {
+      title: "I need help",
+      description: "Tell us what you are trying to do or what is getting in your way.",
+      action: "Explore needs",
+      to: "/needs",
+      symbol: "↗",
+    },
+    {
+      title: "I have work or an idea",
+      description: "Explore services, share an opportunity, or see where your skills could help.",
+      action: "Explore services",
+      to: "/services",
+      symbol: "✳",
+    },
+    {
+      title: "I want to know Hami",
+      description: "Understand what Hami is building, what works today, and what is still unproven.",
+      action: "Meet Hami",
+      to: "/about",
+      symbol: "♡",
+    },
+  ] as const;
+
+  return (
+    <section className="border-b border-line bg-background" aria-labelledby="quick-start-heading">
+      <Container className="py-12 sm:py-16">
+        <div className="mx-auto max-w-3xl text-center">
+          <Eyebrow tone="amber">Start with you</Eyebrow>
+          <h2 id="quick-start-heading" className="mt-3 font-display text-title font-extrabold tracking-tight text-ink">
+            What brings you here?
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-base leading-7 text-muted">
+            No technical knowledge needed. Choose what feels closest — you can always explore the rest later.
+          </p>
+        </div>
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          {paths.map((path) => (
+            <Link
+              key={path.to}
+              to={path.to}
+              className="group flex min-h-56 flex-col rounded-2xl border border-line bg-card p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-accent hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus"
+            >
+              <span aria-hidden="true" className="flex h-11 w-11 items-center justify-center rounded-full bg-secondary text-xl font-bold text-accent">
+                {path.symbol}
+              </span>
+              <h3 className="mt-5 text-xl font-bold tracking-tight text-ink">{path.title}</h3>
+              <p className="mt-2 flex-1 text-sm leading-6 text-muted">{path.description}</p>
+              <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-accent">
+                {path.action}
+                <ArrowRight aria-hidden="true" className="transition-transform group-hover:translate-x-1" size={16} />
+              </span>
+            </Link>
+          ))}
+        </div>
+      </Container>
+    </section>
+  );
+}
 
 function Capabilities() {
   const capabilities = [
@@ -675,15 +738,14 @@ function Hero() {
               </span>
             </div>
             <h1 className="mt-8 font-display text-[clamp(2.4rem,5.5vw,4.2rem)] font-extrabold leading-[1.02] tracking-tight text-ink">
-              Discover what matters.
+              People have needs.
               <br />
-              Understand it.{" "}
-              <span className="text-gradient-gold">Act on it.</span>
+              <span className="text-gradient-gold">Hami helps.</span>
             </h1>
             <div className="cut-rule mt-8" aria-hidden="true" />
             <p className="mt-6 max-w-xl font-sans text-lede leading-relaxed text-ink">
-              Hami is a living system that understands what people need and turns
-              understanding into real value.
+              Hami helps people make sense of real needs and find practical ways
+              forward — with less confusion and more useful outcomes.
             </p>
             <p
               className="mt-3 max-w-xl text-base leading-7 text-muted"
@@ -729,8 +791,8 @@ function Hero() {
               <figcaption className="mt-4 border-t border-line pt-4 text-center">
                 <span className="tag">The reality loop</span>
                 <p className="mt-3 text-sm leading-6 text-muted">
-                  The operating cycle. Every belief must survive contact with
-                  reality — or be revised.
+                  Learn what is happening. Find a useful next step. Check whether
+                  it genuinely helped.
                 </p>
               </figcaption>
             </figure>
