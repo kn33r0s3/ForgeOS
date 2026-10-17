@@ -738,14 +738,15 @@ function Hero() {
               </span>
             </div>
             <h1 className="mt-8 font-display text-[clamp(2.4rem,5.5vw,4.2rem)] font-extrabold leading-[1.02] tracking-tight text-ink">
-              People have needs.
+              Discover what matters.
               <br />
-              <span className="text-gradient-gold">Hami helps.</span>
+              Understand it.{" "}
+              <span className="text-gradient-gold">Act on it.</span>
             </h1>
             <div className="cut-rule mt-8" aria-hidden="true" />
             <p className="mt-6 max-w-xl font-sans text-lede leading-relaxed text-ink">
-              Hami helps people make sense of real needs and find practical ways
-              forward — with less confusion and more useful outcomes.
+              Hami is a living system that understands what people need and turns
+              understanding into real value.
             </p>
             <p
               className="mt-3 max-w-xl text-base leading-7 text-muted"
