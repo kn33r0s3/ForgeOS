@@ -132,6 +132,78 @@ engine is what it inherits:
   the same assurity — then better, because it never gets tired and
   never rounds "mostly accurate" up.
 
+## ForgeBot learning model — from fixed rules to compounding capability
+
+The four-stage neural-network analogy is useful, but ForgeBot must not confuse
+pattern learning with verified understanding. ForgeBot is not currently training
+its own neural-network weights. Its practical learning loop is a system-level
+capability built from evidence, memory, evaluation and controlled changes.
+
+### 1. Human blueprint — define the boundaries, not every answer
+
+Humans define the mission, permitted tools, evidence standards, privacy limits,
+authorization rules and what counts as a useful outcome. These are guardrails,
+not answers to every question. ForgeBot may propose new methods inside those
+boundaries; it may not rewrite its own permissions or truth standards.
+
+### 2. Playground — expose it to real, permitted experience
+
+Use real public sources, authorized work, actual feedback and recorded outcomes.
+Every input retains provenance, date, scope and evidence class. Examples and
+synthetic fixtures may test software, but must never be passed off as real-world
+experience or used to claim business success. Missing access means BLOCKED,
+not an invitation to fabricate or bypass controls.
+
+### 3. Feedback loop — compare predictions with what happened
+
+For each meaningful task, ForgeBot should record: the question or goal, its
+initial belief and uncertainty, the chosen approach, expected result, observed
+result, evidence, cost, side effects and what would change its conclusion.
+Compare outcome against expectation; classify the miss (bad evidence, wrong
+assumption, poor strategy, execution failure or changed conditions); then
+update the relevant claim, unknown, strategy evaluation or task priority.
+Keep the prior state and provenance so learning is auditable and reversible.
+
+### 4. Emergence — compose reusable methods, then prove they generalize
+
+Repeated, independently supported patterns may become reusable strategies,
+tools or hypotheses. They are candidates, not truths. Check them against
+contradictions, new cases and held-out examples before broadening their scope.
+A method that works for one seller, language, source or task must not silently
+be assumed to work everywhere. Record both successful transfer and failure.
+
+### The compounding loop
+
+`observe → represent → hypothesize → choose a bounded action → measure →
+compare → update → test on a new case → retain or roll back`
+
+This reuses Hami's existing ENTITY, RELATION, EVENT, EVIDENCE, CAPABILITY and
+ACTION primitives; it does not create a second truth store or a new primitive.
+Knowledge changes must retain source, time, confidence, counter-evidence and
+the reason for the update. Strategy changes must retain versions and evaluation
+results. Repeating a task without improving a measurable outcome is not learning.
+
+### Promotion gates
+
+- **Observe:** collect and classify evidence without external side effects.
+- **Draft:** propose a conclusion or action with sources and uncertainty visible.
+- **Evaluate:** compare proposals with human feedback and real outcomes; measure
+  correctness, calibration, usefulness, cost and harm.
+- **Bounded action:** only small, reversible actions with explicit authorization,
+  idempotency, logging and a recovery path.
+- **Wider autonomy:** only after repeated real-world evidence shows reliable
+  performance across relevant cases, no unacceptable incidents, and an owner-
+  approved permission boundary. Never infer permission from model confidence.
+
+### Honest capability statement
+
+The present system may persist structured knowledge and enforce gates, but
+those facts alone do not prove ForgeBot independently learns or runs continuously.
+Self-running discovery, automatic strategy improvement and model-weight training
+are distinct capabilities. Report each only when implemented, tested at the exact
+revision, observed running and evaluated against real outcomes. A mock response,
+passing unit test or successful deployment is not proof of real-world learning.
+
 ## Files
 
 - `src/lib/evidence.ts` — evidence classes, Claim, the gate.
