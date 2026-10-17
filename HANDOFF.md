@@ -208,7 +208,24 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
-## Last verified state snapshot (2026-10-16)
+## Last verified state snapshot (2026-10-17)
+
+**Update 2026-10-17 (daily freshness check):** HEAD at `cb9a62fb`
+("docs(log): record test fixture correction and knowledge source audit",
+committed 2026-10-17 NPT). Pull fast-forwarded `92dbd1f3..cb9a62fb`
+clean (OpenAlex collector, multi-source orchestration, closed-loop
+action outcome tests, capability queue, unknowns map updates);
+`main` == `origin/main`. Working tree clean.
+
+- **Health:** haminp.vercel.app/api/health → ok (`status: ok`, `db: up`,
+  v2.3.0, checked 2026-10-17 ~06:23 NPT). forge-os-ebon.vercel.app/api/health
+  → ok (`db: up`).
+- **Intake:** `intake_enabled: false` (unchanged, Forge Bot closed).
+- **Unknowns:** 98 D-entries in `docs/UNKNOWN_MAP.md` (unchanged).
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold: name one seller, authorize
+  first contact; company registration and payment onboarding need the
+  owner's body/identity.
 
 **Update 2026-10-16 (daily freshness check):** HEAD at `9c8af561`
 ("docs(hami): record verified seller evidence capture and next gate",
