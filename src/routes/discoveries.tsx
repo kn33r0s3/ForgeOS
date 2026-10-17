@@ -39,40 +39,19 @@ function DiscoveriesPage() {
   return (
     <main>
       <PageHeader
-        eyebrow="Hami / observation and discovery"
-        title="What Hami has actually noticed"
-        lede="Persisted substrate findings and public source observations stay separate. A possibility or published item is not automatically verified."
+        eyebrow="Hami · learning in public"
+        title="What we have learned so far"
+        lede="Here you can see observations Hami has collected from public sources. A source gives us something to investigate; it does not automatically make a claim true. We keep uncertainty visible rather than presenting guesses as facts."
         containerClassName="max-w-4xl"
       />
       <Container className="max-w-4xl py-10 sm:py-14">
-        <section aria-labelledby="substrate-discoveries-title">
-          <div className="mb-4 border-b border-line pb-3">
-            <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">
-              Canonical substrate · read only
-            </p>
-            <h2 id="substrate-discoveries-title" className="mt-1 font-display text-2xl tracking-tight text-ink">
-              Persisted discoveries
+        <section aria-labelledby="source-observations-title">
+          <div className="mb-5 border-b border-line pb-4">
+            <h2 id="source-observations-title" className="font-display text-2xl tracking-tight text-ink">
+              Public observations
             </h2>
-            <p className="mt-1 text-sm leading-6 text-muted">
-              Persisted substrate findings require internal authorization and are not requested in this public browser view. Opening this page does not run discovery.
-            </p>
-          </div>
-          <UnavailableState
-            title="Substrate discoveries are not available in this public view"
-            body="The public page does not request owner-authorized substrate records. This is an access boundary, not an empty discovery result."
-          />
-        </section>
-
-        <section className="mt-12" aria-labelledby="source-observations-title">
-          <div className="mb-4 border-b border-line pb-3">
-            <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-accent">
-              Public source projection
-            </p>
-            <h2 id="source-observations-title" className="mt-1 font-display text-2xl tracking-tight text-ink">
-              What sources have published
-            </h2>
-            <p className="mt-1 text-sm leading-6 text-muted">
-              A sourced observation is not, by itself, a verified claim or a completed investigation.
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+              Each item is a lead to understand, not a promise or a final conclusion. Hami does not expose private working records on this page.
             </p>
           </div>
           {!ready ? (
@@ -80,16 +59,16 @@ function DiscoveriesPage() {
           ) : null}
           {ready && rows === null ? (
             <UnavailableState
-              title="Observations service unavailable"
-              body="The observations service is unavailable. The records could not be checked, so this is not an empty result."
+              title="We could not load observations"
+              body="The public observations could not be checked just now, so we cannot say whether there are any. Try again in a moment."
               onRetry={retry}
             />
           ) : null}
           {ready && rows?.length === 0 ? (
             <EmptyState
               icon={FileSearch}
-              title="No observations on record yet"
-              body="No external observations are on record yet. The research cycle collects them. An empty list means none have been stored."
+              title="Nothing public to show yet"
+              body="Hami has no public observations to display right now. We would rather show an honest empty state than fill this page with invented examples."
             />
           ) : null}
           {ready && rows && rows.length > 0 ? (
