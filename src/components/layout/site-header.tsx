@@ -140,7 +140,7 @@ export function SiteHeader() {
                     open && bar === 1 && "scale-x-0",
                     open && bar === 2 && "-translate-y-2 -rotate-45",
                   )}
-                  style={{ background: "#FFB000" }}
+                  style={{ background: "#176b4d" }}
                 />
               ))}
             </button>
