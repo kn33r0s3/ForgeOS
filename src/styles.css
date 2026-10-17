@@ -1118,3 +1118,120 @@
     animation: none !important;
   }
 }
+
+
+/* Hami human-first visual refresh: warm, calm, welcoming, phone-first.
+   Keep existing layout contracts; soften the legacy high-contrast motifs. */
+:root {
+  --background: #faf8f2;
+  --surface: #ffffff;
+  --surface-elevated: #f1f5ef;
+  --foreground: #20342b;
+  --muted: #58685e;
+  --border: #dce5dc;
+  --primary: #176b4d;
+  --primary-foreground: #ffffff;
+  --secondary: #eaf3ec;
+  --success: #237a4e;
+  --warning: #a85d08;
+  --danger: #b42318;
+  --info: #245c91;
+  --focus: #d97706;
+  --wheat: #f8f4e9;
+  --slab: #f2f5ed;
+  --plate-edge: #dce5dc;
+  --radius-card: 1rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 1.75rem;
+  --shadow-sm: 0 2px 8px rgb(32 52 43 / 0.06);
+  --shadow-md: 0 8px 28px rgb(32 52 43 / 0.08);
+  --shadow-border: 0 0 0 1px var(--border);
+  --shadow-border-hover: 0 0 0 1px color-mix(in srgb, var(--primary) 50%, transparent);
+}
+@layer base {
+  html { color-scheme: light; }
+  body { background: var(--background); color: var(--foreground); }
+  h1 { letter-spacing: -0.035em; }
+}
+@layer components {
+  .hero-grain, .site-grid {
+    background-image: radial-gradient(rgb(23 107 77 / 0.055) 0.7px, transparent 0.7px);
+    background-size: 18px 18px;
+  }
+  .sheen, .hero-glow {
+    background: radial-gradient(ellipse at 78% 22%, rgb(23 107 77 / 0.09), transparent 42%),
+      linear-gradient(135deg, #ffffff 0%, #f5f7ef 100%);
+  }
+  .masthead {
+    background: #ffffff;
+    color: var(--foreground);
+    border-bottom: 1px solid var(--border);
+  }
+  .mast-link { color: var(--foreground); border-radius: 0.65rem; margin: 0.35rem 0.12rem; }
+  .mast-link:hover { background: var(--secondary); color: var(--primary); }
+  .mast-link[aria-current="page"] { color: var(--primary); background: var(--secondary); }
+  .mast-link[aria-current="page"]::after { display: none; }
+  .plate {
+    border-color: var(--border);
+    border-radius: 0.65rem;
+    background: var(--primary);
+    color: #fff;
+    text-shadow: none;
+    box-shadow: var(--shadow-sm);
+  }
+  .plate::before { display: none; }
+  .pinstripe {
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    background: #ffffff;
+    padding: 1.25rem;
+    box-shadow: var(--shadow-md);
+  }
+  .pinstripe::before, .pinstripe::after { display: none; }
+  .tag {
+    border: 1px solid #dce5dc;
+    border-radius: 999px;
+    background: #eaf3ec;
+    padding: 0.35rem 0.75rem;
+    color: #176b4d;
+    letter-spacing: 0.045em;
+  }
+  .tag::before { display: none; }
+  .card, .glass, .surface-aside, .metric-card {
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: #ffffff;
+    box-shadow: var(--shadow-sm);
+  }
+  .card-interactive:hover, .card-interactive:focus-within {
+    border-color: color-mix(in srgb, var(--primary) 55%, white);
+    box-shadow: var(--shadow-md);
+  }
+  .slab { border: 1px solid var(--border); border-radius: 1rem; background: #f2f5ed; color: var(--foreground); box-shadow: none; }
+  .status-pill { border-radius: 999px; letter-spacing: 0.025em; }
+  .status-pill-accent, .status-pill-warning { border-color: #f0d5a7; color: #7a4308; background: #fff4df; }
+  .status-pill-success { border-color: #b9dfc7; color: #176b4d; background: #edf8f0; }
+  .status-pill-danger { border-color: #f1c3bf; color: #a4231b; background: #fff0ef; }
+  .status-pill-neutral { border-color: var(--border); color: var(--muted); background: #f6f7f3; }
+  .chip { border-color: var(--border); border-radius: 999px; background: #fff; color: var(--foreground); }
+  .chip:hover { background: var(--secondary); color: var(--primary); }
+  .chip[aria-pressed="true"] { border-color: var(--primary); background: var(--primary); color: #fff; box-shadow: none; }
+  .chip[aria-pressed="true"] .chip-count { background: rgb(255 255 255 / 0.18); color: #fff; }
+  .medallion, .icon-chip { border-color: #c5dfce; background: #edf7ef; color: var(--primary); }
+  .live-dot { border-color: #ffffff; }
+  .hero-rings::before { border-color: rgb(23 107 77 / 0.22); }
+  .hero-rings::after { border-color: rgb(23 107 77 / 0.12); }
+  .skeleton { background: linear-gradient(90deg, #edf1eb 25%, #f7f8f4 50%, #edf1eb 75%); background-size: 200% 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
