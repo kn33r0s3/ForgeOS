@@ -349,3 +349,10 @@ Read docs/BRAIN.md, this file, QUEUE.md, AGENTS.md, HANDOFF.md, and the relevant
 - **Not yet done:** CodinGame's official skill is not installed, no account is connected, no device flow was started, and no game was run. Direct retrieval of `https://www.codingame.com/llms.txt` was blocked by the available browser/file-fetch environment (it reports unsupported `text/markdown`); no local shell is available in this session. No URL/code/token was invented.
 - **Next execution dependency:** use a terminal-enabled coding agent to fetch the official Markdown endpoint, install the official skill exactly as documented, then initiate the owner-approved device flow and show the exact returned verification URL/code. After acceptance, run one bounded baseline game and record platform-confirmed score/logs before attempting strategy changes.
 - No game submission, spend, external contact, public claim, production setting, or runtime change occurred. CodinGame results remain TEST evidence and cannot substantiate Hami revenue or seller outcomes. The P0 real seller discovery dependency remains unchanged.
+
+
+## 2026-10-18 — ForgeBot learning-loop architecture
+
+- Added an evidence-grounded ForgeBot learning model to `docs/ENGINE.md` at commit `3507490b12aaa4a8444f7ffeb7d92bdaa2fca762`. It maps the user's four-stage neural-network analogy into Hami's existing primitives: permitted experience, provenance-preserving memory, prediction-versus-outcome feedback, candidate strategy reuse, cross-case evaluation, and owner-gated autonomy.
+- Explicit boundary: this is an architecture definition, not proof ForgeBot trains its own weights or autonomously runs discovery. Neural-network training, persistent system-level learning, self-running discovery, and verified real-world outcomes remain distinct claims.
+- No runtime behavior, permissions, outbound messaging, spending, customer contact, payments or production settings changed. Exact-head tests/CI and runtime behavior remain unverified. The real-world P0 remains an owner-authorized seller conversation and an evidence-backed outcome.
