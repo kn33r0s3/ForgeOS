@@ -133,9 +133,9 @@ describe("Hami public content", () => {
 
   it("exposes public-first primary destinations", () => {
     const hrefs = NAV.map((item) => item.to);
-    // The primary navigation: Home, Findings, Unknowns, Experiments, About.
+    // Primary navigation follows visitor intentions; specialist pages remain available in the footer and cross-links.
     // Join Hami is a separate header button, not a nav menu item.
-    assert.deepEqual(hrefs, ["/", "/discoveries", "/unknowns", "/feed", "/experiments", "/services", "/group", "/about"]);
+    assert.deepEqual(hrefs, ["/", "/needs", "/discoveries", "/services", "/about"]);
     const publicHrefs = new Set<string>(hrefs);
     for (const path of FORBIDDEN_PUBLIC_PATHS) {
       assert.equal(publicHrefs.has(path), false, `nav leaked ${path}`);
