@@ -5,13 +5,10 @@
  */
 export const NAV = [
   { label: "Home", to: "/" },
-  { label: "Findings", to: "/discoveries" },
-  { label: "Unknowns", to: "/unknowns" },
-  { label: "Network", to: "/feed" },
-  { label: "Experiments", to: "/experiments" },
+  { label: "Find help", to: "/needs" },
+  { label: "Explore", to: "/discoveries" },
   { label: "Services", to: "/services" },
-  { label: "Group", to: "/group" },
-  { label: "About", to: "/about" },
+  { label: "About Hami", to: "/about" },
 ] as const;
 
 export const FOOTER_GROUPS = [
