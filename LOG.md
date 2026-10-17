@@ -603,3 +603,10 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Official `/llms.txt` retrieval failed in the available web/file-fetch environment because it returns `text/markdown`, which that browser retriever rejects; this chat has no local shell for the official install/device-flow client. Therefore no official skill install, authorization, game execution, or score is claimed; no fake verification URL/code/token was generated.
 - Next: on a terminal-enabled coding agent, read the official endpoint, install the exact official skill, start the user-approved device flow, and surface the returned URL/code. Once accepted, run one bounded baseline game and capture score/log provenance before making any strategy changes.
 - No production runtime/configuration, external contact, payment, spend, or public claim changed. P0 owner-authorized seller discovery remains the real-world priority; CodinGame results are TEST-only.
+
+
+## 2026-10-18 — ForgeBot learning-loop architecture
+
+- User supplied a four-stage explanation of neural-network learning and asked for it to inform ForgeBot. Reviewed `docs/ENGINE.md`, `docs/CAPABILITY_RESEARCH.md`, `docs/BRAIN.md` and `docs/ROUND_PROTOCOL.md` on current main.
+- Added “ForgeBot learning model — from fixed rules to compounding capability” to `docs/ENGINE.md` at commit `3507490b12aaa4a8444f7ffeb7d92bdaa2fca762`. Defines the human blueprint, permitted real-world experience, measurable feedback, cross-case generalization, auditable/reversible updates and promotion gates for autonomy, reusing the six existing Hami primitives.
+- Explicitly distinguishes system-level learning from neural-network weight training. No claim that ForgeBot currently trains its weights, independently runs continuously, or has achieved real-world learning. No runtime, permissions, outbound messaging, spend, customer contact, payment or production settings changed. Tests and exact-head CI were not run/verified in this session.
