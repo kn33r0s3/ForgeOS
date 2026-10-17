@@ -1235,3 +1235,26 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Follow-through: keep shared public surfaces coherent with the light theme. */
+:root {
+  --color-night: #20342b;
+  --color-dim: #58685e;
+  --color-line-strong: #b9c9bc;
+  --shadow-sm: 0 2px 8px rgb(32 52 43 / 0.06);
+  --shadow-md: 0 8px 28px rgb(32 52 43 / 0.08);
+}
+.masthead .mast-link { color: var(--foreground); }
+.masthead .mast-link:hover,
+.masthead .mast-link[aria-current="page"] { color: var(--primary); }
+.masthead .mast-link[aria-current="page"] { background: var(--secondary); }
+.masthead .mast-link[aria-current="page"]::after { display: none; }
+.hero-badge { border-color: var(--border); background: rgb(255 255 255 / 0.94); color: var(--foreground); box-shadow: var(--shadow-sm); }
+.hero-visual::before { background: rgb(255 255 255 / 0.5); box-shadow: 0 0 0 8px rgb(23 107 77 / 0.06); }
+@media (max-width: 639px) {
+  .hero-visual::before { width: 3.5rem; height: 3.5rem; inset: -0.5rem -0.25rem auto auto; }
+  .pinstripe { padding: 1rem; }
+  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .metric-card { min-height: 0; padding: 0.8rem; }
+}
