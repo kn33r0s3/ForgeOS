@@ -117,6 +117,21 @@ function InboxPrototype() {
             the week's inquiries. Starts empty, because no real week has run yet.
             No data leaves this browser.
           </p>
+          <ul className="mt-3 space-y-1.5 border-t border-amber-500/20 pt-3 text-sm leading-6 text-muted">
+            <li>
+              It can&rsquo;t read your Facebook or Messenger messages — you
+              type in what the customer asked.
+            </li>
+            <li>
+              Names you type stay in this browser on your device — stored
+              locally, never sent anywhere. &ldquo;Clear all prototype
+              data&rdquo; wipes them.
+            </li>
+            <li>
+              Free — no account, no payment. In a real sprint week Hami takes
+              a cut of recovered sales only; no recovery, no charge.
+            </li>
+          </ul>
         </div>
 
         <section aria-label="Week summary" className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">

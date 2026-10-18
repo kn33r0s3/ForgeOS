@@ -761,3 +761,8 @@ Two small coherence fixes from the verify-all/fix-all loop's human round (round 
 
 - **Share previews carried no image.** `public/og.jpg` (1200×630, purpose-built) existed and served 200, but `src/routes/__root.tsx` emitted only `og:title` — no `og:image`, no Twitter card — so links shared into Facebook/WhatsApp groups rendered text-only. The root head now also emits `og:image` (+ width/height) and `twitter:card=summary_large_image` with `twitter:image`, both pointing at the existing `${SITE.url}/og.jpg`. Existing seam only; no new asset.
 - **/discoveries answered to a different name than its nav.** Nav, homepage section, and pathways all call the page "Findings"; its document title said "Discoveries — Hami". Title aligned to "Findings — Hami" in `src/routes/discoveries.tsx` (route path and code identifiers unchanged). A first-time reader in the human round tripped on the mismatch.
+
+
+## Public-surface loop — 2026-10-18
+
+- **/prototype/inbox trust answers.** Round 17's human walkthrough (Sunita, the Pokhara shopkeeper) found the page's exact trust gap: a seller arriving with a message problem needs to hear plainly what the tool does and doesn't do. Three factual lines now sit under the amber Prototype callout: it can't read Facebook/Messenger messages (manual inputs only, no network calls); typed names stay in the browser's localStorage (key "hami-prototype-inbox-v1", "Clear all prototype data" wipes them); free with no account, and in a real sprint week Hami takes a cut of recovered sales only — no recovery, no charge. All three verified against the route source; the existing "Hami prototype honesty" test locks only the prototype labeling, not this copy. Existing seam, no new files.
