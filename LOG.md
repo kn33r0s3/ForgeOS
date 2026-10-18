@@ -646,3 +646,9 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 
 - Re-read `world_graph.find_canonical_entity()` before finalizing importer safety. It deliberately recognizes old `canonical_ref` wrappers in addition to current source-system/source-id wrappers. Replaced the duplicate check's hand-coded modern-only query with this shared function and added a legacy-wrapper regression.
 - This avoids duplicating a historical compatibility rule in the importer. Exact-head checks are pending; no production database was manually read or changed.
+
+## 2026-10-18 — Restore homepage structure contract to the current route
+
+- Exact CI output showed the homepage test's component-order assertion still described the pre-refresh page. The actual existing `src/routes/index.tsx` renders Hero → QuickStart → PublicOffers → FindingsPreview → UnknownsPreview → Capabilities → ExperimentsPreview → AboutLink → StatusRecord → HamiPathways → HomeFooter. The public copy, privacy, honest-empty-state, and no-toy-inbox assertions remain intact.
+- Updated only the stale structural regex in `src/lib/content.test.ts` to guard the currently intended composition/order. No homepage source/behavior changed in this correction.
+- Exact-head CI and deployment verification for this follow-up are required; previous failures/checks are not used as a pass for this revision.

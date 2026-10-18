@@ -2202,3 +2202,11 @@ Do not reopen findings already corrected in source as if still live bugs. Do not
 
 - Canonical substrate identity is owned by `backend/app/services/world_graph.py::find_canonical_entity`, which supports both source-keyed identity and legacy `canonical_ref` fallback. `_claim_has_references` must call this shared seam; do not reimplement a narrower identity query.
 - Added the legacy-wrapper regression to the existing unknown-sync tests. No new architecture. Verify the exact head after this correction; the previous queued CI does not include it.
+
+---
+
+## 2026-10-18 — Restore homepage structure contract to the current route
+
+- **Existing seam:** `src/lib/content.test.ts` “Hami public root” contract, applied to current `src/routes/index.tsx::HomePage`. The prior assertion omitted new first-party `QuickStart`, `PublicOffers`, `StatusRecord`, and `HamiPathways` sections and checked the old order, so it failed after the human-first homepage refresh.
+- **Correction:** change only the order assertion to reflect the current route. Retain the independent copy, public data-loader, empty/failure state, navigation, privacy and removed-prototype assertions. This is not a behavior change or a skipped test.
+- **Verification:** exact-head full CI and deployment verifier required for this commit.

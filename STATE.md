@@ -385,3 +385,9 @@ Read docs/BRAIN.md, this file, QUEUE.md, AGENTS.md, HANDOFF.md, and the relevant
 - Follow-up source audit found that canonical Claim identity lookup supports both source-keyed wrappers and legacy `canonical_ref` wrappers with no source key. The importer guard now calls the existing `world_graph.find_canonical_entity()` seam instead of reimplementing only the new identity shape.
 - Added a regression for a legacy wrapper and retained the existing modern wrapper regression. No new service/file/table/primitive; identity interpretation stays centralized in the existing world graph.
 - Exact-head CI and independent deployment verification remain pending; prior runs do not verify this correction.
+
+## 2026-10-18 — Restore homepage structure contract to the current route
+
+- Exact CI output showed the homepage test's component-order assertion still described the pre-refresh page. The actual existing `src/routes/index.tsx` renders Hero → QuickStart → PublicOffers → FindingsPreview → UnknownsPreview → Capabilities → ExperimentsPreview → AboutLink → StatusRecord → HamiPathways → HomeFooter. The public copy, privacy, honest-empty-state, and no-toy-inbox assertions remain intact.
+- Updated only the stale structural regex in `src/lib/content.test.ts` to guard the currently intended composition/order. No homepage source/behavior changed in this correction.
+- Exact-head CI and deployment verification for this follow-up are required; previous failures/checks are not used as a pass for this revision.

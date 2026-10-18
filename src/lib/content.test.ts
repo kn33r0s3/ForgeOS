@@ -495,7 +495,7 @@ describe("Hami public root", () => {
     assert.doesNotMatch(home, /to="\/prototype\/inbox"|Try the free inbox tool/);
     assert.match(
       home,
-      /<Hero \/>[\s\S]*<Capabilities \/>[\s\S]*<FindingsPreview \/>[\s\S]*<UnknownsPreview \/>[\s\S]*<ExperimentsPreview \/>[\s\S]*<AboutLink \/>[\s\S]*<HomeFooter \/>/,
+      /<Hero \/>[\s\S]*<QuickStart \/>[\s\S]*<PublicOffers \/>[\s\S]*<FindingsPreview \/>[\s\S]*<UnknownsPreview \/>[\s\S]*<Capabilities \/>[\s\S]*<ExperimentsPreview \/>[\s\S]*<AboutLink \/>[\s\S]*<StatusRecord \/>[\s\S]*<HamiPathways current="home" \/>[\s\S]*<HomeFooter \/>/,
     );
     assert.match(home, /Honest status/i);
     assert.match(home, /pre-revenue/i);
