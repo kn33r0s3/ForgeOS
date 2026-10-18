@@ -29,6 +29,8 @@ import sys
 from dataclasses import dataclass
 from datetime import date
 
+from sqlalchemy import or_
+
 log = logging.getLogger(__name__)
 
 STATE_MAP = {
@@ -171,18 +173,71 @@ def import_unknowns(unknowns: list[ParsedUnknown], db, apply: bool = False) -> d
     return stats
 
 
-def _retire_older_dupes(db, models, dupes: list) -> int:
-    """Delete superseded duplicate rows — never ones other records point at."""
-    retired = 0
-    for d in dupes:
-        linked = (
-            db.query(models.EvidenceRelationship).filter_by(claim_id=d.id).first() is not None
-            or db.query(models.Judgment).filter_by(claim_id=d.id).first() is not None
+def _claim_has_references(db, models, claim) -> bool:
+    """Find relational and canonical-substrate references before retiring a Claim."""
+    claim_table = models.Claim.__table__
+
+    # A Claim can itself carry links to an Opportunity, Decision, Experiment, or
+    # Outcome. Deleting it would discard those relationships even without a row
+    # that points back to the Claim.
+    if any(
+        column.foreign_keys and getattr(claim, column.name, None) is not None
+        for column in claim_table.columns
+    ):
+        return True
+
+    # The canonical substrate uses a stable polymorphic source ref rather than
+    # a SQL foreign key. Preserve any Claim already represented in that graph.
+    substrate_ref = (
+        db.query(models.SubstrateEntity.id)
+        .filter_by(
+            entity_type="claim",
+            source_system=claim_table.name,
+            source_id=str(claim.id),
         )
-        if linked:
-            log.info("unknowns import: keeping duplicate claim %s (has linked records)", d.id)
+        .first()
+    )
+    if substrate_ref is not None:
+        return True
+
+    # Discover all inbound Claim FKs from mapped schema metadata. This covers
+    # current and future referencing tables without maintaining a brittle
+    # hand-written list of models.
+    for table in claim_table.metadata.tables.values():
+        if table is claim_table:
             continue
-        db.delete(d)
+        claim_fk_columns = [
+            column
+            for column in table.columns
+            if any(
+                foreign_key.column.table is claim_table
+                and foreign_key.column.name == "id"
+                for foreign_key in column.foreign_keys
+            )
+        ]
+        if not claim_fk_columns:
+            continue
+        reference = (
+            db.query(claim_fk_columns[0])
+            .filter(or_(*(column == claim.id for column in claim_fk_columns)))
+            .first()
+        )
+        if reference is not None:
+            return True
+    return False
+
+
+def _retire_older_dupes(db, models, dupes: list) -> int:
+    """Delete only superseded Claim rows with no live relationship references."""
+    retired = 0
+    for duplicate in dupes:
+        if _claim_has_references(db, models, duplicate):
+            log.info(
+                "unknowns import: preserving superseded Claim %s because its ID is referenced",
+                duplicate.id,
+            )
+            continue
+        db.delete(duplicate)
         retired += 1
     return retired
 

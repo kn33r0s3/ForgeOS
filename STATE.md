@@ -367,3 +367,10 @@ Read docs/BRAIN.md, this file, QUEUE.md, AGENTS.md, HANDOFF.md, and the relevant
 - Added an evidence-grounded ForgeBot learning model to `docs/ENGINE.md` at commit `3507490b12aaa4a8444f7ffeb7d92bdaa2fca762`. It maps the user's four-stage neural-network analogy into Hami's existing primitives: permitted experience, provenance-preserving memory, prediction-versus-outcome feedback, candidate strategy reuse, cross-case evaluation, and owner-gated autonomy.
 - Explicit boundary: this is an architecture definition, not proof ForgeBot trains its own weights or autonomously runs discovery. Neural-network training, persistent system-level learning, self-running discovery, and verified real-world outcomes remain distinct claims.
 - No runtime behavior, permissions, outbound messaging, spending, customer contact, payments or production settings changed. Exact-head tests/CI and runtime behavior remain unverified. The real-world P0 remains an owner-authorized seller conversation and an evidence-backed outcome.
+
+## 2026-10-18 — Preserve claim identity during unknown-map dedupe
+
+- Original lineage remains intact; main's current code evolved from first commit `07baf91a1900cf3e27ce0bae9fead126801da3b3`. The unknown-map importer itself dates to `3af66064302437f0680b1691b3949667d2fe9e8a`; the later stable-row-ID fix `97c9e9f7ec2a9a3b224e221c7c70d75c6fa6288b` was retained.
+- Audited current map identity: 114 rows, 114 unique IDs. Extended the existing retirement guard so linked Claims aren't deleted when a direct FK, an outgoing Claim relationship, or the existing canonical substrate source identity still depends on the row. Regression coverage includes each of those paths plus deletion of a detached duplicate.
+- No new file/table/primitive/route, no history rewrite/reset, and no production database mutation. The change prevents future importer deletion of referenced records; pre-existing orphan substrate wrappers, if any, remain unassessed and were not repaired here.
+- Full exact-head CI and deployment-verifier results are pending at the time of this state entry. The latest source SHA must be verified before calling this change green.

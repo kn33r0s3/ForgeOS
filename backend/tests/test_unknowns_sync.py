@@ -50,29 +50,92 @@ def test_sync_updates_row_in_place_when_map_text_revised(db):
     assert "reworded" in rows[0].statement
 
 
-def test_sync_retires_older_duplicate_rows(db):
-    from app.cli.import_unknowns import import_unknowns, parse_unknown_map
-
+def _duplicate_claim_pair(db, row_id, *, older_opportunity_id=None):
     old = models.Claim(
         statement="Older wording?",
         normalized_statement="older wording?",
         epistemic_state="unknown",
         confidence=0.0,
-        provenance="UNKNOWN_MAP.md §D row D9 (imported 2026-10-04). Cheapest test: x",
+        opportunity_id=older_opportunity_id,
+        provenance=f"UNKNOWN_MAP.md §D row {row_id} (imported 2026-10-04). Cheapest test: x",
     )
     new = models.Claim(
         statement="Newer wording?",
         normalized_statement="newer wording?",
         epistemic_state="unknown",
         confidence=0.0,
-        provenance="UNKNOWN_MAP.md §D row D9 (imported 2026-10-11). Cheapest test: x",
+        provenance=f"UNKNOWN_MAP.md §D row {row_id} (imported 2026-10-11). Cheapest test: x",
     )
     db.add_all([old, new])
+    db.flush()
+    return old, new
+
+
+def _apply_map_revision(db, row_id):
+    from app.cli.import_unknowns import import_unknowns, parse_unknown_map
+
+    unknowns = parse_unknown_map(f"| {row_id} | Newer wording? | UNKNOWN | Ask | Stakes |\\n")
+    return import_unknowns(unknowns, db, apply=True)
+
+
+def test_sync_retires_older_duplicate_rows_when_unreferenced(db):
+    old, new = _duplicate_claim_pair(db, "D9")
     db.commit()
-    unknowns = parse_unknown_map("| D9 | Newer wording? | UNKNOWN | Ask | Stakes |\n")
-    stats = import_unknowns(unknowns, db, apply=True)
+    stats = _apply_map_revision(db, "D9")
     assert stats["skipped_existing"] == 1
     assert stats["retired_dupes"] == 1
     remaining = db.query(models.Claim).filter(models.Claim.provenance.like("%row D9 %")).all()
     assert len(remaining) == 1
     assert remaining[0].id == new.id
+
+
+def test_sync_preserves_older_duplicate_claim_with_inbound_foreign_key(db):
+    old, _new = _duplicate_claim_pair(db, "D10")
+    question = models.ResearchQuestion(
+        question="Follow-up that depends on the older claim ID?",
+        source_claim_id=old.id,
+    )
+    db.add(question)
+    db.commit()
+
+    stats = _apply_map_revision(db, "D10")
+
+    assert stats["retired_dupes"] == 0
+    assert db.get(models.Claim, old.id) is not None
+    assert db.get(models.ResearchQuestion, question.id).source_claim_id == old.id
+
+
+def test_sync_preserves_older_claim_that_owns_an_outgoing_foreign_key(db):
+    opportunity = models.Opportunity(problem="Opportunity attached to old claim")
+    db.add(opportunity)
+    db.flush()
+    old, _new = _duplicate_claim_pair(
+        db, "D11", older_opportunity_id=opportunity.id
+    )
+    db.commit()
+
+    stats = _apply_map_revision(db, "D11")
+
+    assert stats["retired_dupes"] == 0
+    preserved = db.get(models.Claim, old.id)
+    assert preserved is not None
+    assert preserved.opportunity_id == opportunity.id
+
+
+def test_sync_preserves_claim_with_canonical_substrate_identity(db):
+    from app.services import world_graph
+
+    old, _new = _duplicate_claim_pair(db, "D12")
+    entity = world_graph.ensure_canonical_entity(
+        db,
+        "claim",
+        old.id,
+        created_by="legacy_record_substrate_adapter",
+    )
+    db.commit()
+
+    stats = _apply_map_revision(db, "D12")
+
+    assert stats["retired_dupes"] == 0
+    assert db.get(models.Claim, old.id) is not None
+    assert db.get(models.SubstrateEntity, entity.id).source_id == str(old.id)
