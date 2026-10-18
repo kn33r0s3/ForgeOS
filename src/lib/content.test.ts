@@ -131,6 +131,13 @@ describe("Hami public content", () => {
     assert.doesNotMatch(home, /className="border-b border-line bg-surface" aria-hidden="true"/);
   });
 
+  it("keeps desktop navigation readable on the light masthead", () => {
+    const styles = readFileSync(join(root, "src/styles.css"), "utf8");
+    assert.match(styles, /\.masthead \.mast-link\s*\{[^}]*color:\s*#176b4d;/s);
+    assert.match(styles, /\.masthead \.mast-link:hover\s*\{[^}]*background:\s*#edf5ef;[^}]*color:\s*#104e38;/s);
+    assert.match(styles, /\.masthead \.mast-link\[aria-current="page"\]\s*\{[^}]*color:\s*#104e38;/s);
+  });
+
   it("exposes public-first primary destinations", () => {
     const hrefs = NAV.map((item) => item.to);
     // Primary navigation follows visitor intentions; specialist pages remain available in the footer and cross-links.
