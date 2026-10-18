@@ -621,3 +621,11 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - **No real-world effect:** no visitor post, external message/contact, intake/outbound activation, model inference, payment, spend, transaction or revenue was created. Business discovery remains the higher-priority real-world dependency.
 - **Next:** refresh main after the continuity commits; retrieve authorized exact-SHA full CI and deployment verification. If green, verify production SHA plus desktop/mobile and empty/loading/unavailable states. Do not treat a pending status, source presence or readable repo as test/runtime proof.
 
+## 2026-10-18 — Vercel status refresh after continuity writes
+
+- Current `main` immediately before this append was `be935128d5bfb3e7a45cfee6beb29ab9bd913562`. Its GitHub combined commit status now reports the Vercel context **success**: https://vercel.com/kn33r0s3s-projects/forge-os/GjvQ4bR8xHynANZKGQKiShmZrD4c .
+- This refresh supersedes the earlier **PENDING** observation for code/test SHA `a12274d6606649a99ea0fa757728457e8f1e394e) only for the Vercel status on `be935128`. It is not evidence that GitHub's full CI matrix, frontend tests, typecheck, lint, secrets scan, or independent deployment verifier passed.
+- The connected Vercel project/deployment listing remains inaccessible (403 scope error), and the available GitHub workflow-run tool surfaces PR-triggered runs only. Public Actions-page reads through the web connector were disabled. Therefore deployment metadata and rendered production behavior are still not independently confirmed; do not bypass those access boundaries.
+- UI source code and regression tests did not change after `a12274d`; later commits were continuity documentation. The source readback checks passed, but no local or remote test execution result was obtained in this pass.
+- **Next:** refresh exact `main` after this append; obtain authorized exact-SHA CI results and, separately, verify the deployed SHA plus the actual desktop/mobile render. Keep those gates distinct. No public post, customer contact, external message, intake/outbound activation, payment, spend or REAL outcome occurred.
+
