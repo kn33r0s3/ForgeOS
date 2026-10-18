@@ -98,6 +98,7 @@ EXPECTED_COLUMNS = _build_expected_columns()
 EXPECTED_INDEXES = {
     "learning_events": [
         ("ix_learning_events_source_kind", "source_kind"),
+        ("ix_learning_events_outcome_id", "outcome_id"),
     ],
     "lessons": [
         ("ix_lessons_source_kind", "source_kind"),

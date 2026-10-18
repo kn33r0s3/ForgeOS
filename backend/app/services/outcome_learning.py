@@ -58,6 +58,7 @@ def record_experiment_outcome(
             raise ValueError("An immutable outcome already exists; do not overwrite history")
         learning = db.query(models.LearningEvent).filter_by(
             experiment_id=experiment_id,
+            outcome_id=existing.id,
             data_scope=data_scope,
             source_kind=existing.source_kind,
         ).first()
@@ -86,7 +87,10 @@ def record_experiment_outcome(
     experiment.status = "completed"
     experiment.execution_status = "completed"
     db.flush()
-    existing_learning = db.query(models.LearningEvent).filter_by(experiment_id=experiment_id).first()
+    existing_learning = db.query(models.LearningEvent).filter_by(
+        experiment_id=experiment_id,
+        outcome_id=outcome.id,
+    ).first()
     if existing_learning:
         learning = existing_learning
     else:
@@ -100,6 +104,7 @@ def record_experiment_outcome(
             prediction_error=prediction_error,
             error_type=derived_error_type,
             product_id=product_id,
+            outcome_id=outcome.id,
             data_scope=data_scope,
             source_kind=outcome.source_kind,
             commit=False,

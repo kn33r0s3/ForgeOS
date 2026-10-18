@@ -198,6 +198,8 @@ def test_decision_action_outcome_learning(db):
     db.add(verified_outcome)
     db.commit()
 
+    # A legacy caller may omit outcome_id only when one verified REAL Outcome
+    # uniquely identifies the source; the event records that exact row.
     real_event = learning_engine.record_learning_from_experiment(
         db,
         experiment_id=experiment_id,
@@ -209,6 +211,21 @@ def test_decision_action_outcome_learning(db):
         confidence_delta=-10.0,
         source_kind=evidence_source.REAL,
     )
+    assert real_event.outcome_id == verified_outcome.id
+
+    wrong_experiment_id = _ensure_experiment(db, opp.id)
+    with pytest.raises(ValueError, match="does not belong"):
+        learning_engine.record_learning_from_experiment(
+            db,
+            experiment_id=wrong_experiment_id,
+            prediction="A different experiment",
+            actual="No matching outcome exists",
+            lesson="Must not link another experiment's outcome.",
+            outcome_id=verified_outcome.id,
+            data_scope="REAL",
+            source_kind=evidence_source.REAL,
+        )
+
     real_event.belief_id = belief.id
     unrelated_opp = models.Opportunity(
         problem="Different target that this experiment did not test",
@@ -3126,3 +3143,100 @@ def test_prompt_context_exposes_bounded_external_source_metadata_without_source_
     assert "Credentialed link must be withheld" not in context
     assert "https://example.test/fictional" not in context
     assert not db.new and not db.dirty and not db.deleted
+
+
+def test_reported_experiment_learning_event_links_exact_outcome(db):
+    from app import evidence_source, models
+    from app.services import outcome_learning
+
+    opp = models.Opportunity(
+        problem="A report-only fixture outcome",
+        target_customer="Test-only target",
+        solution="Do not infer demand from this report",
+    )
+    db.add(opp)
+    db.commit()
+    db.refresh(opp)
+    experiment_id = _ensure_experiment(db, opp.id)
+
+    recorded = outcome_learning.record_experiment_outcome(
+        db,
+        experiment_id,
+        actual="Owner-reported response count; not independently verified.",
+        success=False,
+        source="manual-test-fixture",
+        actual_value=2.0,
+        unit="count",
+        outcome_type="ACTUAL_RESPONSE",
+        data_scope="REAL",
+    )
+    outcome = recorded["outcome"]
+    learning = recorded["learning"]
+
+    assert outcome.id is not None
+    assert outcome.verification_state == "REPORTED"
+    assert outcome.source_kind == evidence_source.MOCK
+    assert learning.outcome_id == outcome.id
+    assert learning.experiment_id == experiment_id
+    assert learning.source_kind == evidence_source.MOCK
+    assert learning.belief_update_applied is False
+
+    replay = outcome_learning.record_experiment_outcome(
+        db,
+        experiment_id,
+        actual="Owner-reported response count; not independently verified.",
+        success=False,
+        source="manual-test-fixture",
+        actual_value=2.0,
+        unit="count",
+        outcome_type="ACTUAL_RESPONSE",
+        data_scope="REAL",
+    )
+    assert replay["reused"] is True
+    assert replay["outcome"].id == outcome.id
+    assert replay["learning"].id == learning.id
+    assert db.query(models.LearningEvent).filter_by(outcome_id=outcome.id).count() == 1
+
+
+def test_product_learning_event_links_exact_reported_outcome(db):
+    from app import evidence_source, models
+    from app.services import action_engine
+
+    opp = models.Opportunity(
+        problem="Product outcome traceability fixture",
+        target_customer="Test-only target",
+        solution="Keep report separate from verified demand",
+    )
+    db.add(opp)
+    db.flush()
+    product = models.Product(
+        opportunity_id=opp.id,
+        name="Test-only offer",
+        offer="A hypothetical offer",
+        data_scope="REAL",
+    )
+    db.add(product)
+    db.commit()
+    db.refresh(product)
+
+    outcome = action_engine.record_outcome(
+        db,
+        outcome_type="ACTUAL_CUSTOMERS",
+        product_id=product.id,
+        actual_value=1.0,
+        unit="count",
+        qualitative_result="One reported test fixture; not a customer result.",
+        source="test-fixture",
+        success=False,
+        data_scope="REAL",
+        source_kind=evidence_source.MOCK,
+        verification_state="REPORTED",
+    )
+    event = db.query(models.LearningEvent).filter_by(
+        product_id=product.id,
+        outcome_id=outcome.id,
+    ).one()
+    assert event.source_kind == evidence_source.MOCK
+    assert event.data_scope == "REAL"
+    assert event.belief_update_applied is False
+    assert outcome.verification_state == "REPORTED"

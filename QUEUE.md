@@ -43,11 +43,11 @@ The manual repair-shop payment endpoint remains fail-closed for REAL scope. The 
 
 ## P0 — Verify difference-guided learning in the existing loop
 
-- **Verified integrity gates:** legacy BeliefExperiment results are HYPOTHESIS-only and idempotent; generic write-back rejects REAL labels without a matching verified REAL Outcome.
-- **Target-attribution hardening now added:** `apply_learning_to_system` refuses ambiguous multiple verified Outcomes because LearningEvent has no outcome_id. Belief confidence needs the exact verified Outcome → EvidenceRelationship → L5+ third-party Evidence → target Belief chain, including a named verifier/locator and an evidence direction consistent with Outcome.success and the delta. Source reliability only moves for this linked counter-evidence. Opportunity notes/score changes require the Experiment's own Opportunity.
-- **Replay/attribution regressions:** unrelated Belief and Opportunity targets stay unchanged; a linked evidence fixture enables the valid path; replay must not repeat confidence/source changes; multiple verified Outcomes for one Experiment fail closed. All generated records are isolated TEST database fixtures, not actual evidence or business results.
-- **Runtime boundary remains:** source audit found no production caller for `apply_learning_to_system`. This is a stricter contract for a helper, not proof it is running autonomously. Automatic propagation remains **UNPROVEN** until a canonical, idempotent verified-Outcome → LearningEvent → target-state path is wired and observed.
-- **Next step:** connect one already-existing verified outcome consumer only where the explicit target and evidence are known. Do not add a new ontology/table to bypass missing relationships.
+- **Outcome integrity:** legacy BeliefExperiment reports remain HYPOTHESIS-only; generic write-back requires a matching verified REAL Outcome and explicit target evidence. Target attribution, replay safety, wrong-opportunity and ambiguous-outcome checks are covered by the existing closed-loop regression.
+- **Direct provenance increment:** existing LearningEvent now has a nullable `outcome_id`; historical rows remain NULL. Outcome writers in action_engine, outcome_learning and money_engine link each new event to the exact Outcome. REAL learning requires the supplied matching verified Outcome or exactly one eligible outcome; it refuses to guess between multiple outcomes.
+- **Tests added:** wrong Experiment/Outcome binding is rejected; a single verified outcome can be unambiguously associated; report-only outcome_learning replays one existing event; product LearningEvent retains its exact Outcome ID while remaining MOCK/REPORTED.
+- **Runtime truth boundary:** `apply_learning_to_system` still has no production caller in source audit; direct provenance supports a safer future bridge but does not prove general learning runs autonomously. Keep that capability **UNPROVEN** until the production path is wired and observed.
+- **Next step:** use outcome_id to connect one existing safe, canonical consumer only where its target is explicit; preserve the evidence gate and no-new-ontology rule.
 
 
 ## P0 — Verify and extend the multi-climb intelligence loop

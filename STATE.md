@@ -477,3 +477,12 @@ Read docs/BRAIN.md, this file, QUEUE.md, AGENTS.md, HANDOFF.md, and the relevant
 
 - Follow-up inspection of `models.Opportunity` found the new unrelated-opportunity regression used `customer`, while the current model names that field `target_customer`. Corrected the test fixture argument in place before treating CI as evidence.
 - No runtime behavior changed; new exact-head CI is required for this correction.
+
+## 2026-10-18 — Add direct Outcome provenance to LearningEvent
+
+- Current parent: `42058bc440575cd8722cd3b9d4beda3b57b86f49`. Added nullable `LearningEvent.outcome_id` and the existing lightweight schema/index migration; historical event rows remain NULL and no ambiguous backfill is attempted.
+- Updated existing outcome writers in `action_engine.record_outcome`, `outcome_learning.record_experiment_outcome`, and `money_engine.record_revenue_result` so each new learning record carries its exact Outcome ID. The learning factory validates outcome→Experiment, scope, and source kind. For REAL learning, an omitted ID is allowed only when exactly one verified REAL Outcome exists.
+- Updated `apply_learning_to_system` to prefer exact outcome_id and to support product-only outcome records only when the event and outcome identify the same product. Historical rows without the field remain supported only through the existing unambiguous single-outcome fallback. Existing target Belief/Evidence and Experiment/Product attribution gates remain.
+- Added regressions for mismatched outcome/Experiment, unique verified outcome binding, exact outcome-learning replay, and product event linkage while preserving MOCK/REPORTED status. Fixtures are test-only; no real buyer, payment or revenue evidence was created.
+- No production caller for `apply_learning_to_system` was found. This is improved provenance in existing records, not a claim of general autonomous learning. Exact-head CI and deployment verification pending.
+- No external contact, post, send, spend, payment, intake activation, permission change, or REAL outcome was created.

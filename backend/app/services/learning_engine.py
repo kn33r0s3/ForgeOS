@@ -42,31 +42,66 @@ def record_learning_from_experiment(
     error_type: Optional[str] = None,
     confidence_delta: Optional[float] = None,
     product_id: Optional[int] = None,
+    outcome_id: Optional[int] = None,
     data_scope: str = "REAL",
     source_kind: str = evidence_source.MOCK,
     commit: bool = True,
 ) -> models.LearningEvent:
-    """Create a LearningEvent from a completed Experiment (opportunity test)."""
+    """Create a LearningEvent bound to the exact outcome that produced it.
+
+    Historical callers may omit outcome_id. A REAL event is automatically bound
+    only when exactly one verified REAL Outcome exists for this experiment.
+    """
     exp = db.query(models.Experiment).filter_by(id=experiment_id).first()
     if not exp:
         raise ValueError(f"Experiment {experiment_id} not found")
     source_kind = evidence_source.validate(source_kind)
     if exp.data_scope != data_scope:
         raise ValueError("Learning scope must match experiment")
-    if source_kind == evidence_source.REAL:
-        verified_outcome = (
-            db.query(models.Outcome.id)
+
+    linked_outcome = None
+    if outcome_id is not None:
+        linked_outcome = db.get(models.Outcome, outcome_id)
+        if linked_outcome is None:
+            raise ValueError(f"Outcome {outcome_id} not found")
+        if linked_outcome.experiment_id != experiment_id:
+            raise ValueError("Outcome does not belong to the specified Experiment")
+        if linked_outcome.data_scope != data_scope:
+            raise ValueError("Outcome scope must match learning scope")
+        if linked_outcome.source_kind != source_kind:
+            raise ValueError("Outcome source kind must match learning source kind")
+        if source_kind == evidence_source.REAL:
+            eligible = (
+                db.query(models.Outcome.id)
+                .filter(
+                    models.Outcome.id == linked_outcome.id,
+                    models.Outcome.experiment_id == experiment_id,
+                    *evidence_source.verified_real_outcome_filters(models.Outcome),
+                )
+                .first()
+            )
+            if eligible is None:
+                raise ValueError("REAL learning requires this exact verified REAL outcome")
+    elif source_kind == evidence_source.REAL:
+        verified_outcomes = (
+            db.query(models.Outcome)
             .filter(
                 models.Outcome.experiment_id == experiment_id,
                 *evidence_source.verified_real_outcome_filters(models.Outcome),
             )
-            .first()
+            .order_by(models.Outcome.id.asc())
+            .all()
         )
-        if verified_outcome is None:
-            raise ValueError("REAL learning requires linked verified REAL outcome evidence")
+        if len(verified_outcomes) != 1:
+            raise ValueError(
+                "REAL learning requires an explicit outcome_id unless exactly one verified REAL outcome exists"
+            )
+        linked_outcome = verified_outcomes[0]
+        outcome_id = linked_outcome.id
 
     event = models.LearningEvent(
         experiment_id=experiment_id,
+        outcome_id=outcome_id,
         opportunity_id=exp.opportunity_id,
         prediction=prediction,
         actual=actual,
@@ -231,42 +266,86 @@ def apply_learning_to_system(
     db: Session,
     event: models.LearningEvent,
 ) -> dict:
-    """Apply learning only to targets supported by the same verified outcome.
+    """Apply learning only when one exact verified outcome supports its targets.
 
-    A REAL label and an experiment ID are necessary but insufficient. The
-    outcome must be unambiguous for that experiment. Belief updates additionally
-    require proof-level evidence explicitly linked to both that outcome and the
-    target belief; opportunity notes must match the Experiment's own opportunity.
+    Exact outcome_id is preferred. Legacy rows without it can proceed only
+    when one verified REAL Outcome unambiguously belongs to their Experiment.
     """
     changes = {"belief_updated": False, "source_nudged": False, "opportunity_noted": False}
 
     if event.data_scope != "REAL" or not evidence_source.is_real(event.source_kind):
         return changes  # TEST/MOCK/HYPOTHESIS never changes shared REAL knowledge.
-    if event.experiment_id is None:
-        return changes  # A source-kind label without an Outcome link is not proof.
 
-    experiment = db.get(models.Experiment, event.experiment_id)
-    if experiment is None:
-        return changes
-
-    # LearningEvent has no outcome_id. If an Experiment has multiple verified
-    # Outcomes, this record does not identify which one supports its conclusion;
-    # refuse to guess or let one result authorize learning from another.
-    verified_outcomes = (
-        db.query(models.Outcome)
-        .filter(
-            models.Outcome.experiment_id == event.experiment_id,
-            *evidence_source.verified_real_outcome_filters(models.Outcome),
-        )
-        .order_by(models.Outcome.id.asc())
-        .all()
+    experiment = (
+        db.get(models.Experiment, event.experiment_id)
+        if event.experiment_id is not None
+        else None
     )
-    if len(verified_outcomes) != 1:
+    product = (
+        db.get(models.Product, event.product_id)
+        if event.product_id is not None
+        else None
+    )
+    if event.experiment_id is not None and experiment is None:
         return changes
-    verified_outcome = verified_outcomes[0]
+    if event.product_id is not None and (
+        product is None or product.data_scope != event.data_scope
+    ):
+        return changes
 
-    # A belief is a separate target. It can be changed only when qualifying
-    # evidence explicitly points to this belief AND this exact verified outcome.
+    if event.outcome_id is not None:
+        verified_outcome = db.get(models.Outcome, event.outcome_id)
+        if verified_outcome is None:
+            return changes
+        if (
+            verified_outcome.data_scope != event.data_scope
+            or not evidence_source.is_real(verified_outcome.source_kind)
+            or verified_outcome.verification_state != "VERIFIED"
+            or (
+                event.experiment_id is not None
+                and verified_outcome.experiment_id != event.experiment_id
+            )
+            or (
+                event.product_id is not None
+                and verified_outcome.product_id != event.product_id
+            )
+        ):
+            return changes
+        eligible = (
+            db.query(models.Outcome.id)
+            .filter(
+                models.Outcome.id == verified_outcome.id,
+                *evidence_source.verified_real_outcome_filters(models.Outcome),
+            )
+            .first()
+        )
+        if eligible is None:
+            return changes
+    elif event.experiment_id is not None:
+        # Compatibility for old LearningEvent rows. Never guess when several
+        # verified outcomes exist for the same experiment.
+        verified_outcomes = (
+            db.query(models.Outcome)
+            .filter(
+                models.Outcome.experiment_id == event.experiment_id,
+                *evidence_source.verified_real_outcome_filters(models.Outcome),
+            )
+            .order_by(models.Outcome.id.asc())
+            .all()
+        )
+        if len(verified_outcomes) != 1:
+            return changes
+        verified_outcome = verified_outcomes[0]
+    else:
+        return changes
+
+    # Do not merge evidence from two different commercial targets.
+    allow_opportunity_update = not (
+        experiment is not None
+        and product is not None
+        and experiment.opportunity_id != product.opportunity_id
+    )
+
     linked_evidence: list[models.Evidence] = []
     if event.belief_id is not None:
         rows = (
@@ -285,8 +364,6 @@ def apply_learning_to_system(
             )
             .all()
         )
-        # L5+ verification needs third-party provenance, an identifiable
-        # verifier, and an external locator already carried by the evidence row.
         linked_evidence = list({
             row.id: row
             for row in rows
@@ -319,19 +396,20 @@ def apply_learning_to_system(
             be = belief_engine.BeliefEngine(db)
             belief = be.get_belief(event.belief_id)
             if belief:
+                # Persist the replay guard in the same first commit as the
+                # confidence change inside adjust_confidence().
+                event.belief_update_applied = True
                 be.adjust_confidence(
                     belief,
                     float(delta),
                     reason="learning_event",
                     experiment_id=None,
                 )
-                event.belief_update_applied = True
                 db.commit()
                 changes["belief_updated"] = True
 
-                # Source reliability may move only for linked counter-evidence
-                # on a verified unsuccessful outcome. The event flag prevents
-                # this same helper from repeating a completed update on replay.
+                # Source reliability moves only from this same linked
+                # counter-evidence on a verified unsuccessful outcome.
                 if (
                     event.error_type == "overestimate"
                     and verified_outcome.success is False
@@ -355,20 +433,24 @@ def apply_learning_to_system(
                                 db, src_name, delta=-1.5
                             )
                         except Exception:
-                            source.reliability_score = max(
-                                0.0, previous_reliability - 1.5
-                            )
+                            source.reliability_score = max(0.0, previous_reliability - 1.5)
                             db.commit()
                             current_reliability = source.reliability_score
                         nudged.add(src_name)
                         if current_reliability != previous_reliability:
                             changes["source_nudged"] = True
 
-    # Opportunity attribution is structural: only the opportunity already
-    # named by this canonical Experiment is eligible for a note/score change.
+    expected_opportunity_id = (
+        experiment.opportunity_id
+        if experiment is not None
+        else product.opportunity_id
+        if product is not None
+        else None
+    )
     if (
-        event.opportunity_id is not None
-        and event.opportunity_id == experiment.opportunity_id
+        allow_opportunity_update
+        and event.opportunity_id is not None
+        and event.opportunity_id == expected_opportunity_id
         and event.lesson
     ):
         opp = db.get(models.Opportunity, event.opportunity_id)
@@ -377,8 +459,6 @@ def apply_learning_to_system(
             existing = opp.validation_plan or ""
             if note not in existing:
                 opp.validation_plan = (existing + "\\n" + note).strip()
-                # Damp only when a verified unsuccessful outcome and negative
-                # adjustment agree; an overestimate label by itself is not proof.
                 if (
                     event.error_type == "overestimate"
                     and verified_outcome.success is False

@@ -424,14 +424,15 @@ def record_revenue_result(db: Session, experiment_id, result, revenue=None, conv
         experiment.confidence_change = delta
         experiment.status = "completed"
         experiment.completed_at = utcnow()
-        action_engine.record_outcome(db, outcome_type="ACTUAL_REVENUE" if revenue is not None else "QUALITATIVE",
+        outcome = action_engine.record_outcome(db, outcome_type="ACTUAL_REVENUE" if revenue is not None else "QUALITATIVE",
             experiment_id=experiment_id, actual_value=revenue, unit="USD" if revenue is not None else None,
             qualitative_result=result, success=success, data_scope=scope, commit=False,
             idempotency_key=f"experiment-result-{experiment_id}")
         learning_engine.record_learning_from_experiment(db, experiment_id,
             prediction=experiment.expected_result or experiment.hypothesis or experiment.action,
             actual=result, lesson="Explicit result recorded; revise the next test using this evidence, not estimated revenue.",
-            error_type="confirmed" if success else "qualitative_miss", data_scope=scope, commit=False)
+            error_type="confirmed" if success else "qualitative_miss", outcome_id=outcome.id,
+            data_scope=scope, source_kind=outcome.source_kind, commit=False)
         opportunity = db.get(models.Opportunity, experiment.opportunity_id)
         verified_revenue = (
             db.query(models.Outcome)

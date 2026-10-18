@@ -726,3 +726,11 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 
 - Follow-up inspection of `models.Opportunity` found the new unrelated-opportunity regression used `customer`, while the current model names that field `target_customer`. Corrected the test fixture argument in place before treating CI as evidence.
 - No runtime behavior changed; new exact-head CI is required for this correction.
+
+## 2026-10-18 — LearningEvent now points to the exact source Outcome
+
+- Extended the existing LearningEvent row with nullable `outcome_id` and the lightweight migration index, leaving historical rows untouched.
+- Added exact outcome binding to current writers: product outcome LearningEvents, generic experiment outcome LearningEvents, and the money-engine reported outcome. REAL learning cannot guess: explicit ID must match the exact Experiment/scope/source; omitted ID auto-links only when one verified REAL Outcome exists.
+- Updated the existing shared write-back guard to use event.outcome_id when present and to check product link consistency. Historical rows retain the cautious unambiguous fallback; product-only events without an outcome link cannot propagate.
+- Added tests for mismatched Experiment/Outcome, exact binding, outcome-learning replay/idempotency and product LearningEvent provenance. Test records are fixtures, not customer/payment evidence.
+- Exact-head CI, secret scan and independent deployment verification pending. The write-back helper remains without a production caller in source audit, so general autonomous learning is still unproven.

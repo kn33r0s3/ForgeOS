@@ -1564,6 +1564,8 @@ class LearningEvent(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     experiment_id = Column(Integer, ForeignKey("experiments.id"), nullable=True)
+    # Nullable exact source-outcome link. Historical rows stay NULL; no guessed backfill.
+    outcome_id = Column(Integer, ForeignKey("outcomes.id"), nullable=True, index=True)
     belief_experiment_id = Column(Integer, ForeignKey("belief_experiments.id"), nullable=True)
     decision_id = Column(Integer, ForeignKey("decisions.id"), nullable=True)
     opportunity_id = Column(Integer, ForeignKey("opportunities.id"), nullable=True)

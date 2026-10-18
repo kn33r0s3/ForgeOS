@@ -1,3 +1,16 @@
+## [DIRECT OUTCOME PROVENANCE ON LEARNINGEVENT — CODE EDITED / EXACT-HEAD CI PENDING — 2026-10-18]
+
+- **Existing seam inspected:** `models.LearningEvent`, model-derived column migrations in `backend/app/migrations.py`, `learning_engine.record_learning_from_experiment`, `action_engine.record_outcome`, `outcome_learning.record_experiment_outcome`, and `money_engine.record_revenue_result`.
+- **Change:** added nullable `LearningEvent.outcome_id` FK plus the existing migration index. Historical rows remain NULL; no outcome is guessed or backfilled.
+- **Writers linked:** product-perspective LearningEvents, the canonical experiment-outcome recorder, and the money-engine reported outcome recorder persist the exact Outcome ID. The learning factory validates outcome→experiment, scope, and source kind; REAL learning either binds an explicitly supplied verified Outcome or auto-binds only a single unambiguous verified Outcome.
+- **Write-back:** `apply_learning_to_system` prefers exact `outcome_id`; legacy events without it can proceed only through one verified outcome for their Experiment. Product-only events require matching product provenance. MOCK/reported records do not gain REAL semantics from this link.
+- **Regression tests:** wrong Experiment/Outcome binding rejection; exact auto-binding for a single verified REAL Outcome; outcome-learning replay with one LearningEvent per exact Outcome; and product LearningEvent→Outcome linkage. These are isolated fixtures, not customer/payment evidence.
+- **Runtime limit retained:** no production caller for `apply_learning_to_system` was found. This closes traceability ambiguity and links existing writers; it does not claim general learning automatically runs in production.
+- **Verification:** exact-head backend CI, full CI, secret scan, and independent deployment verification pending for this commit.
+- **External side effects:** none.
+
+---
+
 ## [OUTCOME TARGET-ATTRIBUTION GATE — CODE EDITED / EXACT-HEAD CI PENDING — 2026-10-18]
 
 - **Existing seam:** `learning_engine.apply_learning_to_system` consumes canonical `LearningEvent`, `Outcome`, `Evidence`, and `EvidenceRelationship` rows. No new table, endpoint, service, or semantic primitive.

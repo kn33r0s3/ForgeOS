@@ -721,7 +721,8 @@ def record_outcome(
                 action.status = "VERIFIED"
                 action.verification_state = "VERIFIED_SUCCESS" if success else "VERIFIED_FAILURE"
         if product:
-            event = models.LearningEvent(product_id=product_id, opportunity_id=product.opportunity_id,
+            event = models.LearningEvent(product_id=product_id, outcome_id=outcome.id,
+                opportunity_id=product.opportunity_id,
                 prediction=product.hypothesis or product.offer,
                 actual=f"{outcome_type}: {actual_value} {unit or ''}. {qualitative_result or ''}",
                 lesson=f"[{data_scope}] Recorded {outcome_type} from outcome #{outcome.id}. Compare this reported result with the offer; one event does not prove market demand.",
