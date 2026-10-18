@@ -31,3 +31,48 @@ def test_sync_failure_never_raises(db):
     ):
         assert sync_unknowns_from_map(db) == 0
     assert db.query(models.Claim).count() == 0
+
+
+def test_sync_updates_row_in_place_when_map_text_revised(db):
+    with patch("app.services.unknowns_sync.urllib.request.urlopen") as mock_open:
+        mock_open.return_value.__enter__.return_value.read.return_value = MAP_TEXT.encode()
+        assert sync_unknowns_from_map(db) == 2
+        revised = MAP_TEXT.replace("First test question?", "First test question, reworded?")
+        mock_open.return_value.__enter__.return_value.read.return_value = revised.encode()
+        assert sync_unknowns_from_map(db) == 0  # update-in-place, not an insert
+    rows = (
+        db.query(models.Claim)
+        .filter(models.Claim.provenance.like("%row D1 %"))
+        .order_by(models.Claim.id)
+        .all()
+    )
+    assert len(rows) == 1  # no duplicate revision
+    assert "reworded" in rows[0].statement
+
+
+def test_sync_retires_older_duplicate_rows(db):
+    from app.cli.import_unknowns import import_unknowns, parse_unknown_map
+
+    old = models.Claim(
+        statement="Older wording?",
+        normalized_statement="older wording?",
+        epistemic_state="unknown",
+        confidence=0.0,
+        provenance="UNKNOWN_MAP.md §D row D9 (imported 2026-10-04). Cheapest test: x",
+    )
+    new = models.Claim(
+        statement="Newer wording?",
+        normalized_statement="newer wording?",
+        epistemic_state="unknown",
+        confidence=0.0,
+        provenance="UNKNOWN_MAP.md §D row D9 (imported 2026-10-11). Cheapest test: x",
+    )
+    db.add_all([old, new])
+    db.commit()
+    unknowns = parse_unknown_map("| D9 | Newer wording? | UNKNOWN | Ask | Stakes |\n")
+    stats = import_unknowns(unknowns, db, apply=True)
+    assert stats["skipped_existing"] == 1
+    assert stats["retired_dupes"] == 1
+    remaining = db.query(models.Claim).filter(models.Claim.provenance.like("%row D9 %")).all()
+    assert len(remaining) == 1
+    assert remaining[0].id == new.id

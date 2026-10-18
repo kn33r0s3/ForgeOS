@@ -766,3 +766,8 @@ Two small coherence fixes from the verify-all/fix-all loop's human round (round 
 ## Public-surface loop — 2026-10-18
 
 - **/prototype/inbox trust answers.** Round 17's human walkthrough (Sunita, the Pokhara shopkeeper) found the page's exact trust gap: a seller arriving with a message problem needs to hear plainly what the tool does and doesn't do. Three factual lines now sit under the amber Prototype callout: it can't read Facebook/Messenger messages (manual inputs only, no network calls); typed names stay in the browser's localStorage (key "hami-prototype-inbox-v1", "Clear all prototype data" wipes them); free with no account, and in a real sprint week Hami takes a cut of recovered sales only — no recovery, no charge. All three verified against the route source; the existing "Hami prototype honesty" test locks only the prototype labeling, not this copy. Existing seam, no new files.
+
+
+## Public-surface loop — 2026-10-18 (unknowns dedup)
+
+- **Engine unknowns dedup guard.** /api/forge/unknowns had drifted to 119 rows / 114 unique — D35 ×2, D72 ×4, D96 ×2. Root cause: the map→Claim importer deduped on normalized_statement (mutable text), so every discovery-round wording revision inserted a new row and the old revision was never retired. Public /api/public/unknowns stayed clean throughout (102/102, the canary). Fix in the existing seam: backend/app/cli/import_unknowns.py now keys on the stable map row id — unchanged rows skip, revised rows update the newest stored row in place, superseded duplicates are retired (never rows with linked evidence/judgments). Two new tests in backend/tests/test_unknowns_sync.py; full backend suite 1329 passed / 2 skipped. The fix self-heals production on the next backend startup sync — no manual DB touch.

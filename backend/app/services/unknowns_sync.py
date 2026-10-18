@@ -3,8 +3,9 @@
 The discovery rounds bank to docs/UNKNOWN_MAP.md on main (via the local
 cron's importer). Production's database doesn't see that cron, so on
 startup the backend fetches the map from GitHub main and imports any new
-rows. The importer dedups on normalized_statement — this is idempotent
-and additive-only. Failures are logged, never fatal to startup.
+rows. The importer dedups on the map row id: unchanged rows are skipped,
+revised rows update the newest stored row in place, and superseded
+duplicates are retired. Failures are logged, never fatal to startup.
 """
 import logging
 import urllib.request

@@ -11,7 +11,10 @@ Parses the unknowns map and creates Claim rows (one per unknown):
   provenance       = map section + row id + cheapest test
   confidence       = 0.0 (unmeasured until tested — never inflated)
 
-Idempotent: normalized_statement is the dedup key; re-runs only add new rows.
+Idempotent: the map row id (D72, B1, …) is the dedup key. Re-runs skip
+rows whose text is unchanged; when a discovery round revises a row's
+wording, the newest stored row is updated in place and older revisions
+of the same row id are retired (never ones other records point at).
 
 Usage:
     python -m app.cli.import_unknowns [--map docs/UNKNOWN_MAP.md] [--dry-run | --apply]
@@ -20,10 +23,13 @@ Defaults to --dry-run (parse only, no writes). --apply writes to the DB.
 """
 
 import argparse
+import logging
 import re
 import sys
 from dataclasses import dataclass
 from datetime import date
+
+log = logging.getLogger(__name__)
 
 STATE_MAP = {
     "UNKNOWN": "unknown",
@@ -99,16 +105,57 @@ def parse_unknown_map(text: str) -> list[ParsedUnknown]:
 def import_unknowns(unknowns: list[ParsedUnknown], db, apply: bool = False) -> dict:
     from app import models
 
-    stats = {"parsed": len(unknowns), "inserted": 0, "skipped_existing": 0}
+    stats = {
+        "parsed": len(unknowns),
+        "inserted": 0,
+        "skipped_existing": 0,
+        "updated": 0,
+        "retired_dupes": 0,
+    }
     for u in unknowns:
-        exists = (
+        # Stable identity is the map row id; the question text is mutable
+        # (discovery rounds revise wording). A text-only dedup key reinserts
+        # a new row on every revision and never retires the old one.
+        # The trailing space keeps "row D7" from matching "row D72".
+        existing = (
+            db.query(models.Claim)
+            .filter(models.Claim.provenance.like(f"%row {u.row_id} %"))
+            .order_by(models.Claim.id)
+            .all()
+        )
+        current = next(
+            (e for e in existing if e.normalized_statement == u.normalized_statement),
+            None,
+        )
+        if current is not None:
+            stats["skipped_existing"] += 1
+            if apply:
+                stats["retired_dupes"] += _retire_older_dupes(
+                    db, models, [e for e in existing if e.id != current.id]
+                )
+            continue
+        # Safety net: text already stored under a provenance without a row id.
+        text_match = (
             db.query(models.Claim)
             .filter(models.Claim.normalized_statement == u.normalized_statement)
             .first()
         )
-        if exists:
+        if text_match is not None:
             stats["skipped_existing"] += 1
             continue
+        if existing:
+            # Map row revised since last import: update the newest stored
+            # row in place so the Claim id stays stable, retire older ones.
+            stats["updated"] += 1
+            if apply:
+                newest = existing[-1]
+                newest.statement = u.question
+                newest.normalized_statement = u.normalized_statement
+                newest.epistemic_state = u.epistemic_state
+                newest.provenance = u.provenance
+                stats["retired_dupes"] += _retire_older_dupes(db, models, existing[:-1])
+            continue
+        stats["inserted"] += 1
         if apply:
             db.add(
                 models.Claim(
@@ -119,12 +166,25 @@ def import_unknowns(unknowns: list[ParsedUnknown], db, apply: bool = False) -> d
                     provenance=u.provenance,
                 )
             )
-            stats["inserted"] += 1
     if apply:
         db.commit()
-    else:
-        stats["inserted"] = stats["parsed"] - stats["skipped_existing"]
     return stats
+
+
+def _retire_older_dupes(db, models, dupes: list) -> int:
+    """Delete superseded duplicate rows — never ones other records point at."""
+    retired = 0
+    for d in dupes:
+        linked = (
+            db.query(models.EvidenceRelationship).filter_by(claim_id=d.id).first() is not None
+            or db.query(models.Judgment).filter_by(claim_id=d.id).first() is not None
+        )
+        if linked:
+            log.info("unknowns import: keeping duplicate claim %s (has linked records)", d.id)
+            continue
+        db.delete(d)
+        retired += 1
+    return retired
 
 
 def main(argv: list[str] | None = None) -> int:
