@@ -102,9 +102,10 @@ describe("Hami public content", () => {
       background_color?: string;
     };
     const styles = readFileSync(join(root, "src/styles.css"), "utf8");
-    const lightThemeStart = styles.lastIndexOf("/* Hami human-first visual refresh");
-    const lightTheme = styles.slice(lightThemeStart, lightThemeStart + 900);
-    assert.ok(lightThemeStart >= 0, "the existing light-theme token block must be present");
+    const lightThemeStart = styles.indexOf("/* Hami Systems: warm paper");
+    const lightThemeEnd = styles.indexOf("@layer base", lightThemeStart);
+    const lightTheme = styles.slice(lightThemeStart, lightThemeEnd);
+    assert.ok(lightThemeStart >= 0 && lightThemeEnd > lightThemeStart, "the original theme token block must be present");
     assert.match(lightTheme, /--background:\s*#faf8f2;/);
     assert.equal(manifest.theme_color, SITE.themeColor);
     assert.equal(manifest.background_color, SITE.themeColor);
@@ -142,23 +143,43 @@ describe("Hami public content", () => {
     assert.doesNotMatch(home, /className="border-b border-line bg-surface" aria-hidden="true"/);
   });
 
-  it("keeps desktop navigation readable through the final light-theme cascade", () => {
+  it("keeps one readable light theme across navigation and public states", () => {
     const styles = readFileSync(join(root, "src/styles.css"), "utf8");
-    const themeStart = styles.lastIndexOf("/* Hami human-first visual refresh");
-    const themeEnd = styles.indexOf("/* Follow-through: keep shared public surfaces coherent with the light theme. */", themeStart);
-    const mastheadStart = styles.indexOf("/* One authoritative desktop masthead rule set, after the light-theme tokens. */");
+    const home = readFileSync(join(root, "src/routes/index.tsx"), "utf8");
+    const links = readFileSync(join(root, "src/components/layout/text-link.tsx"), "utf8");
+    const feedback = readFileSync(join(root, "src/components/ui/feedback.tsx"), "utf8");
+    const sectionMarker = readFileSync(join(root, "src/components/layout/section-marker.tsx"), "utf8");
+    const buttons = readFileSync(join(root, "src/components/ui/button.tsx"), "utf8");
+    const themeStart = styles.indexOf("/* Hami Systems: warm paper");
+    const themeEnd = styles.indexOf("@layer base", themeStart);
     const themeTokens = styles.slice(themeStart, themeEnd);
-    const masthead = styles.slice(mastheadStart);
 
-    assert.ok(themeStart >= 0 && themeEnd > themeStart && mastheadStart > themeEnd, "light theme tokens must precede the final masthead rules");
+    assert.ok(themeStart >= 0 && themeEnd > themeStart, "the palette belongs in the original token block");
+    assert.match(themeTokens, /--background:\s*#faf8f2;/);
     assert.match(themeTokens, /--foreground:\s*#20342b;/);
     assert.match(themeTokens, /--primary:\s*#176b4d;/);
     assert.match(themeTokens, /--secondary:\s*#eaf3ec;/);
+    assert.equal((styles.match(/^\s*:root\s*\{/gm) ?? []).length, 1, "keep one authoritative token block");
     assert.equal((styles.match(/^\s*\.masthead\s*\{/gm) ?? []).length, 1, "keep one authoritative masthead block");
-    assert.match(masthead, /\.masthead\s*\{[^}]*background:\s*#ffffff;[^}]*color:\s*var\(--foreground\);/s);
-    assert.match(masthead, /\.masthead \.mast-link\s*\{[^}]*color:\s*var\(--foreground\);/s);
-    assert.match(masthead, /\.masthead \.mast-link:hover,\s*\.masthead \.mast-link\[aria-current="page"\]\s*\{[^}]*color:\s*var\(--primary\);[^}]*background:\s*var\(--secondary\);/s);
-    assert.doesNotMatch(styles, /color:\s*#f4efe6;/, "old light text must not return to the light header");
+    assert.equal((styles.match(/@media \(prefers-reduced-motion: reduce\)/g) ?? []).length, 1, "keep one reduced-motion rule");
+    assert.doesNotMatch(styles, /Hami human-first visual refresh|Follow-through: keep shared public surfaces/);
+    assert.match(styles, /html\s*\{\s*color-scheme:\s*light;/s);
+    assert.match(
+      styles,
+      /\.masthead \.mast-link\s*\{[^}]*display:\s*inline-flex;[^}]*height:\s*100%;[^}]*align-items:\s*center;[^}]*padding:\s*0 1\.1rem;[^}]*color:\s*var\(--foreground\);/s,
+    );
+    assert.match(
+      styles,
+      /\.masthead \.mast-link:hover,\s*\.masthead \.mast-link\[aria-current="page"\]\s*\{[^}]*color:\s*var\(--primary\);[^}]*background:\s*var\(--secondary\);/s,
+    );
+    assert.doesNotMatch(styles, /color:\s*#f4efe6;/);
+    assert.match(feedback, /bg-surface-elevated/);
+    assert.match(feedback, /bg-surface p-5 shadow-sm/);
+    assert.doesNotMatch(feedback, /bg-black p-5 shadow-md/);
+    assert.doesNotMatch(links, /hover:text-wheat/);
+    assert.doesNotMatch(sectionMarker, /text-wheat/);
+    assert.doesNotMatch(buttons, /ghost: "btn-ghost text-wheat/);
+    assert.doesNotMatch(home.slice(home.indexOf("function HomeFooter()")), /text-wheat/);
   });
 
   it("surfaces live evidence before system explanation and links value-seekers to the public board", () => {

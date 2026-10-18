@@ -692,3 +692,12 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - After fixing report promotion and verified-outcome gates, searched current source callsites: `apply_learning_to_system` is not called from production code. It is a guarded helper, not yet a live autonomous propagation loop.
 - Next work is to map canonical verified-outcome writers and consumers and connect only a well-grounded, idempotent existing path. The payment flow’s Product rollup and opportunity-confidence logic is not by itself proof of general belief/causal learning.
 - No live customer, provider, payment, spending, or revenue operation was performed.
+
+## 2026-10-18 — Collapse frontend theme overrides into the original rules
+
+- **Starting main:** `d274ed43ac201b3f7e7d45fde322dd6adec84b3b`. Source audit confirmed the light palette lived in two trailing overrides instead of the original tokens. The repeated cascade left old dark component rules and decorative pseudo-elements as hidden dependencies.
+- **In-place consolidation:** merged the green/off-white palette, radius and shadow tokens into their original declarations; updated the existing base, focus, hero, masthead, card, tag, chip, status, icon, loading, and mobile rules; removed appended light-theme blocks, the unused plate animation, and duplicated reduced-motion rules.
+- **Legibility corrections:** aligned existing EmptyState/UnavailableState, Retry, ghost button, text-link hover, section marker and homepage footer link with their actual light surfaces. The intentionally dark main footer remains dark.
+- **Regression contract:** modified `src/lib/content.test.ts` to check the original palette block and reject duplicate override blocks. PWA theme assertion now reads the same canonical token block.
+- **Verification boundary:** readback/structural assertions in the authoring step are not test execution. Run exact-SHA ForgeOS CI, secret scan and independent deployment verification, then review deployed desktop/mobile UI. No external effects occurred.
+

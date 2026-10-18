@@ -69,7 +69,7 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "card fade-in relative overflow-hidden bg-[linear-gradient(45deg,#4a4953_0%,#000_45%_100%)] px-6 py-8 text-center sm:px-10 sm:py-10",
+        "card fade-in relative overflow-hidden bg-surface-elevated px-6 py-8 text-center sm:px-10 sm:py-10",
         className,
       )}
     >
@@ -105,11 +105,11 @@ export function UnavailableState({
     <div
       role="alert"
       className={cn(
-        "fade-in rounded-card border-2 border-warning/70 bg-black p-5 shadow-md sm:p-6",
+        "fade-in rounded-card border border-warning/70 bg-surface p-5 shadow-sm sm:p-6",
         className,
       )}
     >
-      <p className="inline-flex items-center gap-2 rounded-[3px] bg-warning px-2 py-1 text-micro font-extrabold uppercase tracking-[0.14em] text-black">
+      <p className="inline-flex items-center gap-2 rounded-full border border-[#f0d5a7] bg-[#fff4df] px-2 py-1 text-micro font-extrabold uppercase tracking-[0.14em] text-[#7a4308]">
         <span className="live-dot live-dot-warning" aria-hidden="true" /> Unavailable
       </p>
       <h2 className="mt-3 text-2xl font-extrabold tracking-tight text-ink">{title}</h2>
@@ -118,7 +118,7 @@ export function UnavailableState({
         <button
           type="button"
           onClick={onRetry}
-          className="btn-secondary mt-4 inline-flex min-h-11 items-center gap-2 rounded-card border-2 border-black/70 bg-[#f5f1f1] px-4 text-sm font-extrabold text-black hover:border-accent focus-visible:border-accent"
+          className="btn-secondary mt-4 inline-flex min-h-11 items-center gap-2 rounded-card border border-line bg-white px-4 text-sm font-extrabold text-ink hover:border-accent focus-visible:border-accent"
         >
           <RefreshCw className="size-4" aria-hidden="true" />
           Retry
@@ -154,7 +154,7 @@ export function MetricTile({
       style={{ "--i": index } as React.CSSProperties}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-wheat">{label}</p>
+        <p className="text-micro font-extrabold uppercase tracking-[0.12em] text-muted">{label}</p>
         {Icon ? (
           <span className="icon-chip size-8" aria-hidden="true">
             <Icon className="size-4" />

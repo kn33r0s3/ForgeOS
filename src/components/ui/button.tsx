@@ -14,7 +14,7 @@ const buttonVariants = cva(
         // Light secondary actions use a traveling orange highlight, not the primary wipe.
         secondary:
           "btn-secondary border-2 border-black/70 bg-[#f5f1f1] text-black hover:border-accent focus-visible:border-accent hover:-translate-y-px focus-visible:-translate-y-px hover:shadow-[0_4px_0_#000] focus-visible:shadow-[0_4px_0_#000]",
-        ghost: "btn-ghost text-wheat underline-offset-4 hover:text-accent focus-visible:text-accent",
+        ghost: "btn-ghost text-ink underline-offset-4 hover:text-accent focus-visible:text-accent",
         warning:
           "btn-warning border-2 border-black/70 bg-warning text-black hover:border-black focus-visible:border-black hover:-translate-y-px focus-visible:-translate-y-px hover:shadow-[inset_5px_0_0_#000,0_4px_0_#000] focus-visible:shadow-[inset_5px_0_0_#000,0_4px_0_#000]",
       },

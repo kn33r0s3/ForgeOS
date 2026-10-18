@@ -1121,7 +1121,7 @@ function HomeFooter() {
           </p>
           <Link
             to="/about"
-            className="link-arrow text-sm font-bold text-wheat"
+            className="link-arrow text-sm font-bold text-accent"
           >
             What Hami is <ArrowRight className="inline size-4" aria-hidden="true" />
           </Link>

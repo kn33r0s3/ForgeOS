@@ -1,3 +1,14 @@
+## [FRONTEND THEME CONSOLIDATION + LIGHT-STATE CONTRAST — CODE EDITED / EXACT-HEAD VERIFICATION PENDING — 2026-10-18]
+
+- **Existing seams:** `src/styles.css` original `@theme`, primary `:root`, existing `@layer base` and component rules; `src/routes/index.tsx::HomeFooter`; `src/components/layout/text-link.tsx`, `section-marker.tsx`; `src/components/ui/button.tsx` ghost variant and `feedback.tsx` EmptyState/UnavailableState; existing `src/lib/content.test.ts`. No new file or UI component was required.
+- **Observed friction:** the light presentation depended on two CSS blocks appended at EOF, leaving duplicate color values and old dark component rules. Pale `text-wheat` was also used on light surfaces, and empty/unavailable states retained dark surfaces with low-contrast ink.
+- **In-place change:** original tokens and component rules now own the light palette, shape/shadow treatment, status/badge/control states, masthead geometry, phone adjustments and reduced-motion behavior. Superseded appended blocks and unused split-plate/pinstripe art were removed. The existing test checks one token root, one masthead rule, one reduced-motion block and the light surface/call-site contracts.
+- **User friction targeted:** one theme source to maintain; desktop navigation preserves its layout; empty/unavailable and retry states keep readable foreground/background pairs; light-page links no longer switch to a pale foreground when hovered/focused. Dark footer treatment intentionally remains.
+- **Verification:** exact-head frontend tests, typecheck, lint, build, route smoke, secrets scan and independent deployment verification must pass before the change is described as verified. No local test or rendered production check is claimed here.
+- No intake/send activation, contact, publication, payment, spend or REAL outcome was created.
+
+---
+
 ## [OUTCOME-GATED LEARNING — SOURCE EDITED / CODE CI PASSED ON PARENT, CURRENT MAIN CI PENDING — 2026-10-18]
 
 - **Existing seams:** `backend/app/services/experiment_runner.py::record_result`, `learning_engine.record_learning_from_belief_experiment`, `learning_engine.record_learning_from_experiment`, `learning_engine.apply_learning_to_system`, canonical `models.Outcome`, and existing E2E/closed-loop tests.

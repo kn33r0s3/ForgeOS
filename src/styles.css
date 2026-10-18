@@ -9,7 +9,7 @@
   --color-accent-ink: var(--primary-foreground);
   --color-wheat: var(--wheat);
   --color-slab: var(--slab);
-  --color-night: #000000;
+  --color-night: #20342b;
 
   /* Semantic tokens */
   --color-background: var(--background);
@@ -32,9 +32,9 @@
   --color-raised: var(--surface);
   --color-panel: var(--surface-elevated);
   --color-fg: var(--foreground);
-  --color-dim: #8c887f;
+  --color-dim: #58685e;
   --color-line: var(--border);
-  --color-line-strong: #5a5140;
+  --color-line-strong: #b9c9bc;
   --color-cyan: var(--primary);
   --color-cyan-dim: color-mix(in srgb, var(--primary) 14%, transparent);
   --color-cyan-hot: color-mix(in srgb, var(--primary) 22%, transparent);
@@ -63,20 +63,20 @@
   --text-kicker: 0.72rem;
 
   /* One firm 6px radius, as on KneeRose; medallions are full circles. */
-  --radius-card: 0.375rem;
-  --radius-sm: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.375rem;
-  --radius-xl: 0.375rem;
-  --radius-2xl: 0.375rem;
-  --radius-3xl: 0.5rem;
+  --radius-card: 1rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 1.75rem;
 
   --max-width-site: 76rem;
   --header-h: 4rem;
 
   /* Hard, printed shadows rather than soft glows. */
-  --shadow-sm: 2px 2px 2px 1px #000;
-  --shadow-md: 2px 5px 5px 1px rgb(0 0 0 / 0.75);
+  --shadow-sm: 0 2px 8px rgb(32 52 43 / 0.06);
+  --shadow-md: 0 8px 28px rgb(32 52 43 / 0.08);
   --shadow-border: 0 0 0 1px var(--border);
   --shadow-border-hover: 0 0 0 1px color-mix(in srgb, var(--primary) 50%, transparent);
   --shadow-glow: 0 0 0 3px color-mix(in srgb, var(--focus) 30%, transparent);
@@ -86,33 +86,34 @@
 }
 
 /*
- * Hami Systems: near-black ink, precise amber, warm neutral text, connected
- * geometry, readable type and crisp, consistent borders. Scope is universal;
- * presentation stays calm, accessible and evidence-led.
+ * Hami Systems: warm paper, readable ink, and a restrained green accent.
+ * Shared tokens keep the public experience coherent across pages and devices.
  */
 :root {
-  --background: #0b0b0b;
-  --surface: #141412;
-  --surface-elevated: #1c1a16;
-  --foreground: #ebe8e1;
-  --muted: #aaa59b;
-  --border: #332f27;
-  --primary: #ffb000;
-  --primary-foreground: #0b0b0b;
-  --secondary: #201c14;
-  --success: #72d38f;
-  --warning: #ffb000;
-  --danger: #ff6f6f;
-  --info: #9ec5ff;
-  --focus: #ffb000;
-  --wheat: #ebe8e1;
-  --slab: #d7d3c9;
-  --plate-edge: #332f27;
+  --background: #faf8f2;
+  --surface: #ffffff;
+  --surface-elevated: #f1f5ef;
+  --foreground: #20342b;
+  --muted: #58685e;
+  --border: #dce5dc;
+  --primary: #176b4d;
+  --primary-foreground: #ffffff;
+  --secondary: #eaf3ec;
+  --success: #237a4e;
+  --warning: #a85d08;
+  --danger: #b42318;
+  --info: #245c91;
+  --focus: #d97706;
+  --wheat: #f8f4e9;
+  --slab: #f2f5ed;
+  --plate-edge: #dce5dc;
+  --shadow-sm: 0 2px 8px rgb(32 52 43 / 0.06);
+  --shadow-md: 0 8px 28px rgb(32 52 43 / 0.08);
 }
 
 @layer base {
   html {
-    color-scheme: dark;
+    color-scheme: light;
     scroll-behavior: smooth;
     background: var(--background);
     color: var(--foreground);
@@ -186,12 +187,12 @@
   :where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
     outline: 2px solid var(--focus);
     outline-offset: 3px;
-    box-shadow: 0 0 0 3px #000;
+    box-shadow: 0 0 0 3px #e7f3ec;
   }
 
   ::selection {
     background: var(--primary);
-    color: #000;
+    color: #ffffff;
   }
 
   input,
@@ -210,7 +211,7 @@
     border: 2px solid #000;
     border-radius: var(--radius-card);
     background: var(--primary);
-    color: #000;
+    color: #ffffff;
     padding: 0.5rem 0.85rem;
     font-weight: 700;
   }
@@ -223,14 +224,11 @@
     max-width: var(--max-width-site);
   }
 
-  /* A quiet system grid: texture supports the message without competing with it. */
+  /* A subtle paper grain supports the content without competing with it. */
   .site-grid,
   .hero-grain {
-    background-image: repeating-linear-gradient(
-      45deg,
-      rgb(255 255 255 / 0.028) 0 1px,
-      transparent 1px 16px
-    );
+    background-image: radial-gradient(rgb(23 107 77 / 0.055) 0.7px, transparent 0.7px);
+    background-size: 18px 18px;
   }
 
   .hero-grain {
@@ -251,7 +249,7 @@
     position: absolute;
     left: 50%;
     top: 48%;
-    border: 3px solid color-mix(in srgb, var(--primary) 70%, transparent);
+    border: 3px solid rgb(23 107 77 / 0.22);
     border-radius: 999px;
     transform: translate(-50%, -50%);
   }
@@ -265,7 +263,7 @@
     width: min(82%, 23rem);
     height: min(82%, 23rem);
     border-width: 1px;
-    border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+    border-color: rgb(23 107 77 / 0.12);
   }
 
   .hero-visual {
@@ -282,8 +280,8 @@
     height: 5.5rem;
     border: 2px solid color-mix(in srgb, var(--primary) 70%, transparent);
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.18);
-    box-shadow: 0 0 0 8px rgba(255, 155, 4, 0.06);
+    background: rgb(255 255 255 / 0.5);
+    box-shadow: 0 0 0 8px rgb(23 107 77 / 0.06);
     z-index: 0;
   }
 
@@ -300,17 +298,17 @@
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
-    border: 2px solid rgba(255, 255, 255, 0.28);
+    border: 1px solid var(--border);
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.52);
+    background: rgb(255 255 255 / 0.94);
     padding: 0.5rem 0.7rem;
     font-size: 0.73rem;
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--wheat);
+    color: var(--foreground);
     backdrop-filter: blur(6px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
+    box-shadow: var(--shadow-sm);
   }
 
   .hero-badge .live-dot {
@@ -329,51 +327,52 @@
   }
 
   .surface-aside {
-    border: 2px solid var(--border);
-    border-radius: var(--radius-card);
-    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: #ffffff;
     padding: 1.1rem 1.15rem;
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-sm);
   }
 
-  /* Status tags: square-cornered stamps, not pills. */
+  /* Status pills use consistent shape and clear semantic colors. */
   .status-pill {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    border: 2px solid var(--border);
-    border-radius: 3px;
-    padding: 0.28rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.35rem 0.75rem;
     font-family: var(--font-sans);
     font-size: var(--text-micro);
     font-weight: 800;
     line-height: 1;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.025em;
     text-transform: uppercase;
   }
 
   .status-pill-accent,
   .status-pill-warning {
-    border-color: var(--primary);
-    color: #000;
-    background: var(--primary);
+    border-color: #f0d5a7;
+    color: #7a4308;
+    background: #fff4df;
   }
 
   .status-pill-success {
-    border-color: color-mix(in srgb, var(--success) 70%, transparent);
-    color: var(--success);
-    background: #000;
+    border-color: #b9dfc7;
+    color: #176b4d;
+    background: #edf8f0;
   }
 
   .status-pill-danger {
-    border-color: color-mix(in srgb, var(--danger) 70%, transparent);
-    color: var(--danger);
-    background: #000;
+    border-color: #f1c3bf;
+    color: #a4231b;
+    background: #fff0ef;
   }
 
   .status-pill-neutral {
+    border-color: var(--border);
     color: var(--muted);
-    background: #000;
+    background: #f6f7f3;
   }
 
   .metric-grid {
@@ -384,10 +383,11 @@
 
   .metric-card {
     min-height: 9.75rem;
-    border: 2px solid var(--border);
-    border-radius: var(--radius-card);
-    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: #ffffff;
     padding: 1rem;
+    box-shadow: var(--shadow-sm);
   }
 
   .loop-rail {
@@ -422,41 +422,59 @@
 
 /* ── v3 signature motifs ──────────────────────────────────────────────── */
 @layer components {
-  /*
-   * Split plate: blackletter on a hard 45deg black/orange split, with a
-   * black outline on the glyphs so the white stays legible over orange.
-   */
-  .plate {
-    position: relative;
-    isolation: isolate;
-    display: inline-block;
-    max-width: 100%;
-    border: 2px solid var(--plate-edge);
-    border-radius: var(--radius-card);
-    background: #000;
-    padding: 0.08em 0.28em 0.14em;
-    color: #fff;
-    font-family: var(--font-gothic);
-    font-weight: 700;
-    text-shadow:
-      2px 2px 0 #000,
-      -1px -1px 0 #000,
-      1px -1px 0 #000,
-      -1px 1px 0 #000;
-    box-shadow: var(--shadow-md);
+  /* The shared masthead is light; its layout and interaction live in this rule. */
+  .masthead {
+    background: #ffffff;
+    color: var(--foreground);
+    border-bottom: 1px solid var(--border);
   }
 
-  .plate::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    border-radius: inherit;
-    background: var(--primary);
-    clip-path: polygon(58% 0, 100% 0, 100% 100%, 42% 100%);
-    animation: plate-cut 700ms var(--ease-snap) both;
-    animation-delay: 120ms;
+  .masthead :where(a, button):focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 3px #e7f3ec;
   }
+
+  .masthead .mast-link {
+    display: inline-flex;
+    height: 100%;
+    align-items: center;
+    padding: 0 1.1rem;
+    font-weight: 800;
+    color: var(--foreground);
+    border-radius: 0.65rem;
+    margin: 0.35rem 0.12rem;
+    transition:
+      background-color 150ms var(--ease-out),
+      color 150ms var(--ease-out);
+  }
+
+  .masthead .mast-link:hover,
+  .masthead .mast-link[aria-current="page"] {
+    color: var(--primary);
+    background: var(--secondary);
+  }
+
+  .masthead .mast-link[aria-current="page"]::after {
+    display: none;
+  }
+
+  /* Brand plate uses the shared accent, not a second decorative color system. */
+  .plate {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 0.65rem;
+    background: var(--primary);
+    padding: 0.08em 0.28em 0.14em;
+    color: #ffffff;
+    font-family: var(--font-gothic);
+    font-weight: 700;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .plate::before { display: none; }
 
   .plate-sm {
     font-size: 1.35rem;
@@ -464,17 +482,11 @@
     box-shadow: none;
   }
 
-  a:hover > .plate::before,
-  a:focus-visible > .plate::before,
-  .plate-hover:hover::before {
-    clip-path: polygon(48% 0, 100% 0, 100% 100%, 32% 100%);
-    transition: clip-path 260ms var(--ease-snap);
-  }
-
-  /* Grey-to-black 45deg sheen, used for bands and the top of pages. */
+  /* Soft green-tinted light surfaces for bands and page tops. */
   .sheen,
   .hero-glow {
-    background: radial-gradient(ellipse at 76% 28%, rgb(255 176 0 / 0.055), transparent 45%), linear-gradient(135deg, #17150f 0%, #0b0b0b 68%);
+    background: radial-gradient(ellipse at 78% 22%, rgb(23 107 77 / 0.09), transparent 42%),
+      linear-gradient(135deg, #ffffff 0%, #f5f7ef 100%);
   }
 
   .hero-glow {
@@ -484,53 +496,28 @@
   }
 
   .sheen-crimson {
-    background: linear-gradient(135deg, #0b0b0b, rgb(255 176 0 / 0.055) 50% 100%);
+    background: linear-gradient(135deg, #ffffff, rgb(23 107 77 / 0.06) 50% 100%);
   }
 
-  /* Pinstripe frame: orange rules down both sides and fading along top and bottom. */
+  /* A quiet inset surface for grouped information. */
   .pinstripe {
-    position: relative;
-    border: 1px solid rgb(233 232 227 / 0.55);
-    border-radius: 5px;
-    background: #000;
-    padding: 1.4rem;
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    background: #ffffff;
+    padding: 1.25rem;
+    box-shadow: var(--shadow-md);
   }
 
-  .pinstripe::before,
-  .pinstripe::after {
-    content: "";
-    position: absolute;
-    pointer-events: none;
-    z-index: 1;
-  }
-
-  .pinstripe::before {
-    inset: 0.4rem;
-    background:
-      repeating-linear-gradient(90deg, var(--primary) 0 2px, transparent 2px 5px) left / 0.9rem 100% no-repeat,
-      repeating-linear-gradient(90deg, var(--primary) 0 2px, transparent 2px 5px) right / 0.9rem 100% no-repeat;
-    opacity: 0.9;
-  }
-
-  .pinstripe::after {
-    inset: 0.4rem 1.8rem;
-    background:
-      repeating-linear-gradient(0deg, var(--primary) 0 1px, transparent 1px 4px) top / 100% 0.7rem no-repeat,
-      repeating-linear-gradient(0deg, var(--primary) 0 1px, transparent 1px 4px) bottom / 100% 0.7rem no-repeat;
-    -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
-    mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
-  }
-
-  /* Medallion: orange-ringed circle for icons and numerals. */
+  /* Quiet green icon surfaces keep the glyph itself in the foreground. */
   .medallion,
   .icon-chip {
     display: inline-flex;
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    border: 3px solid var(--primary);
+    border: 3px solid #c5dfce;
     border-radius: 999px;
-    background: #000;
+    background: #edf7ef;
     color: var(--primary);
   }
 
@@ -545,14 +532,14 @@
     border-width: 2px;
   }
 
-  /* Slab: pale grey callout with black bold type. */
+  /* Soft surface for a concise callout. */
   .slab {
-    border: 2px solid #fff;
-    border-radius: var(--radius-card);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
     background: var(--slab);
-    color: #000;
+    color: var(--foreground);
     font-weight: 700;
-    box-shadow: var(--shadow-sm);
+    box-shadow: none;
   }
 
   /* Vertical grey rule between paired columns. */
@@ -563,33 +550,21 @@
     background: #aca9a9;
   }
 
-  /* Small section tag: black stamp with an orange corner cut. */
+  /* Compact section label with the shared light-surface palette. */
   .tag {
-    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    border: 2px solid var(--plate-edge);
-    border-radius: 4px;
-    background: #000;
-    padding: 0.3rem 0.65rem 0.3rem 1.35rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--secondary);
+    padding: 0.35rem 0.75rem;
     color: var(--primary);
     font-size: var(--text-micro);
     font-weight: 800;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.045em;
     text-transform: uppercase;
     line-height: 1.2;
-  }
-
-  .tag::before {
-    content: "";
-    position: absolute;
-    left: 0.4rem;
-    top: 50%;
-    width: 0.55rem;
-    height: 0.55rem;
-    background: linear-gradient(45deg, #fff 0 50%, var(--primary) 50% 100%);
-    transform: translateY(-50%);
   }
 
   .tag-muted {
@@ -609,13 +584,13 @@
     color: var(--primary);
   }
 
-  /* Cards use a quiet amber undertone; interaction is communicated by border and focus. */
+  /* Cards share one calm surface; interaction changes the border, not the layout. */
   .card {
     position: relative;
-    border: 2px solid rgb(128 128 128 / 0.4);
-    border-radius: var(--radius-card);
-    background: linear-gradient(135deg, #0b0b0b, rgb(255 176 0 / 0.045) 50% 100%), var(--surface);
-    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: #ffffff;
+    box-shadow: var(--shadow-sm);
     transition:
       border-color 150ms var(--ease-out),
       box-shadow 150ms var(--ease-out),
@@ -641,10 +616,8 @@
 
   .card-interactive:hover,
   .card-interactive:focus-within {
-    border-color: var(--primary);
-    box-shadow:
-      0 0 0 1px rgb(255 176 0 / 0.5),
-      var(--shadow-md);
+    border-color: color-mix(in srgb, var(--primary) 55%, white);
+    box-shadow: var(--shadow-md);
   }
 
   .card-interactive:hover::before,
@@ -653,28 +626,27 @@
   }
 
   .card-accent {
-    border-color: color-mix(in srgb, var(--primary) 75%, transparent);
-    background: linear-gradient(45deg, #3a3943 0%, #000 55% 100%);
+    border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+    background: linear-gradient(135deg, #edf7ef 0%, #ffffff 80%);
   }
 
-  /* Formerly frosted glass; now a solid charcoal panel with a firm edge. */
   .glass {
-    border: 2px solid rgb(255 255 255 / 0.18);
-    border-radius: var(--radius-card);
-    background: var(--surface);
-    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: #ffffff;
+    box-shadow: var(--shadow-sm);
   }
 
-  /* Filter keys: rectangular, bold, pressed = solid orange. */
+  /* Filter keys remain clear on light surfaces and share one selected state. */
   .chip {
     display: inline-flex;
     min-height: 2.75rem;
     flex-shrink: 0;
     align-items: center;
     gap: 0.55rem;
-    border: 2px solid rgb(128 128 128 / 0.5);
-    border-radius: var(--radius-card);
-    background: #000;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: #ffffff;
     padding: 0 0.95rem;
     color: var(--foreground);
     font-size: 0.875rem;
@@ -687,19 +659,20 @@
 
   .chip:hover {
     border-color: var(--primary);
-    color: var(--wheat);
+    background: var(--secondary);
+    color: var(--primary);
   }
 
   .chip[aria-pressed="true"] {
-    border-color: #000;
+    border-color: var(--primary);
     background: var(--primary);
-    color: #000;
-    box-shadow: var(--shadow-sm);
+    color: #ffffff;
+    box-shadow: none;
   }
 
   .chip-count {
     border-radius: 3px;
-    background: rgb(255 255 255 / 0.1);
+    background: rgb(0 0 0 / 0.06);
     padding: 0.1rem 0.4rem;
     font-family: var(--font-mono);
     font-size: var(--text-micro);
@@ -708,8 +681,8 @@
   }
 
   .chip[aria-pressed="true"] .chip-count {
-    background: #000;
-    color: var(--primary);
+    background: rgb(255 255 255 / 0.18);
+    color: #ffffff;
   }
 
   .scroll-fade-x {
@@ -726,7 +699,7 @@
     display: inline-block;
     width: 0.55rem;
     height: 0.55rem;
-    border: 1px solid #000;
+    border: 1px solid #ffffff;
     background: var(--success);
     box-shadow: 0 0 0 2px rgb(114 211 143 / 0.25);
     animation: lamp 2.4s steps(2, jump-none) infinite;
@@ -743,11 +716,11 @@
     animation: none;
   }
 
-  /* Loading: 45deg barber-pole stripes crawling, not a soft shimmer. */
+  /* Loading stays quiet while real content is unavailable. */
   .skeleton {
-    border-radius: 4px;
-    background: repeating-linear-gradient(45deg, #1f1d20 0 10px, #2a2830 10px 20px);
-    background-size: 28.28px 28.28px;
+    border-radius: 0.5rem;
+    background: linear-gradient(90deg, #edf1eb 25%, #f7f8f4 50%, #edf1eb 75%);
+    background-size: 200% 100%;
     animation: stripes 900ms linear infinite;
   }
 
@@ -955,6 +928,17 @@
   .btn-header-cta:focus-visible svg {
     transform: translate(2px, -2px);
   }
+
+  @media (max-width: 639px) {
+    .hero-visual::before {
+      width: 3.5rem;
+      height: 3.5rem;
+      inset: -0.5rem -0.25rem auto auto;
+    }
+    .pinstripe { padding: 1rem; }
+    .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .metric-card { min-height: 0; padding: 0.8rem; }
+  }
 }
 
 @layer components {
@@ -986,15 +970,6 @@
   }
   to {
     transform: scaleX(1);
-  }
-}
-
-@keyframes plate-cut {
-  from {
-    clip-path: polygon(100% 0, 100% 0, 100% 100%, 100% 100%);
-  }
-  to {
-    clip-path: polygon(58% 0, 100% 0, 100% 100%, 42% 100%);
   }
 }
 
@@ -1064,156 +1039,7 @@
   .fade-in,
   .skeleton,
   .live-dot,
-  .plate::before,
   .cut-rule {
     animation: none !important;
   }
-}
-
-
-/* Hami human-first visual refresh: warm, calm, welcoming, phone-first.
-   Keep existing layout contracts; soften the legacy high-contrast motifs. */
-:root {
-  --background: #faf8f2;
-  --surface: #ffffff;
-  --surface-elevated: #f1f5ef;
-  --foreground: #20342b;
-  --muted: #58685e;
-  --border: #dce5dc;
-  --primary: #176b4d;
-  --primary-foreground: #ffffff;
-  --secondary: #eaf3ec;
-  --success: #237a4e;
-  --warning: #a85d08;
-  --danger: #b42318;
-  --info: #245c91;
-  --focus: #d97706;
-  --wheat: #f8f4e9;
-  --slab: #f2f5ed;
-  --plate-edge: #dce5dc;
-  --radius-card: 1rem;
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.25rem;
-  --radius-2xl: 1.5rem;
-  --radius-3xl: 1.75rem;
-  --shadow-sm: 0 2px 8px rgb(32 52 43 / 0.06);
-  --shadow-md: 0 8px 28px rgb(32 52 43 / 0.08);
-  --shadow-border: 0 0 0 1px var(--border);
-  --shadow-border-hover: 0 0 0 1px color-mix(in srgb, var(--primary) 50%, transparent);
-}
-@layer base {
-  html { color-scheme: light; }
-  body { background: var(--background); color: var(--foreground); }
-  h1 { letter-spacing: -0.035em; }
-}
-@layer components {
-  .hero-grain, .site-grid {
-    background-image: radial-gradient(rgb(23 107 77 / 0.055) 0.7px, transparent 0.7px);
-    background-size: 18px 18px;
-  }
-  .sheen, .hero-glow {
-    background: radial-gradient(ellipse at 78% 22%, rgb(23 107 77 / 0.09), transparent 42%),
-      linear-gradient(135deg, #ffffff 0%, #f5f7ef 100%);
-  }
-  .plate {
-    border-color: var(--border);
-    border-radius: 0.65rem;
-    background: var(--primary);
-    color: #fff;
-    text-shadow: none;
-    box-shadow: var(--shadow-sm);
-  }
-  .plate::before { display: none; }
-  .pinstripe {
-    border: 1px solid var(--border);
-    border-radius: 1.25rem;
-    background: #ffffff;
-    padding: 1.25rem;
-    box-shadow: var(--shadow-md);
-  }
-  .pinstripe::before, .pinstripe::after { display: none; }
-  .tag {
-    border: 1px solid #dce5dc;
-    border-radius: 999px;
-    background: #eaf3ec;
-    padding: 0.35rem 0.75rem;
-    color: #176b4d;
-    letter-spacing: 0.045em;
-  }
-  .tag::before { display: none; }
-  .card, .glass, .surface-aside, .metric-card {
-    border: 1px solid var(--border);
-    border-radius: 1rem;
-    background: #ffffff;
-    box-shadow: var(--shadow-sm);
-  }
-  .card-interactive:hover, .card-interactive:focus-within {
-    border-color: color-mix(in srgb, var(--primary) 55%, white);
-    box-shadow: var(--shadow-md);
-  }
-  .slab { border: 1px solid var(--border); border-radius: 1rem; background: #f2f5ed; color: var(--foreground); box-shadow: none; }
-  .status-pill { border-radius: 999px; letter-spacing: 0.025em; }
-  .status-pill-accent, .status-pill-warning { border-color: #f0d5a7; color: #7a4308; background: #fff4df; }
-  .status-pill-success { border-color: #b9dfc7; color: #176b4d; background: #edf8f0; }
-  .status-pill-danger { border-color: #f1c3bf; color: #a4231b; background: #fff0ef; }
-  .status-pill-neutral { border-color: var(--border); color: var(--muted); background: #f6f7f3; }
-  .chip { border-color: var(--border); border-radius: 999px; background: #fff; color: var(--foreground); }
-  .chip:hover { background: var(--secondary); color: var(--primary); }
-  .chip[aria-pressed="true"] { border-color: var(--primary); background: var(--primary); color: #fff; box-shadow: none; }
-  .chip[aria-pressed="true"] .chip-count { background: rgb(255 255 255 / 0.18); color: #fff; }
-  .medallion, .icon-chip { border-color: #c5dfce; background: #edf7ef; color: var(--primary); }
-  .live-dot { border-color: #ffffff; }
-  .hero-rings::before { border-color: rgb(23 107 77 / 0.22); }
-  .hero-rings::after { border-color: rgb(23 107 77 / 0.12); }
-  .skeleton { background: linear-gradient(90deg, #edf1eb 25%, #f7f8f4 50%, #edf1eb 75%); background-size: 200% 100%; }
-}
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-
-/* Follow-through: keep shared public surfaces coherent with the light theme. */
-:root {
-  --color-night: #20342b;
-  --color-dim: #58685e;
-  --color-line-strong: #b9c9bc;
-  --shadow-sm: 0 2px 8px rgb(32 52 43 / 0.06);
-  --shadow-md: 0 8px 28px rgb(32 52 43 / 0.08);
-}
-/* One authoritative desktop masthead rule set, after the light-theme tokens. */
-.masthead {
-  background: #ffffff;
-  color: var(--foreground);
-  border-bottom: 1px solid var(--border);
-}
-.masthead :where(a, button):focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 3px;
-  box-shadow: 0 0 0 3px #e7f3ec;
-}
-.masthead .mast-link {
-  color: var(--foreground);
-  border-radius: 0.65rem;
-  margin: 0.35rem 0.12rem;
-}
-.masthead .mast-link:hover,
-.masthead .mast-link[aria-current="page"] {
-  color: var(--primary);
-  background: var(--secondary);
-}
-.masthead .mast-link[aria-current="page"]::after { display: none; }
-.hero-badge { border-color: var(--border); background: rgb(255 255 255 / 0.94); color: var(--foreground); box-shadow: var(--shadow-sm); }
-.hero-visual::before { background: rgb(255 255 255 / 0.5); box-shadow: 0 0 0 8px rgb(23 107 77 / 0.06); }
-@media (max-width: 639px) {
-  .hero-visual::before { width: 3.5rem; height: 3.5rem; inset: -0.5rem -0.25rem auto auto; }
-  .pinstripe { padding: 1rem; }
-  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .metric-card { min-height: 0; padding: 0.8rem; }
 }

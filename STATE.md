@@ -1,3 +1,14 @@
+## 2026-10-18 — Frontend theme consolidation and light-state contrast (verification pending)
+
+- Current `main` before this in-place refactor: `d274ed43ac201b3f7e7d45fde322dd6adec84b3b`. The frontend had a warm paper/green theme only because two appended CSS blocks at the end of `src/styles.css` overrode the original dark values. Those blocks obscured the actual source of truth and left old component styles in place.
+- **Code changes:** moved the light palette, radius/shadow values, light color scheme, focus halo, card/status/tag/chip/badge/loading treatments, masthead layout, and phone-size/reduced-motion behavior into the original token and component rules. Removed the two superseded end-of-file override blocks and obsolete plate/pinstripe pseudo-art. Restored the desktop masthead link flex geometry while consolidating its rule.
+- **Public-surface legibility:** empty and unavailable states use existing light surfaces and readable label/retry colors; homepage footer link, text-link hover, section marker and ghost button no longer use pale wheat text on light backgrounds. Intentional dark footer colors remain unchanged.
+- The existing UI regression now checks the canonical theme block, one root token block, one masthead rule, one reduced-motion rule and the public-state/call-site classes. The PWA metadata test now refers to the original token block.
+- **Verification:** all edits are in the existing files; exact-head CI, lint, typecheck, build, secret scan and independent deployment verification for the resulting SHA are still required. No local test execution or live desktop/mobile render is claimed. The previous public production page was not accessible through the current web connector, and the authenticated Vercel listing had denied access; no access boundary was bypassed.
+- No new file/component/route/dependency, branch or backup; no public post, intake/send activation, contact, publication, payment, spend or real-world outcome occurred.
+
+---
+
 ## 2026-10-18 — Public homepage UX and masthead cascade consolidation (verification pending)
 
 - **Source/test head before continuity updates:** `a12274d6606649a99ea0fa757728457e8f1e394e`. The existing `main` line now contains the public homepage and CSS/test edits; no feature branch, PR, second implementation or new file was created.
