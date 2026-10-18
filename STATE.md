@@ -374,3 +374,8 @@ Read docs/BRAIN.md, this file, QUEUE.md, AGENTS.md, HANDOFF.md, and the relevant
 - Audited current map identity: 114 rows, 114 unique IDs. Extended the existing retirement guard so linked Claims aren't deleted when a direct FK, an outgoing Claim relationship, or the existing canonical substrate source identity still depends on the row. Regression coverage includes each of those paths plus deletion of a detached duplicate.
 - No new file/table/primitive/route, no history rewrite/reset, and no production database mutation. The change prevents future importer deletion of referenced records; pre-existing orphan substrate wrappers, if any, remain unassessed and were not repaired here.
 - Full exact-head CI and deployment-verifier results are pending at the time of this state entry. The latest source SHA must be verified before calling this change green.
+
+## 2026-10-18 — Test fixture escape correction
+
+- Post-commit source inspection found the new map-revision test helper had an over-escaped newline, so its input would not be a valid single Markdown table row. Corrected the existing test helper to supply a real row terminator. This changes no application behavior.
+- Do not treat the parent commit's CI as verification of this fix. The corrected exact-head CI and deployment-verifier runs must complete before reporting green.

@@ -74,7 +74,7 @@ def _duplicate_claim_pair(db, row_id, *, older_opportunity_id=None):
 def _apply_map_revision(db, row_id):
     from app.cli.import_unknowns import import_unknowns, parse_unknown_map
 
-    unknowns = parse_unknown_map(f"| {row_id} | Newer wording? | UNKNOWN | Ask | Stakes |\\n")
+    unknowns = parse_unknown_map(f"| {row_id} | Newer wording? | UNKNOWN | Ask | Stakes |\n")
     return import_unknowns(unknowns, db, apply=True)
 
 

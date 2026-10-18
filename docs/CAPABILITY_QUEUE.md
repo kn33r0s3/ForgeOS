@@ -2189,3 +2189,9 @@ Do not reopen findings already corrected in source as if still live bugs. Do not
 - **Gap addressed:** prior cleanup only checked `EvidenceRelationship` and `Judgment`. The same `Claim` can be referenced from other mapped tables, can own other foreign-key links, and can have a generic substrate wrapper keyed by `(entity_type="claim", source_system="claims", source_id=Claim.id)`. Deleting such a row can discard a link, fail on database foreign-key enforcement, or leave a dangling canonical source identity.
 - **In-place fix:** introspect existing SQLAlchemy metadata for all inbound FKs; also protect non-null outgoing Claim FKs and existing substrate wrappers. Delete only truly detached duplicate rows. Regression tests cover inbound FK, outgoing FK, substrate wrapper, and detached duplicate. No new file/table/primitive/route. 
 - **Verification:** exact-head CI, security scan, and independent deployment verification are pending for the resulting commit. No production rows or runtime settings were manually modified. This protects future imports; it does not claim to repair potential orphaned wrappers from earlier cleanup runs.
+
+---
+
+## 2026-10-18 — Test fixture escape correction
+
+- The first commit's import path remains the only implementation. A post-commit text audit caught and corrected an over-escaped newline in the new regression fixture. Exact-head CI and deployment verification for the follow-up commit are required; the earlier run does not verify this correction.

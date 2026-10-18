@@ -636,3 +636,8 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Generalized the same existing retirement helper to reflect all inbound FKs from schema metadata, protect outgoing Claim relationships, and preserve canonical substrate identity. Added regressions for an inbound ResearchQuestion FK, an outgoing Opportunity FK, an existing canonical entity wrapper, and the original genuinely-unreferenced duplicate case.
 - This is a preventive importer/code correction. No live database was inspected or modified, and no dangling substrate wrapper from earlier history is claimed repaired. Exact-head CI/security and independent deployment verification must pass before this revision is considered verified.
 - Owner dependency removed: a future automatic map sync no longer needs a person to diagnose and repair avoidable dangling Claim references before this cleanup can run. Owner/legal/seller permissions, source clearance, and runtime observability remain separate boundaries.
+
+## 2026-10-18 — Test fixture escape correction
+
+- Post-commit source inspection found the new map-revision test helper had an over-escaped newline, so its input would not be a valid single Markdown table row. Corrected the existing test helper to supply a real row terminator. This changes no application behavior.
+- Do not treat the parent commit's CI as verification of this fix. The corrected exact-head CI and deployment-verifier runs must complete before reporting green.
