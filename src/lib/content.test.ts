@@ -456,6 +456,8 @@ describe("Hami public root", () => {
     const header = readFileSync(join(root, "src/components/layout/site-header.tsx"), "utf8");
     const footer = readFileSync(join(root, "src/components/layout/site-footer.tsx"), "utf8");
     const systemMap = readFileSync(join(root, "src/lib/hami-system.ts"), "utf8");
+    const rootRoute = readFileSync(join(root, "src/routes/__root.tsx"), "utf8");
+    const styles = readFileSync(join(root, "src/styles.css"), "utf8");
     const businesses = readFileSync(join(root, "src/routes/group.businesses.tsx"), "utf8");
     const forgeBot = readFileSync(join(root, "src/routes/forge-bot-intake.tsx"), "utf8");
     const owner = readFileSync(join(root, "src/routes/owner.tsx"), "utf8");
@@ -469,6 +471,8 @@ describe("Hami public root", () => {
     const ogSite = JSON.parse(readFileSync(join(root, "src/lib/og/site.json"), "utf8")) as {
       title?: string;
     };
+    assert.match(rootRoute, /name: "color-scheme", content: "light"/);
+    assert.match(styles, /html\s*\{\s*color-scheme:\s*light;/s);
     assert.match(home, /createFileRoute\("\/"\)/);
     assert.equal(ogSite.title, "Hami");
     assert.doesNotMatch(home, /Navigate to=/);
