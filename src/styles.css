@@ -422,53 +422,6 @@
 
 /* ── v3 signature motifs ──────────────────────────────────────────────── */
 @layer components {
-  /* The live desktop masthead is light; its links must stay readable on white. */
-  .masthead {
-    background: #ffffff;
-    color: #176b4d;
-    border-bottom: 1px solid #dce5dc;
-  }
-
-  .masthead :where(a, button):focus-visible {
-    outline-color: #176b4d;
-    box-shadow: 0 0 0 3px #e7f3ec;
-  }
-
-  .masthead .mast-link {
-    position: relative;
-    display: inline-flex;
-    height: 100%;
-    align-items: center;
-    padding: 0 1.1rem;
-    font-weight: 800;
-    color: #176b4d;
-    transition:
-      background-color 150ms var(--ease-out),
-      color 150ms var(--ease-out);
-  }
-
-  .masthead .mast-link:hover {
-    background: #edf5ef;
-    color: #104e38;
-  }
-
-  .masthead .mast-link[aria-current="page"] {
-    background: #edf5ef;
-    color: #104e38;
-  }
-
-  .masthead .mast-link[aria-current="page"]::after {
-    content: "";
-    position: absolute;
-    left: 50%;
-    bottom: -2px;
-    width: 0.75rem;
-    height: 0.75rem;
-    background: #176b4d;
-    clip-path: polygon(50% 0, 100% 100%, 0 100%);
-    transform: translateX(-50%);
-  }
-
   /*
    * Split plate: blackletter on a hard 45deg black/orange split, with a
    * black outline on the glyphs so the white stays legible over orange.
@@ -1164,15 +1117,6 @@
     background: radial-gradient(ellipse at 78% 22%, rgb(23 107 77 / 0.09), transparent 42%),
       linear-gradient(135deg, #ffffff 0%, #f5f7ef 100%);
   }
-  .masthead {
-    background: #ffffff;
-    color: var(--foreground);
-    border-bottom: 1px solid var(--border);
-  }
-  .mast-link { color: var(--foreground); border-radius: 0.65rem; margin: 0.35rem 0.12rem; }
-  .mast-link:hover { background: var(--secondary); color: var(--primary); }
-  .mast-link[aria-current="page"] { color: var(--primary); background: var(--secondary); }
-  .mast-link[aria-current="page"]::after { display: none; }
   .plate {
     border-color: var(--border);
     border-radius: 0.65rem;
@@ -1243,10 +1187,27 @@
   --shadow-sm: 0 2px 8px rgb(32 52 43 / 0.06);
   --shadow-md: 0 8px 28px rgb(32 52 43 / 0.08);
 }
-.masthead .mast-link { color: var(--foreground); }
+/* One authoritative desktop masthead rule set, after the light-theme tokens. */
+.masthead {
+  background: #ffffff;
+  color: var(--foreground);
+  border-bottom: 1px solid var(--border);
+}
+.masthead :where(a, button):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px #e7f3ec;
+}
+.masthead .mast-link {
+  color: var(--foreground);
+  border-radius: 0.65rem;
+  margin: 0.35rem 0.12rem;
+}
 .masthead .mast-link:hover,
-.masthead .mast-link[aria-current="page"] { color: var(--primary); }
-.masthead .mast-link[aria-current="page"] { background: var(--secondary); }
+.masthead .mast-link[aria-current="page"] {
+  color: var(--primary);
+  background: var(--secondary);
+}
 .masthead .mast-link[aria-current="page"]::after { display: none; }
 .hero-badge { border-color: var(--border); background: rgb(255 255 255 / 0.94); color: var(--foreground); box-shadow: var(--shadow-sm); }
 .hero-visual::before { background: rgb(255 255 255 / 0.5); box-shadow: 0 0 0 8px rgb(23 107 77 / 0.06); }
