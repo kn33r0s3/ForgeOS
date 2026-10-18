@@ -505,10 +505,10 @@ describe("Hami public root", () => {
     assert.doesNotMatch(footer, /Work board/);
     assert.match(footer, /Built in Kathmandu/);
     assert.ok(NAV.some((item) => item.label === "Home" && item.to === "/"));
-    assert.ok(NAV.some((item) => item.label === "About" && item.to === "/about"));
-    assert.ok(NAV.some((item) => item.label === "Findings" && item.to === "/discoveries"));
-    assert.ok(NAV.some((item) => item.label === "Unknowns" && item.to === "/unknowns"));
-    assert.ok(NAV.some((item) => item.label === "Experiments" && item.to === "/experiments"));
+    assert.ok(NAV.some((item) => item.label === "Find help" && item.to === "/needs"));
+    assert.ok(NAV.some((item) => item.label === "Explore" && item.to === "/discoveries"));
+    assert.ok(NAV.some((item) => item.label === "Services" && item.to === "/services"));
+    assert.ok(NAV.some((item) => item.label === "About Hami" && item.to === "/about"));
     assert.doesNotMatch(header, /Inbox tool|\/prototype\/inbox/);
     // Per HAMI CONTINUITY LAW: inbox is historical material, not public identity.
     assert.doesNotMatch(footer, /Inbox prototype/);
