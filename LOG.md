@@ -685,3 +685,10 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - `apply_learning_to_system` now requires a REAL-scope, REAL-source event with a verified REAL Outcome linked to the same canonical `Experiment`; MOCK/HYPOTHESIS and a REAL label without the outcome do not update Beliefs, source reliability, or Opportunity notes.
 - Updated existing E2E/closed-loop tests to assert honest report-only behavior and the verified-outcome path. Exact-head CI and deployment verification are pending; test database fixtures are not REAL evidence.
 - No contact, outbound message, publication, payment, spend, or revenue was performed.
+
+## 2026-10-18 — Record the remaining production learning-bridge gap
+
+- Exact-head ForgeOS CI passed on the learning fix commit `ed0bfce91cf06e08dd5f292cc9347acb12442e03`; the subsequent current head `f848b0d3741c72c21d999062fcb7fc369c9fee6b` passed independent deployment verification and secret scan, with full CI backend pytest still running when checked.
+- After fixing report promotion and verified-outcome gates, searched current source callsites: `apply_learning_to_system` is not called from production code. It is a guarded helper, not yet a live autonomous propagation loop.
+- Next work is to map canonical verified-outcome writers and consumers and connect only a well-grounded, idempotent existing path. The payment flow’s Product rollup and opportunity-confidence logic is not by itself proof of general belief/causal learning.
+- No live customer, provider, payment, spending, or revenue operation was performed.

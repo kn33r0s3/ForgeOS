@@ -6,8 +6,10 @@ Compares EXPECTED vs ACTUAL outcomes and records structured LearningEvents.
 
 This is not decorative "lesson learned" text. It:
   1. Records prediction error when measurable
-  2. Optionally adjusts linked Belief confidence
-  3. Feeds causal_engine when a belief experiment completed
+  2. Applies shared knowledge changes only when an explicitly REAL learning event
+     is linked to a verified REAL Outcome for the same canonical Experiment
+  3. Keeps legacy BeliefExperiment reports HYPOTHESIS-only until a canonical,
+     evidence-backed outcome path exists
   4. Never fabricates actuals — only records what was provided
 
 States of knowledge remain labeled:

@@ -428,3 +428,10 @@ Read docs/BRAIN.md, this file, QUEUE.md, AGENTS.md, HANDOFF.md, and the relevant
 - Added regressions in existing tests for report-only behavior, one-time recording, idempotency, label-only denial, and the verified Outcome path using isolated TEST DB fixtures. Test fixtures are not real customer/outcome evidence.
 - This preserves history, tables, routes and six primitives. It does not create a new evidence relation for BeliefExperiment; that relationship remains a future dependency, so legacy reports are not promoted into reusable REAL causal knowledge.
 - Exact-head CI, secret scan and independent deployment verification pending for this change. No contact, publication, send, spend, payment or real customer outcome was created.
+
+## 2026-10-18 — Outcome-gated learning: runtime boundary made explicit
+
+- The code commit `ed0bfce91cf06e08dd5f292cc9347acb12442e03` passed all CI jobs, including the full backend test suite. Current main `f848b0d3741c72c21d999062fcb7fc369c9fee6b` also passed independent deployment verification and secret scan; its own full CI backend suite was still running at this state write.
+- Follow-up source search found `apply_learning_to_system` has no production caller (the only callsite found is the closed-loop test). The new outcome gate is a meaningful safety fix, but it does not by itself make shared learning propagate automatically in live runtime.
+- Current verified payment paths update their own Product/Opportunity state. A general Outcome → LearningEvent → shared-state propagation path remains to be traced and wired in-place; no generic belief/causal updates should be inferred from payment alone.
+- Fixed truth status: legacy BeliefExperiment is report-only; source-kind labels without linked verified REAL Outcome are insufficient. No real customer outcome, payment, or revenue was added.

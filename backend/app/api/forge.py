@@ -249,8 +249,11 @@ def record_experiment_result(
     payload: schemas.BeliefExperimentResult,
     db: Session = Depends(get_db),
 ):
-    """Record what actually happened and push the resulting confidence
-    change into the linked belief."""
+    """Store the reported result of a planned belief test.
+
+    This legacy path does not independently verify the result or update shared
+    Belief confidence. The submitted confidence change remains report metadata.
+    """
     require_owner_api_key(request)
     try:
         experiment = experiment_runner.ExperimentRunner(db).record_result(

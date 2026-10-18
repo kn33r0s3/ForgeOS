@@ -520,8 +520,17 @@ class BeliefExperimentCreate(BaseModel):
 
 
 class BeliefExperimentResult(BaseModel):
-    result: str = Field(..., min_length=1)
-    confidence_change: float = Field(..., ge=-100, le=100)
+    result: str = Field(
+        ...,
+        min_length=1,
+        description="Owner-reported result; completion is not independent verification.",
+    )
+    confidence_change: float = Field(
+        ...,
+        ge=-100,
+        le=100,
+        description="Reported confidence adjustment only; this endpoint does not apply it to shared Belief confidence.",
+    )
 
 
 class BeliefExperimentOut(BaseModel):
@@ -531,8 +540,12 @@ class BeliefExperimentOut(BaseModel):
     belief_id: int
     hypothesis: str
     method: str
-    result: Optional[str]
-    confidence_change: Optional[float]
+    result: Optional[str] = Field(
+        description="Owner-reported result; completed means entered, not independently verified.",
+    )
+    confidence_change: Optional[float] = Field(
+        description="Reported confidence adjustment; it has not been applied to shared Belief confidence.",
+    )
     status: str
     created_at: datetime
 
