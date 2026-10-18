@@ -96,7 +96,18 @@ describe("Hami public content", () => {
 
   it("names Hami without publishing compatibility names as product identities", () => {
     assert.equal(SITE.name, "Hami");
-    assert.equal(SITE.themeColor, "#0B0B0B");
+    assert.equal(SITE.themeColor, "#FAF8F2");
+    const manifest = JSON.parse(readFileSync(join(root, "public/manifest.webmanifest"), "utf8")) as {
+      theme_color?: string;
+      background_color?: string;
+    };
+    const styles = readFileSync(join(root, "src/styles.css"), "utf8");
+    const lightThemeStart = styles.lastIndexOf("/* Hami human-first visual refresh");
+    const lightTheme = styles.slice(lightThemeStart, lightThemeStart + 900);
+    assert.ok(lightThemeStart >= 0, "the existing light-theme token block must be present");
+    assert.match(lightTheme, /--background:\s*#faf8f2;/);
+    assert.equal(manifest.theme_color, SITE.themeColor);
+    assert.equal(manifest.background_color, SITE.themeColor);
     assert.equal(SITE.tagline, "Discover what matters. Understand it. Act on it.");
     const rootRoute = readFileSync(join(root, "src/routes/__root.tsx"), "utf8");
     assert.match(rootRoute, /areaServed: "Worldwide"/);
