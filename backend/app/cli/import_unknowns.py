@@ -186,18 +186,12 @@ def _claim_has_references(db, models, claim) -> bool:
     ):
         return True
 
-    # The canonical substrate uses a stable polymorphic source ref rather than
-    # a SQL foreign key. Preserve any Claim already represented in that graph.
-    substrate_ref = (
-        db.query(models.SubstrateEntity.id)
-        .filter_by(
-            entity_type="claim",
-            source_system=claim_table.name,
-            source_id=str(claim.id),
-        )
-        .first()
-    )
-    if substrate_ref is not None:
+    # Delegate both modern source-keyed wrappers and older canonical_ref
+    # wrappers to the substrate's canonical identity lookup. Keep identity
+    # compatibility rules in one place rather than duplicating them here.
+    from app.services import world_graph
+
+    if world_graph.find_canonical_entity(db, "claim", claim.id) is not None:
         return True
 
     # Discover all inbound Claim FKs from mapped schema metadata. This covers

@@ -2195,3 +2195,10 @@ Do not reopen findings already corrected in source as if still live bugs. Do not
 ## 2026-10-18 — Test fixture escape correction
 
 - The first commit's import path remains the only implementation. A post-commit text audit caught and corrected an over-escaped newline in the new regression fixture. Exact-head CI and deployment verification for the follow-up commit are required; the earlier run does not verify this correction.
+
+---
+
+## 2026-10-18 — Centralize canonical Claim identity lookup
+
+- Canonical substrate identity is owned by `backend/app/services/world_graph.py::find_canonical_entity`, which supports both source-keyed identity and legacy `canonical_ref` fallback. `_claim_has_references` must call this shared seam; do not reimplement a narrower identity query.
+- Added the legacy-wrapper regression to the existing unknown-sync tests. No new architecture. Verify the exact head after this correction; the previous queued CI does not include it.

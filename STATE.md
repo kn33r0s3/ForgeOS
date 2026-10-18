@@ -379,3 +379,9 @@ Read docs/BRAIN.md, this file, QUEUE.md, AGENTS.md, HANDOFF.md, and the relevant
 
 - Post-commit source inspection found the new map-revision test helper had an over-escaped newline, so its input would not be a valid single Markdown table row. Corrected the existing test helper to supply a real row terminator. This changes no application behavior.
 - Do not treat the parent commit's CI as verification of this fix. The corrected exact-head CI and deployment-verifier runs must complete before reporting green.
+
+## 2026-10-18 — Centralize canonical Claim identity lookup
+
+- Follow-up source audit found that canonical Claim identity lookup supports both source-keyed wrappers and legacy `canonical_ref` wrappers with no source key. The importer guard now calls the existing `world_graph.find_canonical_entity()` seam instead of reimplementing only the new identity shape.
+- Added a regression for a legacy wrapper and retained the existing modern wrapper regression. No new service/file/table/primitive; identity interpretation stays centralized in the existing world graph.
+- Exact-head CI and independent deployment verification remain pending; prior runs do not verify this correction.

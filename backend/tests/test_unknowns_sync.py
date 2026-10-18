@@ -139,3 +139,34 @@ def test_sync_preserves_claim_with_canonical_substrate_identity(db):
     assert stats["retired_dupes"] == 0
     assert db.get(models.Claim, old.id) is not None
     assert db.get(models.SubstrateEntity, entity.id).source_id == str(old.id)
+
+
+def test_sync_preserves_legacy_canonical_ref_wrapper(db):
+    import json
+
+    from app.services import world_graph
+
+    old, _new = _duplicate_claim_pair(db, "D13")
+    legacy_attributes = json.dumps(
+        {"canonical_ref": {"entity_type": "claim", "entity_id": old.id}},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    entity = models.SubstrateEntity(
+        entity_type="claim",
+        display_name="Legacy canonical claim wrapper",
+        attributes=legacy_attributes,
+        created_by="legacy_test",
+        source_system=None,
+        source_id=None,
+        identity_key=None,
+    )
+    db.add(entity)
+    db.commit()
+
+    assert world_graph.find_canonical_entity(db, "claim", old.id).id == entity.id
+    stats = _apply_map_revision(db, "D13")
+
+    assert stats["retired_dupes"] == 0
+    assert db.get(models.Claim, old.id) is not None
+    assert db.get(models.SubstrateEntity, entity.id).attributes == legacy_attributes

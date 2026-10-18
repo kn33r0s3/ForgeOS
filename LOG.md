@@ -641,3 +641,8 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 
 - Post-commit source inspection found the new map-revision test helper had an over-escaped newline, so its input would not be a valid single Markdown table row. Corrected the existing test helper to supply a real row terminator. This changes no application behavior.
 - Do not treat the parent commit's CI as verification of this fix. The corrected exact-head CI and deployment-verifier runs must complete before reporting green.
+
+## 2026-10-18 — Centralize canonical Claim identity lookup
+
+- Re-read `world_graph.find_canonical_entity()` before finalizing importer safety. It deliberately recognizes old `canonical_ref` wrappers in addition to current source-system/source-id wrappers. Replaced the duplicate check's hand-coded modern-only query with this shared function and added a legacy-wrapper regression.
+- This avoids duplicating a historical compatibility rule in the importer. Exact-head checks are pending; no production database was manually read or changed.
