@@ -131,11 +131,23 @@ describe("Hami public content", () => {
     assert.doesNotMatch(home, /className="border-b border-line bg-surface" aria-hidden="true"/);
   });
 
-  it("keeps desktop navigation readable on the light masthead", () => {
+  it("keeps desktop navigation readable through the final light-theme cascade", () => {
     const styles = readFileSync(join(root, "src/styles.css"), "utf8");
-    assert.match(styles, /\.masthead \.mast-link\s*\{[^}]*color:\s*#176b4d;/s);
-    assert.match(styles, /\.masthead \.mast-link:hover\s*\{[^}]*background:\s*#edf5ef;[^}]*color:\s*#104e38;/s);
-    assert.match(styles, /\.masthead \.mast-link\[aria-current="page"\]\s*\{[^}]*color:\s*#104e38;/s);
+    const themeStart = styles.lastIndexOf("/* Hami human-first visual refresh");
+    const themeEnd = styles.indexOf("/* Follow-through: keep shared public surfaces coherent with the light theme. */", themeStart);
+    const mastheadStart = styles.indexOf("/* One authoritative desktop masthead rule set, after the light-theme tokens. */");
+    const themeTokens = styles.slice(themeStart, themeEnd);
+    const masthead = styles.slice(mastheadStart);
+
+    assert.ok(themeStart >= 0 && themeEnd > themeStart && mastheadStart > themeEnd, "light theme tokens must precede the final masthead rules");
+    assert.match(themeTokens, /--foreground:\s*#20342b;/);
+    assert.match(themeTokens, /--primary:\s*#176b4d;/);
+    assert.match(themeTokens, /--secondary:\s*#eaf3ec;/);
+    assert.equal((styles.match(/^\s*\.masthead\s*\{/gm) ?? []).length, 1, "keep one authoritative masthead block");
+    assert.match(masthead, /\.masthead\s*\{[^}]*background:\s*#ffffff;[^}]*color:\s*var\(--foreground\);/s);
+    assert.match(masthead, /\.masthead \.mast-link\s*\{[^}]*color:\s*var\(--foreground\);/s);
+    assert.match(masthead, /\.masthead \.mast-link:hover,\s*\.masthead \.mast-link\[aria-current="page"\]\s*\{[^}]*color:\s*var\(--primary\);[^}]*background:\s*var\(--secondary\);/s);
+    assert.doesNotMatch(styles, /color:\s*#f4efe6;/, "old light text must not return to the light header");
   });
 
   it("surfaces live evidence before system explanation and links value-seekers to the public board", () => {
