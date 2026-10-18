@@ -1,3 +1,16 @@
+## [OUTCOME-GATED LEARNING — CODE EDITED / EXACT-HEAD CI PENDING — 2026-10-18]
+
+- **Existing seams inspected:** `backend/app/services/experiment_runner.py::record_result`, `learning_engine.record_learning_from_belief_experiment`, `learning_engine.apply_learning_to_system`, `models.Outcome`, and the existing E2E/closed-loop tests.
+- **Defect:** the legacy BeliefExperiment report changed shared Belief confidence and CausalKnowledge despite having no canonical verified Outcome/Evidence link; the companion learning helper could apply the same confidence change a second time. Generic write-back also accepted a `source_kind=REAL` label without checking for a linked verified Outcome.
+- **Changes:** BeliefExperiment retains the submitted result and proposed delta but does not mutate shared belief confidence or causal knowledge. Its companion event is stored as `HYPOTHESIS`, bound to the original hypothesis/result, and idempotent; the proposed delta is not recorded as applied. Generic learning write-back now requires `data_scope=REAL`, `source_kind=REAL`, the same canonical `Experiment`, and a linked `Outcome` that passes the existing verified-REAL filters.
+- **Preserved:** existing tables, routes and primitives; historical rows are not rewritten. The route's status still means “result entered”, not “independently verified”.
+- **Owner work removed:** repeated manual cleanup/repair of inflated belief confidence after duplicate processing. No external action or owner setting changed.
+- **Next dependency:** a future evidence-backed learning workflow for legacy BeliefExperiment records would need an explicit relationship to canonical evidence/outcomes; do not coerce the current free-text result into that relationship.
+- **Verification:** added regressions for planned-result rejection, idempotency, HYPOTHESIS-only recording, report-only state preservation, label-only denial, and verified-Outcome write-back. Full exact-head CI and deploy verification pending.
+- **External effects:** no contact, post, send, spend, payment, revenue entry, or live customer outcome occurred.
+
+---
+
 ## [COGNITIVE PROVIDER-FORMAT FEEDBACK — SOURCE EDITED / EXACT-HEAD CI PENDING — 2026-10-18]
 
 - Follow-up audit found provider-adapter rejections (invalid JSON, envelope, count, or item type) occurred before the shared Pydantic validator and previously retained no safe failure category.

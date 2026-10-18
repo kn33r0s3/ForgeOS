@@ -16,13 +16,15 @@ States of knowledge remain labeled:
 
 from __future__ import annotations
 
+import math
+
 from typing import Optional
 
 from sqlalchemy.orm import Session
 
 from app import evidence_source, models
 from app.models import utcnow
-from app.services import belief_engine, causal_engine
+from app.services import belief_engine
 
 
 
@@ -105,47 +107,75 @@ def record_learning_from_belief_experiment(
     lesson: str,
     confidence_delta: float,
 ) -> models.LearningEvent:
-    """After a BeliefExperiment result is recorded, create LearningEvent
-    and apply confidence change to the Belief."""
+    """Record an unverified BeliefExperiment report without applying it.
+
+    The legacy BeliefExperiment table has no canonical verified-Outcome link.
+    Therefore this event is HYPOTHESIS-only: it cannot update shared Belief
+    confidence, source reliability, opportunity scores, or reusable causal
+    knowledge. A later verified outcome must use the canonical Experiment /
+    Outcome path. The recorded hypothesis and result are immutable.
+    """
     bexp = db.query(models.BeliefExperiment).filter_by(id=belief_experiment_id).first()
     if not bexp:
         raise ValueError(f"BeliefExperiment {belief_experiment_id} not found")
+    if bexp.status != "completed" or not (bexp.result or "").strip():
+        raise ValueError("A completed BeliefExperiment result must be recorded before learning")
+    if (prediction or "").strip() != (bexp.hypothesis or "").strip():
+        raise ValueError("Learning prediction must match the experiment's pre-recorded hypothesis")
+    if (actual or "").strip() != (bexp.result or "").strip():
+        raise ValueError("Learning actual must match the persisted reported result")
+    if not (lesson or "").strip():
+        raise ValueError("A learning note is required")
+    if bexp.confidence_change is None or not math.isfinite(float(bexp.confidence_change)):
+        raise ValueError("BeliefExperiment has no finite reported confidence assessment")
+    if (
+        isinstance(confidence_delta, bool)
+        or not isinstance(confidence_delta, (int, float))
+        or not math.isfinite(float(confidence_delta))
+        or not math.isclose(float(confidence_delta), float(bexp.confidence_change), rel_tol=0.0, abs_tol=1e-9)
+    ):
+        raise ValueError("Confidence assessment must match the value recorded with the result")
+
+    existing = (
+        db.query(models.LearningEvent)
+        .filter_by(belief_experiment_id=belief_experiment_id)
+        .order_by(models.LearningEvent.id.asc())
+        .first()
+    )
+    if existing is not None:
+        if (
+            existing.prediction == bexp.hypothesis
+            and existing.actual == bexp.result
+            and existing.lesson == lesson.strip()
+            and existing.source_kind == evidence_source.HYPOTHESIS
+            and existing.confidence_delta is None
+            and not existing.belief_update_applied
+        ):
+            return existing
+        raise ValueError(
+            "A learning record already exists for this BeliefExperiment; preserve history instead of duplicating it"
+        )
 
     event = models.LearningEvent(
         belief_experiment_id=belief_experiment_id,
         belief_id=bexp.belief_id,
-        prediction=prediction,
-        actual=actual,
-        lesson=lesson,
-        confidence_delta=confidence_delta,
-        error_type="confirmed" if confidence_delta > 0 else ("overestimate" if confidence_delta < 0 else "qualitative_miss"),
+        prediction=bexp.hypothesis,
+        actual=bexp.result,
+        lesson=lesson.strip(),
+        prediction_error=None,
+        error_type=None,
+        confidence_delta=None,
         belief_update_applied=False,
+        data_scope="REAL",
+        source_kind=evidence_source.HYPOTHESIS,
     )
-    db.add(event)
-    db.commit()
-    db.refresh(event)
-
-    # Apply belief update
-    be = belief_engine.BeliefEngine(db)
-    belief = be.get_belief(bexp.belief_id)
-    if belief and confidence_delta != 0:
-        be.adjust_confidence(belief, confidence_delta, reason="learning_event", experiment_id=None)
-        event.belief_update_applied = True
+    try:
+        db.add(event)
         db.commit()
         db.refresh(event)
-
-    # Structured causal knowledge
-    try:
-        causal_engine.record_causal_outcome(
-            db,
-            hypothesis=bexp.hypothesis or prediction,
-            method=bexp.method or "belief_experiment",
-            result=actual,
-            belief_id=bexp.belief_id,
-        )
     except Exception:
-        pass  # non-blocking
-
+        db.rollback()
+        raise
     return event
 
 
@@ -205,8 +235,20 @@ def apply_learning_to_system(
     """
     changes = {"belief_updated": False, "source_nudged": False, "opportunity_noted": False}
 
-    if event.data_scope == "SANDBOX":
-        return changes  # Sandbox learning must not train shared REAL beliefs/sources.
+    if event.data_scope != "REAL" or not evidence_source.is_real(event.source_kind):
+        return changes  # TEST/MOCK/HYPOTHESIS never changes shared REAL knowledge.
+    if event.experiment_id is None:
+        return changes  # A source-kind label without an Outcome link is not proof.
+    verified_outcome = (
+        db.query(models.Outcome.id)
+        .filter(
+            models.Outcome.experiment_id == event.experiment_id,
+            *evidence_source.verified_real_outcome_filters(models.Outcome),
+        )
+        .first()
+    )
+    if verified_outcome is None:
+        return changes  # REAL label alone cannot authorize learning.
 
     # Belief confidence already handled in record_learning_from_belief_experiment
     if event.belief_id and event.confidence_delta and not event.belief_update_applied:

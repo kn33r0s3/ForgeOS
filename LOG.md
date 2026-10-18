@@ -677,3 +677,11 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 
 - Extended the existing cognitive retry feedback to cover model-format failures caught before Pydantic validation: malformed JSON, envelope, proposal count, non-object item, or non-list output. The feedback remains a fixed enum, never raw response text.
 - Added a no-network fake-adapter test with no evidence fixture. Source/test edits only, no new service or primitive. Exact-head verification is required; semantic/factual verification remains a separate outstanding capability.
+
+## 2026-10-18 — Outcome-gated learning and removal of duplicate report updates
+
+- Source history for `experiment_runner.py` already records a 2026-10-05 fix preventing re-recording a BeliefExperiment result. The adjacent `record_learning_from_belief_experiment` still applied confidence updates and CausalKnowledge from free text; generic write-back accepted a REAL label without a verified Outcome.
+- Repaired the existing seam: BeliefExperiment result entry now persists a report/proposed delta only. The companion event must match the pre-recorded hypothesis and result, is HYPOTHESIS-labelled, is idempotent, and cannot update shared state. No historical row was rewritten.
+- `apply_learning_to_system` now requires a REAL-scope, REAL-source event with a verified REAL Outcome linked to the same canonical `Experiment`; MOCK/HYPOTHESIS and a REAL label without the outcome do not update Beliefs, source reliability, or Opportunity notes.
+- Updated existing E2E/closed-loop tests to assert honest report-only behavior and the verified-outcome path. Exact-head CI and deployment verification are pending; test database fixtures are not REAL evidence.
+- No contact, outbound message, publication, payment, spend, or revenue was performed.

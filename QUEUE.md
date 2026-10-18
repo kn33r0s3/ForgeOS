@@ -43,6 +43,13 @@ The manual repair-shop payment endpoint remains fail-closed for REAL scope. The 
 
 ## P0 — Verify difference-guided learning in the existing loop
 
+- **Integrity fix added on current main lineage:** legacy BeliefExperiment result entry persists only a report/proposed delta; it no longer moves shared Belief confidence or writes reusable CausalKnowledge without a canonical verified link. Its companion LearningEvent is HYPOTHESIS-labelled, bound to stored hypothesis/result, and idempotent.
+- **Canonical write-back tightened:** `apply_learning_to_system` requires a REAL-scope, REAL-source event with a matching verified REAL Outcome for the same canonical Experiment. A label alone, MOCK/TEST/HYPOTHESIS report, or missing Outcome cannot change shared knowledge.
+- **Regression coverage:** report-only path, one event per report, no duplicate confidence application, unverified-label denial, and verified-Outcome write-back using isolated test fixtures. Test fixtures are not real customer or revenue evidence.
+- **Still required:** an evidence relationship for the legacy BeliefExperiment model if that workflow is ever to affect shared knowledge; actual provider/runtime evaluation and real-world outcomes remain unverified.
+
+## P0 — Verify difference-guided learning in the existing loop
+
 - **Code increment on the current main line:** schema-verifier failures in the existing `cognitive_worker` are reduced to allow-listed field/error signatures, persisted on the existing rejection event, and fed into the same task's next Ollama attempt through `CognitiveTaskContext`. Raw rejected output is not retained.
 - **Regression added:** an evidence-free TEST provider violates `execution_authorized=false`; the next attempt receives the deterministic signature and remains PROPOSED/non-executable. No synthetic REAL evidence record is needed; this proves only retry feedback wiring when exact-head CI passes.
 - **Additional boundary fix:** provider-adapter rejects for malformed JSON/envelope/count/item type now contribute allow-listed signatures too; raw rejected text is not persisted or forwarded.

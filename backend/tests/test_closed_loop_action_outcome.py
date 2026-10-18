@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 os.environ["AI_PROVIDER"] = "mock"
 
 import pytest
-from app import models
+from app import evidence_source, models
 from app.services.observer_engine import ObserverEngine
 from app.services import (
     forge_loop,
@@ -115,13 +115,29 @@ def test_decision_action_outcome_learning(db):
     assert cmp["expected"] == 6.0
     assert cmp["actual"] == 3.0
 
-    # Learning changes system
+    # A manual/reported Outcome defaults to MOCK. It may be stored, but it
+    # cannot update shared Belief confidence, source reliability or opportunity
+    # priorities without a linked, verified REAL Outcome.
+    experiment_id = _ensure_experiment(db, opp.id)
+    with pytest.raises(ValueError, match="verified REAL outcome"):
+        learning_engine.record_learning_from_experiment(
+            db,
+            experiment_id=experiment_id,
+            prediction="At least 6 of 10 confirm weekly loss",
+            actual="3 of 10 confirmed",
+            lesson="Problem may be less universal; evidence needs verification.",
+            prediction_error=-0.5,
+            error_type="overestimate",
+            confidence_delta=-10.0,
+            source_kind=evidence_source.REAL,
+        )
+
     event = learning_engine.record_learning_from_experiment(
         db,
-        experiment_id=_ensure_experiment(db, opp.id),
+        experiment_id=experiment_id,
         prediction="At least 6 of 10 confirm weekly loss",
         actual="3 of 10 confirmed",
-        lesson="Problem real but less universal; WhatsApp already partial substitute",
+        lesson="Reported result only; verification is still required.",
         prediction_error=-0.5,
         error_type="overestimate",
         confidence_delta=-10.0,
@@ -130,14 +146,78 @@ def test_decision_action_outcome_learning(db):
     event.opportunity_id = opp.id
     db.commit()
 
+    confidence_before_learning = belief.confidence_score
+    plan_before_learning = opp.validation_plan
     changes = learning_engine.apply_learning_to_system(db, event)
     db.refresh(belief)
-    # Confidence should have moved if delta applied
-    assert event.id is not None
-    assert changes["belief_updated"] or event.belief_update_applied or belief.confidence_score != conf_before or True
-    # Opportunity validation_plan should note learning
     db.refresh(opp)
-    assert opp.validation_plan is None or "LEARNING" in (opp.validation_plan or "") or changes["opportunity_noted"] or True
+    assert event.id is not None
+    assert event.source_kind == evidence_source.MOCK
+    assert changes == {"belief_updated": False, "source_nudged": False, "opportunity_noted": False}
+    assert belief.confidence_score == confidence_before_learning
+    assert opp.validation_plan == plan_before_learning
+
+    # Changing only the source label is still insufficient: this event needs
+    # a linked verified REAL Outcome for the same canonical Experiment.
+    label_only = models.LearningEvent(
+        experiment_id=experiment_id,
+        belief_id=belief.id,
+        opportunity_id=opp.id,
+        prediction="At least 6 of 10 confirm weekly loss",
+        actual="3 of 10 confirmed",
+        lesson="A source label is not an outcome.",
+        confidence_delta=-10.0,
+        error_type="overestimate",
+        data_scope="REAL",
+        source_kind=evidence_source.REAL,
+    )
+    db.add(label_only)
+    db.commit()
+    changes = learning_engine.apply_learning_to_system(db, label_only)
+    db.refresh(belief)
+    db.refresh(opp)
+    assert changes == {"belief_updated": False, "source_nudged": False, "opportunity_noted": False}
+    assert belief.confidence_score == confidence_before_learning
+    assert opp.validation_plan == plan_before_learning
+
+    # This isolated TEST-database record exercises the positive authorization
+    # path only; it is not external evidence or real business data.
+    verified_outcome = models.Outcome(
+        experiment_id=experiment_id,
+        outcome_type="ACTUAL_RESPONSE",
+        actual_value=3.0,
+        unit="count",
+        qualitative_result="3 of 10 confirmed",
+        source="independent_test_fixture",
+        success=False,
+        verification_state="VERIFIED",
+        data_scope="REAL",
+        source_kind=evidence_source.REAL,
+    )
+    db.add(verified_outcome)
+    db.commit()
+
+    real_event = learning_engine.record_learning_from_experiment(
+        db,
+        experiment_id=experiment_id,
+        prediction="At least 6 of 10 confirm weekly loss",
+        actual="3 of 10 confirmed",
+        lesson="Verified test fixture: fewer confirmed than expected.",
+        prediction_error=-0.5,
+        error_type="overestimate",
+        confidence_delta=-10.0,
+        source_kind=evidence_source.REAL,
+    )
+    real_event.belief_id = belief.id
+    real_event.opportunity_id = opp.id
+    db.commit()
+    changes = learning_engine.apply_learning_to_system(db, real_event)
+    db.refresh(belief)
+    db.refresh(opp)
+    assert changes["belief_updated"] is True
+    assert belief.confidence_score == max(0.0, round(confidence_before_learning - 10.0, 1))
+    assert changes["opportunity_noted"] is True
+    assert "LEARNING" in (opp.validation_plan or "")
 
     assert db.query(models.Action).count() >= 1
     assert db.query(models.Outcome).count() >= 1

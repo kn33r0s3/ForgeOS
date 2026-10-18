@@ -579,9 +579,12 @@ class IntelligenceCacheEntry(Base):
 
 
 class BeliefExperiment(Base):
-    """A real-world test of a Belief (distinct from the existing
-    Experiment table, which tests Opportunities). Recording a result
-    feeds confidence_change back into the linked Belief."""
+    """A planned belief test and its owner-reported result.
+
+    This legacy model has no canonical verified-Outcome/Evidence link.
+    Its result and confidence_change are therefore report fields only and
+    must not mutate shared belief confidence or reusable causal knowledge.
+    """
 
     __tablename__ = "belief_experiments"
 
@@ -590,8 +593,8 @@ class BeliefExperiment(Base):
     hypothesis = Column(Text, nullable=False)
     method = Column(Text, nullable=False)
     result = Column(Text, nullable=True)
-    confidence_change = Column(Float, nullable=True)
-    status = Column(String, nullable=False, default="planned")  # "planned" | "completed"
+    confidence_change = Column(Float, nullable=True)  # reported proposal only; not an applied confidence change
+    status = Column(String, nullable=False, default="planned")  # planned | completed (result entered, not evidence-verified)
     created_at = Column(DateTime, default=utcnow)
 
 

@@ -22,10 +22,12 @@ Uses real DB and real application logic. No fake success values.
 import os
 import sys
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
-from app import models
+from app import evidence_source, models
 from app.services.observer_engine import ObserverEngine
 from app.services import (
     forge_loop,
@@ -104,12 +106,28 @@ def test_full_intelligence_loop(db):
     runner = ExperimentRunner(db)
     bexp = runner.create_experiment(
         belief_id=belief.id,
-        hypothesis="Restaurants experiencing paper-ticket friction will acknowledge the problem in a short interview.",
+        hypothesis="At least 6 of 10 restaurants confirm weekly paper-ticket loss.",
         method="Contact 10 restaurants; count how many confirm weekly ticket loss.",
     )
     assert bexp.status == "planned"
 
-    # Record result: ACTUAL outcome weaker than a strong prediction would imply
+    lesson = "The problem may be less universal than the first signal cluster suggested."
+    # Planned hypothesis has not produced a result and cannot create a learning record.
+    with pytest.raises(ValueError, match="result must be recorded"):
+        learning_engine.record_learning_from_belief_experiment(
+            db,
+            bexp.id,
+            prediction=bexp.hypothesis,
+            actual="",
+            lesson=lesson,
+            confidence_delta=0.0,
+        )
+    assert db.query(models.LearningEvent).filter_by(belief_experiment_id=bexp.id).count() == 0
+
+    confidence_before_report = belief.confidence_score
+    causal_count_before_report = db.query(models.CausalKnowledge).count()
+
+    # This legacy endpoint stores a report, not a verified outcome.
     updated = runner.record_result(
         bexp.id,
         result="Contacted 10; 3 confirmed weekly ticket loss; 2 were unsure; 5 said they already use WhatsApp orders.",
@@ -118,24 +136,51 @@ def test_full_intelligence_loop(db):
     assert updated.status == "completed"
     assert updated.result
     assert updated.confidence_change == -8.0
-
-    # Belief confidence should have moved
     db.refresh(belief)
-    conf_after = belief.confidence_score
+    assert belief.confidence_score == confidence_before_report
+    assert db.query(models.CausalKnowledge).count() == causal_count_before_report
 
-    # --- 5. LEARNING (expected vs actual) ---
+    # A report is stored as HYPOTHESIS and must not affect shared knowledge.
     event = learning_engine.record_learning_from_belief_experiment(
         db,
         bexp.id,
-        prediction="At least 6 of 10 restaurants confirm weekly paper-ticket loss.",
-        actual="Only 3 of 10 confirmed; 5 already use WhatsApp.",
-        lesson="Problem exists but is less universal than signal cluster suggested; digital alternatives already partial.",
-        confidence_delta=-5.0,
+        prediction=bexp.hypothesis,
+        actual=updated.result,
+        lesson=lesson,
+        confidence_delta=-8.0,
     )
     assert event.id is not None
-    assert event.prediction.startswith("At least 6")
-    assert "3 of 10" in event.actual
-    assert event.belief_update_applied is True
+    assert event.prediction == bexp.hypothesis
+    assert event.actual == updated.result
+    assert event.source_kind == evidence_source.HYPOTHESIS
+    assert event.confidence_delta is None
+    assert event.error_type is None
+    assert event.belief_update_applied is False
+
+    # Replay is idempotent; a different proposed delta cannot be attached retroactively.
+    same_event = learning_engine.record_learning_from_belief_experiment(
+        db,
+        bexp.id,
+        prediction=bexp.hypothesis,
+        actual=updated.result,
+        lesson=lesson,
+        confidence_delta=-8.0,
+    )
+    assert same_event.id == event.id
+    assert db.query(models.LearningEvent).filter_by(belief_experiment_id=bexp.id).count() == 1
+    with pytest.raises(ValueError, match="Confidence assessment"):
+        learning_engine.record_learning_from_belief_experiment(
+            db,
+            bexp.id,
+            prediction=bexp.hypothesis,
+            actual=updated.result,
+            lesson=lesson,
+            confidence_delta=-5.0,
+        )
+
+    db.refresh(belief)
+    assert belief.confidence_score == confidence_before_report
+    assert db.query(models.CausalKnowledge).count() == causal_count_before_report
 
     # Numeric comparison utility
     cmp = learning_engine.compare_expected_vs_actual_numeric(expected=6.0, actual=3.0)

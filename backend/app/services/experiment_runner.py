@@ -1,41 +1,24 @@
 """
-EXPERIMENT RUNNER (belief experiments)
-========================================
+EXPERIMENT RUNNER (belief-experiment reports)
+=============================================
 
-Runs real-world tests of Beliefs — the strongest form of evidence
-Forge can get: not "signals suggest X" but "we tried X and here's what
-happened."
+This legacy path records the owner-reported result of a planned belief test.
+The current BeliefExperiment model has no link to a canonical verified Outcome
+or Evidence row. Therefore a submitted result and confidence_change are only
+a report and a proposed adjustment: they must not update shared Belief
+confidence or create reusable CausalKnowledge. Keep the history here; promote
+learning only through the existing evidence-backed outcome path.
 
-    Belief: "Reducing response time increases small business revenue"
-        |
-        v
-    BeliefExperiment: hypothesis + method (e.g. "build an AI phone
-                       assistant MVP and measure signups")
-        |
-        v
-    record_result(): result text + confidence_change
-        |
-        |--> Belief.confidence_score updated via BeliefEngine
-        |
-        v
-    causal_engine.record_causal_outcome(): the raw hypothesis/method/
-                       result triple becomes structured, reusable
-                       causal knowledge (condition -> action -> outcome)
-                       — see causal_engine.py
-
-This is a separate table/flow from the existing `Experiment` model in
-models.py, which tests Opportunities (business ideas), not Beliefs
-(hypotheses about reality). Keeping them separate avoids overloading
-one table with two different meanings — see models.py docstring for
-why. Forge doesn't run experiments automatically in v0.1; this module
-just gives beliefs a place to be tested and the result fed back in.
+This is separate from the canonical `Experiment` model, which links to
+Outcome and LearningEvent records and has an explicit REAL/verification gate.
 """
+
+import math
+from typing import Optional
 
 from sqlalchemy.orm import Session
 
 from app import models
-from app.services import belief_engine, causal_engine
-from typing import Optional
 
 
 class ExperimentRunner:
@@ -57,8 +40,12 @@ class ExperimentRunner:
     def record_result(
         self, experiment_id: int, result: str, confidence_change: float
     ) -> Optional[models.BeliefExperiment]:
-        """Record what actually happened, mark the experiment
-        completed, and push confidence_change into the linked Belief."""
+        """Persist a reported result without changing shared knowledge.
+
+        `completed` means a result was submitted, not that it was independently
+        verified. This model has no canonical Evidence/Outcome link, so the
+        supplied confidence_change is retained as a reported proposal only.
+        """
         experiment = (
             self.db.query(models.BeliefExperiment)
             .filter(models.BeliefExperiment.id == experiment_id)
@@ -66,28 +53,23 @@ class ExperimentRunner:
         )
         if not experiment:
             return None
-        if experiment.status == "completed":
+        if experiment.status == "completed" or experiment.result is not None:
             raise ValueError("Experiment result has already been recorded")
+        if not isinstance(result, str) or not result.strip():
+            raise ValueError("A non-empty reported result is required")
+        if (
+            isinstance(confidence_change, bool)
+            or not isinstance(confidence_change, (int, float))
+            or not math.isfinite(float(confidence_change))
+            or not -100.0 <= float(confidence_change) <= 100.0
+        ):
+            raise ValueError("Reported confidence change must be finite and between -100 and 100")
 
-        experiment.result = result
-        experiment.confidence_change = confidence_change
+        experiment.result = result.strip()
+        experiment.confidence_change = float(confidence_change)
         experiment.status = "completed"
         self.db.commit()
         self.db.refresh(experiment)
-
-        belief = belief_engine.BeliefEngine(self.db).get_belief(experiment.belief_id)
-        if belief:
-            belief_engine.BeliefEngine(self.db).adjust_confidence(
-                belief, confidence_change, reason="experiment", experiment_id=experiment.id
-            )
-            # Convert the raw hypothesis/method/result triple into
-            # structured, reusable causal knowledge — this is the fix
-            # for "Forge records experiments but doesn't convert
-            # outcomes into reusable causal knowledge" (v0.9). Side
-            # effect only; record_result()'s return value/signature is
-            # unchanged so nothing calling this API needed to change.
-            causal_engine.record_causal_outcome(self.db, experiment, belief)
-
         return experiment
 
     def list_experiments(self, belief_id: Optional[int] = None) -> list[models.BeliefExperiment]:

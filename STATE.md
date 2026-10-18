@@ -419,3 +419,12 @@ Read docs/BRAIN.md, this file, QUEUE.md, AGENTS.md, HANDOFF.md, and the relevant
 - Follow-up source review found invalid JSON and malformed envelopes are rejected inside `OllamaCognitiveProvider.propose`, before shared `_validated_proposals` runs. These failures previously had no structured signature to carry into a retry.
 - Classified only these deterministic contract failures (`invalid_json`, `invalid_envelope`, `invalid_count`, `non_object_item`, `not_a_list`) using the existing allow-list. Added a no-network/no-evidence adapter regression proving a malformed response produces a safe category and does not appear in the raised exception.
 - This extends only the structural-output feedback path. It makes no claim about factual correctness, real provider quality, or end-to-end autonomy. Exact-head CI is pending.
+
+## 2026-10-18 — Gate shared learning on a linked verified Outcome
+
+- Audited the legacy BeliefExperiment path and the canonical Experiment → Outcome → LearningEvent write-back. The legacy report path was directly adjusting Belief confidence and adding CausalKnowledge from free text without a canonical evidence link; its companion learning helper could repeat confidence updates. Generic apply-learning also trusted a REAL label without requiring the matching canonical verified Outcome.
+- Changed the old result path to persist owner-reported text and its proposed confidence delta without changing shared Belief confidence/CausalKnowledge. Its companion event is explicitly HYPOTHESIS, binds to the stored hypothesis/result, is idempotent, and records no applied confidence delta.
+- Hardened shared learning propagation: only REAL-scope REAL-source events linked to the same canonical Experiment and a verified REAL Outcome can update Belief confidence, source reliability or Opportunity notes. A source label alone is insufficient.
+- Added regressions in existing tests for report-only behavior, one-time recording, idempotency, label-only denial, and the verified Outcome path using isolated TEST DB fixtures. Test fixtures are not real customer/outcome evidence.
+- This preserves history, tables, routes and six primitives. It does not create a new evidence relation for BeliefExperiment; that relationship remains a future dependency, so legacy reports are not promoted into reusable REAL causal knowledge.
+- Exact-head CI, secret scan and independent deployment verification pending for this change. No contact, publication, send, spend, payment or real customer outcome was created.
