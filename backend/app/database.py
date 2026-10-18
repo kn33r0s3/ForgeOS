@@ -127,7 +127,7 @@ def init_db():
         db.commit()
         repair_historical_beliefs(db)
         # Live discovery pipeline: production self-syncs the unknowns map
-        # into Claim primitives (idempotent, additive-only).
+        # into Claim primitives (row-id deduped; revisions update in place).
         from app.services.unknowns_sync import sync_unknowns_from_map
 
         sync_unknowns_from_map(db)
