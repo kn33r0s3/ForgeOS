@@ -18,6 +18,7 @@ from app.services import (
     decision_engine,
     learning_engine,
     action_engine,
+    evidence_graph,
 )
 from app.services.ai_engine import AIUnavailableError, get_provider_status
 from app.config import settings
@@ -209,15 +210,138 @@ def test_decision_action_outcome_learning(db):
         source_kind=evidence_source.REAL,
     )
     real_event.belief_id = belief.id
+    unrelated_opp = models.Opportunity(
+        problem="Different target that this experiment did not test",
+        customer="Different customer",
+        solution="Different solution",
+    )
+    db.add(unrelated_opp)
+    db.commit()
+    db.refresh(unrelated_opp)
+
+    # Wrong target attribution must not write a note to an unrelated Opportunity.
+    real_event.opportunity_id = unrelated_opp.id
+    db.commit()
+    changes = learning_engine.apply_learning_to_system(db, real_event)
+    db.refresh(belief)
+    db.refresh(unrelated_opp)
+    assert changes == {
+        "belief_updated": False,
+        "source_nudged": False,
+        "opportunity_noted": False,
+    }
+    assert belief.confidence_score == confidence_before_learning
+    assert unrelated_opp.validation_plan is None
+
+    # Restore the Experiment's actual Opportunity. It may receive a note from
+    # its verified outcome, but that still does not establish which Belief it tests.
     real_event.opportunity_id = opp.id
     db.commit()
     changes = learning_engine.apply_learning_to_system(db, real_event)
     db.refresh(belief)
     db.refresh(opp)
-    assert changes["belief_updated"] is True
-    assert belief.confidence_score == max(0.0, round(confidence_before_learning - 10.0, 1))
-    assert changes["opportunity_noted"] is True
+    assert changes == {
+        "belief_updated": False,
+        "source_nudged": False,
+        "opportunity_noted": True,
+    }
+    assert belief.confidence_score == confidence_before_learning
     assert "LEARNING" in (opp.validation_plan or "")
+    assert real_event.belief_update_applied is False
+
+    # This isolated TEST-database fixture represents an L5 third-party Evidence
+    # record linked to the verified Outcome AND target Belief. It is only a
+    # contract fixture—not external evidence or a REAL business result.
+    source_name = "third_party_test_fixture"
+    db.add(models.Source(name=source_name, type="third_party", reliability_score=50.0))
+    db.commit()
+    target_evidence = models.Evidence(
+        belief_id=belief.id,
+        source=source_name,
+        content="Test fixture: fewer respondents confirmed than the hypothesis predicted.",
+        direction="contradicts",
+        source_kind=evidence_source.REAL,
+        source_type="third_party",
+        proof_level=5,
+        verifier="TEST fixture verifier; no live claim",
+        canonical_url="https://example.gov.np/test-only/outcome-link",
+        external_id=f"TEST-OUTCOME-{verified_outcome.id}",
+    )
+    db.add(target_evidence)
+    db.commit()
+    evidence_graph.link_evidence(
+        db,
+        target_evidence,
+        relation_type="supports",
+        outcome_id=verified_outcome.id,
+    )
+
+    changes = learning_engine.apply_learning_to_system(db, real_event)
+    db.refresh(belief)
+    db.refresh(opp)
+    db.refresh(db.query(models.Source).filter_by(name=source_name).first())
+    assert changes == {
+        "belief_updated": True,
+        "source_nudged": True,
+        "opportunity_noted": False,
+    }
+    assert belief.confidence_score == max(0.0, round(confidence_before_learning - 10.0, 1))
+    assert db.query(models.Source).filter_by(name=source_name).one().reliability_score == 48.5
+    assert real_event.belief_update_applied is True
+
+    # Replay must not repeat the confidence change or source-reliability nudge.
+    confidence_after_learning = belief.confidence_score
+    reliability_after_learning = db.query(models.Source).filter_by(name=source_name).one().reliability_score
+    changes = learning_engine.apply_learning_to_system(db, real_event)
+    db.refresh(belief)
+    assert changes == {
+        "belief_updated": False,
+        "source_nudged": False,
+        "opportunity_noted": False,
+    }
+    assert belief.confidence_score == confidence_after_learning
+    assert db.query(models.Source).filter_by(name=source_name).one().reliability_score == reliability_after_learning
+
+    # LearningEvent currently identifies the Experiment, not a specific Outcome.
+    # Once a second verified Outcome exists for that Experiment, the helper must
+    # refuse to guess which one this event summarizes.
+    second_verified_outcome = models.Outcome(
+        experiment_id=experiment_id,
+        outcome_type="ACTUAL_CUSTOMERS",
+        actual_value=1.0,
+        unit="count",
+        qualitative_result="Different verified outcome for ambiguity regression",
+        source="isolated_test_fixture",
+        success=True,
+        verification_state="VERIFIED",
+        data_scope="REAL",
+        source_kind=evidence_source.REAL,
+    )
+    ambiguous_event = models.LearningEvent(
+        experiment_id=experiment_id,
+        belief_id=belief.id,
+        opportunity_id=opp.id,
+        prediction="At least 6 of 10 confirm weekly loss",
+        actual="One unrelated outcome is also present",
+        lesson="Must not guess which outcome this event summarizes.",
+        confidence_delta=10.0,
+        error_type="confirmed",
+        data_scope="REAL",
+        source_kind=evidence_source.REAL,
+    )
+    db.add_all([second_verified_outcome, ambiguous_event])
+    db.commit()
+    plan_before_ambiguous = opp.validation_plan
+    changes = learning_engine.apply_learning_to_system(db, ambiguous_event)
+    db.refresh(belief)
+    db.refresh(opp)
+    assert changes == {
+        "belief_updated": False,
+        "source_nudged": False,
+        "opportunity_noted": False,
+    }
+    assert belief.confidence_score == confidence_after_learning
+    assert opp.validation_plan == plan_before_ambiguous
 
     assert db.query(models.Action).count() >= 1
     assert db.query(models.Outcome).count() >= 1

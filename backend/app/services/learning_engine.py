@@ -231,9 +231,12 @@ def apply_learning_to_system(
     db: Session,
     event: models.LearningEvent,
 ) -> dict:
-    """Propagate a LearningEvent into beliefs, sources, and opportunity notes.
+    """Apply learning only to targets supported by the same verified outcome.
 
-    This is the difference between storing a lesson string and actually learning.
+    A REAL label and an experiment ID are necessary but insufficient. The
+    outcome must be unambiguous for that experiment. Belief updates additionally
+    require proof-level evidence explicitly linked to both that outcome and the
+    target belief; opportunity notes must match the Experiment's own opportunity.
     """
     changes = {"belief_updated": False, "source_nudged": False, "opportunity_noted": False}
 
@@ -241,67 +244,148 @@ def apply_learning_to_system(
         return changes  # TEST/MOCK/HYPOTHESIS never changes shared REAL knowledge.
     if event.experiment_id is None:
         return changes  # A source-kind label without an Outcome link is not proof.
-    verified_outcome = (
-        db.query(models.Outcome.id)
+
+    experiment = db.get(models.Experiment, event.experiment_id)
+    if experiment is None:
+        return changes
+
+    # LearningEvent has no outcome_id. If an Experiment has multiple verified
+    # Outcomes, this record does not identify which one supports its conclusion;
+    # refuse to guess or let one result authorize learning from another.
+    verified_outcomes = (
+        db.query(models.Outcome)
         .filter(
             models.Outcome.experiment_id == event.experiment_id,
             *evidence_source.verified_real_outcome_filters(models.Outcome),
         )
-        .first()
+        .order_by(models.Outcome.id.asc())
+        .all()
     )
-    if verified_outcome is None:
-        return changes  # REAL label alone cannot authorize learning.
+    if len(verified_outcomes) != 1:
+        return changes
+    verified_outcome = verified_outcomes[0]
 
-    # Belief confidence already handled in record_learning_from_belief_experiment
-    if event.belief_id and event.confidence_delta and not event.belief_update_applied:
-        be = belief_engine.BeliefEngine(db)
-        belief = be.get_belief(event.belief_id)
-        if belief:
-            be.adjust_confidence(
-                belief,
-                event.confidence_delta,
-                reason="learning_event",
-                experiment_id=None,
-            )
-            event.belief_update_applied = True
-            db.commit()
-            changes["belief_updated"] = True
-
-    # Source reliability: if evidence sources supported a failed prediction, nudge down
-    if event.belief_id and event.error_type == "overestimate":
-        from app.services import source_manager
-        evidence_rows = (
+    # A belief is a separate target. It can be changed only when qualifying
+    # evidence explicitly points to this belief AND this exact verified outcome.
+    linked_evidence: list[models.Evidence] = []
+    if event.belief_id is not None:
+        rows = (
             db.query(models.Evidence)
-            .filter(models.Evidence.belief_id == event.belief_id)
+            .join(
+                models.EvidenceRelationship,
+                models.EvidenceRelationship.evidence_id == models.Evidence.id,
+            )
+            .filter(
+                models.EvidenceRelationship.outcome_id == verified_outcome.id,
+                models.EvidenceRelationship.relation_type == "supports",
+                models.Evidence.belief_id == event.belief_id,
+                models.Evidence.direction.in_(("supports", "contradicts")),
+                models.Evidence.source_kind == evidence_source.REAL,
+                models.Evidence.proof_level >= 5,
+            )
             .all()
         )
-        nudged = set()
-        for ev in evidence_rows:
-            src_name = ev.source or "manual"
-            if src_name in nudged:
-                continue
-            try:
-                source_manager.adjust_reliability(db, src_name, delta=-1.5)
-                nudged.add(src_name)
-                changes["source_nudged"] = True
-            except Exception:
-                # adjust_reliability may not exist — try direct
-                src = db.query(models.Source).filter_by(name=src_name).first()
-                if src:
-                    src.reliability_score = max(0.0, (src.reliability_score or 50) - 1.5)
-                    db.commit()
-                    changes["source_nudged"] = True
-                    nudged.add(src_name)
+        # L5+ verification needs third-party provenance, an identifiable
+        # verifier, and an external locator already carried by the evidence row.
+        linked_evidence = list({
+            row.id: row
+            for row in rows
+            if (row.source_type or "").strip().lower() == "third_party"
+            and (row.verifier or "").strip()
+            and ((row.canonical_url or "").strip() or (row.external_id or "").strip())
+        }.values())
 
-    if event.opportunity_id and event.lesson:
-        opp = db.query(models.Opportunity).filter_by(id=event.opportunity_id).first()
+    delta = event.confidence_delta
+    finite_delta = (
+        isinstance(delta, (int, float))
+        and not isinstance(delta, bool)
+        and math.isfinite(float(delta))
+    )
+    if (
+        event.belief_id is not None
+        and linked_evidence
+        and not event.belief_update_applied
+        and finite_delta
+        and delta != 0
+    ):
+        supports_target = any(row.direction == "supports" for row in linked_evidence)
+        contradicts_target = any(row.direction == "contradicts" for row in linked_evidence)
+        consistent_with_outcome = (
+            verified_outcome.success is True and delta > 0 and supports_target
+        ) or (
+            verified_outcome.success is False and delta < 0 and contradicts_target
+        )
+        if consistent_with_outcome:
+            be = belief_engine.BeliefEngine(db)
+            belief = be.get_belief(event.belief_id)
+            if belief:
+                be.adjust_confidence(
+                    belief,
+                    float(delta),
+                    reason="learning_event",
+                    experiment_id=None,
+                )
+                event.belief_update_applied = True
+                db.commit()
+                changes["belief_updated"] = True
+
+                # Source reliability may move only for linked counter-evidence
+                # on a verified unsuccessful outcome. The event flag prevents
+                # this same helper from repeating a completed update on replay.
+                if (
+                    event.error_type == "overestimate"
+                    and verified_outcome.success is False
+                    and delta < 0
+                ):
+                    from app.services import source_manager
+
+                    nudged = set()
+                    for ev in linked_evidence:
+                        if ev.direction != "contradicts":
+                            continue
+                        src_name = ev.source or "manual"
+                        if src_name in nudged:
+                            continue
+                        source = db.query(models.Source).filter_by(name=src_name).first()
+                        if source is None:
+                            continue
+                        previous_reliability = float(source.reliability_score or 50.0)
+                        try:
+                            current_reliability = source_manager.adjust_reliability(
+                                db, src_name, delta=-1.5
+                            )
+                        except Exception:
+                            source.reliability_score = max(
+                                0.0, previous_reliability - 1.5
+                            )
+                            db.commit()
+                            current_reliability = source.reliability_score
+                        nudged.add(src_name)
+                        if current_reliability != previous_reliability:
+                            changes["source_nudged"] = True
+
+    # Opportunity attribution is structural: only the opportunity already
+    # named by this canonical Experiment is eligible for a note/score change.
+    if (
+        event.opportunity_id is not None
+        and event.opportunity_id == experiment.opportunity_id
+        and event.lesson
+    ):
+        opp = db.get(models.Opportunity, event.opportunity_id)
         if opp:
             note = f"[LEARNING {event.created_at}] {event.lesson}"
             existing = opp.validation_plan or ""
             if note not in existing:
-                opp.validation_plan = (existing + "\n" + note).strip()
-                # Slight score dampening on overestimate
-                if event.error_type == "overestimate" and opp.score:
+                opp.validation_plan = (existing + "\\n" + note).strip()
+                # Damp only when a verified unsuccessful outcome and negative
+                # adjustment agree; an overestimate label by itself is not proof.
+                if (
+                    event.error_type == "overestimate"
+                    and verified_outcome.success is False
+                    and finite_delta
+                    and delta < 0
+                    and opp.score
+                ):
                     opp.score = round(max(0.0, opp.score * 0.95), 1)
                 db.commit()
                 changes["opportunity_noted"] = True

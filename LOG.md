@@ -715,3 +715,9 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Extended the existing theme regression test to cover these call sites. This is a follow-up to the two test-selector fixes at `be8540f`; the new exact-head CI must still validate both changes.
 - No customer messages, publication, intake/send activation, payments, spend or real-world outcomes occurred.
 
+## 2026-10-18 — Bind shared learning to the exact verified outcome and target
+
+- Followed the existing six-primitive evidence graph rather than adding an attribution table. The generic learner previously accepted any verified REAL Outcome for an Experiment plus any `belief_id`/opportunity_id on the LearningEvent.
+- Tightened the existing helper: only one verified REAL Outcome may exist for an Experiment when the LearningEvent has no outcome_id; a Belief change needs L5+ third-party Evidence with verifier/locator, an explicit EvidenceRelationship to that exact Outcome, and Evidence.belief_id matching the target. Evidence direction and Outcome.success must agree with the confidence delta. Source reliability derives only from linked counter-evidence. Opportunity note/score requires the Experiment's own Opportunity.
+- Updated the existing closed-loop regression for unlinked-target rejection, wrong-opportunity rejection, explicit-link positive path, replay no-op and ambiguous outcome rejection. Test database rows are fixtures, not customer/payment evidence.
+- Current parent is `5742eef351793cd8dd1545b223ba4a18517aac91`; local test execution is unavailable in this session. Exact-head full CI, secret scan and deploy verification are pending for the new commit. No production learning caller was added or claimed.

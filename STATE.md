@@ -463,3 +463,12 @@ Read docs/BRAIN.md, this file, QUEUE.md, AGENTS.md, HANDOFF.md, and the relevant
 - Follow-up source search found `apply_learning_to_system` has no production caller (the only callsite found is the closed-loop test). The new outcome gate is a meaningful safety fix, but it does not by itself make shared learning propagate automatically in live runtime.
 - Current verified payment paths update their own Product/Opportunity state. A general Outcome → LearningEvent → shared-state propagation path remains to be traced and wired in-place; no generic belief/causal updates should be inferred from payment alone.
 - Fixed truth status: legacy BeliefExperiment is report-only; source-kind labels without linked verified REAL Outcome are insufficient. No real customer outcome, payment, or revenue was added.
+
+## 2026-10-18 — Require outcome-to-target evidence before generic learning
+
+- Current main before this change: `5742eef351793cd8dd1545b223ba4a18517aac91`. Audited the existing `EvidenceRelationship` seam and the verified-Outcome helper; no new ontology or schema was needed to express the target link.
+- Hardened the existing `learning_engine.apply_learning_to_system`: a LearningEvent has no outcome_id, so multiple verified outcomes on one Experiment are ambiguous and now stop propagation. Belief updates require a linked L5+ third-party Evidence row whose `belief_id` is the target and whose existing EvidenceRelationship links it to the exact verified Outcome. The recorded evidence direction and confidence-delta sign must agree with Outcome.success.
+- Source reliability may move only from that same linked counter-evidence on a verified unsuccessful outcome; it no longer considers every Evidence row for a belief. Opportunity notes require `event.opportunity_id == experiment.opportunity_id`, and score dampening requires the matching verified failure/negative delta.
+- Expanded the existing closed-loop regression to cover misattributed belief/Opportunity rejection, exact outcome evidence linkage, replay behavior, and ambiguous multiple Outcomes. All “REAL” source/evidence/outcome rows in this regression are isolated TEST database fixtures only; no real business activity is represented.
+- `apply_learning_to_system` still has no production caller in the source audit. This is stronger safety for a helper, not a claim of autonomous production learning. Exact-head CI and deployment verification pending.
+- No network contact, public post, message, spend, payment, intake activation, or permission change.

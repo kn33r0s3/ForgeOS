@@ -1,3 +1,15 @@
+## [OUTCOME TARGET-ATTRIBUTION GATE — CODE EDITED / EXACT-HEAD CI PENDING — 2026-10-18]
+
+- **Existing seam:** `learning_engine.apply_learning_to_system` consumes canonical `LearningEvent`, `Outcome`, `Evidence`, and `EvidenceRelationship` rows. No new table, endpoint, service, or semantic primitive.
+- **Defect:** the previous guard checked that some verified REAL Outcome existed for the Experiment, but did not prove which outcome the LearningEvent summarized or that its arbitrary `belief_id` was linked to that outcome. Opportunity note/score changes also accepted an unrelated `opportunity_id`.
+- **Change:** ambiguous Experiments with multiple verified Outcomes fail closed because LearningEvent has no `outcome_id`. Belief updates require the exact verified Outcome → EvidenceRelationship → L5+ third-party Evidence → target Belief chain, an explicit verifier/locator, and the delta direction must agree with Outcome.success and Evidence.direction. Source reliability changes use only that same linked counter-evidence. Opportunity updates require the Experiment's own opportunity ID; score dampening additionally requires a verified unsuccessful outcome and negative delta.
+- **Replay guard:** persisted `belief_update_applied` prevents repeated confidence/source updates after completion; existing timestamp-based opportunity note de-duplication remains. The helper still has no production caller in the current source audit.
+- **Regression:** updated the existing closed-loop test to prove (a) a verified Outcome alone cannot update an unrelated Belief; (b) the wrong Opportunity ID cannot be written; (c) explicit outcome↔evidence↔belief linkage enables a valid bounded update in an isolated test DB; (d) replays do not repeat the confidence or source nudge; and (e) multiple verified Outcomes for one Experiment remain ambiguous and do not propagate. TEST fixtures are not real business data.
+- **Verification:** local test execution unavailable in this session; full exact-head CI and deployment verification required for the new commit.
+- **External effects:** none—no contact, outbound message, publication, spend, payment, intake activation, or REAL customer/revenue evidence was created.
+
+---
+
 ## [FRONTEND THEME CONSOLIDATION + LIGHT-STATE CONTRAST — CODE EDITED / EXACT-HEAD VERIFICATION PENDING — 2026-10-18]
 
 - **Existing seams:** `src/styles.css` original `@theme`, primary `:root`, existing `@layer base` and component rules; `src/routes/index.tsx::HomeFooter`; `src/components/layout/text-link.tsx`, `section-marker.tsx`; `src/components/ui/button.tsx` ghost variant and `feedback.tsx` EmptyState/UnavailableState; existing `src/lib/content.test.ts`. No new file or UI component was required.
