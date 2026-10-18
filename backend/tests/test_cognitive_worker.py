@@ -236,31 +236,18 @@ def test_proposal_schema_rejects_execution_or_unlinked_evidence(db, change):
 
 
 def test_schema_verifier_feedback_changes_the_next_candidate_attempt(db):
-    research_task = make_research_task(db, objective="Resolve a source-grounded question.")
-    evidence = models.Evidence(
-        source="third-party-test-fixture",
-        title="Public source record",
-        claim="A bounded claim needing verification.",
-        canonical_url="https://example.gov.np/source",
-        source_kind="REAL",
-        source_type="third_party",
-        consent_status="not_required",
-        collection_status="collected",
-    )
-    db.add(evidence)
-    db.flush()
-    research_task.evidence_ids = str(evidence.id)
-    db.commit()
-
+    # No evidence fixture is needed: this tests output-contract feedback only,
+    # not factual verification or a real-world result.
+    research_task = make_research_task(db, objective="Resolve a bounded research question.")
     worker_task = cognitive_worker.create_cognitive_task(db, research_task.id)
     db.commit()
     invalid_proposal = ReplacementProvider().propose(
         cognitive_provider.CognitiveTaskContext(
             research_task_id=research_task.id,
             objective=research_task.objective,
-            evidence_ids=(evidence.id,),
+            evidence_ids=(),
             evidence_refs_truncated=False,
-            available_evidence_ids=(evidence.id,),
+            available_evidence_ids=(),
         )
     )[0]
     invalid_proposal["execution_authorized"] = True

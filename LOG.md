@@ -667,3 +667,8 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Extended the current proposal-verification seam: Pydantic validation and linked-evidence-ID rejection now produce safe allow-listed failure signatures; `_record_failure` saves those signatures only on the existing `cognitive_proposal_rejected` event. The next task attempt reloads a bounded set into the model context/prompt and context digest/provenance. No raw output or user/provider text is written as feedback.
 - Added a focused test for the failure→persisted signature→next request feedback path, retaining proposal-only output and no executable permission. This uses TEST fixtures and does not represent real inference, fact verification or real-world learning.
 - Edited existing source/test files plus the existing capability/continuity ledgers; no additional architecture or file was created. Full exact-head CI and deployment verification are pending; no external operation was invoked.
+
+## 2026-10-18 — Remove unnecessary synthetic REAL fixture from cognition retry test
+
+- Re-read the newly added retry regression and removed its unused test evidence row labelled REAL. The behavior under test is schema-verifier feedback only, so no Evidence rows are needed.
+- Updated the existing test in place; no new file and no product/runtime behavior change. New exact-head CI is required.

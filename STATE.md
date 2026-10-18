@@ -408,3 +408,8 @@ Read docs/BRAIN.md, this file, QUEUE.md, AGENTS.md, HANDOFF.md, and the relevant
 - Added a regression that rejects a proposal with `execution_authorized=true`, then confirms the next call receives `execution_authorized:literal_error` and remains PROPOSED / not executable. The provider is a TEST fixture; this is not real inference or an economic outcome.
 - Modified existing `cognitive_worker.py`, `cognitive_provider.py`, and `test_cognitive_worker.py`; no new file/table/primitive/subsystem. No production permission or live action boundary changed.
 - Exact-head full CI and deployment checks are pending for the code commit. Real local/self-hosted model invocation, natural production scheduler execution, semantic/factual verification and any REAL seller/payment outcome remain unverified.
+
+## 2026-10-18 — Keep the counterexample regression evidence-free
+
+- Tightened the new cognition regression: schema-retry feedback requires no fabricated source or economic evidence, so the test no longer constructs a fixture labelled `source_kind=REAL`. It now tests only deterministic contract feedback and the unchanged non-executable proposal boundary.
+- This is test-integrity cleanup; it does not upgrade the implementation claim. Exact-head CI/deploy status for the updated head must be checked.
