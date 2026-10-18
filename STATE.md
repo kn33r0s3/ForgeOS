@@ -1,3 +1,12 @@
+## 2026-10-18 — Follow-up source audit: dark controls on the light theme
+
+- After the CSS cleanup at `8c3c904`, a focused call-site search found existing near-black backgrounds paired with the dark `text-ink` color on active UI surfaces: personal-context fields, system next-step panels, feed context/relation chips and **seven** owner-console inputs.
+- Updated those original component/route call sites to use existing white, secondary or elevated-surface tokens; the green foreground now sits on a light surface and the feed's green hover uses white text. No new UI component, route or theme rule was added.
+- Added these call-site contracts to the same existing theme test. Exact-head CI at `8c3c904` exposed two test-anchor mistakes (not rendering or build failures); both anchors were corrected in `be8540f`. The broader call-site patch needs fresh exact-SHA test/build/deploy verification after the next commit. No browser-render pass is claimed.
+- No external message, publication, intake activation, payment, spend or REAL outcome occurred.
+
+---
+
 ## 2026-10-18 — Frontend test-anchor correction
 
 - Exact-head ForgeOS CI run [39146812523](https://github.com/kn33r0s3/ForgeOS/actions/runs/39146812523) found two frontend-test failures in the newly updated theme tests: each test searched for the CSS comment as `/* Hami Systems: warm paper`, while the canonical source is correctly formatted as `/*\n * Hami Systems: warm paper`. This was a test-anchor mismatch, not a CSS/build/typecheck failure. The 258 other frontend assertions passed; frontend-tests reported 2 failures.

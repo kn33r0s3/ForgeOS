@@ -39,7 +39,7 @@ function Tag({ children, tone = "neutral" }: { children: React.ReactNode; tone?:
 export function PanelTitle({ icon: Icon, kicker, title }: { icon: typeof Radio; kicker: string; title: string }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-card border-2 border-accent/70 bg-black text-accent">
+      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-card border border-accent/30 bg-secondary text-accent">
         <Icon className="size-4" aria-hidden="true" />
       </span>
       <div>
@@ -179,7 +179,7 @@ export function PathCard({ path }: { path: PossibilityPath }) {
         </ul>
       </div>
       <div className="mt-auto pt-4">
-        <p className="rounded-card border-l-2 border-accent bg-black/40 px-3 py-2 text-sm leading-6 text-ink">
+        <p className="rounded-card border-l-2 border-accent bg-surface-elevated px-3 py-2 text-sm leading-6 text-ink">
           <span className="font-extrabold text-accent">Next step · </span>
           {path.nextStep}
         </p>

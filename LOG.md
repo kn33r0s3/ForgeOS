@@ -707,3 +707,11 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Root cause: the code's new comment is `/*\n * Hami Systems: warm paper...`, but both tests searched for `/* Hami Systems: warm paper` as a single-line opener. Updated those two existing tests to locate the canonical phrase rather than rely on whitespace after a comment delimiter.
 - The run had **258 frontend assertions passing and 2 failing**. Lint, typecheck, build, route smoke, repository guards and secrets scan passed; backend tests and independent deploy verification were still in progress at the last read. New exact-head CI/deploy results remain pending.
 - No app behavior or production settings were weakened; no external contact, publication, payment, spend, or REAL outcome occurred.
+
+## 2026-10-18 — Align remaining active form and feed surfaces with the light theme
+
+- Source review found seven owner-console inputs plus the personal-context editor still using a black background with dark `text-ink`; the same mismatch remained in system next-step cards and feed relation/context chips.
+- Switched the existing field/panel/chip classes to current light-surface tokens, and adjusted feed clear-action hover text to white against the green active background. No new class system or component was introduced.
+- Extended the existing theme regression test to cover these call sites. This is a follow-up to the two test-selector fixes at `be8540f`; the new exact-head CI must still validate both changes.
+- No customer messages, publication, intake/send activation, payments, spend or real-world outcomes occurred.
+

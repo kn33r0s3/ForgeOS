@@ -1698,7 +1698,7 @@ function OwnerConsolePage() {
                 spellCheck={false}
                 value={key}
                 onChange={(event) => setKey(event.target.value)}
-                className="min-h-12 min-w-0 rounded-card border-2 border-line bg-black px-3 text-base text-ink"
+                className="min-h-12 min-w-0 rounded-card border-2 border-line bg-white px-3 text-base text-ink"
                 required
               />
               <button type="submit" disabled={busy} className="min-h-12 rounded-card border-2 border-accent bg-accent px-4 font-extrabold text-black disabled:opacity-60">
@@ -1964,7 +1964,7 @@ function OwnerConsolePage() {
                       <form onSubmit={(event) => { event.preventDefault(); void runAction("/booked", { evidence_reference: evidenceReference }, "POST", "Booking recorded."); }} className="grid w-full gap-2 sm:max-w-lg sm:grid-cols-[1fr_auto]">
                         <label className="grid gap-1 text-sm font-semibold" htmlFor="booking-evidence">
                           Booking evidence reference
-                          <input id="booking-evidence" value={evidenceReference} onChange={(event) => setEvidenceReference(event.target.value)} maxLength={100} minLength={2} required className="min-h-11 min-w-0 rounded-card border-2 border-line bg-black px-3 text-ink" />
+                          <input id="booking-evidence" value={evidenceReference} onChange={(event) => setEvidenceReference(event.target.value)} maxLength={100} minLength={2} required className="min-h-11 min-w-0 rounded-card border-2 border-line bg-white px-3 text-ink" />
                         </label>
                         <button type="submit" disabled={busy} className="min-h-11 self-end rounded-card border-2 border-accent px-4 font-bold text-accent disabled:opacity-60">Mark booked</button>
                       </form>
@@ -1973,7 +1973,7 @@ function OwnerConsolePage() {
                       <form onSubmit={(event) => { event.preventDefault(); void runAction("/completed", { outcome_note: outcomeNote }, "POST", "Completion recorded."); }} className="grid w-full gap-2 sm:max-w-lg sm:grid-cols-[1fr_auto]">
                         <label className="grid gap-1 text-sm font-semibold" htmlFor="outcome-note">
                           Short outcome note
-                          <textarea id="outcome-note" value={outcomeNote} onChange={(event) => setOutcomeNote(event.target.value)} maxLength={240} minLength={2} required rows={2} className="min-h-11 min-w-0 rounded-card border-2 border-line bg-black px-3 py-2 text-ink" />
+                          <textarea id="outcome-note" value={outcomeNote} onChange={(event) => setOutcomeNote(event.target.value)} maxLength={240} minLength={2} required rows={2} className="min-h-11 min-w-0 rounded-card border-2 border-line bg-white px-3 py-2 text-ink" />
                         </label>
                         <button type="submit" disabled={busy} className="min-h-11 self-end rounded-card border-2 border-accent px-4 font-bold text-accent disabled:opacity-60">Mark completed</button>
                       </form>
@@ -2253,11 +2253,11 @@ function OwnerConsolePage() {
                                         <p className="text-sm text-muted">Record only work you personally performed or directly observed. Use one respondent per line: <code>id | stage | confirmed/not confirmed | short note</code>. This interview form accepts only lead, contacted, and interested; it cannot mark paid_customer or churned. Use pseudonymous IDs, not names, emails, or phone numbers. The existing write path saves owner-entered interview notes as MOCK/REPORTED, not verified REAL evidence. An interview or willingness-to-pay statement is not revenue; paid-customer status requires a separately verified ACTUAL_REVENUE outcome.</p>
                                         <label className="grid gap-1 text-sm font-semibold">
                                           What actually happened?
-                                          <textarea value={outcomeActual} onChange={(event) => setOutcomeActual(event.target.value)} required minLength={2} maxLength={3000} rows={3} className="min-h-20 rounded-card border-2 border-line bg-black px-3 py-2 text-ink" placeholder="Summarize the real conversations and what was said." />
+                                          <textarea value={outcomeActual} onChange={(event) => setOutcomeActual(event.target.value)} required minLength={2} maxLength={3000} rows={3} className="min-h-20 rounded-card border-2 border-line bg-white px-3 py-2 text-ink" placeholder="Summarize the real conversations and what was said." />
                                         </label>
                                         <label className="grid gap-1 text-sm font-semibold">
                                           Overall validation result
-                                          <select value={outcomeSuccess} onChange={(event) => setOutcomeSuccess(event.target.value as "unknown" | "yes" | "no")} className="min-h-10 rounded-card border-2 border-line bg-black px-3 text-ink">
+                                          <select value={outcomeSuccess} onChange={(event) => setOutcomeSuccess(event.target.value as "unknown" | "yes" | "no")} className="min-h-10 rounded-card border-2 border-line bg-white px-3 text-ink">
                                             <option value="unknown">Uncertain / mixed evidence</option>
                                             <option value="yes">Hypothesis supported by these interviews</option>
                                             <option value="no">Hypothesis not supported by these interviews</option>
@@ -2265,7 +2265,7 @@ function OwnerConsolePage() {
                                         </label>
                                         <label className="grid gap-1 text-sm font-semibold">
                                           Actual respondents (one per line)
-                                          <textarea value={outcomeRespondents} onChange={(event) => setOutcomeRespondents(event.target.value)} required rows={5} className="min-h-28 rounded-card border-2 border-line bg-black px-3 py-2 font-mono text-xs text-ink" placeholder={`shop-01 | interested | confirmed | says they may pay NPR 4000/mo
+                                          <textarea value={outcomeRespondents} onChange={(event) => setOutcomeRespondents(event.target.value)} required rows={5} className="min-h-28 rounded-card border-2 border-line bg-white px-3 py-2 font-mono text-xs text-ink" placeholder={`shop-01 | interested | confirmed | says they may pay NPR 4000/mo
 shop-02 | lead | confirmed | confirmed delay problem; price unknown
 shop-03 | lead | not confirmed | uses an existing alternative`} />
                                         </label>
@@ -2640,7 +2640,7 @@ shop-03 | lead | not confirmed | uses an existing alternative`} />
                                         value={pricingDraft}
                                         onChange={(event) => setProductPricingDrafts((current) => ({ ...current, [product.id]: event.target.value }))}
                                         disabled={productLifecycleBusyId === product.id}
-                                        className="min-h-10 rounded-card border-2 border-line bg-black px-3 text-ink"
+                                        className="min-h-10 rounded-card border-2 border-line bg-white px-3 text-ink"
                                         placeholder="NPR 5000 one-time"
                                       />
                                     </label>

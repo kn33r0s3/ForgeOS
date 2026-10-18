@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const field =
-  "mt-2 w-full rounded-card border-2 border-line bg-black px-3 py-2.5 text-base text-ink placeholder:text-dim focus:border-accent focus:outline-none";
+  "mt-2 w-full rounded-card border-2 border-line bg-white px-3 py-2.5 text-base text-ink placeholder:text-dim focus:border-accent focus:outline-none";
 
 function joinValues(items: { value: string }[]) {
   return items.map((i) => i.value).join(", ");

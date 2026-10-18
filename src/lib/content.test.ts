@@ -150,6 +150,10 @@ describe("Hami public content", () => {
     const feedback = readFileSync(join(root, "src/components/ui/feedback.tsx"), "utf8");
     const sectionMarker = readFileSync(join(root, "src/components/layout/section-marker.tsx"), "utf8");
     const buttons = readFileSync(join(root, "src/components/ui/button.tsx"), "utf8");
+    const systemEditor = readFileSync(join(root, "src/components/system/system-editor.tsx"), "utf8");
+    const systemPanels = readFileSync(join(root, "src/components/system/system-panels.tsx"), "utf8");
+    const feed = readFileSync(join(root, "src/routes/feed.tsx"), "utf8");
+    const owner = readFileSync(join(root, "src/routes/owner.tsx"), "utf8");
     const themeStart = styles.indexOf("Hami Systems: warm paper");
     const themeEnd = styles.indexOf("@layer base", themeStart);
     const themeTokens = styles.slice(themeStart, themeEnd);
@@ -180,6 +184,16 @@ describe("Hami public content", () => {
     assert.doesNotMatch(sectionMarker, /text-wheat/);
     assert.doesNotMatch(buttons, /ghost: "btn-ghost text-wheat/);
     assert.doesNotMatch(home.slice(home.indexOf("function HomeFooter()")), /text-wheat/);
+    assert.match(systemEditor, /const field =\s*"[^"]*bg-white[^"]*text-ink/);
+    assert.match(systemPanels, /bg-secondary text-accent/);
+    assert.match(systemPanels, /bg-surface-elevated px-3 py-2 text-sm leading-6 text-ink/);
+    assert.doesNotMatch(systemEditor, /bg-black[^"]*text-ink/);
+    assert.doesNotMatch(systemPanels, /bg-black(?:\/40)?[^"]*text-ink|bg-black text-accent/);
+    assert.match(feed, /border-2 border-accent bg-secondary[^"]*text-ink/);
+    assert.match(feed, /border border-line bg-white px-3 font-bold text-muted/);
+    assert.doesNotMatch(feed, /bg-black[^"]*text-ink|bg-black[^"]*text-muted|hover:bg-accent hover:text-black/);
+    assert.match(owner, /bg-white[^"]*text-ink/);
+    assert.doesNotMatch(owner, /bg-black[^"]*text-ink/);
   });
 
   it("surfaces live evidence before system explanation and links value-seekers to the public board", () => {
