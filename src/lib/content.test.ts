@@ -556,7 +556,7 @@ describe("Hami public root", () => {
     assert.equal(sitemap.includes("/privacy"), false);
     assert.doesNotMatch(discoveries, /loadSubstrateDiscoveries|\/api\/forge\/substrate/);
     assert.match(discoveries, /Hami does not expose private working records on this page/);
-    assert.match(discoveries, /Opening this page does not run discovery/);
+    assert.match(discoveries, /loadDiscoveries\(50/);
     assert.doesNotMatch(discoveries, /discovery\/runs/);
     // The closed-intake link is gone from the header entirely.
     assert.doesNotMatch(header, /to: "\/request"/);
