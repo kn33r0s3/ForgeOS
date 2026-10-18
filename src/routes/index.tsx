@@ -418,9 +418,9 @@ function HomePage() {
       <Hero />
       <QuickStart />
       <PublicOffers />
-      <Capabilities />
       <FindingsPreview />
       <UnknownsPreview />
+      <Capabilities />
       <ExperimentsPreview />
       <AboutLink />
       <StatusRecord />
@@ -442,10 +442,10 @@ function QuickStart() {
       symbol: "↗",
     },
     {
-      title: "I have work or an idea",
-      description: "Explore services, share an opportunity, or see where your skills could help.",
-      action: "Explore services",
-      to: "/services",
+      title: "I have a skill, offer, or idea",
+      description: "Browse needs, jobs, offers, and trades, then decide whether to share a clearly described exchange.",
+      action: "Open the work board",
+      to: "/domain",
       symbol: "✳",
     },
     {
