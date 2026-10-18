@@ -652,3 +652,11 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Exact CI output showed the homepage test's component-order assertion still described the pre-refresh page. The actual existing `src/routes/index.tsx` renders Hero → QuickStart → PublicOffers → FindingsPreview → UnknownsPreview → Capabilities → ExperimentsPreview → AboutLink → StatusRecord → HamiPathways → HomeFooter. The public copy, privacy, honest-empty-state, and no-toy-inbox assertions remain intact.
 - Updated only the stale structural regex in `src/lib/content.test.ts` to guard the currently intended composition/order. No homepage source/behavior changed in this correction.
 - Exact-head CI and deployment verification for this follow-up are required; previous failures/checks are not used as a pass for this revision.
+
+## 2026-10-18 — Replace neuroscience analogy with difference-guided synthesis
+
+- Re-read current main and existing AGENTS/STATE/QUEUE, engine, capability ledger and source seams before writing.
+- Replaced the neuroscience-based ForgeBot learning section in the existing `docs/ENGINE.md` with a counterexample-guided, difference-driven method: recover current/history, define observable transitions, generate bounded candidates, verify independently, retain minimal failures, update existing decision/test seams and require replication before transfer.
+- Source basis: the repository already has open-world discovery plus strategy, experiment, evidence, outcome and learning components; no new engine/file/table/primitive was added. The method is a design contract, not proof the production runtime executes it end-to-end.
+- Recorded runtime implementation and verification as pending in the existing `docs/CAPABILITY_QUEUE.md`. Parent main exposed only Vercel success status; no complete exact-head CI or live runtime was inferred from it.
+- No seller contact, public post, message, spend, payment, permission change, production flag change or real-world outcome was created.

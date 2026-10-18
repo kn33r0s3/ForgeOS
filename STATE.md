@@ -391,3 +391,12 @@ Read docs/BRAIN.md, this file, QUEUE.md, AGENTS.md, HANDOFF.md, and the relevant
 - Exact CI output showed the homepage test's component-order assertion still described the pre-refresh page. The actual existing `src/routes/index.tsx` renders Hero → QuickStart → PublicOffers → FindingsPreview → UnknownsPreview → Capabilities → ExperimentsPreview → AboutLink → StatusRecord → HamiPathways → HomeFooter. The public copy, privacy, honest-empty-state, and no-toy-inbox assertions remain intact.
 - Updated only the stale structural regex in `src/lib/content.test.ts` to guard the currently intended composition/order. No homepage source/behavior changed in this correction.
 - Exact-head CI and deployment verification for this follow-up are required; previous failures/checks are not used as a pass for this revision.
+
+## 2026-10-18 — Replace neuroscience framing with difference-guided synthesis
+
+- Owner direction: do not anchor ForgeBot's reasoning method in neuroscience. The desired behavior is to discover useful transformations from right/wrong outcomes, identify the difference that explains a miss, and improve the next attempt while minimizing routine owner work.
+- Replaced the existing section in `docs/ENGINE.md` in place. The method is: recover the existing implementation/history; specify a measurable state transition and falsifier; generate bounded alternatives; verify independently; preserve the smallest counterexample; update the existing strategy/test/priority seam; transfer only with matching preconditions and replication; promote only after evidence.
+- This is a design correction, not a runtime capability claim. CEGIS provides an established candidate/verifier/counterexample pattern for program synthesis; its formal guarantees do not transfer automatically to economic or other real-world outcomes.
+- Parent main was `e0f8ae5b0d453bd618e1155e60b0f3f4a6c1c4eb`. Its combined status exposed Vercel success only; full exact-head CI was not available from that status result. No local repository/runtime was available for running tests in this session. The new commit's own checks must be inspected separately.
+- No external contact, public post, intake activation, message, spend, payment, or revenue was performed. The seller/legal/channel gate is unchanged; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+- Next internal work: audit the canonical scheduled-cognition → verification → counterexample → write-back path and repair its existing seam, rather than creating a new reasoning engine.

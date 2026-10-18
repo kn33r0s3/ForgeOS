@@ -132,77 +132,132 @@ engine is what it inherits:
   the same assurity — then better, because it never gets tired and
   never rounds "mostly accurate" up.
 
-## ForgeBot learning model — from fixed rules to compounding capability
+## ForgeBot reasoning method — difference-guided synthesis
 
-The four-stage neural-network analogy is useful, but ForgeBot must not confuse
-pattern learning with verified understanding. ForgeBot is not currently training
-its own neural-network weights. Its practical learning loop is a system-level
-capability built from evidence, memory, evaluation and controlled changes.
+Do not define ForgeBot by analogy to a brain. That analogy does not tell the
+system which existing line to change, which observation makes a claim true,
+or why one attempt worked and another failed. The reusable method is a
+disciplined search over candidate transformations, with verification that is
+separate from candidate generation.
 
-### 1. Human blueprint — define the boundaries, not every answer
+An established ancestor is **counterexample-guided inductive synthesis
+(CEGIS)**: a generator proposes a candidate, a verifier checks it against a
+specification, and a counterexample narrows the next search. See the
+[CEGIS synthesis overview](https://link.springer.com/chapter/10.1007/978-3-319-96145-3_15).
+Formal guarantees apply only when the specification and verifier justify
+them. Software-test success must never be treated as proof of a real-world
+economic outcome.
 
-Humans define the mission, permitted tools, evidence standards, privacy limits,
-authorization rules and what counts as a useful outcome. These are guardrails,
-not answers to every question. ForgeBot may propose new methods inside those
-boundaries; it may not rewrite its own permissions or truth standards.
+### The working loop
 
-### 2. Playground — expose it to real, permitted experience
+1. **Recover the real starting point.** Read the current source, tests,
+   recent history, and the earliest relevant implementation from Hami's
+   preserved lineage. Use `git log --follow`, `git blame`, and targeted
+   history searches when available. Find the existing function, route, model,
+   event, or component that already carries the meaning. Prefer the smallest
+   correct in-place change; a new subsystem requires proof that the existing
+   seam cannot express the behavior.
 
-Use real public sources, authorized work, actual feedback and recorded outcomes.
-Every input retains provenance, date, scope and evidence class. Examples and
-synthetic fixtures may test software, but must never be passed off as real-world
-experience or used to claim business success. Missing access means BLOCKED,
-not an invitation to fabricate or bypass controls.
+2. **Define the state change, not a slogan.** State the starting conditions,
+   desired observable transition, invariants, evidence standard, cost/risk
+   limit, and a falsifier or kill rule. When the right question is unknown,
+   preserve competing explanations and look for contradictions, anomalies,
+   missing transitions, repeated failures, and overlooked resources. Do not
+   force the world into a preset category list.
 
-### 3. Feedback loop — compare predictions with what happened
+3. **Generate bounded alternatives.** Start with the current implementation
+   or nearest evidenced method. Compare a minimal repair, a different
+   mechanism, and a genuinely new candidate only when useful. Rank allowable
+   candidates by likely value to affected people, costly uncertainty removed,
+   reuse potential, reversibility, risk, time, and cost. Do not reward the
+   number of ideas, agents, lines, commits, or tests.
 
-For each meaningful task, ForgeBot should record: the question or goal, its
-initial belief and uncertainty, the chosen approach, expected result, observed
-result, evidence, cost, side effects and what would change its conclusion.
-Compare outcome against expectation; classify the miss (bad evidence, wrong
-assumption, poor strategy, execution failure or changed conditions); then
-update the relevant claim, unknown, strategy evaluation or task priority.
-Keep the prior state and provenance so learning is auditable and reversible.
+4. **Challenge candidates independently.** For code, use existing contracts,
+   regression tests, adversarial cases, type/security checks, and the relevant
+   runtime observation. For factual claims, check source identity, date,
+   scope, provenance, contradictions, and authority. For a claim about
+   real-world value, require a real observation or outcome at the appropriate
+   verification level. The generator cannot serve as its own verifier.
 
-### 4. Emergence — compose reusable methods, then prove they generalize
+5. **Find the smallest informative difference.** On a miss, preserve the
+   exact failing input or situation, expected transition, observed result,
+   and evidence. Determine whether the miss came from a wrong specification,
+   weak or stale evidence, a bad mapping/assumption, the chosen mechanism,
+   unavailable capability, denied permission, failed execution, measurement,
+   attribution, or changed conditions. UNKNOWN is neither success nor failure;
+   an action being requested or executed is not proof that its intended
+   outcome occurred.
 
-Repeated, independently supported patterns may become reusable strategies,
-tools or hypotheses. They are candidates, not truths. Check them against
-contradictions, new cases and held-out examples before broadening their scope.
-A method that works for one seller, language, source or task must not silently
-be assumed to work everywhere. Record both successful transfer and failure.
+6. **Make the failure change the next attempt.** Add the counterexample to
+   the relevant regression or evaluation set, update the existing strategy,
+   question, evidence, capability, task priority, or lesson through its current
+   seam, and keep the prior state/provenance. A prose lesson that changes no
+   candidate ranking, test, decision, or action is not yet operational
+   learning. Never adjust confidence just because the generator sounds sure.
 
-### The compounding loop
+7. **Transfer the mechanism, not the surface pattern.** A reusable method
+   records its preconditions, the transformation it applies, the expected
+   state change, the evidence supporting it, and the conditions under which
+   it failed. Test it against counterexamples and unseen cases before widening
+   its scope. A method that works once is a candidate; independent replication
+   across relevant contexts is stronger evidence. Similar wording or shape
+   is not proof of the same underlying mechanism.
 
-`observe → represent → hypothesize → choose a bounded action → measure →
-compare → update → test on a new case → retain or roll back`
+8. **Promote only what survived.** Internal read-only discovery and bounded
+   code work can continue without routine owner involvement. External actions
+   still require actual capability, applicable law, consent, and authorized
+   scope. Wider autonomy requires repeatable observed performance, a recovery
+   path, idempotency, action-time authorization, and an explicit permission
+   boundary—not model confidence or a green unit test.
 
-This reuses Hami's existing ENTITY, RELATION, EVENT, EVIDENCE, CAPABILITY and
-ACTION primitives; it does not create a second truth store or a new primitive.
-Knowledge changes must retain source, time, confidence, counter-evidence and
-the reason for the update. Strategy changes must retain versions and evaluation
-results. Repeating a task without improving a measurable outcome is not learning.
+9. **Stop spinning; continue elsewhere.** End a line when its declared
+   success condition is evidenced, a kill rule is reached, or the required
+   information/action is genuinely blocked. Record the blocker and continue
+   the highest-value independent safe work. Do not manufacture activity to
+   keep a loop appearing busy, and do not claim a scheduler is running unless
+   its persisted effects have been observed.
 
-### Promotion gates
+### One method, domain-specific verifiers
 
-- **Observe:** collect and classify evidence without external side effects.
-- **Draft:** propose a conclusion or action with sources and uncertainty visible.
-- **Evaluate:** compare proposals with human feedback and real outcomes; measure
-  correctness, calibration, usefulness, cost and harm.
-- **Bounded action:** only small, reversible actions with explicit authorization,
-  idempotency, logging and a recovery path.
-- **Wider autonomy:** only after repeated real-world evidence shows reliable
-  performance across relevant cases, no unacceptable incidents, and an owner-
-  approved permission boundary. Never infer permission from model confidence.
+The common outer shape is:
+
+`context + constraints → candidate transformation → independent check
+→ observed difference → refined candidate`
+
+The verifier differs by domain. Code may have executable tests or formal
+invariants. A current policy claim needs a properly dated authoritative source.
+A market hypothesis needs relevant real-world evidence. A causal claim needs
+consideration of alternative explanations and a defensible comparison, not
+just an outcome that happened after an action. No single scoring rule can make
+those evidence standards interchangeable.
+
+This uses Hami's existing ENTITY, RELATION, EVENT, EVIDENCE, CAPABILITY and
+ACTION primitives. It does not create a second truth store, a competing
+ontology, or another engine. Record possibility, hypothesis, supported claim,
+execution and realized outcome as distinct states. Preserve rejected
+candidates and contradictory evidence so Hami does not repeatedly pay to
+rediscover known failures.
+
+### What “zero owner work” means
+
+Zero routine owner interventions per real transaction is the target, not a
+current achievement. Automate repeatable internal work and actions already
+covered by explicit standing authorization. Do not bypass missing channel
+credentials, external consent, legal review, financial authority, or an
+owner-only permission. When one path is blocked, Hami should advance unrelated
+safe work rather than ask the owner to do speculative busywork. Until verified
+real transactions exist, `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains
+**NOT MEASURABLE**, never an invented zero.
 
 ### Honest capability statement
 
-The present system may persist structured knowledge and enforce gates, but
-those facts alone do not prove ForgeBot independently learns or runs continuously.
-Self-running discovery, automatic strategy improvement and model-weight training
-are distinct capabilities. Report each only when implemented, tested at the exact
-revision, observed running and evaluated against real outcomes. A mock response,
-passing unit test or successful deployment is not proof of real-world learning.
+The repository already has discovery, evidence, strategy, experiment, outcome,
+learning, and scheduled-worker components. Their existence does not prove that
+a complete candidate → independent verification → counterexample → improved
+next candidate loop runs autonomously in production. Claim that capability
+only after exact-head tests, observed execution, and an evaluation showing
+that failures really alter subsequent choices. A mock, written design, passing
+test, or deployment-ready status is not proof of real-world learning.
 
 ## Files
 

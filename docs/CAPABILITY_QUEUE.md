@@ -1,3 +1,16 @@
+## [NEURAL ANALOGY REPLACED BY DIFFERENCE-GUIDED SYNTHESIS — DESIGN EDITED / RUNTIME PROOF PENDING — 2026-10-18]
+
+- **Existing seam inspected:** `docs/ENGINE.md`'s ForgeBot learning section; current `backend/app/services/discovery_engine.py`, `backend/app/services/learning_engine.py`, `backend/app/services/experiment_runner.py`, and the existing scheduled intelligence path. No new file, service, table, model, route, or primitive was created.
+- **Decision:** use bounded candidate generation plus independent, domain-appropriate verification and counterexample-driven refinement instead of a neuroscience analogy. CEGIS is a known program-synthesis pattern, not a claim that formal software guarantees automatically apply to markets or other real-world domains.
+- **Routine owner action targeted:** repeated manual explanation/replanning of the reasoning framework. This documentation edit does not itself remove a production owner intervention.
+- **Action this edit removes:** it replaces the ambiguous biological analogy with operational steps that can be implemented and checked in the existing system.
+- **What remains:** runtime code has not yet been changed to prove that failed candidates reliably affect the next candidate/priority. Exact-head CI and current production/scheduler behavior are not established by this edit. The existing `BeliefExperiment` path also deserves a source audit before treating its free-text result as a verified general learning signal.
+- **Next removable dependency:** trace the canonical scheduled-cognition → candidate → verifier → counterexample/write-back path and strengthen that existing path in place, with regression tests for success, counterexample, UNKNOWN, duplicate outcome, denied authorization, and failed execution. Keep real-world outcomes separate from TEST/MOCK/HYPOTHESIS.
+- **External boundary unchanged:** no contact, publication, intake activation, provider send, spend, payment, or revenue event occurred. Real seller discovery/legal/channel gates remain unresolved.
+- **Verification at edit time:** parent main `e0f8ae5b0d453bd618e1155e60b0f3f4a6c1c4eb` exposed only a Vercel success status, not a complete exact-head CI matrix. This change is documentation-only; full CI for the new head and runtime observation remain pending.
+
+---
+
 ## [HOMEPAGE VALUE PATHS + MASTHEAD CASCADE — SOURCE EDITED / VERIFICATION PENDING — 2026-10-18]
 
 - **Existing seams inspected:** `src/routes/index.tsx::HomePage` and `QuickStart`; existing `FindingsPreview` / `UnknownsPreview` live loaders; the public `/domain` needs/offers/jobs/trades route; `src/styles.css`'s base signature styles and later human-first/follow-through theme; and `src/lib/content.test.ts`. No new file, route, component system, backend endpoint, model, table, or semantic primitive was added.
