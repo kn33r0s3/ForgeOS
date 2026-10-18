@@ -400,3 +400,11 @@ Read docs/BRAIN.md, this file, QUEUE.md, AGENTS.md, HANDOFF.md, and the relevant
 - Parent main was `e0f8ae5b0d453bd618e1155e60b0f3f4a6c1c4eb`. Its combined status exposed Vercel success only; full exact-head CI was not available from that status result. No local repository/runtime was available for running tests in this session. The new commit's own checks must be inspected separately.
 - No external contact, public post, intake activation, message, spend, payment, or revenue was performed. The seller/legal/channel gate is unchanged; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
 - Next internal work: audit the canonical scheduled-cognition → verification → counterexample → write-back path and repair its existing seam, rather than creating a new reasoning engine.
+
+## 2026-10-18 — Feed schema-verifier counterexamples into the next ForgeBot attempt
+
+- Audited the existing bounded `cognitive_worker` and its tests before changing code; path history shows the worker was deliberately made idempotent, proposal-only, provider-gated, evidence-filtered, and failure-audited.
+- Extended the existing seam so deterministic proposal-schema failures produce allow-listed field/category signatures in `ResearchTaskEvent`. The same task's retry loads those signatures into `CognitiveTaskContext`; the existing Ollama prompt receives them as structured output-contract feedback. The context digest records the feedback; raw rejected output and raw validation inputs are not persisted.
+- Added a regression that rejects a proposal with `execution_authorized=true`, then confirms the next call receives `execution_authorized:literal_error` and remains PROPOSED / not executable. The provider is a TEST fixture; this is not real inference or an economic outcome.
+- Modified existing `cognitive_worker.py`, `cognitive_provider.py`, and `test_cognitive_worker.py`; no new file/table/primitive/subsystem. No production permission or live action boundary changed.
+- Exact-head full CI and deployment checks are pending for the code commit. Real local/self-hosted model invocation, natural production scheduler execution, semantic/factual verification and any REAL seller/payment outcome remain unverified.

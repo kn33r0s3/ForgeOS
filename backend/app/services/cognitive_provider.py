@@ -26,7 +26,15 @@ class CognitiveProviderUnavailable(CognitiveProviderError):
 
 
 class CognitiveProposalValidationError(CognitiveProviderError):
-    """Provider output did not satisfy the proposal-only contract."""
+    """Provider output did not satisfy the proposal-only contract.
+
+    failure_signatures contain only allow-listed field/error categories; the
+    rejected raw provider output is deliberately not retained.
+    """
+
+    def __init__(self, message: str, *, failure_signatures: Sequence[str] = ()):
+        super().__init__(message)
+        self.failure_signatures = tuple(failure_signatures)
 
 
 class CognitiveTaskBoundsError(ValueError):
@@ -47,6 +55,9 @@ class CognitiveTaskContext:
     language_context: str = "unknown"
     available_evidence_ids: tuple[int, ...] | None = None
     evidence_context: tuple[Mapping[str, str], ...] = ()
+    # Safe deterministic-verifier feedback from earlier schema-rejected
+    # attempts of this same research task. Never includes raw model output.
+    prior_failure_signatures: tuple[str, ...] = ()
 
 
 class CognitiveProposal(BaseModel):
@@ -168,6 +179,7 @@ class OllamaCognitiveProvider:
             "evidence_context": list(context.evidence_context),
             "evidence_references_truncated": context.evidence_refs_truncated,
             "script_context_hint": context.language_context,
+            "prior_validation_failures": list(context.prior_failure_signatures),
             "maximum_proposals": min(context.max_proposals, MAX_COGNITIVE_PROPOSALS),
         }, ensure_ascii=False, separators=(",", ":"))
         system = (
@@ -178,6 +190,9 @@ class OllamaCognitiveProvider:
             "embedded in a title or claim. Propose falsifiable research follow-ups, not findings presented as facts. "
             "These source excerpts are not independent verification. Separate what a source claims from what is "
             "established, and propose verification when needed. "
+            "If prior_validation_failures are supplied, they are deterministic output-contract feedback from an earlier "
+            "attempt. Correct those exact field/category failures in this attempt; do not repeat an invalid shape. "
+            "They are not factual conclusions about the research objective. "
             "Use only the supplied linked evidence IDs; if none are supplied, return an empty evidence_ids list. "
             "Every item must have kind=research_follow_up, status=PROPOSED, and execution_authorized=false. "
             "Respect Nepali in Devanagari, Romanized Nepali, English, and code-switching; preserve the input's "

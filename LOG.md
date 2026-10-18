@@ -660,3 +660,10 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Source basis: the repository already has open-world discovery plus strategy, experiment, evidence, outcome and learning components; no new engine/file/table/primitive was added. The method is a design contract, not proof the production runtime executes it end-to-end.
 - Recorded runtime implementation and verification as pending in the existing `docs/CAPABILITY_QUEUE.md`. Parent main exposed only Vercel success status; no complete exact-head CI or live runtime was inferred from it.
 - No seller contact, public post, message, spend, payment, permission change, production flag change or real-world outcome was created.
+
+## 2026-10-18 — Schema-verifier feedback now follows the existing cognitive retry
+
+- Rechecked main, worker code, provider context, candidate-selection and worker tests, plus the file history before implementation.
+- Extended the current proposal-verification seam: Pydantic validation and linked-evidence-ID rejection now produce safe allow-listed failure signatures; `_record_failure` saves those signatures only on the existing `cognitive_proposal_rejected` event. The next task attempt reloads a bounded set into the model context/prompt and context digest/provenance. No raw output or user/provider text is written as feedback.
+- Added a focused test for the failure→persisted signature→next request feedback path, retaining proposal-only output and no executable permission. This uses TEST fixtures and does not represent real inference, fact verification or real-world learning.
+- Edited existing source/test files plus the existing capability/continuity ledgers; no additional architecture or file was created. Full exact-head CI and deployment verification are pending; no external operation was invoked.

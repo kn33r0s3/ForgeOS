@@ -1,3 +1,15 @@
+## [COGNITIVE SCHEMA-FAILURE FEEDBACK — CODE EDITED / EXACT-HEAD CI PENDING — 2026-10-18]
+
+- **Existing seam:** `backend/app/services/cognitive_worker.py` validates proposal-only outputs and records `ResearchTaskEvent` rejection events; `backend/app/services/cognitive_provider.py` builds the existing bounded Ollama context; `backend/tests/test_cognitive_worker.py` holds the worker contract. No new file, model, table, service, endpoint, or primitive.
+- **Change:** only allow-listed deterministic schema-verifier signatures (for example, `execution_authorized:literal_error` or evidence ID outside the linked set) are persisted on the existing rejection event, loaded into the same task's next retry context, included in the prompt as structured feedback, and included in the context digest/provenance. Raw rejected model output is not stored or sent back.
+- **What this proves when tests pass:** a structural counterexample from the existing schema verifier can change the *next model request* rather than being discarded after a failed proposal. It remains proposal-only; no action is authorized and no research fact is promoted.
+- **What it does not prove:** semantic/factual correctness, a working real local/self-hosted model, natural production scheduling, business value, or autonomous handling of real-world failed outcomes. No semantic judge was invented; the next wider loop still needs an independent verifier appropriate to the domain and verified production execution.
+- **Routine owner action targeted:** repeatedly diagnosing the same output-contract failure on retry. External permissions and real-world seller discovery are unchanged.
+- **Verification:** added a regression using a TEST provider to fail once, then assert that a second call receives the safe failure signature. This is test evidence only. Exact-head CI and deployment verification remain pending.
+- **No external effects:** no contact, post, message, spend, payment, intake flag change, or REAL outcome.
+
+---
+
 ## [NEURAL ANALOGY REPLACED BY DIFFERENCE-GUIDED SYNTHESIS — DESIGN EDITED / RUNTIME PROOF PENDING — 2026-10-18]
 
 - **Existing seam inspected:** `docs/ENGINE.md`'s ForgeBot learning section; current `backend/app/services/discovery_engine.py`, `backend/app/services/learning_engine.py`, `backend/app/services/experiment_runner.py`, and the existing scheduled intelligence path. No new file, service, table, model, route, or primitive was created.

@@ -22,6 +22,55 @@ from app.services import cognitive_provider, world_graph
 _PROPOSAL_LIST_ADAPTER = TypeAdapter(list[cognitive_provider.CognitiveProposal])
 _MAX_EVIDENCE_ID_FIELD_CHARS = 4_096
 
+# Only structured, deterministic-verifier categories may be remembered and
+# passed to a retry. Arbitrary provider output/error text never enters feedback.
+_PROPOSAL_FIELDS = frozenset({
+    "kind", "title", "rationale", "next_step", "evidence_ids",
+    "status", "execution_authorized",
+})
+_SAFE_FAILURE_SIGNATURES = frozenset({
+    "kind:literal_error",
+    "title:string_too_short", "title:string_too_long",
+    "rationale:string_too_short", "rationale:string_too_long",
+    "next_step:string_too_short", "next_step:string_too_long",
+    "evidence_ids:too_long", "evidence_ids:list_type",
+    "evidence_ids:int_type", "evidence_ids:outside_linked_set",
+    "status:literal_error", "execution_authorized:literal_error",
+    "proposal:extra_forbidden", "proposal:schema_error",
+})
+
+
+def _safe_validation_failure_signatures(error: ValidationError) -> tuple[str, ...]:
+    """Reduce Pydantic errors to a small allow-list; never persist input values."""
+    signatures: set[str] = set()
+    for item in error.errors(include_url=False):
+        location = item.get("loc", ())
+        field = next(
+            (
+                part for part in reversed(location)
+                if isinstance(part, str) and part in _PROPOSAL_FIELDS
+            ),
+            None,
+        )
+        error_type = str(item.get("type") or "")
+        if field is None:
+            signature = (
+                "proposal:extra_forbidden"
+                if error_type == "extra_forbidden"
+                else "proposal:schema_error"
+            )
+        else:
+            candidate = f"{field}:{error_type}"
+            signature = (
+                candidate
+                if candidate in _SAFE_FAILURE_SIGNATURES
+                else "proposal:schema_error"
+            )
+        signatures.add(signature)
+    return tuple(sorted(signatures & _SAFE_FAILURE_SIGNATURES))[:8] or (
+        "proposal:schema_error",
+    )
+
 
 def create_cognitive_task(
     db: Session,
@@ -164,7 +213,44 @@ def _context_for_task(
         language_context=cognitive_provider.script_context_hint(objective),
         available_evidence_ids=tuple(available_evidence_ids),
         evidence_context=tuple(evidence_context),
+        prior_failure_signatures=_prior_failure_signatures(db, research_task.id),
     )
+
+
+def _prior_failure_signatures(
+    db: Session,
+    research_task_id: int,
+    *,
+    limit: int = 4,
+) -> tuple[str, ...]:
+    """Load only safe schema-verifier failures from prior attempts of this task."""
+    events = (
+        db.query(models.ResearchTaskEvent)
+        .filter_by(
+            task_id=research_task_id,
+            event_type="cognitive_proposal_rejected",
+        )
+        .order_by(
+            models.ResearchTaskEvent.created_at.desc(),
+            models.ResearchTaskEvent.id.desc(),
+        )
+        .limit(max(1, min(limit, 8)))
+        .all()
+    )
+    signatures: list[str] = []
+    for event in events:
+        details = event.details
+        if not isinstance(details, dict):
+            continue
+        values = details.get("failure_signatures")
+        if not isinstance(values, list):
+            continue
+        for value in values:
+            if value in _SAFE_FAILURE_SIGNATURES and value not in signatures:
+                signatures.append(value)
+                if len(signatures) >= 8:
+                    return tuple(signatures)
+    return tuple(signatures)
 
 
 def _validated_proposals(
@@ -183,7 +269,8 @@ def _validated_proposals(
         proposals = _PROPOSAL_LIST_ADAPTER.validate_python(raw_proposals)
     except ValidationError as exc:
         raise cognitive_provider.CognitiveProposalValidationError(
-            "provider output did not satisfy the proposal-only schema"
+            "provider output did not satisfy the proposal-only schema",
+            failure_signatures=_safe_validation_failure_signatures(exc),
         ) from exc
 
     allowed_evidence_ids = set(
@@ -194,7 +281,8 @@ def _validated_proposals(
     for proposal in proposals:
         if any(evidence_id not in allowed_evidence_ids for evidence_id in proposal.evidence_ids):
             raise cognitive_provider.CognitiveProposalValidationError(
-                "proposal cites evidence outside the linked research evidence set"
+                "proposal cites evidence outside the linked research evidence set",
+                failure_signatures=("evidence_ids:outside_linked_set",),
             )
     return proposals
 
@@ -209,6 +297,7 @@ def _context_digest(context: cognitive_provider.CognitiveTaskContext) -> str:
             "evidence_context": context.evidence_context,
             "evidence_refs_truncated": context.evidence_refs_truncated,
             "language_context": context.language_context,
+            "prior_failure_signatures": context.prior_failure_signatures,
         },
         sort_keys=True,
         separators=(",", ":"),
@@ -241,16 +330,24 @@ def _record_failure(
     event_type: str,
     provider_name: str,
     error_code: str,
+    failure_signatures: Sequence[str] = (),
 ) -> None:
+    details: dict[str, Any] = {
+        "worker_task_id": worker_task.id,
+        "provider": provider_name,
+        "error_code": error_code,
+    }
+    safe_signatures = [
+        item for item in failure_signatures
+        if isinstance(item, str) and item in _SAFE_FAILURE_SIGNATURES
+    ][:8]
+    if safe_signatures:
+        details["failure_signatures"] = list(dict.fromkeys(safe_signatures))
     _record_research_event(
         db,
         research_task,
         event_type,
-        {
-            "worker_task_id": worker_task.id,
-            "provider": provider_name,
-            "error_code": error_code,
-        },
+        details,
     )
     # The worker manager rolls back the handler transaction when the handler
     # raises. A failure record that dies with that rollback is not a record:
@@ -307,7 +404,7 @@ def run_cognitive_task(
             configured_provider.propose(provider_context),
             context,
         )
-    except cognitive_provider.CognitiveProposalValidationError:
+    except cognitive_provider.CognitiveProposalValidationError as exc:
         _record_failure(
             db,
             research_task,
@@ -315,6 +412,7 @@ def run_cognitive_task(
             "cognitive_proposal_rejected",
             configured_provider.name,
             "invalid_proposal",
+            failure_signatures=getattr(exc, "failure_signatures", ()),
         )
         raise
     except cognitive_provider.CognitiveProviderError:
@@ -344,6 +442,7 @@ def run_cognitive_task(
         "provider_mode": configured_provider.mode,
         "provider_metadata": provider_metadata,
         "language_context": context.language_context,
+        "prior_failure_signatures": list(context.prior_failure_signatures),
         "proposal_classification": "HYPOTHESIS",
         "context_sha256": _context_digest(context),
         "evidence_ids": list(context.evidence_ids),
