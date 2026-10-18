@@ -125,7 +125,7 @@ describe("Hami public content", () => {
     assert.match(brand, /HAMI/);
     assert.match(brand, /SYSTEMS/);
     assert.match(brand, /\/favicon\.svg/);
-    assert.match(header, /#FFB000/);
+    assert.match(header, /<BrandMark tone="light"/);
     assert.match(owner, /<BrandMark tone="light" \/>/);
     assert.match(owner, /Private owner workspace/);
     assert.doesNotMatch(home, /className="border-b border-line bg-surface" aria-hidden="true"/);
@@ -555,7 +555,7 @@ describe("Hami public root", () => {
     assert.equal(sitemap.includes("/owner"), false);
     assert.equal(sitemap.includes("/privacy"), false);
     assert.doesNotMatch(discoveries, /loadSubstrateDiscoveries|\/api\/forge\/substrate/);
-    assert.match(discoveries, /does not request owner-authorized substrate records/);
+    assert.match(discoveries, /Hami does not expose private working records on this page/);
     assert.match(discoveries, /Opening this page does not run discovery/);
     assert.doesNotMatch(discoveries, /discovery\/runs/);
     // The closed-intake link is gone from the header entirely.
