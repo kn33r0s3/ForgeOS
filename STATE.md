@@ -472,3 +472,8 @@ Read docs/BRAIN.md, this file, QUEUE.md, AGENTS.md, HANDOFF.md, and the relevant
 - Expanded the existing closed-loop regression to cover misattributed belief/Opportunity rejection, exact outcome evidence linkage, replay behavior, and ambiguous multiple Outcomes. All “REAL” source/evidence/outcome rows in this regression are isolated TEST database fixtures only; no real business activity is represented.
 - `apply_learning_to_system` still has no production caller in the source audit. This is stronger safety for a helper, not a claim of autonomous production learning. Exact-head CI and deployment verification pending.
 - No network contact, public post, message, spend, payment, intake activation, or permission change.
+
+## 2026-10-18 — Correct target-customer field in attribution regression fixture
+
+- Follow-up inspection of `models.Opportunity` found the new unrelated-opportunity regression used `customer`, while the current model names that field `target_customer`. Corrected the test fixture argument in place before treating CI as evidence.
+- No runtime behavior changed; new exact-head CI is required for this correction.

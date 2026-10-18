@@ -212,7 +212,7 @@ def test_decision_action_outcome_learning(db):
     real_event.belief_id = belief.id
     unrelated_opp = models.Opportunity(
         problem="Different target that this experiment did not test",
-        customer="Different customer",
+        target_customer="Different customer",
         solution="Different solution",
     )
     db.add(unrelated_opp)
