@@ -63,7 +63,7 @@ export const Route = createRootRoute({
         { name: "twitter:image", content: `${SITE.url}/og.jpg` },
         { name: "apple-mobile-web-app-title", content: SITE.name },
         { name: "theme-color", content: SITE.themeColor },
-        { name: "color-scheme", content: "dark" },
+        { name: "color-scheme", content: "light" },
       ],
       links: [
         { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
