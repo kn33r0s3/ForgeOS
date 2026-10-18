@@ -208,7 +208,23 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
-## Last verified state snapshot (2026-10-17)
+## Last verified state snapshot (2026-10-18)
+
+**Update 2026-10-18 (daily freshness check):** HEAD at `200f4834`
+("docs: log ForgeBot learning-loop architecture", committed 2026-10-18 NPT).
+Pull fast-forwarded `e8def9ca..200f4834` clean (LOG.md, STATE.md, QUEUE.md,
+docs/ENGINE.md, docs/HUMAN_FIRST_PRODUCT_STANDARD.md, site header/styles
+rework, codingame-agent skill); `main` == `origin/main`. Working tree clean.
+
+- **Health:** haminp.vercel.app/api/health → ok (`status: ok`, `db: up`,
+  v2.3.0, checked 2026-10-18 ~06:23 NPT). forge-os-ebon.vercel.app/api/health
+  → ok (`status: ok`, `db: up`, v2.3.0).
+- **Intake:** `intake_enabled: false` (unchanged, Forge Bot closed).
+- **Unknowns:** 98 D-entries in `docs/UNKNOWN_MAP.md` (unchanged).
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold: name one seller, authorize
+  first contact; company registration and payment onboarding need the
+  owner's body/identity.
 
 **Update 2026-10-17 (daily freshness check):** HEAD at `cb9a62fb`
 ("docs(log): record test fixture correction and knowledge source audit",
