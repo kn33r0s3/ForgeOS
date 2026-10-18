@@ -37,6 +37,9 @@ _SAFE_FAILURE_SIGNATURES = frozenset({
     "evidence_ids:int_type", "evidence_ids:outside_linked_set",
     "status:literal_error", "execution_authorized:literal_error",
     "proposal:extra_forbidden", "proposal:schema_error",
+    "proposal:not_a_list", "proposal:invalid_count",
+    "proposal:invalid_json", "proposal:invalid_envelope",
+    "proposal:non_object_item",
 })
 
 
@@ -259,11 +262,13 @@ def _validated_proposals(
 ) -> list[cognitive_provider.CognitiveProposal]:
     if not isinstance(raw_proposals, (list, tuple)):
         raise cognitive_provider.CognitiveProposalValidationError(
-            "provider output must be a bounded proposal list"
+            "provider output must be a bounded proposal list",
+            failure_signatures=("proposal:not_a_list",),
         )
     if not raw_proposals or len(raw_proposals) > context.max_proposals:
         raise cognitive_provider.CognitiveProposalValidationError(
-            f"provider must return between one and {context.max_proposals} proposals"
+            f"provider must return between one and {context.max_proposals} proposals",
+            failure_signatures=("proposal:invalid_count",),
         )
     try:
         proposals = _PROPOSAL_LIST_ADAPTER.validate_python(raw_proposals)

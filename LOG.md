@@ -672,3 +672,8 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 
 - Re-read the newly added retry regression and removed its unused test evidence row labelled REAL. The behavior under test is schema-verifier feedback only, so no Evidence rows are needed.
 - Updated the existing test in place; no new file and no product/runtime behavior change. New exact-head CI is required.
+
+## 2026-10-18 — Close provider-adapter gap in structural retry feedback
+
+- Extended the existing cognitive retry feedback to cover model-format failures caught before Pydantic validation: malformed JSON, envelope, proposal count, non-object item, or non-list output. The feedback remains a fixed enum, never raw response text.
+- Added a no-network fake-adapter test with no evidence fixture. Source/test edits only, no new service or primitive. Exact-head verification is required; semantic/factual verification remains a separate outstanding capability.

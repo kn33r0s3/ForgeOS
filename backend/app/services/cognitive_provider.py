@@ -218,14 +218,26 @@ class OllamaCognitiveProvider:
         try:
             decoded = json.loads(raw)
         except (TypeError, ValueError) as exc:
-            raise CognitiveProposalValidationError("local provider did not return valid JSON") from exc
+            raise CognitiveProposalValidationError(
+                "local provider did not return valid JSON",
+                failure_signatures=("proposal:invalid_json",),
+            ) from exc
         if not isinstance(decoded, dict) or set(decoded) != {"proposals"}:
-            raise CognitiveProposalValidationError("local provider returned an unexpected JSON envelope")
+            raise CognitiveProposalValidationError(
+                "local provider returned an unexpected JSON envelope",
+                failure_signatures=("proposal:invalid_envelope",),
+            )
         proposals = decoded["proposals"]
         if not isinstance(proposals, list) or not 1 <= len(proposals) <= min(context.max_proposals, MAX_COGNITIVE_PROPOSALS):
-            raise CognitiveProposalValidationError("local provider returned an invalid proposal count")
+            raise CognitiveProposalValidationError(
+                "local provider returned an invalid proposal count",
+                failure_signatures=("proposal:invalid_count",),
+            )
         if any(not isinstance(item, dict) for item in proposals):
-            raise CognitiveProposalValidationError("local provider returned a non-object proposal")
+            raise CognitiveProposalValidationError(
+                "local provider returned a non-object proposal",
+                failure_signatures=("proposal:non_object_item",),
+            )
         return proposals
 
 def get_cognitive_provider(provider_name: str | None = None) -> CognitiveProvider:

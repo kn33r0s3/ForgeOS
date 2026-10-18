@@ -413,3 +413,9 @@ Read docs/BRAIN.md, this file, QUEUE.md, AGENTS.md, HANDOFF.md, and the relevant
 
 - Tightened the new cognition regression: schema-retry feedback requires no fabricated source or economic evidence, so the test no longer constructs a fixture labelled `source_kind=REAL`. It now tests only deterministic contract feedback and the unchanged non-executable proposal boundary.
 - This is test-integrity cleanup; it does not upgrade the implementation claim. Exact-head CI/deploy status for the updated head must be checked.
+
+## 2026-10-18 — Include provider-layer format errors in bounded retry feedback
+
+- Follow-up source review found invalid JSON and malformed envelopes are rejected inside `OllamaCognitiveProvider.propose`, before shared `_validated_proposals` runs. These failures previously had no structured signature to carry into a retry.
+- Classified only these deterministic contract failures (`invalid_json`, `invalid_envelope`, `invalid_count`, `non_object_item`, `not_a_list`) using the existing allow-list. Added a no-network/no-evidence adapter regression proving a malformed response produces a safe category and does not appear in the raised exception.
+- This extends only the structural-output feedback path. It makes no claim about factual correctness, real provider quality, or end-to-end autonomy. Exact-head CI is pending.

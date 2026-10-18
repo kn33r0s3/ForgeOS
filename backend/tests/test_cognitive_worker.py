@@ -284,6 +284,31 @@ def test_schema_verifier_feedback_changes_the_next_candidate_attempt(db):
 
 
 
+
+def test_local_provider_classifies_malformed_json_without_retaining_response():
+    class InvalidJsonModel:
+        _model = "test-only-model"
+
+        def complete_json(self, prompt, *, system, schema):
+            return "secret/raw/rejected-response"
+
+    provider = cognitive_provider.OllamaCognitiveProvider(InvalidJsonModel())
+    context = cognitive_provider.CognitiveTaskContext(
+        research_task_id=1,
+        objective="Check provider output structure.",
+        evidence_ids=(),
+        evidence_refs_truncated=False,
+        available_evidence_ids=(),
+    )
+
+    with pytest.raises(cognitive_provider.CognitiveProposalValidationError) as rejected:
+        provider.propose(context)
+
+    assert rejected.value.failure_signatures == ("proposal:invalid_json",)
+    assert "secret/raw/rejected-response" not in str(rejected.value)
+
+
+
 def test_local_ollama_provider_uses_shared_ai_engine_and_nepal_language_policy(monkeypatch):
     import json
 

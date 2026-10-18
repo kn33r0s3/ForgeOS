@@ -1,3 +1,11 @@
+## [COGNITIVE PROVIDER-FORMAT FEEDBACK — SOURCE EDITED / EXACT-HEAD CI PENDING — 2026-10-18]
+
+- Follow-up audit found provider-adapter rejections (invalid JSON, envelope, count, or item type) occurred before the shared Pydantic validator and previously retained no safe failure category.
+- Extended the same allow-list and existing error type so those deterministic contract failures also persist a bounded signature and can be supplied on the next retry. Added a no-network, no-evidence fake-adapter regression; the fake response is asserted absent from the exception.
+- Still only output-format feedback. This does not verify factual content, prove real inference, enable actions, or demonstrate real-world learning. Exact-head CI is pending.
+
+---
+
 ## [COGNITIVE SCHEMA-FAILURE FEEDBACK — CODE EDITED / EXACT-HEAD CI PENDING — 2026-10-18]
 
 - **Existing seam:** `backend/app/services/cognitive_worker.py` validates proposal-only outputs and records `ResearchTaskEvent` rejection events; `backend/app/services/cognitive_provider.py` builds the existing bounded Ollama context; `backend/tests/test_cognitive_worker.py` holds the worker contract. No new file, model, table, service, endpoint, or primitive.
