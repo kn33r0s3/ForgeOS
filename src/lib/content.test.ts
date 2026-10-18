@@ -138,6 +138,29 @@ describe("Hami public content", () => {
     assert.match(styles, /\.masthead \.mast-link\[aria-current="page"\]\s*\{[^}]*color:\s*#104e38;/s);
   });
 
+  it("surfaces live evidence before system explanation and links value-seekers to the public board", () => {
+    const home = readFileSync(join(root, "src/routes/index.tsx"), "utf8");
+    const homeStart = home.indexOf("function HomePage()");
+    const quickStartStart = home.indexOf("function QuickStart()", homeStart);
+    const capabilitiesStart = home.indexOf("function Capabilities()", quickStartStart);
+    assert.ok(homeStart >= 0 && quickStartStart > homeStart, "homepage composition must remain in the existing route");
+    const composition = home.slice(homeStart, quickStartStart);
+    assert.ok(
+      composition.indexOf("<FindingsPreview />") < composition.indexOf("<Capabilities />"),
+      "source-backed findings should appear before the architecture explanation",
+    );
+    assert.ok(
+      composition.indexOf("<UnknownsPreview />") < composition.indexOf("<Capabilities />"),
+      "open unknowns should appear before the architecture explanation",
+    );
+
+    const quickStart = home.slice(quickStartStart, capabilitiesStart);
+    assert.match(quickStart, /title: "I have a skill, offer, or idea"/);
+    assert.match(quickStart, /Browse needs, jobs, offers, and trades/);
+    assert.match(quickStart, /action: "Open the work board"/);
+    assert.match(quickStart, /to: "\/domain"/);
+  });
+
   it("exposes public-first primary destinations", () => {
     const hrefs = NAV.map((item) => item.to);
     // Primary navigation follows visitor intentions; specialist pages remain available in the footer and cross-links.
