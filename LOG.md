@@ -701,3 +701,9 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - **Regression contract:** modified `src/lib/content.test.ts` to check the original palette block and reject duplicate override blocks. PWA theme assertion now reads the same canonical token block.
 - **Verification boundary:** readback/structural assertions in the authoring step are not test execution. Run exact-SHA ForgeOS CI, secret scan and independent deployment verification, then review deployed desktop/mobile UI. No external effects occurred.
 
+## 2026-10-18 — Fix the exact-head frontend regression test anchor
+
+- Read frontend CI run [39146812523](https://github.com/kn33r0s3/ForgeOS/actions/runs/39146812523) rather than assuming its failure was from the CSS change. The failing tests were `names Hami without publishing compatibility names as product identities` and `keeps one readable light theme across navigation and public states`, both failing at the assertion that the canonical theme token block comment existed.
+- Root cause: the code's new comment is `/*\n * Hami Systems: warm paper...`, but both tests searched for `/* Hami Systems: warm paper` as a single-line opener. Updated those two existing tests to locate the canonical phrase rather than rely on whitespace after a comment delimiter.
+- The run had **258 frontend assertions passing and 2 failing**. Lint, typecheck, build, route smoke, repository guards and secrets scan passed; backend tests and independent deploy verification were still in progress at the last read. New exact-head CI/deploy results remain pending.
+- No app behavior or production settings were weakened; no external contact, publication, payment, spend, or REAL outcome occurred.

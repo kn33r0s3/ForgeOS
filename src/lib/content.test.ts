@@ -102,7 +102,7 @@ describe("Hami public content", () => {
       background_color?: string;
     };
     const styles = readFileSync(join(root, "src/styles.css"), "utf8");
-    const lightThemeStart = styles.indexOf("/* Hami Systems: warm paper");
+    const lightThemeStart = styles.indexOf("Hami Systems: warm paper");
     const lightThemeEnd = styles.indexOf("@layer base", lightThemeStart);
     const lightTheme = styles.slice(lightThemeStart, lightThemeEnd);
     assert.ok(lightThemeStart >= 0 && lightThemeEnd > lightThemeStart, "the original theme token block must be present");
@@ -150,7 +150,7 @@ describe("Hami public content", () => {
     const feedback = readFileSync(join(root, "src/components/ui/feedback.tsx"), "utf8");
     const sectionMarker = readFileSync(join(root, "src/components/layout/section-marker.tsx"), "utf8");
     const buttons = readFileSync(join(root, "src/components/ui/button.tsx"), "utf8");
-    const themeStart = styles.indexOf("/* Hami Systems: warm paper");
+    const themeStart = styles.indexOf("Hami Systems: warm paper");
     const themeEnd = styles.indexOf("@layer base", themeStart);
     const themeTokens = styles.slice(themeStart, themeEnd);
 

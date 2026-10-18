@@ -1,3 +1,11 @@
+## 2026-10-18 — Frontend test-anchor correction
+
+- Exact-head ForgeOS CI run [39146812523](https://github.com/kn33r0s3/ForgeOS/actions/runs/39146812523) found two frontend-test failures in the newly updated theme tests: each test searched for the CSS comment as `/* Hami Systems: warm paper`, while the canonical source is correctly formatted as `/*\n * Hami Systems: warm paper`. This was a test-anchor mismatch, not a CSS/build/typecheck failure. The 258 other frontend assertions passed; frontend-tests reported 2 failures.
+- Corrected both test anchors to search for the unique canonical phrase `Hami Systems: warm paper`. The first run also had lint, typecheck, build, route smoke, repository guards and secrets scan pass; backend tests and deployment verification were still running when checked. This correction requires a new exact-head run; the prior failing result is not described as green.
+- No production feature, customer data, intake, outside contact, payment or spend was changed.
+
+---
+
 ## 2026-10-18 — Frontend theme consolidation and light-state contrast (verification pending)
 
 - Current `main` before this in-place refactor: `d274ed43ac201b3f7e7d45fde322dd6adec84b3b`. The frontend had a warm paper/green theme only because two appended CSS blocks at the end of `src/styles.css` overrode the original dark values. Those blocks obscured the actual source of truth and left old component styles in place.
