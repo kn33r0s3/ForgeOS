@@ -160,7 +160,7 @@ function RootDocument() {
                 We’re improving Hami’s public experience. The rest of the site is temporarily unavailable while the work continues.
               </p>
               <p className="mt-3 max-w-xl text-base leading-7 text-muted" lang="ne">
-                हामी सार्वजनिक अनुभव सुधार्दैछौँ।
+                हामी हाम्रो वेबसाइटलाई अझ राम्रो बनाउँदैछौँ।
               </p>
               <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-sm text-muted">
                 <span>Hami Systems</span>
