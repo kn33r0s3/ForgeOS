@@ -208,6 +208,27 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
+## Last verified state snapshot (2026-10-19)
+
+**Update 2026-10-19 (daily freshness check):** HEAD at `1dc80b7b`
+("fix(learning): link events to exact source outcomes", committed
+2026-10-18 23:00 NPT). Pull fast-forwarded `200f4834..1dc80b7b` clean
+(~39 commits: learning-engine verified-outcome gating, cognition verifier
+counterexamples, UI light-theme contrast cascade consolidation, unknowns
+import dedupe, LOG/STATE/QUEUE/docs continuity updates);
+`main` == `origin/main`. Working tree clean.
+
+- **Health:** haminp.vercel.app/api/health → NOT OK on 2026-10-19 ~06:24 NPT:
+  `{"status":"degraded","ready":false,"ok":false,"version":"2.3.0","db":"down"}`.
+  forge-os-ebon.vercel.app/api/health → ok
+  (`status: ok`, `ready: true`, `db: up`, v2.3.0).
+- **Intake:** `intake_enabled: false` (unchanged, Forge Bot closed).
+- **Unknowns:** 98 D-entries in `docs/UNKNOWN_MAP.md` (unchanged).
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold: name one seller, authorize
+  first contact; company registration and payment onboarding need the
+  owner's body/identity.
+
 ## Last verified state snapshot (2026-10-18)
 
 **Update 2026-10-18 (daily freshness check):** HEAD at `200f4834`
