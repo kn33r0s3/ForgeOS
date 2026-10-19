@@ -98,6 +98,32 @@ app.add_middleware(PublicWriteSizeLimitMiddleware)
 
 
 @app.middleware("http")
+async def public_maintenance_gate(request: Request, call_next):
+    """Hide production API responses during the public maintenance window."""
+    mode = os.getenv("HAMI_MAINTENANCE_MODE", "").strip().lower()
+    if mode not in {"1", "true", "yes", "on"}:
+        return await call_next(request)
+
+    # Continue to let Vercel's existing, CRON_SECRET-guarded jobs run.
+    scheduled_paths = {
+        "/scheduled/cycle",
+        "/api/scheduled/cycle",
+        "/scheduled/intelligence",
+        "/api/scheduled/intelligence",
+    }
+    if request.url.path not in scheduled_paths:
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "Hami is under development."},
+            headers={
+                "Cache-Control": "no-store",
+                "X-Robots-Tag": "noindex, nofollow, noarchive, nosnippet",
+            },
+        )
+    return await call_next(request)
+
+
+@app.middleware("http")
 async def request_id_middleware(request: Request, call_next):
     """Attach a request id: honor X-Request-ID if sent, else mint one.
 

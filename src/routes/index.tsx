@@ -27,23 +27,35 @@ import {
   type StoredCheckoutAttempt,
 } from "@/lib/checkout-attempt-storage";
 
+const MAINTENANCE_MODE = import.meta.env.VITE_HAMI_MAINTENANCE_MODE === "true";
+
 export const Route = createFileRoute("/")({
   component: HomePage,
   head: () => ({
-    meta: [
-      { title: "Hami" },
-      {
-        name: "description",
-        content:
-          "Hami is a living system for understanding needs, knowledge, capabilities, resources, and outcomes across domains. Built in Kathmandu. Serving everywhere equally; action stays evidence-led and authorized.",
-      },
-      { property: "og:title", content: "Hami" },
-      {
-        property: "og:description",
-        content: "Discover what matters. Understand it. Act on it. Built in Kathmandu; serving everywhere equally.",
-      },
-      { name: "apple-mobile-web-app-title", content: "Hami" },
-    ],
+    meta: MAINTENANCE_MODE
+      ? [
+          { title: "Hami — Under Development" },
+          {
+            name: "description",
+            content: "Hami's public website is temporarily under development.",
+          },
+          { name: "robots", content: "noindex, nofollow, noarchive, nosnippet" },
+          { name: "googlebot", content: "noindex, nofollow, noarchive, nosnippet" },
+        ]
+      : [
+          { title: "Hami" },
+          {
+            name: "description",
+            content:
+              "Hami is a living system for understanding needs, knowledge, capabilities, resources, and outcomes across domains. Built in Kathmandu. Serving everywhere equally; action stays evidence-led and authorized.",
+          },
+          { property: "og:title", content: "Hami" },
+          {
+            property: "og:description",
+            content: "Discover what matters. Understand it. Act on it. Built in Kathmandu; serving everywhere equally.",
+          },
+          { name: "apple-mobile-web-app-title", content: "Hami" },
+        ],
   }),
 });
 
