@@ -1,3 +1,13 @@
+## 2026-10-21 — D93 Report #04 access attempt; provenance persistence risk narrowed
+
+- Current main at start: `ff20036a9ba57e98347cc16e73037e46e60d6307`. Exact-head CI passed 9/9 and secrets scan passed; Vercel commit status is green. Independent deployment verification failed after ten polls without a valid `deployed_commit`; the owner-cycle and verification-record steps were skipped. Runtime, deployed identity and persisted-cycle execution remain UNKNOWN. Do not lift the maintenance gate based on CI or Vercel status.
+- NDRRMA page [#04](https://ndrrma.gov.np/np/situation-report/468) states an Asoj 30 / 10:00 am cutoff (16 Oct 2026), but its PDF body could not be retrieved or screenshot-inspected. Search for #05/later reports and dated Gorkha-specific restoration notices surfaced no matching result; absence is not established. Gorkha DAO's surfaced disaster notice is dated 26 Aug and its DDMC/relief pages are archival; DHM River Watch extraction returned only a loading state/no station rows. No current restoration or river-level claim is justified.
+- New implementation detail: `SourceCollector.normalize` keeps nested `metadata` separate and sets top-level `provenance` to `raw_item.provenance or metadata`. If a collector supplies a distinct non-empty provenance object, metadata-only fields may not reach the persisted Signal/Evidence provenance because `ObserverEngine.observe` persists only the top-level provenance mapping. The assessor and research citation projection also omit a distinct source-effective cutoff/report sequence. This is a potential contract gap, not proof of lost live records. No code/schema/table/primitive changed.
+- NDRRMA/DHM robots endpoints were inaccessible through the browser tool; no NDRRMA clearance exists in the registry. No ingestion attempted. The portfolio-summary helper remains blocked and unimplemented; no alternate write path was used.
+- Next: retrieve and visually inspect the official #04 PDF only if the official download becomes reachable; continue exact source clearance and broad, independent discovery. Keep report cutoff, page date, publication time and retrieval time separate.
+
+---
+
 ## 2026-10-20 — NDRRMA Report #03 inspected; temporal provenance seam confirmed
 
 - **Verified code revision:** current documented head before this entry was `1469d7d6b3aca7c363c32525d50fa499316c53ce`. Exact-head CI [39444269952](https://github.com/kn33r0s3/ForgeOS/actions/runs/39444269952) passed all nine jobs; secret scan [39444269871](https://github.com/kn33r0s3/ForgeOS/actions/runs/39444269871) passed. Vercel’s commit status is green. The connected Vercel project/deployment reader returned 403, so current direct deployment metadata is unavailable through that connection.

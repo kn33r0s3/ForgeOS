@@ -1,3 +1,16 @@
+## Latest resumption point — 2026-10-21
+
+## 2026-10-21 — Report #04 body still inaccessible; current-head verification reconciled
+
+- Canonical base inspected: `ff20036a9ba57e98347cc16e73037e46e60d6307`; recent history and required continuity files were read. Latest exact-head CI [39445741389](https://github.com/kn33r0s3/ForgeOS/actions/runs/39445741389) passed all nine jobs, secret scan [39445741290](https://github.com/kn33r0s3/ForgeOS/actions/runs/39445741290) passed, and Vercel status is green. Independent verifier [39445741307](https://github.com/kn33r0s3/ForgeOS/actions/runs/39445741307) could not obtain a valid deployed SHA after ten polls; owner-cycle/evaluation/record steps were skipped. Do not claim production runtime or persisted scheduled-cycle health.
+- Official NDRRMA #04 page [468](https://ndrrma.gov.np/np/situation-report/468) states Asoj 30, 10:00 am (16 Oct 2026) as the report cutoff. Its PDF body remains unread: the page's browser extraction returned no lines, the indexed result did not expose a usable PDF URL, and direct PDF attempts were inaccessible. #05/later report and Gorkha-specific restoration searches returned no matching official result in this pass; that does not prove absence.
+- Gorkha DAO's visible disaster-caution page is dated 26 Aug, and its surfaced DDMC/relief pages are archival; no current Gorkha–Budhigandaki restoration notice was verified. DHM's River Watch page was dated 20 Oct but the browser extraction exposed no station rows, so no current gauge state is claimed. NDRRMA/DHM robots endpoints could not be read; NDRRMA is not cleared in the existing source registry. No ingestion was attempted.
+- Code trace narrowed the temporal-provenance seam: `SourceCollector.normalize` returns a separate `metadata` object but chooses `raw_item.provenance or metadata` for the persisted top-level provenance. A cutoff existing only in nested metadata may be dropped if explicit provenance is present; this is a possible contract risk, not demonstrated production loss. Evidence inherits Signal provenance; freshness assessment and citation output do not expose a separate source-effective cutoff/report sequence. No source code or schema changed.
+- No external action, source ingestion, publication, intake activation, payment, spend or REAL outcome occurred. The previously blocked planner helper remains unimplemented and was not bypassed.
+- Next: retrieve the official #04 PDF through a reachable source-linked download and inspect page screenshots; independently review exact-source access terms/robots/purpose/fields before any future ingestion; otherwise continue unblocked broad discovery.
+
+---
+
 ## Latest verified resumption point — 2026-10-20
 
 ## 2026-10-20 — NDRRMA Report #03 inspected; temporal provenance seam confirmed

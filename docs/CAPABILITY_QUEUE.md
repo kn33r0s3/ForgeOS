@@ -1,3 +1,13 @@
+## [2026-10-21 — D93 PDF BLOCKER; TEMPORAL PROVENANCE CONTRACT RISK TRACED]
+
+- Current base `ff20036a9ba57e98347cc16e73037e46e60d6307`: exact-head CI 9/9 passed; secrets scan passed; Vercel status green. Independent verifier failed after ten polls without a valid deployed SHA, so protected owner-cycle and verification-record steps were skipped. Runtime/persisted-cycle state remains UNKNOWN.
+- NDRRMA Report #04 page [468](https://ndrrma.gov.np/np/situation-report/468) states an Asoj 30 / 10:00 am cutoff (16 Oct 2026), but the PDF body could not be retrieved or inspected. Searches for #05/later reports and Gorkha-specific dated road/power/municipal restoration notices produced no matching official result in this pass; no-result is not proof of nonexistence. Gorkha DAO pages surfaced only older disaster notices/archive records. DHM River Watch extraction exposed no station readings. Current restoration and gauge status remain UNKNOWN.
+- **Existing seam risk:** `SourceCollector.normalize` returns `raw_item.provenance or metadata` and separately returns nested `metadata`. `ObserverEngine.observe` persists the top-level provenance, and `_ensure_evidence` copies it to Evidence. If a future collector puts a source-effective cutoff only in nested metadata while also supplying explicit provenance, that cutoff may not survive persistence. No actual production loss is demonstrated. `assess_source_record` currently assesses publication age versus retrieval time; `research_synthesis_engine._evidence_citation` omits publication time, effective cutoff and report sequence. Reuse existing provenance/assessment/citation seams only; no new model/table/primitive.
+- NDRRMA and DHM robots endpoints were inaccessible via the current browser tool; NDRRMA has no entry in the current source clearance registry. No source ingestion or permission change occurred. Do not use a generic government-domain approval or bypass the blocked planner helper.
+- Next: retrieve #04 through an official reachable download and inspect all pages via screenshots; complete per-source robots/terms/purpose/allowed-fields review before any ingestion. If blocked, continue other evidence-backed discovery without claiming restoration facts.
+
+---
+
 ## [2026-10-20 — OFFICIAL REPORT #03 PDF VERIFIED; SOURCE-AS-OF SEMANTICS REMAIN UNWIRED]
 
 - **Existing seam confirmed:** `Signal.published_at`, `Signal.retrieved_at`, JSON `Signal.provenance`; `SourceCollector.normalize`; `ObserverEngine.observe`; `collector_runner.execute_task`; `research_evidence_assessment.assess_source_record`. The assessor currently reports publication age versus retrieval time but does not separately expose report-declared effective cutoff/version.
