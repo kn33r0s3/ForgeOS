@@ -734,3 +734,15 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Updated the existing shared write-back guard to use event.outcome_id when present and to check product link consistency. Historical rows retain the cautious unambiguous fallback; product-only events without an outcome link cannot propagate.
 - Added tests for mismatched Experiment/Outcome, exact binding, outcome-learning replay/idempotency and product LearningEvent provenance. Test records are fixtures, not customer/payment evidence.
 - Exact-head CI, secret scan and independent deployment verification pending. The write-back helper remains without a production caller in source audit, so general autonomous learning is still unproven.
+
+
+---
+
+## 2026-10-20 — Production-gate verification and NDRRMA version discovery
+
+- Read current main continuity files and inspected the current commit, relevant maintenance middleware, frontend maintenance screen, workflow, CI, secrets scan, deployment metadata and exact failing verifier logs. Current checked head before this log update: `be48a56f410fdb90489e9624cf1d4cfc9ad782e7`.
+- Current head CI run [39348939477](https://github.com/kn33r0s3/ForgeOS/actions/runs/39348939477): all nine jobs succeeded. Secret scan [39348939469](https://github.com/kn33r0s3/ForgeOS/actions/runs/39348939469) succeeded. Production deployment metadata reports READY and exact SHA `be48a56f410fdb90489e9624cf1d4cfc9ad782e7` on aliases haminp.vercel.app and forge-os-ebon.vercel.app.
+- Independent verifier [39348939496](https://github.com/kn33r0s3/ForgeOS/actions/runs/39348939496) failed because the intentional maintenance middleware blocked `/api/forge-bot/owner/readiness`; ten polls returned no parseable `deployed_commit`. The protected owner-cycle test and verification-record write were skipped. This is a verification blocked by the explicit maintenance gate, not evidence of healthy owner APIs and not authorization to reopen production.
+- Immediate runs requested for **Continue Hami Work** and **Verify Hami Runtime**. Both requests were accepted; results were not yet observed. No asynchronous completion is claimed.
+- NDRRMA's official index search confirms report #3 page https://ndrrma.gov.np/np/situation-report/467 and report #4 page https://ndrrma.gov.np/np/situation-report/468. Indexed cutoffs: #1 — 11 Oct 2026 22:00; #2 — 12 Oct 2026 22:00; #3 — 13 Oct 2026 22:00; #4 — page dated 2083-06-30 and indexed as of Asoj 30 10:00. Full embedded PDF bodies were not retrieved or read; contents and restoration state remain UNKNOWN. A lack of report #5 in search is not evidence of absence.
+- Next: maintain production closure; inspect official report #3/#4 PDFs page-by-page with screenshots if direct official download links are available, then search later reports/restoration sources and reconcile effective cutoffs in the existing provenance seam. No code, source ingestion, publication, contact, spend, payment, intake activation or REAL transaction occurred.
