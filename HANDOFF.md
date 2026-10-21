@@ -254,6 +254,25 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
+## Last verified state snapshot (2026-10-21)
+
+**Update 2026-10-21 (daily freshness check, 06:23 NPT):** HEAD at `8290cca8`
+(docs-only workstream: NDRRMA Report #04 body attempt, report-cutoff and
+provenance-persistence gap trace — no code, runtime, or gate changes).
+`git pull --ff-only` clean; `main` == `origin/main`. Working tree clean.
+
+- **Health:** both production endpoints return HTTP 503 with
+  `{"detail":"Hami is under development."}` from the
+  `public_maintenance_gate` — intentional maintenance mode introduced
+  2026-10-19/20, unchanged. Not an external outage. Lifts only when the
+  owner/stream decide; no restore is authorized.
+- **Intake:** still unreadable while the gate is up
+  (`/api/forge-bot/config` also returns the maintenance detail); last
+  known `intake_enabled: false`.
+- **Unknowns:** 98 D-entries in `docs/UNKNOWN_MAP.md` (unchanged).
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold.
+
 ## Last verified state snapshot (2026-10-20)
 
 **Update 2026-10-20 (daily freshness check, 06:23 NPT):** HEAD at `df69e40a`
