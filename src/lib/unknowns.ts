@@ -902,6 +902,24 @@ export const discoveryUnknowns: DiscoveryUnknown[] = [
     stakes: "Sizes the second-order hit of a broken season — the stock loss is only the first ledger line; the loan ledger is the one that kills the next season's stocking",
     round: null,
   },
+  {
+    id: "D99",
+    question: "How many hours/day does a solo Nepali shopkeeper actually spend behind the counter (or on shop work), and what does the day cost them? (round 20: a Nepali commentary essay reports self-employed shops stay open morning-to-evening fearing customer loss to the next shop; Kathmandu barbers reportedly coordinate a collective monthly closing day; CEPR fieldwork finds women entrepreneurs close-and-risk-customers or work nights when obligations collide)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Ask 5 solo sellers: \"what time do you open/close — and when did you last take a full day off?\"",
+    stakes: "Quantifies D5's unpredictability tax as hours — prices any owner-time-saving wedge against the scarcest asset, not just its rupee cost",
+    round: null,
+  },
+  {
+    id: "D100",
+    question: "What share of a shop owner's phone/admin time is collection and coordination (chasing payments, confirming orders, supplier calls) vs selling — and is there a measurable night-work pattern? (round 20: @uprety_fancystore boutique spent days of WhatsApp messages + calls chasing one regular's unpaid promise, with unreliable connectivity compounding it)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Ask 5 sellers to log one day of phone calls: sales vs chase vs admin; ask \"do you do shop admin at night?\"",
+    stakes: "Locates the admin load inside the day — if collection is the dominant phone task, a payment-follow-up tool saves owner-hours directly",
+    round: null,
+  },
 ];
 
 export const unknownsCount = discoveryUnknowns.length;
