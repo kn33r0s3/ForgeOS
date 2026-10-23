@@ -319,6 +319,8 @@ type GlobalFrontierItem = {
   to_entity?: { id: number; type: string; name: string };
   domain_hints?: { from: string | null; to: string | null };
   strength?: number | null;
+  path_entities?: Array<{ id: number; type: string; name: string }>;
+  path_relations?: Array<{ id: number; type: string; state: string }>;
 };
 
 type GlobalFrontierView = {
@@ -2087,6 +2089,23 @@ function OwnerConsolePage() {
                                   <p className="mt-2 text-xs text-muted">Recorded domains: {item.domain_hints.from || "not recorded"} → {item.domain_hints.to || "not recorded"}</p>
                                 ) : null}
                                 {typeof item.strength === "number" ? <p className="mt-1 text-xs text-muted">Recorded strength: {item.strength}</p> : null}
+                              </div>
+                            ) : null}
+                            {item.record_type === "possibility_path" && item.path_entities && item.path_relations ? (
+                              <div className="mt-2 rounded-card border border-line bg-card p-3 text-sm">
+                                <p className="font-semibold">Composed from recorded links</p>
+                                <ol className="mt-2 space-y-2">
+                                  {item.path_entities.map((entity, index) => (
+                                    <li key={entity.id} className="break-words">
+                                      <span className="font-semibold">{entity.name}</span>
+                                      <span className="text-xs text-muted"> · {entity.type} #{entity.id}</span>
+                                      {index < item.path_relations!.length ? (
+                                        <p className="text-xs text-muted">— {item.path_relations![index].type} ({item.path_relations![index].state}) →</p>
+                                      ) : null}
+                                    </li>
+                                  ))}
+                                </ol>
+                                <p className="mt-2 text-xs text-muted">Hypothesis only. The links exist in records; usefulness of the combined path is untested.</p>
                               </div>
                             ) : null}
                             {item.domain_hint ? <p className="mt-1 text-sm text-muted">Recorded domain: {item.domain_hint}</p> : null}
