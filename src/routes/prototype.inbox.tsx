@@ -214,7 +214,7 @@ function InboxPrototype() {
       <PageHeader
         eyebrow="Hami · prototype — not a live product"
         title="Inquiry inbox"
-        lede="A prototype for the first-rupee sprint: log inquiries, reply fast, count recovered sales. Data stays in this browser. Nothing here is a real product yet."
+        lede="First-rupee prototype. Inquiry-timer data stays in this browser. Commitment entries can be synced only when the owner enters the owner key and manually syncs a seller-consented entry; no live pilot or verified revenue exists."
         containerClassName="max-w-4xl"
       />
       <Container className="max-w-4xl py-10 sm:py-14">
@@ -222,9 +222,10 @@ function InboxPrototype() {
           <FlaskConical className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden="true" />
           <p className="text-sm leading-6 text-muted">
             <strong className="text-ink">Prototype.</strong> Built for the delegate
-            running the first-rupee sprint week — to demo to a seller and to log
-            the week's inquiries. Starts empty, because no real week has run yet.
-            No data leaves this browser.
+            running owner-controlled discovery and measurement. Starts empty,
+            because no real week has run yet. Inquiry-timer records stay in this
+            browser. Commitment records only leave this browser after the owner
+            enters the owner key and manually syncs a seller-consented entry.
           </p>
           <ul className="mt-3 space-y-1.5 border-t border-amber-500/20 pt-3 text-sm leading-6 text-muted">
             <li>
@@ -232,13 +233,16 @@ function InboxPrototype() {
               type in what the customer asked.
             </li>
             <li>
-              Names you type stay in this browser on your device — stored
-              locally, never sent anywhere. &ldquo;Clear all prototype
-              data&rdquo; wipes them.
+              Names entered in the inquiry timer stay in this browser. The optional
+              commitment sync excludes customer names, phone numbers, social handles,
+              and free-text notes; it sends only pseudonymous seller and commitment/evidence
+              metadata after seller consent.
             </li>
             <li>
-              Free — no account, no payment. In a real sprint week Hami takes
-              a cut of recovered sales only; no recovery, no charge.
+              No live pilot or payment collection is active. The recorded proposed
+              terms are 10% of a sale independently evidenced as recovered from a missed
+              inquiry; no recovery, no fee. Hami never holds or moves money. Any paid
+              pilot requires written agreement and the D72 legal/accounting gate first.
             </li>
           </ul>
         </div>

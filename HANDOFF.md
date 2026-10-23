@@ -1,5 +1,16 @@
 ## Latest resumption point — 2026-10-23
 
+## 2026-10-23 — first-rupee latest-head reconciliation
+
+- Current base before this reconciliation: `ca73b33a31a17bae9154e96651f4f3f322570095`; the latest main commit is `ca73b33`, which records first-hand public TikTok verification of the originally selected sellers and a standing send authorization. The current mission supplied in this conversation explicitly requires that the owner send all messages and the agent never message/reply; do not exercise the older authorization from this agent.
+- Seller IDs S06/S07/S22/S26 now link to the native public video URLs recorded by the first-hand QA note in `docs/FIRST_RUPEE_SCOREBOARD.md`. These signals identify public seller/workflow facts only, not customer pain, seller consent, willingness to pay, recovered sales, or revenue.
+- The current first-contact draft revision includes the D2 question and 10% pay-only-on-recovered-sale proposal, in both English and Nepali, as requested in the mission. The text has changed since the earlier “drafts as-is” approval; exact revised message text remains in the owner approval queue. No message has been sent, and the 14-day clock has not started.
+- The inbox commitment log now offers explicit owner-key sync through existing substrate routes. It records ENTITY/RELATION/EVIDENCE/EVENT; EVIDENCE support stays `unknown` because the connector does not inspect the referenced proof. It never transmits free-text notes or customer PII, refuses missing seller consent, and keeps the owner key in page memory. CAPABILITY/ACTION are not fabricated; the existing governed paths remain in place.
+- Current main test run `39944267519` has build, typecheck, lint, frontend tests, route smoke, evidence triage, repository guards and secret scan green; backend tests are still running. Production metadata is READY but independent runtime/deployed-SHA proof is not green because the maintenance gate remains active.
+- No real conversations, outbound messages, payment, spend, pilot, or VERIFIED revenue occurred. Keep scoreboard/REVENUE_LOG zeros.
+---
+
+
 ## 2026-10-23 — First Rupee mission: items 1–5 built, approval queue ready
 
 - **New (additive, no architecture):** `/prototype/inbox` gains a verified-commitment log on the existing seam (`src/lib/prototype-inbox.ts` + route section; commit `cdff2eed`). One entry per commitment stage (inquiry, order, payment, delivery, outcome) with evidence reference and seller-consent flag. Invariant enforced in code and tests: VERIFIED requires evidence + consent; REPORTED and VERIFIED rupees are never merged; a recovered sale counts only when verified. 10 new tests (21 in the file, all passing).

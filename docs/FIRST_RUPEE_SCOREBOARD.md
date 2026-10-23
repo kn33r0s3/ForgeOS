@@ -169,3 +169,12 @@ approved four.
 - The current public signal list uses stable S01–S30 IDs. The prior recorded selection uses old-list numbers. No automatic remapping was made.
 - The prior selected #6 and #7 lack direct/native profile verification; #22 and #26 have no auditable source URL in the previous record. **Nothing has been sent.** Owner action: **REVERIFY** exact pages or **REPLACE** with named S-IDs, then approve exact discovery message and route.
 - The previous reference to `workspace/discovery/five-conversations-kit.md` is not in the tracked GitHub tree available here. Use tracked `docs/SPRINT_BRIEF.md`; machine-local workspace content could not be independently inspected through this remote connector.
+
+
+## Current mission directive reconciliation — 2026-10-23
+
+- Latest scoreboard history records standing send authorization at 16:50 and first-hand native-page verification in commit `ca73b33`. The current owner mission in this conversation explicitly says **the owner sends all messages and the agent must never send or reply**. Do not exercise the older authorization from this agent. No outbound messages have been sent by this workstream; the 14-day clock has not started.
+- Current S06/S07/S22/S26 source rows now link the four selected sellers to native public TikTok videos. This is public identity/workflow evidence only; no slow reply, missed sale, willingness-to-pay, or consent claim is established.
+- The revised bilingual first-contact body now contains the 10% pay-only-on-recovered-sale proposal and the D2 question. This text is a new revision; the earlier “drafts as-is” approval does not cover wording that changed afterward. Exact revised text remains an owner approval decision. No offer may become a paid pilot before the recorded D72 legal/accounting gate and clear written bilateral terms.
+- The current UI sync control persists only seller-consented pseudonymous commitment metadata through the existing substrate. It does not inspect proof. A seller-entered claim or a typed evidence reference is **REPORTED**, not independently verified by that fact alone.
+- Proposed outcome standard for owner decision: a recovered sale requires a traceable prior missed inquiry, seller consent, a completed order, and evidence for completion/payment that the owner has actually reviewed. Do not count an unverified screenshot, a message sent, or a seller assertion alone as VERIFIED revenue. Amounts remain REPORTED until that evidence is reviewed. This statement is a proposal for the owner, not an approval silently made by this update.
