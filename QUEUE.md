@@ -1,24 +1,14 @@
 # Hami Execution Queue
 
-## P0 — Lock production and owner workspace before any marketing release
+## P0 — Owner-only access and full-workspace restoration
 
-- Owner decision, 2026-10-23: the entire Hami workspace is owner-only; password is acceptable, but do not add a recurring paid password-protection charge without explicit approval. Online marketing is gated until a convincing networked solution is demonstrated in real use across the intended participant groups.
-- Exact source/runtime seams inspected: `vercel.json` only sets noindex/security headers and routes requests; `src/routes/__root.tsx` redirects non-root paths to `/` when `VITE_HAMI_MAINTENANCE_MODE=true`; `backend/app/main.py` returns 503 for API routes when `HAMI_MAINTENANCE_MODE` is true. Those existing gates explain why `/owner` and API access are unavailable; no source code was changed to expose them.
-- Blocked external action: Vercel project `forge-os` (production alias `haminp.vercel.app`) is visible, but project reads/writes return 403 for scope `kn33r0s3s-projects`. Neither free all-deployment Vercel Authentication nor password protection was enabled. No credential was saved or disclosed.
-- Resume: authorize Vercel access for the identified scope; enable `ssoProtection: {deploymentType: "all"}`; set `VITE_HAMI_MAINTENANCE_MODE=false` and `HAMI_MAINTENANCE_MODE=false`; redeploy; verify both denied anonymous access and successful owner access to `/owner`, the rest of the UI, and `/api/*`. Preserve existing `FORGE_API_KEY` checks for privileged actions. Latest deployment SHA `e16624e51a5aad6cbcb2a7a4b04fea74f08b67fb`; CI run `39945218290` passed but independent deploy verification `39945218293` failed.
-
-## P1 — Public marketing release gate
-
-- Do not run online marketing/promotion for Hami until the networked solution is built and has convincing real-world use across the intended participant groups. Do not count test, mock, or one-pilot use as proof of network-wide usefulness. Keep evidence and unresolved groups visible before changing this gate.
-
-
-## P0 — Obtain a real, owner-authorized seller discovery account (no pilot activation)
-
-- Capture path implemented and verified: POST /opv4/seller-evidence records an already-obtained, explicitly consented, de-identified seller account against the existing Rescue Week Bet. Reuses Evidence/Event; no new table or primitive.
-- Verified SHA 5c1c07713984a8c364229444685a84f7c064ef42. CI 38755037753 passed all nine jobs; 1,324 backend passed, 2 skipped, 18 warnings in 324.85s. Deploy verification 38755037371 and secrets scan 38755036960 passed.
-- Next real-world step requires the owner: authorize a genuine warm introduction/contact for non-commercial discovery and conduct the conversation. Do not pitch the rescue service, promise a free week, discuss price, request account access or copy customer information. Public listings are not permission to contact.
-- After an actual conversation and explicit consent for de-identified discovery notes, enter only the statement truly provided. It is L3 seller-reported evidence, not independently verified transaction evidence. No real seller account has yet been recorded by this agent.
-- Legal eligibility, privacy/data handling, price/revenue share, tax and fee collection remain separate owner/legal gates. Recording a seller statement does not activate a pilot.
+- **Owner decision, 2026-10-23:** Hami is private to the owner; the full existing interface should be usable. All online marketing stays closed until real-world use demonstrates the networked solution is convincingly useful across the intended participant groups.
+- **Access gate enabled:** Vercel project `forge-os` now reads back `ssoProtection.enabled=true`, `deploymentType="all"`. This covers production and generated deployment URLs. Password protection remains disabled. The environment changes and redeploy do not bypass Vercel Authentication.
+- **Production configuration updated:** `VITE_HAMI_MAINTENANCE_MODE=false`, `HAMI_MAINTENANCE_MODE=false`, and the existing sensitive `FORGE_API_KEY` was populated with a new 256-bit random key. The secret is not recorded here. Owner enters it at `/owner`; it stays in page memory and is separate from Vercel sign-in.
+- **Production deployment:** `dpl_2ydUCsesSrAkbEdNiUKhVT2TWeyz`, commit `eddcd64b3e2dede3aca3fe548ef90edd8a73dad7`, state READY. Latest project metadata points to this deploy; aliases `haminp.vercel.app` and `forge-os-ebon.vercel.app` were assigned to it, and `pulsenp.vercel.app` redirects to Hami.
+- **Verification:** exact-base ForgeOS CI `39956361513` and secret scan `39956361606` passed. Independent verifier `39956361434` failed because it checked before the manual redeploy was ready. Anonymous HTTP verification could not be performed from this execution environment (external DNS resolution failed); a direct owner browser check and a fresh post-redeploy external denial test remain required. Do not report anonymous-denial as independently observed until tested.
+- **Owner steps:** sign in to Vercel with the account that owns the project; open `https://haminp.vercel.app/owner`; enter the private API key provided in this conversation. Keep the Vercel deployment gate enabled. Do not commit keys or send them through URLs.
+- **New-file rationale:** no new files created; the existing continuity ledger/queue carries this work.
 
 ## P1 — Resolve legal/operational eligibility before any paid sprint
 
