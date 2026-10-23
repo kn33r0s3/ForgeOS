@@ -1,3 +1,12 @@
+## Operational verification resumption — 2026-10-24 05:07 NPT
+
+1. **After the natural 05:45 NPT cycle and 11:45 NPT intelligence run**, inspect authorized runtime logs or the protected owner-cycle read. Require invocation evidence tied to the scheduler plus a persisted `CycleRun`, final status and stage outcomes; the verifier's schema-valid record count of 1 is not enough to prove cron execution.
+2. **Runtime observability blocker:** direct Vercel deployment/runtime-log reads return HTTP 403 for scope `kn33r0s3s-projects`. Obtain access only through the normal authorized Vercel team-consent flow; do not create a protection-bypass link or change permissions as a workaround.
+3. **Health blocker:** ordinary reads of both production `/api/health` endpoints could not resolve hostnames in this execution environment. Retry ordinary GETs from a working network/DNS environment. Treat the current results as UNKNOWN; preserve the watchdog's two-consecutive-failure threshold and do not count DNS/403 errors as application-health failures.
+4. **Independent checks:** separately establish the explicit Vercel deployment state for the exact head, database identity/durability and read-after-write behavior, real model inference, and current REAL outcomes. Current exact-head CI and application-level deployment verifier are green, but neither proves these layers.
+
+---
+
 ## Current resumption priorities — 2026-10-24 (Hami-wide; no pilot gate)
 
 1. **Source-aware temporal provenance, when the supported source-edit path is available.** In the existing SourceCollector → ObserverEngine → Evidence → assessment/citation seam, preserve report identity/version, language variant, source-declared effective period/cutoff, publication time and retrieval time separately in existing provenance. Add regressions in existing test modules; do not add a table, primitive, collector or file. The previously blocked research_planner.py portfolio-summary write remains NOT IMPLEMENTED and must not be retried through another mutation path.

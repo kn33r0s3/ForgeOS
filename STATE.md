@@ -1,3 +1,16 @@
+## Operational verification snapshot — 2026-10-24 05:07 NPT
+
+- Current main observed: `0a8f88034e9683b74b971e8ca8a8d2ef86c9f531`.
+- Exact-head ForgeOS CI: [40038981095](https://github.com/kn33r0s3/ForgeOS/actions/runs/40038981095) PASS 9/9; backend 1,354 passed / 2 skipped; frontend 274 passed / 0 failed. Standalone secrets scan [40038981235](https://github.com/kn33r0s3/ForgeOS/actions/runs/40038981235) PASS.
+- Independent deployment verifier [40038981050](https://github.com/kn33r0s3/ForgeOS/actions/runs/40038981050) PASS: exact tested SHA reported on attempt 1, one valid protected owner-cycle record read (payload suppressed), verification POST HTTP 200. This does not establish that the record was produced by cron.
+- GitHub Vercel status: success / deployment completed. Direct Vercel deployment object and runtime logs: 403 at team scope; explicit READY remains UNKNOWN.
+- Both production `/api/health` endpoints remain UNKNOWN: ordinary fetch unavailable and direct curl DNS resolution failed before HTTP. Last historical 503 maintenance response is not a current sample.
+- `vercel.json` schedules cycle 05:45 NPT and intelligence 11:45 NPT daily. At snapshot time 05:07 NPT, cycle was still ahead. Natural invocation and a persisted cycle linked to cron remain UNKNOWN.
+- Production DB durability, real model inference and current REAL outcomes remain UNKNOWN. No external actions or activation. Health alert threshold remains two consecutive failing polls; this run did not poll through the watchdog or change its state.
+- **Resume:** after today's natural schedule, inspect authorized logs / owner-cycle data for invocation source, persisted `CycleRun`, final status and stage outcomes; separately restore authorized Vercel observability and retry ordinary GET health from working DNS. Do not infer runtime health from CI, status context or the verifier's one-record read.
+
+---
+
 ## Verification correction — generated projections synchronized (2026-10-24 NPT)
 
 - First research documentation commit: 1f3be0debdc9fe77c7c1f32b6de08ccea12f8354. Its exact-head ForgeOS CI failed only in frontend-tests and repository-guards because the authoritative D93/D96 edits in docs/UNKNOWN_MAP.md were not yet reflected in generated projections backend/app/data/unknowns.json and src/lib/unknowns.ts. Backend tests, build, typecheck, lint, route-smoke, evidence-triage and the CI secret-scan job passed. The separate secrets scan [40038374029](https://github.com/kn33r0s3/ForgeOS/actions/runs/40038374029) passed.
