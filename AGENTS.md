@@ -158,3 +158,35 @@ Choose the highest-leverage unblocked next action and make durable progress. Con
 When a session or network is interrupted, preserve the exact point reached, evidence gathered, verified changes, remaining uncertainty, blocker, and next resumable operation in the existing continuity files. Resume forward from that state; do not restart generically, repeat completed work, or treat elapsed time as frozen. Reuse configured schedulers and workers where they are real and verified. Never claim work ran while disconnected, continuously, or unattended unless durable execution and its result are independently evidenced.
 
 Continuity is not uncontrolled spinning. Each run should produce a meaningful verified increment or a precise, evidence-backed blocker and next action. Preserve test quality, provenance, privacy, authorization, cost limits, and the single canonical Hami lineage. Speed never justifies fabricated progress. External contact, publishing, intake, money movement, production activation, and handling sensitive data remain within their specific authorization boundaries.
+
+---
+
+# PERMANENT ARCHITECTURAL REFUSALS (owner-adopted counsel, 2026-10-23)
+
+These are architecture law, not preferences. No increment may cross them,
+however profitable or convenient crossing would be:
+
+1. **Never manufacture reality** — no fabricated people, demand,
+   capabilities, evidence, consent, bookings, sales, or revenue;
+   simulations stay visibly separate from records of the world.
+2. **Never let a black box turn possibility into authority** — a plausible
+   path, model confidence, popular opinion, or repeated secondary
+   reporting is not proof; conclusions stay contestable, traceable, and
+   bounded.
+3. **Never act autonomously without accountable authorization** — no
+   contacting people, committing money, promising, publishing
+   consequential claims, or irreversible action because a model finds it
+   useful.
+4. **Never become an extractive surveillance or lead-selling machine** —
+   no hoarding private data, no unnecessary sensitive inference, no
+   selling access to people without consent, no bypassing recorded
+   preferences.
+5. **Never sell priority over reality** — payment never decides what is
+   true, which evidence is visible, or which opportunity is "most
+   deserving".
+6. **Never fragment into disconnected products pretending to be one
+   system** — no parallel truth systems or duplicate engines; new
+   interfaces are fine, fragmented reality models are not.
+7. **Never become a research machine that never reaches reality** —
+   endless mapping without useful tests is also a refusal; cleanliness
+   serves real-world value.

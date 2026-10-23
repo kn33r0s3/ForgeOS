@@ -1,3 +1,12 @@
+## Live state — candidate trace live; admissibility gate holds on the real substrate (2026-10-23 NPT)
+
+- `discovery_engine` now traces one deterministic frontier candidate under `candidate-trace-v1` and always records a `candidate_trace_recorded` EVENT; a ResearchQuestion + proposed OBSERVATION Experiment are recorded only when the candidate is admissible (both edges resolving to original evidence under the composition contract). The trace moves no truth state, authorizes nothing, and creates no Action/Outcome rows.
+- Live substrate verdict: candidate `path:367:253:255:256` (of 508 composable paths) is BLOCKED — zero edge-linked evidence exists in the substrate (all 341 Evidence rows are entity-subject, source_kind MOCK; relations #367/#253 have no linked Evidence via either channel). WorldEvent #1555 carries the blocker with full provenance; replay is idempotent; substrate counts unchanged (321 entities / 382 relations / 149 capabilities / 44 research questions / 0 experiments / 0 outcomes).
+- The seven permanent architectural refusals are banked at the close of `AGENTS.md`.
+- Exact-head CI, secrets scan, and deployment verification for this run's commits must be read directly; do not inherit the `88a1edfb` / `25dd7da2` green results.
+- Next: cleared-source evidence collection that links original evidence to relations (existing source-clearance gates apply). The admissibility gate stays exactly as written.
+---
+
 ## Live state — verified base head and open-domain recovery research (2026-10-23 NPT)
 
 - Last directly verified head before this follow-up: `25dd7da2881129d8ebc14a2a558bc490b73c5f65`, documentation-only successor to source-bearing `88a1edfb487630f3f9a063ca32c7018e5cea1800`. Exact-head CI passed 9/9 (backend 1,344 passed / 2 skipped; frontend 274 passed / 0 failed), secret scan passed, independent deployment verifier passed, and Vercel status was success.
@@ -6,6 +15,7 @@
 - D1–D100 metadata survey: 100 unique rows, 96 UNKNOWN / 1 SUPPORTED / 3 HYPOTHESIZED; six rows contain explicit URLs and 35 contain date-like markers. Source independence, freshness, permission and local applicability remain mostly prose. Operational open ResearchQuestion records were not available through the authorized read surface.
 - D95 public-source pass established region-level crop/livestock/irrigation/fisheries loss and recovery dependencies; the farm-level bottleneck and Hami impact remain UNKNOWN. FAO page commercial reuse is not cleared; NDRRMA RDNA/report PDF bodies remain unread; no source ingestion occurred.
 - The source-write block remains in force; `research_planner.py::summarize_research_portfolio` remains NOT IMPLEMENTED. This follow-up is documentation-only; read its exact-head gates directly rather than inheriting the verified base result.
+
 
 ---
 
