@@ -1538,7 +1538,7 @@ def _capability_chain(
     for middle in rows:
         middle_inputs = inputs_by_entity.get(middle.id, [])
         middle_outputs = outputs_by_entity.get(middle.id, [])
-        for input_token, _input_value, middle_input_field in middle_inputs:
+        for input_token, middle_input_value, middle_input_field in middle_inputs:
             suppliers = outputs_by_token.get(input_token, [])
             if not suppliers or len({row.id for row, _, _ in suppliers}) > max_holders:
                 continue
@@ -1551,7 +1551,7 @@ def _capability_chain(
                     consumers = inputs_by_token.get(output_token, [])
                     if not consumers or len({row.id for row, _, _ in consumers}) > max_holders:
                         continue
-                    for target_row, target_field, _target_value in consumers:
+                    for target_row, target_field, target_input_value in consumers:
                         if target_row.id in {source_row.id, middle.id}:
                             continue
                         fingerprint = _hash(input_token, output_token)[:12]
@@ -1564,11 +1564,12 @@ def _capability_chain(
                             key=key,
                             statement=(
                                 "Recorded declarations form a possible three-entity capability chain: "
-                                f"{safe_label(source_row)} lists an output matching a declared input on "
-                                f"{safe_label(middle)}; that entity lists a different output matching a declared "
-                                f"input on {safe_label(target_row)}. This is only a composition hypothesis; "
-                                "compatibility, capacity, permission, agreement, cost, benefit, and real-world "
-                                "availability have not been verified."
+                                f"{safe_label(source_row)} declares output {source_value!r}, matching input "
+                                f"{middle_input_value!r} declared by {safe_label(middle)}; that entity declares "
+                                f"output {output_value!r}, matching input {target_input_value!r} declared by "
+                                f"{safe_label(target_row)}. This is only a composition hypothesis; compatibility, "
+                                "capacity, permission, agreement, cost, benefit, and real-world availability "
+                                "have not been verified."
                             ),
                             basis=(
                                 BasisRef("entity", source_row.id),
