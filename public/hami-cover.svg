@@ -7,8 +7,8 @@
       <stop offset="1" stop-color="#11100D"/>
     </linearGradient>
     <radialGradient id="amber-glow">
-      <stop offset="0" stop-color="#FFB000" stop-opacity=".12"/>
-      <stop offset="1" stop-color="#FFB000" stop-opacity="0"/>
+      <stop offset="0" stop-color="#F2A33A" stop-opacity=".12"/>
+      <stop offset="1" stop-color="#F2A33A" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="left-fade" x1="0" x2="1">
       <stop offset="0" stop-color="#0B0B0B" stop-opacity=".96"/>
@@ -18,7 +18,7 @@
   </defs>
   <rect width="1640" height="720" fill="url(#background)"/>
   <circle cx="1210" cy="330" r="430" fill="url(#amber-glow)"/>
-  <g fill="none" stroke="#FFB000" stroke-opacity=".13" stroke-width="2">
+  <g fill="none" stroke="#F2A33A" stroke-opacity=".13" stroke-width="2">
     <path d="M820 60 940 134 1058 75 1185 151 1310 74 1514 126 1600 55"/>
     <path d="M770 180 900 230 1006 168 1110 237 1226 186 1358 244 1535 194 1630 270"/>
     <path d="M810 335 930 291 1038 360 1138 293 1260 354 1395 310 1512 365 1620 335"/>
@@ -37,7 +37,7 @@
     <path d="M900 420 1038 360 1226 186 1310 74"/>
     <path d="M1062 631 1120 435 1260 354 1535 194"/>
   </g>
-  <g fill="#FFB000" fill-opacity=".38">
+  <g fill="#F2A33A" fill-opacity=".38">
     <circle cx="820" cy="60" r="4"/><circle cx="940" cy="134" r="5"/><circle cx="1058" cy="75" r="4"/>
     <circle cx="1185" cy="151" r="5"/><circle cx="1310" cy="74" r="4"/><circle cx="1514" cy="126" r="5"/>
     <circle cx="900" cy="230" r="4"/><circle cx="1006" cy="168" r="4"/><circle cx="1110" cy="237" r="4"/>
@@ -54,12 +54,12 @@
   <g id="hami-network-mark">
     <circle cx="1210" cy="330" r="250" fill="none" stroke="#B07800" stroke-width="4" stroke-opacity=".88"/>
     <path d="M1210 155 1361.55 242.5 1361.55 417.5 1210 505 1058.45 417.5 1058.45 242.5Z"
-      fill="none" stroke="#FFB000" stroke-width="11" stroke-linejoin="round"/>
+      fill="none" stroke="#F2A33A" stroke-width="11" stroke-linejoin="round"/>
     <g stroke="#B07800" stroke-width="6" stroke-linecap="round">
       <path d="M1210 330V155"/><path d="M1210 330 1361.55 242.5"/><path d="M1210 330 1361.55 417.5"/>
       <path d="M1210 330V505"/><path d="M1210 330 1058.45 417.5"/><path d="M1210 330 1058.45 242.5"/>
     </g>
-    <g fill="#FFB000">
+    <g fill="#F2A33A">
       <circle cx="1210" cy="155" r="27"/><circle cx="1361.55" cy="242.5" r="27"/>
       <circle cx="1361.55" cy="417.5" r="27"/><circle cx="1210" cy="505" r="27"/>
       <circle cx="1058.45" cy="417.5" r="27"/><circle cx="1058.45" cy="242.5" r="27"/>
@@ -67,9 +67,9 @@
     </g>
   </g>
   <g id="wordmark">
-    <text x="260" y="260" fill="#FFB000" font-family="Georgia, 'Times New Roman', serif" font-size="150" font-weight="700" letter-spacing="2">HAMI</text>
+    <text x="260" y="260" fill="#F2A33A" font-family="Georgia, 'Times New Roman', serif" font-size="150" font-weight="700" letter-spacing="2">HAMI</text>
     <text x="266" y="345" fill="#EBE8E1" font-family="Arial, Helvetica, sans-serif" font-size="40" font-weight="700" letter-spacing="15">SYSTEMS</text>
-    <path d="M266 394H400" stroke="#FFB000" stroke-width="4"/>
+    <path d="M266 394H400" stroke="#F2A33A" stroke-width="4"/>
     <text x="266" y="458" fill="#EBE8E1" font-family="Arial, Helvetica, sans-serif" font-size="32">Built in Kathmandu.</text>
     <text x="266" y="510" fill="#AAA59B" font-family="Arial, Helvetica, sans-serif" font-size="32">Serving everywhere equally.</text>
     <text x="266" y="585" fill="#AAA59B" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" letter-spacing="2.4">DISCOVER WHAT MATTERS. UNDERSTAND IT. ACT ON IT.</text>
