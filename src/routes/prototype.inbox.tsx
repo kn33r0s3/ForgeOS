@@ -9,6 +9,7 @@ import {
   isInquiry,
   parseOrderValue,
   summarizeCommitments,
+  syncCommitmentEntryToSubstrate,
   type CommitmentEntry,
   type CommitmentStage,
   type Inquiry,
@@ -125,6 +126,9 @@ function InboxPrototype() {
   const [cRecovered, setCRecovered] = useState("");
   const [cNote, setCNote] = useState("");
   const [cError, setCError] = useState("");
+  const [ownerKey, setOwnerKey] = useState("");
+  const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [syncMessages, setSyncMessages] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setEntries(loadCommitments());
@@ -176,6 +180,24 @@ function InboxPrototype() {
 
   const removeCommitment = (id: string) =>
     setEntries((prev) => prev.filter((e) => e.id !== id));
+
+  const syncCommitment = async (entry: CommitmentEntry) => {
+    if (!ownerKey.trim() || syncingId) return;
+    setSyncingId(entry.id);
+    setSyncMessages((prev) => ({ ...prev, [entry.id]: "Syncing to the canonical Hami substrate…" }));
+    try {
+      const substrateSync = await syncCommitmentEntryToSubstrate(entry, ownerKey);
+      setEntries((prev) => prev.map((current) => current.id === entry.id ? { ...current, substrateSync } : current));
+      setSyncMessages((prev) => ({ ...prev, [entry.id]: "Synced to the canonical substrate. The source evidence was not independently inspected by this connector." }));
+    } catch (error) {
+      setSyncMessages((prev) => ({
+        ...prev,
+        [entry.id]: error instanceof Error ? error.message : "Sync failed; this entry remains in this browser.",
+      }));
+    } finally {
+      setSyncingId(null);
+    }
+  };
 
   const summary = summarizeCommitments(entries);
 
@@ -335,11 +357,39 @@ function InboxPrototype() {
             One entry per stage of a commitment — inquiry, order, payment,
             delivery, outcome — recorded with the seller&rsquo;s consent.
             Money starts as <strong className="text-ink">REPORTED</strong> and
-            only counts as <strong className="text-ink">VERIFIED</strong> when
-            an evidence reference exists and the seller consented. Use a
-            pseudonymous reference (seller-01), never a name or phone number.
-            Starts empty: no real sprint week has run yet.
+            the form has an evidence reference and the seller consented. Mark VERIFIED only after you personally reviewed evidence
+            under the outcome standard approved by the owner; merely typing a reference does not verify it. Use a pseudonymous
+            reference (seller-01), never a name or phone number. Starts empty: no real sprint week has run yet.
           </p>
+
+          <div className="mb-6 mt-4 rounded-xl border border-line bg-surface p-4">
+            <h3 className="text-sm font-semibold text-ink">Sync consented records to Hami</h3>
+            <p className="mt-1 text-sm leading-6 text-muted">
+              Optional manual sync to the existing owner-key-protected substrate. The key stays in this page's memory only.
+              Sync sends a pseudonymous seller reference, stage, amount, consent and evidence-reference metadata; it never sends
+              customer names, phone numbers, social handles, or the free-text note. The connector does not open or validate the
+              referenced proof, so it never upgrades evidence by itself. If production returns HTTP 503, leave the maintenance gate intact.
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
+              <input
+                type="password"
+                value={ownerKey}
+                onChange={(event) => setOwnerKey(event.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+                aria-label="Owner API key (memory only)"
+                placeholder="Owner API key — used in memory only"
+                className="rounded-lg border border-line bg-background px-3 py-2 text-sm text-ink placeholder:text-muted/60"
+              />
+              <button
+                type="button"
+                onClick={() => setOwnerKey("")}
+                className="rounded-lg border border-line px-3 py-2 text-sm text-muted hover:text-ink"
+              >
+                Clear key
+              </button>
+            </div>
+          </div>
 
           <div className="mb-6 mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
@@ -420,7 +470,7 @@ function InboxPrototype() {
               </label>
               <label className="inline-flex items-center gap-2">
                 <input type="checkbox" checked={cVerified} onChange={(e) => setCVerified(e.target.checked)} />
-                Mark VERIFIED (needs evidence + consent)
+                I reviewed the evidence and seller consented (manual assertion)
               </label>
               <Button onClick={addCommitment} className="ml-auto">
                 <Plus className="size-4" aria-hidden="true" /> Log stage
@@ -481,6 +531,23 @@ function InboxPrototype() {
                   {e.sellerConsent ? "Seller consented" : "No consent recorded"}
                   {e.evidenceRef ? ` · Evidence: ${e.evidenceRef}` : " · No evidence reference"}
                 </p>
+                {e.substrateSync ? (
+                  <p className="mt-2 text-xs text-muted">
+                    Canonical refs — seller ENTITY #{e.substrateSync.sellerEntityId} · commitment ENTITY #{e.substrateSync.commitmentEntityId} · RELATION #{e.substrateSync.relationId} · EVIDENCE #{e.substrateSync.evidenceId} · EVENT #{e.substrateSync.eventId}
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={!ownerKey.trim() || !e.sellerConsent || syncingId !== null}
+                    onClick={() => void syncCommitment(e)}
+                    className="mt-3 rounded-lg border border-line px-3 py-2 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {syncingId === e.id ? "Syncing…" : "Sync consented entry to Hami"}
+                  </button>
+                )}
+                {syncMessages[e.id] && (
+                  <p role="status" className="mt-2 text-xs text-muted">{syncMessages[e.id]}</p>
+                )}
               </article>
             ))}
           </div>

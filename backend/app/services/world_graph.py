@@ -256,7 +256,7 @@ def seed_core_types(db: Session) -> int:
             "booking_request", "decision", "experiment", "scenario_prediction",
             "evidence_record", "product",
             "repair_work_item", "need",
-            "bet", "scout_candidate",
+            "bet", "scout_candidate", "commitment",
             "probe", "assumption",
             "orientation", "constraint_diagnosis",
             "horizon_domain", "content_asset",

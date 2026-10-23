@@ -5,6 +5,7 @@ import {
   isInquiry,
   parseOrderValue,
   summarizeCommitments,
+  syncCommitmentEntryToSubstrate,
   type CommitmentEntry,
 } from "./prototype-inbox.ts";
 
@@ -208,5 +209,112 @@ describe("summarizeCommitments", () => {
     assert.equal(s.inquiries, 2);
     assert.equal(s.orders, 1);
     assert.equal(s.recoveredSales, 1);
+  });
+});
+
+
+describe("syncCommitmentEntryToSubstrate", () => {
+  const entry: CommitmentEntry = {
+    id: "entry-01",
+    sellerRef: "seller-01",
+    stage: "payment",
+    at: 1792750000000,
+    amount: 1250,
+    verification: "reported",
+    evidenceRef: "owner-reference-01",
+    sellerConsent: true,
+    recovered: null,
+    note: "PRIVATE FREE TEXT MUST NEVER LEAVE THE BROWSER",
+  };
+
+  it("writes idempotent entity/relation/evidence/event records and excludes the note", async () => {
+    const calls: Array<{ url: string; method: string; headers: HeadersInit; body?: Record<string, unknown> }> = [];
+    const store = {
+      sellers: [] as Array<{ id: number; attributes: Record<string, unknown> }>,
+      commitments: [] as Array<{ id: number; attributes: Record<string, unknown> }>,
+    };
+    let nextId = 1;
+    const fetcher: typeof fetch = async (input, init) => {
+      const url = String(input);
+      const method = String(init?.method ?? "GET");
+      const headers = init?.headers ?? {};
+      const body = typeof init?.body === "string" ? JSON.parse(init.body) as Record<string, unknown> : undefined;
+      calls.push({ url, method, headers, body });
+
+      if (method === "GET" && url.includes("entity_type=scout_candidate")) {
+        return new Response(JSON.stringify(store.sellers), { status: 200 });
+      }
+      if (method === "GET" && url.includes("entity_type=commitment")) {
+        return new Response(JSON.stringify(store.commitments), { status: 200 });
+      }
+      if (method === "POST" && url.endsWith("/entities")) {
+        const row = { id: nextId++, attributes: body?.attributes as Record<string, unknown> };
+        if (body?.entity_type === "scout_candidate") store.sellers.push(row);
+        else store.commitments.push(row);
+        return new Response(JSON.stringify(row), { status: 201 });
+      }
+      if (method === "POST" && url.endsWith("/relations")) {
+        return new Response(JSON.stringify({ id: nextId++ }), { status: 201 });
+      }
+      if (method === "POST" && url.endsWith("/evidence")) {
+        return new Response(JSON.stringify({ legacy_ref: { id: nextId++ } }), { status: 201 });
+      }
+      if (method === "POST" && url.endsWith("/events")) {
+        return new Response(JSON.stringify({ id: nextId++ }), { status: 201 });
+      }
+      return new Response(JSON.stringify({ detail: "unexpected request" }), { status: 404 });
+    };
+
+    const result = await syncCommitmentEntryToSubstrate(entry, "owner-secret-in-memory", fetcher);
+    assert.equal(result.sellerEntityId, 1);
+    assert.equal(result.commitmentEntityId, 2);
+    assert.equal(result.relationId, 3);
+    assert.equal(result.evidenceId, 4);
+    assert.equal(result.eventId, 5);
+    assert.ok(result.syncedAt);
+    assert.ok(calls.every((call) => {
+      const headers = new Headers(call.headers);
+      return headers.get("X-API-Key") === "owner-secret-in-memory";
+    }));
+    assert.equal(calls.some((call) => JSON.stringify(call.body ?? {}).includes("PRIVATE FREE TEXT")), false);
+    assert.equal(calls.find((call) => call.url.endsWith("/evidence"))?.body?.support_level, "unknown");
+    assert.equal(calls.find((call) => call.url.endsWith("/events"))?.body?.payload && JSON.stringify(calls.find((call) => call.url.endsWith("/events"))?.body?.payload).includes("PRIVATE FREE TEXT"), false);
+  });
+
+  it("refuses to sync without consent", async () => {
+    let calls = 0;
+    const fetcher: typeof fetch = async () => {
+      calls += 1;
+      return new Response("{}", { status: 200 });
+    };
+    await assert.rejects(
+      syncCommitmentEntryToSubstrate({ ...entry, sellerConsent: false }, "owner-key", fetcher),
+      /Seller consent is required/,
+    );
+    assert.equal(calls, 0);
+  });
+
+  it("rejects seller identifiers that could contain names or contact data", async () => {
+    let calls = 0;
+    const fetcher: typeof fetch = async () => {
+      calls += 1;
+      return new Response("{}", { status: 200 });
+    };
+    await assert.rejects(
+      syncCommitmentEntryToSubstrate({ ...entry, sellerRef: "Niroj Paudyal" }, "owner-key", fetcher),
+      /pseudonymous seller reference/,
+    );
+    assert.equal(calls, 0);
+  });
+
+  it("does not claim sync succeeded when the maintenance gate returns 503", async () => {
+    const fetcher: typeof fetch = async () => new Response(
+      JSON.stringify({ detail: "Hami is under development." }),
+      { status: 503 },
+    );
+    await assert.rejects(
+      syncCommitmentEntryToSubstrate(entry, "owner-key", fetcher),
+      /maintenance gate may still be active/,
+    );
   });
 });

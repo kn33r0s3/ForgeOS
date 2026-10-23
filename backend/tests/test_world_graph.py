@@ -52,6 +52,29 @@ def test_outreach_no_response_is_an_active_canonical_event_type(db):
     assert registry.status == "active"
 
 
+def test_first_rupee_commitment_is_an_active_open_substrate_entity_type(db):
+    _seed(db)
+    registry = db.query(models.TypeRegistry).filter_by(
+        category="entity_type", type_name="commitment",
+    ).one()
+    assert registry.status == "active"
+    assert json.loads(registry.schema_json) == {"type": "object"}
+
+    commitment = world_graph.create_entity(
+        db,
+        entity_type="commitment",
+        display_name="commitment:entry-01",
+        attributes={
+            "source_app": "first_rupee_commitment_log",
+            "first_rupee_entry_id": "entry-01",
+            "stage": "payment",
+        },
+        created_by="first_rupee_commitment_log",
+    )
+    assert commitment.entity_type == "commitment"
+    assert commitment.attributes is not None
+
+
 def test_type_registry_validates_open_domain_attributes(db):
     _seed(db)
     with pytest.raises(world_graph.SubstrateError, match="unknown entity_type"):
