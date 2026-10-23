@@ -1,3 +1,14 @@
+## Live state — open-domain possibility-path composition (2026-10-23 NPT)
+
+- Owner correction remains the governing direction: Hami is not a missed-call tool, seller-reply product, content channel, or fixed marketplace. The existing docs/HAMI_SYSTEM_MAP.md defines the open-domain value loop; this increment extends its existing discovery_engine.build_global_frontier and owner rendering rather than creating a parallel engine.
+- Source changes on main: 6b826cf surfaces explicit cross-type/cross-domain WorldRelation records; 7aea6da composes bounded two-edge paths from directionally valid recorded relations; 1a71203 renders endpoints/path edges in src/routes/owner.tsx; 3c01b3d documents the new boundary in the existing system map. Regression test_global_frontier_surfaces_only_explicit_cross_type_connections_read_only was added at 1ef99e0 and extended at 8d5717c to assert composed path provenance, hypothesis state, and no writes.
+- Truth boundary: paths are read-only and always HYPOTHESIZED; only explicit existing relations are traversed, respecting direction. The path is not proof of compatibility/value, an offer, consent, permission, or authorization. No new primitive, table, route, branch, or service file was added. This is a first compositional visibility slice, not yet the full possibility-to-outcome engine.
+- Verification: secrets scan succeeded on 3c01b3d. Exact-head ForgeOS CI and independent deploy verification are queued/pending behind active run 39992171424 (backend tests still running on earlier SHA 6b826cf); Vercel deployment status for 3c01b3d is pending. Do not report exact-head tests or deployment green yet.
+- Automation: a one-second continuation reminder could not be created because the account has 3/3 scheduled-task slots in use. No delayed or unattended run is claimed.
+- Next unblocked action: let active CI finish; verify latest exact-head backend/frontend/typecheck/build/route-smoke/repository-guard results and deployment identity. Then continue the same existing seam by linking a composed path to explicit missing-capability requirements and an evidence-backed bounded test, preserving owner approval and exact Outcome/learning provenance. No external contact, public post, spending, or REAL economic outcome was performed in this increment.
+
+---
+
 ## Live state — canonical brand asset reconciliation (2026-10-23 NPT)
 
 - Exact `main` commit `1950f9047e996cb6b1a25b98e30da18b18e5ab34` backend suite passed 1,341/2 skipped; build, typecheck, lint, route smoke, evidence-triage, repository guards, and secret scan passed. One frontend test remained red because `brand-mark.tsx` did not mention the canonical `/favicon.svg`; the other test protects `/hami-mark.png`.
