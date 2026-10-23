@@ -652,7 +652,7 @@ function RealityLoop() {
               y={y}
               textAnchor="middle"
               dominantBaseline="central"
-              fill={highlighted ? "#0b0b0b" : "var(--foreground)"}
+              fill={highlighted ? "#0c0b0a" : "var(--foreground)"}
               fontSize="8.5"
               fontWeight={highlighted ? 700 : 500}
               fontFamily="Archivo, sans-serif"
