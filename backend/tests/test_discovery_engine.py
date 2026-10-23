@@ -1116,3 +1116,47 @@ def test_capability_chain_privacy_screens_declared_tokens_and_person_names(db):
     assert "Lakeside Road 6" not in serialized
     assert "Private Person Name" not in serialized
     assert "person #" in candidates[0]["statement"]
+
+def test_global_frontier_surfaces_only_explicit_cross_type_connections_read_only(db):
+    world_graph.seed_core_types(db)
+    resource = world_graph.create_entity(
+        db, entity_type="resource", display_name="Unused workshop capacity",
+        attributes={"domain": "manufacturing"}, created_by="test",
+    )
+    need = world_graph.create_entity(
+        db, entity_type="need", display_name="Local producer needs small-batch capacity",
+        attributes={"domain": "food"}, created_by="test",
+    )
+    other_resource = world_graph.create_entity(
+        db, entity_type="resource", display_name="Second unused workshop",
+        attributes={"domain": "manufacturing"}, created_by="test",
+    )
+    bridge = world_graph.create_relation(
+        db, from_entity_id=resource.id, to_entity_id=need.id,
+        relation_type="enables", truth_state="hypothesized", created_by="test",
+    )
+    same_type = world_graph.create_relation(
+        db, from_entity_id=resource.id, to_entity_id=other_resource.id,
+        relation_type="enables", truth_state="hypothesized", created_by="test",
+    )
+    db.flush()
+    before = (db.query(models.SubstrateEntity).count(),
+              db.query(models.WorldRelation).count(),
+              db.query(models.WorldEvent).count())
+
+    frontier = engine.build_global_frontier(db, limit=200)
+
+    after = (db.query(models.SubstrateEntity).count(),
+             db.query(models.WorldRelation).count(),
+             db.query(models.WorldEvent).count())
+    connections = [item for item in frontier["items"] if item["record_type"] == "recorded_connection"]
+    by_id = {item["relation_id"]: item for item in connections}
+
+    assert before == after
+    assert bridge.id in by_id
+    assert same_type.id not in by_id
+    assert by_id[bridge.id]["epistemic_state"] == "hypothesized"
+    assert by_id[bridge.id]["domain_hints"] == {"from": "manufacturing", "to": "food"}
+    assert {ref["kind"] for ref in by_id[bridge.id]["source_refs"]} == {"relation", "entity"}
+    assert "not proof of value" in by_id[bridge.id]["next_step"]
+
