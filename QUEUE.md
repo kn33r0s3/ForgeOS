@@ -1,5 +1,17 @@
 # Hami Execution Queue
 
+## P0 — Lock production and owner workspace before any marketing release
+
+- Owner decision, 2026-10-23: the entire Hami workspace is owner-only; password is acceptable, but do not add a recurring paid password-protection charge without explicit approval. Online marketing is gated until a convincing networked solution is demonstrated in real use across the intended participant groups.
+- Exact source/runtime seams inspected: `vercel.json` only sets noindex/security headers and routes requests; `src/routes/__root.tsx` redirects non-root paths to `/` when `VITE_HAMI_MAINTENANCE_MODE=true`; `backend/app/main.py` returns 503 for API routes when `HAMI_MAINTENANCE_MODE` is true. Those existing gates explain why `/owner` and API access are unavailable; no source code was changed to expose them.
+- Blocked external action: Vercel project `forge-os` (production alias `haminp.vercel.app`) is visible, but project reads/writes return 403 for scope `kn33r0s3s-projects`. Neither free all-deployment Vercel Authentication nor password protection was enabled. No credential was saved or disclosed.
+- Resume: authorize Vercel access for the identified scope; enable `ssoProtection: {deploymentType: "all"}`; set `VITE_HAMI_MAINTENANCE_MODE=false` and `HAMI_MAINTENANCE_MODE=false`; redeploy; verify both denied anonymous access and successful owner access to `/owner`, the rest of the UI, and `/api/*`. Preserve existing `FORGE_API_KEY` checks for privileged actions. Latest deployment SHA `e16624e51a5aad6cbcb2a7a4b04fea74f08b67fb`; CI run `39945218290` passed but independent deploy verification `39945218293` failed.
+
+## P1 — Public marketing release gate
+
+- Do not run online marketing/promotion for Hami until the networked solution is built and has convincing real-world use across the intended participant groups. Do not count test, mock, or one-pilot use as proof of network-wide usefulness. Keep evidence and unresolved groups visible before changing this gate.
+
+
 ## P0 — Obtain a real, owner-authorized seller discovery account (no pilot activation)
 
 - Capture path implemented and verified: POST /opv4/seller-evidence records an already-obtained, explicitly consented, de-identified seller account against the existing Rescue Week Bet. Reuses Evidence/Event; no new table or primitive.
