@@ -839,6 +839,7 @@ def fulfill_verified_intent(db: Session, intent_id: int) -> dict:
     if intent.fulfilled_at is not None:
         if intent.outcome_id is None:
             raise RuntimeError("Fulfilled payment intent is missing its linked revenue outcome.")
+        action_engine.propagate_verified_learning_for_outcome(db, intent.outcome_id)
         return _fulfillment_result(db, intent)
 
     try:
@@ -918,6 +919,7 @@ def fulfill_verified_intent(db: Session, intent_id: int) -> dict:
         repair_shop.record_provider_payment_fulfillment(db, intent.id)
         db.commit()
         db.refresh(intent)
+        action_engine.propagate_verified_learning_for_outcome(db, outcome.id)
     except Exception:
         db.rollback()
         raise
