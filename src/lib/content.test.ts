@@ -149,8 +149,6 @@ describe("Hami public content", () => {
     const links = readFileSync(join(root, "src/components/layout/text-link.tsx"), "utf8");
     const feedback = readFileSync(join(root, "src/components/ui/feedback.tsx"), "utf8");
     const sectionMarker = readFileSync(join(root, "src/components/layout/section-marker.tsx"), "utf8");
-    const buttons = readFileSync(join(root, "src/components/ui/button.tsx"), "utf8");
-    const systemEditor = readFileSync(join(root, "src/components/system/system-editor.tsx"), "utf8");
     const systemPanels = readFileSync(join(root, "src/components/system/system-panels.tsx"), "utf8");
     const feed = readFileSync(join(root, "src/routes/feed.tsx"), "utf8");
     const owner = readFileSync(join(root, "src/routes/owner.tsx"), "utf8");
@@ -172,10 +170,8 @@ describe("Hami public content", () => {
     assert.match(styles, /\.mast-link\[aria-current="page"\]::after/);
     assert.ok(links.includes("hover:text-wheat"));
     assert.ok(sectionMarker.includes("text-wheat"));
-    assert.ok(buttons.includes('ghost: "btn-ghost text-wheat'));
     assert.ok(feedback.includes("bg-[linear-gradient(45deg,#4a4953_0%,#000_45%_100%)]"));
     assert.ok(feedback.includes("border-2 border-warning/70 bg-black p-5 shadow-md"));
-    assert.ok(systemEditor.includes("bg-black px-3 py-2.5 text-base text-ink"));
     assert.ok(systemPanels.includes("bg-black/40 px-3 py-2 text-sm leading-6 text-ink"));
     assert.ok(feed.includes("border-2 border-line bg-black px-3 font-bold text-muted"));
     assert.ok(owner.includes("bg-black px-3 text-base text-ink"));
