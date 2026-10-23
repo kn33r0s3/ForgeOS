@@ -26,9 +26,9 @@ are reviewed again at collection time.
 | ILOSTAT SDMX REST API — candidate, NOT cleared | https://sdmx.ilo.org/rest/v1 | Candidate public aggregate country-level labor statistics; restricted constituent microdata explicitly excluded | Exact SDMX robots policy was not established; metadata reads only, with no observation collection | ILO's official policy states datasets published/made available on or after 2023-05-03 are CC BY 4.0, excluding restricted constituent microdata. `DF_EMP_TEMP_SEX_AGE_NB` metadata exposes a `LAST_UPDATE` annotation but no dataset publication date or explicit license tag; no data was persisted. Dataset-specific eligibility and API terms remain unverified; no collector clearance | 2026-09-27 |
 | Nepal Office of Company Registrar (OCR), Public Data Portal — candidate, NOT CLEARED | https://ocr.gov.np/ links to https://company.ocr.gov.np/ and `/company-register` | Public-company verification/search. OCR's portal advertises free public access to CAMIS-updated registration data and search by PAN, company name, or registration number. The company table exposes English/Nepali legal name, registration number, masked PAN, type, status, address, registration date, and expiry date | `https://ocr.gov.np/robots.txt` returned `User-agent: *` and `Crawl-delay: 10` for the OCR host. `https://company.ocr.gov.np/robots.txt` returned the SPA HTML shell, not a robots policy for the company-data subdomain | The portal says common public functions need no login and the company-search page presents a mathematical challenge before search. No portal terms, privacy notice, API specification, reuse license, prospecting permission, automated access permission, rate limit, or permitted commercial purpose was found. `/terms` and `/privacy` returned the app shell without policy text. The UI exposed `/api/public/v1/company-register` as a resource; it is not documented as a supported public API. A default page load in this review triggered its first-page listing; no search was submitted, no detail opened, no company row copied into Forge, and no candidate/prospect was created. This incidental UI request is not source clearance or a discovery exercise. Personal/contact/shareholder/beneficial-owner fields and their availability/permission were not inspected. Do not automate or reuse this source for prospecting without OCR's explicit written authorization covering the exact interface, data fields, use, retention, and rate | 2026-09-28 |
 
-| FAO Nepal flood-recovery appeal — candidate, NOT CLEARED for persistent commercial reuse | https://www.fao.org/nepal/nepal-rasuwa-bhotekoshi-flood--urgent-call-for-assistance/en | Public assessment and planned recovery priorities for the 26 Aug 2026 Rasuwa–Bhotekoshi event | `https://www.fao.org/robots.txt` returned 200; `User-agent: *` disallows several system/file paths but not this page path | `https://www.fao.org/contact-us/terms/en/` permits general site content for private study/research and non-commercial products/services with attribution; unrestricted reuse is stated for news releases, but this appeal page is not established to be a news release. Other commercial use requires permission. No body collection, persistent commercial retention, or provider transmission is cleared | 2026-10-23 |
+| FAO Nepal flood-recovery appeal — NOT CLEARED for persistent commercial reuse (determined 2026-10-23; re-determined with full rights basis 2026-10-24) | https://www.fao.org/nepal/nepal-rasuwa-bhotekoshi-flood--urgent-call-for-assistance/en | Public assessment and planned recovery priorities for the 26 Aug 2026 Rasuwa–Bhotekoshi event | Re-read 2026-10-24: `https://www.fao.org/robots.txt` returned 200; `User-agent: *` disallows `/index.php`, `/t3lib/`, `/typo3/`, `/*?id=*`, `/*&type=98` and two `/fileadmin/user_upload/` paths — this page path is not disallowed | `https://www.fao.org/contact-us/terms/en/` re-read 2026-10-24: website content may be copied/printed/downloaded for private study, research and teaching purposes and for use in non-commercial products or services, with acknowledgement of FAO as source and copyright holder; unrestricted use is encouraged only for news releases, and this appeal page is not established to be a news release; "all requests for translation and adaptation rights, and for resale and other commercial use rights" go to copyright@fao.org / the Licence Request Form; photographs require permission for any commercial use, storage or third-party distribution; FAO does not warrant rights in third-party components, and the page's headline crop/livestock figures are footnoted to the Government of Nepal RDNA. Persistent storage in Hami's commercial evidence substrate and provider transmission are therefore NOT CLEARED; see the 2026-10-24 determination section below | 2026-10-23; re-read 2026-10-24 |
 | World Bank, Nepal Development Update (October 2026) — candidate, NOT CLEARED for website-page ingestion | https://www.worldbank.org/en/country/nepal/publication/nepaldevelopmentupdate | Public macro context on flood impacts, agricultural output and cross-sector recovery | `https://www.worldbank.org/robots.txt` returned 200 and `User-agent: *` allows the page path | The candidate World Bank terms URL checked in this pass returned 404; no applicable terms/license for this exact website page was established. Existing registry clearance is limited to the World Bank Indicators API, not website pages or this report. No persistent website-content ingestion approved | 2026-10-23 |
-| NDRRMA, Rasuwa-Bhotekoshi Flood 2026 Rapid Damage and Needs Assessment — candidate, NOT CLEARED | https://ndrrma.gov.np/np/booklet/438 | Official RDNA metadata and potential sector/district damage assessment | Direct `/robots.txt` and `/sitemap.xml` reads were unavailable through the current browser tool; no permission inferred | No source-specific terms grant was found. Page metadata/PDF preview are visible in search, but the PDF body was not retrieved or inspected. No registry entry or collection permission | 2026-10-23 |
+| NDRRMA, Rasuwa-Bhotekoshi Flood 2026 Rapid Damage and Needs Assessment — NOT CLEARED (determined 2026-10-23; re-determined 2026-10-24 with the official PDF body retrieved and read) | https://ndrrma.gov.np/np/booklet/438 (register landing reference); official PDF: https://ndrrma.gov.np/mediafiles/publications/RDNA_2026_for_web_compressed.pdf | Official RDNA: total damage/loss/recovery-needs and sector/district assessments for the 26 Aug 2026 Rasuwa–Bhotekoshi flood | `/robots.txt` fetch on 2026-10-24 failed with a network error through the permitted fetch route and was not retried; robots status remains UNKNOWN — no permission inferred either way | The official PDF body was retrieved and read on 2026-10-24. Its Publication Information gives the publisher (NDRRMA, Government of Nepal, Kathmandu) and a suggested citation only; a full-text search of the body finds no copyright, licence/license, or permission statement — no reuse grant of any kind. No NDRRMA site terms granting reuse were retrieved. Under this register's fail-closed standard, collection and persistent reuse are NOT CLEARED; see the 2026-10-24 determination section below | 2026-10-23; re-read 2026-10-24 |
 | Ministry of Energy, Water Resources and Irrigation, Budhi Gandaki flood/hydropower damage notice — candidate, NOT CLEARED | https://www.moewri.gov.np/content/454/relation-to-the-sudden-flood/ | Official notice metadata about the Oct 2026 Gorkha–Budhigandaki event and hydropower infrastructure damage | Not reviewed in this pass | Page body/PDF was not retrievable through the current browser tool; terms and exact collection permissions were not reviewed. Do not merge this event with the 26 Aug Rasuwa–Bhotekoshi flood | 2026-10-23 |
 | DHM River Watch — candidate, NOT CLEARED for collection | https://www.dhm.gov.np/hydrology/river-watch | Hydrological station readings if the page's data table is populated | Direct `/robots.txt` read was unavailable through the current browser tool; policy not inferred | The page was dated Wednesday 21 Oct 2026 but extracted as “Loading data...” with no station rows, so it supplied no current reading. Terms and data-use permission were not reviewed; no collection or live reading claim | 2026-10-23 |
 
@@ -334,3 +334,140 @@ from 24 February 2025 (with a Scotland exception for below-threshold notices).
 It is a candidate for the next machine-interface review only: this review did
 not establish an operational public API/OCDS retrieval contract, endpoint
 authentication, or rate policy for it, and no Find a Tender notice was queried.
+
+### FAO Nepal flood-recovery appeal — source-clearance determination (2026-10-24)
+
+**Target identity.** Food and Agriculture Organization of the United
+Nations, FAO in Nepal country page: “Rasuwa–Bhotekoshi flood in Nepal:
+Urgent call for assistance”, https://www.fao.org/nepal/nepal-rasuwa-bhotekoshi-flood--urgent-call-for-assistance/en.
+The page body, https://www.fao.org/robots.txt, and
+https://www.fao.org/contact-us/terms/en/ were all retrieved from the
+source and read on 2026-10-24 for this determination.
+
+**Exact fields/claims Hami would store.** Event identity (26 August 2026
+Bhotekoshi–Trishuli flood surge; six affected districts; an estimated
+32,960 people directly affected); crops damaged 1,806 ha (1,669 ha
+paddy, 137 ha vegetables) with production losses of approximately 7,686
+tonnes; livestock losses of more than 9,000 cattle and buffaloes, 26,000
+goats and sheep, and 214,000 poultry; damaged fisheries assets (24 carp
+ponds, 51 production raceways, 30 research raceways, two hatcheries, six
+reservoirs); damaged irrigation (13 lift-irrigation schemes, 10
+surface-irrigation schemes, two deep tubewells); USD 32.6 million
+estimated damage across the crop, livestock, fisheries and irrigation
+subsectors; FAO's planned response priorities (emergency inputs,
+carcass management and veterinary care, land and micro-irrigation
+rehabilitation, market/collection/cold-storage restoration); plus
+provenance fields: source registry identity, publication time where the
+source declares it, retrieval time, and the page's own attribution
+footnote (“a. Government of Nepal. 2026. Rapid damage and needs
+assessment, Rasuwa–Bhotekoshi Flood 2026”, cited to the NDRRMA report).
+
+**Purpose.** Persistent storage of those claims as Evidence in Hami's
+internal evidence substrate for the discovery engine, including
+transmission to model providers inside that loop. Hami is a commercial
+system; the purpose is therefore a commercial use, stated plainly.
+
+**Rights basis retrieved from the source.** robots.txt (200) does not
+disallow this page path. The FAO Terms and Conditions (“Reuse of web
+content”) state that content on the FAO website is protected by
+copyright; that all other content (except where otherwise indicated)
+“may be copied, printed and downloaded for private study, research and
+teaching purposes, and for use in non-commercial products or services,
+provided that appropriate acknowledgement of FAO as the source and
+copyright holder is given”; that “FAO encourages unrestricted use of
+news releases provided on the FAO website”; and that “all requests for
+translation and adaptation rights, and for resale and other commercial
+use rights should be addressed to copyright@fao.org or submitted via
+the online Licence Request Form”. The photograph clause separately
+requires permission for “any commercial use, advertising, marketing,
+storage or third-party distribution of FAO photographs”. The terms also
+warn that FAO does not necessarily own each component of the content
+and does not warrant that re-use of a third-party-owned component will
+not infringe; the page's headline crop and livestock figures are
+exactly such a component, footnoted to the Government of Nepal RDNA.
+
+**Determination: NOT CLEARED** for the stated purpose and field set.
+Robots permits the fetch, but the terms grant reuse only for private
+study/research/teaching and non-commercial products or services. The
+appeal page is a country-office appeal, not established to be a news
+release, so the unrestricted news-release clause does not reach it.
+Persistent storage in a commercial evidence substrate and provider
+transmission are commercial use rights that FAO reserves to a licence
+request; making that request is an external contact outside this run's
+authority and was not attempted. No FAO content was collected, stored,
+or transmitted under this determination.
+
+**Related distinct source identity (no clearance established).** The
+same appeal also exists as a FAO Knowledge Repository publication,
+“Nepal: Rasuwa–Bhotekoshi flood”, handle 20.500.14283/ce1760en (FAO,
+2026, 3 pp., Rome). The FAO terms state that publications and documents
+in the Knowledge Repository are governed by FAO's Open Access policy.
+The repository item page retrieved on 2026-10-24 did not state an
+item-level licence in its text, so no clearance is established for that
+variant here; it requires its own determination, with the licence read
+from the document itself, before any use.
+
+### NDRRMA Rasuwa–Bhotekoshi Flood 2026 RDNA — source-clearance determination (2026-10-24)
+
+**Target identity.** Government of Nepal, Ministry of Home Affairs,
+National Disaster Risk Reduction and Management Authority (NDRRMA),
+“Rapid Damage and Needs Assessment (RDNA): Rasuwa-Bhotekoshi Flood
+2026”, published Kathmandu, September 2026. Official PDF:
+https://ndrrma.gov.np/mediafiles/publications/RDNA_2026_for_web_compressed.pdf
+(retrieved from the publisher's own host and read on 2026-10-24;
+8,788 extracted text lines). Register landing reference:
+https://ndrrma.gov.np/np/booklet/438; FAO's appeal cites the report at
+https://ndrrma.gov.np/np/study-report/416. The document's Publication
+Information gives the publisher and a suggested citation (“National
+Disaster Risk Reduction and Management Authority (NDRRMA) (2026)
+Rasuwa-Bhotekoshi Flood 2026 Rapid Damage and Needs Assessment (RDNA).
+Kathmandu: Government of Nepal”) and no other rights statement.
+
+**Version and source-declared cutoff (from the body).** The report
+“consolidates information received up to the reporting cut-off of
+3 September 2026”; review continued until 10 September 2026;
+information received after the assessment cut-off is not reflected
+unless expressly stated. Title-page date: September 2026.
+
+**Exact fields/claims Hami would store.** Headline totals: total
+physical damage NPR 27,448.32 crore (USD 1,812.01 million); total
+economic loss NPR 13,380.58 crore (USD 883.32 million); total disaster
+effects NPR 40,828.91 crore (USD 2,695.33 million); total reconstruction
+and recovery needs NPR 72,331.52 crore (USD 4,774.99 million); sector
+tables including Table 20 (crop baseline, affected area and production
+by local level — the crop inventory records 1,806 ha affected,
+comprising 1,669 ha of paddy and 137 ha of vegetables, the same figures
+FAO republishes), Table 22 (agricultural recovery needs), Table 23
+(fisheries damage inventory), Table 25 (livestock and poultry
+quantities and total damage), and Table 47 (irrigation and
+river-training damage); districts covered by the assessment (Rasuwa,
+Nuwakot, Dhading, Gorkha and Chitwan, with effects also reported in
+Tanahun and Nawalparasi); plus provenance fields: registry identity,
+publication time (September 2026), retrieval time, the source-declared
+reporting cut-off (3 September 2026), and report version/geography.
+
+**Purpose.** The same as the FAO determination above: persistent
+storage as Evidence in Hami's internal evidence substrate for the
+discovery engine, including provider transmission — a commercial use.
+
+**Rights basis retrieved from the source.** The PDF itself is the
+rights evidence available, and it contains none: a full-text search of
+the retrieved body finds no occurrence of “copyright”, “licence”,
+“license”, or “permission”. The document carries no licence, no open-data
+mark, and no reuse grant. The host's /robots.txt could not be retrieved
+on 2026-10-24 (the permitted fetch route returned a network error; the
+request was not retried), so the robots component remains UNKNOWN and
+no permission is inferred from it in either direction. No NDRRMA site
+terms granting reuse were retrieved.
+
+**Determination: NOT CLEARED.** Under this register's standing
+fail-closed standard — public availability, a suggested citation, and a
+successful HTTP response are not authorization (see the OCR and PPMO
+decisions above) — the absence of any affirmative reuse grant in or
+around the document means machine collection and persistent reuse are
+not authorized. Reading the body for this determination is not
+collection: no RDNA content was stored in Forge, no Evidence row was
+created, and no claim from the report was ingested. An unlock requires
+new rights evidence: published NDRRMA/Government of Nepal terms or a
+written grant covering the exact fields, purpose, retention, and
+attribution above.

@@ -1,3 +1,12 @@
+## Live state — D95 clearance determinations recorded: both targets NOT CLEARED; rights, not access, is the binding constraint (2026-10-24 NPT)
+
+- Both named D95 targets were re-determined on 2026-10-24 from documents retrieved from the sources themselves (full record: `docs/PUBLIC_SOURCES.md`). **FAO appeal: NOT CLEARED** for persistent storage in Hami's commercial evidence substrate or provider transmission — FAO terms grant the website content only for private study/research/teaching and non-commercial products/services with attribution; commercial use rights are reserved to a licence request; the headline figures are Government of Nepal RDNA third-party components FAO does not warrant. **NDRRMA RDNA: NOT CLEARED** — the official PDF was retrieved and read in full (September 2026; reporting cut-off 3 Sep 2026), and it contains no copyright, licence, or permission statement at all; the host robots component remains UNKNOWN after a failed fetch that was not retried.
+- No ingestion occurred: no collector run, no runtime registry entry, no Evidence rows, no relation-linked evidence. Substrate population is unchanged from the candidate-trace run (321 entities / 382 relations / 341 evidence, 0 relation-subject / 149 capabilities / 44 research questions / 0 experiments / 0 outcomes).
+- Trace re-run on the live substrate (after backup) replayed WorldEvent #1555: `blocked_at_admissibility_gate` for `path:367:253:255:256`; the admissibility gate stands exactly as written and was not lowered or widened.
+- This run is documentation-only; its exact-head CI, secrets scan, and deployment verification must be read directly.
+- Next: a rights unlock — a written FAO licence via owner-authorized contact, published GoN/NDRRMA reuse terms or a written grant, an item-level licence determination for the FAO Knowledge Repository variant (handle 20.500.14283/ce1760en), or a different already-cleared source with claims that genuinely support recorded relations. Do not re-determine the same two targets without new rights evidence.
+---
+
 ## Live state — candidate trace live; admissibility gate holds on the real substrate (2026-10-23 NPT)
 
 - `discovery_engine` now traces one deterministic frontier candidate under `candidate-trace-v1` and always records a `candidate_trace_recorded` EVENT; a ResearchQuestion + proposed OBSERVATION Experiment are recorded only when the candidate is admissible (both edges resolving to original evidence under the composition contract). The trace moves no truth state, authorizes nothing, and creates no Action/Outcome rows.
