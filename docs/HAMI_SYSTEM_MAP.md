@@ -95,6 +95,8 @@ The existing private `/owner` console's Orchestrator & intelligence section read
 
 This is a **visibility and integration seam**, not autonomous discovery or action. It does not trigger discovery, promote a question, create a task, execute an action or validate a hypothesis. An item must proceed through its existing evidence, source-clearance, planning, authorization, action and outcome contracts. The unknowns markdown registry remains authoritative; its database Claim rows are a projection. The current frontier sees only recorded state and the inputs already ingested by Hami, so broader real-world awareness still requires additional permitted source capabilities.
 
+The frontier now also surfaces explicit cross-type/cross-domain `WorldRelation` records and bounded two-edge `possibility_path` hypotheses. These paths are composed only from recorded, directionally valid relations; their state is always `hypothesized`, source references include every entity and relation in the chain, and they are not treated as proof of value, an offer, consent, or authorization. The owner view displays the chain and each relation's recorded state. This is the first path-composition slice, not yet an end-to-end possibility-to-outcome engine: it does not yet identify missing capabilities for a path, propose a cost-bounded experiment, or link a completed action back to a verified outcome automatically.
+
 ## Required integration rule for future work
 
 Before adding a service/page/engine:
