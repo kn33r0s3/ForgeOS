@@ -67,8 +67,8 @@ export function SiteHeader() {
           scrolled || open ? "shadow-[0_4px_0_0_rgb(0_0_0/0.45)]" : "",
         )}
         style={{
-          background: "#ffffff",
-          borderBottom: "1px solid #dce5dc",
+          background: "linear-gradient(180deg, #241d16 0%, #171310 100%)",
+          borderBottom: "2px solid #F2A33A",
         }}
       >
         <Container className="relative flex h-full items-stretch justify-between gap-4">
@@ -103,7 +103,7 @@ export function SiteHeader() {
                   to="/login"
                   search={{ mode: "sign-in" }}
                   className="hidden min-h-12 items-center rounded-card px-3 text-sm font-bold transition-colors sm:inline-flex"
-                  style={{ color: "#176b4d" }}
+                  style={{ color: "#F2A33A" }}
                 >
                   Login
                 </Link>
@@ -112,9 +112,9 @@ export function SiteHeader() {
                   search={{ mode: "sign-up" }}
                   className="hidden min-h-12 items-center rounded-card border-2 px-4 text-sm font-extrabold transition-colors sm:inline-flex"
                   style={{
-                    borderColor: "#176b4d",
-                    background: "#176b4d",
-                    color: "#ffffff",
+                    borderColor: "#F2A33A",
+                    background: "#F2A33A",
+                    color: "#0C0B0A",
                   }}
                 >
                   Join Hami
@@ -140,7 +140,7 @@ export function SiteHeader() {
                     open && bar === 1 && "scale-x-0",
                     open && bar === 2 && "-translate-y-2 -rotate-45",
                   )}
-                  style={{ background: "#176b4d" }}
+                  style={{ background: "#F2A33A" }}
                 />
               ))}
             </button>
@@ -201,9 +201,9 @@ export function SiteHeader() {
                 search={{ mode: "sign-up" }}
                 className="flex min-h-12 items-center justify-center rounded-card border-2 px-4 text-base font-extrabold transition-colors"
                 style={{
-                  borderColor: "#176b4d",
-                  background: "#176b4d",
-                  color: "#ffffff",
+                  borderColor: "#F2A33A",
+                  background: "#F2A33A",
+                  color: "#0C0B0A",
                 }}
               >
                 Join Hami
@@ -212,7 +212,7 @@ export function SiteHeader() {
                 to="/login"
                 search={{ mode: "sign-in" }}
                 className="flex min-h-12 items-center justify-center rounded-card px-4 text-base font-bold transition-colors"
-                style={{ color: "#176b4d" }}
+                style={{ color: "#F2A33A" }}
               >
                 Login
               </Link>
