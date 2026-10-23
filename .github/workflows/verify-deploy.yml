@@ -65,10 +65,14 @@ jobs:
 
       - name: Fetch production content
         id: fetch
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
           set -o pipefail
           sleep 90
-          CONTENT=$(curl --connect-timeout 10 --max-time 30 -fsSL "https://haminp.vercel.app/?v=$(date +%s)")
+          CONTENT=$(curl --connect-timeout 10 --max-time 30 -fsSL \
+            -H "x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET" \
+            "https://haminp.vercel.app/?v=$(date +%s)")
           if [ -z "$CONTENT" ]; then
             echo "::error::Production returned an empty response."
             exit 1
@@ -78,6 +82,10 @@ jobs:
 
       - name: Check verifier preconditions
         run: |
+          if [ -z "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
+            echo "::error::VERCEL_AUTOMATION_BYPASS_SECRET is missing. Protected production verification requires the project-scoped Vercel bypass."
+            exit 1
+          fi
           if [ -z "$BACKEND_URL" ]; then
             echo "::error::BACKEND_URL secret is missing or empty. Cannot record verification."
             exit 1
@@ -89,12 +97,14 @@ jobs:
         env:
           FORGE_API_KEY: ${{ secrets.FORGE_API_KEY }}
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
       - name: Wait for exact tested SHA to reach production
         id: sha
         env:
           FORGE_API_KEY: ${{ secrets.FORGE_API_KEY }}
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
           set -uo pipefail
           # Production deployment can legitimately trail a push. Poll for the
@@ -109,7 +119,8 @@ jobs:
           for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
             RESPONSE="$(curl --connect-timeout 5 --max-time 10 -fsS \
               "$BACKEND_URL/api/forge-bot/owner/readiness" \
-              -H "X-API-Key: $FORGE_API_KEY" 2>/dev/null || true)"
+              -H "X-API-Key: $FORGE_API_KEY" \
+              -H "x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET" 2>/dev/null || true)"
             DEPLOYED_SHA="$(printf '%s' "$RESPONSE" | node -e '
               let body = "";
               process.stdin.setEncoding("utf8");
@@ -156,11 +167,13 @@ jobs:
         env:
           FORGE_API_KEY: ${{ secrets.FORGE_API_KEY }}
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
           set +e
           HTTP_CODE=$(curl -sS --max-time 15 -o /tmp/owner-cycles.json -w "%{http_code}" \
             "$BACKEND_URL/api/forge/cycles?limit=1" \
-            -H "X-API-Key: $FORGE_API_KEY")
+            -H "X-API-Key: $FORGE_API_KEY" \
+            -H "x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET")
           CURL_EXIT=$?
           OWNER_READ_PASSED=false
           RECORD_COUNT=0
@@ -229,11 +242,13 @@ jobs:
         env:
           FORGE_API_KEY: ${{ secrets.FORGE_API_KEY }}
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
           # Capture HTTP status and body separately; never print FORGE_API_KEY
           HTTP_RESPONSE=$(curl --connect-timeout 10 --max-time 30 -s -w "\n%{http_code}" -X POST "$BACKEND_URL/api/opv4/verifications" \
             -H "Content-Type: application/json" \
             -H "X-API-Key: $FORGE_API_KEY" \
+            -H "x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET" \
             -d "{
               \"deployed_sha\": \"${{ steps.sha.outputs.sha }}\",
               \"fetched_content\": \"sha256:${{ steps.fetch.outputs.hash }}\",

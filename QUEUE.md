@@ -1,14 +1,13 @@
 # Hami Execution Queue
 
-## P0 — Owner-only access and full-workspace restoration
+## P0 — Owner-only access and verifier authorization
 
-- **Owner decision, 2026-10-23:** Hami is private to the owner; the full existing interface should be usable. All online marketing stays closed until real-world use demonstrates the networked solution is convincingly useful across the intended participant groups.
-- **Access gate enabled:** Vercel project `forge-os` now reads back `ssoProtection.enabled=true`, `deploymentType="all"`. This covers production and generated deployment URLs. Password protection remains disabled. The environment changes and redeploy do not bypass Vercel Authentication.
-- **Production configuration updated:** `VITE_HAMI_MAINTENANCE_MODE=false`, `HAMI_MAINTENANCE_MODE=false`, and the existing sensitive `FORGE_API_KEY` was populated with a new 256-bit random key. The secret is not recorded here. Owner enters it at `/owner`; it stays in page memory and is separate from Vercel sign-in.
-- **Production deployment:** `dpl_2ydUCsesSrAkbEdNiUKhVT2TWeyz`, commit `eddcd64b3e2dede3aca3fe548ef90edd8a73dad7`, state READY. Latest project metadata points to this deploy; aliases `haminp.vercel.app` and `forge-os-ebon.vercel.app` were assigned to it, and `pulsenp.vercel.app` redirects to Hami.
-- **Verification:** exact-base ForgeOS CI `39956361513` and secret scan `39956361606` passed. Independent verifier `39956361434` failed because it checked before the manual redeploy was ready. Anonymous HTTP verification could not be performed from this execution environment (external DNS resolution failed); a direct owner browser check and a fresh post-redeploy external denial test remain required. Do not report anonymous-denial as independently observed until tested.
-- **Owner steps:** sign in to Vercel with the account that owns the project; open `https://haminp.vercel.app/owner`; enter the private API key provided in this conversation. Keep the Vercel deployment gate enabled. Do not commit keys or send them through URLs.
-- **New-file rationale:** no new files created; the existing continuity ledger/queue carries this work.
+- Vercel Authentication is enabled for **All Deployments**. Password protection remains disabled. Both maintenance flags are false for production, and project metadata confirms the latest ready production SHA at `haminp.vercel.app`.
+- The existing sensitive Vercel `FORGE_API_KEY` variable was populated with the fresh owner key (64 hexadecimal characters); never write the key into this queue. Owner enters it in the existing `/owner` console.
+- Exact latest production before this queue update: deployment `dpl_ECr1vGF6DyHS6AkZ4kUxTeZaLVaS`, SHA `8c8ec9841392c9c8f608c84e3fb7d0be57d053be`. CI run `39958241795` passed every job; secret scan `39958241796` passed.
+- Independent verifier `39958241898` failed waiting for a valid deployed SHA because its requests lacked a Vercel protection bypass. A project-scoped bypass was created for CI; the workflow now requires two GitHub Actions secrets: `FORGE_API_KEY` (same value as current owner key) and `VERCEL_AUTOMATION_BYPASS_SECRET`. The connector cannot write GitHub Actions secrets, so the owner must set/update these at [GitHub Actions secrets](https://github.com/kn33r0s3/ForgeOS/settings/secrets/actions), then manually rerun the independent verifier. Do not disable SSO or embed secrets in source.
+- Direct unauthenticated HTTP verification could not run from this execution container because DNS resolution to the production alias failed. We have configuration and deployment readback, not an observed anonymous 401/403 response.
+- Marketing gate: keep online promotion closed until real use demonstrates a convincing networked solution across the intended participant groups.
 
 ## P1 — Resolve legal/operational eligibility before any paid sprint
 
