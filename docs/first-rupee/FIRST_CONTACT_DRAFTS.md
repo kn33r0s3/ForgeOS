@@ -1,237 +1,313 @@
-# Item 3 — First-contact drafts (DRAFTS ONLY — NOT SENDABLE)
+# First-contact drafts — owner approval queue only; NOT SENDABLE
 
-> **⛔ DO NOT SEND ANYTHING FROM THIS FILE.**
-> These drafts exist for the owner's approval queue only. Four gates
-> stand between a draft and a sent message, and none is cleared:
-> 1. **Owner selects the seller** (one-word approval, scoreboard queue).
-> 2. **Owner approves the exact message text** — including whether the
->    offer clause below is included at all.
-> 3. **Owner approves exact offer terms.** The rate is a blank `[__]%`
->    in every draft on purpose. `docs/FIRST_RUPEE_SPRINT.md` is
->    explicit: outcome-based pricing is a hypothesis, not an approved
->    term, and no cut/fee may be proposed until gate 4 clears.
-> 4. **D72 legal gate recorded** — qualified Nepali legal/accounting
->    review of seller eligibility, Hami's intermediary role, contract,
->    privacy/data handling, tax, and how any fee could lawfully be
->    received (UNKNOWN_MAP D72).
->
-> The existing script in `docs/SPRINT_BRIEF.md` is discovery-only and
-> contains no offer. These drafts follow the mission's instruction to
-> include the D2 question and the pay-only-on-recovered-sale offer —
-> the conflict is flagged here and in the STEP 0 audit rather than
-> silently resolved. If the owner approves only the discovery script,
-> delete the offer paragraph from any draft before use; the rest of
-> each draft stands on the SPRINT_BRIEF script.
->
-> Standing rules baked into every draft: real identity, no fake
-> customer pretense, one message only — **if they do not reply or
-> decline, stop; no follow-up** (SPRINT_BRIEF). The owner sends all
-> messages personally. `[Mutual contact]` is included only where a
-> genuine warm introduction exists; otherwise the bracket is removed
-> and the honest cold-open line is used.
+**QA revision:** 2026-10-23. This draft set is personalized to the linked public source descriptions in `SELLER_LIST_PUBLIC.md`. Public signals do not prove slow replies, lost sales, consent, or willingness to pay.
 
-## Anatomy of every draft (from the existing script)
+> **DO NOT SEND ANYTHING FROM THIS FILE YET.** A prior repo entry recorded old-list #6/#7/#22/#26 as selected. Current QA found the native page for #6 unverified, #7 only indirect evidence, and no auditable public URL for #22/#26. These candidates are **HOLD**; no message is prepared for them. The owner must verify these precise native pages or explicitly approve replacement S-IDs before sending.
 
-1. Namaste + who I am (Niroj, building Hami, Kathmandu).
-2. One sentence proving I actually looked at *their* page (the
-   personalization line — the only part that differs structurally).
-3. The learning ask: 10 minutes about how inquiries are handled.
-4. **The D2 question**, verbatim in spirit: "If 10 new customers
-   arrived tomorrow, what breaks first?"
-5. The offer clause (gated, above): one week, I reply to inquiries
-   fast with your approval on each reply type; you pay only if a sale
-   that would have died is recovered — `[__]%` of that sale, nothing
-   if nothing is recovered. No account password is ever asked for.
-6. Close: no reply needed if not interested; thanks either way.
+## Identity, channel, and script rules
 
----
+- Use `[your real name]` and, only if the owner chooses, `[your actual location]`. Do not invent a name or place.
+- The discovery message is the first-contact body. It contains the D2 question, is non-commercial, and makes no claim that the seller loses sales.
+- Use a genuine warm introduction where available. Any cold-open route requires explicit owner approval for the exact channel/message. No reply or a decline means stop; no follow-up.
+- All messages are drafts only; the owner sends them. No credentials, customer data, phone numbers or personal emails are copied.
+- The offer appears separately as a gated hypothesis, not part of the first-contact body. `docs/FIRST_RUPEE_SPRINT.md` and D72 require qualified Nepali legal/accounting review and owner approval of exact terms before a paid offer.
 
-## 1 · Silai — Facebook, women's clothing/bridal, Kupondole, Lalitpur
+## Gated pay-only-on-recovered-sale offer (EN / NE; not for first contact)
 
-**EN:** Namaste — I'm Niroj, from Kathmandu. I build Hami, a small project learning how online sellers here handle customer inquiries. I found Silai's page through your bridal and kurta collections — a boutique where most orders must start as a chat about sizes, designs, and dates. I'm asking a few sellers for a 10-minute conversation about that: how inquiries come in, and what happens on the days you can't reply quickly. One question I ask everyone: **if 10 new customers arrived tomorrow, what breaks first?** Separately — and only if you're ever interested — I'm testing one week of help where I reply to inquiries fast, with your approval, and you pay only if a sale that would have died is recovered: `[__]%` of that sale, nothing if nothing is recovered. No reply needed if this isn't for you. Thank you either way.
+**EN:** Separate, gated hypothesis—not for first contact: only after qualified Nepali legal/accounting review and the owner’s explicit approval of exact terms, Hami could test one week of seller-approved human reply assistance. Proposed term only: [__]% of a sale independently evidenced as recovered; no recovered sale, no fee. Hami will not hold or move money. Exclude this paragraph from first-contact text unless D72 is cleared and the owner separately approves offer terms.
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। म "हामी" नामको सानो परियोजना बनाउँदै छु, जसले यहाँका अनलाइन विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न खोजिरहेको छ। तपाईंको पेजमा ब्राइडल र कुर्ता कलेक्सन देखेँ — यस्तो बुटीकमा धेरैजसो अर्डर साइज, डिजाइन र मितिबारेको कुराकानीबाटै सुरु हुन्छ होला। म केही विक्रेताहरूसँग १० मिनेट कुरा गर्न चाहन्छु: सोधपुछ कसरी आउँछ, र छिटो जवाफ दिन नभ्याएका दिनमा के हुन्छ भनेर। म सबैलाई सोध्ने एउटा प्रश्न: **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** अर्को कुरा — तपाईंलाई इच्छा भएमा मात्र — म एक हप्ताको परीक्षण गर्दै छु, जसमा म तपाईंको स्वीकृतिले सोधपुछको छिटो जवाफ दिन्छु, र मर्न लागेको बिक्री जोगियो भने मात्र तपाईंले तिर्नुहुन्छ: त्यो बिक्रीको `[__]%`, केही जोगिएन भने केही पनि होइन। इच्छा छैन भने जवाफ दिनु पर्दैन। जे भए पनि धन्यवाद।
+**NE:** छुट्टै र सर्त पूरा भएपछि मात्र प्रयोग गर्न मिल्ने परिकल्पना—पहिलो सम्पर्कमा नहाल्ने: योग्य नेपाली कानुनी/लेखा समीक्षा र ठ्याक्कै सर्तमा मालिकको स्पष्ट स्वीकृतिपछि मात्र Hami ले विक्रेताको स्वीकृतिमा एक हप्ताको जवाफ-सहयोग परीक्षण गर्न सक्छ। प्रस्तावित सर्त मात्र: स्वतन्त्र प्रमाणबाट पुनः प्राप्त भएको बिक्रीको [__]%; बिक्री पुनः प्राप्त नभए शुल्क छैन। Hami ले पैसा राख्ने वा सार्ने छैन। D72 पूरा र मालिकको छुट्टै स्वीकृति नभएसम्म यो अनुच्छेद पहिलो सन्देशमा नहाल्नुहोस्.
 
-## 2 · Tama Fashion Wear — TikTok @tamafashionwear, Gongabu
+## Personalized discovery drafts
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle customer inquiries. Your captions send buyers to Instagram, Facebook, Viber *and* WhatsApp to order — four inboxes for one shop. That's exactly what I'm studying: when orders live in four places, which messages wait longest, and what happens to them. Would you give me 10 minutes on how you manage it? One question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** And only if you're interested: I'm testing a week where I help answer inquiries fast, with your approval, paid only on recovered sales — `[__]%` of a sale that would have died, nothing if none is recovered. No reply needed if not for you.
+### S01 — The Laani’s Closet
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। तपाईंका क्याप्सनले अर्डरका लागि Instagram, Facebook, Viber र WhatsApp — चार ठाउँमा पठाउँछन्। एउटै पसलका चार इनबक्स: कुन सन्देश सबैभन्दा लामो कुर्छ, र त्यसपछि के हुन्छ — म यही अध्ययन गर्दै छु। यसबारे १० मिनेट समय दिनुहुन्छ? म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** र इच्छा भएमा मात्र: म एक हप्ता सोधपुछको छिटो जवाफ दिन सघाउने परीक्षण गर्दै छु — तपाईंको स्वीकृतिमा, र भुक्तानी जोगिएको बिक्रीमा मात्र: मर्न लागेको बिक्रीको `[__]%`, केही जोगिएन भने केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+**Source:** [public source](https://www.findglocal.com/NP/Kathmandu/985967321270860/The-Laani%E2%80%99s-Closet)  
+**Observed signal:** Indexed posts 26 Jun–21 Jul 2026; all-Nepal shipping; orders via Instagram/WhatsApp/TikTok DM.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
 
-## 3 · Shweta's Fashion House Plus — TikTok @shwetasfashionhouseplus, Kageshwori Manohara
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public listing shows clothing posts from July 2026 and says orders come through social DMs. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. You sell plus- and mid-size ethnic wear — where nearly every buyer must ask about size and fit before ordering, so your inbox *is* your fitting room. I'd love 10 minutes on how those conversations go, and what happens when replies wait. My question for every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested, I'm also testing a week of fast, approved replies to inquiries, paid only if a dying sale is recovered — `[__]%` of that sale, nothing otherwise. No reply needed if it isn't for you.
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा The Laani’s Closet सम्बन्धी Indexed posts 26 Jun–21 Jul 2026; all-Nepal shipping; orders via Instagram/WhatsApp/TikTok DM. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। तपाईंले प्लस र मिड साइजका ethnic कपडा बेच्नुहुन्छ — जहाँ प्रायः हरेक ग्राहकले अर्डरअघि साइज र फिटिङ सोध्नैपर्छ, त्यसैले तपाईंको इनबक्स नै तपाईंको फिटिङ रुम हो। ती कुराकानी कसरी हुन्छन्, र जवाफ ढिला हुँदा के हुन्छ भन्नेबारे १० मिनेट कुरा गर्न चाहन्छु। म सबैलाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र, म एक हप्ता तपाईंको स्वीकृतिले सोधपुछको छिटो जवाफ दिने परीक्षण पनि गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+### S02 — MiMi
 
-## 4 · Donisha Shopping Store — TikTok @donishashoppingstore
+**Source:** [public source](https://www.findglocal.com/NP/Kathmandu/101102909288167/MiMi)  
+**Observed signal:** Listing has a 1 Sep 2026 post and repeated DM-to-order captions.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle customer inquiries. Your dresses sell through direct messages on three platforms, with delivery even worldwide — so a slow reply can lose a customer in another timezone, not just another town. Could I have 10 minutes on how you keep up with the messages, and what happens on busy days? The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** And only if you're interested: I'm testing one week of fast, approved help with inquiry replies, paid only on a recovered sale — `[__]%` of a sale that would have died, nothing if none is recovered. No reply needed if not for you.
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public listing shows children’s clothing sizes and a 1 September 2026 post directing buyers to DM. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। तपाईंका ड्रेसहरू तीनवटा प्लेटफर्मका DM बाट बिक्छन्, विश्वभर डेलिभरीसहित — त्यसैले ढिला जवाफले अर्को सहरको मात्र होइन, अर्को टाइम-जोनको ग्राहक पनि गुमाउन सक्छ। सन्देशहरू कसरी भ्याउनुहुन्छ, र व्यस्त दिनमा के हुन्छ भन्नेबारे १० मिनेट कुरा गर्न सक्छु? म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** र इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले सोधपुछको छिटो जवाफ दिन सघाउने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, केही जोगिएन भने केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा MiMi सम्बन्धी Listing has a 1 Sep 2026 post and repeated DM-to-order captions. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
 
-## 5 · Destiny Outfits — destinyoutfits.com, Kathmandu
+### S03 — YAK N NAK
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. Destiny Outfits has both a storefront site and social pages, which makes you the interesting case in my study: which questions still arrive as chats instead of checkouts — sizes, stock, delivery — and how fast they get answered. Would you spare 10 minutes on that? My standing question: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested, I'm also testing a week of fast, approved inquiry replies, paid only when a dying sale is recovered — `[__]%` of that sale, nothing otherwise. No reply needed if not for you.
+**Source:** [public source](https://www.findglocal.com/NP/Kathmandu/100597534770451/YAK-N-NAK)  
+**Observed signal:** Listing shows Sep 2026 activity and DM-to-order captions.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। Destiny Outfits सँग वेबसाइट पनि छ, सामाजिक पेज पनि — त्यसैले तपाईं मेरो अध्ययनको रोचक उदाहरण हुनुहुन्छ: कुन प्रश्नहरू अझै चेकआउट नभई च्याटमै आउँछन् — साइज, स्टक, डेलिभरी — र तिनको जवाफ कति छिटो जान्छ? यसबारे १० मिनेट समय दिनुहुन्छ? मेरो स्थायी प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र, म एक हप्ता तपाईंको स्वीकृतिले सोधपुछको छिटो जवाफ दिने परीक्षण पनि गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public listing shows clothing posts from September and asks buyers to order by DM. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
 
-## 6 · SL Collection Nepal — TikTok/Instagram @slcollectionnepal01
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा YAK N NAK सम्बन्धी Listing shows Sep 2026 activity and DM-to-order captions. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. Your posts ask buyers to DM for price and details — which means literally every sale you make begins as a message that someone has to answer in time. I'm studying exactly that moment. Could I ask you about it for 10 minutes — how many price DMs arrive on a good post, and what happens to the late ones? The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies to exactly those DMs, paid only on recovered sales — `[__]%` of a sale that would have died, nothing otherwise. No reply needed if not for you.
+### S04 — Biva Clothing
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। तपाईंका पोस्टले मूल्य र विवरणका लागि DM गर्न भन्छन् — अर्थात् तपाईंको हरेक बिक्री जवाफ कुर्ने सन्देशबाटै सुरु हुन्छ। म ठीक त्यही क्षणको अध्ययन गर्दै छु। १० मिनेट सोध्न सक्छु — राम्रो पोस्टमा मूल्य सोध्ने कति DM आउँछन्, र ढिला भएकाहरूको के हुन्छ? म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले त्यही DMहरूको छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+**Source:** [public source](https://www.findglocal.com/NP/Kathmandu/100678049628473/Biva-clothing)  
+**Observed signal:** Listing shows Aug 2026 posts and DM-based orders.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
 
-## 7 · Sworup Wear House — TikTok @sworupwearhouse, Sallaghari, Bhaktapur
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public listing shows clothing posts from August 2026 with orders handled by DM. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. One of your posts drew over a hundred comments, and your ordering route is still "DM for price" — so a good post creates a wall of questions all at once. How do you climb it? I'd like 10 minutes on that, including what happens to the comments and DMs that wait until evening. My question for every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested, I'm testing a week of fast, approved help with those replies, paid only on recovered sales — `[__]%` of a sale that would have died, nothing if none is recovered. No reply needed if not for you.
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा Biva Clothing सम्बन्धी Listing shows Aug 2026 posts and DM-based orders. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। तपाईंको एउटा पोस्टमा सयभन्दा बढी कमेन्ट आए, र अर्डरको बाटो अझै "मूल्यका लागि DM" नै छ — अर्थात् राम्रो पोस्टले एकैचोटि प्रश्नको पर्खाल खडा गर्छ। त्यो कसरी सम्हाल्नुहुन्छ? साँझसम्म कुर्ने कमेन्ट र DM को के हुन्छ भन्नेसहित १० मिनेट कुरा गर्न चाहन्छु। म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र, म एक हप्ता तपाईंको स्वीकृतिले ती जवाफहरू छिटो दिन सघाउने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, केही जोगिएन भने केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+### S05 — Easydeals_official
 
-## 8 · Shrestha Fashion Store — TikTok/Instagram @shrestha_fashion_store
+**Source:** [public source](https://www.findglocal.com/NP/Kathmandu/110266075164240/Easydeals_official)  
+**Observed signal:** June 2026 posts; message/WhatsApp orders and nationwide delivery.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. Your model is cash-on-delivery all over Nepal, ordered entirely by inbox — so the conversation has to carry everything: size, address, delivery, trust. I'm studying how sellers carry that load and where it drops. Ten minutes on how your orders actually close? The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved inbox replies, paid only when a sale that would have died is recovered — `[__]%` of that sale, nothing otherwise. No reply needed if not for you.
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public listing shows products ordered through messages and delivery beyond Kathmandu. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। तपाईंको मोडेल भनेको नेपालभर COD, र अर्डर पूरै इनबक्सबाट — त्यसैले साइज, ठेगाना, डेलिभरी, विश्वास — सबै कुराकानीले नै बोक्नुपर्छ। विक्रेताहरूले त्यो भार कसरी बोक्छन् र कहाँ छुट्छ भनेर म अध्ययन गर्दै छु। तपाईंका अर्डर वास्तवमा कसरी टुङ्गिन्छन् भन्नेबारे १० मिनेट कुरा गर्न सक्छु? म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले इनबक्सको छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा Easydeals_official सम्बन्धी June 2026 posts; message/WhatsApp orders and nationwide delivery. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
 
-## 9 · Brands For You Nepal — TikTok @brandsforyounepal, Lazimpat
+### S06 — SL Collection Nepal (legacy selected)
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. Your skincare sets run to Rs 11,800 and sell through chat — at that price, buyers ask a lot before they commit, and one unanswered thread is a large sale gone. I'd like 10 minutes on how those conversations go, especially the ones that go quiet. The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on a recovered sale — `[__]%` of a sale that would have died, nothing if none is recovered. No reply needed if not for you.
+**Source:** **NO AUDITABLE SOURCE URL**  
+**Status:** **HOLD — no sendable draft.** HOLD — no direct profile/source verification; do not contact.
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। तपाईंका स्किनकेयर सेट रु. ११,८०० सम्मका छन् र च्याटबाटै बिक्छन् — त्यो मूल्यमा ग्राहकले किन्नुअघि धेरै सोध्छन्, र एउटा जवाफ नपाएको कुराकानी भनेको ठूलै बिक्री गुम्नु हो। ती कुराकानी कसरी हुन्छन् — विशेषगरी बीचमै रोकिएकाहरू — भनेर १० मिनेट कुरा गर्न चाहन्छु। म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, केही जोगिएन भने केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+A personalized line would repeat an unverified identity/source claim. Recheck the exact native public profile and source first, or approve a replacement S-ID.
+### S07 — Sworup Wear House (legacy selected)
 
-## 10 · Cosmetics Pasal Pokhara — TikTok @cosmetics.pasal.p, Pokhara
+**Source:** [public source](https://pictame.com/en/discover/hashtag/deliveryallovernepal)  
+**Status:** **HOLD — no sendable draft.** OBSERVED indirectly; HOLD pending native profile verification.
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. You're the Pokhara voice in my study — most sellers I find are in the Valley, and I want to know if the inquiry problem looks different outside it: "DM or call to order," delivery all over Nepal. Ten minutes on how orders reach you and what happens when replies wait? The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on a recovered sale — `[__]%` of a sale that would have died, nothing otherwise. No reply needed if not for you.
+A personalized line would repeat an unverified identity/source claim. Recheck the exact native public profile and source first, or approve a replacement S-ID.
+### S08 — Anjyoti Collection
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। मेरो अध्ययनमा तपाईं पोखराको आवाज हुनुहुन्छ — मैले भेटेका धेरै विक्रेता उपत्यकाकै छन्, र सोधपुछको समस्या उपत्यका बाहिर फरक देखिन्छ कि भनेर जान्न चाहन्छु: "अर्डरका लागि DM वा कल", डेलिभरी नेपालभर। अर्डर कसरी आउँछन् र जवाफ ढिला हुँदा के हुन्छ भनेर १० मिनेट कुरा गर्न सक्छु? म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+**Source:** [public source](https://www.fashyas.com/NP/Dharan/1282268268305397/Anjyoti-collection)  
+**Observed signal:** Public listing shows Oct 2026 posts, DM-to-order and delivery across Nepal.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
 
-## 11 · Blossom Collection — TikTok @blossom.cosmetics1
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public listing shows October 2026 clothing posts and DM-to-order wording. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. One of your posts drew 134 comments — that's 134 possible customers asking at once, on top of the DMs. I'm studying what happens to a pile that size: who answers, how long it takes, and how many quietly leave. Ten minutes on how you handle a post that pops? The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on recovered sales — `[__]%` of a sale that would have died, nothing otherwise. No reply needed if not for you.
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा Anjyoti Collection सम्बन्धी Public listing shows Oct 2026 posts, DM-to-order and delivery across Nepal. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। तपाईंको एउटा पोस्टमा १३४ कमेन्ट आए — अर्थात् एकैचोटि १३४ सम्भावित ग्राहकले सोधे, DM त छँदै छ। त्यत्रो थुप्रोको के हुन्छ — कसले जवाफ दिन्छ, कति समय लाग्छ, कति जना चुपचाप फर्किन्छन् — म यही अध्ययन गर्दै छु। पोस्ट हिट भएका दिनबारे १० मिनेट कुरा गर्न सक्छु? म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+### S09 — Shiva Shakti Uniform
 
-## 12 · Sweet Glam — TikTok @sweetglam24
+**Source:** [public source](https://www.findglocal.com/NP/Kathmandu/104697424614390/Shiva-Shakti-Uniform)  
+**Observed signal:** 2026 public listing invites messages or DMs for uniform/custom orders.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. Your whole order route is a phone number in a hashtag — no storefront, no checkout, just you and the messages. That's the purest version of what I'm studying. Ten minutes on how the orders come in and what a busy day does to your replies? The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on a recovered sale — `[__]%` of a sale that would have died, nothing if none is recovered. No reply needed if not for you.
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public listing presents uniforms/custom clothing and directs people to inquire through messages. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। तपाईंको अर्डरको बाटो भनेकै ह्यासट्यागमा रहेको फोन नम्बर हो — न स्टोरफ्रन्ट, न चेकआउट, तपाईं र सन्देशहरू मात्र। म अध्ययन गरिरहेको कुराको सबैभन्दा शुद्ध रूप यही हो। अर्डर कसरी आउँछन् र व्यस्त दिनले तपाईंका जवाफलाई के गर्छ भनेर १० मिनेट कुरा गर्न सक्छु? म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, केही जोगिएन भने केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा Shiva Shakti Uniform सम्बन्धी 2026 public listing invites messages or DMs for uniform/custom orders. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
 
-## 13 · Shringar Cosmetic — TikTok @shringarcosmetic6
+### S10 — Janak Fancy Pasal
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. "Delivery all over Nepal — DM for more details": your store runs on details given one chat at a time — shades, skin types, prices. I'd like 10 minutes on how those detail-conversations go and what happens when several land together. The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on recovered sales — `[__]%` of a sale that would have died, nothing otherwise. No reply needed if not for you.
+**Source:** [public source](https://www.findglocal.com/NP/Unknown/227954503734465/janak-fancy-pasal)  
+**Observed signal:** Listing has a June 2026 signal for message orders/COD; its own index marks location unknown.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। "नेपालभर डेलिभरी — विवरणका लागि DM": तपाईंको पसल एक-एक च्याटमा दिइने विवरणले चल्छ — सेड, छालाको प्रकार, मूल्य। ती विवरण-कुराकानी कसरी हुन्छन् र एकैचोटि धेरै आए के हुन्छ भनेर १० मिनेट कुरा गर्न चाहन्छु। म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public listing shows products ordered by message and mentions delivery/COD; I have not inferred a location. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
 
-## 14 · eSo Online Shopping Manohara — TikTok @eso_onlineshoppingmanoha, shoes
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा Janak Fancy Pasal सम्बन्धी Listing has a June 2026 signal for message orders/COD; its own index marks location unknown. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. You take eSewa and mobile banking and deliver all over Nepal — but the order itself still starts with a call or WhatsApp message, and shoes always bring the size question. Ten minutes on how those conversations run, and what happens when you're at the store and the phone keeps ringing? The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on a recovered sale — `[__]%` of a sale that would have died, nothing otherwise. No reply needed if not for you.
+### S11 — Fusion Dikshya
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। तपाईंले eSewa र मोबाइल बैंकिङ लिनुहुन्छ, नेपालभर डेलिभरी गर्नुहुन्छ — तर अर्डर आफैं भने कल वा WhatsApp सन्देशबाटै सुरु हुन्छ, र जुत्तामा साइजको प्रश्न सधैं आउँछ। ती कुराकानी कसरी चल्छन्, र पसलमा हुँदा फोन बजिरहँदा के हुन्छ भनेर १० मिनेट कुरा गर्न सक्छु? म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+**Source:** [public source](https://www.restaurants10.com/NP/Kathmandu/111347101442544/Fusion-Dikshya)  
+**Observed signal:** Sep 2026 posts show custom sizes/designs and DM-to-order wording.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
 
-## 15 · Footflex Nepal — TikTok @footflex.nepal, shoes
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public listing shows custom sizes/designs and September 2026 posts asking buyers to DM. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. You do something rarer than most: you print the price (Rs 1,399) right on the post — and the order still goes through WhatsApp, because size and stock live in the chat. I'm studying that chat: how much of your day it takes, and what happens to the messages that arrive while you're packing orders. Ten minutes on it? The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on recovered sales — `[__]%` of a sale that would have died, nothing otherwise. No reply needed if not for you.
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा Fusion Dikshya सम्बन्धी Sep 2026 posts show custom sizes/designs and DM-to-order wording. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। तपाईंले धेरैले नगर्ने काम गर्नुहुन्छ: मूल्य (रु. १,३९९) पोस्टमै छाप्नुहुन्छ — तर अर्डर अझै WhatsApp बाटै जान्छ, किनकि साइज र स्टक च्याटमै बस्छन्। म त्यही च्याटको अध्ययन गर्दै छु: त्यसले तपाईंको दिनको कति भाग लिन्छ, र अर्डर प्याक गरिरहँदा आएका सन्देशको के हुन्छ। १० मिनेट दिनुहुन्छ? म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+### S12 — Asan Wholesale Bazaar
 
-## 16 · Naira Shoe Center — TikTok @nairashoecenter3, shoes
+**Source:** [public source](https://www.findglocal.com/NP/Kathmandu/905289882667330/Asan-Wholesale-Bazaar)  
+**Observed signal:** May 2026 public post and message-order/delivery language; business scale uncertain.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. Your captions are in Nepali and your order route is a WhatsApp message — and with sizes 35 to 39 listed, almost every buyer has to confirm their size with you before a sale exists. I'd like 10 minutes on how many of those size conversations finish, and how many go silent. The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on recovered sales — `[__]%` of a sale that would have died, nothing otherwise. No reply needed if not for you.
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public listing shows message-based ordering, though I don’t know whether inquiry handling is a problem. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। तपाईंका क्याप्सन नेपालीमा छन् र अर्डरको बाटो WhatsApp सन्देश हो — र ३५ देखि ३९ साइज उल्लेख भएकाले प्रायः हरेक ग्राहकले बिक्री हुनुअघि तपाईंसँग साइज पक्का गर्नैपर्छ। ती साइज-कुराकानीमध्ये कति टुङ्गिन्छन् र कति बीचमै रोकिन्छन् भनेर १० मिनेट कुरा गर्न चाहन्छु। म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा Asan Wholesale Bazaar सम्बन्धी May 2026 public post and message-order/delivery language; business scale uncertain. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
 
-## 17 · Becky Sneakers NP — TikTok @beckysneakers.np, Tusal, Boudha
+### S13 — Mato Crafts
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. Sneakers are a fit-and-authenticity conversation before they're a sale — "DM us to order" means your replies carry the whole trust of the shop. Ten minutes on how those DM conversations go, and what happens to the ones that start while you're out delivering? The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on a recovered sale — `[__]%` of a sale that would have died, nothing otherwise. No reply needed if not for you.
+**Source:** [public source](https://matocrafts.com/about)  
+**Observed signal:** Official website describes handmade/custom craft products and social enquiries; also has a website.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। स्निकर बिक्री हुनुअघि फिट र असली-नक्कलीको कुराकानी हो — "अर्डरका लागि DM" भनेको तपाईंका जवाफले पसलको पूरै विश्वास बोक्छन्। ती DM कुराकानी कसरी हुन्छन्, र तपाईं डेलिभरीमा बाहिर हुँदा सुरु भएकाहरूको के हुन्छ भनेर १० मिनेट कुरा गर्न चाहन्छु। म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your official site describes handmade/custom craft work, while your public presence also points buyers to social enquiries. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
 
-## 18 · Caliber Shoes Kapan — TikTok @calibershoeskapan, Kapan
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा Mato Crafts सम्बन्धी Official website describes handmade/custom craft products and social enquiries; also has a website. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. You're a local outlet of a known Nepali shoe brand, but your TikTok still sells the human way — offer posts and "DM us" — which makes you a useful comparison: does a brand name make the inbox easier, or is it the same flood? Ten minutes on how your DM orders run alongside the physical shop? The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on recovered sales — `[__]%` of a sale that would have died, nothing otherwise. No reply needed if not for you.
+### S14 — Handicraft Ghar Nepal
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। तपाईं चिनिएको नेपाली जुत्ता ब्रान्डको स्थानीय आउटलेट हुनुहुन्छ, तर तपाईंको TikTok अझै मान्छेकै तरिकाले बेच्छ — अफर पोस्ट र "DM गर्नुहोस्" — त्यसैले तपाईं राम्रो तुलना हुनुहुन्छ: ब्रान्डको नामले इनबक्स सजिलो हुन्छ, कि उही भीड हो? तपाईंका DM अर्डर भौतिक पसलसँगै कसरी चल्छन् भनेर १० मिनेट कुरा गर्न सक्छु? म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+**Source:** [public source](https://www.handicraftgharnepal.com.np/)  
+**Observed signal:** Official site shows handicrafts, social order enquiries, and delivery/payment options.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
 
-## 19 · Sandals Zone — TikTok @sandals.zone01
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your website shows handicrafts with social enquiry and delivery/payment information. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. Nine thousand likes on a post, "limited stock, order now," and the only door is a WhatsApp DM — urgency on one side, a queue on the other. I'm studying what that queue costs. Ten minutes on how you work through a hit post's messages, and what happens to the last thirty in line? The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on recovered sales — `[__]%` of a sale that would have died, nothing otherwise. No reply needed if not for you.
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा Handicraft Ghar Nepal सम्बन्धी Official site shows handicrafts, social order enquiries, and delivery/payment options. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। एउटा पोस्टमा नौ हजार लाइक, "स्टक सीमित, अहिले नै अर्डर गर्नुहोस्," र एउटै ढोका — WhatsApp DM। एकातिर हतार, अर्कातिर लाइन। त्यो लाइनको मूल्य के पर्छ भनेर म अध्ययन गर्दै छु। हिट पोस्टका सन्देश कसरी सक्नुहुन्छ, र लाइनका अन्तिम तीस जनाको के हुन्छ भनेर १० मिनेट कुरा गर्न सक्छु? म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+### S15 — Allinone Earrings
 
-## 20 · Gadget Sathi — TikTok @gadgetsathi, Machhapokhari
+**Source:** [public source](https://urlebird.com/user/allinone.earrings/)  
+**Observed signal:** Public mirror shows recent content and Instagram/WhatsApp DM/COD signals.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. You sell smartwatches with a 12-month warranty over WhatsApp — which means your inbox carries both the sale *and* the after-sale: setup questions, warranty questions, complaints. I'd like 10 minutes on how those two streams mix, and which ones wait. The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on recovered sales — `[__]%` of a sale that would have died, nothing otherwise. No reply needed if not for you.
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. a public TikTok mirror shows your earring posts and directs buyers to social messages for orders. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। तपाईंले १२ महिने वारेन्टीसहितका स्मार्टवाच WhatsApp बाट बेच्नुहुन्छ — अर्थात् तपाईंको इनबक्सले बिक्री पनि बोक्छ, बिक्रीपछिको सेवा पनि: सेटअपका प्रश्न, वारेन्टीका प्रश्न, गुनासा। ती दुई धार कसरी मिसिन्छन् र कुन बढी कुर्छन् भनेर १० मिनेट कुरा गर्न चाहन्छु। म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा Allinone Earrings सम्बन्धी Public mirror shows recent content and Instagram/WhatsApp DM/COD signals. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
 
-## 21 · AK Moon Electronics — TikTok @ak.moon.electroni
+### S16 — Digi Tech
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. Sixty-five comments on a post, home delivery all over Nepal, and orders through WhatsApp — electronics buyers ask about specs, warranty, and delivery before money moves, so your chat *is* your sales counter. Ten minutes on how you staff that counter, and what happens to questions that land at night? The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on recovered sales — `[__]%` of a sale that would have died, nothing otherwise. No reply needed if not for you.
+**Source:** [public source](https://urlebird.com/user/dgtech_nepal/)  
+**Observed signal:** Public mirror shows recent seller content; exact order channel is not fully established.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। एउटा पोस्टमा ६५ कमेन्ट, नेपालभर होम डेलिभरी, र अर्डर WhatsApp बाट — इलेक्ट्रोनिक्सका ग्राहकले पैसा हिँड्नुअघि स्पेस, वारेन्टी र डेलिभरी सोध्छन्, त्यसैले तपाईंको च्याट नै तपाईंको बिक्री काउन्टर हो। त्यो काउन्टर कसरी सम्हाल्नुहुन्छ, र राति आएका प्रश्नको के हुन्छ भनेर १० मिनेट कुरा गर्न सक्छु? म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. a public TikTok mirror shows electronics/audio product posts; I have not assumed how orders are handled. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
 
-## 22 · Hello Mobile Store — TikTok @hello.mobile.stor3, used iPhones
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा Digi Tech सम्बन्धी Public mirror shows recent seller content; exact order channel is not fully established. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. "Offer price — only DM us": with used iPhones, no two units are the same, so no price can be printed and *every* sale is a negotiation in your inbox — battery health, storage, condition, haggling. That makes your inbox the whole business. Ten minutes on how those negotiations run, and how many die mid-chat? The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on a recovered sale — `[__]%` of a sale that would have died, nothing otherwise. No reply needed if not for you.
+### S17 — Becky Sneakers NP
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। "अफर मूल्य — DM मात्र": पुराना iPhone मा कुनै दुईवटा उस्तै हुँदैनन्, त्यसैले मूल्य छाप्न मिल्दैन र *हरेक* बिक्री तपाईंको इनबक्समै हुने बार्गेनिङ हो — ब्याट्री हेल्थ, स्टोरेज, अवस्था, मोलतोल। अर्थात् तपाईंको इनबक्स नै पूरै व्यापार हो। ती बार्गेनिङ कसरी चल्छन् र कति बीचमै मर्छन् भनेर १० मिनेट कुरा गर्न चाहन्छु। म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+**Source:** [public source](https://crevideo.com/tiktok/beckysneakers.np)  
+**Observed signal:** Mirror identifies footwear and message/COD signals; freshness weaker than Sep–Oct 2026 candidates.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
 
-## 23 · Relief Gadgets — TikTok @relief.gadgets, New Road
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. a public TikTok mirror associates your page with sneakers and message-based orders; I would check that this remains current. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. You sell on EMI — 40% down, 0% interest — through WhatsApp, which means your inbox carries an extra layer most sellers don't have: *eligibility* questions. "Do I qualify, what do I need, how long?" — each one a conversation before any sale. Ten minutes on how those EMI conversations go, and how many stall waiting for an answer? The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on recovered sales — `[__]%` of a sale that would have died, nothing otherwise. No reply needed if not for you.
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा Becky Sneakers NP सम्बन्धी Mirror identifies footwear and message/COD signals; freshness weaker than Sep–Oct 2026 candidates. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। तपाईंले EMI मा बेच्नुहुन्छ — ४०% डाउन, ०% ब्याज — WhatsApp बाट, अर्थात् तपाईंको इनबक्समा धेरै विक्रेतासँग नहुने एउटा थप तह छ: *योग्यता* का प्रश्न। "म योग्य छु?, के चाहिन्छ, कति लाग्छ?" — प्रत्येक बिक्रीअघिको एउटा कुराकानी। ती EMI कुराकानी कसरी हुन्छन् र कति जवाफ कुरेर रोकिन्छन् भनेर १० मिनेट कुरा गर्न चाहन्छु। म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+### S18 — Radhacollection
 
-## 24 · Digi Tech — TikTok @dgtech_nepal, audio/gadgets
+**Source:** [public source](https://www.fashyas.com/NP/Kathmandu/102654994815571/Radhacollection)  
+**Observed signal:** Aug 2026 posts for custom kurtha/jewellery and DM-for-order/inquiry signals.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. Wireless buds at Rs 850 with 134 comments on a post: that's a volume business — small tickets, huge question flow, where the sellers who answer first take the sale. Ten minutes on how you keep up, and how many Rs-850 sales a slow evening costs? The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on recovered sales — `[__]%` of a sale that would have died, nothing otherwise. No reply needed if not for you.
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public listing shows customized kurtha designs and August 2026 posts directing size/design enquiries to DM. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। रु. ८५० का वायरलेस बड्स र पोस्टमा १३४ कमेन्ट: यो भोल्युमको व्यापार हो — साना टिकट, ठूलो प्रश्न-प्रवाह, जहाँ पहिले जवाफ दिनेले बिक्री लैजान्छ। कसरी भ्याउनुहुन्छ, र एउटा ढिला साँझले कति रु. ८५० का बिक्री खाइदिन्छ भनेर १० मिनेट कुरा गर्न चाहन्छु। म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा Radhacollection सम्बन्धी Aug 2026 posts for custom kurtha/jewellery and DM-for-order/inquiry signals. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
 
-## 25 · Allinone Earrings — TikTok/Instagram @allinone.earrings
+### S19 — Clothes Nation Nepal
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. Jewelry sells on trust and detail — close-up photos, "is it this exact shade, will it tarnish" — and your door is a DM or WhatsApp, cash on delivery across Nepal. Ten minutes on how those detail questions go, and what a missed one costs when the piece is one of a few? The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on a recovered sale — `[__]%` of a sale that would have died, nothing otherwise. No reply needed if not for you.
+**Source:** [public source](https://www.globuya.com/NP/Kathmandu/1994620917507096/Clothes-Nation-Nepal)  
+**Observed signal:** Public listing has July–Sep 2026 posts and repeated DM-to-order wording.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। गहना विश्वास र विवरणले बिक्छ — नजिकका फोटो, "ठ्याक्कै यही रङ हो?, रङ उड्छ कि उड्दैन" — र तपाईंको ढोका DM वा WhatsApp हो, नेपालभर COD सहित। ती विवरण-प्रश्न कसरी हुन्छन्, र थोरै मात्र बाँकी रहेको डिजाइनमा एउटा छुटेको प्रश्नले के मूल्य चुकाउँछ भनेर १० मिनेट कुरा गर्न चाहन्छु। म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public listing shows clothing posts from July–September 2026 and tells buyers to DM for orders. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
 
-## 26 · Asha Achar — TikTok @asha.achar, homemade pickle
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा Clothes Nation Nepal सम्बन्धी Public listing has July–Sep 2026 posts and repeated DM-to-order wording. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. "Achar available at a reasonable price — DM for price": a home-made product, made in batches, sold one DM at a time. When you're in the kitchen making the next batch, the phone is in the other room — I'm studying exactly those hours. Ten minutes on how orders reach you and what happens to the ones that arrive mid-batch? The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on a recovered sale — `[__]%` of a sale that would have died, nothing otherwise. No reply needed if not for you.
+### S20 — Shades Nepal
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। "उचित मूल्यमा अचार उपलब्ध छ — मूल्यका लागि DM": घरमै बनेको उत्पादन, ब्याच-ब्याचमा बन्ने, एक-एक DM बाट बिक्ने। तपाईं अर्को ब्याच बनाउन भान्सामा हुँदा फोन अर्को कोठामा हुन्छ — म ठीक त्यही घण्टाहरूको अध्ययन गर्दै छु। अर्डर कसरी आउँछन् र ब्याच बनाइरहँदा आएका अर्डरको के हुन्छ भनेर १० मिनेट कुरा गर्न सक्छु? म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+**Source:** [public source](https://www.shadesnepal.com/)  
+**Observed signal:** Official site shows drops from Sep–Oct 2026 and says order by DM.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
 
-## 27 · UG Cakes — ugcakes.com, Mid-Baneshwor
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your official site shows eyewear drops from September–October 2026 and says customers can order by DM. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. Custom cakes are the most conversation-heavy product there is — flavor, design, a photo reference, the message on top, the date, the delivery slot — and a birthday can't be rescheduled because a reply was late. You have a website, yet custom orders still live in chats. Ten minutes on how those design conversations run, and what a slow reply costs on a deadline product? The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on a recovered sale — `[__]%` of a sale that would have died, nothing otherwise. No reply needed if not for you.
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा Shades Nepal सम्बन्धी Official site shows drops from Sep–Oct 2026 and says order by DM. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। कस्टम केक सबैभन्दा बढी कुराकानी माग्ने उत्पादन हो — फ्लेभर, डिजाइन, फोटो रेफरेन्स, माथि लेख्ने सन्देश, मिति, डेलिभरी समय — र जवाफ ढिला भएकैले जन्मदिन सार्न मिल्दैन। तपाईंसँग वेबसाइट छ, तर पनि कस्टम अर्डर च्याटमै बस्छन्। ती डिजाइन-कुराकानी कसरी चल्छन्, र डेडलाइन भएको उत्पादनमा ढिला जवाफले के मूल्य चुकाउँछ भनेर १० मिनेट कुरा गर्न चाहन्छु। म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+### S21 — Salesstore.np
 
-## 28 · Dessert First — Facebook/Instagram, cloud kitchen, Kathmandu
+**Source:** [public source](https://linktr.ee/salesstore.np)  
+**Observed signal:** Public link hub links social channels and says COD/online payment/DM-to-order; account joined Jan 2026 per page.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. As a cloud kitchen you have no storefront for a customer to walk into — your social inbox is quite literally the whole shop, and a mousse cake order that waits too long just goes to a bakery with a door. Ten minutes on how you run a shop that exists only in messages, and what happens on celebration weekends? The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on a recovered sale — `[__]%` of a sale that would have died, nothing otherwise. No reply needed if not for you.
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public link page brings social channels together and says customers can DM to order with COD/online payment options. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। क्लाउड किचेन भएकाले ग्राहक छिर्ने स्टोरफ्रन्ट छैन — तपाईंको सामाजिक इनबक्स नै शाब्दिक रूपमा पूरै पसल हो, र धेरै कुर्ने मुस केकको अर्डर ढोका भएको बेकरीतिरै जान्छ। सन्देशमा मात्र अस्तित्व भएको पसल कसरी चलाउनुहुन्छ, र उत्सवका सप्ताहन्तमा के हुन्छ भनेर १० मिनेट कुरा गर्न चाहन्छु। म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा Salesstore.np सम्बन्धी Public link hub links social channels and says COD/online payment/DM-to-order; account joined Jan 2026 per page. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
 
-## 29 · The GrG Bakery — Facebook/Instagram, Nakhipot, Lalitpur
+### S22 — Hello Mobile Store (legacy selected)
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. Your cakes start at Rs 550 a pound and every one is a small project — theme, flavor, size, date — negotiated in your page's messages. Occasion cakes have hard deadlines, so a message answered tomorrow can be worth nothing. Ten minutes on how those negotiations run, especially near festivals when everyone orders at once? The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on a recovered sale — `[__]%` of a sale that would have died, nothing otherwise. No reply needed if not for you.
+**Source:** **NO AUDITABLE SOURCE URL**  
+**Status:** **HOLD — no sendable draft.** HOLD — no auditable source URL; do not contact.
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। तपाईंका केक रु. ५५० प्रति पाउन्डबाट सुरु हुन्छन् र हरेक एउटा सानो परियोजना हो — थिम, फ्लेभर, साइज, मिति — तपाईंको पेजका सन्देशमै तय हुने। अवसरका केकको डेडलाइन कडा हुन्छ, त्यसैले भोलि दिइएको जवाफको मूल्य शून्य हुन सक्छ। ती बार्गेनिङ कसरी चल्छन् — विशेषगरी चाडपर्वनजिक सबैले एकैचोटि अर्डर गर्दा — भनेर १० मिनेट कुरा गर्न चाहन्छु। म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+A personalized line would repeat an unverified identity/source claim. Recheck the exact native public profile and source first, or approve a replacement S-ID.
+### S23 — Lasya Makeup Official
 
-## 30 · Mom's Store Nepal — Facebook/Instagram, Hattiban, Lalitpur
+**Source:** [public source](https://www.findglocal.com/NP/Kathmandu/610936475427788/Lasyamakeup.official)  
+**Observed signal:** Public listing shows Aug 2026 product posts with DM-to-order wording.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
 
-**EN:** Namaste — I'm Niroj, from Kathmandu, building Hami to learn how online sellers handle inquiries. Your store is the hardest inquiry problem in my whole study: every preloved item is one of one, so the most common message you get must be "is this still available?" — and by the time it's answered, the answer may have changed. Ten minutes on how you handle that stream, and what it costs when a piece sells while three people are still asking? The question I ask every seller: **if 10 new customers arrived tomorrow, what breaks first?** Only if you're interested: I'm testing a week of fast, approved replies, paid only on recovered sales — `[__]%` of a sale that would have died, nothing otherwise. No reply needed if not for you.
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public listing shows makeup/beauty posts from August 2026 that invite customers to order by DM. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
 
-**NE:** नमस्ते — म निरोज, काठमाडौंबाट। अनलाइन विक्रेताहरूले सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म "हामी" बनाउँदै छु। तपाईंको पसल मेरो पूरै अध्ययनकै सबैभन्दा गाह्रो सोधपुछ समस्या हो: हरेक प्रिलभ्ड सामान एउटै मात्र हुन्छ, त्यसैले तपाईंले पाउने सबैभन्दा सामान्य सन्देश "यो अझै छ?" नै हुनुपर्छ — र जवाफ दिँदासम्म जवाफ नै बदलिइसकेको हुन सक्छ। त्यो धार कसरी सम्हाल्नुहुन्छ, र तीन जना सोधिरहेकै बेला सामान बिक्दा के मूल्य पर्छ भनेर १० मिनेट कुरा गर्न चाहन्छु। म हरेक विक्रेतालाई सोध्ने प्रश्न: **भोलि १० जना नयाँ ग्राहक आए भने सबैभन्दा पहिले के बिग्रन्छ?** इच्छा भएमा मात्र: म एक हप्ता तपाईंको स्वीकृतिले छिटो जवाफ दिने परीक्षण गर्दै छु — भुक्तानी जोगिएको बिक्रीमा मात्र: त्यो बिक्रीको `[__]%`, नत्र केही पनि होइन। इच्छा नभए जवाफ दिनु पर्दैन।
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा Lasya Makeup Official सम्बन्धी Public listing shows Aug 2026 product posts with DM-to-order wording. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
 
----
+### S24 — Technic by Lavish Me
 
-## After any conversation (owner's reporting checklist)
+**Source:** [public source](https://www.findglocal.com/NP/Kathmandu/1861456560809265/Technic-by-lavish-me)  
+**Observed signal:** Public listing shows Jul–Aug 2026 products and DM-for-order/inquiry wording.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
 
-Per SPRINT_BRIEF's "Report back": who, what they sell, inquiries
-logged, recovered sales, rupees recovered, rupees paid, what broke,
-one quote in their own words (paraphrased ok, never invented). Report
-it to musa; the scoreboard and the commitment log are updated from
-that report only — never from a draft, a send, or a silence.
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public listing shows beauty-product posts from July–August 2026 with message-based orders or enquiries. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
+
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा Technic by Lavish Me सम्बन्धी Public listing shows Jul–Aug 2026 products and DM-for-order/inquiry wording. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
+
+### S25 — Chrixtina Rocca Nepal
+
+**Source:** [public source](https://www.findglocal.com/NP/Kathmandu/603455999524161/Chrixtina-Rocca-Nepal)  
+**Observed signal:** Public listing shows Aug 2026 cosmetics posts and DM-to-order/delivery wording.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
+
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public listing shows cosmetics posts and directs order enquiries to DM. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
+
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा Chrixtina Rocca Nepal सम्बन्धी Public listing shows Aug 2026 cosmetics posts and DM-to-order/delivery wording. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
+
+### S26 — Asha Achar (legacy selected)
+
+**Source:** **NO AUDITABLE SOURCE URL**  
+**Status:** **HOLD — no sendable draft.** HOLD — no auditable source URL; do not contact.
+
+A personalized line would repeat an unverified identity/source claim. Recheck the exact native public profile and source first, or approve a replacement S-ID.
+### S27 — Case Of Beauty
+
+**Source:** [public source](https://www.findglocal.com/NP/Kathmandu/660485930477755/Case-Of-Beauty)  
+**Observed signal:** Public listing shows Jul–Aug 2026 product signals and DM-to-order language.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
+
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public listing shows beauty-product posts from July–August 2026 and DM-to-order wording. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
+
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा Case Of Beauty सम्बन्धी Public listing shows Jul–Aug 2026 product signals and DM-to-order language. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
+
+### S28 — Gift Studio Nepal
+
+**Source:** [public source](https://www.findglocal.com/NP/Kathmandu/100916479558726/Gift-Studio-Nepal)  
+**Observed signal:** Public listing shows custom gifts, Aug 2026 activity and message-based order language.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
+
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public listing shows customized gifts and directs product/order questions to messages. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
+
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा Gift Studio Nepal सम्बन्धी Public listing shows custom gifts, Aug 2026 activity and message-based order language. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
+
+### S29 — RDM Fashion Trend
+
+**Source:** [public source](https://www.findglocal.com/NP/Kathmandu/111510751650122/RDM-Fashion-Trend)  
+**Observed signal:** Public listing shows Oct 2026 activity and COD/delivery signals.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
+
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public listing shows a recent October 2026 fashion post and delivery/COD information. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
+
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा RDM Fashion Trend सम्बन्धी Public listing shows Oct 2026 activity and COD/delivery signals. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
+
+### S30 — 6K Thrifts
+
+**Source:** [public source](https://6kthrifts.com/)  
+**Observed signal:** Official site describes one-of-one items, new drops, and Instagram DM ordering alongside a website.  
+**Status:** DRAFT ONLY; owner must re-check the page, select the seller and approve exact wording.
+
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your official site describes one-of-one second-hand clothing, new drops, and Instagram DM ordering. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief discovery conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** Thank you either way; no reply is needed if you’re not interested.
+
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न म Hami बनाउँदै छु। तपाईंको सार्वजनिक पेज/सूचीमा 6K Thrifts सम्बन्धी Official site describes one-of-one items, new drops, and Instagram DM ordering alongside a website. भनेर देखिन्छ। ढिलो जवाफ वा छुटेका अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले म त्यस्तो अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ अर्डरसम्म कसरी पुग्यो वा पुगेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** समय दिनुभएकोमा धन्यवाद; चासो नभए जवाफ दिनु पर्दैन।
+
+
+## Owner decision gates
+
+1. Re-verify the legacy selected sellers or explicitly replace with named S-IDs; do not auto-map old numbers.
+2. Approve exact discovery-only text and contact route for each selected seller.
+3. Keep the offer clause out of first contact; decide exact terms only after D72 counsel.
+4. No messaging, reply handling, payment method, or pilot activation occurs from this document.

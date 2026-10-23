@@ -50,14 +50,10 @@ item names the decision, the options, and where the evidence lives.
    signals; strongest missed-inquiry profiles are #6, #7, #22, #26
    (every sale requires a chat reply) and highest public inquiry
    volume #11, #24. Recommendation (not a decision): start with 3–5 so
-   the five-conversation kit (`workspace/discovery/five-conversations-kit.md`)
+   the five-conversation kit (`docs/SPRINT_BRIEF.md` (tracked discovery-only script; old machine-local path is not in the GitHub tree))
    completes inside the 14 days. A warm introduction, where one
    exists, outranks a cold message (SPRINT_BRIEF).
-   **DECIDED 2026-10-23 (owner): #6 SL Collection Nepal, #7 Sworup
-   Wear House, #22 Hello Mobile Store, #26 Asha Achar.** These four
-   are the first contact set; their drafts in
-   `docs/first-rupee/FIRST_CONTACT_DRAFTS.md` (§6, §7, §22, §26) are
-   the send set once items 2–3 clear.
+   **RECORDED IN REPO 2026-10-23: old-list #6 SL Collection Nepal, #7 Sworup Wear House, #22 Hello Mobile Store, #26 Asha Achar. QA HOLD:** current source review cannot verify direct native profiles for #6/#7 and found no auditable source URL for #22/#26. Preserve the recorded selection but do not send those drafts. Owner must verify the exact pages or explicitly approve replacement S-IDs from `SELLER_LIST_PUBLIC.md`.
 2. **Exact message:** approve a draft from
    `docs/first-rupee/FIRST_CONTACT_DRAFTS.md` as-is, approve with the
    offer clause removed (falls back to the SPRINT_BRIEF discovery-only
@@ -104,3 +100,10 @@ on the trigger, by design.
 2026-10-23 (later): Queue item 1 DECIDED — owner approved sellers
 #6, #7, #22, #26. Items 2 (exact message) and 3 (offer terms) are
 next; nothing has been sent to anyone.
+
+
+## QA hold — source identity and mapping (2026-10-23)
+
+- The current public signal list uses stable S01–S30 IDs. The prior recorded selection uses old-list numbers. No automatic remapping was made.
+- The prior selected #6 and #7 lack direct/native profile verification; #22 and #26 have no auditable source URL in the previous record. **Nothing has been sent.** Owner action: **REVERIFY** exact pages or **REPLACE** with named S-IDs, then approve exact discovery message and route.
+- The previous reference to `workspace/discovery/five-conversations-kit.md` is not in the tracked GitHub tree available here. Use tracked `docs/SPRINT_BRIEF.md`; machine-local workspace content could not be independently inspected through this remote connector.

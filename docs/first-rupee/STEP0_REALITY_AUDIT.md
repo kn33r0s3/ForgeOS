@@ -101,3 +101,13 @@ REAL / TEST / MOCK / HYPOTHESIS with its evidence.
   transactions is unresolved; qualified Nepali counsel's written answer
   is required before any paid/operational week. Non-commercial
   discovery is not blocked by this.
+
+
+## Independent QA follow-up — base `d94286f` (2026-10-23)
+
+- Re-read current remote `main` and the committed first-rupee artifacts. Vercel metadata for the earlier first-rupee build reported a READY production deployment matching SHA `e2231336e7c2c3a20e4ff047a32b17068e69c350`; that is deployment metadata, not proof of runtime behavior. Independent deployment verification failed to read the exact deployed SHA/readiness while the maintenance gate remains active. Production runtime and public inbox usability remain BLOCKED/UNKNOWN.
+- The remote GitHub tree does **not** contain `workspace/discovery/*`. Earlier audit prose says a machine-local `~/workspace/discovery/` was inspected, but this remote connector cannot independently access or reproduce it. Treat that local inspection as unverified by this run; use tracked `docs/UNKNOWN_MAP.md`, `docs/SPRINT_BRIEF.md`, `docs/FIRST_RUPEE_SPRINT.md`, `docs/REVENUE_LOG.md`, and `HANDOFF.md`.
+- The earlier seller list had no auditable per-row source URLs. Fresh public source checks re-verified several page signals and found four legacy-selected IDs cannot be treated as send-ready: #6 is indirect only, #7 is only a third-party hashtag listing, and #22/#26 had no independently confirmable source URL. The current list separates OBSERVED public signals from UNKNOWN business pain, and preserves prior choices without silently substituting candidates.
+- A public “DM to order” caption is OBSERVED channel evidence only. Slow reply rate, missed sales, COD return rates, fraud incidents, willingness-to-pay, seller consent and Hami revenue remain UNKNOWN/HYPOTHESIS. No contact, message, reply, intake/outbound change, payment, or REAL customer outcome occurred.
+- Current TikTok terms (last updated 15 Jul 2026) prohibit automated collection/extraction without written approval ([official terms](https://t.tiktok.com/legal/page/us/terms-of-service/en)); this pass used indexed public search and business-published pages, not logged-in scraping or automated platform collection. The official [Department of Commerce page for E-Commerce Act 2081](https://doc.gov.np/content/324/electronic-business--e-commerce--act--2081/) exists; Hami's proposed paid intermediary role still needs qualified Nepali legal/accounting review (D72).
+- `docs/REVENUE_LOG.md` remains empty. Conversations 0; recovered sales 0; rupees reported ₨0; rupees verified ₨0. The 14-day field-test clock is unstarted because no approved owner-sent contact or real field conversation occurred.
