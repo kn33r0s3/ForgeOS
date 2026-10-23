@@ -96,17 +96,17 @@ describe("Hami public content", () => {
 
   it("names Hami without publishing compatibility names as product identities", () => {
     assert.equal(SITE.name, "Hami");
-    assert.equal(SITE.themeColor, "#FAF8F2");
+    assert.equal(SITE.themeColor, "#0C0B0A");
     const manifest = JSON.parse(readFileSync(join(root, "public/manifest.webmanifest"), "utf8")) as {
       theme_color?: string;
       background_color?: string;
     };
     const styles = readFileSync(join(root, "src/styles.css"), "utf8");
-    const lightThemeStart = styles.indexOf("Hami Systems: warm paper");
+    const lightThemeStart = styles.indexOf('ForgeOS visual system v3: "night masthead"');
     const lightThemeEnd = styles.indexOf("@layer base", lightThemeStart);
-    const lightTheme = styles.slice(lightThemeStart, lightThemeEnd);
-    assert.ok(lightThemeStart >= 0 && lightThemeEnd > lightThemeStart, "the original theme token block must be present");
-    assert.match(lightTheme, /--background:\s*#faf8f2;/);
+    const darkTheme = styles.slice(lightThemeStart, lightThemeEnd);
+    assert.ok(lightThemeStart >= 0 && lightThemeEnd > lightThemeStart, "the original dark theme token block must be present");
+    assert.match(darkTheme, /--background:\s*#0c0b0a;/);
     assert.equal(manifest.theme_color, SITE.themeColor);
     assert.equal(manifest.background_color, SITE.themeColor);
     assert.equal(SITE.tagline, "Discover what matters. Understand it. Act on it.");
@@ -128,7 +128,7 @@ describe("Hami public content", () => {
     const owner = readFileSync(join(root, "src/routes/owner.tsx"), "utf8");
     const home = readFileSync(join(root, "src/routes/index.tsx"), "utf8");
     assert.match(mark, /viewBox="0 0 64 64"/);
-    assert.match(mark, /#FFB000/i);
+    assert.match(mark, /#F2A33A/i);
     assert.match(cover, /viewBox="0 0 1640 720"/);
     assert.match(cover, /HAMI/);
     assert.match(cover, /SYSTEMS/);
@@ -143,7 +143,7 @@ describe("Hami public content", () => {
     assert.doesNotMatch(home, /className="border-b border-line bg-surface" aria-hidden="true"/);
   });
 
-  it("keeps one readable light theme across navigation and public states", () => {
+  it("restores the original night masthead and amber visual system across the site", () => {
     const styles = readFileSync(join(root, "src/styles.css"), "utf8");
     const home = readFileSync(join(root, "src/routes/index.tsx"), "utf8");
     const links = readFileSync(join(root, "src/components/layout/text-link.tsx"), "utf8");
@@ -154,46 +154,33 @@ describe("Hami public content", () => {
     const systemPanels = readFileSync(join(root, "src/components/system/system-panels.tsx"), "utf8");
     const feed = readFileSync(join(root, "src/routes/feed.tsx"), "utf8");
     const owner = readFileSync(join(root, "src/routes/owner.tsx"), "utf8");
-    const themeStart = styles.indexOf("Hami Systems: warm paper");
+    const themeStart = styles.indexOf('ForgeOS visual system v3: "night masthead"');
     const themeEnd = styles.indexOf("@layer base", themeStart);
     const themeTokens = styles.slice(themeStart, themeEnd);
 
     assert.ok(themeStart >= 0 && themeEnd > themeStart, "the palette belongs in the original token block");
-    assert.match(themeTokens, /--background:\s*#faf8f2;/);
-    assert.match(themeTokens, /--foreground:\s*#20342b;/);
-    assert.match(themeTokens, /--primary:\s*#176b4d;/);
-    assert.match(themeTokens, /--secondary:\s*#eaf3ec;/);
+    assert.match(themeTokens, /--background:\s*#0c0b0a;/);
+    assert.match(themeTokens, /--foreground:\s*#f4efe6;/);
+    assert.match(themeTokens, /--primary:\s*#f2a33a;/);
+    assert.match(themeTokens, /--secondary:\s*#262019;/);
     assert.equal((styles.match(/^\s*:root\s*\{/gm) ?? []).length, 1, "keep one authoritative token block");
     assert.equal((styles.match(/^\s*\.masthead\s*\{/gm) ?? []).length, 1, "keep one authoritative masthead block");
     assert.equal((styles.match(/@media \(prefers-reduced-motion: reduce\)/g) ?? []).length, 1, "keep one reduced-motion rule");
-    assert.doesNotMatch(styles, /Hami human-first visual refresh|Follow-through: keep shared public surfaces/);
-    assert.match(styles, /html\s*\{\s*color-scheme:\s*light;/s);
-    assert.match(
-      styles,
-      /\.masthead \.mast-link\s*\{[^}]*display:\s*inline-flex;[^}]*height:\s*100%;[^}]*align-items:\s*center;[^}]*padding:\s*0 1\.1rem;[^}]*color:\s*var\(--foreground\);/s,
-    );
-    assert.match(
-      styles,
-      /\.masthead \.mast-link:hover,\s*\.masthead \.mast-link\[aria-current="page"\]\s*\{[^}]*color:\s*var\(--primary\);[^}]*background:\s*var\(--secondary\);/s,
-    );
-    assert.doesNotMatch(styles, /color:\s*#f4efe6;/);
-    assert.match(feedback, /bg-surface-elevated/);
-    assert.match(feedback, /bg-surface p-5 shadow-sm/);
-    assert.doesNotMatch(feedback, /bg-black p-5 shadow-md/);
-    assert.doesNotMatch(links, /hover:text-wheat/);
-    assert.doesNotMatch(sectionMarker, /text-wheat/);
-    assert.doesNotMatch(buttons, /ghost: "btn-ghost text-wheat/);
-    assert.doesNotMatch(home.slice(home.indexOf("function HomeFooter()")), /text-wheat/);
-    assert.match(systemEditor, /const field =\s*"[^"]*bg-white[^"]*text-ink/);
-    assert.match(systemPanels, /bg-secondary text-accent/);
-    assert.match(systemPanels, /bg-surface-elevated px-3 py-2 text-sm leading-6 text-ink/);
-    assert.doesNotMatch(systemEditor, /bg-black[^"]*text-ink/);
-    assert.doesNotMatch(systemPanels, /bg-black(?:\/40)?[^"]*text-ink|bg-black text-accent/);
-    assert.match(feed, /border-2 border-accent bg-secondary[^"]*text-ink/);
-    assert.match(feed, /border border-line bg-white px-3 font-bold text-muted/);
-    assert.doesNotMatch(feed, /bg-black[^"]*text-ink|bg-black[^"]*text-muted|hover:bg-accent hover:text-black/);
-    assert.match(owner, /bg-white[^"]*text-ink/);
-    assert.doesNotMatch(owner, /bg-black[^"]*text-ink/);
+    assert.match(styles, /html\s*\{\s*color-scheme:\s*dark;/s);
+    assert.match(styles, /\.plate::before/);
+    assert.match(styles, /\.pinstripe::before/);
+    assert.match(styles, /\.mast-link\[aria-current="page"\]::after/);
+    assert.ok(links.includes("hover:text-wheat"));
+    assert.ok(sectionMarker.includes("text-wheat"));
+    assert.ok(buttons.includes('ghost: "btn-ghost text-wheat'));
+    assert.ok(feedback.includes("bg-[linear-gradient(45deg,#4a4953_0%,#000_45%_100%)]"));
+    assert.ok(feedback.includes("border-2 border-warning/70 bg-black p-5 shadow-md"));
+    assert.ok(systemEditor.includes("bg-black px-3 py-2.5 text-base text-ink"));
+    assert.ok(systemPanels.includes("bg-black/40 px-3 py-2 text-sm leading-6 text-ink"));
+    assert.ok(feed.includes("border-2 border-line bg-black px-3 font-bold text-muted"));
+    assert.ok(owner.includes("bg-black px-3 text-base text-ink"));
+    assert.equal(SITE.themeColor, "#0C0B0A");
+    assert.doesNotMatch(home, /#176b4d|#faf8f2|#20342b/i);
   });
 
   it("surfaces live evidence before system explanation and links value-seekers to the public board", () => {
@@ -517,8 +504,8 @@ describe("Hami public root", () => {
     const ogSite = JSON.parse(readFileSync(join(root, "src/lib/og/site.json"), "utf8")) as {
       title?: string;
     };
-    assert.match(rootRoute, /name: "color-scheme", content: "light"/);
-    assert.match(styles, /html\s*\{\s*color-scheme:\s*light;/s);
+    assert.match(rootRoute, /name: "color-scheme", content: "dark"/);
+    assert.match(styles, /html\s*\{\s*color-scheme:\s*dark;/s);
     assert.match(home, /createFileRoute\("\/"\)/);
     assert.equal(ogSite.title, "Hami");
     assert.doesNotMatch(home, /Navigate to=/);
