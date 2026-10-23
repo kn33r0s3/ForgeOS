@@ -1,13 +1,14 @@
 # Hami Execution Queue
 
-## P0 — Owner-only access and verifier authorization
+## P0 — Public production visibility, original theme, and verified learning
 
-- Vercel Authentication is enabled for **All Deployments**. Password protection remains disabled. Both maintenance flags are false for production, and project metadata confirms the latest ready production SHA at `haminp.vercel.app`.
-- The existing sensitive Vercel `FORGE_API_KEY` variable was populated with the fresh owner key (64 hexadecimal characters); never write the key into this queue. Owner enters it in the existing `/owner` console.
-- Exact latest production before this queue update: deployment `dpl_ECr1vGF6DyHS6AkZ4kUxTeZaLVaS`, SHA `8c8ec9841392c9c8f608c84e3fb7d0be57d053be`. CI run `39958241795` passed every job; secret scan `39958241796` passed.
-- Independent verifier `39958241898` failed waiting for a valid deployed SHA because its requests lacked a Vercel protection bypass. A project-scoped bypass was created for CI; the workflow now requires two GitHub Actions secrets: `FORGE_API_KEY` (same value as current owner key) and `VERCEL_AUTOMATION_BYPASS_SECRET`. The connector cannot write GitHub Actions secrets, so the owner must set/update these at [GitHub Actions secrets](https://github.com/kn33r0s3/ForgeOS/settings/secrets/actions), then manually rerun the independent verifier. Do not disable SSO or embed secrets in source.
-- Direct unauthenticated HTTP verification could not run from this execution container because DNS resolution to the production alias failed. We have configuration and deployment readback, not an observed anonymous 401/403 response.
-- Marketing gate: keep online promotion closed until real use demonstrates a convincing networked solution across the intended participant groups.
+- **Visibility decision:** keep production aliases publicly viewable so the owner can see the live work. Vercel project `forge-os` has `ssoProtection.enabled=true` with `deploymentType="prod_deployment_urls_and_all_previews"`; previews and generated deployment URLs remain protected. Password protection is disabled. Public visibility is not a marketing launch.
+- **Private owner operations:** both production maintenance flags are false. Owner-changing endpoints retain the `X-API-Key` authorization path, and the sensitive Vercel `FORGE_API_KEY` must not be copied into this queue or source.
+- **Theme restoration:** original snapshot `bf825cc5e515dda8e73abe4fd9c64d59fa893064` is the authority for the near-black/charcoal and `#F2A33A` amber visual system. The existing stylesheet, public theme color/PWA manifest, root color scheme, header accent, section marker, text link, empty/unavailable states, network context, system panels, owner form, favicon and cover art were updated in place. The modern home/checkout/payment flows were preserved.
+- **Remaining UI seam:** direct writes to `src/components/ui/button.tsx` and `src/components/system/system-editor.tsx` were blocked by source-edit safety checks; do not work around those checks. Some ghost-button/form-field styling remains unverified against the historical snapshot.
+- **Learning-loop wiring:** `action_engine.record_outcome()` now applies the existing helper after commit/replay; provider-verified payment fulfillment applies it after the complete payment transaction commits. Only exact REAL-scope/REAL-source/VERIFIED outcomes are eligible. Mock/reported/test/hypothesis rows remain historical observations. Belief/source confidence still requires exact target-linked L5+ evidence; the ordinary product outcome can only add an idempotent note to its own opportunity validation plan.
+- **Regression test:** `backend/tests/test_experiment_action_loop.py` tests mock isolation, one verified-real lesson note, and idempotent replay. Exact-head CI for `1d9bfc35b6d7342349efc0f0d9a2e09ba0e3cafc` is the verification boundary. Earlier run `39965716536` had frontend tests, build, typecheck, lint, route smoke, repository guards, evidence-triage, and secret scan green; backend pytest was still in progress then.
+- **Marketing gate:** no public promotion until real use demonstrates convincing value across the intended participant groups. Keep REAL/TEST/MOCK/HYPOTHESIS separate.
 
 ## P1 — Resolve legal/operational eligibility before any paid sprint
 
