@@ -1,3 +1,15 @@
+## Live resumption point — open-domain capability composition (2026-10-23 NPT)
+
+Owner correction: stop shrinking Hami's identity to whichever first experiment is easiest. Hami's aim is an open-domain, evidence-led system that discovers possible value across domains, composes the capabilities and constraints needed, takes only authorized actions, and learns from outcomes. Missed-inquiry recovery remains one independent hypothesis, not a global gate.
+
+- **Existing source seam:** `backend/app/services/discovery_engine.py` already houses replaceable open-world discovery methods, provenance-bound findings, and the six-primitive write path. This increment adds `capability_chain` there—no new ontology or subsystem.
+- **Method contract:** strict normalized matches across explicit output/input fields only; three distinct entities; bounded token popularity and result count; privacy-screened values and safe labels; source entities remain basis; finding state HYPOTHESIZED; proposed `may_relate` edges remain POSSIBLE. Neither a match nor a chain is evidence of compatibility or actual economic value.
+- **Tests added:** `backend/tests/test_discovery_engine.py`: positive chain + free-prose exclusion + sensitive-value filtering + replay idempotency. Exact-head CI still needs to be read and reported.
+- **Reminder:** automation creation was rejected by the platform's three-active-task limit. No one-second delayed agent wake was created.
+- **Next:** inspect exact new commit/CI, fix any failure at the existing seam, then update this handoff and STATE with exact-head verification. If green, sample the bounded discovery output and evaluate precision before any user-facing promotion. Keep no-contact, no-spend, consent, owner approval, and REAL/TEST/MOCK/HYPOTHESIS gates intact.
+
+---
+
 ## 2026-10-23 — public production view, original theme restoration, and verified-outcome learning
 
 - **Corrected owner direction:** the public production website should stay visible so the owner can see the live work; do not make the whole site owner-only. Current Vercel project `forge-os` reads back `ssoProtection.enabled=true`, `deploymentType="prod_deployment_urls_and_all_previews"`: production aliases can be public, while generated production deployment URLs and preview deployments remain protected. Password protection remains disabled. This public visibility is not permission to start marketing; keep promotion/release claims gated until real use supports the networked solution across intended participant groups.

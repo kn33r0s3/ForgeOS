@@ -1029,3 +1029,90 @@ def test_ignorance_map_method_registered(db):
     method = engine.DEFAULT_REGISTRY.get("ignorance_map")
     assert method.name == "ignorance_map"
     assert "blind_spot" in method.emits
+
+
+def test_capability_chain_composes_explicit_handoffs_as_unverified_hypothesis(db):
+    world_graph.seed_core_types(db)
+    supplier = _entity(
+        db, "organization", "Component workshop",
+        outputs=["sensor-module"],
+    )
+    assembler = _entity(
+        db, "organization", "Field robotics studio",
+        inputs=["sensor-module"], outputs=["aerial-imaging"],
+    )
+    recipient = _entity(
+        db, "organization", "Grower cooperative",
+        inputs=["aerial-imaging"],
+    )
+    # Similar words in free prose are not treated as capability declarations.
+    _entity(
+        db, "organization", "Unrelated observer",
+        description="sensor-module and aerial-imaging",
+    )
+    db.commit()
+
+    report = engine.run_discovery(db, methods=["capability_chain"], max_findings_per_method=50)
+    candidates = [
+        row for row in report["surfaced"]
+        if row["method"] == "capability_chain" and row["kind"] == "hypothesis"
+    ]
+    assert len(candidates) == 1
+    candidate = candidates[0]
+    assert candidate["epistemic_state"] == "hypothesized"
+    assert "compatibility" in candidate["statement"]
+    assert "not been verified" in candidate["statement"]
+    stored = db.get(models.SubstrateEntity, candidate["entity_id"])
+    attrs = json.loads(stored.attributes)
+    assert attrs["facets"]["pattern"] == "capability_chain"
+    assert attrs["facets"]["chain_entity_ids"] == [supplier.id, assembler.id, recipient.id]
+    assert [handoff["matched_declaration"] for handoff in attrs["facets"]["handoffs"]] == [
+        "sensor-module", "aerial-imaging"
+    ]
+    edges = db.query(models.WorldRelation).filter(
+        models.WorldRelation.relation_type == "may_relate",
+        models.WorldRelation.truth_state == "possible",
+        models.WorldRelation.created_by == engine.ENGINE_ACTOR,
+    ).all()
+    assert {(edge.from_entity_id, edge.to_entity_id) for edge in edges} == {
+        (supplier.id, assembler.id), (assembler.id, recipient.id)
+    }
+
+    # Re-running the deterministic proposal doesn't create a second finding or duplicate edges.
+    before_entities = db.query(models.SubstrateEntity).filter_by(source_system=engine.ENGINE_ACTOR).count()
+    before_edges = db.query(models.WorldRelation).filter_by(created_by=engine.ENGINE_ACTOR).count()
+    replay = engine.run_discovery(db, methods=["capability_chain"], max_findings_per_method=50)
+    assert replay["existing"]
+    assert db.query(models.SubstrateEntity).filter_by(source_system=engine.ENGINE_ACTOR).count() == before_entities
+    assert db.query(models.WorldRelation).filter_by(created_by=engine.ENGINE_ACTOR).count() == before_edges
+
+
+def test_capability_chain_privacy_screens_declared_tokens_and_person_names(db):
+    world_graph.seed_core_types(db)
+    _entity(
+        db, "person", "Private Person Name",
+        outputs=["sensor-module", "owner@example.test", "Lakeside Road 6"],
+    )
+    _entity(
+        db, "organization", "Assembler",
+        inputs=["sensor-module", "owner@example.test", "Lakeside Road 6"],
+        outputs=["field-imaging"],
+    )
+    _entity(
+        db, "organization", "Farm",
+        inputs=["field-imaging", "owner@example.test", "Lakeside Road 6"],
+    )
+    db.commit()
+
+    report = engine.run_discovery(db, methods=["capability_chain"], max_findings_per_method=50)
+    candidates = [row for row in report["surfaced"] if row["kind"] == "hypothesis"]
+    assert len(candidates) == 1
+    stored_rows = db.query(models.SubstrateEntity).filter_by(source_system=engine.ENGINE_ACTOR).all()
+    serialized = json.dumps(
+        [{"display_name": row.display_name, "attributes": json.loads(row.attributes)} for row in stored_rows],
+        sort_keys=True,
+    )
+    assert "owner@example.test" not in serialized
+    assert "Lakeside Road 6" not in serialized
+    assert "Private Person Name" not in serialized
+    assert "person #" in candidates[0]["statement"]

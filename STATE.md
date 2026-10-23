@@ -1,3 +1,14 @@
+## Live state — capability composition discovery increment (2026-10-23 NPT)
+
+- Canonical base before this increment: `1e34878f1e4d76b50d015b80c78246c2891e903a`; source and tests are being committed directly to `main` under the single-branch rule.
+- **Architecture direction restored:** Hami is the Nepal-origin, world-open system for discovering, composing, and testing possible value across domains. Missed inquiries are one experiment, not the system's identity.
+- **New source seam:** `backend/app/services/discovery_engine.py::_capability_chain` composes exact normalized recorded output/input declarations across three distinct substrate entities. Results remain HYPOTHESIZED with linked basis rows and POSSIBLE relations. No agreement, practical compatibility, value, permission, or real outcome is inferred.
+- **Coverage:** `backend/tests/test_discovery_engine.py` now checks a 3-entity composition, free-text non-matching, privacy filtering, and idempotent replay.
+- **Verification boundary at commit time:** CI, exact deployed SHA, live runtime, scheduler invocation, model quality, and REAL participant outcomes must be checked separately. Do not call the source increment fully verified until the exact new HEAD has completed its relevant CI.
+- **Next operation:** check exact-head CI and inspect failures; then evaluate precision/noise on bounded existing records. Selected hypotheses must be converted to cheapest falsifiable tests through the existing experiment/action/evidence seams, with permissions unchanged.
+
+---
+
 ## 2026-10-23 — public production view, original theme restoration, and verified-outcome learning
 
 - **Corrected owner direction:** the public production website should stay visible so the owner can see the live work; do not make the whole site owner-only. Current Vercel project `forge-os` reads back `ssoProtection.enabled=true`, `deploymentType="prod_deployment_urls_and_all_previews"`: production aliases can be public, while generated production deployment URLs and preview deployments remain protected. Password protection remains disabled. This public visibility is not permission to start marketing; keep promotion/release claims gated until real use supports the networked solution across intended participant groups.

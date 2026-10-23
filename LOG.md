@@ -790,3 +790,13 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Repaired the dormant production seam: verified outcome propagation now runs after committed direct outcomes and after complete provider-verified payment fulfillment; idempotent replays can retry. Propagation requires REAL/REAL/VERIFIED and writes only an exact opportunity learning note unless stronger exact-outcome-linked evidence supports a belief change. Added a regression in the existing experiment/action loop tests for MOCK isolation, one verified note, and replay dedupe.
 - Exact main after code changes: `1d9bfc35b6d7342349efc0f0d9a2e09ba0e3cafc`. Secret scan succeeded for prior HEAD `6db467baefb919e96fdbb67253880b1c1e5a0035`; at that previous HEAD all CI jobs except backend pytest had finished green when this note was authored. Confirm exact current-head CI and deployment before declaring done. No marketing, seller outreach, or revenue is inferred from these changes.
 
+
+
+## 2026-10-23 — open-domain capability-composition increment
+
+- Resumed from canonical `main` 1e34878f1e4d76b50d015b80c78246c2891e903a after the owner explicitly rejected narrowing Hami to a missed-call use case.
+- Audited `docs/BRAIN.md §35–36`, `QUEUE.md`, `docs/CAPABILITY_QUEUE.md`, `docs/UNKNOWN_MAP.md`, `backend/app/services/discovery_engine.py`, the public/network substrate, and the existing discovery-engine test suite.
+- Implemented `capability_chain` in the existing open-world discovery registry. It joins only exact privacy-screened declarations in explicit output/input fields across three active substrate entities, emits a HYPOTHESIZED finding with basis, and proposes POSSIBLE relation edges; it does not verify practical compatibility or imply an agreement.
+- Added regressions for a three-entity path, prose-only false positives, contact/address privacy, and replay idempotency.
+- Base commit's combined status showed Vercel success, but that did not establish current source test status or runtime readiness. New exact-head CI is pending and must be read before claiming success.
+- Automation reminder request for +1 second failed because the account reached its three-active-automation limit. No scheduled wake or background execution is claimed.

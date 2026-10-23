@@ -1,3 +1,15 @@
+## [2026-10-23 — CAPABILITY COMPOSITION DISCOVERY, FIRST CODE INCREMENT]
+
+- **Owner correction applied:** Hami is open-domain possibility discovery and outcome coordination, not a missed-call product. The First Rupee Sprint remains one independent commercial hypothesis; it does not gate the wider system.
+- **Existing seam modified:** `backend/app/services/discovery_engine.py` and its current `DiscoveryMethodRegistry`. New `capability_chain` method composes three active recorded substrate entities when explicit output/provides/capability declarations match the intermediate entity's inputs/needs and its declared output matches a third entity's input.
+- **Truth/safety boundary:** exact normalized declaration joins only; no matching on description prose; sensitive/private values and precise address/coordinate-shaped values are rejected by the existing discovery privacy guard. The result begins HYPOTHESIZED, records its three source entities, identifies both matched declarations, and proposes only POSSIBLE `may_relate` edges. It claims no compatibility, capacity, authorization, agreement, benefit, or REAL outcome. No new table, primitive, route, provider, or permission.
+- **Regression coverage added:** a positive three-hop test, free-prose exclusion, privacy filtering, and idempotent replay check in `backend/tests/test_discovery_engine.py`.
+- **Improvement delta:** **capability + evidence quality** — the shared open-world discovery engine gains a bounded multi-entity composition candidate, with an explicit counter-boundary and tests. This advances a tested rung only after exact-head CI completes; at this log point tests are NOT YET VERIFIED. No real-world participant or outcome is claimed.
+- **Next:** check exact-head backend/frontend/repository-guard CI, inspect the discovery method output/limits, then use recorded candidates to formulate one measured falsifiable test without external action unless separately authorized.
+- **Reminder limitation:** a one-second continuation automation could not be created because the account is already at its three-task automation limit. This work proceeded in the present turn; no delayed run is claimed.
+
+---
+
 ## [2026-10-23 — RULE #1 ADOPTED: HAMI IMPROVES ITSELF (owner-set)]
 
 - **The rule (owner's words):** "like how u improved urself, u must improve hami, like u change, it should to, u are to treat it like u treat urself — put it on #1." Banked as the first standing rule in `HANDOFF.md` and as FORGEOS RULE #1 in `AGENTS.md`, ranked above every other project rule. The owner-dependency rule's intro now reads "standing autonomy rule" — its substance is unchanged.

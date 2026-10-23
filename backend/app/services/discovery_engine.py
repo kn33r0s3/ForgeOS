@@ -1402,6 +1402,171 @@ def _disconnection(ctx: DiscoveryContext, *, max_holders: int = 4) -> Iterable[F
                 )
 
 
+
+def _capability_chain(
+    ctx: DiscoveryContext,
+    *,
+    max_holders: int = 8,
+    max_findings: int = 250,
+) -> Iterable[Finding]:
+    """Compose explicit output/input declarations into bounded chain hypotheses.
+
+    This is not semantic matching: only exact normalized declarations in
+    named fields are joined. A chain is a research candidate, never evidence
+    that the capabilities are compatible, available, authorized, agreed, or
+    valuable in practice.
+    """
+    from app.services.demand_understanding import normalize_observation_content
+
+    output_fields = ("provides", "outputs", "capabilities", "capability_tags")
+    input_fields = ("requires", "inputs", "needs", "required_tags")
+    rows = ctx.entities()
+    outputs_by_token: dict[str, list[tuple[models.SubstrateEntity, str, str]]] = defaultdict(list)
+    inputs_by_token: dict[str, list[tuple[models.SubstrateEntity, str, str]]] = defaultdict(list)
+    outputs_by_entity: dict[int, list[tuple[str, str, str]]] = {}
+    inputs_by_entity: dict[int, list[tuple[str, str, str]]] = {}
+
+    def declarations(row: models.SubstrateEntity, fields: tuple[str, ...]) -> list[tuple[str, str, str]]:
+        attrs = ctx.attributes(row)
+        by_token: dict[str, tuple[str, str]] = {}
+        for field_name in fields:
+            raw = attrs.get(field_name)
+            values = [raw] if isinstance(raw, str) else raw if isinstance(raw, list) else ()
+            for value in values:
+                if not isinstance(value, str):
+                    continue
+                collapsed = " ".join(value.split())
+                normalized = collapsed.casefold()
+                if (
+                    len(normalized) < 3
+                    or len(normalized) > 120
+                    or normalized.replace(".", "").isdigit()
+                    or normalized in _IGNORED_VALUES
+                    or not _safe_discovery_join_value(field_name, collapsed, normalize_observation_content)
+                ):
+                    continue
+                # One declaration per entity/token prevents duplicated aliases
+                # from multiplying the same candidate path.
+                by_token.setdefault(normalized, (collapsed, field_name))
+        return [(token, value, field_name) for token, (value, field_name) in sorted(by_token.items())]
+
+    def safe_label(row: models.SubstrateEntity) -> str:
+        entity_type = str(row.entity_type or "entity")
+        type_tokens = {
+            token for token in re.split(r"[^a-z0-9]+", entity_type.casefold()) if token
+        }
+        if type_tokens & _PRIVATE_DISCOVERY_ENTITY_TYPE_TOKENS:
+            return f"{entity_type} #{row.id}"
+        display_name = " ".join((row.display_name or "").split())
+        safe_name = normalize_observation_content(display_name)
+        if not display_name or safe_name.casefold() != display_name.casefold() or "[redacted-" in safe_name.casefold():
+            return f"{entity_type} #{row.id}"
+        return f"{display_name} ({entity_type} #{row.id})"
+
+    for row in rows:
+        declared_outputs = declarations(row, output_fields)
+        declared_inputs = declarations(row, input_fields)
+        outputs_by_entity[row.id] = declared_outputs
+        inputs_by_entity[row.id] = declared_inputs
+        for token, value, field_name in declared_outputs:
+            outputs_by_token[token].append((row, field_name, value))
+        for token, value, field_name in declared_inputs:
+            inputs_by_token[token].append((row, field_name, value))
+
+    # Deterministic ordering makes bounded pagination resumable and idempotent.
+    for index in (outputs_by_token, inputs_by_token):
+        for holders in index.values():
+            holders.sort(key=lambda item: (item[0].id, item[1]))
+
+    emitted = 0
+    for middle in rows:
+        middle_inputs = inputs_by_entity.get(middle.id, [])
+        middle_outputs = outputs_by_entity.get(middle.id, [])
+        for input_token, _input_value, middle_input_field in middle_inputs:
+            suppliers = outputs_by_token.get(input_token, [])
+            if not suppliers or len({row.id for row, _, _ in suppliers}) > max_holders:
+                continue
+            for source_row, source_field, source_value in suppliers:
+                if source_row.id == middle.id:
+                    continue
+                for output_token, output_value, middle_output_field in middle_outputs:
+                    if output_token == input_token:
+                        continue
+                    consumers = inputs_by_token.get(output_token, [])
+                    if not consumers or len({row.id for row, _, _ in consumers}) > max_holders:
+                        continue
+                    for target_row, target_field, _target_value in consumers:
+                        if target_row.id in {source_row.id, middle.id}:
+                            continue
+                        fingerprint = _hash(input_token, output_token)[:12]
+                        key = (
+                            f"capability-chain:{source_row.id}:{middle.id}:{target_row.id}:"
+                            f"{source_field}:{middle_input_field}:{middle_output_field}:{target_field}:{fingerprint}"
+                        )
+                        yield Finding(
+                            kind="hypothesis",
+                            key=key,
+                            statement=(
+                                "Recorded declarations form a possible three-entity capability chain: "
+                                f"{safe_label(source_row)} lists an output matching a declared input on "
+                                f"{safe_label(middle)}; that entity lists a different output matching a declared "
+                                f"input on {safe_label(target_row)}. This is only a composition hypothesis; "
+                                "compatibility, capacity, permission, agreement, cost, benefit, and real-world "
+                                "availability have not been verified."
+                            ),
+                            basis=(
+                                BasisRef("entity", source_row.id),
+                                BasisRef("entity", middle.id),
+                                BasisRef("entity", target_row.id),
+                            ),
+                            epistemic_state="hypothesized",
+                            subject_entity_ids=(source_row.id, middle.id, target_row.id),
+                            facets={
+                                "pattern": "capability_chain",
+                                "chain_entity_ids": [source_row.id, middle.id, target_row.id],
+                                "handoffs": [
+                                    {
+                                        "matched_declaration": source_value,
+                                        "producer_attribute": source_field,
+                                        "consumer_attribute": middle_input_field,
+                                    },
+                                    {
+                                        "matched_declaration": output_value,
+                                        "producer_attribute": middle_output_field,
+                                        "consumer_attribute": target_field,
+                                    },
+                                ],
+                                "declarations_are_not_verification": True,
+                            },
+                            next_step=(
+                                "Verify the actual specifications and authority for each handoff; define one "
+                                "measurable benefit and a falsifying test before any contact, commitment, or action."
+                            ),
+                            proposed_relations=(
+                                ProposedRelation(
+                                    "may_relate",
+                                    "Explicit output/input declarations match; practical compatibility is unverified.",
+                                    from_entity_id=source_row.id,
+                                    to_entity_id=middle.id,
+                                    direction="directed",
+                                ),
+                                ProposedRelation(
+                                    "may_relate",
+                                    "Explicit output/input declarations match; practical compatibility is unverified.",
+                                    from_entity_id=middle.id,
+                                    to_entity_id=target_row.id,
+                                    direction="directed",
+                                ),
+                            ),
+                            follow_up_questions=(
+                                "What evidence would show whether this chain can produce a measurable benefit, "
+                                "at what cost, and under which constraints?",
+                            ),
+                        )
+                        emitted += 1
+                        if emitted >= max_findings:
+                            return
+
 def _isolation(ctx: DiscoveryContext, *, min_connected_share: float = 0.5) -> Iterable[Finding]:
     db = ctx.db
     connected: set[int] = set()
@@ -2024,6 +2189,9 @@ DEFAULT_REGISTRY = DiscoveryMethodRegistry([
     DiscoveryMethod("disconnection", "2",
                     "Entities of different kinds sharing a distinctive scalar or list-tag value without a recorded relation; contact-bearing fields, precise addresses, coordinates and email/phone values are excluded.",
                     _disconnection, emits=("hypothesis", "question"), requires=("substrate.entities", "substrate.relations")),
+    DiscoveryMethod("capability_chain", "1",
+                    "Bounded composition of explicit outputs/provides declarations through an intermediate entity into a second declared input; hypotheses only.",
+                    _capability_chain, emits=("hypothesis", "question"), requires=("substrate.entities",)),
     DiscoveryMethod("isolation", "1",
                     "Entities left unconnected while their peers are connected (neglect, unused capacity, missing data).",
                     _isolation, emits=("observation", "question"), requires=("substrate.entities", "substrate.relations")),
