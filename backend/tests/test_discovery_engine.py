@@ -1134,6 +1134,10 @@ def test_global_frontier_surfaces_only_explicit_cross_type_connections_read_only
         db, entity_type="resource", display_name="Second unused workshop",
         attributes={"domain": "manufacturing"}, created_by="test",
     )
+    coordinator = world_graph.create_entity(
+        db, entity_type="organization", display_name="Local producer cooperative",
+        attributes={"domain": "food"}, created_by="test",
+    )
     bridge = world_graph.create_relation(
         db, from_entity_id=resource.id, to_entity_id=need.id,
         relation_type="enables", truth_state="hypothesized", created_by="test",
@@ -1141,6 +1145,14 @@ def test_global_frontier_surfaces_only_explicit_cross_type_connections_read_only
     same_type = world_graph.create_relation(
         db, from_entity_id=resource.id, to_entity_id=other_resource.id,
         relation_type="enables", truth_state="hypothesized", created_by="test",
+    )
+    first_link = world_graph.create_relation(
+        db, from_entity_id=resource.id, to_entity_id=coordinator.id,
+        relation_type="enables", truth_state="hypothesized", created_by="test",
+    )
+    second_link = world_graph.create_relation(
+        db, from_entity_id=coordinator.id, to_entity_id=need.id,
+        relation_type="enables", truth_state="possible", created_by="test",
     )
     db.flush()
     before = (db.query(models.SubstrateEntity).count(),
@@ -1162,6 +1174,16 @@ def test_global_frontier_surfaces_only_explicit_cross_type_connections_read_only
     assert by_id[bridge.id]["domain_hints"] == {"from": "manufacturing", "to": "food"}
     assert {ref["kind"] for ref in by_id[bridge.id]["source_refs"]} == {"relation", "entity"}
     assert "not proof of value" in by_id[bridge.id]["next_step"]
+
+    paths = [item for item in frontier["items"] if item["record_type"] == "possibility_path"]
+    path_item = next(
+        item for item in paths
+        if [entry["id"] for entry in item["path_entities"]] == [resource.id, coordinator.id, need.id]
+    )
+    assert path_item["epistemic_state"] == "hypothesized"
+    assert [entry["id"] for entry in path_item["path_relations"]] == [first_link.id, second_link.id]
+    assert len(path_item["source_refs"]) == 5
+    assert "do not treat the path as an offer or authorization" in path_item["next_step"]
 
 
 
