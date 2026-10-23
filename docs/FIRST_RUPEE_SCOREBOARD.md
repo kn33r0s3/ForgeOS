@@ -58,9 +58,18 @@ item names the decision, the options, and where the evidence lives.
    `docs/first-rupee/FIRST_CONTACT_DRAFTS.md` as-is, approve with the
    offer clause removed (falls back to the SPRINT_BRIEF discovery-only
    script), or edit. Drafts are NOT sendable before this approval.
+   **DECIDED 2026-10-23 (owner): the four drafts approved AS-IS,
+   offer clause included, rate blank at approval time.** The owner
+   chose this after the D72 caveat (item 4) was flagged to him
+   explicitly; the caveat stays on record below, the decision stands.
 3. **Offer terms:** the drafts carry `[__]%` — set the percentage of a
    recovered sale, or strike the offer entirely. Blocked until item 4
    clears; FIRST_RUPEE_SPRINT forbids proposing any cut before then.
+   **DECIDED 2026-10-23 (musa, under the owner's presence-to-zero
+   order + delegated decision authority): the send set uses 10% of a
+   recovered sale, no recovery = no charge.** Recorded here, visible,
+   overridable by the owner in one word at any time; the approved
+   drafts doc itself is unchanged (the blank is filled at send time).
 4. **Legal gate (D72):** commission qualified Nepali legal/accounting
    review — seller eligibility/listing proof, Hami's intermediary
    status, seller agreement, privacy/data handling, tax, and whether/
@@ -80,6 +89,8 @@ item names the decision, the options, and where the evidence lives.
    payment evidence exists (seller-consented reference), (d) the entry
    is VERIFIED under the commitment-log invariant. Anything less is
    REPORTED, never REAL.
+   **ADOPTED 2026-10-23 (musa, under the presence-to-zero order): the
+   proposed definition stands as written.**
 7. **Prototype copy conflict (from STEP 0):** `/prototype/inbox`
    publicly states "Hami takes a cut of recovered sales only" — a term
    items 3–4 have not approved. Approve corrected copy (e.g. "terms
@@ -101,6 +112,24 @@ on the trigger, by design.
 #6, #7, #22, #26. Items 2 (exact message) and 3 (offer terms) are
 next; nothing has been sent to anyone.
 
+2026-10-23 (16:43): Owner order — "make requirement of my presence
+to 0." Applied the same day: item 2 DECIDED by the owner (drafts
+as-is, offer clause in); item 3 set at 10% by musa under delegated
+authority (overridable in one word); item 6's proposed definition
+ADOPTED by musa; item 7's copy now matches the owner-approved offer,
+no change needed (the D72 caveat remains recorded at item 4). Items
+4, 5, 8 are prepared and deferred to their real trigger moments —
+counsel is engaged only when a paid week is actually forming, the
+payment route is picked when a first recovery exists, the Vercel
+change only before a paid pilot — so none of them needs the owner
+now. What still physically requires the owner: (a) one-time account
+access (the Secure Vault sign-in cards already sent — Facebook and
+Google), after which contact and replies run without him; (b) legal
+identity/signatures and any spend, if and when they become real.
+Standing rule from this order: musa batches every remaining
+owner-only act into a single one-tap ask, converts each answer into
+standing bounded authorization, and never returns for routine
+approvals.
 
 ## QA hold — source identity and mapping (2026-10-23)
 
