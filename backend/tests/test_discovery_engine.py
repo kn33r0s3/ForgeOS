@@ -1062,6 +1062,9 @@ def test_capability_chain_composes_explicit_handoffs_as_unverified_hypothesis(db
     assert candidate["epistemic_state"] == "hypothesized"
     assert "compatibility" in candidate["statement"]
     assert "not been verified" in candidate["statement"]
+    # The user-facing finding must expose both handoffs, not just describe an opaque chain.
+    assert "sensor-module" in candidate["statement"]
+    assert "aerial-imaging" in candidate["statement"]
     stored = db.get(models.SubstrateEntity, candidate["entity_id"])
     attrs = json.loads(stored.attributes)
     assert attrs["facets"]["pattern"] == "capability_chain"
@@ -1160,3 +1163,32 @@ def test_global_frontier_surfaces_only_explicit_cross_type_connections_read_only
     assert {ref["kind"] for ref in by_id[bridge.id]["source_refs"]} == {"relation", "entity"}
     assert "not proof of value" in by_id[bridge.id]["next_step"]
 
+
+
+
+def test_capability_chain_cursor_reaches_candidates_after_first_250(db):
+    """Repeated bounded runs must reach later chains instead of hiding them forever."""
+    world_graph.seed_core_types(db)
+    incoming = [f"chain-input-{index}" for index in range(8)]
+    outgoing = [f"chain-output-{index}" for index in range(8)]
+
+    # Seven producers and seven consumers per token remain below the popular-token
+    # guard (8), while their cross-product yields far more than 250 distinct paths.
+    for index in range(7):
+        _entity(db, "organization", f"Chain source {index}", outputs=incoming)
+    _entity(db, "organization", "Chain transformer", inputs=incoming, outputs=outgoing)
+    for index in range(7):
+        _entity(db, "organization", f"Chain target {index}", inputs=outgoing)
+    db.commit()
+
+    observed_fingerprints = set()
+    for _ in range(6):
+        report = engine.run_discovery(
+            db, methods=["capability_chain"], max_findings_per_method=50,
+        )
+        for row in report["surfaced"] + report["existing"]:
+            if row.get("method") == "capability_chain" and row.get("kind") == "hypothesis":
+                observed_fingerprints.add(row["fingerprint"])
+
+    # 6 bounded runs × 50 findings each crosses the old 250-result ceiling.
+    assert len(observed_fingerprints) == 300
