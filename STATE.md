@@ -1,3 +1,14 @@
+## Live state — verified base head and open-domain recovery research (2026-10-23 NPT)
+
+- Last directly verified head before this follow-up: `25dd7da2881129d8ebc14a2a558bc490b73c5f65`, documentation-only successor to source-bearing `88a1edfb487630f3f9a063ca32c7018e5cea1800`. Exact-head CI passed 9/9 (backend 1,344 passed / 2 skipped; frontend 274 passed / 0 failed), secret scan passed, independent deployment verifier passed, and Vercel status was success.
+- The verifier confirmed the exact deployed SHA and one valid protected owner-cycle response (payload suppressed); direct Vercel runtime reads remain 403, so broader health/current cycle content are UNKNOWN.
+- The global frontier's evidence-linked, recency-aware paths are a verified software capability, but path semantics remain HYPOTHESIZED.
+- D1–D100 metadata survey: 100 unique rows, 96 UNKNOWN / 1 SUPPORTED / 3 HYPOTHESIZED; six rows contain explicit URLs and 35 contain date-like markers. Source independence, freshness, permission and local applicability remain mostly prose. Operational open ResearchQuestion records were not available through the authorized read surface.
+- D95 public-source pass established region-level crop/livestock/irrigation/fisheries loss and recovery dependencies; the farm-level bottleneck and Hami impact remain UNKNOWN. FAO page commercial reuse is not cleared; NDRRMA RDNA/report PDF bodies remain unread; no source ingestion occurred.
+- The source-write block remains in force; `research_planner.py::summarize_research_portfolio` remains NOT IMPLEMENTED. This follow-up is documentation-only; read its exact-head gates directly rather than inheriting the verified base result.
+
+---
+
 ## Live state — exact-base gates reconciled; D95 source pass completed (2026-10-23 NPT)
 
 - Base main at the start of this run: `88a1edfb487630f3f9a063ca32c7018e5cea1800`. Exact-head CI passed 9/9; backend **1,344 passed / 2 skipped**, frontend **274 passed / 0 failed**; secret scan passed; independent deployment verifier passed.
