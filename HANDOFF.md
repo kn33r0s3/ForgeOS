@@ -1,3 +1,16 @@
+## Live resumption point — possibility-path composition and exact-head verification (2026-10-23 NPT)
+
+- The owner’s direction is open-domain: Hami should discover and compose possible value across fields; missed inquiries are one experiment, not the system’s identity.
+- Read current AGENTS.md, HANDOFF.md, STATE.md, QUEUE.md, docs/CAPABILITY_QUEUE.md, docs/BRAIN.md, docs/HAMI_SYSTEM_MAP.md, the discovery engine, its tests, owner frontier UI, and recent commit/CI state before this increment.
+- Existing seam extended in place: backend/app/services/discovery_engine.py::build_global_frontier now surfaces explicit cross-type/cross-domain relations and bounded two-edge paths made only from directionally valid recorded WorldRelations. New path records remain HYPOTHESIZED and cite every relation/entity; src/routes/owner.tsx displays the chain and relation states. No new file, primitive, table, route, branch, or parallel engine.
+- Commits in this increment: 6b826cf (frontier relations), 1ef99e0 (regression), 551a108 (relation rendering), 7aea6da (path composition), 8d5717c (path regression), 1a71203 (path rendering), 3c01b3d (system-map boundary), c95dc8b (this state/handoff continuity). All are direct on main.
+- Tests assert the frontier is read-only, cross-type links appear, same-type links alone do not appear, composed paths cite both relation edges and all three entities, and path status remains HYPOTHESIZED. Full exact-head CI has not yet completed. The earlier active ForgeOS CI run 39992171424 was testing SHA 6b826cf; latest head checks were queued behind it. Latest known secrets scan passed on 3c01b3d; latest Vercel status was pending on 3c01b3d. Re-fetch current head and exact-head statuses before claiming green.
+- One-second continuation automation was not created: the scheduler returned its account limit (3 active tasks). Do not imply a timer or unattended worker is running.
+- Next: inspect the exact latest CI/deploy status; fix any real failure without weakening tests. Then extend the same existing path seam to expose explicit missing-capability requirements and a bounded falsifiable test plan, grounded in the existing capability registry, authorization, action, Outcome and LearningEvent flow. Do not create a parallel value engine or treat a path as permission/value.
+- No external contact, public post, spending, payment, or REAL economic outcome occurred in this increment.
+
+---
+
 ## Live resumption point — verify canonical-icon repair (2026-10-23 NPT)
 
 - `1950f9047e996cb6b1a25b98e30da18b18e5ab34` backend suite passed **1,341 / 2 skipped** and all checks except one frontend subtest passed. That test expected `/favicon.svg` in the mark component, while a second regression explicitly preserves `/hami-mark.png`. Both assertions describe useful compatibility requirements.
