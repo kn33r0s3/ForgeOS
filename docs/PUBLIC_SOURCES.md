@@ -471,3 +471,22 @@ created, and no claim from the report was ingested. An unlock requires
 new rights evidence: published NDRRMA/Government of Nepal terms or a
 written grant covering the exact fields, purpose, retention, and
 attribution above.
+
+
+### D96 — electricity-queue sources reviewed for research; runtime collection not enabled (2026-10-24)
+
+**IEA exact report pages (candidate for a future bounded registry entry; no current runtime registration):**
+- [Electricity 2026 executive summary](https://www.iea.org/reports/electricity-2026/executive-summary), published 6 February 2026, page cites the report under CC BY 4.0.
+- [Modernising Grids in the Age of Electricity](https://www.iea.org/reports/modernising-grids-in-the-age-of-electricity), published 21 September 2026, page cites the report under CC BY 4.0.
+- The IEA robots file was read at https://www.iea.org/robots.txt on 2026-10-24. User-agent * disallows /vhu7/, /search? and /search/; neither reviewed report path is disallowed.
+- The IEA [Terms](https://www.iea.org/terms) were read on 2026-10-24. They generally license IEA text, reports, articles, commentary and standalone figures hosted on IEA sites under CC BY 4.0 unless an exception applies. Exceptions include standalone datasets/data explorers/databases, data annexes, collaborative third-party works and Policies and Measures Databases; logos, photos, images and visual identity are excluded. The exact two report pages display CC BY 4.0. A future collection scope must be limited to text/metadata and source-attributed excerpts, omit images and data annexes, retain attribution, and avoid implying IEA endorsement.
+- **Runtime status:** inspected source registry at main 34c8cf9286ba8fd63d2b7358658c45c96395c146 has no IEA entry. The existing web collector authorizes exact registered URLs only; this documentation review does not grant runtime permission. No collection, Evidence creation or provider transmission occurred.
+
+**Lawrence Berkeley National Laboratory — Queued Up: 2026 Edition (research only; NOT cleared for automated collection):**
+- [Official queue page](https://emp.lbl.gov/queues) says the report was published in June 2026 and its data file was updated in May 2026 with data through the end of 2025; the data file is explicitly CC BY 4.0 with attribution to LBNL and GridTracker.
+- The exact robots endpoint was inaccessible through the available browser route and an applicable page-level terms document was not established in this pass. Do not automate or persist this source into the runtime evidence substrate until those gaps are resolved and an exact registry entry exists.
+
+**FERC policy fact sheet — research context only:**
+- [Improvements to Generator Interconnection Procedures and Agreements](https://ferc.gov/news-events/news/fact-sheet-improvements-generator-interconnection-procedures-and-agreements), dated 27 July 2023, was read for the rule's stated first-ready/cluster-study, readiness, deadline and technology-evaluation mechanisms. Its exact robots/terms and source-specific reuse scope were not reviewed here; no collection or runtime registration.
+
+This review is a source-readiness record, not evidence that any project-specific queue cause is known, any grid capacity is deliverable, or Hami has released capacity. No source collector ran and no source was ingested.

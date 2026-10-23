@@ -1,3 +1,14 @@
+## Current resumption priorities — 2026-10-24 (Hami-wide; no pilot gate)
+
+1. **Source-aware temporal provenance, when the supported source-edit path is available.** In the existing SourceCollector → ObserverEngine → Evidence → assessment/citation seam, preserve report identity/version, language variant, source-declared effective period/cutoff, publication time and retrieval time separately in existing provenance. Add regressions in existing test modules; do not add a table, primitive, collector or file. The previously blocked research_planner.py portfolio-summary write remains NOT IMPLEMENTED and must not be retried through another mutation path.
+2. **D93 official report contents and rights.** NDRRMA #03 metadata is now verified on official bilingual pages #466/#467; #04 page #468 states a later cutoff. Retrieve and screenshot-inspect only a source-linked official PDF when the permitted route is available. No current restoration claim, ingestion or alerting capability until source-specific access/reuse permission and content review are established.
+3. **D96 exact-source readiness.** IEA report-page robots/terms and page-specific CC BY 4.0 were reviewed, but IEA is not registered in the runtime source registry. LBNL data-file licensing is explicit, but robots/terms remain incomplete; FERC rights were not reviewed. No automated collection until each exact target is registered and its fields/purpose are bounded.
+4. **Continue open-domain discovery and quality/reliability work independently.** Reuse the existing D1–D100 portfolio; do not inflate it or claim the metadata survey is deep research. The seller path remains one possible real-world outcome, not Hami's identity or a gate for unrelated progress.
+
+This current section supersedes stale verification/status assumptions below where newer direct evidence differs. It does not delete historical queue entries.
+
+---
+
 # Hami Execution Queue
 
 ## P0 — Public production visibility, original theme, and verified learning
