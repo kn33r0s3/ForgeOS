@@ -131,6 +131,39 @@ owner-only act into a single one-tap ask, converts each answer into
 standing bounded authorization, and never returns for routine
 approvals.
 
+2026-10-23 (16:50): STANDING SEND AUTHORIZATION GRANTED (owner):
+"send the approved drafts from my accounts, log everything." Scope,
+bounded: the four approved sellers only (SL Collection Nepal, Sworup
+Wear House, Hello Mobile Store, Asha Achar); the approved draft text
+only, with the rate filled at 10%; replies handled under the same
+approved terms; every send and conversation logged here and in the
+commitment log. No other sellers, offers, or terms are covered.
+
+2026-10-23 (later): HOLD CLEARED BY FIRST-HAND VERIFICATION (musa).
+The QA-revised list (commit 23f26207) marked the four approved
+sellers HOLD for lack of an auditable source URL. Musa checked the
+native platform directly: all four exist on TikTok under the exact
+handles in the original record, with the qualifying signals intact —
+@slcollectionnepal01 (clothing; multiple product videos, e.g.
+https://www.tiktok.com/@slcollectionnepal01/video/7580444582358371592);
+@sworupwearhouse (Sallaghari, Bhaktapur; captions carry the
+DM-for-price/order hashtag and nationwide delivery; posts with 204
+and 1,789 comments, e.g.
+https://www.tiktok.com/@sworupwearhouse/video/7637539441527098645);
+@hello.mobile.stor3 (used iPhones; "Offer Price only DM us" in
+captions verbatim, e.g.
+https://www.tiktok.com/@hello.mobile.stor3/video/7623858812893564180);
+@asha.achar ("Akbare and lasun achar available Dm for price.
+Delivery all over Nepal.", e.g.
+https://www.tiktok.com/@asha.achar/video/7593269742895451412).
+Mapping: legacy #6/#7/#22/#26 are the same sellers the revised list
+carries as S06/S07/S22/S26. The earlier HOLD was an artifact of
+searching third-party business indexes, which do not index
+TikTok-native sellers; the original list's defect was only that it
+had not saved these URLs. The revised list's other S-entries remain
+a separate, unverified candidate pool — not substituted for the
+approved four.
+
 ## QA hold — source identity and mapping (2026-10-23)
 
 - The current public signal list uses stable S01–S30 IDs. The prior recorded selection uses old-list numbers. No automatic remapping was made.
