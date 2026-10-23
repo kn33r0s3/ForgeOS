@@ -654,25 +654,34 @@ def propagate_verified_learning_for_outcome(db: Session, outcome_id: int) -> Non
     from app import evidence_source
     from app.services import learning_engine
 
-    outcome = db.get(models.Outcome, outcome_id)
-    if (
-        outcome is None
-        or outcome.data_scope != "REAL"
-        or not evidence_source.is_real(outcome.source_kind)
-        or outcome.verification_state != "VERIFIED"
-    ):
+    try:
+        outcome = db.get(models.Outcome, outcome_id)
+        if (
+            outcome is None
+            or outcome.data_scope != "REAL"
+            or not evidence_source.is_real(outcome.source_kind)
+            or outcome.verification_state != "VERIFIED"
+        ):
+            return
+
+        events = (
+            db.query(models.LearningEvent)
+            .filter_by(
+                outcome_id=outcome.id,
+                data_scope="REAL",
+                source_kind=evidence_source.REAL,
+            )
+            .order_by(models.LearningEvent.id.asc())
+            .all()
+        )
+    except Exception:
+        db.rollback()
+        logger.exception(
+            "Verified outcome learning lookup failed; outcome_id=%s",
+            outcome_id,
+        )
         return
 
-    events = (
-        db.query(models.LearningEvent)
-        .filter_by(
-            outcome_id=outcome.id,
-            data_scope="REAL",
-            source_kind=evidence_source.REAL,
-        )
-        .order_by(models.LearningEvent.id.asc())
-        .all()
-    )
     for event in events:
         try:
             learning_engine.apply_learning_to_system(db, event)
