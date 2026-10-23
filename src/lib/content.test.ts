@@ -152,6 +152,8 @@ describe("Hami public content", () => {
     const systemPanels = readFileSync(join(root, "src/components/system/system-panels.tsx"), "utf8");
     const feed = readFileSync(join(root, "src/routes/feed.tsx"), "utf8");
     const owner = readFileSync(join(root, "src/routes/owner.tsx"), "utf8");
+    const brandMark = readFileSync(join(root, "src/components/layout/brand-mark.tsx"), "utf8");
+    const siteFooter = readFileSync(join(root, "src/components/layout/site-footer.tsx"), "utf8");
     const themeStart = styles.indexOf('ForgeOS visual system v3: "night masthead"');
     const themeEnd = styles.indexOf("@layer base", themeStart);
     const themeTokens = styles.slice(themeStart, themeEnd);
@@ -161,6 +163,7 @@ describe("Hami public content", () => {
     assert.match(themeTokens, /--foreground:\s*#f4efe6;/);
     assert.match(themeTokens, /--primary:\s*#f2a33a;/);
     assert.match(themeTokens, /--secondary:\s*#262019;/);
+    assert.match(themeTokens, /--radius-card:\s*0\.375rem;/);
     assert.equal((styles.match(/^\s*:root\s*\{/gm) ?? []).length, 1, "keep one authoritative token block");
     assert.equal((styles.match(/^\s*\.masthead\s*\{/gm) ?? []).length, 1, "keep one authoritative masthead block");
     assert.equal((styles.match(/@media \(prefers-reduced-motion: reduce\)/g) ?? []).length, 1, "keep one reduced-motion rule");
@@ -175,6 +178,10 @@ describe("Hami public content", () => {
     assert.ok(systemPanels.includes("bg-black/40 px-3 py-2 text-sm leading-6 text-ink"));
     assert.ok(feed.includes("border-2 border-line bg-black px-3 font-bold text-muted"));
     assert.ok(owner.includes("bg-black px-3 text-base text-ink"));
+    assert.ok(brandMark.includes('src="/hami-mark.png"'));
+    assert.ok(brandMark.includes('"font-gothic text-2xl leading-none"'));
+    assert.ok(siteFooter.includes('borderTop: "1px solid #3A2E1A", background: "#15130F"'));
+    assert.ok(existsSync(join(root, "public/hami-mark.png")), "keep the historical wordmark asset");
     assert.equal(SITE.themeColor, "#0C0B0A");
     assert.doesNotMatch(home, /#176b4d|#faf8f2|#20342b/i);
   });
