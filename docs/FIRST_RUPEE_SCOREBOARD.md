@@ -42,8 +42,8 @@ conversation is not a sale; a reported rupee is not a verified rupee.
 
 ## Approval queue — owner decisions, one word each, evidence attached
 
-Nothing below is decided. Each item names the decision, the options,
-and where the evidence lives.
+Decisions are recorded in place below as the owner makes them. Each
+item names the decision, the options, and where the evidence lives.
 
 1. **Which sellers to contact first?** — Pick any subset of the 30 in
    `docs/first-rupee/SELLER_LIST_PUBLIC.md`. Evidence: per-row public
@@ -53,6 +53,11 @@ and where the evidence lives.
    the five-conversation kit (`workspace/discovery/five-conversations-kit.md`)
    completes inside the 14 days. A warm introduction, where one
    exists, outranks a cold message (SPRINT_BRIEF).
+   **DECIDED 2026-10-23 (owner): #6 SL Collection Nepal, #7 Sworup
+   Wear House, #22 Hello Mobile Store, #26 Asha Achar.** These four
+   are the first contact set; their drafts in
+   `docs/first-rupee/FIRST_CONTACT_DRAFTS.md` (§6, §7, §22, §26) are
+   the send set once items 2–3 clear.
 2. **Exact message:** approve a draft from
    `docs/first-rupee/FIRST_CONTACT_DRAFTS.md` as-is, approve with the
    offer clause removed (falls back to the SPRINT_BRIEF discovery-only
@@ -95,3 +100,7 @@ Rupees reported: ₨0. Rupees verified: ₨0. The next event in this
 workstream is an owner decision from the queue above — everything
 after it (sends, conversations, the 14-day clock) is the owner's hand
 on the trigger, by design.
+
+2026-10-23 (later): Queue item 1 DECIDED — owner approved sellers
+#6, #7, #22, #26. Items 2 (exact message) and 3 (offer terms) are
+next; nothing has been sent to anyone.
