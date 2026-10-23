@@ -313,6 +313,12 @@ type GlobalFrontierItem = {
   success?: boolean | null;
   data_scope?: string;
   source_kind?: string;
+  relation_id?: number;
+  relation_type?: string;
+  from_entity?: { id: number; type: string; name: string };
+  to_entity?: { id: number; type: string; name: string };
+  domain_hints?: { from: string | null; to: string | null };
+  strength?: number | null;
 };
 
 type GlobalFrontierView = {
@@ -2071,6 +2077,18 @@ function OwnerConsolePage() {
                               {item.unknown_id ? <span className="font-mono text-muted">{item.unknown_id}</span> : null}
                             </div>
                             <h4 className="mt-2 break-words font-bold">{item.title}</h4>
+                            {item.record_type === "recorded_connection" && item.from_entity && item.to_entity ? (
+                              <div className="mt-2 rounded-card border border-line bg-card p-3 text-sm">
+                                <p className="font-semibold">Recorded endpoints</p>
+                                <p className="mt-1 break-words">{item.from_entity.name} <span className="text-muted">({item.from_entity.type} #{item.from_entity.id})</span></p>
+                                <p className="text-muted">connects to</p>
+                                <p className="break-words">{item.to_entity.name} <span className="text-muted">({item.to_entity.type} #{item.to_entity.id})</span></p>
+                                {item.domain_hints?.from || item.domain_hints?.to ? (
+                                  <p className="mt-2 text-xs text-muted">Recorded domains: {item.domain_hints.from || "not recorded"} → {item.domain_hints.to || "not recorded"}</p>
+                                ) : null}
+                                {typeof item.strength === "number" ? <p className="mt-1 text-xs text-muted">Recorded strength: {item.strength}</p> : null}
+                              </div>
+                            ) : null}
                             {item.domain_hint ? <p className="mt-1 text-sm text-muted">Recorded domain: {item.domain_hint}</p> : null}
                             {item.recorded_cheapest_test ? (
                               <p className="mt-2 break-words text-sm"><span className="font-bold">Recorded test:</span> {item.recorded_cheapest_test}</p>
