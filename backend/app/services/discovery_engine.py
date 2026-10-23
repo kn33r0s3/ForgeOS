@@ -792,6 +792,64 @@ def build_global_frontier(db: Session, *, limit: int = 50) -> dict[str, Any]:
             "created_at": stamp(row.created_at),
         })
 
+    # Surface explicit relationships that bridge entity types or explicitly
+    # recorded domains. This is a read-only projection: it never invents a
+    # connection from similar wording, promotes its truth state, or authorizes
+    # an action. The relation itself is the evidence trail's address.
+    relations = (
+        db.query(models.WorldRelation)
+        .filter(models.WorldRelation.truth_state.in_(("possible", "hypothesized", "tested", "supported", "unknown")))
+        .order_by(models.WorldRelation.id.asc())
+        .limit(scan_limit)
+        .all()
+    )
+    scan_counts["recorded_connections"] = len(relations)
+    if len(relations) == scan_limit:
+        scan_limited.append("recorded_connections")
+    for relation in relations:
+        left = db.get(models.SubstrateEntity, relation.from_entity_id)
+        right = db.get(models.SubstrateEntity, relation.to_entity_id)
+        if left is None or right is None or left.status != "active" or right.status != "active":
+            continue
+        left_attrs = _load(left.attributes)
+        right_attrs = _load(right.attributes)
+        left_domain = recorded_hint(left_attrs.get("facets", left_attrs))
+        right_domain = recorded_hint(right_attrs.get("facets", right_attrs))
+        # Cross-type is explicit structural information. Cross-domain requires
+        # two different domain labels already recorded on the endpoints.
+        crosses_type = left.entity_type != right.entity_type
+        crosses_domain = bool(left_domain and right_domain and left_domain.casefold() != right_domain.casefold())
+        if not (crosses_type or crosses_domain):
+            continue
+        lane = "recorded_connections"
+        lanes[lane].append({
+            "frontier_id": f"relation:{relation.id}",
+            "record_type": "recorded_connection",
+            "lane": lane,
+            "kind": relation.relation_type,
+            "title": f"{left.display_name} — {relation.relation_type} → {right.display_name}",
+            "status": relation.truth_state,
+            "epistemic_state": relation.truth_state,
+            "basis": [{"kind": "relation", "id": relation.id}],
+            "source_refs": [
+                {"kind": "relation", "id": relation.id},
+                {"kind": "entity", "id": left.id},
+                {"kind": "entity", "id": right.id},
+            ],
+            "relation_id": relation.id,
+            "relation_type": relation.relation_type,
+            "from_entity": {"id": left.id, "type": left.entity_type, "name": left.display_name},
+            "to_entity": {"id": right.id, "type": right.entity_type, "name": right.display_name},
+            "domain_hints": {"from": left_domain, "to": right_domain},
+            "strength": relation.strength,
+            "next_step": (
+                "Inspect the relation's supporting and refuting evidence, then test whether this "
+                "connection enables a useful path. A recorded connection is not proof of value "
+                "or permission to act."
+            ),
+            "created_at": stamp(relation.created_at),
+        })
+
     # UNKNOWN_MAP.md is the authoritative unknown registry; Claim rows are
     # its additive operational projection. Keep unresolved rows in the frontier
     # with their registered IDs and cheapest-test provenance.
