@@ -20,17 +20,20 @@ export function BrandMark({
       className={cn("group flex items-center gap-2.5", className)}
       aria-label="HAMI SYSTEMS home"
     >
-      <img
-        src="/hami-mark.png"
-        alt=""
-        width={32}
-        height={32}
-        decoding="async"
-        className={cn(
-          "size-8 rounded-card border-2 object-cover transition-transform duration-150 group-hover:-rotate-6",
-          tone === "dark" ? "border-black bg-black" : "border-line bg-card",
-        )}
-      />
+      <picture className="size-8 shrink-0">
+        <source srcSet="/favicon.svg" type="image/svg+xml" />
+        <img
+          src="/hami-mark.png"
+          alt=""
+          width={32}
+          height={32}
+          decoding="async"
+          className={cn(
+            "size-8 rounded-card border-2 object-cover transition-transform duration-150 group-hover:-rotate-6",
+            tone === "dark" ? "border-black bg-black" : "border-line bg-card",
+          )}
+        />
+      </picture>
       <span className="flex flex-col items-start gap-0.5">
         <span
           className={cn(

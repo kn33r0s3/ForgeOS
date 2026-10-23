@@ -1,3 +1,12 @@
+## Live resumption point — verify canonical-icon repair (2026-10-23 NPT)
+
+- `1950f9047e996cb6b1a25b98e30da18b18e5ab34` backend suite passed **1,341 / 2 skipped** and all checks except one frontend subtest passed. That test expected `/favicon.svg` in the mark component, while a second regression explicitly preserves `/hami-mark.png`. Both assertions describe useful compatibility requirements.
+- Follow-up now uses `picture` with preferred `source srcSet="/favicon.svg" type="image/svg+xml"` and the existing `hami-mark.png` as fallback. The user-facing lockup contains visible Hami + SYSTEMS.
+- **Next:** inspect exact-head CI on this commit, confirm both frontend tests pass, then inspect deployment-verification verdict. Do not publish a green claim before that.
+- The capability-chain generator has no permanent 250 candidate ceiling; cursor paging and popular-token guard remain. Its findings are hypotheses only. No external contact, publishing, spending, or REAL economic outcome occurred.
+
+---
+
 ## Live resumption point — finish exact-head repair verification (2026-10-23 NPT)
 
 - Owner direction remains the high-level truth: Hami is an open-domain, Nepal-origin system that can discover and compose possible value across fields. Missed-inquiry recovery is not its identity.

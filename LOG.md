@@ -809,3 +809,11 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Fixed the test to assert the radius in the full stylesheet, not require a duplicate declaration in `:root`.
 - Removed the capability-chain generator's permanent first-250 ceiling; each method run remains bounded by the existing cursor page and popular-token guard, and later valid chains can now be reached.
 - Exact-head CI and deployment-verification for the follow-up commit remain the verification boundary. No live customer outcomes are asserted.
+
+
+## 2026-10-23 — canonical favicon + fallback contract
+
+- Exact-head source `1950f9047e996cb6b1a25b98e30da18b18e5ab34`: backend 1,341 passed/2 skipped; build, typecheck, lint, route smoke, evidence-triage, repository guards and gitleaks passed; frontend had one remaining asset-contract failure. The independent deploy verification for the prior commit remains failure overall because CI count was red, although it matched the exact deployed SHA and the protected owner-cycle read passed.
+- Inspected the actual `public/favicon.svg` (64×64 Hami Systems emblem). Fixed `BrandMark` in place to prefer the canonical SVG with `picture/source` while preserving `hami-mark.png` fallback required by the independent regression. No tests were weakened and no asset was deleted.
+- CI and independent verification for this new exact main commit remain pending.
+

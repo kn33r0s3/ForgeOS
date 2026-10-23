@@ -1,3 +1,11 @@
+## [2026-10-23 — CANONICAL BRAND ICON + FALLBACK RECONCILED]
+
+- Exact-head result for `1950f9047e996cb6b1a25b98e30da18b18e5ab34`: backend **1,341 passed, 2 skipped**; build, typecheck, lint, route smoke, evidence-triage, repository guards, and secret scan passed. Frontend had one remaining failure: the brand test requires `/favicon.svg`, while a separate visual regression protects the existing `/hami-mark.png` fallback.
+- Read the real `public/favicon.svg`: it is the canonical 64×64 amber Hami Systems emblem. The brand mark now uses it as the preferred SVG through an existing native `picture/source` pattern while retaining `hami-mark.png` as the fallback. This resolves the actual asset-contract mismatch without weakening either assertion or deleting the prior asset.
+- **New exact-head CI is pending.** Do not claim the repairs green until the complete run finishes; deployment verification's verdict depends on the source CI test count.
+
+---
+
 ## [2026-10-23 — DISCOVERY COMPOSITION PAGINATION + BRAND REGRESSION REPAIR]
 
 - **Exact-head result for prior increment** `ab76dce3db6913a800792828a073e7a5fcd13348`: backend suite **1,341 passed, 2 skipped** including both new `capability_chain` regressions; lint, build, typecheck, route smoke, evidence-triage, repository guards, and secret scan passed. Frontend tests failed on two older theme regressions, not on the new discovery method. The independent verifier fetched the exact tested SHA and passed the protected owner-cycle read, but recorded overall `passed=false` because the frontend suite count was red.

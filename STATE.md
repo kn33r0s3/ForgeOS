@@ -1,3 +1,12 @@
+## Live state — canonical brand asset reconciliation (2026-10-23 NPT)
+
+- Exact `main` commit `1950f9047e996cb6b1a25b98e30da18b18e5ab34` backend suite passed 1,341/2 skipped; build, typecheck, lint, route smoke, evidence-triage, repository guards, and secret scan passed. One frontend test remained red because `brand-mark.tsx` did not mention the canonical `/favicon.svg`; the other test protects `/hami-mark.png`.
+- Updated the existing brand component with `picture/source srcSet="/favicon.svg"` and preserved `img src="/hami-mark.png"` as fallback, after reading the actual SVG and checking its viewBox/brand identity. The Hami + SYSTEMS lockup stays visible.
+- Follow-up exact-head CI, deploy verification, and secrets scan remain pending. Do not call this revision green until those checks complete.
+- Broader Hami work remains open-domain: the capability-chain candidate is still HYPOTHESIZED and no REAL economic or participant outcome is claimed.
+
+---
+
 ## Live state — CI diagnosis and two repairs (2026-10-23 NPT)
 
 - Previous source commit `ab76dce3db6913a800792828a073e7a5fcd13348`: backend 1,341 passed / 2 skipped; build, typecheck, lint, route smoke, evidence-triage, repository guards, and secret scan passed. Frontend had two failures in `src/lib/content.test.ts`; deployment verification read the exact SHA and owner cycle but records its verdict false because the frontend check was red.
