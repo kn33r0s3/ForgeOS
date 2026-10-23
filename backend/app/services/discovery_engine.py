@@ -850,6 +850,93 @@ def build_global_frontier(db: Session, *, limit: int = 50) -> dict[str, Any]:
             "created_at": stamp(relation.created_at),
         })
 
+    # Compose short paths only from explicit, directionally valid relations.
+    # A path is a new hypothesis about a possible combination, never a supported
+    # claim that the combination is useful. No edges are inferred from wording.
+    adjacency: dict[int, list[tuple[int, models.WorldRelation]]] = defaultdict(list)
+    path_entities: dict[int, models.SubstrateEntity] = {}
+    for relation in relations:
+        left = db.get(models.SubstrateEntity, relation.from_entity_id)
+        right = db.get(models.SubstrateEntity, relation.to_entity_id)
+        if left is None or right is None or left.status != "active" or right.status != "active":
+            continue
+        path_entities[left.id] = left
+        path_entities[right.id] = right
+        adjacency[left.id].append((right.id, relation))
+        if relation.direction == "bidirectional":
+            adjacency[right.id].append((left.id, relation))
+
+    max_paths = min(20, max(1, limit))
+    path_items: list[dict[str, Any]] = []
+    seen_paths: set[tuple[int, int, int, int, int]] = set()
+    path_scan_limited = False
+    for start_id in sorted(adjacency):
+        start = path_entities[start_id]
+        for middle_id, first_relation in sorted(adjacency[start_id], key=lambda pair: (pair[0], pair[1].id)):
+            if middle_id == start_id:
+                continue
+            for end_id, second_relation in sorted(adjacency.get(middle_id, []), key=lambda pair: (pair[0], pair[1].id)):
+                if end_id in {start_id, middle_id} or first_relation.id == second_relation.id:
+                    continue
+                end = path_entities.get(end_id)
+                middle = path_entities.get(middle_id)
+                if end is None or middle is None or start.entity_type == end.entity_type:
+                    continue
+                key = (start_id, middle_id, end_id, first_relation.id, second_relation.id)
+                if key in seen_paths:
+                    continue
+                seen_paths.add(key)
+                if len(path_items) >= max_paths:
+                    path_scan_limited = True
+                    break
+                path_items.append({
+                    "frontier_id": f"path:{first_relation.id}:{second_relation.id}:{start_id}:{end_id}",
+                    "record_type": "possibility_path",
+                    "lane": "possibility_paths",
+                    "kind": "explicit_relation_chain",
+                    "title": (
+                        f"{start.display_name} — {first_relation.relation_type} → "
+                        f"{middle.display_name} — {second_relation.relation_type} → {end.display_name}"
+                    ),
+                    "status": "hypothesized",
+                    "epistemic_state": "hypothesized",
+                    "basis": [
+                        {"kind": "relation", "id": first_relation.id},
+                        {"kind": "relation", "id": second_relation.id},
+                    ],
+                    "source_refs": [
+                        {"kind": "entity", "id": start.id},
+                        {"kind": "relation", "id": first_relation.id},
+                        {"kind": "entity", "id": middle.id},
+                        {"kind": "relation", "id": second_relation.id},
+                        {"kind": "entity", "id": end.id},
+                    ],
+                    "path_entities": [
+                        {"id": start.id, "type": start.entity_type, "name": start.display_name},
+                        {"id": middle.id, "type": middle.entity_type, "name": middle.display_name},
+                        {"id": end.id, "type": end.entity_type, "name": end.display_name},
+                    ],
+                    "path_relations": [
+                        {"id": first_relation.id, "type": first_relation.relation_type, "state": first_relation.truth_state},
+                        {"id": second_relation.id, "type": second_relation.relation_type, "state": second_relation.truth_state},
+                    ],
+                    "next_step": (
+                        "Test whether this recorded chain enables a useful real-world outcome. "
+                        "Inspect evidence for both links, identify missing capabilities and consent, "
+                        "and do not treat the path as an offer or authorization."
+                    ),
+                    "created_at": stamp(second_relation.created_at),
+                })
+            if path_scan_limited:
+                break
+        if path_scan_limited:
+            break
+
+    scan_counts["possibility_paths"] = len(path_items)
+    if path_scan_limited:
+        scan_limited.append("possibility_paths")
+    lanes["possibility_paths"].extend(path_items)
+
     # UNKNOWN_MAP.md is the authoritative unknown registry; Claim rows are
     # its additive operational projection. Keep unresolved rows in the frontier
     # with their registered IDs and cheapest-test provenance.
