@@ -57,6 +57,7 @@ import re
 import statistics
 from collections import defaultdict
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any, Callable, Iterable, Mapping
 
 from sqlalchemy.orm import Session
@@ -118,6 +119,11 @@ BUILTIN_RELATION_TYPES: dict[str, str] = {
 BUILTIN_EVENT_TYPES: dict[str, str] = {
     "discovery_run_completed": "One explicit discovery engine run and its outcome summary.",
     "discovery_deferred": "A finding that could not be materialized yet, with the reason.",
+    "candidate_trace_recorded": (
+        "One deterministic candidate trace over a composed possibility path: the admissibility "
+        "verdict under the recorded trace rule version, blockers with provenance, and any "
+        "research question / proposed experiment the trace created."
+    ),
 }
 GAP_CAPABILITY_TYPE = "discovery_input"
 GAP_RECORD_KIND = "discovery_capability_gap"
@@ -1238,6 +1244,665 @@ def build_global_frontier(db: Session, *, limit: int = 50) -> dict[str, Any]:
             "Items are proposals or operational records, not proof, authorization, or instructions to execute."
         ),
     }
+
+
+# ---------------------------------------------------------------------------
+# Candidate trace: one composed path, admissibility-gated
+# ---------------------------------------------------------------------------
+#
+# The frontier composes possibility paths; this section traces ONE of them,
+# selected deterministically, and asks whether it may advance toward a real
+# test. The hardening is the point (architect counsel, 2026-10-23):
+#   * provenance must be reproducible, not merely traceable — canonical
+#     identity dedup means mirrored copies of one report are ONE
+#     confirmation, while independent sources stay distinct identities;
+#   * both edges must resolve to original evidence under an explicit
+#     composition contract (asserting support level, REAL source kind,
+#     resolvable canonical identity, complete provenance, inside the
+#     staleness window, registry-active relation type), with refuting
+#     evidence and identity ambiguity retained, never discarded;
+#   * truth states never move here: the trace records a WorldEvent and —
+#     only when admissible — proposes a ResearchQuestion and a proposed,
+#     approval-gated Experiment. It never creates Action or Outcome rows
+#     and never mutates a relation or evidence record.
+# An inadmissible candidate stops at the gate with a blocker carrying its
+# provenance. A gap in this substrate is a gap in Hami's recorded
+# knowledge; it is never stated as absence in reality.
+
+TRACE_RULE_VERSION = "candidate-trace-v1"
+TRACE_STALENESS_DAYS = 365
+_TRACE_SUPPORTING_STATES = ("supported", "tested")
+_TRACE_PATH_TRUTH_STATES = ("possible", "hypothesized", "tested", "supported", "unknown")
+
+
+def _trace_naive_utc(value: Any) -> datetime | None:
+    """Normalize datetimes and ISO strings to naive UTC for comparison."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        try:
+            value = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    if isinstance(value, datetime):
+        if value.tzinfo is not None:
+            return value.astimezone(timezone.utc).replace(tzinfo=None)
+        return value
+    return None
+
+
+def _trace_evidence_provenance(row: models.Evidence) -> dict[str, Any]:
+    parsed = _load(row.substrate_provenance)
+    if not parsed:
+        parsed = _load(row.provenance)
+    return parsed
+
+
+def _trace_canonical_identity(row: models.Evidence, provenance: Mapping[str, Any]) -> str | None:
+    """Stable source identity for dedup: mirrored copies share one identity.
+
+    Two representations of the same original record collapse to a single
+    confirmation; two independent sources never share an identity here.
+    """
+    url = (row.canonical_url or "").strip() or str(
+        provenance.get("url") or provenance.get("canonical_url") or ""
+    ).strip()
+    if url:
+        return f"url:{url.casefold()}"
+    external = (row.external_id or "").strip() or str(provenance.get("external_id") or "").strip()
+    if external:
+        source = (row.substrate_source or row.source or "").strip().casefold()
+        return f"external:{source}:{external}"
+    fingerprint = (row.content_fingerprint or "").strip()
+    if fingerprint:
+        return f"fingerprint:{fingerprint}"
+    provenance_hash = (row.provenance_hash or "").strip()
+    if provenance_hash:
+        return f"provenance-hash:{provenance_hash}"
+    return None
+
+
+def _trace_reference_time(row: models.Evidence, provenance: Mapping[str, Any]) -> datetime | None:
+    """The evidence's own time (publication/observation preferred over capture)."""
+    for value in (
+        row.published_at,
+        row.observed_at,
+        provenance.get("published_at"),
+        provenance.get("observed_at"),
+        row.retrieved_at,
+        row.recorded_at,
+        row.created_at,
+    ):
+        parsed = _trace_naive_utc(value)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _trace_evidence_detail(row: models.Evidence, now: datetime) -> dict[str, Any]:
+    provenance = _trace_evidence_provenance(row)
+    identity = _trace_canonical_identity(row, provenance)
+    source_identity = (row.substrate_source or row.source or row.source_identity or "").strip()
+    reference = _trace_reference_time(row, provenance)
+    missing: list[str] = []
+    if not source_identity:
+        missing.append("source identity")
+    if identity is None:
+        missing.append("original identifier")
+    if reference is None:
+        missing.append("timing")
+    if not (row.claim or row.content or "").strip():
+        missing.append("claim")
+    age_days = (now - reference).days if reference is not None else None
+    stale = age_days is not None and age_days > TRACE_STALENESS_DAYS
+    resolves = (
+        row.support_level in _TRACE_SUPPORTING_STATES
+        and (row.source_kind or "") == "REAL"
+        and identity is not None
+        and not missing
+        and not stale
+    )
+    return {
+        "id": row.id,
+        "support_level": row.support_level,
+        "source_kind": row.source_kind,
+        "source": source_identity or None,
+        "canonical_identity": identity,
+        "provenance_complete": not missing,
+        "provenance_missing": missing,
+        "reference_time": reference.isoformat() if reference is not None else None,
+        "age_days": age_days,
+        "stale": stale,
+        "refuting": row.support_level == "refuted",
+        "resolves_edge": resolves,
+    }
+
+
+def _trace_linked_evidence(db: Session, relation_ids: list[int]) -> dict[int, list[models.Evidence]]:
+    """Evidence linked to relations, through both recorded link channels.
+
+    Mirrors the frontier's linkage rule: direct relation-subject Evidence
+    plus explicit legacy EvidenceRelationship projections. A relation with
+    no rows here is unlinked *in this substrate*; nothing follows about
+    evidence elsewhere.
+    """
+    linked: dict[int, dict[int, models.Evidence]] = {relation_id: {} for relation_id in relation_ids}
+    if not relation_ids:
+        return {relation_id: [] for relation_id in relation_ids}
+    for row in db.query(models.Evidence).filter(
+        models.Evidence.subject_kind == "relation",
+        models.Evidence.subject_id.in_(relation_ids),
+    ).all():
+        linked[int(row.subject_id)][row.id] = row
+    for evidence_id, relation_id in db.query(
+        models.EvidenceRelationship.evidence_id,
+        models.EvidenceRelationship.substrate_relation_id,
+    ).filter(models.EvidenceRelationship.substrate_relation_id.in_(relation_ids)).all():
+        if relation_id is None:
+            continue
+        row = db.get(models.Evidence, evidence_id)
+        if row is not None:
+            linked[int(relation_id)][row.id] = row
+    return {
+        relation_id: [bucket[key] for key in sorted(bucket)]
+        for relation_id, bucket in linked.items()
+    }
+
+
+def _trace_analyze_edge(
+    db: Session, relation: models.WorldRelation, rows: list[models.Evidence], now: datetime
+) -> dict[str, Any]:
+    details = [_trace_evidence_detail(row, now) for row in rows]
+    resolving = [detail for detail in details if detail["resolves_edge"]]
+    confirmations = {detail["canonical_identity"] for detail in resolving}
+    refuting = [detail for detail in details if detail["refuting"]]
+    supporting_ids = [
+        detail["id"] for detail in details if detail["support_level"] in _TRACE_SUPPORTING_STATES
+    ]
+    refutation_outstanding = bool(refuting) and not any(
+        supporting_id > max(detail["id"] for detail in refuting) for supporting_id in supporting_ids
+    )
+    registry_active = db.query(models.TypeRegistry).filter_by(
+        category="relation_type", type_name=relation.relation_type, status="active"
+    ).one_or_none() is not None
+    blockers: list[str] = []
+    if not details:
+        blockers.append(
+            f"relation #{relation.id} ({relation.relation_type}) has no Evidence record linked to it "
+            "in the current substrate (0 via relation-subject link, 0 via legacy "
+            "evidence-relationship projection), so the edge does not resolve to original evidence "
+            "here; this records missing linkage in Hami's substrate only and does not establish "
+            "that evidence is absent elsewhere"
+        )
+    elif not resolving:
+        reasons = []
+        for detail in details:
+            why = []
+            if detail["support_level"] not in _TRACE_SUPPORTING_STATES:
+                why.append(f"support level {detail['support_level']!r} does not assert support")
+            if detail["source_kind"] != "REAL":
+                why.append(f"source_kind is {detail['source_kind']}, not REAL")
+            if detail["canonical_identity"] is None:
+                why.append("no resolvable canonical identity")
+            if not detail["provenance_complete"]:
+                why.append(
+                    "provenance incomplete (missing " + ", ".join(detail["provenance_missing"]) + ")"
+                )
+            if detail["stale"]:
+                why.append(
+                    f"stale under the {TRACE_STALENESS_DAYS}-day window of {TRACE_RULE_VERSION} "
+                    f"(reference time {detail['reference_time']})"
+                )
+            reasons.append(
+                f"Evidence #{detail['id']}: " + ("; ".join(why) if why else "does not resolve the edge")
+            )
+        blockers.append(
+            f"relation #{relation.id} ({relation.relation_type}) has {len(details)} linked Evidence "
+            f"record(s), but none resolves to original evidence under {TRACE_RULE_VERSION} — "
+            + " | ".join(reasons)
+        )
+    if refutation_outstanding:
+        refuting_labels = ", ".join(f"#{detail['id']}" for detail in refuting)
+        blockers.append(
+            f"relation #{relation.id} ({relation.relation_type}) carries refuting Evidence "
+            f"{refuting_labels} with no later supporting record; the refutation is retained "
+            "and blocks this trace"
+        )
+    if not registry_active:
+        blockers.append(
+            f"relation type {relation.relation_type!r} is not an active registered relation_type, "
+            "so the composition contract cannot be checked for this edge"
+        )
+    if relation.truth_state == "refuted":
+        blockers.append(f"relation #{relation.id} is itself recorded as refuted")
+    return {
+        "relation_id": relation.id,
+        "relation_type": relation.relation_type,
+        "truth_state": relation.truth_state,
+        "registry_active": registry_active,
+        "linked_evidence_count": len(details),
+        "evidence": details,
+        "resolving_evidence_ids": [detail["id"] for detail in resolving],
+        "distinct_confirmations": len(confirmations),
+        "refutation_outstanding": refutation_outstanding,
+        "admissible": not blockers,
+        "blockers": blockers,
+    }
+
+
+def _trace_composed_paths(
+    db: Session,
+) -> list[tuple[models.SubstrateEntity, models.SubstrateEntity, models.SubstrateEntity, models.WorldRelation, models.WorldRelation]]:
+    """Every composable two-edge path under the frontier's composition contract.
+
+    Mirrors ``build_global_frontier``: explicit recorded relations only,
+    directionally valid, active endpoints, distinct entities and relations,
+    endpoints of different entity types. Unlike the frontier's bounded
+    display page, the trace considers every composed path and orders them
+    deterministically — most recent edges first, then ids — so the selected
+    candidate is reproducible from the substrate alone.
+    """
+    relations = (
+        db.query(models.WorldRelation)
+        .filter(models.WorldRelation.truth_state.in_(_TRACE_PATH_TRUTH_STATES))
+        .order_by(models.WorldRelation.id.desc())
+        .all()
+    )
+    adjacency: dict[int, list[tuple[int, models.WorldRelation]]] = defaultdict(list)
+    entities: dict[int, models.SubstrateEntity] = {}
+    for relation in relations:
+        left = db.get(models.SubstrateEntity, relation.from_entity_id)
+        right = db.get(models.SubstrateEntity, relation.to_entity_id)
+        if left is None or right is None or left.status != "active" or right.status != "active":
+            continue
+        entities[left.id] = left
+        entities[right.id] = right
+        adjacency[left.id].append((right.id, relation))
+        if relation.direction == "bidirectional":
+            adjacency[right.id].append((left.id, relation))
+    paths = []
+    for start_id, edges in adjacency.items():
+        start = entities[start_id]
+        for middle_id, first in edges:
+            if middle_id == start_id:
+                continue
+            middle = entities[middle_id]
+            for end_id, second in adjacency.get(middle_id, []):
+                if end_id in {start_id, middle_id} or first.id == second.id:
+                    continue
+                end = entities[end_id]
+                if start.entity_type == end.entity_type:
+                    continue
+                paths.append((start, middle, end, first, second))
+    paths.sort(key=lambda path: (path[3].id, path[4].id, path[0].id, path[1].id, path[2].id), reverse=True)
+    return paths
+
+
+def _trace_path_record(
+    start: models.SubstrateEntity,
+    middle: models.SubstrateEntity,
+    end: models.SubstrateEntity,
+    first: models.WorldRelation,
+    second: models.WorldRelation,
+) -> dict[str, Any]:
+    return {
+        "path_key": f"path:{first.id}:{second.id}:{start.id}:{end.id}",
+        "entity_ids": [start.id, middle.id, end.id],
+        "entities": [
+            {"id": row.id, "type": row.entity_type, "name": row.display_name}
+            for row in (start, middle, end)
+        ],
+        "relation_ids": [first.id, second.id],
+        "relations": [
+            {
+                "id": relation.id,
+                "type": relation.relation_type,
+                "state": relation.truth_state,
+                "direction": relation.direction,
+            }
+            for relation in (first, second)
+        ],
+    }
+
+
+def select_trace_candidate(db: Session) -> dict[str, Any] | None:
+    """The deterministic next candidate to trace, or None when no path composes."""
+    paths = _trace_composed_paths(db)
+    if not paths:
+        return None
+    return _trace_path_record(*paths[0])
+
+
+def _trace_missing_capabilities(
+    db: Session, entity_rows: list[models.SubstrateEntity]
+) -> list[dict[str, Any]]:
+    """Declared inputs on the path that no recorded declaration provides.
+
+    Reuses the capability-chain declaration fields and normalization: only
+    explicit ``provides``/``outputs`` declarations (on the path entities or
+    in the capability registry) count as recorded provision. Every gap is
+    phrased as substrate-gap language — a gap in Hami's recorded knowledge,
+    never a claim that the capability is absent in reality.
+    """
+    from app.services.demand_understanding import normalize_observation_content
+
+    output_fields = ("provides", "outputs", "capabilities", "capability_tags")
+    input_fields = ("requires", "inputs", "needs", "required_tags")
+
+    def declarations(row: Any, fields: tuple[str, ...]) -> list[tuple[str, str, str]]:
+        attrs = DiscoveryContext.attributes(row)
+        by_token: dict[str, tuple[str, str]] = {}
+        for field_name in fields:
+            raw = attrs.get(field_name)
+            values = [raw] if isinstance(raw, str) else raw if isinstance(raw, list) else ()
+            for value in values:
+                if not isinstance(value, str):
+                    continue
+                collapsed = " ".join(value.split())
+                normalized = collapsed.casefold()
+                if (
+                    len(normalized) < 3
+                    or len(normalized) > 120
+                    or normalized.replace(".", "").isdigit()
+                    or normalized in _IGNORED_VALUES
+                    or not _safe_discovery_join_value(field_name, collapsed, normalize_observation_content)
+                ):
+                    continue
+                by_token.setdefault(normalized, (collapsed, field_name))
+        return [(token, value, field_name) for token, (value, field_name) in sorted(by_token.items())]
+
+    provided: set[str] = set()
+    for row in entity_rows:
+        for token, _value, _field_name in declarations(row, output_fields):
+            provided.add(token)
+    for capability in db.query(models.ForgeCapability).all():
+        attrs = _load(capability.attributes)
+        raw = attrs.get("provides")
+        values = [raw] if isinstance(raw, str) else raw if isinstance(raw, list) else ()
+        for value in values:
+            if isinstance(value, str):
+                provided.add(" ".join(value.split()).casefold())
+
+    gaps: list[dict[str, Any]] = []
+    # Each handoff: the middle entity consumes the start's declarations, the
+    # end entity consumes the middle's. An input nobody on the path (or in
+    # the registry) declares providing is a recorded knowledge gap.
+    for consumer in entity_rows[1:]:
+        for token, value, field_name in declarations(consumer, input_fields):
+            if token in provided:
+                continue
+            gaps.append({
+                "entity_id": consumer.id,
+                "declaration": value,
+                "field": field_name,
+                "statement": (
+                    f"No record in the current substrate provides {value!r}, declared as an input "
+                    f"by {consumer.display_name} ({consumer.entity_type} #{consumer.id}) in field "
+                    f"{field_name!r}. This is a gap in Hami's recorded knowledge, not evidence "
+                    "that the capability is absent in reality."
+                ),
+            })
+    return gaps
+
+
+def trace_candidate_path(
+    db: Session, candidate: dict[str, Any], *, now: datetime | None = None
+) -> dict[str, Any]:
+    """Pure analysis of one composed path. Writes nothing; moves no truth state."""
+    moment = _trace_naive_utc(now) or _trace_naive_utc(models.utcnow())
+    assert moment is not None
+    relation_rows = [db.get(models.WorldRelation, relation_id) for relation_id in candidate["relation_ids"]]
+    entity_rows = [db.get(models.SubstrateEntity, entity_id) for entity_id in candidate["entity_ids"]]
+    linked = _trace_linked_evidence(db, list(candidate["relation_ids"]))
+    edges = [
+        _trace_analyze_edge(db, relation, linked[relation.id], moment) for relation in relation_rows
+    ]
+    blockers = [blocker for edge in edges for blocker in edge["blockers"]]
+    identity_notes = [
+        {
+            "entity_id": row.id,
+            "identity_state": row.identity_state,
+            "identity_uncertainty": row.identity_uncertainty,
+            "ambiguity_retained": row.identity_state == "candidate",
+        }
+        for row in entity_rows
+    ]
+    endpoint_entity_evidence = {
+        str(row.id): db.query(models.Evidence).filter_by(
+            subject_kind="entity", subject_id=row.id
+        ).count()
+        for row in entity_rows
+    }
+    return {
+        "rule_version": TRACE_RULE_VERSION,
+        "candidate": candidate,
+        "edges": edges,
+        "admissible": not blockers,
+        "blockers": blockers,
+        "missing_capabilities": _trace_missing_capabilities(db, entity_rows),
+        "identity_notes": identity_notes,
+        "endpoint_entity_evidence": endpoint_entity_evidence,
+        "boundary": (
+            "Entity-subject evidence does not resolve a path edge; only evidence linked to the "
+            "relation itself counts toward admissibility. Unlinked means unlinked in the current "
+            "substrate only."
+        ),
+    }
+
+
+def _trace_fingerprint(candidate: dict[str, Any], analysis: dict[str, Any]) -> str:
+    edge_bits = [
+        (
+            edge["relation_id"],
+            tuple(detail["id"] for detail in edge["evidence"]),
+            tuple(detail["support_level"] for detail in edge["evidence"]),
+            tuple(detail["source_kind"] for detail in edge["evidence"]),
+            edge["admissible"],
+        )
+        for edge in analysis["edges"]
+    ]
+    return _hash(
+        "candidate-trace", TRACE_RULE_VERSION, candidate["path_key"], edge_bits, analysis["admissible"]
+    )[:32]
+
+
+def _trace_create_proposal(
+    db: Session, candidate: dict[str, Any], analysis: dict[str, Any]
+) -> dict[str, int | None]:
+    """Record the falsifiable test for an admissible candidate.
+
+    Mirrors ``experiment_service.create_proposed`` discipline on the existing
+    rows: the Experiment is proposed, requires approval, and is not cleared
+    for execution. No Action or Outcome row is ever created here.
+    """
+    start, middle, end = candidate["entities"]
+    question_text = (
+        f"Does the recorded connection from {start['name']} through {middle['name']} to "
+        f"{end['name']} hold under direct observation?"
+    )
+    plan = {
+        "kind": "candidate_trace_test",
+        "rule_version": TRACE_RULE_VERSION,
+        "candidate_path": candidate["path_key"],
+        "supports": (
+            "Independent REAL evidence, from a source identity distinct from those already "
+            "linked, recorded against both relations supporting the composed connection "
+            "within the observation window."
+        ),
+        "weakens": (
+            "Independent evidence supporting only one of the two relations, or supporting "
+            "the endpoints without the recorded middle step."
+        ),
+        "rejects": (
+            "Refuting evidence recorded against either relation that is not answered by "
+            "later supporting evidence; refuting records are retained, never deleted."
+        ),
+        "unit": (
+            "One recorded instance of the endpoint relationship "
+            f"({start['name']} -> {end['name']}) observed through the recorded middle entity."
+        ),
+        "observation_window_days": 90,
+        "evidence_staleness_days": TRACE_STALENESS_DAYS,
+        "stopping_rule": (
+            "Stop when either relation gains unanswered refuting evidence, when the "
+            "observation window closes with no new independent evidence, or when a "
+            "supporting record resolves both edges — whichever comes first."
+        ),
+        "missing_capabilities": analysis["missing_capabilities"],
+        "safety_constraints": (
+            "Observation only: no contact, no spend, no publication. Any contact, spend, or "
+            "publication needs separate authorization through the existing gates."
+        ),
+    }
+    question = db.query(models.ResearchQuestion).filter_by(question=question_text).one_or_none()
+    if question is None:
+        question = models.ResearchQuestion(
+            question=question_text, status="planned", research_plan=plan
+        )
+        db.add(question)
+        db.flush()
+    action_text = f"Candidate trace observation: {candidate['path_key']}"
+    experiment = (
+        db.query(models.Experiment)
+        .filter_by(source_research_question_id=question.id, action=action_text)
+        .one_or_none()
+    )
+    if experiment is None:
+        five_fields = {
+            "reality": (
+                "Both relations on the selected path resolve to linked original evidence in "
+                "the current substrate (provenance is recorded in the candidate trace event). "
+                "The composed path itself remains hypothesized; linkage is not proof that the "
+                "connection is useful or real."
+            ),
+            "possibility": (
+                "Direct observation of the endpoint relationship could support, weaken, or "
+                "reject the composed path under the recorded research plan."
+            ),
+            "constraint": (
+                "Observation only under present constraints: $0 spend, no contact, no "
+                "publication; contact or spend needs separate authorization."
+            ),
+            "constraint_state": "hypothesis",
+            "intervention": (
+                "Observe and record evidence bearing on both relations (supports / weakens / "
+                "rejects per the research plan) during the observation window; stop under "
+                "the recorded stopping rule."
+            ),
+            "outcome": "",
+        }
+        experiment = models.Experiment(
+            action=action_text,
+            source_research_question_id=question.id,
+            authorization_status="require_approval",
+            authorization_reason=(
+                "Candidate-trace proposal requires explicit authorization before any "
+                "execution; the trace itself performs no external action."
+            ),
+            execution_status="proposed",
+            response_received="none",
+            revenue_amount=0.0,
+            revenue_currency="USD",
+            hypothesis=five_fields["possibility"],
+            expected_result=plan["supports"],
+            action_type="observation",
+            status="planned",
+            requires_owner_approval=True,
+            execution_allowed=False,
+            experiment_kind="OBSERVATION",
+            five_fields_json=json.dumps(five_fields),
+            data_scope="REAL",
+        )
+        db.add(experiment)
+        db.flush()
+    return {"research_question_id": question.id, "experiment_id": experiment.id}
+
+
+def trace_frontier_candidate(db: Session, *, actor: str = ENGINE_ACTOR) -> dict[str, Any]:
+    """Trace the deterministic frontier candidate and record the outcome.
+
+    Always records exactly one ``candidate_trace_recorded`` WorldEvent (with
+    an idempotency key) per distinct substrate state under the current rule
+    version. An inadmissible candidate stops at the admissibility gate: the
+    event carries the blocker with full provenance and nothing else is
+    created. The caller owns the transaction.
+    """
+    ensure_discovery_types(db)
+    paths = _trace_composed_paths(db)
+    if not paths:
+        payload: dict[str, Any] = {
+            "rule_version": TRACE_RULE_VERSION,
+            "outcome": "no_candidate",
+            "candidate": None,
+            "paths_considered": 0,
+            "admissible": False,
+            "blockers": ["no composable two-edge path exists in the current substrate"],
+            "created": {"research_question_id": None, "experiment_id": None},
+            "recorded_text": (
+                f"No candidate trace under {TRACE_RULE_VERSION}: the current substrate "
+                "composes no two-edge possibility path."
+            ),
+        }
+        key = "candidate-trace:" + _hash(
+            "candidate-trace", TRACE_RULE_VERSION, "no-candidate",
+            db.query(models.SubstrateEntity).count(), db.query(models.WorldRelation).count(),
+        )[:32]
+        event = world_graph.create_event(
+            db, event_type="candidate_trace_recorded", source=actor,
+            payload=payload, idempotency_key=key,
+        )
+        return {**payload, "event_id": event.id, "replayed": False}
+
+    candidate = _trace_path_record(*paths[0])
+    analysis = trace_candidate_path(db, candidate)
+    fingerprint = _trace_fingerprint(candidate, analysis)
+    idempotency_key = f"candidate-trace:{fingerprint}"
+    existing = db.query(models.WorldEvent).filter_by(idempotency_key=idempotency_key).one_or_none()
+    if existing is not None:
+        return {**_load(existing.payload), "event_id": existing.id, "replayed": True}
+
+    created: dict[str, int | None] = {"research_question_id": None, "experiment_id": None}
+    if analysis["admissible"]:
+        created = _trace_create_proposal(db, candidate, analysis)
+        recorded_text = (
+            f"Trace admissible under {TRACE_RULE_VERSION} for {candidate['path_key']}: both "
+            "edges resolve to original evidence in the current substrate. Recorded "
+            f"ResearchQuestion #{created['research_question_id']} and proposed Experiment "
+            f"#{created['experiment_id']} (OBSERVATION, require_approval, execution not "
+            "allowed). The path remains hypothesized; nothing was authorized, contacted, "
+            "executed, or completed."
+        )
+        outcome = "proposed_test_recorded"
+    else:
+        recorded_text = (
+            f"Trace stopped at the admissibility gate under {TRACE_RULE_VERSION} for "
+            f"{candidate['path_key']}: " + "; ".join(analysis["blockers"]) + ". No research "
+            "question or experiment was created for this candidate, and no relation or "
+            "evidence truth state was changed."
+        )
+        outcome = "blocked_at_admissibility_gate"
+    payload = {
+        "rule_version": TRACE_RULE_VERSION,
+        "outcome": outcome,
+        "candidate": candidate,
+        "paths_considered": len(paths),
+        "admissible": analysis["admissible"],
+        "edges": analysis["edges"],
+        "blockers": analysis["blockers"],
+        "missing_capabilities": analysis["missing_capabilities"],
+        "identity_notes": analysis["identity_notes"],
+        "endpoint_entity_evidence": analysis["endpoint_entity_evidence"],
+        "created": created,
+        "recorded_text": recorded_text,
+    }
+    event = world_graph.create_event(
+        db, event_type="candidate_trace_recorded", source=actor,
+        payload=payload, idempotency_key=idempotency_key,
+    )
+    return {**payload, "event_id": event.id, "replayed": False}
 
 
 # ---------------------------------------------------------------------------

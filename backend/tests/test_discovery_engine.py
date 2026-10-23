@@ -1268,3 +1268,317 @@ def test_global_frontier_prioritizes_recent_paths_when_path_list_is_bounded(db):
     assert len(surfaced) == 20
     assert paths[-1] in surfaced_entity_paths
     assert paths[0] not in surfaced_entity_paths
+
+
+# ---------------------------------------------------------------------------
+# Candidate trace (candidate-trace-v1): one composed path, admissibility-gated
+# ---------------------------------------------------------------------------
+
+
+def _trace_world(db):
+    """A single composable path: research question -> pattern -> signal.
+
+    All three nodes are canonical wrappers, exactly as the live substrate
+    holds them (bare pattern/signal entities are not schema-valid).
+    """
+    world_graph.seed_core_types(db)
+    record = models.ResearchQuestion(question="Which gold supply chain actors publish prices?")
+    db.add(record)
+    db.flush()
+    pattern = models.Pattern(
+        title="Recurring theme: unpublished prices",
+        description="Signals repeatedly mention prices that are never published.",
+    )
+    signal = models.Signal(
+        source="manual", content="Transparency at a Price: the Case of the Gold Supply Chain",
+    )
+    db.add_all([pattern, signal])
+    db.flush()
+    start = world_graph.ensure_canonical_entity(db, "research_question", record.id)
+    middle = world_graph.ensure_canonical_entity(db, "pattern", pattern.id)
+    end = world_graph.ensure_canonical_entity(db, "signal", signal.id)
+    first = world_graph.create_relation(
+        db, from_entity_id=start.id, to_entity_id=middle.id,
+        relation_type="derived_from", created_by="curiosity_engine",
+    )
+    second = world_graph.create_relation(
+        db, from_entity_id=middle.id, to_entity_id=end.id,
+        relation_type="derived_from", created_by="curiosity_engine",
+    )
+    db.commit()
+    return {"record": record, "start": start, "middle": middle, "end": end,
+            "first": first, "second": second}
+
+
+def _original_evidence(db, relation, *, url, days_old=10, support="supported",
+                       source="field_audit", claim="Direct audit record for this recorded link."):
+    """Relation-linked evidence that resolves an edge under candidate-trace-v1.
+
+    The canonical writer records the substrate fields; a collector also
+    stamps the original identifier, publication time, and REAL source kind
+    onto the row, which is what the lines below mirror.
+    """
+    from datetime import timedelta
+
+    row = world_graph.create_evidence(
+        db, subject_kind="relation", subject_id=relation.id, claim=claim,
+        support_level=support, source=source,
+        provenance={"url": url, "retrieved_at": "2026-10-01T00:00:00Z"},
+    )
+    row.canonical_url = url
+    row.external_id = f"{source}-{relation.id}-{support}"
+    row.published_at = models.utcnow() - timedelta(days=days_old)
+    row.source_kind = "REAL"
+    db.flush()
+    return row
+
+
+def _truth_snapshot(db):
+    return {
+        relation.id: relation.truth_state
+        for relation in db.query(models.WorldRelation).order_by(models.WorldRelation.id)
+    }
+
+
+def test_trace_blocks_when_edges_have_no_linked_evidence(db):
+    """The real substrate's shape: entity evidence exists, edge evidence does not."""
+    world = _trace_world(db)
+    world_graph.create_evidence(
+        db, subject_kind="entity", subject_id=world["end"].id, claim="Background note.",
+        support_level="possible", source="field_interview", provenance=FIELD_SOURCE,
+    )
+    db.commit()
+    before = _truth_snapshot(db)
+    evidence_before = db.query(models.Evidence).count()
+
+    result = engine.trace_frontier_candidate(db)
+    db.commit()
+
+    assert result["outcome"] == "blocked_at_admissibility_gate"
+    assert result["admissible"] is False
+    assert result["paths_considered"] == 1
+    assert result["candidate"]["path_key"] == (
+        f"path:{world['first'].id}:{world['second'].id}:{world['start'].id}:{world['end'].id}"
+    )
+    assert "Trace stopped at the admissibility gate" in result["recorded_text"]
+    assert f"relation #{world['first'].id}" in result["recorded_text"]
+    assert "no Evidence record linked to it" in result["recorded_text"]
+    assert result["created"] == {"research_question_id": None, "experiment_id": None}
+    event = db.get(models.WorldEvent, result["event_id"])
+    assert event.event_type == "candidate_trace_recorded"
+    payload = json.loads(event.payload)
+    assert payload["outcome"] == "blocked_at_admissibility_gate"
+    assert payload["endpoint_entity_evidence"][str(world["end"].id)] == 1
+    # Nothing downstream was created and no truth state moved.
+    assert db.query(models.ResearchQuestion).count() == 1
+    assert db.query(models.Experiment).count() == 0
+    assert db.query(models.Outcome).count() == 0
+    assert db.query(models.Evidence).count() == evidence_before
+    assert _truth_snapshot(db) == before
+
+
+def test_trace_replay_is_idempotent(db):
+    world = _trace_world(db)
+    first = engine.trace_frontier_candidate(db)
+    db.commit()
+    second = engine.trace_frontier_candidate(db)
+    db.commit()
+    assert first["replayed"] is False
+    assert second["replayed"] is True
+    assert second["event_id"] == first["event_id"]
+    assert db.query(models.WorldEvent).filter_by(event_type="candidate_trace_recorded").count() == 1
+    assert db.query(models.Experiment).count() == 0
+
+
+def test_trace_admissible_creates_question_and_proposed_experiment(db):
+    world = _trace_world(db)
+    _original_evidence(db, world["first"], url="https://example.org/gold-audit-2026")
+    _original_evidence(db, world["second"], url="https://example.org/customs-ledger-2026",
+                       source="customs_ledger")
+    db.commit()
+    before = _truth_snapshot(db)
+
+    result = engine.trace_frontier_candidate(db)
+    db.commit()
+
+    assert result["outcome"] == "proposed_test_recorded"
+    assert result["admissible"] is True
+    assert result["blockers"] == []
+    question = db.get(models.ResearchQuestion, result["created"]["research_question_id"])
+    plan = question.research_plan
+    assert plan["rule_version"] == engine.TRACE_RULE_VERSION
+    assert plan["candidate_path"] == result["candidate"]["path_key"]
+    for field_name in ("supports", "weakens", "rejects", "unit", "stopping_rule"):
+        assert plan[field_name], field_name
+    assert plan["observation_window_days"] == 90
+    assert plan["evidence_staleness_days"] == 365
+    experiment = db.get(models.Experiment, result["created"]["experiment_id"])
+    assert experiment.experiment_kind == "OBSERVATION"
+    five_fields = json.loads(experiment.five_fields_json)
+    assert set(five_fields) == {"reality", "possibility", "constraint",
+                                "constraint_state", "intervention", "outcome"}
+    assert experiment.source_research_question_id == question.id
+    assert experiment.execution_status == "proposed"
+    assert experiment.authorization_status == "require_approval"
+    assert experiment.requires_owner_approval is True
+    assert experiment.execution_allowed is False
+    # The path itself stays hypothesized; the trace authorized nothing.
+    assert _truth_snapshot(db) == before
+    assert db.query(models.Outcome).count() == 0
+    event = db.get(models.WorldEvent, result["event_id"])
+    assert json.loads(event.payload)["created"]["experiment_id"] == experiment.id
+
+
+def test_trace_never_grants_execution(db):
+    from app.services import experiment_service
+
+    world = _trace_world(db)
+    _original_evidence(db, world["first"], url="https://example.org/gold-audit-2026")
+    _original_evidence(db, world["second"], url="https://example.org/customs-ledger-2026",
+                       source="customs_ledger")
+    db.commit()
+    result = engine.trace_frontier_candidate(db)
+    db.commit()
+    experiment = db.get(models.Experiment, result["created"]["experiment_id"])
+    with pytest.raises(ValueError):
+        experiment_service.assert_executable(experiment)
+    # No relation or evidence record changed state as a side effect.
+    for relation in db.query(models.WorldRelation).all():
+        assert relation.truth_state == "hypothesized"
+    for row in db.query(models.Evidence).all():
+        assert row.support_level in {"supported", "possible", "hypothesized", "unknown", "refuted"}
+
+
+def test_trace_stale_evidence_does_not_resolve_edge(db):
+    world = _trace_world(db)
+    _original_evidence(db, world["first"], url="https://example.org/gold-audit-2021", days_old=400)
+    _original_evidence(db, world["second"], url="https://example.org/customs-ledger-2026",
+                       source="customs_ledger")
+    db.commit()
+    result = engine.trace_frontier_candidate(db)
+    db.commit()
+    assert result["admissible"] is False
+    assert result["outcome"] == "blocked_at_admissibility_gate"
+    stale_blockers = [b for b in result["blockers"] if "stale" in b]
+    assert stale_blockers and f"#{world['first'].id}" in stale_blockers[0]
+    assert result["edges"][0]["evidence"][0]["stale"] is True
+    assert result["edges"][1]["admissible"] is True
+    assert db.query(models.Experiment).count() == 0
+
+
+def test_trace_mirrored_sources_count_as_one_confirmation(db):
+    world = _trace_world(db)
+    _original_evidence(db, world["first"], url="https://example.org/gold-audit-2026",
+                       claim="Original audit record.")
+    _original_evidence(db, world["first"], url="https://example.org/gold-audit-2026",
+                       claim="Mirrored copy of the same audit record.")
+    _original_evidence(db, world["second"], url="https://example.org/customs-ledger-2026",
+                       source="customs_ledger")
+    db.commit()
+    candidate = engine.select_trace_candidate(db)
+    analysis = engine.trace_candidate_path(db, candidate)
+    first_edge, second_edge = analysis["edges"]
+    assert len(first_edge["resolving_evidence_ids"]) == 2
+    assert first_edge["distinct_confirmations"] == 1
+    assert second_edge["distinct_confirmations"] == 1
+    assert analysis["admissible"] is True
+
+
+def test_trace_inactive_relation_type_blocks(db):
+    world = _trace_world(db)
+    _original_evidence(db, world["first"], url="https://example.org/gold-audit-2026")
+    _original_evidence(db, world["second"], url="https://example.org/customs-ledger-2026",
+                       source="customs_ledger")
+    registry_row = db.query(models.TypeRegistry).filter_by(
+        category="relation_type", type_name="derived_from"
+    ).one()
+    world_graph.set_type_status(
+        db, registry_row, "deprecated", actor="test",
+        rationale="Trace must refuse edges whose type left the active registry.",
+        evidence_ref=TEST_REF,
+    )
+    db.commit()
+    result = engine.trace_frontier_candidate(db)
+    db.commit()
+    assert result["admissible"] is False
+    assert any("not an active registered relation_type" in b for b in result["blockers"])
+    assert db.query(models.Experiment).count() == 0
+
+
+def test_trace_refuting_evidence_is_retained_and_blocks(db):
+    world = _trace_world(db)
+    _original_evidence(db, world["first"], url="https://example.org/gold-audit-2026")
+    _original_evidence(db, world["second"], url="https://example.org/customs-ledger-2026",
+                       source="customs_ledger")
+    refuting = _original_evidence(
+        db, world["first"], url="https://example.org/gold-audit-recheck",
+        support="refuted", source="customs_ledger",
+        claim="Recheck found the audit record does not cover this link.",
+    )
+    db.commit()
+    result = engine.trace_frontier_candidate(db)
+    db.commit()
+    assert result["admissible"] is False
+    assert result["edges"][0]["refutation_outstanding"] is True
+    assert any(f"#{refuting.id}" in b and "refuting" in b for b in result["blockers"])
+    # Retained, not deleted or downgraded.
+    retained = db.get(models.Evidence, refuting.id)
+    assert retained is not None and retained.support_level == "refuted"
+    assert db.query(models.Experiment).count() == 0
+
+
+def test_trace_rule_version_change_records_a_new_event(db, monkeypatch):
+    world = _trace_world(db)
+    _original_evidence(db, world["first"], url="https://example.org/gold-audit-2026")
+    _original_evidence(db, world["second"], url="https://example.org/customs-ledger-2026",
+                       source="customs_ledger")
+    db.commit()
+    first = engine.trace_frontier_candidate(db)
+    db.commit()
+    monkeypatch.setattr(engine, "TRACE_RULE_VERSION", "candidate-trace-v2")
+    second = engine.trace_frontier_candidate(db)
+    db.commit()
+    assert second["replayed"] is False
+    assert second["event_id"] != first["event_id"]
+    events = db.query(models.WorldEvent).filter_by(event_type="candidate_trace_recorded").all()
+    assert len(events) == 2
+    versions = {json.loads(event.payload)["rule_version"] for event in events}
+    assert versions == {"candidate-trace-v1", "candidate-trace-v2"}
+    # The v1 record is untouched, and the proposal was not duplicated.
+    assert db.query(models.ResearchQuestion).count() == 2
+    assert db.query(models.Experiment).count() == 1
+    assert second["created"] == first["created"]
+
+
+def test_trace_selection_is_deterministic_and_gaps_use_substrate_language(db):
+    world_graph.seed_core_types(db)
+
+    def build_path(tag, end_attributes=None):
+        start = _entity(db, "resource", f"Resource {tag}")
+        middle = _entity(db, "organization", f"Organization {tag}")
+        end = _entity(db, "need", f"Need {tag}", **(end_attributes or {}))
+        first = world_graph.create_relation(
+            db, from_entity_id=start.id, to_entity_id=middle.id,
+            relation_type="derived_from", created_by="test",
+        )
+        second = world_graph.create_relation(
+            db, from_entity_id=middle.id, to_entity_id=end.id,
+            relation_type="derived_from", created_by="test",
+        )
+        return start, middle, end, first, second
+
+    build_path("older")
+    newer = build_path("newer", end_attributes={"requires": ["verified customs price ledger"]})
+    db.commit()
+
+    candidate = engine.select_trace_candidate(db)
+    assert candidate["relation_ids"] == [newer[3].id, newer[4].id]
+    assert engine.select_trace_candidate(db) == candidate
+
+    analysis = engine.trace_candidate_path(db, candidate)
+    gaps = analysis["missing_capabilities"]
+    assert len(gaps) == 1
+    assert gaps[0]["declaration"] == "verified customs price ledger"
+    assert gaps[0]["entity_id"] == newer[2].id
+    assert "gap in Hami's recorded knowledge" in gaps[0]["statement"]
+    assert "not evidence that the capability is absent in reality" in gaps[0]["statement"]
