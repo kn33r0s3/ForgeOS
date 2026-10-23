@@ -1407,7 +1407,6 @@ def _capability_chain(
     ctx: DiscoveryContext,
     *,
     max_holders: int = 8,
-    max_findings: int = 250,
 ) -> Iterable[Finding]:
     """Compose explicit output/input declarations into bounded chain hypotheses.
 
@@ -1478,7 +1477,6 @@ def _capability_chain(
         for holders in index.values():
             holders.sort(key=lambda item: (item[0].id, item[1]))
 
-    emitted = 0
     for middle in rows:
         middle_inputs = inputs_by_entity.get(middle.id, [])
         middle_outputs = outputs_by_entity.get(middle.id, [])
@@ -1563,9 +1561,7 @@ def _capability_chain(
                                 "at what cost, and under which constraints?",
                             ),
                         )
-                        emitted += 1
-                        if emitted >= max_findings:
-                            return
+
 
 def _isolation(ctx: DiscoveryContext, *, min_connected_share: float = 0.5) -> Iterable[Finding]:
     db = ctx.db

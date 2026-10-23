@@ -18,7 +18,7 @@ export function BrandMark({
     <Link
       to="/"
       className={cn("group flex items-center gap-2.5", className)}
-      aria-label="Hami home"
+      aria-label="HAMI SYSTEMS home"
     >
       <img
         src="/hami-mark.png"
@@ -31,13 +31,23 @@ export function BrandMark({
           tone === "dark" ? "border-black bg-black" : "border-line bg-card",
         )}
       />
-      <span
-        className={cn(
-          "font-gothic text-2xl leading-none",
-          tone === "dark" ? "text-black" : "text-accent",
-        )}
-      >
-        Hami
+      <span className="flex flex-col items-start gap-0.5">
+        <span
+          className={cn(
+            "font-gothic text-2xl leading-none",
+            tone === "dark" ? "text-black" : "text-accent",
+          )}
+        >
+          Hami
+        </span>
+        <span
+          className={cn(
+            "text-[0.55rem] font-extrabold uppercase leading-none tracking-[0.2em]",
+            tone === "dark" ? "text-black" : "text-accent",
+          )}
+        >
+          SYSTEMS
+        </span>
       </span>
     </Link>
   );

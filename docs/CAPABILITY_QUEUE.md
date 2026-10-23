@@ -1,3 +1,14 @@
+## [2026-10-23 — DISCOVERY COMPOSITION PAGINATION + BRAND REGRESSION REPAIR]
+
+- **Exact-head result for prior increment** `ab76dce3db6913a800792828a073e7a5fcd13348`: backend suite **1,341 passed, 2 skipped** including both new `capability_chain` regressions; lint, build, typecheck, route smoke, evidence-triage, repository guards, and secret scan passed. Frontend tests failed on two older theme regressions, not on the new discovery method. The independent verifier fetched the exact tested SHA and passed the protected owner-cycle read, but recorded overall `passed=false` because the frontend suite count was red.
+- **Brand defect fixed in the existing seam:** `src/components/layout/brand-mark.tsx` now visibly renders the Hami blackletter wordmark with a smaller SYSTEMS line and exposes the HAMI SYSTEMS name accessibly. The existing test had caught a true mismatch between the intended Hami Systems lockup and the actual mark; this is implementation, not test relaxation.
+- **Stale test scope fixed:** `src/lib/content.test.ts` now checks `--radius-card` in the full stylesheet. The token already lives in the authoritative Tailwind `@theme` block; the previous assertion wrongly required it to be duplicated in the later palette-only `themeTokens` slice, violating the single-source design.
+- **Discovery pagination fixed:** `_capability_chain` no longer hard-stops after its first 250 emitted candidates. The existing resumable `_next_method_page` cursor already bounds each run; a method-level cap would silently make all later candidates unreachable. Popular-token suppression via `max_holders=8`, deterministic keys, basis links, HYPOTHESIZED findings, and POSSIBLE edges remain.
+- **Improvement delta:** capability + evidence quality + brand integrity — subsequent pages of distinct composition hypotheses remain discoverable, and the visible brand now matches the intended lockup. The new exact-head CI is still pending at commit time; don't call it green until all jobs complete.
+- **Next:** check full CI and independent deploy-verification for the exact new SHA. Keep verified deployment identity separate from application/test readiness; no real economic outcome or public-market validation is claimed.
+
+---
+
 ## [2026-10-23 — CAPABILITY COMPOSITION DISCOVERY, FIRST CODE INCREMENT]
 
 - **Owner correction applied:** Hami is open-domain possibility discovery and outcome coordination, not a missed-call product. The First Rupee Sprint remains one independent commercial hypothesis; it does not gate the wider system.

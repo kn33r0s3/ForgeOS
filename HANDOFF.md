@@ -1,3 +1,13 @@
+## Live resumption point — finish exact-head repair verification (2026-10-23 NPT)
+
+- Owner direction remains the high-level truth: Hami is an open-domain, Nepal-origin system that can discover and compose possible value across fields. Missed-inquiry recovery is not its identity.
+- Commit `ab76dce3db6913a800792828a073e7a5fcd13348` passed backend tests (1,341/2 skipped), build/typecheck/lint/route-smoke/evidence-triage/repository guards/secret scan; the frontend suite failed on two theme checks. The deployment verifier successfully matched the exact SHA and passed the protected owner-cycle read, but its overall verdict was false because CI test_counts were red.
+- Follow-up repairs: true visible Hami SYSTEMS lockup in existing `brand-mark.tsx`; correct the radius-token assertion to inspect the full stylesheet where it actually lives; remove the global 250-result ceiling from the paginated capability-chain generator.
+- **Current next step:** read exact-head CI job statuses for the new commit and fetch logs for any remaining failure; then inspect the matching deployment-verifier verdict. Do not start another code commit while this latest run is active unless an urgent safety/correctness defect appears.
+- No new tables, primitives, routes, branches, or ledgers; no permissions changed. No external contact, public posting, spend, or REAL economic outcome.
+
+---
+
 ## Live resumption point — open-domain capability composition (2026-10-23 NPT)
 
 Owner correction: stop shrinking Hami's identity to whichever first experiment is easiest. Hami's aim is an open-domain, evidence-led system that discovers possible value across domains, composes the capabilities and constraints needed, takes only authorized actions, and learns from outcomes. Missed-inquiry recovery remains one independent hypothesis, not a global gate.

@@ -800,3 +800,12 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Added regressions for a three-entity path, prose-only false positives, contact/address privacy, and replay idempotency.
 - Base commit's combined status showed Vercel success, but that did not establish current source test status or runtime readiness. New exact-head CI is pending and must be read before claiming success.
 - Automation reminder request for +1 second failed because the account reached its three-active-automation limit. No scheduled wake or background execution is claimed.
+
+
+## 2026-10-23 — follow-up fixes after exact-head CI diagnosis
+
+- Exact main `ab76dce3db6913a800792828a073e7a5fcd13348` CI: backend **1,341 passed, 2 skipped**; lint, build, typecheck, route smoke, evidence-triage tests, repository guards, and secret scan passed. Frontend was **272 passed, 2 failed**. Failure one: the Hami Systems mark claimed by the component and tests was missing its visible SYSTEMS line. Failure two: a stale test searched for the Tailwind radius token only inside a later CSS slice even though it exists in the authoritative `@theme` block. The independent verifier matched the exact deployed SHA and read the owner cycle, but records overall failure because frontend tests were red.
+- Fixed the actual UI seam: visible Hami / SYSTEMS lockup plus accessible `HAMI SYSTEMS home` label.
+- Fixed the test to assert the radius in the full stylesheet, not require a duplicate declaration in `:root`.
+- Removed the capability-chain generator's permanent first-250 ceiling; each method run remains bounded by the existing cursor page and popular-token guard, and later valid chains can now be reached.
+- Exact-head CI and deployment-verification for the follow-up commit remain the verification boundary. No live customer outcomes are asserted.

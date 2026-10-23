@@ -163,7 +163,8 @@ describe("Hami public content", () => {
     assert.match(themeTokens, /--foreground:\s*#f4efe6;/);
     assert.match(themeTokens, /--primary:\s*#f2a33a;/);
     assert.match(themeTokens, /--secondary:\s*#262019;/);
-    assert.match(themeTokens, /--radius-card:\s*0\.375rem;/);
+    // Tailwind's radius token lives in @theme, before this palette-only slice.
+    assert.match(styles, /--radius-card:\s*0\.375rem;/);
     assert.equal((styles.match(/^\s*:root\s*\{/gm) ?? []).length, 1, "keep one authoritative token block");
     assert.equal((styles.match(/^\s*\.masthead\s*\{/gm) ?? []).length, 1, "keep one authoritative masthead block");
     assert.equal((styles.match(/@media \(prefers-reduced-motion: reduce\)/g) ?? []).length, 1, "keep one reduced-motion rule");

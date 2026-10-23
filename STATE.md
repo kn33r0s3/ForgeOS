@@ -1,3 +1,13 @@
+## Live state — CI diagnosis and two repairs (2026-10-23 NPT)
+
+- Previous source commit `ab76dce3db6913a800792828a073e7a5fcd13348`: backend 1,341 passed / 2 skipped; build, typecheck, lint, route smoke, evidence-triage, repository guards, and secret scan passed. Frontend had two failures in `src/lib/content.test.ts`; deployment verification read the exact SHA and owner cycle but records its verdict false because the frontend check was red.
+- Fixed the actual brand mismatch in `src/components/layout/brand-mark.tsx`: visible Hami / SYSTEMS lockup and accessible HAMI SYSTEMS name. Fixed the radius-token assertion to check the full stylesheet because the token lives in the Tailwind `@theme` block. No palette duplication or weakening of visual assertions.
+- Removed the discovery method's permanent first-250 ceiling: each invocation remains bounded by the existing resumable cursor page and popular-token guard, while later valid chains can now be reached.
+- **Current verification:** the follow-up commit's exact-head CI, deployment verification, and secret scan must be checked. The last run was red only on the two frontend tests and those are now specifically repaired; do not infer they are green until rerun.
+- No real-world contact, publishing, spend, participant, value or revenue outcome occurred. Discovery candidates remain hypotheses, not confirmed economic connections.
+
+---
+
 ## Live state — capability composition discovery increment (2026-10-23 NPT)
 
 - Canonical base before this increment: `1e34878f1e4d76b50d015b80c78246c2891e903a`; source and tests are being committed directly to `main` under the single-branch rule.
