@@ -1,4 +1,13 @@
-## Latest resumption point — 2026-10-22
+## Latest resumption point — 2026-10-23
+
+## 2026-10-23 — First Rupee mission: items 1–5 built, approval queue ready
+
+- **New (additive, no architecture):** `/prototype/inbox` gains a verified-commitment log on the existing seam (`src/lib/prototype-inbox.ts` + route section; commit `cdff2eed`). One entry per commitment stage (inquiry, order, payment, delivery, outcome) with evidence reference and seller-consent flag. Invariant enforced in code and tests: VERIFIED requires evidence + consent; REPORTED and VERIFIED rupees are never merged; a recovered sale counts only when verified. 10 new tests (21 in the file, all passing).
+- **Docs:** `docs/first-rupee/STEP0_REALITY_AUDIT.md` (contradictions, REAL/TEST/MOCK/HYPOTHESIS labels), `docs/first-rupee/WEDGE_RANKING.md` (D1–D100 clusters scored with evidence classes; thesis survives narrowed — the wedge is human reply labor paid only on recovery, the inbox is the log; kill criteria set), `docs/first-rupee/SELLER_LIST_PUBLIC.md` (30 public social-seller pages, signal data only, no contact details copied), `docs/first-rupee/SELLER_CONTACTS_SEPARATE.md` (deliberately empty), `docs/first-rupee/FIRST_CONTACT_DRAFTS.md` (EN + NE drafts per seller, DRAFTS ONLY banner), `docs/FIRST_RUPEE_SCOREBOARD.md` (honest zeros + the owner approval queue).
+- **Contradiction flagged for owner, not silently fixed:** the live prototype copy asserts "Hami takes a cut of recovered sales only" while `docs/FIRST_RUPEE_SPRINT.md` records outcome pricing as unapproved pending the D72 legal review. Queued as approval item 7.
+- **State unchanged where it matters:** zero real seller conversations, zero verified transactions, revenue ₨0 REPORTED / ₨0 VERIFIED, intake untouched, no message sent to anyone, no payment code built, production maintenance gate untouched. The 14-day clock starts at the first owner-sent contact; everything now waits on the scoreboard's approval queue (seller selection, exact message, offer terms, D72 counsel, payment collection method, real-outcome definition).
+
+## Previous resumption point — 2026-10-22
 
 ## 2026-10-22 — D99–D100 projection repair and D93 source-access review
 
