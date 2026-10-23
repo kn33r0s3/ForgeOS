@@ -15,6 +15,7 @@ rather than fabricating success.
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any, Optional
 
 from sqlalchemy.orm import Session
@@ -22,6 +23,8 @@ from sqlalchemy.orm import Session
 from app import models
 from app.models import utcnow
 from app.services import autonomy_engine, decision_rights
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -639,6 +642,49 @@ def start_and_execute_action(db: Session, action_id: int) -> Optional[models.Act
     return action
 
 
+def propagate_verified_learning_for_outcome(db: Session, outcome_id: int) -> None:
+    """Apply the existing evidence-gated learning loop after an Outcome is committed.
+
+    The helper is intentionally narrow: only REAL + REAL-source + VERIFIED
+    outcomes can reach apply_learning_to_system(). Reported, test, mock,
+    sandbox, disputed, and hypothetical records remain history only.
+    Failures are logged without turning an already-committed payment/outcome
+    into an apparent write failure; an idempotent replay can retry this step.
+    """
+    from app import evidence_source
+    from app.services import learning_engine
+
+    outcome = db.get(models.Outcome, outcome_id)
+    if (
+        outcome is None
+        or outcome.data_scope != "REAL"
+        or not evidence_source.is_real(outcome.source_kind)
+        or outcome.verification_state != "VERIFIED"
+    ):
+        return
+
+    events = (
+        db.query(models.LearningEvent)
+        .filter_by(
+            outcome_id=outcome.id,
+            data_scope="REAL",
+            source_kind=evidence_source.REAL,
+        )
+        .order_by(models.LearningEvent.id.asc())
+        .all()
+    )
+    for event in events:
+        try:
+            learning_engine.apply_learning_to_system(db, event)
+        except Exception:
+            db.rollback()
+            logger.exception(
+                "Verified outcome learning propagation failed; outcome_id=%s learning_event_id=%s",
+                outcome.id,
+                event.id,
+            )
+
+
 def record_outcome(
     db: Session,
     *,
@@ -706,6 +752,8 @@ def record_outcome(
         if existing:
             if (existing.outcome_type, existing.product_id, existing.experiment_id, existing.actual_value) != (outcome_type, product_id, experiment_id, actual_value):
                 raise ValueError("Conflicting idempotency key")
+            if commit:
+                propagate_verified_learning_for_outcome(db, existing.id)
             return existing
     try:
         outcome = models.Outcome(action_id=action_id, experiment_id=experiment_id,
@@ -724,8 +772,12 @@ def record_outcome(
             event = models.LearningEvent(product_id=product_id, outcome_id=outcome.id,
                 opportunity_id=product.opportunity_id,
                 prediction=product.hypothesis or product.offer,
-                actual=f"{outcome_type}: {actual_value} {unit or ''}. {qualitative_result or ''}",
-                lesson=f"[{data_scope}] Recorded {outcome_type} from outcome #{outcome.id}. Compare this reported result with the offer; one event does not prove market demand.",
+                actual=f"{outcome_type}: {actual_value} {unit or ''}. {qualitative_result or ''} [{source_kind}/{verification_state}]",
+                lesson=(
+                    f"[{data_scope}/{source_kind}/{verification_state}] "
+                    f"Recorded {outcome_type} from outcome #{outcome.id}. "
+                    "Compare this observation with the prediction; one event does not prove market demand."
+                ),
                 error_type="confirmed" if success else None, data_scope=data_scope,
                 source_kind=outcome.source_kind,
                 belief_update_applied=False)
@@ -734,6 +786,7 @@ def record_outcome(
             lessons_engine.consolidate_learning_event(db, event, commit=False)
         if commit:
             db.commit()
+            propagate_verified_learning_for_outcome(db, outcome.id)
         return outcome
     except Exception:
         db.rollback()
