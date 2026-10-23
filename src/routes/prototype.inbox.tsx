@@ -4,7 +4,16 @@ import { FlaskConical, Plus, Timer, Trash2 } from "lucide-react";
 import { Container } from "@/components/layout/container";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
-import { isInquiry, parseOrderValue, type Inquiry, type Outcome } from "@/lib/prototype-inbox";
+import {
+  isCommitmentEntry,
+  isInquiry,
+  parseOrderValue,
+  summarizeCommitments,
+  type CommitmentEntry,
+  type CommitmentStage,
+  type Inquiry,
+  type Outcome,
+} from "@/lib/prototype-inbox";
 
 export const Route = createFileRoute("/prototype/inbox")({
   component: InboxPrototype,
@@ -12,6 +21,7 @@ export const Route = createFileRoute("/prototype/inbox")({
 });
 
 const STORAGE_KEY = "hami-prototype-inbox-v1";
+const COMMITMENT_STORAGE_KEY = "hami-prototype-commitments-v1";
 
 function load(): Inquiry[] {
   try {
@@ -23,6 +33,19 @@ function load(): Inquiry[] {
     return [];
   }
 }
+
+function loadCommitments(): CommitmentEntry[] {
+  try {
+    const raw = localStorage.getItem(COMMITMENT_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(isCommitmentEntry) : [];
+  } catch {
+    return [];
+  }
+}
+
+const COMMITMENT_STAGES: CommitmentStage[] = ["inquiry", "order", "payment", "delivery", "outcome"];
 
 function fmtTime(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -91,6 +114,70 @@ function InboxPrototype() {
   const clearAll = () => {
     if (window.confirm("Clear all prototype inquiries?")) setItems([]);
   };
+
+  const [entries, setEntries] = useState<CommitmentEntry[]>([]);
+  const [cSellerRef, setCSellerRef] = useState("");
+  const [cStage, setCStage] = useState<CommitmentStage>("inquiry");
+  const [cAmount, setCAmount] = useState("");
+  const [cEvidenceRef, setCEvidenceRef] = useState("");
+  const [cConsent, setCConsent] = useState(false);
+  const [cVerified, setCVerified] = useState(false);
+  const [cRecovered, setCRecovered] = useState("");
+  const [cNote, setCNote] = useState("");
+  const [cError, setCError] = useState("");
+
+  useEffect(() => {
+    setEntries(loadCommitments());
+  }, []);
+
+  useEffect(() => {
+    if (hydrated) {
+      try {
+        localStorage.setItem(COMMITMENT_STORAGE_KEY, JSON.stringify(entries));
+      } catch {
+        /* prototype: storage failure is not fatal */
+      }
+    }
+  }, [entries, hydrated]);
+
+  const addCommitment = () => {
+    if (!cSellerRef.trim()) {
+      setCError("A pseudonymous seller reference is required (e.g. seller-01) — never a name or phone number.");
+      return;
+    }
+    if (cVerified && !cEvidenceRef.trim()) {
+      setCError("VERIFIED requires an evidence reference. Without one, the entry stays REPORTED.");
+      return;
+    }
+    if (cVerified && !cConsent) {
+      setCError("VERIFIED requires the seller's consent to keep this record.");
+      return;
+    }
+    const now = Date.now();
+    const entry: CommitmentEntry = {
+      id: `${now}-${Math.random().toString(36).slice(2, 7)}`,
+      sellerRef: cSellerRef.trim(),
+      stage: cStage,
+      at: now,
+      amount: cAmount.trim() ? parseOrderValue(cAmount) : null,
+      verification: cVerified ? "verified" : "reported",
+      evidenceRef: cEvidenceRef.trim(),
+      sellerConsent: cConsent,
+      recovered: cStage === "outcome" && cRecovered ? cRecovered === "yes" : null,
+      note: cNote.trim(),
+    };
+    setEntries((prev) => [entry, ...prev]);
+    setCError("");
+    setCAmount("");
+    setCEvidenceRef("");
+    setCNote("");
+    setCRecovered("");
+  };
+
+  const removeCommitment = (id: string) =>
+    setEntries((prev) => prev.filter((e) => e.id !== id));
+
+  const summary = summarizeCommitments(entries);
 
   const replied = items.filter((i) => i.replyAt !== null);
   const avgLatency =
@@ -240,6 +327,163 @@ function InboxPrototype() {
               </div>
             </article>
           ))}
+        </section>
+
+        <section aria-label="Verified-commitment log" className="mt-12">
+          <h2 className="font-display text-lg text-ink">Verified-commitment log</h2>
+          <p className="mt-1 text-sm leading-6 text-muted">
+            One entry per stage of a commitment — inquiry, order, payment,
+            delivery, outcome — recorded with the seller&rsquo;s consent.
+            Money starts as <strong className="text-ink">REPORTED</strong> and
+            only counts as <strong className="text-ink">VERIFIED</strong> when
+            an evidence reference exists and the seller consented. Use a
+            pseudonymous reference (seller-01), never a name or phone number.
+            Starts empty: no real sprint week has run yet.
+          </p>
+
+          <div className="mb-6 mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { label: "Inquiries logged", value: String(summary.inquiries) },
+              { label: "Orders logged", value: String(summary.orders) },
+              { label: "Recovered sales (verified)", value: String(summary.recoveredSales) },
+              {
+                label: "Rupees reported / verified",
+                value: `₨${summary.rupeesReported.toLocaleString()} / ₨${summary.rupeesVerified.toLocaleString()}`,
+              },
+            ].map((s) => (
+              <div key={s.label} className="rounded-xl border border-line bg-surface p-4">
+                <p className="text-xs font-medium uppercase tracking-wider text-muted">{s.label}</p>
+                <p className="mt-1 font-display text-2xl text-ink">{s.value}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-xl border border-line bg-surface p-5">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <input
+                value={cSellerRef}
+                onChange={(e) => setCSellerRef(e.target.value)}
+                placeholder="Seller reference — e.g. seller-01"
+                aria-label="Seller reference"
+                className="rounded-lg border border-line bg-background px-3 py-2 text-sm text-ink placeholder:text-muted/60"
+              />
+              <select
+                value={cStage}
+                onChange={(e) => setCStage(e.target.value as CommitmentStage)}
+                aria-label="Commitment stage"
+                className="rounded-lg border border-line bg-background px-3 py-2 text-sm text-ink"
+              >
+                {COMMITMENT_STAGES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+              <input
+                value={cAmount}
+                onChange={(e) => setCAmount(e.target.value)}
+                placeholder="Amount in ₨ (payment stage)"
+                aria-label="Amount in rupees"
+                className="rounded-lg border border-line bg-background px-3 py-2 text-sm text-ink placeholder:text-muted/60"
+              />
+              <input
+                value={cEvidenceRef}
+                onChange={(e) => setCEvidenceRef(e.target.value)}
+                placeholder="Evidence reference — e.g. owner-note-2026-10-24"
+                aria-label="Evidence reference"
+                className="rounded-lg border border-line bg-background px-3 py-2 text-sm text-ink placeholder:text-muted/60"
+              />
+              <input
+                value={cNote}
+                onChange={(e) => setCNote(e.target.value)}
+                placeholder="Note (de-identified, one line)"
+                aria-label="Note"
+                className="rounded-lg border border-line bg-background px-3 py-2 text-sm text-ink placeholder:text-muted/60 sm:col-span-2"
+              />
+              {cStage === "outcome" && (
+                <select
+                  value={cRecovered}
+                  onChange={(e) => setCRecovered(e.target.value)}
+                  aria-label="Recovered?"
+                  className="rounded-lg border border-line bg-background px-3 py-2 text-sm text-ink"
+                >
+                  <option value="">Recovered? — unset</option>
+                  <option value="yes">Recovered — yes</option>
+                  <option value="no">Recovered — no</option>
+                </select>
+              )}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-muted">
+              <label className="inline-flex items-center gap-2">
+                <input type="checkbox" checked={cConsent} onChange={(e) => setCConsent(e.target.checked)} />
+                Seller consented to this record
+              </label>
+              <label className="inline-flex items-center gap-2">
+                <input type="checkbox" checked={cVerified} onChange={(e) => setCVerified(e.target.checked)} />
+                Mark VERIFIED (needs evidence + consent)
+              </label>
+              <Button onClick={addCommitment} className="ml-auto">
+                <Plus className="size-4" aria-hidden="true" /> Log stage
+              </Button>
+            </div>
+            {cError && (
+              <p role="alert" className="mt-3 text-sm text-amber-300">
+                {cError}
+              </p>
+            )}
+          </div>
+
+          <div className="mt-4 grid gap-3">
+            {entries.length === 0 && (
+              <div className="rounded-xl border border-dashed border-line p-8 text-center">
+                <p className="text-sm font-semibold text-ink">No commitments logged yet</p>
+                <p className="mt-1 text-sm text-muted">
+                  The honest empty state — entries appear only when a real,
+                  consented sprint week produces them.
+                </p>
+              </div>
+            )}
+            {entries.map((e) => (
+              <article key={e.id} className="rounded-xl border border-line bg-surface p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-bold text-ink">{e.sellerRef}</span>
+                  <span className="rounded-full border border-line px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                    {e.stage}
+                  </span>
+                  <span
+                    className={`rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-wider ${
+                      e.verification === "verified"
+                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+                        : "border-line text-muted"
+                    }`}
+                  >
+                    {e.verification}
+                  </span>
+                  {e.amount !== null && (
+                    <span className="text-sm text-ink">₨{e.amount.toLocaleString()}</span>
+                  )}
+                  {e.stage === "outcome" && e.recovered !== null && (
+                    <span className="text-xs text-muted">
+                      {e.recovered ? "recovered" : "not recovered"}
+                    </span>
+                  )}
+                  <span className="text-xs text-muted">{fmtTime(e.at)}</span>
+                  <button
+                    onClick={() => removeCommitment(e.id)}
+                    aria-label="Remove commitment entry"
+                    className="ml-auto rounded p-1 text-muted hover:text-ink"
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
+                {e.note && <p className="mt-1 text-sm text-muted">{e.note}</p>}
+                <p className="mt-1 text-xs text-muted">
+                  {e.sellerConsent ? "Seller consented" : "No consent recorded"}
+                  {e.evidenceRef ? ` · Evidence: ${e.evidenceRef}` : " · No evidence reference"}
+                </p>
+              </article>
+            ))}
+          </div>
         </section>
 
         {items.length > 0 && (
