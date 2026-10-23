@@ -1154,15 +1154,27 @@ def test_global_frontier_surfaces_only_explicit_cross_type_connections_read_only
         db, from_entity_id=coordinator.id, to_entity_id=need.id,
         relation_type="enables", truth_state="possible", created_by="test",
     )
+    linked_evidence = world_graph.create_evidence(
+        db,
+        subject_kind="relation",
+        subject_id=first_link.id,
+        claim="Fixture evidence is associated with the first test relation only.",
+        support_level="hypothesized",
+        source="test-fixture",
+        provenance={"fixture_only": True},
+        idempotency_key=f"frontier-test-relation-evidence:{first_link.id}",
+    )
     db.flush()
     before = (db.query(models.SubstrateEntity).count(),
               db.query(models.WorldRelation).count(),
+              db.query(models.Evidence).count(),
               db.query(models.WorldEvent).count())
 
     frontier = engine.build_global_frontier(db, limit=200)
 
     after = (db.query(models.SubstrateEntity).count(),
              db.query(models.WorldRelation).count(),
+             db.query(models.Evidence).count(),
              db.query(models.WorldEvent).count())
     connections = [item for item in frontier["items"] if item["record_type"] == "recorded_connection"]
     by_id = {item["relation_id"]: item for item in connections}
@@ -1182,7 +1194,11 @@ def test_global_frontier_surfaces_only_explicit_cross_type_connections_read_only
     )
     assert path_item["epistemic_state"] == "hypothesized"
     assert [entry["id"] for entry in path_item["path_relations"]] == [first_link.id, second_link.id]
-    assert len(path_item["source_refs"]) == 5
+    assert [entry["linked_evidence_count"] for entry in path_item["path_relations"]] == [1, 0]
+    assert path_item["path_relations"][0]["evidence_ids"] == [linked_evidence.id]
+    assert {"kind": "evidence", "id": linked_evidence.id} in path_item["source_refs"]
+    assert "No Evidence record is directly linked" in path_item["next_step"]
+    assert "does not prove evidence is absent elsewhere" in path_item["next_step"]
     assert "do not treat the path as an offer or authorization" in path_item["next_step"]
 
 
@@ -1214,3 +1230,41 @@ def test_capability_chain_cursor_reaches_candidates_after_first_250(db):
 
     # 6 bounded runs × 50 findings each crosses the old 250-result ceiling.
     assert len(observed_fingerprints) == 300
+
+
+def test_global_frontier_prioritizes_recent_paths_when_path_list_is_bounded(db):
+    world_graph.seed_core_types(db)
+    paths = []
+    for index in range(21):
+        source = world_graph.create_entity(
+            db, entity_type="resource", display_name=f"Recent-path source {index}",
+            attributes={"domain": "resource"}, created_by="test",
+        )
+        middle = world_graph.create_entity(
+            db, entity_type="organization", display_name=f"Recent-path bridge {index}",
+            attributes={"domain": "coordination"}, created_by="test",
+        )
+        target = world_graph.create_entity(
+            db, entity_type="need", display_name=f"Recent-path target {index}",
+            attributes={"domain": "production"}, created_by="test",
+        )
+        world_graph.create_relation(
+            db, from_entity_id=source.id, to_entity_id=middle.id,
+            relation_type="enables", truth_state="hypothesized", created_by="test",
+        )
+        world_graph.create_relation(
+            db, from_entity_id=middle.id, to_entity_id=target.id,
+            relation_type="enables", truth_state="hypothesized", created_by="test",
+        )
+        paths.append((source.id, middle.id, target.id))
+    db.commit()
+
+    frontier = engine.build_global_frontier(db, limit=50)
+    surfaced = [item for item in frontier["items"] if item["record_type"] == "possibility_path"]
+    surfaced_entity_paths = [
+        tuple(entity["id"] for entity in item["path_entities"])
+        for item in surfaced
+    ]
+    assert len(surfaced) == 20
+    assert paths[-1] in surfaced_entity_paths
+    assert paths[0] not in surfaced_entity_paths

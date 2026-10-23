@@ -320,7 +320,13 @@ type GlobalFrontierItem = {
   domain_hints?: { from: string | null; to: string | null };
   strength?: number | null;
   path_entities?: Array<{ id: number; type: string; name: string }>;
-  path_relations?: Array<{ id: number; type: string; state: string }>;
+  path_relations?: Array<{
+    id: number;
+    type: string;
+    state: string;
+    evidence_ids: number[];
+    linked_evidence_count: number;
+  }>;
 };
 
 type GlobalFrontierView = {
@@ -2100,7 +2106,16 @@ function OwnerConsolePage() {
                                       <span className="font-semibold">{entity.name}</span>
                                       <span className="text-xs text-muted"> · {entity.type} #{entity.id}</span>
                                       {index < item.path_relations!.length ? (
-                                        <p className="text-xs text-muted">— {item.path_relations![index].type} ({item.path_relations![index].state}) →</p>
+                                        <div className="text-xs text-muted">
+                                          <p>— {item.path_relations![index].type} ({item.path_relations![index].state}) →</p>
+                                          <p>
+                                            Linked evidence: {item.path_relations![index].linked_evidence_count}{" "}
+                                            {item.path_relations![index].linked_evidence_count === 1 ? "record" : "records"}
+                                            {item.path_relations![index].evidence_ids.length > 0
+                                              ? ` · #${item.path_relations![index].evidence_ids.join(", #")}`
+                                              : " · none linked to this relation"}
+                                          </p>
+                                        </div>
                                       ) : null}
                                     </li>
                                   ))}

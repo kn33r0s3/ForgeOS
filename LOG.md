@@ -828,3 +828,12 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - **Improvement delta:** capability + evidence quality — the shared owner frontier now exposes explicit cross-type connections and short compositional paths while preserving provenance and uncertainty. The path-to-outcome loop remains incomplete: missing-capability identification, bounded test-plan composition, authorized action, and exact verified Outcome/LearningEvent propagation still need integration through existing seams.
 - **Next:** check exact-head CI and deployment; fix any failure based on evidence. Then extend the existing path representation to name missing capabilities and propose a falsifiable, cost-bounded test using the existing capability/action/Outcome lifecycle. No external contact, public post, spend, payment, or REAL economic outcome occurred.
 
+
+
+## 2026-10-23 — evidence-linked, recency-aware possibility paths
+
+- Resumed after exact-head base 8861aa0d4874fbc9d6e21518fd935c33c9b4b39c passed CI 9/9, secrets scan, and independent deployment verification.
+- Strengthened existing build_global_frontier: each two-edge possibility path now includes linked Evidence IDs/counts; explicitly projected legacy evidence-relation references are included and duplicate evidence IDs are collapsed. Paths missing a direct evidence link state that limitation precisely rather than implying evidence does not exist.
+- Changed bounded relation/path selection to newest-first so the 20-path view is not permanently monopolized by low-ID or old records.
+- Added regressions for linked-evidence attribution, no-write behavior, and recent-path visibility; the owner view now shows evidence counts and IDs per edge.
+- Verification boundary: exact-head CI/deploy/secret results for this new commit are pending. Vercel runtime access could not be independently read through the connected tool (403). No external action, message, publication, spend, or REAL economic outcome occurred.

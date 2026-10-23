@@ -1,3 +1,16 @@
+## Live resumption point — evidence-linked possibility paths (2026-10-23 NPT)
+
+- Base main SHA: 8861aa0d4874fbc9d6e21518fd935c33c9b4b39c. Its exact-head ForgeOS CI, secrets scan, and independent deployment verification passed (CI run https://github.com/kn33r0s3/ForgeOS/actions/runs/39992699610, secrets https://github.com/kn33r0s3/ForgeOS/actions/runs/39992699532, deploy verifier https://github.com/kn33r0s3/ForgeOS/actions/runs/39992699549).
+- The existing read-only global frontier now makes its two-edge possibility paths auditable: each link lists attached Evidence IDs, and each linked evidence row is included in path source references. Both canonical relation-subject Evidence links and explicit legacy EvidenceRelationship substrate-relation projections are considered; duplicate IDs are collapsed.
+- A link with zero linked Evidence records is labeled as unlinked in the current substrate only. This does not establish that evidence is absent elsewhere and never automatically changes the relation's truth state.
+- The bounded first page prioritizes the latest recorded relation paths. Regression coverage protects evidence trace, read-only behavior, and newest-path visibility.
+- The path still remains HYPOTHESIZED. Missing capability/constraint identification is not auto-completed, no experiment or action is created, and no external contact, public publishing, spend, or REAL outcome occurred.
+- Public production alias runtime inspection remains blocked by the current Vercel connector's 403 project/team authorization; deployment-verification success is not a generic health-check result.
+- One-second follow-up automation remains blocked by the three-active-task limit. No timed wake or background execution is claimed.
+- Next: verify exact-head CI for this evidence-linked path update. If green, trace one concrete candidate from linked source evidence through missing-capability analysis to a bounded, falsifiable test proposal using existing ResearchQuestion/Experiment/Action/Outcome seams. Do not create or execute an external action without existing authorization.
+
+---
+
 ## Live resumption point — possibility-path composition and exact-head verification (2026-10-23 NPT)
 
 - The owner’s direction is open-domain: Hami should discover and compose possible value across fields; missed inquiries are one experiment, not the system’s identity.

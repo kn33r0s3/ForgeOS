@@ -799,10 +799,32 @@ def build_global_frontier(db: Session, *, limit: int = 50) -> dict[str, Any]:
     relations = (
         db.query(models.WorldRelation)
         .filter(models.WorldRelation.truth_state.in_(("possible", "hypothesized", "tested", "supported", "unknown")))
-        .order_by(models.WorldRelation.id.asc())
+        # Prefer recent relations in a bounded projection so old paths cannot
+        # permanently monopolize the owner's first page.
+        .order_by(models.WorldRelation.id.desc())
         .limit(scan_limit)
         .all()
     )
+    # Follow explicit evidence links only. A zero count means there is no direct
+    # link in this substrate, not that evidence does not exist elsewhere.
+    relation_evidence_ids: dict[int, set[int]] = defaultdict(set)
+    relation_ids = [relation.id for relation in relations]
+    if relation_ids:
+        for relation_id, evidence_id in db.query(
+            models.Evidence.subject_id, models.Evidence.id
+        ).filter(
+            models.Evidence.subject_kind == "relation",
+            models.Evidence.subject_id.in_(relation_ids),
+        ).all():
+            relation_evidence_ids[int(relation_id)].add(int(evidence_id))
+        for relation_id, evidence_id in db.query(
+            models.EvidenceRelationship.substrate_relation_id,
+            models.EvidenceRelationship.evidence_id,
+        ).filter(
+            models.EvidenceRelationship.substrate_relation_id.in_(relation_ids)
+        ).all():
+            if relation_id is not None:
+                relation_evidence_ids[int(relation_id)].add(int(evidence_id))
     scan_counts["recorded_connections"] = len(relations)
     if len(relations) == scan_limit:
         scan_limited.append("recorded_connections")
@@ -866,16 +888,28 @@ def build_global_frontier(db: Session, *, limit: int = 50) -> dict[str, Any]:
         if relation.direction == "bidirectional":
             adjacency[right.id].append((left.id, relation))
 
+    # Bounded first-page selection must not be biased toward low IDs/old edges.
+    for edges in adjacency.values():
+        edges.sort(key=lambda pair: (pair[1].id, pair[0]), reverse=True)
+    start_ids = sorted(
+        adjacency,
+        key=lambda entity_id: (
+            max((relation.id for _, relation in adjacency[entity_id]), default=0),
+            entity_id,
+        ),
+        reverse=True,
+    )
+
     max_paths = min(20, max(1, limit))
     path_items: list[dict[str, Any]] = []
     seen_paths: set[tuple[int, int, int, int, int]] = set()
     path_scan_limited = False
-    for start_id in sorted(adjacency):
+    for start_id in start_ids:
         start = path_entities[start_id]
-        for middle_id, first_relation in sorted(adjacency[start_id], key=lambda pair: (pair[0], pair[1].id)):
+        for middle_id, first_relation in adjacency[start_id]:
             if middle_id == start_id:
                 continue
-            for end_id, second_relation in sorted(adjacency.get(middle_id, []), key=lambda pair: (pair[0], pair[1].id)):
+            for end_id, second_relation in adjacency.get(middle_id, []):
                 if end_id in {start_id, middle_id} or first_relation.id == second_relation.id:
                     continue
                 end = path_entities.get(end_id)
@@ -889,6 +923,48 @@ def build_global_frontier(db: Session, *, limit: int = 50) -> dict[str, Any]:
                 if len(path_items) >= max_paths:
                     path_scan_limited = True
                     break
+                first_evidence_ids = sorted(relation_evidence_ids.get(first_relation.id, set()))
+                second_evidence_ids = sorted(relation_evidence_ids.get(second_relation.id, set()))
+                missing_evidence_relations = [
+                    relation.id
+                    for relation, evidence_ids in (
+                        (first_relation, first_evidence_ids),
+                        (second_relation, second_evidence_ids),
+                    )
+                    if not evidence_ids
+                ]
+                if missing_evidence_relations:
+                    missing_labels = ", ".join(f"#{relation_id}" for relation_id in missing_evidence_relations)
+                    path_next_step = (
+                        f"No Evidence record is directly linked to relation(s) {missing_labels} in the current "
+                        "substrate; this does not prove evidence is absent elsewhere. Inspect both links' "
+                        "provenance and contradictions, identify missing capabilities or constraints, and define "
+                        "a falsifiable, cost-bounded test before any authorized action; do not treat the path "
+                        "as an offer or authorization."
+                    )
+                else:
+                    path_next_step = (
+                        "Both relations have linked Evidence records, but linkage alone does not establish source "
+                        "independence or support for the exact links. Inspect provenance and contradictions, "
+                        "identify missing capabilities or constraints, and define a falsifiable, cost-bounded test "
+                        "before any authorized action; do not treat the path as an offer or authorization."
+                    )
+                raw_path_refs = [
+                    {"kind": "entity", "id": start.id},
+                    {"kind": "relation", "id": first_relation.id},
+                    *[{"kind": "evidence", "id": evidence_id} for evidence_id in first_evidence_ids],
+                    {"kind": "entity", "id": middle.id},
+                    {"kind": "relation", "id": second_relation.id},
+                    *[{"kind": "evidence", "id": evidence_id} for evidence_id in second_evidence_ids],
+                    {"kind": "entity", "id": end.id},
+                ]
+                path_source_refs = []
+                seen_path_refs = set()
+                for ref in raw_path_refs:
+                    ref_key = (ref["kind"], ref["id"])
+                    if ref_key not in seen_path_refs:
+                        seen_path_refs.add(ref_key)
+                        path_source_refs.append(ref)
                 path_items.append({
                     "frontier_id": f"path:{first_relation.id}:{second_relation.id}:{start_id}:{end_id}",
                     "record_type": "possibility_path",
@@ -904,27 +980,29 @@ def build_global_frontier(db: Session, *, limit: int = 50) -> dict[str, Any]:
                         {"kind": "relation", "id": first_relation.id},
                         {"kind": "relation", "id": second_relation.id},
                     ],
-                    "source_refs": [
-                        {"kind": "entity", "id": start.id},
-                        {"kind": "relation", "id": first_relation.id},
-                        {"kind": "entity", "id": middle.id},
-                        {"kind": "relation", "id": second_relation.id},
-                        {"kind": "entity", "id": end.id},
-                    ],
+                    "source_refs": path_source_refs,
                     "path_entities": [
                         {"id": start.id, "type": start.entity_type, "name": start.display_name},
                         {"id": middle.id, "type": middle.entity_type, "name": middle.display_name},
                         {"id": end.id, "type": end.entity_type, "name": end.display_name},
                     ],
                     "path_relations": [
-                        {"id": first_relation.id, "type": first_relation.relation_type, "state": first_relation.truth_state},
-                        {"id": second_relation.id, "type": second_relation.relation_type, "state": second_relation.truth_state},
+                        {
+                            "id": first_relation.id,
+                            "type": first_relation.relation_type,
+                            "state": first_relation.truth_state,
+                            "evidence_ids": first_evidence_ids,
+                            "linked_evidence_count": len(first_evidence_ids),
+                        },
+                        {
+                            "id": second_relation.id,
+                            "type": second_relation.relation_type,
+                            "state": second_relation.truth_state,
+                            "evidence_ids": second_evidence_ids,
+                            "linked_evidence_count": len(second_evidence_ids),
+                        },
                     ],
-                    "next_step": (
-                        "Test whether this recorded chain enables a useful real-world outcome. "
-                        "Inspect evidence for both links, identify missing capabilities and consent, "
-                        "and do not treat the path as an offer or authorization."
-                    ),
+                    "next_step": path_next_step,
                     "created_at": stamp(second_relation.created_at),
                 })
             if path_scan_limited:

@@ -1,3 +1,14 @@
+## Live state — possibility paths expose evidence and recency (2026-10-23 NPT)
+
+- Verified base main SHA 8861aa0d4874fbc9d6e21518fd935c33c9b4b39c passed all nine ForgeOS CI jobs; secrets scan and independent deployment verification also passed.
+- Source increment adds attached Evidence IDs/counts per path relation, includes those evidence IDs in source references, counts both direct relation Evidence and explicit legacy relation projections, and orders the bounded path view newest-first.
+- Added backend regressions for evidence/source tracing, read-only behavior, and recent-path visibility. The new commit's exact-head CI has not run yet; do not infer green status from the base.
+- The path itself remains HYPOTHESIZED; no missing capability is fabricated, and no experiment execution, outreach, publication, spend, or REAL value event is initiated by this display.
+- Production runtime health inspection through the Vercel connector remains blocked by 403 project/team access; live health is UNKNOWN. No one-second automation was created because all three scheduled-task slots are occupied.
+- Next: read exact-head CI/deployment verification for this commit, then deepen the path into evidence-bound missing-capability analysis and a falsifiable bounded-test proposal.
+
+---
+
 ## Live state — open-domain possibility-path composition (2026-10-23 NPT)
 
 - Owner correction remains the governing direction: Hami is not a missed-call tool, seller-reply product, content channel, or fixed marketplace. The existing docs/HAMI_SYSTEM_MAP.md defines the open-domain value loop; this increment extends its existing discovery_engine.build_global_frontier and owner rendering rather than creating a parallel engine.

@@ -1,3 +1,13 @@
+## [2026-10-23 — EVIDENCE-LINKED POSSIBILITY PATHS]
+
+- Verified base main SHA 8861aa0d4874fbc9d6e21518fd935c33c9b4b39c: all nine CI jobs, secrets scan, and independent deployment verification passed.
+- The existing owner frontier composes two-edge paths from recorded, directionally valid relations. This increment attaches explicit evidence references to each edge when present, including legacy EvidenceRelationship substrate-relation links; per-edge evidence counts are deduplicated. A zero count describes current record linkage only, not whether evidence exists elsewhere.
+- The bounded first page now prioritizes recent relation paths instead of letting old low-ID paths monopolize the view. Tests cover evidence attribution, read-only projection, and recent-path visibility under the 20-path cap.
+- This is still a read-only proposal surface; path state remains HYPOTHESIZED. Next, trace a concrete candidate through direct source assessment, explicitly identified missing capabilities/constraints, and a falsifiable bounded test proposal using the existing ResearchQuestion/Experiment/Action/Outcome lifecycle. No new primitive, table, queue, or subsystem.
+- The new source/test/UI/continuity commit's exact-head CI and deployment verification are pending. No external contact, publication, spend, REAL participant, or value outcome occurred.
+
+---
+
 ## [2026-10-23 — CANONICAL BRAND ICON + FALLBACK RECONCILED]
 
 - Exact-head result for `1950f9047e996cb6b1a25b98e30da18b18e5ab34`: backend **1,341 passed, 2 skipped**; build, typecheck, lint, route smoke, evidence-triage, repository guards, and secret scan passed. Frontend had one remaining failure: the brand test requires `/favicon.svg`, while a separate visual regression protects the existing `/hami-mark.png` fallback.
