@@ -17,7 +17,7 @@ export function SiteFooter() {
   return (
     <footer
       className="mt-auto"
-      style={{ borderTop: "1px solid #332F27", background: "#141412" }}
+      style={{ borderTop: "1px solid #3A2E1A", background: "#15130F" }}
     >
       <div className="band-rule" aria-hidden="true" />
       <Container className="grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1.1fr_1.1fr_1fr]">
