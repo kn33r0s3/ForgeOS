@@ -1,3 +1,13 @@
+## D93 discovery queue — 2026-10-24 05:20 NPT
+
+1. Retrieve NDRRMA report #04 and, if available, #03 through a reachable authorized official PDF link; inspect each page by screenshot. Keep page date, report sequence, effective cutoff, language variant, source update, and retrieval time distinct.
+2. Verify the Ministry of Energy notice body and linked document, then resolve whether 25 Asoj versus 28 Asoj reflects original publication, later update, listing timestamp, or index drift. Until verified, do not state current hydropower restoration.
+3. Complete exact-source robots/terms/reuse/purpose/field review for NDRRMA and the Ministry of Energy. They remain NOT CLEARED and absent from the runtime registry. Do not use Setu without authorized Department of Roads credentials; no public sign-up is offered.
+4. If and only if the source-edit path becomes authorized, add a regression in existing modules for source-effective cutoff preservation through normalization, Signal/Evidence persistence, assessment, and citation. Do not retry the blocked planner helper via another tool; no new table, primitive, collector, or file.
+5. Continue D95/D96 and other open-domain discovery independently; D93 is not a gate on Hami-wide progress. No alerting, emergency advice, external contact, publication, spend, payment, intake/outbound activation, or REAL outcome is authorized by this research.
+
+---
+
 ## Operational verification resumption — 2026-10-24 05:07 NPT
 
 1. **After the natural 05:45 NPT cycle and 11:45 NPT intelligence run**, inspect authorized runtime logs or the protected owner-cycle read. Require invocation evidence tied to the scheduler plus a persisted `CycleRun`, final status and stage outcomes; the verifier's schema-valid record count of 1 is not enough to prove cron execution.

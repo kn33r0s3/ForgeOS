@@ -1,3 +1,14 @@
+## Discovery state — D93 chronology and source access (2026-10-24 05:20 NPT)
+
+- Canonical main at start: `6631c3d15cb52c2d8522841262f5c8e0a13e50cd`. No code, schema, registry, runtime, or substrate mutation was made in this pass.
+- D93 now distinguishes official NDRRMA report #01–#04 effective cutoffs (11 Oct 22:00, 12 Oct 22:00, 13 Oct 22:00, 16 Oct 10:00) from page dates and retrieval time. #04 is 60 hours after #03. The official #03/#04 PDF bodies remain unread; a bounded search did not surface #05/later, which does not prove absence.
+- Separate 12 Oct news reporting relays a 04:45 warning and 04:59 post alongside the 05:30 landslide time attributed to NDRRMA. This is a reported timeline difference, not proof of warning failure. Nepal Police and UN Nepal corroborate initial event reporting but not those warning times or current restoration. The Ministry of Energy notice is indexed as 25 Asoj on some page snippets and 28 Asoj on its notice-board listing; direct retrieval timed out. Setu terms restrict the road-data app to credentialed Department of Roads officers.
+- Code trace narrowed the temporal-provenance risk: a non-empty raw provenance object replaces metadata as top-level provenance; collector_runner adds task/clearance fields, Signal/Evidence persist that provenance, and assessment/citation omit source-effective cutoff/report sequence. This is a contract risk, not demonstrated production data loss. The source-code write path remains blocked; no workaround was used.
+- NDRRMA robots/terms and Ministry of Energy robots/terms/reuse scope remain unverified; neither source has an exact registry entry. No report body ingestion, provider transmission, contact, publishing, emergency advice, alerting, spend, payment, or REAL outcome occurred.
+
+- **Exact-head engineering verification at start:** main `6631c3d15cb52c2d8522841262f5c8e0a13e50cd`; ForgeOS CI [run 40039475549](https://github.com/kn33r0s3/ForgeOS/actions/runs/40039475549) passed all 9 jobs, standalone secrets scan [40039475530](https://github.com/kn33r0s3/ForgeOS/actions/runs/40039475530) passed, and independent deploy verifier [40039475525](https://github.com/kn33r0s3/ForgeOS/actions/runs/40039475525) passed. GitHub's Vercel commit status is success. The verifier observed exact-SHA production identity, one schema-valid protected owner-cycle record (payload suppressed), and HTTP 200 from the verification recorder; this does not prove natural cron execution, DB durability, real inference, or broad runtime health. Vercel runtime reads remain 403 and prior ordinary health probes failed at DNS before HTTP, so current health remains UNKNOWN. At 05:20 NPT the scheduled 05:45 cycle had not yet occurred; no manual invocation was made.
+---
+
 ## Operational verification snapshot — 2026-10-24 05:07 NPT
 
 - Current main observed: `0a8f88034e9683b74b971e8ca8a8d2ef86c9f531`.

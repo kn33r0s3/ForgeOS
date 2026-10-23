@@ -1,3 +1,14 @@
+## Current discovery resumption — 2026-10-24 05:20 NPT
+
+- **Canonical main at start:** `6631c3d15cb52c2d8522841262f5c8e0a13e50cd`.
+- **Exact-head engineering verification at start:** main `6631c3d15cb52c2d8522841262f5c8e0a13e50cd`; ForgeOS CI [run 40039475549](https://github.com/kn33r0s3/ForgeOS/actions/runs/40039475549) passed all 9 jobs, standalone secrets scan [40039475530](https://github.com/kn33r0s3/ForgeOS/actions/runs/40039475530) passed, and independent deploy verifier [40039475525](https://github.com/kn33r0s3/ForgeOS/actions/runs/40039475525) passed. GitHub's Vercel commit status is success. The verifier observed exact-SHA production identity, one schema-valid protected owner-cycle record (payload suppressed), and HTTP 200 from the verification recorder; this does not prove natural cron execution, DB durability, real inference, or broad runtime health. Vercel runtime reads remain 403 and prior ordinary health probes failed at DNS before HTTP, so current health remains UNKNOWN. At 05:20 NPT the scheduled 05:45 cycle had not yet occurred; no manual invocation was made.
+
+- **D93 discovery increment:** official NDRRMA page metadata confirms #04's 16 Oct 10:00 cutoff after #01–#03 cutoffs on 11–13 Oct. The #03/#04 bodies remain unread. The reported local-warning times and the Ministry of Energy page/listing date discrepancy are unresolved observations, not proof of a coordination failure or current restoration. Setu terms establish a closed audience of credentialed Department of Roads officers, not public access.
+- **Existing-seam risk:** `SourceCollector.normalize → collector_runner.execute_task → ObserverEngine.observe → _ensure_evidence → assess_source_record / _evidence_citation`. A source-declared cutoff only in nested metadata may be omitted when raw provenance is separately populated. This is a contract risk, not demonstrated production loss. No code or schema changes were made.
+- **Next:** retrieve official #03/#04 PDFs through a reachable authorized source-linked route and inspect page screenshots; review exact NDRRMA and Ministry of Energy robots/terms/reuse before collection. Do not create registry entries, ingest bodies, or claim restoration until the gate is satisfied. The portfolio-summary helper remains NOT IMPLEMENTED and must not be retried through another mutation path. Continue broad Hami discovery independently.
+
+---
+
 ## Fresh operational verification — 2026-10-24 05:07 NPT
 
 - **Verified base:** `main` = `0a8f88034e9683b74b971e8ca8a8d2ef86c9f531` (live branch ref checked twice; commit `docs: synchronize unknown projections after research update`). Required continuity, health-watch, cron and workflow files were read at this SHA.
