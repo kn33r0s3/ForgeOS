@@ -5,7 +5,7 @@
 3. **D96 exact-source readiness.** IEA report-page robots/terms and page-specific CC BY 4.0 were reviewed, but IEA is not registered in the runtime source registry. LBNL data-file licensing is explicit, but robots/terms remain incomplete; FERC rights were not reviewed. No automated collection until each exact target is registered and its fields/purpose are bounded.
 4. **Continue open-domain discovery and quality/reliability work independently.** Reuse the existing D1–D100 portfolio; do not inflate it or claim the metadata survey is deep research. The seller path remains one possible real-world outcome, not Hami's identity or a gate for unrelated progress.
 
-This current section supersedes stale verification/status assumptions below where newer direct evidence differs. It does not delete historical queue entries.
+The first research docs commit 1f3be0debdc9fe77c7c1f32b6de08ccea12f8354 failed exact-head CI because the D93/D96 map update was not yet reflected in generated projections. The corrective commit synchronizes those projections through the existing transformation; read its exact-head CI, secret scan and deployment verification before any further write. This current section supersedes stale verification/status assumptions below where newer direct evidence differs. It does not delete historical queue entries.
 
 ---
 

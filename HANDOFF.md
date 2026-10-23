@@ -1,3 +1,13 @@
+## Verification correction — generated projections synchronized (2026-10-24 NPT)
+
+- First research documentation commit: 1f3be0debdc9fe77c7c1f32b6de08ccea12f8354. Its exact-head ForgeOS CI failed only in frontend-tests and repository-guards because the authoritative D93/D96 edits in docs/UNKNOWN_MAP.md were not yet reflected in generated projections backend/app/data/unknowns.json and src/lib/unknowns.ts. Backend tests, build, typecheck, lint, route-smoke, evidence-triage and the CI secret-scan job passed. The separate secrets scan [40038374029](https://github.com/kn33r0s3/ForgeOS/actions/runs/40038374029) passed.
+- Independent deployment verifier [40038373983](https://github.com/kn33r0s3/ForgeOS/actions/runs/40038373983) recorded passed=false because TESTS_PASSED was false from the same projection-sync check. Its logs show deployment SHA match=true, owner-cycle read passed, and verification POST HTTP 200; this is not a deployment identity failure, but it is not a passing verifier result.
+- The current production deployment was READY and reported source SHA 1f3be0debdc9fe77c7c1f32b6de08ccea12f8354. This does not waive the failed exact-head CI gate.
+- Correction: the two generated projections are being synchronized from the authoritative map using the exact deterministic transformation in scripts/sync-unknowns-json.mjs. An in-memory reproduction of that transformation found 116 total map rows / 100 D-entries and changes only D93/D96 in the projections; it was not a local CLI invocation. The corrective commit's exact-head CI runs the repository's own --check and is the independent verification boundary.
+- No source-code helper was added or retried; no source-write safety restriction was bypassed. The correction touches only generated projections and existing continuity docs. Do not make another write until this corrective head's CI, secret scan and deployment verification are read directly.
+
+---
+
 ## Live resumption point — D93 bilingual report identity + D96 grid-queue source pass (2026-10-24 NPT)
 
 - **Canonical main at start:** 34c8cf9286ba8fd63d2b7358658c45c96395c146. No branch, PR, worktree, new file, source-code change, schema change, runtime registry change, or substrate mutation was made in this pass.

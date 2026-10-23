@@ -872,3 +872,12 @@ Append-only. Record what was checked, what changed, evidence, failures and the n
 - Improvement delta: knowledge + evidence quality; official #03 page metadata confirmed and bilingual duplication recognized; D96 gained independent, current queue-series context. No code/tests/schema/registry/substrate rows changed. No external contact, publication, spend, intake/outbound activation, payment or REAL outcome occurred.
 - Next: only inspect the #03/#04 PDFs through a reachable official download path; keep D93 restoration unknown and ingestion blocked pending exact-source rights/robots/terms. If source editing becomes supported, implement the bounded provenance contract change and regression coverage in the existing seam. Continue other safe Hami-wide work in parallel.
 
+
+
+## 2026-10-24 — Correct generated projections after D93/D96 map update
+
+- Exact-head CI on 1f3be0debdc9fe77c7c1f32b6de08ccea12f8354 found the expected repository invariant: docs/UNKNOWN_MAP.md is authoritative, and backend/app/data/unknowns.json plus src/lib/unknowns.ts must be synchronized. Both frontend-tests and repository-guards failed because the two projections lagged the map. Backend tests and the other CI jobs passed; secret scan passed.
+- The independent deploy verifier recorded passed=false because TESTS_PASSED=false; its logs show the deployed SHA matched, the protected owner-cycle read passed, and verification POST returned HTTP 200. Do not describe that run as a successful verifier.
+- Recomputed the two generated projections from the current authoritative map using an in-memory reproduction of scripts/sync-unknowns-json.mjs's deterministic transformation (not a local CLI invocation). The output preserves 116 total map rows / 100 D-entries and changes only D93/D96 projection records. The corrective commit contains the generated outputs plus continuity notes; no source code, schema, runtime registry, or substrate rows are changed.
+- Next verification boundary is the corrective head's own ForgeOS CI, secrets scan, and independent deployment verifier. Do not make further commits until those exact-head results are read.
+
