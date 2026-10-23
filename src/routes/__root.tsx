@@ -67,7 +67,7 @@ export const Route = createRootRoute({
           },
           { name: "robots", content: "noindex, nofollow, noarchive, nosnippet" },
           { name: "googlebot", content: "noindex, nofollow, noarchive, nosnippet" },
-          { name: "color-scheme", content: "light" },
+          { name: "color-scheme", content: "dark" },
         ],
         links: [
           { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
@@ -99,7 +99,7 @@ export const Route = createRootRoute({
         { name: "twitter:image", content: `${SITE.url}/og.jpg` },
         { name: "apple-mobile-web-app-title", content: SITE.name },
         { name: "theme-color", content: SITE.themeColor },
-        { name: "color-scheme", content: "light" },
+        { name: "color-scheme", content: "dark" },
       ],
       links: [
         { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
@@ -109,7 +109,7 @@ export const Route = createRootRoute({
         { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
         {
           rel: "stylesheet",
-          href: "https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700&family=Roboto+Mono:wght@400;500;700&family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap",
+          href: "https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700&family=Roboto+Mono:wght@400;500;700&family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=Noto+Sans+Devanagari:wght@400;600;700&family=UnifrakturCook:wght@700&display=swap",
         },
         ...(canonicalHref ? [{ rel: "canonical", href: canonicalHref }] : []),
       ],
@@ -135,7 +135,7 @@ function RootDocument() {
               <div className="absolute -left-24 -top-24 size-72 rounded-full bg-accent/10 blur-3xl" />
               <div className="absolute -bottom-28 -right-20 size-80 rounded-full bg-ink/5 blur-3xl" />
             </div>
-            <section className="relative w-full max-w-3xl border border-line bg-white/90 p-8 shadow-sm sm:p-12 lg:p-16">
+            <section className="relative w-full max-w-3xl border border-line bg-surface p-8 shadow-md sm:p-12 lg:p-16">
               <div className="flex items-center gap-3">
                 <div className="grid size-12 place-items-center border border-ink bg-ink font-display text-xl font-black text-paper">
                   H
