@@ -200,7 +200,7 @@ export function summarizeCommitments(entries: CommitmentEntry[]): CommitmentSumm
 }
 
 
-export interface SubstrateSyncResult extends CanonicalCommitmentSync {}
+export type SubstrateSyncResult = CanonicalCommitmentSync;
 
 interface SubstrateEntity {
   id: number;
