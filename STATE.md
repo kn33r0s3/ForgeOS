@@ -1,3 +1,16 @@
+## Live state — exact-base gates reconciled; D95 source pass completed (2026-10-23 NPT)
+
+- Base main at the start of this run: `88a1edfb487630f3f9a063ca32c7018e5cea1800`. Exact-head CI passed 9/9; backend **1,344 passed / 2 skipped**, frontend **274 passed / 0 failed**; secret scan passed; independent deployment verifier passed.
+- Production reported the exact tested SHA and the protected owner-cycle read returned one valid record (payload suppressed). Direct Vercel runtime inspection still returned 403; broader health and current cycle contents remain UNKNOWN.
+- The open-domain frontier now has evidence IDs/counts per composed-path edge and newest-first bounded selection. This is a verified software capability; its paths remain HYPOTHESIZED and do not prove real-world compatibility or value.
+- Portfolio metadata sweep covered all 100 unique D1–D100 rows: 96 UNKNOWN, 1 SUPPORTED, 3 HYPOTHESIZED. Only six rows have explicit URLs in the row and 35 carry date-like markers; provenance, freshness, source independence, contradictions and clearance are mostly prose, not consistent fields. No operational open ResearchQuestion records were accessible through the authorized read surface; do not infer none exist.
+- D95 source pass established documented agricultural-loss/recovery dependencies from FAO and World Bank public pages. It did **not** identify the largest avoidable farm-level loss, a specific beneficiary/decision, or Hami impact. D95 remains UNKNOWN.
+- FAO's exact appeal path is not cleared for persistent commercial reuse/provider transmission under the terms found; NDRRMA/MoEWRI/DHM exact-source clearance and/or content access remains incomplete. No ingestion occurred.
+- The prior `research_planner.py::summarize_research_portfolio` source-write block remains active and the helper remains NOT IMPLEMENTED. No alternate write path or source mutation was used.
+- Next: finish exact-source rights/access review, then reuse the existing source collector and Evidence/provenance seam only for cleared fields; preserve publication/retrieval/effective-cutoff/report-version distinctions. Keep D93's Aug Rasuwa event separate from the Oct Gorkha–Budhigandaki event. The docs-only commit produced by this run needs its own exact-head gates.
+
+---
+
 ## Live state — possibility paths expose evidence and recency (2026-10-23 NPT)
 
 - Verified base main SHA 8861aa0d4874fbc9d6e21518fd935c33c9b4b39c passed all nine ForgeOS CI jobs; secrets scan and independent deployment verification also passed.
