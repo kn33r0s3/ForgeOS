@@ -1,3 +1,15 @@
+## [2026-10-23 — RULE #1 ADOPTED: HAMI IMPROVES ITSELF (owner-set)]
+
+- **The rule (owner's words):** "like how u improved urself, u must improve hami, like u change, it should to, u are to treat it like u treat urself — put it on #1." Banked as the first standing rule in `HANDOFF.md` and as FORGEOS RULE #1 in `AGENTS.md`, ranked above every other project rule. The owner-dependency rule's intro now reads "standing autonomy rule" — its substance is unchanged.
+- **What it operationalizes:** every work cycle records its improvement delta HERE (this existing ledger — no new one) under one of four heads: knowledge (verified claim added / hypothesis cheaply killed), capability (tested rung advanced), evidence quality (provenance strengthened / wrong claim struck), autonomy (owner interventions per real outcome). A cycle with no delta under any head and no banked lesson did not improve Hami, whatever else it did.
+- **Baseline at adoption (honest):** verified real transactions = 0, so the autonomy metric is NOT MEASURABLE (never report as zero). Claims/capability counts stand as recorded in this ledger's prior entries; this entry adds no new claim.
+- **First deltas claimed under the rule (same-day, already evidenced in this repo's history):** production restored and health-verified after the maintenance era (evidence quality: deployed-state claims now checkable); the deploy verifier's secrets completed and a full verification run succeeded on head (capability: independent verification rung); the first-rupee substrate sync landed with consent hard-required and REPORTED ≠ VERIFIED preserved in code and tests (capability + evidence quality).
+- **Next:** every subsequent entry in this ledger carries an explicit "Improvement delta:" line naming its head (knowledge / capability / evidence / autonomy) or states plainly that it banked only a lesson.
+
+---
+
+---
+
 ## 2026-10-23 — public production view, original theme restoration, and verified-outcome learning
 
 - **Corrected owner direction:** the public production website should stay visible so the owner can see the live work; do not make the whole site owner-only. Current Vercel project `forge-os` reads back `ssoProtection.enabled=true`, `deploymentType="prod_deployment_urls_and_all_previews"`: production aliases can be public, while generated production deployment URLs and preview deployments remain protected. Password protection remains disabled. This public visibility is not permission to start marketing; keep promotion/release claims gated until real use supports the networked solution across intended participant groups.
@@ -9,6 +21,16 @@
 - **Learning remains evidence-bounded:** a product outcome creates an exact `LearningEvent` and a source-labelled lesson. The helper can add an idempotent note to the matching opportunity's validation plan. Belief confidence/source reliability changes still require the exact outcome relationship and directly linked high-proof third-party support/contradiction. A payment is not proof of unrelated claims; one event does not establish network-wide demand, and no model retraining or automatic weight updates are claimed.
 - **Regression:** `backend/tests/test_experiment_action_loop.py` now tests that MOCK/REPORTED outcomes do not add shared learning, an exact REAL/REAL/VERIFIED outcome does add one target-scoped note, and idempotent replay does not duplicate the note. At the last poll for the preceding HEAD, frontend tests, route smoke, build, typecheck, lint, repository guards, evidence-triage tests, and secret scan were green; backend pytest was still running. Check CI for the current exact SHA before final verification.
 - **Musa continuity:** no separate Musa conversation is visible through these connected tools. The repository is the shared durable context for this run; reconcile any new Musa decision from source or a supplied transcript rather than guessing.
+
+---
+
+## [2026-10-21 — D93 PDF BLOCKER; TEMPORAL PROVENANCE CONTRACT RISK TRACED]
+
+- Current base `ff20036a9ba57e98347cc16e73037e46e60d6307`: exact-head CI 9/9 passed; secrets scan passed; Vercel status green. Independent verifier failed after ten polls without a valid deployed SHA, so protected owner-cycle and verification-record steps were skipped. Runtime/persisted-cycle state remains UNKNOWN.
+- NDRRMA Report #04 page [468](https://ndrrma.gov.np/np/situation-report/468) states an Asoj 30 / 10:00 am cutoff (16 Oct 2026), but the PDF body could not be retrieved or inspected. Searches for #05/later reports and Gorkha-specific dated road/power/municipal restoration notices produced no matching official result in this pass; no-result is not proof of nonexistence. Gorkha DAO pages surfaced only older disaster notices/archive records. DHM River Watch extraction exposed no station readings. Current restoration and gauge status remain UNKNOWN.
+- **Existing seam risk:** `SourceCollector.normalize` returns `raw_item.provenance or metadata` and separately returns nested `metadata`. `ObserverEngine.observe` persists the top-level provenance, and `_ensure_evidence` copies it to Evidence. If a future collector puts a source-effective cutoff only in nested metadata while also supplying explicit provenance, that cutoff may not survive persistence. No actual production loss is demonstrated. `assess_source_record` currently assesses publication age versus retrieval time; `research_synthesis_engine._evidence_citation` omits publication time, effective cutoff and report sequence. Reuse existing provenance/assessment/citation seams only; no new model/table/primitive.
+- NDRRMA and DHM robots endpoints were inaccessible via the current browser tool; NDRRMA has no entry in the current source clearance registry. No source ingestion or permission change occurred. Do not use a generic government-domain approval or bypass the blocked planner helper.
+- Next: retrieve #04 through an official reachable download and inspect all pages via screenshots; complete per-source robots/terms/purpose/allowed-fields review before any ingestion. If blocked, continue other evidence-backed discovery without claiming restoration facts.
 
 ---
 ## [2026-10-20 — OFFICIAL REPORT #03 PDF VERIFIED; SOURCE-AS-OF SEMANTICS REMAIN UNWIRED]

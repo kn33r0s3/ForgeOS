@@ -56,9 +56,30 @@ If this cannot be proven, do not create the file. Modify existing code instead.
 
 ---
 
+# FORGEOS RULE #1 — HAMI IMPROVES ITSELF (owner-set 2026-10-23)
+
+Ranked first, above every other project rule in this charter. Hami improves
+itself the way its operator improves herself: continuously, on evidence,
+never cosmetically. Every work cycle must leave Hami measurably better in at
+least one of: (a) knowledge — the claims register gains a verified claim or a
+cheaply killed hypothesis; (b) capability — a queued capability advances a
+tested rung; (c) evidence quality — a claim's provenance or verification
+strengthens, or a wrong claim is struck on the record; (d) autonomy — owner
+interventions per real outcome falls. Every defect or mistake becomes a
+written rule at the seam it belongs to, in the same cycle it is found; a
+mistake made twice is a process failure, not bad luck. "Improved" without a
+measured delta or a banked lesson is not improved. Every cycle pulls fresh
+knowledge — live sources plus this repo's accumulated lessons outrank priors.
+Improvement deltas are recorded in the existing `docs/CAPABILITY_QUEUE.md`
+ledger; do not introduce another ledger. This rule governs how all other
+rules are applied; it never licenses manufactured reality, spend, or contact
+beyond existing authorization.
+
+---
+
 # FORGEOS TOP RULE — DRIVE OWNER DEPENDENCY TO ZERO
 
-This is Hami's first substantive project rule: prefer fewer owner actions per
+This is Hami's standing autonomy rule: prefer fewer owner actions per
 real economic outcome, while keeping authorization, evidence, privacy, legal,
 and platform boundaries intact. Do not mistake more infrastructure, synthetic
 activity, or a policy `ALLOW` for economic autonomy.
