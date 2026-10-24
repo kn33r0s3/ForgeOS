@@ -1,10 +1,10 @@
-## Current Hami-wide resumption — 2026-10-25 05:05 NPT
+## Current Hami-wide resumption — 2026-10-25
 
-1. Verify this grouped documentation/projection commit's own CI, secret scan and independent deployment verifier before another write.
-2. D84: retrieve and inspect Tea Board India’s 23 Sep 2026 Direction No.02/2026 PDF; compare with 20 May, 18 June and 30 June reports and current official customs/export data. Complete exact-source robots/terms/reuse review before collection. NOT CLEARED; D84 remains UNKNOWN.
-3. D93: Report #03 inspection is complete (20 Oct). Retrieve NDRRMA #04 via an authorized official PDF route, inspect all pages, and keep report date, effective cutoff, language, retrieval time and metric labels distinct. Current restoration UNKNOWN; no emergency advice/alerting.
-4. Reliability: after natural 05:45 and 11:45 NPT schedules, use authorized logs or protected owner-cycle evidence to correlate invocation, persisted CycleRun, final status and stage outcomes. No manual route invocation. DNS/browser failures are not health failures; DB durability and real inference remain separate unknowns.
-5. Capability/portfolio: if a supported source-edit path becomes available, extend the existing SourceCollector → Signal → Evidence → assessment/citation seam with existing tests. The blocked research_planner.py::summarize_research_portfolio remains NOT IMPLEMENTED. Reuse the 100-row D1–D100 survey; keep broad research, source clearance, reliability, privacy/security, integration and QA moving independently. No First Rupee/pilot gate.
+1. Verify this correction commit's own exact-head CI, secret scan and independent deployment verifier before another write.
+2. D84: the formal rule is now known from the official Directive No.02/2026. Verify actual post-June Nepal tea exports/imports from official trade statistics; distinguish domestic-use from re-export where supported. Keep D84 UNKNOWN until actual movement is grounded. Source is not cleared for automated collection/provider transmission.
+3. D93: #03 inspection complete; retrieve NDRRMA #04 through an authorized official PDF route and inspect all pages. Keep publication/update time, effective cutoff and retrieval time distinct. Restoration UNKNOWN.
+4. Reliability: after natural 05:45 and 11:45 NPT schedules, correlate authorized invocation logs with persisted CycleRun and stage outcomes. Do not manually invoke routes. Current health/DB durability/real inference remain UNKNOWN.
+5. Capability: if a supported source-edit path becomes available, extend the existing SourceCollector → Signal → Evidence → assessment/citation seam to preserve document date, index date, explicit effective time and retrieval time separately. The blocked research_planner.py::summarize_research_portfolio helper remains NOT IMPLEMENTED. Keep broad research/security/privacy/integration/QA moving independently; no First Rupee gate.
 
 ---
 
