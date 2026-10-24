@@ -444,6 +444,28 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
+## Last verified state snapshot (2026-10-24)
+
+**Update 2026-10-24 (daily freshness check, 06:23 NPT):** HEAD at `c6f69ae2`
+(documentation-only discovery work since 2026-10-23: D95 source-clearance
+determinations, D93 bilingual-report identity, generated unknown-projection
+sync). `git pull --ff-only` clean; `main` == `origin/main`. Working tree
+clean.
+
+- **Health:** haminp now answers `/api/health` with
+  `{"status":"degraded","ready":false,"ok":false,"version":"2.3.0","db":"down"}` —
+  the maintenance gate no longer intercepts; the app responds but reports
+  its database down. forge-os-ebon returns
+  `{"status":"ok","ready":true,"ok":true,"version":"2.3.0","db":"up"}`.
+  Drift since the 2026-10-23 maintenance-gate 503s; haminp health is NOT
+  ok while the second domain is healthy.
+- **Intake:** `/api/forge-bot/config` readable again (was maintenance-gated):
+  `intake_enabled: false` (unchanged).
+- **Unknowns:** 100 D-entries in `docs/UNKNOWN_MAP.md` (unchanged since
+  2026-10-23).
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold.
+
 ## Last verified state snapshot (2026-10-23)
 
 **Update 2026-10-23 (daily freshness check, 06:23 NPT):** HEAD at `c060cf07`
