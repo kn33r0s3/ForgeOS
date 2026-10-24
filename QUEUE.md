@@ -1,3 +1,13 @@
+## Current Hami-wide resumption — 2026-10-25 05:05 NPT
+
+1. Verify this grouped documentation/projection commit's own CI, secret scan and independent deployment verifier before another write.
+2. D84: retrieve and inspect Tea Board India’s 23 Sep 2026 Direction No.02/2026 PDF; compare with 20 May, 18 June and 30 June reports and current official customs/export data. Complete exact-source robots/terms/reuse review before collection. NOT CLEARED; D84 remains UNKNOWN.
+3. D93: Report #03 inspection is complete (20 Oct). Retrieve NDRRMA #04 via an authorized official PDF route, inspect all pages, and keep report date, effective cutoff, language, retrieval time and metric labels distinct. Current restoration UNKNOWN; no emergency advice/alerting.
+4. Reliability: after natural 05:45 and 11:45 NPT schedules, use authorized logs or protected owner-cycle evidence to correlate invocation, persisted CycleRun, final status and stage outcomes. No manual route invocation. DNS/browser failures are not health failures; DB durability and real inference remain separate unknowns.
+5. Capability/portfolio: if a supported source-edit path becomes available, extend the existing SourceCollector → Signal → Evidence → assessment/citation seam with existing tests. The blocked research_planner.py::summarize_research_portfolio remains NOT IMPLEMENTED. Reuse the 100-row D1–D100 survey; keep broad research, source clearance, reliability, privacy/security, integration and QA moving independently. No First Rupee/pilot gate.
+
+---
+
 ## D93 discovery queue — 2026-10-24 05:20 NPT
 
 1. Retrieve NDRRMA report #04 and, if available, #03 through a reachable authorized official PDF link; inspect each page by screenshot. Keep page date, report sequence, effective cutoff, language variant, source update, and retrieval time distinct.

@@ -1,3 +1,15 @@
+## Current resumption — 2026-10-25 05:05 NPT
+
+- Base main 2349b19d1767262cba9bbe72aa4997d53669366d had passing exact-head CI, secret scan and independent deployment verification; this grouped documentation/projection commit requires its own gates.
+- Hami's open-ended mission is settled. No seller pilot, First Rupee or single experiment gates unrelated research, capability, reliability, security, integration or quality work.
+- D93: Report #03 was screenshot-inspected on 20 Oct; do not repeat it. #04 page metadata states a 16 Oct 10:00 cutoff, but its PDF body remains unread. #02/#03 rescue/contact labels are not equivalent. Current restoration remains UNKNOWN. The map narrative and projections were corrected together.
+- D84: official Tea Board India Latest News lists Direction No.02/2026 dated 23 Sep 2026; PDF body unread. May/June secondary reports differ on resumption and sampling. Copyright policy requires approval for other proposed use beyond downloading material meant for download; robots endpoint inaccessible; no runtime registry entry. D84 stays UNKNOWN and NOT CLEARED for automated collection/persistent reuse.
+- Existing seam: SourceCollector.normalize → collector_runner.execute_task → ObserverEngine.observe → Evidence → assess_source_record / _evidence_citation. Publication and retrieval time are distinct, but source-effective cutoff/report sequence are not surfaced. The temporal-provenance extension and research_planner.py::summarize_research_portfolio remain NOT IMPLEMENTED; do not retry the blocked helper through another path.
+- Operational boundary: base verifier matched exact SHA and read one protected owner-cycle record, but direct Vercel runtime reads remain 403 and current health, DB durability/read-after-write, real inference and natural scheduled CycleRun status remain UNKNOWN. No manual schedule invocation or bypass.
+- Next: inspect the official Tea Board PDF; inspect NDRRMA #04 through an authorized route; after natural schedules correlate invocation and persisted CycleRun; continue open-domain work independently. No new question/task rows were added; one NOT CLEARED documentation source candidate was recorded, no runtime registry entry.
+
+---
+
 ## Current discovery resumption — 2026-10-24 05:20 NPT
 
 - **Canonical main at start:** `6631c3d15cb52c2d8522841262f5c8e0a13e50cd`.
