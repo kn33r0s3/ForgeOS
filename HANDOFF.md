@@ -6,6 +6,14 @@
 - Outcome truth: 0 contacts sent, 0 conversations, 0 verified recovered sales, ₨0 reported/verified. The 14-day clock begins at first owner-sent contact. Use docs/FIRST_RUPEE_SCOREBOARD.md for contact/outcome and docs/REVENUE_LOG.md only for qualifying commercial evidence. D72 counsel/legal gate still blocks paid pilot.
 - This priority does not gate unrelated Hami work or erase D84/D93/reliability queue.
 
+## Current continuation — 2026-10-26 05:42 NPT
+
+- Canonical main at start: `23f6bd7d2ee494f4abbec22bac92d5008cd3dc81`; recent commits `23f6bd7`, `1217396`, `604af78` are documentation-only. Exact-head CI 40246407140 passed 9/9 (backend 1,354 passed / 2 skipped / 18 warnings; frontend 274 passed / 0 failed); secrets scan 40246407070 passed; independent verifier 40246407096 passed. Verifier saw exact deployed SHA on attempt 1, a schema-valid protected cycle record with payload suppressed, and verification POST HTTP 200. This is not proof of natural cron, DB durability/read-after-write, real inference or general health. GitHub Vercel status is success; direct Vercel reads are 403 and live health remains UNKNOWN.
+- D95 is now deeper-researched, not resolved: FAO's 26 Aug Rasuwa–Bhotekoshi appeal reports crop, irrigation and fisheries damage and estimated cross-subsector losses; it is distinct from the 11 Oct Gorkha–Budhigandaki event. DHM/Kalimati current source observations are bounded retrieval/freshness leads, not proof of missing data or a farmer information failure. Details and source URLs are in `docs/CAPABILITY_QUEUE.md`; D95 stays UNKNOWN.
+- Portfolio sweep covered existing D1–D100 metadata only. No operational `ResearchQuestion` inventory was available through authorized read access. No new rows were added.
+- Source-code writes remain blocked. The planner portfolio-summary helper remains NOT IMPLEMENTED; no alternate write path was used. Existing source-time seam and regression target are documented in `docs/CAPABILITY_QUEUE.md`. FAO/NDRRMA/DHM/Kalimati ingestion is not cleared; no collection or provider transmission occurred.
+- Next: (1) keep independent Hami-wide tracks moving; (2) obtain exact-source rights/access and a supported source-edit path before touching code; (3) preserve report/effective cutoff/publication/retrieval/scope through the existing provenance seam when authorized; (4) resolve direct Vercel access only via normal team authorization and never infer cron/health from verifier success. No external contact, publication, spend, payment, activation or REAL outcome occurred.
+
 ## Current operational resumption — 2026-10-26 05:31 NPT
 
 - Base SHA `604af783c9f481eb48fb0dc6a9a15810b1c4d968`: CI 40212749685 PASS 9/9, secrets scan 40212749555 PASS, independent verifier 40212749671 PASS. The verifier matched exact SHA and read one schema-valid cycle record (payload suppressed), then recorded HTTP 200; this is not proof of natural cron or DB durability.

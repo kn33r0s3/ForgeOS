@@ -7,6 +7,16 @@
 
 ---
 
+## Hami-wide continuation — 2026-10-26 (portfolio + D95)
+
+1. **Portfolio coverage:** survey the 100 existing D1–D100 rows only; prefix counts 96 UNKNOWN / 3 HYPOTHESIZED / 1 SUPPORTED. Row-text date/source/independence/contradiction counts are recorded in `docs/CAPABILITY_QUEUE.md`; this is not deep research. Live open `ResearchQuestion` records are not available through an authorized read surface, so their count is UNKNOWN.
+2. **D95 deeper pass:** FAO's 26 Aug Rasuwa–Bhotekoshi appeal establishes substantial crop/irrigation/fisheries damage and estimated cross-subsector losses, but not which loss is most avoidable or whether information is the binding constraint. DHM's indexed agromet list and Kalimati's current rendered price page expose bounded freshness/retrieval limitations, not proof of missing data. Keep D95 UNKNOWN; do not merge this event with the 11 Oct Gorkha–Budhigandaki event.
+3. **Reusable capability candidate:** preserve source-declared effective cutoff/report version separately from page publication and retrieval times through the existing SourceCollector → Signal → Evidence → assessment/citation seam. Exact source clearance and the supported source-edit path are blockers. The previously blocked `research_planner.py::summarize_research_portfolio` remains NOT IMPLEMENTED; do not retry via another mutation path.
+4. **Reliability:** main `23f6bd7d2ee494f4abbec22bac92d5008cd3dc81` has passed its exact-head CI, secrets scan and independent deployment verifier; current health, natural scheduler attribution, DB durability/read-after-write and real inference remain UNKNOWN because direct runtime access is 403/unavailable. No manual scheduled-route invocation.
+5. Seller first-contact kits remain owner-dependent and unsent. That owner step does not gate D95, reliability, security/privacy, integration, research or capability work.
+
+---
+
 ## Current Hami-wide resumption — 2026-10-25 (D84 refinement)
 
 1. **D84, next discriminator:** NRB's one-month Table 14 transcription shows Rs 522 million in tea exports in Shrawan 2083, provisional; this establishes some recorded tea exports after the June date, not exports to India or resumption of the affected lane. Inspect the official two-month TEPC/NRB files and locate tea-by-destination or customs-office evidence. D84 remains UNKNOWN for the India-lane question; do not annualize the one-month value.
