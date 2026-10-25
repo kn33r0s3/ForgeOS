@@ -1,3 +1,12 @@
+## Owner-directed priority correction — 2026-10-25 16:55
+
+1. **P0 — First-contact kits + outcome log.** Active four: S06 SL Collection Nepal, S07 Sworup Wear House, S22 Hello Mobile Store, S26 Asha Achar. Kits are discovery-only, bilingual, no offer; owner sends; agent never sends/replies. Log real contact/reply/consent/conversation and outcome in docs/FIRST_RUPEE_SCOREBOARD.md; log only qualifying commercial evidence in docs/REVENUE_LOG.md. Current state: all NOT SENT, 0 conversations, 0 verified recovered sales, ₨0 reported/verified.
+2. **Campaign method:** 16:55 directive supersedes “every reel beats the last.” Change one named variable per reel; evaluate 5–8 reels at matched ages. Retain subtitle spec v2, phone gate and posted-aspect gate. Ship Passport before 29 Oct from sampled evidence; don't delay for an underpowered comparison.
+3. **D72:** paid pilot remains gated by qualified Nepali legal/accounting review and written terms. No offer in first contact.
+4. **Independent Hami work continues:** D84 official tea-by-destination/customs-office evidence, D93 authorized report retrieval and production scheduler/runtime verification remain separate; seller/reel work is not a gate on unrelated engineering.
+
+---
+
 ## Current Hami-wide resumption — 2026-10-25 (D84 refinement)
 
 1. **D84, next discriminator:** NRB's one-month Table 14 transcription shows Rs 522 million in tea exports in Shrawan 2083, provisional; this establishes some recorded tea exports after the June date, not exports to India or resumption of the affected lane. Inspect the official two-month TEPC/NRB files and locate tea-by-destination or customs-office evidence. D84 remains UNKNOWN for the India-lane question; do not annualize the one-month value.

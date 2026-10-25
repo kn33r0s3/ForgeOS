@@ -11,6 +11,23 @@ sent, so the clock has not started.
 prepared, messages sent, or silence. A send is not a conversation; a
 conversation is not a sale; a reported rupee is not a verified rupee.
 
+## Owner directive — 2026-10-25: money-first execution (supersedes older queue text below)
+
+- **Priority now:** four seller discovery kits (S06 SL Collection Nepal, S07 Sworup Wear House, S22 Hello Mobile Store, S26 Asha Achar) and actual outcome logging before more reel volume. Current baseline remains 0 owner-reported conversations, 0 verified recovered sales, ₨0 reported/verified.
+- **Contact boundary:** discovery-only, no offer or fee. Owner sends; agent does not send or reply. Draft prep, a sent message, silence, or a seller assertion is not a conversation or sale. No reply/decline means stop; no follow-up.
+- **Outcome standard:** log actual timestamp/channel, response, explicit consent, minimized seller-stated workflow, voluntary baseline counts, follow-up permission and next step. A recovered sale is VERIFIED only with a traceable prior missed inquiry, seller confirmation it otherwise would have died, completed order, seller-consented payment evidence and owner-reviewed evidence reference. Otherwise REPORTED or UNKNOWN.
+- **Reel method correction (2026-10-25 16:55):** replaces “every reel beats the last.” Each reel changes one named variable; judge a 5–8-reel sample at matched post ages, not against its immediate predecessor. Keep subtitle spec v2, phone gate and posted-aspect gate. Passport ships before 29 Oct based on sampled evidence; do not hold it for an underpowered comparison.
+- Historical approval/offer notes below are history where they conflict with this ruling. Do not send the 10% offer in first contact.
+
+## Four-seller contact and outcome ledger
+
+| Seller ref | Kit status | Sent (date/time/channel) | Reply / explicit consent | Conversation held | Baseline / stated bottleneck | Follow-up permission | Outcome / evidence ref |
+|---|---|---|---|---|---|---|---|
+| S06 SL Collection Nepal | PREPARED — discovery-only | NOT SENT | UNKNOWN | NO | UNKNOWN | UNKNOWN | UNKNOWN |
+| S07 Sworup Wear House | PREPARED — discovery-only | NOT SENT | UNKNOWN | NO | UNKNOWN | UNKNOWN | UNKNOWN |
+| S22 Hello Mobile Store | PREPARED — discovery-only | NOT SENT | UNKNOWN | NO | UNKNOWN | UNKNOWN | UNKNOWN |
+| S26 Asha Achar | PREPARED — discovery-only | NOT SENT | UNKNOWN | NO | UNKNOWN | UNKNOWN | UNKNOWN |
+
 ## The numbers (all zero — honestly)
 
 | Metric | Value | Evidence |
@@ -102,11 +119,7 @@ item names the decision, the options, and where the evidence lives.
 
 ## Status line
 
-2026-10-23: Mission items 1–5 built and queued. Conversations: 0.
-Rupees reported: ₨0. Rupees verified: ₨0. The next event in this
-workstream is an owner decision from the queue above — everything
-after it (sends, conversations, the 14-day clock) is the owner's hand
-on the trigger, by design.
+2026-10-25: Four discovery-only kits are prepared; all four remain NOT SENT. Conversations: 0. Rupees reported: ₨0. Rupees verified: ₨0. The 14-day clock still starts at first owner-sent contact. The current owner directive puts these kits and the outcome ledger ahead of additional reel volume.
 
 2026-10-23 (later): Queue item 1 DECIDED — owner approved sellers
 #6, #7, #22, #26. Items 2 (exact message) and 3 (offer terms) are

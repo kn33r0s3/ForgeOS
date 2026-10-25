@@ -1,3 +1,11 @@
+## Current owner directive — 2026-10-25 16:55: money-first, controlled reel test
+
+- Supersedes the 16:13 “every reel beats the last” law. Change one named variable per reel and judge a 5–8-reel sample at matched post age. A single reel at median ~26 views is noise; do not declare a winner against the immediate predecessor.
+- Keep subtitle spec v2, phone gate and posted-aspect gate. Ship time-sensitive utility content such as Passport before 29 Oct using what was sampled; don't wait for an underpowered comparison.
+- First earning path is four first-contact kits + outcome logging, not more reel volume. Kits for S06 SL Collection Nepal, S07 Sworup Wear House, S22 Hello Mobile Store and S26 Asha Achar are bilingual, discovery-only, prepared but NOT SENT. Owner sends; agent never sends/replies. No offer/fee in first contact. No reply or decline = stop, no follow-up.
+- Outcome truth: 0 contacts sent, 0 conversations, 0 verified recovered sales, ₨0 reported/verified. The 14-day clock begins at first owner-sent contact. Use docs/FIRST_RUPEE_SCOREBOARD.md for contact/outcome and docs/REVENUE_LOG.md only for qualifying commercial evidence. D72 counsel/legal gate still blocks paid pilot.
+- This priority does not gate unrelated Hami work or erase D84/D93/reliability queue.
+
 ## Current resumption — 2026-10-25 (D84 source refinement)
 
 - Main at start: `8ff8fd94ae5a5fc8d38d33dee79e54f06115c36f`; exact-head ForgeOS CI, separate secrets scan and independent deploy verifier all passed.

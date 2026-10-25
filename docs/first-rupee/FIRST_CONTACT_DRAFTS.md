@@ -2,7 +2,7 @@
 
 **QA revision:** 2026-10-23. This draft set is personalized to the linked public source descriptions in `SELLER_LIST_PUBLIC.md`. Public signals do not prove slow replies, lost sales, consent, or willingness to pay.
 
-> **DRAFTS ONLY. The owner sends all messages.** The latest repo record states the owner chose SL Collection Nepal, Sworup Wear House, Hello Mobile Store, and Asha Achar, with first-hand native TikTok verification recorded in commit `ca73b33`. Their direct public video URLs are linked in S06/S07/S22/S26. A separate standing send authorization is recorded in the scoreboard, but this mission explicitly says the owner sends all messages; no agent will send or reply. The English/Nepali copy below has been revised to include the D2 question and the 10% pay-only-on-recovered-sale proposal as requested; because this revises previously approved wording, exact revised copy remains in the owner approval queue. No draft is evidence of consent, customer pain, or willingness to pay.
+> **ACTIVE FOUR-SELLER KIT — prepared, not sent.** Priority set: S06 SL Collection Nepal, S07 Sworup Wear House, S22 Hello Mobile Store, S26 Asha Achar. Only these four kits are active; all other candidate drafts are inactive. Owner sends all messages; the agent must not contact sellers or reply. The active messages are discovery-only: no fee, pilot, service promise, or claim of lost sales. Owner must review the exact wording and select the native channel before sending. No contact has occurred as of this revision.
 
 ## Identity, channel, and script rules
 
@@ -12,13 +12,9 @@
 - The owner sends all messages; the assistant must not contact sellers or reply, even though an older standing authorization is recorded elsewhere in the repository.
 - The pay-only-on-recovery wording is a proposal, not an active contract or proof of legal eligibility. D72 and qualified Nepali legal/accounting review remain required before a paid pilot starts; Hami never holds or moves funds.
 
-## Pay-only-on-recovered-sale offer included in draft bodies
+## Commercial offer deliberately excluded from first contact
 
-**EN:** The proposed pilot fee is 10% of a sale that we can independently evidence was recovered from a missed inquiry; if no sale is recovered, there is no fee. Hami will never hold or move your money. Any pilot would start only after both sides agree written terms and the required Nepali legal/accounting review is complete.
-
-**NE:** प्रस्तावित परीक्षण शुल्क छुटेको सोधपुछबाट पुनः प्राप्त भएको स्वतन्त्र रूपमा प्रमाणित बिक्रीको १०% मात्र हुनेछ; बिक्री पुनः प्राप्त नभए शुल्क लाग्दैन। Hami ले तपाईंको पैसा राख्ने वा सार्ने छैन। परीक्षण दुवै पक्षले लिखित सर्तमा सहमति गरेपछि र आवश्यक नेपाली कानुनी/लेखा समीक्षा पूरा भएपछि मात्र सुरु हुनेछ.
-
-The repository records a prior 10% delegated term and a previous approval of older draft wording. This revised first-contact wording now explicitly includes the offer because the current mission required it; the owner should approve this exact revision before sending.
+First contact is a short, non-commercial request for a 10-minute workflow conversation. Do not mention a fee or pilot terms. Any later commercial offer requires a separate decision after the D72 qualified Nepali legal/accounting gate and clear written bilateral terms. Hami does not hold or move seller funds.
 
 ## Personalized discovery drafts
 
@@ -75,22 +71,22 @@ The repository records a prior 10% delegated term and a previous approval of old
 ### S06 — SL Collection Nepal
 
 **Source:** [native TikTok public video](https://www.tiktok.com/@slcollectionnepal01/video/7580444582358371592)  
-**Observed signal:** Native TikTok video shows clothing products; the account has multiple public product videos.  
-**Status:** DRAFT ONLY — seller selected in the scoreboard; native public source is linked. Owner sends; revised exact text awaits approval. No contact has occurred.
+**Observed signal:** Public clothing posts and multiple product videos; missed sales and slow replies are UNKNOWN.  
+**Status:** ACTIVE KIT — prepared only; owner sends; NOT SENT.
 
-**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. Native TikTok video shows clothing products; the account has multiple public product videos. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** The proposed pilot fee is 10% of a sale that we can independently evidence was recovered from a missed inquiry; if no sale is recovered, there is no fee. Hami will never hold or move your money. Any pilot would start only after both sides agree the written terms and the required Nepali legal/accounting review is complete. Thank you either way; no reply is needed if you’re not interested.
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. I saw your public clothing posts on TikTok; I don’t know whether replying to inquiries is difficult for you, and I’m not assuming it is. Would you be open to a 10-minute conversation about how one recent inquiry moved—or didn’t move—to an order? If ten new customers arrived tomorrow, what would break first? No account access or customer data needed. Thank you either way; if you’re not interested, no reply is needed.
 
-**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न Hami बनाउँदै छु। तपाईंको सार्वजनिक TikTok भिडियोमा कपडाका उत्पादनहरू देखिन्छन्। ढिलो जवाफ वा छुटेको अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ कसरी अर्डरमा बदलियो वा बदलिन सकेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** प्रस्तावित परीक्षण शुल्क छुटेको सोधपुछबाट पुनः प्राप्त भएको स्वतन्त्र रूपमा प्रमाणित बिक्रीको १०% मात्र हुनेछ; बिक्री पुनः प्राप्त नभए शुल्क लाग्दैन। Hami ले तपाईंको पैसा राख्ने वा सार्ने छैन। परीक्षण दुवै पक्षले लिखित सर्तमा सहमति गरेपछि र आवश्यक नेपाली कानुनी/लेखा समीक्षा पूरा भएपछि मात्र सुरु हुनेछ। धन्यवाद; चासो नभए जवाफ दिनु पर्दैन.
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न Hami बनाउँदै छु। तपाईंका TikTok पोस्टमा कपडाका उत्पादन देखेँ। ग्राहकका सोधपुछको जवाफ दिन गाह्रो हुन्छ भन्ने मलाई थाहा छैन, त्यसैले अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ कसरी अर्डरमा बदलियो वा बदलिन सकेन भनेर १० मिनेट कुरा गर्न मिल्ला? भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ? खाता पहुँच वा ग्राहकको व्यक्तिगत विवरण चाहिँदैन। चासो नभए जवाफ दिनु पर्दैन.
 
 ### S07 — Sworup Wear House
 
 **Source:** [native TikTok public video](https://www.tiktok.com/@sworupwearhouse/video/7637539441527098645)  
-**Observed signal:** Native TikTok video/captions include DM-for-price/order and nationwide delivery; the recorded source review identifies the seller in Sallaghari, Bhaktapur.  
-**Status:** DRAFT ONLY — seller selected in the scoreboard; native public source is linked. Owner sends; revised exact text awaits approval. No contact has occurred.
+**Observed signal:** Captions invite DM for price/order and mention nationwide delivery; missed sales and slow replies are UNKNOWN.  
+**Status:** ACTIVE KIT — prepared only; owner sends; NOT SENT.
 
-**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. Native TikTok video/captions include DM-for-price/order and nationwide delivery; the recorded source review identifies the seller in Sallaghari, Bhaktapur. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** The proposed pilot fee is 10% of a sale that we can independently evidence was recovered from a missed inquiry; if no sale is recovered, there is no fee. Hami will never hold or move your money. Any pilot would start only after both sides agree the written terms and the required Nepali legal/accounting review is complete. Thank you either way; no reply is needed if you’re not interested.
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. I saw your TikTok captions inviting people to DM for prices or orders, with nationwide delivery. I don’t know whether managing those inquiries is difficult for you. Would you be open to a 10-minute conversation about how one recent inquiry moved—or didn’t move—to an order? If ten new customers arrived tomorrow, what would break first? No account access or customer data needed. Thank you either way; if you’re not interested, no reply is needed.
 
-**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न Hami बनाउँदै छु। तपाईंको सार्वजनिक TikTok पोस्टमा मूल्य वा अर्डरका लागि DM गर्न र नेपालभर डेलिभरीको उल्लेख छ। ढिलो जवाफ वा छुटेको अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ कसरी अर्डरमा बदलियो वा बदलिन सकेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** प्रस्तावित परीक्षण शुल्क छुटेको सोधपुछबाट पुनः प्राप्त भएको स्वतन्त्र रूपमा प्रमाणित बिक्रीको १०% मात्र हुनेछ; बिक्री पुनः प्राप्त नभए शुल्क लाग्दैन। Hami ले तपाईंको पैसा राख्ने वा सार्ने छैन। परीक्षण दुवै पक्षले लिखित सर्तमा सहमति गरेपछि र आवश्यक नेपाली कानुनी/लेखा समीक्षा पूरा भएपछि मात्र सुरु हुनेछ। धन्यवाद; चासो नभए जवाफ दिनु पर्दैन.
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न Hami बनाउँदै छु। तपाईंका TikTok क्याप्सनमा मूल्य वा अर्डरका लागि DM गर्न र नेपालभर डेलिभरीको उल्लेख देखेँ। ती सोधपुछ सम्हाल्न गाह्रो हुन्छ भन्ने मलाई थाहा छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ कसरी अर्डरमा बदलियो वा बदलिन सकेन भनेर १० मिनेट कुरा गर्न मिल्ला? भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ? खाता पहुँच वा ग्राहकको व्यक्तिगत विवरण चाहिँदैन। चासो नभए जवाफ दिनु पर्दैन.
 
 ### S08 — Anjyoti Collection
 
@@ -235,12 +231,12 @@ The repository records a prior 10% delegated term and a previous approval of old
 ### S22 — Hello Mobile Store
 
 **Source:** [native TikTok public video](https://www.tiktok.com/@hello.mobile.stor3/video/7623858812893564180)  
-**Observed signal:** Native TikTok video advertises used iPhones and says “Offer Price only DM us.”  
-**Status:** DRAFT ONLY — seller selected in the scoreboard; native public source is linked. Owner sends; revised exact text awaits approval. No contact has occurred.
+**Observed signal:** Public post advertises used iPhones and says “Offer Price only DM us”; missed sales and slow replies are UNKNOWN.  
+**Status:** ACTIVE KIT — prepared only; owner sends; NOT SENT.
 
-**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. Native TikTok video advertises used iPhones and says “Offer Price only DM us.” I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** The proposed pilot fee is 10% of a sale that we can independently evidence was recovered from a missed inquiry; if no sale is recovered, there is no fee. Hami will never hold or move your money. Any pilot would start only after both sides agree the written terms and the required Nepali legal/accounting review is complete. Thank you either way; no reply is needed if you’re not interested.
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. I saw your TikTok post about used iPhones directing people to DM for the offer price. I don’t know whether managing those inquiries is difficult for you. Would you be open to a 10-minute conversation about how one recent inquiry moved—or didn’t move—to an order? If ten new customers arrived tomorrow, what would break first? No account access or customer data needed. Thank you either way; if you’re not interested, no reply is needed.
 
-**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न Hami बनाउँदै छु। तपाईंको सार्वजनिक TikTok भिडियोमा प्रयोग भएका iPhone र मूल्यका लागि DM गर्न आग्रह गरिएको छ। ढिलो जवाफ वा छुटेको अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ कसरी अर्डरमा बदलियो वा बदलिन सकेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** प्रस्तावित परीक्षण शुल्क छुटेको सोधपुछबाट पुनः प्राप्त भएको स्वतन्त्र रूपमा प्रमाणित बिक्रीको १०% मात्र हुनेछ; बिक्री पुनः प्राप्त नभए शुल्क लाग्दैन। Hami ले तपाईंको पैसा राख्ने वा सार्ने छैन। परीक्षण दुवै पक्षले लिखित सर्तमा सहमति गरेपछि र आवश्यक नेपाली कानुनी/लेखा समीक्षा पूरा भएपछि मात्र सुरु हुनेछ। धन्यवाद; चासो नभए जवाफ दिनु पर्दैन.
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न Hami बनाउँदै छु। तपाईंको TikTok पोस्टमा प्रयोग भएका iPhone को मूल्यका लागि DM गर्न भनिएको देखेँ। ती सोधपुछ सम्हाल्न गाह्रो हुन्छ भन्ने मलाई थाहा छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ कसरी अर्डरमा बदलियो वा बदलिन सकेन भनेर १० मिनेट कुरा गर्न मिल्ला? भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ? खाता पहुँच वा ग्राहकको व्यक्तिगत विवरण चाहिँदैन। चासो नभए जवाफ दिनु पर्दैन.
 
 ### S23 — Lasya Makeup Official
 
@@ -275,53 +271,12 @@ The repository records a prior 10% delegated term and a previous approval of old
 ### S26 — Asha Achar
 
 **Source:** [native TikTok public video](https://www.tiktok.com/@asha.achar/video/7593269742895451412)  
-**Observed signal:** Native TikTok video caption says akbare and garlic pickle are available, asks buyers to DM for price, and mentions delivery throughout Nepal.  
-**Status:** DRAFT ONLY — seller selected in the scoreboard; native public source is linked. Owner sends; revised exact text awaits approval. No contact has occurred.
+**Observed signal:** Caption offers achar, asks buyers to DM for price, and mentions delivery throughout Nepal; missed sales and slow replies are UNKNOWN.  
+**Status:** ACTIVE KIT — prepared only; owner sends; NOT SENT.
 
-**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. Native TikTok video caption says akbare and garlic pickle are available, asks buyers to DM for price, and mentions delivery throughout Nepal. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** The proposed pilot fee is 10% of a sale that we can independently evidence was recovered from a missed inquiry; if no sale is recovered, there is no fee. Hami will never hold or move your money. Any pilot would start only after both sides agree the written terms and the required Nepali legal/accounting review is complete. Thank you either way; no reply is needed if you’re not interested.
+**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. I saw your TikTok caption about achar orders, asking people to DM for prices and noting delivery across Nepal. I don’t know whether managing those inquiries is difficult for you. Would you be open to a 10-minute conversation about how one recent inquiry moved—or didn’t move—to an order? If ten new customers arrived tomorrow, what would break first? No account access or customer data needed. Thank you either way; if you’re not interested, no reply is needed.
 
-**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न Hami बनाउँदै छु। तपाईंको सार्वजनिक TikTok भिडियोमा अकबरे र लसुनको अचार, मूल्यका लागि DM गर्न र नेपालभर डेलिभरीको उल्लेख छ। ढिलो जवाफ वा छुटेको अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ कसरी अर्डरमा बदलियो वा बदलिन सकेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** प्रस्तावित परीक्षण शुल्क छुटेको सोधपुछबाट पुनः प्राप्त भएको स्वतन्त्र रूपमा प्रमाणित बिक्रीको १०% मात्र हुनेछ; बिक्री पुनः प्राप्त नभए शुल्क लाग्दैन। Hami ले तपाईंको पैसा राख्ने वा सार्ने छैन। परीक्षण दुवै पक्षले लिखित सर्तमा सहमति गरेपछि र आवश्यक नेपाली कानुनी/लेखा समीक्षा पूरा भएपछि मात्र सुरु हुनेछ। धन्यवाद; चासो नभए जवाफ दिनु पर्दैन.
-
-### S27 — Case Of Beauty
-
-**Source:** [public source](https://www.findglocal.com/NP/Kathmandu/660485930477755/Case-Of-Beauty)  
-**Observed signal:** Public listing shows Jul–Aug 2026 product signals and DM-to-order language.  
-**Status:** DRAFT ONLY — public signal only; owner must re-check the current page, select this seller and approve the exact message. No contact has occurred.
-
-**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public listing shows beauty products and DM-to-order language. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** The proposed pilot fee is 10% of a sale that we can independently evidence was recovered from a missed inquiry; if no sale is recovered, there is no fee. Hami will never hold or move your money. Any pilot would start only after both sides agree the written terms and the required Nepali legal/accounting review is complete. Thank you either way; no reply is needed if you’re not interested.
-
-**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न Hami बनाउँदै छु। तपाईंको सार्वजनिक सूचीमा ब्युटी उत्पादन र DM बाट अर्डर गर्ने उल्लेख छ। ढिलो जवाफ वा छुटेको अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ कसरी अर्डरमा बदलियो वा बदलिन सकेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** प्रस्तावित परीक्षण शुल्क छुटेको सोधपुछबाट पुनः प्राप्त भएको स्वतन्त्र रूपमा प्रमाणित बिक्रीको १०% मात्र हुनेछ; बिक्री पुनः प्राप्त नभए शुल्क लाग्दैन। Hami ले तपाईंको पैसा राख्ने वा सार्ने छैन। परीक्षण दुवै पक्षले लिखित सर्तमा सहमति गरेपछि र आवश्यक नेपाली कानुनी/लेखा समीक्षा पूरा भएपछि मात्र सुरु हुनेछ। धन्यवाद; चासो नभए जवाफ दिनु पर्दैन.
-
-### S28 — Gift Studio Nepal
-
-**Source:** [public source](https://www.findglocal.com/NP/Kathmandu/100916479558726/Gift-Studio-Nepal)  
-**Observed signal:** Public listing shows custom gifts, Aug 2026 activity and message-based order language.  
-**Status:** DRAFT ONLY — public signal only; owner must re-check the current page, select this seller and approve the exact message. No contact has occurred.
-
-**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public listing shows customized gifts and message-based product/order questions. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** The proposed pilot fee is 10% of a sale that we can independently evidence was recovered from a missed inquiry; if no sale is recovered, there is no fee. Hami will never hold or move your money. Any pilot would start only after both sides agree the written terms and the required Nepali legal/accounting review is complete. Thank you either way; no reply is needed if you’re not interested.
-
-**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न Hami बनाउँदै छु। तपाईंको सार्वजनिक सूचीमा कस्टम उपहार र सामान/अर्डरबारे सन्देशमार्फत सोध्न सकिने उल्लेख छ। ढिलो जवाफ वा छुटेको अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ कसरी अर्डरमा बदलियो वा बदलिन सकेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** प्रस्तावित परीक्षण शुल्क छुटेको सोधपुछबाट पुनः प्राप्त भएको स्वतन्त्र रूपमा प्रमाणित बिक्रीको १०% मात्र हुनेछ; बिक्री पुनः प्राप्त नभए शुल्क लाग्दैन। Hami ले तपाईंको पैसा राख्ने वा सार्ने छैन। परीक्षण दुवै पक्षले लिखित सर्तमा सहमति गरेपछि र आवश्यक नेपाली कानुनी/लेखा समीक्षा पूरा भएपछि मात्र सुरु हुनेछ। धन्यवाद; चासो नभए जवाफ दिनु पर्दैन.
-
-### S29 — RDM Fashion Trend
-
-**Source:** [public source](https://www.findglocal.com/NP/Kathmandu/111510751650122/RDM-Fashion-Trend)  
-**Observed signal:** Public listing shows Oct 2026 activity and COD/delivery signals.  
-**Status:** DRAFT ONLY — public signal only; owner must re-check the current page, select this seller and approve the exact message. No contact has occurred.
-
-**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your public listing shows recent fashion posts and COD/delivery information. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** The proposed pilot fee is 10% of a sale that we can independently evidence was recovered from a missed inquiry; if no sale is recovered, there is no fee. Hami will never hold or move your money. Any pilot would start only after both sides agree the written terms and the required Nepali legal/accounting review is complete. Thank you either way; no reply is needed if you’re not interested.
-
-**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न Hami बनाउँदै छु। तपाईंको सार्वजनिक सूचीमा फेसनका पोस्ट र COD/डेलिभरीसम्बन्धी जानकारी छ। ढिलो जवाफ वा छुटेको अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ कसरी अर्डरमा बदलियो वा बदलिन सकेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** प्रस्तावित परीक्षण शुल्क छुटेको सोधपुछबाट पुनः प्राप्त भएको स्वतन्त्र रूपमा प्रमाणित बिक्रीको १०% मात्र हुनेछ; बिक्री पुनः प्राप्त नभए शुल्क लाग्दैन। Hami ले तपाईंको पैसा राख्ने वा सार्ने छैन। परीक्षण दुवै पक्षले लिखित सर्तमा सहमति गरेपछि र आवश्यक नेपाली कानुनी/लेखा समीक्षा पूरा भएपछि मात्र सुरु हुनेछ। धन्यवाद; चासो नभए जवाफ दिनु पर्दैन.
-
-### S30 — 6K Thrifts
-
-**Source:** [public source](https://6kthrifts.com/)  
-**Observed signal:** Official site describes one-of-one items, new drops, and Instagram DM ordering alongside a website.  
-**Status:** DRAFT ONLY — public signal only; owner must re-check the current page, select this seller and approve the exact message. No contact has occurred.
-
-**EN:** Namaste — I’m [your real name], building Hami to understand how Nepali sellers handle customer inquiries. your official site describes one-of-one second-hand clothing, new drops and Instagram DM ordering. I don’t know whether slow replies or missed orders are a problem for you, and I’m not assuming they are. If you’re open to a brief conversation, could I ask how one recent inquiry moved—or didn’t move—to an order? **If ten new customers arrived tomorrow, what would break first?** The proposed pilot fee is 10% of a sale that we can independently evidence was recovered from a missed inquiry; if no sale is recovered, there is no fee. Hami will never hold or move your money. Any pilot would start only after both sides agree the written terms and the required Nepali legal/accounting review is complete. Thank you either way; no reply is needed if you’re not interested.
-
-**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न Hami बनाउँदै छु। तपाईंको आधिकारिक साइटमा विशेष/एकमात्र किसिमका पुराना कपडा, नयाँ ड्रप र Instagram DM बाट अर्डर गर्ने विकल्प छ। ढिलो जवाफ वा छुटेको अर्डर तपाईंको समस्या हो भन्ने मलाई थाहा छैन, त्यसैले अनुमान गरिरहेको छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ कसरी अर्डरमा बदलियो वा बदलिन सकेन भनेर छोटो कुराकानी गर्न मिल्ला? **भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ?** प्रस्तावित परीक्षण शुल्क छुटेको सोधपुछबाट पुनः प्राप्त भएको स्वतन्त्र रूपमा प्रमाणित बिक्रीको १०% मात्र हुनेछ; बिक्री पुनः प्राप्त नभए शुल्क लाग्दैन। Hami ले तपाईंको पैसा राख्ने वा सार्ने छैन। परीक्षण दुवै पक्षले लिखित सर्तमा सहमति गरेपछि र आवश्यक नेपाली कानुनी/लेखा समीक्षा पूरा भएपछि मात्र सुरु हुनेछ। धन्यवाद; चासो नभए जवाफ दिनु पर्दैन.
-
+**NE:** नमस्ते — म [तपाईंको वास्तविक नाम] हुँ। नेपाली विक्रेताहरूले ग्राहकका सोधपुछ कसरी सम्हाल्छन् भनेर बुझ्न Hami बनाउँदै छु। तपाईंको अचारसम्बन्धी TikTok क्याप्सनमा मूल्यका लागि DM गर्न र नेपालभर डेलिभरीको उल्लेख देखेँ। ती सोधपुछ सम्हाल्न गाह्रो हुन्छ भन्ने मलाई थाहा छैन। तपाईंलाई ठीक लागेमा, हालैको एउटा सोधपुछ कसरी अर्डरमा बदलियो वा बदलिन सकेन भनेर १० मिनेट कुरा गर्न मिल्ला? भोलि १० जना नयाँ ग्राहक एकैचोटि आए भने सबैभन्दा पहिले के बिग्रन्छ? खाता पहुँच वा ग्राहकको व्यक्तिगत विवरण चाहिँदैन। चासो नभए जवाफ दिनु पर्दैन.
 
 ## Legacy selected sellers — current source crosswalk
 
@@ -329,7 +284,8 @@ The original selected IDs (#6 SL Collection Nepal, #7 Sworup Wear House, #22 Hel
 
 ## Owner decision gates
 
-1. Re-verify the legacy selected sellers or explicitly replace with named S-IDs; do not auto-map old numbers.
-2. Approve exact discovery-only text and contact route for each selected seller.
-3. Keep the offer clause out of first contact; decide exact terms only after D72 counsel.
-4. No messaging, reply handling, payment method, or pilot activation occurs from this document.
+1. Active set is S06/S07/S22/S26 only; their native public source links are saved above.
+2. These four discovery-only texts are prepared, not sent. Owner inserts their real name, reviews exact wording, and chooses the native contact route.
+3. Owner sends; no agent message or reply. No reply or decline means stop, no follow-up.
+4. No offer, fee, account access, customer-data request, payment method, or pilot activation in first contact. Paid work remains gated by D72 and separate written terms.
+5. Log actual contact, response, consent, conversation and outcome in docs/FIRST_RUPEE_SCOREBOARD.md; record only qualifying commercial evidence in docs/REVENUE_LOG.md. Drafts and silence are not outcomes.

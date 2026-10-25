@@ -1,3 +1,14 @@
+## 2026-10-25 — Owner methodology correction + money-first campaign priority
+
+- Replaces the 2026-10-25 16:13 “every reel beats the last” law with the 16:55 owner directive: each reel changes ONE named variable; judge a 5–8-reel sample at matched post age, not versus the immediate predecessor. Median ~26 views makes a single-reel comparison mostly noise.
+- Quality gates remain: subtitle spec v2, phone gate, posted-aspect gate. Timely utility content such as Passport must ship before 29 Oct based on evidence already sampled; do not delay it for an underpowered reel comparison.
+- Money-first: at 159 reels / 2 followers, reels are not the earning path. First-contact kits for S06/S07/S22/S26 and the outcome ledger come first. The four bilingual discovery-only kits are aligned to that set; prepared, not sent. Owner sends; no agent sends or replies. No commercial offer in first contact.
+- Truth boundary at this update: all four NOT SENT; conversations 0; verified recovered sales 0; reported/verified rupees ₨0. The 14-day counter starts with first owner-sent contact. Keep commercial proof separate from draft preparation and social metrics.
+- Next: owner can use the prepared kits; after real contact, record time/channel/reply/consent/conversation and seller-reported workflow in the scoreboard, and qualifying commercial evidence in docs/REVENUE_LOG.md. D72 legal/accounting clearance remains required before any paid pilot.
+- Docs-only correction: no seller was contacted, no reel was published, and no spend/intake/production switch was made.
+
+---
+
 ## 2026-10-25 — D84 first post-directive export datum: destination unresolved
 
 - Fresh source-backed result: Nepal Public Data's transcription of Nepal Rastra Bank's **one-month** 2026/27 Table 14 lists tea exports at **Rs 522 million in Shrawan 2083 (July/August 2026), provisional**, cell H16 in sheet `14.Top X`. Source: https://nepalpublicdata.com/figure-nrb_exports_fytd.html; underlying official source identified as NRB *Current Macroeconomic and Financial Situation: Tables (based on one month data of 2026/27)*, published 30 Sep 2026.

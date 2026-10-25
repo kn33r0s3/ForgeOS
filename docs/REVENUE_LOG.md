@@ -7,7 +7,7 @@ claims. `TEST`, `MOCK`, and `HYPOTHESIS` are never commercial proof.
 
 Do not put personal contact details, sensitive data, credentials, or raw
 customer messages here. Link to an access-controlled source by a non-secret
-reference. No commercial evidence has been recorded in this log yet.
+reference. No commercial evidence has been recorded in this log yet. Four seller kits are prepared but NOT SENT; preparation is not commercial evidence. The owner-reported contact/outcome ledger lives in docs/FIRST_RUPEE_SCOREBOARD.md.
 
 ## Conversations and prospects
 
