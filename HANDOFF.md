@@ -1,3 +1,9 @@
+## Current resumption — 2026-10-25 (D84 source refinement)
+
+- Main at start: `8ff8fd94ae5a5fc8d38d33dee79e54f06115c36f`; exact-head ForgeOS CI, separate secrets scan and independent deploy verifier all passed.
+- D84 new evidence: Nepal Public Data's transcription of official NRB one-month Table 14 says **Rs 522 million tea exports in Shrawan 2083 (July/August 2026), provisional** (sheet `14.Top X`, cell H16; https://nepalpublicdata.com/figure-nrb_exports_fytd.html). This supports some recorded Nepal tea exports after the June directive date, but table does not establish destination, India-lane continuity, or rule effect. Do not overstate this as proof that the affected India route resumed.
+- Current two-month TEPC Bhadra workbook and NRB tables remain uninspected. Next: locate tea by destination/customs office from official data; verify period, units and provisional/final status. Keep D84 UNKNOWN on the specific India-lane/resumption question; no automated collection/provider transmission or source registry change.
+
 ## Current resumption — 2026-10-25
 
 - **Canonical main at start:** `98fa7c664d5aafee7ae0503fc2479d9667230406` (direct GitHub branch-ref read before this docs-only update).

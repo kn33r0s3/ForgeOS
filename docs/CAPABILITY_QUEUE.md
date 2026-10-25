@@ -1,3 +1,11 @@
+## [2026-10-25 — D84 first post-directive trade datum; not an India-lane measure]
+
+- Nepal Public Data's transcription of NRB's official one-month Table 14 lists Tea = **Rs 522 million**, Shrawan 2083, **provisional** (July/August 2026), sheet `14.Top X`, cell H16: https://nepalpublicdata.com/figure-nrb_exports_fytd.html. The source identifies the NRB Table 14 workbook published 30 Sep 2026.
+- Evidence change: some tea export value was recorded in Nepal's first fiscal month after the June directive date. This is a nationwide major-commodity total and does not isolate destination/country or customs office. It does not prove trade specifically through the affected India lane, regulatory compliance, or the rule's causal impact. A two-month dataset is now listed by TEPC/NRB but its tea rows have not been inspected.
+- D84 remains UNKNOWN for “did the affected India lane resume?” The next cheapest test is an official tea-by-destination/customs-office breakdown from the two-month table or customs data. Do not annualize a single month or merge national totals with Kakarbhitta-only data. No source registry update, automated collection, provider transmission, contact, publishing or spend occurred.
+
+---
+
 ## [2026-10-25 — D84 official current-statistics lead; no current tea amount verified]
 
 - **Evidence delta:** the official [Trade and Export Promotion Centre (TEPC) foreign-trade page](https://tepc.gov.np/news_events/full_story/foreign-trade-statistics-of-nepal-second-months-shrawan-bhadra-of-fiscal-year-2083-84) exposes `bhadra_NFTS_2083_84.xlsx` for Shrawan–Bhadra FY 2083/84. The official [Nepal Rastra Bank site](https://www.nrb.org.np/) lists “Current Macroeconomic and Financial Situation-Tables (Based on two months Data of 2026/27)” dated 15 October 2026. Direct retrieval timed out in this session; neither workbook nor table contents were extracted. This is a verified source lead, not a verified tea shipment amount.

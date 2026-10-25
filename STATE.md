@@ -1,3 +1,11 @@
+## 2026-10-25 — D84 first post-directive export datum: destination unresolved
+
+- Fresh source-backed result: Nepal Public Data's transcription of Nepal Rastra Bank's **one-month** 2026/27 Table 14 lists tea exports at **Rs 522 million in Shrawan 2083 (July/August 2026), provisional**, cell H16 in sheet `14.Top X`. Source: https://nepalpublicdata.com/figure-nrb_exports_fytd.html; underlying official source identified as NRB *Current Macroeconomic and Financial Situation: Tables (based on one month data of 2026/27)*, published 30 Sep 2026.
+- Interpretation: this is evidence that Nepal recorded some tea exports after the June directive date; it does **not** establish exports specifically to India, compliance with India's testing rule, continuity of the Kakarbhitta/Mechi lane, or causal impact. Table 14 provides commodity totals; a destination-by-commodity cross-tab was not established. The two-month TEPC Bhadra workbook and NRB two-month tables are still not inspected. D84 stays UNKNOWN for the India-lane/resumption question.
+- Do not annualize this first-month figure or combine it with border-specific Kakarbhitta totals. Next cheapest discriminator: get the official two-month trade tables/workbook and locate tea by destination or customs office; explicitly mark any unavailable breakdown. No automated collection, provider transmission, source registration, or real-world action.
+
+---
+
 ## 2026-10-25 — D84 current-statistics source audit and exact-head verification
 
 - **Current main at start:** `98fa7c664d5aafee7ae0503fc2479d9667230406` (direct GitHub branch-ref read). Exact-head [ForgeOS CI](https://github.com/kn33r0s3/ForgeOS/actions/runs/40147540032) PASS, all 9 jobs; separate [secrets scan](https://github.com/kn33r0s3/ForgeOS/actions/runs/40147540051) PASS; [independent deploy verifier](https://github.com/kn33r0s3/ForgeOS/actions/runs/40147540022) PASS. Verifier evidence is limited to exact tested SHA, one schema-valid protected owner-cycle record with payload suppressed, and verification POST HTTP 200. This does not prove natural cron execution, current production health, DB durability, real inference, or real outcomes. GitHub Vercel status is success; current ordinary health/DB/inference/scheduler state remains UNKNOWN without fresh direct evidence.

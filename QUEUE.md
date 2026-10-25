@@ -1,3 +1,11 @@
+## Current Hami-wide resumption — 2026-10-25 (D84 refinement)
+
+1. **D84, next discriminator:** NRB's one-month Table 14 transcription shows Rs 522 million in tea exports in Shrawan 2083, provisional; this establishes some recorded tea exports after the June date, not exports to India or resumption of the affected lane. Inspect the official two-month TEPC/NRB files and locate tea-by-destination or customs-office evidence. D84 remains UNKNOWN for the India-lane question; do not annualize the one-month value.
+2. **D93:** retrieve official NDRRMA #04 via the authorized PDF route and inspect all pages; current restoration remains UNKNOWN.
+3. **Reliability:** correlate natural scheduled invocations with authorized logs and persisted CycleRun/stage outcomes. Do not manually invoke routes. Current production health, DB durability/read-after-write and real inference remain UNKNOWN.
+4. **Capability:** when supported source editing is available, preserve document date, index/listing date, source-declared effective time and retrieval time in the existing SourceCollector → Signal → Evidence → assessment/citation seam. The blocked `research_planner.py::summarize_research_portfolio` remains NOT IMPLEMENTED.
+5. Continue independent safe research/engineering without external contact, publishing, spend, intake activation or provider transmission absent authorization.
+
 ## Current Hami-wide resumption — 2026-10-25
 
 1. **D84 current statistics (active):** official TEPC Shrawan–Bhadra 2083/84 workbook and NRB two-month 2026/27 tables are now identified, but the current browser route timed out before either tea-specific table could be read. Obtain/extract tea rows via a normal accessible route; keep D84 UNKNOWN until period, unit, destination/border scope and data status are verified. No automated collection/provider transmission before source-specific rights clearance.
