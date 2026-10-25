@@ -6,6 +6,13 @@
 - Outcome truth: 0 contacts sent, 0 conversations, 0 verified recovered sales, ₨0 reported/verified. The 14-day clock begins at first owner-sent contact. Use docs/FIRST_RUPEE_SCOREBOARD.md for contact/outcome and docs/REVENUE_LOG.md only for qualifying commercial evidence. D72 counsel/legal gate still blocks paid pilot.
 - This priority does not gate unrelated Hami work or erase D84/D93/reliability queue.
 
+## Current operational resumption — 2026-10-26 05:31 NPT
+
+- Base SHA `604af783c9f481eb48fb0dc6a9a15810b1c4d968`: CI 40212749685 PASS 9/9, secrets scan 40212749555 PASS, independent verifier 40212749671 PASS. The verifier matched exact SHA and read one schema-valid cycle record (payload suppressed), then recorded HTTP 200; this is not proof of natural cron or DB durability.
+- Current main advanced to `12173967f2720fad2915ece43bc3082cfb70b17b`. Its CI is still running (8/9 jobs complete successfully; backend tests in progress), secret scan passed, and verifier remains in progress. GitHub Vercel status says deployment completed; direct Vercel deployment/runtime reads are 403, so explicit READY is UNKNOWN.
+- Ordinary health GETs failed at DNS before HTTP for both domains; health remains UNKNOWN. The 05:45 NPT cycle is still ahead at this snapshot; intelligence is scheduled 11:45. Do not manually invoke either. DB durability, natural cron attribution, real inference and fresh REAL outcomes remain UNKNOWN. Preserve the two-consecutive-failure alert rule; do not count DNS/403 as health failures.
+- Resume: finish exact-head checks for `12173967…`; after natural schedules, use authorized logs/protected owner-cycle read to correlate trigger, persisted CycleRun, final status/stages and read-after-write. Retry ordinary health GETs from working DNS; resolve Vercel scope only through normal authorization.
+
 ## Current resumption — 2026-10-25 (D84 source refinement)
 
 - Main at start: `8ff8fd94ae5a5fc8d38d33dee79e54f06115c36f`; exact-head ForgeOS CI, separate secrets scan and independent deploy verifier all passed.

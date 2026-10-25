@@ -2505,3 +2505,12 @@ Do not reopen findings already corrected in source as if still live bugs. Do not
 - **Rights/access and next lawful action:** NDRRMA's robots endpoint could not be retrieved through the available browser route; no NDRRMA-specific terms/reuse grant was located. The Ministry of Energy page's robots/terms/reuse scope was not verified. Neither source is registered in `source_clearance_registry.py`; the existing web collector requires exact URL registration and live robots/terms validation. Setu is not a public feed and no credentials were attempted. No collector run, Signal/Evidence ingestion, provider transmission, contact, publication, payment, or source-code mutation occurred. First retrieve official PDFs through a reachable authorized route and inspect screenshots, then complete source-specific rights/robots/terms review. Only if a supported source-edit path is available should an existing-module regression test the provenance seam; no new table, primitive, collector, taxonomy, or file.
 
 - **Improvement delta (knowledge + evidence quality):** the official report #04 cutoff is reconfirmed; a separate news report supplies a bounded early-warning timeline; the Ministry of Energy's page/listing date mismatch and the road-data app's restricted audience are now explicit unknowns rather than implied current status. No operational coordination failure is claimed.
+
+---
+
+## 2026-10-26 — Operational evidence delta and observability dependency
+
+- Evidence-quality increment: base SHA `604af783c9f481eb48fb0dc6a9a15810b1c4d968` passed exact-head CI 9/9, secrets scan, and independent deployment verification. The verifier read one schema-valid cycle record but suppresses its payload; trigger and durability remain unproved.
+- The later current SHA `12173967f2720fad2915ece43bc3082cfb70b17b` has its own CI still in progress (backend pytest), secrets scan passed, and independent verifier in progress. The parent result is not carried forward.
+- GitHub Vercel status reports deployment completed; direct Vercel deployment/runtime access returns 403 for the team scope. Ordinary health probes fail at DNS before HTTP. Explicit READY and current health remain UNKNOWN.
+- Next removable dependency: authorized runtime observability plus working ordinary DNS/network. After natural 05:45/11:45 NPT schedules, correlate invocation source with persisted CycleRun, final stage outcomes, and read-after-write. No manual cron invocation, external action, spend, or activation.
