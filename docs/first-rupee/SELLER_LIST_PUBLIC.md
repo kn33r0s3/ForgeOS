@@ -1,62 +1,27 @@
-# Public seller signal list — First Rupee Sprint
+# Public seller signal summary — anonymized
 
-**QA revision:** 2026-10-23. This is a public-signal shortlist for owner review, not a lead list.
-Method: targeted public search/index pages and business-owned websites. No logged-in browsing, automated platform collection, account access, profile following, messaging, or contact-data harvesting was used. Some source URLs are third-party public indices/mirrors; the evidence class states that.
+**Status:** historical desk research, anonymized in the current public tree under Hami Autonomy Proof v1. No current outreach is authorized by this file.
 
-## Epistemic / privacy boundary
+## What the sample established
 
-A public page showing “DM to order”, WhatsApp, COD, custom sizing, or a product post establishes only that the linked public source contains that signal. It does **not** establish slow replies, lost orders, small team size, buyer frustration, consent to contact, willingness to try Hami, or willingness to pay. All of those remain UNKNOWN until the owner has a real permitted conversation and records the result.
+- 30 public seller/business pages were sampled signed-out in the earlier research round.
+- Sampled categories included clothing, general retail, accessories, electronics, beauty, food/pickles, customized goods and handicrafts.
+- Observed public signals included DM/message ordering, requests to ask for prices, delivery/COD wording and custom-order inquiries.
+- A public post establishes only what it says. It does **not** establish slow replies, missed sales, consent to contact, willingness to pay, customer counts or any realized outcome.
+- Third-party social mirrors are weaker than owner-controlled pages. Source dates and freshness need rechecking before reuse.
 
-No phone numbers, personal emails, private contact details, or credentials are copied. Source URL is a public signal locator, not consent or permission to contact. Native social pages must be manually rechecked by the owner before a seller is selected. E-commerce registration/listing status remains UNKNOWN for every candidate.
+## Current status
 
-**Evidence classes:** OBSERVED = linked public source contains the stated signal; UNKNOWN = actual customer-service pain, response speed, recovered sales, seller consent and willingness-to-pay are not evidenced.
+- Original desk sample: 30 pages.
+- A four-item shortlist was recorded only by anonymized references S06, S07, S22 and S26. These IDs do not resolve to identities in this public file.
+- First-contact kits were reported **NOT SENT** in the latest saved scoreboard before this privacy scrub.
+- Real seller conversations: **0** in that scoreboard.
+- Verified recovered sales: **0** in that scoreboard.
+- Verified rupees: **₨0** in that scoreboard.
+- The 14-day clock had not started because there was no qualifying owner-sent first contact.
 
-## Thirty public signal candidates
+## Privacy and evidence boundary
 
-| ID | Business/page name | Public source URL | Category / location from source | Actual public signal | Evidence / gate |
-|---|---|---|---|---|---|
-| S01 | The Laani’s Closet | [open source](https://www.findglocal.com/NP/Kathmandu/985967321270860/The-Laani%E2%80%99s-Closet) | clothing · Shwoyembhu/Kathmandu | Indexed posts 26 Jun–21 Jul 2026; all-Nepal shipping; orders via Instagram/WhatsApp/TikTok DM. | OBSERVED via third-party index; native account check required. Pain and consent UNKNOWN. |
-| S02 | MiMi | [open source](https://www.findglocal.com/NP/Kathmandu/101102909288167/MiMi) | children’s clothing · Kaldhara/Thamel, Kathmandu | Listing has a 1 Sep 2026 post and repeated DM-to-order captions. | OBSERVED via third-party index; pain UNKNOWN. Pain and consent UNKNOWN. |
-| S03 | YAK N NAK | [open source](https://www.findglocal.com/NP/Kathmandu/100597534770451/YAK-N-NAK) | clothing · Kathmandu | Listing shows Sep 2026 activity and DM-to-order captions. | OBSERVED via third-party index; lost sales UNKNOWN. Pain and consent UNKNOWN. |
-| S04 | Biva Clothing | [open source](https://www.findglocal.com/NP/Kathmandu/100678049628473/Biva-clothing) | clothing · Kathmandu | Listing shows Aug 2026 posts and DM-based orders. | OBSERVED via third-party index; pain UNKNOWN. Pain and consent UNKNOWN. |
-| S05 | Easydeals_official | [open source](https://www.findglocal.com/NP/Kathmandu/110266075164240/Easydeals_official) | clothing/retail · Kathmandu | June 2026 posts; message/WhatsApp orders and nationwide delivery. | OBSERVED via third-party index; team size UNKNOWN. Pain and consent UNKNOWN. |
-| S06 | SL Collection Nepal | [native public TikTok video](https://www.tiktok.com/@slcollectionnepal01/video/7580444582358371592) | clothing · TikTok public seller | Native TikTok video shows clothing products; the account has multiple public product videos. | OBSERVED — native TikTok source recorded as first-hand checked in commit ca73b33; the linked public video is the source. Actual slow replies, lost sales, consent and willingness to pay remain UNKNOWN. |
-| S07 | Sworup Wear House | [native public TikTok video](https://www.tiktok.com/@sworupwearhouse/video/7637539441527098645) | clothing · Sallaghari, Bhaktapur | Native TikTok video/captions include DM-for-price/order and nationwide delivery; the recorded source review identifies the seller in Sallaghari, Bhaktapur. | OBSERVED — native TikTok source recorded as first-hand checked in commit ca73b33; the linked public video is the source. Actual slow replies, lost sales, consent and willingness to pay remain UNKNOWN. |
-| S08 | Anjyoti Collection | [open source](https://www.fashyas.com/NP/Dharan/1282268268305397/Anjyoti-collection) | clothing · Dharan | Public listing shows Oct 2026 posts, DM-to-order and delivery across Nepal. | OBSERVED via third-party index; current workflow still needs re-check. Pain and consent UNKNOWN. |
-| S09 | Shiva Shakti Uniform | [open source](https://www.findglocal.com/NP/Kathmandu/104697424614390/Shiva-Shakti-Uniform) | uniforms/custom clothing · Kathmandu | 2026 public listing invites messages or DMs for uniform/custom orders. | OBSERVED via third-party index; volume UNKNOWN. Pain and consent UNKNOWN. |
-| S10 | Janak Fancy Pasal | [open source](https://www.findglocal.com/NP/Unknown/227954503734465/janak-fancy-pasal) | general retail · location UNKNOWN | Listing has a June 2026 signal for message orders/COD; its own index marks location unknown. | OBSERVED via third-party index; location/activity revalidation needed. Pain and consent UNKNOWN. |
-| S11 | Fusion Dikshya | [open source](https://www.restaurants10.com/NP/Kathmandu/111347101442544/Fusion-Dikshya) | custom clothing · Kathmandu | Sep 2026 posts show custom sizes/designs and DM-to-order wording. | OBSERVED via third-party index; actual missed inquiries UNKNOWN. Pain and consent UNKNOWN. |
-| S12 | Asan Wholesale Bazaar | [open source](https://www.findglocal.com/NP/Kathmandu/905289882667330/Asan-Wholesale-Bazaar) | wholesale/general retail · Kathmandu | May 2026 public post and message-order/delivery language; business scale uncertain. | OBSERVED via third-party index; lower fit as micro-seller is possible. Pain and consent UNKNOWN. |
-| S13 | Mato Crafts | [open source](https://matocrafts.com/about) | handmade crafts/jewellery · Nepal | Official website describes handmade/custom craft products and social enquiries; also has a website. | OBSERVED on own website; confirm actual order channel. Pain and consent UNKNOWN. |
-| S14 | Handicraft Ghar Nepal | [open source](https://www.handicraftgharnepal.com.np/) | handicrafts · Nepal | Official site shows handicrafts, social order enquiries, and delivery/payment options. | OBSERVED on own website; no pain evidence. Pain and consent UNKNOWN. |
-| S15 | Allinone Earrings | [open source](https://urlebird.com/user/allinone.earrings/) | jewellery/accessories · third-party TikTok mirror | Public mirror shows recent content and Instagram/WhatsApp DM/COD signals. | OBSERVED on third-party mirror; native page recheck required. Pain and consent UNKNOWN. |
-| S16 | Digi Tech | [open source](https://urlebird.com/user/dgtech_nepal/) | electronics/audio · third-party TikTok mirror | Public mirror shows recent seller content; exact order channel is not fully established. | OBSERVED content only; weak candidate until native workflow is checked. Pain and consent UNKNOWN. |
-| S17 | Becky Sneakers NP | [open source](https://crevideo.com/tiktok/beckysneakers.np) | footwear · third-party TikTok mirror | Mirror identifies footwear and message/COD signals; freshness weaker than Sep–Oct 2026 candidates. | OBSERVED on mirror; low recency confidence. Pain and consent UNKNOWN. |
-| S18 | Radhacollection | [open source](https://www.fashyas.com/NP/Kathmandu/102654994815571/Radhacollection) | customized clothing/jewellery · Chabahil, Kathmandu | Aug 2026 posts for custom kurtha/jewellery and DM-for-order/inquiry signals. | OBSERVED via third-party index; actual order loss UNKNOWN. Pain and consent UNKNOWN. |
-| S19 | Clothes Nation Nepal | [open source](https://www.globuya.com/NP/Kathmandu/1994620917507096/Clothes-Nation-Nepal) | clothing · Kathmandu | Public listing has July–Sep 2026 posts and repeated DM-to-order wording. | OBSERVED via third-party index; native page should be checked. Pain and consent UNKNOWN. |
-| S20 | Shades Nepal | [open source](https://www.shadesnepal.com/) | eyewear · Kathmandu | Official site shows drops from Sep–Oct 2026 and says order by DM. | OBSERVED on official site; missed messages UNKNOWN. Pain and consent UNKNOWN. |
-| S21 | Salesstore.np | [open source](https://linktr.ee/salesstore.np) | general online store · location requires revalidation | Public link hub links social channels and says COD/online payment/DM-to-order; account joined Jan 2026 per page. | OBSERVED on public link hub; confirm Nepal operation/native accounts. Pain and consent UNKNOWN. |
-| S22 | Hello Mobile Store | [native public TikTok video](https://www.tiktok.com/@hello.mobile.stor3/video/7623858812893564180) | used iPhones/electronics · TikTok public seller | Native TikTok video advertises used iPhones and says “Offer Price only DM us.” | OBSERVED — native TikTok source recorded as first-hand checked in commit ca73b33; the linked public video is the source. Actual slow replies, lost sales, consent and willingness to pay remain UNKNOWN. |
-| S23 | Lasya Makeup Official | [open source](https://www.findglocal.com/NP/Kathmandu/610936475427788/Lasyamakeup.official) | makeup/beauty · Kathmandu | Public listing shows Aug 2026 product posts with DM-to-order wording. | OBSERVED via third-party index; service burden UNKNOWN. Pain and consent UNKNOWN. |
-| S24 | Technic by Lavish Me | [open source](https://www.findglocal.com/NP/Kathmandu/1861456560809265/Technic-by-lavish-me) | beauty products · Kathmandu | Public listing shows Jul–Aug 2026 products and DM-for-order/inquiry wording. | OBSERVED via third-party index; slow replies UNKNOWN. Pain and consent UNKNOWN. |
-| S25 | Chrixtina Rocca Nepal | [open source](https://www.findglocal.com/NP/Kathmandu/603455999524161/Chrixtina-Rocca-Nepal) | cosmetics/beauty · Kathmandu | Public listing shows Aug 2026 cosmetics posts and DM-to-order/delivery wording. | OBSERVED via third-party index; workflow to confirm. Pain and consent UNKNOWN. |
-| S26 | Asha Achar | [native public TikTok video](https://www.tiktok.com/@asha.achar/video/7593269742895451412) | pickle/food products · TikTok public seller | Native TikTok video caption says akbare and garlic pickle are available, asks buyers to DM for price, and mentions delivery throughout Nepal. | OBSERVED — native TikTok source recorded as first-hand checked in commit ca73b33; the linked public video is the source. Actual slow replies, lost sales, consent and willingness to pay remain UNKNOWN. |
-| S27 | Case Of Beauty | [open source](https://www.findglocal.com/NP/Kathmandu/660485930477755/Case-Of-Beauty) | beauty products · Kathmandu | Public listing shows Jul–Aug 2026 product signals and DM-to-order language. | OBSERVED via third-party index; conversion unknown. Pain and consent UNKNOWN. |
-| S28 | Gift Studio Nepal | [open source](https://www.findglocal.com/NP/Kathmandu/100916479558726/Gift-Studio-Nepal) | customized gifts · Kathmandu | Public listing shows custom gifts, Aug 2026 activity and message-based order language. | OBSERVED via third-party index; order process should be checked. Pain and consent UNKNOWN. |
-| S29 | RDM Fashion Trend | [open source](https://www.findglocal.com/NP/Kathmandu/111510751650122/RDM-Fashion-Trend) | clothing · Kathmandu | Public listing shows Oct 2026 activity and COD/delivery signals. | OBSERVED via third-party index; slow replies/lost orders UNKNOWN. Pain and consent UNKNOWN. |
-| S30 | 6K Thrifts | [open source](https://6kthrifts.com/) | second-hand/vintage clothing · Kathmandu | Official site describes one-of-one items, new drops, and Instagram DM ordering alongside a website. | OBSERVED on official website; verify actual order channel before selection. Pain and consent UNKNOWN. |
+Prospect names, row-level source locators and personalized prospect observations are omitted from the current public tree. They were not copied into another repository or private store by this change; do not claim that a private backup exists. Rebuild any required source mapping only through a future owner-authorized review, verify the current source and permissions, and retain only the minimum necessary evidence outside public source control.
 
-## Selected sellers and source crosswalk
-
-The scoreboard records owner selection of original-list #6 **SL Collection Nepal**, #7 **Sworup Wear House**, #22 **Hello Mobile Store**, and #26 **Asha Achar**. Commit `ca73b33` records a first-hand native-platform check of the exact TikTok accounts and supplies the public video URLs in S06/S07/S22/S26 above. The mapping is by account identity and cited video—not numeric coincidence. This closes the earlier missing-URL issue in the repository record. It does not establish slow replies, lost sales, consent to contact, willingness to pay, or permission for an AI agent to send messages.
-
-## Alternatives if the owner elects to replace a non-verifiable legacy selection
-
-| Alternative | Public source | Observed signal | Evidence boundary |
-|---|---|---|---|
-| Salesstore.np | [Linktree](https://linktr.ee/salesstore.np) | Social links and COD/online payment/DM-to-order text | Public link hub; verify native account and Nepal operation |
-| Clothes Nation Nepal | [Public listing](https://www.globuya.com/NP/Kathmandu/1994620917507096/Clothes-Nation-Nepal) | Jul–Sep 2026 clothing posts direct buyers to DM | Third-party public index |
-| Radhacollection | [Public listing](https://www.fashyas.com/NP/Kathmandu/102654994815571/Radhacollection) | Aug 2026 custom clothing/jewellery posts ask buyers to DM | Third-party public index |
-| Fusion Dikshya | [Public listing](https://www.restaurants10.com/NP/Kathmandu/111347101442544/Fusion-Dikshya) | Sep 2026 custom sizing/design posts direct buyers to DM | Third-party public index |
-
-A public page is not a lead and is not consent. Prefer a genuine warm introduction. No outreach is permitted by this list.
+No contact, follow-up, publishing, payment or external action is authorized here. A public page is not consent. The previous Git history has **not** been rewritten; earlier versions may remain visible in historical commits.
