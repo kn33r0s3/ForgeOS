@@ -6,6 +6,13 @@
 - Outcome truth: 0 contacts sent, 0 conversations, 0 verified recovered sales, ₨0 reported/verified. The 14-day clock begins at first owner-sent contact. Use docs/FIRST_RUPEE_SCOREBOARD.md for contact/outcome and docs/REVENUE_LOG.md only for qualifying commercial evidence. D72 counsel/legal gate still blocks paid pilot.
 - This priority does not gate unrelated Hami work or erase D84/D93/reliability queue.
 
+## Current continuation — 2026-10-27 05:16 NPT
+
+- Run-start main: f77a74ee9608f6770b55cd84a1e79f62ad1093c2; exact-head CI 40419391982 passed 9/9 (backend 1,354 passed / 2 skipped / 18 warnings; frontend 274 passed), secrets scan 40419392252 passed, and independent verifier 40419392355 passed with exact deployed SHA, valid protected owner read (payload suppressed) and HTTP 200 verification POST. This is not proof of natural cron, database durability, inference or general health. The current follow-up docs commit needs its own checks.
+- D95: official Nuwakot DAO reports #30 (16 Oct), #05 (22 Oct), #06 (23 Oct), #07 (24 Oct) and #08 (25 Oct) were inspected page-by-page. #05 does not list the Dunge–Trishuli ACRO bridge under construction; #06 first lists it in the sampled sequence; #07/#08 repeat it. This is the first reported appearance, not a construction start date. Counts remain source-reported and unchanged; do not infer no activity.
+- D93: official indexed metadata now identifies #02 at /np/situation-report/465 (page date Asoj 27; cutoff 12 Oct, 22:00) and #03 at /np/situation-report/466 (Nepali) /467 (English), page date Asoj 28 but cutoff 13 Oct, 22:00. #04 /468 has cutoff 16 Oct, 10:00. #03/#04 PDF bodies remain unread because direct opens time out; #05/later was not surfaced by bounded search, not proven absent. The older #02 /464 reference remains unresolved. Do not merge this event with the Rasuwa–Bhotekoshi reports.
+- Source-time capability remains NOT IMPLEMENTED. Nuwakot/NDRRMA robots/terms/reuse review is incomplete; neither is registered for automated ingestion. Source-code write safety remains blocked; do not retry the planner helper through another route. Preserve publication/listing date, body cutoff, retrieval time, language route, report version and scope separately once a supported source-edit path and source-specific clearance exist. No external action or REAL outcome occurred.
+
 ## Current continuation — 2026-10-27 05:02 NPT
 
 - Canonical main at start: `8cf2bc272470c956edc07fa21ef79eb2fb6317d8`. The previous `644d9e2` note is stale. Recent history includes the authority-contract/anonymization commit `b7043d5` and continuity wording correction `8cf2bc2`.
