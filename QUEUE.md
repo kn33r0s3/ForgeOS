@@ -7,6 +7,14 @@
 
 ---
 
+## Reliability verification follow-up — 2026-10-27 05:20 NPT
+
+1. Exact current head at run start: 18560d5dd7da3a955155bcd1feb651fa71cc17ea. CI run 40420491991 is still in progress only because backend pytest is running; the other eight jobs passed. Secret scan 40420492247 and independent verifier 40420491958 passed. Recheck the live SHA and its own checks after pytest finishes.
+2. GitHub Vercel status says deployment completed, but direct Vercel metadata/runtime access is HTTP 403 and connected team/project listings are empty. Do not claim explicit READY or runtime health from that status.
+3. Both ordinary health probes failed before HTTP due to environment DNS resolution. Keep both health states UNKNOWN; do not run the watchdog or count these as confirmed app failures.
+4. Natural 05:45 cycle and 11:45 intelligence invocations remain unverified. After each schedule, use authorized logs/owner-cycle read to establish trigger, persisted CycleRun, final status, stage outcomes and durable read-after-write. Never manually invoke cron to manufacture evidence.
+5. Existing health-watch code counts a curl/DNS failure as a non-ok poll. Correct this existing seam with a regression: transport/observation errors are UNKNOWN and must not increment the consecutive confirmed-health-failure counter; preserve two consecutive confirmed unhealthy observations before alerting.
+
 ## Hami-wide continuation — 2026-10-26 (portfolio + D95)
 
 1. **Portfolio coverage:** survey the 100 existing D1–D100 rows only; prefix counts 96 UNKNOWN / 3 HYPOTHESIZED / 1 SUPPORTED. Row-text date/source/independence/contradiction counts are recorded in `docs/CAPABILITY_QUEUE.md`; this is not deep research. Live open `ResearchQuestion` records are not available through an authorized read surface, so their count is UNKNOWN.
