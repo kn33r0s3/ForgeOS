@@ -71,3 +71,9 @@
 - Corrected three continuity-text occurrences that had duplicated the word “seller” beside anonymized IDs. The current tracked files now label S06/S07/S22/S26 as anonymized references without duplicated labels.
 - Static assertion: none of the 30 known seller display names or any of the 30 exact source locators is present in the changed queue/handoff text. No history rewrite and no external action.
 - This is documentation-only. Do not treat this note as passing CI for the new SHA until that SHA's checks finish.
+
+## 2026-10-27 — Exact-head verification for M0 anonymization correction
+
+- The exact head `8cf2bc272470c956edc07fa21ef79eb2fb6317d8` subsequently passed [ForgeOS CI 40387729641](https://github.com/kn33r0s3/ForgeOS/actions/runs/40387729641): 9/9 jobs; backend pytest 1,354 passed / 2 skipped / 18 warnings; frontend 274 passed. The separate [Gitleaks scan 40387729405](https://github.com/kn33r0s3/ForgeOS/actions/runs/40387729405) reports no leaks. The [independent deployment verifier 40387729244](https://github.com/kn33r0s3/ForgeOS/actions/runs/40387729244) passed with deployed SHA match, protected owner-read success, and verification POST HTTP 200. GitHub's Vercel commit status is success.
+- This closes the earlier pending-verification note for `8cf2bc272470c956edc07fa21ef79eb2fb6317d8` only. The verifier's cycle read is schema-valid but payload-suppressed; it does not prove natural cron attribution, database durability/read-after-write, real model inference, 24/72-hour soak completion or general health. Connected Vercel project enumeration returned zero projects and direct deployment lookup 404, so independent runtime observability remains UNKNOWN.
+- Any subsequent main SHA, including a documentation-only continuation commit, requires its own exact-head CI, secret scan and deployment-verifier result. Do not carry this baseline forward as a pass for a later SHA.
