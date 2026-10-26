@@ -63,3 +63,11 @@
 - **M3–M6:** official Nepal source clearances, Nepali toolkit/evaluation, 7-day prediction calibration and evidence API interoperability have not been implemented or verified by this run. No code/schema/primitive/ledger was added for these unfinished gates.
 - **Execution blocker:** container network resolution for `github.com` failed. The Vercel sandbox request returned 403 team-scope authorization, so no isolated test runner could be started. This documentation/redaction change does not claim post-change CI success. No contacts, messages, public posts, spend or REAL outcome occurred.
 - **Next dependency:** run the changed SHA through CI and restore an authorized isolated test-runner path before changing runtime code; then implement M1 with the existing scheduler, heartbeat/event, Telegram owner-control and HALT seams, without enabling customer-outbound dispatch. Metrics without real transactions remain **NOT MEASURABLE**.
+
+
+## 2026-10-27 — M0 anonymization wording correction
+
+- Exact base `b7043d59d5f98a093f5645b1dffde27d34251a45` passed all 11/11 GitHub checks (backend 1,354 passed / 2 skipped, frontend suite, typecheck, lint, repository guards, route smoke and both secret scans).
+- Corrected three continuity-text occurrences that had duplicated the word “seller” beside anonymized IDs. The current tracked files now label S06/S07/S22/S26 as anonymized references without duplicated labels.
+- Static assertion: none of the 30 known seller display names or any of the 30 exact source locators is present in the changed queue/handoff text. No history rewrite and no external action.
+- This is documentation-only. Do not treat this note as passing CI for the new SHA until that SHA's checks finish.
