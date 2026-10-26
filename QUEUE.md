@@ -7,6 +7,15 @@
 
 ---
 
+## Independent D95 source increment — 2026-10-27 05:31 NPT
+
+1. Official Nuwakot report #08 PDF is now inspected page-by-page: effective cutoff Kartik 8 / 25 Oct 2026, 18:00; page updated Kartik 9 / 26 Oct 17:49:46. Preserve the source-reported cumulative categories and bridge/temporary-crossing status as dated observations, not live travel/access advice.
+2. The DAO's separate Kartik 9 / 26 Oct high-alert notice cites a DHM special bulletin for Kartik 11–14 / 28–31 Oct. The underlying DHM bulletin has not been retrieved; independent corroboration remains UNKNOWN. Do not build emergency advice or an alerting service from this notice.
+3. Nuwakot, DHM and NDRRMA remain NOT CLEARED for automated collection/provider transmission: robots endpoints were inaccessible, and the linked MoHA Terms of Use does not grant explicit collection/reuse rights. Keep manual source reading separate from Hami ingestion.
+4. Next cheapest step: retrieve the exact DHM bulletin and check for a later Nuwakot flood-status PDF. No-search is not proof of absence. Continue D93 and reliability work independently; no new primitive/table/collector and no retry of the blocked planner helper.
+
+---
+
 ## Reliability verification follow-up — 2026-10-27 05:20 NPT
 
 1. Exact current head at run start: 18560d5dd7da3a955155bcd1feb651fa71cc17ea. CI run 40420491991 is still in progress only because backend pytest is running; the other eight jobs passed. Secret scan 40420492247 and independent verifier 40420491958 passed. Recheck the live SHA and its own checks after pytest finishes.

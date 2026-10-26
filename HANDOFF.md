@@ -6,6 +6,16 @@
 - Outcome truth: 0 contacts sent, 0 conversations, 0 verified recovered sales, ₨0 reported/verified. The 14-day clock begins at first owner-sent contact. Use docs/FIRST_RUPEE_SCOREBOARD.md for contact/outcome and docs/REVENUE_LOG.md only for qualifying commercial evidence. D72 counsel/legal gate still blocks paid pilot.
 - This priority does not gate unrelated Hami work or erase D84/D93/reliability queue.
 
+## Operational verification and next discovery — 2026-10-27 05:31 NPT
+
+- Current main at this run: a61dd22a9c28a729402d47e5f47a51ad74d06662; exact-head CI, secret scan and independent deploy verifier all passed (run IDs 40421131013, 40421130858, 40421130867). This verifies the parent SHA only; any new continuity commit needs its own checks.
+- D95: read both pages of Nuwakot DAO report #08 (cutoff Kartik 8 / 25 Oct 18:00; page updated Kartik 9 / 26 Oct 17:49:46). Restoration and cumulative categories are recorded in docs/CAPABILITY_QUEUE.md; do not present them as live/current access proof.
+- Separate high-alert notice dated Kartik 9 / 26 Oct cites a DHM special bulletin for Kartik 11–14 / 28–31 Oct. Underlying DHM bulletin not retrieved; no independent corroboration. Do not create emergency advice or alerting.
+- Source clearance remains blocked: the linked MoHA Terms of Use grants no explicit automated reuse permission and robots endpoints are inaccessible in this browser. No ingestion or provider transmission.
+- Next: retrieve the exact DHM bulletin and check for a later Nuwakot status PDF; preserve event/scope/time separation and leave unproved facts UNKNOWN. Do not retry the blocked planner helper through another write path.
+
+---
+
 ## Operational verification — 2026-10-27 05:20 NPT
 
 - **Run-start main:** 18560d5dd7da3a955155bcd1feb651fa71cc17ea, resolved from the live refs/heads/main API. Exact-SHA ForgeOS CI run [40420491991](https://github.com/kn33r0s3/ForgeOS/actions/runs/40420491991) is **IN PROGRESS**: backend pytest is still running; the other eight jobs passed. Standalone secrets scan [40420492247](https://github.com/kn33r0s3/ForgeOS/actions/runs/40420492247) passed. Independent deploy verifier [40420491958](https://github.com/kn33r0s3/ForgeOS/actions/runs/40420491958) passed: production reported the exact tested SHA, the protected owner-cycle read returned one schema-valid record (payload suppressed), and the verification POST succeeded. These facts do not establish natural cron attribution, database durability, real inference, or broad runtime health.
