@@ -762,3 +762,56 @@ def test_evaluation_retry_scan_skips_retry_exhausted_backlog(db, monkeypatch):
     assert len(outcomes) == 1
     assert outcomes[0]["task_id"] == eligible.id
     assert outcomes[0]["status"] == "completed"
+
+
+def test_missing_referenced_evidence_is_not_silently_dropped(db, monkeypatch):
+    from app.services import multi_judge
+
+    task, evidence = _task_with_claimed_evidence(db)
+    existing_ids = [row.id for row in db.query(models.Evidence).all()]
+    missing_id = max(existing_ids, default=0) + 100
+
+    def judgment(label):
+        return {
+            "label": label,
+            "conclusion": "This is a deterministic test judgment, not a real-world outcome.",
+            "reasoning": "The test checks evidence-reference integrity only.",
+            "uncertainty": "A referenced Evidence row is missing.",
+        }
+
+    judges = [
+        multi_judge.JudgeSpec(
+            name="missing-row-judge-a",
+            provider="test-provider",
+            model="model-a",
+            evaluate=lambda _question, _evidence: judgment("positive"),
+        ),
+        multi_judge.JudgeSpec(
+            name="missing-row-judge-b",
+            provider="test-provider",
+            model="model-b",
+            evaluate=lambda _question, _evidence: judgment("positive"),
+        ),
+    ]
+    monkeypatch.setattr(multi_judge, "_default_judges", lambda evidence=None: judges)
+
+    result = research_task_engine.evaluate_claim_after_research(
+        db, task, [evidence.id, missing_id]
+    )
+    persisted = db.get(models.ResearchTask, task.id)
+    evaluate_step = {step.name: step for step in persisted.steps}["evaluate"]
+
+    assert result is not None
+    assert [row.id for row in result["judgments"]] and all(
+        row.status == "completed" for row in result["judgments"]
+    )
+    assert result["comparison"].outcome == "missing_evidence"
+    assert result["comparison"].missing_evidence == [missing_id]
+    assert result["comparison"].follow_up_question_id is not None
+    assert result["comparison"].evidence_ids == str(evidence.id)
+    assert persisted.results["missing_evidence_ids"] == [missing_id]
+    assert persisted.results["evaluation_status"] == "missing_evidence_rows"
+    assert persisted.results["comparison_outcome"] == "missing_evidence"
+    assert evaluate_step.status == "failed"
+    assert evaluate_step.output_data["status"] == "missing_evidence_rows"
+    assert evaluate_step.output_data["missing_evidence_ids"] == [missing_id]
