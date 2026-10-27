@@ -7,6 +7,16 @@
 
 ---
 
+
+## Operational verification resumption — 2026-10-28 05:24 NPT
+
+1. Exact run-start SHA `129080103d932f818bd9e201b9c4579bbbdb063f` has full CI 9/9, secrets scan PASS, and independent verifier PASS; these results do not transfer to a newer SHA.
+2. Today's natural 05:45 NPT cycle and 11:45 NPT intelligence execution still need authorized trigger evidence linked to a persisted `CycleRun`, final status/stages, and durable read-after-write. Do not invoke either route manually.
+3. Both ordinary production health probes failed before HTTP at DNS; treat both as UNKNOWN. Vercel metadata/runtime reads remain 403; explicit READY and runtime state remain UNKNOWN.
+4. Preserve two consecutive **confirmed unhealthy** observations before alerting. Do not count DNS/transport/403 as health failures. The watchdog's transport-UNKNOWN correction and regression remain queued.
+5. Verify production DB durability, real model inference, and fresh REAL outcomes independently. No external activity, activation, spend, or money action.
+
+
 ## Independent D95 source increment — 2026-10-27 05:31 NPT
 
 1. Official Nuwakot report #08 PDF is now inspected page-by-page: effective cutoff Kartik 8 / 25 Oct 2026, 18:00; page updated Kartik 9 / 26 Oct 17:49:46. Preserve the source-reported cumulative categories and bridge/temporary-crossing status as dated observations, not live travel/access advice.
