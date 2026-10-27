@@ -8,6 +8,16 @@
 ---
 
 
+## Independent D95/D93 source increment — 2026-10-28 05:33 NPT
+
+1. Official Nuwakot report #27 PDF inspected page-by-page: cutoff Kartik 9 / 26 Oct, 18:00 NPT; page date Kartik 10 / 27 Oct. Cumulative categories match #08; the Dunge–Trishuli ACRO bridge remains listed under construction. No current passability or service state is established.
+2. The homepage widget is older than the notice index/direct #27 route. No #28 surfaced in bounded search; absence is not established.
+3. The 26 Oct DAO notice cites a DHM forecast window of 28–31 Oct; secondary reports describe 28 Oct–1 Nov. The original bulletin remains unread. A similar Morang DAO notice is dated 2083-06-07 / 23 Sep and is excluded as stale, not current corroboration.
+4. NDRRMA #02 page/listing date and stated cutoff remain one day apart; #02 PDF remains inaccessible and no #05/later surfaced. Gorkha restoration UNKNOWN.
+5. Source-time provenance remains a candidate in the existing seam, gated on source-specific rights review and a supported source-edit path. No new D row, primitive, table, collector or automated ingestion. Hami-wide work continues independently of the seller pilot.
+
+---
+
 ## Operational verification resumption — 2026-10-28 05:24 NPT
 
 1. Exact run-start SHA `129080103d932f818bd9e201b9c4579bbbdb063f` has full CI 9/9, secrets scan PASS, and independent verifier PASS; these results do not transfer to a newer SHA.
