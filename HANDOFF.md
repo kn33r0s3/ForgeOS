@@ -520,6 +520,32 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
+## Last verified state snapshot (2026-10-27)
+
+**Update 2026-10-27 (daily freshness check, 06:23 NPT):** HEAD at `7440cc86`
+(since 2026-10-26: Hami authority contract and anonymised prospect
+artifacts, D95 recovery report and exact-head verification, official
+flood report cutoffs and recovery timeline reconciliation, 2026-10-27
+operational verification record, Nuwakot report #08 and forecast notice
+reconciliation, secret-scan record wording clarification). `git pull
+--ff-only` fast-forwarded `8415fa81..7440cc86`; `main` ==
+`origin/main`. Working tree clean.
+
+- **Health:** haminp `/api/health` first read
+  `{"status":"degraded","ready":false,"ok":false,"version":"2.3.0","db":"down"}`,
+  rechecked twice seconds later as
+  `{"status":"ok","ready":true,"ok":true,"version":"2.3.0","db":"up"}` —
+  a transient db-down blip, not a sustained outage (same blip pattern
+  noted on 2026-10-23, 2026-10-25 and 2026-10-26). forge-os-ebon returns
+  `{"status":"ok","ready":true,"ok":true,"version":"2.3.0","db":"up"}`.
+  Both endpoints ok at the close of this check.
+- **Intake:** `/api/forge-bot/config` returns `intake_enabled: false`
+  (unchanged).
+- **Unknowns:** 100 D-entries in `docs/UNKNOWN_MAP.md` (unchanged since
+  2026-10-23).
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold.
+
 ## Last verified state snapshot (2026-10-26)
 
 **Update 2026-10-26 (daily freshness check, 06:23 NPT):** HEAD at `f73bec2d`
