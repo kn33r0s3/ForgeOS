@@ -299,13 +299,15 @@ def evaluate_claim_after_research(
         .filter(models.Evidence.id.in_(requested_evidence_ids))
         .all()
     )
+    found_evidence_ids = {row.id for row in evidence_rows}
+    missing_evidence_ids = sorted(set(requested_evidence_ids) - found_evidence_ids)
     metadata_only_ids = sorted(
         row.id for row in evidence_rows if _evidence_is_metadata_only(row)
     )
     evidence_ids = sorted(
         row.id for row in evidence_rows if not _evidence_is_metadata_only(row)
     )
-    if not evidence_ids:
+    if not evidence_ids and not missing_evidence_ids:
         task.judgments = [
             {
                 "status": "unassessed_metadata_only",
@@ -348,7 +350,9 @@ def evaluate_claim_after_research(
         db,
         question=question,
         judgment_ids=[judgment.id for judgment in judgments],
-        evidence_ids=sorted(set(evidence_ids)),
+        # Preserve every requested reference for the missing-row check. The
+        # judges see only the substantive rows that actually exist.
+        evidence_ids=requested_evidence_ids,
         claim_id=task.claim_id,
     )
     task.judgments = [{"id": judgment.id, "status": judgment.status} for judgment in judgments]
@@ -360,7 +364,14 @@ def evaluate_claim_after_research(
     failed_judgments = [
         judgment for judgment in judgments if judgment.status != "completed"
     ]
-    if not judgments:
+    if missing_evidence_ids:
+        step_status = "failed"
+        evaluation_status = "missing_evidence_rows"
+        evaluation_reason = (
+            "One or more referenced Evidence rows are missing from persistence; "
+            "the evaluation is incomplete."
+        )
+    elif not judgments:
         step_status = "skipped"
         evaluation_status = "no_judges_available"
         evaluation_reason = (
@@ -385,6 +396,7 @@ def evaluate_claim_after_research(
     task.results = {
         **(task.results or {}),
         "judgment_ids": [judgment.id for judgment in judgments],
+        "missing_evidence_ids": missing_evidence_ids,
         "comparison_id": comparison.id,
         "comparison_outcome": comparison.outcome,
         "evaluation_status": evaluation_status,
@@ -393,6 +405,7 @@ def evaluate_claim_after_research(
     step_output = {
         "status": evaluation_status,
         "judgment_ids": [judgment.id for judgment in judgments],
+        "missing_evidence_ids": missing_evidence_ids,
         "successful_judgment_count": len(successful_judgments),
         "failed_judgments": [
             {
