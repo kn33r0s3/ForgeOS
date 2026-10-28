@@ -1,3 +1,12 @@
+## Operational resumption — 2026-10-29 05:05 NPT
+
+1. Current run-start main `b9e34c65b8c3c4fd94bbe7ee8014d1e73c2d594a` has CI FAIL: 3/9 jobs failed. Frontend/repository guards identify stale unknown projections; backend pytest has 53 failures, including expired Crossref/GDELT/OpenAlex/World Bank source clearances and a stale 120-row parser-count expectation. See the operational record at the top of HANDOFF.md/STATE.md and the appended LOG/CAPABILITY_QUEUE entries.
+2. Regenerate projections with the existing sync script and reconcile the parser count against `docs/UNKNOWN_MAP.md`; review source rights/expiry before any clearance update. Do not weaken fail-closed source authorization.
+3. Deployment `dpl_5AgKa7gsebnM7wCaDy5yh4r5rg6A` is READY on this SHA, but both health GETs are UNKNOWN due DNS failure; runtime logs return 403. Do not bypass controls.
+4. After natural 05:45 and 11:45 NPT schedules, correlate authorized invocation evidence with persisted CycleRun/final stages/read-after-write; never invoke manually. Database durability, real inference and fresh REAL outcomes remain UNKNOWN.
+5. Preserve two consecutive confirmed unhealthy observations before a health alert; transport failures must be UNKNOWN. No external activity, activation, spend or money action.
+---
+
 ## Owner-directed priority correction — 2026-10-25 16:55
 
 1. **P0 — First-contact kits + outcome log.** Active four (anonymized refs): S06, S07, S22, S26. Kits are discovery-only, bilingual, no offer; owner sends; agent never sends/replies. Log real contact/reply/consent/conversation and outcome in docs/FIRST_RUPEE_SCOREBOARD.md; log only qualifying commercial evidence in docs/REVENUE_LOG.md. Current state: all NOT SENT, 0 conversations, 0 verified recovered sales, ₨0 reported/verified.
