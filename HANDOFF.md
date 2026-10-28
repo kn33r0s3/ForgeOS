@@ -547,6 +547,27 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
+## Last verified state snapshot (2026-10-28)
+
+**Update 2026-10-28 (daily freshness check, 06:23 NPT):** HEAD at `65cb8f77`
+(since 2026-10-27: Oct 28 source-time discovery and verification,
+2026-10-28 operational verification record). `git pull --ff-only`
+fast-forwarded `3c804251..65cb8f77`; `main` == `origin/main`. Working tree
+clean.
+
+- **Health:** haminp `/api/health` returns
+  `{"status":"ok","ready":true,"ok":true,"version":"2.3.0","db":"up"}` and
+  forge-os-ebon returns the same, both read cleanly in this run (no
+  transient blip this time; earlier 2026-10-28 runs reported DNS failures
+  in their own environment, which this run did not reproduce). Both
+  endpoints ok at the close of this check.
+- **Intake:** `/api/forge-bot/config` returns `intake_enabled: false`
+  (unchanged).
+- **Unknowns:** 100 D-entries in `docs/UNKNOWN_MAP.md` (unchanged since
+  2026-10-23).
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold.
+
 ## Last verified state snapshot (2026-10-27)
 
 **Update 2026-10-27 (daily freshness check, 06:23 NPT):** HEAD at `7440cc86`
