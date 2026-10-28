@@ -920,6 +920,42 @@ export const discoveryUnknowns: DiscoveryUnknown[] = [
     stakes: "Locates the admin load inside the day — if collection is the dominant phone task, a payment-follow-up tool saves owner-hours directly",
     round: null,
   },
+  {
+    id: "D101",
+    question: "What is the actual late-reply recovery window for Nepali social sellers — at what delay (hours/days) does a late reply still convert vs. lose the buyer? (round 21: sellers publicly promise 2-3 days and are mostly tolerated; at 4-5 days commenters suspect fraud and threaten warnings; global benchmarks claim a minutes-to-hours cliff, untested in Nepal)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Ask 5 sellers for their last 10 late replies: replied after how long, bought or not; compare against their announced window",
+    stakes: "Sets the reply-rescue wedge's SLA: if the window is ~72 hours, rescue inside it is a save; past it, damage control — the wedge's price and pitch depend on it",
+    round: null,
+  },
+  {
+    id: "D102",
+    question: "Does a \"seen\" receipt change customer anger — is seen-but-unanswered worse than unopened silence? (round 21: Jersey Pasal Nepal commenters cite both unanswered messages and seen-but-unanswered waits; the two states were not separated)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Ask buyers: \"which angered you more — no reply at all, or a reply that never came after seen?\"; sample comment threads for seen-mentions vs unopened-mentions",
+    stakes: "If seen is worse, the wedge's first job is not answering faster but never leaving a read thread hanging — a different workflow than raw speed",
+    round: null,
+  },
+  {
+    id: "D103",
+    question: "Do sellers' publicly announced reply windows (2-3 days, 72 hours) actually hold buyers, or do commenters defect inside the window anyway? (round 21: @miisha.np commenters pleaded impatiently despite the 2-3 day announcement)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Sample 5 sellers with announced windows: count impatient/defecting comments posted inside vs. outside the announced window",
+    stakes: "If announcements don't hold, the wedge cannot sell \"a nicer apology post\" — it must sell actual replies inside the window",
+    round: null,
+  },
+  {
+    id: "D104",
+    question: "What share of unanswered inquiries is deliberate triage (non-buyers filtered on purpose, per Chhabi clothing's \"genuine customers only\" policy) vs. capacity overflow? (round 21: triage and overload are mixed in D12's unanswered bucket)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Ask 3 sellers to sort one week's unanswered threads: filtered on purpose vs. ran out of time; ask what marks a \"genuine\" buyer",
+    stakes: "If triage is large, D12's leak is overstated and the wedge must answer everyone, not just faster — or it inherits the seller's filter, not the buyer's loss",
+    round: null,
+  },
 ];
 
 export const unknownsCount = discoveryUnknowns.length;
