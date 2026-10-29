@@ -1,3 +1,13 @@
+## Current continuation — 2026-10-29 06:44 NPT (run-start main SHA `30dedeb65faf391387ffe1aeed5e2e7d38bf6a8a`)
+
+1. **P0 — backend test determinism without weakening source authorization.** Parent exact-head CI 40796940231 fails only backend: 52 failed, 1,303 passed, 2 skipped. Keep expired source clearances fail-closed. When supported source editing is available, separate frozen dates for tests of formerly cleared behavior from live-expiry/no-network regressions.
+2. **P1 — source-time grounding in the existing seam.** Preserve effective/as-of cutoff separately from publication date, retrieval time, report version, geography and language through normalization → Signal → Evidence → assessment/citation. This is a contract risk, not observed production loss; no source write is authorized through an alternate path.
+3. **P1 — D84 host-aware trade-data query.** Use the directly read non-www import commodity × country page (data through Sep 2026, updated 28 Oct) for the next supported query. The www-host import variant shows only Aug/8 Oct and returns 502; do not mix host/page metadata. No result value is known. Country × commodity cannot prove the Kakarbhitta/Mechi route. Keep the source NOT CLEARED for automated/persistent reuse.
+4. **P1 — D93 official report #04 body.** Listing #468 states a 16 Oct 10:00 NPT cutoff; PDF unread. Retrieve by a permitted source-linked route, inspect every page and continue searching for later official reports/restoration notices without inferring absence from search misses.
+5. **P1 — per-source rights and reliability.** Review robots, terms, fields, purpose, retention and provider-transmission scope individually. Current production SHA is verified, but current health, DB durability, natural schedule attribution and inference remain UNKNOWN.
+6. **P1 — portfolio.** D101–D104 remain UNKNOWN with missing row-level URLs/timestamps/sample frame/independence; operational open ResearchQuestion count UNKNOWN.
+7. **Continue Hami-wide progress.** The mission is settled; seller discovery/First Rupee is one possible path, not a gate for unrelated research, capability, integration, reliability, privacy/security or quality work.
+
 ## Current continuation — 2026-10-29 06:36 NPT (run-start main SHA `8671ad365e6be86be7238cd87f9d9ac6f16a451d`)
 
 1. **P0 — backend test determinism without weakening authorization.** Exact-head CI 40795971130 fails only backend pytest: 52 failed, 1,303 passed, 2 skipped. Keep all five expired source clearances fail-closed. On a supported source-edit path, use explicit/frozen dates only in tests exercising previously cleared behavior; separately assert that genuinely expired sources reject collection without network, task, or Evidence side effects.

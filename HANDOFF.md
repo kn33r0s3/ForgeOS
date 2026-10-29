@@ -1,3 +1,14 @@
+## Exact-head continuation — 2026-10-29 06:44 NPT (run-start main SHA `30dedeb65faf391387ffe1aeed5e2e7d38bf6a8a`)
+
+- - Parent main `30dedeb65faf391387ffe1aeed5e2e7d38bf6a8a` had production deployment `dpl_6oc2GZhrre5gc31MWe2hFmX2DRSt` READY on the exact SHA. Exact-head CI [40796940231](https://github.com/kn33r0s3/ForgeOS/actions/runs/40796940231) finished FAIL in 1/9 jobs: backend pytest 52 failed, 1,303 passed, 2 skipped, 18 warnings; eight other jobs passed. Secret scan [40796940072](https://github.com/kn33r0s3/ForgeOS/actions/runs/40796940072) passed. Independent verifier [40796940118](https://github.com/kn33r0s3/ForgeOS/actions/runs/40796940118) passed exact deployed SHA, one protected owner-cycle record (payload suppressed), 274 npm tests and verification POST HTTP 200.
+- **D84 source-time refinement:** the directly opened non-www [TradeStat import commodity × country page](https://tradestat.commerce.gov.in/ftspcc/import_commodity_xcountry_wise_monthly) shows coverage through Sep 2026, last updated 28 Oct. The non-www export page has the same coverage/update date but is the opposite trade direction. A search-indexed `www`-host import page shows only Aug 2026 / 8 Oct and its direct open returned 502. Record the exact host and direction; do not transfer the export page's freshness to imports or assume host variants match. No form was submitted and no tea value was retrieved.
+- The Department of Commerce copyright policy requires permission for reproduction; TradeStat robots and page-specific reuse scope remain unverified. NOT CLEARED for automated collection, persistent reuse or provider transmission. No Hami ingestion or source registration.
+- D93 #04's official listing gives a 16 Oct 10:00 NPT cutoff; body unread. A bounded search found no #05+, not proof of absence. Current restoration UNKNOWN.
+- Source-time contract risk and blocked source-write path remain as recorded in the 06:36 section below. No code or runtime permission changed. The new grouped documentation commit needs its own exact-head gates.
+
+
+---
+
 ## Exact-head continuation — 2026-10-29 06:36 NPT (run-start main SHA `8671ad365e6be86be7238cd87f9d9ac6f16a451d`)
 
 - **Run-start state:** canonical main `8671ad365e6be86be7238cd87f9d9ac6f16a451d`; Vercel production deployment `dpl_Bb4bnbvGzTjYhS15p5wBcUFZaiQB` is READY on that exact SHA.
