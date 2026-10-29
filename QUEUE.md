@@ -1,3 +1,15 @@
+## Current continuation — run-start main SHA 5f566375a36f1114bfee46dfa0113f661c81ce8e (2026-10-29 05:58 NPT)
+
+1. **P0 — backend test determinism without weakening authorization.** Exact-head CI 40791884839 is red only in backend pytest: 52 failed, 1,303 passed, 2 skipped. When supported source editing is available, use explicit/frozen dates only in tests of formerly cleared behavior, while separately asserting genuinely expired sources reject collection with no network/task/Evidence side effect.
+2. **P1 — source-time grounding in the existing seam.** D93 report #04 has official listing metadata for a 16 Oct 10:00 cutoff but unread body; current Gorkha restoration stays UNKNOWN. Preserve source-declared cutoff separately from page/listing date, publication time, retrieval time, report version/language and incident geography. Prepared, not implemented.
+3. **P1 — source-specific rights.** Five runtime registry entries are expired. World Bank's October update page has no established commercial reuse grant; Kalimati and MoALD robots endpoints were inaccessible and no content-reuse terms were found. Do not register or collect by assumption.
+4. **P1 — D95 cross-source agricultural value map.** Keep national FY26 crop output, August flood livelihood effects, Kathmandu wholesale prices and the dated MoALD coordination notice as distinct scopes. Reconcile time/place/commodity through existing Evidence/Signal provenance; do not invent a generic agriculture subsystem. Local bottleneck and avoidable loss remain UNKNOWN.
+5. **P1 — health-watch reliability.** Keep DNS/transport/missing/unparseable samples UNKNOWN; preserve two consecutive confirmed-unhealthy observations before alerting. Runtime logs remain 403; no schedule invocation or access bypass.
+6. **P1 — portfolio.** D101–D104 remain UNKNOWN with no row-level source URLs/timestamps/sample frame. Open operational ResearchQuestion count remains UNKNOWN.
+7. **Continue Hami-wide work.** The mission is settled; seller discovery is one possible path, not a gate. External actions remain separately authorized.
+
+---
+
 ## Current continuation — 2026-10-29 05:50 NPT (base main `22a4d9fcf12ecd9a7569fab589c4144b1a050921`)
 
 1. **P0 — backend test determinism:** exact-head CI [40791177832](https://github.com/kn33r0s3/ForgeOS/actions/runs/40791177832) fails only backend (52 failed, 1,303 passed, 2 skipped). Keep expired source clearances fail-closed; use explicit/frozen dates in tests of formerly cleared sources and retain live-expiry/no-network regressions when supported editing is available.
