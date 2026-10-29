@@ -1112,3 +1112,12 @@ This is the Nuwakot view of the 26 Aug Bhotekoshi–Trishuli event, distinct fro
 - D93 #04 listing #468 remains newer by stated cutoff (16 Oct 10:00 NPT) than #03 (13 Oct 22:00 NPT), but #04 body is unread. Current Gorkha restoration UNKNOWN.
 - No source-code change, source registration, collector run, ingestion, contact, publication, spend, payment change, intake/outbound activation, high-stakes alert or REAL outcome. The source-edit blocker and NOT IMPLEMENTED planner helper remain unchanged. The grouped documentation refinement needs its own exact-head CI, secret scan and verifier.
 
+
+
+## 2026-10-29 06:51 NPT — exact-head reconciliation and continuity formatting cleanup
+
+- Run-start main SHA `bc137581cdcd5fd431807cae3b1fd7eaf822036a`; production deployment `dpl_HwAmVzG3NJtr4hywTep2MhdpP11g` is READY on the exact SHA.
+- Exact-head CI [40797695062](https://github.com/kn33r0s3/ForgeOS/actions/runs/40797695062) failed only backend: 52 failed, 1,303 passed, 2 skipped, 18 warnings. Secret scan [40797695024](https://github.com/kn33r0s3/ForgeOS/actions/runs/40797695024) passed. Independent verifier [40797695079](https://github.com/kn33r0s3/ForgeOS/actions/runs/40797695079) passed exact SHA, one protected owner-cycle record (payload suppressed), 274 npm tests and verification POST HTTP 200.
+- The backend clearance-expiry blocker remains fail-closed. No source dates were extended. D84's non-www import/export pages show through Sep 2026 / updated 28 Oct; the www import variant shows through Aug / updated 8 Oct and direct open returned 502. No form result/value was retrieved and automated/persistent reuse remains NOT CLEARED.
+- Corrected the doubled bullet marker in the prior 06:44 STATE/HANDOFF sections. No source-code or runtime behavior changed. This grouped documentation cleanup requires its own exact-head CI, secret scan and independent verifier.
+

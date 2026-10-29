@@ -1,3 +1,13 @@
+## Current continuation — 2026-10-29 06:51 NPT (run-start main SHA `bc137581cdcd5fd431807cae3b1fd7eaf822036a`)
+
+1. **P0 — backend test determinism without weakening source authorization.** Exact-head CI 40797695062 is red only in backend: 52 failed, 1,303 passed, 2 skipped. Keep expired sources fail-closed; when supported editing is available, freeze dates only in tests of previously cleared behavior and retain a separate live-expiry/no-network regression.
+2. **P1 — source-time grounding.** Preserve source-effective cutoff separately from publication, retrieval, report version, geography and language through the existing normalization → Signal → Evidence → assessment/citation seam. Source-write blocker remains; no bypass.
+3. **P1 — D84 trade data.** Query the directly read non-www import page for the available post-directive months using a supported interaction/download path. The www import variant is older/inaccessible; do not merge its dates with the non-www page or confuse imports with exports. No tea value is known and no route conclusion is supported.
+4. **P1 — D93 report #04.** Retrieve and inspect the official PDF body; search for later reports/restoration notices without inferring absence from a search miss. Current restoration remains UNKNOWN.
+5. **P1 — rights and runtime reliability.** Review source-specific rights before registration; current health/DB durability/natural schedule/inference remain UNKNOWN.
+6. **P1 — portfolio.** D101–D104 remain UNKNOWN; operational open ResearchQuestion count UNKNOWN.
+7. **Continue Hami-wide progress.** Mission settled; First Rupee and seller discovery are optional paths, not gates for unrelated work.
+
 ## Current continuation — 2026-10-29 06:44 NPT (run-start main SHA `30dedeb65faf391387ffe1aeed5e2e7d38bf6a8a`)
 
 1. **P0 — backend test determinism without weakening source authorization.** Parent exact-head CI 40796940231 fails only backend: 52 failed, 1,303 passed, 2 skipped. Keep expired source clearances fail-closed. When supported source editing is available, separate frozen dates for tests of formerly cleared behavior from live-expiry/no-network regressions.
