@@ -1,3 +1,14 @@
+## Current verified state — 2026-10-29 05:50 NPT (base main `22a4d9fcf12ecd9a7569fab589c4144b1a050921`)
+
+- Vercel deployment `dpl_BNywar2mvUoYZ39LgFNLNksM2dpJ` is READY on exact SHA `22a4d9fcf12ecd9a7569fab589c4144b1a050921`.
+- Exact-head CI [40791177832](https://github.com/kn33r0s3/ForgeOS/actions/runs/40791177832) fails only backend pytest: 52 failed, 1,303 passed, 2 skipped, 18 warnings. Eight other jobs pass. Secret scan [40791177871](https://github.com/kn33r0s3/ForgeOS/actions/runs/40791177871) and independent verifier [40791177745](https://github.com/kn33r0s3/ForgeOS/actions/runs/40791177745) pass. Verifier confirms exact deployed SHA, one protected owner-cycle record, 274 npm tests and HTTP 200 verification POST; not backend pytest, DB durability or natural schedule attribution.
+- Runtime-error/session reads are 403 under the connected Vercel team scope; health GETs are unavailable through the browser route. No access escalation or share link. Runtime health UNKNOWN.
+- NEA source rights review: robots endpoint returned an administrative rejection page, not directives; its surfaced privacy policy governs personal data, not content reuse. No general collection/reuse grant found. NEA remains NOT CLEARED. Its visible national energy totals and routine maintenance schedule do not establish Gorkha flood restoration.
+- Source clearances remain expired; keep the live gate fail-closed. Test-date determinism and source-specific rights renewal are separate tasks. D93 restoration remains UNKNOWN; D101–D104 remain UNKNOWN after metadata survey. The blocked portfolio helper remains NOT IMPLEMENTED.
+- No code/schema/model/table/primitive/new file, source ingestion, contact, publishing, spend, payment action, intake/outbound activation or REAL external outcome occurred.
+
+---
+
 ## Current verified state — 2026-10-29 05:40 NPT (base main `7484e82888b37b48e87ae641e175f1bca32a29f3`)
 
 - Main is `7484e82888b37b48e87ae641e175f1bca32a29f3`; Vercel deployment `dpl_6D5kwMFxfwiLAfBqdc7mVahZJASd` is READY on the exact SHA.

@@ -2662,3 +2662,11 @@ Do not reopen findings already corrected in source as if still live bugs. Do not
 - **Access limit:** runtime-error and session-list reads returned 403 under the connected Vercel team scope. Both health endpoints were unavailable through the ordinary browser path. No access escalation or share link was created; runtime health stays UNKNOWN.
 - **Next:** separate deterministic test-time clearance fixtures from the real expiry gate; review exact-source rights before any renewal; then implement the already-prepared effective-cutoff provenance/citation regression in the existing seam if the source-edit path becomes available. Keep `research_planner.py::summarize_research_portfolio` NOT IMPLEMENTED until its blocked source-edit path is explicitly available.
 
+
+
+## [2026-10-29 — exact-head verification for `22a4d9fcf12ecd9a7569fab589c4144b1a050921` + NEA clearance determination]
+
+- CI [40791177832](https://github.com/kn33r0s3/ForgeOS/actions/runs/40791177832) completed FAIL in 1/9 jobs: backend 52 failed, 1,303 passed, 2 skipped, 18 warnings; the other eight jobs passed. Secret scan [40791177871](https://github.com/kn33r0s3/ForgeOS/actions/runs/40791177871) and verifier [40791177745](https://github.com/kn33r0s3/ForgeOS/actions/runs/40791177745) passed. Vercel reports deployment `dpl_BNywar2mvUoYZ39LgFNLNksM2dpJ` READY on the exact SHA. Runtime-error/session reads are 403 and health is UNKNOWN.
+- **NEA source clearance decision: NOT CLEARED.** The exact robots endpoint returned an administrative rejection page, not directives. The only surfaced policy was a privacy policy covering personal data through the website/mobile app; no general automated-collection or content-reuse grant was found. The official homepage's 28 Oct 10:34:43 update and routine maintenance schedule do not establish Gorkha flood restoration; visible Gorkha/Palungtar archive rows are 30 Sep–1 Oct. Do not add NEA to the runtime registry or persist/transmit its content without an affirmative source-specific basis.
+- **Next:** deterministic test-date isolation must not weaken the current source expiry gate. Review each expired source separately; only then renew if supported by current robots/terms/purpose/field evidence. Source-effective-cutoff persistence/citation remains prepared but not implemented.
+

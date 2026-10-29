@@ -1,3 +1,14 @@
+## Current continuation — 2026-10-29 05:50 NPT (base main `22a4d9fcf12ecd9a7569fab589c4144b1a050921`)
+
+1. **P0 — backend test determinism:** exact-head CI [40791177832](https://github.com/kn33r0s3/ForgeOS/actions/runs/40791177832) fails only backend (52 failed, 1,303 passed, 2 skipped). Keep expired source clearances fail-closed; use explicit/frozen dates in tests of formerly cleared sources and retain live-expiry/no-network regressions when supported editing is available.
+2. **P1 — source rights renewal:** five registry entries expired. Re-review exact robots/terms, operation, fields, purpose, retention and provider-transmission scope before any renewal. NEA is also NOT CLEARED: robots endpoint returned a rejection page and its privacy policy is not a content-reuse grant.
+3. **P1 — source-time grounding:** NDRRMA #04 body remains unread; current Gorkha restoration is UNKNOWN. Extend existing provenance/assessment/citation only after a supported source-edit path becomes available; no new schema.
+4. **P1 — health-watch reliability:** classify DNS/transport/missing/unparseable health samples as UNKNOWN; preserve two consecutive confirmed unhealthy observations before alerting.
+5. **P1 — portfolio:** D101–D104 remain UNKNOWN with missing row-level source URLs/timestamps/sample frame. Open operational ResearchQuestion records are unavailable through the authorized read surface; count remains UNKNOWN.
+6. **Continue independent Hami-wide work:** value discovery is open-ended; the seller path is one option, not a gate. No external action without its specific authorization.
+
+---
+
 ## Current continuation — 2026-10-29 05:40 NPT (base main `7484e82888b37b48e87ae641e175f1bca32a29f3`)
 
 1. **P0 — backend test determinism, not clearance renewal.** Exact-head CI [40790342735](https://github.com/kn33r0s3/ForgeOS/actions/runs/40790342735) fails only backend: 52 failed, 1,303 passed, 2 skipped. The source gate is correctly fail-closed for expired entries. On a supported source-edit path, freeze/inject review dates only for tests that exercise previously cleared collectors; separately test current-date expiry and assert no network/task/Evidence side effect.
