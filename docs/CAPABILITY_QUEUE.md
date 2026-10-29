@@ -2653,3 +2653,12 @@ Do not reopen findings already corrected in source as if still live bugs. Do not
 ### Scope and safety
 
 - This entry advances knowledge/evidence quality and reliability. It does not claim any external recovery, seller conversion, revenue or autonomous runtime outcome. No source clearance was renewed; no collector, source-body ingestion, provider transmission, contact, publishing, spend, payment action, intake/outbound activation, emergency advice or alert occurred. No code/test/schema/model/primitive/file was added.
+
+
+## [2026-10-29 — final exact-head gate result for `7484e82888b37b48e87ae641e175f1bca32a29f3`]
+
+- **CI:** [40790342735](https://github.com/kn33r0s3/ForgeOS/actions/runs/40790342735) completed FAIL in 1/9 jobs. Backend: 52 failed, 1,303 passed, 2 skipped, 18 warnings. Eight other jobs passed. The D104 projection synchronization is verified by passing frontend tests and repository guards. The remaining backend failure cluster is due to expired source clearances and downstream tests assuming active source eligibility; preserve the production fail-closed rule.
+- **Security/deployment:** secret scan [40790343346](https://github.com/kn33r0s3/ForgeOS/actions/runs/40790343346) passed. Independent verifier [40790342765](https://github.com/kn33r0s3/ForgeOS/actions/runs/40790342765) passed exact production SHA on attempt 1, one protected owner-cycle record, 274 npm tests and verification-record POST HTTP 200. Vercel metadata says deployment `dpl_6D5kwMFxfwiLAfBqdc7mVahZJASd` is READY on the same SHA. This does not prove backend test success, DB durability, natural cron execution or general health.
+- **Access limit:** runtime-error and session-list reads returned 403 under the connected Vercel team scope. Both health endpoints were unavailable through the ordinary browser path. No access escalation or share link was created; runtime health stays UNKNOWN.
+- **Next:** separate deterministic test-time clearance fixtures from the real expiry gate; review exact-source rights before any renewal; then implement the already-prepared effective-cutoff provenance/citation regression in the existing seam if the source-edit path becomes available. Keep `research_planner.py::summarize_research_portfolio` NOT IMPLEMENTED until its blocked source-edit path is explicitly available.
+

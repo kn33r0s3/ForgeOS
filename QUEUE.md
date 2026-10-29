@@ -1,3 +1,14 @@
+## Current continuation — 2026-10-29 05:40 NPT (base main `7484e82888b37b48e87ae641e175f1bca32a29f3`)
+
+1. **P0 — backend test determinism, not clearance renewal.** Exact-head CI [40790342735](https://github.com/kn33r0s3/ForgeOS/actions/runs/40790342735) fails only backend: 52 failed, 1,303 passed, 2 skipped. The source gate is correctly fail-closed for expired entries. On a supported source-edit path, freeze/inject review dates only for tests that exercise previously cleared collectors; separately test current-date expiry and assert no network/task/Evidence side effect.
+2. **P1 — source rights review.** Five registry entries are expired. Re-review exact robots, terms, allowed operation/fields, purpose, retention and provider-transmission scope one source at a time. Do not extend expiry from stale notes.
+3. **P1 — source-time grounding.** Report #04 body remains unread; current restoration is UNKNOWN. Preserve source-effective cutoff, page/listing date, publication time, retrieval time, report/version, language and incident/geography through the existing provenance and citation seam. Prepared, not implemented.
+4. **P1 — health-watch reliability.** The existing shell watch treats curl/DNS failure or missing/unparseable JSON as down. When supported editing is available, classify transport/missing response as UNKNOWN and preserve the two-consecutive-confirmed-unhealthy alert rule.
+5. **P1 — portfolio quality.** D101–D104 remain UNKNOWN and lack exact row-level source URLs/timestamps/sample frame. Operational open ResearchQuestion records are inaccessible through the authorized read surface; no zero-count inference.
+6. **Continue independent Hami-wide research.** Revenue/seller discovery is one possible outcome, not a gate on other domains or reliability work. No contact, publishing, spend, payment changes, intake/outbound activation or high-stakes alerting without explicit authorization.
+
+---
+
 ## Current continuation — 2026-10-29 05:31 NPT (base main `8dabf34734a18c55f95bfd2b41b26a243aec5b2a`)
 
 1. **P0 — restore backend test determinism without weakening source authorization.** Exact-head CI `40787976942` is 8/9: backend only fails (52 failed, 1,303 passed, 2 skipped). The job log shows 17 direct expired-clearance errors across Crossref/GDELT/OpenAlex/World Bank and downstream planner/collector/evidence failures. All five source clearances are genuinely expired. Once a supported source-edit path is available, inject/freeze explicit review dates in tests that exercise previously cleared behavior, and keep a regression that today's expired entries reject collection. Do not extend expiry to make CI green.

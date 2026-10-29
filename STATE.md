@@ -1,3 +1,14 @@
+## Current verified state — 2026-10-29 05:40 NPT (base main `7484e82888b37b48e87ae641e175f1bca32a29f3`)
+
+- Main is `7484e82888b37b48e87ae641e175f1bca32a29f3`; Vercel deployment `dpl_6D5kwMFxfwiLAfBqdc7mVahZJASd` is READY on the exact SHA.
+- CI [40790342735](https://github.com/kn33r0s3/ForgeOS/actions/runs/40790342735) fails only backend pytest: 52 failed, 1,303 passed, 2 skipped, 18 warnings. The other 8/9 jobs pass. Secret scan [40790343346](https://github.com/kn33r0s3/ForgeOS/actions/runs/40790343346) and independent verifier [40790342765](https://github.com/kn33r0s3/ForgeOS/actions/runs/40790342765) pass. Verifier observed exact deployed SHA, one protected owner-cycle record (payload suppressed), 274 npm tests and HTTP 200 verification POST; this does not override backend CI or prove natural scheduling/DB durability.
+- Vercel runtime-error/session reads remain 403 for the connected team scope; health GETs are unavailable through the public browser path. No access escalation or share link was created. Runtime health UNKNOWN.
+- All five source clearances are expired; source-specific rights review is required before renewal. Keep the production gate fail-closed; next source-code dependency, when supported editing is available, is deterministic test-date injection plus a separate current-expiry regression. Source-effective cutoff preservation/citation remains prepared but NOT IMPLEMENTED.
+- D101–D104 remain UNKNOWN after metadata-only survey; operational open ResearchQuestion records remain unavailable through the authorized read surface, not zero. D93 restoration remains UNKNOWN; report #04 body unread.
+- No source code, schema, model, table, primitive or new file was added. No ingestion, contact, publishing, spend, payment action, intake/outbound activation or REAL external outcome occurred.
+
+---
+
 ## Current continuation — 2026-10-29 05:31 NPT (base main `8dabf34734a18c55f95bfd2b41b26a243aec5b2a`)
 
 - Exact-head CI [40787976942](https://github.com/kn33r0s3/ForgeOS/actions/runs/40787976942): **FAIL, 1/9 jobs**. Backend: 52 failed, 1,303 passed, 2 skipped, 18 warnings. Frontend, build, lint, typecheck, route smoke, repository guards, evidence-triage and in-workflow secret scan pass. The generated D104 projections are now synchronized; the remaining red gate is backend source-clearance expiry behavior and downstream tests that assume those sources are currently cleared.
