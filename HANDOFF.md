@@ -628,6 +628,32 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
+## Last verified state snapshot (2026-10-29)
+
+**Update 2026-10-29 (daily freshness check, 06:23 NPT):** HEAD at `3d20b8e8`
+(since 2026-10-28: discovery round 21 — late-reply recovery window
+(D101–D104), 2026-10-29 operational verification, generated unknowns
+projections sync, Hami continuation and source-time findings, Gorkha
+source timestamp reconciliation, NEA source-rights boundary, D95
+cross-source value/time evidence). `git pull --ff-only` fast-forwarded
+`65cb8f77..3d20b8e8`; `main` == `origin/main`. Working tree clean.
+
+- **Health:** haminp `/api/health` first read
+  `{"status":"degraded","ready":false,"ok":false,"version":"2.3.0","db":"down"}`,
+  rechecked twice ~90 seconds later as
+  `{"status":"ok","ready":true,"ok":true,"version":"2.3.0","db":"up"}` —
+  a transient db-down blip, not a sustained outage (same blip pattern
+  noted on 2026-10-23, 2026-10-25, 2026-10-26 and 2026-10-27).
+  forge-os-ebon returns
+  `{"status":"ok","ready":true,"ok":true,"version":"2.3.0","db":"up"}`.
+  Both endpoints ok at the close of this check.
+- **Intake:** `/api/forge-bot/config` returns `intake_enabled: false`
+  (unchanged).
+- **Unknowns:** 104 D-entries in `docs/UNKNOWN_MAP.md` (up from 100;
+  D101–D104 added by discovery round 21).
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold.
+
 ## Last verified state snapshot (2026-10-28)
 
 **Update 2026-10-28 (daily freshness check, 06:23 NPT):** HEAD at `65cb8f77`
