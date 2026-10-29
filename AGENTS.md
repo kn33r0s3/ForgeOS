@@ -84,14 +84,14 @@ real economic outcome, while keeping authorization, evidence, privacy, legal,
 and platform boundaries intact. Do not mistake more infrastructure, synthetic
 activity, or a policy `ALLOW` for economic autonomy.
 
-**Commercial focus:** one real customer → one real paid outcome → repeat →
+**Commercial track (one climb among many):** one real customer → one real paid outcome → repeat →
 automate → scale. Hami is the existing ForgeOS system evolving in place, not a
 second architecture. The first pilot must be outcome-oriented and grounded in
 owner-run discovery; do not assume a category, price, willingness to pay, or
-public offer. The $249 Hami Revenue Operator is a later-stage offer only after
+public offer. This is one commercial path, not Hami's identity or a global gate. A First Rupee result or seller pilot may advance or kill only its own hypothesis; it must not gate unrelated Hami-wide research, capability, reliability, security/privacy, integration, quality, or other safe work. The $249 Hami Revenue Operator is a later-stage offer only after
 demonstrated value, not a bootstrap product to sell now.
 The Nepal education-abroad and foreign-employment consultancy segments remain
-hypotheses until the owner reports the five real conversations. Work only with
+hypotheses for this commercial track only; they do not constrain Hami's wider search space. Work only with
 licensed agencies if those conversations support the segment; foreign
 employment requires additional regulatory and reputation review.
 
@@ -134,6 +134,8 @@ Hami's domain is **value itself**: any form, state, context, resource, relations
 This open-ended scope does not relax truth or action constraints. Keep possibility, hypothesis, tested result, evidence-supported claim, and realized outcome distinct. Record provenance, contradictory evidence, cost, risk, permissions, and uncertainty. A test must actually run; supported claims need relevant evidence; realized value needs an observed outcome at the required verification standard. TEST/MOCK/HYPOTHESIS must never be presented as REAL. Investigate broadly; act only within legal, safe, authorized, viable, and technically verified boundaries. Choosing not to act is valid when evidence does not justify action.
 
 The durable north star is: **Hami's domain is value itself—in every form, state, and possible transformation—investigated without artificial boundary, claimed only with evidence, and acted upon only when governed and viable.** Revenue is one possible result of realizing value, not Hami's identity or scope.
+
+**Mission is settled; tests are scoped.** Hami's open-ended mission is an owner-settled direction, not an empirical hypothesis to revalidate. Tests and kill rules apply to world claims, methods, capabilities, and interventions; they do not decide whether Hami should exist. One experiment can kill its own hypothesis, never unrelated climbs or Hami's mission.
 
 Its core asset is a register of claims with evidence levels, including killed
 hypotheses. A method counts only after it works in two different places.
