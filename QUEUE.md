@@ -1,3 +1,12 @@
+## Current continuation — 2026-10-30 04:39 NPT (run-start main SHA `c00f597f7e9a1f98433e3266b6d4b4bbd4d851b7`)
+
+1. **P0 — backend CI determinism without weakening source rights.** [40798472609](https://github.com/kn33r0s3/ForgeOS/actions/runs/40798472609) fails 1/9 jobs: 52 failed, 1,303 passed, 2 skipped. Keep expired source clearances fail-closed; when source editing is supported, freeze dates only in tests of previously cleared behavior and retain live-expiry/no-network regressions.
+2. **P1 — natural schedule attribution.** After today's 05:45 NPT cycle and 11:45 NPT intelligence schedule, use authorized logs/owner-cycle reads to correlate invocation source with persisted CycleRun, final status/stages and read-after-write. One row is readable, but payload is suppressed and no trigger field exists; do not infer cron from row presence.
+3. **P1 — production observability.** Both health aliases returned DNS failure before HTTP; Vercel runtime logs returned 403 at the team scope. Retry ordinary GETs from working DNS and use only normal team authorization; no bypass or share link.
+4. **P1 — health-watch UNKNOWN semantics.** Modify the existing script so transport/DNS/invalid-response observations are UNKNOWN and do not increment the health-failure counter; retain two consecutive confirmed unhealthy observations before alerting.
+5. **P1 — independent runtime proof.** Verify production database identity/durability, real model inference and current REAL outcomes separately from CI/deployment.
+6. **Existing research work remains queued below:** source-time provenance, D84 trade-data result retrieval/rights, D93 report body/restoration, D101–D104 provenance and operational ResearchQuestion inventory. No research source was newly cleared in this run.
+
 ## Current continuation — 2026-10-29 06:51 NPT (run-start main SHA `bc137581cdcd5fd431807cae3b1fd7eaf822036a`)
 
 1. **P0 — backend test determinism without weakening source authorization.** Exact-head CI 40797695062 is red only in backend: 52 failed, 1,303 passed, 2 skipped. Keep expired sources fail-closed; when supported editing is available, freeze dates only in tests of previously cleared behavior and retain a separate live-expiry/no-network regression.

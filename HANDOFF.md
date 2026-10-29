@@ -1,3 +1,13 @@
+## Exact-head operational handoff — 2026-10-30 04:39 NPT (run-start main SHA `c00f597f7e9a1f98433e3266b6d4b4bbd4d851b7`)
+
+- Current main resolves to `c00f597f7e9a1f98433e3266b6d4b4bbd4d851b7`; production deployment `dpl_4wpbBZN2dM5njWq2vh3QfnMdytcm` is explicitly READY on that exact SHA and aliases both production domains.
+- Exact-SHA [CI 40798472609](https://github.com/kn33r0s3/ForgeOS/actions/runs/40798472609) fails only backend: 52 failed, 1,303 passed, 2 skipped, 18 warnings; eight jobs pass. [Secrets 40798472519](https://github.com/kn33r0s3/ForgeOS/actions/runs/40798472519) pass. [Independent verifier 40798472503](https://github.com/kn33r0s3/ForgeOS/actions/runs/40798472503) passes exact deployed SHA, one schema-valid protected CycleRun read (payload suppressed), 274 npm tests and verification POST HTTP 200.
+- Backend failures remain source-clearance expiry: GovInfo through 25 Sep; Crossref, World Bank, GDELT and OpenAlex through 27 Oct. Preserve fail-closed production authorization; do not renew by assumption.
+- Both ordinary health GETs failed at DNS before HTTP; health is UNKNOWN. Vercel runtime logs are HTTP 403 under `kn33r0s3s-projects`; no bypass/share link or team authorization was attempted.
+- The protected cycle list returns one persisted CycleRun DTO, but its payload is suppressed and the model has no trigger field. Natural cron attribution and final status/stages are UNKNOWN. Today's 05:45 and 11:45 NPT schedules were still ahead at the run snapshot; no manual invocation.
+- Production DB durability, real model inference and fresh REAL outcomes remain UNKNOWN. CI uses mock AI and in-memory SQLite. Health-watch transport failures still increment the failure counter; preserve the two-consecutive-confirmed-failure rule and fix the UNKNOWN classification in the existing script.
+- **Resume:** after natural 05:45/11:45 NPT windows, correlate authorized invocation evidence with CycleRun identity/status/stages and durable read-after-write; retry ordinary health GETs from working DNS; obtain Vercel access only through normal authorization. No external activity or money action was performed.
+
 ## Exact-head reconciliation — 2026-10-29 06:51 NPT (run-start main SHA `bc137581cdcd5fd431807cae3b1fd7eaf822036a`)
 
 - Production deployment `dpl_HwAmVzG3NJtr4hywTep2MhdpP11g` is READY on exact SHA `bc137581cdcd5fd431807cae3b1fd7eaf822036a`.

@@ -1121,3 +1121,14 @@ This is the Nuwakot view of the 26 Aug Bhotekoshi–Trishuli event, distinct fro
 - The backend clearance-expiry blocker remains fail-closed. No source dates were extended. D84's non-www import/export pages show through Sep 2026 / updated 28 Oct; the www import variant shows through Aug / updated 8 Oct and direct open returned 502. No form result/value was retrieved and automated/persistent reuse remains NOT CLEARED.
 - Corrected the doubled bullet marker in the prior 06:44 STATE/HANDOFF sections. No source-code or runtime behavior changed. This grouped documentation cleanup requires its own exact-head CI, secret scan and independent verifier.
 
+
+
+## 2026-10-30 04:39 NPT — exact-head operational verification
+
+- Live `main` resolved to `c00f597f7e9a1f98433e3266b6d4b4bbd4d851b7`. Vercel deployment `dpl_4wpbBZN2dM5njWq2vh3QfnMdytcm` is READY on that exact SHA; both production aliases are attached.
+- Exact-SHA CI [40798472609](https://github.com/kn33r0s3/ForgeOS/actions/runs/40798472609) failed only backend: 52 failed, 1,303 passed, 2 skipped, 18 warnings; eight jobs passed. Secret scan [40798472519](https://github.com/kn33r0s3/ForgeOS/actions/runs/40798472519) passed. Independent verifier [40798472503](https://github.com/kn33r0s3/ForgeOS/actions/runs/40798472503) passed: production exact SHA on attempt 1, one schema-valid protected CycleRun DTO (payload suppressed), 274 npm tests and verification POST HTTP 200.
+- Backend failures trace to expired Crossref, World Bank, GDELT and OpenAlex clearances (valid through 27 Oct); GovInfo is valid through 25 Sep. Keep source access fail-closed; do not renew by assumption.
+- Direct Vercel metadata confirms READY. Both ordinary health GETs failed at DNS before HTTP; health remains UNKNOWN. Runtime-log read returned 403 at team scope; no authorization workaround or share link.
+- One persisted CycleRun DTO is readable, but trigger attribution/final status/stages are not visible; the model has no trigger field. Natural cron invocation and database durability remain UNKNOWN. Today's 05:45 and 11:45 NPT schedules were ahead at observation time; no manual invocation.
+- CI uses mock AI and in-memory SQLite; real production inference, durable DB behavior and fresh REAL outcomes remain UNKNOWN. Existing health-watch still counts transport failures as non-ok polls; it was not run and its counter/threshold were not changed.
+- No application code, schema, runtime setting, clearance, external contact/message, intake/outbound activation, payment, money action, or paid infrastructure changed. Exact next verification is in the new STATE/HANDOFF/QUEUE heads.
