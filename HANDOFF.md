@@ -689,6 +689,26 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
+## Last verified state snapshot (2026-10-30)
+
+**Update 2026-10-30 (daily freshness check, 06:23 NPT):** HEAD at `78006819`
+(since 2026-10-29: 2026-10-30 Hami continuation and D95 source-time
+findings, 2026-10-30 operational verification, exact-head gates
+reconciliation and continuity cleanup, TradeStat host-specific freshness,
+official India trade-data lead, and the 2026-10-29 handoff freshness
+commit). `git pull --ff-only` fast-forwarded `8671ad36..78006819`;
+`main` == `origin/main`. Working tree clean.
+
+- **Health:** haminp `/api/health` returns
+  `{"status":"ok","ready":true,"ok":true,"version":"2.3.0","db":"up"}` and
+  forge-os-ebon returns the same. Both endpoints ok at the close of
+  this check (no transient blip observed this run).
+- **Intake:** `/api/forge-bot/config` returns `intake_enabled: false`
+  (unchanged).
+- **Unknowns:** 104 D-entries in `docs/UNKNOWN_MAP.md` (unchanged).
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold.
+
 ## Last verified state snapshot (2026-10-29)
 
 **Update 2026-10-29 (daily freshness check, 06:23 NPT):** HEAD at `3d20b8e8`
