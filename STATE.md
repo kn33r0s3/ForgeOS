@@ -1,3 +1,16 @@
+## Current operational run — 2026-10-31 04:41 NPT (run-start main SHA `42daa43c0ae7f0cd655dfaf3b352facb76618bec`)
+
+- **Source:** live `main` is `42daa43c0ae7f0cd655dfaf3b352facb76618bec`. The current commit is handoff-only over `78006819`; no application/source/schema/scheduler change.
+- **Exact-SHA gates:** CI [40981083108](https://github.com/kn33r0s3/ForgeOS/actions/runs/40981083108) FAIL 1/9: backend 52 failed, 1,303 passed, 2 skipped, 18 warnings; eight jobs passed. The backend log confirms expired OpenAlex, Crossref, GDELT DOC and World Bank Indicators source clearances and downstream cascades. Keep source authorization fail-closed. Secrets [40981083169](https://github.com/kn33r0s3/ForgeOS/actions/runs/40981083169) PASS. Independent verifier [40981083242](https://github.com/kn33r0s3/ForgeOS/actions/runs/40981083242) PASS: exact production SHA on attempt 1, one schema-valid owner-cycle DTO (payload suppressed), 274 frontend tests, verification POST HTTP 200.
+- **Deployment:** GitHub Vercel status says `success` / deployment completed. Direct Vercel deployment/runtime-log reads return 403 for `kn33r0s3s-projects`; explicit Vercel `READY` and logs remain UNKNOWN.
+- **Health:** last direct healthy sample was 30 Oct 06:23 NPT (both aliases status ok, ready true, db up, v2.3.0). Fresh 31 Oct ~04:41 NPT ordinary GETs failed at DNS before HTTP on both aliases (curl exit 6); current health UNKNOWN.
+- **Scheduler:** schedules remain 05:45 and 11:45 NPT. The verifier's one readable CycleRun DTO on 30 Oct was after the 05:45 window, but payload suppression and no trigger field prevent natural-cron attribution; 11:45 and current-day invocation remain unverified. No manual invocation.
+- **Durability/model/outcomes:** production DB durability/read-after-write, real model inference and fresh REAL outcomes UNKNOWN. CI uses mock AI and in-memory SQLite. No fresh production outcome ledger read; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` NOT MEASURABLE.
+- **Health-watch:** transport/DNS failures still increment its non-ok counter; two-consecutive-failure threshold remains. Watchdog not run; no counter mutation or alert.
+- No external activity, activation, spend, payment, money action, source-rights change, permission change or paid infrastructure.
+
+**Next:** verify natural 05:45 and 11:45 NPT invocations through authorized logs plus persisted CycleRun identity/status/stages/read-after-write; restore ordinary DNS health probes; obtain Vercel metadata/log access through normal authorization; keep source clearance expiry fail-closed; fix transport-UNKNOWN classification in the existing watchdog without weakening the two-confirmed-failure rule.
+
 ## Current run — 2026-10-30 05:18 NPT (run-start main SHA `84fbca0e5e028d2d396e763e3e36da7f628eeb36`)
 
 - **Live source:** `refs/heads/main` resolved directly to `84fbca0e5e028d2d396e763e3e36da7f628eeb36`; this is the exact head inspected. The parent commit `c00f597f7e9a1f98433e3266b6d4b4bbd4d851b7`→head diff is documentation-only.
