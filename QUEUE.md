@@ -1,3 +1,16 @@
+## Current continuation — 2026-10-31 (run-start main SHA `3b5ca9c32edcae60fc3da796d9565212a75b1f30`)
+
+1. **P0 — deterministic backend tests without weakening rights.** The exact-head CI failed 52 tests because current-date source clearance checks reject expired sources. The existing `govinfo_review_clock` fixture freezes `datetime.now` but not `date.today`; `authorize_request` uses the latter when tests omit `today`. On a supported source-edit path, freeze a historical review date only in tests exercising previously cleared behavior; retain separate current-date expiry/no-network/no-Evidence regressions. Do not renew clearances to make CI green.
+2. **P1 — source-time grounding in existing provenance.** Preserve source-declared data cutoff, CAP sent/effective/onset/expires, report version/language/geography and method separately from publication/retrieval. Trace and test normalization → Signal → Evidence → assessment/citation. No new model/table/primitive; source code remains blocked.
+3. **P1 — D94 cross-border event chain.** Verify only public/authorized NCHM Taktsemakhang station status/uptime and event-specific advisory/alert records; distinguish the 29 Oct Bhutan event from Rasuwa and Gorkha. Do not issue warnings or infer prevented loss.
+4. **P1 — source rights and interfaces.** CHWRR terms/robots, NCHM written reuse permission, ICIMOD commercial authorization and SACHET exact feed identifier/agency permission remain unresolved. No registry entry or ingestion. If SACHET is cleared, extend existing WebCollector for bounded CAP/XML+ETag/304; do not add a new collector.
+5. **P1 — D93 report #04 and later official reporting.** Retrieve the #04 PDF body through a permitted source-linked route and continue checking for #05/later restoration records. Search misses do not prove absence.
+6. **P1 — production observability.** Health UNKNOWN; Vercel runtime read 403. Use only ordinary health probes and normal team authorization. Correlate natural 05:45/11:45 NPT invocation evidence with CycleRun identity/status/stages/read-after-write; no manual invocation.
+7. **P1 — continue independent Hami-wide work.** D96 cross-border power-market legal/transaction evidence, D95 agriculture/market evidence and the wider D1–D100 portfolio remain independent of any seller path.
+8. **P2 — stale branch reference.** `feature/governed-offers` remains 0 ahead/847 behind; no supported delete-ref action is available, so preserve history.
+
+**Global scope:** Hami's mission is settled and open-ended. First Rupee/seller work is one possible commercial path, never a gate for unrelated research, capability, reliability, security/privacy, integration or quality.
+
 ## Current continuation — 2026-10-31 (run-start main SHA `899931782a33b2880ae28931d0223984c5b416a7`)
 
 1. **P0 — source-clearance expiry / CI determinism.** Keep Crossref, GDELT DOC, OpenAlex, World Bank and GovInfo fail-closed until each exact source's robots, terms, purpose, fields, retention and redirects are re-reviewed. Do not extend dates to green CI.
