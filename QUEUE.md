@@ -1,3 +1,14 @@
+## Current continuation — 2026-10-31 (run-start main SHA `899931782a33b2880ae28931d0223984c5b416a7`)
+
+1. **P0 — source-clearance expiry / CI determinism.** Keep Crossref, GDELT DOC, OpenAlex, World Bank and GovInfo fail-closed until each exact source's robots, terms, purpose, fields, retention and redirects are re-reviewed. Do not extend dates to green CI.
+2. **P1 — D96 primary record.** Retrieve signed 16 Oct MoEWRI LOI decision, template and dated applicant/recipient register; reconcile 5/12 versus 6/14 without assuming either authoritative.
+3. **P1 — D96 legal-instrument lineage.** Compare Electricity Act 2049, Parliament's Electricity Bill 2080, MoEWRI's 2082 bill page, reported 2026 amendment draft and separate 2083 Nepal–India long-term trade-agreement bill. Do not conflate treaty approval with private trader licensing.
+4. **P1 — D96 technical/commercial evidence.** Through a permitted route, inspect ERC transmission-charge/Open Access PDFs and proposed connectivity/captive/deviation/metering/settlement drafts; retrieve NEA 2025/26 annual-report body and dated LDC data. Separate approvals, capacity, schedules, actual MWh and revenue.
+5. **P1 — source-time grounding in existing seams.** Preserve source-declared effective cutoff, document version, geography and observation period separately from page publication/retrieval. Trace explicit provenance plus nested metadata through normalization→Signal→Evidence→assessment/citation; no new model/table/primitive and no source-write bypass.
+6. **P1 — D93/D94 follow-through.** Inspect official NDRRMA PDFs and later restoration evidence through permitted routes; keep Gorkha–Budhi Gandaki separate from 26 Aug Rasuwa–Bhotekoshi. No emergency advice/alerting from incomplete reporting.
+7. **P1 — runtime evidence.** Keep health UNKNOWN until ordinary probes return HTTP; use authorized deployment/log access only. Correlate natural 05:45/11:45 NPT schedules with persisted CycleRun trigger/status/stages/read-after-write; no manual invocation.
+8. **Global scope:** Hami's mission and breadth are settled. Seller/First Rupee work is one path, never a gate for research, capability, reliability, privacy/security, integration or quality elsewhere.
+
 ## Current continuation — 2026-10-31 (run-start main SHA `965faeb43533a0a12efa2822cf55749be481f041`)
 
 1. **P0 — repair the documentation projection contract.** Restore the structured UNKNOWN_MAP table and keep the D94/D93 evidence pointer outside the parsed table; the existing generator check must remain green. Do not hand-edit `unknowns.json` or `unknowns.ts`.

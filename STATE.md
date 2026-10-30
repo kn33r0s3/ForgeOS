@@ -1,3 +1,13 @@
+## Current state — 2026-10-31 (run-start main SHA `899931782a33b2880ae28931d0223984c5b416a7`)
+
+- Main resolved directly to `899931782a33b2880ae28931d0223984c5b416a7`; preceding commit documentation-only.
+- Exact-head CI: 52 backend failures / 1,303 passed / 2 skipped; eight other jobs passed. Direct causes are expired Crossref, GDELT DOC, OpenAlex and World Bank clearances with downstream cascades. Secret scan passed. Independent deploy verifier passed exact-SHA match, 274 frontend tests, protected CycleRun DTO read (payload suppressed) and HTTP 200 verification write. GitHub Vercel status success; direct Vercel metadata unavailable in connected team context. Health not re-probed; last known state UNKNOWN after DNS failure before HTTP.
+- Five registry entries are outside review windows (GovInfo 25 Sep; Crossref, World Bank, GDELT and OpenAlex 27 Oct). Keep fail-closed; no renewal without exact-source review.
+- D96 gained a Nepal cross-border electricity market-access subcase: 40 MW Bangladesh export resumed 23 Oct after flood interruption; Ashoj exports to India reported 633.986 GWh / NPR 5.925B; private-trader LOIs are preparatory, 28 Oct applicant/recipient counts differ, and legal-instrument lineage is unresolved. No private-trader transaction evidenced. D96 remains UNKNOWN.
+- Electricity Act 2049, Electricity Bill 2080, MoEWRI 2082 bill page, 2083 Nepal–India agreement bill and 2026 amendment draft are distinct artifacts until their relationship is proved. ERC published items remain distinct from proposed drafts.
+- ERC/NEA/CEA/MoEWRI/Parliament/Law Commission sources are NOT CLEARED for automated collection/provider transmission. No registration or ingestion.
+- Existing source-time seam remains incomplete; source-code edits remain blocked. Hami's broad mission is settled; no new taxonomy, model, table, collector or Hami-wide gate.
+
 ## Current exact-head correction — 2026-10-31 (run-start main SHA `965faeb43533a0a12efa2822cf55749be481f041`)
 
 - CI 41142556719 completed FAIL 3/9: backend 52 failed / 1,303 passed / 2 skipped / 18 warnings; frontend-tests and repository-guards failed because UNKNOWN_MAP changed without regenerating its two projections. Six jobs passed.

@@ -547,3 +547,14 @@ This review is a source-readiness record, not evidence that any project-specific
 - **MoALD:** search-index metadata lists a flood-affected food-security response/coordination notice dated 10 Bhadra 2083. Direct category-page open returned older 2082 content and the homepage timed out; the notice body and exact current page state remain unverified. Robots/terms/reuse basis unresolved; NOT CLEARED. Do not infer the response's contents or current food-security conditions.
 - No source query, attachment inspection, collector run, Signal/Evidence write, contact, provider transmission or external action occurred.
 
+
+
+## 2026-10-31 — D96 Nepal cross-border electricity sources (manual-only; NOT CLEARED)
+
+- **ERC:** [proposed-draft index](https://erc.gov.np/proposed-draft), [transmission-charge standard](https://erc.gov.np/detail/327) and [Open Access first amendment](https://erc.gov.np/detail/326) were read for page metadata. Index dated 2083 Kartik 12 / 29 Oct; connectivity, captive-power, deviation, metering, balancing/settlement and grievance documents are explicitly proposed drafts. PDFs unread. Robots endpoint inaccessible; footer says all rights reserved; no general reuse grant found. NOT CLEARED for automated collection, source-body persistence or provider transmission.
+- **NEA:** official 2025/26 annual-report page listed last updated 30 Oct 2026 18:59:53; PDF retrieval timed out and body unread. Robots endpoint inaccessible; footer says all rights reserved. NOT CLEARED.
+- **CEA (India):** cross-border approval page was discoverable in search with project-specific approval periods, but direct retrieval failed (404); robots/terms/reuse scope not reviewed. Search metadata does not prove actual MWh or current private-trader authorization. NOT CLEARED.
+- **MoEWRI:** official page titled “Bill to amend and consolidate electricity laws” dated 29 Sawan 2082; body/PDF could not be retrieved. Older “Letter of Intent” page dated 20 Sawan 2082 is not the 16 Oct 2026 private-trading decision. Signed decision and recipient register not located; robots/terms/reuse scope not reviewed. NOT CLEARED.
+- **Parliament and Nepal Law Commission:** Parliament-hosted Electricity Bill 2080 explanatory PDF was publicly readable and manually reviewed; bill-status page and separate 2083 Nepal–India agreement bill were metadata-only because direct retrieval timed out. Law Commission search index exposed the prevailing Act 2049 and section 22 excerpt, but page timed out. Robots/terms/retention not reviewed. NOT CLEARED for automated ingestion/provider transmission.
+- Fiscal Nepal, Kathmandu Post, New Business Age and BSS were used as manual secondary reporting only. No article body was copied into a Hami source record. No collector, registry entry, Signal/Evidence write or provider transmission occurred. Public visibility is not collection permission.
+
