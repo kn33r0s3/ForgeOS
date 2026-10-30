@@ -1167,3 +1167,12 @@ This is the Nuwakot view of the 26 Aug Bhotekoshi–Trishuli event, distinct fro
 - Connected to existing Hami primitives and normalization→Signal→Evidence→assessment. Source-effective cutoff/event/observation/issue/delivery times still need distinct provenance; no new primitive/model/table/collector. The source-write safety blocker remains; no source-code write or alternate mutation path. No external contact, data request, alert, publication, intake/outbound activation, spend, private-record access or high-stakes recommendation.
 - Next: inspect ICIMOD report body through a permitted route; obtain only public or explicitly authorized DHM event/dispatch and station-uptime records; resolve the 25-vs-26 Aug chronology with independently attributable evidence. D94 remains UNKNOWN.
 
+
+
+## 2026-10-31 — exact-head CI failure reconciliation and projection-safe documentation correction
+
+- Main at correction start: `965faeb43533a0a12efa2822cf55749be481f041`. CI 41142556719 completed FAIL 3/9: backend 52 failed / 1,303 passed / 2 skipped / 18 warnings; frontend-tests and repository-guards failed because the structured UNKNOWN_MAP table change left `backend/app/data/unknowns.json` and `src/lib/unknowns.ts` stale. Secret scan passed. Independent verifier failed because tests were false, while exact production SHA, protected CycleRun read and verification POST HTTP 200 succeeded. Vercel deployment was READY on exact SHA.
+- Corrected the documentation contract by restoring the structured map table from the pre-edit head and appending a non-table evidence pointer. Reproduced the existing `sync-unknowns-json.mjs` parser and confirmed its JSON and TypeScript outputs match the existing generated files exactly; no generated projection was hand-edited.
+- Added the NESRA public capability/coordination node: its FloodWatch support page identifies satellite/EO processing, geospatial analysis, data infrastructure, analyst capacity and future readiness needs; it explicitly distinguishes institutional capability support from direct victim assistance. EAS 2026 is planned for December in Kathmandu with programme details pending. No contact, donation, registration or partnership assumption.
+- D94 evidence remains UNKNOWN and source-rights gated. The source-write blocker remains; no source code or registry changes, no external actions.
+

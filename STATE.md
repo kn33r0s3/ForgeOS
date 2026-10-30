@@ -1,3 +1,12 @@
+## Current exact-head correction — 2026-10-31 (run-start main SHA `965faeb43533a0a12efa2822cf55749be481f041`)
+
+- CI 41142556719 completed FAIL 3/9: backend 52 failed / 1,303 passed / 2 skipped / 18 warnings; frontend-tests and repository-guards failed because UNKNOWN_MAP changed without regenerating its two projections. Six jobs passed.
+- Secret scan 41142556353 PASS. Independent verifier 41142556369 FAIL because tests were false, but exact production SHA, protected CycleRun read and verification POST HTTP 200 succeeded.
+- Vercel deployment `dpl_2YQnfj2rqHXY1aU9uxEomtDDN3Lw` READY on exact SHA 965faeb, production aliases include haminp, forge-os-ebon and pulsenp. Runtime logs 403; health UNKNOWN after DNS failure before HTTP.
+- The correction restores the structured UNKNOWN_MAP table and uses a non-table evidence addendum; the existing generator parser was reproduced and the two generated projections match exactly. No generated files or source code were hand-edited.
+- D94 evidence and rights remain in CAPABILITY_QUEUE/PUBLIC_SOURCES. NESRA's public support page lists EO processing, geospatial, data infrastructure, analyst and readiness needs; EAS 2026 is planned for December in Kathmandu. This is a public resource node, not a Hami partnership/customer. No contact or contribution.
+- Source-clearance expiry remains fail-closed; no clearance renewed. Source-write blocker remains; no source-code or runtime mutation.
+
 ## Current state and research increment — 2026-10-31 (run-start main SHA `5b7f0423bbcfadb556341f98516182f057c1a3ab`)
 
 - **Main and deployment:** main `5b7f0423bbcfadb556341f98516182f057c1a3ab`; parent `42daa43c0ae7f0cd655dfaf3b352facb76618bec`; docs-only change. Vercel deployment `dpl_5JFuKKDrVsSryRdgmmM7zdj3LgjC` is READY on the exact SHA, production, aliases include `haminp.vercel.app` and `forge-os-ebon.vercel.app`. Runtime logs remain 403.

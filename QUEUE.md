@@ -1,3 +1,16 @@
+## Current continuation — 2026-10-31 (run-start main SHA `965faeb43533a0a12efa2822cf55749be481f041`)
+
+1. **P0 — repair the documentation projection contract.** Restore the structured UNKNOWN_MAP table and keep the D94/D93 evidence pointer outside the parsed table; the existing generator check must remain green. Do not hand-edit `unknowns.json` or `unknowns.ts`.
+2. **P0 — source-clearance expiry.** Backend exact-head CI has 52 failures, 1,303 passes, 2 skips; direct expired clearances are Crossref, GDELT, OpenAlex and World Bank. Review each source's own robots/terms/purpose/fields before any renewal; no blanket approval.
+3. **P1 — runtime observability.** Vercel deployment is READY on exact SHA 965faeb with production aliases. Runtime logs remain 403; health UNKNOWN after DNS failure before HTTP. No bypass or team permission change.
+4. **P1 — D94 multi-hazard evidence.** Verify ICIMOD's preliminary timeline against DHM event/dispatch records and station uptime; resolve the 25-vs-26 Aug chronology. Keep Rasuwa separate from Budhi Gandaki. No Hami warning/alert service.
+5. **P1 — D93 report #04.** Official NDRRMA listing states 16 Oct 10:00 cutoff; PDF body unread. A 31 Oct targeted official-domain search did not surface #05/later, which does not prove absence.
+6. **P1 — portfolio coverage.** D1–D100 metadata sweep complete; operational open ResearchQuestion count UNKNOWN because the route is owner-key gated. No new question/task rows.
+7. **P1 — natural schedule attribution.** After 05:45/11:45 NPT windows, use authorized invocation evidence and protected CycleRun reads to correlate trigger/status/stages/read-after-write. No manual invocation.
+8. **P2 — stale branch reference.** `feature/governed-offers` remains 0 ahead/847 behind main; no supported delete-ref action exposed, preserve history.
+
+**Global scope rule:** Hami's mission is settled and open-ended. First Rupee/seller work is one commercial path, never a gate for unrelated research, capability, reliability, security/privacy, integration or quality work.
+
 ## Current continuation — 2026-10-31 (run-start main SHA `5b7f0423bbcfadb556341f98516182f057c1a3ab`)
 
 1. **P0 — backend CI determinism without weakening source rights.** [41141589623](https://github.com/kn33r0s3/ForgeOS/actions/runs/41141589623) fails only backend: 52 failed, 1,303 passed, 2 skipped. Expired Crossref, GDELT, OpenAlex and World Bank clearances are the direct cause; isolate historical test fixtures from live expiry/no-network tests only when a supported source-edit path exists.

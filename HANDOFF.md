@@ -1,3 +1,14 @@
+## Exact-head CI reconciliation and projection correction — 2026-10-31 (run-start main SHA `965faeb43533a0a12efa2822cf55749be481f041`)
+
+- [CI run 41142556719](https://github.com/kn33r0s3/ForgeOS/actions/runs/41142556719) completed FAIL 3/9. Backend: 52 failed, 1,303 passed, 2 skipped, 18 warnings in 265.02s; direct errors are expired Crossref, GDELT, OpenAlex and World Bank clearances, with downstream cascades. Frontend-tests and repository-guards both stopped at `node scripts/sync-unknowns-json.mjs --check`: the D94/D93 structured table edits left `backend/app/data/unknowns.json` and `src/lib/unknowns.ts` stale. Six other CI jobs passed.
+- [Secret scan 41142556353](https://github.com/kn33r0s3/ForgeOS/actions/runs/41142556353) passed. [Independent verifier 41142556369](https://github.com/kn33r0s3/ForgeOS/actions/runs/41142556369) failed because the test result was false; it did verify the exact deployed SHA, passed the protected owner CycleRun read, and recorded the verification POST with HTTP 200. It did not run backend pytest.
+- Vercel deployment `dpl_2YQnfj2rqHXY1aU9uxEomtDDN3Lw` is READY on exact SHA `965faeb43533a0a12efa2822cf55749be481f041`, production aliases include `haminp.vercel.app`, `forge-os-ebon.vercel.app`, and `pulsenp.vercel.app`. Runtime logs remain 403; health remains UNKNOWN after DNS failure before HTTP, with last healthy sample 30 Oct 06:23 NPT.
+- **Correction in this commit:** restore the structured UNKNOWN_MAP table to its pre-edit version and place the D94/D93 evidence pointer in a non-table addendum. The canonical generator parser was reproduced and checked against both existing generated projections; the addendum is outside the parsed table, and both projections match exactly. No generated file was hand-edited. The detailed D94 evidence and per-source rights remain in CAPABILITY_QUEUE and PUBLIC_SOURCES.
+- **Additional real-world connection:** NESRA publicly identifies EO processing, geospatial analysis, data infrastructure, analyst capacity and future readiness as FloodWatch capability needs; its EAS 2026 is planned for December in Kathmandu. This is a public resource/coordination node, not a verified Hami partnership or customer.
+- The source-write blocker remains; no source code, registry, runtime setting, permission, or external action changed.
+
+**Next:** verify this correction on its exact head; backend source clearances still require source-by-source review before any renewal; do not weaken fail-closed behavior or hand-edit generated projections.
+
 ## Exact-head and research reconciliation — 2026-10-31 (run-start main SHA `5b7f0423bbcfadb556341f98516182f057c1a3ab`)
 
 - **Canonical source:** live `main` is `5b7f0423bbcfadb556341f98516182f057c1a3ab`, parent `42daa43c0ae7f0cd655dfaf3b352facb76618bec`. The parent→head commit is documentation-only (HANDOFF, LOG, QUEUE, STATE, CAPABILITY_QUEUE); no application/source/schema/scheduler change.
