@@ -1,3 +1,16 @@
+## Current continuation — 2026-10-31 (run-start main SHA `5b7f0423bbcfadb556341f98516182f057c1a3ab`)
+
+1. **P0 — backend CI determinism without weakening source rights.** [41141589623](https://github.com/kn33r0s3/ForgeOS/actions/runs/41141589623) fails only backend: 52 failed, 1,303 passed, 2 skipped. Expired Crossref, GDELT, OpenAlex and World Bank clearances are the direct cause; isolate historical test fixtures from live expiry/no-network tests only when a supported source-edit path exists.
+2. **P1 — runtime observability.** Vercel deployment `dpl_5JFuKKDrVsSryRdgmmM7zdj3LgjC` is explicitly READY on exact main SHA with production aliases. Runtime logs remain 403; ordinary health GETs failed DNS before HTTP, so health is UNKNOWN. No bypass or team permission change.
+3. **P1 — source-time grounding in the existing seam.** Preserve event/observation/effective cutoff, publication, retrieval, report version, geography, language and method separately through normalization→Signal→Evidence→assessment/citation. Prepared only; source writes remain blocked. No new model/table/primitive.
+4. **P1 — D94 multi-hazard early-warning evidence.** Verify the ICIMOD preliminary timeline against DHM event/dispatch records and station uptime; resolve the 25-vs-26 Aug chronology. Keep Rasuwa separate from the Budhi Gandaki event. No Hami warning/alert service or current hazard claim.
+5. **P1 — D93 report #04.** The official NDRRMA listing states a 16 Oct 10:00 cutoff; the PDF body remains unread. A 31 Oct targeted official-domain search did not surface #05/later, which does not prove absence. Inspect #04 through a permitted source-linked route.
+6. **P1 — portfolio coverage.** D1–D100 metadata sweep is complete; operational open ResearchQuestion count remains UNKNOWN because the route is owner-key gated. No new question/task rows.
+7. **P1 — natural schedule attribution and production proof.** After 05:45/11:45 NPT windows, use authorized invocation evidence and protected CycleRun reads to correlate trigger/status/stages/read-after-write. Production DB durability, real inference and fresh REAL outcomes remain UNKNOWN.
+8. **P2 — stale branch reference.** `feature/governed-offers` remains 0 ahead/847 behind main and fully reachable; no supported delete-ref action is exposed, so preserve history.
+
+**Global scope rule:** Hami's mission is settled and open-ended. First Rupee/seller work is one commercial climb, never a gate for unrelated research, capability, reliability, security/privacy, integration or quality work.
+
 ## Current continuation — 2026-10-31 04:41 NPT (run-start main SHA `42daa43c0ae7f0cd655dfaf3b352facb76618bec`)
 
 1. **P0 — backend CI determinism without weakening source rights.** [40981083108](https://github.com/kn33r0s3/ForgeOS/actions/runs/40981083108) fails only backend: 52 failed, 1,303 passed, 2 skipped. Its exact job log confirms expired OpenAlex, Crossref, GDELT DOC and World Bank Indicators clearances; downstream tests assume eligible collectors/planner effects. Preserve fail-closed production authorization. When source editing is supported, isolate deterministic historical test fixtures from current-date expiry/no-network regressions; do not renew sources by assumption.
