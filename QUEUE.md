@@ -1,3 +1,17 @@
+## Current research continuation — 2026-11-01 (run-start main SHA 8ccec7b20b80c7a86b0b53b5a32b5c9d34986e0d)
+
+1. **P0 — production/deployment gate:** exact-head verifier returned HTTP 402 after 274 npm tests; GitHub Vercel status says account blocked. Last recorded aliases were READY on older SHA 6076690f; current exact deployment/runtime health remain UNKNOWN. Use normal platform/account authorization only; no payment action or bypass.
+2. **P0 — backend CI without rights weakening:** exact-head CI 41253777448 failed 52 backend tests (1,303 passed / 2 skipped / 18 warnings); expired OpenAlex, Crossref, GDELT and World Bank clearances cause direct denials and downstream cascades. Secret scan passed. Keep production collection fail-closed; do not renew permissions for green CI.
+3. **P1 — D94 event-chain evidence:** retrieve only public/authorized NCHM station uptime, current threshold version, raw event observations, alarm/siren timestamps and sender/recipient receipts; retrieve original CWC advisory/gauges and official hydropower/road restoration status. Reported siren activation is positive evidence; no failure claim, warning or emergency advice.
+4. **P1 — D93 official recovery records:** revisit NDRRMA #02/#04 PDFs only if direct official links become accessible; #02 /464 and /465 timed out, #04 /468 body unread, #05/later not surfaced. MoEWRI #454 is title/date only; NEA page is pre-event; DoR Krishna Bhir notice is a different August event. Search misses do not prove absence.
+5. **P1 — source-time grounding through existing provenance:** preserve event/observation/alert/receipt/effective/publication/retrieval times, report version, language, geography and metric definitions through normalization→Signal→Evidence→assessment/citation. No new model/table/primitive/collector. Source-write blocker remains.
+6. **P1 — source-specific rights:** NCHM written reuse permission, ICIMOD commercial authorization, SACHET feed identifier/agency permission and CWC terms remain unresolved. No source registration or ingestion.
+7. **P1 — continue Hami-wide independent work:** D95 agriculture, D96 electricity-grid flexibility and other value domains continue independently; no one event or seller experiment gates Hami's mission.
+
+**Scope:** Hami's open-ended mission is settled. Research continues across domains/geographies; claims and consequential actions remain evidence-, rights- and authorization-gated.
+
+---
+
 ## Current continuation — 2026-11-01 05:25 NPT (run-start main SHA `f45fa1ea807aa284aa338ec7c841531649f8bb24`)
 
 1. **P0 — current production deployment is blocked/stale.** GitHub Vercel status says `failure` / “Account is blocked”; the independent verifier's ordinary production-content fetch returned HTTP 402. Both aliases still resolve to a READY deployment on SHA `6076690f00c238f1b22a3afcdf489e983c468e7d`, five commits behind current main. Exact-SHA Vercel listing for `f45fa1e` returns zero; intervening diff is documentation-only. Resolve the account gate only through the normal Vercel account process; no payment action or bypass.
