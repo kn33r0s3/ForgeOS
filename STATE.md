@@ -1,3 +1,15 @@
+## Current operational state — 2026-11-01 05:25 NPT (run-start main SHA `f45fa1ea807aa284aa338ec7c841531649f8bb24`)
+
+- **Current main:** `f45fa1ea807aa284aa338ec7c841531649f8bb24`.
+- **CI:** exact-SHA ForgeOS CI [41199109733](https://github.com/kn33r0s3/ForgeOS/actions/runs/41199109733) FAIL 1/9; backend 52 failed / 1,303 passed / 2 skipped / 18 warnings, eight jobs passed. Direct failure cause remains expired Crossref, GDELT DOC, OpenAlex and World Bank Indicators clearances plus downstream test cascades. Secrets scan [41199109694](https://github.com/kn33r0s3/ForgeOS/actions/runs/41199109694) PASS.
+- **Verifier/deployment:** verifier [41199109684](https://github.com/kn33r0s3/ForgeOS/actions/runs/41199109684) passed 274 npm tests but production fetch returned HTTP 402; owner-cycle read and verification POST were skipped. GitHub Vercel status is FAILURE / “Account is blocked.” The latest aliases resolve to READY deployment `dpl_3dXSN8bAD2KD6HyPhofDgEhaVmWo` on old SHA `6076690f00c238f1b22a3afcdf489e983c468e7d`. Exact current-SHA deployment query returned zero. Current main is five commits ahead of deployed SHA; only HANDOFF and CAPABILITY_QUEUE differ, so the code diff is documentation-only. Current main is not deployed.
+- **Health:** both ordinary GETs failed DNS before HTTP (curl exit 6); both current health states UNKNOWN. Last historical direct healthy sample: 31 Oct 06:23 NPT.
+- **Observability:** runtime logs and runtime-error reads 403 under `kn33r0s3s-projects`; team ID `team_M6sQhUiJL8SjPhJZVnu2MSBv`. Normal single-use team consent request generated; owner approval pending. No access bypass.
+- **Scheduler:** 05:45 NPT cycle and 11:45 NPT intelligence schedules are present in `vercel.json`. Today's cycle is still ahead; prior natural windows are not attributable from available authorized evidence. Current verifier did not reach owner-cycle read. No manual invocation.
+- **Durability/inference/outcomes:** production DB durability, natural cron-linked final CycleRun/stages, real model inference and fresh REAL outcomes UNKNOWN. CI's mock provider/in-memory DB are not production proof.
+- **Watchdog:** two-failure threshold remains; current implementation can count DNS/transport/invalid responses. No watchdog/counter/alert operation this pass.
+- No paid infrastructure, external messages, intake/outbound activation, payment/money action, production change, or manual schedule invocation.
+
 ## [2026-10-31 — D94 cross-border follow-up and exact-head source-time reconciliation]
 
 - **Research scope:** a separate 29 Oct 2026 Sintaphu Lake GLOF in Bhutan links a documented 2021 NCHM Taktsemakhang monitoring-station location to a 30 Oct 2026 advisory naming a new lake at Taktsemakhang. The shared locality is a site-level lead, not proof of current station uptime, event detection or alert causation. ICIMOD reports downstream alerts in West Bengal and Assam; no recipient-level delivery or loss-prevention outcome is verified.
