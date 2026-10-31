@@ -758,6 +758,26 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
+## Last verified state snapshot (2026-10-31)
+
+**Update 2026-10-31 (daily freshness check, 06:23 NPT):** HEAD at `c1399c94`
+(since 2026-10-30: 2026-10-31 exact-head operational verification, D94
+early-warning evidence and portfolio sweep, D94 evidence preservation
+without desynchronizing projections, D96 cross-border power market
+discovery, and D94 cross-border warning evidence linked to CAP time
+semantics). `git pull --ff-only` fast-forwarded `42daa43c..c1399c94`;
+`main` == `origin/main`. Working tree clean.
+
+- **Health:** haminp `/api/health` returns
+  `{"status":"ok","ready":true,"ok":true,"version":"2.3.0","db":"up"}` and
+  forge-os-ebon returns the same. Both endpoints ok at the close of
+  this check (no transient blip observed this run).
+- **Intake:** `/api/forge-bot/config` returns `intake_enabled: false`
+  (unchanged).
+- **Unknowns:** 104 D-entries in `docs/UNKNOWN_MAP.md` (unchanged).
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold.
+
 ## Last verified state snapshot (2026-10-30)
 
 **Update 2026-10-30 (daily freshness check, 06:23 NPT):** HEAD at `78006819`
