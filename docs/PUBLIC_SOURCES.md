@@ -579,3 +579,18 @@ This review is a source-readiness record, not evidence that any project-specific
 - `https://ampis.gov.np/robots.txt` was inaccessible via the available browser route (tool-level failure, not an HTTP allow/deny result). No terms/content-reuse grant was located on the reviewed pages; footer states © 2026 / all rights reserved. No AMPIS entry exists in the runtime source-clearance registry. Status: NOT CLEARED for automated collection, persistent storage or provider transmission.
 - Manual reading only. No collector run, source registration, Signal/Evidence write, source-body persistence, provider transmission, contact or external action occurred.
 
+## 2026-11-02 — exact source-time and reuse determination: World Bank report and DHM index
+
+### World Bank Nepal Development Update, 6 October 2026
+
+- Exact report PDF: https://documents1.worldbank.org/curated/en/099514210052618832/pdf/IDU-595c97d5-48e8-4e50-9a96-b02022966072.pdf
+- The report states its cutoff date is 26 September 2026 (PDF page 3), despite its 6 October 2026 publication date. Preserve those as distinct source times.
+- The PDF's Rights and Permissions section (page 2) says the material may be reproduced for non-commercial purposes with full attribution; rights/licence queries go to World Bank Publications. This does not establish permission for Hami's commercial persistent ingestion, provider transmission or derivative commercial reuse. Status: **NOT CLEARED** for automated collection, persistent commercial storage or provider transmission. Manual research only. The expired World Bank Indicators API clearance is a separate source/endpoint and does not cover this report PDF.
+
+### Department of Hydrology and Meteorology — weekly agromet index
+
+- Exact index: https://dhm.gov.np/agromet-services/weekly-weather-bulletin
+- Current page header displayed Saturday 31 October 2026. The index lists 2083-07-12 uploaded 30 October 2026 04:15:22, 2083-07-05 uploaded 29 October 2026 08:56:28, and 2083-06-29 uploaded 16 October 2026 04:10:37. Older bulletin titles can have much later upload dates (for example, 2082-10-29 uploaded 11 March 2026). Title labels, upload timestamps and any source-effective period must remain separate.
+- The relevant PDF bodies were not retrieved or inspected, so no crop, forecast, observation or effective-cutoff claim is made. Direct reads of DHM robots.txt and a candidate terms path were tool-inaccessible; this is not an HTTP allow/deny decision. No applicable reuse grant or exact-source registry entry was established. Status: **NOT CLEARED** for automated collection, persistence or provider transmission; manual index review only.
+
+- No registry entry, collector run, Signal/Evidence write, source-body persistence or provider transmission occurred for either source.
