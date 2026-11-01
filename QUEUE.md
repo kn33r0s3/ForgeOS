@@ -1,3 +1,14 @@
+## Current operational resumption — 2026-11-02 05:01 NPT (run-start main `ec77d4bbd0e88584695a23ea095ce68a56571355`)
+
+1. **P0 — Vercel platform gate:** current-main Vercel status is failure / “Account is blocked”; both aliases still point to a READY ancestor deployment on `6076690f`, and exact-SHA listing for current main is empty. Resolve only through normal Vercel account/platform channels; no payment action or protection bypass.
+2. **P0 — backend CI without rights weakening:** exact-head CI [41359891443](https://github.com/kn33r0s3/ForgeOS/actions/runs/41359891443) fails 52 backend tests (1,303 passed / 2 skipped / 18 warnings) from expired Crossref/GDELT/OpenAlex/World Bank clearances and downstream assumptions. Keep source authorization fail-closed; isolate deterministic historical fixtures from current-date expiry/no-network tests.
+3. **P1 — normal Vercel observability authorization:** runtime logs/errors return 403 for team `kn33r0s3s-projects`. A normal single-use team-consent link has been generated and delivered separately; owner approval is required before retrying the same scoped reads.
+4. **P1 — health:** ordinary GETs to both production `/api/health` endpoints fail DNS before HTTP; both are UNKNOWN. Retry from a working DNS environment; do not count transport errors as app-health failures.
+5. **P1 — natural scheduler attribution:** today's 05:45 NPT cycle and 11:45 NPT intelligence windows require authorized invocation logs correlated to a persisted CycleRun identity, trigger, final status/stages and durable read-after-write. Do not manually invoke either route.
+6. **P1 — health-watch UNKNOWN semantics:** update the existing script/test seam so DNS/transport/missing/invalid responses are UNKNOWN and do not increment the confirmed-health-failure counter; preserve two consecutive confirmed unhealthy observations. Do not run the watchdog as part of verification.
+7. **P1 — independent production proof:** establish DB identity/durability, real model inference and fresh REAL outcomes separately from CI, READY status and record readability. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains NOT MEASURABLE without verified real transactions.
+8. Continue unrelated Hami-wide research/capability work independently; this operational/platform block does not gate the mission.
+
 ## Current research continuation — 2026-11-02 (run-start main SHA `3cb14cd0a50e1bc79c516c7f85f9d67861581d12`)
 
 1. **P0 — backend CI remains fail-closed.** Exact-head CI 41257781573 fails 1/9 because expired Crossref, GDELT DOC, OpenAlex and World Bank Indicators clearances trigger direct denials and downstream test cascades (52 failed / 1,303 passed / 2 skipped). Secret scan 41257781584 passed. Do not renew source rights to green CI; deterministic historical test-clock repair remains blocked until supported source editing is available.

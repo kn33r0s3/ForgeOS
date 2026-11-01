@@ -1,3 +1,14 @@
+## 2026-11-02 — operational verification evidence delta
+
+- **Exact-head evidence strengthened:** current main `ec77d4bbd0e88584695a23ea095ce68a56571355` has decoded workflow/job results, not only a stale status summary. CI fails only backend (52 failed / 1,303 passed / 2 skipped); the direct denials are expired Crossref, GDELT DOC, OpenAlex and World Bank clearances. The rights gate is correctly fail-closed; no clearance was renewed.
+- **Deployment drift made explicit:** both aliases are READY on ancestor SHA `6076690f00c238f1b22a3afcdf489e983c468e7d`; current-SHA Vercel listing is empty and GitHub's Vercel status says account blocked. The independent verifier's 274 frontend tests pass, but its production fetch returns 402 before readiness/owner-cycle verification.
+- **Runtime uncertainty preserved:** both health probes fail at DNS before HTTP; runtime logs/errors are 403 pending normal team consent. Neither observation failure is counted as an application failure.
+- **Scheduler boundary:** the current verifier did not reach the owner-cycle read; yesterday's natural cron cannot be attributed from available logs. A historical one-record DTO read (31 Oct) has suppressed payload and no cron trigger; it does not prove durable execution.
+- **Owner-dependency delta:** a normal team-consent request is available for owner approval; no access bypass or permission mutation. No production capability rung, model inference, DB durability or REAL outcome was advanced. The next removable dependency is normal Vercel team authorization, followed by the account-level deployment block.
+- **No new model/table/primitive/collector/ledger.** Continue the existing health-watch transport-UNKNOWN regression and deterministic test-clock separation in their existing seams.
+
+---
+
 ## [2026-11-02 — D95 AMPIS measurement comparability; farm-to-retail chain remains unresolved]
 
 - **Official market system and scope:** the Government of Nepal's [AMPIS homepage](https://ampis.gov.np/) displayed its daily wholesale list and cross-market comparison dated Kartik 15, 2083 when retrieved on 2 Nov 2026. The [market directory](https://ampis.gov.np/contact-us) lists 12 centres; the [commodity directory](https://www.ampis.gov.np/available-commodity) lists 170 commodity records. These are market-level wholesale records, not farmgate prices, retail prices, delivered prices, or farmer net returns. The accessible pages do not state a retrieval/observation time-of-day.

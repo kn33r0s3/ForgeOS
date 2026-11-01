@@ -1,3 +1,17 @@
+## [2026-11-02 05:01 NPT — operational verification]
+
+- **Run-start main:** `ec77d4bbd0e88584695a23ea095ce68a56571355` (parent `3cb14cd0a50e1bc79c516c7f85f9d67861581d12`), documentation-only D95 update.
+- **Exact-head CI:** [41359891443](https://github.com/kn33r0s3/ForgeOS/actions/runs/41359891443) FAIL 1/9; backend 52 failed / 1,303 passed / 2 skipped / 18 warnings. Direct expired clearances: Crossref, GDELT DOC, OpenAlex, World Bank Indicators; downstream cascades. Other eight jobs passed. No clearance renewed.
+- **Secrets scan:** [41359891398](https://github.com/kn33r0s3/ForgeOS/actions/runs/41359891398) PASS.
+- **Independent verifier:** [41359891455](https://github.com/kn33r0s3/ForgeOS/actions/runs/41359891455) FAIL at production content fetch HTTP 402 after 274/274 frontend tests; exact-SHA wait, protected owner-cycle read and verification POST were skipped.
+- **Vercel:** GitHub status failure / “Account is blocked.” Both production aliases resolve to READY deployment `dpl_3dXSN8bAD2KD6HyPhofDgEhaVmWo` on old SHA `6076690f00c238f1b22a3afcdf489e983c468e7d`; exact current SHA deployment listing returns zero.
+- **Health:** both ordinary `/api/health` GETs fail DNS before HTTP (curl exit 6, HTTP 000); both UNKNOWN. Last healthy sample 31 Oct ~06:23 NPT is historical.
+- **Observability:** runtime logs/errors 403 for team scope. Normal single-use consent request generated, approval link delivered separately (expires 05:13:56 NPT); no bypass or permission change.
+- **Natural scheduler:** cron declarations present (05:45 and 11:45 NPT). Today's 05:45 is still ahead; yesterday's invocation is not established. Current verifier never reached owner-cycle read. Last historical protected DTO read on 31 Oct returned one schema-valid record, payload suppressed, without cron attribution or durability proof.
+- **Independent unknowns:** DB identity/durability/read-after-write, final cron-attributed CycleRun status/stages, real model inference and fresh REAL outcomes. CI uses mock AI and in-memory SQLite.
+- **Health-watch:** two-consecutive-failure threshold remains, but transport/DNS/invalid responses still increment the non-ok counter. Watchdog not run; counter untouched; no alert. Transport must remain UNKNOWN.
+- **No external contact/message, intake/outbound activation, payment, money action, paid infrastructure, manual cron invocation, source-clearance renewal or production setting change.
+
 ## [2026-11-02 — D95 AMPIS measurement comparability; exact-head verification]
 
 - **Run-start main:** `3cb14cd0a50e1bc79c516c7f85f9d67861581d12`, parent `17283506f085f270a681625f9a94f95f20283c6d`; current main was confirmed directly. Branches: main and stale feature/governed-offers; no open PRs. Grouped continuity update is documentation-only.
