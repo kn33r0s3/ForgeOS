@@ -569,3 +569,13 @@ This review is a source-readiness record, not evidence that any project-specific
 - **Parliament and Nepal Law Commission:** Parliament-hosted Electricity Bill 2080 explanatory PDF was publicly readable and manually reviewed; bill-status page and separate 2083 Nepal–India agreement bill were metadata-only because direct retrieval timed out. Law Commission search index exposed the prevailing Act 2049 and section 22 excerpt, but page timed out. Robots/terms/retention not reviewed. NOT CLEARED for automated ingestion/provider transmission.
 - Fiscal Nepal, Kathmandu Post, New Business Age and BSS were used as manual secondary reporting only. No article body was copied into a Hami source record. No collector, registry entry, Signal/Evidence write or provider transmission occurred. Public visibility is not collection permission.
 
+
+
+## 2026-11-02 — AMPIS market-price methodology (manual-only; NOT CLEARED)
+
+- Official surfaces manually reviewed: [AMPIS homepage](https://ampis.gov.np/) (daily wholesale list and market comparison dated Kartik 15, 2083 at retrieval on 2 Nov 2026), [technical note](https://www.ampis.gov.np/technical-note), [12-centre directory](https://ampis.gov.np/contact-us), and [170-record commodity directory](https://www.ampis.gov.np/available-commodity).
+- The technical note states the original 11 markets use the midpoint of minimum/maximum because the data-entry format does not capture all collected price observations; Kalimati, added from 2083 Asar 1, uses the arithmetic mean of multiple observations. The note explicitly warns these indicators are not directly comparable. The note does not display its own publication/update date.
+- The homepage comparison table contains repeated market labels and two different Pokhara rows for large Nepali tomato; the page does not explain whether these are separate reporting groups or duplicate records. Preserve UNKNOWN.
+- `https://ampis.gov.np/robots.txt` was inaccessible via the available browser route (tool-level failure, not an HTTP allow/deny result). No terms/content-reuse grant was located on the reviewed pages; footer states © 2026 / all rights reserved. No AMPIS entry exists in the runtime source-clearance registry. Status: NOT CLEARED for automated collection, persistent storage or provider transmission.
+- Manual reading only. No collector run, source registration, Signal/Evidence write, source-body persistence, provider transmission, contact or external action occurred.
+

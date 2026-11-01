@@ -1,4 +1,18 @@
-## Current research continuation — 2026-11-01 (run-start main SHA 8ccec7b20b80c7a86b0b53b5a32b5c9d34986e0d)
+## Current research continuation — 2026-11-02 (run-start main SHA `3cb14cd0a50e1bc79c516c7f85f9d67861581d12`)
+
+1. **P0 — backend CI remains fail-closed.** Exact-head CI 41257781573 fails 1/9 because expired Crossref, GDELT DOC, OpenAlex and World Bank Indicators clearances trigger direct denials and downstream test cascades (52 failed / 1,303 passed / 2 skipped). Secret scan 41257781584 passed. Do not renew source rights to green CI; deterministic historical test-clock repair remains blocked until supported source editing is available.
+2. **P0 — Vercel deployment identity/runtime remain UNKNOWN.** Verifier 41257781469 passed 274 npm tests then hit HTTP 402 on production content; exact-SHA/deployment and owner-cycle steps were skipped. Vercel status is account-blocked and team-scoped deployment lookup is 403. Use normal authorization only; no payment or access bypass.
+3. **P1 — D95 method-aware agricultural price reconciliation.** AMPIS's official note says 11 markets use midpoint(min,max), Kalimati uses arithmetic mean, and the values are not directly comparable. The current comparison table has unexplained repeated market labels. Keep D95 UNKNOWN; do not infer arbitrage, intermediary misconduct or a farm-level loss. AMPIS is NOT CLEARED for ingestion. If authorized evidence becomes available, compare only same-grade/same-date/same-batch farmgate→wholesale→retail values plus costs.
+4. **P1 — existing source-time/method provenance seam.** Preserve source-declared estimator, sample count, unit/grade, market identity and observation cutoff alongside publication/retrieval in the existing normalization→Signal→Evidence→assessment/citation path. Prepared capability only; source-code edits remain blocked. No new model/table/primitive/collector.
+5. **P1 — D93/D94 follow-through.** Keep Gorkha, Rasuwa–Bhotekoshi and Bhutan Sintaphu events separate. Inspect only reachable official/authorized reports and restoration/alert logs; search misses do not prove absence. No emergency advice or alerting.
+6. **P1 — runtime/scheduler evidence.** Current runtime health, exact deployed SHA, DB durability and natural CycleRun attribution remain UNKNOWN. Use ordinary probes and normal Vercel authorization; no manual invocation.
+7. Continue unrelated Hami-wide research and capability work; no seller experiment, one domain or one event gates the mission.
+
+**Scope:** Hami's mission and breadth are settled. Continue evidence-led discovery across domains and geographies while keeping source rights, uncertainty and action gates intact.
+
+---
+
+## Previous research continuation — 2026-11-01 (run-start main SHA 8ccec7b20b80c7a86b0b53b5a32b5c9d34986e0d)
 
 1. **P0 — production/deployment gate:** exact-head verifier returned HTTP 402 after 274 npm tests; GitHub Vercel status says account blocked. Last recorded aliases were READY on older SHA 6076690f; current exact deployment/runtime health remain UNKNOWN. Use normal platform/account authorization only; no payment action or bypass.
 2. **P0 — backend CI without rights weakening:** exact-head CI 41253777448 failed 52 backend tests (1,303 passed / 2 skipped / 18 warnings); expired OpenAlex, Crossref, GDELT and World Bank clearances cause direct denials and downstream cascades. Secret scan passed. Keep production collection fail-closed; do not renew permissions for green CI.
