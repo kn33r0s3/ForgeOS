@@ -801,6 +801,31 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
+## Last verified state snapshot (2026-11-01)
+
+**Update 2026-11-01 (daily freshness check, 06:23 NPT):** HEAD at `17283506`
+(since 2026-10-31: D94 station chronology and D93 status sharpening, the
+Vercel account deployment gate recorded in the handoff, NCHM warning
+lead-time terminology correction, a 2026-11-01 deployment/runtime
+verification record, and D94 warning-chain / D93 recovery-source
+reconciliation). `git pull --ff-only` fast-forwarded `6076690f..17283506`;
+`main` == `origin/main`. Working tree clean before this edit.
+
+- **Health: NOT OK — both endpoints return HTTP 402
+  `Payment required` / `DEPLOYMENT_DISABLED` (confirmed on two reads each,
+  haminp and forge-os-ebon). This is a change from 2026-10-31, when both
+  endpoints returned `{"status":"ok","ready":true}`. It matches the
+  Vercel account/deployment gate already recorded in the handoff on
+  2026-10-31; the exact Vercel cause remains pending normal team
+  authorization, and no bypass or permission change was made here.
+- **Intake: UNKNOWN this run —** `/api/forge-bot/config` also returns
+  the same 402 `DEPLOYMENT_DISABLED` response, so `intake_enabled` could
+  not be verified. Last verified value (2026-10-31) was `false`; no
+  change is claimed.
+- **Unknowns:** 104 D-entries in `docs/UNKNOWN_MAP.md` (unchanged).
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold.
+
 ## Last verified state snapshot (2026-10-31)
 
 **Update 2026-10-31 (daily freshness check, 06:23 NPT):** HEAD at `c1399c94`
