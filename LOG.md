@@ -1293,3 +1293,13 @@ This is the Nuwakot view of the 26 Aug Bhotekoshi–Trishuli event, distinct fro
 - **Source rights:** NRB's prior 25 Sep robots snapshot allowed the public root except /wp-admin/, but current recheck was unavailable; no general content-reuse grant found. NIA robots/terms were inaccessible and no reuse grant found. Neither source is in source_clearance_registry.py. Manual review only; no collection, persistence or provider transmission.
 - **Source-write block:** no source code changed; the blocked research_planner.py write was not retried or rerouted. No contact, private-record request, publishing, intake/outbound activation, spend, payment change, source registration/ingestion, provider transmission, manual cron or REAL outcome.
 
+
+
+## 2026-11-03 — exact-head verification of D98 documentation commit 1e7ae63
+
+- Current main is 1e7ae63d4ff13fec4ee8474403c6feb74d7d2ec0, parent 10825f43c53bc72b9464de0fb36eeada48695321. The commit changes six existing documentation files only; no source code, schema or runtime setting changed.
+- Exact-head ForgeOS CI 41547807014: FAIL 1/9. Backend 52 failed / 1,303 passed / 2 skipped / 18 warnings in 366.95s; eight other jobs passed. Direct PermissionErrors identify expired Crossref, GDELT DOC, OpenAlex and World Bank Indicators clearances; other failures cascade because the collectors fail closed and no task/evidence is created. The source policy is behaving fail-closed. The test suite needs a fixed historical date for tests that intend to exercise in-window success, while retaining a separate current-date expiry/no-network test. Do not renew rights to green CI.
+- Exact-head secrets scan 41547807006 PASS. Independent deploy verifier 41547807027: all 274 frontend tests pass; production content fetch returns HTTP 402; exact-SHA readiness, protected owner-cycle read and verification-record POST are skipped. GitHub Vercel status remains failure / Account is blocked. No current-SHA deployment is verified.
+- D98 evidence, source rights and proposed capability are recorded in docs/CAPABILITY_QUEUE.md; NRB and NIA are recorded as NOT CLEARED in docs/PUBLIC_SOURCES.md. The NIFRA and D-class circular PDFs were visually inspected; the A/B/C PDF and NIA claim-detail body remain unread. D98 remains UNKNOWN. No source registration, ingestion, provider transmission, contact, private-record request or external action occurred.
+- Next: wait for no further commit until the current-head gates finish (now complete); resolve the account gate through normal channels; fix historical TEST date assumptions without relaxing expiry; continue the source-aware provenance work only when the supported source-edit path is available.
+

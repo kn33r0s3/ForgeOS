@@ -1,11 +1,13 @@
-## Current Hami-wide priorities — 2026-11-03 (main 10825f43c53bc72b9464de0fb36eeada48695321)
+## Current Hami-wide priorities — 2026-11-03 (main 1e7ae63d4ff13fec4ee8474403c6feb74d7d2ec0)
 
 1. **P0 — Vercel platform/account gate:** exact-head verifier reaches production and receives HTTP 402; Vercel status says Account is blocked. Resolve only through normal platform/account channels; no bypass, share link, payment or production-setting change.
-2. **P0 — CI determinism without rights weakening:** backend fails 52 tests because Crossref, GDELT DOC, OpenAlex and World Bank Indicators clearances have expired, with downstream cascades. Isolate historical TEST fixtures from current-date expiry/no-network checks. Do not renew clearances merely to make CI green.
+2. **P0 — CI determinism without rights weakening:** exact-head backend has 52 failures, 1,303 passes and 2 skips; direct PermissionErrors are expired Crossref, GDELT DOC, OpenAlex and World Bank Indicators clearances, with downstream cascades. Pin historical TEST success cases to an in-window date and retain separate current-date expiry/no-network tests. Do not renew clearances merely to green CI.
 3. **P1 — source-time/provenance capability:** preserve source-declared effective cutoff, publication date, retrieval time, policy/report version, geography and method through the existing collector→Signal→Evidence→assessment/citation seam. Source-edit path remains blocked; do not bypass.
-4. **P1 — D98 recovery-finance evidence:** verify the primary A/B/C circular and NIA claim-detail body; find dated aggregate lender extension uptake/arrears and insurance settlement updates. D98 remains UNKNOWN; no borrower contact or private records without explicit authorization. Independent of seller work and Hami-wide mission.
+4. **P1 — D98 recovery-finance evidence:** retrieve the primary A/B/C circular and NIA claim-detail body; find dated aggregate lender extension uptake/arrears and insurance settlement updates. D98 remains UNKNOWN; no borrower contact or private records without explicit authorization. Independent of seller work and Hami-wide mission.
 5. **P1 — operational truth:** obtain normal Vercel team authorization, re-probe health from a DNS-capable environment, and correlate natural schedule invocations with persisted CycleRun identity/final stages/durable read-after-write. No manual invocation.
 6. **P1 — health-watch correction:** transport/DNS/missing/invalid responses must remain UNKNOWN; preserve the two-consecutive-confirmed-unhealthy threshold.
+
+---
 
 ---
 
