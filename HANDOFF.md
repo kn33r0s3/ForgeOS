@@ -851,6 +851,29 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
+## Last verified state snapshot (2026-11-02)
+
+**Update 2026-11-02 (daily freshness check, 06:23 NPT):** HEAD at `208dce3e`
+(since 2026-11-01: the 2026-11-01 freshness commit itself, D95 AMPIS
+price-method comparability research, a 2026-11-02 exact-head operational
+verification, and D95 source-time research with current main evidence).
+`git pull --ff-only` fast-forwarded `3cb14cd0..208dce3e`;
+`main` == `origin/main`. Working tree clean before this edit.
+
+- **Health: NOT OK — both endpoints return HTTP 402
+  `Payment required` / `DEPLOYMENT_DISABLED` (confirmed on two reads each,
+  haminp and forge-os-ebon). Unchanged from 2026-11-01. It matches the
+  Vercel account/deployment gate already recorded in the handoff on
+  2026-10-31; the exact Vercel cause remains pending normal team
+  authorization, and no bypass or permission change was made here.
+- **Intake: UNKNOWN this run —** `/api/forge-bot/config` also returns
+  the same 402 `DEPLOYMENT_DISABLED` response, so `intake_enabled` could
+  not be verified. Last verified value (2026-10-31) was `false`; no
+  change is claimed.
+- **Unknowns:** 104 D-entries in `docs/UNKNOWN_MAP.md` (unchanged).
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold.
+
 ## Last verified state snapshot (2026-11-01)
 
 **Update 2026-11-01 (daily freshness check, 06:23 NPT):** HEAD at `17283506`
