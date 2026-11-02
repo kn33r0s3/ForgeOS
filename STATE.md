@@ -1,3 +1,15 @@
+## [2026-11-03 — current main and verified gates]
+
+- **Canonical main:** 10825f43c53bc72b9464de0fb36eeada48695321 (parent 1506162ccff9068278fa94dc9c4510f28919f80b); parent-to-head changes HANDOFF.md only.
+- **Exact-head CI:** [41547012781](https://github.com/kn33r0s3/ForgeOS/actions/runs/41547012781) FAIL 1/9: backend 52 failed / 1,303 passed / 2 skipped / 18 warnings; eight jobs passed. Direct failures are expired Crossref, GDELT DOC, OpenAlex and World Bank Indicators clearances plus cascades. [Secrets scan 41547012751](https://github.com/kn33r0s3/ForgeOS/actions/runs/41547012751) PASS.
+- **Deployment verifier:** [41547012749](https://github.com/kn33r0s3/ForgeOS/actions/runs/41547012749) passed 274 frontend tests, then production fetch returned HTTP 402; exact-SHA readiness, protected owner-cycle read and verification POST were skipped. Vercel status is failure / Account is blocked. Last recorded READY deployment is on ancestor SHA 6076690f; exact-current-SHA deployment lookup returned zero; Vercel detail/runtime reads 403.
+- **Health/scheduler:** current ordinary health GETs failed DNS before HTTP, so health is UNKNOWN; last observed HTTP was 402 DEPLOYMENT_DISABLED on 2 Nov. No authorized current cron attribution, final CycleRun stages or durable read-after-write. No manual schedule invocation.
+- **Portfolio:** D1–D100 scan plus D101–D104 metadata review remain current; live open ResearchQuestion records are unavailable through authorized access. No new question/task rows.
+- **D98:** NRB's 13 Oct 2026 circular index and visually inspected NIFRA/D-class circulars establish a conditional Asoj-end-to-Poush-end repayment extension for specified affected borrowers after financial assessment. A/B/C details are secondary-reported because the primary PDF timed out. Chaurasiya's reported NPR 45m uninsured loss does not establish eligibility. NIA claim-detail body and lender uptake/default data remain unavailable; secondary insurance snapshots conflict on effective cutoff. D98 remains UNKNOWN.
+- **No external activity or REAL outcome:** no contact, private record request, source registration/ingestion, provider transmission, publishing, spend, payment change, permission change, intake/outbound activation or manual cron invocation.
+
+---
+
 ## [2026-11-03 05:20 NPT — current main and operational evidence]
 
 - **Canonical repository main:** `1506162ccff9068278fa94dc9c4510f28919f80b` (parent `208dce3e47a9ce3e76419de1b3ea10877df22611`); parent-to-head changes only HANDOFF.md. This is the current repository SHA; do not confuse it with the latest deployed application SHA.

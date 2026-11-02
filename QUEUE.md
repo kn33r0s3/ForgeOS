@@ -1,3 +1,14 @@
+## Current Hami-wide priorities — 2026-11-03 (main 10825f43c53bc72b9464de0fb36eeada48695321)
+
+1. **P0 — Vercel platform/account gate:** exact-head verifier reaches production and receives HTTP 402; Vercel status says Account is blocked. Resolve only through normal platform/account channels; no bypass, share link, payment or production-setting change.
+2. **P0 — CI determinism without rights weakening:** backend fails 52 tests because Crossref, GDELT DOC, OpenAlex and World Bank Indicators clearances have expired, with downstream cascades. Isolate historical TEST fixtures from current-date expiry/no-network checks. Do not renew clearances merely to make CI green.
+3. **P1 — source-time/provenance capability:** preserve source-declared effective cutoff, publication date, retrieval time, policy/report version, geography and method through the existing collector→Signal→Evidence→assessment/citation seam. Source-edit path remains blocked; do not bypass.
+4. **P1 — D98 recovery-finance evidence:** verify the primary A/B/C circular and NIA claim-detail body; find dated aggregate lender extension uptake/arrears and insurance settlement updates. D98 remains UNKNOWN; no borrower contact or private records without explicit authorization. Independent of seller work and Hami-wide mission.
+5. **P1 — operational truth:** obtain normal Vercel team authorization, re-probe health from a DNS-capable environment, and correlate natural schedule invocations with persisted CycleRun identity/final stages/durable read-after-write. No manual invocation.
+6. **P1 — health-watch correction:** transport/DNS/missing/invalid responses must remain UNKNOWN; preserve the two-consecutive-confirmed-unhealthy threshold.
+
+---
+
 ## Current operational resumption — 2026-11-03 05:20 NPT (run-start main `1506162ccff9068278fa94dc9c4510f28919f80b`)
 
 1. **P0 — Vercel platform/deployment-disabled gate.** Current-main Vercel status is `Account is blocked`; verifier production fetch returns HTTP 402. Latest listed production deployment is READY on old SHA `6076690f`; exact-current-SHA deployment listing is empty. Resolve through normal platform/account channels only; no payment, bypass, share link or production-setting change.
