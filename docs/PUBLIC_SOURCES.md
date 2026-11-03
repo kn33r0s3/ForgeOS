@@ -604,3 +604,33 @@ This review is a source-readiness record, not evidence that any project-specific
 - **Inland Revenue Department — VAT Rules index:** https://ird.gov.np/category/valueaddedtaxrules/ — current index lists the 27th amendment dated 18 Poush 2082; the linked rules body was not inspected. Robots/terms/reuse grant were not reviewed.
 - **Determination:** these were manual public-page reads for this research pass only. Search/browser visibility does not clear collection, persistent storage, provider transmission or commercial reuse. No exact source-registry entries exist for these URLs; no source bodies were stored in Hami and no automated collection was run. Status remains **NOT CLEARED** for runtime collection, persistence or provider transmission.
 
+
+
+## 2026-11-04 — D96 GB electricity-connection sources (source-specific rights review; no runtime registration)
+
+### Ofgem — Transforming Connections Data consultation
+- Exact PDF: https://www.ofgem.gov.uk/sites/default/files/2026-09/transforming-connections-data.pdf
+- Publication date: 25 September 2026. Response deadline: 6 November 2026. No single source-effective data cutoff is stated; the consultation reflects 2026 stakeholder/workshop work. The document itself states that text may be reproduced under OGL v3.0 excluding logos, with Crown-copyright and document-title attribution.
+- The exact `ofgem.gov.uk/robots.txt` and candidate terms route were inaccessible through the available browser. This is a tool-level retrieval failure, not an HTTP allow/deny decision. Manual PDF review with the document's attribution conditions only; no automated collection or runtime registration.
+
+### NESO — Transmission Entry Capacity (TEC) Register dataset
+- Exact dataset page: https://www.neso.energy/data-portal/transmission-entry-capacity-tec-register
+- Published download: https://api.neso.energy/dataset/cbd45e54-e6e2-4a38-99f1-8de6fd96d7c1/resource/17becbab-e3e8-473f-b303-3806f43a6a10/download/tec-register-03-november-2026.csv
+- The dataset page explicitly associates this exact dataset with the NESO Open Data Licence. Licence: https://www.neso.energy/data-portal/neso-open-licence . The licence permits copying, publication, distribution, transmission, adaptation and commercial/non-commercial exploitation with the required attribution (“Supported by National Energy SO Open Data”), subject to exclusions including personal data, third-party rights and logos. It applies only to datasets explicitly associated with it.
+- The dataset page read on 4 November displays a twice-weekly update frequency, a “last changed” time of about four hours before retrieval and a filename dated 3 November 2026. These are page/file metadata, not a verified effective data cutoff. The page warns of aggregate-capacity duplicate ambiguity and delayed corrections under temporary change governance; the CSV body was not retrieved.
+- The CSV download redirected to a signed object-storage URL that the browser could not access. `www.neso.energy/robots.txt` and `api.neso.energy/robots.txt` were inaccessible via the browser; this is not an HTTP allow/deny result. The exact dataset content has a reuse licence, but automated API/redirect collection is **NOT CLEARED** until the robots, rate-limit, endpoint, redirect and field scope are reviewed. No source registry entry, collector run, Signal/Evidence write, source-body persistence or provider transmission occurred.
+
+### NESO — general website and Gate 2 guidance
+- Terms: https://www.neso.energy/terms-and-conditions
+- Gate 2 Criteria Methodology (21 January 2026): https://www.neso.energy/document/376221/download
+- Evidence handbook page: https://www.neso.energy/industry-information/connections-reform/evidence-handbook-and-other-g2wq-submission-resources
+- General website terms limit copies to reasonable personal use and restrict commercial exploitation except as permitted by law. The NESO Open Data Licence applies only to datasets individually marked as associated; it does not automatically license general website pages, PDFs or guidance. The January methodology explicitly says it is not live; the handbook page says the previous evidence window is closed and it remains for re-submissions after initial checks. Manual reading only; no automated collection or provider transmission. `www.neso.energy/robots.txt` was inaccessible. No exact runtime source registration.
+
+### NGED — Gate 1→Gate 2 process
+- Notice: https://connections.nationalgrid.co.uk/new-gate-1-to-gate-2-process-announced-october-2026
+- Current regional process page: https://connections.nationalgrid.co.uk/gate-1-to-gate-2/
+- Linked terms: https://customer.nationalgrid.co.uk/terms-and-conditions
+- The terms identify NGED and state that website material is all rights reserved, cannot be reproduced or redistributed without written permission, and may be downloaded/printed only as a single copy for personal non-commercial offline viewing. They also restrict commercial/business use of the website. `connections.nationalgrid.co.uk/robots.txt` and `customer.nationalgrid.co.uk/robots.txt` were inaccessible via the browser; this is not an HTTP allow/deny result. **NOT CLEARED** for Hami commercial persistence, automated collection or provider transmission. Manual reading only; no exact registry entry or source ingestion.
+
+### Determination
+- Search visibility and browser readability do not establish collection permission. No Ofgem, NESO or NGED entry was added to `backend/app/services/source_clearance_registry.py`. Do not use a blanket domain approval. The Ofgem document's OGL grant and the NESO TEC dataset's dataset-specific licence are distinct from the robots/endpoint authorization needed for automated collection. No external contact, consultation submission, source-body persistence or provider transmission occurred.
