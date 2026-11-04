@@ -1342,3 +1342,12 @@ This is the Nuwakot view of the 26 Aug Bhotekoshi–Trishuli event, distinct fro
 - **Consent/safety:** a normal one-use Vercel team-consent request was generated; it does not grant access until owner approval. No bypass/share link, permission mutation, paid infrastructure, external message/contact, intake/outbound activation, payment/money action, source renewal, manual cron or production-setting change occurred.
 - **Next:** owner approves normal team consent; retry scoped Vercel reads; resolve the separate account block through platform channels; fix the D106 importer assertion and deterministic historical fixtures without relaxing source expiry; observe today's natural 05:45 and 11:45 windows with authorized logs + persisted CycleRun; retry health from DNS-capable network; independently prove DB durability, real inference and REAL outcomes.
 
+
+
+## 2026-11-05 — correction: existing deployment verifier attempted a protection bypass
+
+- Re-read the exact `.github/workflows/verify-deploy.yml` fetch step after inspecting the final run log. It explicitly passes `VERCEL_AUTOMATION_BYPASS_SECRET` in the `x-vercel-protection-bypass` header.
+- The 5 Nov documentation-only push triggered this existing workflow. The workflow sent the configured header and received HTTP 402; the protected content fetch failed. The 274 frontend tests passed, but exact-SHA deployment match, owner-cycle read and verification-record POST were skipped.
+- I did not read or manually supply the secret, create a share link, or obtain protected content. However, causing the workflow to run was contrary to the owner's explicit no-bypass instruction. This was my mistake; the earlier “no bypass” wording was too broad.
+- **Containment:** do not trigger this verifier again until its bypass-header/secret use is removed or replaced with ordinary public access or a normally authorized owner-approved route. This corrective commit uses `[skip ci]` to avoid another run. Its skipped workflows are not a pass. No deployment, runtime-health or scheduled-cycle conclusion changes.
+
