@@ -956,6 +956,24 @@ export const discoveryUnknowns: DiscoveryUnknown[] = [
     stakes: "If triage is large, D12's leak is overstated and the wedge must answer everyone, not just faster — or it inherits the seller's filter, not the buyer's loss",
     round: null,
   },
+  {
+    id: "D105",
+    question: "Is late-reply defection mostly silent — buyers buying elsewhere without telling the seller — and at what delay does the silent exit happen? (round 22: across 91 retrieved posts no Nepali buyer announced a rival purchase over a slow reply; the only Nepali defection on record is a seller's joke about a 30-day inquirer becoming another page's happy customer, while visible exits are delivery-delay cancellations)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Ask 5 sellers for their last 10 lost inquiries: which buyers later appeared as another page's customer, and after how long; ask buyers whether they tell the slow seller they went elsewhere",
+    stakes: "If the leak is silent, a reply-rescue count built on visible complaints understates it — the wedge must chase quiet losses, not just answered threads; if buyers do announce, the count is measurable from threads alone",
+    round: null,
+  },
+  {
+    id: "D106",
+    question: "Is multi-page inquiry normal buyer behaviour — inquiring at several pages and buying from whoever answers first — so that \"defection\" is just comparison shopping rather than a lost relationship? (round 22: the 30-day inquiry ending at another page may be parallel shopping, not a reply failure)",
+    state: "unknown",
+    stateNote: "UNKNOWN",
+    cheapestTest: "Ask 5 buyers: \"when you wanted something online, how many pages did you message before buying?\"; ask sellers whether repeat inquirers who buy elsewhere ever return",
+    stakes: "If parallel inquiry is the norm, the wedge's edge is being first to answer, not winning back a lost buyer — and D101's window is a race, not a grace period",
+    round: null,
+  },
 ];
 
 export const unknownsCount = discoveryUnknowns.length;
