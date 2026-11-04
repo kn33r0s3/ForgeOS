@@ -634,3 +634,30 @@ This review is a source-readiness record, not evidence that any project-specific
 
 ### Determination
 - Search visibility and browser readability do not establish collection permission. No Ofgem, NESO or NGED entry was added to `backend/app/services/source_clearance_registry.py`. Do not use a blanket domain approval. The Ofgem document's OGL grant and the NESO TEC dataset's dataset-specific licence are distinct from the robots/endpoint authorization needed for automated collection. No external contact, consultation submission, source-body persistence or provider transmission occurred.
+
+
+## 2026-11-05 — D95 cold-storage and AMPIS follow-up (manual-only; NOT CLEARED)
+
+### PMAMP — cold-room study and operating manual
+- Study PDF: https://www.pmamp.gov.np/sites/default/files/2025-07/Study%20Report%20on%20Status%20%26%20Effectiveness%20of%20Cold%20Rooms-Cold%20Chambers%20Established%20Under%20PMAMP.pdf
+  - Published year 2082 (2025); report period FY 2081/82. No exact field-survey dates or source-effective cutoff stated. It is a 25-site purposive assessment of PMAMP's reported 87-unit series; the report itself also says 86 in its secondary inventory. No source-body storage or collector use.
+- Operating manual PDF: https://pmamp.gov.np/sites/default/files/2026-07/Cold%20Storage.pdf
+  - FY 2082/83; publication year 2083 Asar; exact Gregorian publication day and underlying asset-status cutoff not stated. It is technical guidance, not a live facility register.
+- Rights review: the study identifies PMAMP copyright; the PMAMP site footer is all-rights-reserved. Exact robots/terms/reuse surfaces were not retrievable or did not provide a content-reuse grant. Status: MANUAL-ONLY / NOT CLEARED for automated collection, persistent source-body storage or provider transmission.
+
+### Sudurpashchim provincial cold-storage reporting
+- Kathmandu Post article: https://kathmandupost.com/national/2026/06/11/five-years-on-12-cold-storage-projects-in-sudurpashcim-remain-stalled
+- Published 11 June 2026; updated 11 June 2026 17:17. It reports a separate provincial programme and status at reporting time; no exact underlying data cutoff is stated. No official provincial progress document was retrieved in the bounded search. This is one secondary reporting source, not a PMAMP inventory.
+- Manual research only. No article-body persistence, automated collection or provider transmission.
+
+### AMPIS / Department of Agriculture
+- DoA notice: https://doanepal.gov.np/ne/noticedetail/206/2026/18347180
+  - Published 28 July 2026; page says last updated 30 October 2026. It announces a mobile application for daily wholesale prices at 12 federal agricultural markets. The notice is not a data-reuse grant.
+- AMPIS homepage: https://www.ampis.gov.np/
+  - Price data page showed 2083 Kartik 18 / 4 November 2026 when read 5 November. This is a wholesale data date, not farmgate or netback evidence.
+- AMPIS technical note: https://www.ampis.gov.np/technical-note
+  - Undated. It states 11 markets use the midpoint of minimum and maximum from five daily observations; Kalimati uses the arithmetic mean of multiple observations after joining on 2083 Asar 1. It explicitly says the two measures are not directly comparable.
+- Rights review: AMPIS robots was inaccessible; its footer says ©2026 / all rights reserved. Its app privacy policy is not a data-reuse licence. DoA robots/terms and an exact content-reuse grant were not established. No PMAMP/AMPIS/DoA entry exists in the runtime source-clearance registry. Status: MANUAL-ONLY / NOT CLEARED for automated collection, persistence or provider transmission.
+
+### Determination
+- Keep the PMAMP 87/86 series, the separate 126-store literature-review table, the Sudurpashchim 13-project report and AMPIS 12-market data separate. Do not treat public visibility, a copyright notice, or a mobile-app launch as collection permission. No registry change, collector run, Signal/Evidence write, source-body persistence or provider transmission occurred.
