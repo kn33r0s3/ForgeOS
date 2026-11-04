@@ -1,3 +1,11 @@
+## 2026-11-05 — operational verification evidence delta
+
+- **Evidence quality:** exact-current-main checks for `c8da700db9e7619bf058b5010b99d57884420f7e` were resolved from GitHub check-runs and decoded job logs. ForgeOS CI is 8/9 with backend 53 failed / 1,302 passed / 2 skipped / 18 warnings; standalone secrets scan passes; the independent verifier stops at production HTTP 402. The backend log isolates a new importer inventory mismatch (map D106 vs test D104) separately from the existing expired-source authorization/cascade cluster.
+- **Deployment/runtime boundary:** GitHub's Vercel status remains `Account is blocked`; team-scoped deployment/runtime reads return 403. Both public health GETs fail DNS before HTTP, so runtime health remains UNKNOWN. A previous READY ancestor deployment is not current-main deployment proof.
+- **Scheduled-execution boundary:** route and cron declarations are present, and the intelligence route source commits a CycleRun before work; no authorized log or protected read proves a natural invocation, final stages or durable read-after-write. Today's 05:45 NPT run was still ahead at the 05:07:44 observation.
+- **Owner-dependency delta:** a normal Vercel team-consent request was generated but not approved; no access grant or bypass occurred. No capability rung, production durability, inference or REAL outcome is claimed. Next removable dependency is owner-approved team observability, then the account-level deployment block.
+- **No new model/table/primitive/collector/ledger.** Repair the existing importer test and historical TEST-clock fixtures without weakening live source-expiry checks; fix transport→UNKNOWN in the existing health-watch seam while retaining two consecutive confirmed unhealthy responses.
+
 ## 2026-11-02 — D95 agriculture: source-time and market-method subcase (manual-only)
 
 - **Identity/scope:** D95 in UNKNOWN_MAP remains the broad question about avoidable agricultural and livelihood loss during weather shocks. AMPIS is a market-coordination subcase within D95, not a separate D-number or a new ResearchQuestion. Keep the parent question UNKNOWN.
