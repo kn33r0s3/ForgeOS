@@ -32,40 +32,6 @@ Documentation-only continuity update; exact-head checks remain unverified by des
 
 ---
 
-## Current handoff — 2026-11-06 (run-start main SHA `da99bb22448bc5471cea303db1372fdd7af15bc4`)
-
-Hami's mission and breadth remain settled. This run adds a manual-only agricultural extension/service-network discovery from official local/provincial records. It is separate from D95 cold-storage counts and does not create a new D-number or architecture.
-
-### Current operational boundary
-
-- Main at run start: `da99bb22448bc5471cea303db1372fdd7af15bc4`, parent `500947914e7463a09d67e8fd615b230b645895d7`. Current SHA has zero Actions checks/runs due to `[skip ci]`; Vercel status is failure/account-blocked. The last tested ancestor `1f4d2626` has ForgeOS CI failure (53 failed / 1,302 passed / 2 skipped / 18 warnings), secret scan pass and verifier failure at production HTTP 402.
-- Latest READY production deployment belongs to old SHA `6076690f00c238f1b22a3afcdf489e983c468e7d`; no current-SHA deployment proof. Both health GETs failed DNS before HTTP; runtime logs and team-scoped reads remain 403. DB durability, natural cron attribution, real inference and REAL outcomes remain UNKNOWN.
-- Do not trigger the existing deploy verifier until its protection-bypass header/secret use is removed or replaced by ordinary/owner-authorized access. No manual route/scheduler invocation or health-watch run occurred.
-
-### Agricultural service-network evidence
-
-- **Sharda Municipality, Salyan:** official Gazette procedure 2081 (approved 2081/12/15, certified 2081/12/18, published 2081/12/25) defines up to two approved clinic sites per ward, at least one monthly session at designated sites, free technical service, sample-based diagnosis, referral when unresolved, coordination with district agriculture/veterinary offices and provincial integrated labs, municipal monitoring and quarterly adviser reports.
-- **Sharda reported activity:** its Baisakh–Asar 2082 disclosure reports 15 locations, one session each and 375 farmers served in FY2081/82. The procedure became effective near the fiscal-year end; one session at each site in that first reporting year is not proof of a missed monthly requirement. A later site index lists another clinic-operation notice and 2083/84 policy/budget pages posted 25 June 2026, but the later notice and policy/budget bodies were not retrieved. Current operation remains UNKNOWN.
-- **Okhaldhunga Agriculture Knowledge Centre, Koshi Province:** FY2080/81 report says six clinics and 402 crop samples; its table says 93 farmer households benefited, while narrative says 402 households. Preserve both; no independent source resolved the units/count.
-- **NPPONEPAL version boundary:** hosted plant-clinic PDF contains 2079, 2081, 2080/81 and body 2071/02/08/2071 markers. It is an unresolved version lead, not a verified current national instrument. PDF screenshots timed out; text extraction only.
-- **CABI rights boundary:** CABI content was excluded from Hami evidence after its terms indicated AI use requires prior agreement/licensing. Do not use CABI content in Hami without the required written agreement and exact rights review.
-
-### Consequence and reusable capability
-
-The records establish public clinic activity and a local service design, not crop loss avoided, yield gains, safer pesticide use, current monthly operation, farmer income or current demand. The capability candidate is a source- and unit-aware trace across session → location → crop/sample → diagnosis → recommendation → referral → follow-up → outcome. Reuse only existing ENTITY/RELATION/EVENT/EVIDENCE/CAPABILITY/ACTION and Signal/Evidence provenance; do not build a second architecture or replace qualified diagnosis.
-
-### Code and source boundary
-
-At this exact head, `SourceCollector.normalize` chooses `raw_item.provenance or metadata`; collector_runner adds task/authorization context; ObserverEngine persists top-level provenance to Signal; `_ensure_evidence` copies it to Evidence. Assessment compares publication time with retrieval; evidence citation exposes source/title/URL/registry ID/retrieval time but not publication/effective period/version/unit. This is a contract risk, not proof of production loss. Source-edit block and planner portfolio helper remain NOT IMPLEMENTED. Sharda, Okhaldhunga AKC and NPPONEPAL robots endpoints were inaccessible; no exact terms/reuse grant was found. Manual research only; no automated collection, body persistence, registration or provider transmission. CABI excluded.
-
-### Next
-
-Retrieve Sharda FY2082/83 annual progress, 2083/84 policy/budget bodies and later operation notice; obtain Okhaldhunga's next annual report and reconcile 93 versus 402; resolve NPPONEPAL's current authoritative version. Keep D95 cold storage separate and UNKNOWN. No contact, field visit, private data request, advice, alert, publishing, spend or external action.
-
-Documentation-only continuity update; exact-head checks remain unverified by design.
-
----
-
 ## Previous handoff — 2026-11-06 04:59 NPT (run-start main SHA `500947914e7463a09d67e8fd615b230b645895d7`; superseded by `da99bb22448bc5471cea303db1372fdd7af15bc4`)
 
 ### Operational verification
