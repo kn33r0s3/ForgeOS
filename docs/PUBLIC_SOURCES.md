@@ -683,3 +683,25 @@ This review is a source-readiness record, not evidence that any project-specific
 - Current programme/index leads: https://namp.gov.np/ ; Chitwan PIU publications https://piuchitwan.pmamp.gov.np/publications ; Kaski PIU publications https://piukaski.pmamp.gov.np/publications . NAMP lists FY2082/83 activity and a progress-review seminar; Chitwan lists FY2082/83 learning/cost-benefit reports and a banana ripening-chamber proposal; Kaski lists FY2082/83 annual-progress/cost-benefit publications. Those linked report bodies were not retrieved. NAMP's ARMIS was not accessed.
 - Rights review: PMAMP/NAMP and PIU pages show copyright/all-rights-reserved notices; robots endpoints were not retrievable and no explicit reuse grant was found. Manual reading/citation only; no automated collection, source registration, body storage or provider transmission.
 
+## 2026-11-06 — D96 electricity-connection source determinations (manual-only; no runtime registration)
+
+### Ofgem — Transforming Connections Data consultation
+- Page: https://www.ofgem.gov.uk/consultation/transforming-connections-data
+- Exact PDF: https://www.ofgem.gov.uk/sites/default/files/2026-09/transforming-connections-data.pdf
+- Page publication date: 25 September 2026; closing date: 6 November 2026; status OPEN when read on 6 November. The PDF is marked OFFICIAL and says its text (excluding logos) may be reproduced under the Open Government Licence. Crown-copyright and document-title attribution are required.
+- Exact robots and candidate website-terms routes were not retrievable in this pass. The PDF's document-text licence is not treated as permission for automated page/API collection. **MANUAL READING ONLY**; no source registry entry, automated collection, body persistence or provider transmission.
+
+### NESO — Connections Reform Detailed Results Data and FOI/25/269
+- January 2026 detailed-results PDF: https://www.neso.energy/document/374936/download
+- FOI/25/269 response dated 25 February 2026: https://www.neso.energy/document/378991/download
+- Both documents are marked Public. Neither inspected document states a specific reuse licence. General NESO website terms limit copying to reasonable personal use and restrict commercial exploitation except as permitted by law; the NESO Open Data Licence applies only to datasets individually associated with it, not automatically to general PDFs/webpages. **MANUAL READING ONLY**; no source registration, automated collection, source-body storage or provider transmission.
+
+### NGED — queue, webinar and Clearview
+- Queue formation page: https://connections.nationalgrid.co.uk/connections-reform/queue-formation
+- 8 December 2025 webinar PDF: https://connections.nationalgrid.co.uk/downloads/191216/connections-reform-webinar-december-8-2025.pdf
+- Clearview Connect: https://connections.nationalgrid.co.uk/clear-view/clear-view-connect
+- October 2026 Gate 1→Gate 2 notice: https://connections.nationalgrid.co.uk/new-gate-1-to-gate-2-process-announced-october-2026
+- Linked NGED/customer terms state website material is all rights reserved, cannot be reproduced or redistributed without written permission, and may be downloaded/printed only as a single copy for personal non-commercial offline viewing; commercial/business use is restricted. Robots endpoints were not retrievable, which is not an HTTP allow/deny result. Clearview exposes a customer's own project position but keeps other projects anonymous. **NOT CLEARED** for Hami commercial persistence, automated collection or provider transmission; manual reading only.
+
+### Determination
+- No Ofgem, NESO or NGED entry was added to `backend/app/services/source_clearance_registry.py`. No blanket domain clearance is implied. The NESO TEC Register's dataset-specific Open Data Licence remains separate from its API/robots/redirect review and from the queue-outcome documents above.
