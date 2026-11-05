@@ -1,4 +1,18 @@
-## Current state — 2026-11-05 05:21 NPT (run-start main SHA `754676188c83e3537c4c3a20787399de1dc6aaf3`)
+## Current state — 2026-11-06 04:59 NPT (run-start main SHA `500947914e7463a09d67e8fd615b230b645895d7`)
+
+- **Mission:** settled and open-ended; no seller experiment or deployment blocker gates unrelated Hami-wide work.
+- **Main:** `refs/heads/main` resolved to `500947914e7463a09d67e8fd615b230b645895d7`. This round made no application-source or production-configuration change.
+- **Exact-SHA checks:** zero check-runs and zero Actions workflow-runs on this `[skip ci]` SHA; this is unverified, not green. Its only combined status is Vercel `failure / Account is blocked`. Last full ancestor CI remains `1f4d2626` run 41933598119 FAIL 1/9 (53 failed / 1,302 passed / 2 skipped / 18 warnings); ancestor secrets scan passed; ancestor verifier stopped at HTTP 402.
+- **Deployment:** Vercel project metadata is readable; raw `live:false`. Latest listed production deployment is READY but runs SHA `6076690f00c238f1b22a3afcdf489e983c468e7d` (2026-10-31 00:39:51.885Z). Exact current-SHA deployment lookup returned zero records. Current-main READY is not established.
+- **Runtime:** both production health GETs failed DNS before HTTP (curl exit 6), so both are UNKNOWN. Vercel deployment detail, runtime logs and grouped errors return 403. A normal team-consent request is pending owner approval; no access grant or bypass occurred.
+- **Scheduler:** source declarations/routes exist; 6 Nov 05:45 NPT cycle was still ahead at observation time. Previous natural schedule windows are unobservable due 403 logs; no cron-attributed persisted CycleRun, final stages or durable read-after-write verified.
+- **Independent layers:** production DB identity/durability, real model inference and fresh REAL outcomes remain UNKNOWN/not established. CI's MOCK/in-memory SQLite settings prove none of them.
+- **Health-watch:** two-consecutive-failure threshold remains; transport/invalid-response handling still increments the failure counter. Script/counter untouched; no alert. Preserve two confirmed unhealthy responses, not two transport failures.
+- **Verifier safety:** `verify-deploy.yml` still uses a Vercel protection-bypass header. Do not trigger it until corrected. No manual cron, health-watch, external activity, spend, money or production setting changes.
+
+## Previous state — 2026-11-05 05:21 NPT (superseded by this verification)
+
+## Previous state — 2026-11-05 05:21 NPT (run-start main SHA `754676188c83e3537c4c3a20787399de1dc6aaf3`)
 
 - **Mission:** settled and open-ended. Hami-wide discovery, understanding, connection, protection, creation and realization of value continue independently of any seller pilot or first-rupee experiment.
 - **Main/history:** canonical `main` was `754676188c83e3537c4c3a20787399de1dc6aaf3`. Recent chain: `7546761` D95 cold-storage documentation; `9ed9936` verifier-boundary correction; `1f4d262618fdba865226c9ae50aaea95ee4b5a54` operational verification record; `c8da700db9e7619bf058b5010b99d57884420f7e` last non-documentation change in this short chain (unknown-map projection synchronization). The 754/9ed commits are documentation-only; no branch or PR was created.

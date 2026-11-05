@@ -1,4 +1,17 @@
-## Current Hami-wide queue — 2026-11-05 05:21 NPT (run-start main SHA `754676188c83e3537c4c3a20787399de1dc6aaf3`)
+## Current Hami-wide queue — 2026-11-06 04:59 NPT (run-start main SHA `500947914e7463a09d67e8fd615b230b645895d7`)
+
+1. **P0 — Normal Vercel team access and account status.** Project metadata/deployment listing are now readable, but team-scoped deployment detail and runtime logs return 403; fresh team-consent link requires owner approval. Approve only through the normal Vercel flow, then retry the same scoped reads. Resolve the separate `Account is blocked` status through ordinary platform channels. No bypass/share link.
+2. **P0 — Do not trigger the current independent verifier.** `.github/workflows/verify-deploy.yml` still sends `x-vercel-protection-bypass` from `VERCEL_AUTOMATION_BYPASS_SECRET`. Remove/replace that behavior through the normal source-edit path before any push/dispatch that would run it. Current main has zero checks because of `[skip ci]`; that is not a pass.
+3. **P0 — Re-establish engineering gates without weakening source rights.** Latest full ancestor CI 41933598119 fails backend (53 failed / 1,302 passed / 2 skipped / 18 warnings); reconcile the D106-vs-D104 importer expectation and historical TEST clocks while retaining current-date expired-clearance and no-network tests. Do not extend clearances to green CI.
+4. **P1 — Retry both production health endpoints from DNS-capable access.** Current probes failed before HTTP; classify as UNKNOWN. Do not infer from the older 402 response or the older READY deployment.
+5. **P1 — Verify natural scheduled execution.** After 6 Nov 05:45 and 11:45 NPT windows, use authorized request logs plus protected CycleRun read to correlate invocation, row ID, final status/stages and durable read-after-write. No manual route invocation.
+6. **P1 — Fix health-watch classification in the existing script.** DNS/transport/missing/invalid response → UNKNOWN and must not increment the application-failure counter; only explicit unhealthy health JSON counts. Retain two consecutive confirmed failures before alerting.
+7. **P1 — Independently verify production DB durability, real model inference and fresh REAL outcomes.** Do not infer from source, CI, deployment READY or a CycleRun row alone.
+8. **P1 — Continue independent Hami-wide research/capability work.** Keep D95 and other research moving only through permitted manual/public routes; no source ingestion without exact-source rights review.
+
+## Previous queue snapshot — 2026-11-05 05:21 NPT (superseded)
+
+## Previous queue snapshot — 2026-11-05 05:21 NPT (run-start main SHA `754676188c83e3537c4c3a20787399de1dc6aaf3`)
 
 1. **P0 — Restore ordinary production access and establish the deployed SHA.** Current main SHA 754 has no deployment proof; the GitHub Vercel status is `failure` with an account-blocked target, prior direct health evidence is HTTP 402 `DEPLOYMENT_DISABLED`, and current runtime reads are 403. Do not use a protection-bypass secret or manually invoke routes. The owner-dependent step is ordinary Vercel account/project access restoration; then verify exact SHA, health, DB identity/read-after-write and natural schedule attribution.
 2. **P0 — Re-establish exact-head engineering gates without weakening source authorization.** SHA 754 and parent 9ed were intentionally `[skip ci]`; no exact-head CI/secret scan/deployment verifier is claimed. Previous tested head 1f4d: CI 53 failed / 1,302 passed / 2 skipped / 18 warnings; secret scan passed; verifier failed HTTP 402. The D104 importer expectation must be reconciled with the current D106 map, while expired-clearance tests must preserve current fail-closed behavior. No source/test edit until the supported source-edit path is restored.

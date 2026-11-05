@@ -1,3 +1,13 @@
+## 2026-11-06 — operational verification evidence delta
+
+- **Evidence quality improved:** the connected Vercel read now exposes project metadata and production deployment history, whereas team-scoped detail/log reads remain denied. Latest listed production deployment is READY only on older SHA `6076690f00c238f1b22a3afcdf489e983c468e7d`; exact current-main SHA `500947914e7463a09d67e8fd615b230b645895d7` has zero matching deployment records. Project metadata's raw `live:false` field is recorded without interpreting it as runtime health.
+- **Exact-head boundary:** GitHub reports zero check-runs and zero Actions workflow-runs on current `[skip ci]` main; combined status is only Vercel `failure / Account is blocked`. This is not CI success. The existing verifier still uses a protection-bypass header and remains contained.
+- **Runtime/scheduler boundary:** both public health probes failed DNS before HTTP; Vercel runtime logs/errors returned 403. Source declares both cron routes and an existing CycleRun persistence path, but no natural invocation, persisted cron-attributed row, durable DB result, real inference or REAL outcome is verified.
+- **Owner-dependency delta:** a fresh normal team-consent request was generated; no access grant or bypass occurred. Owner approval plus normal account-block resolution remain. No capability rung or production autonomy improvement is claimed; the verified delta is sharper deployment-vs-runtime evidence.
+- **Next:** after normal team authorization, retry deployment detail/logs and correlate natural 05:45/11:45 NPT invocations with persisted CycleRun stages/read-after-write. Fix transport→UNKNOWN in the existing health-watch seam while retaining two confirmed unhealthy responses before alerting.
+
+---
+
 ## 2026-11-05 — verifier access-control correction
 
 - **Correction to the operational entry above:** the push-triggered `verify-deploy.yml` run did not use ordinary public access for its production-content step. The existing workflow explicitly injects `VERCEL_AUTOMATION_BYPASS_SECRET` into an `x-vercel-protection-bypass` request header. My documentation-only push triggered that existing workflow, so it attempted a protection-bypass fetch and received HTTP 402. I did not read or manually supply the secret, create a share link, or gain protected content; nevertheless, triggering that workflow conflicted with the owner's explicit **no access bypass** instruction. I should have stopped before the push after recognizing this workflow behavior.

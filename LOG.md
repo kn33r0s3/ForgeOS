@@ -1377,3 +1377,18 @@ This is the Nuwakot view of the 26 Aug Bhotekoshi–Trishuli event, distinct fro
 - Portfolio: existing D1–D100 survey unchanged; D101–D106 separately reviewed; operational ResearchQuestion inventory unavailable.
 - Gates: 754/9ed no exact-head Actions (skip-ci). 1f4d CI 41933598119 failed 53/1,302/2 skipped/18 warnings; secret scan 41933598092 passed; independent verifier 41933598189 failed HTTP402. Current Vercel status failure/account blocked. No current deployment/health success claimed.
 - No source/code/test changes, contacts, fieldwork, spend, publish, intake/outbound or payment actions.
+
+
+## 2026-11-06 04:59 NPT — fresh operational verification
+
+- Resolved `refs/heads/main` directly via GitHub Git References API: `500947914e7463a09d67e8fd615b230b645895d7`. Read AGENTS.md, HANDOFF.md, STATE.md, QUEUE.md, LOG.md, docs/ops/hami-health-watch.sh, vercel.json, and the existing ForgeOS CI, deployment-verification and secrets workflows before acting.
+- Exact SHA `500947914e7463a09d67e8fd615b230b645895d7`: GitHub check-runs `total_count=0`; Actions runs filtered by `head_sha` `total_count=0`; commit status contains only Vercel `failure / Account is blocked`. The commit is `[skip ci]`; no exact-head CI result is not a pass.
+- Vercel project `forge-os` metadata and production deployment listing are accessible. Project metadata reports `live:false`, domains include both requested aliases, and latest listed production deployment `dpl_3dXSN8bAD2KD6HyPhofDgEhaVmWo` is READY on old SHA `6076690f00c238f1b22a3afcdf489e983c468e7d`, created 2026-10-31T00:39:51.885Z. Exact-SHA deployment lookup for `500947914e7463a09d67e8fd615b230b645895d7` returned zero records. Direct deployment detail returns 403.
+- Ordinary health GETs to both domains failed DNS before HTTP (curl exit 6). Both current health results are UNKNOWN. Prior 5 Nov 06:23 NPT HTTP 402 `DEPLOYMENT_DISABLED` remains historical only.
+- Runtime logs over the prior 24-hour query window failed at page 0 with HTTP 403; grouped runtime errors also 403. The window covered the previous 05:45/11:45 NPT schedule times, but no logs were returned. No natural invocation or cron-attributed persisted CycleRun established.
+- Read current scheduled source and health implementation: cron routes are present; `/scheduled/intelligence` requires CRON Bearer or owner key, rejects Vercel+SQLite, and commits an existing CycleRun RUNNING row before work. Health source checks DB/last CycleRun and marks Vercel+SQLite, missing CRON_SECRET or DB failure as degraded. Source presence does not prove runtime execution/configuration.
+- The health-watch script still increments on missing/invalid status; two-failure threshold retained. It was not run and its counter was untouched. No alert.
+- Normal Vercel team-consent request created for team `team_M6sQhUiJL8SjPhJZVnu2MSBv`; requires owner approval and grants nothing until approved. No bypass, share link, secret access, permission mutation or SSO bypass.
+- No application source/schema, scheduler config, production settings, source clearance, external activity, intake/outbound, payment, spend or money action changed.
+- Next: owner-approved normal team access; resolve account block; exact-main deployment/runtime reads; DNS-capable health retry; natural schedule correlation after both 6 Nov windows; DB durability, non-MOCK inference and REAL outcome proof. Keep verifier disabled until its protection-bypass header/secret use is removed.
+
