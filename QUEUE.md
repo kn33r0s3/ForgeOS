@@ -1,4 +1,4 @@
-## Current Hami-wide queue — 2026-11-07 04:35 NPT (run-start main SHA `a4315edf3869d6664d2eb82158500bbfa17f5040`)
+## Current Hami-wide queue — 2026-11-07 04:39 NPT (run-start main SHA `a4315edf3869d6664d2eb82158500bbfa17f5040`)
 
 1. **P0 — Owner approval for normal Vercel team access.** The current connection's project/deployment/runtime reads return 403 for `kn33r0s3s-projects`; team list is empty. A fresh single-use normal-consent request was generated and expires 07 Nov 2026 04:47:16 NPT. Owner approval grants the existing app permissions; no access exists before approval. Do not use a protection bypass, share link or alternate credentials.
 2. **P0 — Resolve the separate Vercel account-block status.** Exact current-SHA GitHub status is `failure / Account is blocked`. After normal team approval, retry project/deployment listing and exact-SHA deployment identity. Last known READY deployment is old SHA `6076690f00c238f1b22a3afcdf489e983c468e7d`; current-main READY remains UNKNOWN.
@@ -9,6 +9,7 @@
 7. **P1 — Health-watch UNKNOWN semantics.** DNS/transport/missing/invalid responses must not increment the application-failure count. Retain two consecutive confirmed unhealthy application responses before alerting. Do not run watchdog as verification.
 8. **P1 — Independent production proof.** Establish production DB identity/durability, non-MOCK inference and fresh REAL outcomes separately from source presence, CI, deployment READY or CycleRun DTO readability. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains NOT MEASURABLE.
 9. **P1 — Continue independent Hami-wide research/capability/reliability/security work.** The deployment and observability block does not gate unrelated safe work. Preserve existing research records and source-rights limits; no contact, submission, private-record request, publication, spend, intake/outbound activation or payment action is authorized here.
+10. **P1 — D96 source-aware connections reconciliation.** Keep the NESO TEC Register manual-only until both exact robots policies and the parameterized API operation are reviewed. The dataset-specific NESO Open Data Licence permits reuse with attribution but excludes personal data/third-party rights and does not clear the API/redirect. If cleared, extend the existing WebCollector for bounded JSON parameters and preserve resource/file/effective/retrieval times; link transmission, distribution, demand and reinforcement records without treating Gate blanks, consent-limited register absence or aggregate capacity as project truth. Recheck Ofgem's consultation response publication in December 2026.
 
 No external message/contact, manual invocation, spend, money action, production-setting change or access-control bypass is authorized by this queue.
 
