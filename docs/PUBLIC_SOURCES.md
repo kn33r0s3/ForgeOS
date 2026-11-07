@@ -757,3 +757,30 @@ This review is a source-readiness record, not evidence that any project-specific
 ### Determination
 - The prior simple “05 November file label” note is narrowed: the resource detail page links to that filename, but the canonical dataset landing page still links to a 05 October filename. Neither filename nor relative Last Changed is a source-effective cutoff. The actual CSV body and resource_show metadata remain unread.
 - Keep both NESO and NGED automated use MANUAL-ONLY / NOT CLEARED until the exact robots response, API operation/parameters, redirect, dataset-specific rights, fields, retention and provider purpose are reviewed. No registry change or ingestion occurred.
+
+
+## 2026-11-08 — NRB and NIA disaster-credit/insurance sources (manual-only; NOT CLEARED)
+
+### Nepal Rastra Bank (NRB)
+- Official archive: https://www.nrb.org.np/category/circulars/
+- Circular No. 5 (A/B/C), FY 2083/84, listed 13 October 2026: https://www.nrb.org.np/bfr/%E0%A4%AA%E0%A4%B0%E0%A4%BF%E0%A4%AA%E0%A4%A4%E0%A5%8D%E0%A4%B0-%E0%A4%A8%E0%A4%82-%E0%A5%AB-%E0%A4%95-%E0%A4%96-%E0%A4%97-%E0%A5%A8%E0%A5%A6%E0%A5%AE%E0%A5%A9-%E0%A5%AE%E0%A5%AA-%E0%A4%A8/
+- Notice No. 12/2083-84, listed 6 November 2026: https://www.nrb.org.np/bfr/%E0%A4%B8%E0%A5%82%E0%A4%9A%E0%A4%A8%E0%A4%BE-%E0%A4%A8%E0%A4%82-%E0%A5%A7%E0%A5%A8-%E0%A5%A6%E0%A5%AE%E0%A5%A9-%E0%A5%AE%E0%A5%AA-%E0%A4%AD%E0%A4%A8%E0%A5%8D%E0%A4%B8%E0%A4%BE%E0%A4%B0/
+- Two-month 2026/27 macro report: https://www.nrb.org.np/red/current-macroeconomic-and-financial-situation-english-based-on-two-months-data-of-2026-27/
+- The archive footer states “All Rights Reserved.” https://www.nrb.org.np/robots.txt was inaccessible through the available browser route; this is not an allow or deny response. No explicit content-reuse licence or automated-collection permission was identified in this pass. **Manual reading/citation only**; no automated collection, source-body persistence, provider transmission or runtime source registration.
+
+### Nepal Insurance Authority (NIA)
+- Official homepage/index: https://www.nia.gov.np/
+- Official circular index: https://nia.gov.np/law/circular
+- Official terms: https://nia.gov.np/np/footer/terms-conditions
+- Official copyright policy: https://nia.gov.np/footer/copyright-policy
+- The homepage lists “Rasuwa Flood Claim Settlement Abbreviated Procedure, 2083” and a separate flood-insurance-claim-details item. The circular index lists “Insurance payment simplification” dated 2 October 2026. The linked procedure PDF, claim-detail data body and 3 November life/micro-life circular body were not retrieved from the official site.
+- The copyright policy states the website materials are protected, all rights reserved, and commercial reproduction/reuse is not allowed without prior written permission (subject to its stated fair-dealing exception for private study, research, criticism or review as permitted by law). The terms describe the site as a general information source and state it is not professional advice. https://www.nia.gov.np/robots.txt and https://nia.gov.np/robots.txt were inaccessible; neither is an HTTP allow/deny result. **Manual reading/citation only**; no automated collection, commercial body reuse, persistent source-body storage, provider transmission or runtime source registration.
+
+### Secondary reporting used only as corroboration leads
+- The Rising Nepal, 1 October 2026: https://www.risingnepaldaily.com/news/87194
+- Note Bazar, 29 September 2026: https://notebazar.com/news/2026/09/29/169214/
+- Nepal News, 3 November 2026: https://english.nepalnews.com/s/business/insurance-authority-directs-life-insurers-to-simplify-claims-for-flood-affected-policyholders/
+- These are secondary reporting sources, not the official rule/claim records. No article bodies were persisted or transmitted to a provider.
+
+### Determination
+- The current runtime source_clearance_registry has no NRB or NIA entry. No entry was added. Public visibility and successful manual browser reading do not grant collection permission. No source-body storage, automated collection, provider transmission, private-record request or external contact occurred.
