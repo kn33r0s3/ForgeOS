@@ -1,3 +1,17 @@
+## Current state — 2026-11-08 05:03 NPT (run-start main SHA `e5d1dd52d54d03ee394b41a02b4043b2f4fc5934`)
+
+- **Main/history:** `main=e5d1dd52d54d03ee394b41a02b4043b2f4fc5934`, parent `c37907d0ccd79d09f67d0905da66a746c8aa762a`. The two commits since 7 Nov 05:30 are documentation-only; application source/tests/schema/scheduler are unchanged.
+- **Exact-head CI:** 0 check-runs and 0 Actions runs because the current head is `[skip ci]`; not a pass. Combined GitHub status is Vercel `failure / Account is blocked`. Latest completed ancestor `1f4d2626`: CI 1/9 failed (backend 53 failed / 1,302 passed / 2 skipped / 18 warnings; eight other CI jobs passed); secrets scan passed; independent verifier failed at HTTP 402 after 274 frontend tests. Backend logs show expired Crossref/GDELT DOC/OpenAlex/World Bank clearances and D106-vs-D104 importer expectation; keep collection fail-closed.
+- **Deployment:** Vercel project metadata and deployment listing are readable without explicit team scope. Latest listed production deployment is READY only for old SHA `6076690f00c238f1b22a3afcdf489e983c468e7d`; exact current-SHA deployment lookup returns zero. Project raw `live:false`; SSO protection enabled. Current-main deployment READY remains UNKNOWN. GitHub Vercel status is account-blocked.
+- **Runtime access:** explicit team-scoped runtime logs and grouped errors return 403 before records; 24-hour window included the 7 Nov 05:45/11:45 NPT windows. Vercel CLI is absent. Team list is empty; no bypass/share link/alternate credential used.
+- **Health:** 8 Nov 05:03 NPT ordinary GETs to both health aliases fail DNS (curl exit 6; no HTTP). Both current health states UNKNOWN. Last historical direct observation: 7 Nov 06:23 NPT HTTP 402 `DEPLOYMENT_DISABLED` on both, including recheck. Health handler may persist safe-mode on degraded readiness; today's probes never reached it.
+- **Scheduler/persistence:** source schedules cycle 05:45 NPT and intelligence 11:45 NPT. 7 Nov windows elapsed but logs were inaccessible; 8 Nov windows are ahead. `/cycle` is privacy maintenance plus legacy cycle only when enabled; `/intelligence` has CRON/owner auth, PostgreSQL lock, SQLite rejection, dormancy gate and RUNNING/final CycleRun commits. CycleRun has no trigger field. No natural invocation, cron-attributed row, final stage result or durable read-after-write established. No manual route invocation. Earlier DTO readability is not cron proof.
+- **Independent layers:** production DB identity/durability, real model inference and fresh REAL outcomes remain UNKNOWN. CI uses mock AI and in-memory SQLite. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains NOT MEASURABLE.
+- **Health-watch:** two-failure threshold remains, but DNS/transport/missing/malformed status is counted as failure. Script/counter untouched; no alert. Require two consecutive confirmed unhealthy application observations.
+- **Safety:** no spend, paid infrastructure, external contact/message, intake/outbound activation, money action, source-clearance renewal, production-setting/permission change, share link, bypass, manual route or watchdog execution.
+
+---
+
 ## Current state — 2026-11-07 05:30 NPT (run-start main SHA 485d26f46276a8730449f3861ac282b996ddc28d)
 
 - **Mission:** settled and open-ended: Hami discovers, understands, connects, protects, creates and realizes value across domains/geographies, originating in Nepal and useful anywhere. No First Rupee, seller pilot or single experiment gates unrelated work.
