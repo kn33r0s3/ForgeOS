@@ -1,3 +1,20 @@
+## Current Hami-wide queue — 2026-11-08 05:03 NPT (run-start main SHA `21a8099dd977cbd48bb5b37dbc39a4acbe3fc7f3`)
+
+1. **P0 — Keep the independent deployment verifier contained.** `.github/workflows/verify-deploy.yml` still sends `VERCEL_AUTOMATION_BYPASS_SECRET` as `x-vercel-protection-bypass`. Do not push/dispatch until this path is removed or replaced with ordinary public/owner-authorized access.
+2. **P0 — Restore normal Vercel observability and resolve the separate account block.** Current-main deployment lookup is empty; latest READY deployment is old SHA 6076690f; team-scoped runtime logs/errors return 403 and team listing is empty. Resolve through normal owner/platform authorization; no share link or bypass.
+3. **P0 — Repair source-bearing CI without weakening rights.** Latest completed ancestor 1f4d has 53 backend failures / 1,302 passed / 2 skipped / 18 warnings; eight other jobs passed; ancestor secret scan passed; verifier failed at HTTP 402. Fix D106-vs-D104 importer expectation and deterministic TEST clocks for expired Crossref/GDELT DOC/OpenAlex/World Bank clearances. Keep current-date expiry/no-network tests; do not renew rights for green CI.
+4. **P1 — Verify natural 8 Nov scheduled execution after the windows.** Use authorized logs and persisted CycleRun reads to correlate trigger, row ID, final status/stages and durable read-after-write. CycleRun has no trigger field; a row alone is insufficient. Do not invoke routes manually.
+5. **P1 — Correct health-watch transport classification in the existing script.** DNS/transport/HTTP-unavailable/missing/malformed responses are UNKNOWN and must not increment the confirmed application-failure counter. Preserve two consecutive confirmed unhealthy application responses; do not run the watchdog as verification.
+6. **P1 — D98 recovery evidence and uptake.** Obtain the official NIA procedure/claim-detail bodies through a permitted route; verify dated NRB/NIA implementation and actual claims/extension outcomes from primary sources. Keep the August 26 and October Gorkha events distinct; do not infer Chaurasiya's eligibility or a borrower outcome. Manual-only until rights are reviewed; no contact/private records.
+7. **P1 — Preserve source-effective time in the existing evidence seam.** If source-edit safety is restored, merge allowlisted source-effective cutoff/version/method/scope with explicit provenance, preserve through Signal→Evidence→assessment/citation, and add regressions. No new model/table/primitive/collector; do not repeat the blocked planner helper.
+8. **P1 — D93/D94 recovery and warning evidence.** Inspect NDRRMA #04 body if a direct official PDF route appears; continue event-specific restoration/warning chronology without emergency advice or alerts.
+9. **P1 — D95/D96 independent value networks.** Continue cold-storage/AMPIS asset and market-method reconciliation and source-version-aware infrastructure connection research; keep rights, scope, identifiers and confidentiality boundaries explicit.
+10. **P1 — Preserve portfolio truth and continue Hami-wide tracks.** D1–D100 is a metadata survey, not 100 deep investigations; D101–D106 remain separate; operational open ResearchQuestion count UNKNOWN behind owner-key access. Continue independent research, capability, reliability, security/privacy, integration and quality work. No seller test or deployment blocker gates unrelated progress.
+
+No external message/contact, manual invocation, spend, money action, production-setting change or access-control bypass is authorized by this queue.
+
+---
+
 ## Current Hami-wide queue — 2026-11-08 05:03 NPT (run-start main SHA `e5d1dd52d54d03ee394b41a02b4043b2f4fc5934`)
 
 1. **P0 — Keep the independent deployment verifier contained.** `.github/workflows/verify-deploy.yml` still injects `VERCEL_AUTOMATION_BYPASS_SECRET` into `x-vercel-protection-bypass`. Do not push/dispatch it until that path is removed or replaced with ordinary public/owner-authorized access. No verifier run was triggered in this round.
