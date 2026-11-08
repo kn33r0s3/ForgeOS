@@ -1,3 +1,22 @@
+## Current Hami-wide queue — 2026-11-09 05:09 NPT (run-start main SHA `47b1c7a57e52e150e92a437c1310b4f5ed4d0499`)
+
+1. **P0 — Preserve source-edit safety; prepare one grouped source/test repair for the supported path.** Do not repeat the blocked research_planner write or bypass it. When supported editing is restored, reconcile D1–D106 projections/importer expectation, review expired source clearances individually, then inspect licensed-abstract, monitoring-cache, multi-judge and public-value/planner failures. Do not extend rights for green CI.
+2. **P0 — Restore normal Vercel deployment/observability.** Project live:false/SSO; latest READY deployment is old SHA 6076690f; exact 47b1 deployment lookup empty; logs/errors/session listing 403; verifier HTTP 402. Resolve only through ordinary owner/platform authorization. Do not trigger the verifier while it injects the protection-bypass header.
+3. **P1 — D98 missing-person aggregate verification.** Reconcile the official 32-district index (2,293 badge sum) against 2,294 reported Nepali records, 171 foreign records, 5,285 aggregate missing, 1,457/1,464 death counts, district-count mismatches and the “Final”/not-final status ambiguity. Obtain official notice/ordinance text and cutoff. Aggregate-only; never access/export person-level records or provide legal advice.
+4. **P1 — D98 PDNA/RDNA and recovery-resource crosswalk.** Obtain the official PDNA report/data, resolve survey scope/team counts and sector arithmetic, then distinguish needs from approved/committed/disbursed resources, claims and loan outcomes. 79.17b, 723.31b and 706.65b are different stages/scopes.
+5. **P1 — D93: obtain official Gorkha report PDFs and dated restoration evidence.** #3 /467 is confirmed by NDRRMA search metadata; #2 /464 versus /465 remains unresolved; #2/#3/#4 bodies unread. Search for later reports and road/power/municipal restoration notices, but search misses are not proof of absence. No alerts, advice or contact.
+6. **P1 — D94: reconcile the 29 Oct Sintaphu event evidence chain.** Find direct dated NCHM warning/telemetry and downstream receipt records through permitted public sources; obtain the actual SACHET CAP feed ID and exact rights scope before integration. Preserve Mo_gl 234/Mo_gl 37 as candidate aliases. No alert or emergency advice.
+7. **P1 — Prepare source-effective time/identity support in existing provenance.** When source editing is allowed, preserve source-declared as-of/effective cutoff and basis, source-local ID/version/scope/metric definition separately from published_at/retrieved_at; verify Signal→Evidence→citation. No new model/table/primitive/collector.
+8. **P1 — Triage dependency vulnerabilities.** CI reports 15 npm vulnerabilities including one critical; package paths are missing. Obtain full advisory/path report through authorized access; no blind npm audit fix.
+9. **P1 — Continue independent Hami-wide tracks.** Preserve D1–D100 metadata survey and six later D101–D106 entries; operational open ResearchQuestion count UNKNOWN behind owner-key access. Continue research across natural/built systems, knowledge, resources, infrastructure, safety/privacy, reliability, integration and quality. No commercial experiment gates these tracks.
+10. **P2 — Remove stale feature/governed-offers branch ref through a supported GitHub delete-branch action.** It is 904 behind main and zero ahead; current connector exposes no delete action. Do not use an alternate route.
+
+No external contact, source collection, person-level data, body persistence, provider transmission, manual invocation, spend, money action, production-setting change, publication, alert or access-control bypass is authorized by this queue.
+
+---
+
+## Previous queue — 2026-11-09 04:40 NPT (run-start main SHA d53e68e2c53698eab04eeee4e73f677f1237f765)
+
 ## Current Hami-wide queue — 2026-11-09, after exact-head run 42533453272
 
 1. **P0 — Source-edit safety and exact-head CI repair.** Do not bypass the blocked source write. When a supported source-edit path returns, group the projection sync, D106 importer expectation, deterministic TEST clocks for expired sources, and separate fixes for licensed-abstract, monitoring-cache and multi-judge tests. Keep production source clearance fail-closed.

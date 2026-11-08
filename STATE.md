@@ -1,3 +1,18 @@
+## Current state — 2026-11-09 05:09 NPT (run-start main SHA 47b1c7a57e52e150e92a437c1310b4f5ed4d0499)
+
+- **Mission:** settled and open-ended; Hami's breadth is not gated by one seller or event experiment.
+- **Main/source:** main=47b1c7a57e52e150e92a437c1310b4f5ed4d0499, parent=40b5d471. Source-bearing code remains c8da700; 31 commits after it are documentation-only. The 47b1 D94 update is already recorded. No source/test/schema/scheduler/config change. Portfolio helper NOT IMPLEMENTED; source-edit safety remains blocked.
+- **Exact-head gates:** CI 42534404177 failed 3/9 jobs; six passed. Backend 53 failed / 1,302 passed / 2 skipped / 18 warnings; frontend/repository guards fail because unknown projections are out of sync. Expired source clearances cause fail-closed cascades; importer expects D104 while map contains D106/122 records; licensed-abstract, monitoring-cache and multi-judge tests also fail. Secret scan 42534404178 passed. Verifier 42534404122 failed production fetch HTTP 402 after tests passed.
+- **Dependency security:** npm ci reports 15 vulnerabilities (2 low, 8 moderate, 4 high, 1 critical); package names/paths/reachability not captured. Full advisory report still needed; no blind fix.
+- **Deployment/runtime:** Vercel project live:false/SSO; latest READY production deployment is old SHA 6076690f; exact 47b1 deployment lookup empty. Runtime logs/errors and team sessions return 403. Health UNKNOWN.
+- **D93:** official NDRRMA search confirms report #3 /467 (page Asoj 28; report cutoff 13 Oct 22:00). #2 search result /465 (Asoj 27; cutoff 12 Oct 22:00) differs from canonical /464; relation UNKNOWN. #4 /468 remains metadata-only. PDFs unread; no #5+ or later Gorkha restoration notice surfaced.
+- **D98 PDNA:** NPR 472.66b damage/loss; NPR 706.65b preliminary needs; poverty estimate 12.2%→14.9% (+2.7pp). Earlier 79.17b household/establishment survey and 723.31b RDNA are different stages/scopes. Official body/cutoff unavailable; sector subtotal mismatch unresolved.
+- **D98 missing-list:** official portal publishes 32 district summaries; badges sum 2,293 vs 2,294 Nepali names reported, plus 171 foreign nationals. Rasuwa count conflicts 1,538/1,536/1,583; list title says “Final” while NDRRMA-attributed reporting says more records/revised notice will follow. 5,285 aggregate missing vs 2,465 currently published verified entries is a scope/verification distinction, not a proven failure. Death counts 1,457/1,464 differ. Only aggregate index used; no PII processed.
+- **Source rights:** NPC/NDRRMA/Setu robots/terms do not establish public-list reuse permission; Setu app terms are not a list-data licence. No source registry entries, collection, person-level storage or provider transmission.
+- **Safety:** no contact, private-record request, source registration/collection, provider transmission, publication, alert, legal/emergency advice, spend/payment, intake/outbound activation, production-setting change or REAL outcome.
+
+## Previous state — 2026-11-09 04:40 NPT (run-start main SHA d53e68e2c53698eab04eeee4e73f677f1237f765)
+
 ## Current state — 2026-11-09, D94 source-time refinement (run-start main SHA 40b5d47177f1b56b3346c8e51159e789366c6954)
 
 - Main=40b5d47177f1b56b3346c8e51159e789366c6954; source-bearing code=c8da700. Thirty commits after source head are documentation-only.

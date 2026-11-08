@@ -826,3 +826,38 @@ This review is a source-readiness record, not evidence that any project-specific
 - The NCHM Road Map 2024–2034 is CC BY 3.0 IGO for the work itself, including commercial reuse with attribution; third-party figures/components require separate permission. This does not clear the NCHM host for automated collection because robots/collection scope remain unavailable.
 - No NCHM source was registered in source_clearance_registry.py. No automated collection, report-body persistence or provider transmission.
 
+
+
+## 2026-11-09 — NDRRMA/Setu missing-list aggregate and NPC PDNA (manual-only; no person-level data)
+
+### NDRRMA / Setu public missing-list index
+- Aggregate-only index: https://setu.ndrrma.gov.np/admin/missing.php
+- The index says records for 32 districts are published and displays the district counts; it has no visible last-updated/effective cutoff. Do not open or export district-level records for this research path: the individual pages and Excel view expose personal identifiers, family/contact details and missing-location fields.
+- Setu robots.txt was inaccessible. Setu Terms of Service (https://setu.ndrrma.gov.np/terms) and Privacy Policy (https://setu.ndrrma.gov.np/privacy) describe a closed-user-base Department of Roads mobile app and its authorised officers; they do not explicitly grant reuse rights for the public missing-list webpage. Do not infer a general public-data licence from the app terms.
+- No Setu/NDRRMA runtime source clearance exists. Aggregate manual reading/citation only; no automated collection, individual record access, storage, provider transmission or third-party sharing.
+
+### Nepal Law Commission — legal instrument metadata
+- Ordinance index: https://lawcommission.gov.np/category/1809/
+- The index lists the Disaster-Related Acts Amendment Ordinance, 2083, published 30 Asoj 2083 at 13:35. The ordinance text itself was not retrieved; no legal interpretation or death-declaration conclusion is cleared from the index metadata alone.
+
+### National Planning Commission (NPC) preliminary PDNA
+- Official press-release page: https://npc.gov.np/content/6845/press-release--regarding-preliminary-details-of-post-disaster/
+- PDNA Census portal: https://pdna.npc.gov.np/
+- The press-release page displays 20 Kartik 2083 and the preliminary PDNA title, but the body did not render in the available browser route. The PDNA portal timed out. NPC robots/terms were inaccessible and no general reuse grant was identified. No NPC source registry entry exists. Manual reading/citation only.
+
+### Secondary/multilateral sources used only for manual corroboration
+- Annapurna Express, missing-list notice (7 Nov): https://theannapurnaexpress.com/story/68590/
+- Republica, verified missing details (7 Nov): https://myrepublica.nagariknetwork.com/news/details-of-2294-missing-victims-of-bhotekoshi-trishuli-flood-unveiled-74-11.html
+- OnlineKhabar, verified missing details (8 Nov): https://english.onlinekhabar.com/ndrrma-details-missing-bhotekoshi-floods.html
+- Kantipur, preliminary PDNA (6 Nov): https://ekantipur.com/business/2026/11/06/the-bhotokoshi-flood-increased-the-poverty-rate-of-the-concerned-municipality-from-12-to-15-percentage-points-32-54.html
+- Annapurna Express, PDNA damage/needs breakdown (7 Nov): https://theannapurnaexpress.com/story/68584/
+- Business 360, earlier household/establishment survey (26 Oct): https://www.b360nepal.com/detail/30508/bhotekoshi-floods-cause-rs-7917bn-in-losses-npc-estimates
+- Kathmandu Post, RDNA estimate (10 Sep): https://kathmandupost.com/national/2026/09/10/rs723-billion-needed-to-rebuild-flood-hit-areas-government-assessment-finds
+- UNDP Nepal: https://www.undp.org/nepal/nepal-floods-2026
+- ADB, 28 August 2026: https://www.adb.org/news/adb-responds-immediately-nepal-floods-5-million-grant
+- World Bank, 23 September 2026: https://www.worldbank.org/en/news/statement/2026/09/23/statement-on-catastrophic-floods-in-nepal
+- These sources were manually read for research/citation only. No automated collection, body persistence, provider transmission or commercial reuse permission was established.
+
+### Determination
+- Public visibility and a Government of Nepal footer do not grant collection permission. The missing-list page is especially sensitive because its individual records contain personal data. Keep only aggregate metadata if exact host/path/operation/field/retention/attribution/privacy/provider-use rights are later reviewed and cleared. No source registration was added.
+
