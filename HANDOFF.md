@@ -1,3 +1,46 @@
+## Current handoff — 2026-11-09 04:40 NPT (run-start main SHA d53e68e2c53698eab04eeee4e73f677f1237f765)
+
+Hami's mission is settled and open-ended: discover, understand, connect, protect, create and realize value in the real world, originating in Nepal and ultimately useful anywhere. No seller pilot, First Rupee or single experiment gates unrelated Hami-wide progress.
+
+### Repository and exact-head truth
+- Main at run start: d53e68e2c53698eab04eeee4e73f677f1237f765; parent 2792850b3144ae2748a57f64cd209207be3f2d7f. Comparing source-bearing c8da700db9e7619bf058b5010b99d57884420f7e to main shows 29 commits ahead and only seven documentation files changed: HANDOFF, LOG, QUEUE, STATE, docs/CAPABILITY_QUEUE, docs/PUBLIC_SOURCES and docs/UNKNOWN_MAP. No source, test, schema, scheduler or production config changed.
+- AGENTS.md and docs/BRAIN.md confirm one Hami/main lineage, six primitives, no unnecessary files/parallel systems, and mission-wide progress independent of seller experiments. Current continuity docs and relevant collector/observer/evidence code/tests were read.
+- Branches: main plus feature/governed-offers at f51ef262d31642479a47df7a0b6795f0949d936c. Compare shows 0 commits ahead, 904 behind, no unique commits/files. Its history is already reachable from main. No branch-delete action is exposed by the connector; no alternate deletion path was used.
+- research_planner.py has no portfolio-summary helper. The previously blocked source write remains NOT IMPLEMENTED. No source-code/test write or alternate mutation path was attempted.
+
+### Exact-head gates
+- ForgeOS CI run 42430784067 on d53e68e2c53698eab04eeee4e73f677f1237f765 failed 3/9 jobs: backend-tests, frontend-tests and repository-guards. Six jobs passed, including the CI secret-scan job.
+- Backend result: 53 failed, 1,302 passed, 2 skipped. Direct failures include expired Crossref/GDELT DOC/OpenAlex/World Bank clearances and resulting fail-closed cascades; test_import_unknowns still expects D104 while docs/UNKNOWN_MAP.md contains D106 (122 total A/B/C/D records); a licensed-abstract fixture expected source_content_included=true but received false; monitoring-cache and multi-judge assertions also failed. Do not collapse these into one cause.
+- Frontend-tests and repository-guards both report backend/app/data/unknowns.json and src/lib/unknowns.ts out of sync with docs/UNKNOWN_MAP.md; the guard names node scripts/sync-unknowns-json.mjs. Do not mutate projections through another path while source editing is blocked.
+- Separate exact-head secret scan 42430784049 passed; the CI secret-scan job also passed. Independent verifier 42430784036 failed when the production request returned HTTP 402. No deployment pass.
+- All five current source clearances are expired: GovInfo through 2026-09-25; Crossref, World Bank Indicators, GDELT DOC and OpenAlex through 2026-10-27. Keep runtime fail-closed. When supported source editing returns, fix historical TEST clocks and importer/projection consistency without extending source permissions.
+
+### Deployment and operational evidence
+- Vercel project forge-os metadata reports live:false and SSO protection. Latest listed READY production deployment is old SHA 6076690f00c238f1b22a3afcdf489e983c468e7d (31 Oct); lookup for current main returned zero deployments.
+- Team-scoped runtime logs for 7 Nov natural schedule windows returned 403 before records. Current health endpoints could not be read through the browser route; this is not an HTTP health result. Latest direct observations remain historical: 7 Nov 06:23 NPT HTTP 402 DEPLOYMENT_DISABLED on both domains; 8 Nov 05:03 NPT DNS failure before HTTP. Current health UNKNOWN. No cron-attributed CycleRun, final stages or durable read-after-write established. No manual route; no unattended execution claimed. Today's 9 Nov 05:45/11:45 NPT windows were still ahead at run start.
+
+### D94 — Sintaphu GLOF and cross-border evidence chain
+- ICIMOD's 30 Oct 2026 advisory says the 29 Oct Sintaphu Lake GLOF triggered downstream alerts in West Bengal and Assam and describes Bhutan authorities' warnings as timely. It estimates 6–7 million m³ before the outburst; released volume remained under assessment. This is institutional reporting, not the event-time NCHM alert log or proof of a particular recipient's receipt/response.
+- NCHM's 2019 reassessment calls the lake Mo_gl 234 / Sintaphu Tsho; its detailed field assessment was in 2016 and reported about 6.2 million m³, average depth 54 m, a growing supraglacial lake and a need for regular monitoring. NCHM's State of the Climate 2023 (published 2024) lists Sintaphu as Mo_gl 37, area 238,314 m² and volume 6.41 million m³. Preserve Mo_gl 234 and Mo_gl 37 as a candidate alias, not a proven crosswalk.
+- NCHM's 2024–2034 Road Map describes GLOF EWS as flood detection after an outburst; names automatic lake-water-level systems at Luggye, Thorthormi, Rapstreng and Baytsho in Punakha–Wangdue; and describes warnings along Punatsangchu and Chamkhar–Mange. It records distinct servers/protocols across warning/AWLS/GLOF/AWS systems and hourly flood-warning water-level sharing with West Bengal and Assam. This is a 2024 baseline, not proof of the exact 2026 configuration; Sintaphu is not among those four named lakes, which is not proof no later instrumentation exists.
+- NCHM's Sintaphu AWS report says installation 20 Feb–12 Mar 2025 and operational from 8 Mar 2025. Location 28.18284°N, 89.82464°E, 4,529 m, Mo Chhu headwater; 4G to NCHM central database. Listed sensors: wind, snow depth, air temperature/humidity, pressure, solar radiation and precipitation—not lake water level. It records a negative snow-depth bias and recommends recalibration. The 2023 lake coordinates are about 3.46 km from the AWS coordinates; this is a nearby weather station, not proof of a lake-level gauge. Uptime on 29 Oct 2026 is UNKNOWN.
+- NDMA SACHET portal v3.2.1 says last updated 15 Oct 2026 and exposes state-wise CAP/RSS feeds. Its CAP XML guide mandates ETag/If-None-Match (200 replaces cached XML/ETag; 304 reuses cached XML), but its example identifier is a placeholder and the dynamic Subscribe controls did not expose an actual feed ID. The current zero-live-alert snapshot is not a historical event record.
+- Practical value: source-versioned event reconciliation across lake identity, basin, effective time, station/variables, event time, warning issue time, CAP identity, cross-border transmission, receipt, response and restoration. Not an alerting/forecasting/emergency-advice service. Actual warning timestamps, event-time telemetry, CAP IDs, downstream receipts and current station uptime remain UNKNOWN.
+
+### Existing Hami seam and prepared change
+- At source-bearing c8da700, SourceCollector.normalize selects raw_item.provenance or metadata; explicit provenance may omit metadata-only effective-time/version/identity fields. collector_runner adds selected task/authorization context; ObserverEngine persists provenance JSON to Signal; _ensure_evidence copies it to Evidence. research_evidence_assessment calculates publication age from published_at versus retrieved_at. research_synthesis_engine citations expose source_registry_id and retrieved_at, not effective cutoff/source-local version/metric definition.
+- Prepared, NOT IMPLEMENTED: allowlist source-declared effective/as-of time and basis, source-local ID/version/scope and metric definition into existing provenance even when explicit provenance exists; never let payload metadata override authorization identity; keep published_at/retrieved_at distinct; verify Signal→Evidence round-trip; expose validated metadata in citations without implying claim support. Add regression tests. No new model/table/primitive/collector. Source-edit safety remains blocked.
+- This removes repeated manual rediscovery of source date, effective cutoff, source-local ID and version. Lawful collection and official event-time access remain dependencies; no contact/private-record request is authorized.
+
+### Portfolio and safety
+- D1–D100 is a completed metadata-level row survey, not 100 deep investigations; D101–D106 are six later UNKNOWN entries. Operational open ResearchQuestion count remains UNKNOWN behind owner-key access.
+- NCHM, NDMA SACHET and ICIMOD rights reviews are in docs/PUBLIC_SOURCES.md. No runtime source registration, automated collection, body persistence or provider transmission.
+- No people contacted, publication, alert, high-stakes advice, private-record request, spend, payment-setting change, intake/outbound activation, production-setting change or REAL external outcome occurred.
+
+This run's documentation-only continuity commit is recorded in Git history; its own exact-head gates must be read separately before any pass is claimed.
+
+---
+
 ## Current handoff — 2026-11-08 05:17 NPT (run-start main SHA `c9d740d004378c6a097425bee080c365af4723c7`)
 
 Hami's mission is settled and open-ended: discover, understand, connect, protect, create and realize value in the real world, originating in Nepal and ultimately useful anywhere. No seller pilot, First Rupee or single experiment gates unrelated Hami-wide progress.

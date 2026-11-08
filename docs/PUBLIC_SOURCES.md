@@ -789,3 +789,30 @@ This review is a source-readiness record, not evidence that any project-specific
 
 ### Determination
 - The current runtime source_clearance_registry has no NRB or NIA entry. No entry was added. Public visibility and successful manual browser reading do not grant collection permission. No source-body storage, automated collection, provider transmission, private-record request or external contact occurred.
+
+## 2026-11-09 — D94 Sintaphu / cross-border warning source review (manual-only)
+
+### National Centre for Hydrology and Meteorology (NCHM), Bhutan
+- 2019 *Reassessment of Potentially Dangerous Glacial Lakes in Bhutan*: https://www.nchm.gov.bt/attachment/ckfinder/userfiles/files/Re-assessment%20of%20Potentailly%20Dangerous%20Glacial%20Lakes.pdf
+- *State of the Climate 2023* (published 2024): https://www.nchm.gov.bt/attachment/ckfinder/userfiles/files/State%20of%20Climate%2C%202023%281%29.pdf
+- *AWS Installation at Sintaphu, Laya* (report published 2024; installation Feb–Mar 2025): https://www.nchm.gov.bt/attachment/ckfinder/userfiles/files/Tour%20report%20on%20AWS%20Installation%20at%20Sintaphu%2C%20Laya%20%282%29.pdf
+- *Institutional Strengthening and Modernization of Hydromet and Multi-hazard Early Warning Services in Bhutan: Road Map 2024–2034*, prepared with the World Bank: https://www.nchm.gov.bt/attachment/ckfinder/userfiles/files/Hydro-Met%20Road%20Map%202024.pdf
+- The Road Map states CC BY 3.0 IGO for that work, including commercial reuse with attribution; third-party components are excluded and require separate rights review. This licence is specific to that document, not other NCHM reports/pages.
+- NCHM robots https://www.nchm.gov.bt/robots.txt and attempted terms/privacy paths were inaccessible through the available browser route; no robots allow/deny or general website reuse permission was inferred. The 2019/2023/2025 reports show NCHM copyright or no explicit reuse grant. Manual reading/citation only for those reports; no automated collection, body retention or provider transmission. The Road Map may be reused under its stated CC BY 3.0 IGO terms, but automated collection remains unreviewed because host robots/collection scope is unavailable. No runtime registration.
+
+### India's National Disaster Management Authority (NDMA) — SACHET
+- Portal: https://sachet.ndma.gov.in/
+- State-wise CAP/RSS page: https://sachet.ndma.gov.in/CapFeed
+- CAP XML Integration Guide: https://sachet.ndma.gov.in/docs/Integration_Guide_For_Agencies.pdf
+- Website Policy: https://sachet.ndma.gov.in/WebsitePolicy
+- Portal version 3.2.1 says last updated 15 October 2026 and describes geo-targeted multi-channel warnings and state-wise RSS/CAP feeds. The integration guide requires ETag/If-None-Match: 200 replaces cached XML/ETag; 304 reuses cached XML. The sample identifier is a placeholder; the actual feed ID/URL was not exposed by dynamic Subscribe controls.
+- Website Policy says material may be reproduced free of charge only after proper permission by email, with accurate reproduction and source acknowledgement; third-party material remains separately protected. https://sachet.ndma.gov.in/robots.txt was inaccessible. Manual reading/citation only; no automated collection, feed polling, XML/body persistence, provider transmission or runtime registration. No event-time CAP payload/alert ID was retrieved.
+
+### International Centre for Integrated Mountain Development (ICIMOD)
+- 30 October 2026 media advisory: https://www.icimod.org/press-release/bhutan-glof-triggers-downstream-alerts
+- Terms of Use: https://www.icimod.org/terms-of-use/
+- Terms last updated 17 November 2019 permit ICIMOD materials for non-commercial research/education/personal use with attribution and the same conditions; commercial deviations require prior authorization. Third-party materials have separate terms. https://www.icimod.org/robots.txt was inaccessible. This pass used manual reading/citation only; no automated collection, persistent body storage or provider transmission. No runtime registration.
+
+### Determination
+- No NCHM, NDMA SACHET or ICIMOD source was added to source_clearance_registry.py. Public visibility, an open PDF, a CAP page or a licence on one document is not blanket permission for automated collection/provider use. Any future collection must identify exact host/feed/fields/operations, review current robots and terms, respect NDMA permission and ETag requirements, and register only the narrowly cleared scope. No source body was persisted or sent to a provider.
+

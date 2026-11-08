@@ -1,3 +1,16 @@
+## Current Hami-wide queue — 2026-11-09 04:40 NPT (run-start main SHA d53e68e2c53698eab04eeee4e73f677f1237f765)
+
+1. **P0 — Keep source-edit safety intact; prepare one grouped source/test repair for the supported path.** Do not repeat the blocked research_planner write or bypass it through another mutation route. When supported editing is restored, sync the D1–D106 projections using the existing script, update importer expectation to D106/122 total records, freeze historical TEST clocks for expired-source tests, and separately inspect the licensed-abstract, monitoring-cache and multi-judge failures. Do not extend source permissions for green CI.
+2. **P0 — Restore normal Vercel deployment/observability.** Project metadata says live:false and SSO enabled; latest READY deployment is old SHA 6076690f; current-main deployment lookup empty; runtime logs return 403; verifier fails HTTP 402. Resolve only through ordinary owner/platform authorization. No bypass header, share link, production mutation or manual schedule route.
+3. **P1 — D94: reconcile the 29 Oct Sintaphu event evidence chain.** Find direct dated NCHM warning/telemetry and downstream receipt records through permitted public sources; obtain the actual SACHET CAP feed ID and exact rights scope before any integration. Preserve Mo_gl 234/Mo_gl 37 as candidate aliases. No alert, emergency advice, contact or private-record request.
+4. **P1 — Prepare source-effective time/identity support in existing provenance.** When source editing is allowed, preserve source-declared as-of/effective cutoff and basis, source-local ID/version/scope/metric definition separately from published_at/retrieved_at; verify Signal→Evidence→citation and add regressions. No new model/table/primitive/collector.
+5. **P1 — Continue independent Hami-wide tracks.** Preserve the D1–D100 metadata survey and six later D101–D106 entries; open ResearchQuestion count UNKNOWN behind owner-key access. Continue research across natural/built systems, knowledge, resources, infrastructure, safety/privacy, reliability, integration and quality. No commercial experiment gates these tracks.
+6. **P2 — Remove stale feature/governed-offers branch ref through a supported GitHub delete-branch action.** It is 904 behind main and zero ahead, so its history is already reachable from main. Current connector exposes no delete action; do not use an alternate route.
+
+No external contact, source collection, body persistence, provider transmission, manual invocation, spend, money action, production-setting change or access-control bypass is authorized by this queue.
+
+---
+
 ## Current Hami-wide queue — 2026-11-08 05:17 NPT (run-start main SHA `c9d740d004378c6a097425bee080c365af4723c7`)
 
 1. **P0 — Keep the independent deployment verifier contained.** `.github/workflows/verify-deploy.yml` still sends `VERCEL_AUTOMATION_BYPASS_SECRET` as `x-vercel-protection-bypass`. Do not push/dispatch until this path is removed or replaced with ordinary public/owner-authorized access.
