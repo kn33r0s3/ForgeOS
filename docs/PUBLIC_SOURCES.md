@@ -795,7 +795,7 @@ This review is a source-readiness record, not evidence that any project-specific
 ### National Centre for Hydrology and Meteorology (NCHM), Bhutan
 - 2019 *Reassessment of Potentially Dangerous Glacial Lakes in Bhutan*: https://www.nchm.gov.bt/attachment/ckfinder/userfiles/files/Re-assessment%20of%20Potentailly%20Dangerous%20Glacial%20Lakes.pdf
 - *State of the Climate 2023* (published 2024): https://www.nchm.gov.bt/attachment/ckfinder/userfiles/files/State%20of%20Climate%2C%202023%281%29.pdf
-- *AWS Installation at Sintaphu, Laya* (report published 2024; installation Feb–Mar 2025): https://www.nchm.gov.bt/attachment/ckfinder/userfiles/files/Tour%20report%20on%20AWS%20Installation%20at%20Sintaphu%2C%20Laya%20%282%29.pdf
+- *AWS Installation at Sintaphu, Laya* (title page dated 2024; installation Feb–Mar 2025; publication date not independently established): https://www.nchm.gov.bt/attachment/ckfinder/userfiles/files/Tour%20report%20on%20AWS%20Installation%20at%20Sintaphu%2C%20Laya%20%282%29.pdf
 - *Institutional Strengthening and Modernization of Hydromet and Multi-hazard Early Warning Services in Bhutan: Road Map 2024–2034*, prepared with the World Bank: https://www.nchm.gov.bt/attachment/ckfinder/userfiles/files/Hydro-Met%20Road%20Map%202024.pdf
 - The Road Map states CC BY 3.0 IGO for that work, including commercial reuse with attribution; third-party components are excluded and require separate rights review. This licence is specific to that document, not other NCHM reports/pages.
 - NCHM robots https://www.nchm.gov.bt/robots.txt and attempted terms/privacy paths were inaccessible through the available browser route; no robots allow/deny or general website reuse permission was inferred. The 2019/2023/2025 reports show NCHM copyright or no explicit reuse grant. Manual reading/citation only for those reports; no automated collection, body retention or provider transmission. The Road Map may be reused under its stated CC BY 3.0 IGO terms, but automated collection remains unreviewed because host robots/collection scope is unavailable. No runtime registration.
@@ -815,4 +815,14 @@ This review is a source-readiness record, not evidence that any project-specific
 
 ### Determination
 - No NCHM, NDMA SACHET or ICIMOD source was added to source_clearance_registry.py. Public visibility, an open PDF, a CAP page or a licence on one document is not blanket permission for automated collection/provider use. Any future collection must identify exact host/feed/fields/operations, review current robots and terms, respect NDMA permission and ETag requirements, and register only the narrowly cleared scope. No source body was persisted or sent to a provider.
+
+
+
+## NCHM source-time refinement — 2026-11-09
+
+- *AWS Installation at Sintaphu, Laya*: https://www.nchm.gov.bt/attachment/ckfinder/userfiles/files/Tour%20report%20on%20AWS%20Installation%20at%20Sintaphu%2C%20Laya%20%282%29.pdf — title page dated 2024; body says installation 20 Feb–12 Mar 2025 and operational 8 Mar 2025. Publication date not independently established. Preserve all date layers separately.
+- *Revised Structure, Mandates and Functions* (NCHM, 2022): https://www.nchm.gov.bt/attachment/ckfinder/userfiles/files/Revised%20structure_mandate_functions%202022%20Final.pdf — institutional roles/24-7 NWFWC/basin-control-room description. No explicit reuse licence identified in the document; manual reading/citation only.
+- NCHM HWRSD page: https://www.nchm.gov.bt/home/pageMenu/22 — describes HWRSD functions. No dated content version or explicit reuse grant identified. Manual reading only.
+- The NCHM Road Map 2024–2034 is CC BY 3.0 IGO for the work itself, including commercial reuse with attribution; third-party figures/components require separate permission. This does not clear the NCHM host for automated collection because robots/collection scope remain unavailable.
+- No NCHM source was registered in source_clearance_registry.py. No automated collection, report-body persistence or provider transmission.
 

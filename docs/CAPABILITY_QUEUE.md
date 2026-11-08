@@ -3244,3 +3244,23 @@ No contact, consultation response, publication, source-body persistence, provide
 - No NCHM, NDMA SACHET or ICIMOD source is registered in the runtime clearance registry. Rights/robots findings are recorded in docs/PUBLIC_SOURCES.md. No automated collection, body persistence, provider transmission, alert, advice, contact, field visit, private-record request or real-world action occurred.
 - D94 remains UNKNOWN. Downstream alerts are reported; this is not a demonstrated no-warning failure. A weather station is not a lake-level warning sensor.
 
+
+
+## D94 refinement — 2026-11-09 (source time, monitoring network and operating baseline)
+
+### Date semantics correction
+The NCHM PDF *AWS Installation at Sintaphu, Laya* has a 2024 title-page date. Its body says installation occurred 20 February–12 March 2025 and the station became operational on 8 March 2025. The document's publication date is not independently established. Preserve three separate values: title-page/document date=2024; installation interval=20 Feb–12 Mar 2025; operational date=8 Mar 2025. Do not normalize these into one publication date.
+
+### Additional NCHM operating evidence (all 2024/2022 baselines, not 2026 event proof)
+- The 2024 NCHM/World Bank Road Map reports 45 automatic water-level stations (AWLS), with 30-minute data transmission; 15 GLOF EWS stations transmitting by satellite every 15 minutes; and 17 GoI-supported flood-warning stations operated by NCHM with data shared to India's Central Water Commission for downstream forecasting.
+- Within the 17-station India-cooperation network snapshot, the Road Map lists eight AWLS sites, only three functional; four manual water-level gauges; three manual rain gauges; two automatic river-discharge systems (one faulty, one with data-transmission problems); and two AWS, both with transmission problems. This is the report's dated snapshot, not a present-day status.
+- The Road Map describes GLOF EWS as detection after an outburst, primarily using measured water levels and telemetry; critical thresholds trigger high-frequency-radio transmission and sirens near populated areas. It documents separate servers/systems/protocols and recommends consolidation. It says hourly flood-warning water levels are passed through control centres to partners in West Bengal and Assam.
+- NCHM's 2022 structure/mandate document describes the 24/7 National Weather and Flood Warning Centre, jointly operated by weather and hydrology divisions, overseeing named basin control rooms and collecting manual/AWLS/AWS observations for continuous warning services. This is institutional structure, not event-time evidence.
+- The AWS report's data logger checks whether the station is operational and sends data to NCHM's central database via 4G. This does not prove station uptime or transmission on 29 Oct 2026. Its listed sensors remain meteorological/snow sensors, not lake-water-level sensors; snow-depth negative bias was noted.
+
+### Entity/time reconciliation
+The 2019 reassessment lists Mo_gl 234 / Sintaphu Tsho at 28°10'06.0"N, 89°51'21.1"E, 4,480 m and 238,314 m². The 2023 inventory lists Mo_gl 37 / Sintaphu at 28°10'06.00"N, 89°51'21.10"E, 4,480 m and the same area. This is strong evidence that the source-local IDs refer to the same physical lake, but no explicit crosswalk is stated. Preserve a candidate same-location/alias relation with both identifiers and source dates; do not overwrite either ID.
+
+### Remaining UNKNOWN
+No direct 29 Oct 2026 NCHM sensor series, station heartbeat, warning issue timestamp, SACHET CAP alert ID/XML, downstream receipt, community-level dissemination record or response was retrieved. ICIMOD reports downstream alerts and timely Bhutan warnings, so do not describe this as a demonstrated no-warning failure. The SACHET guide's ETag contract is known; its actual feed ID remains unavailable. D94 remains UNKNOWN for event-time operational completeness and current restoration.
+

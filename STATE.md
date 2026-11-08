@@ -1,3 +1,14 @@
+## Current state — 2026-11-09, D94 source-time refinement (run-start main SHA 40b5d47177f1b56b3346c8e51159e789366c6954)
+
+- Main=40b5d47177f1b56b3346c8e51159e789366c6954; source-bearing code=c8da700. Thirty commits after source head are documentation-only.
+- Exact-head CI 42533453272: 6/9 pass, 3 fail. Backend 53 failed / 1,302 passed / 2 skipped. Frontend and repository guards fail on stale generated unknown projections; importer expects D104 vs map D106/122 records. Expired source clearances produce fail-closed test cascades; other separate failures include licensed-abstract fixture, monitoring-cache and multi-judge. Do not relax real source rights.
+- Exact-head secrets scan 42533453407 passed. Independent verifier 42533453363 failed at HTTP 402. No deployment for current main; Vercel latest READY remains old SHA 6076690f, project live:false/SSO; runtime logs 403; health UNKNOWN.
+- D94 refinement: 2024 NCHM AWS report title page vs body dates differ: title 2024, installation Feb–Mar 2025, operational 8 Mar 2025; publication date not independently established. 2024 NCHM/World Bank roadmap reports 45 AWLS, 15 GLOF EWS stations, 17 cross-border flood-warning stations; only 3/8 AWLS functional in the GoI network snapshot, one ARDMS faulty, another with transmission issue, both AWS with transmission issues. GLOF EWS described as detection-after-outburst using water-level thresholds, radio and sirens; separate servers/protocols. NCHM 2022 document describes 24/7 NWFWC and basin control rooms, not event-specific proof.
+- Mo_gl 234 (2019) and Mo_gl 37 (2023) share Sintaphu name, coordinates, altitude and area; strong same-location candidate, but no explicit ID crosswalk. Keep both source-local IDs.
+- D94 remains UNKNOWN for actual 29 Oct 2026 event-time telemetry, alert timestamps, CAP IDs/receipts, downstream response and station uptime.
+- D1–D100 metadata survey remains 100/100; D101–D106 separate. Open operational ResearchQuestion count UNKNOWN behind owner-key access. Stale feature/governed-offers branch 904 behind/0 ahead; no delete action exposed.
+- Source-edit safety remains blocked; capability is prepared, not implemented. No new source registrations, automated collection, body persistence, provider transmission or external actions.
+
 ## Current state — 2026-11-09 04:40 NPT (run-start main SHA d53e68e2c53698eab04eeee4e73f677f1237f765)
 
 - **Mission:** settled and open-ended. Hami discovers, understands, connects, protects, creates and realizes value across domains/geographies, originating in Nepal and useful anywhere. No seller experiment gates unrelated work.

@@ -251,3 +251,17 @@ India's NDMA SACHET portal lists state-wise CAP/RSS feeds and says version 3.2.1
 
 Practical value is a source-versioned event chain across lake identity, basin, source-effective time, station and measured variables, outburst, warning issue, CAP alert, cross-border transmission, receipt, response and restoration. Reuse the existing six primitives and Signal/Evidence provenance; do not create an alerting service or high-stakes advice. Actual warning timestamps, event-time telemetry, CAP alert IDs, downstream receipts/response, current station uptime and the Mo_gl ID crosswalk remain UNKNOWN. No specific operational coordination failure is established. Source rights and no-ingestion boundary are recorded in docs/PUBLIC_SOURCES.md and docs/CAPABILITY_QUEUE.md. No contact, collection, body persistence, provider transmission, alert or intervention occurred.
 
+
+
+## D94 source-time and network refinement — 2026-11-09
+
+The NCHM Sintaphu AWS PDF is internally date-layered: its title page says 2024, but the body says installation was 20 Feb–12 Mar 2025 and operation began 8 Mar 2025. Its publication date is not independently established. Keep title-page date, installation interval, operational date and retrieval date distinct.
+
+The 2024 NCHM/World Bank Road Map reports 45 AWLS with 30-minute transmission, 15 GLOF EWS stations with 15-minute satellite telemetry, and 17 GoI-supported flood-warning stations sharing data with India's CWC. In that 17-station network snapshot, only three of eight AWLS were functional; one of two ARDMS was faulty, the other had transmission issues, and both AWS had transmission issues. The same Road Map describes detection-after-outburst GLOF EWS using water-level thresholds, high-frequency radio and sirens, and separate servers/protocols across real-time systems. These are 2024 status findings, not proof of 2026 event conditions.
+
+NCHM's 2022 structure/mandate document describes a 24/7 National Weather and Flood Warning Centre and basin control rooms collecting manual/AWLS/AWS observations and disseminating warnings. This is institutional design, not an event-specific action record.
+
+The 2019 inventory's Mo_gl 234 / Sintaphu Tsho and the 2023 inventory's Mo_gl 37 / Sintaphu have matching local name, coordinates, altitude and area (238,314 m²). This is strong same-location evidence but no published ID crosswalk; preserve both source-local IDs and a candidate alias relation.
+
+These findings strengthen the existing source-time/identity capability candidate; they do not establish actual event-time telemetry, warning issue/receipt, current station uptime or restoration. D94 remains UNKNOWN. No source ingestion or operational action.
+

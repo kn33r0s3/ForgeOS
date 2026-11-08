@@ -1,3 +1,14 @@
+## Current Hami-wide queue — 2026-11-09, after exact-head run 42533453272
+
+1. **P0 — Source-edit safety and exact-head CI repair.** Do not bypass the blocked source write. When a supported source-edit path returns, group the projection sync, D106 importer expectation, deterministic TEST clocks for expired sources, and separate fixes for licensed-abstract, monitoring-cache and multi-judge tests. Keep production source clearance fail-closed.
+2. **P0 — Vercel deployment/observability.** Current main has no deployment; latest READY production is old SHA 6076690f; project live:false/SSO; runtime logs 403; verifier HTTP 402. Resolve through ordinary owner/platform authorization only.
+3. **P1 — D94 event chain.** Seek public, dated NCHM event-time observations/warnings and downstream CAP/receipt evidence. Do not infer absence from current dashboards or from the 2024 baseline. No contact, alert or private-log request.
+4. **P1 — Existing provenance capability.** Preserve source-declared effective/as-of time and basis, source-local IDs/versions, station/metric scope separately from published_at/retrieved_at. Verify Signal→Evidence→citation. Prepared only; no new model/table/primitive/collector.
+5. **P1 — Continue broad Hami-wide research and quality tracks.** D1–D100 metadata survey and D101–D106 remain; open ResearchQuestion count UNKNOWN behind owner-key access. No seller experiment gate.
+6. **P2 — Stale branch reference.** feature/governed-offers is 904 behind/0 ahead, no unique commits. Remove only with a supported branch-delete action; none exposed now.
+
+---
+
 ## Current Hami-wide queue — 2026-11-09 04:40 NPT (run-start main SHA d53e68e2c53698eab04eeee4e73f677f1237f765)
 
 1. **P0 — Keep source-edit safety intact; prepare one grouped source/test repair for the supported path.** Do not repeat the blocked research_planner write or bypass it through another mutation route. When supported editing is restored, sync the D1–D106 projections using the existing script, update importer expectation to D106/122 total records, freeze historical TEST clocks for expired-source tests, and separately inspect the licensed-abstract, monitoring-cache and multi-judge failures. Do not extend source permissions for green CI.

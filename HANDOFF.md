@@ -1,3 +1,27 @@
+## Current handoff — 2026-11-09, D94 source-time refinement (run-start main SHA 40b5d47177f1b56b3346c8e51159e789366c6954)
+
+This is a continuation after the prior documentation commit's exact-head checks completed. Hami's settled, open-ended mission is unchanged; no seller/First-Rupee experiment gates unrelated progress.
+
+### Current exact-head reconciliation
+- Main at run start: 40b5d47177f1b56b3346c8e51159e789366c6954; source-bearing code remains c8da700db9e7619bf058b5010b99d57884420f7e. The 30 commits after that source head are documentation-only.
+- Exact-head CI 42533453272 completed with 6/9 jobs passing and 3 failing: backend-tests, frontend-tests, repository-guards. Backend: 53 failed, 1,302 passed, 2 skipped. Frontend and repository guards fail because backend/app/data/unknowns.json and src/lib/unknowns.ts are out of sync with docs/UNKNOWN_MAP.md. Importer still expects D104 while the map has D106 (122 total A/B/C/D records). Backend failures also include expired Crossref/GDELT/OpenAlex/World Bank clearances and cascades, a licensed-abstract fixture mismatch, and separate monitoring-cache/multi-judge assertions.
+- Exact-head CI secret-scan/gitleaks and separate secrets scan 42533453407 passed. Independent verifier 42533453363 failed at production HTTP 402. No deployment pass.
+- Five existing source clearances remain expired: GovInfo through 25 Sep 2026; Crossref, World Bank Indicators, GDELT DOC and OpenAlex through 27 Oct 2026. Do not renew rights merely to satisfy tests; preserve fail-closed collection and fix TEST clocks when source editing is supported.
+- Vercel project forge-os reports live:false and SSO; latest READY production deployment remains old SHA 6076690f; exact current-main deployment lookup is empty. Runtime logs return 403; current health remains UNKNOWN. No manual invocation or unattended execution claimed.
+- Stale feature/governed-offers branch remains 904 behind and zero ahead of main; its history is already reachable from main. Connector has no branch-delete action; no workaround.
+
+### D94 source-time correction and refinement
+- The NCHM AWS report's title page is dated 2024, but its body explicitly says installation at Sintaphu occurred 20 Feb–12 Mar 2025 and the station became operational 8 Mar 2025. Treat title-page date, installation period and operational date separately; publication date is not independently established. This is a source-time discrepancy, not a reason to discard the report.
+- The same report's data logger checks station operation and sends data to NCHM's central database over 4G. The listed instruments are meteorological/snow sensors, not lake-water-level sensors; a negative snow-depth bias required recalibration. No proof of uptime or event-time telemetry on 29 Oct 2026.
+- The 2024 NCHM/World Bank Road Map gives a richer baseline: 45 AWLS with 30-minute transmission; 15 GLOF EWS stations with 15-minute satellite telemetry; 17 GoI-supported flood-warning stations whose data are shared with India's CWC. In that 17-station network snapshot, only 3 of 8 AWLS were functional, one of two ARDMS was faulty and the other had a transmission issue, and both AWS had transmission issues. The Road Map says GLOF EWS is detection-after-outburst, relies on measured water levels/telemetry and threshold-triggered radio/sirens, and documents different servers/protocols. These are 2024 status statements, not the 2026 event configuration.
+- NCHM's 2022 structure/mandate document describes the 24/7 National Weather and Flood Warning Centre, basin control rooms, shift-based monitoring of manual/AWLS/AWS observations and dissemination of warnings. This is institutional design/mandate, not an event-specific action log.
+- The 2019 reassessment's Mo_gl 234 / Sintaphu Tsho and 2023 inventory's Mo_gl 37 / Sintaphu share the same local name, coordinates, altitude and area. This is strong same-location evidence, but no explicit crosswalk is published; preserve a candidate alias relation with both source-local IDs rather than silently merging.
+- These refinements are documented in docs/UNKNOWN_MAP.md, docs/CAPABILITY_QUEUE.md and docs/PUBLIC_SOURCES.md. No source registration or automated collection.
+
+The source-effective-time/identity capability remains PREPARED, NOT IMPLEMENTED. The source-edit safety block remains in force. No source/test/schema write, contact, alert, advice, publication, spend, private-record request or external action occurred.
+
+---
+
 ## Current handoff — 2026-11-09 04:40 NPT (run-start main SHA d53e68e2c53698eab04eeee4e73f677f1237f765)
 
 Hami's mission is settled and open-ended: discover, understand, connect, protect, create and realize value in the real world, originating in Nepal and ultimately useful anywhere. No seller pilot, First Rupee or single experiment gates unrelated Hami-wide progress.
