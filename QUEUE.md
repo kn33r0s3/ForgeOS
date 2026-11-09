@@ -1,3 +1,22 @@
+## Current Hami-wide queue — 2026-11-10 05:25 NPT (run-start main SHA `8d3f4f39856f3c2e6e7d048be040dbc351f559bb`)
+
+1. **P0 — Preserve source-edit safety.** Do not retry the blocked `research_planner.py` helper or route the same source mutation through another tool. When the supported source-edit path is restored, make one grouped source-time provenance change with normalization → Signal → Evidence → assessment → citation regressions.
+2. **P0 — Restore normal CI/deploy observability through ordinary authorization.** Current HEAD `8d3f4f3` has no workflow run because it is a documentation-only `[skip ci]` commit; Vercel status says “Account is blocked.” Do not bypass access controls or claim deployment health.
+3. **P1 — WASH primary report and local data.** Retrieve the complete NSO “Water Supply and Sanitation Situation in Nepal” report and its 753-municipality WASH Equity Index; inspect the municipality-level denominators, data vintages and methodology. The NSO page date (17 Kartik 2083) and UN-Habitat launch date (30 Oct 2026) remain separate.
+4. **P1 — WASH source reconciliation.** Retrieve the NWASH 326-municipality categorization sheet; resolve the report-card 326/346 label, basic-service threshold gap (70–80%), Charali-vs-Godawari effluent-data conflict, and Kakarvitta “operational” vs non-functioning treatment-system wording. Seek dated public municipal/FSTP operating notices and public NWASH record-update timestamps. Do not infer current operations from a 2026 report label.
+5. **P1 — WASH service-chain crosswalk.** Compare NSO all-753 outcomes, NWASH selected-326 service/asset data, MICS 2024/25 household results, and the four-municipality SMOSS pilot only after aligning period, geography, population, indicator and source. Preserve pilot data as pilot data; no national extrapolation.
+6. **P1 — WASH source rights.** Keep NSO, NWASH, MICS/UNICEF, JMP and UN-Habitat sources manual-only/NOT CLEARED until exact robots, terms, licence, purpose, fields, retention and provider-use scopes are reviewed. No blanket .gov.np clearance or body ingestion.
+7. **P1 — D93 Gorkha–Budhi Gandaki.** Continue official report-body and restoration reconciliation; no emergency advice or alerting service.
+8. **P1 — D94 Sintaphu.** Continue dated NCHM warning/telemetry and downstream receipt evidence; no alerting or high-stakes public advice.
+9. **P1 — D98 missing-person aggregate/PDNA reconciliation.** Aggregate-only; resolve cutoffs and official PDNA body; never access/export person-level records.
+10. **P1 — D99/D100 trade-work and owner-time.** Keep NSO NDTS aggregate baseline separate from daily shop-level evidence; resolve the “NLFS 2079” sales-row/catalog discrepancy; no microdata request or automated collection.
+11. **P1 — Continue broad independent discovery and ordinary engineering safeguards.** Preserve D1–D100 and D101–D106; open operational ResearchQuestion count remains UNKNOWN. Do not gate Hami-wide progress on WASH or another single track.
+12. **P2 — Stale feature branch.** `feature/governed-offers` has no unique work per prior comparison; no supported delete action is exposed. Do not use an alternate path.
+
+No external contact, source collection, person-level data, body persistence, provider transmission, publication, alert, spend/payment, intake/outbound activation, manual route, or access-control bypass is authorized by this queue.
+
+---
+
 ## Current Hami-wide queue — 2026-11-10 05:04 NPT (run-start main SHA `950f3b673c6985f91d816b0c2faa07bd3b27b061`)
 
 1. **P0 — Preserve source-edit safety and prepare one grouped source-time change.** Do not repeat the blocked `research_planner.py` write or use another mutation route. When supported source editing is restored, extend the existing provenance JSON contract through normalization → Signal → Evidence → assessment → citation; add round-trip and unknown-date regressions. No new model/table/primitive/collector.

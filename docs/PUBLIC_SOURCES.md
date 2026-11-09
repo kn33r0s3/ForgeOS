@@ -880,3 +880,22 @@ This review is a source-readiness record, not evidence that any project-specific
 - robots.txt endpoints for nsonepal.gov.np, data.nsonepal.gov.np and microdata.nsonepal.gov.np were not retrievable through the available browser route. This is not an HTTP allow/deny result. No automated collection scope was approved.
 - **Determination:** manual reading/citation only. No source_clearance_registry entry, automated collection, body persistence, provider transmission, raw-microdata request, redistribution or commercial reuse authorization. Re-review exact robots, terms, fields, retention and provider-use purpose before any automated operation.
 
+
+
+## 2026-11-10 — Nepal WASH sources (manual-only; NOT CLEARED)
+
+### Exact sources reviewed
+- NSO “Water Supply and Sanitation Situation in Nepal” listing: https://www.nsonepal.gov.np/content/13536/water-supply-and-sanitation-sutuaion-in-nepal/ — retrieved 10 November 2026; page displays 17 Kartik 2083. The page exposes the report title but the full report body/download was not available in the inspected browser route.
+- UN-Habitat Nepal co-publisher release: https://unhabitat.org.np/featured_news_detail/nepal-releases-national-water-and-sanitation-status-report — states the report was launched 30 October 2026, covers all 753 municipalities, integrates Census 2021 with MICS 2024/25, and introduces a WASH Equity Index. It is a co-publisher release, not the full report body.
+- NSO “Statistics Publication, Communication and Distribution Procedure, 2082” listing: https://www.nsonepal.gov.np/content/13372/statistics-public--compressment-and-distribution-procedure--2082/ — page displays 28 Sawan 2083, but the procedure body was not exposed by the inspected route. Do not infer permissions from the title alone.
+- Nepal MICS 2024/25 Survey Findings Report: https://www.unicef.org/nepal/media/28566/file/Final_Nepal%20Multiple%20Indicator%20Cluster%20Survey%202024-25.pdf.pdf — NSO/UNICEF report dated February 2026; fieldwork Dec 2024–May 2025; Census 2021 frame; 12,960 households sampled, 12,802 interviewed, 2,700 household water-quality tests. Public manual reading/citation only; no explicit open reuse licence was identified in the inspected front matter.
+- NWASH Sanitation Report Card 2026: https://nwash.gov.np/documents/Sanitation%20Report%20Card%20Final%20(1).pdf — Government of Nepal/DWSSM report developed with WaterAid Nepal and UN-Habitat support. Public PDF; no explicit open reuse licence identified. The PDF is labelled 2026 but does not state one overall extraction/cutoff date.
+- NWASH Data Update Manual: https://nwash.gov.np/documents/DataUpdateManual.pdf — public PDF; no explicit open reuse licence or publication date identified in the inspected document.
+- UNICEF/JMP Nepal SMOSS pilot report: https://washdata.org/report/nepal-2025-monitoring-safely-managed-onsite-sanitation-smoss-report — final report dated October 2025; four pilot municipalities only. No project-specific automated reuse licence was established.
+- JMP Nepal country page: https://washdata.org/countries/nepal — at retrieval lists the 2025 SMOSS report and 2019 MICS report, not the 2024/25 MICS report. The page links to UNICEF Legal; the API/data reuse terms were not reviewed and no API collection was attempted.
+
+### Robots, terms, and determination
+- Browser attempts to retrieve robots endpoints for `nsonepal.gov.np`, `www.nsonepal.gov.np`, `data.nsonepal.gov.np`, `microdata.nsonepal.gov.np`, `nwash.gov.np`, and `unhabitat.org.np` were not successful. This is not an HTTP allow/deny result.
+- No explicit open reuse licence was identified in the inspected NSO/NWASH report pages/PDFs. The UN-Habitat site footer identifies ©2026 UN-Habitat Nepal; no open licence was established. The NSO distribution-procedure page is a listing only; its body remains unread.
+- **Determination:** manual reading and factual citation only. No source-clearance registration, automated collection, report-body persistence, provider transmission, dataset download beyond browser reading, or commercial reuse permission is granted by this review. Re-review exact host/path/robots, terms, fields, purpose, retention, attribution, privacy and provider-use scope before any automated operation. Do not blanket-clear .gov.np or the entire UNICEF/JMP/WASHData domain.
+
