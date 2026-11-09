@@ -861,3 +861,22 @@ This review is a source-readiness record, not evidence that any project-specific
 ### Determination
 - Public visibility and a Government of Nepal footer do not grant collection permission. The missing-list page is especially sensitive because its individual records contain personal data. Keep only aggregate metadata if exact host/path/operation/field/retention/attribution/privacy/provider-use rights are later reviewed and cleared. No source registration was added.
 
+
+
+## 2026-11-10 — National Statistics Office (NSO) trade/labour sources (manual-only; NOT CLEARED)
+
+### Exact sources reviewed
+- NSO homepage/index: https://nsonepal.gov.np/ — retrieved 10 November 2026. It lists the FY2082/83 Q4 Statistical Bulletin with posting date 11 Kartik 2083 and the second-review programme for NLFS IV (2083/04/08–10).
+- FY2082/83 Q4 Statistical Bulletin: https://giwmscdnone.gov.np/media/pdf_upload/4th%20Quarterly%20Statistical%20Bulletin%202082-83_lthsuqe.pdf — reporting period is FY2082/83 Q4 (Baisakh–Asar 2083); homepage posting date is 11 Kartik 2083. It reports NLFS IV progress and microdata sales; page publication and reporting period must remain distinct.
+- Nepal Distributive Trade Survey 2022 national report: https://data.nsonepal.gov.np/dataset/602bfa70-e215-4cb8-8fd3-71fb5271c3e6/resource/b44f7254-b983-47f0-8e97-64ff8c403a1f/download/nepal-distributive-trade-survey.pdf . Catalog metadata: https://microdata.nsonepal.gov.np/index.php/catalog/132 . The catalog says the dataset is internal-use-only and not accessible for public use. The data dictionary shows 0 cases/0 variables. The report itself is public for manual reading/citation, but the raw dataset is not public.
+- NSO data portal record: https://data.nsonepal.gov.np/dataset/nepal-distributive-trade-survey-2022 — lists 68 aggregate/report resources but explicitly says “No License Provided”; footer says all rights reserved. No general automated or commercial reuse licence was identified.
+- Microdata catalog policy: https://microdata.nsonepal.gov.np/index.php/policies-and-procedures — licensed microdata is restricted to statistical/scientific research and aggregated reporting; redistribution, re-identification and dataset linkage capable of identifying people/organizations are prohibited. The NDTS record's “internal use only” condition is stricter than the general catalog policy.
+- Microdata catalog history: https://microdata.nsonepal.gov.np/index.php/catalog/history?sort_by=title&sort_order=asc — as retrieved, lists NLFS 1998/99, 2008 and 2017/18, but no NLFS 2079 entry.
+
+### Observed limits and unresolved discrepancy
+- The Q4 bulletin says 920 NLFS IV enumeration areas were selected, 304 had completed the reported household-listing/sample-selection/main-questionnaire collection steps, 184 were completed during Q4, and a FY2083/84 fieldwork plan was prepared. It is a dated progress snapshot, not a current completion statement.
+- The Q4 microdata-sales table lists four “Nepal Labour Force Survey, 2079” sales, while the same bulletin's available-microdata list and the catalog history list only three prior NLFS rounds (1998/99, 2008, 2017/18). This may be a typo, an unlisted separate dataset or a reporting mismatch; it is unresolved. Do not infer a fourth-round dataset from the row.
+- The NDTS report has several distinct time layers: title year 2022; collection Feb–Jun 2022; reference period FY2020/21; report printed Feb 2024; catalog record created/modified Jun 2026; data-portal resource created Oct 2024 and last updated Dec 2024. Preserve each role separately.
+- robots.txt endpoints for nsonepal.gov.np, data.nsonepal.gov.np and microdata.nsonepal.gov.np were not retrievable through the available browser route. This is not an HTTP allow/deny result. No automated collection scope was approved.
+- **Determination:** manual reading/citation only. No source_clearance_registry entry, automated collection, body persistence, provider transmission, raw-microdata request, redistribution or commercial reuse authorization. Re-review exact robots, terms, fields, retention and provider-use purpose before any automated operation.
+

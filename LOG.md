@@ -1546,3 +1546,17 @@ This is the Nuwakot view of the 26 Aug Bhotekoshi–Trishuli event, distinct fro
 - Exact-head main 47b1c7a57e52e150e92a437c1310b4f5ed4d0499: CI 42534404177 failed 3/9 (backend 53 failed / 1,302 passed / 2 skipped / 18 warnings; frontend and repository guards failed). Six jobs passed. Secret scan 42534404178 passed. Verifier 42534404122 failed production fetch HTTP 402 after its test step passed. npm ci reports 15 vulnerabilities (2 low, 8 moderate, 4 high, 1 critical); package paths not captured. Vercel exact-head deployment lookup empty, latest READY deployment old SHA 6076690f, project live:false/SSO; runtime logs/errors/session listing 403; health UNKNOWN.
 - No new D-number, ResearchQuestion, model, table, primitive, collector, source registration, person-level data, external contact, private-record request, publication, alert, high-stakes/legal/emergency advice, spend/payment, intake/outbound activation or REAL outcome. This grouped documentation-only commit uses [skip ci]; no new exact-head CI/deployment pass is claimed.
 
+
+
+## 2026-11-10 05:04 NPT — D99/D100 trade-economy research and NSO source boundary
+
+- Run-start main `950f3b673c6985f91d816b0c2faa07bd3b27b061`; source-bearing code remains `c8da700db9e7619bf058b5010b99d57884420f7`, with 33 documentation-only commits after it. No source edit; portfolio helper remains NOT IMPLEMENTED.
+- Deepened existing D99/D100 using NSO's Distributive Trade Survey 2022 and the FY2082/83 Q4 statistical bulletin. The trade survey provides a national/provincial aggregate baseline (1,130,645 persons engaged; 80.58% unpaid; average annual operating cost NPR 264,373 per establishment) but no published daily shop-hours/admin-time result. Its reference period is FY2020/21 despite the 2022 title, Feb 2024 print date and 2026 catalog record.
+- Trade margin is not net profit and was not weighted due to missing CPC weights. Owner/family unpaid labour is not fully priced by wage/operating-cost figures. D99/D100 remain UNKNOWN.
+- NLFS IV 2082/83 Q4 progress: 304/920 enumeration areas complete at the report snapshot, 184 during Q4; FY2083/84 fieldwork plan prepared. The Q4 microdata-sales table's four “NLFS 2079” sales conflict with the available-microdata list and catalog history, which show only NLFS I/II/III. Keep unresolved.
+- NSO source is manual-only/NOT CLEARED: NDTS raw dataset internal-only, data portal no licence, microdata policy restricts licensed files to statistical/scientific aggregated use and prohibits re-identification/linkage; robots endpoints unavailable. No source registration, microdata request, automated collection or provider transmission.
+- Prepared the source-time JSON provenance extension in the existing Signal→Evidence→assessment→citation seam; implementation remains blocked by source-edit safety. No new table/model/primitive/collector.
+- Exact 950f3b gates: CI 42541503472 failed 3/9 (backend 53 failed/1,302 passed/2 skipped; frontend and repo guards failed); secret scan 42541503318 passed; independent verifier 42541503473 failed production fetch HTTP 402. Vercel status account-blocked; team/project reads 403. No runtime health probe due the known health-handler side effect.
+- Portfolio D1–D100 remains 100/100 metadata-surveyed; D101–D106 separate; open ResearchQuestion count UNKNOWN behind owner-key. No new rows.
+- No external contact, private data, publication, alert, spend/payment, intake/outbound activation, production-setting change or REAL outcome.
+

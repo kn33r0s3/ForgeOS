@@ -1,3 +1,20 @@
+## Current Hami-wide queue — 2026-11-10 05:04 NPT (run-start main SHA `950f3b673c6985f91d816b0c2faa07bd3b27b061`)
+
+1. **P0 — Preserve source-edit safety and prepare one grouped source-time change.** Do not repeat the blocked `research_planner.py` write or use another mutation route. When supported source editing is restored, extend the existing provenance JSON contract through normalization → Signal → Evidence → assessment → citation; add round-trip and unknown-date regressions. No new model/table/primitive/collector.
+2. **P0 — Restore normal Vercel deployment and observability through ordinary authorization.** Current GitHub status is account-blocked; team/project listing and runtime records return 403; latest observed READY deployment is old SHA 6076690f; exact-head verifier failed HTTP 402. No protection bypass, manual health route, or permission workaround.
+3. **P0 — Repair exact-head CI without weakening source rights.** Reconcile D1–D106 generated projections and importer expectation; make expired-clearance tests deterministic with TEST clocks rather than renewing production clearances; then isolate licensed-abstract, monitoring-cache and multi-judge failures. Source access stays fail-closed.
+4. **P1 — D93 Gorkha–Budhi Gandaki source bodies and restoration.** Official #2/#3/#4 report pages exist, but their PDF bodies remain unread and /464 versus /465 identity remains unresolved. Seek direct official report bodies and dated road/power/municipal restoration records; no emergency advice or alerts.
+5. **P1 — D94 Sintaphu event evidence chain.** Seek dated NCHM warning/telemetry and downstream receipt evidence through permitted public sources; obtain the actual SACHET CAP feed ID and exact rights scope before integration. No alert or emergency advice.
+6. **P1 — D98 missing-person aggregate and PDNA reconciliation.** Keep aggregate-only; resolve source cutoffs, district count mismatches, official PDNA body and needs/commitments/disbursements. Never access/export person-level records or give legal advice.
+7. **P1 — D99/D100 trade-work and owner-time evidence.** Use the NSO NDTS 2022 public report as a bounded aggregate baseline, not as a current solo-shop diary. Resolve the “NLFS 2079” sales-row versus available-catalog discrepancy; monitor the NLFS IV release after its 2082/83 fieldwork progress snapshot. No microdata request or automated collection.
+8. **P1 — NSO source-rights review.** Keep NDTS/NLFS sources manual-only and NOT CLEARED until exact robots, terms, intended operation, field, retention and provider-use scopes are reviewed. The NDTS raw record is internal-only; public aggregate pages provide no licence.
+9. **P1 — Continue independent research, security/privacy, reliability, integration and quality tracks.** Preserve D1–D100 portfolio coverage and D101–D106 additions; operational open ResearchQuestion count remains UNKNOWN behind owner-key access. Do not let one blocked source or seller path freeze other work.
+10. **P2 — Retire the stale feature branch only through a supported action.** `feature/governed-offers` has no unique commits and is 908 behind main; no delete-branch action is exposed. Do not use an alternate path.
+
+No external contact, source collection, person-level data, body persistence, provider transmission, publication, alert, spend, payment, intake/outbound activation, manual route or access-control bypass is authorized by this queue.
+
+---
+
 ## Current Hami-wide queue — 2026-11-09 05:09 NPT (run-start main SHA `47b1c7a57e52e150e92a437c1310b4f5ed4d0499`)
 
 1. **P0 — Preserve source-edit safety; prepare one grouped source/test repair for the supported path.** Do not repeat the blocked research_planner write or bypass it. When supported editing is restored, reconcile D1–D106 projections/importer expectation, review expired source clearances individually, then inspect licensed-abstract, monitoring-cache, multi-judge and public-value/planner failures. Do not extend rights for green CI.
