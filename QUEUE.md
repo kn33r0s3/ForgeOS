@@ -1,3 +1,18 @@
+## Current Hami-wide queue — 2026-11-11 05:18 NPT (run-start main SHA `45a86cda8636217ee54c5897cb9ab1c4e4402a7c`)
+
+1. **P0 — Preserve source-edit safety.** Do not retry `research_planner.py::summarize_research_portfolio` or route the blocked source mutation through another tool. It remains NOT IMPLEMENTED.
+2. **P0 — Exact-head CI repair without weakening source rights.** `45a86cda` CI failed 3/9: backend 53 failed / 1,302 passed / 2 skipped; frontend and repository guards fail on `docs/UNKNOWN_MAP.md` projection drift. Backend groups include expired Crossref/GDELT/OpenAlex/World Bank clearances and dependent fail-closed paths, importer/projection expectations, licensed-abstract fixture, monitoring/multi-judge and dependent planner/public-value assertions. CI install log also reports 15 npm advisories including one critical; inspect package-level audit before changes.
+3. **P0 — Deployment access.** Exact-head deploy verifier returned HTTP 402; Vercel status says Account is blocked. Use only ordinary authorized account recovery; no bypass or manual health-route mutation.
+4. **P1 — D96 Dhungesanghu shared-node crosswalk.** Keep Sitalpati–Dhungesanghu (48 km / approx. 600 MW, IEE EOI), Tamor–Dhungesanghu (32 km / 700 MW DoED record; RPGCL page says 60 circuit-km), Amarpur–Dhungesanghu (132 kV / 19.13 km / 200 MW field) and the commissioned Basantapur–Dhungesanghu segment separate. Find Sitalpati post-EOI shortlist/award/IEE and dated Amarpur post-July status; do not infer congestion or failure.
+5. **P1 — D96 technical/operational evidence.** Seek public official single-line diagram, voltage/bay schedule, connection agreement, current operating flows and actual curtailment/transfer data. Do not compare 132/33 kV transformer MVA with 220 kV MW evacuation estimates or infer headroom from licence fields.
+6. **P1 — Existing provenance capability.** When supported source editing is restored and exact-source rights are cleared, preserve page update, report/EOI date, source-declared effective cutoff, record date, licence validity, project stage, voltage, units/metric definition, scope and retrieval time through normalize → Signal → Evidence → assessment → citation. Existing seam only; round-trip regressions; no new model/table/primitive/collector.
+7. **P1 — Continue independent WASH, D93/D94/D98, D99/D100 and broad discovery tracks.** No single D96 project, seller path or revenue event gates Hami-wide progress. Preserve UNKNOWN and source boundaries.
+8. **P2 — Archived branch.** `feature/governed-offers` remains in the remote branch list but prior comparison found no unique commits; no supported delete-branch action is exposed. No alternate deletion path.
+
+No external contact, collection, private-record request, provider transmission, publication, alert, spend/payment, intake/outbound activation, production-setting change or access-control bypass is authorized by this queue.
+
+---
+
 ## Current Hami-wide queue — 2026-11-11 05:07 NPT (run-start main SHA `d126d45de500170944abfae12d31df08a8c0df4c`)
 
 1. **P0 — Preserve source-edit safety.** Do not retry the blocked `research_planner.py::summarize_research_portfolio` source write through another route. It remains NOT IMPLEMENTED.
