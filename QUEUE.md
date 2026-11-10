@@ -1,3 +1,19 @@
+## Current Hami-wide queue — 2026-11-11 04:50 NPT (run-start main SHA `9060dfce4e6a5d9fe40f3fe1ca6c29ecc38a0286`)
+
+1. **P0 — Preserve source-edit safety.** Do not retry `research_planner.py::summarize_research_portfolio` or route the same source mutation through another tool. The helper remains NOT IMPLEMENTED. Wait for a supported source-edit path; then make one grouped, regression-covered change in the existing provenance seam.
+2. **P0 — Reconcile exact-head CI without weakening source rights.** `9060dfc` CI failed 3/9: 53 backend failures, generated unknown projections out of sync, importer D104-versus-122 expectation, licensed-abstract fixture mismatch, monitoring-cache/multi-judge and dependent fail-closed paths. Review source clearances individually; do not renew or broaden them just to make tests green.
+3. **P0 — Restore deployment observability only through ordinary authorization.** Exact-head deploy verifier returned HTTP 402; GitHub Vercel status says Account is blocked. No protection bypass, manual health route or permission workaround.
+4. **P1 — D96 Nepal generation-to-grid crosswalk.** Use the existing DoED registry pages as manual-only evidence; resolve project/line aliases, stage, endpoints, source dates and current status. No claim of bottleneck, energization or capacity until separately evidenced. DoED is NOT CLEARED for automated collection.
+5. **P1 — WASH primary report and service-chain reconciliation.** Retrieve the NSO 753-municipality report/index and NWASH 326-municipality classification sheet; resolve the 326/346 label and FSTP source contradictions; keep local operational status UNKNOWN without dated records.
+6. **P1 — D93/D94/D98 recovery and hazard evidence.** Continue official report-body, restoration, NCHM warning/telemetry and aggregate PDNA/missing-list reconciliation. No emergency advice, alerting, or person-level data.
+7. **P1 — D99/D100 trade-work and owner-time.** Keep NSO aggregate baseline separate from current shop-level evidence; resolve the NLFS “2079” catalog discrepancy. No microdata request or automated collection.
+8. **P1 — Continue independent discovery and capability/reliability/security/privacy/integration/quality tracks.** Preserve D1–D100 and D101–D106; operational open ResearchQuestion count remains UNKNOWN behind owner-key access. No single research item or seller path gates Hami-wide progress.
+9. **P2 — Stale feature branch.** Prior comparison found no unique work in `feature/governed-offers`; no supported branch-delete action is exposed. Do not use an alternate route.
+
+No external contact, source collection, private-record request, provider transmission, publication, alert, spend/payment, intake/outbound activation, production-setting change or access-control bypass is authorized by this queue.
+
+---
+
 ## Current Hami-wide queue — 2026-11-10 05:25 NPT (run-start main SHA `8d3f4f39856f3c2e6e7d048be040dbc351f559bb`)
 
 1. **P0 — Preserve source-edit safety.** Do not retry the blocked `research_planner.py` helper or route the same source mutation through another tool. When the supported source-edit path is restored, make one grouped source-time provenance change with normalization → Signal → Evidence → assessment → citation regressions.
