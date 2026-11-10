@@ -1,3 +1,16 @@
+## Current Hami-wide queue — 2026-11-11 05:07 NPT (run-start main SHA `d126d45de500170944abfae12d31df08a8c0df4c`)
+
+1. **P0 — Preserve source-edit safety.** Do not retry the blocked `research_planner.py::summarize_research_portfolio` source write through another route. It remains NOT IMPLEMENTED.
+2. **P0 — Exact-head CI repair.** `d126d45d` CI failed 3/9: backend 53 failed / 1,302 passed / 2 skipped; frontend and repository guards fail on unknown-projection drift. Resolve importer/projection consistency, expired source-clearance tests, licensed-abstract projection and monitoring/planner regressions without weakening source rights or hand-editing generated projections.
+3. **P0 — Deployment access.** Independent verifier returned HTTP 402; Vercel status says Account is blocked. Use only ordinary authorized account recovery; no bypass or manual health-route mutation.
+4. **P1 — D96 Amarpur–Dhungesanghu current status.** Reconcile DoED licence `194` with NEA FY2025/26 report progress as of July 2026 (60/67 foundations, 29 erections, no stringing; FY2026/27 target). Find a dated official post-July completion/energization update; verify actual flow/curtailment and capacity semantics before claims. NEA/DoED manual-only, NOT CLEARED.
+5. **P1 — D96 project-to-grid crosswalk.** Preserve the Phukot generation/line/E-flow and regional corridor distinctions; connect only evidenced project/line/substation/promoter/route/status relationships. No new D-number.
+6. **P1 — WASH, D93/D94/D98, D99/D100 and broad discovery.** Continue independent source-backed tracks; no single issue, seller path or revenue event gates Hami-wide work.
+7. **P1 — Provenance capability when source editing is restored.** Preserve page update, publication date, source-declared effective cutoff, record date, licence validity, retrieval time and scope separately through normalize → Signal → Evidence → assessment → citation. Add round-trip regressions in the existing seam only.
+
+No external contact, collection, private-record request, provider transmission, publication, alert, spend/payment, intake/outbound activation, production-setting change or access-control bypass is authorized by this queue.
+
+---
 ## Current Hami-wide queue — 2026-11-11 04:50 NPT (run-start main SHA `9060dfce4e6a5d9fe40f3fe1ca6c29ecc38a0286`)
 
 1. **P0 — Preserve source-edit safety.** Do not retry `research_planner.py::summarize_research_portfolio` or route the same source mutation through another tool. The helper remains NOT IMPLEMENTED. Wait for a supported source-edit path; then make one grouped, regression-covered change in the existing provenance seam.
