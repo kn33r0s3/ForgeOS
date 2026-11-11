@@ -1,3 +1,19 @@
+## Current Hami-wide queue — 2026-11-12 04:49 NPT (run-start main SHA `7b8c7a5413fa25d7f63789f34853fc6f6454ee9f`)
+
+1. **P0 — Exact-head verification.** Obtain CI, secret scan and independent deployment verification for current `main`; the 7b8c7a5 head has only a Vercel failure status and no surfaced Actions run. The latest ancestor CI failed 3/9; 7b8c7a5 updated generated projections but has no verification result. Do not call it green.
+2. **P0 — Deployment/runtime access.** Vercel team-scope read is 403 and the status says Account is blocked. Use ordinary authorized account recovery only; no bypass, secret extraction or manual health-route mutation.
+3. **P0 — Preserve source-edit safety.** Do not retry `research_planner.py::summarize_research_portfolio` or route that blocked source write through another tool. It remains NOT IMPLEMENTED.
+4. **P1 — Reusable source-time/provenance capability.** When a supported source-edit path exists, preserve source-declared effective cutoff/period, report/resource version, page, scope, unit, denominator and method through normalize → Signal → Evidence → assessment → citation. Protect registry-owned rights fields; retain publication/retrieval separately; do not infer claim support from metadata. Reuse Claim/EvidenceRelationship; no new model/table/primitive/collector.
+5. **P1 — D95 cold-chain/public-asset crosswalk.** Keep PMAMP/NAMP and Lumbini OAG inventories separate. Obtain stable asset identity, programme, location, operator, commissioning, handover, current operation, commodity compatibility, utilization period, energy/maintenance and transport dependencies. Reconcile the 87/90 and 5/10MT report variants without averaging. D95 remains UNKNOWN; no contact or intervention.
+6. **P1 — Per-source rights review.** PMAMP/NAMP/PIU/OAG remain manual-only; robots/terms/reuse scope unresolved and no registry entry exists. Review one exact source/operation/field set at a time; no blanket government-domain approval.
+7. **P1 — Independent Hami-wide tracks.** Continue D96 grid identity/operational evidence, WASH service chains, D93/D94 recovery and warning provenance, trade/export, migration/labour, household finance, resource discovery and other existing questions. No single track gates the system.
+8. **P1 — Portfolio integrity.** D1–D100 metadata survey complete; D101–D108 remain separately UNKNOWN where applicable. Operational open ResearchQuestion count is UNKNOWN behind owner-key access. Do not inflate rows or invent empirical evidence.
+9. **P2 — Archived branch.** `feature/governed-offers` remains an archived remote ref beside canonical `main`; no delete action or branch mutation was used.
+
+No external contact, private-record request, publication, alert, diagnosis/advice, spend/payment, intake/outbound activation, production-setting change, source ingestion or provider transmission is authorized by this queue.
+
+---
+
 ## Current Hami-wide queue — 2026-11-11 06:27 NPT (run-start main SHA `368f8ca8dee8ec1493b4a92c689709771ab02ba5`)
 
 1. **P0 — Preserve source-edit safety and projection contracts.** Do not retry `research_planner.py::summarize_research_portfolio`, route the blocked mutation through another tool, or rewrite generated unknown projections to satisfy stale tests. Keep the blocked helper NOT IMPLEMENTED.
