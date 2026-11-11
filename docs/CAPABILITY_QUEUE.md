@@ -1,3 +1,23 @@
+## 2026-11-12 05:22 NPT — D93 local road-access notice metadata (manual-only; D93 remains UNKNOWN)
+
+### Evidence-quality delta
+- **Dharche Rural Municipality official notice:** https://www.dharchemun.gov.np/node/1300 lists “सडक अवरुद्ध हुने सम्बन्धी सूचना” (road-blockage notice), submitted 13 Oct 2026 at 13:52 NPT, FY 2083/84. The accessible page exposes only the title and submission timestamp. No route/road segment, cause, relation to the 11 Oct flood, start/end of closure, reopening, attachment or current status is visible. Treat it as an official metadata lead only, not evidence of a particular flood-caused closure or restoration.
+- **Ministry of Energy notice #454 recheck:** https://moewri.gov.np/content/454/relation-to-the-sudden-flood/ was directly opened on 12 Nov. It shows the title concerning sudden Budhi Gandaki flooding and hydropower-infrastructure damage and date 28 Asoj 2083 / 14 Oct 2026, but no substantive body or attachment. The www-host variant still times out; its earlier 25 Asoj search snippet conflicts with the non-www 28 Asoj listing date. This remains unresolved page/host metadata, not a source-effective cutoff or signed revision.
+- **NDRRMA report sequence:** #04 /468 still gives a 16 Oct 10:00 NPT cutoff at metadata level, but its page has no readable lines and the PDF body remains unread. A 12 Nov targeted search for #05/later and direct opens of /469–/471 surfaced no readable event-specific report. This is a bounded non-result, not proof of absence. #03 /466–/467 is one report in two language variants; its PDF was inspected page-by-page on 20 Oct.
+- No independent operator/municipal source corroborates the Dharche notice's road, cause, duration or reopening. No restoration status, contradiction or operational coordination failure is established.
+
+### Real-world consequence and six-primitive connection
+- The only named affected entity in the new record is Dharche Rural Municipality as publisher. The road asset, route, users and affected services are not identified. If the notice concerns an affected route, connectivity can influence access to services, goods and livelihoods; that consequence is plausible but not observed in this record.
+- Reuse the six canonical primitives only: ENTITY (Dharche Rural Municipality; road/route remains unidentified); RELATION (municipality publishes notice; route-to-service relations remain UNKNOWN); EVENT (notice submitted 13 Oct; any closure/reopening event remains UNKNOWN); EVIDENCE (exact page, title, submitted time, missing body, rights and retrieval); CAPABILITY (source-aware local access record reconciliation with distinct publication/submission/effective/retrieval times); ACTION (internal review only unless separately authorized).
+- No new D-number, taxonomy, collector, model, table or parallel ledger is justified.
+
+### Existing seam, source rights and next lawful dependency
+- Existing path: SourceCollector.normalize → collector_runner.execute_task → ObserverEngine.observe/_ensure_evidence → Signal → Evidence → research_evidence_assessment.assess_source_record → research_synthesis_engine._evidence_citation. Signal/Evidence already have published_at, retrieved_at and provenance. Non-empty explicit provenance can omit metadata-only fields; freshness compares publication date with retrieval time; citation does not expose source-effective cutoff, page/version, scope, unit or method. Claim/EvidenceRelationship and supports/contradicts links already exist, but the link writer does not prove source-body support.
+- Dharche www/non-www robots endpoints and privacy-policy path were inaccessible through the browser route. No applicable terms/content-reuse grant was found; footer displays ©2026. The source is NOT CLEARED for automated collection, body retention or provider transmission. No runtime registry entry exists. NDRRMA and MoEWRI remain NOT CLEARED under existing source-register determinations.
+- Next lawful evidence: a readable official Dharche notice body/attachment or a separately dated official road/operator reopening notice; an accessible NDRRMA #04 PDF or later event-specific report; and an official Gorkha-specific power/restoration notice. If no body is available, preserve metadata-only UNKNOWN. No external contact, emergency advice or alerting action.
+
+---
+
 ## 2026-11-12 04:49 NPT — D95 cold-chain asset/service-network crosswalk (manual-only; D95 remains UNKNOWN)
 
 ### Evidence-quality delta

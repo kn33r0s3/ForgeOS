@@ -267,3 +267,14 @@ The 2019 inventory's Mo_gl 234 / Sintaphu Tsho and the 2023 inventory's Mo_gl 37
 
 These findings strengthen the existing source-time/identity capability candidate; they do not establish actual event-time telemetry, warning issue/receipt, current station uptime or restoration. D94 remains UNKNOWN. No source ingestion or operational action.
 
+
+
+## Evidence addendum — 2026-11-12 (D93 local road-access metadata; restoration remains UNKNOWN)
+
+The structured D1–D108 table remains unchanged; D93 remains UNKNOWN. Dharche Rural Municipality's official page https://www.dharchemun.gov.np/node/1300 lists a “सडक अवरुद्ध हुने सम्बन्धी सूचना” (road-blockage notice) submitted 13 Oct 2026 at 13:52 NPT. The accessible page exposes only title/date; no route, cause, flood attribution, duration, reopening, attachment or current condition is visible. The notice does not establish that a road was blocked by the 11 Oct event, and it is not a restoration notice.
+
+The Ministry of Energy's non-www notice #454 page was re-opened on 12 Nov and still shows only the title and 28 Asoj 2083 / 14 Oct 2026 date; its www-host variant still times out and the earlier 25 Asoj search snippet remains unresolved. NDRRMA #04 /468 still exposes no readable body; targeted #05/later search and direct /469–/471 opens produced no readable event-specific report. A bounded no-result is not proof of absence.
+
+No independent road operator/municipal record corroborates a specific route status or restoration. Current passability, power restoration, affected users, and any coordination failure remain UNKNOWN. The Dharche robots/privacy/terms review did not establish collection permission; manual metadata-only review, NOT CLEARED. No body was persisted or sent to a provider.
+
+No structured row or generated projection changed. Any future structured D93 row change must use the existing sync-unknowns path; do not hand-edit backend/app/data/unknowns.json or src/lib/unknowns.ts.

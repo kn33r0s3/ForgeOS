@@ -1,3 +1,17 @@
+## Current Hami-wide queue — 2026-11-12 05:22 NPT (run-start main SHA 13d36e7c6f23f2ffe08858ba2d64e786e8edbbc6)
+
+1. **P0 — Preserve source-edit safety.** Do not retry research_planner.py::summarize_research_portfolio or route the blocked mutation through another tool. It remains NOT IMPLEMENTED.
+2. **P0 — Repair exact-head CI through supported paths only.** CI 43119394619 has one failing job (backend): 53 failed / 1,302 passed / 2 skipped / 18 warnings. Separate the expired-clearance fail-closed cascades from stale importer/licensed-abstract fixtures and independent monitoring-cache/multi-judge failures. Review source rights individually; do not renew or broaden clearances merely to pass tests.
+3. **P0 — Deployment access.** Verifier 43119394455 returned HTTP 402 while fetching production content; Vercel status says Account is blocked and team-scoped read returned 403. Use ordinary authorized account recovery only; no bypass or manual health-route mutation.
+4. **P1 — D93 Gorkha–Budhi Gandaki recovery information.** Obtain readable official NDRRMA #04 body/PDF and check #05/later only through official routes. Inspect Dharche Rural Municipality notice #1300 only if its body/attachment becomes accessible; it currently supplies title/date only and is not proven flood-related. Seek dated road/power/municipal restoration evidence. No result is not proof of absence; do not infer current passability, restoration or coordination failure.
+5. **P1 — Existing source-time/provenance capability.** When supported source editing and exact-source rights permit, preserve source-declared effective cutoff/period, page/report version, scope, unit, denominator and method through normalize → Signal → Evidence → assessment → citation. Protect registry-owned rights fields; keep publication and retrieval separate; never infer claim support from metadata. Reuse existing Claim/EvidenceRelationship; no new model/table/primitive/collector.
+6. **P1 — Continue independent Hami-wide work.** Keep D95 public assets/cold chain, D96 grid, WASH, D94 warning evidence, D98 disaster credit/insurance, D99/D100 trade/labour, household finance and other resource/capability tracks moving independently. No single experiment or revenue event gates the system.
+7. **P2 — Archived branch.** feature/governed-offers remains a remote archive beside main; no branch deletion or alternate branch/worktree was attempted.
+
+No external contact, private-record request, source ingestion, provider transmission, publication, alert, diagnosis/advice, spend/payment, intake/outbound activation, production-setting change or access-control bypass is authorized by this queue.
+
+---
+
 ## Current Hami-wide queue — 2026-11-12 04:49 NPT (run-start main SHA `7b8c7a5413fa25d7f63789f34853fc6f6454ee9f`)
 
 1. **P0 — Exact-head verification.** Obtain CI, secret scan and independent deployment verification for current `main`; the 7b8c7a5 head has only a Vercel failure status and no surfaced Actions run. The latest ancestor CI failed 3/9; 7b8c7a5 updated generated projections but has no verification result. Do not call it green.
