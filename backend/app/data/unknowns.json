@@ -995,9 +995,9 @@
    "category": "D",
    "question": "During weather shocks, where is the largest avoidable loss of agricultural and livelihood value: decision information, planting timing, harvest, storage, transport, or market coordination? (cross-domain scan, 2026-10-12: the World Bank reports FY26 agricultural growth slowed to 1.6% and paddy production contracted 4.2%, affected by drought and excessive rainfall)",
    "state": "UNKNOWN",
-   "state_note": "UNKNOWN (L1 orientation only: national production figures establish exposure, not a specific farm-level bottleneck, recoverable value, or demand for a solution. Source: [World Bank, 2026-10-06](https://www.worldbank.org/en/news/press-release/2026/10/06/nepal-s-growth-projected-to-slow-following-devastating-rasuwa-flood))",
-   "cheapest_test": "Compare open weather, crop-calendar, production, storage and market records to locate a specific falsifiable failure point; then seek consented, relevant first-hand evidence before proposing an intervention",
-   "stake": "Could expose a high-consequence value path across food, time, resources, and livelihoods. If the binding constraints are weather, input access or infrastructure rather than information/coordination, Hami must not pretend its software alone can resolve them."
+   "state_note": "UNKNOWN (new official evidence: Lumbini OAG FY2080/81 reports 17 completed cold stores with 11,425MT capacity, 1,200MT used and 3 non-operating; FY2081/82 reports 3 completed/950MT not continuous and 2 under construction/1,000MT. No stable asset IDs or current November 2026 operating status. Separate from national PMAMP/NAMP counts; do not aggregate programme totals.)",
+   "cheapest_test": "Crosswalk official Lumbini facility/project IDs, commissioning, operator, handover and utilization across OAG reports; separately inspect current NAMP/PIU FY2082/83 publications and preserve programme identity and source-time scope. Manual-only until source rights are reviewed.",
+   "stake": "Could identify public assets that may be repaired, commissioned, transferred or matched to crop/logistics demand; aggregate capacity alone is not live supply or proof of market demand."
   },
   {
    "id": "D96",
@@ -1097,7 +1097,25 @@
    "state_note": "UNKNOWN",
    "cheapest_test": "Ask 5 buyers: \"when you wanted something online, how many pages did you message before buying?\"; ask sellers whether repeat inquirers who buy elsewhere ever return",
    "stake": "If parallel inquiry is the norm, the wedge's edge is being first to answer, not winning back a lost buyer — and D101's window is a race, not a grace period"
+  },
+  {
+   "id": "D107",
+   "category": "D",
+   "question": "When a Nepali buyer messages several pages about the same product, what decides the sale — reply speed or price? (round 23: Bangladeshi FB-commerce discourse says first reply wins at a 1–1.5 hour losing lag AND cheapest quote wins when prices differ; the two mechanisms were never separated, and no Nepali voice surfaced)",
+   "state": "UNKNOWN",
+   "state_note": "UNKNOWN",
+   "cheapest_test": "Ask 5 buyers: \"when you messaged several pages, did you buy from the one who answered first or the one who quoted cheapest?\"; ask 5 sellers for their last 10 multi-page inquiries: speed-won vs price-won",
+   "stake": "Decides whether D101's window is a race, a price comparison, or both at once — and whether the reply-rescue wedge only wins the subset where the seller's price is already competitive"
+  },
+  {
+   "id": "D108",
+   "category": "D",
+   "question": "Do Nepali sellers recognize parallel inquirers (\"quote-fishers\") and triage them — what signals do they use, and does triage save time or lose buyers? (round 23: sellers elsewhere report 4–10 non-buying detailed inquiries a day and plead for buyers to say when they buy elsewhere; round 21's D104 asks what share of unanswered is triage, but no round has asked what the triage criterion is)",
+   "state": "UNKNOWN",
+   "state_note": "UNKNOWN",
+   "cheapest_test": "In the five conversations: \"how do you tell a buyer who is comparing prices from one who is ready to buy — and do you answer them differently?\"; ask 3 sellers to sort one week's threads by first-message shape (price-only vs product-detail)",
+   "stake": "If parallel inquiry is the triage criterion, the wedge inherits the seller's filter, not the buyer's loss — and \"answer everyone faster\" would spend the rescued hours on shoppers who were never going to buy"
   }
  ],
- "last_loop": "2026-11-04"
+ "last_loop": "2026-11-11"
 }
