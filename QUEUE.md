@@ -1,4 +1,19 @@
-## Current Hami-wide queue — 2026-11-11 05:18 NPT (run-start main SHA `45a86cda8636217ee54c5897cb9ab1c4e4402a7c`)
+## Current Hami-wide queue — 2026-11-11 06:27 NPT (run-start main SHA `368f8ca8dee8ec1493b4a92c689709771ab02ba5`)
+
+1. **P0 — Preserve source-edit safety and projection contracts.** Do not retry `research_planner.py::summarize_research_portfolio`, route the blocked mutation through another tool, or rewrite generated unknown projections to satisfy stale tests. Keep the blocked helper NOT IMPLEMENTED.
+2. **P0 — Exact-head CI/security repair without weakening source rights.** Current run `42933119133`: backend 53 failed / 1,302 passed / 2 skipped; frontend and repository guards fail on generated projection drift. Investigate each failure against current contracts and source rights. Review the 15 npm advisories (including one critical) before any dependency change; no automatic fix.
+3. **P0 — Deployment access.** Exact-head deploy verifier `42933119117` returned HTTP 402; Vercel status says Account is blocked. Use only ordinary authorized account recovery; no bypass or manual health-route mutation.
+4. **P1 — D95 plant-clinic/service-network evidence.** Retrieve the Koshi DoAD FY2082/83 annual-report body and Okhaldhunga's FY2082/83 district report. Reconcile FY2080/81 93-vs-402 household conflict, FY2081/82 366/571 extracted versus 386/751 visible narrative, 640-vs-650 soil-sample text-layer mismatch, and 4-vs-3 meeting count. Verify current FY2083/84 programme selection/implementation only from dated official public records. D95 remains UNKNOWN; no new D-number/ResearchQuestion.
+5. **P1 — Existing source-aware provenance capability.** When supported source editing is restored and exact-source rights are cleared, preserve source-declared effective cutoff, page/report version, scope, metric definition, unit and aggregation through normalize → Signal → Evidence → assessment → citation. Reuse existing fields/seams and add round-trip tests; no new model/table/primitive/collector.
+6. **P1 — D96 Dhungesanghu.** Continue the separate line/project identity crosswalk and seek official post-July-2026 Amarpur completion/energization status, Sitalpati IEE procurement result and actual flow/curtailment evidence. Do not infer congestion or operational failure.
+7. **P1 — Continue independent WASH, D93/D94/D98, D99/D100 and broad cross-domain discovery.** No single D95/D96, seller path or revenue event gates Hami-wide progress.
+8. **P2 — Archived branch.** `feature/governed-offers` remains in the remote branch list; prior comparison found no unique commits and no supported delete action is exposed. No alternate deletion path.
+
+No external contact, farmer-data request, private-record request, provider transmission, publication, alert, diagnosis/advice, spend/payment, intake/outbound activation, production-setting change or access-control bypass is authorized by this queue.
+
+---
+
+## Previous Hami-wide queue — 2026-11-11 05:18 NPT (run-start main SHA `45a86cda8636217ee54c5897cb9ab1c4e4402a7c`)
 
 1. **P0 — Preserve source-edit safety.** Do not retry `research_planner.py::summarize_research_portfolio` or route the blocked source mutation through another tool. It remains NOT IMPLEMENTED.
 2. **P0 — Exact-head CI repair without weakening source rights.** `45a86cda` CI failed 3/9: backend 53 failed / 1,302 passed / 2 skipped; frontend and repository guards fail on `docs/UNKNOWN_MAP.md` projection drift. Backend groups include expired Crossref/GDELT/OpenAlex/World Bank clearances and dependent fail-closed paths, importer/projection expectations, licensed-abstract fixture, monitoring/multi-judge and dependent planner/public-value assertions. CI install log also reports 15 npm advisories including one critical; inspect package-level audit before changes.
@@ -12,6 +27,7 @@
 No external contact, collection, private-record request, provider transmission, publication, alert, spend/payment, intake/outbound activation, production-setting change or access-control bypass is authorized by this queue.
 
 ---
+
 
 ## Current Hami-wide queue — 2026-11-11 05:07 NPT (run-start main SHA `d126d45de500170944abfae12d31df08a8c0df4c`)
 

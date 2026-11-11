@@ -1,4 +1,21 @@
-## Current state — 2026-11-11 05:18 NPT (run-start main SHA `45a86cda8636217ee54c5897cb9ab1c4e4402a7c`)
+## Current state — 2026-11-11 06:27 NPT (run-start main SHA `368f8ca8dee8ec1493b4a92c689709771ab02ba5`)
+
+- **Mission:** settled and open-ended. Hami discovers, understands, connects, protects, creates and realizes value across domains/geographies. No seller pilot, single market, event or revenue experiment gates unrelated Hami-wide work.
+- **Main/source:** run-start main `368f8ca8dee8ec1493b4a92c689709771ab02ba5`; source-bearing code SHA `c8da700db9e7619bf058b5010b99d57884420f7`. Main is 41 commits ahead, zero behind; all intervening changes are documentation-only. No application source, test, schema, scheduler or production-config change.
+- **Exact-head verification:** ForgeOS CI `42933119133` failed 3/9 jobs; backend 53 failed / 1,302 passed / 2 skipped / 18 warnings; frontend and repository guards fail on generated unknown-projection drift. CI install reports 15 npm advisories (2 low, 8 moderate, 4 high, 1 critical). Secret scan `42933119175` passed. Independent deploy verifier `42933119117` failed HTTP 402; Vercel status says Account is blocked. No exact-head deploy/runtime-health pass.
+- **Source-edit boundary:** `research_planner.py::summarize_research_portfolio` remains NOT IMPLEMENTED; source-edit safety remains blocked. No bypass, generated projection rewrite or source/test mutation. No local tests run.
+- **D95 update — still UNKNOWN:** FY2080/81 Okhaldhunga book has a table/narrative 93-versus-402 household conflict and a 84+11-versus-93 arithmetic conflict. FY2081/82 book's visible narrative reports 10 clinics / 386 households / 751 samples, while a separate extracted block says 366 / 571; soil-test page visually shows 640 samples / 431 households and category counts sum to 640, while the text layer says 650. The report also contains 24 price-collection sessions and a 4-versus-3 coordination-meeting difference. Keep source/page/metric variants separate.
+- **D95 current context:** FY2082/83 approved programme lists 10 clinics and 24 market-price collections (plan only). FY2083/84 Okhaldhunga calls for coffee, citrus, kiwi and organic programmes were dated 2083-06-08 with 2083-06-28 deadline; no selection/result surfaced in bounded index search. Koshi DoAD says 14 AKCs, three labs and one training centre serve 14 districts; it lists FY2082/83 annual and FY2083/84 Bhadra progress reports, bodies unread. No independent clinic-count corroboration or current clinic availability established.
+- **Value and unknowns:** the reports document a public extension/plant-health service mechanism and farmer reach, but no crop loss avoided, diagnosis accuracy, referral completion, yield gain or income outcome. No coordination failure is demonstrated. D95 remains UNKNOWN; no new D-number/ResearchQuestion because generated projections are already out of sync.
+- **Existing seam:** SourceCollector.normalize → collector_runner → ObserverEngine → Signal/Evidence → evidence assessment → citation. Signal/Evidence already store published_at, retrieved_at and JSON provenance. Explicit provenance can replace metadata; freshness is publication-versus-retrieval; citation lacks source-effective cutoff, page/version, measurement unit and aggregation method. This is a contract risk, not proof of live data loss.
+- **Rights:** Okhaldhunga and DoAD robots endpoints were inaccessible; no exact terms/reuse grant or source-registry entry exists. Manual reading/citation only; NOT CLEARED for automated collection, source-body retention, Hami ingestion or provider transmission. No source body was persisted or sent to a provider.
+- **Other tracks:** D96 Dhungesanghu crosswalk and the existing WASH, disaster, livelihood, public-asset and broad discovery tracks remain independent. No single track gates Hami-wide work.
+- **Actions not taken:** no code/test changes, external contact, farmer-data request, field visit, source registration, provider transmission, diagnosis/advice, alert, publication, spend/payment, intake/outbound activation or production setting change.
+- **Next:** retrieve DoAD FY2082/83 annual report body and Okhaldhunga FY2082/83 district report; verify current FY2083/84 programme selection/implementation from public official records; keep all unresolved counts UNKNOWN and continue broad discovery.
+
+---
+
+## Previous state — 2026-11-11 05:18 NPT (run-start main SHA `45a86cda8636217ee54c5897cb9ab1c4e4402a7c`)
 
 - **Mission:** settled and open-ended. Hami discovers, understands, connects, protects, creates and realizes value across domains/geographies. No seller pilot, single market, event or revenue experiment gates unrelated Hami-wide work.
 - **Main/source:** main `45a86cda8636217ee54c5897cb9ab1c4e4402a7c`, parent `d126d45de500170944abfae12d31df08a8c0df4c`. Main is 39 commits ahead and zero behind source-bearing `c8da700db9e7619bf058b5010b99d57884420f7`; changed paths are documentation-only. No source/test/schema/scheduler/config mutation occurred. Remote refs show `main` plus archived `feature/governed-offers`; prior comparison found no unique feature-branch commits, and no supported delete action is exposed.
@@ -16,6 +33,7 @@
 - **Safety:** no source ingestion, external contact, private data, publishing, alert, emergency advice, spend/payment, intake/outbound activation, production-setting change or REAL outcome.
 
 ---
+
 
 ## Current state — 2026-11-10 05:25 NPT (run-start main SHA `8d3f4f39856f3c2e6e7d048be040dbc351f559bb`)
 

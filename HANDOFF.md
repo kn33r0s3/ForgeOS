@@ -1,4 +1,31 @@
-## Current handoff — 2026-11-11 05:18 NPT (run-start main SHA `45a86cda8636217ee54c5897cb9ab1c4e4402a7c`)
+## Current handoff — 2026-11-11 06:27 NPT (run-start main SHA `368f8ca8dee8ec1493b4a92c689709771ab02ba5`)
+
+This run advances the existing D95 plant-clinic/service-network subcase with a new FY2081/82 Okhaldhunga annual book, unresolved count/period differences, current FY2083/84 programme-index metadata and provincial network context. It does not reopen Hami's mission, add a new D-number, claim a coordination failure or treat public reporting as firsthand evidence.
+
+### Repository and exact-head truth
+- Run-start main: `368f8ca8dee8ec1493b4a92c689709771ab02ba5`. It is 41 commits ahead and zero behind source-bearing code SHA `c8da700db9e7619bf058b5010b99d57884420f7`; all intervening changes are documentation-only. The immediate parent update `368f8ca` changed only HANDOFF.md to add a 06:23 freshness snapshot; no application source, test, schema, scheduler or production configuration changed.
+- Exact-head ForgeOS CI run `42933119133` failed 3/9 jobs. Backend: **53 failed, 1,302 passed, 2 skipped, 18 warnings**. Frontend tests and repository guards fail because `backend/app/data/unknowns.json` and `src/lib/unknowns.ts` are out of sync with `docs/UNKNOWN_MAP.md`. Backend failures include expired Crossref/GDELT/OpenAlex/World Bank clearances and dependent fail-closed assertions, importer expectation drift, licensed-abstract fixture mismatch, monitoring/multi-judge assertions and downstream planner/public-value failures.
+- CI install log reports **15 npm advisories** (2 low, 8 moderate, 4 high, 1 critical); no automatic dependency fix was run.
+- Exact-head secret scan `42933119175` passed. Independent deploy verifier `42933119117` failed production-content retrieval with HTTP 402; Vercel status remains Account is blocked. No deployment/runtime-health pass is established. The preceding 06:23 snapshot read both production endpoints and `/api/forge-bot/config` as HTTP 402; intake is UNKNOWN for that check, not assumed off/on.
+- `research_planner.py::summarize_research_portfolio` remains **NOT IMPLEMENTED**. Source-edit safety remains blocked. No source/test mutation, alternate write route, generated-projection regeneration, branch, worktree or PR was attempted. This run changes continuity documents only; no local tests were run.
+- `docs/UNKNOWN_MAP.md` remains unchanged; D95 remains UNKNOWN. No new D-number or ResearchQuestion was added while generated projections are out of sync.
+
+### D95 — Okhaldhunga plant-clinic and agricultural extension evidence
+- FY2080/81 official book: table reports six clinics, 402 samples and 93 households; narrative reports 402 households. The table's 84 women + 11 men also does not equal its total 93. Preserve the discrepancy; do not choose a count.
+- FY2081/82 official book: visible narrative page reports 10 clinics, 386 households and 751 samples. A separate extracted block says 366 households and 571 samples but was not matched to a visible page. The soil-test page visibly reports three camps, 640 samples and 431 households; its pH categories sum to 640 while the text layer says 650. The report states 24 fortnightly market-price collections; its 12-column display does not explain aggregation. Its coordination summary says 4 meetings while narrative says 3.
+- Okhaldhunga's FY2082/83 approved-program image lists 10 clinics and 24 market-price collections; plan, not completion. Its FY2083/84 page lists coffee/citrus/kiwi/organic proposal calls dated 2083-06-08 with deadline 2083-06-28. No selection result surfaced in the bounded index check; absence is not proof none exists.
+- Koshi DoAD's official portal describes 14 Agriculture Knowledge Centres and three laboratories serving 14 districts and lists FY2082/83 annual progress plus FY2083/84 Bhadra financial progress. Bodies were not retrieved; this is administrative context, not clinic-count corroboration.
+- Real consequence: plant-health/soil-test services and local market-price reporting are real public-service mechanisms. The records do not prove current FY2083/84 coverage, crop loss avoided, diagnosis accuracy, referral completion, yield gain or farmer-income change. No coordination failure is demonstrated.
+- Reusable capability: reconcile institution/program, fiscal period, clinic session/location, crop/sample, household, metric/unit, document version/page, source-declared cutoff, publication/listing date and retrieval time through existing primitives and Signal/Evidence. Keep all conflicting counts and UNKNOWNs visible.
+
+### Existing code seam, rights and next step
+- Source code is unchanged since `c8da700db9e7619bf058b5010b99d57884420f7`. Current path remains `SourceCollector.normalize → collector_runner.execute_task → ObserverEngine.observe/_ensure_evidence → assess_source_record → _evidence_citation`. Explicit non-empty provenance can replace metadata; current freshness compares publication age with retrieval time; citation does not expose effective cutoff, page/version, unit or aggregation method. This is a contract risk, not proof of production data loss.
+- `source_clearance_registry.py` contains no Okhaldhunga or DoAD registration. Their robots endpoints were inaccessible; no exact-source terms/reuse grant was found. Manual reading/citation only; NOT CLEARED for automated collection, body retention, Hami ingestion or provider transmission. No source body was persisted or sent to a provider.
+- Next: retrieve the provincial FY2082/83 annual-report body and Okhaldhunga's FY2082/83 district book if the official files can be reached; then compare page/version/cutoff and metric definitions. Continue independent Hami-wide discovery; D95 is not a global gate. No external contact, field visit, farmer-data request, diagnosis, pesticide advice, alert, publication, spend, intake/outbound activation or consequential action.
+
+---
+
+## Previous handoff — 2026-11-11 05:18 NPT (run-start main SHA `45a86cda8636217ee54c5897cb9ab1c4e4402a7c`)
 
 This run adds a source-backed D96 Nepal grid increment: Dhungesanghu is an already commissioned network node referenced by several distinct licensed/proposed lines, while a separate 48 km / approximately 600 MW Sitalpati–Dhungesanghu project was still procuring its IEE consultancy as of 1 October 2026. This is a project-to-grid and source-time crosswalk, not a claim of a grid bottleneck or coordination failure. Hami's mission and breadth remain settled; no seller experiment or single project gates Hami-wide progress.
 
@@ -28,6 +55,7 @@ This run adds a source-backed D96 Nepal grid increment: Dhungesanghu is an alrea
 - No external contact, private-record request, publication, alert, emergency advice, source ingestion, provider transmission, spend/payment, intake/outbound activation, production-setting change or REAL outcome occurred. Only documentation continuity was changed after this research.
 
 ---
+
 
 ## Current handoff — 2026-11-11 05:07 NPT (run-start main SHA `d126d45de500170944abfae12d31df08a8c0df4c`)
 
