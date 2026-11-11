@@ -1,3 +1,18 @@
+## Current Hami-wide queue — 2026-11-12 05:22 NPT (follow-on D93 pass; run-start main SHA dbd3a2ec9e24a55c655c4d246b41610add7b7c2a)
+
+1. **P0 — Preserve source-edit safety.** Do not retry research_planner.py::summarize_research_portfolio or route the blocked mutation through another tool.
+2. **P0 — Backend CI through supported paths.** Exact-head run 43122282966 failed backend-tests (53 / 1,302 passed / 2 skipped / 18 warnings); all other jobs including secret scan passed. Separate five expired-clearance fail-closed cascades from stale D104 importer fixture, licensed-abstract fixture expecting withheld content, and independent monitoring-cache/multi-judge failures. Review source rights individually; do not weaken rights or prompt boundaries.
+3. **P0 — Deployment access.** Verifier 43122283073 passed local tests but production-content fetch returned HTTP 402; later verification steps were skipped. Use ordinary authorized Vercel account recovery only.
+4. **P1 — D93 hydrology service/source-series reconciliation.** Retrieve official DHM Monsoon Withdrawal Bulletin-2, CHWRR report #1 and 13/14 Oct bulletin bodies through accessible official routes. Keep CHWRR's 14 Oct seasonal-service suspension distinct from DHM's weather 24-hour forecast, 1155 option-2 listing and later targeted advisories. Do not call the hotline, infer live operation, issue advice or build an alert.
+5. **P1 — D93 local recovery.** Obtain a readable body/attachment for Dharche notice #1300 or a dated route-reopening notice; current page is title/date only and not proven flood-related. Check NDRRMA #04/#05+ and dated Gorkha road/power restoration; no search result is not proof of absence.
+6. **P1 — Existing provenance capability.** When source editing and per-source rights permit, preserve source-effective cutoff/period, page/report version, service/agency scope, units, denominator and method through normalize → Signal → Evidence → assessment → citation. Protect registry-owned rights; keep publication/retrieval separate; use existing Claim/EvidenceRelationship only after content review. No new model/table/primitive/collector.
+7. **P1 — Continue independent Hami-wide work.** D95 public assets/cold chain, D96 grid, WASH, D94 warning evidence, D98 disaster credit/insurance, D99/D100 trade/labour, household finance and other tracks continue independently.
+8. **P2 — Archived branch.** feature/governed-offers remains a remote archive; no deletion or alternate branch/worktree.
+
+No external contact, hotline call, private-record request, source ingestion, provider transmission, publication, alert, emergency advice, spend/payment, intake/outbound activation, production-setting change or access-control bypass is authorized.
+
+---
+
 ## Current Hami-wide queue — 2026-11-12 05:22 NPT (run-start main SHA 13d36e7c6f23f2ffe08858ba2d64e786e8edbbc6)
 
 1. **P0 — Preserve source-edit safety.** Do not retry research_planner.py::summarize_research_portfolio or route the blocked mutation through another tool. It remains NOT IMPLEMENTED.
