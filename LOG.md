@@ -1,3 +1,13 @@
+## 2026-11-13 05:20 NPT — D86 trade-concentration and source-time evidence pass
+
+- Run-start main `880caf9f223233d7610c7193d9914f2e403ee88f`; canonical `main`, 47 commits ahead / zero behind source-bearing `c8da700db9e7619bf058b5010b99d57884420f7`. Read AGENTS, BRAIN, HANDOFF, STATE, QUEUE, CAPABILITY_QUEUE, UNKNOWN_MAP, PUBLIC_SOURCES and LOG; traced existing source normalization, runner, observer, Signal/Evidence, assessment, citation and tests. No source/test/schema/config change.
+- Exact-head CI 43129031505: 8/9 jobs passed; backend 53 failed / 1,302 passed / 2 skipped / 18 warnings. Secret scan 43129031620 passed. Independent deploy verification 43129031646 failed production content fetch HTTP 402; subsequent checks skipped. Current Vercel status failure; team-scoped read 403. No current health claim.
+- Metadata survey D1–D100: 95 UNKNOWN, 1 partial/unknown, 1 supported, 3 hypotheses; 6 URL-bearing rows, 43 dated rows, 100 next-action cells. This is not a 100-item deep research pass. Operational ResearchQuestion records unavailable; count UNKNOWN.
+- D86 denominator correction: NRB official nine-month FY2025/26 export growth +18.5% to Rs222.94b through mid-April; the 18% article figure is only the top-ten export basket (Rs18,169 crore to Rs21,433 crore); full-year total is reported separately at about +13.8%. Palm's +246.7% is a high percentage from a small base; secondary HS-level values show soybean oil's roughly Rs21.95b increase exceeds the palm-olein/palm-oil combined increase of about Rs5.94b. Refined edible oils are reported at Rs149b / 47.2% of annual exports, almost all to India. D86 remains UNKNOWN pending official workbook and domestic-value-added evidence.
+- Source-time capability now has a second cross-domain example: disaster report cutoffs, WASH/energy report periods and trade fiscal periods cannot be reduced to page publication date or retrieval time. Prepared existing-provenance-only change and regression plan; source-edit path remains blocked and was not bypassed.
+- Added exact source URLs, publication/data dates, limits and NOT CLEARED/manual-only status to PUBLIC_SOURCES and CAPABILITY_QUEUE. No source registry addition or ingestion. No external action, contact, publication, spend, payment, intake/outbound activation or production mutation.
+
+---
 # Hami Run Log
 
 Append-only. Record what was checked, what changed, evidence, failures and the next unblocked action. Never edit old entries to make outcomes look better.

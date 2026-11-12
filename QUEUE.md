@@ -1,3 +1,18 @@
+## Ranked queue — 2026-11-13 05:20 NPT (run-start main SHA `880caf9f223233d7610c7193d9914f2e403ee88f`)
+
+Mission and breadth are settled. No pilot, seller, revenue wedge or validation experiment gates unrelated Hami-wide work.
+
+1. **P0 — Restore verified build/deployment truth.** Exact-head ForgeOS CI 43129031505 failed backend-tests (53 failed / 1,302 passed / 2 skipped); secret scan 43129031620 passed; independent deploy verifier 43129031646 failed production fetch HTTP 402. Reconcile the expired Crossref, GDELT, OpenAlex and World Bank clearances by fresh per-source robots/terms review; do not loosen fail-closed checks. Fix genuinely stale fixtures only after verifying the current contract. Recheck the Vercel account/team boundary before claiming production health.
+2. **P1 — Source-time provenance, cross-domain.** Existing Signal/Evidence seam has publication/retrieval/provenance but no source-declared data-period/effective cutoff or citation projection. SourceCollector explicit provenance can displace metadata. Prepared a bounded provenance-only extension and regression list in CAPABILITY_QUEUE; source-edit safety remains blocked, so no source write or bypass.
+3. **P1 — D86 trade concentration.** Retrieve the official Department of Customs FY2082/83 Asar XLSX and reconcile HS lines/denominators; separate annual total exports, NRB nine-month growth and the 24Ghanta top-ten basket. Verify domestic value added, exporter/firm concentration and local inputs before calling this broad-based capacity. Check monthly HS data after India's 24 Sep 2026 tariff change; do not infer its effect from a period that straddles it.
+4. **P1 — D93 incident/service-time chain.** Continue locating readable official NDRRMA/CHWRR/DHM report bodies and current restoration notices; preserve distinct event, publisher, service, publication time and source cutoff. No emergency advice, alert or contact.
+5. **P1 — Independent real-world tracks.** Continue D95 agriculture-extension outcomes, D96 transmission project lifecycle, WASH report reconciliation, D99/D100 labour and demand evidence, and other existing unknowns. One blocked source or intervention does not pause other tracks.
+6. **P1 — Portfolio access.** D1–D100 metadata survey is recorded; retrieve operational open ResearchQuestion records only when the protected runtime is available through the authorized route. Do not invent counts or create filler rows.
+7. **P2 — Reliability/security/privacy.** Preserve source-body withholding, consent, HALT and spend boundaries; inspect exact-head gates after every substantive batch; keep the single canonical main branch and existing generated projections intact.
+
+No new question, task inventory, model, table, primitive, collector, branch, worktree or file is authorized by this queue update.
+
+---
 ## Current Hami-wide queue — 2026-11-12 05:22 NPT (follow-on D93 pass; run-start main SHA dbd3a2ec9e24a55c655c4d246b41610add7b7c2a)
 
 1. **P0 — Preserve source-edit safety.** Do not retry research_planner.py::summarize_research_portfolio or route the blocked mutation through another tool.
