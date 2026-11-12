@@ -1,3 +1,16 @@
+## Current handoff — 2026-11-12 06:23 NPT (handoff freshness check; run-start main SHA 5abfd95902bea75517c7b0b5b6dd6a6acc090139)
+
+Freshness-only pass. Pull succeeded; main moved dbd3a2ec → 5abfd959 with one commit since the 05:22 handoff: 5abfd959 "Record CHWRR and DHM flood-service timeline evidence" (05:39 NPT), the commit landing the D93 service-chain work the 05:22 entry describes. No other fact drifted beyond that HEAD move.
+
+### Live check (06:23 NPT, direct curl)
+- `haminp.vercel.app/api/health` — HTTP 402, `Payment required / DEPLOYMENT_DISABLED`. NOT ok; same Vercel account-blocked boundary the 05:22 entry records (independent deploy verifier also failed production fetch with HTTP 402). No change in state, still blocked.
+- `forge-os-ebon.vercel.app/api/health` — HTTP 402, `Payment required / DEPLOYMENT_DISABLED`. Same boundary, unchanged.
+- `haminp.vercel.app/api/forge-bot/config` — HTTP 402, unreadable. Intake flag remains UNKNOWN (cannot confirm false); no flag change claimed or made.
+- Banked unknowns: 108 `^| D` rows in `docs/UNKNOWN_MAP.md` (D1–D108), unchanged.
+
+No flag changes, no outreach, no spend, no other commits. Next freshness check re-verifies the 402 boundary; the Vercel account block is the standing production blocker.
+
+---
 ## Current handoff — 2026-11-12 05:22 NPT (follow-on D93 service-chain pass; run-start main SHA dbd3a2ec9e24a55c655c4d246b41610add7b7c2a)
 
 This follow-on pass adds a separate official hydrology source series and a seasonal-service timeline to D93. It does not establish a warning failure, a live service outage, a current flood condition, or a restoration status. Hami's mission and breadth remain settled.
