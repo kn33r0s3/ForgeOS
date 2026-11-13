@@ -1,3 +1,16 @@
+## Current handoff — 2026-11-13 06:23 NPT (handoff freshness check; run-start main SHA 5e7b2d7ee221ba3d723d0d1f8ea696c2df4692bd)
+
+Freshness-only pass. Pull succeeded; main moved 880caf9f → 5e7b2d7e with one commit since the 05:20 handoff: 5e7b2d7e "Record D86 trade concentration and source-time evidence", the commit landing the D86 work the 05:20 entry describes. No other fact drifted beyond that HEAD move.
+
+### Live check (06:23 NPT, direct curl)
+- `haminp.vercel.app/api/health` — HTTP 402, `Payment required / DEPLOYMENT_DISABLED`. NOT ok; same Vercel account-blocked boundary recorded since 2026-10-31, confirmed on the check read and a recheck read (root also 402). No change in state, still blocked.
+- `forge-os-ebon.vercel.app/api/health` — HTTP 402, `Payment required / DEPLOYMENT_DISABLED`. Same boundary, unchanged (root also 402).
+- `haminp.vercel.app/api/forge-bot/config` — HTTP 402, unreadable. Intake flag remains UNKNOWN (cannot confirm false); no flag change claimed or made.
+- Banked unknowns: 108 `^| D` rows in `docs/UNKNOWN_MAP.md` (D1–D108), unchanged.
+
+No flag changes, no outreach, no spend, no other commits. Next freshness check re-verifies the 402 boundary; the Vercel account block is the standing production blocker.
+
+---
 ## Current handoff — 2026-11-13 05:20 NPT (D86 trade-concentration and source-time pass; run-start main SHA `880caf9f223233d7610c7193d9914f2e403ee88f`)
 
 Hami's mission is settled and open-ended: discover, understand, connect, protect, create and realize value across domains and places, originating in Nepal. No seller pilot, First Rupee experiment, market or revenue milestone gates unrelated Hami-wide work.
