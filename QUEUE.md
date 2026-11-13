@@ -1,3 +1,21 @@
+## Ranked queue — 2026-11-14 05:19 NPT (run-start main SHA ca7af0546cf5f5f452c950368c308c8fdfdbc7d5)
+
+Mission and breadth are settled. A blocked source, intervention or experiment does not pause independent Hami-wide discovery.
+
+1. **P0 — Preserve source-edit and source-rights boundaries.** Do not retry research_planner.py::summarize_research_portfolio or route that blocked source mutation through another tool. Do not renew Crossref/GDELT/OpenAlex/World Bank clearances without exact fresh robots/terms/purpose/field review. Do not weaken source-body withholding.
+2. **P0 — Backend exact-head CI.** Run 43525351337 failed backend-tests (53 failed / 1,302 passed / 2 skipped / 18 warnings); other eight jobs passed. Separate direct expired-clearance failures from dependent cascades, the abstract fixture conflicting with body withholding, importer count 124, and independent monitoring-cache/multi-judge/research-loop assertions. Fix only through supported code paths after current contracts are reviewed.
+3. **P0 — Deployment/account boundary.** Verifier 43525351355 failed production content retrieval with HTTP 402 after local tests; later checks skipped. Vercel team-scoped read returned 403 and requires ordinary reauthorization. No access-control bypass or production-health claim.
+4. **P1 — D95 fish cold-chain ↔ market-price crosswalk.** Reconcile the PMAMP Rupandehi fish facility (0.1% reported utilization/no revenue; 10MT narrative versus 5MT annex), MoALD FY2079/80 fish production (8,545MT in Rupandehi), SIRACS FY2078/79 data and FY2080/81 farmer survey, and AMPIS Butwal market/dated fish prices. Preserve separate source periods, definitions and sample limits. No current facility operation, local demand, price match or outcome is proved; no contact.
+5. **P1 — Existing source-time and metric-method capability.** When supported source editing and exact-source rights allow, preserve page/listing date, reporting period/effective cutoff, source/report version, geography/market, commodity, unit, denominator, min/max/average method, sample count and retrieval time through normalize → Signal → Evidence → assessment → citation. Existing seam only; no new model/table/primitive/collector.
+6. **P1 — EV workforce and post-warranty service chain.** Continue reconciling CTEVT curricula/OJT, GGGI's 52 publicly documented mechanics across two 60-hour cohorts, the 100-mechanic target, 18 EV-testing officials, SET4NPL's project-reported 400 buses/600 next-slab capacity, employer requirements and actual workshop/contract coverage. Keep populations and targets distinct.
+7. **P1 — Continue independent tracks.** D86 Customs workbook/HS/value-added reconciliation; D93/D94 official service/report/restoration chain; D96 transmission lifecycle; WASH; D99/D100 labour/demand; other evidence-rich domains. None gates the others.
+8. **P1 — Portfolio/projection integrity.** D1–D108 remains the structured map; test_import_unknowns receives 124 records. Preserve the existing parser/sync path and generated projections. Operational open ResearchQuestion count is UNKNOWN behind protected runtime access; do not invent counts or filler rows.
+9. **P2 — Reliability/security/privacy.** Recheck exact-head CI, secret scan and deployment separately after the grouped documentation commit. Preserve consent, HALT, source rights and spend boundaries.
+
+No new question/task inventory, model, table, primitive, collector, branch, worktree or unnecessary file is authorized by this queue update.
+
+---
+
 ## Ranked queue — 2026-11-14 04:41 NPT (run-start main SHA 3863f82f9658f6e58c8ad77a345f845719aa108d)
 
 Mission and breadth are settled. A blocked intervention, source or experiment does not pause independent Hami-wide discovery.
