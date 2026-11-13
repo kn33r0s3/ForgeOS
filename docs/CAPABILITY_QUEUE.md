@@ -1,3 +1,25 @@
+## 2026-11-14 — D95 Jaldevi cooperative / fish cold-room entity resolution (HYPOTHESIS; manual-only; not implemented)
+
+### Cross-source link
+- PMAMP's FY2081/82 cold-room study identifies Shree Jaldevi Matsya Utpaadan Sahakari Sanstha Limited as the owner of a fish cold-room facility at Siyari-5, Banghusari, Rupandehi. Narrative: 10MT plus 500kg/batch blast freezer, 0.1% utilization, no current revenue; Annex I: 5MT.
+- Lumbini DoLFD/SIRACS reports that “Jaldevi Cooperatives, Chhapia (Rupandehi)” had practiced blast-frozen fish, but efforts were unsatisfactory. The same distinctive Jaldevi name and district make the same-organization hypothesis strong, but SIRACS gives no legal registration number or exact facility identifier.
+- Siyari Rural Municipality's official procurement notice (23 March 2025) places Chhapiya Chowk in Ward 4 and Banghusari Bazaar in Ward 5; it describes a road from Chhapiya Chowk to the Ward 5 border and a separate development project at Banghusari Bazaar. This establishes nearby but distinct locality labels, not a same-site match.
+- Status: HYPOTHESIS — likely same cooperative, not confirmed; same facility/product linkage NOT MEASURABLE. Do not merge the entities or assert the SIRACS blast-freezing operation used the PMAMP cold room.
+
+### Why this matters
+- If the cooperative is the same, this is not simply an idle asset with no prior attempt: the cooperative had documented blast-frozen-fish experience with unsatisfactory results, while the later PMAMP study reports the cold room at 0.1% utilization and no current revenue.
+- Converging but bounded constraints: SIRACS survey of 75 fish farmers (FY2080/81) ranks competition 3.61, low fish-market-development investment 3.43, low farm-gate price 3.37, marketing cost 2.79 and low value addition 2.63. PMAMP reports limited market size, low public awareness and lack of technical personnel. These sources do not prove the cause for the specific facility.
+- The opportunity is to understand why existing processing capacity did not translate into durable value: buyer access, product/grade, price realization, distribution, processing/packaging, technical staffing, standards and cold-chain logistics. Do not presume the answer is more cold storage or a new seller SaaS.
+
+### Existing seam and next dependency
+- Reuse ENTITY for cooperative/facility/market; RELATION for ownership, operation, site, supply and buyer links; EVENT for blast-freezing attempts, storage and dated sales/price observations; EVIDENCE for the two reports and municipal geography; CAPABILITY for entity resolution plus resource-to-market matching; ACTION only for internal work unless separately authorized.
+- Existing world_graph/evidence_graph and provenance/citation seams are sufficient candidates. Do not merge the cooperative entities until an official registration ID or authoritative directory confirms the match. Keep Chhapia Ward 4, Banghusari Ward 5 and facility site distinct.
+- Next: locate an official cooperative registry or municipal directory; verify facility status/ownership/handover and current product/buyer/distribution records from public sources; obtain a dated Butwal fish price; reconcile capacity and locality labels. No contact or private-record request.
+- Source links: PMAMP https://www.pmamp.gov.np/sites/default/files/2025-07/Study%20Report%20on%20Status%20%26%20Effectiveness%20of%20Cold%20Rooms-Cold%20Chambers%20Established%20Under%20PMAMP.pdf ; SIRACS https://dolfd.lumbini.gov.np/sites/default/files/2024-10/Final_Report_DoLF_SIRACS.pdf ; Siyari municipal notice https://siyarimun.gov.np/sites/siyarimun.gov.np/files/notice-Chhapiya-road.pdf .
+- PMAMP, SIRACS and municipal notice remain manual-only / NOT CLEARED for automated collection, body persistence or provider transmission. No registry/collector/source-body change, no external contact, no code/test/model/table/primitive/collector mutation. This is a research/identity hypothesis, not a realized outcome.
+
+---
+
 ## 2026-11-14 05:19 NPT — D95 fish cold-chain, producer constraints and market-price method crosswalk (manual-only; capability candidate; outcomes UNKNOWN)
 
 ### Source-backed evidence and distinct time bases

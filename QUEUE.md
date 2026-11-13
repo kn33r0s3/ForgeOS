@@ -1,3 +1,16 @@
+## Follow-on priority — 2026-11-14 (D95 Jaldevi entity resolution; base main SHA e8c3ca7c2b59b5b0ce53924a1a1652da1ea6e01e)
+
+1. **P0 — Reconcile the D95 cooperative identity without overclaiming.** Match PMAMP's Shree Jaldevi Matsya Utpaadan Sahakari Sanstha Limited (facility at Siyari-5 Banghusari) to SIRACS's Jaldevi Cooperatives, Chhapia. Strong name/district match; no registration ID or facility ID. Siyari's municipal notice distinguishes Chhapiya Chowk Ward 4 and Banghusari Bazaar Ward 5; adjacency is not identity.
+2. **P1 — Trace the prior blast-frozen-fish attempt.** If the entity match is confirmed through public records, identify the documented product, buyers, distribution, packaging/standards, technical staffing, price realization and why the effort was unsatisfactory. Keep PMAMP 0.1% utilization/no current revenue and SIRACS survey constraints as bounded dated claims, not current operating facts.
+3. **P1 — Reconcile current asset and market.** Verify facility status, owner/handover, 5MT versus 10MT + 500kg/batch discrepancy, current Butwal fish prices and actual catchment from public records. Keep the separate OAG 1,000MT Rupandehi project distinct until stable identity proves a match.
+4. **P0 — Preserve exact-head verification.** The prior D95 docs head e8c3... has CI failure (backend 53/1,302/2/18; other eight jobs pass), secret scan pass, and deploy verifier HTTP 402 after 274/274 local tests. Do not write again until the new head's CI, secret scan and deploy checks finish.
+5. **P0 — Preserve rights and source-write boundaries.** PMAMP, SIRACS and Siyari municipal source remain manual-only / NOT CLEARED. No contact, source ingestion, body persistence, provider transmission or alternate source-edit path.
+6. **P1 — Continue all other Hami tracks.** D86 trade, D93/D94 disaster and source-time, D96 energy, EV workforce, WASH, labour and broader evidence discovery remain independent of D95.
+
+No new D-number, task/question inventory, model/table/primitive/collector, branch, worktree or external action.
+
+---
+
 ## Ranked queue — 2026-11-14 05:19 NPT (run-start main SHA ca7af0546cf5f5f452c950368c308c8fdfdbc7d5)
 
 Mission and breadth are settled. A blocked source, intervention or experiment does not pause independent Hami-wide discovery.

@@ -1,3 +1,30 @@
+## Follow-on handoff — 2026-11-14 (D95 Jaldevi cooperative / fish cold-room identity reconciliation; base main SHA e8c3ca7c2b59b5b0ce53924a1a1652da1ea6e01e)
+
+### Exact-head result for the preceding grouped D95 documentation commit
+- Base/main was e8c3ca7c2b59b5b0ce53924a1a1652da1ea6e01e, the grouped D95 fish-production / AMPIS price-method commit.
+- Exact-head ForgeOS CI run 43529969982 completed FAILURE: backend-tests 53 failed, 1,302 passed, 2 skipped, 18 warnings in 194.05s; the other eight CI jobs passed. The failed families remain expired Crossref/GDELT/OpenAlex/World Bank clearances and their dependent cascades, an OpenAlex abstract fixture conflicting with source-body withholding, the unknown importer count 124, and monitoring-cache/multi-judge/research-loop assertions.
+- Separate exact-head secret scan 43529970032 passed. CI's own gitleaks job also passed.
+- Independent deployment verifier 43529970019 completed FAILURE. Its 274 local tests passed; after a 90-second wait, production content retrieval returned HTTP 402 and later checks were skipped. No production deployment/health/durability/scheduler claim.
+- Vercel team-scoped read returned 403 and requires ordinary reauthorization. No reauthorization flow or access-control bypass was initiated.
+- Run links: https://github.com/kn33r0s3/ForgeOS/actions/runs/43529969982 ; https://github.com/kn33r0s3/ForgeOS/actions/runs/43529970032 ; https://github.com/kn33r0s3/ForgeOS/actions/runs/43529970019 .
+
+### D95 — new cross-source cooperative / asset link
+- PMAMP's FY2081/82 cold-room study identifies the Rupandehi fish cold-room owner as Shree Jaldevi Matsya Utpaadan Sahakari Sanstha Limited and places the facility at Siyari-5, Banghusari, Rupandehi. The narrative reports 10MT plus a 500kg/batch blast-freezing unit, 0.1% utilization and no current revenue; Annex I lists 5MT. Preserve the capacity conflict and the study's limited/self-reported status.
+- Lumbini DoLFD/SIRACS separately says blast-frozen fish had been practiced by “Jaldevi Cooperatives, Chhapia (Rupandehi)” but efforts were unsatisfactory. The organization-name and district match make this a strong likely entity link to the PMAMP cooperative, but the report does not provide a registration number or exact facility identifier. Do NOT assert that the cold room and SIRACS blast-freezing operation are the same asset.
+- Siyari Rural Municipality's 23 March 2025 procurement notice distinguishes Chhapiya Chowk in Ward 4 from Banghusari Bazaar in Ward 5 and describes a road from Chhapiya Chowk to the Ward 5 border plus development at Banghusari Bazaar. This supports geographic proximity/adjacency, not same-site identity. No exact route distance or cooperative registered address was established.
+- If the same cooperative is confirmed, this is a more precise value-recovery lead: the organization has a documented prior blast-frozen-fish attempt with unsatisfactory results, while its PMAMP-listed cold-room asset is reported at 0.1% utilization/no current revenue. This shifts the next research from “is there a cold room?” to the unresolved reasons productization failed: buyer/market development, pricing, distribution, technical staffing, processing/packaging, product standards and cold-chain logistics. This is a hypothesis about the same organization, not a verified current outcome.
+- Existing SIRACS survey constraints (N=75 fish farmers, FY2080/81) include high competition 3.61, low market-development investment 3.43, low farm-gate price 3.37, marketing cost 2.79 and low value addition 2.63. PMAMP separately reports limited market size, low public awareness and lack of technical personnel. These are converging source claims with different populations/periods, not proof of the cause for this specific facility.
+- Locality reconciliation source: https://siyarimun.gov.np/sites/siyarimun.gov.np/files/notice-Chhapiya-road.pdf (published 23 March 2025). PMAMP report: https://www.pmamp.gov.np/sites/default/files/2025-07/Study%20Report%20on%20Status%20%26%20Effectiveness%20of%20Cold%20Rooms-Cold%20Chambers%20Established%20Under%20PMAMP.pdf . SIRACS: https://dolfd.lumbini.gov.np/sites/default/files/2024-10/Final_Report_DoLF_SIRACS.pdf .
+
+### Existing Hami seam / next dependency
+- Resolve the likely cooperative identity with a public registration number or official cooperative directory, then distinguish registered address, facility site and market/service area. Keep ENTITY, RELATION, EVENT and EVIDENCE separate; source text alone does not create a verified same-asset relation.
+- Next public-source work: current public facility status/ownership/handover; the cooperative's public buyer/product/distribution records; current Butwal fish prices; applicable public processing/food-quality requirements; energy/maintenance and catchment. No calls, messages, interviews or private-record requests.
+- The next value question is not “sell cold storage”; it is whether a documented existing fish-processing capability can be reconnected to producers and buyers, or whether another lawful use/asset transfer is more valuable. Do not choose an intervention without current evidence.
+- This follow-on research is documentation-only. No source code, tests, model, table, primitive, collector, source-registry entry, Signal/Evidence write, external contact or outcome claim. The source-edit block and NOT CLEARED status for PMAMP, SIRACS and municipal sources remain.
+- Do not make another repository write until this new exact-head CI, secret scan and deployment verifier have completed; continue independent research and operational/security checks in parallel.
+
+---
+
 ## Current handoff — 2026-11-14 05:19 NPT (D95 fish cold-chain / market-price crosswalk; run-start main SHA ca7af0546cf5f5f452c950368c308c8fdfdbc7d5)
 
 Hami's mission is settled and open-ended across domains and geographies. This run advances an existing D95 resource/market question; no seller experiment, First Rupee, revenue milestone or single domain gates unrelated Hami-wide work.

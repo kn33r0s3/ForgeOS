@@ -1710,3 +1710,12 @@ This is the Nuwakot view of the 26 Aug Bhotekoshi–Trishuli event, distinct fro
 - New sources remain manual-only / NOT CLEARED; no registry change, collector, source-body storage, provider transmission or external contact. No owner action or transaction automation was removed; this pass removed one manual source-discovery/collation step only.
 - Next: dated Butwal fish price; current fish-room identity/status/ownership and 5/10MT reconciliation; keep the separate OAG 1,000MT Rupandehi project distinct; exact per-source rights review; source-time/method implementation only when supported source editing is available. Continue D86, D93/D94, D96, EV workforce, WASH and other independent tracks.
 
+
+## 2026-11-14 — D95 Jaldevi cooperative / fish cold-room identity lead
+
+- After the previous grouped D95 documentation commit e8c3ca7c2b59b5b0ce53924a1a1652da1ea6e01e completed exact-head gates, a further manual source pass found a likely same-organization link.
+- PMAMP names Shree Jaldevi Matsya Utpaadan Sahakari Sanstha Limited as the owner of the Siyari-5 Banghusari fish cold room. SIRACS says Jaldevi Cooperatives, Chhapia, Rupandehi had practiced blast-frozen fish but efforts were unsatisfactory. No registration number or facility ID proves the match.
+- Siyari Rural Municipality's 23 March 2025 notice distinguishes Chhapiya Chowk Ward 4 from Banghusari Bazaar Ward 5 and describes a road from the former to the Ward 5 border. This supports adjacency, not same-site identity.
+- If same cooperative, the later 0.1%-utilization/no-current-revenue report may follow an earlier unsuccessful blast-frozen-fish attempt. The likely bottleneck is not proven; buyer development, price realization, distribution, technical staff, processing/packaging, standards and cold-chain logistics remain candidates.
+- Exact-head checks for e8c3ca7c2b59b5b0ce53924a1a1652da1ea6e01e: CI 43529969982 failed backend 53/1,302/2/18 with other eight jobs passed; secret scan 43529970032 passed; deployment verifier 43529970019 failed HTTP 402 after 274/274 local tests.
+- New source is manual-only / NOT CLEARED; no entity merge, source ingestion, body persistence, provider transmission, contact or source edit. Next: official cooperative registration identifier and current public facility/buyer/distribution evidence.

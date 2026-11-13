@@ -1,3 +1,17 @@
+## Follow-on state — 2026-11-14 (D95 Jaldevi entity-resolution lead; base main SHA e8c3ca7c2b59b5b0ce53924a1a1652da1ea6e01e)
+
+- **Exact-head CI:** e8c3ca7c2b59b5b0ce53924a1a1652da1ea6e01e run 43529969982 completed failure: backend 53 failed / 1,302 passed / 2 skipped / 18 warnings; other eight CI jobs passed.
+- **Secret scan:** exact-head run 43529970032 passed; CI gitleaks passed.
+- **Deployment:** exact-head verifier 43529970019 failed after 274/274 local tests passed; production content fetch returned HTTP 402 after 90 seconds, later checks skipped. Vercel team read 403/re-auth required. Production status remains UNKNOWN.
+- **D95 entity lead:** PMAMP names Shree Jaldevi Matsya Utpaadan Sahakari Sanstha Limited as owner of a fish cold room at Siyari-5 Banghusari, Rupandehi. SIRACS independently reports that Jaldevi Cooperatives, Chhapia, Rupandehi had practiced blast-frozen fish but efforts were unsatisfactory. This is a strong likely same-organization link, NOT a confirmed entity/facility match: no registration number or exact facility ID connects the records.
+- **Geography:** Siyari Rural Municipality's 23 March 2025 notice distinguishes Chhapiya Chowk (Ward 4) from Banghusari Bazaar (Ward 5) and documents a road from Chhapiya Chowk to the Ward 5 border. This supports adjacency, not same-site identity.
+- **Practical implication:** if same cooperative, the existing 0.1%-utilized/no-current-revenue cold-room asset may have an earlier documented blast-frozen-fish attempt that failed to reach a viable market. Investigate buyer development, pricing, distribution, technical staffing, processing/packaging and cold-chain logistics before any intervention. This remains a hypothesis; no current demand or transaction is proved.
+- **Rights/safety:** PMAMP, SIRACS and Siyari municipal sources remain manual-only / NOT CLEARED. No source ingestion, registry change, body persistence, provider transmission or contact.
+- **Source-edit boundary:** unchanged; no source/test/schema/config mutation or bypass. UNKNOWN_MAP D1–D108 and generated projections unchanged; importer still receives 124 records.
+- **Next:** obtain an official cooperative registration identifier and distinguish registered address, facility site and service area; then find public evidence of current operation, buyers, distribution and Butwal fish prices. Do not contact or request private records.
+
+---
+
 ## Current state — 2026-11-14 05:19 NPT (run-start main SHA ca7af0546cf5f5f452c950368c308c8fdfdbc7d5)
 
 - **Mission:** settled and open-ended across domains/geographies. Hami discovers, understands, connects, protects, creates and realizes value in the real world. No seller experiment or revenue milestone gates unrelated progress.
