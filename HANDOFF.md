@@ -1,3 +1,34 @@
+## Current handoff — 2026-11-14 04:41 NPT (EV workforce and post-warranty service-chain pass; run-start main SHA 3863f82f9658f6e58c8ad77a345f845719aa108d)
+
+Hami's mission and breadth remain settled. This pass advanced a cross-domain capability candidate in Nepal's electric-mobility workforce and public-transport maintenance chain. No seller experiment or single market gates unrelated Hami-wide work.
+
+### Repository and authority
+- Re-resolved canonical main at 3863f82f9658f6e58c8ad77a345f845719aa108d; parent is 5e7b2d7ee221ba3d723d0d1f8ea696c2df4692bd. Main is 49 commits ahead / zero behind source-bearing c8da700db9e7619bf058b5010b99d57884420f7. Compare shows continuity/research documents and existing generated unknown projections only; no runtime source, tests, schema, scheduler or production configuration changed after the source-bearing SHA.
+- Read AGENTS, HANDOFF, STATE, QUEUE, BRAIN v4, UNKNOWN_MAP, CAPABILITY_QUEUE, LOG, PUBLIC_SOURCES, discovery-loop specification, relevant code and tests. Canonical main remains the only active branch; the archived feature/governed-offers reference was not changed.
+- research_planner.py::summarize_research_portfolio remains NOT IMPLEMENTED under the source-edit safety block. It was not retried through another tool. No application source/test/schema/config change was made.
+
+### Exact-head verification at run-start SHA
+- ForgeOS CI 43338895920 on 3863f82f9658f6e58c8ad77a345f845719aa108d: 8/9 jobs passed; backend-tests failed with 53 failed, 1,302 passed, 2 skipped and 18 warnings. Frontend, route smoke, typecheck, evidence triage, build, repository guards, lint and CI gitleaks passed. Backend failures include direct expired-clearance errors for Crossref, GDELT, OpenAlex and World Bank and downstream research/planner cascades; an OpenAlex abstract fixture expecting content despite the current withholding boundary; test_import_unknowns receiving 124 records; and independent monitoring-cache, multi-judge and research-loop assertions. Do not weaken source authorization or body withholding to make these fixtures green.
+- Separate secret scan 43338896038 passed.
+- Independent deploy verification 43338895873 failed at production content fetch with HTTP 402; later checks were skipped. GitHub's Vercel status is failure; team-scoped Vercel reads returned 403. No live health endpoint was invoked in this pass. Production health, deployed identity, database durability and scheduler execution remain UNKNOWN.
+
+### Discovery increment
+- MAF's 16 June 2026 article reports the 2025 SET4NPL Training Needs Assessment: independent mechanics have limited access to specialised EV training; public-transport operators often rely on independent workshops after warranties expire; training delivery is constrained by labs, training vehicles and qualified instructors.
+- CTEVT's 2024 competency-based Professional EV Technician curriculum is 1,696 hours with 12 weeks OJT, max 20 per cohort and practical high-voltage, battery, charging and diagnostics modules. Its public portal separately lists one historical 390-hour free cohort at Shankharapur Polytechnic Institute (22 March–14 June 2026, quota 20); the portal's 0-applicant field is not reliable because no count cutoff is shown and the page throws a storage error.
+- GGGI publicly documents 25 mechanics in the first 60-hour upskilling cohort and 27 in the second (23 September–4 October 2026, Pokhara), 52 across two cohorts; the 100-mechanic figure is a 2026 target, not a completed total. A separate 18 federal/provincial officials were trained in EV testing at VFTC Teku on 6–9 October.
+- SET4NPL's 7 August project update reports 400 supported electric mini/microbuses on the road and slab 3 for 600 more; the 3,500 figure is a target. The maintenance-package page's included-versus-optional contract wording is ambiguous, and actual vehicle-level contract coverage is UNKNOWN.
+- One current displayed employer signal is Paramount Motors' Kathmandu EV 4-wheeler technician listing, asking for 2–5 years of automotive electrical experience, high-voltage diagnostics, ECU/wiring, OBD-II and battery knowledge. It is one vacancy, not a national labour count.
+- The practical capability candidate is to reconcile training/cohort/competency/OJT and employer requirements with independent workshop skills/equipment, fleet/warranty/maintenance contracts and actual service outcomes. No service failure, safety incident, downtime, post-warranty coverage rate, placement outcome or willingness-to-pay was proved.
+
+### Existing code seam, source rights and action boundary
+- Reuse existing SourceCollector.normalize → collector_runner.execute_task → ObserverEngine.observe/_ensure_evidence → Signal/Evidence → assessment/citation and existing demand_understanding, capability_discovery and world_graph services. capability_discovery is bounded (three candidates, depth one, zero discovery requests per cycle); tests confirm candidate idempotency and no external action. No new model, table, primitive, collector or taxonomy.
+- CTEVT robots/terms were not established; SET4NPL terms prohibit reuse without permission; GGGI/Mitigation Action Facility terms/robots were not established; LinkedIn robots explicitly prohibits automated access without express permission. No matching registry entries exist. Manual citation only / NOT CLEARED for Hami ingestion, source-body retention or provider transmission.
+- No contact, interview, job application, training enrolment, workshop inspection, private-data request, publishing, money movement, spend, intake/outbound activation, alert or production mutation occurred.
+- No D109 row or generated unknown projection changed. The structured UNKNOWN_MAP remains D1–D108; the exact-head importer test currently fails with 124 parsed records. Do not hand-edit generated projections or bypass the existing sync path.
+- After this grouped documentation commit, exact-head CI, secret scan and deployment validation for the new commit are pending. Do not transfer the run-start results to the new head.
+
+
+---
 ## Current handoff — 2026-11-13 06:23 NPT (handoff freshness check; run-start main SHA 5e7b2d7ee221ba3d723d0d1f8ea696c2df4692bd)
 
 Freshness-only pass. Pull succeeded; main moved 880caf9f → 5e7b2d7e with one commit since the 05:20 handoff: 5e7b2d7e "Record D86 trade concentration and source-time evidence", the commit landing the D86 work the 05:20 entry describes. No other fact drifted beyond that HEAD move.

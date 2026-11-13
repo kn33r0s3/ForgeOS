@@ -1,3 +1,20 @@
+## Ranked queue — 2026-11-14 04:41 NPT (run-start main SHA 3863f82f9658f6e58c8ad77a345f845719aa108d)
+
+Mission and breadth are settled. A blocked intervention, source or experiment does not pause independent Hami-wide discovery.
+
+1. **P0 — Preserve source-edit and source-rights boundaries.** Do not retry research_planner.py::summarize_research_portfolio or route that blocked mutation through another tool. Do not renew expired Crossref/GDELT/OpenAlex/World Bank clearances without exact fresh robots/terms/purpose/field review. Do not weaken source-body withholding.
+2. **P0 — Backend exact-head CI.** Run 43338895920 failed backend-tests (53 failed / 1,302 passed / 2 skipped / 18 warnings); other eight jobs passed. Separate direct expired-clearance errors from downstream planner/collector failures, the abstract fixture that conflicts with body withholding, the importer count of 124, and monitoring-cache/multi-judge/research-loop assertions. Fix only through supported code paths after current contracts are reviewed.
+3. **P0 — Deployment/account boundary.** Verifier 43338895873 failed production content fetch HTTP 402; later checks skipped. Vercel team read is 403. Use ordinary authorized account recovery only; no bypass and no production-health claim.
+4. **P1 — EV workforce and post-warranty service-chain capability.** Reconcile CTEVT 390h/1,696h curricula, GGGI's 52 publicly documented mechanics across two 60h cohorts, the 100-mechanic 2026 target, 18 EV-testing officials, SET4NPL's project-reported 400 buses/600 next-slab capacity, employer requirements and actual post-warranty workshop/contract coverage. Keep these populations and programme levels distinct. Public outcomes and workshop capacity remain UNKNOWN; no contact or new product assumption.
+5. **P1 — Existing source-time provenance capability.** When supported source editing and exact-source rights allow, preserve page/listing date, report/version, source-effective cutoff, scope, unit, denominator and retrieval time through normalize → Signal → Evidence → assessment → citation. Existing seam only; no new model/table/primitive/collector.
+6. **P1 — Continue independent tracks.** D86 Customs workbook/HS and value-added reconciliation; D93/D94 official service/report/restoration chain; D95 agriculture-extension outcomes; D96 transmission project lifecycle; WASH service-chain evidence; D99/D100 labour and demand; other evidence-rich domains. None gates the others.
+7. **P1 — Documentation projection contract.** test_import_unknowns on the run-start exact head receives 124 parsed records. Preserve the structured D1–D108 map and generated projections; do not hand-edit unknowns.json/unknowns.ts or add D109 until the existing parser/sync path is restored.
+8. **P2 — Reliability/security/privacy.** Recheck exact-head CI, secret scan and deployment separately after the grouped documentation commit. Preserve consent, HALT, source rights and spend boundaries.
+
+No new question/task inventory, model, table, primitive, collector, branch or worktree is authorized by this queue update.
+
+
+---
 ## Ranked queue — 2026-11-13 05:20 NPT (run-start main SHA `880caf9f223233d7610c7193d9914f2e403ee88f`)
 
 Mission and breadth are settled. No pilot, seller, revenue wedge or validation experiment gates unrelated Hami-wide work.
