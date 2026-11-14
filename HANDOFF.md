@@ -1,3 +1,17 @@
+## Current handoff — 2026-11-14 — governed operator / LiveKit proving ground
+
+- **Resume from main:** `6267be567194750044f78a6808d76501c1fe9b88` (re-resolve main before any edit; other work may have landed).
+- **What was inspected:** `AGENTS.md`, `AUTHORITY.md`, `STATE.md`, `QUEUE.md`, `HANDOFF.md`, `docs/CAPABILITY_QUEUE.md`, `action_engine.py`, `decision_rights.py`, `worker_manager.py`, `tool_registry.py`, cognition/goal planning and deployment records.
+- **Implemented before this handoff:** strict universal GoalPlan contract, owner-only goal-plan route, replaceable cognition provider, durable idempotent WorkerTask proposal, WorldEvent provenance. Latest commit at inspection also preserves Ollama prompt/completion token and duration metadata.
+- **Still missing:** general Action-to-tool executor; bounded browser operator; safe fixed repo/build/test tools; worker heartbeat/lease/stale recovery/resource scheduling; independent artifact verifier; LiveKit deployment and benchmark.
+- **CI:** exact-head run `43615184838` on `6267be567194750044f78a6808d76501c1fe9b88` was in progress. Eight non-backend jobs had passed; backend pytest was still running. Do not infer its outcome. The immediately prior goal-planning SHA `6fe1bbbcf432e07a132674873d3cd1bc4dd62bd5` had a failed backend job.
+- **Production:** latest READY deployment is old SHA `6076690f00c238f1b22a3afcdf489e983c468e7d`; no deployment for inspected SHA. Health probe returned HTTP 402 `DEPLOYMENT_DISABLED`. Owner must resolve the account/usage gate without unapproved spend.
+- **LiveKit:** not provisioned or tested. Self-hosted single-room scale remains bounded by one SFU node; design candidate is a logical Hami room with multiple media shards and publisher relay, subject to topology tests. Benchmark the exact viewer layout and network geography; 100ms must be defined as a percentile SLO.
+- **Next exact operation:** retrieve the final jobs for `43615184838`, inspect the backend failure log if failed, then design a closed typed adapter contract from GoalPlan to Action. Recheck current main, source/test files and existing tests before changing code. Preserve the current main-only rule and never change permissions to make a test pass.
+- **No action claims:** no source edit, local Mac command, Docker/LiveKit start, load test, deployment, spend or external contact occurred during this inspection.
+
+---
+
 ## Current handoff — 2026-11-14 — Hami goal-planning increment
 
 - **Canonical repository:** `main`, HEAD `6fe1bbbcf432e07a132674873d3cd1bc4dd62bd5`. The two commits since `ced8e34c830da665a8c0a660d283dc35b93bc23b` add universal proposal-only goal planning and fix its API import. No branch, worktree, PR, force-push or history rewrite was used.

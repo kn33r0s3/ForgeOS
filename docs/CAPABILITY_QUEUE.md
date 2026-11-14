@@ -1,3 +1,68 @@
+## 2026-11-14 — Governed Hami operator + LiveKit proving ground (audit/design baseline; execution capability NOT IMPLEMENTED)
+
+### Mission translated into an engineering contract
+- One Hami, extending the existing system. No second agent, parallel ledger, new semantic primitive, or replacement runtime.
+- Durable intent → reasoning → registered capability → execution-time authority → tool invocation → independent postcondition verification → evidence/outcome → reusable method.
+- “Inner power” means Hami owns its mission, reasoning process, durable memory, plans, controls and recovery. External sources and machines remain necessary to observe and affect the physical world; they do not own Hami's identity.
+- Zero compromise means fail-closed truth, authorization, privacy, security, audit and verification. It does not mean claiming infinite resources, zero latency or flawless software.
+
+### Verified run-start state
+- Main at inspection: `6267be567194750044f78a6808d76501c1fe9b88`. Latest commit at that point: `6267be567194750044f78a6808d76501c1fe9b88` (`fix(hami): retain Ollama goal planning call metrics`).
+- Workflow run `43615184838` for that exact SHA was still in progress at inspection. Build, lint, typecheck, frontend tests, route smoke, repository guards, evidence-triage tests and secret scan had completed successfully; backend tests remained in progress. Do not call the exact-head suite green until the backend job and overall run complete.
+- Hami has an owner-only goal-planning route, strict proposal-only GoalPlan contract, replaceable cognition provider, existing WorkerTask persistence and a narrow proposal-only handler. Goal planning is not general task execution.
+- Existing `action_engine.py` provides a canonical Action lifecycle and adapter registry. `decision_rights.py` defaults unknown action types to OWNER_ONLY. Execution revalidates relevant rights/standing authorization before adapter dispatch. This is the execution seam to extend.
+- `worker_manager.py` has durable task claiming/retry logic, but most worker execution remains behind the legacy-intelligence flag. Its builder and QA handlers explicitly report that they did not build or inspect an artifact.
+- `tool_registry.py` currently describes/selects registered intelligence/source tools; it is not a general-purpose browser, shell or infrastructure executor. Root Playwright scripts are currently browser smoke/QA with a local-target guard, not a full autonomous browser.
+- No LiveKit server, streamer containers, SFU cluster, load generator, 4,000-viewer run or 100ms measurement was provisioned in this inspection.
+- The latest READY Vercel production deployment is SHA `6076690f00c238f1b22a3afcdf489e983c468e7d`, not the inspected main SHA. No deployment record existed for the inspected SHA. `https://haminp.vercel.app/api/health` returned HTTP 402 `DEPLOYMENT_DISABLED`; current production health is NOT VERIFIED. No billing, usage, resume, deployment or spend setting was changed.
+
+### Existing seams; missing link
+- Goal understanding/planning: `Goal`, `GoalPlan`, `goal_engine.py`, `cognitive_provider.py`, `WorkerTask`.
+- Governed execution: `Action`, `action_engine.py`, `decision_rights.py`, `autonomy_engine.py`, existing Action/Event/audit records.
+- Persistent work: `worker_manager.py`, existing scheduler and `WorkerTask` retry/idempotency fields.
+- Capability discovery: existing `ToolRegistry` and `ForgeCapability`.
+- Browser: existing Playwright dependency and browser smoke scripts; needs a bounded read-only browser adapter with host/path allowlists and no ambient credentials.
+- Missing integration: validated GoalPlan steps are not yet mapped to registered Actions/adapters and dispatched through the existing authorization + verification path. Do not let model-generated strings become shell commands, URLs, permissions or provider credentials.
+
+### Build order (reuse existing files and primitives)
+1. **Exact-head quality gate.** Finish the current backend test run; diagnose failures from logs; verify CI against the exact SHA. Keep Vercel `DEPLOYMENT_DISABLED` separate from code-test results.
+2. **Governed executor in the existing Action seam.** Define a closed, typed allowlist of internal operations; map plan steps to known action types; validate parameters; check rights and scope immediately before execution; persist start/result/error; verify a deterministic postcondition independently. Unknown tools, malformed inputs, expired grants, HALT, timeouts or ambiguity must fail closed. No generic unrestricted shell.
+3. **Persistent worker reliability.** Extend existing `WorkerTask`/scheduler path for lease/heartbeat, stale-running recovery, idempotent execution, bounded retry/backoff, cancellation, resource limits and failure-only operator escalation. Do not silently enable all legacy workers.
+4. **First operating tools.** Begin with bounded, read-only repository inspection; fixed test/build commands in an isolated workspace; then read-only browser research against explicitly cleared/allowlisted hosts. Add write-capable adapters only with a specific permission envelope and rollback/test plan.
+5. **Resource independence.** Separate control plane from workers. Use one heavy local model at a time; initially cap browser concurrency at one; pause noncritical work under memory pressure. Docker isolates processes but does not create additional host RAM/CPU. Add remote workers only after a provider-independent deployment and spend decision.
+6. **LiveKit proving ground.** Hami should calculate the media topology and bandwidth before provisioning; generate reproducible configuration; validate it; deploy only in an authorized environment; load-test; independently inspect metrics and recover from worker failure. Preserve the LiveKit configuration, test recipe and verified capacity in Hami's existing evidence/capability records so a repeat task becomes a known playbook rather than a fresh invention.
+
+### LiveKit capacity math (planning assumptions, not a benchmark)
+- LiveKit's self-hosted distributed mode scales many rooms across nodes, but each individual room must fit on one node. Official self-hosted guidance says roughly up to 3,000 participants in a room; 9 publishers + 4,000 viewers is 4,009 participants and is outside that guidance. A second SFU node does not transparently split one self-hosted room. See official benchmark and distributed-mode docs.
+- At an illustrative 720p stream rate of 1.5 Mbps:
+  - One selected stream per viewer: `4,000 × 1.5 Mbps ≈ 6 Gbps` outbound media.
+  - Nine simultaneous streams per viewer: `4,000 × 9 × 1.5 Mbps ≈ 54 Gbps` outbound media.
+  - Nine publishers ingesting one 1.5 Mbps rendition each: `9 × 1.5 Mbps ≈ 13.5 Mbps` inbound, before simulcast layers/audio/protocol overhead.
+- These are arithmetic scenarios, not capacity claims. LiveKit states actual SFU capacity depends on published tracks, subscriber count and bytes forwarded per subscriber; its reference video benchmark used a 16-core compute-optimized GCP machine, not the local development laptop.
+- Candidate paths to test, not preselected outcomes:
+  1. Hami logical-room control plane with multiple bounded LiveKit media rooms (audience sharding) and an explicitly designed publisher-track relay; this changes media topology and requires unified chat/presence semantics.
+  2. Managed global-mesh service as a measured comparison only; cost, usage limits, terms and provider dependence must be explicit.
+  3. Do not claim that simply running multiple self-hosted SFU containers makes a single room larger.
+- Define the latency SLO before benchmarking: capture-to-render glass-to-glass p50/p95/p99, geography, resolution/codec, audio/video track count, loss, jitter, reconnect time and viewer layout. “100ms” without a measurement definition and geographic scope is not a testable guarantee.
+- Use LiveKit's `lk perf load-test`/equivalent generators from separate machines for large tests; generators themselves need CPU, bandwidth and file handles. Cloud load-test allowances are restricted. No 4,000-viewer test or paid Cloud test until the account/plan and cost are owner-approved.
+
+### “Boom next time” equation
+- Autonomous success requires every link: `durable intent × permitted tools × execution-time authority × independent verification × recovery`. If any factor is zero, the end-to-end autonomous result is zero.
+- Repeat speed: `T_next = plan_lookup + resource_start + execution + verification`. Reduce plan lookup and resource start with saved, tested playbooks, prebuilt images, cached configuration, warm workers and measured resource scheduling. Never remove verification to make a demo look instant.
+
+### Acceptance criteria
+- A goal can be converted into typed Actions without executing during planning.
+- Every Action is idempotent, permission-checked at dispatch, scoped to an allowlisted target, and produces durable evidence of result/error.
+- Independent verifier reopens/checks the actual artifact or service; provider acceptance or a model's claim is not proof.
+- Crash/restart, duplicate dispatch, timeout, stale lease, resource pressure, HALT and unauthorized target tests all fail safely or recover deterministically.
+- The LiveKit benchmark records actual hardware, room topology, publishers, subscribers, active tracks/view layout, bitrate, aggregate ingress/egress, CPU/RAM, packet loss, jitter and capture-to-render latency distribution. Capacity is reported only at a tested load with headroom.
+- No production deployment, billing/usage change, external communication, paid infrastructure or permission widening is implied by this design record.
+
+### Owner-held blockers
+- Production Vercel project is currently returning `DEPLOYMENT_DISABLED` (HTTP 402). A project/account owner must resolve the account/usage gate; do not silently resume or incur spend.
+- Current main exact-head CI run must complete; the prior goal-planning SHA's backend test job failed, so no green verdict can be carried forward.
+- Local Mac/Ollama/Docker are not accessible through this assistant's connected GitHub/Vercel tools. No claim of local machine execution is made.
+
 ## 2026-11-14 — Hami universal goal interpretation v1 (implemented; exact-head CI pending)
 
 ### Capability added

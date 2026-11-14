@@ -1,3 +1,14 @@
+## Current state — 2026-11-14 — governed Hami operator / LiveKit baseline
+
+- **Repository:** inspected main HEAD `6267be567194750044f78a6808d76501c1fe9b88`; main-only workflow preserved. This record is based on remote repository and deployment metadata, not a local checkout.
+- **Current capability:** goal interpretation is implemented as a bounded, owner-only, proposal-only path. General goal-plan → registered Action → tool adapter → independent verifier execution is NOT IMPLEMENTED.
+- **Existing seams:** Action/adapter dispatch, decision-rights registry, GoalPlan, WorkerTask scheduler/retry path, ToolRegistry and Playwright smoke scripts. The worker builder/QA handlers explicitly do not build or inspect an artifact. The registry is not proof that a tool is live.
+- **Exact-head CI:** workflow `43615184838` on `6267be567194750044f78a6808d76501c1fe9b88` was still in progress at inspection. Build, lint, typecheck, frontend, route smoke, repository guards, evidence-triage and secret scan had passed; backend tests were still running. Final verdict pending.
+- **Production:** `haminp.vercel.app/api/health` returned HTTP 402 `DEPLOYMENT_DISABLED`. Latest READY deployment found was old SHA `6076690f00c238f1b22a3afcdf489e983c468e7d`; no deployment for inspected main SHA. Runtime health, durable database, scheduler and provider availability remain UNKNOWN/NOT VERIFIED.
+- **LiveKit:** design-only. No containers, SFU, load generator, or media test has run. Self-hosted 4,000-viewer single-room target is not proven; official docs require each self-hosted room to fit a single node. The candidate engineering path is logical Hami room + tested media-room sharding/relay, compared with managed global mesh only if cost/authorization permits.
+- **Next engineering step:** finish exact-head CI and inspect backend failure logs; then design the typed Action-to-tool dispatcher inside existing `action_engine.py` + worker path. Do not create a parallel executor or generic arbitrary-shell tool.
+- **Safety/resource posture:** no spend, billing/resume change, deployment, contact, publication, production activation, source-rights widening, or permission change occurred. Local Mac/Ollama/Docker was not reachable from this assistant session.
+
 ## Current state — 2026-11-14 — Hami goal-planning increment
 
 - **Repository:** canonical `main` HEAD `6fe1bbbcf432e07a132674873d3cd1bc4dd62bd5`; universal goal-plan capability and import-fix commits are on main. One branch only; no history rewrite.

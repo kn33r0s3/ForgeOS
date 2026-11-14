@@ -1,3 +1,14 @@
+## 2026-11-14 — Hami operator + LiveKit proving-ground priorities (base main 6267be567194750044f78a6808d76501c1fe9b88)
+
+1. **P0 — Exact-head test truth.** Workflow `43615184838` for `6267be567194750044f78a6808d76501c1fe9b88` was in progress; eight non-backend jobs passed and backend pytest was still running. Resolve the final result before any new source change. Diagnose, do not suppress, any failure.
+2. **P0 — Production gate.** Vercel production health probe is HTTP 402 `DEPLOYMENT_DISABLED`; newest READY deployment is old SHA `6076690f00c238f1b22a3afcdf489e983c468e7d`. Owner must resolve the account/usage gate. No resume/billing/usage change or spend.
+3. **P1 — Governed execution bridge.** Reuse GoalPlan → existing Action → `action_engine.py` adapter map → `decision_rights.py` → WorkerTask/scheduler. First write a typed closed operation contract; no generic shell, no model-generated command strings, and no unknown action default other than owner-only.
+4. **P1 — Persistent operator.** Add/verify heartbeat, lease/stale-task recovery, idempotency, bounded retries, resource gates, cancellation and persistent HALT via existing task/action/event seams. Keep legacy worker enablement narrow; never turn on every worker as a shortcut.
+5. **P1 — Read-only browser and repository tools.** Extend existing Playwright/browser guard with host/path scope and isolated sessions; start with read-only browsing, repository inspection and fixed test/build commands. Verify outputs independently.
+6. **P1 — LiveKit topology proof.** Evaluate 9 publishers and 4,000 viewers with the actual UI layout. Self-hosted single-room placement on one node is a known architectural limit; test room-shard + publisher-relay semantics and managed global-mesh only as a costed comparison. Do not provision paid services without explicit authorization.
+7. **P1 — Performance & persistence.** Capture video track matrix, bitrate, egress, CPU, RAM, packet loss, jitter, reconnects and glass-to-glass p50/p95/p99. Bank measured topology/configuration/results as a reusable Hami playbook.
+8. **P2 — Resource independence.** Route one heavy local inference at a time initially; one browser worker; separate load generators from the 24GB development laptop. Make all providers/workers replaceable and fail closed when unavailable.
+
 ## Follow-on priorities — 2026-11-14 06:33 NPT (base main 0c78f807f48d8e8b0f879a84185fd2a28dd03e47)
 
 1. **P0 — preserve exact-head truth.** CI 43535815149: 8/9 jobs passed; backend 53 failed / 1,302 passed / 2 skipped. Secret scan passed. Deployment verifier failed HTTP 402 after 90 seconds. Do not call production healthy or transfer previous green results to a new SHA.

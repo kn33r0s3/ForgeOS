@@ -1750,3 +1750,14 @@ This is the Nuwakot view of the 26 Aug Bhotekoshi–Trishuli event, distinct fro
 - **Portfolio/operations:** previous 100-entry UNKNOWN_MAP survey remains a metadata survey, not 100 deep investigations; D1–D108 and generated projections unchanged. Operational open ResearchQuestion count remains UNKNOWN behind protected runtime access.
 - **Next:** inspect the FY2083/84 budget-book body; locate official cooperative registration and facility asset/operator identifiers; find a dated Butwal fish-price record and current public facility/buyer evidence; continue source-time provenance work only via a supported edit path. No contact, publication, spending, intake/outbound activation or external intervention.
 
+
+
+## 2026-11-14 — Hami governed operator / LiveKit proving-ground audit
+
+- Re-resolved `main` at 6267be567194750044f78a6808d76501c1fe9b88; the branch had advanced during this session from `9b5ff084` to `6267be5` as goal-planning metrics were fixed. No branch, PR, force-push or history rewrite created.
+- Read the continuity charter, authority contract, current state/handoff/queue/capability ledger, Action adapters, decision-rights registry, worker manager, cognition/goal planner and browser smoke seams.
+- Confirmed that Hami can persist proposal-only GoalPlans and already has an Action adapter lifecycle, but there is no general goal-plan-to-tool execution bridge. The worker builder and QA handlers explicitly report that no build/inspection occurred. Playwright is currently used for smoke/QA, not a general autonomous browser operator.
+- Exact-head GitHub CI run `43615184838` for `6267be567194750044f78a6808d76501c1fe9b88` was still in progress; all non-backend jobs had passed, backend pytest was still running. The immediately prior SHA `6fe1bbbc` had a backend test failure. Exact-head CI therefore remains pending.
+- The Vercel health endpoint returned HTTP 402 `DEPLOYMENT_DISABLED`; latest READY deployment found was `6076690f00c238f1b22a3afcdf489e983c468e7d`, older than current main. No deployment record for `6267be567194750044f78a6808d76501c1fe9b88`. No billing, resume or usage setting was changed.
+- LiveKit official documentation confirms self-hosted multi-node mode scales many rooms, but each room still resides on one node. The 9-publisher + 4,000-subscriber target is not established for self-hosting. Illustrative 1.5Mbps video assumptions produce 6Gbps egress if each viewer watches one feed, or 54Gbps if each viewer watches all nine. No load test or deployment was run.
+- Engineering plan is recorded in the existing STATE, HANDOFF, QUEUE and CAPABILITY_QUEUE seams. No new ledger/table/model/primitive. No runtime source change, local Mac/Ollama/Docker command, LiveKit deployment, external contact, spend or permission change occurred.
