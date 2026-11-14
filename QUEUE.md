@@ -1,3 +1,21 @@
+## Current continuation — 2026-11-15 (reconciled main 8042d5572c5e1b22f1095e75afe187ffb47ede66)
+
+Mission and breadth are settled. Continue independent research across domains; do not gate Hami-wide progress on one pilot or revenue.
+
+1. **P0 — Preserve exact-head truth.** Main 8042 has no GitHub Actions runs/statuses. Vercel deployment is READY but project live=false, SSO-enabled and has zero environment variables. Do not claim a healthy live runtime. The prior b004 CI failure is not an 8042 result.
+2. **P1 — D93 WASH service continuity.** Seek dated public primary records for Chumnubri post-flood water-source retesting, named-scheme repairs, treatment operation, commissioning and household service restoration. The July sample is pre-event and cannot establish current contamination.
+3. **P1 — D93 bridge/source reconciliation.** Compare NDRRMA #03, NRCS #03/#04 and UN SitRep #12 by named asset, type, report version, effective cutoff and definition. Preserve the 12 Oct UN citation vs 13 Oct 22:00 NDRRMA PDF date and 5-vs-9 bridge count as UNKNOWN.
+4. **P1 — Chumnubri bridge notice.** Retrieve the official Syurang Khola notice PDF if it becomes accessible; establish exactly which movement types are restricted. Do not equate this Ward 4 wooden bridge with a Bailey bridge or Rasuwa's Syafrubesi crossing.
+5. **P1 — Rasuwa produce recovery.** Seek public primary confirmation and actual delivery/settlement evidence for the reported 337.5 MT cabbage arrangement. Verify mode, route beyond Syafrubesi, buyers, freight, quality, spoilage and farmer payment.
+6. **P1 — NDRRMA #04.** Retrieve and inspect the official PDF page-by-page only if the official page exposes a retrievable file; do not infer its contents from metadata.
+7. **P1 — Existing source-time capability.** Continue tracing normalize → collector_runner → ObserverEngine → Signal/Evidence → assessment → citation. Preserve report/page date, data cutoff, sample period, method, unit and scope within existing provenance when source editing is authorized. No new model/table/primitive/collector.
+8. **P2 — Reusable service/logistics continuity.** Connect WASH, disaster recovery, humanitarian cargo and perishable markets at the capability level using existing graph/evidence/demand/economic seams. Keep event and source scopes separate.
+9. **P2 — Hami persistence and autonomy.** Keep GoalPlan proposal-only until a typed authorized Action executor, durable database and independent verifier are proven. Do not add environment variables or activate production without authorization.
+
+No D-number, ResearchQuestion, generated-map edit, source registration, external contact, publishing, spend, money movement, emergency advice or alerting service.
+
+---
+
 ## 2026-11-15 — current priorities (base main b004bae89aa180ea433798f12d90cd5b272f4e4d)
 
 1. **P0 — exact-head verification truth.** Retrieve main-push GitHub Actions CI and secret-scan outcomes for b004bae. The current connector exposes Vercel statuses only; do not infer a green suite from a READY deployment.
