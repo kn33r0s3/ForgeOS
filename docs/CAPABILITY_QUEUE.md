@@ -1,3 +1,44 @@
+## 2026-11-15 — NSO WASH report body inspected; local baseline and service-chain crosswalk
+
+### Source and source-time record
+- Official NSO listing: https://www.nsonepal.gov.np/content/13536/water-supply-and-sanitation-sutuaion-in-nepal/ (page date 18 Kartik 2083).
+- Full report PDF: https://giwmscdnone.gov.np/media/files/Water%20Supply%20and%20Sanitation%20Situation%20in%20Nepal_f9hdjvg.pdf .
+- Keep distinct: NSO page/listing date (18 Kartik 2083); local-estimation period (2024/25); underlying local Census source/facility distributions (NPHC 2021); MICS transition-probability/benchmark period (2024/25); retrieval (2026-11-15). The report does not provide one universal current effective instant for every metric.
+- Local JMP estimates combine Census 2021 distributions with transition probabilities from MICS 2024/25. Surface/unimproved drinking-water categories and the Census "No toilet" proxy for open defecation are directly Census-derived; remaining local JMP service categories are modelled. Do not call municipal values direct MICS observations.
+
+### Verified findings
+- National MICS 2024/25 scorecard: on-premises drinking water 90.0%; safely managed drinking water 47.5%; improved sanitation 92.8%; safely managed sanitation 39.9%; handwashing with water and soap 86.4%; open defecation 5.5%.
+- Household water samples were E. coli-positive in 61.2%, compared with 46.1% of source samples. These are sample positivity rates, not population coverage; the difference does not by itself identify where contamination occurred.
+- Safely managed drinking-water coverage is estimated below 50% in 518/753 local levels (68.8%); 348 are below 25%, 170 between 25–49%, 234 between 50–74%, and one at least 75%.
+- Four planning categories cover 753 local levels: 57 P1 critical integrated WASH gap; 277 P2A drinking-water priority; 147 P2B sanitation priority; 272 P3 progress/sustain/learn. The 424 at-risk/inadequate local levels are not one homogeneous intervention group.
+- Chumanubri RM, Gorkha: DWEI 0.529, SEI 0.670, WASH EI 0.595. Under the report's P1 band (0.376 ≤ WASH EI < 0.600), it falls in the critical integrated-gap planning category; the water index is lower than sanitation. These are index scores, not percentages of households served. This is a geographic cross-reference to D93's Gorkha context only: it does not establish flood damage or current disruption.
+- The report says NPC's administrative safely managed-water estimate of 25.8% in 2022 and the MICS-based 47.5% for 2024/25 use different measurement approaches; this is not a confirmed 21.7-point service improvement.
+
+### Method and uncertainty limits
+- Direct model validation is only at national, provincial and 15 MICS analytical-domain levels; the report says direct district/municipality validation was not possible because MICS is not representative at that granularity.
+- Qualitative field validation covered 33 local levels across 22 districts in six provinces. This is contextual triangulation, not direct representative validation of all 753 municipalities.
+- Reported MAE: drinking water 1.57 percentage points nationally, 1.99 province, 2.22 at 15 domains; sanitation 3.61, 5.96 and 6.05 respectively. Do not transfer these validation errors to each municipality as a measured local confidence interval.
+- The report identifies sampling uncertainty, Census-to-JMP classification uncertainty, and transferability uncertainty from assuming domain-level transition relationships apply within municipalities.
+- WASH EI is the geometric mean of DWEI and SEI; it does not include hygiene. The report describes it as a foundation for a future broader WASH performance index, not a completed all-dimension WPI. Index scores are not household coverage percentages or permanent rankings.
+
+### Practical value and existing Hami seam
+- The evidence shifts attention from infrastructure counts alone to safe management, reliability, functionality, water quality, sanitation containment/treatment, operation and maintenance, and local institutional capacity.
+- Reuse the six primitives: ENTITY (local government, scheme, source, operator, lab, funder, service area); RELATION (serves, owns, operates, funds, maintains, tests); EVENT (outage, sample, contamination result, repair, commissioning, emptying/treatment); EVIDENCE (source, date/period, method, unit, denominator, geography, uncertainty and rights); CAPABILITY (local service-chain and asset-to-need reconciliation); ACTION (internal review only unless separately authorized).
+- This extends the existing source-time/evidence-graph seam; it is not a new model, table, primitive, collector, D-number or operational service. It can connect WASH baseline → asset/operator → dated condition/quality/repair record → funding/maintenance responsibility → measured service outcome.
+
+### Owner dependency, blocker and next dependency
+- This pass removes the owner-dependent step of locating and reading the full national report and extracting its local-level method/example. It does not remove the need for current asset/operator records, local field verification, water-quality tests, service-interruption logs, budget/execution records or source-rights review.
+- Exact source-rights blocker: NSO and the government PDF host robots/terms/content-reuse terms were not reviewed. Manual reading/citation only; NOT CLEARED for automated collection, body persistence, runtime ingestion or provider transmission. No Signal/Evidence record was created.
+- Next: cross-reference Chumanubri and other Gorkha local-level baselines with dated official water-scheme damage, repair, quality-test, operator and budget records; do not infer post-flood impact from district co-location. Then assess whether existing provenance can carry source-time/method/uncertainty fields.
+- Existing code blocker remains: SourceCollector.normalize selects explicit raw provenance instead of merging normalized metadata; runner/Observer/Evidence preserve only the resulting provenance; assessment compares publication with retrieval; citation omits publication/effective cutoff, report version and method. Prepared source-time extension remains NOT IMPLEMENTED until a supported source-edit path exists. The blocked research_planner.py::summarize_research_portfolio write was not retried or routed around.
+
+### Current verification boundary
+- Main base: b004bae89aa180ea433798f12d90cd5b272f4e4d. Vercel hami exact-head deployment is READY, but project live=false, SSO-protected and has no environment variables; durable DB/auth are not evidenced.
+- Exact-head GitHub Actions CI and secret scan are UNVERIFIED because the available workflow-run reader is PR-only and combined status exposes Vercel contexts only. Old forge-os Vercel status remains failure.
+- No code/test/schema/runtime write, source registration, collector run, contact, publication, spend, payment change, intake/outbound activation or external intervention occurred.
+
+---
+
 ## 2026-11-14 — Governed Hami operator + LiveKit proving ground (audit/design baseline; execution capability NOT IMPLEMENTED)
 
 ### Mission translated into an engineering contract

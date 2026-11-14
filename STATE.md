@@ -1,3 +1,15 @@
+## Current state — 2026-11-15 05:06 NPT — main b004bae89aa180ea433798f12d90cd5b272f4e4d
+
+- Mission is settled and open-ended across domains/geographies; no seller experiment, First Rupee or revenue milestone gates unrelated Hami-wide progress.
+- Canonical repository has one active branch, main, at b004bae89aa180ea433798f12d90cd5b272f4e4d. Recent source changes add a fail-closed deployed database boundary, a North Star Goal anchor in the existing Goal model, and a separate inner-ground design invariant. No new model/table/primitive/parallel runtime.
+- GoalPlan is owner-only and proposal-only. Its regression proves execution_allowed=false and zero Action rows. General typed GoalPlan→Action→tool execution and independent artifact verification remain NOT IMPLEMENTED.
+- Vercel project hami has an exact-head READY deployment, but metadata says live=false, SSO enabled, generated aliases only, and zero project environment variables. Durable Postgres and stable auth configuration are not evidenced. The old forge-os Vercel status remains failure. READY does not establish public/live runtime health.
+- Current deployment produced no runtime logs in the last 30 minutes; one older deployment emitted a PGLite missing-file bootstrap error. The later code fails closed when deployed PostgreSQL is missing. Current health, read-after-write, separate backend DB, scheduler heartbeat and provider reachability remain NOT VERIFIED.
+- Exact-head GitHub Actions CI and secret scan are UNVERIFIED. Combined status exposes Vercel hami success and forge-os failure only; available workflow-run retrieval is PR-only and returned no run for main SHA.
+- Official NSO WASH report page dated 18 Kartik 2083 and full PDF were inspected. National MICS 2024/25 estimates 47.5% safely managed drinking water and 39.9% safely managed sanitation; 518/753 local levels are below 50% safely managed water. Chumanubri RM (Gorkha) is listed DWEI 0.529 / SEI 0.670 / WASH EI 0.595 (P1 by the report's band). Local figures are model-based, not direct municipality MICS observations. This is a pre-event baseline, not current service or flood-damage evidence.
+- Source normalization still allows explicit raw provenance to displace normalized metadata; Signal/Evidence carry published_at/retrieved_at/provenance; freshness is publication-versus-retrieval; citation lacks source-effective cutoff/report version/method. Five registry entries are expired; NSO/NWASH is not registered or cleared. Manual citation only; no ingestion.
+- research_planner.py::summarize_research_portfolio remains NOT IMPLEMENTED under the prior source-edit block. No alternate mutation path or source code write was attempted.
+- D1–D108 unchanged. Previous 100-row survey remains metadata-only. Operational open ResearchQuestion count UNKNOWN. No new D-number, task or question row. No external actions.
 ## Current state — 2026-11-14 — governed Hami operator / LiveKit baseline
 
 - **Repository:** inspected main HEAD `6267be567194750044f78a6808d76501c1fe9b88`; main-only workflow preserved. This record is based on remote repository and deployment metadata, not a local checkout.
