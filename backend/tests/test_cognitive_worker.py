@@ -1020,5 +1020,5 @@ def test_ollama_provider_proposes_a_valid_general_goal_plan():
     assert result["steps"][0]["execution_authorized"] is False
     assert '"goal_id":17' in model.prompt
     assert "open-ended" in model.system
-    assert model.schema["properties"]["plan"]["additionalProperties"] is False
+    assert model.schema["$defs"]["GoalPlan"]["additionalProperties"] is False
     assert provider.last_call_metadata["total_duration_ms"] == 125.0

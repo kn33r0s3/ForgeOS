@@ -392,6 +392,13 @@ class OllamaCognitiveProvider:
             raise CognitiveProviderError(
                 f"Local Ollama goal-planning call failed ({type(exc).__name__})"
             ) from exc
+        metadata = getattr(self._implementation, "last_call_metadata", {})
+        if isinstance(metadata, dict):
+            self.last_call_metadata = {
+                key: metadata.get(key)
+                for key in ("prompt_eval_tokens", "completion_eval_tokens", "total_duration_ms")
+                if metadata.get(key) is not None
+            }
         try:
             decoded = json.loads(raw)
         except (TypeError, ValueError) as exc:
