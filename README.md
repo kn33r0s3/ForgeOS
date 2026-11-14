@@ -1,8 +1,8 @@
 # Hami — product and system entrypoint
 
-**Current snapshot:** 2026-10-11 (Nepal time) · canonical branch `main`.
+**Current snapshot:** 2026-11-14 (Nepal time) · canonical branch `main`.
 
-**Production web surface:** [https://haminp.vercel.app](https://haminp.vercel.app). Vercel currently reports the Hami production alias as READY. This verifies deployment state and alias assignment, not API readiness, durable production persistence, scheduled jobs, real users, or economic outcomes. A deployment/build status does not by itself verify API readiness, durable production persistence, scheduled jobs, real users, or economic outcomes.
+**Production web surface:** [https://haminp.vercel.app](https://haminp.vercel.app). The production aliases currently return Vercel `402 DEPLOYMENT_DISABLED`; they are not live. The local Hami path is `FORGEOS_ENABLE_SCHEDULER=false ./start.sh`, which starts only the backend and root web UI after rebuilding the generated dependency target when needed. Local availability does not verify API readiness in production, durable production persistence, scheduled jobs, real users, or economic outcomes.
 
 Hami is the product identity. This repository is the in-place technical lineage evolving from ForgeOS; historical API paths, database records, environment variables, imports, and migration identifiers remain compatible unless a specific migration proves safe. There is one Hami application, not a replacement frontend, parallel service catalogue, or second architecture.
 
