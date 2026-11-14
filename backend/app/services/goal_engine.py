@@ -32,6 +32,9 @@ downstream changes behavior — goals are strictly additive.
 """
 
 
+import hashlib
+import json
+
 from sqlalchemy.orm import Session
 
 from app import models
@@ -180,3 +183,158 @@ def belief_goal_relevance(db: Session, belief: models.Belief) -> float:
     structural = structural_goal_relevance(db, belief.pattern_id)
     textual = goal_relevance_boost(db, belief.statement)
     return round(min(100.0, structural + textual), 1)
+
+
+
+def _goal_revision(goal: models.Goal) -> str:
+    """Stable digest of the exact goal version being planned."""
+    payload = {
+        "goal_id": goal.id,
+        "statement": goal.statement,
+        "target_metric": goal.target_metric,
+        "status": goal.status,
+        "updated_at": goal.updated_at.isoformat() if goal.updated_at else None,
+    }
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+def queue_goal_plan(db: Session, goal: models.Goal) -> models.WorkerTask:
+    """Create or reuse one proposal-only WorkerTask for this exact goal revision."""
+    if goal.status != "active":
+        raise ValueError("Only an active goal can be planned")
+    revision = _goal_revision(goal)
+    key = f"goal-plan:v1:{goal.id}:{revision}"
+    existing = db.query(models.WorkerTask).filter_by(idempotency_key=key).one_or_none()
+    if existing is not None:
+        return existing
+    task = models.WorkerTask(
+        idempotency_key=key,
+        worker_type="goal_plan",
+        task_name="interpret_goal_and_propose_verified_path",
+        status="queued",
+        priority=int(max(0, min(100, goal.priority))),
+        inputs={"goal_id": goal.id, "goal_revision": revision},
+        max_attempts=2,
+    )
+    db.add(task)
+    db.flush()
+    return task
+
+
+def run_goal_plan_task(
+    db: Session,
+    worker_task: models.WorkerTask,
+    *,
+    provider=None,
+) -> dict:
+    """Produce a bounded goal plan from the replaceable provider; never execute it."""
+    from app.services import cognitive_provider, tool_registry, world_graph
+
+    if worker_task.worker_type != "goal_plan":
+        raise ValueError("worker task is not a goal_plan task")
+    inputs = worker_task.inputs
+    if not isinstance(inputs, dict) or set(inputs) != {"goal_id", "goal_revision"}:
+        raise ValueError("goal-plan task inputs do not match the contract")
+    goal_id = inputs.get("goal_id")
+    if type(goal_id) is not int or goal_id <= 0:
+        raise ValueError("goal-plan task references an invalid goal")
+    goal = db.get(models.Goal, goal_id)
+    if goal is None or goal.status != "active":
+        raise ValueError("goal is missing or no longer active")
+    revision = _goal_revision(goal)
+    if inputs.get("goal_revision") != revision:
+        raise ValueError("goal changed after this plan task was queued; create a fresh plan task")
+    objective = (goal.statement or "").strip()
+    if not objective or len(objective) > cognitive_provider.MAX_GOAL_OBJECTIVE_CHARS:
+        raise cognitive_provider.CognitiveTaskBoundsError(
+            f"goal objective must contain 1 to {cognitive_provider.MAX_GOAL_OBJECTIVE_CHARS} characters"
+        )
+    target_metric = (goal.target_metric or "").strip() or None
+    if target_metric and len(target_metric) > 500:
+        raise cognitive_provider.CognitiveTaskBoundsError("goal target metric exceeds 500 characters")
+
+    # These are declared metadata only. No availability probe or tool invocation occurs here.
+    declarations = tuple(
+        {
+            "name": item.name,
+            "category": item.category,
+            "input_types": list(item.input_types),
+            "output_types": list(item.output_types),
+            "capabilities": list(item.capabilities),
+        }
+        for item in tool_registry.default_registry().list_capabilities()[
+            : cognitive_provider.MAX_GOAL_CAPABILITIES
+        ]
+    )
+    context = cognitive_provider.GoalPlanningContext(
+        goal_id=goal.id,
+        objective=objective,
+        target_metric=target_metric,
+        declared_capabilities=declarations,
+    )
+    selected_provider = provider or cognitive_provider.get_cognitive_provider()
+    raw_plan = selected_provider.plan_goal(context)
+    plan = cognitive_provider.validate_goal_plan(raw_plan)
+    plan_status = plan["status"]
+    provider_mode = str(getattr(selected_provider, "mode", "UNKNOWN"))
+    classification = (
+        "MOCK" if provider_mode == "MOCK"
+        else ("HYPOTHESIS" if plan_status == "PROPOSED" else "UNKNOWN")
+    )
+    context_payload = {
+        "goal_id": goal.id,
+        "goal_revision": revision,
+        "objective": objective,
+        "target_metric": target_metric,
+        "declared_capabilities": list(declarations),
+    }
+    context_digest = hashlib.sha256(
+        json.dumps(context_payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    plan_digest = hashlib.sha256(
+        json.dumps(plan, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    provider_metadata = getattr(selected_provider, "last_call_metadata", {})
+    safe_provider_metadata = {
+        key: provider_metadata.get(key)
+        for key in ("prompt_eval_tokens", "completion_eval_tokens", "total_duration_ms")
+        if isinstance(provider_metadata, dict) and provider_metadata.get(key) is not None
+    }
+
+    world_graph.seed_core_types(db)
+    world_graph.create_event(
+        db,
+        event_type="goal_plan_assessed",
+        source="goal_engine",
+        payload={
+            "goal_id": goal.id,
+            "worker_task_id": worker_task.id,
+            "goal_revision_sha256": revision,
+            "context_sha256": context_digest,
+            "plan_sha256": plan_digest,
+            "provider": str(getattr(selected_provider, "name", "unknown"))[:80],
+            "provider_version": str(getattr(selected_provider, "version", "unknown"))[:120],
+            "provider_mode": provider_mode[:32],
+            "plan_status": plan_status,
+            "classification": classification,
+            "execution_allowed": False,
+        },
+        idempotency_key=f"goal-plan-assessed:v1:{worker_task.id}",
+    )
+    return {
+        "status": plan_status,
+        "classification": classification,
+        "execution_allowed": False,
+        "plan": plan,
+        "provenance": {
+            "provider": str(getattr(selected_provider, "name", "unknown"))[:80],
+            "provider_version": str(getattr(selected_provider, "version", "unknown"))[:120],
+            "provider_mode": provider_mode[:32],
+            "goal_revision_sha256": revision,
+            "context_sha256": context_digest,
+            "plan_sha256": plan_digest,
+            "provider_metrics": safe_provider_metadata,
+        },
+    }

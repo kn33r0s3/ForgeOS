@@ -61,7 +61,7 @@ from app.database import get_db
 from app import evidence_source, schemas, models
 from app.config import settings
 from app.security import require_owner_api_key
-from app.services import (
+from app.services import (, worker_manager
     reality_checker,
     reality_memory,
     experiment_runner,
@@ -544,6 +544,33 @@ def create_goal(
     return goal_engine.GoalEngine(db).create_goal(
         payload.statement, target_metric=payload.target_metric, priority=payload.priority
     )
+
+
+
+@router.post("/goals/{goal_id}/plan", response_model=schemas.WorkerTaskOut)
+def plan_goal(
+    request: Request,
+    goal_id: int,
+    db: Session = Depends(get_db),
+):
+    """Queue and run one bounded goal-interpretation task; proposals never execute."""
+    require_owner_api_key(request)
+    goal = goal_engine.GoalEngine(db).get_goal(goal_id)
+    if not goal:
+        raise HTTPException(status_code=404, detail="Goal not found")
+    try:
+        task = goal_engine.queue_goal_plan(db, goal)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    db.commit()
+    if task.status == "queued":
+        # On-demand execution is explicit and proposal-only. The worker still checks
+        # the operating_v4 dormancy guard and the selected provider's data boundary.
+        worker_manager.process_worker_task_by_id(
+            db, task.id, worker_type="goal_plan"
+        )
+        db.refresh(task)
+    return task
 
 
 @router.get("/goals", response_model=list[schemas.GoalOut])

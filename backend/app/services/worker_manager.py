@@ -14,6 +14,10 @@ from app.models import WorkerTask, utcnow
 from app.config import settings
 
 
+# These worker types can only create internal proposals. They never execute Actions.
+PROPOSAL_ONLY_WORKER_TYPES = frozenset({"goal_plan"})
+
+
 def process_worker_task_by_id(
     db: Session,
     task_id: int,
@@ -21,7 +25,10 @@ def process_worker_task_by_id(
     worker_type: str | None = None,
 ) -> bool:
     """Atomically claim and execute one queued task, if it is eligible."""
-    if not settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
+    if (
+        not settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED
+        and worker_type not in PROPOSAL_ONLY_WORKER_TYPES
+    ):
         return False
 
     # Dormancy guard: agent runs are stopped while dormant.
@@ -192,6 +199,14 @@ def cognitive_handler(db: Session, task: WorkerTask) -> dict:
     return handle_task(db, task)
 
 
+
+def goal_plan_handler(db: Session, task: WorkerTask) -> dict:
+    """Interpret an active Goal and persist a non-executable plan proposal."""
+    from app.services import goal_engine
+
+    return goal_engine.run_goal_plan_task(db, task)
+
+
 def evolution_handler(db: Session, task: WorkerTask) -> dict:
     output = {"next": "discovery", "message": "Scheduled the next discovery. No system evaluation ran."}
 
@@ -225,6 +240,7 @@ HANDLERS: Dict[str, Callable[[Session, WorkerTask], dict]] = {
     "revenue_miner": revenue_miner_handler,
     "demand_understanding": demand_understanding_handler,
     "cognitive": cognitive_handler,
+    "goal_plan": goal_plan_handler,
 }
 
 

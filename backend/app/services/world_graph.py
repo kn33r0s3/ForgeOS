@@ -279,6 +279,7 @@ def seed_core_types(db: Session) -> int:
             "economic_validation_assessed",
             "prospect_discovery_evaluated",
             "cognitive_proposals_generated",
+            "goal_plan_assessed",
             "forge_bot_inquiry_received",
             "forge_bot_inquiry_opted_out",
             "forge_bot_inquiry_erased",

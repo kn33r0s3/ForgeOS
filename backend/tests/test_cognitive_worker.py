@@ -774,3 +774,188 @@ def test_bounded_cognitive_worker_blocks_self_hosted_gateway_without_data_opt_in
     assert result["status"] == "blocked"
     assert result["reason"] == "remote_internal_context_not_authorized"
     assert db.query(models.WorkerTask).filter_by(worker_type="cognitive").count() == 0
+
+
+
+class ReplacementGoalPlanner:
+    name = "replacement-goal-planner"
+    version = "test-v1"
+    mode = "TEST"
+
+    def __init__(self):
+        self.context = None
+
+    def plan_goal(self, context):
+        self.context = context
+        return {
+            "status": "PROPOSED",
+            "objective_interpretation": (
+                "Validate whether one LiveKit room can support the requested broadcaster "
+                "and viewer load under the stated latency target."
+            ),
+            "success_criteria": [
+                "Nine independent streamer processes can publish concurrently.",
+                "Four thousand viewers join the same logical room.",
+                "Measured glass-to-glass latency meets the agreed 100 ms definition."
+            ],
+            "assumptions": ["The 100 ms target requires an explicit measurement definition."],
+            "unknowns": ["Per-viewer bitrate, codec, geography and traffic distribution."],
+            "evidence_needed": ["A repeatable single-room load test with production-like media."],
+            "capability_gaps": ["No verified load-test executor or production LiveKit infrastructure is registered."],
+            "steps": [
+                {
+                    "order": 1,
+                    "operation_class": "research",
+                    "title": "Resolve LiveKit room capacity constraints",
+                    "purpose": "Compare documented self-hosted limits with the one-room target.",
+                    "required_capabilities": ["web_research"],
+                    "verification": "Verify official versioned documentation and capture the room placement constraints.",
+                    "permissions_required": [],
+                    "reversibility": "reversible",
+                    "blocked_by": [],
+                    "execution_authorized": False
+                },
+                {
+                    "order": 2,
+                    "operation_class": "test",
+                    "title": "Benchmark one room under the target load",
+                    "purpose": "Measure concurrent publisher/subscriber behaviour and latency.",
+                    "required_capabilities": ["container_execution", "load_testing", "metrics"],
+                    "verification": "Persist reproducible load-test output, percentiles, packet loss and resource usage.",
+                    "permissions_required": ["approved compute capacity and an isolated test environment"],
+                    "reversibility": "conditionally_reversible",
+                    "blocked_by": ["No production-like infrastructure or approved test budget is configured."],
+                    "execution_authorized": False
+                }
+            ],
+            "blockers": ["No deployment account, target host or authorized infrastructure is available to this task."],
+            "execution_authorized": False
+        }
+
+
+def test_goal_plan_is_persisted_idempotently_and_never_executes(db, monkeypatch):
+    from app.services import goal_engine, worker_manager
+
+    monkeypatch.setattr(settings, "FORGEOS_LEGACY_INTELLIGENCE_ENABLED", False)
+    monkeypatch.setattr(
+        "app.services.operating_v4.check_agent_run_allowed",
+        lambda session: None,
+    )
+    planner = ReplacementGoalPlanner()
+    monkeypatch.setattr(
+        cognitive_provider,
+        "get_cognitive_provider",
+        lambda: planner,
+    )
+
+    goal = models.Goal(
+        statement=(
+            "Deploy a multi-streamer LiveKit platform: nine independent streamer "
+            "containers, up to 4,000 viewers in one room, target 100 ms real-time latency."
+        ),
+        target_metric="9 streamers; 4,000 viewers in one room; 100 ms latency",
+    )
+    db.add(goal)
+    db.commit()
+    db.refresh(goal)
+
+    first = goal_engine.queue_goal_plan(db, goal)
+    db.commit()
+    second = goal_engine.queue_goal_plan(db, goal)
+    assert first.id == second.id
+
+    assert worker_manager.process_worker_task_by_id(
+        db, first.id, worker_type="goal_plan"
+    ) is True
+    db.refresh(first)
+
+    assert first.status == "completed"
+    assert first.outputs["status"] == "PROPOSED"
+    assert first.outputs["classification"] == "HYPOTHESIS"
+    assert first.outputs["execution_allowed"] is False
+    assert len(first.outputs["plan"]["steps"]) == 2
+    assert planner.context.goal_id == goal.id
+    assert planner.context.objective == goal.statement
+    assert all(
+        item["name"] for item in planner.context.declared_capabilities
+    )
+    assert db.query(models.Action).count() == 0
+    event = (
+        db.query(models.WorldEvent)
+        .filter_by(
+            event_type="goal_plan_assessed",
+            source="goal_engine",
+            idempotency_key=f"goal-plan-assessed:v1:{first.id}",
+        )
+        .one()
+    )
+    assert json.loads(event.payload)["execution_allowed"] is False
+
+
+def test_mock_goal_planner_reports_unavailable_instead_of_inventing_a_plan(db):
+    from app.services import goal_engine
+
+    goal = models.Goal(statement="Build and deploy a real-time media platform")
+    db.add(goal)
+    db.commit()
+    db.refresh(goal)
+    task = goal_engine.queue_goal_plan(db, goal)
+    db.commit()
+
+    output = goal_engine.run_goal_plan_task(
+        db, task, provider=cognitive_provider.MockCognitiveProvider()
+    )
+
+    assert output["status"] == "UNAVAILABLE"
+    assert output["classification"] == "MOCK"
+    assert output["plan"]["steps"] == []
+    assert output["execution_allowed"] is False
+    assert db.query(models.Action).count() == 0
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"execution_authorized": True},
+        {"steps": [{
+            "order": 2,
+            "operation_class": "deploy",
+            "title": "Deploy",
+            "purpose": "Attempt a deployment.",
+            "verification": "Check the URL.",
+            "execution_authorized": False,
+        }]},
+    ],
+)
+def test_goal_plan_schema_rejects_authority_and_invalid_step_order(change):
+    plan = {
+        "status": "PROPOSED",
+        "objective_interpretation": "Interpret a general human goal.",
+        "success_criteria": [],
+        "assumptions": [],
+        "unknowns": [],
+        "evidence_needed": [],
+        "capability_gaps": [],
+        "steps": [],
+        "blockers": [],
+        "execution_authorized": False,
+    }
+    plan.update(change)
+    with pytest.raises(cognitive_provider.CognitiveGoalPlanValidationError):
+        cognitive_provider.validate_goal_plan(plan)
+
+
+def test_non_proposal_worker_types_stay_behind_legacy_gate(db, monkeypatch):
+    from app.services import worker_manager
+
+    monkeypatch.setattr(settings, "FORGEOS_LEGACY_INTELLIGENCE_ENABLED", False)
+    task = models.WorkerTask(
+        worker_type="discovery",
+        task_name="must_remain_gated",
+        status="queued",
+    )
+    db.add(task)
+    db.commit()
+    assert worker_manager.process_worker_task_by_id(db, task.id) is False
+    db.refresh(task)
+    assert task.status == "queued"
