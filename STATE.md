@@ -1,3 +1,13 @@
+## Current state — 2026-11-14 — Hami goal-planning increment
+
+- **Repository:** canonical `main` HEAD `6fe1bbbcf432e07a132674873d3cd1bc4dd62bd5`; universal goal-plan capability and import-fix commits are on main. One branch only; no history rewrite.
+- **Implemented:** owner-only goal plan route; replaceable cognition contract; strict non-executable plan schema; idempotent existing WorkerTask persistence; event provenance; narrow proposal-only worker handler. No new DB model, table, semantic primitive or parallel engine.
+- **Exact-head CI run 43614511637:** frontend tests, evidence triage, lint, build, typecheck, repository guards, route-smoke and secret scan passed. Backend pytest was in progress when this entry was written. Do not mark exact-head CI green until job 132506537228 completes.
+- **Not implemented:** general tool executor, autonomous software build, infrastructure provisioner, LiveKit deployment or independent real-world outcome verification. Goal plans do not authorize Actions. The current registry is not proof that any tool is live/available.
+- **Vercel:** project `forge-os` reported `live=false`; latest READY production deployment uses old SHA `6076690f00c238f1b22a3afcdf489e983c468e7d`; no deployment for current main. Prior 14 Nov direct check reported HTTP 402 / `DEPLOYMENT_DISABLED`. No resume, billing or usage-setting change; runtime and durable storage remain UNKNOWN.
+- **LiveKit first test:** 9 publishers / 4,000 same-room viewers / 100ms is not yet proven. Official self-hosted guidance is about 3,000 participants per single SFU node; one room cannot be spread across multiple self-hosted SFU nodes as if each container increased single-room capacity. Need architecture alternative and real geographically distributed benchmark.
+- **Next step:** clear disabled production environment without unapproved spend, finish backend tests, then implement a generic permissioned executor and independent verifier using existing CAPABILITY/ACTION/WorkerTask seams. Hami remains open-ended; LiveKit is only one evaluation.
+
 ## Current state — 2026-11-14 06:33 NPT (run-start main SHA 0c78f807f48d8e8b0f879a84185fd2a28dd03e47)
 
 - **Mission:** settled and open-ended across domains/geographies; no First Rupee, seller pilot or revenue gate for Hami-wide progress.

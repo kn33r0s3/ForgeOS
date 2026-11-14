@@ -2,13 +2,14 @@
 GOAL ENGINE
 ============
 
-The smallest viable next rung above Curiosity Engine / Research Planner
-on Forge's long-term architecture. A Goal is a target Forge is trying
-to make progress toward — nothing more. Reasoning about HOW to reach a
-goal (which questions to prioritize, which experiments to run, which
-opportunities to pursue) is Strategy Engine's and Decision Engine's
-job; this module deliberately stays a target store + a few integration
-points, not a planner:
+The Goal Engine stores the durable target and connects it to Hami's
+reasoning and work systems. Its original goal-relevance functions remain
+additive. The proposal-only planning path now interprets any active Goal
+through the replaceable cognition provider, records a bounded plan on an
+existing WorkerTask, and emits an auditable WorldEvent. Plans identify
+success criteria, assumptions, unknowns, evidence, capability gaps,
+permissions, blockers and verification. They are hypotheses, not evidence,
+authority, or executable Actions; this module does not perform the work.
 
   1. Opportunities can optionally link to the goal they serve
      (link_opportunity()).

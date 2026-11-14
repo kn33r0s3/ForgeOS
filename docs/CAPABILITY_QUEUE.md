@@ -1,3 +1,25 @@
+## 2026-11-14 — Hami universal goal interpretation v1 (implemented; exact-head CI pending)
+
+### Capability added
+- Added an owner-only `POST /forge/goals/{goal_id}/plan` path that turns an existing active Goal into a durable, idempotent `WorkerTask`; the task captures the exact goal revision so a changed goal cannot silently reuse a stale plan.
+- Extended the existing replaceable cognition provider with a distinct general-goal planning contract. The provider receives the human objective, optional target metric and declared capability metadata. It must return bounded success criteria, assumptions, unknowns, evidence needed, capability gaps, ordered steps, permissions, blockers and independent verification requirements.
+- The strict schema rejects execution authority, invalid step ordering and an unavailable result containing steps. Every plan and every step is explicitly non-executable. The deterministic MOCK adapter returns `UNAVAILABLE`, not a fabricated plan. Ollama uses the existing shared `ai_engine` provider and its established data-boundary checks; no parallel model stack was added.
+- Reused Goal, WorkerTask/idempotency, ToolRegistry metadata, WorldEvent/type registry, existing owner API authentication, and the operating-v4 dormancy guard. No new table, top-level primitive, ledger, provider stack, scheduler or route family was introduced.
+- Added TEST coverage for persistent idempotency, replacement-provider planning, no Action creation, mock honesty, authority/order rejection, non-proposal worker gating, and the actual Ollama JSON-provider adapter path. These tests are not REAL deployment or load-test evidence.
+
+### Evidence boundary and remaining gaps
+- Main HEAD at this entry: `6fe1bbbcf432e07a132674873d3cd1bc4dd62bd5`. Frontend tests, evidence-triage tests, lint, build, typecheck, repository guards, route smoke and Gitleaks passed on exact head. Backend pytest was still running when this entry was prepared; final status must be taken from GitHub Actions, not inferred.
+- Hami can now propose how to approach a goal when a real, approved provider is configured. Default `MOCK` explicitly cannot interpret a goal. No production configuration was read as proof of Ollama availability.
+- ToolRegistry's current catalogue is mainly research/collector and provider capabilities. It is not a verified general-purpose shell, code-build, container, infrastructure or deployment executor. WorkerTask persistence is not proof of continuous scheduling.
+- No Actions were created or executed by goal planning. No LiveKit containers were deployed; no 9-publisher/4,000-viewer/100ms load test was run. No production deployment was made from this commit.
+- Vercel project `forge-os` was inspected after owner access approval: `live=false`; its latest READY production deployment points to older source `6076690f00c238f1b22a3afcdf489e983c468e7d`, not this Hami commit. No deployment exists for `6fe1bbbcf432e07a132674873d3cd1bc4dd62bd5`. A prior 14 November production probe recorded HTTP 402 / `DEPLOYMENT_DISABLED`; resume/billing/usage controls are not changed here. Production runtime, persistent database, provider reachability and scheduler remain unverified.
+- `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains NOT MEASURABLE; no verified real transaction or external value outcome has been produced by this increment.
+
+### Next capability increment
+- Build the general governed execution/verification path by composing the existing CAPABILITY and ACTION primitives with action-time authorization, idempotent WorkerTasks, independent evaluators and outcome write-back. Do not make "deployment" a hard-coded product mode.
+- Use LiveKit only as the first technical evaluation: inspect a versioned deployment target, check self-hosted single-room constraints versus a cloud/multi-SFU alternative, define latency precisely, then create a reversible isolated test environment and measure concurrent publishers/viewers, packet loss, bandwidth, CPU, reconnect behaviour and latency percentiles. Production deployment and compute spend remain separately authorized.
+- Preserve source-rights gates and the existing `research_planner.py::summarize_research_portfolio` safety boundary; do not route around it.
+
 ## 2026-11-14 06:33 NPT — D93 incident recovery as an asset-level, source-time-aware timeline (capability NOT IMPLEMENTED)
 
 ### Verified and reported recovery sequence
