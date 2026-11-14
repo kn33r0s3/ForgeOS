@@ -165,6 +165,7 @@ type CycleEffectSummary = {
 
 type RuntimeWindow = {
   inner_identity?: {
+    inner_ground: string;
     north_star: string;
     status: string;
     reason: string | null;
@@ -2068,7 +2069,16 @@ function OwnerConsolePage() {
                     </span>
                   </div>
                   <div className="mt-4 rounded-card border border-line bg-background p-4">
-                    <p className="text-xs font-bold uppercase tracking-wide text-muted">Unchanging direction</p>
+                    <p className="text-xs font-bold uppercase tracking-wide text-muted">Inner ground · nothingness</p>
+                    <p className="mt-2 text-base font-extrabold">
+                      {innerIdentity?.inner_ground ?? "Inner-ground principle UNKNOWN"}
+                    </p>
+                    <p className="mt-2 text-xs leading-5 text-muted">
+                      Architectural invariant, not a measured mental state or proof of subjective consciousness.
+                    </p>
+                  </div>
+                  <div className="mt-3 rounded-card border border-line bg-background p-4">
+                    <p className="text-xs font-bold uppercase tracking-wide text-muted">Continuing North Star</p>
                     <p className="mt-2 text-base font-extrabold">
                       {innerIdentity?.north_star ?? "North Star status UNKNOWN"}
                     </p>

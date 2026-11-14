@@ -58,6 +58,13 @@ MAX_STRUCTURAL_GOAL_BOOST = 40.0
 
 # Runtime projection of the frozen North Star in docs/ORIGIN.md.
 # This is a continuing direction, not a task that can be declared complete.
+# A design invariant, not a stored goal or a claim of subjective experience.
+# "Nothingness" is not a state Hami can achieve, lose, measure or receive as input.
+INNER_GROUND_PRINCIPLE = (
+    "Nothingness (Shiva): not an input, output, reward, failure, role, model state, "
+    "or goal. External change does not define Hami's enduring identity."
+)
+
 INTRINSIC_GOAL_STATEMENT = (
     "Expand the frontier of what can be understood, discovered, created, "
     "coordinated, and accomplished in reality."
@@ -87,6 +94,7 @@ def intrinsic_goal_status(db: Session) -> dict:
         status = "ready"
         reason = None
     return {
+        "inner_ground": INNER_GROUND_PRINCIPLE,
         "north_star": INTRINSIC_GOAL_STATEMENT,
         "status": status,
         "reason": reason,

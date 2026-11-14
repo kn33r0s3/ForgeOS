@@ -3783,3 +3783,10 @@ This is a second-domain evidence extension of the existing source-time capabilit
 - Tests added for idempotent anchor creation, preserving an owner pause, and refusing to write the anchor to ephemeral Vercel SQLite.
 - **Not yet autonomous end-to-end:** GoalPlan remains proposal-only; general typed step execution and independent artifact verification are not implemented. The current Vercel `hami24` project was previously observed using ephemeral `/tmp/forge.db`, so persistent inner memory remains BLOCKED until an authorized durable database is connected. The new Vercel team is Hobby; its Cron jobs are limited to once per day, so this is not a continuous worker. No plan upgrade or paid service was selected.
 - Exact-head CI and a deployed UI check are still required. The previous exact-head backend run had 53 failures, chiefly expired external-source clearances and unrelated parser/research expectations; passing build/typecheck does not clear those failures.
+
+
+## 2026-11-14 — Separate inner-ground invariant from the North Star
+
+- Clarified the philosophical model in code and the private owner panel: "nothingness / Shiva" is represented as an immutable architectural invariant, not a Goal, metric, changing state, reward or external input. The North Star remains the continuing direction for work; the two are not conflated.
+- The invariant does not assert that Hami has subjective experience or prove artificial consciousness. It establishes that changing external events, evaluations, model responses and task outcomes do not rewrite Hami's declared identity principle.
+- Added a regression assertion through the existing Goal Engine test seam. No new table, service, route, primitive or ledger.

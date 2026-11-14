@@ -846,6 +846,8 @@ def test_intrinsic_goal_is_persisted_once_and_owner_pause_is_preserved(db, monke
     assert goal is not None
     assert goal.statement == goal_engine.INTRINSIC_GOAL_STATEMENT
     assert goal.priority == 100.0
+    assert "Nothingness (Shiva)" in goal_engine.INNER_GROUND_PRINCIPLE
+    assert goal_engine.intrinsic_goal_status(db)["inner_ground"] == goal_engine.INNER_GROUND_PRINCIPLE
 
     goal.status = "paused"
     db.commit()
