@@ -1,3 +1,16 @@
+## Current handoff — 2026-11-14 06:23 NPT (handoff freshness check; run-start main SHA befcdb12609fcb7ba404a46024ba64346d97bc06)
+
+Freshness-only pass. Pull succeeded; main moved 8596924b → befcdb12 with one commit since the 05:46 handoff: befcdb12 "Record D95 subsidy-to-market evidence and correct source dates", the commit landing the D95 subsidy/AMPIS work the 05:46 entry describes (including the Kartik-27 = 13 Nov calendar correction). No other fact drifted beyond that HEAD move.
+
+### Live check (06:23 NPT, direct curl)
+- `haminp.vercel.app/api/health` — HTTP 402, `Payment required / DEPLOYMENT_DISABLED`. NOT ok; same Vercel account-blocked boundary recorded since 2026-10-31, unchanged.
+- `forge-os-ebon.vercel.app/api/health` — HTTP 402, `Payment required / DEPLOYMENT_DISABLED`. Same boundary, unchanged.
+- `haminp.vercel.app/api/forge-bot/config` — HTTP 402, unreadable. Intake flag remains UNKNOWN (cannot confirm false); no flag change claimed or made.
+- Banked unknowns: 108 `^| D` rows in `docs/UNKNOWN_MAP.md` (D1–D108), unchanged.
+
+No flag changes, no outreach, no spend, no other commits. Next freshness check re-verifies the 402 boundary; the Vercel account block is the standing production blocker.
+
+---
 ## Current handoff — 2026-11-14 05:46 NPT (D95 fish-subsidy / market-data crosswalk; run-start main SHA 8596924b8d2655af3f493f0ef83e04e7dd7c05ba)
 
 Hami's mission is settled and open-ended: discover, understand, connect, protect, create and realize value in the real world, originating in Nepal and useful anywhere. This run advances an existing public-value / fish-chain question; no seller pilot, First Rupee or revenue milestone gates unrelated Hami-wide work.
