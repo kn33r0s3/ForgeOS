@@ -26,7 +26,7 @@ test("the default backend SQLite URL is scoped away from the root web process", 
   assert.ok(WEB_DB.includes('import { isWorkspacePreview } from "./env.server";'));
   assert.ok(
     WEB_DB.includes(
-      'export const dbSource: DbSource = databaseUrl\\n  ? "neon"\\n  : isWorkspacePreview()\\n    ? "pglite"\\n    : "unavailable";',
+      'export const dbSource: DbSource = databaseUrl\n  ? "neon"\n  : isWorkspacePreview()\n    ? "pglite"\n    : "unavailable";',
     ),
   );
   assert.ok(
