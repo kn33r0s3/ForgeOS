@@ -61,7 +61,8 @@ from app.database import get_db
 from app import evidence_source, schemas, models
 from app.config import settings
 from app.security import require_owner_api_key
-from app.services import (, worker_manager
+from app.services import (
+    worker_manager,
     reality_checker,
     reality_memory,
     experiment_runner,
