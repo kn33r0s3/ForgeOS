@@ -1686,7 +1686,7 @@ def get_runtime(request: Request, db: Session = Depends(get_db)):
     """
     require_owner_api_key(request)
     from sqlalchemy import func
-    from app.services import truth_audit
+    from app.services import goal_engine, truth_audit
 
     truth_audit.reconcile_stale_cycles(db)
     truth = truth_audit.snapshot(db)
@@ -1811,6 +1811,7 @@ def get_runtime(request: Request, db: Session = Depends(get_db)):
         },
         "loop_stages_with_data": stages,
         "active_stage": active_stage,
+        "inner_identity": goal_engine.intrinsic_goal_status(db),
         "truth": truth,
     }
 

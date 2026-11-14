@@ -659,6 +659,22 @@ def run_scheduled_intelligence(
                 "error": type(exc).__name__,
             }
 
+    # Stage 0: preserve Hami's intrinsic direction in the existing Goal substrate.
+    # The route already refuses to run on Vercel's instance-local SQLite database.
+    try:
+        with database.SessionLocal() as db:
+            from app.services import goal_engine
+
+            intelligence["inner_direction"] = goal_engine.ensure_intrinsic_goal(db)
+            db.commit()
+    except Exception as exc:
+        logger.warning("scheduled intelligence: inner direction anchor failed (%s)", type(exc).__name__)
+        intelligence["inner_direction"] = {
+            "status": "error",
+            "reason": type(exc).__name__,
+            "created": False,
+        }
+
     # Stage 1: reasoning cycle — plans questions/tasks/opportunities/proposals.
     try:
         with database.SessionLocal() as db:

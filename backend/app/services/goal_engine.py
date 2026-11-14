@@ -35,6 +35,7 @@ downstream changes behavior — goals are strictly additive.
 
 import hashlib
 import json
+import os
 
 from sqlalchemy.orm import Session
 
@@ -55,7 +56,66 @@ MAX_GOAL_BOOST = 20.0
 # shared wording.
 MAX_STRUCTURAL_GOAL_BOOST = 40.0
 
+# Runtime projection of the frozen North Star in docs/ORIGIN.md.
+# This is a continuing direction, not a task that can be declared complete.
+INTRINSIC_GOAL_STATEMENT = (
+    "Expand the frontier of what can be understood, discovered, created, "
+    "coordinated, and accomplished in reality."
+)
 
+
+def intrinsic_goal_status(db: Session) -> dict:
+    """Return the inner-direction anchor and its persistence boundary."""
+    bind = db.get_bind()
+    ephemeral_vercel_sqlite = bool(os.getenv("VERCEL")) and bind.dialect.name == "sqlite"
+    goal = (
+        db.query(models.Goal)
+        .filter(models.Goal.statement == INTRINSIC_GOAL_STATEMENT)
+        .order_by(models.Goal.id.asc())
+        .first()
+    )
+    if ephemeral_vercel_sqlite:
+        status = "blocked"
+        reason = "ephemeral_vercel_sqlite"
+    elif goal is None:
+        status = "not_seeded"
+        reason = "scheduled_inner_direction_cycle_not_yet_recorded"
+    elif goal.status != "active":
+        status = "paused"
+        reason = "intrinsic_goal_record_is_not_active"
+    else:
+        status = "ready"
+        reason = None
+    return {
+        "north_star": INTRINSIC_GOAL_STATEMENT,
+        "status": status,
+        "reason": reason,
+        "storage_state": "ephemeral" if ephemeral_vercel_sqlite else "configured",
+        "goal_id": goal.id if goal is not None else None,
+        "goal_status": goal.status if goal is not None else None,
+    }
+
+
+def ensure_intrinsic_goal(db: Session) -> dict:
+    """Persist the North Star in the existing Goal substrate when storage permits."""
+    state = intrinsic_goal_status(db)
+    if state["status"] == "blocked":
+        return {"status": "blocked", "reason": state["reason"], "goal_id": None, "created": False}
+    if state["goal_id"] is not None:
+        return {
+            "status": state["status"],
+            "reason": state["reason"],
+            "goal_id": state["goal_id"],
+            "created": False,
+        }
+    goal = models.Goal(
+        statement=INTRINSIC_GOAL_STATEMENT,
+        target_metric="Continuous verified progress; no terminal completion state.",
+        priority=100.0,
+    )
+    db.add(goal)
+    db.flush()
+    return {"status": "created", "reason": None, "goal_id": goal.id, "created": True}
 
 
 class GoalEngine:

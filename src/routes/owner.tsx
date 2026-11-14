@@ -164,6 +164,14 @@ type CycleEffectSummary = {
 };
 
 type RuntimeWindow = {
+  inner_identity?: {
+    north_star: string;
+    status: string;
+    reason: string | null;
+    storage_state: string;
+    goal_id: number | null;
+    goal_status: string | null;
+  };
   signals: number | null;
   evidence: number | null;
   research_tasks: number | null;
@@ -197,6 +205,16 @@ type RuntimeWindow = {
       error: string | null;
     } | null;
   };
+};
+
+type GoalRow = {
+  id: number;
+  statement: string;
+  target_metric: string | null;
+  status: string;
+  priority: number;
+  created_at: string;
+  updated_at: string;
 };
 
 type ResearchQuestionRow = {
@@ -291,6 +309,7 @@ type IntelligenceState = {
   cycles: CycleSummary[] | null;
   questions: ResearchQuestionRow[] | null;
   tasks: ResearchTaskRow[] | null;
+  goals: GoalRow[] | null;
   clearance: { as_of: string; sources: ClearanceEntry[] } | null;
 };
 
@@ -1170,6 +1189,11 @@ function OwnerConsolePage() {
   const [outcomeRespondents, setOutcomeRespondents] = useState("");
 
   const cycleOperations = intel?.runtime?.truth?.operations;
+  const innerIdentity = intel?.runtime?.inner_identity;
+  const activeInnerTasks = intel?.tasks?.filter((task) =>
+    ["planned", "queued", "running"].includes(task.status.toLowerCase()),
+  ) ?? [];
+  const latestInnerCycle = intel?.cycles?.[0] ?? null;
 
   async function refresh(ownerKey = key) {
     taskHistoryRequestId.current += 1;
@@ -1260,14 +1284,15 @@ function OwnerConsolePage() {
     // (backend predates the endpoint) yields null -> UNKNOWN in the UI.
     // A 401 propagates like the rest of the console.
     try {
-      const [runtime, cycles, questions, tasks, clearance] = await Promise.all([
+      const [runtime, cycles, questions, tasks, clearance, goals] = await Promise.all([
         forgeFetch<RuntimeWindow>("runtime", ownerKey),
         forgeFetch<CycleSummary[]>("cycles?limit=5", ownerKey),
         forgeFetch<ResearchQuestionRow[]>("questions?status=open", ownerKey),
         forgeFetch<ResearchTaskRow[]>("tasks", ownerKey),
         forgeFetch<{ as_of: string; sources: ClearanceEntry[] }>("clearance", ownerKey),
+        forgeFetch<GoalRow[]>("goals?status=active", ownerKey),
       ]);
-      setIntel({ runtime, cycles, questions, tasks, clearance });
+      setIntel({ runtime, cycles, questions, tasks, clearance, goals });
     } catch (cause) {
       // Intelligence is additive; a failure here must not hide readiness/leads.
       setIntel(null);
@@ -2028,6 +2053,90 @@ function OwnerConsolePage() {
                   not instrumented, not zero. Nothing here is inferred from
                   imports or tests; every number comes from a persisted record.
                 </p>
+                <section id="hami-inner-work" aria-label="Hami inner work" className="mb-5 scroll-mt-24 rounded-card border-2 border-line bg-card p-4 sm:p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Inner continuity</p>
+                      <h3 className="mt-1 text-lg font-extrabold">Hami&apos;s own direction and work</h3>
+                      <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">
+                        Hami&apos;s identity is anchored in its North Star; its next research questions come from recorded uncertainty,
+                        patterns and evidence gaps—not from the latest chat prompt.
+                      </p>
+                    </div>
+                    <span className="rounded-full border border-line px-3 py-1 text-xs font-semibold text-muted">
+                      Owner-only · internal work
+                    </span>
+                  </div>
+                  <div className="mt-4 rounded-card border border-line bg-background p-4">
+                    <p className="text-xs font-bold uppercase tracking-wide text-muted">Unchanging direction</p>
+                    <p className="mt-2 text-base font-extrabold">
+                      {innerIdentity?.north_star ?? "North Star status UNKNOWN"}
+                    </p>
+                    <p className="mt-2 text-sm text-muted">
+                      Persistent anchor: {innerIdentity === undefined ? "UNKNOWN" : innerIdentity.status.toUpperCase().replace(/_/g, " ")}
+                      {innerIdentity?.reason ? " · " + innerIdentity.reason.replace(/_/g, " ") : ""}
+                      {innerIdentity?.goal_id ? " · Goal #" + innerIdentity.goal_id : ""}
+                    </p>
+                    {innerIdentity?.storage_state === "ephemeral" ? (
+                      <p role="status" className="mt-2 text-sm text-muted">
+                        The deployed runtime is using instance-local SQLite. Hami will not treat that as lasting memory or claim a durable inner anchor until persistent storage is connected.
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-card border border-line p-3">
+                      <p className="text-xs font-bold uppercase tracking-wide text-muted">Active inner goals</p>
+                      <p className="mt-1 text-2xl font-extrabold tabular-nums">
+                        {!intel || !intel.goals ? "UNKNOWN" : intel.goals.length}
+                      </p>
+                    </div>
+                    <div className="rounded-card border border-line p-3">
+                      <p className="text-xs font-bold uppercase tracking-wide text-muted">Open questions</p>
+                      <p className="mt-1 text-2xl font-extrabold tabular-nums">
+                        {!intel || !intel.questions ? "UNKNOWN" : intel.questions.length}
+                      </p>
+                    </div>
+                    <div className="rounded-card border border-line p-3">
+                      <p className="text-xs font-bold uppercase tracking-wide text-muted">Planned / queued / running research</p>
+                      <p className="mt-1 text-2xl font-extrabold tabular-nums">
+                        {!intel || !intel.tasks ? "UNKNOWN" : activeInnerTasks.length}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                    <div className="rounded-card border border-line p-3">
+                      <p className="text-xs font-bold uppercase tracking-wide text-muted">Latest recorded reasoning cycle</p>
+                      <p className="mt-2 text-sm font-extrabold">
+                        {latestInnerCycle ? latestInnerCycle.status + " · " + displayTime(latestInnerCycle.started_at) : "UNKNOWN"}
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-muted">
+                        A persisted cycle is evidence that the internal loop ran; it is not proof that a real-world outcome changed.
+                      </p>
+                    </div>
+                    <div className="rounded-card border border-line p-3">
+                      <p className="text-xs font-bold uppercase tracking-wide text-muted">Current work selection</p>
+                      {!intel || !intel.questions ? (
+                        <p className="mt-2 text-sm text-muted">Question state unavailable; it is not assumed to be empty.</p>
+                      ) : intel.questions.length === 0 ? (
+                        <p className="mt-2 text-sm text-muted">No open research questions are recorded.</p>
+                      ) : (
+                        <ul className="mt-2 grid gap-2 text-sm">
+                          {intel.questions.slice(0, 3).map((question) => (
+                            <li key={question.id} className="border-t border-line pt-2">
+                              <span className="font-semibold">{question.question}</span>
+                              <span className="block text-xs text-muted">Question #{question.id} · priority {question.priority_score}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                  <p className="mt-3 text-xs leading-5 text-muted">
+                    Internal cycle: observe → understand → discover → explore → create → coordinate → act → verify → learn → expand.
+                    External contact, publication, spending and consequential commitments remain outside this internal loop.
+                  </p>
+                </section>
+
                 <section id="hami-frontier" aria-label="Global value frontier" className="scroll-mt-24 rounded-card border-2 border-line bg-card p-4 sm:p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>

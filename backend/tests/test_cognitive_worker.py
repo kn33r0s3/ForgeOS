@@ -833,6 +833,49 @@ class ReplacementGoalPlanner:
         }
 
 
+def test_intrinsic_goal_is_persisted_once_and_owner_pause_is_preserved(db, monkeypatch):
+    from app.services import goal_engine
+
+    monkeypatch.delenv("VERCEL", raising=False)
+    first = goal_engine.ensure_intrinsic_goal(db)
+    assert first["status"] == "created"
+    assert first["created"] is True
+    db.commit()
+
+    goal = db.get(models.Goal, first["goal_id"])
+    assert goal is not None
+    assert goal.statement == goal_engine.INTRINSIC_GOAL_STATEMENT
+    assert goal.priority == 100.0
+
+    goal.status = "paused"
+    db.commit()
+    second = goal_engine.ensure_intrinsic_goal(db)
+
+    assert second["status"] == "paused"
+    assert second["created"] is False
+    assert second["goal_id"] == first["goal_id"]
+    assert db.query(models.Goal).filter_by(
+        statement=goal_engine.INTRINSIC_GOAL_STATEMENT
+    ).count() == 1
+
+
+def test_intrinsic_goal_is_not_written_to_ephemeral_vercel_sqlite(db, monkeypatch):
+    from app.services import goal_engine
+
+    monkeypatch.setenv("VERCEL", "1")
+    result = goal_engine.ensure_intrinsic_goal(db)
+
+    assert result == {
+        "status": "blocked",
+        "reason": "ephemeral_vercel_sqlite",
+        "goal_id": None,
+        "created": False,
+    }
+    assert db.query(models.Goal).filter_by(
+        statement=goal_engine.INTRINSIC_GOAL_STATEMENT
+    ).count() == 0
+
+
 def test_goal_plan_is_persisted_idempotently_and_never_executes(db, monkeypatch):
     from app.services import goal_engine, worker_manager
 

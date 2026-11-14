@@ -3772,3 +3772,14 @@ This is a second-domain evidence extension of the existing source-time capabilit
 - Exact blocker: Siyari and AMPIS robots endpoints were not retrievable; both sites show ©2026/all rights reserved and no exact content-reuse grant. `source_clearance_registry.py` has no Siyari/AMPIS entry. Manual reading/citation only. The source-edit safety block remains active; do not bypass it or write code/tests through another path.
 - Next dependency: retrieve the FY2083/84 budget-book body; locate an official cooperative/facility identifier; establish current public market/operation evidence; complete per-source rights review. Implement the provenance extension only when a supported source-edit path is available. No new model/table/primitive/collector and no source registration in this run.
 
+
+
+## 2026-11-14 — Inner direction anchor and private Hami work surface (implemented; autonomy remains partial)
+
+- Reused the canonical North Star in `docs/ORIGIN.md` as one persistent `Goal` record. The scheduled intelligence cycle ensures this record idempotently; it does not create a new table, primitive, agent service or second queue.
+- Added an explicit storage boundary: on Vercel with SQLite at `/tmp`, Hami refuses to create or claim a persistent identity anchor. The owner-only `/forge/runtime` projection exposes the anchor status and reason.
+- The existing `/owner` console now has an Inner continuity panel showing the North Star, durable-anchor status, active goals, unresolved questions, queued research work and latest persisted reasoning cycle. No public route or browser-visible owner key was added.
+- The existing intelligence loop remains the worker: it derives questions from signals/patterns/belief gaps, plans source-specific research tasks, runs only cleared collectors, recovers stale research tasks, and proposes Actions through existing policy. No arbitrary shell, model-generated commands, external messages or spending were enabled.
+- Tests added for idempotent anchor creation, preserving an owner pause, and refusing to write the anchor to ephemeral Vercel SQLite.
+- **Not yet autonomous end-to-end:** GoalPlan remains proposal-only; general typed step execution and independent artifact verification are not implemented. The current Vercel `hami24` project was previously observed using ephemeral `/tmp/forge.db`, so persistent inner memory remains BLOCKED until an authorized durable database is connected. The new Vercel team is Hobby; its Cron jobs are limited to once per day, so this is not a continuous worker. No plan upgrade or paid service was selected.
+- Exact-head CI and a deployed UI check are still required. The previous exact-head backend run had 53 failures, chiefly expired external-source clearances and unrelated parser/research expectations; passing build/typecheck does not clear those failures.
