@@ -1,7 +1,8 @@
 import { pendingMigrations } from "../../scripts/migration-plan.mjs";
+import { isWorkspacePreview } from "./env.server";
 
 /** Which database backend is active. */
-export type DbSource = "neon" | "pglite";
+export type DbSource = "neon" | "pglite" | "unavailable";
 
 // An empty/whitespace DATABASE_URL (an easy misconfig in deploy UIs) must mean
 // "unset" — otherwise production would silently run on the PGLite fallback.
@@ -11,12 +12,16 @@ const databaseUrl =
   rawDatabaseUrl && rawDatabaseUrl.trim() ? rawDatabaseUrl : undefined;
 
 /**
- * Active backend: real **Neon** when `DATABASE_URL` is set (deployed / configured
- * sandbox), otherwise a local embedded **PGLite** (Postgres compiled to WASM) so
- * the app has a working database even with nothing configured — the live preview
- * included. Swap in Neon later by just setting `DATABASE_URL`; no code changes.
+ * Active backend: real **Neon** when `DATABASE_URL` is set; embedded **PGLite**
+ * only in a local/workspace preview. A deployed process without a durable
+ * PostgreSQL URL has no database and must fail closed rather than pretend that
+ * ephemeral in-memory storage is persistent.
  */
-export const dbSource: DbSource = databaseUrl ? "neon" : "pglite";
+export const dbSource: DbSource = databaseUrl
+  ? "neon"
+  : isWorkspacePreview()
+    ? "pglite"
+    : "unavailable";
 
 /**
  * Minimal shared SQL surface, satisfied by both Neon and PGLite. Both the
@@ -176,7 +181,11 @@ async function createSql(): Promise<Sql> {
         "or a server route loader, never from client code.",
     );
   }
-  return dbSource === "neon" ? createNeonSql() : createPgliteSql();
+  if (dbSource === "neon") return createNeonSql();
+  if (dbSource === "pglite") return createPgliteSql();
+  throw new Error(
+    "DATABASE_URL must be configured for deployed database access; PGlite is limited to local/workspace preview.",
+  );
 }
 
 /**

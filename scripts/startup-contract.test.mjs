@@ -23,7 +23,14 @@ test("the default backend SQLite URL is scoped away from the root web process", 
   assert.ok(START.includes('BACKEND_DATABASE_URL="${DATABASE_URL:-sqlite:///$PWD/storage/forge.db}"'));
   assert.ok(START.includes('export DATABASE_URL="$BACKEND_DATABASE_URL"'));
   assert.ok(!START.includes('export DATABASE_URL="${DATABASE_URL:-sqlite:///'));
-  assert.ok(WEB_DB.includes('const dbSource: DbSource = databaseUrl ? "neon" : "pglite"'));
+  assert.ok(WEB_DB.includes('import { isWorkspacePreview } from "./env.server";'));
+  assert.match(
+    WEB_DB,
+    /export const dbSource: DbSource = databaseUrl[\\s\\S]*?isWorkspacePreview\\(\\)[\\s\\S]*?"unavailable"/,
+  );
+  assert.ok(
+    WEB_DB.includes("DATABASE_URL must be configured for deployed database access"),
+  );
 });
 
 test("optional triage URLs never get invented local defaults", () => {

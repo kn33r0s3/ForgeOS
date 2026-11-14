@@ -19,9 +19,13 @@ migrations, don't import `@/lib/db`, and keep state in `localStorage` / zustand.
 This template ships a ready-made, **dual-mode** database integration:
 
 - **Configured** (env var set, e.g. deployed): real **Neon Postgres**.
-- **Not configured** (sandbox live preview): the DB falls back to a local
-  **PGLite** (embedded WASM Postgres), so the preview always renders. Build
-  against the `@/lib/db` helper; both modes work with the same API.
+- **Not configured** (local/workspace preview only): the DB falls back to
+  local **PGLite** (embedded WASM Postgres).
+- **Not configured in a deployed environment**: database access is unavailable
+  and fails closed. It must never silently use an ephemeral PGLite database as
+  if that data were durable. Better Auth remains unavailable until a stable
+  secret and durable PostgreSQL URL are provisioned.
+Build against the `@/lib/db` helper; configured Neon and local PGLite use the same API.
 
 Packages are **preinstalled** — do not `npm install` them: `pg` (node-postgres,
 the regular Postgres driver) and `@electric-sql/pglite` (local DB fallback).
