@@ -1,3 +1,16 @@
+## Follow-on priorities — 2026-11-14 05:46 NPT (base main 8596924b8d2655af3f493f0ef83e04e7dd7c05ba)
+
+1. **P0 — keep exact-head gates honest.** Main 8596924b8d2655af3f493f0ef83e04e7dd7c05ba: CI 8/9 jobs passed but backend is 53 failed / 1,302 passed / 2 skipped / 18 warnings; secret scan passed; deployment verifier's 274 local tests passed but production retrieval returned HTTP 402. Preserve source-rights and source-body withholding; do not label production healthy.
+2. **P0 — preserve the source-edit boundary.** The prior portfolio-summary source write remains blocked. Do not retry through another path. Continue exact source/test inspection and prepare only an existing-seam change until a supported edit path is available.
+3. **P1 — D95 public subsidy-to-market chain.** Siyari OAG FY2080/81 audit records NPR5/kg fish subsidy, 403 beneficiaries and NPR2.575m; current FY2083/84 budget book is listed but unread. Link the programme to the unresolved Jaldevi cooperative/fish-room identity, facility operator/status, public buyers, dated fish prices and outcomes without asserting a transaction. Current Butwal daily page (Kartik24) has no fish rows despite the AMPIS fish catalogue; this is a source-coverage gap, not proof of no price.
+4. **P1 — source-time / method preservation.** Correct the AMPIS Kartik27 date to 13 Nov (retrieved 14 Nov); retain the Kawasoti search-index/body date conflict as UNKNOWN. Existing `published_at`, `retrieved_at`, and `provenance` are the seam; no new model/table/primitive.
+5. **P1 — continue D93 and independent domains.** Preserve separate incident scope, report publication date, effective cutoff and restoration evidence; continue energy, agriculture/WASH, labour, infrastructure, law and other unworked portfolio items. One blocked source or intervention does not stop unrelated work.
+6. **P2 — rights and runtime.** Review Siyari/AMPIS robots/terms individually before any collector registration; current robots endpoints are not retrievable and no reuse grant was found. Protected runtime ResearchQuestion count and production durability remain UNKNOWN.
+
+No new D-number, task/question row, branch, worktree, PR, source mutation or external action was created.
+
+---
+
 ## Follow-on priority — 2026-11-14 (D95 Jaldevi entity resolution; base main SHA e8c3ca7c2b59b5b0ce53924a1a1652da1ea6e01e)
 
 1. **P0 — Reconcile the D95 cooperative identity without overclaiming.** Match PMAMP's Shree Jaldevi Matsya Utpaadan Sahakari Sanstha Limited (facility at Siyari-5 Banghusari) to SIRACS's Jaldevi Cooperatives, Chhapia. Strong name/district match; no registration ID or facility ID. Siyari's municipal notice distinguishes Chhapiya Chowk Ward 4 and Banghusari Bazaar Ward 5; adjacency is not identity.
