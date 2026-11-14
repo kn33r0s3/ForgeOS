@@ -1,3 +1,16 @@
+## Current state — 2026-11-14 06:33 NPT (run-start main SHA 0c78f807f48d8e8b0f879a84185fd2a28dd03e47)
+
+- **Mission:** settled and open-ended across domains/geographies; no First Rupee, seller pilot or revenue gate for Hami-wide progress.
+- **Repository:** canonical main 0c78f807f48d8e8b0f879a84185fd2a28dd03e47; source-bearing code unchanged since c8da700db9e7619bf058b5010b99d57884420f7. Changes since that source baseline are continuity/research docs and existing generated unknown projections only. No source/test/schema/scheduler/config change. Main remains canonical.
+- **Exact-head CI:** run 43535815149; 8/9 jobs passed. Backend 53 failed / 1,302 passed / 2 skipped / 18 warnings in 294.10 seconds. Build, route-smoke, frontend tests, repository guards, typecheck, evidence triage, gitleaks and lint passed. Failures remain concentrated in expired Crossref/GDELT/OpenAlex/World Bank clearances and downstream planner/research tests, D108-vs-D104 importer expectation, monitoring-cache and multi-judge assertions.
+- **Secret scan:** run 43535815083 passed; CI gitleaks passed.
+- **Deployment:** verifier run 43535814902 failed HTTP 402 after 90 seconds. Direct probes at 06:23 NPT recorded HTTP 402 / DEPLOYMENT_DISABLED for haminp.vercel.app and forge-os-ebon.vercel.app. GitHub Vercel status failure; Vercel team-scoped reads 403. Production identity/health/durability/read-after-write/scheduler remain UNKNOWN.
+- **Source rights:** five registry entries, all expired (GovInfo through 25 Sep; Crossref, World Bank, GDELT and OpenAlex through 27 Oct). No D93 source registration; all new D93 sources remain manual-only pending individual rights review.
+- **D93:** NDRRMA Report #03 inspected; NRCS Bulletin 04 inspected; date-stamped recovery reports now include NEA/Ministry electricity restoration status (all areas except Dharche as of 13 Oct), Army Bailey bridge handover at Aarughat (19 Oct), temporary Tsum/Chum Valley access reopening (26 Oct, reported 27 Oct), and Sirdibas Uhiya microhydro resumption within four days (reported 27 Oct). These are historical reported milestones, not current 14 November status. Dharche grid status after 14 Oct and full road/crossing status remain UNKNOWN. Project capacity of 412 MW is not lost operating generation.
+- **Source-time capability:** existing provenance normalization can drop metadata-only source-time when explicit raw provenance exists; assessment freshness is publication-versus-retrieval; citation lacks source cutoff. Prepared additive extension in existing provenance and an asset-level recovery timeline are documented; NOT IMPLEMENTED due source-edit block.
+- **Portfolio/runtime:** previous 100-entry UNKNOWN_MAP survey remains metadata-only; operational open ResearchQuestion count is UNKNOWN behind protected runtime access. Generated UNKNOWN_MAP projections remain out of sync; no new D-number or row added.
+- **External actions:** none. No source bodies persisted or sent to a provider.
+
 ## Current state — 2026-11-14 05:46 NPT (run-start main SHA 8596924b8d2655af3f493f0ef83e04e7dd7c05ba)
 
 - **Mission:** settled and open-ended across domains/geographies; no seller pilot, First Rupee or revenue gate for Hami-wide progress.

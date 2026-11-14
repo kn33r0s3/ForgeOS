@@ -1,3 +1,18 @@
+## Follow-on priorities — 2026-11-14 06:33 NPT (base main 0c78f807f48d8e8b0f879a84185fd2a28dd03e47)
+
+1. **P0 — preserve exact-head truth.** CI 43535815149: 8/9 jobs passed; backend 53 failed / 1,302 passed / 2 skipped. Secret scan passed. Deployment verifier failed HTTP 402 after 90 seconds. Do not call production healthy or transfer previous green results to a new SHA.
+2. **P0 — review the five expired source clearances individually.** GovInfo valid only through 25 Sep; Crossref, World Bank, GDELT and OpenAlex only through 27 Oct. Re-read each source's robots, terms, licence, purpose, fields, retention and provider-use scope. Do not weaken fail-closed collection or body-withholding tests.
+3. **P0 — preserve the source-edit boundary.** research_planner.py::summarize_research_portfolio remains blocked. Do not retry through another mutation path. Continue source/test inspection and prepare the existing-seam additive provenance change only.
+4. **P1 — D93 asset-level recovery timeline.** NDRRMA #03 and NRCS #04 are inspected. Add the dated Ministry/NEA electricity status (Dharche exception as of 13 Oct), Army Bailey bridge handover at Aarughat (19 Oct), temporary Chum/Tsum route reopening (26 Oct), and reported microhydro restart. Obtain direct Ministry/NEA, Army/Gorkha Road Project, MCAP/NTNC and local-government records; confirm whether Dharche grid, Salleri–Jagat road, and temporary crossings were restored after 27 Oct. Do not contact offices without authorization.
+5. **P1 — reconcile asset counts and capacities.** NDRRMA #03: 5 suspension bridges / 3 hydropower facilities; NRCS #04: 6 suspension bridges / 3 projects under construction; Ministry account: 4 named projects / about 412 MW project capacity; OnlineKhabar #27 Oct: 6 suspension bridges, 2 motorable, 1 Bailey, 1 cantilever at Yaru. Preserve scope and definitions; do not treat 412 MW as operating generation lost.
+6. **P1 — source-time preservation across existing Signal/Evidence.** Fix the normalization contract so explicit raw provenance does not silently drop metadata-only source-time fields; preserve page date, report timestamp, metric-specific as-of, reporting period and retrieval separately. Verify Signal→Evidence→assessment→citation. Use existing provenance and Evidence.observed_at only where semantics match. No new model/table/primitive/collector.
+7. **P1 — continue independent portfolio tracks.** Continue D95 fish/subsidy chain, D96 transmission project status, EV workforce/service chain, WASH outcomes, agriculture, labour, law and other unworked items independently of D93 and any commercial experiment.
+8. **P2 — runtime and rights.** Production health/deployment identity/database durability/scheduler and operational ResearchQuestion count remain UNKNOWN. NDRRMA, NRCS, Gorkha DAO, NEA, NTNC, Radio Nepal, OnlineKhabar, Lagani and Rising Nepal remain manual-only pending source-specific rights review.
+
+No new D-number, ResearchQuestion, branch, worktree, PR, source mutation, source registration, external contact, publication, spend, payment change, intake/outbound activation or emergency alert was created.
+
+---
+
 ## Follow-on priorities — 2026-11-14 05:46 NPT (base main 8596924b8d2655af3f493f0ef83e04e7dd7c05ba)
 
 1. **P0 — keep exact-head gates honest.** Main 8596924b8d2655af3f493f0ef83e04e7dd7c05ba: CI 8/9 jobs passed but backend is 53 failed / 1,302 passed / 2 skipped / 18 warnings; secret scan passed; deployment verifier's 274 local tests passed but production retrieval returned HTTP 402. Preserve source-rights and source-body withholding; do not label production healthy.
