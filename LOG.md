@@ -1789,3 +1789,15 @@ This is the Nuwakot view of the 26 Aug Bhotekoshi–Trishuli event, distinct fro
 - Exact current head 8042: no GitHub Actions run/status yet. Vercel deployment dpl_KPGrLJwMZzaA1QHkPsFuvYM7vdcc READY on exact SHA, but project live=false, SSO enabled, zero env vars; build reported 15 npm audit vulnerabilities and skipped DB migration without DATABASE_URL. No live-runtime claim.
 - Kantipur, municipal, NRCS, UN/WFP, INSEC and Desh Sanchar sources remain manual-only / NOT CLEARED for automated collection/body persistence/provider transmission. No contact, publication, spend, money movement or production activation.
 - Documentation-only continuity update; no runtime source, tests, schema, scheduler, environment or source registry changed.
+
+
+## 2026-11-15 05:31 NPT — D93 #04 timing, Chumnubri response notice and exact-head reconciliation
+
+- Re-resolved main at 7b55f2ba72bb862353e868fc64f38f75f0e7a1f9; read required continuity/charter/discovery files, recent history, relevant source/evidence code and tests.
+- New D93 source metadata: NDRRMA #04 index listing date 3 Nov 2026 / 2083-07-17; detail page date 16 Oct / Asoj30; page-declared cutoff 16 Oct 10:00 NPT. PDF body remains unread because no official attachment URL was exposed. #05/later search had no result and /469–471 were inaccessible; absence is not proved.
+- Chumnubri Rural Municipality's official index lists an event-specific rescue/relief/disaster-response notice submitted 11 Oct 2026 21:47, with “बिपद् सूचना.pdf”; body unread. This is a notice listing, not evidence of completed relief or service restoration. UN SitRep #12 provides a separate specific beneficiary-verification/information-sharing finding; no blanket failure inferred.
+- Department of Roads general road-status page returned no data; no event-specific Gorkha power-restoration notice surfaced. Current passability, power, Chumnubri water quality and scheme restoration remain UNKNOWN.
+- Code trace: non-empty raw_item.provenance can displace metadata in SourceCollector.normalize; runner adds task/registry context only; Observer/Signal/Evidence preserve provenance; assessment compares publication/retrieval; citation omits effective cutoff/page date/report version. Source edits remain blocked.
+- Portfolio integrity: UNKNOWN_MAP is 124 rows (A9/B4/C3/D108); test_import_unknowns.py expects 120 (D104). No D109/map rewrite. The stale feature/governed-offers branch is 943 behind and 0 ahead; no unique work, but delete-ref action unavailable.
+- Exact-head Vercel deployment is READY on 7b55; project live=false, SSO, zero env vars; 15 npm vulnerabilities; DB migration skipped without DATABASE_URL. Vercel hami status success, forge-os failure; main-push CI/secret scan unverified; no runtime error logs in 30m is not health.
+- Documentation-only. No source/test/schema/registry/runtime mutation, source ingestion, contact, publishing, spend, payment, intake/outbound activation, emergency advice or alerting service.

@@ -1,22 +1,21 @@
-## Current continuation — 2026-11-15 (reconciled main 8042d5572c5e1b22f1095e75afe187ffb47ede66)
+## Current continuation — 2026-11-15 05:31 NPT (main 7b55f2ba72bb862353e868fc64f38f75f0e7a1f9)
 
-Mission and breadth are settled. Continue independent research across domains; do not gate Hami-wide progress on one pilot or revenue.
+Mission and breadth are settled. Continue independent, evidence-grounded discovery across domains.
 
-1. **P0 — Preserve exact-head truth.** Main 8042 has no GitHub Actions runs/statuses. Vercel deployment is READY but project live=false, SSO-enabled and has zero environment variables. Do not claim a healthy live runtime. The prior b004 CI failure is not an 8042 result.
-2. **P1 — D93 WASH service continuity.** Seek dated public primary records for Chumnubri post-flood water-source retesting, named-scheme repairs, treatment operation, commissioning and household service restoration. The July sample is pre-event and cannot establish current contamination.
-3. **P1 — D93 bridge/source reconciliation.** Compare NDRRMA #03, NRCS #03/#04 and UN SitRep #12 by named asset, type, report version, effective cutoff and definition. Preserve the 12 Oct UN citation vs 13 Oct 22:00 NDRRMA PDF date and 5-vs-9 bridge count as UNKNOWN.
-4. **P1 — Chumnubri bridge notice.** Retrieve the official Syurang Khola notice PDF if it becomes accessible; establish exactly which movement types are restricted. Do not equate this Ward 4 wooden bridge with a Bailey bridge or Rasuwa's Syafrubesi crossing.
-5. **P1 — Rasuwa produce recovery.** Seek public primary confirmation and actual delivery/settlement evidence for the reported 337.5 MT cabbage arrangement. Verify mode, route beyond Syafrubesi, buyers, freight, quality, spoilage and farmer payment.
-6. **P1 — NDRRMA #04.** Retrieve and inspect the official PDF page-by-page only if the official page exposes a retrievable file; do not infer its contents from metadata.
-7. **P1 — Existing source-time capability.** Continue tracing normalize → collector_runner → ObserverEngine → Signal/Evidence → assessment → citation. Preserve report/page date, data cutoff, sample period, method, unit and scope within existing provenance when source editing is authorized. No new model/table/primitive/collector.
-8. **P2 — Reusable service/logistics continuity.** Connect WASH, disaster recovery, humanitarian cargo and perishable markets at the capability level using existing graph/evidence/demand/economic seams. Keep event and source scopes separate.
-9. **P2 — Hami persistence and autonomy.** Keep GoalPlan proposal-only until a typed authorized Action executor, durable database and independent verifier are proven. Do not add environment variables or activate production without authorization.
+1. **P0 — Exact-head truth.** 7b55f2ba has Vercel hami success / forge-os failure; main-push GitHub Actions and secret-scan results are UNVERIFIED. Exact deployment READY is not public/live health: live=false, SSO, zero env vars, no durable DATABASE_URL, no health/read-after-write evidence.
+2. **P0 — Importer/test drift.** UNKNOWN_MAP has 124 rows (A9/B4/C3/D108); test_import_unknowns.py expects 120 (A9/B4/C3/D104). Reconcile through the authorized normal sync/test path; do not edit generated projections or add D109 while this mismatch remains.
+3. **P1 — D93 NDRRMA #04.** Retrieve the official PDF attachment and inspect every page by screenshot. Preserve index listing date 3 Nov, detail-page date 16 Oct, sequence #04, page-declared cutoff 16 Oct 10:00 and retrieval separately. No body claim until read.
+4. **P1 — Chumnubri response notice.** Retrieve the official “बिपद् सूचना.pdf” from the 11-Oct notice listing only through an accessible official route; inspect its instructions before describing response or outcomes.
+5. **P1 — Chumnubri WASH and restoration.** Seek dated primary source-water retests, named-scheme repair/commissioning, treatment operation, household service records, and Gorkha-specific road/power notices. July samples are pre-event; Arughat WASH response is not Chumnubri restoration.
+6. **P1 — Source-time capability.** When source editing is authorized, fix the existing normalize→runner→Observer→Signal/Evidence→assessment→citation seam so source-declared effective cutoff survives non-empty raw provenance. Add round-trip tests; no new model/table/primitive/collector.
+7. **P2 — Stale branch.** feature/governed-offers is 943 commits behind main and 0 ahead. Remove only through a supported delete-ref action; none is exposed now.
+8. **P2 — Independent discovery.** Continue WASH, agriculture, grid, labour, EV workforce, trade and other evidence-rich tracks independently. No D93 gate on Hami-wide work.
 
-No D-number, ResearchQuestion, generated-map edit, source registration, external contact, publishing, spend, money movement, emergency advice or alerting service.
+No new D-number, ResearchQuestion, generated-map edit, source registration, external contact, publishing, spend, money movement, emergency advice or alerting service.
 
 ---
 
-## 2026-11-15 — current priorities (base main b004bae89aa180ea433798f12d90cd5b272f4e4d)
+## Previous queue snapshot — 2026-11-15 (base main b004bae89aa180ea433798f12d90cd5b272f4e4d)
 
 1. **P0 — exact-head verification truth.** Retrieve main-push GitHub Actions CI and secret-scan outcomes for b004bae. The current connector exposes Vercel statuses only; do not infer a green suite from a READY deployment.
 2. **P0 — durable runtime boundary.** Current Vercel project hami has no environment variables, is not marked live and has SSO protection. Owner-controlled durable PostgreSQL and stable auth configuration are required before claiming persistent production memory. Do not spend, upgrade, change billing or expose the app without separate authorization. Check any separate backend independently.

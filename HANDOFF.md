@@ -1,4 +1,53 @@
-## Current handoff — 2026-11-15 — Gorkha WASH, infrastructure and shared-logistics evidence (run-start 05:03 NPT; reconciled main 8042d557)
+## Current handoff — 2026-11-15 05:31 NPT — D93 report #04 timing, municipal response and exact-head reconciliation
+
+Hami's mission and breadth are settled. Continue independent discovery across domains and geographies. Keep public reporting separate from firsthand evidence, preserve UNKNOWN, and use only ENTITY, RELATION, EVENT, EVIDENCE, CAPABILITY and ACTION.
+
+### Canonical repository, history and branch state
+- Exact main at run start: 7b55f2ba72bb862353e868fc64f38f75f0e7a1f9. The preceding 8042d557 and current 7b55f054? correction: 7b55f2ba are documentation-only continuity commits. History since source-bearing c8da700 contains 68 commits, including GoalPlan/cognition/worker and fail-closed deployed-database changes; those runtime changes were not treated as part of this documentation-only discovery.
+- Re-read AGENTS.md, HANDOFF.md, STATE.md, QUEUE.md, docs/BRAIN.md, docs/UNKNOWN_MAP.md, docs/CAPABILITY_QUEUE.md, LOG.md, docs/ops/discovery-loop.md, docs/PUBLIC_SOURCES.md, source normalization/runner/Observer/Signal/Evidence/assessment/citation code and relevant tests.
+- AGENTS.md requires exactly one active branch. GitHub lists main plus feature/governed-offers. Comparing main with feature/governed-offers shows the latter is 943 commits behind and 0 ahead; no unique commit is present and its HANDOFF is a stale 13-Oct snapshot. No unique work needs integration. The GitHub connector exposes no delete-ref action; no alternate API/tool path was attempted. This is a branch-cleanup blocker, not lost work.
+- The UNKNOWN_MAP currently parses to 124 rows (A9/B4/C3/D108). backend/tests/test_import_unknowns.py still asserts A9/B4/C3/D104 = 120. This is a stale test expectation against the current map, not a reason to delete rows or alter production behavior. No D109, ResearchQuestion, UNKNOWN_MAP edit or generated-projection rewrite was made.
+
+### D93 — new official source-time and local-response evidence
+- NDRRMA's Nepali situation-report index lists Gorkha–Budhi Gandaki Situation Report #04 with an index/listing date of 2026-11-03 (2083-07-17). Its detail page is https://ndrrma.gov.np/np/situation-report/468 and displays 2083-06-30 / Asoj 30; the page heading says as of 16 October 2026, 10:00 AM NPT. Sequence #04 is explicit. The index date is 18 days later than the page-declared report cutoff. Treat this as an index/detail date mismatch; the index label's precise semantics and any source update time are not stated. Do not call it proof of newer field facts.
+- The #04 page exposes a PDF Preview label, but no retrievable source PDF URL was exposed through the official page/search route. Direct page open returned no readable body. PDF contents remain unread and no page screenshots were possible; no content claim is made.
+- #03 remains the directly retrieved official PDF already inspected page-by-page: 13 October 2026, 22:00. #02 /464 states a 12 October 22:00 cutoff, but its PDF body remains unread. A bounded official search for #05/later returned no result; direct /469, /470 and /471 opens were inaccessible. This is not proof that no later report exists.
+- Chumnubri Rural Municipality's official notice index https://www.chumanuwrimun.gov.np/news-notices lists “बुढीगण्डकी नदीमा आएको बाढीबाट प्रभावित नागरिकको उद्धार राहत तथा विपद् प्रतिकार्य सम्बन्धी सूचना !” submitted 11 October 2026 at 21:47 (the page does not state a timezone) and names an attached PDF “बिपद् सूचना.pdf”. This establishes a dated official notice listing, not the notice's instructions, relief delivery, completed rescue, beneficiary outcome, water testing or service restoration; the page/PDF body was not retrieved.
+- UN Nepal SitRep No.12 (30 October) independently records a 14–15 October Gorkha inter-agency mission (52 km, 14 representatives), rapid local-government response and a specific beneficiary-verification difficulty compounded by information-sharing gaps between municipalities and district authorities. It also records WASH support to 50 Arughat households. This does not establish a failed beneficiary case, a blanket coordination failure, or Chumnubri water-system restoration.
+- The Department of Roads' general road-condition page returned “No data available”; this is not a Gorkha passability record and does not prove no restoration. The NEA Gandaki page/remit was checked, but no event-specific Gorkha power-restoration notice was surfaced in the bounded search. Current road passability, power restoration, Chumnubri water quality, scheme commissioning and household service outcomes remain UNKNOWN.
+
+### Real-world consequence and reusable capability
+The new municipal notice is one local primary record in the response chain; the UN assessment supplies a separate, specific information-sharing constraint. Together they justify tracing notice → municipal action/beneficiary record → district reconciliation → service/route outcome, but not asserting that the notice was acted on or that coordination failed in a particular case. The reusable capability is source-aware reconciliation of report sequence, index/listing date, detail-page date, source-declared cutoff, retrieval time, geography, metric definitions and actual service outcomes, using existing provenance and graph/evidence seams. Keep the Gorkha 11-Oct event separate from the Rasuwa 26-Aug event.
+
+### Existing code seam and exact limitation
+- SourceCollector.normalize currently sets provenance to raw_item.provenance or metadata. A non-empty raw provenance object can therefore omit source-declared temporal/scope fields that exist only in normalized metadata.
+- collector_runner adds task and registry context to provenance, but not every arbitrary source metadata field. ObserverEngine persists provenance plus published_at/retrieved_at to Signal; _ensure_evidence copies those fields/provenance to Evidence. research_evidence_assessment freshness compares publication date with retrieval time. research_synthesis_engine._evidence_citation exposes source_registry_id and retrieved_at, but not source-declared effective cutoff, page/listing date or report version.
+- Existing models already have published_at, retrieved_at and provenance; no new model/table/primitive/collector is justified. The source-edit safety block remains in force. Do not implement the blocked portfolio-summary helper or route the same mutation through another tool.
+- The current registry has five entries, all past valid_through by 15 November; neither NDRRMA nor Chumnubri is registered. NDRRMA robots/terms endpoints and both Chumnubri robots host variants were inaccessible; no affirmative reuse grant was found. Manual factual citation only / NOT CLEARED for automated collection, body persistence or provider transmission.
+- Relevant tests inspected: test_import_unknowns (stale D-row expectation), test_research_evidence_assessment (publication/retrieval freshness only), test_source_clearance_registry (exact URL and expiry fail-closed), and test_verified_research (registry identity persistence). No test currently proves an effective-cutoff value survives metadata + explicit provenance → Signal → Evidence → citation.
+
+### Exact-head verification
+- Main SHA: 7b55f2ba72bb862353e868fc64f38f75f0e7a1f9.
+- Combined GitHub status: Vercel – hami success; Vercel – forge-os failure. The connected workflow-run wrapper is PR-only and returned no main-push runs. Exact-head GitHub Actions CI and secret-scan results are UNVERIFIED.
+- Vercel deployment dpl_DcK87gkthwgjdGQMowMPUrqgXBVi is READY for exact SHA 7b55. Project metadata still says live=false, SSO enabled and zero visible/hidden environment variables. The project-domain listing contains hami-sigma.vercel.app; the deployment object also lists generated hami-hami24 and hami-git-main aliases. No haminp.vercel.app alias is attached.
+- Exact deployment build audited 419 packages and reported 15 vulnerabilities (2 low, 8 moderate, 4 high, 1 critical). No package-level reachability assessment or dependency change was made. Database migration was skipped because DATABASE_URL is absent; the build script still prints that PGLite fallback migrates itself, while deployed src/lib/db.ts fails closed without durable PostgreSQL. No DB or environment variable was provisioned.
+- No error/fatal runtime logs were returned for the last 30 minutes; this is not a health check or proof of no requests. No public health/read-after-write, durable database, scheduler heartbeat or separate backend runtime was verified.
+
+### Next resumable work
+1. Retrieve NDRRMA #04 PDF only through an official attachment route, then inspect every page by screenshot. Keep index/listing date, page date, report sequence, source-declared cutoff, update time and retrieval separate.
+2. Retrieve Chumnubri's “बिपद् सूचना.pdf” only through an official accessible route; inspect the notice body before describing any instruction or outcome.
+3. Seek dated primary post-flood Chumnubri source-water tests, named-scheme repair/commissioning, treatment operation and household service records; seek Gorkha-specific road and power restoration notices.
+4. Recheck for #05/later only through official NDRRMA routes; no search result is not proof of absence.
+5. When source editing is authorized, fix the existing normalize→Signal→Evidence→assessment→citation seam with a narrow allowlisted provenance merge and regressions for explicit provenance, missing cutoff and round-trip citation. No schema expansion.
+6. Reconcile the UNKNOWN_MAP 124-row inventory with the 120-row test expectation and generated projections through the authorized normal continuity path; do not hand-edit the map or add D109 while the mismatch persists.
+7. Remove feature/governed-offers only if a supported delete-ref action becomes available; its 0-ahead/943-behind comparison shows no unique work.
+8. Continue independent Hami-wide discovery; no D93 experiment gates other domains.
+
+This is a documentation-only update. No source code, tests, schema, source registry, collector, scheduler, deployment configuration, external contact, publishing, spend, money movement, intake/outbound activation, emergency advice or alerting service changed.
+
+---
+
+## Prior handoff — 2026-11-15 05:03 NPT — Gorkha WASH, infrastructure and shared-logistics evidence (reconciled main 8042d557)
 
 Hami's mission and breadth are settled. Continue evidence-led discovery across domains and geographies; do not gate unrelated work on a single experiment, seller, revenue target or one domain. Keep public reporting separate from firsthand evidence, preserve UNKNOWN, and use the existing six ENTITY/RELATION/EVENT/EVIDENCE/CAPABILITY/ACTION primitives.
 
