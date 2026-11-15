@@ -1,3 +1,12 @@
+## Current continuation — 2026-11-16 — LiveKit safety and D85 export settlement
+
+1. **P0 — Durable production state and scheduler truth.** Keep Hami's Vercel deployment fail-closed for durable operations: no project environment variables are configured; runtime uses per-instance `/tmp/forge.db`; legacy intelligence startup is disabled. Owner-controlled DB/auth/scheduler configuration remains the dependency. Do not activate a worker or consequential action.
+2. **P0 — Verify this grouped commit at its exact new head.** Run all CI jobs, secret scan and independent deployment verifier. Parent SHA `b95e94f29143e44c0eeee526f1a5508b02c1cdb9` passed 10/10 CI jobs and secret scan; its deployment verifier failed HTTP 402. Do not inherit parent results.
+3. **P0 — LiveKit Cloud guard implemented; no Cloud use.** Existing Compose services now require a manual opt-in profile and self-attestation; helper start/test fail closed; config-only CI regression checks the guard; CI room output is allowlisted. No Cloud test/spend. Direct Compose remains a manual override requiring owner authorization and LiveKit written approval.
+4. **P1 — Source-aware time and claim provenance.** Preserve publication date, source-declared effective cutoff, reporting period, source registry identity and claim relation through existing Signal/Evidence/citation seams. Existing source-time plan remains NOT IMPLEMENTED; do not retry the blocked planner helper.
+5. **P1 — D85 cross-border settlement.** Convert NRB goods/service routes and bank tariff into a source-versioned route/document/fee/deadline map. Keep UNKNOWN until actual consented transaction evidence exists; contact exporters only after explicit owner authorization.
+6. **P1 — Continue independent world research.** D95 fish cold-chain/asset chain, D93 disaster-source reconciliation, WASH, D96 energy and D86 trade remain independent tracks. No First Rupee or seller pilot gate.
+
 ## Current continuation — 2026-11-16 — D95 Jaldevi fish cold-chain / market-chain evidence (run-start main 0ed23af9)
 
 1. **P0 — Durable production state and scheduler truth.** Vercel project has no environment variables/hidden production variables. Runtime code/logs confirm per-instance ephemeral SQLite, no DATABASE_URL, no CRON_SECRET, and legacy intelligence startup disabled. HTTP 200 does not mean ready; health code marks this degraded/not-ready. Owner-controlled durable DB/auth/scheduler configuration is the blocker. No changes or activation.

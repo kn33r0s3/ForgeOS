@@ -1,3 +1,41 @@
+# Current handoff — 2026-11-16 — D85 export settlement and LiveKit Cloud hardening
+
+**Run-start main:** `b95e94f29143e44c0eeee526f1a5508b02c1cdb9`. The grouped changes below touch existing LiveKit harness/test/CI files and existing continuity/source-register documents only. No new file, branch, PR, table, collector, primitive or D-number was added. The blocked `research_planner.py` portfolio helper remains NOT IMPLEMENTED and was not retried.
+
+## Exact run-start verification
+
+- ForgeOS CI run [43775513266](https://github.com/kn33r0s3/ForgeOS/actions/runs/43775513266) completed successfully: 10/10 jobs passed, including backend-tests, repository-guards, local LiveKit smoke, route smoke, build, lint, typecheck and frontend tests.
+- Secrets scan [43775513294](https://github.com/kn33r0s3/ForgeOS/actions/runs/43775513294) passed.
+- Independent deploy verification [43775513300](https://github.com/kn33r0s3/ForgeOS/actions/runs/43775513300) failed at production-content retrieval with HTTP 402 after its local verifier tests passed. Do not call production verification green.
+- Vercel deployment [dpl_8AQgXfdX5fqsSetmr53Xwu66fYxp](https://vercel.com/hami24/hami/8AQgXfdX5fqsSetmr53Xwu66fYxp) is READY for exact SHA `b95e94f29143e44c0eeee526f1a5508b02c1cdb9`. The project env list is empty (hidden production count 0); project live flag is false and SSO protection is enabled. Runtime logs at 2026-11-15 23:35:53–23:35:54Z show HTTP 200 for `/api/health`, `/api/public/unknowns` and `/api/payments/offers`, but fresh function instances resolve SQLite to `/tmp/forge.db`, log `unknowns sync: inserted 124 new claims`, and report `Legacy intelligence startup disabled.` These 200 responses are not readiness or durable-state proof. No DB/auth/scheduler configuration was changed.
+
+## LiveKit reliability/safety increment
+
+Official LiveKit docs accessed 16 November 2026 state that Cloud load tests allow at most 50 video publishers, 50 audio publishers and 50 subscribers, and that test traffic counts against plan allowances. The CLI `--num-per-second` option is documented up to 10 participants/second; that is a CLI option limit, not a separate Cloud allowance: https://docs.livekit.io/reference/developer-tools/livekit-cli/perf/
+
+The existing Cloud Compose defaults were 10,000 subscribers and 100 joins/second. Existing files are now hardened: both services require the `manual-cloud-opt-in` profile and a non-empty self-attestation variable; defaults are 50 subscribers, 10 joins/second and 30 seconds; helper `start` and `test` fail closed, while `stop/status` remain available. CI verifies that Compose config fails without opt-in and parses in config-only mode with the opt-in/profile. It does not start Cloud containers. The duplicated CI `room_matches` helpers now print only room name, participant count and publisher count, avoiding the full Room JSON and its ephemeral `turnPassword`. Regression coverage was added to the existing startup-contract test. The opt-in is not an authorization mechanism: direct Compose remains a deliberate manual override requiring explicit owner authorization and LiveKit written approval. No Cloud test, spend or production change occurred.
+
+## D85 — cross-border export settlement research (remains UNKNOWN)
+
+The 2026-04-07 NRB FXM Unified Circular 11/2082-83 (consolidated through 2082/12/24) is more complete than TEPC's undated page, which lists only advance payment and documentary credit. NRB's circular specifies:
+- Goods-export advance-payment certificates against documented foreign-currency receipts through a bank; the receiving bank issues the APC or transfers the same currency to the exporter's account bank and discloses fees.
+- L/C negotiation/collection and bank monitoring; collection payment expectations cannot exceed six months from export.
+- A shortfall tolerance up to 2% of document value or USD 1,000 (whichever higher; INR 100,000 for INR), with exporter consent; larger shortfalls require NRB approval.
+- CAD for destinations other than India, up to USD 500,000 per shipment, with invoice/contract/PO, insurance, 1% security and six-month payment requirement; bank guarantees require prior NRB approval.
+- Service-export receipts through licensed banks with PAN, invoice/PO where applicable and AML/CFT self-declaration, via SWIFT, draft/TT and other electronic payment instruments.
+The 5 October 2026 NRB amendment also raises the cap for using already-received export proceeds to pay for imports from USD 12,000 to USD 30,000 for third-country imports and INR 30 lakh to INR 60 lakh for India. This is an import-payment facility funded by export proceeds, not a new export-receipt rail.
+
+NMB's bank tariff effective 3 June 2026 shows that real transaction cost is route-specific: export LC advising NPR 1,000 plus NPR 2,000 authentication (refundable if the export documents are presented at NMB), confirmation 0.50% per quarter/minimum NPR 5,000, clean sight-bill negotiation 0.63%/minimum NPR 2,500, discrepant sight bills 0.75%/minimum NPR 2,500, CAD sight 0.25%/minimum NPR 2,500 plus courier/SWIFT, document handling NPR 2,500, follow-up NPR 1,000 plus SWIFT, CAD letter NPR 2,000 and APC NPR 1,000. This is one bank's tariff, not a market average or proof of any exporter paying these charges.
+
+The evidence shows that regulated routes exist; it does not establish that payment is the binding constraint before logistics or product. Actual exporter uptake, settlement time, rejection rate and realized costs remain UNKNOWN. No exporter was contacted and no private transaction data was requested. The existing D85 question stays UNKNOWN. Candidate Hami capability: a source-versioned route/document/fee/deadline checklist using existing Entities, Relations, Events, Evidence, Capabilities and Actions. Next dependency: consented transaction cases only after explicit owner authorization, plus per-source rights review before automated collection. NRB, TEPC and bank sources are manual-only/NOT CLEARED; no ingestion or provider transmission occurred.
+
+## Remaining blockers
+
+1. Durable production database, stable authentication and authorized scheduler/worker remain owner-dependent; ephemeral SQLite cannot support durable memory or cross-instance HALT.
+2. This new commit requires its own exact-head CI, secret scan and deployment verification; no result is assumed before direct checks.
+3. Source-time provenance and source-aware claim grounding remain NOT IMPLEMENTED; the existing `research_planner.py` source-edit block remains untouched.
+4. D85's real-world binding constraint requires transaction evidence, not a general regulatory summary. No contact or external action was authorized.
+
 # Current handoff — 2026-11-16 — D95 Jaldevi fish cold-chain / market-chain discovery
 
 **Run-start main:** 0ed23af9a56a7eb8a68cb4d6050fdd5f064ad9e9 (the exact-head checks below belong to this parent, not the new documentation commit).

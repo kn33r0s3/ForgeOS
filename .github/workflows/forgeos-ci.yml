@@ -52,6 +52,15 @@ jobs:
           cache: npm
           cache-dependency-path: services/evidence-triage/package-lock.json
       - run: npm ci
+      - name: Verify LiveKit Cloud scale Compose requires manual opt-in
+        shell: bash
+        run: |
+          set -euo pipefail
+          if docker compose -f docker-compose.livekit-scale.yml config >/dev/null 2>&1; then
+            echo "::error::LiveKit Cloud Compose must fail without manual opt-in"
+            exit 1
+          fi
+          LIVEKIT_CLOUD_MANUAL_OPT_IN=ci-contract-check docker compose --profile manual-cloud-opt-in -f docker-compose.livekit-scale.yml config >/dev/null
       - run: npm test
       - run: npm run typecheck
   frontend-tests:
@@ -154,13 +163,28 @@ jobs:
                   document, _ = decoder.raw_decode(raw[offset:])
               except json.JSONDecodeError:
                   continue
-              if any(
-                  room.get("name") == "hami-proving-ground"
+              matching_rooms = [
+                  room for room in document.get("rooms", [])
+                  if room.get("name") == "hami-proving-ground"
                   and room.get("numParticipants") == expected
                   and room.get("numPublishers") == 9
-                  for room in document.get("rooms", [])
-              ):
-                  print(json.dumps(document, indent=2))
+              ]
+              if matching_rooms:
+                  print(
+                      json.dumps(
+                          {
+                              "rooms": [
+                                  {
+                                      "name": room.get("name"),
+                                      "numParticipants": room.get("numParticipants"),
+                                      "numPublishers": room.get("numPublishers"),
+                                  }
+                                  for room in matching_rooms
+                              ]
+                          },
+                          separators=(",", ":"),
+                      )
+                  )
                   sys.exit(0)
           sys.exit(1)
           PY
@@ -234,13 +258,28 @@ jobs:
                   document, _ = decoder.raw_decode(raw[offset:])
               except json.JSONDecodeError:
                   continue
-              if any(
-                  room.get("name") == "hami-proving-ground"
+              matching_rooms = [
+                  room for room in document.get("rooms", [])
+                  if room.get("name") == "hami-proving-ground"
                   and room.get("numParticipants") == expected
                   and room.get("numPublishers") == 9
-                  for room in document.get("rooms", [])
-              ):
-                  print(json.dumps(document, indent=2))
+              ]
+              if matching_rooms:
+                  print(
+                      json.dumps(
+                          {
+                              "rooms": [
+                                  {
+                                      "name": room.get("name"),
+                                      "numParticipants": room.get("numParticipants"),
+                                      "numPublishers": room.get("numPublishers"),
+                                  }
+                                  for room in matching_rooms
+                              ]
+                          },
+                          separators=(",", ":"),
+                      )
+                  )
                   sys.exit(0)
           sys.exit(1)
           PY

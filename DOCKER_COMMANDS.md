@@ -107,26 +107,30 @@ Do not increase load until actual receiver-side metrics and stop conditions are
 defined. A local smoke does not establish 4,000-viewer capacity or a 100 ms
 glass-to-glass guarantee.
 
-**Cloud harness is blocked.** The separate
-`docker-compose.livekit-scale.yml` targets LiveKit Cloud and defaults to
-10,000 subscribers, 100 joins/second and five minutes; its publisher service
-uses 20 containers by default. LiveKit's current
-[Cloud load-testing docs](https://docs.livekit.io/reference/developer-tools/livekit-cli/perf/)
-restrict Cloud tests to at most 50 video publishers, 50 audio publishers and
-50 subscribers, with a join rate up to 10 participants/second; test traffic
-counts against plan allowances. The current defaults exceed those limits.
-`scripts/livekit-scale-test.sh test` fails closed after a Cloud rejection,
-but invoking the Compose service directly bypasses that script guard. Do not
-start Cloud publishers or the Cloud load-test service without explicit owner
-authorization and LiveKit's written approval/approved procedure. No Cloud test
-or spend occurred.
+**Cloud harness remains blocked.** The separate
+`docker-compose.livekit-scale.yml` targets LiveKit Cloud. The previous
+defaults (10,000 subscribers and 100 joins/second) exceeded the current
+published limits. LiveKit's [Cloud load-testing documentation](https://docs.livekit.io/reference/developer-tools/livekit-cli/perf/)
+allows at most 50 video publishers, 50 audio publishers and 50 subscribers;
+test traffic counts against plan allowances. The CLI's `--num-per-second`
+option is documented up to 10 participants/second; that is a CLI option
+limit, not a separate Cloud allowance. The Cloud Compose defaults are now
+50 subscribers, 10 joins/second and 30 seconds, but this does not authorize
+a Cloud run.
 
-The local CI `room_matches` helper currently prints the complete Room JSON;
-the observed test log includes an ephemeral `turnPassword` field. This is not
-evidence of production credential exposure, but full-object logging is
-unnecessary. The next safe source change is to print only allowlisted room
-name/participant/publisher counts and retain a regression against secret-like
-log fields.
+Both Cloud services now require the `manual-cloud-opt-in` Compose profile
+and a non-empty `LIVEKIT_CLOUD_MANUAL_OPT_IN` value. The supported
+`scripts/livekit-scale-test.sh start` and `test` commands fail closed;
+only `stop` and `status` are exposed. The variable/profile are a
+self-attested manual override, not proof of owner authorization. Direct
+Compose can still be invoked deliberately with both; do not do so without
+explicit owner authorization and LiveKit's written approval/approved
+procedure. No Cloud test or spend occurred.
+
+The local CI `room_matches` helper now prints only allowlisted room name,
+participant count and publisher count. The previous full Room JSON included
+an ephemeral `turnPassword` in a local test log; no production credential
+exposure is established. The regression prevents full-object logging.
 Do not use `docker compose down -v` or delete `storage/forge.db` as routine
 cleanup; those commands can destroy local data. The root `start.sh` uses
 non-destructive shutdown.

@@ -1,8 +1,13 @@
 name: forgeos-livekit-scale
 
+# This is a self-attested manual opt-in, not proof of authorization.
+x-hami-cloud-manual-opt-in:
+  required: ${LIVEKIT_CLOUD_MANUAL_OPT_IN:?Cloud scale Compose is disabled; only set LIVEKIT_CLOUD_MANUAL_OPT_IN after explicit owner authorization and written LiveKit approval.}
+
 services:
   livekit-publisher:
     image: livekit/livekit-cli:v2.19.4
+    profiles: [manual-cloud-opt-in]
     volumes:
       - ${HOME}/.livekit:/root/.livekit:ro
     command:
@@ -17,7 +22,7 @@ services:
 
   livekit-load-test:
     image: livekit/livekit-cli:v2.19.4
-    profiles: [load-test]
+    profiles: [manual-cloud-opt-in]
     volumes:
       - ${HOME}/.livekit:/root/.livekit:ro
     command:
@@ -27,11 +32,11 @@ services:
       - --room
       - ${LIVEKIT_ROOM:-forgeos-scale-test}
       - --duration
-      - ${LIVEKIT_TEST_DURATION:-5m}
+      - ${LIVEKIT_TEST_DURATION:-30s}
       - --subscribers
-      - ${LIVEKIT_SUBSCRIBERS:-10000}
+      - ${LIVEKIT_SUBSCRIBERS:-50}
       - --num-per-second
-      - ${LIVEKIT_JOIN_RATE:-100}
+      - ${LIVEKIT_JOIN_RATE:-10}
       - --layout
       - ${LIVEKIT_LAYOUT:-speaker}
       - --video-resolution

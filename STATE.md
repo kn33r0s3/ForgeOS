@@ -1,3 +1,12 @@
+# Current state — 2026-11-16 — D85 export settlement and LiveKit hardening
+
+- **Run-start main:** `b95e94f29143e44c0eeee526f1a5508b02c1cdb9`. Exact-head ForgeOS CI passed 10/10 jobs; secret scan passed; independent deployment verifier failed HTTP 402 at production-content fetch. The exact production deployment is READY, but the Vercel project env list is empty and runtime logs show per-instance `/tmp/forge.db`, 124 UNKNOWN_MAP claims seeded on fresh instances, and legacy intelligence startup disabled. HTTP 200 is not readiness.
+- **Current run increment:** existing LiveKit Cloud Compose and helper paths are now opt-in/fail-closed; defaults match documented participant/CLI limits; CI room polling logs only allowlisted room metadata; existing regression coverage and Compose config-only guard were added. No Cloud test or spend occurred.
+- **D85:** NRB 2026 export rules and one effective-dated NMB bank tariff were inspected. Several goods/service export payment routes exist, but the binding constraint is UNKNOWN without real transaction evidence. D85 remains UNKNOWN; no exporter was contacted.
+- **Source rights:** NRB, TEPC and bank pages are manual-only/NOT CLEARED for automated ingestion or provider transmission.
+- **Still NOT IMPLEMENTED:** durable DB/auth/scheduler; source-effective-time propagation and claim-specific source grounding; the blocked read-only portfolio helper in `research_planner.py`. No alternate write path was used for that blocked change.
+- **Verification for the new commit:** pending direct exact-head CI, secret-scan and deployment checks. Do not inherit the parent SHA's green CI as proof for the new head.
+
 # Current state — 2026-11-16 — D95 fish cold-chain / market-chain discovery
 
 - **Run-start main:** 0ed23af9a56a7eb8a68cb4d6050fdd5f064ad9e9. Its exact-head GitHub Actions suite completed 10/10; backend tests 1,363 passed, 2 skipped, 17 warnings; secret scan passed. Hami production deployment was READY for that exact SHA. The independent deploy verifier failed HTTP 402 at production-content fetch after local verifier tests passed. This follow-up is documentation-only; the new head requires its own checks.

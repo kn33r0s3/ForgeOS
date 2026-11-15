@@ -12,6 +12,8 @@ const WEB_DB = readFileSync(join(ROOT, "src/lib/db.ts"), "utf8");
 const CHECK_ALL = readFileSync(join(ROOT, "scripts/check_all.sh"), "utf8");
 const LIVEKIT_DOC = readFileSync(join(ROOT, "DOCKER_COMMANDS.md"), "utf8");
 const CI_WORKFLOW = readFileSync(join(ROOT, ".github/workflows/forgeos-ci.yml"), "utf8");
+const CLOUD_COMPOSE = readFileSync(join(ROOT, "docker-compose.livekit-scale.yml"), "utf8");
+const CLOUD_SCALE_SCRIPT = readFileSync(join(ROOT, "scripts/livekit-scale-test.sh"), "utf8");
 
 test("Docker startup uses the canonical root Vite app, not archived Next.js", () => {
   assert.ok(START.includes("docker compose up --build -d"));
@@ -99,4 +101,33 @@ test("the local LiveKit 100-subscriber scenario preserves the tuned speaker layo
   assert.ok(LIVEKIT_DOC.includes("default to `--layout speaker`"));
   assert.ok(LIVEKIT_DOC.includes("LIVEKIT_TEST_LAYOUT=3x3"));
   assert.ok(LIVEKIT_DOC.includes("heavier alternative"));
+});
+
+
+test("LiveKit Cloud scale Compose requires an explicit manual opt-in and safe defaults", () => {
+  const publisherBlock =
+    CLOUD_COMPOSE.split("  livekit-publisher:\\n")[1]?.split("\\n  livekit-load-test:\\n")[0] ?? "";
+  const loadTestBlock =
+    CLOUD_COMPOSE.split("  livekit-load-test:\\n")[1] ?? "";
+
+  assert.ok(CLOUD_COMPOSE.includes("x-hami-cloud-manual-opt-in:"));
+  assert.ok(CLOUD_COMPOSE.includes("${LIVEKIT_CLOUD_MANUAL_OPT_IN:?"));
+  assert.ok(publisherBlock.includes('profiles: [manual-cloud-opt-in]'));
+  assert.ok(loadTestBlock.includes('profiles: [manual-cloud-opt-in]'));
+  assert.ok(loadTestBlock.includes("${LIVEKIT_TEST_DURATION:-30s}"));
+  assert.ok(loadTestBlock.includes("${LIVEKIT_SUBSCRIBERS:-50}"));
+  assert.ok(loadTestBlock.includes("${LIVEKIT_JOIN_RATE:-10}"));
+  assert.ok(CLOUD_SCALE_SCRIPT.includes("--profile manual-cloud-opt-in"));
+  assert.ok(CLOUD_SCALE_SCRIPT.includes("LIVEKIT_CLOUD_MANUAL_OPT_IN=cleanup-only"));
+  assert.ok(CLOUD_SCALE_SCRIPT.includes("start|test)"));
+  assert.ok(CLOUD_SCALE_SCRIPT.includes("Blocked: LiveKit Cloud publishers and load tests are disabled."));
+  assert.ok(!CLOUD_SCALE_SCRIPT.includes(" up -d"));
+  assert.ok(!CLOUD_SCALE_SCRIPT.includes(" run --rm"));
+});
+
+test("LiveKit CI room polling logs only allowlisted room metadata", () => {
+  assert.equal((CI_WORKFLOW.match(/print\\(json\\.dumps\\(document, indent=2\\)\\)/g) || []).length, 0);
+  assert.equal((CI_WORKFLOW.match(/"name": room\\.get\\("name"\\)/g) || []).length, 2);
+  assert.equal((CI_WORKFLOW.match(/"numParticipants": room\\.get\\("numParticipants"\\)/g) || []).length, 2);
+  assert.equal((CI_WORKFLOW.match(/"numPublishers": room\\.get\\("numPublishers"\\)/g) || []).length, 2);
 });
