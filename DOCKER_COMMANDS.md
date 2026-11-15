@@ -44,7 +44,7 @@ key/secret and binds host ports to `127.0.0.1`; it is not a production deploymen
 and must not be exposed to a LAN or the public internet.
 
 The smoke uses nine separate CLI publisher containers, each publishing LiveKit's
-synthetic demo video to the same room, plus 25 simulated subscribers for 30 seconds.
+synthetic demo video to the same room, plus 25 simulated subscribers for 30 seconds with a 3x3 viewer layout.
 These are TEST participants and synthetic media, not real streamers or viewers.
 
 ```bash

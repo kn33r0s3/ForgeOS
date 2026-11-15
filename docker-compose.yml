@@ -183,3 +183,5 @@ services:
       - 30s
       - --subscribers
       - "25"
+      - --layout
+      - 3x3
