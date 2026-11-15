@@ -96,7 +96,7 @@ test("the local LiveKit 100-subscriber scenario preserves the tuned speaker layo
     "CI must verify the rendered Compose command uses speaker layout",
   );
   assert.ok(ciLoadTest.includes("config --format json"));
-  assert.ok(LIVEKIT_DOC.includes("defaults to `--layout speaker`"));
+  assert.ok(LIVEKIT_DOC.includes("default to `--layout speaker`"));
   assert.ok(LIVEKIT_DOC.includes("LIVEKIT_TEST_LAYOUT=3x3"));
   assert.ok(LIVEKIT_DOC.includes("heavier alternative"));
 });
