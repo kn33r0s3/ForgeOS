@@ -182,13 +182,13 @@ jobs:
           echo "::error::Expected nine publishers in hami-proving-ground; room state did not reach 9 participants / 9 publishers."
           exit 1
 
-      - name: Run the 25-subscriber grid smoke and verify one shared room
+      - name: Run the 100-subscriber grid load test and verify one shared room
         shell: bash
         run: |
           set -euo pipefail
-          docker compose --profile livekit-local run --rm livekit-load-test > "$RUNNER_TEMP/livekit-load-test.log" 2>&1 &
+          LIVEKIT_TEST_SUBSCRIBERS=100 docker compose --profile livekit-local run --rm livekit-load-test > "$RUNNER_TEMP/livekit-load-test.log" 2>&1 &
           load_pid=$!
-          saw_34_participants=false
+          saw_109_participants=false
 
           room_matches() {
             ROOM_JSON="$1" EXPECTED_PARTICIPANTS="$2" python - <<'PY'
@@ -218,10 +218,12 @@ jobs:
           PY
           }
 
-          for attempt in $(seq 1 20); do
+          for attempt in $(seq 1 40); do
             room_json="$(docker run --rm --network forgeos_default livekit/livekit-cli:v2.19.4 room list --url ws://livekit:7880 --api-key devkey --api-secret secret --json hami-proving-ground 2>/dev/null || true)"
-            if room_matches "$room_json" 34; then
-              saw_34_participants=true
+            if room_matches "$room_json" 109; then
+              saw_109_participants=true
+              echo "Verified 109 concurrent participants (9 publishers + 100 subscribers)."
+              docker stats --no-stream --format 'name={{.Name}} cpu={{.CPUPerc}} mem={{.MemUsage}} net={{.NetIO}}' forgeos-livekit | tee "$RUNNER_TEMP/livekit-sfu-stats.txt"
               break
             fi
             if ! kill -0 "$load_pid" 2>/dev/null; then
@@ -236,11 +238,11 @@ jobs:
           fi
           cat "$RUNNER_TEMP/livekit-load-test.log"
 
-          if [ "$saw_34_participants" != "true" ]; then
+          if [ "$saw_109_participants" != "true" ]; then
             docker compose --profile livekit-local ps
             docker compose --profile livekit-local logs --no-color --tail 100 livekit
             docker compose --profile livekit-local logs --no-color --tail 100 livekit-publisher
-            echo "::error::The room did not reach 34 concurrent participants (9 publishers + 25 subscribers)."
+            echo "::error::The room did not reach 109 concurrent participants (9 publishers + 100 subscribers)."
             exit 1
           fi
 

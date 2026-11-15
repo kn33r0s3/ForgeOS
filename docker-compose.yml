@@ -182,6 +182,6 @@ services:
       - --duration
       - 30s
       - --subscribers
-      - "25"
+      - "${LIVEKIT_TEST_SUBSCRIBERS:-25}"
       - --layout
       - 3x3

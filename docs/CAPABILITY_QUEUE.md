@@ -116,6 +116,8 @@
 - This is verified TEST evidence on an ephemeral public-repository GitHub runner. Streams are LiveKit's synthetic demo video and viewers are simulated; no real camera sources, owner Mac runtime, or public deployment are involved.
 - It does **not** establish 4,000-viewer capacity, production headroom, geographic distribution, glass-to-glass latency, or a 100 ms guarantee. The latency SLO and high-scale generator topology remain untested.
 - No cloud provider, paid service, public hostname, or production credentials were used.
+- **Next scale rung:** the opt-in load-test service now accepts `LIVEKIT_TEST_SUBSCRIBERS` (default 25); the CI smoke has been stepped up to 100 simulated subscribers (109 total including the 9 publishers) and records the SFU container's CPU, memory and network I/O at peak. This next run is pending; the previous 25-subscriber result remains the last verified baseline.
+
 
 ### Owner-held blockers
 - Production Vercel project is currently returning `DEPLOYMENT_DISABLED` (HTTP 402). A project/account owner must resolve the account/usage gate; do not silently resume or incur spend.

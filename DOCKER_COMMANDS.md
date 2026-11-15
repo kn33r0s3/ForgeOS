@@ -54,8 +54,9 @@ docker compose --profile livekit-local up -d livekit
 # Start nine independent demo publishers in the same logical room.
 docker compose --profile livekit-local up -d --scale livekit-publisher=9 livekit-publisher
 
-# Run the 30-second / 25-subscriber smoke and print the CLI summary.
-docker compose --profile livekit-local run --rm livekit-load-test
+# Run the 30-second / 25-subscriber smoke and print the CLI summary (default).
+# Set LIVEKIT_TEST_SUBSCRIBERS=100 for a 100-subscriber step-up test.
+LIVEKIT_TEST_SUBSCRIBERS=100 docker compose --profile livekit-local run --rm livekit-load-test
 
 # Inspect service state and publisher/SFU logs.
 docker compose --profile livekit-local ps

@@ -67,7 +67,7 @@ test("the optional LiveKit smoke profile is loopback-only and publisher-scalable
   assert.ok(publisherBlock.includes("hami-proving-ground"));
   assert.ok(loadTestBlock.includes("load-test"));
   assert.ok(loadTestBlock.includes("--subscribers"));
-  assert.ok(loadTestBlock.includes('"25"'));
+  assert.ok(loadTestBlock.includes("${LIVEKIT_TEST_SUBSCRIBERS:-25}"));
   assert.ok(loadTestBlock.includes("30s"));
   assert.ok(loadTestBlock.includes("3x3"));
 });
