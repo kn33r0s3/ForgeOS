@@ -138,11 +138,38 @@ jobs:
           set -euo pipefail
           docker compose --profile livekit-local up -d --scale livekit-publisher=9 livekit-publisher
 
+          room_matches() {
+            ROOM_JSON="$1" EXPECTED_PARTICIPANTS="$2" python - <<'PY'
+          import json
+          import os
+          import sys
+
+          raw = os.environ.get("ROOM_JSON", "")
+          expected = int(os.environ["EXPECTED_PARTICIPANTS"])
+          decoder = json.JSONDecoder()
+          for offset, char in enumerate(raw):
+              if char != "{":
+                  continue
+              try:
+                  document, _ = decoder.raw_decode(raw[offset:])
+              except json.JSONDecodeError:
+                  continue
+              if any(
+                  room.get("name") == "hami-proving-ground"
+                  and room.get("numParticipants") == expected
+                  and room.get("numPublishers") == 9
+                  for room in document.get("rooms", [])
+              ):
+                  print(json.dumps(document, indent=2))
+                  sys.exit(0)
+          sys.exit(1)
+          PY
+          }
+
           room_json=""
           for attempt in $(seq 1 30); do
             room_json="$(docker run --rm --network forgeos_default livekit/livekit-cli:v2.19.4 room list --url ws://livekit:7880 --api-key devkey --api-secret secret --json hami-proving-ground 2>/dev/null || true)"
-            if printf '%s' "$room_json" | jq -e 'any(.rooms[]?; .name == "hami-proving-ground" and .numParticipants == 9 and .numPublishers == 9)' >/dev/null; then
-              printf '%s\\n' "$room_json" | jq .
+            if room_matches "$room_json" 9; then
               echo "Verified nine publisher participants in one LiveKit room."
               exit 0
             fi
@@ -163,10 +190,37 @@ jobs:
           load_pid=$!
           saw_34_participants=false
 
+          room_matches() {
+            ROOM_JSON="$1" EXPECTED_PARTICIPANTS="$2" python - <<'PY'
+          import json
+          import os
+          import sys
+
+          raw = os.environ.get("ROOM_JSON", "")
+          expected = int(os.environ["EXPECTED_PARTICIPANTS"])
+          decoder = json.JSONDecoder()
+          for offset, char in enumerate(raw):
+              if char != "{":
+                  continue
+              try:
+                  document, _ = decoder.raw_decode(raw[offset:])
+              except json.JSONDecodeError:
+                  continue
+              if any(
+                  room.get("name") == "hami-proving-ground"
+                  and room.get("numParticipants") == expected
+                  and room.get("numPublishers") == 9
+                  for room in document.get("rooms", [])
+              ):
+                  print(json.dumps(document, indent=2))
+                  sys.exit(0)
+          sys.exit(1)
+          PY
+          }
+
           for attempt in $(seq 1 20); do
             room_json="$(docker run --rm --network forgeos_default livekit/livekit-cli:v2.19.4 room list --url ws://livekit:7880 --api-key devkey --api-secret secret --json hami-proving-ground 2>/dev/null || true)"
-            if printf '%s' "$room_json" | jq -e 'any(.rooms[]?; .name == "hami-proving-ground" and .numParticipants == 34 and .numPublishers == 9)' >/dev/null; then
-              printf '%s\\n' "$room_json" | jq .
+            if room_matches "$room_json" 34; then
               saw_34_participants=true
               break
             fi
