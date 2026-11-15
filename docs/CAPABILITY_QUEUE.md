@@ -4256,3 +4256,14 @@ This is a second-domain evidence extension of the existing source-time capabilit
   is **NOT MEASURABLE**.
 
 ## 2026-11-15 — Senior repository review and test recovery (main 50fa89cf)
+
+
+## 2026-11-16 — D95 asset-to-market reconciliation candidate (NOT IMPLEMENTED)
+
+The Jaldevi fish cooperative evidence extends the existing source-time/provenance capability into a concrete resource-recovery case. The evidence chain spans a registered cooperative, historical processing-centre investment, PMAMP cold-room/chilling/vehicle/lab records, producer links, frozen-fish production, trader refrigerators, packaging/consumer-awareness barriers, current support programmes and market visibility. The same source set also contains unresolved joins: 10 MT narrative versus 5 MT annex; multiple Jaldevi-like grant rows with spelling/location variants; 400 farmers versus 403 municipal beneficiaries versus 438 PIU organizations; Chhapiya Ward 4 versus Banghusuri Ward 5; and report-time sales versus 0.1% utilization/no current revenue.
+
+**Candidate reusable capability:** evidence-grounded resource-to-market matching: reconcile the legal entity and asset identity, grant/commissioning history, physical capacity and current condition, production network, product/quality requirements, energy/operating costs, packaging, buyer channels, current subsidy/support eligibility and verified outcomes. This can generalize to cold stores, dairy chillers, grain mills, irrigation and logistics assets. It is a capability hypothesis, not a marketplace, new ledger, offer or validated commercial opportunity.
+
+Use the existing ENTITY/RELATION/EVENT/EVIDENCE/CAPABILITY/ACTION primitives and Signal/Evidence provenance. The existing collector → Signal → Evidence → assessment → citation seam is sufficient to represent the known facts and their limitations; source-effective time, source identity and claim-level support still need the already documented provenance work. No new model, table, taxonomy, collector or parallel ledger is justified.
+
+**Next evidence:** current asset condition/ownership/commissioning, monthly throughput and revenue, actual buyers/prices/repeat orders, electricity category and bills, product testing/label/permit status, current subsidy form eligibility and beneficiary list, and whether the three-room/5 MT/10 MT/chilling-plant records refer to the same physical asset. Public records first; direct contact/field verification only with explicit owner authorization. No source ingestion until each exact source is cleared.

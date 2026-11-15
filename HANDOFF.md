@@ -1,3 +1,38 @@
+# Current handoff — 2026-11-16 — D95 Jaldevi fish cold-chain / market-chain discovery
+
+**Run-start main:** 0ed23af9a56a7eb8a68cb4d6050fdd5f064ad9e9 (the exact-head checks below belong to this parent, not the new documentation commit).
+
+## Verified research increment
+
+The strongest new D95 finding is now an entity-linked resource chain, not merely a cold-store statistic:
+
+- The Lumbini Cooperative Registrar list (row 632) and the House of Representatives Agriculture, Cooperative and Natural Resources Committee Annual Report 2082 identify जलदेवी मत्स्य उत्पादक सहकारी संस्था लि., Siyari-5/Banghusuri, registration 487/2355/064/065.
+- The Parliament report records about 400 linked farmers, frozen-fish production, refrigerators supplied to traders, and unresolved consumer-awareness, blast-freezer know-how, vacuum-packaging, electricity-cost and market-access concerns. It requests a Kalimati fish stall. Site-visit date is not stated; this is not current operational proof.
+- The National Farmers Commission FY2078/79 report records a long-running operation (since 2053 BS), about 12 ha, frozen-fish practice, sales in three districts, PMAMP vehicle/machinery and a processing centre funded NPR3.8m by PMAMP plus NPR0.75m by the cooperative.
+- PMAMP's FY2081/82 cold-room study names the same cooperative and reports 0.1% utilization/no current revenue. Its narrative says 10 MT + 500 kg/batch; Annex I says 5 MT/three rooms. Preserve the discrepancy; the measurement period and denominator are unclear.
+- PMAMP's FY2081/82 equipment inventory contains multiple Jaldevi-like grants (pickup/post-harvest shed, chilling plant, lab equipment and a separate three-chamber line); spelling/location variants prevent a complete grant-to-asset join. Do not sum or assume all lines are the same asset.
+- PMAMP's programme-completion report gives programme-wide underutilization and coordination/reporting gaps; it does not prove a local Jaldevi coordination failure.
+- Current PIU Rupandehi pages list FY2083/84 post-harvest/packaging/labeling/marketing material and a farmer-registration-number requirement. Siyari lists a result-based fish-farmer subsidy proposal. A local article reports the Chhapiya fish festival opened 2 Feb 2026. None proves a Jaldevi award, participation, sales or current market demand.
+- DFTQC's current standards compilation includes fish mercury limits; the accessible text did not surface a dedicated frozen-fish standard. The cooperative's permit, product testing, labels and cold-chain controls remain UNKNOWN.
+
+## Hami implication
+
+The candidate capability is evidence-grounded resource-to-market reconciliation: join an existing legal entity and its assets/grants to current condition, production, processing, packaging/quality, energy cost, buyers, support programmes and outcomes. Reuse ENTITY/RELATION/EVENT/EVIDENCE/CAPABILITY/ACTION and the existing Signal/Evidence substrate. No new model, table, taxonomy, collector or parallel ledger. This extends the existing source-time/provenance candidate; it is not a new marketplace or service offer.
+
+## Rights and authorization
+
+All new sources are manual-only / NOT CLEARED for automated collection, source-body persistence or provider transmission. Parliament, Registrar, DFTQC and Law Commission robots/terms paths were inaccessible; no allow/deny or reuse permission was inferred. PMAMP's existing rights review applies. No source registration, collector run, Signal/Evidence write, external contact, application, payment or public offer occurred. No code/runtime change was made; the blocked portfolio helper remains NOT IMPLEMENTED.
+
+## Verification and next steps
+
+- Parent 0ed23af9: CI 10/10 passed; backend 1,363 passed / 2 skipped / 17 warnings; secret scan passed; Hami production deployment READY for that exact SHA.
+- Independent deploy verifier failed HTTP 402 at production-content fetch after local verifier tests passed. READY is not proof of durable DB, worker or scheduler operation.
+- This commit is documentation-only; wait for its own exact-head CI/security/deploy checks before another write.
+- Next: public records for asset commissioning/maintenance and FY2082/83 beneficiary/annual-progress data; verify FY2083/84 support eligibility, current fish prices/buyers, electricity tariff category/bills, product testing/licensing, and whether the three-room/5MT/10MT/chilling-plant records refer to one physical asset. Direct field verification requires owner authorization.
+- Continue D93, WASH, trade, EV and other Hami-wide discovery independently; no single experiment gates Hami's mission.
+
+---
+
 ## Current handoff — 2026-11-16 — exact-head CI, production runtime, source-time trace (run-start main 24d76a40)
 
 ### Mission and repository

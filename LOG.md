@@ -1,3 +1,15 @@
+## 2026-11-16 — D95 Jaldevi fish cold-chain / market-chain evidence increment (manual-only; NOT CLEARED)
+
+- **Entity identity:** the Lumbini Cooperative Registrar list and House of Representatives Committee Annual Report 2082 identify the same registered Jaldevi Matsya Producer Cooperative at Siyari-5/Banghusuri, registration 487/2355/064/065. The Committee report records about 400 linked farmers and report-time frozen-fish production/market barriers; visit date not stated.
+- **Historical assets:** the National Farmers Commission FY2078/79 report records a processing centre funded NPR3.8m by PMAMP plus NPR0.75m by the cooperative, a vehicle and frozen-fish machinery. PMAMP FY2081/82 inventory lists multiple Jaldevi-like grant rows, but name/location variants prevent complete asset joins.
+- **Utilization/contradiction:** PMAMP's FY2081/82 cold-room study reports 0.1% utilization/no current revenue, narrative 10 MT + 500 kg/batch versus Annex I 5 MT/three rooms. Period/denominator unclear. Small frozen-fish distribution in the Parliament report can coexist with very low utilization; no current status proved.
+- **Current levers:** PIU Rupandehi lists FY2083/84 post-harvest/packaging/labeling/marketing material and a farmer-registration requirement; Siyari lists a result-based fish-farmer subsidy proposal; Chhapiya fish festival opened 2 Feb 2026. No award, Jaldevi participation, sales or repeat demand established.
+- **Food quality:** Food Hygiene and Quality Act 2081 is in force; DFTQC Standards 2082 include fish mercury limits, but no dedicated frozen-fish standard surfaced in the accessible compilation. Permit, testing, label and cold-chain compliance remain UNKNOWN.
+- **Capability candidate:** resource-to-market reconciliation using existing six primitives and Signal/Evidence provenance. No new architecture or service offer. Public records first; no direct contact without authorization.
+- **Rights:** Parliament, Registrar, DFTQC and Law Commission robots/terms attempts were inaccessible; no reuse permission inferred. PMAMP's existing rights review applies. All new sources manual-only / NOT CLEARED. No registry, collector, Signal/Evidence write, body persistence, contact or external action.
+- **Engineering continuity:** run-start main 0ed23af9 exact-head CI 10/10 passed (backend 1,363/2 skipped/17 warnings); secret scan passed; Hami deployment READY. Independent deployment verifier failed HTTP 402 at production-content fetch. This follow-up changes documentation only; its own checks pending.
+- Structured D1–D108 map and generated projections remain unchanged; D95 received an evidence addendum, not a new question or taxonomy.
+
 ## 2026-11-16 — exact-head 24d76 verification, production runtime trace, source-time seam audit
 
 - Run-start main `24d76a40930fab12f96745b2887e4158182d2e1d`. Read current AGENTS/HANDOFF/STATE/QUEUE/BRAIN/CAPABILITY_QUEUE/UNKNOWN_MAP/LOG/PUBLIC_SOURCES and traced database/startup/health/unknowns-sync, BaseCollector normalization, collector_runner, ObserverEngine, Evidence writer, evidence assessment, synthesis citation and source-clearance registry.
