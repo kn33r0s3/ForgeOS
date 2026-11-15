@@ -1985,6 +1985,37 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
+## Last verified state snapshot (2026-11-15)
+
+**Update 2026-11-15 (daily freshness check, 06:23 NPT):** HEAD at `e964e687`
+(since 2026-11-11: discovery round 23 banking D107–D108, D95 fish
+cold-chain / subsidy-to-market evidence and the Jaldevi cold-room link,
+D93 asset-recovery timeline and report-timing reconciliation, Gorkha
+WASH baseline and shared-logistics evidence, D86 trade-concentration
+evidence, CHWRR/DHM flood-service timelines, universal proposal-only
+goal planning with Ollama metrics, fail-closed deployed-database
+selection, the governed-operator / LiveKit roadmap, and the inner-ground
+invariant split from the north star, plus the 2026-11-12/13/14 freshness
+commits). `git pull --ff-only` fast-forwarded `0c78f807..e964e687`;
+`main` == `origin/main`. Working tree clean before this edit.
+
+- **Health: NOT OK — both endpoints still return HTTP 402
+  `Payment required` / `DEPLOYMENT_DISABLED` (haminp and
+  forge-os-ebon, confirmed on the check read and a recheck read;
+  the haminp root URL also returns 402). Unchanged from
+  2026-10-31. It matches the Vercel account/deployment gate
+  already recorded in the handoff on 2026-10-31; the exact Vercel
+  cause remains pending normal team authorization, and no bypass or
+  permission change was made here.
+- **Intake: UNKNOWN this run —** `/api/forge-bot/config` also returns
+  the same 402 `DEPLOYMENT_DISABLED` response, so `intake_enabled` could
+  not be verified. Last verified value (2026-10-31) was `false`; no
+  change is claimed.
+- **Unknowns:** 108 D-entries in `docs/UNKNOWN_MAP.md` (was 106 on
+  2026-11-11; the two new entries are D107–D108 from discovery round 23).
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold.
+
 ## Last verified state snapshot (2026-11-11)
 
 **Update 2026-11-11 (daily freshness check, 06:23 NPT):** HEAD at `097e49d0`
