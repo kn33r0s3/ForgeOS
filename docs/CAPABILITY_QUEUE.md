@@ -1,3 +1,38 @@
+## 2026-11-16 — LiveKit metric correction, Cloud harness safety, and D93 source-time correction
+
+### LiveKit load-test semantics (verified against pinned upstream source)
+
+- Hami pins `livekit/livekit-cli:v2.19.4`; that tag depends on `livekit/server-sdk-go/v2 v2.19.0`.
+- [CLI loadtester.go](https://github.com/livekit/livekit-cli/blob/v2.19.4/pkg/loadtester/loadtester.go#L398-L424) increments its `dropped` counter from `samplebuilder.WithPacketDroppedHandler`. The accepted `packets` counter increments for each packet returned by `PopPackets`.
+- [SampleBuilder.drop](https://github.com/livekit/server-sdk-go/blob/v2.19.0/pkg/samplebuilder/samplebuilder.go#L230-L247) calls the handler once per dropped frame, then releases the packets for that frame. The method is reached when the buffer is full or when an incomplete frame exceeds the `maxLate` sequence window.
+- [CLI formatting](https://github.com/livekit/livekit-cli/blob/v2.19.4/pkg/loadtester/util.go#L34-L40) divides dropped callbacks by accepted packets plus callbacks. The printed `Pkt. Loss` percentage therefore mixes frame-drop events and RTP packet counts. It is not a valid network packet-loss percentage.
+- Correction: the saved 250-subscriber result is **212 samplebuilder frame-drop callback events**, not 212 RTP packets; 0.005% is a mixed-unit CLI ratio. The 38 nonzero subscriber rows (34×6 callbacks, 4×2) and zero subscriber errors remain TEST observations; exact trigger per callback is unknown.
+- Exact-head CI 43761793520 ran 9 publishers + 100 simulated subscribers, verified 109 participants and 600 video subscriptions, and all 100 subscriber rows reported 0 samplebuilder callbacks and no errors. This is a TEST harness result, not production capacity.
+- Actual transport loss should use per-track inbound RTP `packets_lost` snapshots and interval deltas; [LiveKit stats docs](https://docs.livekit.io/robotics/media/performance/stats/) state the value is cumulative since subscription start. Hami has no capture-to-render measurement path; the 100 ms target remains NOT MEASURABLE.
+
+### Cloud scale harness safety
+
+- `docker-compose.livekit-scale.yml` targets LiveKit Cloud (`--project hami`) and defaults to 10,000 subscribers, 100 joins/second and five minutes. `scripts/livekit-scale-test.sh` defaults to 20 publisher containers. Its `test` subcommand fails closed after a Cloud rejection, but direct Compose invocation bypasses the script guard.
+- Do not start Cloud publishers or the load-test service without explicit owner authorization and LiveKit written approval/approved procedure. No Cloud request or spend occurred.
+- CI's `room_matches` helper prints the full Room JSON; observed logs include an ephemeral `turnPassword` field from the local test room. This is not evidence of production credential exposure, but is unnecessary secret-like logging. Next supported source change: print only allowlisted room name, participant count and publisher count; add/retain a regression that rejects secret-like fields in logs.
+
+### D93 official index correction (manual source review only)
+
+- Official NDRRMA [English](https://ndrrma.gov.np/en/situation-report) and [Nepali](https://ndrrma.gov.np/np/situation-report) index search snapshots retrieved 16 Nov show Gorkha–Budhi Gandaki #04 dated 16 Oct / Asoj 30, with page-declared cutoff 16 Oct 10:00 NPT.
+- The 3 Nov 2026 / 2083-07-17 card is the separate Bhotekoshi–Trishuli update, not Gorkha #04. Correct the earlier attribution.
+- The index also shows #03 dated 14 Oct/cutoff 13 Oct 22:00, national monsoon report 6 Nov, and national Daily Disaster Bulletin 15 Nov. The latter are not incident-specific Gorkha restoration evidence.
+- No #05 card surfaced in the current index/search; bounded non-result, not proof of absence. #04 PDF preview exists, but no attachment URL surfaced and its body remains unread. Current restoration remains UNKNOWN.
+- Existing Hami seam: Signal/Evidence provenance and assessment. Preserve incident/geography, report version, page/index date, publication date, source-effective cutoff and retrieval time separately. NDRRMA robots/terms remain unverified; manual-only / NOT CLEARED. No source registration, body persistence, collection or provider transmission.
+
+### Owner dependency and next removable step
+
+- This run removes the need to infer LiveKit CLI metric semantics from a label: pinned source now establishes what the counter actually counts. It also corrects the D93 #04 index-date attribution.
+- Remaining owner dependencies: local access to retained stopped-container logs; explicit authorization plus LiveKit written approval for any Cloud test; authorized production DB/auth configuration. None was exercised.
+- Exact blockers: no Hami capture-to-render instrumentation; no inbound RTP interval metric in the current harness; direct Compose Cloud path is not fail-closed; NDRRMA #04 PDF body is not retrievable and its source rights are not cleared.
+- No source write was made because the existing source-edit safety boundary remains respected. No new file, primitive, table, collector, D-number or parallel ledger.
+
+---
+
 ## 2026-11-16 — Local LiveKit ramp: 100 clean; 250 with small packet loss (main 94876910)
 
 - **Existing seam inspected:** root `docker-compose.yml`'s `livekit`,

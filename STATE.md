@@ -1,44 +1,17 @@
-## Current state — 2026-11-16 — LiveKit ramp and runtime status (main 94876910)
+## Current state — 2026-11-16 — LiveKit/D93 evidence corrections (main 46ff1894)
 
-- **Repository:** `main` and `origin/main` are synchronized at
-  `94876910e233060b970385ad61bcdd17194cd397` (0 ahead / 0 behind); the
-  worktree was clean at recovery start. This update changes existing
-  continuity files only.
-- **Exact-head checks:** ForgeOS CI `43758207538` and secret scan `43758207546`
-  passed on `94876910`. Independent deploy verification `43758207593` failed
-  when its production-content request returned HTTP 402. The earlier local
-  `npm test` result of 427 passed tests and the map/route checks refer to
-  `193345cc`; they were not rerun here.
-- **Local LiveKit:** the 100-subscriber synthetic speaker-view step passed
-  with 600 video subscriptions, 198 Mbps, 0 packet loss/errors, 31.8% peak
-  aggregate Docker CPU (of 10 configured CPUs), and 7.28% summed Docker
-  memory. The 250 step completed with 1,500 subscriptions, 442.8 Mbps,
-  212 lost packets (0.005%), no subscriber errors, 46.5% peak aggregate
-  Docker CPU, and 14.33% summed Docker memory. The 250 point is not considered
-  loss-free capacity; no 500 or 4,000 test was run. All test containers were
-  stopped and cleanup verified.
-- **Latency/scale:** no capture-to-render measurement exists; 100 ms is
-  unverified. A source search found no LiveKit SDK or application renderer
-  path in this repository. LiveKit's current docs say one self-hosted room
-  must fit on one node. 4,000 viewers were not tested or projected as a
-  capacity claim.
-- **Production:** read-only checks found `hami-sigma` HTTP 200 but degraded,
-  `ready=false`, `db=not_configured`; `haminp` and `forge-os-ebon` return HTTP
-  402 `DEPLOYMENT_DISABLED`. No production configuration or deployment
-  changed.
-- **Local runtime:** Mac 10 CPUs / 24 GiB; Docker `desktop-linux` 10 CPUs /
-  16 GiB; no containers are running. `docker compose --profile livekit-local
-  ps -a` shows ten exited containers (the SFU and nine publisher replicas),
-  which remain available for log inspection. Root Compose defaults to
-  `backend`; the LiveKit services are opt-in under `livekit-local`. No test ran
-  during recovery.
-- **Next:** inspect retained stopped-container logs and LiveKit CLI loss
-  semantics to classify the 250-run signal before considering a repeat;
-  specify resource stop conditions before any rerun. Define the capture-to-
-  render percentile SLO before designing an application measurement path;
-  defer higher scale until appropriate authorization and infrastructure. No
-  real transaction occurred;
-  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE**.
+- **Repository:** canonical remote `main` is `46ff1894e4e1d2a7bd818a69096e729128905f16`, parent `94876910e233060b970385ad61bcdd17194cd397`. The 46ff commit is documentation-only. The stale remote `feature/governed-offers` ref is `f51ef262d31642479a47df7a0b6795f0949d936c`, 968 behind / 0 ahead; no delete-ref action was available, so it remains untouched.
+- **Mission:** settled. AGENTS and BRAIN state that no pilot or single commercial outcome defines Hami. No vision-validation experiment was run.
+- **Exact-head checks:** ForgeOS CI 43761793520 passed 10/10 jobs; backend 1,363 passed / 2 skipped / 17 warnings. Separate secret scan 43761793587 passed. Deploy verifier 43761793571 failed on production content HTTP 402; its local verifier tests passed and later production checks were skipped. Combined Vercel statuses: Hami success, legacy forge-os failure.
+- **Production:** Vercel deployment `dpl_8FqSkzE9nfg6xWnzAjmpz8cLx8Co` is READY for exact 46ff and targets production. Project metadata says `live=false`, SSO enabled, and zero project/hidden production environment variables. Runtime logs over 30 minutes: none; runtime errors over 24 hours: none. No-log/no-error results do not establish health or durable DB operation. No deployment or environment changes made.
+- **LiveKit local TEST:** CI verified 9 publishers + 100 simulated subscribers in one room (109 participants), 600 video subscriptions, 0 samplebuilder drop callbacks on all subscriber rows, and no subscriber errors. The previous local 250-subscriber summary's 212 count is now correctly classified as samplebuilder frame-drop callback events, not RTP packets. The printed 0.005% mixes unlike units and is not a valid transport packet-loss rate. The underlying cause remains UNKNOWN.
+- **LiveKit Cloud safety:** separate scale Compose file targets Cloud and defaults to 10,000 subscribers / 100 joins per second / five minutes; shell helper's `test` path fails closed, but direct Compose invocation bypasses that guard. Do not run without owner authorization and LiveKit written approval. CI currently prints full local Room JSON including an ephemeral `turnPassword` field; sanitize to allowlisted counts in a supported source-edit change.
+- **D93:** current official NDRRMA English/Nepali index snapshots show Gorkha #04 dated 16 Oct / cutoff 16 Oct 10:00. The 3 Nov card belongs to the separate Bhotekoshi–Trishuli update; earlier attribution to Gorkha #04 is corrected. National monsoon report 6 Nov and daily bulletin 15 Nov are aggregate, not Gorkha-specific restoration. No #05 card surfaced; bounded non-result only. #04 PDF body remains unread; D93 restoration remains UNKNOWN and NDRRMA remains manual-only / NOT CLEARED.
+- **Portfolio:** UNKNOWN_MAP has 124 existing rows, D108 latest. Prior D1–D100 metadata survey remains latest; it is not deep research. Operational open ResearchQuestion count remains UNKNOWN because production DB access is not evidenced.
+- **Source-write boundary:** no source code was changed. The blocked research_planner.py portfolio-summary proposal remains NOT IMPLEMENTED and was not bypassed. No models/tables/primitives/collectors or D-numbers added.
+
+**Next:** make the existing Cloud harness fail closed even when Compose is invoked directly; sanitize CI Room output; add true inbound RTP interval metrics; continue D93 PDF retrieval and source-time provenance through existing seams; maintain independent research and security/reliability tracks. Owner-controlled production DB/auth configuration remains separate from safe internal progress.
+
 
 ## Previous state — 2026-11-16 — homepage polish on main 4dc09990
 

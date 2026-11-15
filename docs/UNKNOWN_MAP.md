@@ -305,3 +305,13 @@ The routine flood service suspension, DHM's weather 24-hour forecast, DHM's 1155
 
 Sources: https://siyarimun.gov.np/sites/siyarimun.gov.np/files/%E0%A4%B8%E0%A4%BF%E0%A4%AF%E0%A4%BE%E0%A4%B0%E0%A5%80%20%E0%A4%97%E0%A4%BE%E0%A4%89%E0%A4%81%E0%A4%AA%E0%A4%BE%E0%A4%B2%E0%A4%BF%E0%A4%95%E0%A4%BE.pdf ; https://siyarimun.gov.np/node/1822 ; https://ampis.gov.np/available-commodity ; https://www.ampis.gov.np/market-price/6116a0f3-3f3a-46e2-9f02-6647fab7366e ; https://ampis.gov.np/market-price/75b5ebdb-f20e-4cc8-a7dd-cb20f1e84b6c ; https://ampis.gov.np/market-price/26418ca3-a6ef-4a15-9a4e-a12d00ebff5b .
 
+
+
+## Evidence addendum — 2026-11-16 (D93 official index date correction)
+
+- Rechecked the official NDRRMA [English situation-report index](https://ndrrma.gov.np/en/situation-report) and [Nepali index](https://ndrrma.gov.np/np/situation-report) through search-index snapshots on 16 November 2026. Both show Gorkha–Budhi Gandaki Report #04 dated 16 October 2026 / Asoj 30, with the detail page /468 declaring a 16 October 10:00 NPT cutoff.
+- The 3 November 2026 / 2083-07-17 card is the separate Bhotekoshi–Trishuli update. Correct the earlier attribution of that date to Gorkha #04. The #03 card remains dated 14 October, with a 13 October 22:00 cutoff.
+- The same index snapshots show a national monsoon situation report dated 6 November and the NDRRMA homepage shows a national Daily Disaster Bulletin dated 15 November. These aggregate national products do not establish current Gorkha-specific restoration or service status.
+- No Gorkha #05 card surfaced in the current index/search. This is a bounded non-result, not proof that no later official report or local notice exists. The #04 PDF preview is present, but no official attachment URL was exposed; its body remains unread.
+- NDRRMA robots/terms/reuse remain unverified. This was manual search-index review only: NOT CLEARED for automated collection, source-body persistence or provider transmission. No source registry entry or Signal/Evidence record was created.
+- Existing Hami implication: report-card/index date, report publication date, effective cutoff, incident/geography, version and retrieval time must remain separate in the existing provenance/citation seam. D93 remains UNKNOWN; no emergency advice or restoration claim is made.

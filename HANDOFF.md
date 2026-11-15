@@ -1,3 +1,66 @@
+## Current handoff — 2026-11-16 04:39 NPT — LiveKit measurement correction, Cloud harness guard, D93 index correction (main 46ff1894)
+
+### Mission and repository truth
+
+- The owner-settled mission is not under validation. `AGENTS.md` explicitly says Hami's domain is value itself, with open-ended investigation through the existing six primitives; tests apply to claims, methods, capabilities and interventions, not Hami's existence. `docs/BRAIN.md` likewise says no pilot, customer type, market or finite roadmap defines Hami. First Rupee remains one commercial climb among many.
+- Run-start canonical `main`: `46ff1894e4e1d2a7bd818a69096e729128905f16`, parent `94876910e233060b970385ad61bcdd17194cd397`. The 46ff commit is documentation-only; no application source, tests, schema, scheduler or runtime configuration changed in it.
+- Read `AGENTS.md`, `HANDOFF.md`, `STATE.md`, `QUEUE.md`, `docs/BRAIN.md`, `docs/CAPABILITY_QUEUE.md`, `docs/UNKNOWN_MAP.md`, `LOG.md`, `docs/PUBLIC_SOURCES.md`, current LiveKit Compose/scale harness/CI files, and pinned upstream LiveKit CLI/samplebuilder source.
+- Branch inventory: `main` at 46ff; stale `feature/governed-offers` at `f51ef262d31642479a47df7a0b6795f0949d936c`, 968 commits behind and zero ahead. It contains no unique work relative to main. No supported delete-ref action was exposed in this run; leave the stale ref intact rather than using an alternate mutation route.
+- `docs/UNKNOWN_MAP.md` has 124 existing rows and D108 is the latest D-entry. The prior D1–D100 metadata survey remains the latest portfolio survey; no new D-number or task was created. Operational open `ResearchQuestion` count remains UNKNOWN because the current Vercel project exposes no production environment variables or database connection evidence.
+
+### Exact-head verification — 46ff
+
+- ForgeOS CI run [43761793520](https://github.com/kn33r0s3/ForgeOS/actions/runs/43761793520): all 10 jobs passed — evidence-triage, frontend, typecheck, build, repository guards, lint, secret-scan/gitleaks, LiveKit local smoke, backend and route smoke.
+- Backend: 1,363 passed, 2 skipped, 17 warnings.
+- Separate secret scan [43761793587](https://github.com/kn33r0s3/ForgeOS/actions/runs/43761793587): passed.
+- Independent deployment verifier [43761793571](https://github.com/kn33r0s3/ForgeOS/actions/runs/43761793571): failed at production content retrieval with HTTP 402. Its local verifier tests passed; subsequent production checks were skipped. Do not call deployment verification green.
+- Combined status contexts: `Vercel – hami` success; `Vercel – forge-os` failure.
+
+### Vercel and live operational evidence
+
+- Project `hami`, deployment `dpl_8FqSkzE9nfg6xWnzAjmpz8cLx8Co`, is `READY` for the exact 46ff SHA and targets production.
+- Project metadata reports `live=false`, SSO protection enabled, and no project environment variables (`envs=[]`, hidden production count 0). The custom project domain returned by the project-domain listing is `hami-sigma.vercel.app`; deployment aliases also include generated Vercel hostnames.
+- Runtime log query for the latest 30 minutes returned no records; 24-hour runtime error aggregation returned no errors. A two-hour log query failed because the project API reports Hobby-plan retention shorter than that window. No logs is not a health check. Direct public health retrieval was not verified in this run.
+- No environment, domain, deployment, database, spend or activation setting was changed.
+
+### LiveKit: correction to the 250-subscriber measurement
+
+- Hami's local LiveKit stack pins `livekit-cli:v2.19.4`; that exact tag's source was inspected, along with `server-sdk-go/v2 v2.19.0`'s samplebuilder implementation:
+  - [CLI loadtester.go](https://github.com/livekit/livekit-cli/blob/v2.19.4/pkg/loadtester/loadtester.go#L398-L424) increments `dropped` from `samplebuilder.WithPacketDroppedHandler`, while `packets` increments for packets returned by `PopPackets`.
+  - [CLI loadtest.go](https://github.com/livekit/livekit-cli/blob/v2.19.4/pkg/loadtester/loadtest.go#L120-L184) prints those values as `Pkt. Loss`.
+  - [CLI util.go](https://github.com/livekit/livekit-cli/blob/v2.19.4/pkg/loadtester/util.go#L34-L40) computes `dropped / (packets + dropped)`.
+  - [SampleBuilder.drop](https://github.com/livekit/server-sdk-go/blob/v2.19.0/pkg/samplebuilder/samplebuilder.go#L230-L247) invokes the callback once per dropped frame, then releases the packets belonging to that frame. The drop path is reached on buffer-full handling or when an incomplete frame exceeds the configured `maxLate` window.
+- Therefore the saved 250-subscriber summary's 212 is 212 samplebuilder frame-drop callback events, not 212 RTP packets. Its displayed 0.005% combines frame-drop events with accepted RTP packet counts and is not a valid network packet-loss percentage. The 38 subscribers with nonzero counts (34 reporting six callbacks, four reporting two) and zero subscriber errors remain TEST observations; the cause of each callback is unknown.
+- Exact-head CI's 100-subscriber speaker-view smoke also ran: 9 publishers + 100 subscribers reached 109 participants; 600 video subscriptions were observed; all 100 subscriber summary rows showed 0 samplebuilder drop callbacks and no subscriber errors. This is a synthetic TEST result, not production capacity or real viewers.
+- For actual transport loss, LiveKit's [WebRTC stats documentation](https://docs.livekit.io/robotics/media/performance/stats/) says per-track inbound `packets_lost` is cumulative since subscription start; compare two readings to obtain an interval delta. No receiver-side interval instrumentation or capture-to-render path is currently in the Hami repository. The 100 ms goal remains NOT MEASURABLE.
+
+### LiveKit Cloud harness safety finding
+
+- `docker-compose.livekit-scale.yml` targets LiveKit Cloud via `--project hami`, mounts `~/.livekit`, defaults to 10,000 subscribers, 100 joins/second and five minutes; `scripts/livekit-scale-test.sh` defaults to 20 publisher containers. Its `test` command currently fails closed with a written-approval warning after LiveKit Cloud rejected load testing.
+- Invoking the Compose service directly bypasses that shell-script guard. Do not run the Cloud publisher or load-test services without both explicit owner authorization and LiveKit's written approval/approved procedure. No Cloud test or spend occurred.
+- The local CI workflow's `room_matches` helper prints the complete Room JSON on success. The observed CI log includes a `turnPassword` field from the ephemeral local test room. This is not evidence of a production credential exposure, but full object logging is unnecessary secret-like output; the safe existing-seam fix is to print only allowlisted room name/participant/publisher counts. Gitleaks passing does not inspect retained runtime logs.
+
+### D93 — official NDRRMA index date correction
+
+- Rechecked official [English](https://ndrrma.gov.np/en/situation-report) and [Nepali](https://ndrrma.gov.np/np/situation-report) index search snapshots on 16 Nov. Both show Gorkha–Budhi Gandaki Report #04 with the 16 Oct 2026 / Asoj 30 date and a page-declared cutoff of 16 Oct 10:00 NPT.
+- The 3 Nov 2026 / 2083-07-17 card is the separate Bhotekoshi–Trishuli update, not Gorkha Report #04. The earlier attribution of 3 Nov to #04 is corrected.
+- The same index snapshots show Report #03 dated 14 Oct with a 13 Oct 22:00 cutoff, the national monsoon situation report dated 6 Nov, and a national Daily Disaster Bulletin dated 15 Nov. The latter two are aggregate national reporting, not current Gorkha-specific restoration evidence.
+- No Gorkha Report #05 card surfaced in the current index/search. This is a bounded non-result, not proof that no later report or local notice exists. Report #04's PDF preview is shown, but no retrievable official attachment URL surfaced; its body remains unread.
+- Direct page opens returned no readable lines in the available browser route. NDRRMA robots/terms/reuse remain unverified; status stays manual-only / NOT CLEARED. No collection, source registration, body persistence or provider transmission occurred.
+- Existing source-time seam remains: preserve report publication/index date, source-declared effective cutoff, incident/geographic scope, retrieval time and report version separately through existing Signal/Evidence provenance. No source-code write was attempted; the prior source-edit safety block remains respected.
+
+### Next dependencies
+
+1. Harden the direct Compose Cloud load-test path and remove full Room JSON from CI logs, using existing files and regression coverage when a supported source-edit path is available.
+2. Add actual per-track inbound RTP loss deltas and define capture-to-render p50/p95/p99 before any higher-scale or 100 ms claim.
+3. Continue D93 with the unread #04 PDF only if an official attachment becomes retrievable; keep local restoration status UNKNOWN.
+4. Continue the existing source-time provenance and GoalPlan/Action execution work without bypassing source-write restrictions; continue independent research, security, reliability and quality tracks.
+5. Resolve production DB/auth configuration and deployment protection only through the owner's authorized path. The current Vercel deployment being READY does not prove a functioning durable Hami runtime.
+
+No new models, tables, primitives, collectors, D-numbers, branches or files were created. No contact, publication, intake/outbound activation, payment change, spend, emergency advice or external intervention occurred.
+
+---
+
 ## Current handoff — 2026-11-16 — LiveKit local ramp (main 94876910)
 
 - **Run-start repository reality:** `main` and `origin/main` are synchronized

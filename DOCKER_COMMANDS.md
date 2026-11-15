@@ -83,17 +83,45 @@ active workload and `docker compose --profile livekit-local ps -a` for stopped
 containers; preserve the latter's logs until test evidence has been reviewed.
 
 For larger tests, run the load generator on separate machine(s), raise its file
-descriptor limit as LiveKit documents (`ulimit -n 65535`), and record the actual
-publisher/subscriber counts, track layout, bitrates, CPU/RAM, egress, packet loss,
-jitter, reconnects and latency percentiles. A local smoke does not establish
-4,000-viewer capacity or a 100 ms glass-to-glass guarantee. LiveKit's own
-benchmarking guide warns that each self-hosted room must fit on one SFU node and
-that load testing consumes cloud-plan allowances when run on cloud infrastructure.
-The CLI summary reports bitrate and packet loss, not capture-to-render latency;
-the 100 ms target needs timestamped video frames and render-side measurement.
-The local 250-subscriber result recorded on 2026-11-16 had 0.005% packet loss;
-see [CAPABILITY_QUEUE.md](./docs/CAPABILITY_QUEUE.md) before increasing the load.
+descriptor limit as LiveKit documents (`ulimit -n 65535`), and record actual
+publisher/subscriber counts, track layout, bitrate, CPU/RAM, egress, **receiver
+inbound RTP loss deltas**, jitter, reconnects, frame/decode/render statistics and
+capture-to-render latency percentiles. LiveKit's
+[WebRTC stats guide](https://docs.livekit.io/robotics/media/performance/stats/)
+says per-track inbound `packets_lost` is cumulative since subscription start;
+compare two readings to measure an interval. The CLI's `Pkt. Loss` column is
+not a substitute for this transport metric.
 
+**Important: pinned CLI v2.19.4 counter semantics.** In
+[loadtester.go](https://github.com/livekit/livekit-cli/blob/v2.19.4/pkg/loadtester/loadtester.go#L398-L424),
+the CLI increments `dropped` from the SampleBuilder dropped-frame callback,
+once per dropped frame, while `packets` counts RTP packets returned by
+`PopPackets`. Its [percentage formatter](https://github.com/livekit/livekit-cli/blob/v2.19.4/pkg/loadtester/util.go#L34-L40)
+divides those unlike units. The saved 250-subscriber run's 212 is therefore
+212 frame-drop callback events, **not 212 RTP packets**; its displayed 0.005%
+is not a valid network packet-loss percentage. The 38 nonzero subscriber rows
+and zero subscriber errors remain TEST observations; the cause of each event
+is unknown. The exact-head CI 100-subscriber smoke had zero such callbacks and
+zero subscriber errors, but neither result establishes production capacity.
+Do not increase load until actual receiver-side metrics and stop conditions are
+defined. A local smoke does not establish 4,000-viewer capacity or a 100 ms
+glass-to-glass guarantee.
+
+**Cloud harness is blocked.** The separate
+`docker-compose.livekit-scale.yml` targets LiveKit Cloud and defaults to
+10,000 subscribers, 100 joins/second and five minutes; its publisher service
+uses 20 containers by default. `scripts/livekit-scale-test.sh test` currently
+fails closed after a Cloud rejection, but invoking the Compose service directly
+bypasses that script guard. Do not start Cloud publishers or the Cloud
+load-test service without explicit owner authorization and LiveKit's written
+approval/approved procedure. No Cloud test or spend occurred.
+
+The local CI `room_matches` helper currently prints the complete Room JSON;
+the observed test log includes an ephemeral `turnPassword` field. This is not
+evidence of production credential exposure, but full-object logging is
+unnecessary. The next safe source change is to print only allowlisted room
+name/participant/publisher counts and retain a regression against secret-like
+log fields.
 Do not use `docker compose down -v` or delete `storage/forge.db` as routine
 cleanup; those commands can destroy local data. The root `start.sh` uses
 non-destructive shutdown.

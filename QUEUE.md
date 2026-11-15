@@ -1,38 +1,16 @@
-## Current continuation — 2026-11-16 — LiveKit measured ramp (main 94876910)
+## Current continuation — 2026-11-16 — LiveKit/D93 evidence corrections (main 46ff1894)
 
-1. **P0 — Production runtime truth.** Fresh public checks: `hami-sigma`
-   returns HTTP 200 but `degraded`, `ready=false`, `db=not_configured`;
-   `haminp` and `forge-os-ebon` return HTTP 402 `DEPLOYMENT_DISABLED`. Exact-
-   head deploy verification `43758207593` also failed because its production
-   content fetch received HTTP 402. No production configuration, deployment,
-   or database change was made.
-2. **P0 — Preserve exact-head verification.** ForgeOS CI `43758207538` and
-   secret scan `43758207546` passed on `94876910`; deploy verification
-   `43758207593` failed as above. Earlier local `npm test` (427 passed) and
-   map/route checks were on `193345cc`, not rerun in this recovery.
-3. **P1 — Diagnose the 250-subscriber packet-loss signal.** Local nine-
-   publisher speaker-layout test: 100 subscribers yielded 198.0 Mbps, 0 loss,
-   0 errors and 31.8% peak aggregate Docker CPU; 250 yielded 442.8 Mbps,
-   212 lost packets (0.005%), 0 errors and 46.5% peak aggregate Docker CPU.
-   The saved CLI summary confirms the totals, but not the cause or
-   repeatability. Inspect retained stopped-container logs and pinned CLI loss
-   semantics, then consider a repeat only with explicit CPU/RAM stop
-   conditions; do not jump to 500. No test ran during this recovery.
-4. **P1 — Measure the stated latency goal.** Current CLI tests report bitrate
-   and packet loss, not capture-to-render. Define the 100 ms percentile and
-   instrument timestamps at capture and rendered display; report p50/p95/p99.
-5. **P1 — Keep scale claims bounded.** No 500- or 4,000-viewer run occurred.
-   One self-hosted LiveKit room must fit one SFU node; high-scale testing
-   requires authorized infrastructure and separate load generators. Cloud
-   tests are metered/capped and significant tests require written consent.
+1. **P0 — Close the LiveKit Cloud test bypass before any Cloud use.** `scripts/livekit-scale-test.sh test` blocks after a Cloud rejection, but `docker-compose.livekit-scale.yml` can be invoked directly and defaults to 10,000 subscribers, 100 joins/second and five minutes; publisher start defaults to 20. Keep all Cloud paths unused until a supported source edit makes direct invocation fail closed and both owner authorization and LiveKit written approval exist.
+2. **P0 — Production runtime truth.** Exact 46ff deployment is READY, but project metadata is `live=false`, SSO enabled, and environment variables/hidden production variables are empty. Independent verifier failed on HTTP 402. Runtime logs 30m: none; errors 24h: none. Do not call Hami production-healthy or durable. Owner-controlled DB/auth configuration and access remain the blocker; no changes made.
+3. **P1 — Remove secret-like CI log output.** The local LiveKit CI `room_matches` helper prints the complete Room JSON, including an ephemeral `turnPassword` field. This is not evidence of production credential exposure, but is unnecessary. Replace full-object printing with allowlisted room name/participant/publisher counts and retain the room-count regression.
+4. **P1 — Measure real transport loss before another scale run.** The pinned CLI v2.19.4 `Pkt. Loss` value is based on SampleBuilder frame-drop callbacks; 212 in the saved 250-run is callbacks, not RTP packets. The displayed 0.005% mixes callbacks with accepted RTP packets. Use per-track inbound RTP `packets_lost` deltas, jitter/reconnects, and frame/decode/render metrics. No repeat or Cloud test now.
+5. **P1 — Define the 100 ms measurement contract.** No capture-to-render path exists in Hami. Define timestamp source, clock basis, percentile SLO (p50/p95/p99), and instrumentation at capture and render before making a latency claim.
+6. **P1 — Continue D93 without conflating events or dates.** Current NDRRMA index shows Gorkha #04 dated 16 Oct/cutoff 16 Oct 10:00; the 3 Nov card is Bhotekoshi–Trishuli, a separate event. No #05 surfaced in the current index/search; bounded non-result only. #04 PDF body and current Gorkha restoration remain UNKNOWN. NDRRMA stays manual-only / NOT CLEARED.
+7. **P1 — Source-time provenance.** Keep page/index date, report publication date, source-declared cutoff, incident scope/version and retrieval time distinct through existing Signal/Evidence provenance. Source-edit safety block remains respected.
+8. **P1 — General execution and evidence tracks.** Continue GoalPlan-to-Action, reliability, security/privacy, source-clearance review, D95/D96/WASH/trade/EV and other independent work. First Rupee is one commercial climb, not a gate for any of these.
 
-Mac capacity is 10 CPUs / 24 GiB RAM; Docker is limited to 10 CPUs / 16 GiB,
-and no containers are running. Ten stopped containers (the LiveKit SFU and
-nine publishers) remain in `docker compose --profile livekit-local ps -a`;
-inspect their retained logs before any cleanup. Default Compose exposes only
-`backend`; LiveKit services are opt-in under `livekit-local`. The local TEST
-results do not prove a real transaction or production service.
-`OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+Exact-head CI 43761793520 passed 10/10 jobs (backend 1,363 passed / 2 skipped / 17 warnings); secret scan 43761793587 passed; deploy verifier 43761793571 failed HTTP 402. Stale `feature/governed-offers` is 968 behind / 0 ahead; no delete-ref action exposed. No source code, schema, scheduler, production config or external action changed in this run.
+
 
 ## Previous continuation — 2026-11-16 — main 4dc09990 + homepage polish
 
