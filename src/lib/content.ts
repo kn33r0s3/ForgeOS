@@ -200,6 +200,8 @@ export type PublicDomainEvents = {
 export type EngineHealth = {
   reachable: boolean;
   status?: string;
+  ready?: boolean;
+  db?: string;
   cycle?: { id?: number; status?: string; ended_at?: string | null } | null;
 };
 
@@ -211,8 +213,8 @@ export type PublicRevenueMiner = {
 };
 
 export async function loadEngineHealth(scope?: CacheScope): Promise<EngineHealth> {
-  // A failed probe is cached as `null` so the tile recovers within seconds
-  // rather than holding "not reachable" for the full read TTL.
+  // Failed probes use the shorter missing TTL so public data surfaces recover
+  // quickly instead of holding "not reachable" for the full read TTL.
   const probe = await cachedRead<EngineHealth | null>(
     "public:/health",
     async () => {
@@ -225,8 +227,14 @@ export async function loadEngineHealth(scope?: CacheScope): Promise<EngineHealth
         try {
           const response = await fetch(url, { headers: { Accept: "application/json" } });
           if (!response.ok) continue;
-          const body = (await response.json()) as EngineHealth;
-          return { reachable: true, status: body.status, cycle: body.cycle ?? null };
+          const body = (await response.json()) as Omit<EngineHealth, "reachable">;
+          return {
+            reachable: true,
+            status: body.status,
+            ready: body.ready,
+            db: body.db,
+            cycle: body.cycle ?? null,
+          };
         } catch {
           continue;
         }
@@ -359,6 +367,16 @@ async function fetchJsonFromCandidates<T>(path: string, scope?: CacheScope): Pro
 }
 
 export async function loadDiscoveries(limit = 20, scope?: CacheScope): Promise<PublicDiscovery[] | null> {
+  const health = await loadEngineHealth(scope);
+  if (
+    !health.reachable ||
+    health.status !== "ok" ||
+    health.ready !== true ||
+    health.db !== "up"
+  ) {
+    return null;
+  }
+
   const payload = await fetchJsonFromCandidates<PublicDiscovery[]>(
     `/discoveries?limit=${encodeURIComponent(String(limit))}`,
     scope,

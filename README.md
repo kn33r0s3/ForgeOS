@@ -1,8 +1,10 @@
 # Hami — product and system entrypoint
 
-**Current snapshot:** 2026-11-14 (Nepal time) · canonical branch `main`.
+**Current snapshot:** 2026-11-15 (Nepal time) · canonical branch `main`.
 
-**Production web surface:** [https://haminp.vercel.app](https://haminp.vercel.app). The production aliases currently return Vercel `402 DEPLOYMENT_DISABLED`; they are not live. The local Hami path is `FORGEOS_ENABLE_SCHEDULER=false ./start.sh`, which starts only the backend and root web UI after rebuilding the generated dependency target when needed. Local availability does not verify API readiness in production, durable production persistence, scheduled jobs, real users, or economic outcomes.
+**Deployment parity:** the accessible comparison deployment at [https://hami-sigma.vercel.app](https://hami-sigma.vercel.app) serves the same root Vite frontend as localhost, but is not runtime-ready. On 2026-11-15 its `/api/health` reported `status=degraded`, `ready=false`, `db=not_configured`, and `/api/public/discoveries` returned an empty array. Local `/health` reported `status=ok`, `ready=true`, `db=up` and `/api/public/discoveries` returned 48 findings. The canonical `haminp.vercel.app` host returned Vercel `402 DEPLOYMENT_DISABLED`. The findings UI now treats unhealthy or unverified storage as unavailable, not as proof that no findings exist. This does not synchronize local and deployed data: an owner-authorized durable database configuration and any needed data migration remain blocked. No production environment or database was changed.
+
+The local Hami path is `FORGEOS_ENABLE_SCHEDULER=false ./start.sh`, which starts only the backend and root web UI after rebuilding the generated dependency target when needed. Local availability does not verify API readiness in production, durable production persistence, scheduled jobs, real users, or economic outcomes.
 
 Hami is the product identity. This repository is the in-place technical lineage evolving from ForgeOS; historical API paths, database records, environment variables, imports, and migration identifiers remain compatible unless a specific migration proves safe. There is one Hami application, not a replacement frontend, parallel service catalogue, or second architecture.
 
@@ -14,7 +16,7 @@ Hami is the product identity. This repository is the in-place technical lineage 
 - `src/components/layout/hami-pathways.tsx` connects related evidence, questions, experiments, opportunities, actions, services, provider records and work pages.
 - `public/sitemap.xml` includes only indexable, live public destinations. Owner controls, closed intake, TEST-only demos, archived redirects and pages marked `noindex` are intentionally omitted from public discovery.
 
-**Current registry snapshot:** 36 entries — 25 live, 7 hidden, 4 archived, 0 planned. Hidden means retained but not advertised (owner-only, TEST-only or closed); it does not mean delete. Archived routes remain compatibility redirects rather than parallel features.
+**Current registry snapshot:** 37 entries — 25 live, 8 hidden, 4 archived, 0 planned. Hidden means retained but not advertised (owner-only, TEST-only or closed); it does not mean delete. Archived routes remain compatibility redirects rather than parallel features.
 
 ## Commercial and authorization truth
 
@@ -70,9 +72,12 @@ Knowledge is labeled: **OBSERVED / INFERRED / ESTIMATED / UNKNOWN / ACTUAL**.
 
 ## Quick Start
 
-The root Vite app is the current Hami web interface, matching the frontend
-deployed at `haminp.vercel.app`. Start it with the existing development
-command:
+The root Vite app is the current Hami web interface; local and deployed pages
+share this frontend and the canonical navigation map. Runtime data is not
+automatically shared: the current Vercel comparison deployment has no
+configured durable database, so findings are reported as unavailable there
+instead of as an empty record. Start the local app with the existing
+development command:
 
 ```bash
 npm run dev

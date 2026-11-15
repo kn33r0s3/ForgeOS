@@ -1,3 +1,18 @@
+## 2026-11-15 — Local/deployment findings parity: fail closed on unhealthy runtime
+
+### Verified discrepancy
+- The same root Vite frontend and canonical navigation are used locally and by the accessible `hami-sigma.vercel.app` comparison deployment; the app shell is not a second frontend.
+- At verification, local `/health` returned `status=ok`, `ready=true`, `db=up` and `/api/public/discoveries?limit=50` returned 48 records. The deployment returned `status=degraded`, `ready=false`, `db=not_configured` and HTTP 200 with `[]` for the same discoveries endpoint. The canonical `haminp.vercel.app` host returned HTTP 402 `DEPLOYMENT_DISABLED`.
+- Before this change, the shared `loadDiscoveries` helper trusted an empty array without consulting the existing `loadEngineHealth` seam, so the deployment could present an unavailable database as an authentic empty findings set.
+
+### Existing seam, owner dependency and improvement delta
+- Existing seam inspected: `src/lib/content.ts::loadEngineHealth` and `loadDiscoveries`, consumed by the homepage findings preview and `/discoveries`. The existing helper already probes `/api/health`; no new service, route, model, or ledger was needed.
+- Owner action still required: an authorized operator must configure a durable `DATABASE_URL` for the Vercel runtime and decide whether/how local records should be migrated. This change does not provision infrastructure, sync data, or remove that authorization.
+- Action removed: users no longer have to infer whether a zero-row findings response is a real empty result or an unready deployment. The shared loader returns unavailable unless health confirms `status=ok`, `ready=true`, and `db=up`; the existing UI then renders its unavailable state.
+- Next removable dependency: authorized durable-database configuration and a verified migration/read-after-write process. Until then, local and deployed findings remain intentionally distinct.
+- **Improvement delta — evidence quality:** production `[]` is no longer treated as evidence of “no findings” when the health endpoint says storage is unconfigured. Focused tests cover degraded and ready health states. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**; this change produces no real transaction.
+- No production setting, database, external service, or customer data was changed.
+
 ## 2026-11-15 — NSO WASH report body inspected; local baseline and service-chain crosswalk
 
 ### Source and source-time record

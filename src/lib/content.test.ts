@@ -11,6 +11,8 @@ import {
   getService,
   groupAreas,
   getPublicDemandRequestEnabled,
+  loadDiscoveries,
+  loadEngineHealth,
   processSteps,
   services,
   submitPublicDemandRequest,
@@ -89,6 +91,61 @@ describe("Hami public content", () => {
         throw new Error("TEST-only unavailable request");
       };
       assert.equal(await getPublicDemandRequestEnabled(), null);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("uses the shared health endpoint to distinguish an unavailable database from an empty finding set", async () => {
+    const originalFetch = globalThis.fetch;
+    const requested: string[] = [];
+    globalThis.fetch = async (input) => {
+      requested.push(String(input));
+      return new Response(
+        JSON.stringify({ status: "degraded", ready: false, db: "not_configured" }),
+        { headers: { "Content-Type": "application/json" } },
+      );
+    };
+    try {
+      assert.deepEqual(await loadEngineHealth(), {
+        reachable: true,
+        status: "degraded",
+        ready: false,
+        db: "not_configured",
+        cycle: null,
+      });
+      assert.equal(await loadDiscoveries(50), null);
+      assert.deepEqual(requested, ["/api/health", "/api/health"]);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("loads findings only when the shared runtime confirms a ready database", async () => {
+    const originalFetch = globalThis.fetch;
+    const requested: string[] = [];
+    globalThis.fetch = async (input) => {
+      const url = String(input);
+      requested.push(url);
+      if (url === "/api/health") {
+        return new Response(
+          JSON.stringify({ status: "ok", ready: true, db: "up" }),
+          { headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url === "/api/public/discoveries?limit=50") {
+        return new Response(JSON.stringify([{ id: 1 }]), {
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    };
+    try {
+      assert.deepEqual(await loadDiscoveries(50), [{ id: 1 }]);
+      assert.deepEqual(requested, [
+        "/api/health",
+        "/api/public/discoveries?limit=50",
+      ]);
     } finally {
       globalThis.fetch = originalFetch;
     }
