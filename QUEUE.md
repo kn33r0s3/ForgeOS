@@ -1,4 +1,32 @@
-## Current continuation — 2026-11-16 — main 4dc09990 + homepage polish
+## Current continuation — 2026-11-16 — LiveKit measured ramp (main 193345cc)
+
+1. **P0 — Production runtime truth.** Fresh public checks: `hami-sigma`
+   returns HTTP 200 but `degraded`, `ready=false`, `db=not_configured`;
+   `haminp` returns HTTP 402 `DEPLOYMENT_DISABLED`. No production
+   configuration, deployment, or database change is authorized by this local
+   validation.
+2. **P0 — Preserve exact-head verification.** CI `43753958846` and secret
+   scan `43753958849` passed on `193345cc`; local `npm test` passed 427 tests.
+   The deploy-verification run lookup timed out, so do not infer a live
+   deployment from CI success.
+3. **P1 — Diagnose the 250-subscriber packet-loss signal.** Local nine-
+   publisher speaker-layout test: 100 subscribers yielded 198.0 Mbps, 0 loss,
+   0 errors and 31.8% peak aggregate Docker CPU; 250 yielded 442.8 Mbps,
+   212 lost packets (0.005%), 0 errors and 46.5% peak aggregate CPU. Repeat
+   the bounded 250 step and inspect the existing per-track summary before
+   considering 500. Containers were cleaned up after each run.
+4. **P1 — Measure the stated latency goal.** Current CLI tests report bitrate
+   and packet loss, not capture-to-render. Define the 100 ms percentile and
+   instrument timestamps at capture and rendered display; report p50/p95/p99.
+5. **P1 — Keep scale claims bounded.** No 500- or 4,000-viewer run occurred.
+   One self-hosted LiveKit room must fit one SFU node; high-scale testing
+   requires authorized infrastructure and separate load generators. Cloud
+   tests are metered/capped and significant tests require written consent.
+
+The local TEST results do not prove a real transaction or production service.
+`OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
+## Previous continuation — 2026-11-16 — main 4dc09990 + homepage polish
 
 1. **P0 — Exact-head verification.** ForgeOS CI 43749236767 for
    `4dc099903a649c8e528f514fb7ec688454474573` failed; the GitHub API timed out

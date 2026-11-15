@@ -1,3 +1,74 @@
+## 2026-11-16 — Local LiveKit ramp: 100 clean; 250 with small packet loss (main 193345cc)
+
+- **Existing seam inspected:** root `docker-compose.yml`'s `livekit`,
+  `livekit-publisher`, and `livekit-load-test` services; the existing
+  `DOCKER_COMMANDS.md` runbook and `scripts/startup-contract.test.mjs` contract.
+  `git log --follow`, `git blame`, and `git log -S'4,000 viewers'` trace this
+  same harness and its evidence; no replacement service or new ledger was
+  introduced.
+- **Routine owner action still required:** authorize and provision any
+  production or larger-scale test environment, define the 100 ms latency SLO,
+  and approve any cloud usage/spend. This local work does not remove those
+  permissions or establish production health.
+- **Action removed:** the first local 100- and 250-subscriber measurements no
+  longer depend on owner-run command assembly or estimates. They remain TEST
+  evidence only.
+- **Test setup:** one loopback-only local SFU, nine independent publisher
+  containers sending synthetic demo video to `hami-proving-ground`, and the
+  existing CLI load-test service. All runs used the existing `speaker` layout,
+  low resolution, 10 joins/second, and `ulimit -n 65535`. The 100- and
+  250-subscriber runs waited 45 seconds after all subscribers connected.
+- **Measured results:**
+  - 25 subscribers / 30 seconds: 150 video subscriptions, 47.0 Mbps aggregate
+    subscriber bitrate, 0 packet loss, 0 errors.
+  - 100 subscribers / 45 seconds: 600 video subscriptions, 198.0 Mbps, 0
+    packet loss, 0 errors. Peak sum of active-container CPU was 317.95% of the
+    Docker 10-CPU allocation (31.8%); summed Docker `MemPerc` was 7.28%.
+  - 250 subscribers / 45 seconds: 1,500 video subscriptions, 442.8 Mbps
+    (1.8 Mbps average), 212 lost packets (0.005%), 0 errors. Peak summed
+    active-container CPU was 465.31% of the 10-CPU allocation (46.5%); summed
+    Docker `MemPerc` was 14.33%.
+- CPU percentages above are summed Docker container readings, not a whole-Mac
+  CPU measurement. The 100 run had a hard stop above 800% aggregate CPU or
+  80% aggregate memory; the 250 run used stricter 700% CPU / 50% memory
+  limits. Neither threshold was reached. `docker ps` and the Compose profile
+  were empty after cleanup.
+- **Process lesson:** the first baseline monitor used an unsupported
+  `docker stats --filter` option and left a one-off test container running.
+  It was stopped by its specific container ID; the rerun used supported
+  unfiltered stats and verified cleanup. Verify `docker ps` after every run.
+- **Limits:** no 500- or 4,000-subscriber run was attempted. The 250 result is
+  not a clean loss-free capacity point and its loss has not been shown to be
+  repeatable. No capture-to-render latency was measured; the CLI bitrate/loss
+  summary does not establish a 100 ms target. The tests used synthetic media
+  and one local SFU, not real cameras, geographically distributed viewers, or
+  production infrastructure.
+- **Fresh official evidence:** LiveKit's
+  [benchmark guide](https://docs.livekit.io/transport/self-hosting/benchmark.md)
+  says each room must fit within one node and that load testing needs ample CPU
+  and bandwidth; its 3,000-subscriber/one-publisher video benchmark used 92%
+  CPU and 531 MB/s egress on a 16-core GCP host. The
+  [deployment guide](https://docs.livekit.io/transport/self-hosting/deployment.md)
+  recommends 10 Gbps or faster networking for production. The
+  [CLI load-test guide](https://docs.livekit.io/reference/developer-tools/livekit-cli/perf.md)
+  says Cloud load tests are capped at 50 subscribers and count toward usage;
+  LiveKit's [Acceptable Use Policy](https://livekit.com/legal/acceptable-use-policy)
+  requires written consent for significant Cloud load testing. The
+  [frame-metadata guide](https://docs.livekit.io/transport/media/frame-metadata.md)
+  describes timestamp/frame-ID support for capture-to-render latency
+  measurement; the current CLI test does not report it.
+- **Next removable dependency:** inspect the 250-run loss pattern and repeat
+  that same bounded step once before considering 500; define whether 100 ms
+  means capture-to-render and which percentile must meet it, then instrument a
+  real publisher/render path. A 4,000-viewer test needs an authorized,
+  appropriately provisioned single-node room and separate load generators, or
+  a separately tested topology; it must not be attempted on this Mac.
+- **Improvement delta — evidence quality:** the tested loss-free local point
+  advanced to 100 subscribers, and the 250-subscriber run exposed a small
+  packet-loss signal that narrows the next experiment. No real transaction
+  occurred; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains
+  **NOT MEASURABLE**.
+
 ## 2026-11-16 — Hami homepage first-fold clarity and truthful identity
 
 - **Existing seam inspected:** `src/routes/index.tsx::Hero` and its existing

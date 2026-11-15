@@ -1,4 +1,32 @@
-## Current state — 2026-11-16 — homepage polish on main 4dc09990
+## Current state — 2026-11-16 — LiveKit ramp and runtime status (main 193345cc)
+
+- **Repository:** `main` and `origin/main` were synchronized at
+  `193345cc64ac729401428e65779d93f650ad4848`; the run started clean. Only
+  existing continuity/runbook documents are being updated for this increment.
+- **Code quality:** exact-head CI `43753958846` and secret scan `43753958849`
+  passed. Local `npm test` passed 427 tests; map projection and 39-route
+  checks also passed.
+- **Local LiveKit:** the 100-subscriber synthetic speaker-view step passed
+  with 600 video subscriptions, 198 Mbps, 0 packet loss/errors, 31.8% peak
+  aggregate Docker CPU (of 10 configured CPUs), and 7.28% summed Docker
+  memory. The 250 step completed with 1,500 subscriptions, 442.8 Mbps,
+  212 lost packets (0.005%), no subscriber errors, 46.5% peak aggregate
+  Docker CPU, and 14.33% summed Docker memory. The 250 point is not considered
+  loss-free capacity; no 500 or 4,000 test was run. All test containers were
+  stopped and cleanup verified.
+- **Latency/scale:** no capture-to-render measurement exists; 100 ms is
+  unverified. LiveKit's current docs say one self-hosted room must fit on one
+  node. 4,000 viewers were not tested or projected as a capacity claim.
+- **Production:** `hami-sigma` public health is HTTP 200 but degraded,
+  `ready=false`, `db=not_configured`; `haminp` returns HTTP 402
+  `DEPLOYMENT_DISABLED`. No production configuration or deployment changed.
+- **Next:** inspect/replicate the packet-loss signal at 250; define a
+  capture-to-render percentile SLO and instrument it in an actual publisher /
+  renderer path; defer higher scale until appropriate authorization and
+  infrastructure. No real transaction occurred;
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE**.
+
+## Previous state — 2026-11-16 — homepage polish on main 4dc09990
 
 - **Repository:** one active branch, `main`; run started clean and
   synchronized with `origin/main` at `4dc099903a649c8e528f514fb7ec688454474573`.

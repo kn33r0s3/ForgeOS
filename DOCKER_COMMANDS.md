@@ -85,6 +85,10 @@ jitter, reconnects and latency percentiles. A local smoke does not establish
 4,000-viewer capacity or a 100 ms glass-to-glass guarantee. LiveKit's own
 benchmarking guide warns that each self-hosted room must fit on one SFU node and
 that load testing consumes cloud-plan allowances when run on cloud infrastructure.
+The CLI summary reports bitrate and packet loss, not capture-to-render latency;
+the 100 ms target needs timestamped video frames and render-side measurement.
+The local 250-subscriber result recorded on 2026-11-16 had 0.005% packet loss;
+see [CAPABILITY_QUEUE.md](./docs/CAPABILITY_QUEUE.md) before increasing the load.
 
 Do not use `docker compose down -v` or delete `storage/forge.db` as routine
 cleanup; those commands can destroy local data. The root `start.sh` uses

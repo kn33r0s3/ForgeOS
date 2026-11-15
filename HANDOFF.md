@@ -1,4 +1,41 @@
-## Current handoff — 2026-11-16 — Hami homepage first-fold polish (main 4dc09990)
+## Current handoff — 2026-11-16 — LiveKit local ramp (main 193345cc)
+
+- **Run-start repository reality:** `main` and `origin/main` were synchronized
+  at `193345cc64ac729401428e65779d93f650ad4848`; the worktree was clean.
+  This increment changes only existing continuity/runbook documents; no
+  source, tests, production configuration, or deployment was changed.
+- **Validation:** `npm test` passed (166 script tests and 261 library tests);
+  projection sync reported 124 map rows / 108 D-unknowns and route checks
+  passed for all 39 routes. Exact-head CI `43753958846` and secret scan
+  `43753958849` both completed successfully on `193345cc`.
+- **LiveKit evidence:** on the local one-SFU profile, nine synthetic publishers
+  plus 100 simulated subscribers ran for 45 seconds after connection: 600
+  video subscriptions, 198.0 Mbps, zero packet loss/errors; peak aggregate
+  Docker-container CPU was 31.8% of its 10-CPU allocation and summed memory
+  percentage was 7.28%. The 250-subscriber step ran for 45 seconds: 1,500
+  subscriptions, 442.8 Mbps, 212 packets lost (0.005%), zero errors; peak
+  aggregate container CPU was 46.5% and summed memory percentage 14.33%.
+  No resource threshold was reached. Containers were stopped and cleanup
+  verified. These are synthetic TEST results, not a 4,000-viewer capacity
+  claim.
+- **Measurement boundary:** the CLI reports bitrate and packet loss, not
+  capture-to-render latency. No 100 ms result exists. No 500/4,000 test, Cloud
+  test, production test, or paid usage occurred. Official LiveKit docs require
+  each self-hosted room to fit on one node; Cloud load tests are metered and
+  capped at 50 subscribers, and significant Cloud testing requires written
+  consent.
+- **Runtime truth:** direct public checks returned `hami-sigma` HTTP 200 with
+  `status=degraded`, `ready=false`, `db=not_configured`; `haminp` returned
+  HTTP 402 `DEPLOYMENT_DISABLED`. A separate GitHub API read for deploy
+  verification timed out. No deployment, database, or production setting was
+  changed.
+- **Next:** investigate and repeat the bounded 250 step before increasing
+  load; define/implement a real capture-to-render percentile measurement; keep
+  4,000 viewers off this Mac until an authorized, provisioned environment is
+  available. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains
+  **NOT MEASURABLE**.
+
+## Previous handoff — 2026-11-16 — Hami homepage first-fold polish (main 4dc09990)
 
 - Run-start reality: `main` and `origin/main` were synchronized at
   `4dc099903a649c8e528f514fb7ec688454474573`; the worktree was clean before
