@@ -1,4 +1,4 @@
-## 2026-11-16 — Local LiveKit ramp: 100 clean; 250 with small packet loss (main 193345cc)
+## 2026-11-16 — Local LiveKit ramp: 100 clean; 250 with small packet loss (main 94876910)
 
 - **Existing seam inspected:** root `docker-compose.yml`'s `livekit`,
   `livekit-publisher`, and `livekit-load-test` services; the existing
@@ -31,18 +31,34 @@
 - CPU percentages above are summed Docker container readings, not a whole-Mac
   CPU measurement. The 100 run had a hard stop above 800% aggregate CPU or
   80% aggregate memory; the 250 run used stricter 700% CPU / 50% memory
-  limits. Neither threshold was reached. `docker ps` and the Compose profile
-  were empty after cleanup.
+  limits. Neither threshold was reached. At recovery, `docker ps` is empty,
+  but `docker compose --profile livekit-local ps -a` shows ten exited
+  containers (the SFU and nine publisher replicas); stopped is verified,
+  removal is not. Preserve their logs until the packet-loss trace is complete.
 - **Process lesson:** the first baseline monitor used an unsupported
   `docker stats --filter` option and left a one-off test container running.
   It was stopped by its specific container ID; the rerun used supported
-  unfiltered stats and verified cleanup. Verify `docker ps` after every run.
+  unfiltered stats. A later `docker ps` confirmed no active load, while
+  `docker compose ... ps -a` exposed retained exited SFU/publisher containers.
+  Verify both running and stopped container state after every run; do not
+  equate "no running containers" with full removal.
+- **Loss-triage evidence:** the 250-run CLI summary reports 212 lost packets
+  and zero subscriber errors. The subscriber summary attributes nonzero counts
+  to 38 of 250 subscribers: 34 reported six packets each and four reported
+  two each (212 total); the other subscriber rows reported zero. Retained SFU
+  logs include the local development secret-length warning and data-channel
+  `user initiated abort` warnings; neither is evidence of the media-packet
+  loss cause. No log-to-counter correlation is established, so packet-loss
+  attribution remains open.
 - **Limits:** no 500- or 4,000-subscriber run was attempted. The 250 result is
   not a clean loss-free capacity point and its loss has not been shown to be
   repeatable. No capture-to-render latency was measured; the CLI bitrate/loss
   summary does not establish a 100 ms target. The tests used synthetic media
   and one local SFU, not real cameras, geographically distributed viewers, or
-  production infrastructure.
+  production infrastructure. A repository search found no LiveKit SDK import
+  or application track-render path; the existing harness is CLI-only, so there
+  is no application publisher/renderer callback to instrument for
+  capture-to-render latency yet.
 - **Fresh official evidence:** LiveKit's
   [benchmark guide](https://docs.livekit.io/transport/self-hosting/benchmark.md)
   says each room must fit within one node and that load testing needs ample CPU
@@ -68,6 +84,24 @@
   packet-loss signal that narrows the next experiment. No real transaction
   occurred; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains
   **NOT MEASURABLE**.
+- **Recovery verification:** actual `main` and `origin/main` are both
+  `94876910e233060b970385ad61bcdd17194cd397` (0/0 divergence); the worktree
+  was clean at recovery start. Exact-head ForgeOS CI `43758207538` and secrets
+  scan `43758207546` passed; deploy verification `43758207593` failed because
+  its production-content fetch returned HTTP 402. Read-only health checks
+  found `hami-sigma` degraded (`db=not_configured`) and `haminp` /
+  `forge-os-ebon` disabled (HTTP 402). Mac/Docker capacity is 10/10 CPUs and
+  24/16 GiB RAM, with no running containers; ten stopped LiveKit SFU/publisher
+  containers remain for log inspection. The root Compose LiveKit profile is
+  opt-in. No code, runtime, deployment, or load-test changes were made.
+- **Current blocker / next safe action:** 4,000-viewer scale still requires
+  authorized, provisioned infrastructure; the 100 ms goal has no defined
+  measurement contract, and no application render path was found. The
+  retained 250-subscriber summary confirms 212 packet losses (0.005%) and zero
+  subscriber errors, but does not establish whether the loss is repeatable or
+  where it occurred. Inspect retained stopped-container logs and the pinned
+  CLI loss semantics before deciding whether a bounded repeat is justified;
+  require explicit stop conditions before any repeat.
 
 ## 2026-11-16 — Hami homepage first-fold clarity and truthful identity
 

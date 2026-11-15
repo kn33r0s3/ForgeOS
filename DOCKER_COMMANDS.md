@@ -70,13 +70,17 @@ LIVEKIT_TEST_LAYOUT=speaker LIVEKIT_TEST_SUBSCRIBERS=100 docker compose --profil
 LIVEKIT_TEST_LAYOUT=3x3 LIVEKIT_TEST_SUBSCRIBERS=100 docker compose --profile livekit-local run --rm livekit-load-test
 
 # Inspect service state and publisher/SFU logs.
-docker compose --profile livekit-local ps
+docker compose --profile livekit-local ps -a
 docker compose --profile livekit-local logs --tail 80 livekit
 docker compose --profile livekit-local logs --tail 80 livekit-publisher
 
 # Stop only the LiveKit services; leave the rest of Hami's stack untouched.
 docker compose --profile livekit-local stop livekit-publisher livekit
 ```
+
+`stop` leaves exited containers and their logs behind. Check `docker ps` for
+active workload and `docker compose --profile livekit-local ps -a` for stopped
+containers; preserve the latter's logs until test evidence has been reviewed.
 
 For larger tests, run the load generator on separate machine(s), raise its file
 descriptor limit as LiveKit documents (`ulimit -n 65535`), and record the actual

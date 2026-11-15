@@ -1,20 +1,23 @@
-## Current continuation — 2026-11-16 — LiveKit measured ramp (main 193345cc)
+## Current continuation — 2026-11-16 — LiveKit measured ramp (main 94876910)
 
 1. **P0 — Production runtime truth.** Fresh public checks: `hami-sigma`
    returns HTTP 200 but `degraded`, `ready=false`, `db=not_configured`;
-   `haminp` returns HTTP 402 `DEPLOYMENT_DISABLED`. No production
-   configuration, deployment, or database change is authorized by this local
-   validation.
-2. **P0 — Preserve exact-head verification.** CI `43753958846` and secret
-   scan `43753958849` passed on `193345cc`; local `npm test` passed 427 tests.
-   The deploy-verification run lookup timed out, so do not infer a live
-   deployment from CI success.
+   `haminp` and `forge-os-ebon` return HTTP 402 `DEPLOYMENT_DISABLED`. Exact-
+   head deploy verification `43758207593` also failed because its production
+   content fetch received HTTP 402. No production configuration, deployment,
+   or database change was made.
+2. **P0 — Preserve exact-head verification.** ForgeOS CI `43758207538` and
+   secret scan `43758207546` passed on `94876910`; deploy verification
+   `43758207593` failed as above. Earlier local `npm test` (427 passed) and
+   map/route checks were on `193345cc`, not rerun in this recovery.
 3. **P1 — Diagnose the 250-subscriber packet-loss signal.** Local nine-
    publisher speaker-layout test: 100 subscribers yielded 198.0 Mbps, 0 loss,
    0 errors and 31.8% peak aggregate Docker CPU; 250 yielded 442.8 Mbps,
-   212 lost packets (0.005%), 0 errors and 46.5% peak aggregate CPU. Repeat
-   the bounded 250 step and inspect the existing per-track summary before
-   considering 500. Containers were cleaned up after each run.
+   212 lost packets (0.005%), 0 errors and 46.5% peak aggregate Docker CPU.
+   The saved CLI summary confirms the totals, but not the cause or
+   repeatability. Inspect retained stopped-container logs and pinned CLI loss
+   semantics, then consider a repeat only with explicit CPU/RAM stop
+   conditions; do not jump to 500. No test ran during this recovery.
 4. **P1 — Measure the stated latency goal.** Current CLI tests report bitrate
    and packet loss, not capture-to-render. Define the 100 ms percentile and
    instrument timestamps at capture and rendered display; report p50/p95/p99.
@@ -23,7 +26,12 @@
    requires authorized infrastructure and separate load generators. Cloud
    tests are metered/capped and significant tests require written consent.
 
-The local TEST results do not prove a real transaction or production service.
+Mac capacity is 10 CPUs / 24 GiB RAM; Docker is limited to 10 CPUs / 16 GiB,
+and no containers are running. Ten stopped containers (the LiveKit SFU and
+nine publishers) remain in `docker compose --profile livekit-local ps -a`;
+inspect their retained logs before any cleanup. Default Compose exposes only
+`backend`; LiveKit services are opt-in under `livekit-local`. The local TEST
+results do not prove a real transaction or production service.
 `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
 
 ## Previous continuation — 2026-11-16 — main 4dc09990 + homepage polish

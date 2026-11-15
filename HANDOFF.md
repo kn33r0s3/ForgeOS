@@ -1,13 +1,20 @@
-## Current handoff — 2026-11-16 — LiveKit local ramp (main 193345cc)
+## Current handoff — 2026-11-16 — LiveKit local ramp (main 94876910)
 
-- **Run-start repository reality:** `main` and `origin/main` were synchronized
-  at `193345cc64ac729401428e65779d93f650ad4848`; the worktree was clean.
-  This increment changes only existing continuity/runbook documents; no
-  source, tests, production configuration, or deployment was changed.
-- **Validation:** `npm test` passed (166 script tests and 261 library tests);
-  projection sync reported 124 map rows / 108 D-unknowns and route checks
-  passed for all 39 routes. Exact-head CI `43753958846` and secret scan
-  `43753958849` both completed successfully on `193345cc`.
+- **Run-start repository reality:** `main` and `origin/main` are synchronized
+  at `94876910e233060b970385ad61bcdd17194cd397` (divergence 0/0). The worktree
+  was clean before this recovery note. Commit `94876910` contains only the
+  five existing continuity/runbook documents and no source, test, production
+  configuration, or deployment changes.
+- **Exact-head verification:** ForgeOS CI
+  [43758207538](https://github.com/kn33r0s3/ForgeOS/actions/runs/43758207538)
+  and secret scan
+  [43758207546](https://github.com/kn33r0s3/ForgeOS/actions/runs/43758207546)
+  passed on `94876910`. Independent deploy verification
+  [43758207593](https://github.com/kn33r0s3/ForgeOS/actions/runs/43758207593)
+  failed: its production-content fetch received HTTP 402. This is a deployment
+  access/status blocker, not proof of a code or application-health failure.
+  The earlier local `npm test` / projection / route results belong to
+  `193345cc`, not a rerun in this recovery.
 - **LiveKit evidence:** on the local one-SFU profile, nine synthetic publishers
   plus 100 simulated subscribers ran for 45 seconds after connection: 600
   video subscriptions, 198.0 Mbps, zero packet loss/errors; peak aggregate
@@ -15,25 +22,32 @@
   percentage was 7.28%. The 250-subscriber step ran for 45 seconds: 1,500
   subscriptions, 442.8 Mbps, 212 packets lost (0.005%), zero errors; peak
   aggregate container CPU was 46.5% and summed memory percentage 14.33%.
-  No resource threshold was reached. Containers were stopped and cleanup
-  verified. These are synthetic TEST results, not a 4,000-viewer capacity
-  claim.
+  No resource threshold was reached. These are synthetic TEST results, not a
+  4,000-viewer capacity claim. The 250-run summary was recovered and confirms
+  212 losses with zero subscriber errors; the cause/repeatability is unknown.
 - **Measurement boundary:** the CLI reports bitrate and packet loss, not
-  capture-to-render latency. No 100 ms result exists. No 500/4,000 test, Cloud
-  test, production test, or paid usage occurred. Official LiveKit docs require
-  each self-hosted room to fit on one node; Cloud load tests are metered and
-  capped at 50 subscribers, and significant Cloud testing requires written
-  consent.
-- **Runtime truth:** direct public checks returned `hami-sigma` HTTP 200 with
-  `status=degraded`, `ready=false`, `db=not_configured`; `haminp` returned
-  HTTP 402 `DEPLOYMENT_DISABLED`. A separate GitHub API read for deploy
-  verification timed out. No deployment, database, or production setting was
-  changed.
-- **Next:** investigate and repeat the bounded 250 step before increasing
-  load; define/implement a real capture-to-render percentile measurement; keep
-  4,000 viewers off this Mac until an authorized, provisioned environment is
-  available. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains
-  **NOT MEASURABLE**.
+  capture-to-render latency. No LiveKit SDK import or application renderer
+  path was found in the repository, so the 100 ms goal has no instrumentable
+  app path yet. No 500/4,000 test, Cloud test, production test, or paid usage
+  occurred. Official LiveKit docs require each self-hosted room to fit on one
+  node; Cloud load tests are metered and capped at 50 subscribers, and
+  significant Cloud testing requires written consent.
+- **Runtime truth:** read-only checks returned `hami-sigma` HTTP 200 with
+  `status=degraded`, `ready=false`, `db=not_configured`; `haminp` and
+  `forge-os-ebon` returned HTTP 402 `DEPLOYMENT_DISABLED`. No deployment,
+  database, or production setting was changed.
+- **Local capacity:** Mac reports 10 CPUs / 24 GiB RAM; Docker context is
+  `desktop-linux`, limited to 10 CPUs / 16 GiB. No containers are running.
+  `docker compose --profile livekit-local ps -a` lists ten exited containers
+  (the SFU and nine publisher replicas), so they are stopped but not removed.
+  Default Compose exposes only `backend`; LiveKit remains opt-in under
+  `livekit-local`. No load test ran during this recovery.
+- **Next:** inspect retained stopped-container logs and the pinned CLI's loss
+  semantics to classify the 250-run signal; no repeat until that review and
+  explicit resource stop conditions are complete. Define the 100 ms metric
+  before designing an application measurement path. Keep 4,000 viewers off
+  this Mac until an authorized, provisioned environment is available.
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
 
 ## Previous handoff — 2026-11-16 — Hami homepage first-fold polish (main 4dc09990)
 
