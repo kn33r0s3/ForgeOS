@@ -182,11 +182,11 @@ jobs:
           echo "::error::Expected nine publishers in hami-proving-ground; room state did not reach 9 participants / 9 publishers."
           exit 1
 
-      - name: Run the 100-subscriber 3x3 grid load test and verify one shared room
+      - name: Run the 100-subscriber speaker-view load test and verify one shared room
         shell: bash
         run: |
           set -euo pipefail
-          resolved_config="$(LIVEKIT_TEST_LAYOUT=3x3 LIVEKIT_TEST_SUBSCRIBERS=100 docker compose --profile livekit-local config --format json)"
+          resolved_config="$(LIVEKIT_TEST_LAYOUT=speaker LIVEKIT_TEST_SUBSCRIBERS=100 docker compose --profile livekit-local config --format json)"
           RESOLVED_CONFIG="$resolved_config" python - <<'PY'
           import json
           import os
@@ -199,7 +199,7 @@ jobs:
               "--duration": "30s",
               "--subscribers": "100",
               "--num-per-second": "10",
-              "--layout": "3x3",
+              "--layout": "speaker",
               "--video-resolution": "low",
           }
           if service["image"] != "livekit/livekit-cli:v2.19.4":
@@ -211,10 +211,10 @@ jobs:
                   raise SystemExit(f"Missing or incomplete LiveKit option: {option}")
               if actual != value:
                   raise SystemExit(f"{option}: expected {value!r}, received {actual!r}")
-          print("Verified rendered LiveKit CLI contract: pinned v2.19.4, room hami-proving-ground, 100 subscribers, 3x3 layout, 30 seconds.")
+          print("Verified rendered LiveKit CLI contract: pinned v2.19.4, room hami-proving-ground, 100 subscribers, speaker layout, 30 seconds.")
           PY
 
-          LIVEKIT_TEST_LAYOUT=3x3 LIVEKIT_TEST_SUBSCRIBERS=100 docker compose --profile livekit-local run --rm livekit-load-test > "$RUNNER_TEMP/livekit-load-test.log" 2>&1 &
+          LIVEKIT_TEST_LAYOUT=speaker LIVEKIT_TEST_SUBSCRIBERS=100 docker compose --profile livekit-local run --rm livekit-load-test > "$RUNNER_TEMP/livekit-load-test.log" 2>&1 &
           load_pid=$!
           saw_109_participants=false
 

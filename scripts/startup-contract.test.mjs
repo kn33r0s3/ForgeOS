@@ -78,24 +78,25 @@ test("the optional LiveKit smoke profile is loopback-only and publisher-scalable
   assert.ok(loadTestBlock.includes("--subscribers"));
   assert.ok(loadTestBlock.includes("${LIVEKIT_TEST_SUBSCRIBERS:-25}"));
   assert.ok(loadTestBlock.includes("30s"));
-  assert.ok(loadTestBlock.includes('"${LIVEKIT_TEST_LAYOUT:-3x3}"'));
+  assert.ok(loadTestBlock.includes('"${LIVEKIT_TEST_LAYOUT:-speaker}"'));
 });
 
-test("the local LiveKit 100-subscriber scenario keeps its 3x3 layout across Compose, CI, and operator docs", () => {
+test("the local LiveKit 100-subscriber scenario preserves the tuned speaker layout across Compose, CI, and docs", () => {
   const ciLoadTest = CI_WORKFLOW
-    .split("      - name: Run the 100-subscriber 3x3 grid load test and verify one shared room")[1]
+    .split("      - name: Run the 100-subscriber speaker-view load test and verify one shared room")[1]
     ?.split("      - name: Stop the ephemeral LiveKit test stack")[0] ?? "";
 
-  assert.ok(ciLoadTest, "CI must retain the named 3x3 load-test step");
+  assert.ok(ciLoadTest, "CI must retain the speaker-view load-test step");
   assert.ok(
-    ciLoadTest.includes("LIVEKIT_TEST_LAYOUT=3x3 LIVEKIT_TEST_SUBSCRIBERS=100 docker compose"),
-    "CI must pin the same 3x3 layout rather than inheriting a mutable default",
+    ciLoadTest.includes("LIVEKIT_TEST_LAYOUT=speaker LIVEKIT_TEST_SUBSCRIBERS=100 docker compose"),
+    "CI must pin the tuned speaker layout rather than inheriting a mutable default",
   );
   assert.ok(
-    ciLoadTest.includes("config --format json"),
-    "CI must verify the rendered Compose command before launching the load test",
+    ciLoadTest.includes('"--layout": "speaker"'),
+    "CI must verify the rendered Compose command uses speaker layout",
   );
-  assert.ok(LIVEKIT_DOC.includes("`--layout 3x3`"));
-  assert.ok(LIVEKIT_DOC.includes("LIVEKIT_TEST_LAYOUT=speaker"));
-  assert.ok(LIVEKIT_DOC.includes("it is not the CI workload"));
+  assert.ok(ciLoadTest.includes("config --format json"));
+  assert.ok(LIVEKIT_DOC.includes("defaults to `--layout speaker`"));
+  assert.ok(LIVEKIT_DOC.includes("LIVEKIT_TEST_LAYOUT=3x3"));
+  assert.ok(LIVEKIT_DOC.includes("heavier alternative"));
 });

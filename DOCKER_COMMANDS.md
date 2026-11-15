@@ -45,12 +45,13 @@ and must not be exposed to a LAN or the public internet.
 
 The smoke uses nine separate CLI publisher containers, each publishing LiveKit's
 synthetic demo video to the same room, plus 25 simulated subscribers by default
-(or more via `LIVEKIT_TEST_SUBSCRIBERS`) for 30 seconds. The local profile
-defaults to `--layout 3x3`: each simulated subscriber models nine video
-subscriptions at medium quality. `LIVEKIT_TEST_LAYOUT=speaker` is an explicit
-alternate speaker-view workload (one high-quality and five low-quality video
-subscriptions); it is not the CI workload. These are TEST participants and
-synthetic media, not real streamers or viewers.
+(or more via `LIVEKIT_TEST_SUBSCRIBERS`) for 30 seconds. The local profile and
+CI default to `--layout speaker`: each simulated subscriber models one video
+at high quality plus five at low quality (six video subscriptions). This is the
+lower-subscription speaker-view workload. `LIVEKIT_TEST_LAYOUT=3x3` is an
+explicit heavier alternative with nine medium-quality video subscriptions per
+simulated subscriber; use it only when testing a nine-tile grid. These are TEST
+participants and synthetic media, not real streamers or viewers.
 
 ```bash
 # Start the local SFU (normal Hami services are not started by this command).
@@ -62,11 +63,11 @@ docker compose --profile livekit-local up -d --scale livekit-publisher=9 livekit
 # Run the 30-second / 25-subscriber smoke and print the CLI summary (default).
 docker compose --profile livekit-local run --rm livekit-load-test
 
-# CI-equivalent: nine publishers + 100 subscribers using the 3x3 grid workload.
-LIVEKIT_TEST_LAYOUT=3x3 LIVEKIT_TEST_SUBSCRIBERS=100 docker compose --profile livekit-local run --rm livekit-load-test
+# CI-equivalent: nine publishers + 100 subscribers using the tuned speaker-view workload.
+LIVEKIT_TEST_LAYOUT=speaker LIVEKIT_TEST_SUBSCRIBERS=100 docker compose --profile livekit-local run --rm livekit-load-test
 
-# Optional alternate speaker-view workload (not equivalent to the 3x3 grid test).
-LIVEKIT_TEST_LAYOUT=speaker docker compose --profile livekit-local run --rm livekit-load-test
+# Optional heavier nine-tile grid workload (nine medium-quality subscriptions per subscriber).
+LIVEKIT_TEST_LAYOUT=3x3 LIVEKIT_TEST_SUBSCRIBERS=100 docker compose --profile livekit-local run --rm livekit-load-test
 
 # Inspect service state and publisher/SFU logs.
 docker compose --profile livekit-local ps
