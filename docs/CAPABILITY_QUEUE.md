@@ -116,7 +116,8 @@
 - This is verified TEST evidence on an ephemeral public-repository GitHub runner. Streams are LiveKit's synthetic demo video and viewers are simulated; no real camera sources, owner Mac runtime, or public deployment are involved.
 - It does **not** establish 4,000-viewer capacity, production headroom, geographic distribution, glass-to-glass latency, or a 100 ms guarantee. The latency SLO and high-scale generator topology remain untested.
 - No cloud provider, paid service, public hostname, or production credentials were used.
-- **Next scale rung:** the opt-in load-test service now accepts `LIVEKIT_TEST_SUBSCRIBERS` (default 25); the CI smoke has been stepped up to 100 simulated subscribers (109 total including the 9 publishers) and records the SFU container's CPU, memory and network I/O at peak. This next run is pending; the previous 25-subscriber result remains the last verified baseline.
+- **100-viewer step-up:** exact source commit `0c9840f659eb4b872559fad340647d1e17055d36`, GitHub Actions run `43700184482`, job `livekit-local-smoke`, completed **SUCCESS**. LiveKit room API observed 109 participants / 9 publishers in `hami-proving-ground`. All 100 simulated subscribers received all nine video tracks (900/0 tracks total); CLI reported 282.7 Mbps aggregate subscriber bitrate (2.8 Mbps average per subscriber), 0% packet loss and zero subscriber errors. At the peak participant sample, `docker stats` reported 64.40% CPU, 431.1 MiB memory and 77.7 MB received / 853 MB sent cumulative network I/O. The ephemeral containers and network were removed.
+- A linear arithmetic extrapolation of 2.827 Mbps per subscriber to 4,000 viewers is approximately 11.3 Gbps outbound media. This is only a load-pattern projection, not a measured 4,000-viewer result or a capacity guarantee.
 
 
 ### Owner-held blockers

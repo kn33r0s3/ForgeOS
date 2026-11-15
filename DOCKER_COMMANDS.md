@@ -44,7 +44,7 @@ key/secret and binds host ports to `127.0.0.1`; it is not a production deploymen
 and must not be exposed to a LAN or the public internet.
 
 The smoke uses nine separate CLI publisher containers, each publishing LiveKit's
-synthetic demo video to the same room, plus 25 simulated subscribers for 30 seconds with a 3x3 viewer layout.
+synthetic demo video to the same room, plus 25 simulated subscribers by default (or more via `LIVEKIT_TEST_SUBSCRIBERS`) for 30 seconds with a 3x3 viewer layout.
 These are TEST participants and synthetic media, not real streamers or viewers.
 
 ```bash
@@ -55,7 +55,9 @@ docker compose --profile livekit-local up -d livekit
 docker compose --profile livekit-local up -d --scale livekit-publisher=9 livekit-publisher
 
 # Run the 30-second / 25-subscriber smoke and print the CLI summary (default).
-# Set LIVEKIT_TEST_SUBSCRIBERS=100 for a 100-subscriber step-up test.
+docker compose --profile livekit-local run --rm livekit-load-test
+
+# Optional: run a 100-subscriber step-up test.
 LIVEKIT_TEST_SUBSCRIBERS=100 docker compose --profile livekit-local run --rm livekit-load-test
 
 # Inspect service state and publisher/SFU logs.
