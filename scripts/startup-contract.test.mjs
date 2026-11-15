@@ -48,13 +48,13 @@ test("the advertised check script is portable and uses repository-local dependen
   assert.ok(CHECK_ALL.includes("venv/bin/python"));
 });
 
-test("the optional LiveKit smoke profile is loopback-only and publisher-scaleable", () => {
+test("the optional LiveKit smoke profile is loopback-only and publisher-scalable", () => {
   const publisherBlock =
-    COMPOSE.split("  livekit-publisher:\\n")[1]?.split("\\n  livekit-load-test:\\n")[0] ?? "";
+    COMPOSE.split("  livekit-publisher:\n")[1]?.split("\n  livekit-load-test:\n")[0] ?? "";
   const loadTestBlock =
-    COMPOSE.split("  livekit-load-test:\\n")[1] ?? "";
+    COMPOSE.split("  livekit-load-test:\n")[1] ?? "";
 
-  assert.ok(COMPOSE.includes('livekit:\\n    profiles: ["livekit-local"]'));
+  assert.ok(COMPOSE.includes('livekit:\n    profiles: ["livekit-local"]'));
   assert.ok(COMPOSE.includes("image: livekit/livekit-server:v1.13.11"));
   assert.ok(COMPOSE.includes('127.0.0.1:7880:7880/tcp'));
   assert.ok(COMPOSE.includes('127.0.0.1:7881:7881/tcp'));
