@@ -1,569 +1,302 @@
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { FlaskConical, Plus, Timer, Trash2 } from "lucide-react";
+import { Download, FlaskConical, Plus, Timer, Trash2 } from "lucide-react";
 import { Container } from "@/components/layout/container";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import {
-  isCommitmentEntry,
-  isInquiry,
+  formatDuration,
+  normalizeInquiry,
   parseOrderValue,
-  summarizeCommitments,
-  syncCommitmentEntryToSubstrate,
-  type CommitmentEntry,
-  type CommitmentStage,
+  summarizeWeek,
+  weekSummaryText,
+  type Channel,
   type Inquiry,
   type Outcome,
 } from "@/lib/prototype-inbox";
 
 export const Route = createFileRoute("/prototype/inbox")({
   component: InboxPrototype,
-  head: () => ({ meta: [{ title: "Inbox prototype — Hami" }] }),
+  head: () => ({ meta: [{ title: "Inquiry inbox prototype — Hami" }] }),
 });
 
 const STORAGE_KEY = "hami-prototype-inbox-v1";
-const COMMITMENT_STORAGE_KEY = "hami-prototype-commitments-v1";
+type Language = "en" | "ne";
 
-function load(): Inquiry[] {
+const COPY = {
+  en: {
+    eyebrow: "Hami · browser-only prototype",
+    title: "Inquiry inbox",
+    lede: "A simple one-week log for a social seller. It does not read or send messages.",
+    privacy: "Everything stays in this browser. No account, no server sync, no outbound messages. Export contains totals only.",
+    summary: "This week",
+    inquiries: "Inquiries received",
+    average: "Average reply time",
+    recovered: "Recovered sales",
+    lost: "Lost",
+    export: "Export week summary",
+    formTitle: "Add an inquiry",
+    name: "Customer name",
+    channel: "Channel",
+    asked: "What did they ask?",
+    add: "Add inquiry",
+    noInquiries: "No inquiries yet",
+    noInquiriesDetail: "Add the first message you need to remember. Nothing leaves this phone.",
+    received: "Received",
+    waiting: "Waiting",
+    repliedIn: "Replied in",
+    markReplied: "Mark replied",
+    markRecovered: "Recovered",
+    markLost: "Lost",
+    amount: "Sale amount (NPR)",
+    saveRecovered: "Save recovered sale",
+    cancel: "Cancel",
+    clear: "Clear all local data",
+    remove: "Remove inquiry",
+    npr: "NPR",
+  },
+  ne: {
+    eyebrow: "Hami · ब्राउजरमा मात्र रहने नमुना",
+    title: "सोधपुछ इनबक्स",
+    lede: "सामाजिक सञ्जाल विक्रेताका लागि एक हप्ताको सरल लग। यसले सन्देश पढ्दैन वा पठाउँदैन।",
+    privacy: "सबै कुरा यही ब्राउजरमा रहन्छ। खाता छैन, सर्भरमा पठाइँदैन, बाहिर सन्देश जाँदैन। निर्यातमा जम्मा तथ्याङ्क मात्र हुन्छ।",
+    summary: "यस हप्ता",
+    inquiries: "प्राप्त सोधपुछ",
+    average: "औसत जवाफ समय",
+    recovered: "फर्किएको बिक्री",
+    lost: "हराएका",
+    export: "हप्ताको सारांश निकाल्नुहोस्",
+    formTitle: "सोधपुछ थप्नुहोस्",
+    name: "ग्राहकको नाम",
+    channel: "च्यानल",
+    asked: "उहाँले के सोध्नुभयो?",
+    add: "सोधपुछ थप्नुहोस्",
+    noInquiries: "अहिलेसम्म सोधपुछ छैन",
+    noInquiriesDetail: "सम्झनुपर्ने पहिलो सन्देश थप्नुहोस्। यो फोनबाट केही बाहिर जाँदैन।",
+    received: "प्राप्त",
+    waiting: "पर्खाइ",
+    repliedIn: "जवाफ दिइयो",
+    markReplied: "जवाफ दिइयो",
+    markRecovered: "बिक्री भयो",
+    markLost: "हरायो",
+    amount: "बिक्री रकम (रु)",
+    saveRecovered: "बिक्री रकम सुरक्षित गर्नुहोस्",
+    cancel: "रद्द",
+    clear: "सबै स्थानीय डाटा मेटाउनुहोस्",
+    remove: "सोधपुछ हटाउनुहोस्",
+    npr: "रु",
+  },
+} as const;
+
+const CHANNEL_LABELS: Record<Language, Record<Channel, string>> = {
+  en: { facebook: "Facebook", instagram: "Instagram", tiktok: "TikTok", whatsapp: "WhatsApp", other: "Other" },
+  ne: { facebook: "फेसबुक", instagram: "इन्स्टाग्राम", tiktok: "टिकटक", whatsapp: "ह्वाट्सएप", other: "अन्य" },
+};
+
+function loadInquiries(): Inquiry[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(isInquiry) : [];
+    return Array.isArray(parsed)
+      ? parsed.map(normalizeInquiry).filter((item): item is Inquiry => item !== null)
+      : [];
   } catch {
     return [];
   }
 }
 
-function loadCommitments(): CommitmentEntry[] {
-  try {
-    const raw = localStorage.getItem(COMMITMENT_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(isCommitmentEntry) : [];
-  } catch {
-    return [];
-  }
-}
-
-const COMMITMENT_STAGES: CommitmentStage[] = ["inquiry", "order", "payment", "delivery", "outcome"];
-
-function fmtTime(ts: number): string {
-  return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
-
-function fmtLatency(ms: number): string {
-  const mins = Math.round(ms / 60000);
-  if (mins < 1) return "<1 min";
-  if (mins < 60) return `${mins} min`;
-  return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+function formatTime(timestamp: number, language: Language): string {
+  return new Date(timestamp).toLocaleTimeString(language === "ne" ? "ne-NP" : "en-NP", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 function InboxPrototype() {
+  const [language, setLanguage] = useState<Language>("en");
   const [items, setItems] = useState<Inquiry[]>([]);
-  const [customer, setCustomer] = useState("");
+  const [name, setName] = useState("");
+  const [channel, setChannel] = useState<Channel>("facebook");
   const [want, setWant] = useState("");
   const [hydrated, setHydrated] = useState(false);
+  const [now, setNow] = useState(Date.now());
+  const [recoveringId, setRecoveringId] = useState<string | null>(null);
+  const [recoveryAmount, setRecoveryAmount] = useState("");
+  const t = COPY[language];
 
   useEffect(() => {
-    setItems(load());
+    setItems(loadInquiries());
     setHydrated(true);
   }, []);
 
   useEffect(() => {
-    if (hydrated) {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-      } catch {
-        /* prototype: storage failure is not fatal */
-      }
-    }
-  }, [items, hydrated]);
-
-  const add = () => {
-    if (!want.trim()) return;
-    const now = Date.now();
-    setItems((prev) => [
-      {
-        id: `${now}-${Math.random().toString(36).slice(2, 7)}`,
-        timeIn: now,
-        customer: customer.trim() || "—",
-        want: want.trim(),
-        replyAt: null,
-        outcome: "open",
-        orderValue: null,
-      },
-      ...prev,
-    ]);
-    setCustomer("");
-    setWant("");
-  };
-
-  const markReplied = (id: string) =>
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, replyAt: Date.now() } : i)));
-
-  const setOutcome = (id: string, outcome: Outcome, orderValue?: number) =>
-    setItems((prev) =>
-      prev.map((i) =>
-        i.id === id
-          ? { ...i, outcome, orderValue: outcome === "recovered" ? (orderValue ?? i.orderValue ?? 0) : null }
-          : i,
-      ),
-    );
-
-  const remove = (id: string) => setItems((prev) => prev.filter((i) => i.id !== id));
-  const clearAll = () => {
-    if (window.confirm("Clear all prototype inquiries?")) setItems([]);
-  };
-
-  const [entries, setEntries] = useState<CommitmentEntry[]>([]);
-  const [cSellerRef, setCSellerRef] = useState("");
-  const [cStage, setCStage] = useState<CommitmentStage>("inquiry");
-  const [cAmount, setCAmount] = useState("");
-  const [cEvidenceRef, setCEvidenceRef] = useState("");
-  const [cConsent, setCConsent] = useState(false);
-  const [cVerified, setCVerified] = useState(false);
-  const [cRecovered, setCRecovered] = useState("");
-  const [cNote, setCNote] = useState("");
-  const [cError, setCError] = useState("");
-  const [ownerKey, setOwnerKey] = useState("");
-  const [syncingId, setSyncingId] = useState<string | null>(null);
-  const [syncMessages, setSyncMessages] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    setEntries(loadCommitments());
+    const interval = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    if (hydrated) {
-      try {
-        localStorage.setItem(COMMITMENT_STORAGE_KEY, JSON.stringify(entries));
-      } catch {
-        /* prototype: storage failure is not fatal */
-      }
-    }
-  }, [entries, hydrated]);
-
-  const addCommitment = () => {
-    if (!cSellerRef.trim()) {
-      setCError("A pseudonymous seller reference is required (e.g. seller-01) — never a name or phone number.");
-      return;
-    }
-    if (cVerified && !cEvidenceRef.trim()) {
-      setCError("VERIFIED requires an evidence reference. Without one, the entry stays REPORTED.");
-      return;
-    }
-    if (cVerified && !cConsent) {
-      setCError("VERIFIED requires the seller's consent to keep this record.");
-      return;
-    }
-    const now = Date.now();
-    const entry: CommitmentEntry = {
-      id: `${now}-${Math.random().toString(36).slice(2, 7)}`,
-      sellerRef: cSellerRef.trim(),
-      stage: cStage,
-      at: now,
-      amount: cAmount.trim() ? parseOrderValue(cAmount) : null,
-      verification: cVerified ? "verified" : "reported",
-      evidenceRef: cEvidenceRef.trim(),
-      sellerConsent: cConsent,
-      recovered: cStage === "outcome" && cRecovered ? cRecovered === "yes" : null,
-      note: cNote.trim(),
-    };
-    setEntries((prev) => [entry, ...prev]);
-    setCError("");
-    setCAmount("");
-    setCEvidenceRef("");
-    setCNote("");
-    setCRecovered("");
-  };
-
-  const removeCommitment = (id: string) =>
-    setEntries((prev) => prev.filter((e) => e.id !== id));
-
-  const syncCommitment = async (entry: CommitmentEntry) => {
-    if (!ownerKey.trim() || syncingId) return;
-    setSyncingId(entry.id);
-    setSyncMessages((prev) => ({ ...prev, [entry.id]: "Syncing to the canonical Hami substrate…" }));
+    if (!hydrated) return;
     try {
-      const substrateSync = await syncCommitmentEntryToSubstrate(entry, ownerKey);
-      setEntries((prev) => prev.map((current) => current.id === entry.id ? { ...current, substrateSync } : current));
-      setSyncMessages((prev) => ({ ...prev, [entry.id]: "Synced to the canonical substrate. The source evidence was not independently inspected by this connector." }));
-    } catch (error) {
-      setSyncMessages((prev) => ({
-        ...prev,
-        [entry.id]: error instanceof Error ? error.message : "Sync failed; this entry remains in this browser.",
-      }));
-    } finally {
-      setSyncingId(null);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    } catch {
+      // Browser storage can be unavailable; keep the active session usable.
     }
+  }, [items, hydrated]);
+
+  const addInquiry = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!name.trim() || !want.trim()) return;
+    const timeIn = Date.now();
+    setItems((current) => [{
+      id: `${timeIn}-${Math.random().toString(36).slice(2, 7)}`,
+      timeIn,
+      customer: name.trim(),
+      channel,
+      want: want.trim(),
+      replyAt: null,
+      outcome: "open",
+      orderValue: null,
+    }, ...current]);
+    setName("");
+    setWant("");
   };
 
-  const summary = summarizeCommitments(entries);
+  const updateInquiry = (id: string, update: (item: Inquiry) => Inquiry) =>
+    setItems((current) => current.map((item) => item.id === id ? update(item) : item));
 
-  const replied = items.filter((i) => i.replyAt !== null);
-  const avgLatency =
-    replied.length > 0
-      ? replied.reduce((s, i) => s + (i.replyAt! - i.timeIn), 0) / replied.length
-      : null;
-  const recovered = items.filter((i) => i.outcome === "recovered");
-  const recoveredValue = recovered.reduce((s, i) => s + (i.orderValue ?? 0), 0);
+  const markReplied = (id: string) => updateInquiry(id, (item) => ({ ...item, replyAt: item.replyAt ?? Date.now() }));
+  const markLost = (id: string) => updateInquiry(id, (item) => ({
+    ...item,
+    replyAt: item.replyAt ?? Date.now(),
+    outcome: "lost",
+    orderValue: null,
+  }));
+  const saveRecovered = (id: string) => {
+    if (!recoveryAmount.trim() || parseOrderValue(recoveryAmount) <= 0) return;
+    updateInquiry(id, (item) => ({
+      ...item,
+      replyAt: item.replyAt ?? Date.now(),
+      outcome: "recovered",
+      orderValue: parseOrderValue(recoveryAmount),
+    }));
+    setRecoveringId(null);
+    setRecoveryAmount("");
+  };
+
+  const summary = summarizeWeek(items, now);
+  const exportSummary = () => {
+    const blob = new Blob([weekSummaryText(summary, language, now)], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "hami-week-summary.txt";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+  const clearAll = () => {
+    if (window.confirm(language === "ne" ? "सबै स्थानीय डाटा मेटाउने?" : "Clear all local data?")) setItems([]);
+  };
 
   return (
-    <main>
-      <PageHeader
-        eyebrow="Hami · prototype — not a live product"
-        title="Inquiry inbox"
-        lede="First-rupee prototype. Inquiry-timer data stays in this browser. Commitment entries can be synced only when the owner enters the owner key and manually syncs a seller-consented entry; no live pilot or verified revenue exists."
-        containerClassName="max-w-4xl"
-      />
-      <Container className="max-w-4xl py-10 sm:py-14">
-        <div className="mb-8 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-          <FlaskConical className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden="true" />
-          <p className="text-sm leading-6 text-muted">
-            <strong className="text-ink">Prototype.</strong> Built for the delegate
-            running owner-controlled discovery and measurement. Starts empty,
-            because no real week has run yet. Inquiry-timer records stay in this
-            browser. Commitment records only leave this browser after the owner
-            enters the owner key and manually syncs a seller-consented entry.
-          </p>
-          <ul className="mt-3 space-y-1.5 border-t border-amber-500/20 pt-3 text-sm leading-6 text-muted">
-            <li>
-              It can&rsquo;t read your Facebook or Messenger messages — you
-              type in what the customer asked.
-            </li>
-            <li>
-              Names entered in the inquiry timer stay in this browser. The optional
-              commitment sync excludes customer names, phone numbers, social handles,
-              and free-text notes; it sends only pseudonymous seller and commitment/evidence
-              metadata after seller consent.
-            </li>
-            <li>
-              No live pilot or payment collection is active. The recorded proposed
-              terms are 10% of a sale independently evidenced as recovered from a missed
-              inquiry; no recovery, no fee. Hami never holds or moves money. Any paid
-              pilot requires written agreement and the D72 legal/accounting gate first.
-            </li>
-          </ul>
+    <main className={language === "ne" ? "font-nepali" : undefined}>
+      <PageHeader eyebrow={t.eyebrow} title={t.title} lede={t.lede} containerClassName="max-w-3xl" />
+      <Container className="max-w-3xl py-6 sm:py-10">
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <p className="text-xs text-muted">{t.privacy}</p>
+          <button
+            type="button"
+            onClick={() => setLanguage((current) => current === "en" ? "ne" : "en")}
+            className="shrink-0 rounded-lg border border-line px-3 py-2 text-sm font-semibold text-ink"
+          >
+            {language === "en" ? "नेपाली" : "English"}
+          </button>
         </div>
 
-        <section aria-label="Week summary" className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {[
-            { label: "Inquiries", value: String(items.length) },
-            { label: "Avg reply time", value: avgLatency !== null ? fmtLatency(avgLatency) : "—" },
-            { label: "Recovered", value: String(recovered.length) },
-            { label: "Recovered value", value: recoveredValue > 0 ? `₨${recoveredValue.toLocaleString()}` : "₨0" },
-          ].map((s) => (
-            <div key={s.label} className="rounded-xl border border-line bg-surface p-4">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted">{s.label}</p>
-              <p className="mt-1 font-display text-2xl text-ink">{s.value}</p>
-            </div>
-          ))}
-        </section>
+        <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm leading-6 text-muted">
+          <FlaskConical className="mt-0.5 size-5 shrink-0 text-amber-300" aria-hidden="true" />
+          <p>{language === "ne" ? "नमुना मात्र। ग्राहकको सन्देश वा सम्पर्क विवरण बाहिर पठाइँदैन।" : "Prototype only. Customer messages and contact details are never sent anywhere."}</p>
+        </div>
 
-        <section aria-label="Log an inquiry" className="mb-8 rounded-xl border border-line bg-surface p-5">
-          <h2 className="font-display text-lg text-ink">Log an inquiry</h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_2fr_auto]">
-            <input
-              value={customer}
-              onChange={(e) => setCustomer(e.target.value)}
-              placeholder="Customer (optional)"
-              aria-label="Customer"
-              className="rounded-lg border border-line bg-background px-3 py-2 text-sm text-ink placeholder:text-muted/60"
-            />
-            <input
-              value={want}
-              onChange={(e) => setWant(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && add()}
-              placeholder="What they want — e.g. red kurta, size M, price?"
-              aria-label="What they want"
-              className="rounded-lg border border-line bg-background px-3 py-2 text-sm text-ink placeholder:text-muted/60"
-            />
-            <Button onClick={add} disabled={!want.trim()}>
-              <Plus className="size-4" aria-hidden="true" /> Log
+        <section aria-label={t.summary} className="mb-6">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="font-display text-xl text-ink">{t.summary}</h2>
+            <Button type="button" size="sm" onClick={exportSummary}>
+              <Download className="size-4" aria-hidden="true" /> {t.export}
             </Button>
           </div>
-        </section>
-
-        <section aria-label="Inquiries" className="grid gap-3">
-          {items.length === 0 && (
-            <div className="rounded-xl border border-dashed border-line p-8 text-center">
-              <p className="text-sm font-semibold text-ink">No inquiries yet</p>
-              <p className="mt-1 text-sm text-muted">
-                This is the honest empty state — the prototype comes alive during
-                a real sprint week.
-              </p>
-            </div>
-          )}
-          {items.map((i) => (
-            <article key={i.id} className="rounded-xl border border-line bg-surface p-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-bold text-ink">{i.customer}</span>
-                <span className="text-xs text-muted">
-                  in {fmtTime(i.timeIn)}
-                  {i.replyAt !== null && (
-                    <span className="ml-2 inline-flex items-center gap-1 text-accent">
-                      <Timer className="h-3 w-3" aria-hidden="true" />
-                      replied in {fmtLatency(i.replyAt - i.timeIn)}
-                    </span>
-                  )}
-                </span>
-                <button
-                  onClick={() => remove(i.id)}
-                  aria-label="Remove inquiry"
-                  className="ml-auto rounded p-1 text-muted hover:text-ink"
-                >
-                  <Trash2 className="h-4 w-4" aria-hidden="true" />
-                </button>
-              </div>
-              <p className="mt-1 text-sm text-muted">{i.want}</p>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                {i.replyAt === null ? (
-                  <Button size="sm" onClick={() => markReplied(i.id)}>
-                    Mark replied
-                  </Button>
-                ) : (
-                  <>
-                    <span className="text-xs font-semibold uppercase tracking-wider text-muted">Outcome:</span>
-                    {(["recovered", "lost", "browsing"] as Outcome[]).map((o) => (
-                      <button
-                        key={o}
-                        onClick={() => {
-                          if (o === "recovered") {
-                            const v = window.prompt("Order value in ₨?", String(i.orderValue ?? ""));
-                            if (v === null) return;
-                            setOutcome(i.id, o, parseOrderValue(v));
-                          } else {
-                            setOutcome(i.id, o);
-                          }
-                        }}
-                        className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                          i.outcome === o
-                            ? o === "recovered"
-                              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
-                              : "border-line bg-background text-ink"
-                            : "border-line text-muted hover:text-ink"
-                        }`}
-                      >
-                        {o === "recovered" && i.orderValue ? `Recovered · ₨${i.orderValue.toLocaleString()}` : o}
-                      </button>
-                    ))}
-                  </>
-                )}
-              </div>
-            </article>
-          ))}
-        </section>
-
-        <section aria-label="Verified-commitment log" className="mt-12">
-          <h2 className="font-display text-lg text-ink">Verified-commitment log</h2>
-          <p className="mt-1 text-sm leading-6 text-muted">
-            One entry per stage of a commitment — inquiry, order, payment,
-            delivery, outcome — recorded with the seller&rsquo;s consent.
-            Money starts as <strong className="text-ink">REPORTED</strong> and
-            the form has an evidence reference and the seller consented. Mark VERIFIED only after you personally reviewed evidence
-            under the outcome standard approved by the owner; merely typing a reference does not verify it. Use a pseudonymous
-            reference (seller-01), never a name or phone number. Starts empty: no real sprint week has run yet.
-          </p>
-
-          <div className="mb-6 mt-4 rounded-xl border border-line bg-surface p-4">
-            <h3 className="text-sm font-semibold text-ink">Sync consented records to Hami</h3>
-            <p className="mt-1 text-sm leading-6 text-muted">
-              Optional manual sync to the existing owner-key-protected substrate. The key stays in this page's memory only.
-              Sync sends a pseudonymous seller reference, stage, amount, consent and evidence-reference metadata; it never sends
-              customer names, phone numbers, social handles, or the free-text note. The connector does not open or validate the
-              referenced proof, so it never upgrades evidence by itself. If production returns HTTP 503, leave the maintenance gate intact.
-            </p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
-              <input
-                type="password"
-                value={ownerKey}
-                onChange={(event) => setOwnerKey(event.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-                aria-label="Owner API key (memory only)"
-                placeholder="Owner API key — used in memory only"
-                className="rounded-lg border border-line bg-background px-3 py-2 text-sm text-ink placeholder:text-muted/60"
-              />
-              <button
-                type="button"
-                onClick={() => setOwnerKey("")}
-                className="rounded-lg border border-line px-3 py-2 text-sm text-muted hover:text-ink"
-              >
-                Clear key
-              </button>
-            </div>
-          </div>
-
-          <div className="mb-6 mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
-              { label: "Inquiries logged", value: String(summary.inquiries) },
-              { label: "Orders logged", value: String(summary.orders) },
-              { label: "Recovered sales (verified)", value: String(summary.recoveredSales) },
-              {
-                label: "Rupees reported / verified",
-                value: `₨${summary.rupeesReported.toLocaleString()} / ₨${summary.rupeesVerified.toLocaleString()}`,
-              },
-            ].map((s) => (
-              <div key={s.label} className="rounded-xl border border-line bg-surface p-4">
-                <p className="text-xs font-medium uppercase tracking-wider text-muted">{s.label}</p>
-                <p className="mt-1 font-display text-2xl text-ink">{s.value}</p>
+              { label: t.inquiries, value: String(summary.inquiries) },
+              { label: t.average, value: summary.averageReplyMs === null ? "—" : formatDuration(summary.averageReplyMs, language) },
+              { label: t.recovered, value: `${t.npr} ${summary.recoveredSalesNpr.toLocaleString("en-NP")}` },
+              { label: t.lost, value: String(summary.lost) },
+            ].map((stat) => (
+              <div key={stat.label} className="min-w-0 rounded-xl border border-line bg-surface p-3">
+                <p className="text-xs font-medium leading-4 text-muted">{stat.label}</p>
+                <p className="mt-1 break-words font-display text-xl text-ink">{stat.value}</p>
               </div>
             ))}
           </div>
+        </section>
 
-          <div className="rounded-xl border border-line bg-surface p-5">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <input
-                value={cSellerRef}
-                onChange={(e) => setCSellerRef(e.target.value)}
-                placeholder="Seller reference — e.g. seller-01"
-                aria-label="Seller reference"
-                className="rounded-lg border border-line bg-background px-3 py-2 text-sm text-ink placeholder:text-muted/60"
-              />
-              <select
-                value={cStage}
-                onChange={(e) => setCStage(e.target.value as CommitmentStage)}
-                aria-label="Commitment stage"
-                className="rounded-lg border border-line bg-background px-3 py-2 text-sm text-ink"
-              >
-                {COMMITMENT_STAGES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-              <input
-                value={cAmount}
-                onChange={(e) => setCAmount(e.target.value)}
-                placeholder="Amount in ₨ (payment stage)"
-                aria-label="Amount in rupees"
-                className="rounded-lg border border-line bg-background px-3 py-2 text-sm text-ink placeholder:text-muted/60"
-              />
-              <input
-                value={cEvidenceRef}
-                onChange={(e) => setCEvidenceRef(e.target.value)}
-                placeholder="Evidence reference — e.g. owner-note-2026-10-24"
-                aria-label="Evidence reference"
-                className="rounded-lg border border-line bg-background px-3 py-2 text-sm text-ink placeholder:text-muted/60"
-              />
-              <input
-                value={cNote}
-                onChange={(e) => setCNote(e.target.value)}
-                placeholder="Note (de-identified, one line)"
-                aria-label="Note"
-                className="rounded-lg border border-line bg-background px-3 py-2 text-sm text-ink placeholder:text-muted/60 sm:col-span-2"
-              />
-              {cStage === "outcome" && (
-                <select
-                  value={cRecovered}
-                  onChange={(e) => setCRecovered(e.target.value)}
-                  aria-label="Recovered?"
-                  className="rounded-lg border border-line bg-background px-3 py-2 text-sm text-ink"
-                >
-                  <option value="">Recovered? — unset</option>
-                  <option value="yes">Recovered — yes</option>
-                  <option value="no">Recovered — no</option>
-                </select>
-              )}
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-muted">
-              <label className="inline-flex items-center gap-2">
-                <input type="checkbox" checked={cConsent} onChange={(e) => setCConsent(e.target.checked)} />
-                Seller consented to this record
-              </label>
-              <label className="inline-flex items-center gap-2">
-                <input type="checkbox" checked={cVerified} onChange={(e) => setCVerified(e.target.checked)} />
-                I reviewed the evidence and seller consented (manual assertion)
-              </label>
-              <Button onClick={addCommitment} className="ml-auto">
-                <Plus className="size-4" aria-hidden="true" /> Log stage
-              </Button>
-            </div>
-            {cError && (
-              <p role="alert" className="mt-3 text-sm text-amber-300">
-                {cError}
-              </p>
-            )}
-          </div>
+        <section aria-label={t.formTitle} className="mb-6 rounded-xl border border-line bg-surface p-4">
+          <h2 className="font-display text-xl text-ink">{t.formTitle}</h2>
+          <form className="mt-3 grid gap-3" onSubmit={addInquiry}>
+            <input value={name} onChange={(event) => setName(event.target.value)} required autoComplete="off" placeholder={t.name} aria-label={t.name} className="min-h-11 rounded-lg border border-line bg-background px-3 text-base text-ink placeholder:text-muted/60" />
+            <select value={channel} onChange={(event) => setChannel(event.target.value as Channel)} aria-label={t.channel} className="min-h-11 rounded-lg border border-line bg-background px-3 text-base text-ink">
+              {(Object.keys(CHANNEL_LABELS[language]) as Channel[]).map((value) => <option key={value} value={value}>{CHANNEL_LABELS[language][value]}</option>)}
+            </select>
+            <input value={want} onChange={(event) => setWant(event.target.value)} required autoComplete="off" placeholder={t.asked} aria-label={t.asked} className="min-h-11 rounded-lg border border-line bg-background px-3 text-base text-ink placeholder:text-muted/60" />
+            <Button type="submit" className="min-h-11 w-full sm:w-auto sm:justify-self-end"><Plus className="size-4" aria-hidden="true" /> {t.add}</Button>
+          </form>
+        </section>
 
-          <div className="mt-4 grid gap-3">
-            {entries.length === 0 && (
-              <div className="rounded-xl border border-dashed border-line p-8 text-center">
-                <p className="text-sm font-semibold text-ink">No commitments logged yet</p>
-                <p className="mt-1 text-sm text-muted">
-                  The honest empty state — entries appear only when a real,
-                  consented sprint week produces them.
-                </p>
-              </div>
-            )}
-            {entries.map((e) => (
-              <article key={e.id} className="rounded-xl border border-line bg-surface p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-bold text-ink">{e.sellerRef}</span>
-                  <span className="rounded-full border border-line px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-muted">
-                    {e.stage}
-                  </span>
-                  <span
-                    className={`rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-wider ${
-                      e.verification === "verified"
-                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
-                        : "border-line text-muted"
-                    }`}
-                  >
-                    {e.verification}
-                  </span>
-                  {e.amount !== null && (
-                    <span className="text-sm text-ink">₨{e.amount.toLocaleString()}</span>
-                  )}
-                  {e.stage === "outcome" && e.recovered !== null && (
-                    <span className="text-xs text-muted">
-                      {e.recovered ? "recovered" : "not recovered"}
-                    </span>
-                  )}
-                  <span className="text-xs text-muted">{fmtTime(e.at)}</span>
-                  <button
-                    onClick={() => removeCommitment(e.id)}
-                    aria-label="Remove commitment entry"
-                    className="ml-auto rounded p-1 text-muted hover:text-ink"
-                  >
-                    <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  </button>
+        <section aria-label={t.inquiries} className="grid gap-3">
+          {items.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-line p-7 text-center">
+              <p className="font-semibold text-ink">{t.noInquiries}</p>
+              <p className="mt-1 text-sm text-muted">{t.noInquiriesDetail}</p>
+            </div>
+          ) : items.map((item) => {
+            const elapsed = Math.max(0, (item.replyAt ?? now) - item.timeIn);
+            const isRecovering = recoveringId === item.id;
+            return (
+              <article key={item.id} className="rounded-xl border border-line bg-surface p-4">
+                <div className="flex items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <h3 className="break-words font-semibold text-ink">{item.customer}</h3>
+                      <span className="rounded-full border border-line px-2 py-0.5 text-xs text-muted">{CHANNEL_LABELS[language][item.channel]}</span>
+                    </div>
+                    <p className="mt-1 break-words text-sm text-muted">{item.want}</p>
+                  </div>
+                  <button type="button" onClick={() => setItems((current) => current.filter((entry) => entry.id !== item.id))} aria-label={t.remove} className="rounded p-2 text-muted hover:text-ink"><Trash2 className="size-4" aria-hidden="true" /></button>
                 </div>
-                {e.note && <p className="mt-1 text-sm text-muted">{e.note}</p>}
-                <p className="mt-1 text-xs text-muted">
-                  {e.sellerConsent ? "Seller consented" : "No consent recorded"}
-                  {e.evidenceRef ? ` · Evidence: ${e.evidenceRef}` : " · No evidence reference"}
-                </p>
-                {e.substrateSync ? (
-                  <p className="mt-2 text-xs text-muted">
-                    Canonical refs — seller ENTITY #{e.substrateSync.sellerEntityId} · commitment ENTITY #{e.substrateSync.commitmentEntityId} · RELATION #{e.substrateSync.relationId} · EVIDENCE #{e.substrateSync.evidenceId} · EVENT #{e.substrateSync.eventId}
-                  </p>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={!ownerKey.trim() || !e.sellerConsent || syncingId !== null}
-                    onClick={() => void syncCommitment(e)}
-                    className="mt-3 rounded-lg border border-line px-3 py-2 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    {syncingId === e.id ? "Syncing…" : "Sync consented entry to Hami"}
-                  </button>
-                )}
-                {syncMessages[e.id] && (
-                  <p role="status" className="mt-2 text-xs text-muted">{syncMessages[e.id]}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted">
+                  <span>{t.received} {formatTime(item.timeIn, language)}</span>
+                  <span className="inline-flex items-center gap-1 font-semibold text-accent"><Timer className="size-3" aria-hidden="true" />{item.replyAt === null ? `${t.waiting} ${formatDuration(elapsed, language)}` : `${t.repliedIn} ${formatDuration(elapsed, language)}`}</span>
+                  {item.outcome === "recovered" && <span className="font-semibold text-emerald-300">{t.recovered}: {t.npr} {(item.orderValue ?? 0).toLocaleString("en-NP")}</span>}
+                  {item.outcome === "lost" && <span className="font-semibold text-red-300">{t.lost}</span>}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button type="button" size="sm" variant="secondary" onClick={() => markReplied(item.id)} disabled={item.replyAt !== null}>{t.markReplied}</Button>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => { setRecoveringId(item.id); setRecoveryAmount(item.orderValue?.toString() ?? ""); }}>{t.markRecovered}</Button>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => markLost(item.id)}>{t.markLost}</Button>
+                </div>
+                {isRecovering && (
+                  <div className="mt-3 grid gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 sm:grid-cols-[1fr_auto_auto]">
+                    <input type="number" inputMode="decimal" min="1" step="0.01" required value={recoveryAmount} onChange={(event) => setRecoveryAmount(event.target.value)} placeholder={t.amount} aria-label={t.amount} className="min-h-10 rounded-lg border border-line bg-background px-3 text-base text-ink placeholder:text-muted/60" />
+                    <Button type="button" size="sm" onClick={() => saveRecovered(item.id)} disabled={!recoveryAmount.trim() || parseOrderValue(recoveryAmount) <= 0}>{t.saveRecovered}</Button>
+                    <Button type="button" size="sm" variant="secondary" onClick={() => setRecoveringId(null)}>{t.cancel}</Button>
+                  </div>
                 )}
               </article>
-            ))}
-          </div>
+            );
+          })}
         </section>
 
-        {items.length > 0 && (
-          <div className="mt-6 text-right">
-            <button onClick={clearAll} className="text-xs text-muted underline-offset-4 hover:underline">
-              Clear all prototype data
-            </button>
-          </div>
-        )}
+        {items.length > 0 && <div className="mt-6 text-right"><button type="button" onClick={clearAll} className="text-sm text-muted underline-offset-4 hover:underline">{t.clear}</button></div>}
       </Container>
     </main>
   );
