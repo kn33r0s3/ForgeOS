@@ -1,4 +1,21 @@
-# Current state — 2026-11-16 — D85 export settlement and LiveKit hardening
+# Current state — 2026-11-16 05:23 +0545 — main `20b8ff1db9fc3fde595b4256a11c3f6caf090ee9`
+
+- Mission remains broad across domains/geographies; First Rupee or one pilot is not a Hami-wide gate.
+- Run-start main `20b8ff1db9fc3fde595b4256a11c3f6caf090ee9`; the grouped test/workflow correction and continuity update are in the new commit. Exact-head verification for that new commit is pending.
+- DFTQC Bhairahawa office profile identifies local laboratory/testing capability covering Rupandehi and five neighbouring districts. NeFFILS is the separate food/feed industry recommendation/licensing workflow. LIMS notice is specific to NFFRL, not evidence of Bhairahawa LIMS. No fish-specific local test scope, current fees, accreditation, Jaldevi permit or sample result.
+- DFTQC Annual Bulletin 2082 lists historical Gazette 2078/04/25 test rates (histamine, heavy metals, Salmonella, Vibrio, Listeria and generic microbiological tests). The same bulletin's Biratnagar accreditation certificate expired 30 Dec 2024 and is not a current Bhairahawa accreditation record.
+- PMAMP D95 facility report remains historical FY2081/82 evidence: 10 MT + 500 kg/batch narrative vs 5 MT annex; 10–20°C storage value, 0.1% utilization/no current revenue and 0.1% spoilage; no survey date/cutoff or denominator. Current facility condition UNKNOWN.
+- AMPIS Dharan Kartik29 body lists rohu NPR380–420/kg (average396); Butwal Kartik29 body has no fish section; Kawasoti body remains Kartik12 while current search snippet claims Kartik29 with zero minima and lower averages. Current Kawasoti price is UNKNOWN; no buyer/offtake/farmgate evidence.
+- Source-time seam: non-empty raw provenance replaces metadata; unchanged content returns prior Signal/Evidence without refreshing source times; Evidence.observed_at is not set by writer; assessment compares publication to retrieval; citations omit effective cutoff. NOT IMPLEMENTED; no schema/model/collector changes.
+- Run-start exact head `20b8ff1db9fc3fde595b4256a11c3f6caf090ee9`: CI failed three jobs for the path and escaping reasons recorded in HANDOFF; backend 1,363 passed / 2 skipped / 17 warnings; secret scan passed; independent deploy verifier HTTP 402. Vercel deployment READY for `20b8ff1db9fc3fde595b4256a11c3f6caf090ee9`.
+- Runtime: Vercel env list empty (hidden production count 0); logs show per-instance `/tmp/forge.db`, 124 imported map rows and legacy intelligence disabled. Health code says degraded/not-ready without DATABASE_URL and CRON_SECRET. No durable DB or unattended cycle established.
+- Importer correction: map and test both expect 124 rows (A9/B4/C3/D108); previous 120-mismatch statement was wrong.
+- Stale branch: `feature/governed-offers` is 972 behind / 0 ahead.
+- No contact, sample submission, application, publishing, spend, money movement, Cloud load test, production configuration change or intake/outbound activation.
+
+---
+
+## Previous state snapshot — run-start main `20b8ff1db9fc3fde595b4256a11c3f6caf090ee9`
 
 - **Run-start main:** `b95e94f29143e44c0eeee526f1a5508b02c1cdb9`. Exact-head ForgeOS CI passed 10/10 jobs; secret scan passed; independent deployment verifier failed HTTP 402 at production-content fetch. The exact production deployment is READY, but the Vercel project env list is empty and runtime logs show per-instance `/tmp/forge.db`, 124 UNKNOWN_MAP claims seeded on fresh instances, and legacy intelligence startup disabled. HTTP 200 is not readiness.
 - **Current run increment:** existing LiveKit Cloud Compose and helper paths are now opt-in/fail-closed; defaults match documented participant/CLI limits; CI room polling logs only allowlisted room metadata; existing regression coverage and Compose config-only guard were added. No Cloud test or spend occurred.

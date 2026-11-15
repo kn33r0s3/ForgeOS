@@ -106,14 +106,14 @@ test("the local LiveKit 100-subscriber scenario preserves the tuned speaker layo
 
 test("LiveKit Cloud scale Compose requires an explicit manual opt-in and safe defaults", () => {
   const publisherBlock =
-    CLOUD_COMPOSE.split("  livekit-publisher:\\n")[1]?.split("\\n  livekit-load-test:\\n")[0] ?? "";
+    CLOUD_COMPOSE.split("  livekit-publisher:\n")[1]?.split("\n  livekit-load-test:\n")[0] ?? "";
   const loadTestBlock =
-    CLOUD_COMPOSE.split("  livekit-load-test:\\n")[1] ?? "";
+    CLOUD_COMPOSE.split("  livekit-load-test:\n")[1] ?? "";
 
   assert.ok(CLOUD_COMPOSE.includes("x-hami-cloud-manual-opt-in:"));
   assert.ok(CLOUD_COMPOSE.includes("${LIVEKIT_CLOUD_MANUAL_OPT_IN:?"));
-  assert.ok(publisherBlock.includes('profiles: [manual-cloud-opt-in]'));
-  assert.ok(loadTestBlock.includes('profiles: [manual-cloud-opt-in]'));
+  assert.ok(publisherBlock.includes("profiles: [manual-cloud-opt-in]"));
+  assert.ok(loadTestBlock.includes("profiles: [manual-cloud-opt-in]"));
   assert.ok(loadTestBlock.includes("${LIVEKIT_TEST_DURATION:-30s}"));
   assert.ok(loadTestBlock.includes("${LIVEKIT_SUBSCRIBERS:-50}"));
   assert.ok(loadTestBlock.includes("${LIVEKIT_JOIN_RATE:-10}"));
@@ -126,8 +126,8 @@ test("LiveKit Cloud scale Compose requires an explicit manual opt-in and safe de
 });
 
 test("LiveKit CI room polling logs only allowlisted room metadata", () => {
-  assert.equal((CI_WORKFLOW.match(/print\\(json\\.dumps\\(document, indent=2\\)\\)/g) || []).length, 0);
-  assert.equal((CI_WORKFLOW.match(/"name": room\\.get\\("name"\\)/g) || []).length, 2);
-  assert.equal((CI_WORKFLOW.match(/"numParticipants": room\\.get\\("numParticipants"\\)/g) || []).length, 2);
-  assert.equal((CI_WORKFLOW.match(/"numPublishers": room\\.get\\("numPublishers"\\)/g) || []).length, 2);
+  assert.equal((CI_WORKFLOW.match(/print\(json\.dumps\(document, indent=2\)\)/g) || []).length, 0);
+  assert.equal((CI_WORKFLOW.match(/"name": room\.get\("name"\)/g) || []).length, 2);
+  assert.equal((CI_WORKFLOW.match(/"numParticipants": room\.get\("numParticipants"\)/g) || []).length, 2);
+  assert.equal((CI_WORKFLOW.match(/"numPublishers": room\.get\("numPublishers"\)/g) || []).length, 2);
 });

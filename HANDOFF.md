@@ -1,4 +1,47 @@
-# Current handoff — 2026-11-16 — D85 export settlement and LiveKit Cloud hardening
+# Current handoff — 2026-11-16 — D95 quality pathway and exact-head CI correction
+
+## Current run — 2026-11-16 05:23 +0545 — D95 quality pathway and exact-head CI correction
+
+**Run-start main:** `20b8ff1db9fc3fde595b4256a11c3f6caf090ee9`. The grouped change below is test/workflow wiring plus documentation only; `research_planner.py`, runtime behavior, models, collectors, source registry and production configuration remain untouched.
+
+### D95: an existing local quality/permit capability is now visible
+
+- PMAMP FY2081/82 cold-room study: sample 25 of 87 PMAMP cold rooms, including 2 of 8 listed in Lumbini. Section 4.1.9 reports Shree Jaldevi Matsya Utpaadan Sahakari Sanstha Limited at Siyari-5, Bangsari: narrative capacity 10 MT plus 500 kg/batch blast-freezing, three chambers, -32°C blast chamber, 10–20°C storage chamber, eight-hour daily operation, quarterly maintenance, 18.6 kWh/day average (20 kWh peak), grid plus generator, alarms, 0.1% utilization/no current revenue and 0.1% spoilage. It cites limited market size/awareness and lack of technical personnel. Annex I says 5 MT. No field-survey date/effective cutoff or utilization denominator is clear. Preserve both capacity values and the reported temperature; actual readings and food-safety status remain UNKNOWN.
+- **Local public capability:** DFTQC's Bhairahawa office profile says it covers Rupandehi plus Nawalparasi West, Kapilvastu, Arghakhanchi, Palpa and Gulmi, and offers physical/chemical/microbiological laboratory services, inspection, sampling, training and consultancy. Its page has no visible publication date. This is a real local institutional capability, but the page does not establish fish-specific sample acceptance, tests, current fees, turnaround, accreditation scope or Jaldevi's eligibility.
+- **Separate national workflows:** NeFFILS is the DFTQC food/feed industry recommendation/licensing system; its description says recommendation is required before establishment and an industry permit before marketing. This is not a lab-testing system, and no Jaldevi permit/application status was found. A separate DFTQC notice says LIMS has delivered National Food and Feed Reference Laboratory (NFFRL) analysis services online since 2080/04/01; it is NFFRL-specific, not proof that Bhairahawa's regional lab uses LIMS.
+- **Historical test/accreditation evidence:** DFTQC Annual Bulletin 2082 Annex 3 lists fees as published in Nepal Gazette 2078/04/25. It lists histamine NPR1,000, heavy metals NPR550 per parameter, Salmonella NPR500, Vibrio NPR300, Listeria NPR300, total bacterial count NPR250 and coliform NPR300. These are historical Gazette rates, not confirmed current fees or proof that Bhairahawa accepts fish samples for these tests. The same bulletin includes a Biratnagar-10 ISO/IEC 17025 certificate valid only until 30 Dec 2024; its listed microbiological scope covers fruit/vegetables, cereals/bakery, water, milk and meat, not fish. It is not a current Bhairahawa accreditation record.
+- **Food standards:** DFTQC's 252-page Mandatory Quality Standards 2082 compilation, listed 30 Aug 2026, includes fish mercury limits of 0.5 mg/kg for non-predatory fish and 1.0 mg/kg for predatory fish. No frozen-fish-specific standard surfaced in this compilation search; that does not establish that no other applicable standard exists. No Jaldevi permit, sample test, label or conformity evidence was found.
+- **Market observations:** AMPIS Dharan's direct detail page dated Kartik 29, 2083 lists fresh rohu NPR380–420/kg (average396). Butwal's Kartik29 page has no fish section; this is not evidence of no fish trade. Kawasoti's detail body is still dated Kartik12 and lists rohu NPR370–380/kg (average375) and chhadi NPR310–320/kg (average315), while its current search-index snippet says Kartik29 and shows zero minima/average NPR150 and NPR126 respectively. The latter is an unverified index lead, not a confirmed current price. No current Butwal fish price, Jaldevi farmgate price, buyer, quantity or repeat order is established.
+- **Consequence and capability:** the useful next path is to verify the existing local testing/permit route, then connect actual facility condition, test scope/results, buyer specification, current price, quantity and realized outcome. This can protect product value and consumer trust without inventing a Hami lab, marketplace or new architecture. No contact, sample submission, registration, application or offer occurred.
+
+### Source-time and current code seam
+
+The existing path remains `SourceCollector.normalize → collector_runner → ObserverEngine/Signal → _ensure_evidence/Evidence → research_evidence_assessment → research_synthesis_engine citation`. A non-empty raw provenance object replaces normalized metadata. On unchanged content fingerprint, ObserverEngine returns the previous Signal; _ensure_evidence returns existing Evidence without refreshing provenance/timestamps. Evidence copies publication/retrieval/provenance but leaves `observed_at` unset. Assessment compares publication date with retrieval time and explicitly does not infer claim support; citations expose registry ID and retrieval time, not the effective cutoff. The existing assessment test covers keyword overlap/missing dates, not cutoff persistence or same-content refresh. Candidate remains within existing provenance only; **NOT IMPLEMENTED**. The blocked portfolio helper was not retried or routed through another tool.
+
+### Exact-head verification at run start
+
+For `20b8ff1db9fc3fde595b4256a11c3f6caf090ee9`: ForgeOS CI run 43776540517 failed three jobs; backend tests passed (1,363 passed, 2 skipped, 17 warnings), typecheck/lint/build/route-smoke/livekit-local-smoke passed, and secrets scan passed. The three failures were precisely:
+1. `evidence-triage-tests` runs from `services/evidence-triage` but referenced the repository-root `docker-compose.livekit-scale.yml` without `../../`.
+2. `scripts/startup-contract.test.mjs` used double-escaped newline separators, so it split on literal backslash-n rather than line breaks.
+3. The same test double-escaped regex metacharacters, so the allowlisted room-field count assertions failed.
+The independent deploy verifier failed at production-content fetch with HTTP 402 after local verifier tests passed. Vercel deployment `dpl_Cb4BCPp4Y5ZbRf5QWDKRwKoU7M8o` was READY for exact SHA `20b8ff1db9fc3fde595b4256a11c3f6caf090ee9`. Environment listing was empty (hidden production count 0); runtime logs show `/tmp/forge.db`, 124 startup-projected claims and legacy intelligence disabled. Current health code marks Vercel+SQLite without DATABASE_URL/CRON_SECRET degraded/not-ready even when HTTP 200 is returned.
+The importer count is correct: `UNKNOWN_MAP` and `test_import_unknowns.py` both expect A9/B4/C3/D108 = 124. The earlier 120-mismatch statement was incorrect. `feature/governed-offers` is 972 commits behind main and zero ahead.
+
+### Rights and safety
+
+PMAMP, AMPIS, DFTQC, NeFFILS and LIMS remain manual-only / NOT CLEARED. Main-domain and subdomain robots/terms routes were inaccessible through the available browser route; no exact reuse grant was found. The exact-head source-clearance registry has no corresponding entries. No automated collection, Signal/Evidence write, body persistence, provider transmission, external contact, application, publishing, money movement, Cloud load test or production activation occurred.
+
+### Next
+
+1. Verify this grouped test/workflow correction at its new exact head before any further commit.
+2. Verify whether DFTQC Bhairahawa accepts fish samples and which parameters, fee schedule, turnaround and accreditation scope are current; distinguish its regional lab from NFFRL/LIMS.
+3. Establish Jaldevi's current permit, test records, temperature/maintenance logs, throughput, buyer and realized price only through authorized evidence.
+4. Continue D93 and Hami-wide discovery independently; no single experiment gates the mission.
+
+
+---
+
+## Previous handoff snapshot — 2026-11-16 — LiveKit safety and D85 export settlement
 
 **Run-start main:** `b95e94f29143e44c0eeee526f1a5508b02c1cdb9`. The grouped changes below touch existing LiveKit harness/test/CI files and existing continuity/source-register documents only. No new file, branch, PR, table, collector, primitive or D-number was added. The blocked `research_planner.py` portfolio helper remains NOT IMPLEMENTED and was not retried.
 

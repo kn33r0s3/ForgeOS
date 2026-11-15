@@ -1,3 +1,14 @@
+## 2026-11-16 05:23 +0545 — D95 local testing/permit path and CI repair
+
+- Reconciled current main `20b8ff1db9fc3fde595b4256a11c3f6caf090ee9`, recent history, AGENTS/HANDOFF/STATE/QUEUE/BRAIN/UNKNOWN_MAP/CAPABILITY_QUEUE/LOG/PUBLIC_SOURCES/discovery-loop, exact-head workflow jobs, Vercel deployment/runtime, current source-clearance registry, collector/Signal/Evidence/assessment/citation code and relevant tests.
+- New D95 link: DFTQC Bhairahawa office profile covers Rupandehi and lists local physical/chemical/microbiological lab services. NeFFILS is the separate food/feed industry licensing path; LIMS notice is NFFRL-specific. No fish-specific local test scope, current fees, accreditation, Jaldevi permit or sample result established.
+- DFTQC Annual Bulletin 2082 lists historical Gazette 2078/04/25 fees for histamine, heavy metals and microbiological tests; its Biratnagar ISO/IEC 17025 certificate expired 30 Dec 2024 and is not Bhairahawa evidence. DFTQC Standards 2082 contains fish mercury limits; no frozen-fish-specific entry surfaced in the searched compilation.
+- AMPIS current Dharan Kartik29 detail page reports fresh rohu NPR380–420/kg (average396); Butwal Kartik29 page has no fish section. Kawasoti detail body is Kartik12, while search snippet says Kartik29 with zero minima/lower averages. Current Kawa price remains UNKNOWN.
+- 20b8 CI failed evidence-triage path resolution and two startup-contract test assertions caused by double-escaped newline/regex patterns. The grouped commit fixes only the workflow path and test expressions; no production code changed.
+- 20b8 backend tests: 1,363 passed / 2 skipped / 17 warnings; secret scan passed; three CI jobs failed; deploy verifier HTTP 402; Vercel deployment READY. Runtime remains per-instance `/tmp/forge.db`, no env, 124 projection rows, legacy startup disabled.
+- Corrected earlier false claim: importer test and UNKNOWN_MAP both expect 124 rows (A9/B4/C3/D108); no count mismatch.
+- All sources remain manual-only / NOT CLEARED. No automated ingestion, contact, sample submission, application, public offer, money movement, Cloud load test or production activation.
+
 ## 2026-11-16 — D95 Jaldevi fish cold-chain / market-chain evidence increment (manual-only; NOT CLEARED)
 
 - **Entity identity:** the Lumbini Cooperative Registrar list and House of Representatives Committee Annual Report 2082 identify the same registered Jaldevi Matsya Producer Cooperative at Siyari-5/Banghusuri, registration 487/2355/064/065. The Committee report records about 400 linked farmers and report-time frozen-fish production/market barriers; visit date not stated.

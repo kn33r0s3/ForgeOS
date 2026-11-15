@@ -1,3 +1,15 @@
+## 2026-11-16 — D95 local food-quality and licensing pathway (manual-only; NOT CLEARED)
+
+- **Local office:** DFTQC Bhairahawa profile says its jurisdiction includes Rupandehi, Nawalparasi West, Kapilvastu, Arghakhanchi, Palpa and Gulmi, with physical/chemical/microbiological laboratory services, inspection, sampling, training and consultancy. No publication date is shown. Fish-specific matrix, current test list, fees, turnaround, accreditation and Jaldevi eligibility remain UNKNOWN.
+- **Licensing:** NeFFILS is the separate national food/feed industry recommendation and licensing system; its description says recommendation before establishment and permit before marketing. This does not prove Jaldevi needs a new application or lacks an existing permit.
+- **Laboratory workflow:** the LIMS notice says National Food and Feed Reference Laboratory (NFFRL) analysis services have been online since 2080/04/01. It does not establish that the Bhairahawa regional office uses LIMS.
+- **Historical fee/scope caveat:** DFTQC Annual Bulletin 2082 Annex 3 reproduces Gazette 2078/04/25 fees, including histamine NPR1,000, heavy metals NPR550/parameter, Salmonella NPR500, Vibrio/Listeria NPR300, total bacterial count NPR250 and coliform NPR300. Treat as historical reference, not current fees or proof of fish-matrix availability. The same bulletin's ISO/IEC 17025 certificate is for Biratnagar-10 and expired 30 Dec 2024; its listed microbiological scope omits fish. It says nothing definitive about current Bhairahawa accreditation.
+- **Standard:** Mandatory Quality Standards 2082 includes fish mercury limits of 0.5 mg/kg for non-predatory fish and 1.0 mg/kg for predatory fish. No frozen-fish-specific standard surfaced in this compilation search; other applicable standards may exist.
+- **Market:** Dharan Kartik29 AMPIS body reports fresh rohu NPR380–420/kg, average396. Butwal Kartik29 body has no fish section. Kawasoti direct body is Kartik12; a newer search-index snippet says Kartik29 but displays zero minima and lower averages. Treat that snippet as an unverified lead; no current Kawa/Butwal price or Jaldevi buyer/offtake is established.
+- **Reusable capability:** connect existing producer/asset, local regulator/lab, standards, test results, buyer specifications, market prices and realized outcomes through existing ENTITY/RELATION/EVENT/EVIDENCE/CAPABILITY/ACTION and Signal/Evidence. The capability is evidence-grounded routing/reconciliation, not a new lab, licensing portal or marketplace.
+- **Source-time seam:** BaseCollector raw provenance replacement, unchanged-content Signal/Evidence early return, unset Evidence.observed_at, publication-vs-retrieval-only assessment and citation omission of effective cutoff remain. NOT IMPLEMENTED; no source-write bypass.
+- **Rights:** DFTQC main site, NeFFILS and LIMS robots/terms routes were inaccessible; no exact reuse grant. No source registry entries, collector calls, source-body persistence or provider transmission.
+
 ## 2026-11-16 — D85 cross-border export settlement (manual evidence; remains UNKNOWN)
 
 ### Primary rule set and version chronology

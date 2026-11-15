@@ -56,11 +56,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if docker compose -f docker-compose.livekit-scale.yml config >/dev/null 2>&1; then
+          if docker compose -f ../../docker-compose.livekit-scale.yml config >/dev/null 2>&1; then
             echo "::error::LiveKit Cloud Compose must fail without manual opt-in"
             exit 1
           fi
-          LIVEKIT_CLOUD_MANUAL_OPT_IN=ci-contract-check docker compose --profile manual-cloud-opt-in -f docker-compose.livekit-scale.yml config >/dev/null
+          LIVEKIT_CLOUD_MANUAL_OPT_IN=ci-contract-check docker compose --profile manual-cloud-opt-in -f ../../docker-compose.livekit-scale.yml config >/dev/null
       - run: npm test
       - run: npm run typecheck
   frontend-tests:
