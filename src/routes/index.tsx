@@ -509,9 +509,9 @@ function Capabilities() {
   const capabilities = [
     {
       name: "Observe",
-      description: "Discover through the five currently configured, explicitly governed source adapters — OpenAlex, Crossref, World Bank, GDELT, and GovInfo. These instruments are not a boundary on the kinds of value Hami may investigate.",
-      status: "Implemented",
-      statusTone: "text-emerald-600",
+      description: "Five source adapters exist in code. Each collection requires current, purpose-specific clearance and a healthy runtime; code presence is not current access. These instruments are not a boundary on the kinds of value Hami may investigate.",
+      status: "Requires clearance",
+      statusTone: "text-amber-600",
     },
     {
       name: "Preserve",
@@ -840,23 +840,34 @@ function SectionHead({
   );
 }
 
-function EmptyRecord({
+function RecordState({
+  kind,
   label,
   message,
 }: {
+  kind: "empty" | "unavailable";
   label: string;
   message: string;
 }) {
   return (
-    <div className="card mt-8 p-8 text-center sm:p-10">
+    <div
+      className="card mt-8 p-8 text-center sm:p-10"
+      role={kind === "unavailable" ? "status" : undefined}
+    >
       <span className="tag tag-muted">{label}</span>
       <p className="mx-auto mt-4 max-w-md text-base font-bold leading-7 text-ink">
         {message}
       </p>
-      <p className="mt-2 text-sm text-muted">
-        There is nothing here <em className="not-italic font-bold text-accent">yet</em> —
-        not because it was forgotten, but because reality hasn't supplied it.
-      </p>
+      {kind === "unavailable" ? (
+        <p className="mt-2 text-sm text-muted">
+          This unavailable response is not evidence that the findings record is empty.
+        </p>
+      ) : (
+        <p className="mt-2 text-sm text-muted">
+          There is nothing here <em className="not-italic font-bold text-accent">yet</em> —
+          not because it was forgotten, but because reality hasn't supplied it.
+        </p>
+      )}
     </div>
   );
 }
@@ -906,12 +917,14 @@ function FindingsPreview() {
           {!items && !failed ? (
             <div className="skeleton h-32 w-full" aria-label="Loading findings" />
           ) : failed ? (
-            <EmptyRecord
+            <RecordState
+              kind="unavailable"
               label="Unavailable"
-              message="The findings service is currently unavailable. Please try again later."
+              message="Hami couldn't verify the findings right now. Please try again later."
             />
           ) : items!.length === 0 ? (
-            <EmptyRecord
+            <RecordState
+              kind="empty"
               label="Empty record"
               message="No findings with recorded consequences yet. Findings appear here once they change a decision, experiment, or outcome."
             />
@@ -965,7 +978,8 @@ function UnknownsPreview() {
           {!items ? (
             <div className="skeleton h-32 w-full" aria-label="Loading unknowns" />
           ) : items.length === 0 ? (
-            <EmptyRecord
+            <RecordState
+              kind="empty"
               label="Empty record"
               message="No unknowns recorded yet. The unknowns map grows as Hami meets reality."
             />
@@ -1002,7 +1016,8 @@ function ExperimentsPreview() {
         />
         <div className="mt-8">
           {items.length === 0 ? (
-            <EmptyRecord
+            <RecordState
+              kind="empty"
               label="Empty record"
               message="No experiments yet. The first experiment begins when reality supplies a participant."
             />

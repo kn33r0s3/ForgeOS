@@ -3962,3 +3962,40 @@ This is a second-domain evidence extension of the existing source-time capabilit
 - NDRRMA robots/terms endpoints and both Chumnubri robots host variants were inaccessible; no affirmative reuse grant was found. Keep both manual factual-citation only / NOT CLEARED for automated collection, source-body persistence or provider transmission.
 - No new D-number, ResearchQuestion, UNKNOWN_MAP projection, Signal/Evidence record or source registration. No contact, publication, spending, payment, production activation, emergency advice or alerting service.
 - Improvement delta: evidence quality + continuity. The D93 record now distinguishes index date, detail-page date and page-declared cutoff; the exact provenance-loss edge and stale importer test expectation are identified without bypassing the source-edit restriction.
+## 2026-11-15 — Homepage outage truth and production runtime recheck (main 2fec5327)
+
+- **Existing seam inspected:** `src/routes/index.tsx::FindingsPreview`,
+  `RecordState`, and `Capabilities`; shared health/discovery loading remains
+  in `src/lib/content.ts`. History for the Observe capability copy was traced
+  through `git log -S` and `git blame`. No new presentation or health service
+  was needed.
+- **Observed blocker:** local `/api/health` is ready (`db=up`); deployed
+  `hami-sigma` is degraded (`ready=false`, `db=not_configured`). Its
+  discoveries endpoint returned `[]` while unhealthy, which the existing
+  loader correctly treats as unavailable. The UI then reused the confirmed-
+  empty copy, misleading users about the record.
+- **Owner action still required:** authorized durable database and deployment
+  configuration, followed by deployment identity and read-after-write
+  verification. This change does not configure or migrate storage, restore
+  production, or grant source clearance.
+- **Action removed:** a user no longer has to interpret an unavailable
+  findings response as an empty record. The same homepage also no longer
+  claims that source adapters are currently configured when collection
+  requires current purpose-specific clearance and healthy runtime.
+- **What remains / next removable dependency:** production data is still
+  unavailable and the local fix is not deployed. Resolve the authorized
+  database/deployment dependency, then verify live health and persistence;
+  separately triage the backend-test failure in CI 43744768436 without
+  weakening rights gates.
+- **Measured improvement delta — evidence quality:** `npm test` passed 425
+  tests; `npm run check` passed with one existing Fast Refresh warning; a
+  browser test with degraded health verified the unavailable state does not
+  assert that findings are empty. Exact-head CI for the committed base passed
+  frontend tests/build/typecheck/lint but failed backend tests; deployment
+  verification failed fetching production content. The local fix remains
+  uncommitted and has not been covered by CI.
+- **Boundary:** no new file/schema/route/service, source request, public post,
+  production write, deployment, external contact or transaction. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION`
+  is **NOT MEASURABLE**.
+
+## 2026-11-15 — Senior repository review and test recovery (main 50fa89cf)

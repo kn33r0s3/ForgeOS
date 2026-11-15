@@ -588,6 +588,20 @@ describe("Hami public root", () => {
     assert.match(home, /ExperimentsPreview/);
     assert.match(home, /loadDiscoveries/);
     assert.match(home, /loadPublicUnknowns/);
+    const findingsPreview = home.slice(
+      home.indexOf("function FindingsPreview"),
+      home.indexOf("function UnknownsPreview"),
+    );
+    const failedFindings = findingsPreview.match(
+      /: failed \? \(([\s\S]*?)\) : items!\.length/,
+    )?.[1];
+    assert.ok(failedFindings);
+    assert.match(failedFindings, /kind="unavailable"/);
+    assert.doesNotMatch(failedFindings, /kind="empty"|There is nothing here/);
+    assert.match(
+      home,
+      /This unavailable response is not evidence that the findings record is empty/,
+    );
     assert.match(home, /See all findings/);
     assert.match(home, /See all unknowns/);
     assert.match(home, /See all experiments/);

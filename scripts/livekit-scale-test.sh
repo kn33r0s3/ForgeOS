@@ -45,9 +45,8 @@ case "${1:-}" in
     "${COMPOSE[@]}" up -d --scale "livekit-publisher=$PUBLISHERS" livekit-publisher
     ;;
   test)
-    require_project_config
-    "${COMPOSE[@]}" up -d --scale "livekit-publisher=$PUBLISHERS" livekit-publisher
-    "${COMPOSE[@]}" --profile load-test run --rm --no-deps livekit-load-test
+    echo "Blocked: LiveKit Cloud rejected load testing for this project. Do not retry against Cloud without written approval and LiveKit's approved procedure." >&2
+    exit 1
     ;;
   stop)
     "${COMPOSE[@]}" down --remove-orphans

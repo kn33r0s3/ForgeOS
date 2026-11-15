@@ -1,3 +1,44 @@
+## Current handoff — 2026-11-15 23:57 NPT — homepage outage truth and live-runtime check (main 2fec5327)
+
+- Run-start repository reality: `main` and `origin/main` were synchronized at
+  `2fec53276cc023d660411370ea92a3311ae29c8f`. Source/test changes are limited
+  to the homepage and its existing content test; this handoff, state, queue
+  and capability ledger record the evidence. No new file, branch, schema, API
+  or service was added.
+- Compared the same homepage locally and at `hami-sigma.vercel.app`. Local
+  `/api/health` is ready with `db=up`; deployed `/api/health` is degraded,
+  `ready=false`, `db=not_configured`. Production discoveries returned `[]`
+  while unhealthy. The existing loader correctly treats findings as
+  unavailable, but the homepage reused its confirmed-empty message. The
+  existing `RecordState` seam now distinguishes empty from unavailable and
+  the unavailable branch explicitly says emptiness is unverified. The Observe
+  capability now says adapters exist in code but current collection requires
+  purpose-specific clearance and healthy runtime.
+- Local rendered homepage verified the updated capability status and copy.
+  A browser test with a simulated degraded health response verified that the
+  Findings section no longer says the record is empty. `npm test` passed all
+  425 tests; `npm run check` passed with one existing Fast Refresh warning;
+  `git diff --check` passed.
+- Exact committed-head evidence is for the prior code, not this uncommitted
+  fix: CI run [43744768436](https://github.com/kn33r0s3/ForgeOS/actions/runs/43744768436)
+  failed in `backend-tests`; frontend tests, build, typecheck, lint and other
+  listed jobs passed. Secret scan
+  [43744768447](https://github.com/kn33r0s3/ForgeOS/actions/runs/43744768447)
+  passed. Deploy verification
+  [43744768412](https://github.com/kn33r0s3/ForgeOS/actions/runs/43744768412)
+  failed at “Fetch production content.” No exact-head CI exists for the
+  uncommitted changes.
+- Owner action still required: authorized durable production database and
+  deployment configuration, then verify deployment identity, health and
+  persistence. No production setting, database, external contact, public
+  post, or deployment was changed. Do not claim the homepage fix is live.
+- The change removes the misleading empty-record implication; it does not
+  make the backend available or remove the database/deployment dependency.
+  Next: resolve the authorized DB/config blocker, then verify live health and
+  read-after-write; separately triage the current backend CI failure without
+  relaxing source-rights gates. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION`
+  remains **NOT MEASURABLE**.
+
 ## Current handoff — 2026-11-15 — senior repository review and recovery (main 50fa89cf)
 
 Hami remains the one in-place system. No branch or parallel architecture was

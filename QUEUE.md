@@ -1,3 +1,30 @@
+## Current continuation — 2026-11-15 23:57 NPT (main 2fec5327)
+
+1. **P0 — Production runtime truth.** `hami-sigma` health is degraded with
+   `db=not_configured`; local health is ready with `db=up`. Obtain owner-
+   authorized durable DB/deployment configuration, then verify deployment
+   identity, health, and read-after-write. No deployment or production
+   configuration was changed.
+2. **P0 — Exact-head backend CI.** CI 43744768436 failed in `backend-tests`;
+   frontend tests, build, typecheck and lint passed. Diagnose the backend
+   failure causes without relaxing source-clearance or other safety gates.
+   The homepage fix in this worktree is uncommitted and has no exact-head CI.
+3. **P1 — Verify the homepage truth-state correction after integration.**
+   `RecordState` now distinguishes unavailable findings from a confirmed empty
+   record; Observe no longer implies current source access from adapter code
+   presence. Local tests and a degraded-backend browser check pass. This fix
+   is not live until an authorized, successful deployment.
+4. **P1 — Source clearance.** Collection requires current purpose-specific
+   clearance; do not renew or bypass expired entries as a test workaround.
+5. **P1 — Preserve production evidence.** The deploy verifier
+   43744768412 failed at “Fetch production content”; do not infer a live,
+   durable service from local readiness or a successful frontend build.
+
+`OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**. No real
+transaction, external contact, public post, or production write occurred.
+
+---
+
 ## Current continuation — 2026-11-15 — senior review recovery (main 50fa89cf)
 
 This review covers an inventory of 833 tracked files and targeted code/history

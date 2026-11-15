@@ -1,3 +1,38 @@
+## Current state — 2026-11-15 23:57 NPT — main 2fec5327
+
+- **Repository:** `main` and `origin/main` are synchronized at
+  `2fec53276cc023d660411370ea92a3311ae29c8f`; source/test changes are limited
+  to two existing files (`src/routes/index.tsx`, `src/lib/content.test.ts`),
+  with four existing continuity/ledger documents updated. No new file or
+  architecture was introduced.
+- **Local vs deployed:** local `/api/health` is `ok`, ready, `db=up`;
+  `hami-sigma.vercel.app/api/health` is degraded, `ready=false`,
+  `db=not_configured`. Production discoveries returned an empty payload while
+  health was degraded, so the existing content loader correctly classified
+  the result as unavailable. The homepage copy previously implied confirmed
+  emptiness; the existing presentation seam now distinguishes unavailable
+  from empty. Observe now labels collection as requiring current clearance.
+- **Verification:** local rendered homepage shows the new Observe status;
+  browser simulation of degraded health confirms the Findings state does not
+  claim an empty record. `npm test` passed 425 tests; `npm run check` passed
+  with one existing Fast Refresh warning; `git diff --check` passed.
+- **Exact committed-head CI (does not include these local edits):**
+  43744768436 failed in backend tests; frontend tests, build, typecheck and
+  lint passed. Secret scan 43744768447 passed. Deploy verifier 43744768412
+  failed fetching production content.
+- **Still blocked:** no production DB configuration, deployment identity,
+  write/read-back, or worker heartbeat was changed or verified. The frontend
+  correction is local and not deployed. No public form was submitted or
+  external action taken. Authorized durable database/deployment configuration
+  remains necessary; source collection also requires current purpose-specific
+  clearance. Real transactions remain absent;
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE**.
+- **Next:** resolve the authorized production DB/config dependency and verify
+  health plus persistence; independently classify the exact-head backend CI
+  failure without weakening source-rights gates.
+
+---
+
 ## Current state — 2026-11-15 — senior review of main 50fa89cf
 
 - **Repository:** one active branch, `main`, reviewed HEAD `50fa89cf14dbce626c215d4d6769c494dbefe428`; worktree was clean at start and now has uncommitted review fixes. 833 tracked files inventoried; this is not a literal line-by-line audit of every archive/document.
