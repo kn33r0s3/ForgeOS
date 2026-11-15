@@ -108,13 +108,14 @@
 - **Verification boundary:** configuration and command wiring have been checked against the official LiveKit config, room-join, and load-test interfaces. The assistant execution environment has no Docker CLI, so images were not pulled and no service, publisher, subscriber or benchmark was run. Runtime status is **NOT RUN / NOT VERIFIED** until executed on an authorized Docker host.
 - **No scale claim:** the scaffold is only a local TEST harness. It does not demonstrate 4,000 viewers, nine production camera feeds, room sharding/relay, or 100 ms glass-to-glass latency. LiveKit documents that one self-hosted room must fit on one SFU node; separate SFUs do not automatically divide one room.
 
-### Ephemeral CI runtime proof (2026-11-15; first smoke partially observed)
+### Ephemeral CI runtime proof (2026-11-15; verified small-scale smoke)
 
-- The existing `.github/workflows/forgeos-ci.yml` now includes `livekit-local-smoke` using a standard `ubuntu-latest` runner. The repository is public; standard hosted-runner usage for public repositories is free.
-- First runtime run `43699305327` pulled the pinned server and CLI images, started the SFU, and started nine separate publisher containers. A LiveKit `room list` response reported `numParticipants: 9` and `numPublishers: 9` for `hami-proving-ground`. This is verified TEST evidence for nine synthetic demo publishers in one room.
-- The job then failed because the CLI's JSON output had trailing non-JSON text and the `jq` parser rejected the stream. It failed closed before the 25-subscriber step; viewer concurrency is **NOT YET VERIFIED**. The parser is being corrected to decode the JSON object while ignoring trailing output, then the exact runtime job will be rerun.
-- This provides actual ephemeral container/process and room-participant evidence if the full job passes. It is not execution on the owner's Mac, does not record nine real camera sources, does not measure glass-to-glass latency, and does not prove 4,000-viewer capacity.
-- No cloud provider, paid service, public hostname, or production credentials are used.
+- Exact source commit: `b81ab7efb7d455da36cd4b9d567cac28bdcaeb43`. GitHub Actions run `43699656871`, job `livekit-local-smoke`, completed **SUCCESS**; the test stack was torn down cleanly afterwards.
+- The job pulled `livekit/livekit-server:v1.13.11` and `livekit/livekit-cli:v2.19.4`, started one SFU, and observed `hami-proving-ground` at **9 participants / 9 publishers** from nine independent CLI publisher containers.
+- The 25-subscriber / 3x3 load-test reached **34 concurrent participants** (9 publishers + 25 subscribers) in the same room. CLI summary: **9 video tracks per subscriber**, **225/0 tracks total**, **80.1 Mbps aggregate subscriber bitrate** (3.2 Mbps average per subscriber), **0 packet loss**, and **0 subscriber errors**.
+- This is verified TEST evidence on an ephemeral public-repository GitHub runner. Streams are LiveKit's synthetic demo video and viewers are simulated; no real camera sources, owner Mac runtime, or public deployment are involved.
+- It does **not** establish 4,000-viewer capacity, production headroom, geographic distribution, glass-to-glass latency, or a 100 ms guarantee. The latency SLO and high-scale generator topology remain untested.
+- No cloud provider, paid service, public hostname, or production credentials were used.
 
 ### Owner-held blockers
 - Production Vercel project is currently returning `DEPLOYMENT_DISABLED` (HTTP 402). A project/account owner must resolve the account/usage gate; do not silently resume or incur spend.
