@@ -108,6 +108,13 @@
 - **Verification boundary:** configuration and command wiring have been checked against the official LiveKit config, room-join, and load-test interfaces. The assistant execution environment has no Docker CLI, so images were not pulled and no service, publisher, subscriber or benchmark was run. Runtime status is **NOT RUN / NOT VERIFIED** until executed on an authorized Docker host.
 - **No scale claim:** the scaffold is only a local TEST harness. It does not demonstrate 4,000 viewers, nine production camera feeds, room sharding/relay, or 100 ms glass-to-glass latency. LiveKit documents that one self-hosted room must fit on one SFU node; separate SFUs do not automatically divide one room.
 
+### Ephemeral CI runtime proof (2026-11-15; first result pending)
+
+- The existing `.github/workflows/forgeos-ci.yml` now includes `livekit-local-smoke` using a standard `ubuntu-latest` runner. The repository is public; GitHub documents standard hosted runner usage in public repositories as free.
+- The job starts the same opt-in Compose profile, waits for the room API to report 9 participants / 9 publishers, then runs the configured 25-subscriber load test and checks for 34 concurrent participants / 9 publishers in that one room. It always tears down the ephemeral Compose stack.
+- This provides real process/container and participant-count evidence on an isolated ephemeral VM if the job passes. It is not execution on the owner's Mac, does not record nine real camera sources, does not measure end-to-end glass-to-glass latency, and does not prove 4,000-viewer capacity.
+- The assistant's own container runtime still lacks Docker; the first outcome must come from the CI job logs. No cloud provider, paid service, public hostname, or production credentials are used.
+
 ### Owner-held blockers
 - Production Vercel project is currently returning `DEPLOYMENT_DISABLED` (HTTP 402). A project/account owner must resolve the account/usage gate; do not silently resume or incur spend.
 - Current main exact-head CI run must complete; the prior goal-planning SHA's backend test job failed, so no green verdict can be carried forward.
