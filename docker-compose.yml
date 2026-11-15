@@ -180,6 +180,6 @@ services:
       - --num-per-second
       - "${LIVEKIT_TEST_JOIN_RATE:-10}"
       - --layout
-      - "${LIVEKIT_TEST_LAYOUT:-speaker}"
+      - "${LIVEKIT_TEST_LAYOUT:-3x3}"
       - --video-resolution
       - "${LIVEKIT_TEST_VIDEO_RESOLUTION:-low}"

@@ -10,6 +10,8 @@ const COMPOSE = readFileSync(join(ROOT, "docker-compose.yml"), "utf8");
 const BACKEND_DOCKERFILE = readFileSync(join(ROOT, "backend/Dockerfile"), "utf8");
 const WEB_DB = readFileSync(join(ROOT, "src/lib/db.ts"), "utf8");
 const CHECK_ALL = readFileSync(join(ROOT, "scripts/check_all.sh"), "utf8");
+const LIVEKIT_DOC = readFileSync(join(ROOT, "DOCKER_COMMANDS.md"), "utf8");
+const CI_WORKFLOW = readFileSync(join(ROOT, ".github/workflows/forgeos-ci.yml"), "utf8");
 
 test("Docker startup uses the canonical root Vite app, not archived Next.js", () => {
   assert.ok(START.includes("docker compose up --build -d"));
@@ -76,5 +78,24 @@ test("the optional LiveKit smoke profile is loopback-only and publisher-scalable
   assert.ok(loadTestBlock.includes("--subscribers"));
   assert.ok(loadTestBlock.includes("${LIVEKIT_TEST_SUBSCRIBERS:-25}"));
   assert.ok(loadTestBlock.includes("30s"));
-  assert.ok(loadTestBlock.includes('"${LIVEKIT_TEST_LAYOUT:-speaker}"'));
+  assert.ok(loadTestBlock.includes('"${LIVEKIT_TEST_LAYOUT:-3x3}"'));
+});
+
+test("the local LiveKit 100-subscriber scenario keeps its 3x3 layout across Compose, CI, and operator docs", () => {
+  const ciLoadTest = CI_WORKFLOW
+    .split("      - name: Run the 100-subscriber 3x3 grid load test and verify one shared room")[1]
+    ?.split("      - name: Stop the ephemeral LiveKit test stack")[0] ?? "";
+
+  assert.ok(ciLoadTest, "CI must retain the named 3x3 load-test step");
+  assert.ok(
+    ciLoadTest.includes("LIVEKIT_TEST_LAYOUT=3x3 LIVEKIT_TEST_SUBSCRIBERS=100 docker compose"),
+    "CI must pin the same 3x3 layout rather than inheriting a mutable default",
+  );
+  assert.ok(
+    ciLoadTest.includes("config --format json"),
+    "CI must verify the rendered Compose command before launching the load test",
+  );
+  assert.ok(LIVEKIT_DOC.includes("`--layout 3x3`"));
+  assert.ok(LIVEKIT_DOC.includes("LIVEKIT_TEST_LAYOUT=speaker"));
+  assert.ok(LIVEKIT_DOC.includes("it is not the CI workload"));
 });
