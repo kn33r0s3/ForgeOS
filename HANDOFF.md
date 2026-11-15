@@ -1,3 +1,165 @@
+## Current handoff — 2026-11-15 05:31 NPT — D93 report #04 timing, municipal response and exact-head reconciliation
+
+Hami's mission and breadth are settled. Continue independent discovery across domains and geographies. Keep public reporting separate from firsthand evidence, preserve UNKNOWN, and use only ENTITY, RELATION, EVENT, EVIDENCE, CAPABILITY and ACTION.
+
+### Canonical repository, history and branch state
+- Exact main at run start: 7b55f2ba72bb862353e868fc64f38f75f0e7a1f9. The preceding 8042d557 and current 7b55f054? correction: 7b55f2ba are documentation-only continuity commits. History since source-bearing c8da700 contains 68 commits, including GoalPlan/cognition/worker and fail-closed deployed-database changes; those runtime changes were not treated as part of this documentation-only discovery.
+- Re-read AGENTS.md, HANDOFF.md, STATE.md, QUEUE.md, docs/BRAIN.md, docs/UNKNOWN_MAP.md, docs/CAPABILITY_QUEUE.md, LOG.md, docs/ops/discovery-loop.md, docs/PUBLIC_SOURCES.md, source normalization/runner/Observer/Signal/Evidence/assessment/citation code and relevant tests.
+- AGENTS.md requires exactly one active branch. GitHub lists main plus feature/governed-offers. Comparing main with feature/governed-offers shows the latter is 943 commits behind and 0 ahead; no unique commit is present and its HANDOFF is a stale 13-Oct snapshot. No unique work needs integration. The GitHub connector exposes no delete-ref action; no alternate API/tool path was attempted. This is a branch-cleanup blocker, not lost work.
+- The UNKNOWN_MAP currently parses to 124 rows (A9/B4/C3/D108). backend/tests/test_import_unknowns.py still asserts A9/B4/C3/D104 = 120. This is a stale test expectation against the current map, not a reason to delete rows or alter production behavior. No D109, ResearchQuestion, UNKNOWN_MAP edit or generated-projection rewrite was made.
+
+### D93 — new official source-time and local-response evidence
+- NDRRMA's Nepali situation-report index lists Gorkha–Budhi Gandaki Situation Report #04 with an index/listing date of 2026-11-03 (2083-07-17). Its detail page is https://ndrrma.gov.np/np/situation-report/468 and displays 2083-06-30 / Asoj 30; the page heading says as of 16 October 2026, 10:00 AM NPT. Sequence #04 is explicit. The index date is 18 days later than the page-declared report cutoff. Treat this as an index/detail date mismatch; the index label's precise semantics and any source update time are not stated. Do not call it proof of newer field facts.
+- The #04 page exposes a PDF Preview label, but no retrievable source PDF URL was exposed through the official page/search route. Direct page open returned no readable body. PDF contents remain unread and no page screenshots were possible; no content claim is made.
+- #03 remains the directly retrieved official PDF already inspected page-by-page: 13 October 2026, 22:00. #02 /464 states a 12 October 22:00 cutoff, but its PDF body remains unread. A bounded official search for #05/later returned no result; direct /469, /470 and /471 opens were inaccessible. This is not proof that no later report exists.
+- Chumnubri Rural Municipality's official notice index https://www.chumanuwrimun.gov.np/news-notices lists “बुढीगण्डकी नदीमा आएको बाढीबाट प्रभावित नागरिकको उद्धार राहत तथा विपद् प्रतिकार्य सम्बन्धी सूचना !” submitted 11 October 2026 at 21:47 (the page does not state a timezone) and names an attached PDF “बिपद् सूचना.pdf”. This establishes a dated official notice listing, not the notice's instructions, relief delivery, completed rescue, beneficiary outcome, water testing or service restoration; the page/PDF body was not retrieved.
+- UN Nepal SitRep No.12 (30 October) independently records a 14–15 October Gorkha inter-agency mission (52 km, 14 representatives), rapid local-government response and a specific beneficiary-verification difficulty compounded by information-sharing gaps between municipalities and district authorities. It also records WASH support to 50 Arughat households. This does not establish a failed beneficiary case, a blanket coordination failure, or Chumnubri water-system restoration.
+- The Department of Roads' general road-condition page returned “No data available”; this is not a Gorkha passability record and does not prove no restoration. The NEA Gandaki page/remit was checked, but no event-specific Gorkha power-restoration notice was surfaced in the bounded search. Current road passability, power restoration, Chumnubri water quality, scheme commissioning and household service outcomes remain UNKNOWN.
+
+### Real-world consequence and reusable capability
+The new municipal notice is one local primary record in the response chain; the UN assessment supplies a separate, specific information-sharing constraint. Together they justify tracing notice → municipal action/beneficiary record → district reconciliation → service/route outcome, but not asserting that the notice was acted on or that coordination failed in a particular case. The reusable capability is source-aware reconciliation of report sequence, index/listing date, detail-page date, source-declared cutoff, retrieval time, geography, metric definitions and actual service outcomes, using existing provenance and graph/evidence seams. Keep the Gorkha 11-Oct event separate from the Rasuwa 26-Aug event.
+
+### Existing code seam and exact limitation
+- SourceCollector.normalize currently sets provenance to raw_item.provenance or metadata. A non-empty raw provenance object can therefore omit source-declared temporal/scope fields that exist only in normalized metadata.
+- collector_runner adds task and registry context to provenance, but not every arbitrary source metadata field. ObserverEngine persists provenance plus published_at/retrieved_at to Signal; _ensure_evidence copies those fields/provenance to Evidence. research_evidence_assessment freshness compares publication date with retrieval time. research_synthesis_engine._evidence_citation exposes source_registry_id and retrieved_at, but not source-declared effective cutoff, page/listing date or report version.
+- Existing models already have published_at, retrieved_at and provenance; no new model/table/primitive/collector is justified. The source-edit safety block remains in force. Do not implement the blocked portfolio-summary helper or route the same mutation through another tool.
+- The current registry has five entries, all past valid_through by 15 November; neither NDRRMA nor Chumnubri is registered. NDRRMA robots/terms endpoints and both Chumnubri robots host variants were inaccessible; no affirmative reuse grant was found. Manual factual citation only / NOT CLEARED for automated collection, body persistence or provider transmission.
+- Relevant tests inspected: test_import_unknowns (stale D-row expectation), test_research_evidence_assessment (publication/retrieval freshness only), test_source_clearance_registry (exact URL and expiry fail-closed), and test_verified_research (registry identity persistence). No test currently proves an effective-cutoff value survives metadata + explicit provenance → Signal → Evidence → citation.
+
+### Exact-head verification
+- Main SHA: 7b55f2ba72bb862353e868fc64f38f75f0e7a1f9.
+- Combined GitHub status: Vercel – hami success; Vercel – forge-os failure. The connected workflow-run wrapper is PR-only and returned no main-push runs. Exact-head GitHub Actions CI and secret-scan results are UNVERIFIED.
+- Vercel deployment dpl_DcK87gkthwgjdGQMowMPUrqgXBVi is READY for exact SHA 7b55. Project metadata still says live=false, SSO enabled and zero visible/hidden environment variables. The project-domain listing contains hami-sigma.vercel.app; the deployment object also lists generated hami-hami24 and hami-git-main aliases. No haminp.vercel.app alias is attached.
+- Exact deployment build audited 419 packages and reported 15 vulnerabilities (2 low, 8 moderate, 4 high, 1 critical). No package-level reachability assessment or dependency change was made. Database migration was skipped because DATABASE_URL is absent; the build script still prints that PGLite fallback migrates itself, while deployed src/lib/db.ts fails closed without durable PostgreSQL. No DB or environment variable was provisioned.
+- No error/fatal runtime logs were returned for the last 30 minutes; this is not a health check or proof of no requests. No public health/read-after-write, durable database, scheduler heartbeat or separate backend runtime was verified.
+
+### Next resumable work
+1. Retrieve NDRRMA #04 PDF only through an official attachment route, then inspect every page by screenshot. Keep index/listing date, page date, report sequence, source-declared cutoff, update time and retrieval separate.
+2. Retrieve Chumnubri's “बिपद् सूचना.pdf” only through an official accessible route; inspect the notice body before describing any instruction or outcome.
+3. Seek dated primary post-flood Chumnubri source-water tests, named-scheme repair/commissioning, treatment operation and household service records; seek Gorkha-specific road and power restoration notices.
+4. Recheck for #05/later only through official NDRRMA routes; no search result is not proof of absence.
+5. When source editing is authorized, fix the existing normalize→Signal→Evidence→assessment→citation seam with a narrow allowlisted provenance merge and regressions for explicit provenance, missing cutoff and round-trip citation. No schema expansion.
+6. Reconcile the UNKNOWN_MAP 124-row inventory with the 120-row test expectation and generated projections through the authorized normal continuity path; do not hand-edit the map or add D109 while the mismatch persists.
+7. Remove feature/governed-offers only if a supported delete-ref action becomes available; its 0-ahead/943-behind comparison shows no unique work.
+8. Continue independent Hami-wide discovery; no D93 experiment gates other domains.
+
+This is a documentation-only update. No source code, tests, schema, source registry, collector, scheduler, deployment configuration, external contact, publishing, spend, money movement, intake/outbound activation, emergency advice or alerting service changed.
+
+---
+
+## Prior handoff — 2026-11-15 05:03 NPT — Gorkha WASH, infrastructure and shared-logistics evidence (reconciled main 8042d557)
+
+Hami's mission and breadth are settled. Continue evidence-led discovery across domains and geographies; do not gate unrelated work on a single experiment, seller, revenue target or one domain. Keep public reporting separate from firsthand evidence, preserve UNKNOWN, and use the existing six ENTITY/RELATION/EVENT/EVIDENCE/CAPABILITY/ACTION primitives.
+
+### Canonical main and current deployment truth
+- Run-start main was b004bae89aa180ea433798f12d90cd5b272f4e4d. Main advanced during this run through a separate documentation-only WASH baseline commit to current main 8042d5572c5e1b22f1095e75afe187ffb47ede66. Re-read the new current HANDOFF/STATE/QUEUE/CAPABILITY_QUEUE/LOG/PUBLIC_SOURCES before this update. No stale-head write was attempted.
+- Current 8042 changes continuity/source-register documentation only relative to b004. GitHub Actions has no runs/statuses for exact SHA 8042; b004's CI/secrets/deploy results do not transfer.
+- Vercel deployment dpl_KPGrLJwMZzaA1QHkPsFuvYM7vdcc reached READY for exact Git SHA 8042d5572c5e1b22f1095e75afe187ffb47ede66. Aliases: hami-sigma.vercel.app, hami-hami24.vercel.app and hami-git-main-hami24.vercel.app. The project metadata still reports live=false, SSO enabled, zero visible and zero hidden environment variables; no custom haminp.vercel.app alias is attached. READY build is not proof of an externally usable live service or healthy runtime.
+- Vercel build output reports 15 npm audit vulnerabilities (2 low, 8 moderate, 4 high, 1 critical); package identities and reachable paths were not established in this pass. No dependency upgrade or audit fix was run.
+- The build skipped database migration because DATABASE_URL was absent and printed “the PGLite fallback migrates itself.” Current src/lib/db.ts returns dbSource=unavailable in a deployed process without DATABASE_URL and throws instead of using PGlite; PGlite is limited to local/workspace preview. The build-script message is therefore stale/misleading relative to the runtime fail-closed rule. No DATABASE_URL was added and no production DB was created.
+- The previous exact-head b004 CI failed (backend 53 failed / 1,310 passed / 2 skipped / 18 warnings); its secret scan passed and its independent deploy verifier failed HTTP 402. These are prior-head results only.
+
+### D93 — Gorkha–Budhi Gandaki: bridge, WASH and source-time reconciliation
+- NDRRMA Situation Report #03 is directly readable at https://ndrrma.gov.np/mediafiles/publications/SitRep_EN_03_13102026_-_Gorkha-Budhigandaki_Flash_Flood.pdf. Its explicit report timestamp is 13 October 2026, 10:00 PM. The damage panel lists 2 permanent bridges, 5 suspension bridges, 1 Bailey bridge and 1 cantilever bridge, plus 3 hydropower facilities, 1 school and 140–150 livestock swept away.
+- NRCS Situation Bulletin #03 is dated 17 October 2026; its one-page PDF is https://website-api.nrcs.org/media/news/attachments/Gorkha_Flash_Flood__Bulletin_3.pdf. It reports 146 households, 3 hydropower projects under construction, 2 permanent bridges, 1 Bailey bridge, 6 suspension bridges, 3 vehicles, Bikash Primary School and 6 residents “out of contact.” It says rapid assessments were completed in Aarughat, Chumnubri and Dharche (Gorkha) and Tripurasundari (Dhading), with regular coordination with local government representatives and district chapters.
+- NRCS Situation Bulletin #04 is dated 29 October 2026; its one-page PDF is https://website-api.nrcs.org/media/news/attachments/Gorkha_Flash_Flood__Bulletin_4.pdf. It repeats the same impact set and gives distribution totals explicitly as of 25 October: 98 tarpaulins, 192 blankets, 37 tents, 64 mattresses, 94 kitchen-utensil sets, 36 hygiene kits, 1,425 kg rice and 30 kg lentils across Chumnubri, Aarughat and Dharche. It also reports that an NRCS helicopter relief operation medically evacuated one pregnant resident from Uhiya, Dharche-3; no patient outcome is stated.
+- Bridge-count reconciliation: NDRRMA #03 totals 9 structures if its categories are summed (2 permanent + 5 suspension + 1 Bailey + 1 cantilever). NRCS #03/#04 also total 9 (2 permanent + 6 suspension + 1 Bailey). The category split differs by one suspension versus one separately labelled cantilever; this may be a classification difference, but the source records do not prove that mapping.
+- UN Nepal Situation Report No.12 (30 October 2026) cites “NDRRMA Situation Report #3, 12 October” and summarizes 5 bridges damaged/destroyed, 3 hydropower projects and 204 houses washed away or inundated. The official NDRRMA #03 PDF is dated 13 October, 10:00 PM and lists 9 bridge structures. This is a directly documented citation-date/count mismatch; it could reflect an earlier report version, narrower scope or a citation error. No explanation is established. Do not call it an operational coordination failure.
+- Keep NRCS “out of contact” distinct from NDRRMA “missing.” NRCS #02's 174-household initial rapid assessment versus #03/#04's 146 households remains unexplained; it is not evidence that 28 households recovered. The effective cutoff for NRCS impact counts is not stated; #04's distribution cutoff is 25 October.
+- The UN report's Gorkha section records a 14–15 October inter-agency mission across 52 km with 14 representatives; local governments responded rapidly and immediate food/NFI needs were largely met, while roads, bridges and trails still disrupted access. It says markets were functional up to Arughat and a Bailey Bridge had been installed. It explicitly identifies beneficiary-verification difficulty compounded by information-sharing gaps between municipalities and district authorities. This is a specific assessment finding, not proof of a particular failed case or a blanket coordination failure.
+- The same UN report records WASH Cluster support to 50 households in Arughat: 50 temporary toilets plus 50 water-storage jerrycans, buckets, mugs and purification solutions. This is an Arughat response, not evidence of water-system restoration or water quality in Chumnubri.
+
+### Chumnubri WASH and route-capacity evidence
+- Kantipur's 3 July 2026 report https://ekantipur.com/gandaki-pradesh/2026/07/03/coliforms-found-in-176-of-225-drinking-water-samples-tested-in-gorkha-34-13.html attributes testing to the Provincial Public Health Office Gorkha. It reports 176 coliform-positive samples out of 225 across 11 local levels (about 78.2%); Chumnubri is 10/21 (about 47.6%). The article says some schemes distributed water without filtration and some installed filter plants were bypassed, but it does not name the schemes or say Chumnubri was among them. Sample collection dates, selection method and source-vs-tap breakdown for the 21 Chumnubri samples are not stated. This is a secondary report of local sampling, not a published laboratory dataset or representative household survey.
+- The NSO 2024/25 modelled local baseline already recorded in the current WASH entry is separate: Chumnubri DWEI 0.529, SEI 0.670, WASH EI 0.595 (P1 band). It combines Census 2021 with MICS 2024/25 modelling and is not direct Chumnubri MICS. Do not compare its scores or national E. coli rates numerically with the July 2026 local coliform samples.
+- Chumnubri Rural Municipality's official page https://chumanuwrimun.gov.np/content/ lists a 10 September 2026 notice titled as a risk restriction on mule/horse movement over a newly built wooden bridge at Syurang Khola, Ward 4. The page metadata is readable; the linked PDF timed out. This is a pre-11-October route-capacity restriction, not a current bridge status or proof of flood damage. Do not equate it with the Syafrubesi footbridge in Rasuwa or the Bailey bridge in Gorkha.
+- The same municipal notice index lists a heavy-rain/flood/landslide caution notice submitted 23 September 2026; its body was not inspected. The municipality lists a WASH master plan from 2020, but its page timed out and its body was not retrieved. Its 2083/84 annual-budget page is titled 2083/84 but the fiscal-year metadata field reads 82/83; the PDF link timed out. The monthly progress/expense index currently exposes reports only through 2025. These are public-record availability/metadata observations, not proof that no newer internal records exist.
+- No post-11-October Chumnubri source-water retest, named-scheme repair/commissioning record, treatment-plant functionality check or household service-restoration record was found in this bounded search. Preserve UNKNOWN. The July sample is pre-event; the UN WASH response is in Arughat; neither establishes current Chumnubri water safety or service status.
+
+### Separate Rasuwa–Bhotekoshi agricultural market-access case
+- UN Nepal SitRep No.12 (30 October) reports WFP's Gre pilot connected 140 farmers with buyers in Nuwakot/Kathmandu, moved 8,110 kg potatoes and cabbage and generated estimated gross sales of NPR 251,370; reported farmer prices were about 38% above pre-flood levels. It separately reports 6,080 kg from Manchet to Kathmandu without a shipment date or settlement details.
+- Kathmandu Post (14 October) dates the Gre pilot to 9 October and rounds the shipment to about 8,000 kg over roughly four relief-helicopter return trips. This is compatible with the UN's 8,110 kg, not a demonstrated contradiction.
+- Kathmandu Post (30 October) reports no further WFP transport after the pilot as of that article and attributes spoilage/cost problems to local traders and officials. Desh Sanchar (7 November) and INSEC (9 November) later report a WFP–Aamachhodingmo Rural Municipality first-phase arrangement for 337.5 MT of cabbage to a road-accessible point on this side of the Bhotekoshi at Syafrubesi. The agreement date, mode, schedule, buyers, costs, downstream crossing, deliveries and farmer settlements are not documented. This is a reported commitment, not completed transport.
+- INSEC (9/12 November) reports residents rebuilt a temporary wooden footbridge at Syafrubesi after an earlier crossing was swept away by a 30 October flood. The page returned 403; no official confirmation or load rating was found. A pedestrian footbridge is not proof of motorable freight access. This is the separate 26 August Rasuwa–Bhotekoshi event, not D93 Gorkha.
+
+### Reusable capability and existing code seam
+The cross-domain opportunity is evidence-backed service/logistics continuity: link water source or produce → scheme/operator/aggregation → bridge/road/transport capacity → buyer/household → quality/price/service outcome → repair/settlement. It can connect WASH, disaster recovery, humanitarian logistics and perishable markets without merging their events.
+
+Reuse existing ENTITY/RELATION/EVENT/EVIDENCE/CAPABILITY/ACTION and world_graph/evidence_graph/market_signal_substrate_adapter, plus demand_understanding, economic_validation and capability_discovery after source rights and evidence qualify. Existing types include organization, resource, market, market_signal, product, capability and action. No new model, table, primitive, collector or taxonomy is justified.
+
+The source-time path remains collectors/base.normalize → collector_runner.execute_task → ObserverEngine.observe/_ensure_evidence → Signal/Evidence → research_evidence_assessment → research_synthesis_engine._evidence_citation. Existing fields are published_at, retrieved_at and provenance; assessment freshness compares publication with retrieval. The current path does not expose all effective cutoffs, report versions, category definitions, sample methods, measurement units or data periods in citations. Preserve those only in existing provenance/contracts when the source-edit path is authorized. Do not bypass the source-write block or implement the blocked portfolio-summary helper through another tool.
+
+### Rights and boundaries
+- Kantipur's robots file declares content-signal semantics but provides no affirmative ai-input permission; its terms page returned 403. Chumnubri municipal and NRCS robots/terms endpoints were inaccessible. UN terms restrict ordinary reuse to personal/non-commercial use; WFP terms do likewise and restrict redistribution/derivatives. INSEC/Desh Sanchar pages or rights pages were inaccessible/403. Kathmandu Post robots allows crawling but its terms/reuse grant were not established.
+- All new sources remain manual factual-citation only / NOT CLEARED for automated collection, body persistence or provider transmission. No source registry entry, Signal/Evidence write, contact, publication, spending, money movement, production activation, intake/outbound activation, emergency advice or alerting service occurred.
+- No D-number, ResearchQuestion or UNKNOWN_MAP projection was added/edited; the importer/projection mismatch remains.
+
+### Next resumable work
+1. Seek dated public primary evidence of Chumnubri post-flood water-source retesting, scheme-level repair/commissioning, treatment operation and household service restoration. Do not infer contamination from pre-event samples.
+2. Reconcile NDRRMA #03, NRCS #03/#04 and UN SitRep #12 bridge counts using named assets, definitions, report versions and effective cutoffs. Preserve the UN 12 October citation versus NDRRMA 13 October 22:00 timestamp as UNKNOWN until explained.
+3. Retrieve the municipal Syurang Khola notice PDF only through an official accessible route and identify its load/usage restriction; do not equate it with other bridges.
+4. Seek public primary confirmation and delivery records for the 337.5 MT cabbage arrangement; verify route/mode, buyers, cost, spoilage and farmer settlement.
+5. Inspect NDRRMA Report #04 PDF only if the official page exposes a retrievable file; do not infer body content from page metadata.
+6. Recheck exact-head CI/secrets and Vercel runtime only when their own checks exist. Current 8042 has no GitHub Actions run; Vercel build is READY but project is not live and has no environment variables.
+7. Continue Hami-wide research independently. No schedule is proof of continuous 24/7 execution.
+
+This update is documentation-only. No runtime source, tests, schema, scheduler, source registry, provider configuration or production environment changed.
+
+---
+
+## Current handoff — 2026-11-15 05:06 NPT — NSO WASH baseline and current-main reconciliation
+
+- Resume from canonical main b004bae89aa180ea433798f12d90cd5b272f4e4d. The only active remote branch is main. Recent commits: b004bae separates the inner-ground invariant from the continuing North Star; 5490aa4 anchors the North Star in the existing Goal substrate; 61b8928 makes deployed database selection fail closed without durable PostgreSQL, with regression commits 1de3469 and 1fa1e18.
+- Read AGENTS.md, AUTHORITY.md, HANDOFF.md, STATE.md, QUEUE.md, docs/BRAIN.md, docs/CAPABILITY_QUEUE.md, docs/UNKNOWN_MAP.md, LOG.md, docs/PUBLIC_SOURCES.md, current GoalPlan/Action/decision-rights/worker source and tests, database boundary source/tests, source normalization/runner/Observer/Signal/Evidence/assessment/citation, and source-clearance registry.
+- Mission remains settled and open-ended. No First Rupee, seller pilot, or one domain gates unrelated Hami-wide work.
+- New research: NSO's official Water Supply and Sanitation Situation in Nepal page is dated 18 Kartik 2083 and links the full report: https://www.nsonepal.gov.np/content/13536/water-supply-and-sanitation-sutuaion-in-nepal/ ; PDF: https://giwmscdnone.gov.np/media/files/Water%20Supply%20and%20Sanitation%20Situation%20in%20Nepal_f9hdjvg.pdf . The report combines NPHC 2021 local source/facility distributions with MICS 2024/25 transition probabilities. National scorecard: 90.0% on-premises water, 47.5% safely managed drinking water, 92.8% improved sanitation, 39.9% safely managed sanitation, 86.4% handwashing with water and soap, 5.5% open defecation. E. coli-positive samples: 61.2% at household versus 46.1% at source; sample rates, not population estimates.
+- Local result and bounds: 518/753 local levels have estimated safely managed drinking-water coverage below 50%; 348 are below 25%; only one is at least 75%. Chumanubri RM, Gorkha, is listed with DWEI 0.529, SEI 0.670 and WASH EI 0.595; under the report's 0.376–<0.600 P1 band it is a critical integrated-gap planning category, with water the weaker index dimension. These indices are not coverage percentages. Local estimates are model-based for 2024/25, not direct MICS observations in each municipality. Validation was national, provincial and 15 MICS domains; qualitative field checks covered 33 local levels in 22 districts and six provinces. Sampling, Census-to-JMP classification and transferability uncertainty remain.
+- D93 connection is bounded: Chumanubri is a Gorkha local level and gives a pre-event WASH baseline for later comparison with recovery records. This report does not establish that Chumanubri was damaged by the Budhi Gandaki flood, nor its current water/sanitation status or restoration.
+- Capability connection: reuse the existing ENTITY/RELATION/EVENT/EVIDENCE/CAPABILITY/ACTION substrate to connect local governments, water schemes, sources, operators, laboratories, funders, service interruptions, quality tests, repairs and commissioning. This is a source-aware service-chain crosswalk candidate, not an implemented collector, current asset inventory or external outcome.
+- Source-time seam rechecked at this head: SourceCollector.normalize still chooses raw_item.provenance or metadata; the runner adds task and registry context, ObserverEngine persists provenance to Signal, and Evidence copies Signal publication/retrieval/provenance. Assessment freshness remains publication-time versus retrieval-time. Citation exposes registry ID and retrieval time, but not publication time, source-effective cutoff, report version, measurement unit or method. No dedicated effective-cutoff field exists. The blocked research_planner.py::summarize_research_portfolio source write remains NOT IMPLEMENTED; it was not retried or bypassed.
+- Source rights: the runtime registry has five entries (GovInfo, Crossref, World Bank, GDELT, OpenAlex); all are past their recorded validity dates as of 15 Nov 2026. No NSO/NWASH clearance exists. The NSO report is manual reading/citation only; robots/terms/reuse were not reviewed. No collection, Signal/Evidence ingestion, body retention or provider transmission occurred.
+- Goal/execution state: the inner-ground principle is a design invariant distinct from the continuing North Star; it does not claim subjective consciousness. The North Star uses the existing Goal model when durable storage permits. GoalPlan remains owner-only and proposal-only: its regression asserts execution_allowed=false and zero Action rows. Existing Action adapters and execution-time decision-rights checks exist, but no general typed GoalPlan→Action→tool dispatcher or independent artifact verifier is implemented.
+- Exact-head verification: GitHub main HEAD is b004bae89aa180ea433798f12d90cd5b272f4e4d. Combined status exposes Vercel – hami: success and Vercel – forge-os: failure; the available workflow-run retrieval is PR-only and returned no runs for this SHA. Exact-head GitHub Actions CI and secret-scan result are UNVERIFIED, not green. Vercel project hami has a READY production-target deployment for this exact SHA (dpl_DtMWfi1js4GRDUSzpPwtbQAAcK7b), but project metadata says live=false, SSO protection is enabled, only generated .vercel.app aliases are listed, and the project environment-variable list is empty (no evidenced DATABASE_URL or stable auth secret). The old forge-os status remains failure. READY is deployment/build evidence, not verified public/live service health.
+- Runtime evidence: the current deployment returned no runtime logs in the last 30 minutes; this is not proof of health or absence of requests. One runtime error in the last 24 hours belongs to an older deployment (dpl_3ukFq6KKtufa9ZJkMM7DknkCfuSo, SHA 234ae812): PGLite bootstrap failed because /var/task/_libs/pglite.data was missing. The later 61b8928 change makes a deployed app without durable PostgreSQL fail closed rather than silently treating ephemeral PGLite as persistent. No current health/read-after-write, separate Python backend database, scheduler heartbeat or operational ResearchQuestion read was verified.
+- Portfolio: D1–D108 remain the existing map; the prior 100-entry survey is metadata-only, not 100 deep investigations. Operational open ResearchQuestion count remains UNKNOWN behind protected runtime access. No new D-number or question/task row was created.
+- No external actions: no contact, publication, intake/outbound activation, money movement, payment change, source registration, spend, plan upgrade, LiveKit provisioning or emergency advice/alert occurred. No source/test/schema/runtime code changed in this run; only existing continuity/source-register documentation is being updated.
+
+### Next exact dependencies
+1. Retrieve exact-head main-push CI and secret-scan outcomes through an authorized Actions path; do not carry prior SHA results forward.
+2. Resolve durable database and stable auth configuration for the current Vercel project through the owner-controlled environment; no spend or plan change is authorized here. Independently verify any separate backend runtime.
+3. Implement a closed, typed GoalPlan→existing Action adapter mapping only when a supported source-edit path is available; preserve action-time rights, idempotency, HALT, bounded retries and independent postcondition verification. No arbitrary shell or model-generated commands.
+4. Continue source-time provenance preservation only through a supported source-edit path; add normalization→Signal→Evidence→assessment→citation regression coverage. Do not route around the blocked planner write.
+5. Cross-reference the Chumanubri 2024/25 WASH baseline with dated Gorkha water-scheme damage, repair, quality-test and operator records; preserve incident and time scope. No contact or current-condition claim.
+6. Review the five expired source clearances individually; keep NSO and all other unreviewed sources manual-only.
+
+---
+
+## Current handoff — 2026-11-14 — governed operator / LiveKit proving ground
+
+- **Resume from main:** `6267be567194750044f78a6808d76501c1fe9b88` (re-resolve main before any edit; other work may have landed).
+- **What was inspected:** `AGENTS.md`, `AUTHORITY.md`, `STATE.md`, `QUEUE.md`, `HANDOFF.md`, `docs/CAPABILITY_QUEUE.md`, `action_engine.py`, `decision_rights.py`, `worker_manager.py`, `tool_registry.py`, cognition/goal planning and deployment records.
+- **Implemented before this handoff:** strict universal GoalPlan contract, owner-only goal-plan route, replaceable cognition provider, durable idempotent WorkerTask proposal, WorldEvent provenance. Latest commit at inspection also preserves Ollama prompt/completion token and duration metadata.
+- **Still missing:** general Action-to-tool executor; bounded browser operator; safe fixed repo/build/test tools; worker heartbeat/lease/stale recovery/resource scheduling; independent artifact verifier; LiveKit deployment and benchmark.
+- **CI:** exact-head run `43615184838` on `6267be567194750044f78a6808d76501c1fe9b88` was in progress. Eight non-backend jobs had passed; backend pytest was still running. Do not infer its outcome. The immediately prior goal-planning SHA `6fe1bbbcf432e07a132674873d3cd1bc4dd62bd5` had a failed backend job.
+- **Production:** latest READY deployment is old SHA `6076690f00c238f1b22a3afcdf489e983c468e7d`; no deployment for inspected SHA. Health probe returned HTTP 402 `DEPLOYMENT_DISABLED`. Owner must resolve the account/usage gate without unapproved spend.
+- **LiveKit:** not provisioned or tested. Self-hosted single-room scale remains bounded by one SFU node; design candidate is a logical Hami room with multiple media shards and publisher relay, subject to topology tests. Benchmark the exact viewer layout and network geography; 100ms must be defined as a percentile SLO.
+- **Next exact operation:** retrieve the final jobs for `43615184838`, inspect the backend failure log if failed, then design a closed typed adapter contract from GoalPlan to Action. Recheck current main, source/test files and existing tests before changing code. Preserve the current main-only rule and never change permissions to make a test pass.
+- **No action claims:** no source edit, local Mac command, Docker/LiveKit start, load test, deployment, spend or external contact occurred during this inspection.
+
+---
+
+## Current handoff — 2026-11-14 — Hami goal-planning increment
+
+- **Canonical repository:** `main`, HEAD `6fe1bbbcf432e07a132674873d3cd1bc4dd62bd5`. The two commits since `ced8e34c830da665a8c0a660d283dc35b93bc23b` add universal proposal-only goal planning and fix its API import. No branch, worktree, PR, force-push or history rewrite was used.
+- **Source changes:** `cognitive_provider.py` now has a separate strict goal-plan contract and Ollama adapter method; `goal_engine.py` queues and runs a plan against an exact goal revision; `worker_manager.py` has a narrow proposal-only handler; `world_graph.py` registers `goal_plan_assessed`; `forge.py` exposes the owner-only goal-plan route; the existing cognitive-worker test file now covers the path. Existing Goal, WorkerTask, ToolRegistry, provider, WorldEvent and authorization seams are reused. No new model/table/primitive or parallel runtime was added.
+- **Exact-head CI:** workflow run 43614511637 on `6fe1bbbcf432e07a132674873d3cd1bc4dd62bd5`. Frontend, evidence-triage, lint, build, typecheck, repository guards, route smoke and secret scan passed. Backend pytest was still in progress at this handoff write; update from the final workflow result before declaring exact-head CI green.
+- **Honest capability state:** this is goal interpretation and durable proposal persistence, not general execution. The mock says UNAVAILABLE. Ollama uses the configured existing provider only; no provider availability in production has been established. No Actions were created or executed by the planner.
+- **LiveKit evaluation:** recorded as a test case only. No streamer containers, SFU, load generator, network or deployment were provisioned. Nine publisher processes are not nine SFU nodes. Official LiveKit guidance puts a self-hosted room at approximately 3,000 participants per node and notes one room must fit on a single SFU node; therefore 4,000 viewers in one self-hosted room is not an assumed pass and needs a redesigned/multi-SFU or managed-cloud evaluation plus actual tests.
+- **Vercel:** team-scoped access was approved for inspection. Project `forge-os` (`prj_oNtplnVNGS3AIceurfomHBZZayE1`) reported `live=false`; latest READY production deployment is still older commit `6076690f00c238f1b22a3afcdf489e983c468e7d`. There is no Vercel deployment record for this main HEAD. Prior 14 November direct probes recorded HTTP 402 / `DEPLOYMENT_DISABLED`. No billing/usage/resume setting or spend was changed. Production runtime, DB durability, scheduler and provider health remain UNKNOWN.
+- **Next:** resolve the Vercel project-disabled/usage gate through the owner account without silently incurring spend; finish exact-head backend CI; then use LiveKit as the first cross-capability test while building a generic governed executor and independent outcome verifier. Keep all external/production actions separately authorized.
+
+---
+
 ## Current handoff — 2026-11-14 06:33 NPT (D93 asset-level recovery chronology; run-start main SHA 0c78f807f48d8e8b0f879a84185fd2a28dd03e47)
 
 Hami's mission is settled and open-ended: discover, understand, connect, protect, create and realize value in the real world, originating in Nepal and useful anywhere. This run advances D93 from a report-date question into an asset-level recovery timeline spanning bridges, trails, electricity distribution, micro-hydropower, local government, the Nepal Army, the Gorkha Road Project and conservation/tourism access. No First Rupee, seller pilot, revenue milestone or single experiment gates unrelated Hami-wide progress.
@@ -1822,6 +1984,37 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
+
+## Last verified state snapshot (2026-11-15)
+
+**Update 2026-11-15 (daily freshness check, 06:23 NPT):** HEAD at `e964e687`
+(since 2026-11-11: discovery round 23 banking D107–D108, D95 fish
+cold-chain / subsidy-to-market evidence and the Jaldevi cold-room link,
+D93 asset-recovery timeline and report-timing reconciliation, Gorkha
+WASH baseline and shared-logistics evidence, D86 trade-concentration
+evidence, CHWRR/DHM flood-service timelines, universal proposal-only
+goal planning with Ollama metrics, fail-closed deployed-database
+selection, the governed-operator / LiveKit roadmap, and the inner-ground
+invariant split from the north star, plus the 2026-11-12/13/14 freshness
+commits). `git pull --ff-only` fast-forwarded `0c78f807..e964e687`;
+`main` == `origin/main`. Working tree clean before this edit.
+
+- **Health: NOT OK — both endpoints still return HTTP 402
+  `Payment required` / `DEPLOYMENT_DISABLED` (haminp and
+  forge-os-ebon, confirmed on the check read and a recheck read;
+  the haminp root URL also returns 402). Unchanged from
+  2026-10-31. It matches the Vercel account/deployment gate
+  already recorded in the handoff on 2026-10-31; the exact Vercel
+  cause remains pending normal team authorization, and no bypass or
+  permission change was made here.
+- **Intake: UNKNOWN this run —** `/api/forge-bot/config` also returns
+  the same 402 `DEPLOYMENT_DISABLED` response, so `intake_enabled` could
+  not be verified. Last verified value (2026-10-31) was `false`; no
+  change is claimed.
+- **Unknowns:** 108 D-entries in `docs/UNKNOWN_MAP.md` (was 106 on
+  2026-11-11; the two new entries are D107–D108 from discovery round 23).
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold.
 
 ## Last verified state snapshot (2026-11-11)
 

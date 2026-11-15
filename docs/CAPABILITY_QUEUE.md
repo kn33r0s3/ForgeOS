@@ -1,3 +1,152 @@
+## 2026-11-15 — NSO WASH report body inspected; local baseline and service-chain crosswalk
+
+### Source and source-time record
+- Official NSO listing: https://www.nsonepal.gov.np/content/13536/water-supply-and-sanitation-sutuaion-in-nepal/ (page date 18 Kartik 2083).
+- Full report PDF: https://giwmscdnone.gov.np/media/files/Water%20Supply%20and%20Sanitation%20Situation%20in%20Nepal_f9hdjvg.pdf .
+- Keep distinct: NSO page/listing date (18 Kartik 2083); local-estimation period (2024/25); underlying local Census source/facility distributions (NPHC 2021); MICS transition-probability/benchmark period (2024/25); retrieval (2026-11-15). The report does not provide one universal current effective instant for every metric.
+- Local JMP estimates combine Census 2021 distributions with transition probabilities from MICS 2024/25. Surface/unimproved drinking-water categories and the Census "No toilet" proxy for open defecation are directly Census-derived; remaining local JMP service categories are modelled. Do not call municipal values direct MICS observations.
+
+### Verified findings
+- National MICS 2024/25 scorecard: on-premises drinking water 90.0%; safely managed drinking water 47.5%; improved sanitation 92.8%; safely managed sanitation 39.9%; handwashing with water and soap 86.4%; open defecation 5.5%.
+- Household water samples were E. coli-positive in 61.2%, compared with 46.1% of source samples. These are sample positivity rates, not population coverage; the difference does not by itself identify where contamination occurred.
+- Safely managed drinking-water coverage is estimated below 50% in 518/753 local levels (68.8%); 348 are below 25%, 170 between 25–49%, 234 between 50–74%, and one at least 75%.
+- Four planning categories cover 753 local levels: 57 P1 critical integrated WASH gap; 277 P2A drinking-water priority; 147 P2B sanitation priority; 272 P3 progress/sustain/learn. The 424 at-risk/inadequate local levels are not one homogeneous intervention group.
+- Chumanubri RM, Gorkha: DWEI 0.529, SEI 0.670, WASH EI 0.595. Under the report's P1 band (0.376 ≤ WASH EI < 0.600), it falls in the critical integrated-gap planning category; the water index is lower than sanitation. These are index scores, not percentages of households served. This is a geographic cross-reference to D93's Gorkha context only: it does not establish flood damage or current disruption.
+- The report says NPC's administrative safely managed-water estimate of 25.8% in 2022 and the MICS-based 47.5% for 2024/25 use different measurement approaches; this is not a confirmed 21.7-point service improvement.
+
+### Method and uncertainty limits
+- Direct model validation is only at national, provincial and 15 MICS analytical-domain levels; the report says direct district/municipality validation was not possible because MICS is not representative at that granularity.
+- Qualitative field validation covered 33 local levels across 22 districts in six provinces. This is contextual triangulation, not direct representative validation of all 753 municipalities.
+- Reported MAE: drinking water 1.57 percentage points nationally, 1.99 province, 2.22 at 15 domains; sanitation 3.61, 5.96 and 6.05 respectively. Do not transfer these validation errors to each municipality as a measured local confidence interval.
+- The report identifies sampling uncertainty, Census-to-JMP classification uncertainty, and transferability uncertainty from assuming domain-level transition relationships apply within municipalities.
+- WASH EI is the geometric mean of DWEI and SEI; it does not include hygiene. The report describes it as a foundation for a future broader WASH performance index, not a completed all-dimension WPI. Index scores are not household coverage percentages or permanent rankings.
+
+### Practical value and existing Hami seam
+- The evidence shifts attention from infrastructure counts alone to safe management, reliability, functionality, water quality, sanitation containment/treatment, operation and maintenance, and local institutional capacity.
+- Reuse the six primitives: ENTITY (local government, scheme, source, operator, lab, funder, service area); RELATION (serves, owns, operates, funds, maintains, tests); EVENT (outage, sample, contamination result, repair, commissioning, emptying/treatment); EVIDENCE (source, date/period, method, unit, denominator, geography, uncertainty and rights); CAPABILITY (local service-chain and asset-to-need reconciliation); ACTION (internal review only unless separately authorized).
+- This extends the existing source-time/evidence-graph seam; it is not a new model, table, primitive, collector, D-number or operational service. It can connect WASH baseline → asset/operator → dated condition/quality/repair record → funding/maintenance responsibility → measured service outcome.
+
+### Owner dependency, blocker and next dependency
+- This pass removes the owner-dependent step of locating and reading the full national report and extracting its local-level method/example. It does not remove the need for current asset/operator records, local field verification, water-quality tests, service-interruption logs, budget/execution records or source-rights review.
+- Exact source-rights blocker: NSO and the government PDF host robots/terms/content-reuse terms were not reviewed. Manual reading/citation only; NOT CLEARED for automated collection, body persistence, runtime ingestion or provider transmission. No Signal/Evidence record was created.
+- Next: cross-reference Chumanubri and other Gorkha local-level baselines with dated official water-scheme damage, repair, quality-test, operator and budget records; do not infer post-flood impact from district co-location. Then assess whether existing provenance can carry source-time/method/uncertainty fields.
+- Existing code blocker remains: SourceCollector.normalize selects explicit raw provenance instead of merging normalized metadata; runner/Observer/Evidence preserve only the resulting provenance; assessment compares publication with retrieval; citation omits publication/effective cutoff, report version and method. Prepared source-time extension remains NOT IMPLEMENTED until a supported source-edit path exists. The blocked research_planner.py::summarize_research_portfolio write was not retried or routed around.
+
+### Current verification boundary
+- Main base: b004bae89aa180ea433798f12d90cd5b272f4e4d. Vercel hami exact-head deployment is READY, but project live=false, SSO-protected and has no environment variables; durable DB/auth are not evidenced.
+- Exact-head GitHub Actions CI and secret scan are UNVERIFIED because the available workflow-run reader is PR-only and combined status exposes Vercel contexts only. Old forge-os Vercel status remains failure.
+- No code/test/schema/runtime write, source registration, collector run, contact, publication, spend, payment change, intake/outbound activation or external intervention occurred.
+
+---
+
+## 2026-11-14 — Governed Hami operator + LiveKit proving ground (design baseline; local harness scaffolded, runtime NOT VERIFIED)
+
+### Mission translated into an engineering contract
+- One Hami, extending the existing system. No second agent, parallel ledger, new semantic primitive, or replacement runtime.
+- Durable intent → reasoning → registered capability → execution-time authority → tool invocation → independent postcondition verification → evidence/outcome → reusable method.
+- “Inner power” means Hami owns its mission, reasoning process, durable memory, plans, controls and recovery. External sources and machines remain necessary to observe and affect the physical world; they do not own Hami's identity.
+- Zero compromise means fail-closed truth, authorization, privacy, security, audit and verification. It does not mean claiming infinite resources, zero latency or flawless software.
+
+### Verified run-start state
+- Main at inspection: `6267be567194750044f78a6808d76501c1fe9b88`. Latest commit at that point: `6267be567194750044f78a6808d76501c1fe9b88` (`fix(hami): retain Ollama goal planning call metrics`).
+- Workflow run `43615184838` for that exact SHA was still in progress at inspection. Build, lint, typecheck, frontend tests, route smoke, repository guards, evidence-triage tests and secret scan had completed successfully; backend tests remained in progress. Do not call the exact-head suite green until the backend job and overall run complete.
+- Hami has an owner-only goal-planning route, strict proposal-only GoalPlan contract, replaceable cognition provider, existing WorkerTask persistence and a narrow proposal-only handler. Goal planning is not general task execution.
+- Existing `action_engine.py` provides a canonical Action lifecycle and adapter registry. `decision_rights.py` defaults unknown action types to OWNER_ONLY. Execution revalidates relevant rights/standing authorization before adapter dispatch. This is the execution seam to extend.
+- `worker_manager.py` has durable task claiming/retry logic, but most worker execution remains behind the legacy-intelligence flag. Its builder and QA handlers explicitly report that they did not build or inspect an artifact.
+- `tool_registry.py` currently describes/selects registered intelligence/source tools; it is not a general-purpose browser, shell or infrastructure executor. Root Playwright scripts are currently browser smoke/QA with a local-target guard, not a full autonomous browser.
+- No LiveKit server, streamer containers, SFU cluster, load generator, 4,000-viewer run or 100ms measurement was provisioned in this inspection.
+- The latest READY Vercel production deployment is SHA `6076690f00c238f1b22a3afcdf489e983c468e7d`, not the inspected main SHA. No deployment record existed for the inspected SHA. `https://haminp.vercel.app/api/health` returned HTTP 402 `DEPLOYMENT_DISABLED`; current production health is NOT VERIFIED. No billing, usage, resume, deployment or spend setting was changed.
+
+### Existing seams; missing link
+- Goal understanding/planning: `Goal`, `GoalPlan`, `goal_engine.py`, `cognitive_provider.py`, `WorkerTask`.
+- Governed execution: `Action`, `action_engine.py`, `decision_rights.py`, `autonomy_engine.py`, existing Action/Event/audit records.
+- Persistent work: `worker_manager.py`, existing scheduler and `WorkerTask` retry/idempotency fields.
+- Capability discovery: existing `ToolRegistry` and `ForgeCapability`.
+- Browser: existing Playwright dependency and browser smoke scripts; needs a bounded read-only browser adapter with host/path allowlists and no ambient credentials.
+- Missing integration: validated GoalPlan steps are not yet mapped to registered Actions/adapters and dispatched through the existing authorization + verification path. Do not let model-generated strings become shell commands, URLs, permissions or provider credentials.
+
+### Build order (reuse existing files and primitives)
+1. **Exact-head quality gate.** Finish the current backend test run; diagnose failures from logs; verify CI against the exact SHA. Keep Vercel `DEPLOYMENT_DISABLED` separate from code-test results.
+2. **Governed executor in the existing Action seam.** Define a closed, typed allowlist of internal operations; map plan steps to known action types; validate parameters; check rights and scope immediately before execution; persist start/result/error; verify a deterministic postcondition independently. Unknown tools, malformed inputs, expired grants, HALT, timeouts or ambiguity must fail closed. No generic unrestricted shell.
+3. **Persistent worker reliability.** Extend existing `WorkerTask`/scheduler path for lease/heartbeat, stale-running recovery, idempotent execution, bounded retry/backoff, cancellation, resource limits and failure-only operator escalation. Do not silently enable all legacy workers.
+4. **First operating tools.** Begin with bounded, read-only repository inspection; fixed test/build commands in an isolated workspace; then read-only browser research against explicitly cleared/allowlisted hosts. Add write-capable adapters only with a specific permission envelope and rollback/test plan.
+5. **Resource independence.** Separate control plane from workers. Use one heavy local model at a time; initially cap browser concurrency at one; pause noncritical work under memory pressure. Docker isolates processes but does not create additional host RAM/CPU. Add remote workers only after a provider-independent deployment and spend decision.
+6. **LiveKit proving ground.** Hami should calculate the media topology and bandwidth before provisioning; generate reproducible configuration; validate it; deploy only in an authorized environment; load-test; independently inspect metrics and recover from worker failure. Preserve the LiveKit configuration, test recipe and verified capacity in Hami's existing evidence/capability records so a repeat task becomes a known playbook rather than a fresh invention.
+
+### LiveKit capacity math (planning assumptions, not a benchmark)
+- LiveKit's self-hosted distributed mode scales many rooms across nodes, but each individual room must fit on one node. Official self-hosted guidance says roughly up to 3,000 participants in a room; 9 publishers + 4,000 viewers is 4,009 participants and is outside that guidance. A second SFU node does not transparently split one self-hosted room. See official benchmark and distributed-mode docs.
+- At an illustrative 720p stream rate of 1.5 Mbps:
+  - One selected stream per viewer: `4,000 × 1.5 Mbps ≈ 6 Gbps` outbound media.
+  - Nine simultaneous streams per viewer: `4,000 × 9 × 1.5 Mbps ≈ 54 Gbps` outbound media.
+  - Nine publishers ingesting one 1.5 Mbps rendition each: `9 × 1.5 Mbps ≈ 13.5 Mbps` inbound, before simulcast layers/audio/protocol overhead.
+- These are arithmetic scenarios, not capacity claims. LiveKit states actual SFU capacity depends on published tracks, subscriber count and bytes forwarded per subscriber; its reference video benchmark used a 16-core compute-optimized GCP machine, not the local development laptop.
+- Candidate paths to test, not preselected outcomes:
+  1. Hami logical-room control plane with multiple bounded LiveKit media rooms (audience sharding) and an explicitly designed publisher-track relay; this changes media topology and requires unified chat/presence semantics.
+  2. Managed global-mesh service as a measured comparison only; cost, usage limits, terms and provider dependence must be explicit.
+  3. Do not claim that simply running multiple self-hosted SFU containers makes a single room larger.
+- Define the latency SLO before benchmarking: capture-to-render glass-to-glass p50/p95/p99, geography, resolution/codec, audio/video track count, loss, jitter, reconnect time and viewer layout. “100ms” without a measurement definition and geographic scope is not a testable guarantee.
+- Use LiveKit's `lk perf load-test`/equivalent generators from separate machines for large tests; generators themselves need CPU, bandwidth and file handles. Cloud load-test allowances are restricted. No 4,000-viewer test or paid Cloud test until the account/plan and cost are owner-approved.
+
+### “Boom next time” equation
+- Autonomous success requires every link: `durable intent × permitted tools × execution-time authority × independent verification × recovery`. If any factor is zero, the end-to-end autonomous result is zero.
+- Repeat speed: `T_next = plan_lookup + resource_start + execution + verification`. Reduce plan lookup and resource start with saved, tested playbooks, prebuilt images, cached configuration, warm workers and measured resource scheduling. Never remove verification to make a demo look instant.
+
+### Acceptance criteria
+- A goal can be converted into typed Actions without executing during planning.
+- Every Action is idempotent, permission-checked at dispatch, scoped to an allowlisted target, and produces durable evidence of result/error.
+- Independent verifier reopens/checks the actual artifact or service; provider acceptance or a model's claim is not proof.
+- Crash/restart, duplicate dispatch, timeout, stale lease, resource pressure, HALT and unauthorized target tests all fail safely or recover deterministically.
+- The LiveKit benchmark records actual hardware, room topology, publishers, subscribers, active tracks/view layout, bitrate, aggregate ingress/egress, CPU/RAM, packet loss, jitter and capture-to-render latency distribution. Capacity is reported only at a tested load with headroom.
+- No production deployment, billing/usage change, external communication, paid infrastructure or permission widening is implied by this design record.
+
+### Local proving-ground scaffold (2026-11-15; TEST setup only)
+
+- **Existing seams inspected:** root `docker-compose.yml` already composes Hami's local services; `DOCKER_COMMANDS.md` is the existing local runbook. No existing LiveKit service, new Hami runtime, model/table/primitive, or second ledger was found or added.
+- **In-place change:** optional `livekit-local` profile pins the official LiveKit server image (`v1.13.11`) and CLI image (`v2.19.4`). Host signaling/TCP/UDP ports bind only to loopback. The server uses a development-only key/secret and a single local SFU; no Redis, TLS, TURN, external hostname, or public exposure is configured.
+- **Publisher topology:** Compose can scale nine distinct `livekit-publisher` containers. Each joins `hami-proving-ground` and publishes the CLI's synthetic simulcast demo video; identities are generated by the CLI. One-off `livekit-load-test` simulates 25 subscribers for 30 seconds with a 3x3 viewer layout.
+- **Why this is a genuine increment:** it removes manual image/port/room/command assembly for the first repeatable local smoke. It does not remove the requirement for an accessible Docker runtime, sufficient local resources, or separate load-generator machines for high scale.
+- **Verification boundary:** configuration and command wiring have been checked against the official LiveKit config, room-join, and load-test interfaces. The assistant execution environment has no Docker CLI, so images were not pulled and no service, publisher, subscriber or benchmark was run. Runtime status is **NOT RUN / NOT VERIFIED** until executed on an authorized Docker host.
+- **No scale claim:** the scaffold is only a local TEST harness. It does not demonstrate 4,000 viewers, nine production camera feeds, room sharding/relay, or 100 ms glass-to-glass latency. LiveKit documents that one self-hosted room must fit on one SFU node; separate SFUs do not automatically divide one room.
+
+### Ephemeral CI runtime proof (2026-11-15; verified small-scale smoke)
+
+- Exact source commit: `b81ab7efb7d455da36cd4b9d567cac28bdcaeb43`. GitHub Actions run `43699656871`, job `livekit-local-smoke`, completed **SUCCESS**; the test stack was torn down cleanly afterwards.
+- The job pulled `livekit/livekit-server:v1.13.11` and `livekit/livekit-cli:v2.19.4`, started one SFU, and observed `hami-proving-ground` at **9 participants / 9 publishers** from nine independent CLI publisher containers.
+- The 25-subscriber / 3x3 load-test reached **34 concurrent participants** (9 publishers + 25 subscribers) in the same room. CLI summary: **9 video tracks per subscriber**, **225/0 tracks total**, **80.1 Mbps aggregate subscriber bitrate** (3.2 Mbps average per subscriber), **0 packet loss**, and **0 subscriber errors**.
+- This is verified TEST evidence on an ephemeral public-repository GitHub runner. Streams are LiveKit's synthetic demo video and viewers are simulated; no real camera sources, owner Mac runtime, or public deployment are involved.
+- It does **not** establish 4,000-viewer capacity, production headroom, geographic distribution, glass-to-glass latency, or a 100 ms guarantee. The latency SLO and high-scale generator topology remain untested.
+- No cloud provider, paid service, public hostname, or production credentials were used.
+- **100-viewer step-up:** exact source commit `0c9840f659eb4b872559fad340647d1e17055d36`, GitHub Actions run `43700184482`, job `livekit-local-smoke`, completed **SUCCESS**. LiveKit room API observed 109 participants / 9 publishers in `hami-proving-ground`. All 100 simulated subscribers received all nine video tracks (900/0 tracks total); CLI reported 282.7 Mbps aggregate subscriber bitrate (2.8 Mbps average per subscriber), 0% packet loss and zero subscriber errors. At the peak participant sample, `docker stats` reported 64.40% CPU, 431.1 MiB memory and 77.7 MB received / 853 MB sent cumulative network I/O. The ephemeral containers and network were removed.
+- A linear arithmetic extrapolation of 2.827 Mbps per subscriber to 4,000 viewers is approximately 11.3 Gbps outbound media. This is only a load-pattern projection, not a measured 4,000-viewer result or a capacity guarantee.
+
+
+### Owner-held blockers
+- Production Vercel project is currently returning `DEPLOYMENT_DISABLED` (HTTP 402). A project/account owner must resolve the account/usage gate; do not silently resume or incur spend.
+- Current main exact-head CI run must complete; the prior goal-planning SHA's backend test job failed, so no green verdict can be carried forward.
+- Local Mac/Ollama/Docker are not accessible through this assistant's connected GitHub/Vercel tools. No claim of local machine execution is made.
+
+## 2026-11-14 — Hami universal goal interpretation v1 (implemented; exact-head CI pending)
+
+### Capability added
+- Added an owner-only `POST /forge/goals/{goal_id}/plan` path that turns an existing active Goal into a durable, idempotent `WorkerTask`; the task captures the exact goal revision so a changed goal cannot silently reuse a stale plan.
+- Extended the existing replaceable cognition provider with a distinct general-goal planning contract. The provider receives the human objective, optional target metric and declared capability metadata. It must return bounded success criteria, assumptions, unknowns, evidence needed, capability gaps, ordered steps, permissions, blockers and independent verification requirements.
+- The strict schema rejects execution authority, invalid step ordering and an unavailable result containing steps. Every plan and every step is explicitly non-executable. The deterministic MOCK adapter returns `UNAVAILABLE`, not a fabricated plan. Ollama uses the existing shared `ai_engine` provider and its established data-boundary checks; no parallel model stack was added.
+- Reused Goal, WorkerTask/idempotency, ToolRegistry metadata, WorldEvent/type registry, existing owner API authentication, and the operating-v4 dormancy guard. No new table, top-level primitive, ledger, provider stack, scheduler or route family was introduced.
+- Added TEST coverage for persistent idempotency, replacement-provider planning, no Action creation, mock honesty, authority/order rejection, non-proposal worker gating, and the actual Ollama JSON-provider adapter path. These tests are not REAL deployment or load-test evidence.
+
+### Evidence boundary and remaining gaps
+- Main HEAD at this entry: `6fe1bbbcf432e07a132674873d3cd1bc4dd62bd5`. Frontend tests, evidence-triage tests, lint, build, typecheck, repository guards, route smoke and Gitleaks passed on exact head. Backend pytest was still running when this entry was prepared; final status must be taken from GitHub Actions, not inferred.
+- Hami can now propose how to approach a goal when a real, approved provider is configured. Default `MOCK` explicitly cannot interpret a goal. No production configuration was read as proof of Ollama availability.
+- ToolRegistry's current catalogue is mainly research/collector and provider capabilities. It is not a verified general-purpose shell, code-build, container, infrastructure or deployment executor. WorkerTask persistence is not proof of continuous scheduling.
+- No Actions were created or executed by goal planning. No LiveKit containers were deployed; no 9-publisher/4,000-viewer/100ms load test was run. No production deployment was made from this commit.
+- Vercel project `forge-os` was inspected after owner access approval: `live=false`; its latest READY production deployment points to older source `6076690f00c238f1b22a3afcdf489e983c468e7d`, not this Hami commit. No deployment exists for `6fe1bbbcf432e07a132674873d3cd1bc4dd62bd5`. A prior 14 November production probe recorded HTTP 402 / `DEPLOYMENT_DISABLED`; resume/billing/usage controls are not changed here. Production runtime, persistent database, provider reachability and scheduler remain unverified.
+- `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains NOT MEASURABLE; no verified real transaction or external value outcome has been produced by this increment.
+
+### Next capability increment
+- Build the general governed execution/verification path by composing the existing CAPABILITY and ACTION primitives with action-time authorization, idempotent WorkerTasks, independent evaluators and outcome write-back. Do not make "deployment" a hard-coded product mode.
+- Use LiveKit only as the first technical evaluation: inspect a versioned deployment target, check self-hosted single-room constraints versus a cloud/multi-SFU alternative, define latency precisely, then create a reversible isolated test environment and measure concurrent publishers/viewers, packet loss, bandwidth, CPU, reconnect behaviour and latency percentiles. Production deployment and compute spend remain separately authorized.
+- Preserve source-rights gates and the existing `research_planner.py::summarize_research_portfolio` safety boundary; do not route around it.
+
 ## 2026-11-14 06:33 NPT — D93 incident recovery as an asset-level, source-time-aware timeline (capability NOT IMPLEMENTED)
 
 ### Verified and reported recovery sequence
@@ -3693,3 +3842,81 @@ This is a second-domain evidence extension of the existing source-time capabilit
 - **Owner dependency:** this removes the routine owner action of hand-repairing generated dependency directories after a stale ABI or failed bootstrap. It does not remove the need to launch the local process from the owner's desktop session, because this agent's sandbox is forbidden to bind loopback ports. No public deployment, intake, scheduler, worker, contact, payment, source collection or other consequential action was enabled. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
 - **Next removable dependency:** prove clean Python 3.13 resolution and `/health` from a normal local shell; then replace stale generated dependencies through the existing `start.sh` path. Docker Desktop being off is an independent optional-container blocker, not a reason to enable an alternate Hami runtime.
 
+
+
+## 2026-11-14 — Inner direction anchor and private Hami work surface (implemented; autonomy remains partial)
+
+- Reused the canonical North Star in `docs/ORIGIN.md` as one persistent `Goal` record. The scheduled intelligence cycle ensures this record idempotently; it does not create a new table, primitive, agent service or second queue.
+- Added an explicit storage boundary: on Vercel with SQLite at `/tmp`, Hami refuses to create or claim a persistent identity anchor. The owner-only `/forge/runtime` projection exposes the anchor status and reason.
+- The existing `/owner` console now has an Inner continuity panel showing the North Star, durable-anchor status, active goals, unresolved questions, queued research work and latest persisted reasoning cycle. No public route or browser-visible owner key was added.
+- The existing intelligence loop remains the worker: it derives questions from signals/patterns/belief gaps, plans source-specific research tasks, runs only cleared collectors, recovers stale research tasks, and proposes Actions through existing policy. No arbitrary shell, model-generated commands, external messages or spending were enabled.
+- Tests added for idempotent anchor creation, preserving an owner pause, and refusing to write the anchor to ephemeral Vercel SQLite.
+- **Not yet autonomous end-to-end:** GoalPlan remains proposal-only; general typed step execution and independent artifact verification are not implemented. The current Vercel `hami24` project was previously observed using ephemeral `/tmp/forge.db`, so persistent inner memory remains BLOCKED until an authorized durable database is connected. The new Vercel team is Hobby; its Cron jobs are limited to once per day, so this is not a continuous worker. No plan upgrade or paid service was selected.
+- Exact-head CI and a deployed UI check are still required. The previous exact-head backend run had 53 failures, chiefly expired external-source clearances and unrelated parser/research expectations; passing build/typecheck does not clear those failures.
+
+
+## 2026-11-14 — Separate inner-ground invariant from the North Star
+
+- Clarified the philosophical model in code and the private owner panel: "nothingness / Shiva" is represented as an immutable architectural invariant, not a Goal, metric, changing state, reward or external input. The North Star remains the continuing direction for work; the two are not conflated.
+- The invariant does not assert that Hami has subjective experience or prove artificial consciousness. It establishes that changing external events, evaluations, model responses and task outcomes do not rewrite Hami's declared identity principle.
+- Added a regression assertion through the existing Goal Engine test seam. No new table, service, route, primitive or ledger.
+
+
+
+## 2026-11-15 — D93 water-quality, bridge-capacity and logistics reconciliation; separate Rasuwa market-access evidence
+
+### Gorkha / Chumnubri WASH and infrastructure
+- Kantipur's 3 July 2026 report (https://ekantipur.com/gandaki-pradesh/2026/07/03/coliforms-found-in-176-of-225-drinking-water-samples-tested-in-gorkha-34-13.html) attributes source/project sampling to the Provincial Public Health Office Gorkha. It reports 176 coliform-positive samples out of 225 across 11 local levels (about 78.2%); Chumnubri is 10/21 (about 47.6%). The article does not state sample collection dates, sampling frame, representativeness or the source-versus-distribution split for Chumnubri. It reports that some schemes distributed water without filtration and some installed filter plants were bypassed, but does not identify the schemes or establish that Chumnubri was among them.
+- Keep this distinct from the NSO 2024/25 modelled WASH baseline already recorded above: Chumnubri DWEI 0.529, SEI 0.670, WASH EI 0.595. The NSO model combines Census 2021 with MICS 2024/25 and is not a direct Chumnubri MICS. The local July samples are a different source, method and period. No post-11-October Chumnubri water-source retest, named-scheme repair/commissioning or household service-restoration evidence was found.
+- Chumnubri Rural Municipality's official notice page (https://chumanuwrimun.gov.np/content/) lists a 10 September 2026 notice titled as a risk restriction on mule/horse movement over a newly constructed wooden bridge at Syurang Khola, Ward 4. The PDF link timed out; only page title/date metadata was reviewed. This is a pre-event route-capacity constraint, not a current bridge condition or proof of flood damage. The same index lists a heavy-rain/flood/landslide notice dated 23 September, but its body was not inspected.
+- The municipality lists a WASH master plan dated 2020 (https://www.chumanuwrimun.gov.np/node/73); page timed out and the body was not read. Its 2083/84 annual-budget page was submitted 25 June 2026 but the fiscal-year metadata field reads 82/83; the PDF link timed out. Its monthly progress/expense page (https://chumanuwrimun.gov.np/monthly-progress-report) exposes reports only through 2025. These are public index/metadata observations, not proof that no newer internal records exist.
+- UN Nepal SitRep No.12 (30 October 2026) says the WASH Cluster supported 50 Arughat households with 50 temporary toilets and 50 water-storage jerrycans, buckets, mugs and purification solutions. This is a Gorkha response action in Arughat, not Chumnubri water-source testing or system restoration.
+- NRCS #03 (17 October) and #04 (29 October) report rapid assessments in Aarughat, Chumnubri and Dharche (Gorkha), and Tripurasundari (Dhading). NRCS #04 reports distribution totals as of 25 October across Chumnubri, Aarughat and Dharche. It also reports one medical evacuation during a relief helicopter operation; no clinical outcome is stated.
+- UN SitRep No.12 reports a 14–15 October inter-agency mission across 52 km with 14 representatives. It says local governments responded rapidly and immediate food/NFI needs were largely met, but roads/bridges/trails disrupted access; it records beneficiary-verification difficulty compounded by information-sharing gaps between municipalities and district authorities. This is a specific information-management constraint, not proof of a blanket coordination failure. NRCS separately reports regular coordination with local government representatives and district chapters.
+
+### D93 source-time and bridge-count reconciliation
+- Official NDRRMA #03 PDF (https://ndrrma.gov.np/mediafiles/publications/SitRep_EN_03_13102026_-_Gorkha-Budhigandaki_Flash_Flood.pdf) explicitly dates itself 13 October 2026, 10:00 PM. Its damage panel lists 2 permanent, 5 suspension, 1 Bailey and 1 cantilever bridge (9 total), 3 hydropower facilities and 1 school.
+- NRCS #03 (17 October; https://website-api.nrcs.org/media/news/attachments/Gorkha_Flash_Flood__Bulletin_3.pdf) and #04 (29 October; https://website-api.nrcs.org/media/news/attachments/Gorkha_Flash_Flood__Bulletin_4.pdf) each list 2 permanent, 6 suspension and 1 Bailey bridge (also 9 total). The one-category difference may be a cantilever/suspension classification difference, but no shared asset register proves it.
+- UN SitRep No.12 (30 October) cites “NDRRMA Situation Report #3, 12 October” and summarizes 5 bridges damaged/destroyed. That date differs from the official #03 PDF timestamp of 13 October, 10:00 PM, and the count differs from the later nine-structure categories. It may reference an earlier version or narrower scope; a citation error is also possible. Preserve UNKNOWN.
+- NRCS #03/#04 say 146 households; NRCS #02's initial rapid assessment said 174. No documented method/scope correction explains the delta. Do not infer 28 households recovered. NRCS “out of contact” remains distinct from NDRRMA “missing.”
+- NDRRMA Report #04 page metadata is located at https://ndrrma.gov.np/np/situation-report/468 (16 October / Asoj 30; heading as of 16 October, 10:00). PDF body remains unread.
+
+### Separate Rasuwa–Bhotekoshi market-access and shared-logistics case
+- UN SitRep No.12 (30 October) reports WFP's Gre pilot connected 140 farmers with Nuwakot/Kathmandu buyers, moved 8,110 kg potatoes/cabbage and generated estimated NPR 251,370 gross sales; reported farmer prices were about 38% above pre-flood levels. It separately reports 6,080 kg from Manchet to Kathmandu without a shipment date or settlement data.
+- Kathmandu Post (14 October) dates the Gre pilot to 9 October and rounds it to about 8,000 kg over roughly four relief-helicopter return trips. This is compatible with the UN's 8,110 kg.
+- Kathmandu Post (30 October) reports no further WFP transport after the pilot as of that article and quotes local accounts of spoilage and freight costs. Desh Sanchar (7 November) and INSEC (9 November) later report a first-phase WFP–Aamachhodingmo Rural Municipality arrangement for 337.5 MT cabbage to a road-accessible point on this side of the Bhotekoshi at Syafrubesi. This is a reported commitment, not proof of collection, delivery, sale or farmer settlement.
+- INSEC (9/12 November) reports residents rebuilt a temporary wooden footbridge at Syafrubesi after an earlier crossing was swept away by a 30 October flood. The article page returned 403; no official confirmation, load rating or motorable crossing status was found. Keep it distinct from the Chumnubri Syurang Khola bridge and D93 Bailey bridge.
+- The same UN SitRep's logistics section reports 115 common air rotations and 179.8 mt humanitarian cargo delivered to 15 locations; 583.6 mt road cargo (including 114.3 mt to Dhunche); 1,000 m² common storage in Dhunche and 1,115 m² in Kathmandu; 33 partners used common transport and 77 participated in coordination. It explicitly identifies limited visibility of partner cargo pipelines/winterization requirements, weather/access uncertainty and administrative approvals as constraints. These are humanitarian-logistics figures, not spare capacity available for produce.
+- The overlooked reusable connection is shared logistics capacity: Rasuwa's WFP produce backhaul, Gorkha's NRCS relief helicopter operation/medical evacuation and the UN common logistics service all show different uses of scarce transport assets. Do not merge the events or infer spare capacity; any matching must be operator-authorized and preserve humanitarian priority/safety rules.
+
+### Existing Hami seam and capability
+- Reuse ENTITY/RELATION/EVENT/EVIDENCE/CAPABILITY/ACTION with existing world_graph, evidence_graph, market_signal_substrate_adapter, demand_understanding, economic_validation and capability_discovery. A WASH/service record can connect municipality → water source/scheme → operator/treatment → sample/quality → repair/commissioning → households/service outcome. An infrastructure/logistics record can connect asset → restriction/route → operator/cargo → destination → delivery/outcome.
+- The same source-time seam applies: report date, publication/index date, effective cutoff, sample period, measurement method, asset category, unit and retrieval must remain distinct. Existing normalize/runner/observer/Signal/Evidence/assessment/citation path does not currently expose all of them in a grounded citation. No new model/table/primitive/collector or source write is justified.
+- No new D-number, ResearchQuestion or UNKNOWN_MAP projection was added. Existing projection/importer mismatch remains.
+
+### Source rights and next work
+- Kantipur robots https://ekantipur.com/robots.txt defines search/ai-input/ai-train content signals but provides no affirmative ai-input signal; absence is not permission. Its terms page returned 403. Chumnubri municipal and NRCS robots/terms endpoints were inaccessible. UN terms are non-commercial; WFP terms are personal/non-commercial and restrict redistribution/derivatives. INSEC/Desh Sanchar pages or rights pages were inaccessible/403. No commercial ingestion grant was found.
+- All sources remain manual factual-citation only / NOT CLEARED for automated collection, body persistence or provider transmission. No new source registry entry, Signal/Evidence write or provider transmission.
+- Next: obtain dated public post-flood Chumnubri water retest and scheme-level service status; retrieve the Syurang Khola notice PDF if officially accessible; reconcile bridge counts with named assets and report versions; verify WFP's 337.5 MT deliveries and farmer settlement; preserve all UNKNOWN fields.
+
+
+## 2026-11-15 — D93 #04 index/detail timing, local response notice and provenance-loss edge
+
+### New primary-source metadata
+- NDRRMA's Nepali situation-report index https://ndrrma.gov.np/np/situation-report lists Gorkha–Budhi Gandaki Situation Report #04 with index date 2026-11-03 / 2083-07-17. Detail page https://ndrrma.gov.np/np/situation-report/468 displays 2083-06-30 / Asoj 30 and says as of 16 October 2026, 10:00 AM. The 18-day difference is a directly observed index/detail date mismatch. The index date's exact semantics and any source update time are not stated; do not call it proof of refreshed field facts.
+- The page exposes a PDF Preview label, but the official PDF URL was not retrievable through the page/search route. The page itself yielded no readable lines. Report #04 body remains unread; no screenshots or content claims.
+- The Chumnubri Rural Municipality official notice index https://www.chumanuwrimun.gov.np/news-notices lists the event-specific Budhi Gandaki rescue/relief/disaster-response notice submitted 11 October 2026 at 21:47 (timezone not stated), with attachment label “बिपद् सूचना.pdf”. The notice/PDF body was not retrieved. This proves a notice listing, not delivery of relief, rescue outcomes, beneficiary identity or restoration.
+- The UN Nepal SitRep No.12 (30 October) remains the independent assessment source for the 14–15 October 52-km / 14-person mission and the specific beneficiary-verification difficulty compounded by information-sharing gaps between municipalities and district authorities. This does not prove a failed individual case or blanket coordination failure. Its 50-household WASH response is in Arughat, not proof of Chumnubri water restoration.
+- The Department of Roads general road-condition page https://www.dor.gov.np/home/page/road-condition-update returned “No data available”; this is not a Gorkha-specific passability record. No event-specific NEA Gandaki power-restoration notice surfaced in the bounded search. Current road, power, water-quality and scheme-restoration status remain UNKNOWN.
+
+### Existing source-time seam: exact data-loss point
+- SourceCollector.normalize currently sets provenance to raw_item.provenance or metadata. When raw provenance is non-empty, normalized metadata-only fields (including a source-declared effective cutoff) need not enter provenance.
+- collector_runner adds task and registry context, but not arbitrary source metadata fields. ObserverEngine persists provenance plus published_at/retrieved_at to Signal; _ensure_evidence copies them. research_evidence_assessment computes freshness from publication date versus retrieval time. research_synthesis_engine._evidence_citation exposes source_registry_id and retrieved_at, but not effective cutoff, page/listing date or report version.
+- Existing Signal/Evidence models already have published_at, retrieved_at and provenance. No new model/table/primitive/collector is warranted. The blocked source-edit path remains closed; do not implement this through another tool.
+- Tests inspected: test_import_unknowns (currently expects 120 rows while UNKNOWN_MAP has 124); test_research_evidence_assessment (publication/retrieval only); test_source_clearance_registry (exact URL and expiry); test_verified_research (registry identity persistence). No regression currently proves source-effective cutoff survives explicit provenance → Signal → Evidence → citation.
+
+### Portfolio and authorization boundaries
+- The five runtime source-clearance entries have valid_through dates 25 September or 27 October 2026 and are all expired by 15 November. NDRRMA and Chumnubri are not registered.
+- NDRRMA robots/terms endpoints and both Chumnubri robots host variants were inaccessible; no affirmative reuse grant was found. Keep both manual factual-citation only / NOT CLEARED for automated collection, source-body persistence or provider transmission.
+- No new D-number, ResearchQuestion, UNKNOWN_MAP projection, Signal/Evidence record or source registration. No contact, publication, spending, payment, production activation, emergency advice or alerting service.
+- Improvement delta: evidence quality + continuity. The D93 record now distinguishes index date, detail-page date and page-declared cutoff; the exact provenance-loss edge and stale importer test expectation are identified without bypassing the source-edit restriction.

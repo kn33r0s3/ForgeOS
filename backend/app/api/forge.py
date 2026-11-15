@@ -62,7 +62,6 @@ from app import evidence_source, schemas, models
 from app.config import settings
 from app.security import require_owner_api_key
 from app.services import (
-    worker_manager,
     reality_checker,
     reality_memory,
     experiment_runner,
@@ -565,8 +564,11 @@ def plan_goal(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     db.commit()
     if task.status == "queued":
-        # On-demand execution is explicit and proposal-only. The worker still checks
-        # the operating_v4 dormancy guard and the selected provider's data boundary.
+        # Defer the legacy worker import until an owner explicitly requests planning;
+        # normal application startup must remain free of the disabled worker stack.
+        from app.services import worker_manager
+
+        # On-demand execution is proposal-only and still passes the dormancy guard.
         worker_manager.process_worker_task_by_id(
             db, task.id, worker_type="goal_plan"
         )
@@ -1684,7 +1686,7 @@ def get_runtime(request: Request, db: Session = Depends(get_db)):
     """
     require_owner_api_key(request)
     from sqlalchemy import func
-    from app.services import truth_audit
+    from app.services import goal_engine, truth_audit
 
     truth_audit.reconcile_stale_cycles(db)
     truth = truth_audit.snapshot(db)
@@ -1809,6 +1811,7 @@ def get_runtime(request: Request, db: Session = Depends(get_db)):
         },
         "loop_stages_with_data": stages,
         "active_stage": active_stage,
+        "inner_identity": goal_engine.intrinsic_goal_status(db),
         "truth": truth,
     }
 

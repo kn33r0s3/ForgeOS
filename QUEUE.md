@@ -1,3 +1,43 @@
+## Current continuation — 2026-11-15 05:31 NPT (main 7b55f2ba72bb862353e868fc64f38f75f0e7a1f9)
+
+Mission and breadth are settled. Continue independent, evidence-grounded discovery across domains.
+
+1. **P0 — Exact-head truth.** 7b55f2ba has Vercel hami success / forge-os failure; main-push GitHub Actions and secret-scan results are UNVERIFIED. Exact deployment READY is not public/live health: live=false, SSO, zero env vars, no durable DATABASE_URL, no health/read-after-write evidence.
+2. **P0 — Importer/test drift.** UNKNOWN_MAP has 124 rows (A9/B4/C3/D108); test_import_unknowns.py expects 120 (A9/B4/C3/D104). Reconcile through the authorized normal sync/test path; do not edit generated projections or add D109 while this mismatch remains.
+3. **P1 — D93 NDRRMA #04.** Retrieve the official PDF attachment and inspect every page by screenshot. Preserve index listing date 3 Nov, detail-page date 16 Oct, sequence #04, page-declared cutoff 16 Oct 10:00 and retrieval separately. No body claim until read.
+4. **P1 — Chumnubri response notice.** Retrieve the official “बिपद् सूचना.pdf” from the 11-Oct notice listing only through an accessible official route; inspect its instructions before describing response or outcomes.
+5. **P1 — Chumnubri WASH and restoration.** Seek dated primary source-water retests, named-scheme repair/commissioning, treatment operation, household service records, and Gorkha-specific road/power notices. July samples are pre-event; Arughat WASH response is not Chumnubri restoration.
+6. **P1 — Source-time capability.** When source editing is authorized, fix the existing normalize→runner→Observer→Signal/Evidence→assessment→citation seam so source-declared effective cutoff survives non-empty raw provenance. Add round-trip tests; no new model/table/primitive/collector.
+7. **P2 — Stale branch.** feature/governed-offers is 943 commits behind main and 0 ahead. Remove only through a supported delete-ref action; none is exposed now.
+8. **P2 — Independent discovery.** Continue WASH, agriculture, grid, labour, EV workforce, trade and other evidence-rich tracks independently. No D93 gate on Hami-wide work.
+
+No new D-number, ResearchQuestion, generated-map edit, source registration, external contact, publishing, spend, money movement, emergency advice or alerting service.
+
+---
+
+## Previous queue snapshot — 2026-11-15 (base main b004bae89aa180ea433798f12d90cd5b272f4e4d)
+
+1. **P0 — exact-head verification truth.** Retrieve main-push GitHub Actions CI and secret-scan outcomes for b004bae. The current connector exposes Vercel statuses only; do not infer a green suite from a READY deployment.
+2. **P0 — durable runtime boundary.** Current Vercel project hami has no environment variables, is not marked live and has SSO protection. Owner-controlled durable PostgreSQL and stable auth configuration are required before claiming persistent production memory. Do not spend, upgrade, change billing or expose the app without separate authorization. Check any separate backend independently.
+3. **P1 — governed execution bridge.** Reuse GoalPlan → existing Action → action_engine.py adapter registry → decision_rights.py → WorkerTask/scheduler. GoalPlan currently persists proposals only. Define a closed typed operation mapping, execution-time rights, idempotency, persistent HALT, bounded retries and independent postcondition evidence. No generic shell or model-generated command strings.
+4. **P1 — source-time preservation.** Extend the existing provenance seam only when a supported source-edit path exists: preserve raw source time, publication time, effective cutoff, reporting period, retrieval time, scope, version, unit and method through SourceCollector → runner → Signal → Evidence → assessment → citation. Add regression coverage. Do not bypass the blocked planner write.
+5. **P1 — WASH service-chain crosswalk.** Use the inspected NSO 2024/25 modelled baseline to identify which local service dimension needs current verification, then reconcile public water-scheme assets, operators, quality tests, repair/commissioning, budgets and dates. Chumanubri is a Gorkha baseline example, not proof of flood damage or current conditions. No contact or emergency advice.
+6. **P1 — source rights.** Individually re-review the five expired registry entries. NSO/NWASH, NDRRMA, NEA, district administrations and other public pages remain manual-only until exact robots, terms, purpose, fields, retention and provider-use rights are established.
+7. **P1 — independent research tracks.** Continue D93/D94 recovery and warning evidence, D95 agriculture/fish/cold-chain/plant-clinic subcases, D96 grid projects, D86 trade, EV workforce, WASH, labour, law and other existing unknowns. One blocked source or experiment does not pause other tracks.
+8. **P2 — LiveKit and performance.** Verified CI results: one SFU with nine synthetic demo publishers and 25 subscribers passed; the 100-subscriber step-up also passed with 109 participants / 9 publishers in one room. CLI reported 900 video tracks, 282.7 Mbps aggregate subscriber bitrate (2.8 Mbps average), 0% packet loss and zero errors. Peak `docker stats`: 64.40% CPU, 431.1 MiB RAM, 77.7 MB received / 853 MB sent. At the same observed per-viewer bitrate, 4,000 viewers project to ~11.3 Gbps outbound media (arithmetic only). These are TEST-only synthetic streams on ephemeral GitHub runners, not real cameras, production capacity, geographical distribution, glass-to-glass latency or a 100 ms guarantee. Next: prove Hami logical-room media sharding and publisher fan-out across independent SFU shards, then use separate load-generator hosts and measure end-to-end latency.
+
+No new D-number, ResearchQuestion, task row, branch, worktree, PR, schema or collector is authorized by this queue.
+## 2026-11-14 — Hami operator + LiveKit proving-ground priorities (base main 6267be567194750044f78a6808d76501c1fe9b88)
+
+1. **P0 — Exact-head test truth.** Workflow `43615184838` for `6267be567194750044f78a6808d76501c1fe9b88` was in progress; eight non-backend jobs passed and backend pytest was still running. Resolve the final result before any new source change. Diagnose, do not suppress, any failure.
+2. **P0 — Production gate.** Vercel production health probe is HTTP 402 `DEPLOYMENT_DISABLED`; newest READY deployment is old SHA `6076690f00c238f1b22a3afcdf489e983c468e7d`. Owner must resolve the account/usage gate. No resume/billing/usage change or spend.
+3. **P1 — Governed execution bridge.** Reuse GoalPlan → existing Action → `action_engine.py` adapter map → `decision_rights.py` → WorkerTask/scheduler. First write a typed closed operation contract; no generic shell, no model-generated command strings, and no unknown action default other than owner-only.
+4. **P1 — Persistent operator.** Add/verify heartbeat, lease/stale-task recovery, idempotency, bounded retries, resource gates, cancellation and persistent HALT via existing task/action/event seams. Keep legacy worker enablement narrow; never turn on every worker as a shortcut.
+5. **P1 — Read-only browser and repository tools.** Extend existing Playwright/browser guard with host/path scope and isolated sessions; start with read-only browsing, repository inspection and fixed test/build commands. Verify outputs independently.
+6. **P1 — LiveKit topology proof.** Evaluate 9 publishers and 4,000 viewers with the actual UI layout. Self-hosted single-room placement on one node is a known architectural limit; test room-shard + publisher-relay semantics and managed global-mesh only as a costed comparison. Do not provision paid services without explicit authorization.
+7. **P1 — Performance & persistence.** Capture video track matrix, bitrate, egress, CPU, RAM, packet loss, jitter, reconnects and glass-to-glass p50/p95/p99. Bank measured topology/configuration/results as a reusable Hami playbook.
+8. **P2 — Resource independence.** Route one heavy local inference at a time initially; one browser worker; separate load generators from the 24GB development laptop. Make all providers/workers replaceable and fail closed when unavailable.
+
 ## Follow-on priorities — 2026-11-14 06:33 NPT (base main 0c78f807f48d8e8b0f879a84185fd2a28dd03e47)
 
 1. **P0 — preserve exact-head truth.** CI 43535815149: 8/9 jobs passed; backend 53 failed / 1,302 passed / 2 skipped. Secret scan passed. Deployment verifier failed HTTP 402 after 90 seconds. Do not call production healthy or transfer previous green results to a new SHA.

@@ -833,6 +833,51 @@ class ReplacementGoalPlanner:
         }
 
 
+def test_intrinsic_goal_is_persisted_once_and_owner_pause_is_preserved(db, monkeypatch):
+    from app.services import goal_engine
+
+    monkeypatch.delenv("VERCEL", raising=False)
+    first = goal_engine.ensure_intrinsic_goal(db)
+    assert first["status"] == "created"
+    assert first["created"] is True
+    db.commit()
+
+    goal = db.get(models.Goal, first["goal_id"])
+    assert goal is not None
+    assert goal.statement == goal_engine.INTRINSIC_GOAL_STATEMENT
+    assert goal.priority == 100.0
+    assert "Nothingness (Shiva)" in goal_engine.INNER_GROUND_PRINCIPLE
+    assert goal_engine.intrinsic_goal_status(db)["inner_ground"] == goal_engine.INNER_GROUND_PRINCIPLE
+
+    goal.status = "paused"
+    db.commit()
+    second = goal_engine.ensure_intrinsic_goal(db)
+
+    assert second["status"] == "paused"
+    assert second["created"] is False
+    assert second["goal_id"] == first["goal_id"]
+    assert db.query(models.Goal).filter_by(
+        statement=goal_engine.INTRINSIC_GOAL_STATEMENT
+    ).count() == 1
+
+
+def test_intrinsic_goal_is_not_written_to_ephemeral_vercel_sqlite(db, monkeypatch):
+    from app.services import goal_engine
+
+    monkeypatch.setenv("VERCEL", "1")
+    result = goal_engine.ensure_intrinsic_goal(db)
+
+    assert result == {
+        "status": "blocked",
+        "reason": "ephemeral_vercel_sqlite",
+        "goal_id": None,
+        "created": False,
+    }
+    assert db.query(models.Goal).filter_by(
+        statement=goal_engine.INTRINSIC_GOAL_STATEMENT
+    ).count() == 0
+
+
 def test_goal_plan_is_persisted_idempotently_and_never_executes(db, monkeypatch):
     from app.services import goal_engine, worker_manager
 
@@ -959,3 +1004,66 @@ def test_non_proposal_worker_types_stay_behind_legacy_gate(db, monkeypatch):
     assert worker_manager.process_worker_task_by_id(db, task.id) is False
     db.refresh(task)
     assert task.status == "queued"
+
+
+def test_ollama_provider_proposes_a_valid_general_goal_plan():
+    plan = {
+        "status": "PROPOSED",
+        "objective_interpretation": "Interpret a human goal and propose a verifiable route.",
+        "success_criteria": ["The requested outcome is independently checked."],
+        "assumptions": ["The target environment can be accessed after authorization."],
+        "unknowns": ["The current environment and runtime limits are not yet known."],
+        "evidence_needed": ["Current provider and infrastructure documentation."],
+        "capability_gaps": ["A verified deployment executor is not declared."],
+        "steps": [{
+            "order": 1,
+            "operation_class": "research",
+            "title": "Inspect current deployment requirements",
+            "purpose": "Establish the exact target and compatible deployment path.",
+            "required_capabilities": ["web_research"],
+            "verification": "Compare the plan with official, versioned platform documentation.",
+            "permissions_required": [],
+            "reversibility": "reversible",
+            "blocked_by": [],
+            "execution_authorized": False,
+        }],
+        "blockers": ["No deployment action is authorized by a plan."],
+        "execution_authorized": False,
+    }
+
+    class FakeLocalModel:
+        _model = "test-goal-model"
+
+        def __init__(self):
+            self.prompt = None
+            self.system = None
+            self.schema = None
+            self.last_call_metadata = {
+                "prompt_eval_tokens": 90,
+                "completion_eval_tokens": 65,
+                "total_duration_ms": 125.0,
+            }
+
+        def complete_json(self, prompt, *, system, schema):
+            self.prompt, self.system, self.schema = prompt, system, schema
+            return json.dumps({"plan": plan})
+
+    model = FakeLocalModel()
+    provider = cognitive_provider.OllamaCognitiveProvider(model)
+    context = cognitive_provider.GoalPlanningContext(
+        goal_id=17,
+        objective="Build and deploy a multi-streamer live video platform.",
+        target_metric="9 publishers, 4,000 viewers in one room, defined latency target",
+        declared_capabilities=({"name": "web", "capabilities": ["collect"]},),
+    )
+
+    result = provider.plan_goal(context)
+
+    assert result["status"] == "PROPOSED"
+    assert result["steps"][0]["order"] == 1
+    assert result["execution_authorized"] is False
+    assert result["steps"][0]["execution_authorized"] is False
+    assert '"goal_id":17' in model.prompt
+    assert "open-ended" in model.system
+    assert model.schema["$defs"]["GoalPlan"]["additionalProperties"] is False
+    assert provider.last_call_metadata["total_duration_ms"] == 125.0

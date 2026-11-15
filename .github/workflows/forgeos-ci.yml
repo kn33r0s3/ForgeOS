@@ -125,3 +125,127 @@ jobs:
       - run: node scripts/sync-unknowns-json.mjs --check
       - run: node scripts/check-orphaned-routes.mjs
       - run: node --test scripts/startup-contract.test.mjs
+
+  livekit-local-smoke:
+    name: livekit-local-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start the local SFU and verify nine independent publishers
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose --profile livekit-local up -d --scale livekit-publisher=9 livekit-publisher
+
+          room_matches() {
+            ROOM_JSON="$1" EXPECTED_PARTICIPANTS="$2" python - <<'PY'
+          import json
+          import os
+          import sys
+
+          raw = os.environ.get("ROOM_JSON", "")
+          expected = int(os.environ["EXPECTED_PARTICIPANTS"])
+          decoder = json.JSONDecoder()
+          for offset, char in enumerate(raw):
+              if char != "{":
+                  continue
+              try:
+                  document, _ = decoder.raw_decode(raw[offset:])
+              except json.JSONDecodeError:
+                  continue
+              if any(
+                  room.get("name") == "hami-proving-ground"
+                  and room.get("numParticipants") == expected
+                  and room.get("numPublishers") == 9
+                  for room in document.get("rooms", [])
+              ):
+                  print(json.dumps(document, indent=2))
+                  sys.exit(0)
+          sys.exit(1)
+          PY
+          }
+
+          room_json=""
+          for attempt in $(seq 1 30); do
+            room_json="$(docker run --rm --network forgeos_default livekit/livekit-cli:v2.19.4 room list --url ws://livekit:7880 --api-key devkey --api-secret secret --json hami-proving-ground 2>/dev/null || true)"
+            if room_matches "$room_json" 9; then
+              echo "Verified nine publisher participants in one LiveKit room."
+              exit 0
+            fi
+            sleep 2
+          done
+
+          docker compose --profile livekit-local ps
+          docker compose --profile livekit-local logs --no-color --tail 100 livekit
+          docker compose --profile livekit-local logs --no-color --tail 100 livekit-publisher
+          echo "::error::Expected nine publishers in hami-proving-ground; room state did not reach 9 participants / 9 publishers."
+          exit 1
+
+      - name: Run the 100-subscriber grid load test and verify one shared room
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIVEKIT_TEST_SUBSCRIBERS=100 docker compose --profile livekit-local run --rm livekit-load-test > "$RUNNER_TEMP/livekit-load-test.log" 2>&1 &
+          load_pid=$!
+          saw_109_participants=false
+
+          room_matches() {
+            ROOM_JSON="$1" EXPECTED_PARTICIPANTS="$2" python - <<'PY'
+          import json
+          import os
+          import sys
+
+          raw = os.environ.get("ROOM_JSON", "")
+          expected = int(os.environ["EXPECTED_PARTICIPANTS"])
+          decoder = json.JSONDecoder()
+          for offset, char in enumerate(raw):
+              if char != "{":
+                  continue
+              try:
+                  document, _ = decoder.raw_decode(raw[offset:])
+              except json.JSONDecodeError:
+                  continue
+              if any(
+                  room.get("name") == "hami-proving-ground"
+                  and room.get("numParticipants") == expected
+                  and room.get("numPublishers") == 9
+                  for room in document.get("rooms", [])
+              ):
+                  print(json.dumps(document, indent=2))
+                  sys.exit(0)
+          sys.exit(1)
+          PY
+          }
+
+          for attempt in $(seq 1 40); do
+            room_json="$(docker run --rm --network forgeos_default livekit/livekit-cli:v2.19.4 room list --url ws://livekit:7880 --api-key devkey --api-secret secret --json hami-proving-ground 2>/dev/null || true)"
+            if room_matches "$room_json" 109; then
+              saw_109_participants=true
+              echo "Verified 109 concurrent participants (9 publishers + 100 subscribers)."
+              docker stats --no-stream --format 'name={{.Name}} cpu={{.CPUPerc}} mem={{.MemUsage}} net={{.NetIO}}' forgeos-livekit | tee "$RUNNER_TEMP/livekit-sfu-stats.txt"
+              break
+            fi
+            if ! kill -0 "$load_pid" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          if ! wait "$load_pid"; then
+            cat "$RUNNER_TEMP/livekit-load-test.log"
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/livekit-load-test.log"
+
+          if [ "$saw_109_participants" != "true" ]; then
+            docker compose --profile livekit-local ps
+            docker compose --profile livekit-local logs --no-color --tail 100 livekit
+            docker compose --profile livekit-local logs --no-color --tail 100 livekit-publisher
+            echo "::error::The room did not reach 109 concurrent participants (9 publishers + 100 subscribers)."
+            exit 1
+          fi
+
+      - name: Stop the ephemeral LiveKit test stack
+        if: always()
+        run: docker compose --profile livekit-local down --remove-orphans

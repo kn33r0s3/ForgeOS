@@ -1,3 +1,52 @@
+## Current state — 2026-11-15 05:31 NPT — main 7b55f2ba72bb862353e868fc64f38f75f0e7a1f9
+
+- Mission and breadth remain settled. Continue independent research across domains/geographies; no one experiment gates Hami-wide progress.
+- Main: 7b55f2ba72bb862353e868fc64f38f75f0e7a1f9. Last two commits 8042d557 and 7b55f2ba are documentation-only. History since c8da700 includes 68 commits with GoalPlan/cognition/worker and fail-closed database changes.
+- Branches: main plus stale feature/governed-offers. Comparison shows feature branch 943 behind and 0 ahead; no unique commits. AGENTS.md requires one branch. Delete-ref action is unavailable through the connected GitHub tools; no alternate route attempted.
+- Exact Vercel deployment dpl_DcK87gkthwgjdGQMowMPUrqgXBVi is READY for this SHA, but project live=false, SSO enabled, zero env vars, no haminp alias. Build reports 15 npm audit vulnerabilities (2 low, 8 moderate, 4 high, 1 critical) across 419 audited packages. Migration skipped without DATABASE_URL; build message about PGLite fallback is stale against deployed fail-closed src/lib/db.ts. No DB or environment change.
+- Exact-head combined status: Vercel – hami success; Vercel – forge-os failure. Connected Actions wrapper is PR-only and returns no main-push runs; CI and secret-scan result UNVERIFIED. No error/fatal runtime logs in the last 30 minutes is not proof of health. No public health/read-after-write or durable DB verified.
+- D93 #04: NDRRMA index listing date 2026-11-03 / 2083-07-17; detail page date 2083-06-30 / 16 Oct; page-declared cutoff 16 Oct 10:00 NPT. The 18-day index/detail gap is directly visible, but its exact meaning and source update time are UNKNOWN. PDF body unread; no content claim.
+- Chumnubri municipality index lists a Budhi Gandaki flood rescue/relief/response notice submitted 11 Oct 2026 21:47, attachment label “बिपद् सूचना.pdf”. Body unread; this proves a notice listing, not delivered relief or current restoration. UN SitRep #12 separately records beneficiary-verification information-sharing difficulty, not a proven failed case or blanket failure.
+- No official post-flood Chumnubri water retest/scheme commissioning or current Gorkha road/power restoration record was established. Department of Roads general status page had no data; no current passability inference.
+- Source seam: raw_item.provenance or metadata can omit metadata-only effective cutoff when raw provenance is non-empty; runner adds task/registry fields only; Signal/Evidence preserve existing provenance; assessment compares publication/retrieval; citation omits effective cutoff/page listing/report version. Source edits remain blocked. Five runtime source clearances are expired; NDRRMA/Chumnubri absent.
+- UNKNOWN_MAP contains 124 rows (A9/B4/C3/D108), while test_import_unknowns.py asserts 120 (A9/B4/C3/D104). No map edit or D109. No source registration, Signal/Evidence write, external action, publication, spend, payment, emergency advice or alert occurred.
+
+---
+
+
+## Prior state snapshot — 2026-11-15 05:06 NPT — main b004bae89aa180ea433798f12d90cd5b272f4e4d
+
+- Mission is settled and open-ended across domains/geographies; no seller experiment, First Rupee or revenue milestone gates unrelated Hami-wide progress.
+- Canonical repository has one active branch, main, at b004bae89aa180ea433798f12d90cd5b272f4e4d. Recent source changes add a fail-closed deployed database boundary, a North Star Goal anchor in the existing Goal model, and a separate inner-ground design invariant. No new model/table/primitive/parallel runtime.
+- GoalPlan is owner-only and proposal-only. Its regression proves execution_allowed=false and zero Action rows. General typed GoalPlan→Action→tool execution and independent artifact verification remain NOT IMPLEMENTED.
+- Vercel project hami has an exact-head READY deployment, but metadata says live=false, SSO enabled, generated aliases only, and zero project environment variables. Durable Postgres and stable auth configuration are not evidenced. The old forge-os Vercel status remains failure. READY does not establish public/live runtime health.
+- Current deployment produced no runtime logs in the last 30 minutes; one older deployment emitted a PGLite missing-file bootstrap error. The later code fails closed when deployed PostgreSQL is missing. Current health, read-after-write, separate backend DB, scheduler heartbeat and provider reachability remain NOT VERIFIED.
+- Exact-head GitHub Actions CI and secret scan are UNVERIFIED. Combined status exposes Vercel hami success and forge-os failure only; available workflow-run retrieval is PR-only and returned no run for main SHA.
+- Official NSO WASH report page dated 18 Kartik 2083 and full PDF were inspected. National MICS 2024/25 estimates 47.5% safely managed drinking water and 39.9% safely managed sanitation; 518/753 local levels are below 50% safely managed water. Chumanubri RM (Gorkha) is listed DWEI 0.529 / SEI 0.670 / WASH EI 0.595 (P1 by the report's band). Local figures are model-based, not direct municipality MICS observations. This is a pre-event baseline, not current service or flood-damage evidence.
+- Source normalization still allows explicit raw provenance to displace normalized metadata; Signal/Evidence carry published_at/retrieved_at/provenance; freshness is publication-versus-retrieval; citation lacks source-effective cutoff/report version/method. Five registry entries are expired; NSO/NWASH is not registered or cleared. Manual citation only; no ingestion.
+- research_planner.py::summarize_research_portfolio remains NOT IMPLEMENTED under the prior source-edit block. No alternate mutation path or source code write was attempted.
+- D1–D108 unchanged. Previous 100-row survey remains metadata-only. Operational open ResearchQuestion count UNKNOWN. No new D-number, task or question row. No external actions.
+## Current state — 2026-11-14 — governed Hami operator / LiveKit baseline
+
+- **Repository:** inspected main HEAD `6267be567194750044f78a6808d76501c1fe9b88`; main-only workflow preserved. This record is based on remote repository and deployment metadata, not a local checkout.
+- **Current capability:** goal interpretation is implemented as a bounded, owner-only, proposal-only path. General goal-plan → registered Action → tool adapter → independent verifier execution is NOT IMPLEMENTED.
+- **Existing seams:** Action/adapter dispatch, decision-rights registry, GoalPlan, WorkerTask scheduler/retry path, ToolRegistry and Playwright smoke scripts. The worker builder/QA handlers explicitly do not build or inspect an artifact. The registry is not proof that a tool is live.
+- **Exact-head CI:** workflow `43615184838` on `6267be567194750044f78a6808d76501c1fe9b88` was still in progress at inspection. Build, lint, typecheck, frontend, route smoke, repository guards, evidence-triage and secret scan had passed; backend tests were still running. Final verdict pending.
+- **Production:** `haminp.vercel.app/api/health` returned HTTP 402 `DEPLOYMENT_DISABLED`. Latest READY deployment found was old SHA `6076690f00c238f1b22a3afcdf489e983c468e7d`; no deployment for inspected main SHA. Runtime health, durable database, scheduler and provider availability remain UNKNOWN/NOT VERIFIED.
+- **LiveKit:** design-only. No containers, SFU, load generator, or media test has run. Self-hosted 4,000-viewer single-room target is not proven; official docs require each self-hosted room to fit a single node. The candidate engineering path is logical Hami room + tested media-room sharding/relay, compared with managed global mesh only if cost/authorization permits.
+- **Next engineering step:** finish exact-head CI and inspect backend failure logs; then design the typed Action-to-tool dispatcher inside existing `action_engine.py` + worker path. Do not create a parallel executor or generic arbitrary-shell tool.
+- **Safety/resource posture:** no spend, billing/resume change, deployment, contact, publication, production activation, source-rights widening, or permission change occurred. Local Mac/Ollama/Docker was not reachable from this assistant session.
+
+## Current state — 2026-11-14 — Hami goal-planning increment
+
+- **Repository:** canonical `main` HEAD `6fe1bbbcf432e07a132674873d3cd1bc4dd62bd5`; universal goal-plan capability and import-fix commits are on main. One branch only; no history rewrite.
+- **Implemented:** owner-only goal plan route; replaceable cognition contract; strict non-executable plan schema; idempotent existing WorkerTask persistence; event provenance; narrow proposal-only worker handler. No new DB model, table, semantic primitive or parallel engine.
+- **Exact-head CI run 43614511637:** frontend tests, evidence triage, lint, build, typecheck, repository guards, route-smoke and secret scan passed. Backend pytest was in progress when this entry was written. Do not mark exact-head CI green until job 132506537228 completes.
+- **Not implemented:** general tool executor, autonomous software build, infrastructure provisioner, LiveKit deployment or independent real-world outcome verification. Goal plans do not authorize Actions. The current registry is not proof that any tool is live/available.
+- **Vercel:** project `forge-os` reported `live=false`; latest READY production deployment uses old SHA `6076690f00c238f1b22a3afcdf489e983c468e7d`; no deployment for current main. Prior 14 Nov direct check reported HTTP 402 / `DEPLOYMENT_DISABLED`. No resume, billing or usage-setting change; runtime and durable storage remain UNKNOWN.
+- **LiveKit first test:** 9 publishers / 4,000 same-room viewers / 100ms is not yet proven. Official self-hosted guidance is about 3,000 participants per single SFU node; one room cannot be spread across multiple self-hosted SFU nodes as if each container increased single-room capacity. Need architecture alternative and real geographically distributed benchmark.
+- **Next step:** clear disabled production environment without unapproved spend, finish backend tests, then implement a generic permissioned executor and independent verifier using existing CAPABILITY/ACTION/WorkerTask seams. Hami remains open-ended; LiveKit is only one evaluation.
+
 ## Current state — 2026-11-14 06:33 NPT (run-start main SHA 0c78f807f48d8e8b0f879a84185fd2a28dd03e47)
 
 - **Mission:** settled and open-ended across domains/geographies; no First Rupee, seller pilot or revenue gate for Hami-wide progress.

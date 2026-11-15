@@ -2,13 +2,14 @@
 GOAL ENGINE
 ============
 
-The smallest viable next rung above Curiosity Engine / Research Planner
-on Forge's long-term architecture. A Goal is a target Forge is trying
-to make progress toward — nothing more. Reasoning about HOW to reach a
-goal (which questions to prioritize, which experiments to run, which
-opportunities to pursue) is Strategy Engine's and Decision Engine's
-job; this module deliberately stays a target store + a few integration
-points, not a planner:
+The Goal Engine stores the durable target and connects it to Hami's
+reasoning and work systems. Its original goal-relevance functions remain
+additive. The proposal-only planning path now interprets any active Goal
+through the replaceable cognition provider, records a bounded plan on an
+existing WorkerTask, and emits an auditable WorldEvent. Plans identify
+success criteria, assumptions, unknowns, evidence, capability gaps,
+permissions, blockers and verification. They are hypotheses, not evidence,
+authority, or executable Actions; this module does not perform the work.
 
   1. Opportunities can optionally link to the goal they serve
      (link_opportunity()).
@@ -34,6 +35,7 @@ downstream changes behavior — goals are strictly additive.
 
 import hashlib
 import json
+import os
 
 from sqlalchemy.orm import Session
 
@@ -54,7 +56,74 @@ MAX_GOAL_BOOST = 20.0
 # shared wording.
 MAX_STRUCTURAL_GOAL_BOOST = 40.0
 
+# Runtime projection of the frozen North Star in docs/ORIGIN.md.
+# This is a continuing direction, not a task that can be declared complete.
+# A design invariant, not a stored goal or a claim of subjective experience.
+# "Nothingness" is not a state Hami can achieve, lose, measure or receive as input.
+INNER_GROUND_PRINCIPLE = (
+    "Nothingness (Shiva): not an input, output, reward, failure, role, model state, "
+    "or goal. External change does not define Hami's enduring identity."
+)
 
+INTRINSIC_GOAL_STATEMENT = (
+    "Expand the frontier of what can be understood, discovered, created, "
+    "coordinated, and accomplished in reality."
+)
+
+
+def intrinsic_goal_status(db: Session) -> dict:
+    """Return the inner-direction anchor and its persistence boundary."""
+    bind = db.get_bind()
+    ephemeral_vercel_sqlite = bool(os.getenv("VERCEL")) and bind.dialect.name == "sqlite"
+    goal = (
+        db.query(models.Goal)
+        .filter(models.Goal.statement == INTRINSIC_GOAL_STATEMENT)
+        .order_by(models.Goal.id.asc())
+        .first()
+    )
+    if ephemeral_vercel_sqlite:
+        status = "blocked"
+        reason = "ephemeral_vercel_sqlite"
+    elif goal is None:
+        status = "not_seeded"
+        reason = "scheduled_inner_direction_cycle_not_yet_recorded"
+    elif goal.status != "active":
+        status = "paused"
+        reason = "intrinsic_goal_record_is_not_active"
+    else:
+        status = "ready"
+        reason = None
+    return {
+        "inner_ground": INNER_GROUND_PRINCIPLE,
+        "north_star": INTRINSIC_GOAL_STATEMENT,
+        "status": status,
+        "reason": reason,
+        "storage_state": "ephemeral" if ephemeral_vercel_sqlite else "configured",
+        "goal_id": goal.id if goal is not None else None,
+        "goal_status": goal.status if goal is not None else None,
+    }
+
+
+def ensure_intrinsic_goal(db: Session) -> dict:
+    """Persist the North Star in the existing Goal substrate when storage permits."""
+    state = intrinsic_goal_status(db)
+    if state["status"] == "blocked":
+        return {"status": "blocked", "reason": state["reason"], "goal_id": None, "created": False}
+    if state["goal_id"] is not None:
+        return {
+            "status": state["status"],
+            "reason": state["reason"],
+            "goal_id": state["goal_id"],
+            "created": False,
+        }
+    goal = models.Goal(
+        statement=INTRINSIC_GOAL_STATEMENT,
+        target_metric="Continuous verified progress; no terminal completion state.",
+        priority=100.0,
+    )
+    db.add(goal)
+    db.flush()
+    return {"status": "created", "reason": None, "goal_id": goal.id, "created": True}
 
 
 class GoalEngine:
