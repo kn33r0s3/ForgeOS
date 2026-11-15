@@ -86,7 +86,7 @@ function AboutPage() {
       <PageHeader
         eyebrow="Hami · about"
         title="About Hami"
-        lede="A living system that understands what people need and turns understanding into real value. Built in Kathmandu. Serving everywhere equally."
+        lede="Hami connects needs, evidence, and capabilities to make useful next steps clearer while keeping uncertainty visible. Built in Kathmandu. Serving everywhere equally."
         containerClassName="max-w-4xl"
       />
       <Container className="max-w-4xl py-10 sm:py-14">

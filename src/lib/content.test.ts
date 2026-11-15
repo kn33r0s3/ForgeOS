@@ -157,6 +157,7 @@ describe("Hami public content", () => {
     const manifest = JSON.parse(readFileSync(join(root, "public/manifest.webmanifest"), "utf8")) as {
       theme_color?: string;
       background_color?: string;
+      description?: string;
     };
     const styles = readFileSync(join(root, "src/styles.css"), "utf8");
     const lightThemeStart = styles.indexOf('ForgeOS visual system v3: "night masthead"');
@@ -166,7 +167,8 @@ describe("Hami public content", () => {
     assert.match(darkTheme, /--background:\s*#0c0b0a;/);
     assert.equal(manifest.theme_color, SITE.themeColor);
     assert.equal(manifest.background_color, SITE.themeColor);
-    assert.equal(SITE.tagline, "Discover what matters. Understand it. Act on it.");
+    assert.equal(SITE.tagline, "Find what matters. Test what helps.");
+    assert.equal(manifest.description, SITE.tagline);
     const rootRoute = readFileSync(join(root, "src/routes/__root.tsx"), "utf8");
     assert.match(rootRoute, /areaServed: "Worldwide"/);
     assert.doesNotMatch(SITE.description, /ForgeOS|Pulse/);
@@ -191,6 +193,7 @@ describe("Hami public content", () => {
     assert.match(cover, /SYSTEMS/);
     assert.match(cover, /Built in Kathmandu/);
     assert.match(cover, /Serving everywhere equally/);
+    assert.match(cover, /Find what matters\. Test what helps\./);
     assert.match(brand, /HAMI/);
     assert.match(brand, /SYSTEMS/);
     assert.match(brand, /\/favicon\.svg/);
@@ -572,9 +575,9 @@ describe("Hami public root", () => {
     assert.equal(ogSite.title, "Hami");
     assert.doesNotMatch(home, /Navigate to=/);
     // Home per the unknowns-surface design: hero, primitives, unknown counts, climb, findings.
-    assert.match(home, /Discover what matters/);
-    assert.match(home, /Act on it/);
-    assert.match(home, /Hami is a living system that understands what people need/);
+    assert.match(home, /Find what matters/);
+    assert.match(home, /Test what helps/);
+    assert.match(home, /Hami connects needs, evidence, and capabilities/);
     assert.match(home, /Built in Kathmandu/);
     assert.match(home, /Serving everywhere equally/);
     assert.match(home, /RealityLoop/);
@@ -615,7 +618,7 @@ describe("Hami public root", () => {
     assert.match(home.replace(/\s+/g, " "), /no participants or results to report/);
     // The wedge is never the headline.
     const h1 = home.replace(/\s+/g, " ").match(/<h1[^>]*>(.*?)<\/h1>/)?.[1] ?? "";
-    assert.match(h1, /Discover what matters/);
+    assert.match(h1, /Find what matters/);
     assert.doesNotMatch(h1, /slow reply|inbox|seller|business|customer support|sale/i);
     const primarySystem = home.slice(0, home.indexOf("function FindingsPreview"));
     assert.doesNotMatch(

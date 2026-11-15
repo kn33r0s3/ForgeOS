@@ -1,3 +1,27 @@
+## Current continuation — 2026-11-16 — main 4dc09990 + homepage polish
+
+1. **P0 — Exact-head verification.** ForgeOS CI 43749236767 for
+   `4dc099903a649c8e528f514fb7ec688454474573` failed; the GitHub API timed out
+   while fetching failed-job logs. Local `npm test` also fails at the
+   unchanged `scripts/startup-contract.test.mjs:79` check for `3x3` in the
+   optional LiveKit profile. Triage that contract without weakening
+   unrelated safety/runtime behavior. The homepage-specific tests pass.
+2. **P0 — Production runtime truth.** `hami-sigma` is degraded with
+   `db=not_configured`; only owner-authorized DB/deployment configuration can
+   remove that blocker. Do not claim the homepage polish is live or deploy
+   without authorization.
+3. **P1 — Homepage increment verified locally.** CTA is above the fold at six
+   tested viewport sizes; headline, bilingual description, about/terms,
+   manifest and social-cover text align. Continue with the existing Hami
+   design system; do not copy the reference's assets or exact composition.
+4. **P1 — Preserve evidence and rights.** No contact, public offer, spend,
+   data intake, or production change occurred. Source collection remains
+   subject to current purpose-specific clearance.
+
+The visual change removes visitor scroll effort, not an owner action per real
+transaction. No verified real transaction exists;
+`OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
 ## Current continuation — 2026-11-15 23:57 NPT (main 2fec5327)
 
 1. **P0 — Production runtime truth.** `hami-sigma` health is degraded with

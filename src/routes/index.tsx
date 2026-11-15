@@ -47,12 +47,13 @@ export const Route = createFileRoute("/")({
           {
             name: "description",
             content:
-              "Hami is a living system for understanding needs, knowledge, capabilities, resources, and outcomes across domains. Built in Kathmandu. Serving everywhere equally; action stays evidence-led and authorized.",
+              "Hami connects needs, evidence, and capabilities to make useful next steps clearer while keeping uncertainty visible. Built in Kathmandu; serving everywhere equally.",
           },
           { property: "og:title", content: "Hami" },
           {
             property: "og:description",
-            content: "Discover what matters. Understand it. Act on it. Built in Kathmandu; serving everywhere equally.",
+            content:
+              "Find what matters. Test what helps. Hami connects needs, evidence, and capabilities while keeping uncertainty visible.",
           },
           { name: "apple-mobile-web-app-title", content: "Hami" },
         ],
@@ -728,55 +729,51 @@ function Hero() {
           </span>
         </Container>
       </div>
-      <Container className="relative py-14 sm:py-20 lg:py-28">
-        <div className="grid items-center gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
+      <Container className="relative py-7 sm:py-10 lg:py-14">
+        <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-12">
           {/* Left: identity + editorial type */}
           <div className="reveal" style={{ "--i": 0 } as React.CSSProperties}>
             <Eyebrow tone="amber">A living system</Eyebrow>
-            <div className="mt-2 flex flex-wrap items-end gap-x-6 gap-y-4">
+            <div className="mt-2 flex flex-wrap items-end gap-x-5 gap-y-3">
               <span className="flex flex-col">
-                <span className="font-serif text-[clamp(3.2rem,9vw,6rem)] font-bold uppercase leading-[0.95] tracking-[0.035em] text-accent">
+                <span className="font-serif text-[clamp(2.5rem,7vw,4.5rem)] font-bold uppercase leading-[0.95] tracking-[0.035em] text-accent">
                   HAMI
                 </span>
-                <span className="mt-3 font-mono text-xs font-bold uppercase tracking-[0.32em] text-foreground">
+                <span className="mt-2 font-mono text-xs font-bold uppercase tracking-[0.32em] text-foreground">
                   SYSTEMS
                 </span>
               </span>
               <span
-                className="pb-1 text-[clamp(1.6rem,4vw,2.6rem)] text-muted"
+                className="pb-1 text-[clamp(1.5rem,3.5vw,2.2rem)] text-muted"
                 style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
               >
                 हामी
               </span>
             </div>
-            <h1 className="mt-8 font-display text-[clamp(2.4rem,5.5vw,4.2rem)] font-extrabold leading-[1.02] tracking-tight text-ink">
-              Discover what matters.
+            <h1 className="mt-6 font-display text-[clamp(2.3rem,5vw,3.8rem)] font-extrabold leading-[1.02] tracking-tight text-ink">
+              Find what matters.
               <br />
-              Understand it.{" "}
-              <span className="text-accent">Act on it.</span>
+              <span className="text-accent">Test what helps.</span>
             </h1>
-            <div className="cut-rule mt-8" aria-hidden="true" />
-            <p className="mt-6 max-w-xl font-sans text-lede leading-relaxed text-ink">
-              Hami is a living system that understands what people need and turns
-              understanding into real value.
+            <div className="cut-rule mt-6" aria-hidden="true" />
+            <p className="mt-4 max-w-xl font-sans text-lede leading-relaxed text-ink">
+              Hami connects needs, evidence, and capabilities to make the next
+              useful step clearer. What remains uncertain stays visible.
             </p>
             <p
-              className="mt-3 max-w-xl text-base leading-7 text-muted"
+              className="mt-2 max-w-xl text-base leading-7 text-muted"
               style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
             >
-              हामी एउटा जीवित प्रणाली हो जसले मानिसहरूलाई के चाहिन्छ भन्ने बुझ्छ र
-              बुझाइलाई वास्तविक मूल्यमा बदल्छ।
+              हामी आवश्यकता, प्रमाण र क्षमतालाई जोडेर उपयोगी अर्को कदम स्पष्ट
+              पार्छौँ। अनिश्चित कुरा पनि स्पष्ट राख्छौँ।
             </p>
-            <p className="mt-4 max-w-xl text-sm leading-6 text-muted">
-              From a practical problem to a bigger possibility, Hami helps make the next useful step clearer. We show what is known, what is uncertain, and what still needs to happen.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4">
+            <div className="mt-4 flex flex-wrap items-center gap-x-8 gap-y-4">
               <p className="text-sm font-extrabold uppercase tracking-[0.18em] text-accent">
                 Built in Kathmandu.
                 <br className="sm:hidden" /> Serving everywhere equally.
               </p>
             </div>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-5 flex flex-wrap gap-3">
               <Button asChild variant="primary" size="lg">
                 <Link to="/needs">
                   Find help or offer something <ArrowRight aria-hidden="true" />
@@ -784,7 +781,7 @@ function Hero() {
               </Button>
               <Button asChild variant="secondary" size="lg">
                 <Link to="/about">
-                  Meet Hami <ArrowRight aria-hidden="true" />
+                  See how Hami works <ArrowRight aria-hidden="true" />
                 </Link>
               </Button>
             </div>

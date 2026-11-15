@@ -91,22 +91,34 @@ describe("homepage contract", () => {
   const systemMap = () => read("src/lib/hami-system.ts");
   const surfaces = () => home() + header() + footer() + systemMap();
 
-  it("1. hero carries the design headline and Hami identity, in English and Nepali", () => {
+  it("1. hero carries an evidence-led headline and Hami identity, in English and Nepali", () => {
     const src = home();
-    assert.match(src, /Discover what matters/);
-    assert.match(src, /Understand it/);
-    assert.match(src, /Act on it/);
+    assert.match(src, /Find what matters/);
+    assert.match(src, /Test what helps/);
     assert.match(
       src,
-      /Hami is a living system that understands what people need and turns understanding into real value/,
+      /Hami connects needs, evidence, and capabilities to make the next useful step clearer/,
     );
     assert.match(
       src,
-      /\u0939\u093e\u092e\u0940 \u090f\u0909\u091f\u093e \u091c\u0940\u0935\u093f\u0924 \u092a\u094d\u0930\u0923\u093e\u0932\u0940 \u0939\u094b/,
+      /हामी आवश्यकता, प्रमाण र क्षमतालाई जोडेर उपयोगी अर्को कदम स्पष्ट पार्छौँ/,
     );
+    assert.doesNotMatch(src, /turns understanding into real value/);
     // Reality loop SVG present
     assert.match(src, /RealityLoop/);
     assert.match(src, /New reality/);
+  });
+
+  it("keeps Hami's public identity aligned without promising unverified outcomes", () => {
+    const publicIdentity = [
+      home(),
+      read("src/routes/about.tsx"),
+      read("src/routes/terms.tsx"),
+      read("public/manifest.webmanifest"),
+      read("public/hami-cover.svg"),
+    ].join(" ");
+    assert.doesNotMatch(publicIdentity, /turns understanding into real value/i);
+    assert.match(publicIdentity, /Find what matters\. Test what helps\./);
   });
 
   it("2. carries the Kathmandu/global identity without Nepal-first framing", () => {
@@ -139,8 +151,7 @@ describe("homepage contract", () => {
 
   it("6. does not position Hami as an inbox, reply service, seller business, or fixed vertical", () => {
     const src = home();
-    // Identity sentence present (in hero body, per design)
-    assert.match(src, /Hami is a living system that understands what people need/);
+    assert.match(src, /What remains uncertain stays visible/);
     // H1 is the design headline, not the wedge
     const headline = src.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)?.[1] ?? "";
     assert.doesNotMatch(headline, /slow reply|inbox|seller|shop|business|customer support|sale/i);

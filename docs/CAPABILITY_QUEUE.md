@@ -1,3 +1,44 @@
+## 2026-11-16 — Hami homepage first-fold clarity and truthful identity
+
+- **Existing seam inspected:** `src/routes/index.tsx::Hero` and its existing
+  `RealityLoop`, `src/lib/content.ts::SITE.tagline`, and existing about/terms,
+  manifest, and social-cover copy. `git log --follow`, `git blame`, and
+  `git log -S'Discover what matters.'` traced the hero's evolution. The prior
+  parked redesign note is historical; this increment follows the owner's
+  renewed request to polish the homepage.
+- **Design boundary:** used the reference only for high-level clarity and
+  hierarchy. Kept Hami's amber/ink system, bilingual identity, and own
+  reality-loop diagram; no reference assets, copy, or exact composition were
+  used. No new file, dependency, route, or architecture was needed.
+- **Routine owner action still required:** authorize durable production
+  database/deployment configuration and verify the live runtime; any real
+  value outcome still requires a participant and evidence. This UI change
+  does not remove owner approval or establish commercial validation.
+- **Action removed:** a visitor no longer has to scroll through a long hero
+  to reach the primary help/work path at ordinary tested viewport sizes.
+- **Measured delta:** at 1440×900, primary CTA top moved from y=1032 to y=682
+  (350 px earlier); at 390×844, y=880 to y=615 (265 px earlier). It is now
+  visible without scrolling at 320×800, 390×844, 768×1024, 1024×768,
+  1280×800, and 1440×900; none has horizontal overflow.
+- **Evidence and limits:** the hero now says “Find what matters. Test what
+  helps.” and describes needs/evidence/capabilities while keeping uncertainty
+  visible. English/Nepali copy, about/terms, browser manifest, and social
+  cover description are aligned. Local app health remains ready, but deployed
+  `hami-sigma` is still degraded with
+  `db=not_configured`; no deployment or production change occurred.
+- **Verification:** `node --experimental-strip-types --test
+  src/lib/content.test.ts src/lib/public-copy.test.ts` — 62 passed;
+  `npm run check` — passed with one existing Fast Refresh warning;
+  `npm run build:dev` — passed; browser checks — six viewport sizes above,
+  no page errors; `git diff --check` — passed. Full `npm test` remains
+  blocked by the unchanged `scripts/startup-contract.test.mjs:79` assertion
+  expecting `3x3` in the optional LiveKit profile; no unrelated LiveKit test
+  or runtime behavior was changed.
+- **Next removable dependency:** triage the exact-head CI/LiveKit assertion
+  separately, then obtain owner-authorized production database/deployment
+  configuration and verify the deployed page/runtime. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION`
+  remains **NOT MEASURABLE**.
+
 ## 2026-11-16 — Restored deterministic backend source-clearance tests
 
 - **Existing seam inspected:** `backend/tests/conftest.py::govinfo_review_clock`

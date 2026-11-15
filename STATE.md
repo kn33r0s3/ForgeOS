@@ -1,3 +1,26 @@
+## Current state — 2026-11-16 — homepage polish on main 4dc09990
+
+- **Repository:** one active branch, `main`; run started clean and
+  synchronized with `origin/main` at `4dc099903a649c8e528f514fb7ec688454474573`.
+  The homepage/identity changes are local and uncommitted.
+- **Measured UI change:** the existing hero now presents a shorter,
+  evidence-led bilingual message and retains Hami's own identity/RealityLoop.
+  Primary CTA position moved from y=1032 to y=682 at 1440×900 and y=880 to
+  y=615 at 390×844. It is visible without scrolling at six tested viewport
+  sizes; no horizontal overflow or browser page errors observed.
+- **Validation:** focused homepage/public-copy tests 62/62 passed;
+  `npm run check` and `npm run build:dev` passed; `git diff --check` passed.
+  Full `npm test` is not green: the unchanged optional LiveKit startup
+  contract asserts a missing `3x3` token. Exact-head CI 43749236767 failed;
+  failed-job details could not be fetched because the GitHub API request
+  timed out. The local changes are not covered by that CI run.
+- **Runtime:** local health is ready with `db=up`; deployed `hami-sigma`
+  remains degraded with `db=not_configured`. No deployment or production
+  configuration changed. No real participant/outcome was produced;
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE**.
+- **Next:** investigate the current CI assertion independently, preserve the
+  production DB authorization boundary, and continue safe Hami engineering.
+
 ## Current state — 2026-11-15 23:57 NPT — main 2fec5327
 
 - **Repository:** `main` and `origin/main` are synchronized at

@@ -1,3 +1,38 @@
+## Current handoff — 2026-11-16 — Hami homepage first-fold polish (main 4dc09990)
+
+- Run-start reality: `main` and `origin/main` were synchronized at
+  `4dc099903a649c8e528f514fb7ec688454474573`; the worktree was clean before
+  this increment. Changes remain local and uncommitted on `main`.
+- Existing seam and history: updated the existing homepage `Hero`, its
+  `RealityLoop`, and the shared `SITE.tagline`; history was traced with
+  `git log --follow`, `git blame`, and `git log -S`. Reused Hami's current
+  palette, Devanagari identity, and loop diagram. No new file, asset,
+  dependency, route, model, or service.
+- Result: concise evidence-led English/Nepali homepage message and aligned
+  about/terms, manifest, and social-cover description. The primary CTA moved
+  350 px earlier at 1440×900 (y=1032 → 682) and 265 px earlier at 390×844
+  (y=880 → 615). Browser checks found the CTA above the fold at six tested
+  sizes (320×800 through 1440×900), no horizontal overflow, and no page
+  errors.
+- Verification: focused homepage/public-copy tests — 62 passed;
+  `npm run check` passed with one existing Fast Refresh warning;
+  `npm run build:dev` passed; `git diff --check` passed. Full `npm test`
+  currently fails in the unchanged `scripts/startup-contract.test.mjs:79`
+  assertion for `3x3` in the optional LiveKit profile. Exact-head ForgeOS CI
+  run 43749236767 for base SHA 4dc09990 concluded failure; fetching its
+  failed-job log timed out. The local homepage edits are not represented by
+  that run.
+- Runtime boundary: local health is `ok`, ready, `db=up`; deployed
+  `hami-sigma` remains degraded, `ready=false`, `db=not_configured`. Exact
+  head also has a failed independent deploy-verification run. No deployment,
+  database, public action, contact, or production setting was changed.
+- Owner action still required: authorized durable production DB/deployment
+  setup and independent health/persistence verification. This presentation
+  change removes visitor scroll effort only; it creates no real-world value
+  evidence. Next: triage the existing CI/LiveKit assertion separately and
+  continue runtime recovery only within owner authorization.
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
 ## Current handoff — 2026-11-15 23:57 NPT — homepage outage truth and live-runtime check (main 2fec5327)
 
 - Run-start repository reality: `main` and `origin/main` were synchronized at

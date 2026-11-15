@@ -34,10 +34,10 @@ function TermsPage() {
           <section>
             <h2 className="font-display text-xl font-bold text-ink">1. What Hami is</h2>
             <p className="mt-3 text-sm leading-7 text-muted">
-              Hami is a living system that understands what people need and turns understanding
-              into real value. It is built in Kathmandu and serves everywhere equally. Hami is
-              pre-revenue and experimental. Features may change, break, or be removed without
-              notice.
+              Hami connects needs, evidence, and capabilities to make useful next steps clearer
+              while keeping uncertainty visible. It is built in Kathmandu and serves everywhere
+              equally. Hami is pre-revenue and experimental. Features may change, break, or be
+              removed without notice.
             </p>
           </section>
 

@@ -7,7 +7,7 @@ export const SITE = {
   url: "https://haminp.vercel.app",
   email: "",
   location: "Built in Kathmandu",
-  tagline: "Discover what matters. Understand it. Act on it.",
+  tagline: "Find what matters. Test what helps.",
   description:
     "Hami is being built in Kathmandu as a living system for understanding needs, knowledge, capabilities, resources, and outcomes across domains. It serves everywhere equally, keeps uncertainty visible, and acts within evidence, authorization, and safety boundaries. Pre-revenue; no merchants served yet; public intake is currently closed.",
 } as const;
