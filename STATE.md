@@ -1,3 +1,16 @@
+## Current state — 2026-11-15 — main 6d6cad48 — H0/H1 direct-client map
+
+- **Repository:** canonical `main`, base SHA `6d6cad48b1aed6e385c367b3bcdeb17082711ba6`; worktree was clean at run start. This run adds documentation updates and one unused-import cleanup. No branch or worktree created.
+- **H0 runtime:** local health is HTTP 200 / ready / DB up. `hami-sigma` API health is degraded with `db=not_configured`; canonical `haminp` returns HTTP 402 `DEPLOYMENT_DISABLED`. Deployment SHA, owner-key access, and worker heartbeat remain UNVERIFIED.
+- **Exact-base verification:** ForgeOS CI 43738735395 failed (backend 53 failed / 1,310 passed / 2 skipped, lint unused `Outcome`, frontend assertion failures); secrets scan 43738735394 passed; independent deployment verifier 43738735333 failed HTTP 402. This run removed the unused import; `npm exec eslint -- src/routes/prototype.inbox.tsx` and full `npm run lint` passed, with one existing lint warning. Full tests were not rerun.
+- **H1:** the direct-client pipeline is mapped in [HAMI_CAPABILITY_MAP.md](docs/HAMI_CAPABILITY_MAP.md#direct-client-value-workflow-map-h0h1). Existing generic entity/relation/evidence and opportunity/option/decision/action/outcome/payment seams exist, but no company dossier aggregator, company-to-opportunity link in the economic path, or ten-family company evaluator exists. Six generic option classes are not the ten families.
+- **Source boundary:** five configured source clearances are expired by 2026-11-15; none supports `authorized_prospect_discovery`; readiness audits without querying sources. No company was researched, no source data was fetched, and no contact/outbound action occurred.
+- **Next:** review one exact source's current rights; only if cleared, implement/test one no-contact company → evidence → Opportunity/Relation path using existing primitives. Do not invent family opportunities or scale claims. Owner interventions per real transaction remain NOT MEASURABLE.
+- **Worktree delta:** documentation-only mapping/continuity edits plus removal of the unused `Outcome` type import; no runtime behavior changed.
+- **Untracked paths:** `docker-compose.livekit-scale.yml` and `scripts/livekit-scale-test.sh` appeared during final verification. Not inspected or modified in this pass.
+
+---
+
 ## Current state — 2026-11-15 05:31 NPT — main 7b55f2ba72bb862353e868fc64f38f75f0e7a1f9
 
 - Mission and breadth remain settled. Continue independent research across domains/geographies; no one experiment gates Hami-wide progress.

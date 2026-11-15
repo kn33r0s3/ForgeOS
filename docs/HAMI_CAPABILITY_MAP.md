@@ -51,6 +51,73 @@ works or that the real world has no relevant records.
 | Forge Bot inquiry | [`/forge-bot-intake`](../src/routes/forge-bot-intake.tsx) is retained as a closed, `noindex` route. The public Businesses page does **not** link to it; it links to existing Hami services, process, and work surfaces instead. Backend [`forge_bot.py`](../backend/app/api/forge_bot.py) implements the gated record path; [`forge_bot_owner_notification.py`](../backend/app/api/forge_bot_owner_notification.py) implements the internal digest. | Public config contains contact/booking settings and intake status. Lead summary is owner-key protected; lead writes also require server configuration and the LIVE gate. `noindex` is not access control. | **IMPLEMENTED / BLOCKED** — [`test_forge_bot_api.py`](../backend/tests/test_forge_bot_api.py) and [`test_forge_bot_owner_notification.py`](../backend/tests/test_forge_bot_owner_notification.py) cover the existing paths; intake remains disabled, and public navigation does not authorize REAL lead intake or outreach. |
 | Workers and scheduler | Backend [`worker.py`](../backend/worker.py), [`workers.py`](../backend/app/api/workers.py), [`scheduled.py`](../backend/app/api/scheduled.py), and [`cycle_scheduler.py`](../backend/app/services/cycle_scheduler.py) implement separate worker/scheduled paths. | The worker is a separate process; Vercel Hobby cron is daily. Internal digest delivery requires SMTP configuration; no customer messaging is enabled. | **PARTIAL / UNVERIFIED** — [`test_scheduled_cycle.py`](../backend/tests/test_scheduled_cycle.py) covers scheduled behavior; code presence is not evidence of reliable continuous worker operation or successful email delivery. No Oracle VM was provisioned or tested. |
 
+## Direct-client value workflow map (H0/H1)
+
+This inventory implements the requested first step: map the direct-client
+workflow onto Hami's existing primitives before adding behavior. It does not
+authorize contact, create a prospect, or claim a customer outcome.
+
+### H0 — current reality (2026-11-15)
+
+| Check | Evidence | Status |
+|---|---|---|
+| Repository identity | Canonical branch `main`, base commit `6d6cad48b1aed6e385c367b3bcdeb17082711ba6`; worktree was clean at run start. This run adds documentation updates and one unused-import cleanup. | **VERIFIED** |
+| Local API and database | `http://localhost:8000/health` returned HTTP 200, `status=ok`, `ready=true`, `db=up` at 2026-11-15 17:10 UTC. | **VERIFIED** for this local process only |
+| Comparison deployment | `https://hami-sigma.vercel.app/api/health` returned HTTP 200, `status=degraded`, `ready=false`, `db=not_configured`. The health response does not identify its deployed commit. | **BLOCKED / UNVERIFIED** deployment identity |
+| Canonical public host | `https://haminp.vercel.app/api/health` returned HTTP 402 `DEPLOYMENT_DISABLED`. | **BLOCKED** |
+| Exact-head CI and secret scan | On `6d6cad48b1aed6e385c367b3bcdeb17082711ba6`, [ForgeOS CI run 43738735395](https://github.com/kn33r0s3/ForgeOS/actions/runs/43738735395) failed: backend 53 failed / 1,310 passed / 2 skipped; lint reported unused `Outcome` in `src/routes/prototype.inbox.tsx`; frontend assertions failed in prototype honesty and seller-summary/duration tests. This run removed the unused import; file-scoped and full `npm run lint` passed (the full command reports one existing warning in `experiment-card.tsx`); the full test suite was not rerun. [Secrets scan run 43738735394](https://github.com/kn33r0s3/ForgeOS/actions/runs/43738735394) succeeded on the base SHA. | **FAILED** base CI; **PASSED** lint; **PASSED** base secret scan |
+| Independent deployment verification | [Run 43738735333](https://github.com/kn33r0s3/ForgeOS/actions/runs/43738735333) failed when production content retrieval returned HTTP 402. | **BLOCKED** |
+| Owner access and worker runtime | No owner key was used and no owner-only data was read. A worker heartbeat/process was not independently verified. | **UNVERIFIED** |
+
+**H0 verdict: PARTIAL.** Local API/database and external health responses were
+checked directly. The deployed database is not configured at `hami-sigma`;
+`haminp` is disabled; exact deployment identity, owner access, and worker
+uptime remain unverified.
+
+### H1 — direct-client pipeline seams
+
+| Required step | Status | Existing seam and verified boundary |
+|---|---|---|
+| Company identity and relations | **PARTIAL** | [`SubstrateEntity`](../backend/app/models.py#L788) already carries generic identity, source identity, provenance, uncertainty, merge, and archive state; [`WorldRelation`](../backend/app/models.py#L821) and [`world_graph.create_relation`](../backend/app/services/world_graph.py#L927) represent typed links. No `Company` or `Business` model was found. [`Opportunity`](../backend/app/models.py#L142) has free-text `target_customer`, not a company foreign key; [`assess_need_economics`](../backend/app/services/economic_validation.py#L22) creates it with `target_customer=None`. The graph can hold one business identity, but the business-to-opportunity relation is not wired by this flow. |
+| External source discovery and clearance | **BLOCKED** | [`SourceClearance`](../backend/app/services/source_clearance_registry.py#L20) limits exact URLs, purpose, operation, fields, provenance and validity; [`capabilities_for_requirement`](../backend/app/services/source_clearance_registry.py#L437) only returns currently valid entries. All five configured entries expire no later than 2026-10-27, and none declares `authorized_prospect_discovery`. [`evaluate_prospect_discovery_readiness`](../backend/app/services/prospect_discovery.py#L87) audits the registry but makes no source request; the public provider/service directories are expressly excluded as buyer-prospect sources. There is no prospect-specific source adapter. |
+| Evidence and provenance | **PARTIAL** | [`Evidence`](../backend/app/models.py#L639), [`Claim`](../backend/app/models.py#L706), [`EvidenceRelationship`](../backend/app/models.py#L729), and [`world_graph.create_evidence`](../backend/app/services/world_graph.py#L1045) can attach sourced, classifiable evidence to an entity and preserve provenance. The economic assessment checks referenced evidence for source, claim, provenance and a classifiable support level. No company-level evidence aggregation is connected to that path. |
+| Company-level dossier | **MISSING** | No company dossier model, aggregate service, or direct-client API was found in the inspected workflow. Existing entity, relation, event and evidence records are the reusable inputs; they currently require manual assembly rather than producing one source-backed company view. |
+| Ten solution assessments | **MISSING** | No company-scoped solution-family evaluator or persisted assessment contract was found in backend code/tests. [`option_space.py`](../backend/app/services/option_space.py#L12) defines six generic decision options (`validate`, `build`, `service`, `buy_or_integrate`, `defer`, `do_nothing`), not the ten requested solution families; it leaves scores empty and unknowns explicit. No company has ten family statuses recorded. |
+| Opportunity and option records | **PARTIAL** | Owner-only `POST /api/needs/{need_id}/economic-validation` in [`opportunities.py`](../backend/app/api/opportunities.py#L75) can create an evidence-bounded `Opportunity` from an existing sufficiently understood Need. `GET /api/opportunities/{id}/options` uses the six generic options and returns unknowns without invented scores. The Need-to-Opportunity flow does not attach a company entity. |
+| Decision and qualification | **PARTIAL** | Owner-only `POST /api/opportunities/{id}/options/decision` proposes a generic `Decision`; `/api/forge/decisions/{id}/accept` is an explicit owner action in [`forge.py`](../backend/app/api/forge.py#L1406). Prospect readiness records qualification evidence needed, but explicitly leaves qualification unstarted, creates no interested party/customer, and marks outreach ineligible while source clearance is absent. |
+| Capability and execution authorization | **PARTIAL** | [`ForgeCapability`](../backend/app/models.py#L974) requires a test reference for an active capability. Economic assessment requires an active tested capability and fit evidence before it can be `testable`; it never creates or executes an Action. Existing owner-gated Action routes in [`forge.py`](../backend/app/api/forge.py#L944) are reusable, but no company-scoped direct-client capability/authorization chain is connected. |
+| Drafting, sending and suppression | **PARTIAL** | Existing [`scout.py`](../backend/app/services/scout.py#L26) uses `SubstrateEntity(entity_type="scout_candidate")`, Evidence, `OutreachDraft`, and `DoNotContact`; owner-only `/api/scout/*` routes prepare drafts, record approval, suppression and owner-reported sends. The owner sends from their own account; no autonomous send exists. [`test_scout.py`](../backend/tests/test_scout.py) exercises this existing workflow. It is not linked to the Need/Opportunity flow and does not authorize contact. |
+| Replies and buyer qualification | **PARTIAL** | Scout can record an owner-observed reply or no-response summary on a sent draft. Prospect readiness requires evidence of relevance, corroborated identity, need fit and decision-role qualification, but does not collect or establish those facts. The separate Forge Bot path is inbound and consent-gated, not a buyer-prospect adapter. |
+| Offer, contract, payment and delivery | **PARTIAL** | Existing [`Product`](../backend/app/models.py#L1801), [`OpPaymentIntent`](../backend/app/models.py#L2308), [`payments.py`](../backend/app/api/payments.py#L195), and [`fulfill_verified_intent`](../backend/app/services/payment_intent_engine.py#L819) support product checkout, server-side payment verification, and owner-confirmed fulfillment. [`test_payment_intents.py`](../backend/tests/test_payment_intents.py) exercises the provider verification/fulfillment boundary. Fulfillment can record a REAL revenue `Outcome`; this is product/payment plumbing, not a company-linked scope, contract, software delivery or client-acceptance workflow. |
+| Outcome and economic learning | **PARTIAL** | [`Action`](../backend/app/models.py#L1635), [`Outcome`](../backend/app/models.py#L1673), and existing experiment/learning APIs preserve outcomes and learning. [`test_closed_loop_action_outcome.py`](../backend/tests/test_closed_loop_action_outcome.py) exercises the generic Action/Outcome bridge. The revenue log contains no verified direct-client transaction; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**. No end-to-end company → accepted work → payment → cost → outcome chain is established. |
+
+The ten requested assessment families are website/digital presence;
+landing pages/conversion; catalogue/commerce/ordering; scheduling;
+enquiry/customer management; workflow automation; analytics/reporting;
+portals/internal tools; payments/invoicing/reconciliation; and AI/knowledge
+workflows. Until a real company has permitted, source-backed observations,
+its family states remain **not evaluated**; for any individual family without
+adequate evidence, the correct eventual status is **UNKNOWN**, not a fabricated
+problem or an automatic Opportunity.
+
+### First-company acceptance boundary
+
+The no-contact first-company acceptance test has **NOT RUN**. No company was
+selected or researched, no source data was fetched, and no contact or external
+action occurred. H2 is blocked on fresh, purpose-specific source clearance;
+the first company dossier and ten-family assessment path are not implemented;
+and production persistence is unavailable on the checked deployment. The
+smallest existing-architecture route is one `SubstrateEntity`, its sourced
+Evidence and typed Relations/Events, then an Opportunity only for a distinct
+substantiated problem. Do not create ten company records, ten artificial
+problems, or a new CRM.
+
+Relevant existing contracts also include
+[`test_economic_validation.py`](../backend/tests/test_economic_validation.py)
+and [`test_prospect_discovery.py`](../backend/tests/test_prospect_discovery.py).
+These exercise bounded code behavior, not a real company or commercial
+outcome; the exact-base CI result above is failed.
+
 ## Route and navigation map
 
 | Classification | Current paths | What a visitor can expect |
@@ -118,10 +185,15 @@ record.
 
 ## Next owner dependency
 
-The navigation change removes the need to manually share the business and
-closed inquiry URLs. It does not remove owner-run discovery, decide a market or
-price, authorize contact, open intake, or create a transaction. The next
-economic evidence still requires owner-run conversations and an attributable
-real paid outcome. The page is noindex rather than route-authenticated, so it is not a secret URL; traced money/action reads are key-guarded, while production key presence and end-to-end owner access remain unverified. No
-real transaction is verified; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION`
-remains **NOT MEASURABLE**.
+The direct-client H0/H1 map removes the owner-dependent step of rediscovering
+which code owns each stage. It does not provide an eligible source, create a
+company dossier, choose an evidenced opportunity, authorize contact, or
+complete delivery. The next removable dependency is a fresh, exact-source
+review and clearance for the prospect-discovery purpose; then verify the
+smallest company-to-evidence-to-Opportunity path locally before any contact
+workflow. Production `hami-sigma` has no configured database, `haminp` returns
+HTTP 402, and owner access and worker uptime remain unverified. The unused `Outcome` import flagged by base CI was removed; both the
+file-scoped check and full `npm run lint` passed (one existing warning remains
+in `experiment-card.tsx`). The full test suite was not rerun, and the rest of
+the base CI failure remains unresolved. No real transaction is verified;
+`OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.

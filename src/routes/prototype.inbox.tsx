@@ -12,7 +12,6 @@ import {
   weekSummaryText,
   type Channel,
   type Inquiry,
-  type Outcome,
 } from "@/lib/prototype-inbox";
 
 export const Route = createFileRoute("/prototype/inbox")({

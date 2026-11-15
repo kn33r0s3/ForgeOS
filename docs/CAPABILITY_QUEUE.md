@@ -1,3 +1,14 @@
+## 2026-11-15 — Direct-client H0/H1 inventory (map complete; H0 partial)
+
+### Verified delta
+- Existing seam inspected: [`SubstrateEntity`](../backend/app/models.py#L788), [`WorldRelation`](../backend/app/models.py#L821), `Opportunity` / `Option` / `Decision`, [`economic_validation.py`](../backend/app/services/economic_validation.py), [`prospect_discovery.py`](../backend/app/services/prospect_discovery.py), [`option_space.py`](../backend/app/services/option_space.py), Scout, Action/Outcome, and payment fulfillment. The full required pipeline is recorded in [`HAMI_CAPABILITY_MAP.md`](./HAMI_CAPABILITY_MAP.md#direct-client-value-workflow-map-h0h1).
+- Owner action still required: no new owner action is required to preserve this map. A real company dossier remains contingent on a fresh source-specific review and clearance; any later external contact remains separately owner-authorized.
+- Action removed: an operator no longer has to rediscover the code path for each direct-client stage or confuse six generic option classes with ten solution-family assessments. The exact-head lint error from the unused `Outcome` type import in `src/routes/prototype.inbox.tsx` was also removed.
+- What remains: the exact company-to-evidence-to-Opportunity path is not wired; no dossier or ten-family evaluator exists; all five source-clearance entries are expired and none supports `authorized_prospect_discovery`; no prospect adapter exists. Production database is unconfigured at the inspected deployment; worker and owner access are unverified.
+- Next removable dependency: review one exact official company-information source for its current terms, robots, purpose, fields, retention, and provider-use limits. Only if cleared, use the existing ENTITY/RELATION/EVENT/EVIDENCE seams to prove one no-contact dossier before implementing scale or engagement.
+- **Improvement delta — knowledge/evidence quality and cleanup:** exact H0 runtime facts and all 12 requested H1 stages are now mapped to existing code and explicit gaps. Ten family statuses are not claimed without a real, sourced company. Both `npm exec eslint -- src/routes/prototype.inbox.tsx` and full `npm run lint` passed after removing the unused import; the full command reports one existing warning in `experiment-card.tsx`. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+- No source was fetched for a prospect, no company record was created, and no contact or external action occurred. No schema, route, model, or new file was added. Full CI was not rerun; the exact-base CI failure remains recorded.
+
 ## 2026-11-15 — Local/deployment findings parity: fail closed on unhealthy runtime
 
 ### Verified discrepancy

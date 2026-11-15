@@ -1,3 +1,29 @@
+## Current handoff — 2026-11-15 — Hami direct-client H0/H1 inventory (base main 6d6cad48)
+
+Hami remains one open-ended, evidence-led system. Continue by reusing its
+ENTITY, RELATION, EVENT, EVIDENCE, CAPABILITY and ACTION primitives; do not add
+a CRM, parallel ledger, new top-level primitive, or outbound sender.
+
+### Repository and H0 reality
+- Current base is `main` at `6d6cad48b1aed6e385c367b3bcdeb17082711ba6`; the worktree was clean at run start. This run adds documentation updates and one unused-import cleanup. Active branch remains `main`.
+- At 2026-11-15 17:10 UTC, local `/health` returned HTTP 200, `status=ok`, `ready=true`, `db=up`. `hami-sigma.vercel.app/api/health` returned HTTP 200, `degraded`, `ready=false`, `db=not_configured`; `haminp.vercel.app/api/health` returned HTTP 402 `DEPLOYMENT_DISABLED`.
+- `hami-sigma` health did not reveal its deployed SHA. Owner-key access and a worker heartbeat/process were not independently verified. H0 is PARTIAL.
+- Exact-base ForgeOS CI run 43738735395 failed (backend 53 failed / 1,310 passed / 2 skipped; unused `Outcome` lint error; frontend prototype-honesty and seller-summary/duration assertions failed). This run removed the unused import from `src/routes/prototype.inbox.tsx`; both `npm exec eslint -- src/routes/prototype.inbox.tsx` and `npm run lint` passed (full lint has one existing warning in `experiment-card.tsx`). The full test suite was not rerun. Secrets scan 43738735394 passed on the base SHA. Independent deploy verifier 43738735333 failed on HTTP 402. Do not transfer a prior run's result to the changed worktree.
+
+### H1 map and first-company boundary
+- The full evidence-backed matrix is now in [HAMI_CAPABILITY_MAP.md](docs/HAMI_CAPABILITY_MAP.md#direct-client-value-workflow-map-h0h1), with the improvement/blocker recorded in [CAPABILITY_QUEUE.md](docs/CAPABILITY_QUEUE.md#2026-11-15--direct-client-h0h1-inventory-map-complete-h0-partial).
+- Existing identity/relation/evidence primitives can represent one company without a new model. No company dossier aggregator or ten-family evaluator was found. `Opportunity.target_customer` is free text and the economic-validation path creates it empty; a business-to-opportunity relation is not wired.
+- Current `option_space` has six generic choices, not the ten required solution families. Source clearance requires exact current purpose; all five configured entries are expired by 2026-11-15, none authorizes `authorized_prospect_discovery`, and the readiness audit makes no source requests. No prospect adapter exists.
+- Scout is a distinct owner-only, seller-focused draft/reply workflow. It never sends messages, is not connected to this Need/Opportunity path, and does not authorize contact. No company was selected or researched; H2 acceptance is NOT RUN. No contact or external action occurred.
+
+### Verified work and next resumable operation
+- Changes: direct-client H0/H1 matrix in the existing capability map; measurable delta and blocker in the existing capability queue; this handoff/state/queue update; one unused type-only import removed. The import cleanup changes no runtime behavior. No new file, model, route, schema, source registration, database write, or deployment.
+- Next: review current rights for one exact official company-information source. If—and only if—it is purpose-cleared, implement the smallest in-place company → sourced evidence → existing Opportunity/Relation path and prove one company with no outreach. Do not generate any of the ten problem statements without evidence.
+- Separately, diagnose exact-head CI failures without weakening source-rights gates. H0 still needs independently observed worker state and authorized owner access; production persistence remains blocked. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is NOT MEASURABLE.
+- Untracked paths appeared during final verification: `docker-compose.livekit-scale.yml` and `scripts/livekit-scale-test.sh`. They are outside this H0/H1 pass and were not inspected, modified, staged, or removed.
+
+---
+
 ## Current handoff — 2026-11-15 05:31 NPT — D93 report #04 timing, municipal response and exact-head reconciliation
 
 Hami's mission and breadth are settled. Continue independent discovery across domains and geographies. Keep public reporting separate from firsthand evidence, preserve UNKNOWN, and use only ENTITY, RELATION, EVENT, EVIDENCE, CAPABILITY and ACTION.

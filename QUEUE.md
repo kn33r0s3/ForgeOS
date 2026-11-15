@@ -1,3 +1,16 @@
+## Current continuation — 2026-11-15 — direct-client H0/H1 (base main 6d6cad48)
+
+1. **P0 — Exact-head CI.** Diagnose the 53 backend failures and frontend assertions on `6d6cad48b1aed6e385c367b3bcdeb17082711ba6`. The unused `Outcome` import lint error is fixed locally and its file-scoped ESLint check passed; the full suite still needs a new exact-head run. Do not suppress failures or relax expired-source/consent gates. Secrets scan passed; deploy verification failed HTTP 402.
+2. **P0 — H0 runtime truth.** Local health/DB are ready; `hami-sigma` is degraded with no configured database; `haminp` returns HTTP 402. Verify deployment identity, worker heartbeat and owner-only access only through authorized means.
+3. **P1 — Clear one exact discovery source.** Re-review current terms, robots, allowed purpose/fields, retention and provider use for one official company-information source. All five current registry entries are expired; none supports prospect discovery. No source fetch until the existing registry authorizes it.
+4. **P1 — First company dossier.** After a source is cleared, use one genuine company and existing ENTITY/RELATION/EVENT/EVIDENCE records. Wire only the minimal evidenced business-to-Opportunity link in the existing path; do not add a CRM or duplicate company record. No outreach.
+5. **P1 — Ten-family evaluation.** Implement the missing company-scoped assessment seam only after the first company has source-backed observations; each family must remain UNKNOWN unless evidence supports OPPORTUNITY or NOT SUITABLE.
+6. **P2 — Keep scope and metrics honest.** No contact, offer, payment, paid infrastructure, or scale-up without their own authorization/evidence. No real transaction exists; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is NOT MEASURABLE.
+
+The H0/H1 evidence map is in [HAMI_CAPABILITY_MAP.md](docs/HAMI_CAPABILITY_MAP.md#direct-client-value-workflow-map-h0h1). No new Hami model, route family, primitive, ledger or company record was created in this pass.
+
+---
+
 ## Current continuation — 2026-11-15 05:31 NPT (main 7b55f2ba72bb862353e868fc64f38f75f0e7a1f9)
 
 Mission and breadth are settled. Continue independent, evidence-grounded discovery across domains.
