@@ -4,7 +4,9 @@ from app import models
 from app.services import research_planner
 
 
-def test_unrelated_questions_get_general_subquestions_and_only_cleared_sources(db):
+def test_unrelated_questions_get_general_subquestions_and_only_cleared_sources(
+    db, public_metadata_review_clock
+):
     questions = [
         models.ResearchQuestion(
             question="What are the measured postharvest losses for smallholder farmers in Nepal?"
@@ -336,7 +338,9 @@ def test_linked_claim_evidence_is_reused_by_reference_without_truth_upgrade(db):
     assert db.get(models.Claim, claim.id).epistemic_state == "contested"
 
 
-def test_gap_questions_are_not_planned_for_external_collectors(db):
+def test_gap_questions_are_not_planned_for_external_collectors(
+    db, public_metadata_review_clock
+):
     gap = models.ResearchQuestion(
         question='Gap: open job #1 "repair" has no recorded counterparty.'
     )
@@ -352,7 +356,9 @@ def test_gap_questions_are_not_planned_for_external_collectors(db):
     assert db.get(models.ResearchQuestion, gap.id).status == "open"
 
 
-def test_gap_questions_do_not_fill_the_planning_limit(db):
+def test_gap_questions_do_not_fill_the_planning_limit(
+    db, public_metadata_review_clock
+):
     for index in range(20):
         db.add(
             models.ResearchQuestion(

@@ -2463,7 +2463,9 @@ def test_ai_external_provider_status_is_disabled_until_metered(monkeypatch):
 
 
 
-def test_prompt_context_includes_only_provenance_verified_work_licensed_abstract_excerpt(db, monkeypatch):
+def test_prompt_context_includes_only_provenance_verified_work_licensed_abstract_excerpt(
+    db, monkeypatch, public_metadata_review_clock
+):
     import json
     from datetime import datetime, timezone
 

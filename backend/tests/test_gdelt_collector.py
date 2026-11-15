@@ -24,6 +24,8 @@ from app.services.collectors import gdelt
 from app.services.observer_engine import ObserverEngine
 from app.services.research_evidence_assessment import gdelt_requirement_eligibility
 
+pytestmark = pytest.mark.usefixtures("public_metadata_review_clock")
+
 QUERY = '("supply chain" OR "logistics")'
 ARTICLES = {
     "articles": [

@@ -1,6 +1,7 @@
 import json
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
+import pytest
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
 
@@ -52,7 +53,9 @@ def _authorized_fixture_observation(
     )
 
 
-def test_authorized_clearance_observation_persists_event_evidence_and_provenance(db):
+def test_authorized_clearance_observation_persists_event_evidence_and_provenance(
+    db, public_metadata_review_clock
+):
     signal = _authorized_fixture_observation(
         db, when=datetime(2026, 9, 27, 10, 0, tzinfo=timezone.utc)
     )
@@ -84,7 +87,9 @@ def test_authorized_clearance_observation_persists_event_evidence_and_provenance
     assert db.query(models.IntegrationDelivery).count() == 0
 
 
-def test_uncleared_or_stale_source_authorization_is_rejected(db):
+def test_uncleared_or_stale_source_authorization_is_rejected(
+    db, public_metadata_review_clock
+):
     entry = next(
         item
         for item in source_clearance_registry.source_clearances()
@@ -106,6 +111,13 @@ def test_uncleared_or_stale_source_authorization_is_rejected(db):
         db=db,
         now=datetime(2026, 9, 28, 12, 0, tzinfo=timezone.utc),
     )
+    with pytest.raises(PermissionError, match="clearance has expired"):
+        source_clearance_registry.validate_authorization(
+            authorization,
+            url=entry.url,
+            collector=entry.collector,
+            today=date(2026, 10, 28),
+        )
     with __import__("pytest").raises(PermissionError):
         demand_understanding.record_authorized_source_observation(
             db,
@@ -129,7 +141,9 @@ def test_uncleared_or_stale_source_authorization_is_rejected(db):
     assert db.query(models.Signal).count() == 0
 
 
-def test_duplicate_and_independent_observations_are_distinct_and_idempotent(db):
+def test_duplicate_and_independent_observations_are_distinct_and_idempotent(
+    db, public_metadata_review_clock
+):
     first_time = datetime(2026, 9, 26, 10, 0, tzinfo=timezone.utc)
     first = _authorized_fixture_observation(db, when=first_time)
     duplicate = demand_understanding.record_authorized_source_observation(
@@ -214,7 +228,9 @@ def test_unresolved_questions_prevent_sufficient_need(db):
     assert result.inferred_need_id is None
 
 
-def test_adequate_capability_is_reused_without_research(db):
+def test_adequate_capability_is_reused_without_research(
+    db, public_metadata_review_clock
+):
     signal = _observation(db, "A repair shop needs a documented incidence estimate.", "obs-e")
     result = demand_understanding.understand(
         db,
@@ -279,7 +295,9 @@ def test_repeated_observations_and_need_are_idempotent(db):
     assert db.query(models.WorldEvent).filter_by(event_type="demand_understood").count() == 1
 
 
-def test_sqlite_reopen_preserves_demand_to_capability_gap(tmp_path):
+def test_sqlite_reopen_preserves_demand_to_capability_gap(
+    tmp_path, public_metadata_review_clock
+):
     engine = create_engine(
         f"sqlite:///{tmp_path / 'demand.sqlite'}",
         connect_args={"check_same_thread": False},

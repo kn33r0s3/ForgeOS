@@ -78,7 +78,9 @@ def judge_specs(evidence=None):
     ]
 
 
-def test_media_claim_creates_subquestions_on_cleared_sources_without_duplication(db):
+def test_media_claim_creates_subquestions_on_cleared_sources_without_duplication(
+    db, public_metadata_review_clock
+):
     claim, _ = make_claim_task(db)
     question = db.query(models.ResearchQuestion).filter_by(source_claim_id=claim.id).one()
 

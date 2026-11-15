@@ -111,7 +111,9 @@ def test_high_quality_economic_cluster_can_handoff_but_isolated_rare_signal_cann
     assert assessment.opportunity_id == opportunity.id
 
 
-def test_geographic_language_spread_and_research_trigger_are_persistent(db, monkeypatch):
+def test_geographic_language_spread_and_research_trigger_are_persistent(
+    db, monkeypatch, public_metadata_review_clock
+):
     from app.config import settings
 
     now = datetime(2026, 9, 11, tzinfo=timezone.utc)

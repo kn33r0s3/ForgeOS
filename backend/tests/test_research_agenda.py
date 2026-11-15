@@ -2,7 +2,9 @@ from app import models
 from app.services import research_planner, research_task_engine
 
 
-def test_zero_result_question_stays_open_and_uses_cleared_research_tasks(db):
+def test_zero_result_question_stays_open_and_uses_cleared_research_tasks(
+    db, public_metadata_review_clock
+):
     question = models.ResearchQuestion(
         question="What public evidence describes current market price?",
         status="planned",

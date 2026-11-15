@@ -278,7 +278,9 @@ def test_need_assessment_api_uses_existing_opportunity_surface(db):
     assert db.query(models.Experiment).count() == 0
 
 
-def test_need_assessment_and_provenance_survive_sqlite_reopen(tmp_path):
+def test_need_assessment_and_provenance_survive_sqlite_reopen(
+    tmp_path, public_metadata_review_clock
+):
     engine = create_engine(
         f"sqlite:///{tmp_path / 'economic-assessment.sqlite'}",
         connect_args={"check_same_thread": False},

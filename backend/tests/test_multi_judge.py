@@ -67,7 +67,9 @@ def test_multiple_judges_preserve_identity_and_prevent_duplicate_work(db):
     assert db.query(models.EvidenceRelationship).filter_by(judgment_id=first[0].id).count() == 1
 
 
-def test_agreement_and_disagreement_create_durable_comparisons(db):
+def test_agreement_and_disagreement_create_durable_comparisons(
+    db, public_metadata_review_clock
+):
     evidence = evidence_fixture(db)
     agreement_judgments = multi_judge.run_judgments(
         db,

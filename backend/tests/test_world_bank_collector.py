@@ -14,6 +14,8 @@ from app.services import (
 from app.services.collectors import world_bank
 from app.services.research_evidence_assessment import world_bank_requirement_eligibility
 
+pytestmark = pytest.mark.usefixtures("public_metadata_review_clock")
+
 
 INDICATOR_ID = "SP.POP.TOTL"
 SOURCE_ORGANIZATION = (

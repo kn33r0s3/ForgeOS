@@ -61,7 +61,9 @@ def test_contradiction_invalidates_without_deleting_history(db):
     assert first["snapshot"]["evidence_count"] == 1
 
 
-def test_stale_monitoring_triggers_research_and_persists_snapshot(db):
+def test_stale_monitoring_triggers_research_and_persists_snapshot(
+    db, public_metadata_review_clock
+):
     opportunity = make_opportunity(db)
     old = models.Evidence(
         opportunity_id=opportunity.id, source="rss", content="Old evidence",

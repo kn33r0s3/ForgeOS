@@ -1,3 +1,28 @@
+## 2026-11-16 — Restored deterministic backend source-clearance tests
+
+- **Existing seam inspected:** `backend/tests/conftest.py::govinfo_review_clock`
+  and `source_clearance_registry.validate_authorization`. History shows the
+  runtime expiry gate was added as a fail-closed authorization control; it was
+  left unchanged.
+- **Root cause:** mocked collector and research-flow tests created records in
+  September/October 2026 but validated clearance against the actual November
+  clock. The registry correctly rejected collection after entries' recorded
+  `valid_through` dates.
+- **Action removed:** maintainers no longer need to treat 52 failures caused by
+  stale test time as unrelated production regressions. Mocked positive paths
+  now run at 2026-10-16, within the recorded review window; the demand-
+  understanding test explicitly verifies rejection at 2026-10-28.
+- **Measured delta:** local Python 3.12 backend run changed from 52 failed /
+  1,311 passed / 2 skipped to 1,363 passed / 2 skipped. Collector-focused
+  expiry and positive-path tests passed (54 passed / 2 skipped). No runtime
+  clearance, source registry date, or external request changed.
+- **Process lesson:** ledger edits record verified progress; they are not
+  progress by themselves. Advance and test an executable system seam first.
+- **Remaining dependency:** fresh exact-head CI for the uncommitted test
+  changes; separate owner-authorized source re-review and production database
+  configuration remain necessary before live collection or production
+  persistence can be claimed.
+
 ## 2026-11-15 — Senior repository review and test recovery (main 50fa89cf)
 
 ### Verified improvement and constraints

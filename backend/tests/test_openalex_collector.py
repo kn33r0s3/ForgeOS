@@ -32,6 +32,8 @@ from app.services.research_evidence_assessment import (
     openalex_requirement_eligibility,
 )
 
+pytestmark = pytest.mark.usefixtures("public_metadata_review_clock")
+
 QUERY = "postharvest loss smallholder farmers Nepal"
 WORKS = {
     "meta": {"count": 2, "per_page": 2},

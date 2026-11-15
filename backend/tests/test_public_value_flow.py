@@ -587,7 +587,7 @@ def test_product_catalog_reads_require_owner_key(client_with_db, monkeypatch):
 
 
 def test_public_problem_submission_starts_real_research_and_defers_opportunity(
-    owner_client_with_db, db, monkeypatch
+    owner_client_with_db, db, monkeypatch, public_metadata_review_clock
 ):
     class CrossrefFixture(SourceCollector):
         source_name = "crossref"
@@ -680,7 +680,9 @@ def test_api_root_uses_hami_product_identity(owner_client_with_db):
     assert response.json()["name"] == "Hami"
 
 
-def test_analyze_acknowledges_before_the_collector_background_task(db, monkeypatch):
+def test_analyze_acknowledges_before_the_collector_background_task(
+    db, monkeypatch, public_metadata_review_clock
+):
     collector_calls = []
     planning_calls = []
     build_research_plan = research_planner.build_research_plan
@@ -738,7 +740,9 @@ def test_analyze_acknowledges_before_the_collector_background_task(db, monkeypat
     assert planning_calls == [response.research_question_id]
 
 
-def test_analyze_reuses_the_same_durable_task_for_a_duplicate_request(db):
+def test_analyze_reuses_the_same_durable_task_for_a_duplicate_request(
+    db, public_metadata_review_clock
+):
     payload = schemas.AnalyzeRequest(
         idea="What independently verified evidence could clarify a recurring local need?"
     )
@@ -802,7 +806,7 @@ def test_research_status_distinguishes_queued_from_running_work(
 
 
 def test_analyze_does_not_report_completed_for_mixed_empty_task_results(
-    db,
+    db, public_metadata_review_clock
 ):
     response_headers = Response()
     response = analyze_idea(
@@ -839,7 +843,7 @@ def test_analyze_does_not_report_completed_for_mixed_empty_task_results(
 
 
 def test_analyze_requires_persisted_evidence_before_source_collection_can_complete(
-    owner_client_with_db, db
+    owner_client_with_db, db, public_metadata_review_clock
 ):
     response_headers = Response()
     response = analyze_idea(
@@ -2570,7 +2574,9 @@ def test_fulfillment_records_the_work_and_not_a_payment(owner_client_with_db, db
     assert "The fridge cools again" not in visible[0]["latest_fulfillment"]
 
 
-def test_world_research_agenda_opens_once_and_does_not_state_prices(db):
+def test_world_research_agenda_opens_once_and_does_not_state_prices(
+    db, public_metadata_review_clock
+):
     from app.services.curiosity_engine import WORLD_RESEARCH_AGENDA, CuriosityEngine
     from app.services import research_planner
 

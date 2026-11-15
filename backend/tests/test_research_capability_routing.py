@@ -15,7 +15,9 @@ from app.services import (
 )
 
 
-def test_planner_discovers_and_persists_existing_cleared_capability(db):
+def test_planner_discovers_and_persists_existing_cleared_capability(
+    db, public_metadata_review_clock
+):
     tables_before = set(Base.metadata.tables)
     question = models.ResearchQuestion(
         question="What published solutions address independent bicycle repair shop needs?"
@@ -237,7 +239,9 @@ def test_source_route_ranking_reuses_measured_successful_capability(
     ] == "existing_tested_capability"
 
 
-def test_failed_capability_execution_is_projected_without_claiming_success(db):
+def test_failed_capability_execution_is_projected_without_claiming_success(
+    db, public_metadata_review_clock
+):
     question = models.ResearchQuestion(question="Can this source answer the query?")
     db.add(question)
     db.commit()

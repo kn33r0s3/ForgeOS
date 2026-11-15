@@ -98,16 +98,35 @@ def db():
         database.SessionLocal = previous_session_local
 
 
-@pytest.fixture
-def govinfo_review_clock(monkeypatch):
-    """Freeze source-registry validation at the notice's reviewed-through date."""
-    from datetime import datetime as RealDateTime, timezone
+def _source_clearance_review_clock(monkeypatch, reviewed_at):
+    from datetime import datetime as RealDateTime
     from app.services import source_clearance_registry
 
     class ReviewDateTime(RealDateTime):
         @classmethod
         def now(cls, tz=None):
-            reviewed_at = RealDateTime(2026, 9, 25, 12, tzinfo=timezone.utc)
             return reviewed_at.astimezone(tz) if tz else reviewed_at.replace(tzinfo=None)
 
     monkeypatch.setattr(source_clearance_registry, "datetime", ReviewDateTime)
+
+
+@pytest.fixture
+def govinfo_review_clock(monkeypatch):
+    """Freeze source-registry validation at the notice's reviewed-through date."""
+    from datetime import datetime, timezone
+
+    _source_clearance_review_clock(
+        monkeypatch,
+        datetime(2026, 9, 25, 12, tzinfo=timezone.utc),
+    )
+
+
+@pytest.fixture
+def public_metadata_review_clock(monkeypatch):
+    """Freeze mocked collection within the recorded public-source review window."""
+    from datetime import datetime, timezone
+
+    _source_clearance_review_clock(
+        monkeypatch,
+        datetime(2026, 10, 16, 12, tzinfo=timezone.utc),
+    )

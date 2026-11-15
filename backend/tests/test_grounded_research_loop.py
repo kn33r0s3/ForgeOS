@@ -28,7 +28,9 @@ def _planned_question(db, text="Do independent repair shops have appointment-sta
     return question
 
 
-def test_zero_result_and_failed_tasks_never_satisfy_research(db):
+def test_zero_result_and_failed_tasks_never_satisfy_research(
+    db, public_metadata_review_clock
+):
     question = _planned_question(db)
     task = (
         db.query(models.ResearchTask)
@@ -54,7 +56,9 @@ def test_zero_result_and_failed_tasks_never_satisfy_research(db):
     assert question.research_plan["status"] != "research_complete"
 
 
-def test_unrelated_evidence_does_not_satisfy_bibliographic_requirement(db):
+def test_unrelated_evidence_does_not_satisfy_bibliographic_requirement(
+    db, public_metadata_review_clock
+):
     question = _planned_question(db)
     task = (
         db.query(models.ResearchTask)
@@ -85,7 +89,9 @@ def test_unrelated_evidence_does_not_satisfy_bibliographic_requirement(db):
     assert requirement["terminal_reason"] == "metadata_leads_do_not_establish_content_relevance_or_answer_the_claim"
 
 
-def test_satisfied_crossref_lead_does_not_repeat_metadata_as_follow_up(db):
+def test_satisfied_crossref_lead_does_not_repeat_metadata_as_follow_up(
+    db, public_metadata_review_clock
+):
     question = _planned_question(db)
     task = (
         db.query(models.ResearchTask)

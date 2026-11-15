@@ -11,6 +11,8 @@ from app.services import collector_runner, research_task_engine
 from app.services.collectors import crossref
 from app.services import source_clearance_registry
 
+pytestmark = pytest.mark.usefixtures("public_metadata_review_clock")
+
 
 TERMS_HTML = """
 <html><body>

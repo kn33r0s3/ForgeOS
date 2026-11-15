@@ -174,8 +174,12 @@ services:
       - --room
       - hami-proving-ground
       - --duration
-      - 30s
+      - "${LIVEKIT_TEST_DURATION:-30s}"
       - --subscribers
       - "${LIVEKIT_TEST_SUBSCRIBERS:-25}"
+      - --num-per-second
+      - "${LIVEKIT_TEST_JOIN_RATE:-10}"
       - --layout
-      - 3x3
+      - "${LIVEKIT_TEST_LAYOUT:-speaker}"
+      - --video-resolution
+      - "${LIVEKIT_TEST_VIDEO_RESOLUTION:-low}"
