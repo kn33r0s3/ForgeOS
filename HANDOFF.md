@@ -1,3 +1,62 @@
+## Current handoff — 2026-11-16 — exact-head CI, production runtime, source-time trace (run-start main 24d76a40)
+
+### Mission and repository
+
+- `AGENTS.md` explicitly settles Hami's mission: value itself, open-ended across domains, investigated through the existing six primitives. Tests apply to claims, methods, capabilities and interventions, not Hami's existence. `docs/BRAIN.md` does not make First Rupee or any pilot a gate for unrelated Hami-wide work.
+- Run-start main: `24d76a40930fab12f96745b2887e4158182d2e1d`, parent `46ff1894e4e1d2a7bd818a69096e729128905f16`. This follow-up is documentation-only; no source, tests, schema, scheduler, runtime configuration or source registry changed.
+- Canonical branch inventory remains `main` plus stale `feature/governed-offers` at `f51ef262d31642479a47df7a0b6795f0949d936c`, 968 behind / 0 ahead. No supported delete-ref action was exposed.
+- Read AGENTS, HANDOFF, STATE, QUEUE, BRAIN, CAPABILITY_QUEUE, UNKNOWN_MAP, LOG, PUBLIC_SOURCES, database/startup/health/unknowns-sync, collector normalization/runner, Observer/Evidence writers, evidence assessment/citation, source registry, LiveKit Compose/CI and pinned upstream source.
+
+### Exact-head verification — 24d76
+
+- ForgeOS CI [43773153991](https://github.com/kn33r0s3/ForgeOS/actions/runs/43773153991): all 10 jobs passed. Backend: 1,363 passed, 2 skipped, 17 warnings in 228.49 seconds. Frontend, typecheck, build, route smoke, repository guards, lint, evidence-triage and LiveKit local smoke also passed.
+- Separate secret scan [43773153984](https://github.com/kn33r0s3/ForgeOS/actions/runs/43773153984): passed.
+- Independent deployment verifier [43773153982](https://github.com/kn33r0s3/ForgeOS/actions/runs/43773153982): failed because production content retrieval returned HTTP 402. Its local verifier suite passed (261 tests); the production fetch failed and later production checks were skipped.
+- Vercel status contexts: `Vercel – hami` success; legacy `Vercel – forge-os` failure.
+
+### Production runtime — new direct evidence
+
+- Exact 24d76 deployment `dpl_7znHsW9PpExFWg9mYXVWHEKC6uRx` is `READY`, target production, aliases include `hami-sigma.vercel.app`. The project metadata still reports `live=false`, SSO enabled, no environment variables (`envs=[]`, hidden production count 0).
+- Runtime logs for 2026-11-15 23:10 UTC show successful HTTP 200 execution for `/api/health`, `/api/public/unknowns`, and `/api/payments/offers`. These are endpoint execution results, not proof of readiness or durable writes.
+- The same logs show `[database] resolved SQLite path: /tmp/forge.db`, `unknowns sync: inserted 124 new claims`, and `Legacy intelligence startup disabled.` Repeated cold-start invocations emitted the 124-row sync.
+- Direct code trace explains the behavior:
+  - `backend/app/database.py` selects `sqlite:////tmp/forge.db` when `VERCEL` is set and `DATABASE_URL` is absent; its own comment says rows live for that instance only.
+  - `backend/app/main.py:on_startup()` calls `init_db()`; `init_db()` runs `sync_unknowns_from_map()`.
+  - `unknowns_sync.py` fetches the committed `docs/UNKNOWN_MAP.md` from GitHub main and imports rows by map-row ID. The 124 inserted rows are a static unknown-map projection into a fresh per-instance database, not 124 new empirical discoveries or external outcomes.
+  - `main.py:_health_details()` classifies Vercel+SQLite as `ephemeral`, adds `durable_database_not_configured`, and also blocks readiness when `CRON_SECRET` is absent. `health()` still returns HTTP 200 while its JSON contract is degraded/not-ready; the response body was not captured in this run, so the status is code-derived rather than body-observed.
+  - `FORGEOS_LEGACY_INTELLIGENCE_ENABLED` is false (runtime log: “Legacy intelligence startup disabled”). No scheduled intelligence execution is evidenced. The environment list is empty, so no `DATABASE_URL` or `CRON_SECRET` is configured.
+- The health route attempts to persist safe mode when degraded, but its Vercel SQLite target is per-instance ephemeral storage. Do not treat that write as a durable cross-instance HALT. Durable storage and owner-controlled runtime configuration remain required before autonomous production operations.
+- Runtime error aggregation for 24 hours returned no errors; this does not establish data durability, scheduler execution or application readiness. No environment, deployment, database, domain or payment setting was changed.
+
+### Source-time provenance — exact current seam trace
+
+- Generic `Signal` and `Evidence` store `published_at`, `retrieved_at` and JSON `provenance`. `Evidence.observed_at` also exists, but the collector writer does not populate it. The only `data_as_of` model field found is on `RevenueSource` payout terms; it is not a generic source/evidence cutoff.
+- `SourceCollector.normalize` in `collectors/base.py` sets `provenance = raw_item.get("provenance") or metadata`. A non-empty raw provenance object therefore replaces, rather than merges with, normalized metadata.
+- `collector_runner.py` preserves that provenance and adds task context plus authorized source-registry identity, but it does not merge every top-level metadata field (for example a top-level source-effective cutoff) into provenance.
+- `ObserverEngine.observe` stores `metadata["provenance"]` as Signal.provenance and parses publication/retrieval timestamps into their respective columns. `_ensure_evidence` copies those fields into Evidence, leaving `observed_at` unset.
+- If an unchanged content fingerprint is seen again, ObserverEngine returns the previous Signal; `_ensure_evidence` returns existing Evidence without updating its provenance/timestamps. A changed source cutoff or retrieval timestamp can therefore be lost on a same-content refresh.
+- `research_evidence_assessment.py` calculates age as publication date compared with retrieval time; no source-effective cutoff is included. `research_synthesis_engine._evidence_citation` returns source/title/URL/source_registry_id/retrieved_at, but not published_at or a source-effective cutoff.
+- Additive existing-seam proposal: preserve a namespaced source-time object inside existing provenance (raw source label/value, calendar, timezone, precision, period/scope, parsed UTC only when justified); deterministically merge raw provenance and normalized metadata without losing either; retain later retrieval observations on same-content refresh without overwriting historical provenance; expose publication date and source-time separately in citations; add regression tests for all paths. No new model/table/primitive is justified.
+- The source-edit safety block remains in force. No code write was attempted.
+
+### Source clearance and research portfolio
+
+- Current `source_clearance_registry.py` contains five entries; all are expired as of 16 Nov: GovInfo through 25 Sep 2026; Crossref, World Bank, GDELT and OpenAlex through 27 Oct 2026. It contains no NDRRMA registration. Collectors must remain fail-closed; no renewal or source ingestion occurred.
+- Portfolio metadata pass: first 100 existing D-entries (D1–D100) reviewed. 78 are exactly `UNKNOWN`, 2 are explicit hypotheses, 1 is `SUPPORTED`, and 19 have other UNKNOWN annotations. Six rows contain an explicit URL, 44 an explicit date/year, and all 100 have a next-action cell. Twenty-three mention a named institution/primary-source candidate in prose. Provenance, freshness, independence, contradiction, local applicability, known limitation and missing capability are not consistently structured fields; many are prose-only. This is not 100 deep investigations.
+- `UNKNOWN_MAP.md` has 124 rows, D108 latest. Operational open `ResearchQuestion` count remains UNKNOWN because the production database is ephemeral and no durable DB credentials are configured.
+- D93 correction from the preceding handoff stands: current official NDRRMA index snapshots show Gorkha #04 dated 16 Oct/cutoff 16 Oct 10:00; the 3 Nov card belongs to the separate Bhotekoshi–Trishuli update. No #05 card surfaced; bounded non-result only. #04 PDF body and current Gorkha restoration remain UNKNOWN; NDRRMA is manual-only / NOT CLEARED.
+
+### LiveKit safety and measurement
+
+- Exact-head CI local smoke: 9 publishers + 100 simulated subscribers reached 109 participants and 600 video subscriptions; all subscriber rows showed zero SampleBuilder frame-drop callbacks and no subscriber errors.
+- The saved 250-subscriber run's 212 value is 212 SampleBuilder dropped-frame callbacks, not RTP packets; the CLI's 0.005% mixes callbacks and accepted packets and is not a valid network packet-loss percentage. True transport loss requires per-track inbound RTP `packets_lost` deltas.
+- LiveKit's current [Cloud load-testing docs](https://docs.livekit.io/reference/developer-tools/livekit-cli/perf/) restrict Cloud tests to at most 50 video publishers, 50 audio publishers and 50 subscribers; the documented join rate is up to 10 participants/second, and test traffic counts against plan allowances. Hami's separate Cloud Compose file defaults to 10,000 subscribers and 100 joins/second for five minutes; its direct invocation bypasses the helper script's fail-closed `test` command. Do not run it without explicit owner authorization and LiveKit written approval/approved procedure. No Cloud test or spend occurred.
+- CI's `room_matches` helper prints full Room JSON including an ephemeral local `turnPassword` field. No production credential exposure is established, but sanitize to allowlisted counts in a supported source change.
+
+No new models, tables, primitives, collectors, D-numbers, branches or files were created. No contact, publication, spend, payment change, intake/outbound activation, source ingestion, provider transmission, or external intervention occurred.
+
+---
+
 ## Current handoff — 2026-11-16 04:39 NPT — LiveKit measurement correction, Cloud harness guard, D93 index correction (main 46ff1894)
 
 ### Mission and repository truth

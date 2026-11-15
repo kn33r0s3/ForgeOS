@@ -1,3 +1,54 @@
+## 2026-11-16 — production runtime truth and source-time provenance trace
+
+### Production database and execution reality
+
+- Exact deployment `dpl_7znHsW9PpExFWg9mYXVWHEKC6uRx` is READY, but Vercel project env list is empty (hidden production count 0). Runtime logs show HTTP 200 for `/api/health`, `/api/public/unknowns`, and `/api/payments/offers`; they also show `/tmp/forge.db`, `unknowns sync: inserted 124 new claims`, and `Legacy intelligence startup disabled.`
+- `database.py` explicitly selects `sqlite:////tmp/forge.db` on Vercel when `DATABASE_URL` is absent and comments that rows live only for that instance. `main.py:on_startup` calls `init_db`; `init_db` invokes `sync_unknowns_from_map`; that service fetches the committed UNKNOWN_MAP and imports rows. Repeated 124-row insert logs are per-fresh-instance projection seeding, not new research evidence.
+- `main.py:_health_details` classifies Vercel+SQLite as ephemeral and blocks readiness for missing durable DB and missing CRON_SECRET. `health()` returns HTTP 200 even when status is degraded; body not captured, so only code-derived status is recorded. `FORGEOS_LEGACY_INTELLIGENCE_ENABLED` is false. No unattended intelligence cycle is evidenced.
+- The health failure path attempts to persist safe mode in the same per-instance SQLite database. It cannot be treated as a durable cross-instance HALT. The next dependency is owner-controlled durable DB/auth/scheduler configuration; no environment changes were made.
+
+### Source-time trace through the existing seam
+
+1. `backend/app/services/collectors/base.py`: `provenance = raw_item.get("provenance") or metadata`. A non-empty raw provenance object replaces normalized metadata rather than merging it.
+2. `collector_runner.py`: preserves that provenance, adds task context and authorized source-registry identity, but does not merge every normalized metadata field into provenance.
+3. `observer_engine.py`: stores only `metadata["provenance"]` on Signal; publication/retrieval timestamps go to separate columns. `_ensure_evidence` copies those fields to Evidence but does not populate the existing `Evidence.observed_at`.
+4. Same-content dedup: if the content fingerprint is unchanged, ObserverEngine returns the prior Signal; `_ensure_evidence` returns existing Evidence. A newer source cutoff or retrieval timestamp may not refresh the existing record.
+5. `research_evidence_assessment.py`: freshness is publication date compared with retrieval time. `research_synthesis_engine._evidence_citation`: exposes source/title/URL/registry ID/retrieved_at, not publication date or source-effective cutoff.
+6. `models.py`: Signal/Evidence have published_at/retrieved_at/provenance; Evidence has observed_at but the collector writer leaves it unset. `RevenueSource.data_as_of` is specific to payout terms, not a generic evidence cutoff.
+
+### Additive implementation plan (NOT IMPLEMENTED)
+
+- Keep the existing Signal/Evidence models and provenance JSON.
+- Merge normalized metadata with raw provenance deterministically, preserving source-provided values and existing registry/task provenance; never discard a non-empty raw provenance object or silently trust arbitrary top-level metadata.
+- Add a namespaced source-time object only when the source actually declares it: raw label/value, calendar, timezone, precision, reporting period/scope, and parsed UTC only when conversion is justified. Missing/ambiguous values remain UNKNOWN.
+- On unchanged content with changed metadata, retain a new retrieval observation or append-only provenance history instead of silently returning stale time metadata.
+- Expose `published_at`, `retrieved_at`, and source-effective cutoff as distinct citation fields. Keep freshness assessment's basis explicit; do not substitute page publication date for data cutoff.
+- Regression coverage: raw provenance plus metadata cutoff; missing/ambiguous calendar; unchanged body/new cutoff; same content/new retrieval; citation fields; unregistered source rejected; metadata not proof of claim support.
+- No new model/table/primitive/collector is justified. The existing source-edit safety block remains; no source code changed.
+
+### Rights and source registry
+
+- Five registered source clearances are expired as of 16 Nov: GovInfo 2026-09-25; Crossref, World Bank, GDELT and OpenAlex 2026-10-27. The registry contains no NDRRMA entry. Keep all collectors fail-closed; re-review each source's robots, terms, purpose, fields, retention and provider scope independently.
+
+### Portfolio coverage (metadata survey, not deep research)
+
+- First 100 existing D-entries: 78 exact UNKNOWN, 2 hypotheses, 1 supported, 19 other UNKNOWN annotations; 6 explicit URLs, 44 explicit date/year markers, 100 next-action cells, 23 mentions of named institutions/primary-source candidates.
+- Provenance, freshness, independence, contradiction, local applicability, known limitations and missing capabilities are not consistently structured fields; many are only prose. The survey does not equal 100 deep investigations. Operational open ResearchQuestion count remains UNKNOWN because production DB access is not durable/authorized.
+
+### LiveKit Cloud limit and measurement correction
+
+- LiveKit's current [Cloud load-testing docs](https://docs.livekit.io/reference/developer-tools/livekit-cli/perf/) state a maximum of 50 video publishers, 50 audio publishers and 50 subscribers; join rate is up to 10/second; traffic counts against plan allowances.
+- Hami's separate Cloud Compose defaults to 10,000 subscribers/100 joins per second/five minutes. Direct Compose invocation bypasses the shell helper's fail-closed `test` command. No Cloud test/spend.
+- The 250-run's 212 counter is SampleBuilder frame-drop callbacks, not RTP packets; its 0.005% is mixed-unit. The exact-head local 100-subscriber CI smoke passed with 0 such callbacks and no errors. True transport loss needs inbound RTP `packets_lost` interval deltas. CI Room JSON includes ephemeral `turnPassword`; sanitize to allowlisted counts.
+
+### Owner dependency and next removable step
+
+- This run removes uncertainty about why production HTTP 200 responses do not represent durable readiness, and precisely traces where source-time metadata can be lost.
+- Remaining owner action: provide an authorized durable DB/auth/scheduler configuration and written LiveKit approval if Cloud testing is ever desired. Remaining code blockers: provenance merge/refresh/citation behavior; direct Cloud Compose bypass; full Room JSON logging.
+- No new files, schema, primitives, D-numbers, source registrations, Signal/Evidence records, or external actions.
+
+---
+
 ## 2026-11-16 — LiveKit metric correction, Cloud harness safety, and D93 source-time correction
 
 ### LiveKit load-test semantics (verified against pinned upstream source)

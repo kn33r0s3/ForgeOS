@@ -110,11 +110,16 @@ glass-to-glass guarantee.
 **Cloud harness is blocked.** The separate
 `docker-compose.livekit-scale.yml` targets LiveKit Cloud and defaults to
 10,000 subscribers, 100 joins/second and five minutes; its publisher service
-uses 20 containers by default. `scripts/livekit-scale-test.sh test` currently
-fails closed after a Cloud rejection, but invoking the Compose service directly
-bypasses that script guard. Do not start Cloud publishers or the Cloud
-load-test service without explicit owner authorization and LiveKit's written
-approval/approved procedure. No Cloud test or spend occurred.
+uses 20 containers by default. LiveKit's current
+[Cloud load-testing docs](https://docs.livekit.io/reference/developer-tools/livekit-cli/perf/)
+restrict Cloud tests to at most 50 video publishers, 50 audio publishers and
+50 subscribers, with a join rate up to 10 participants/second; test traffic
+counts against plan allowances. The current defaults exceed those limits.
+`scripts/livekit-scale-test.sh test` fails closed after a Cloud rejection,
+but invoking the Compose service directly bypasses that script guard. Do not
+start Cloud publishers or the Cloud load-test service without explicit owner
+authorization and LiveKit's written approval/approved procedure. No Cloud test
+or spend occurred.
 
 The local CI `room_matches` helper currently prints the complete Room JSON;
 the observed test log includes an ephemeral `turnPassword` field. This is not
