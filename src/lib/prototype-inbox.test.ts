@@ -56,7 +56,7 @@ describe("weekly seller summary", () => {
       { ...inquiry, id: "lost", timeIn: NOW - 2 * 60 * 60 * 1000, replyAt: NOW - 90 * 60 * 1000, outcome: "lost" },
       { ...inquiry, id: "old", timeIn: NOW - 8 * 24 * 60 * 60 * 1000, outcome: "recovered", orderValue: 9999 },
     ], NOW);
-    assert.deepEqual(summary, { inquiries: 2, averageReplyMs: 60 * 60 * 1000, recoveredSalesNpr: 1250, lost: 1 });
+    assert.deepEqual(summary, { inquiries: 2, averageReplyMs: 30 * 60 * 1000, recoveredSalesNpr: 1250, lost: 1 });
   });
 
   it("reports no average until a reply exists", () => {

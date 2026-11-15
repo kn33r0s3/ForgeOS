@@ -1,4 +1,22 @@
-## Current continuation — 2026-11-15 — direct-client H0/H1 (base main 6d6cad48)
+## Current continuation — 2026-11-15 — senior review recovery (main 50fa89cf)
+
+This review covers an inventory of 833 tracked files and targeted code/history
+inspection, not every line of archived content. Continue in the same Hami
+lineage and use existing runtime/knowledge seams.
+
+1. **P0 — Restore backend test signal without weakening source rights.** Python 3.12 local suite: 52 failed / 1,311 passed / 2 skipped / 17 warnings. Separate expired Crossref, GDELT, OpenAlex and World Bank clearance failures from follow-on tests that expect research tasks despite unavailable cleared collectors, and from genuinely independent regressions. Inspect the existing `govinfo_review_clock` fixture as a possible opt-in historical clock for mocked positive-path tests; keep current-date expiry tests. Do not extend production dates or bypass gates to satisfy tests. This is not exact-head CI.
+2. **P0 — Reverify exact head.** Current CI 43740740891 is red (53 backend failures, three frontend failures); local frontend failures are fixed and tests now pass, but local edits are not represented by CI. Secret scan passes; deploy verifier fails HTTP 402. Require fresh exact-head results after integration.
+3. **P0 — Keep production truth blocked.** `hami-sigma` is degraded with no database; `haminp` returns HTTP 402. Deployment SHA, owner-only access, worker heartbeat and durable persistence are unknown. Only proceed with owner-authorized configuration; no spend or production mutation.
+4. **P1 — Verify hardened Docker on target OS.** Compose no longer overrides the Python image healthcheck with missing `curl`; the cached image healthchecked healthy with ephemeral storage. Verify image builds, SQLite persistence and host bind-mount ownership on the actual Linux deployment host before release.
+5. **P1 — Bound external LiveKit load.** The opt-in harness defaults to 20 publishers and 10,000 subscribers over five minutes. Do not run against a billed service until explicit spend/usage authorization and a target capacity envelope are recorded. CI proves only 100 simulated subscribers locally.
+6. **P1 — Reconcile inactive branch refs.** Local and remote `main` both point to `50fa89cf`; 6 other local and 28 other remote refs remain. Existing main behavior/tests account for selected old router-auth and curiosity-convergence changes; operating-v2/v3 are superseded by v4 tests; the main Build Book differs from archived copies. Review every remaining unique commit before integrating or deleting refs. Preserve all refs meanwhile.
+7. **P2 — Continue inventory-led cleanup.** 833 tracked paths include archives, historical docs and multiple tools; no mass deletion or architecture rewrite is justified. Confirm reachability/ownership before removing any file. The `hami-origin` commit exists and is ancestral, but no tag with that name is present in local refs.
+
+**Verified changes this cycle:** corrected inbox duration/test semantics, made prototype status explicit, updated stale importer row-count expectations, and fixed the Compose healthcheck override. Existing H0/H1 map remains at [HAMI_CAPABILITY_MAP.md](docs/HAMI_CAPABILITY_MAP.md); this pass added no model, route, migration, ledger, source clearance, or real-world record.
+
+---
+
+## Prior continuation — 2026-11-15 — direct-client H0/H1 (base main 6d6cad48)
 
 1. **P0 — Exact-head CI.** Diagnose the 53 backend failures and frontend assertions on `6d6cad48b1aed6e385c367b3bcdeb17082711ba6`. The unused `Outcome` import lint error is fixed locally and its file-scoped ESLint check passed; the full suite still needs a new exact-head run. Do not suppress failures or relax expired-source/consent gates. Secrets scan passed; deploy verification failed HTTP 402.
 2. **P0 — H0 runtime truth.** Local health/DB are ready; `hami-sigma` is degraded with no configured database; `haminp` returns HTTP 402. Verify deployment identity, worker heartbeat and owner-only access only through authorized means.

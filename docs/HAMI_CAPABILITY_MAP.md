@@ -31,6 +31,60 @@ Keep **REAL**, **TEST**, **MOCK**, and **HYPOTHESIS** evidence distinct. An
 empty or unavailable result is not evidence that the underlying capability
 works or that the real world has no relevant records.
 
+## Current repository review and recovery snapshot
+
+Reviewed against `main` at `50fa89cf14dbce626c215d4d6769c494dbefe428`
+(2026-11-15). The tracked tree contains 833 files. The review combined the
+tracked-path inventory, architecture and continuity docs, current CI results,
+focused source/history inspection, and executable frontend/Compose checks; it
+was not a line-by-line audit of every archived document and source file.
+
+- Exact-head [CI run 43740740891](https://github.com/kn33r0s3/ForgeOS/actions/runs/43740740891)
+  failed: backend 53 failed / 1,310 passed / 2 skipped; frontend tests had
+  three inbox failures. The other CI jobs, including LiveKit's 100-subscriber
+  local test, passed. [Deploy verifier 43740741005](https://github.com/kn33r0s3/ForgeOS/actions/runs/43740741005)
+  failed retrieving production content with HTTP 402; later checks were
+  skipped. [Secret scan 43740740987](https://github.com/kn33r0s3/ForgeOS/actions/runs/43740740987)
+  passed.
+- The frontend failures included a test still requiring removed prototype
+  copy, a mathematically incorrect 60-minute expectation for two 30-minute
+  replies, and duration rounding 30 seconds up to one minute. Current local
+  tests now pass after updating the stale expectations, fixing the floor
+  calculation, and explicitly labeling the prototype as not a live product.
+- The backend failure cluster includes source adapters correctly rejecting
+  expired Crossref, GDELT, OpenAlex, and World Bank clearances; dependent
+  planner/research assertions and independent failures remain to triage. No
+  source clearance was renewed. The UNKNOWN_MAP test's old D104 limit was
+  updated to the checked-in 124-row map (D108); the parser was verified in the
+  cached Python 3.13 image.
+- On the current local worktree, the full backend suite ran under Python 3.12:
+  52 failed / 1,311 passed / 2 skipped / 17 warnings. The importer expectation
+  now passes. Several remaining failures arise downstream of unavailable
+  cleared collectors; exact-head CI has not rerun and these local results do
+  not replace it.
+- Local and remote `main` are synchronized at `50fa89cf`; 6 local and 28
+  remote non-main refs remain. Targeted comparisons found current main
+  equivalents for the old router-auth and curiosity-convergence changes, and
+  the operating-v4 tests reject a nested v3 implementation. Archived
+  `BUILD_BOOK.md` copies differ from main. Unique work across all remaining
+  refs is not yet fully reconciled; no ref was deleted or merged.
+- The changed Docker image uses Python for its healthcheck, but Compose had
+  overridden it with `curl`. The cached hardened image has no `curl`; Compose
+  now inherits the image check. A temporary backend container with ephemeral
+  storage became healthy. On this macOS Docker host, UID 65532 could create
+  and delete a temporary file in the mounted storage, and the database file
+  passed `os.access(..., W_OK)`; an actual database write and Linux-host
+  ownership remain unverified.
+- Local runtime remains ready with DB up; `hami-sigma` remains degraded with
+  `db=not_configured`; `haminp` returns HTTP 402. No production config,
+  database, worker, or owner-only access was changed or verified.
+- Next recovery: run the updated backend suite on its supported Python
+  version; triage source-clearance-dependent tests separately from unrelated
+  failures without bypassing rights; verify hardened image builds and bind
+  mount behavior on the deployment OS; then resolve production availability
+  only with owner-authorized configuration. Do not run the external LiveKit
+  load harness without explicit spend/usage authorization.
+
 ## Capability inventory
 
 | Capability | Existing implementation and user surface | Access / current boundary | Status and missing seam |
@@ -57,16 +111,16 @@ This inventory implements the requested first step: map the direct-client
 workflow onto Hami's existing primitives before adding behavior. It does not
 authorize contact, create a prospect, or claim a customer outcome.
 
-### H0 — current reality (2026-11-15)
+### H0 — runtime snapshot (2026-11-15)
 
 | Check | Evidence | Status |
 |---|---|---|
-| Repository identity | Canonical branch `main`, base commit `6d6cad48b1aed6e385c367b3bcdeb17082711ba6`; worktree was clean at run start. This run adds documentation updates and one unused-import cleanup. | **VERIFIED** |
-| Local API and database | `http://localhost:8000/health` returned HTTP 200, `status=ok`, `ready=true`, `db=up` at 2026-11-15 17:10 UTC. | **VERIFIED** for this local process only |
-| Comparison deployment | `https://hami-sigma.vercel.app/api/health` returned HTTP 200, `status=degraded`, `ready=false`, `db=not_configured`. The health response does not identify its deployed commit. | **BLOCKED / UNVERIFIED** deployment identity |
-| Canonical public host | `https://haminp.vercel.app/api/health` returned HTTP 402 `DEPLOYMENT_DISABLED`. | **BLOCKED** |
-| Exact-head CI and secret scan | On `6d6cad48b1aed6e385c367b3bcdeb17082711ba6`, [ForgeOS CI run 43738735395](https://github.com/kn33r0s3/ForgeOS/actions/runs/43738735395) failed: backend 53 failed / 1,310 passed / 2 skipped; lint reported unused `Outcome` in `src/routes/prototype.inbox.tsx`; frontend assertions failed in prototype honesty and seller-summary/duration tests. This run removed the unused import; file-scoped and full `npm run lint` passed (the full command reports one existing warning in `experiment-card.tsx`); the full test suite was not rerun. [Secrets scan run 43738735394](https://github.com/kn33r0s3/ForgeOS/actions/runs/43738735394) succeeded on the base SHA. | **FAILED** base CI; **PASSED** lint; **PASSED** base secret scan |
-| Independent deployment verification | [Run 43738735333](https://github.com/kn33r0s3/ForgeOS/actions/runs/43738735333) failed when production content retrieval returned HTTP 402. | **BLOCKED** |
+| Repository identity | Canonical branch `main`, reviewed HEAD `50fa89cf14dbce626c215d4d6769c494dbefe428`; current review changes are uncommitted. | **VERIFIED** |
+| Local API and database | `http://127.0.0.1:8000/health` returned HTTP 200, `status=ok`, `ready=true`, `db=up` at 2026-11-15 17:41 UTC. | **VERIFIED** for this local process only |
+| Comparison deployment | `https://hami-sigma.vercel.app/api/health` returned HTTP 200, `status=degraded`, `ready=false`, `db=not_configured` at 2026-11-15 17:41 UTC. The response does not identify its deployed commit. | **BLOCKED / UNVERIFIED** deployment identity |
+| Canonical public host | `https://haminp.vercel.app/api/health` returned HTTP 402 `DEPLOYMENT_DISABLED` at 2026-11-15 17:41 UTC. | **BLOCKED** |
+| Exact-head CI and secret scan | On reviewed SHA `50fa89cf14dbce626c215d4d6769c494dbefe428`, [ForgeOS CI run 43740740891](https://github.com/kn33r0s3/ForgeOS/actions/runs/43740740891) failed: backend 53 failed / 1,310 passed / 2 skipped; frontend had three inbox failures. Other CI jobs passed. [Secrets scan run 43740740987](https://github.com/kn33r0s3/ForgeOS/actions/runs/43740740987) passed. Local frontend and guard tests now pass after focused fixes; this uncommitted state has no exact-head CI result. | **FAILED** exact-head CI; **PASSED** local frontend and secret scan |
+| Independent deployment verification | [Run 43740741005](https://github.com/kn33r0s3/ForgeOS/actions/runs/43740741005) failed at production content retrieval with HTTP 402; subsequent verification steps were skipped. | **BLOCKED** |
 | Owner access and worker runtime | No owner key was used and no owner-only data was read. A worker heartbeat/process was not independently verified. | **UNVERIFIED** |
 
 **H0 verdict: PARTIAL.** Local API/database and external health responses were

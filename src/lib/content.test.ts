@@ -448,7 +448,8 @@ describe("Hami prototype honesty", () => {
     assert.match(route, /Prototype/);
     assert.match(route, /not a live product/i);
     assert.match(route, /No inquiries yet/);
-    assert.match(route, /honest empty state/);
+    assert.match(route, /Add the first message you need to remember/);
+    assert.match(route, /Nothing leaves this phone/);
     assert.match(route, /createFileRoute\("\/prototype\/inbox"\)/);
     // The prototype is historical material, not public identity.
     // Per HAMI CONTINUITY LAW: it must not appear in footer or nav.

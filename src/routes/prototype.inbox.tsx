@@ -214,7 +214,7 @@ function InboxPrototype() {
 
         <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm leading-6 text-muted">
           <FlaskConical className="mt-0.5 size-5 shrink-0 text-amber-300" aria-hidden="true" />
-          <p>{language === "ne" ? "नमुना मात्र। ग्राहकको सन्देश वा सम्पर्क विवरण बाहिर पठाइँदैन।" : "Prototype only. Customer messages and contact details are never sent anywhere."}</p>
+          <p>{language === "ne" ? "यो प्रत्यक्ष उत्पादन होइन; नमुना मात्र हो। ग्राहकका सन्देश वा सम्पर्क विवरण बाहिर पठाइँदैन।" : "Not a live product; this is a prototype only. Customer messages and contact details are never sent anywhere."}</p>
         </div>
 
         <section aria-label={t.summary} className="mb-6">

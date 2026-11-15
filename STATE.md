@@ -1,4 +1,19 @@
-## Current state — 2026-11-15 — main 6d6cad48 — H0/H1 direct-client map
+## Current state — 2026-11-15 — senior review of main 50fa89cf
+
+- **Repository:** one active branch, `main`, reviewed HEAD `50fa89cf14dbce626c215d4d6769c494dbefe428`; worktree was clean at start and now has uncommitted review fixes. 833 tracked files inventoried; this is not a literal line-by-line audit of every archive/document.
+- **Branch inventory:** local and remote `main` both point to `50fa89cf`; only `main` is checked out. There are 6 other local and 28 other remote refs. The prior router-auth and curiosity-convergence changes have current main behavior/tests; operating-v2/v3 are superseded by the v4 seam; archived Build Book copies differ from main. Unique commits on the remaining refs have not all been reviewed, so none were deleted or merged.
+- **Exact-head CI:** run 43740740891 failed: backend 53 failed / 1,310 passed / 2 skipped and three frontend inbox failures. All other listed CI jobs passed, including LiveKit local test. Secret scan 43740740987 passed. Independent deployment verification 43740741005 failed at production content retrieval with HTTP 402.
+- **Implemented locally:** fixed 30-second display rounding, corrected the test's average-reply arithmetic, aligned prototype honesty test/copy, updated importer test inventory to 124 rows, and removed the Compose `curl` healthcheck override in favor of the image's Python healthcheck.
+- **Verification:** `npm test` passed 165 script tests + 260 library tests; route and unknown-projection guards passed. `npm run check` passed with one pre-existing Fast Refresh warning. Compose files validate; LiveKit shell syntax validates. Cached Python 3.13 image parser verified A9/B4/C3/D108; cached hardened backend image started with ephemeral storage and became healthy. Local full backend pytest is unavailable under Python 3.9 (`TypeAlias` import failure).
+- **Backend blockers:** the full local Python 3.12 suite ran with the documented requirements in a temporary dependency target: 52 failed / 1,311 passed / 2 skipped / 17 warnings in 101.80s. The corrected importer test passes. Expired Crossref/GDELT/OpenAlex/World Bank clearance gates explain a major cluster and dependent planner/research assertions; monitor, multi-judge and other failures still require cause-by-cause classification. This is not a new exact-head CI result. Do not extend expiry or weaken fail-closed behavior; no rights or source registry changed.
+- **Runtime:** local health HTTP 200 / ready / DB up; `hami-sigma` HTTP 200 degraded / DB unconfigured; `haminp` HTTP 402 disabled. Owner access, worker heartbeat and deployment identity remain UNVERIFIED. No production changes.
+- **Container concern:** cached hardened image has no `curl`; Compose now inherits its working Python healthcheck. On macOS UID 65532 created/deleted one temporary file in the bind mount and the DB file passed `os.access(..., W_OK)`; actual DB writes and Linux target-host ownership are unverified.
+- **LiveKit:** CI's local 100-subscriber smoke passed. The external harness defaults to 10,000 subscribers; it was not run and requires explicit cost/usage authorization.
+- **Next:** classify the 52 local Python 3.12 backend failures as clearance-blocked, dependent, or independent regressions; verify Docker image build + bind-mounted storage on the target Linux host; then request owner-authorized production configuration. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
+---
+
+## Prior state — 2026-11-15 — main 6d6cad48 — H0/H1 direct-client map
 
 - **Repository:** canonical `main`, base SHA `6d6cad48b1aed6e385c367b3bcdeb17082711ba6`; worktree was clean at run start. This run adds documentation updates and one unused-import cleanup. No branch or worktree created.
 - **H0 runtime:** local health is HTTP 200 / ready / DB up. `hami-sigma` API health is degraded with `db=not_configured`; canonical `haminp` returns HTTP 402 `DEPLOYMENT_DISABLED`. Deployment SHA, owner-key access, and worker heartbeat remain UNVERIFIED.

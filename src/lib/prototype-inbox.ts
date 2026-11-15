@@ -78,7 +78,7 @@ export function summarizeWeek(inquiries: Inquiry[], now = Date.now()): WeekSumma
 }
 
 export function formatDuration(milliseconds: number, language: "en" | "ne"): string {
-  const minutes = Math.max(0, Math.round(milliseconds / 60000));
+  const minutes = Math.max(0, Math.floor(milliseconds / 60000));
   if (language === "ne") {
     if (minutes < 1) return "१ मिनेटभन्दा कम";
     if (minutes < 60) return `${minutes} मिनेट`;

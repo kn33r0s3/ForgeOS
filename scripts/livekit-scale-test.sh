@@ -10,17 +10,17 @@ usage() {
   cat <<'USAGE'
 Usage: scripts/livekit-scale-test.sh {start|test|stop|status}
 
-Required environment:
-  LIVEKIT_URL          LiveKit WebSocket URL (wss://... for LiveKit Cloud)
-  LIVEKIT_API_KEY      LiveKit project API key
-  LIVEKIT_API_SECRET   LiveKit project API secret
+Prerequisite:
+  Authenticate with LiveKit CLI and persist its config at ~/.livekit:
+  docker run --rm -it -v "$HOME/.livekit:/root/.livekit" \\
+    livekit/livekit-cli:v2.19.4 cloud auth
 
 Optional environment:
   LIVEKIT_ROOM=forgeos-scale-test
   LIVEKIT_PUBLISHERS=20
-  LIVEKIT_SUBSCRIBERS=10000
-  LIVEKIT_TEST_DURATION=5m
-  LIVEKIT_JOIN_RATE=100
+  LIVEKIT_SUBSCRIBERS=25
+  LIVEKIT_TEST_DURATION=1m
+  LIVEKIT_JOIN_RATE=5
   LIVEKIT_LAYOUT=speaker
   LIVEKIT_VIDEO_RESOLUTION=low
 
@@ -32,19 +32,20 @@ Commands:
 USAGE
 }
 
-require_credentials() {
-  : "${LIVEKIT_URL:?Set LIVEKIT_URL (wss://... for LiveKit Cloud)}"
-  : "${LIVEKIT_API_KEY:?Set LIVEKIT_API_KEY}"
-  : "${LIVEKIT_API_SECRET:?Set LIVEKIT_API_SECRET}"
+require_project_config() {
+  if [[ ! -f "$HOME/.livekit/cli-config.yaml" ]]; then
+    echo "Missing $HOME/.livekit/cli-config.yaml. Authenticate with LiveKit CLI first." >&2
+    exit 1
+  fi
 }
 
 case "${1:-}" in
   start)
-    require_credentials
+    require_project_config
     "${COMPOSE[@]}" up -d --scale "livekit-publisher=$PUBLISHERS" livekit-publisher
     ;;
   test)
-    require_credentials
+    require_project_config
     "${COMPOSE[@]}" up -d --scale "livekit-publisher=$PUBLISHERS" livekit-publisher
     "${COMPOSE[@]}" --profile load-test run --rm --no-deps livekit-load-test
     ;;

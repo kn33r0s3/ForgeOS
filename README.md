@@ -166,8 +166,8 @@ Output is structured intelligence, not only scores:
 
 ```bash
 cd backend
-python3 -m pip install --target .deps -r requirements.txt
-PYTHONPATH="$PWD/.deps:$PWD" python3 -m pytest tests/ -q
+python3.12 -m pip install --target .deps -r requirements.txt
+PYTHONPATH="$PWD/.deps:$PWD" python3.12 -m pytest tests/ -q
 ```
 
 Includes a full end-to-end intelligence loop test:

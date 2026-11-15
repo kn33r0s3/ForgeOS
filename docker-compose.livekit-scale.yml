@@ -3,11 +3,11 @@ name: forgeos-livekit-scale
 services:
   livekit-publisher:
     image: livekit/livekit-cli:v2.19.4
-    environment:
-      LIVEKIT_URL: ${LIVEKIT_URL:-}
-      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
-      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
+    volumes:
+      - ${HOME}/.livekit:/root/.livekit:ro
     command:
+      - --project
+      - hami
       - room
       - join
       - --publish-demo
@@ -18,11 +18,11 @@ services:
   livekit-load-test:
     image: livekit/livekit-cli:v2.19.4
     profiles: [load-test]
-    environment:
-      LIVEKIT_URL: ${LIVEKIT_URL:-}
-      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
-      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
+    volumes:
+      - ${HOME}/.livekit:/root/.livekit:ro
     command:
+      - --project
+      - hami
       - load-test
       - --room
       - ${LIVEKIT_ROOM:-forgeos-scale-test}

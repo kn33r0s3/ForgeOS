@@ -7,6 +7,7 @@ import test from "node:test";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const START = readFileSync(join(ROOT, "start.sh"), "utf8");
 const COMPOSE = readFileSync(join(ROOT, "docker-compose.yml"), "utf8");
+const BACKEND_DOCKERFILE = readFileSync(join(ROOT, "backend/Dockerfile"), "utf8");
 const WEB_DB = readFileSync(join(ROOT, "src/lib/db.ts"), "utf8");
 const CHECK_ALL = readFileSync(join(ROOT, "scripts/check_all.sh"), "utf8");
 
@@ -32,6 +33,12 @@ test("the default backend SQLite URL is scoped away from the root web process", 
   assert.ok(
     WEB_DB.includes("DATABASE_URL must be configured for deployed database access"),
   );
+});
+
+test("Compose inherits the backend image healthcheck", () => {
+  const backendBlock = COMPOSE.split("  backend:\n")[1]?.split("\n  worker:\n")[0] ?? "";
+  assert.ok(!backendBlock.includes("healthcheck:"), "Compose must not override the image's Python healthcheck");
+  assert.match(BACKEND_DOCKERFILE, /HEALTHCHECK[\s\S]*CMD \["python", "-c",/);
 });
 
 test("optional triage URLs never get invented local defaults", () => {

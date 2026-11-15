@@ -1,4 +1,34 @@
-## Current handoff — 2026-11-15 — Hami direct-client H0/H1 inventory (base main 6d6cad48)
+## Current handoff — 2026-11-15 — senior repository review and recovery (main 50fa89cf)
+
+Hami remains the one in-place system. No branch or parallel architecture was
+created. At review start `main` was clean at
+`50fa89cf14dbce626c215d4d6769c494dbefe428`; the fixes below are uncommitted.
+The tracked tree has 833 files; this was a broad inventory-based review, not a
+literal line-by-line audit of all archive and documentation content.
+
+### Verified review and recovery progress
+- Exact-head [CI run 43740740891](https://github.com/kn33r0s3/ForgeOS/actions/runs/43740740891) failed (backend 53 failed / 1,310 passed / 2 skipped; three frontend inbox failures). Other CI jobs passed, including the LiveKit local test. Secret scan [43740740987](https://github.com/kn33r0s3/ForgeOS/actions/runs/43740740987) passed. Deploy verifier [43740741005](https://github.com/kn33r0s3/ForgeOS/actions/runs/43740741005) failed on HTTP 402.
+- Fixed the incorrect 60-minute average-reply expectation (the two test replies are each 30 minutes), duration rounding that displayed 30 seconds as one minute, outdated inbox-copy assertion, and missing explicit “not a live product” disclosure.
+- Fixed the Compose backend healthcheck override: it called `curl`, absent from the cached hardened image, despite the image defining a Python healthcheck. Compose now inherits that check; the cached image ran with ephemeral storage and became healthy.
+- Updated the stale UNKNOWN_MAP importer test inventory from D104/120 rows to D108/124 rows. The parser verified `A9/B4/C3/D108` in the cached Python 3.13 image.
+- `npm test`: 165 script tests + 260 library tests passed; all 39 routes and unknown projections passed. `npm run check` passed with one existing Fast Refresh warning. Compose config and script syntax checks passed.
+- The full backend suite now runs under Python 3.12 using the documented requirements installed to a temporary target. `cd backend && PYTHONPATH="/tmp/forgeos-backend-py312-deps-8063088f:$PWD" python3.12 -m pytest tests/ -q` resulted in 52 failed, 1,311 passed, 2 skipped, 17 warnings (101.80s). This is local worktree evidence, not a new exact-head CI result. Failures cluster around expired source clearances and dependent research planning; investigate the remaining failures separately without weakening rights gates.
+- Branch audit: local `main` and `origin/main` are both `50fa89cf`; only `main` is checked out, with 6 other local and 28 other remote branch refs preserved. Targeted history checks found existing main equivalents for the old router-auth hardening and curiosity-convergence work; the current operating-v4 tests explicitly reject a nested v3 implementation. `docs/BUILD_BOOK.md` exists on main but differs from the archived branch copies, and the maintenance script blob matches main. Not every unique branch commit is accounted for, so no ref was deleted or merged.
+
+### Current blockers and next recovery steps
+1. Triage backend failures by cause. Crossref, GDELT, OpenAlex and World Bank collection tests fail closed on expired source clearances; dependent failures must not be “fixed” by renewing or bypassing rights. Inspect the existing `backend/tests/conftest.py::govinfo_review_clock` pattern for an opt-in historical clock in mocked positive-path tests, while retaining current-date expiry tests. Investigate monitor, multi-judge, public-flow and research assertions separately.
+2. Triage the 52 local Python 3.12 backend failures into expired-clearance/dependent cases and independent regressions; preserve fail-closed rights behavior. Then obtain a new exact-head CI result after changes are integrated.
+3. Build and verify the hardened Dockerfiles and Compose on the deployment OS. macOS testing showed UID 65532 can create/delete a temporary file in the bind mount and that the DB file passes `os.access(..., W_OK)`; an actual DB write and equivalent Linux host ownership remain unverified.
+4. Keep production blocked: current `hami-sigma` is degraded (`db=not_configured`), `haminp` returns HTTP 402, and deployment identity, owner access and worker heartbeat are unverified. No production setting or data was changed.
+5. Do not run `scripts/livekit-scale-test.sh test` without explicit authorization for the external service's usage/cost; its default is 10,000 simulated subscribers.
+6. Preserve Hami's lineage. Origin commit `07baf91a1900cf3e27ce0bae9fead126801da3b3` is present and ancestral; the claimed `hami-origin` tag is not present in the local tag refs.
+7. Reconcile all unique commits on inactive branch refs against current main. Keep the refs intact until each change is classified as integrated, superseded, or still valuable; do not create branches or worktrees.
+
+Owner action still required: source-rights re-review and authorized production configuration. This work removes the owner-dependent manual triage of three observed frontend test failures and the Compose/image healthcheck mismatch; it does not deliver a real transaction. The next removable dependency is cause-by-cause classification of the 52 backend failures, using test-only historical clearance clocks only where the mocked positive-path contract requires them, followed by exact-head CI. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
+---
+
+## Prior handoff — 2026-11-15 — Hami direct-client H0/H1 inventory (base main 6d6cad48)
 
 Hami remains one open-ended, evidence-led system. Continue by reusing its
 ENTITY, RELATION, EVENT, EVIDENCE, CAPABILITY and ACTION primitives; do not add
