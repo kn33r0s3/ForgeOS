@@ -37,6 +37,43 @@ docker compose --profile legacy-frontend up --build
 docker compose --profile paid-triage up --build
 ```
 
+## Optional local LiveKit proving ground
+
+This profile is separate from normal Hami startup. It uses a local-only development
+key/secret and binds host ports to `127.0.0.1`; it is not a production deployment
+and must not be exposed to a LAN or the public internet.
+
+The smoke uses nine separate CLI publisher containers, each publishing LiveKit's
+synthetic demo video to the same room, plus 25 simulated subscribers for 30 seconds.
+These are TEST participants and synthetic media, not real streamers or viewers.
+
+```bash
+# Start the local SFU (normal Hami services are not started by this command).
+docker compose --profile livekit-local up -d livekit
+
+# Start nine independent demo publishers in the same logical room.
+docker compose --profile livekit-local up -d --scale livekit-publisher=9 livekit-publisher
+
+# Run the 30-second / 25-subscriber smoke and print the CLI summary.
+docker compose --profile livekit-local run --rm livekit-load-test
+
+# Inspect service state and publisher/SFU logs.
+docker compose --profile livekit-local ps
+docker compose --profile livekit-local logs --tail 80 livekit
+docker compose --profile livekit-local logs --tail 80 livekit-publisher
+
+# Stop only the LiveKit services; leave the rest of Hami's stack untouched.
+docker compose --profile livekit-local stop livekit-publisher livekit
+```
+
+For larger tests, run the load generator on separate machine(s), raise its file
+descriptor limit as LiveKit documents (`ulimit -n 65535`), and record the actual
+publisher/subscriber counts, track layout, bitrates, CPU/RAM, egress, packet loss,
+jitter, reconnects and latency percentiles. A local smoke does not establish
+4,000-viewer capacity or a 100 ms glass-to-glass guarantee. LiveKit's own
+benchmarking guide warns that each self-hosted room must fit on one SFU node and
+that load testing consumes cloud-plan allowances when run on cloud infrastructure.
+
 Do not use `docker compose down -v` or delete `storage/forge.db` as routine
 cleanup; those commands can destroy local data. The root `start.sh` uses
 non-destructive shutdown.
