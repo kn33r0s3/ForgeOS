@@ -2,7 +2,7 @@
 
 ## Current run — 2026-11-16 13:39 NPT — exact-head CI verified; production remains blocked
 
-**Verified repository head:** `41a08eda4ca3281ab7da96c1b8d7169ba861c3db` on the single active `main` branch. The repository was read through GitHub; the user’s Mac-local LiveKit checkout is not mounted in this session, so no claim is made that Copilot Task 017’s local diff has been reviewed.
+**Code-verification base before this documentation-only update:** `41a08eda4ca3281ab7da96c1b8d7169ba861c3db`, on the single active `main` branch. This handoff update itself changes only existing documentation files. The repository was read through GitHub; the user’s Mac-local LiveKit checkout is not mounted in this session, so no claim is made that Copilot Task 017’s local diff has been reviewed.
 
 ### Exact-head checks (GitHub Actions, SHA `41a08eda4ca3281ab7da96c1b8d7169ba861c3db`)
 

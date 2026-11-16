@@ -1,4 +1,4 @@
-# Current state — 2026-11-16 2026-11-16 13:39 NPT — main `41a08eda4ca3281ab7da96c1b8d7169ba861c3db`
+# Current state — 2026-11-16 13:39 NPT — documentation state; code-verification base `41a08eda4ca3281ab7da96c1b8d7169ba861c3db`
 
 - **Exact-head verification:** ForgeOS CI 10/10 passed on `41a08eda4ca3281ab7da96c1b8d7169ba861c3db`; secret scan passed. Independent deploy verifier failed only at production fetch with HTTP 402 after its 261 local verifier tests passed. Vercel Hami status says deployment completed; forge-os status says account blocked. Production readiness is not established.
 - **Runtime:** both domains’ last observed health/config requests return HTTP 402; intake, durable DB, scheduler and live owner state remain UNKNOWN. No activation or configuration change.
