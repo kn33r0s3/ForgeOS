@@ -23,6 +23,7 @@ import { Route as FeedRouteImport } from './routes/feed'
 import { Route as ForgeBotIntakeRouteImport } from './routes/forge-bot-intake'
 import { Route as GroupRouteImport } from './routes/group'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as MeetHamiRouteImport } from './routes/meet-hami'
 import { Route as NeedsRouteImport } from './routes/needs'
 import { Route as OperationsRouteImport } from './routes/operations'
 import { Route as OpportunitiesRouteImport } from './routes/opportunities'
@@ -117,6 +118,11 @@ const GroupRoute = GroupRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeetHamiRoute = MeetHamiRouteImport.update({
+  id: '/meet-hami',
+  path: '/meet-hami',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NeedsRoute = NeedsRouteImport.update({
@@ -260,6 +266,7 @@ export interface FileRoutesByFullPath {
   '/forge-bot-intake': typeof ForgeBotIntakeRoute
   '/group': typeof GroupRouteWithChildren
   '/login': typeof LoginRoute
+  '/meet-hami': typeof MeetHamiRoute
   '/needs': typeof NeedsRoute
   '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
@@ -300,6 +307,7 @@ export interface FileRoutesByTo {
   '/feed': typeof FeedRoute
   '/forge-bot-intake': typeof ForgeBotIntakeRoute
   '/login': typeof LoginRoute
+  '/meet-hami': typeof MeetHamiRoute
   '/needs': typeof NeedsRoute
   '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
@@ -341,6 +349,7 @@ export interface FileRoutesById {
   '/forge-bot-intake': typeof ForgeBotIntakeRoute
   '/group': typeof GroupRouteWithChildren
   '/login': typeof LoginRoute
+  '/meet-hami': typeof MeetHamiRoute
   '/needs': typeof NeedsRoute
   '/operations': typeof OperationsRoute
   '/opportunities': typeof OpportunitiesRoute
@@ -384,6 +393,7 @@ export interface FileRouteTypes {
     | '/forge-bot-intake'
     | '/group'
     | '/login'
+    | '/meet-hami'
     | '/needs'
     | '/operations'
     | '/opportunities'
@@ -424,6 +434,7 @@ export interface FileRouteTypes {
     | '/feed'
     | '/forge-bot-intake'
     | '/login'
+    | '/meet-hami'
     | '/needs'
     | '/operations'
     | '/opportunities'
@@ -464,6 +475,7 @@ export interface FileRouteTypes {
     | '/forge-bot-intake'
     | '/group'
     | '/login'
+    | '/meet-hami'
     | '/needs'
     | '/operations'
     | '/opportunities'
@@ -506,6 +518,7 @@ export interface RootRouteChildren {
   ForgeBotIntakeRoute: typeof ForgeBotIntakeRoute
   GroupRoute: typeof GroupRouteWithChildren
   LoginRoute: typeof LoginRoute
+  MeetHamiRoute: typeof MeetHamiRoute
   NeedsRoute: typeof NeedsRoute
   OperationsRoute: typeof OperationsRoute
   OpportunitiesRoute: typeof OpportunitiesRoute
@@ -627,6 +640,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/meet-hami': {
+      id: '/meet-hami'
+      path: '/meet-hami'
+      fullPath: '/meet-hami'
+      preLoaderRoute: typeof MeetHamiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/needs': {
@@ -848,6 +868,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForgeBotIntakeRoute: ForgeBotIntakeRoute,
   GroupRoute: GroupRouteWithChildren,
   LoginRoute: LoginRoute,
+  MeetHamiRoute: MeetHamiRoute,
   NeedsRoute: NeedsRoute,
   OperationsRoute: OperationsRoute,
   OpportunitiesRoute: OpportunitiesRoute,

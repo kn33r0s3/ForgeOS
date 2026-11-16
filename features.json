@@ -397,7 +397,18 @@
       "route": "/payment-result",
       "selector": "main",
       "status": "hidden"
+    },
+    {
+      "commit": "913cc8f8",
+      "date_added": "2026-11-16",
+      "heading": "Meet Hami",
+      "id": "page-meet-hami",
+      "intent": "Public chat page for Hami AI through the authenticated gateway; no evidence-store context or actions are enabled.",
+      "name": "Meet Hami",
+      "route": "/meet-hami",
+      "selector": "main",
+      "status": "hidden"
     }
   ],
-  "updated": "2026-10-12"
+  "updated": "2026-11-16"
 }
