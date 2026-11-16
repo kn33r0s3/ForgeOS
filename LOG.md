@@ -1,3 +1,13 @@
+## 2026-11-16 13:39 NPT — exact-head revalidation and D95 local testing capability correction
+
+- Read repository `main` at exact SHA `41a08eda4ca3281ab7da96c1b8d7169ba861c3db`; confirmed `HANDOFF.md` freshness note’s stated head.
+- Exact SHA Actions: ForgeOS CI run 43781771273 passed 10/10 jobs; secrets scan 43781771146 passed; independent deploy verifier 43781771110 failed at production GET with HTTP 402 after local verifier tests passed 261/261.
+- Commit statuses: Vercel – Hami reported deployment completed; Vercel – forge-os reported account blocked. This is not proof of runtime readiness. Latest handoff probe also had HTTP 402 for both public domains and Forge Bot config; intake could not be rechecked.
+- DFTQC official annual bulletin (FY2080/81 / 2023–24) reports Bhairahawa 1,778 food analyses and 46 feed analyses; purpose-wise table reports 329 requested sample analyses, 8 non-compliant, without food/feed or commodity split. It proves requested-sample capability in aggregate only, not fish/frozen-fish acceptance.
+- Source: https://www.dftqc.gov.np/downloadfiles/DFTQC-Annual-Bulletin-Eng-2082-Book-for-WEB-%281%29-1779272721.pdf. No contact, sample submission, application, source registration, collector run, body persistence or provider transmission. Manual-only / NOT CLEARED retained.
+- Copilot Task 017 remains pending independent review because its checkout and diff are on the user's Mac and are not mounted in this session. No sign-off inferred.
+- No code/runtime/config/permission/credential change, Cloud test, spend, production activation or external action.
+
 ## 2026-11-16 05:23 +0545 — D95 local testing/permit path and CI repair
 
 - Reconciled current main `20b8ff1db9fc3fde595b4256a11c3f6caf090ee9`, recent history, AGENTS/HANDOFF/STATE/QUEUE/BRAIN/UNKNOWN_MAP/CAPABILITY_QUEUE/LOG/PUBLIC_SOURCES/discovery-loop, exact-head workflow jobs, Vercel deployment/runtime, current source-clearance registry, collector/Signal/Evidence/assessment/citation code and relevant tests.

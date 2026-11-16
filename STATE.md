@@ -1,3 +1,14 @@
+# Current state — 2026-11-16 2026-11-16 13:39 NPT — main `41a08eda4ca3281ab7da96c1b8d7169ba861c3db`
+
+- **Exact-head verification:** ForgeOS CI 10/10 passed on `41a08eda4ca3281ab7da96c1b8d7169ba861c3db`; secret scan passed. Independent deploy verifier failed only at production fetch with HTTP 402 after its 261 local verifier tests passed. Vercel Hami status says deployment completed; forge-os status says account blocked. Production readiness is not established.
+- **Runtime:** both domains’ last observed health/config requests return HTTP 402; intake, durable DB, scheduler and live owner state remain UNKNOWN. No activation or configuration change.
+- **D95:** DFTQC FY2080/81 bulletin reports Bhairahawa 1,778 food + 46 feed analyses (1,824 total) and 329 requested sample analyses (8 non-compliant) across unspecified food/feed/commodities. Fish sample acceptance, frozen-fish test scope, current fees/turnaround, accreditation and Jaldevi eligibility remain UNKNOWN.
+- **Task 017:** Copilot reported completion in the Mac-local `~/Downloads/livekit-cli` checkout; that checkout/diff is not accessible in this session. Independent review/sign-off is not claimed.
+- **No external contact, sample submission, application, spend, money movement, public publishing, intake/outbound activation, Cloud load test, credential/permission change or production configuration change occurred.
+- Mission remains broad across domains/geographies. First Rupee or one pilot is not a Hami-wide gate.
+
+---
+
 # Current state — 2026-11-16 05:23 +0545 — main `20b8ff1db9fc3fde595b4256a11c3f6caf090ee9`
 
 - Mission remains broad across domains/geographies; First Rupee or one pilot is not a Hami-wide gate.
