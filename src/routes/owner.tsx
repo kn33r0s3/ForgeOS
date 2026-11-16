@@ -1754,6 +1754,14 @@ function OwnerConsolePage() {
                   Start by asking ForgeBot a question in your own words. It can explain what Hami has recorded,
                   what is still unclear, and what would be useful to investigate next. You can ignore the technical tools unless you need them.
                 </p>
+                <div className="mt-5">
+                  <Link
+                    to="/meet-hami"
+                    className="inline-flex min-h-12 items-center rounded-card border-2 border-accent bg-accent px-5 font-extrabold text-black"
+                  >
+                    Meet Hami — talk with Hami AI
+                  </Link>
+                </div>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl border border-line bg-background p-4">
                     <p className="text-sm font-semibold text-muted">New inquiry records · last 24 hours</p>
