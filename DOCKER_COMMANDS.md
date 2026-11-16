@@ -84,13 +84,20 @@ containers; preserve the latter's logs until test evidence has been reviewed.
 
 For larger tests, run the load generator on separate machine(s), raise its file
 descriptor limit as LiveKit documents (`ulimit -n 65535`), and record actual
-publisher/subscriber counts, track layout, bitrate, CPU/RAM, egress, **receiver
-inbound RTP loss deltas**, jitter, reconnects, frame/decode/render statistics and
-capture-to-render latency percentiles. LiveKit's
+publisher/subscriber counts, track layout, bitrate(s), CPU/RAM, egress,
+receiver inbound RTP loss deltas, jitter, reconnects, frame/decode/render
+statistics and capture-to-render latency percentiles. LiveKit's
 [WebRTC stats guide](https://docs.livekit.io/robotics/media/performance/stats/)
 says per-track inbound `packets_lost` is cumulative since subscription start;
-compare two readings to measure an interval. The CLI's `Pkt. Loss` column is
-not a substitute for this transport metric.
+compare two readings to measure an interval. The CLI's `Pkt. Loss` field counts
+`SampleBuilder` drop-callback events, not RTP transport loss. A local smoke does
+not establish 4,000-viewer capacity or a 100 ms glass-to-glass guarantee. Each
+self-hosted room must fit on one SFU node, and load testing consumes cloud-plan
+allowances when run on cloud infrastructure. Capture-to-render latency also
+requires timestamped frames and render-side measurement. The local
+250-subscriber run recorded 212 callback events, not a valid transport-loss
+percentage; see [CAPABILITY_QUEUE.md](./docs/CAPABILITY_QUEUE.md) before
+increasing the load.
 
 **Important: pinned CLI v2.19.4 counter semantics.** In
 [loadtester.go](https://github.com/livekit/livekit-cli/blob/v2.19.4/pkg/loadtester/loadtester.go#L398-L424),

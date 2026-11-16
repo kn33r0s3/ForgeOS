@@ -236,55 +236,74 @@ No new models, tables, primitives, collectors, D-numbers, branches or files were
 
 ---
 
-## Current handoff — 2026-11-16 — LiveKit local ramp (main 94876910)
+## Current handoff — 2026-11-16 — LiveKit local ramp (main 46ff1894)
 
-- **Run-start repository reality:** `main` and `origin/main` are synchronized
-  at `94876910e233060b970385ad61bcdd17194cd397` (divergence 0/0). The worktree
-  was clean before this recovery note. Commit `94876910` contains only the
-  five existing continuity/runbook documents and no source, test, production
-  configuration, or deployment changes.
-- **Exact-head verification:** ForgeOS CI
+- **Repository reality:** `main` and `origin/main` are synchronized at
+  `46ff1894e4e1d2a7bd818a69096e729128905f16` (divergence 0/0). This
+  documentation-only commit has parent `94876910`; the five existing
+  continuity/runbook files are again modified locally with the forensic
+  correction. No source, test, production configuration, or deployment code
+  changed.
+- **Exact-head verification:** `gh run list` returned no Actions runs for
+  `46ff1894`. Its GitHub commit statuses show Vercel `hami` deployment
+  completed and Vercel `forge-os` failed because the account is blocked; this
+  does not establish production health. Parent `94876910` had ForgeOS CI
   [43758207538](https://github.com/kn33r0s3/ForgeOS/actions/runs/43758207538)
   and secret scan
   [43758207546](https://github.com/kn33r0s3/ForgeOS/actions/runs/43758207546)
-  passed on `94876910`. Independent deploy verification
+  pass, while deploy verification
   [43758207593](https://github.com/kn33r0s3/ForgeOS/actions/runs/43758207593)
-  failed: its production-content fetch received HTTP 402. This is a deployment
-  access/status blocker, not proof of a code or application-health failure.
-  The earlier local `npm test` / projection / route results belong to
-  `193345cc`, not a rerun in this recovery.
+  failed on HTTP 402. Those parent results are not exact-head CI for
+  `46ff1894`. Earlier local test/projection/route results belong to
+  `193345cc`; none was rerun here.
 - **LiveKit evidence:** on the local one-SFU profile, nine synthetic publishers
   plus 100 simulated subscribers ran for 45 seconds after connection: 600
-  video subscriptions, 198.0 Mbps, zero packet loss/errors; peak aggregate
+  video subscriptions, 198.0 Mbps, zero CLI `SampleBuilder` drop-callback
+  events/errors; transport loss was not measured. Peak aggregate
   Docker-container CPU was 31.8% of its 10-CPU allocation and summed memory
   percentage was 7.28%. The 250-subscriber step ran for 45 seconds: 1,500
-  subscriptions, 442.8 Mbps, 212 packets lost (0.005%), zero errors; peak
-  aggregate container CPU was 46.5% and summed memory percentage 14.33%.
-  No resource threshold was reached. These are synthetic TEST results, not a
-  4,000-viewer capacity claim. The 250-run summary was recovered and confirms
-  212 losses with zero subscriber errors; the cause/repeatability is unknown.
-- **Measurement boundary:** the CLI reports bitrate and packet loss, not
+  subscriptions, 442.8 Mbps, 212 `SampleBuilder` drop-callback events and
+  zero subscriber errors. All 212 were on track SID `TR_VCrEnrdUoxTset`,
+  across 38/250 subscribers (34 with six events, four with two); publisher
+  identity is **NOT RECOVERABLE**. These callbacks are not missing RTP
+  datagrams, so no transport-loss percentage can be derived. The 250 artifact
+  has 18 indexed resource samples (peak aggregate CPU 465.31%, maximum summed
+  `MemPerc` 14.33%) but no absolute memory bytes, per-container series,
+  network counters, or wall-clock sample timestamps. Retained disconnects at
+  20:04:26Z and connection-manager closure at 20:04:30Z are teardown events;
+  they cannot be correlated with the untimestamped drops. Cause and
+  repeatability remain unknown. Both results are synthetic TEST evidence,
+  not a 4,000-viewer capacity claim.
+- **Measurement boundary:** the stock CLI reports bitrate and
+  `SampleBuilder` drop-callback counts, not RTP transport-loss statistics or
   capture-to-render latency. No LiveKit SDK import or application renderer
-  path was found in the repository, so the 100 ms goal has no instrumentable
-  app path yet. No 500/4,000 test, Cloud test, production test, or paid usage
-  occurred. Official LiveKit docs require each self-hosted room to fit on one
-  node; Cloud load tests are metered and capped at 50 subscribers, and
-  significant Cloud testing requires written consent.
-- **Runtime truth:** read-only checks returned `hami-sigma` HTTP 200 with
+  path was found in the repository, so actual rendered-frame degradation and
+  the 100 ms goal remain unmeasured. No 500/4,000 test, Cloud test, production
+  test, or paid usage occurred. Official LiveKit docs require each self-hosted
+  room to fit on one node; Cloud load tests are metered and capped at 50
+  subscribers, and significant Cloud testing requires written consent.
+- **Last recorded runtime checks:** read-only checks returned `hami-sigma` HTTP 200 with
   `status=degraded`, `ready=false`, `db=not_configured`; `haminp` and
   `forge-os-ebon` returned HTTP 402 `DEPLOYMENT_DISABLED`. No deployment,
   database, or production setting was changed.
-- **Local capacity:** Mac reports 10 CPUs / 24 GiB RAM; Docker context is
-  `desktop-linux`, limited to 10 CPUs / 16 GiB. No containers are running.
-  `docker compose --profile livekit-local ps -a` lists ten exited containers
-  (the SFU and nine publisher replicas), so they are stopped but not removed.
-  Default Compose exposes only `backend`; LiveKit remains opt-in under
-  `livekit-local`. No load test ran during this recovery.
-- **Next:** inspect retained stopped-container logs and the pinned CLI's loss
-  semantics to classify the 250-run signal; no repeat until that review and
-  explicit resource stop conditions are complete. Define the 100 ms metric
-  before designing an application measurement path. Keep 4,000 viewers off
-  this Mac until an authorized, provisioned environment is available.
+- **Local capacity and container state:** last measured limits remain Mac
+  10 CPUs / 24 GiB RAM and Docker 10 CPUs / 16 GiB; these limits were not
+  re-read. A read-only check on Docker context `desktop-linux` found exactly
+  ten containers: the SFU and nine publishers, all `Exited (0)`. They were
+  created at about 2026-11-15 19:58:07Z and finished at about 20:04:30Z.
+  `json-file` log paths are configured, but `docker logs` returned 0 bytes
+  for every container, so no log content is currently retrievable. The
+  reported `Exited 101 6 minutes ago` fragment was not reproduced. Default
+  Compose exposes only `backend`; LiveKit remains opt-in under
+  `livekit-local`. No container state was changed and no load test ran.
+- **Next:** review the receiver-instrumentation and enforceable Mac-safety
+  proposal in [docs/CAPABILITY_QUEUE.md](docs/CAPABILITY_QUEUE.md). Muse
+  returned partial source verification; its implementation-body check failed
+  on network fetches. This continuation independently verified the pinned
+  CLI's counter and formula, resolving the concern about a second sequence-gap
+  counter in the displayed metric path. No instrumentation implementation or
+  repeat is authorized yet; keep 4,000 viewers off this Mac until an
+  authorized, provisioned environment is available.
   `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
 
 ## Previous handoff — 2026-11-16 — Hami homepage first-fold polish (main 4dc09990)

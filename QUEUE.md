@@ -1,4 +1,4 @@
-## Current continuation — 2026-11-16 — LiveKit safety and D85 export settlement
+## Previous continuation — 2026-11-16 — LiveKit safety and D85 export settlement
 
 1. **P0 — Durable production state and scheduler truth.** Keep Hami's Vercel deployment fail-closed for durable operations: no project environment variables are configured; runtime uses per-instance `/tmp/forge.db`; legacy intelligence startup is disabled. Owner-controlled DB/auth/scheduler configuration remains the dependency. Do not activate a worker or consequential action.
 2. **P0 — Verify this grouped commit at its exact new head.** Run all CI jobs, secret scan and independent deployment verifier. Parent SHA `b95e94f29143e44c0eeee526f1a5508b02c1cdb9` passed 10/10 CI jobs and secret scan; its deployment verifier failed HTTP 402. Do not inherit parent results.
@@ -7,7 +7,7 @@
 5. **P1 — D85 cross-border settlement.** Convert NRB goods/service routes and bank tariff into a source-versioned route/document/fee/deadline map. Keep UNKNOWN until actual consented transaction evidence exists; contact exporters only after explicit owner authorization.
 6. **P1 — Continue independent world research.** D95 fish cold-chain/asset chain, D93 disaster-source reconciliation, WASH, D96 energy and D86 trade remain independent tracks. No First Rupee or seller pilot gate.
 
-## Current continuation — 2026-11-16 — D95 Jaldevi fish cold-chain / market-chain evidence (run-start main 0ed23af9)
+## Previous continuation — 2026-11-16 — D95 Jaldevi fish cold-chain / market-chain evidence (run-start main 0ed23af9)
 
 1. **P0 — Durable production state and scheduler truth.** Vercel project has no environment variables/hidden production variables. Runtime code/logs confirm per-instance ephemeral SQLite, no DATABASE_URL, no CRON_SECRET, and legacy intelligence startup disabled. HTTP 200 does not mean ready; health code marks this degraded/not-ready. Owner-controlled durable DB/auth/scheduler configuration is the blocker. No changes or activation.
 2. **P0 — Preserve a durable HALT boundary.** The degraded health path attempts to persist safe mode in the same ephemeral DB. Do not treat this as cross-instance durable. Consequential actions must fail closed until durable shared state and authorization are proven.
@@ -19,6 +19,57 @@
 8. **P1 — Portfolio quality.** D1–D100 survey shows next actions exist in all 100 rows, but provenance/freshness/independence/contradiction/local applicability/limitations/capability are not structured. Operational ResearchQuestion count remains UNKNOWN due no durable DB access.
 
 Exact-head 0ed23af9 CI 10/10 passed (backend 1,363 passed / 2 skipped / 17 warnings); secret scan passed; Hami production deployment is READY for that exact SHA. The independent deployment verifier failed HTTP 402 at production-content fetch after local verifier tests passed. Deployment READY does not establish durable production operation. This follow-up changes documentation only; its own exact-head checks remain pending.
+## Current continuation — 2026-11-16 — LiveKit measured ramp (main 46ff1894)
+
+1. **P0 — Production runtime truth.** The last recorded public checks found
+   `hami-sigma` HTTP 200 but `degraded`, `ready=false`,
+   `db=not_configured`; `haminp` and `forge-os-ebon` returned HTTP 402
+   `DEPLOYMENT_DISABLED`. Runtime was not rechecked during this
+   documentation/source review.
+2. **P0 — Preserve exact-head verification.** Current HEAD
+   `46ff1894e4e1d2a7bd818a69096e729128905f16` has no GitHub Actions runs in
+   `gh run list`; commit statuses show Vercel `hami` completed and `forge-os`
+   failed because the account is blocked. Parent `94876910` had passing
+   ForgeOS CI `43758207538` and secret scan `43758207546`, but deploy
+   verification `43758207593` failed on HTTP 402. Do not transfer those
+   parent results to current HEAD. Earlier local `npm test` and map/route
+   checks were on `193345cc`, not rerun here.
+3. **P1 — Instrument the existing 250-subscriber harness before repeating.**
+   The 100-subscriber run reported zero CLI `SampleBuilder` drop-callback
+   events, not measured RTP transport loss. The 250 run reported 212 such
+   events on track SID `TR_VCrEnrdUoxTset`, across 38/250 subscribers
+   (34x6, 4x2); publisher mapping is **NOT RECOVERABLE**. The callback count
+   is not missing datagrams and no transport-loss percentage is derivable.
+   The 250 artifact has 18 indexed samples (peak aggregate CPU 465.31%,
+   summed `MemPerc` 14.33%) but no memory bytes, per-container series,
+   network counters, or wall-clock sample timestamps. Teardown at
+   20:04:26Z/20:04:30Z cannot be correlated with untimestamped drops. Cause
+   remains unknown. Muse returned partial verification but could not verify
+   implementation bodies; this continuation checked the pinned source and
+   confirmed the displayed metric has no separate sequence-gap counter.
+   Review the design in
+   [docs/CAPABILITY_QUEUE.md](docs/CAPABILITY_QUEUE.md) before any
+   implementation or repeat. No repeat is authorized; do not escalate to 500.
+4. **P1 — Measure the stated latency goal.** The CLI has no renderer and
+   reports no capture-to-render latency. The design proposes a real
+   capture/render path with frame IDs/timestamps and p50/p95/p99 reporting;
+   the candidate target is p95 <=100 ms, still unverified and pending a
+   measurement-contract review.
+5. **P1 — Keep scale claims bounded.** No 500- or 4,000-viewer run occurred.
+   One self-hosted LiveKit room must fit one SFU node; high-scale testing
+   requires authorized infrastructure and separate load generators. Cloud
+   tests are metered/capped and significant tests require written consent.
+
+Last measured capacity remains 10 CPUs / 24 GiB RAM on the Mac and 10 CPUs /
+16 GiB in Docker (limits not re-read). A read-only check on `desktop-linux`
+found ten stopped LiveKit containers (one SFU, nine publishers), all exit
+code 0, created about 2026-11-15 19:58:07Z and finished about 20:04:30Z.
+Their `json-file` log paths are configured, but `docker logs` returned 0 bytes
+for every container; no log content is currently retrievable. The fragment
+`Exited 101 6 minutes ago` was not reproduced. Default Compose exposes only
+`backend`; LiveKit services are opt-in under `livekit-local`. These local TEST
+results do not prove a real transaction or production service.
+`OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
 
 ## Previous continuation — 2026-11-16 — main 4dc09990 + homepage polish
 

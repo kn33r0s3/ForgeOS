@@ -1,4 +1,4 @@
-# Current state — 2026-11-16 05:23 +0545 — main `20b8ff1db9fc3fde595b4256a11c3f6caf090ee9`
+## Previous state snapshot — 2026-11-16 05:23 +0545 — main `20b8ff1db9fc3fde595b4256a11c3f6caf090ee9`
 
 - Mission remains broad across domains/geographies; First Rupee or one pilot is not a Hami-wide gate.
 - Run-start main `20b8ff1db9fc3fde595b4256a11c3f6caf090ee9`; the grouped test/workflow correction and continuity update are in the new commit. Exact-head verification for that new commit is pending.
@@ -24,7 +24,7 @@
 - **Still NOT IMPLEMENTED:** durable DB/auth/scheduler; source-effective-time propagation and claim-specific source grounding; the blocked read-only portfolio helper in `research_planner.py`. No alternate write path was used for that blocked change.
 - **Verification for the new commit:** pending direct exact-head CI, secret-scan and deployment checks. Do not inherit the parent SHA's green CI as proof for the new head.
 
-# Current state — 2026-11-16 — D95 fish cold-chain / market-chain discovery
+## Previous state — 2026-11-16 — D95 fish cold-chain / market-chain discovery
 
 - **Run-start main:** 0ed23af9a56a7eb8a68cb4d6050fdd5f064ad9e9. Its exact-head GitHub Actions suite completed 10/10; backend tests 1,363 passed, 2 skipped, 17 warnings; secret scan passed. Hami production deployment was READY for that exact SHA. The independent deploy verifier failed HTTP 402 at production-content fetch after local verifier tests passed. This follow-up is documentation-only; the new head requires its own checks.
 - **D95 increment:** the Lumbini Cooperative Registrar list and House of Representatives Committee report identify the same registered Jaldevi Matsya Producer Cooperative at Siyari-5/Banghusuri (registration 487/2355/064/065). The Parliament report records about 400 linked farmers, frozen-fish production, trader refrigerators and market/packaging/electricity/consumer-awareness constraints. The National Farmers Commission FY2078/79 report records a historical processing centre funded NPR 3.8m by PMAMP plus NPR 0.75m by the cooperative, frozen-fish machinery and a vehicle.
@@ -37,7 +37,7 @@
 
 ---
 
-## Current state — 2026-11-16 — production runtime and source-time trace (run-start main 24d76a40)
+## Previous state — 2026-11-16 — production runtime and source-time trace (run-start main 24d76a40)
 
 - **Repository:** run-start main `24d76a40930fab12f96745b2887e4158182d2e1d`; this follow-up is documentation-only. Stale `feature/governed-offers` is 968 behind / 0 ahead; no delete-ref action exposed.
 - **Mission:** settled. First Rupee is one commercial track, not a gate for Hami-wide progress.
@@ -52,6 +52,61 @@
 
 **Next:** owner-controlled durable DB and CRON_SECRET; keep all consequential actions fail-closed; harden direct Cloud Compose and sanitize CI Room output; implement source-time provenance only through a supported existing seam with regression coverage; re-review expired clearances individually; continue D93 and independent research/security/reliability/capability tracks.
 
+## Current state — 2026-11-16 — LiveKit ramp and runtime status (main 46ff1894)
+
+- **Repository:** `main` and `origin/main` are synchronized at
+  `46ff1894e4e1d2a7bd818a69096e729128905f16` (0 ahead / 0 behind). This
+  documentation-only commit has parent `94876910`; the five existing
+  continuity/runbook files are modified locally with the forensic correction.
+- **Exact-head checks:** `gh run list` returned no Actions runs for
+  `46ff1894`; its commit statuses show Vercel `hami` completed and Vercel
+  `forge-os` failed because the account is blocked. The parent `94876910`
+  passed ForgeOS CI `43758207538` and secret scan `43758207546`, but deploy
+  verification `43758207593` failed on HTTP 402. Parent results are not
+  exact-head CI for `46ff1894`. Earlier local `npm test` (427 passed) and
+  map/route checks refer to `193345cc`; they were not rerun here.
+- **Local LiveKit:** the 100-subscriber synthetic speaker-view step passed
+  with 600 video subscriptions, 198 Mbps, zero CLI `SampleBuilder`
+  drop-callback events/errors, 31.8% peak aggregate Docker CPU (of 10
+  configured CPUs), and 7.28% summed Docker memory; RTP transport loss was not
+  measured. The 250 step completed with 1,500 subscriptions, 442.8 Mbps, 212
+  `SampleBuilder` drop-callback events, and no subscriber errors. All 212 were
+  on track SID `TR_VCrEnrdUoxTset`; 38/250 subscribers reported events
+  (34x6, 4x2). Publisher identity is **NOT RECOVERABLE**. These callback
+  events are not missing RTP datagrams, so no transport-loss percentage is
+  supported. The 250 artifact has 18 indexed samples, peak aggregate CPU
+  465.31%, and maximum summed `MemPerc` 14.33%; it lacks absolute memory
+  bytes, per-container series, network counters, and wall-clock sample
+  timestamps. Retained disconnect/connection-manager teardown at
+  20:04:26Z/20:04:30Z cannot be correlated with untimestamped drops. No cause
+  or repeatability is established; no 500 or 4,000 test was run.
+- **Latency/scale:** no capture-to-render measurement exists; 100 ms is
+  unverified. A source search found no LiveKit SDK or application renderer
+  path in this repository. LiveKit's current docs say one self-hosted room
+  must fit on one node. 4,000 viewers were not tested or projected as a
+  capacity claim.
+- **Last recorded production checks:** read-only checks found `hami-sigma` HTTP 200 but degraded,
+  `ready=false`, `db=not_configured`; `haminp` and `forge-os-ebon` return HTTP
+  402 `DEPLOYMENT_DISABLED`. No production configuration or deployment
+  changed.
+- **Local runtime:** last measured limits remain Mac 10 CPUs / 24 GiB and
+  Docker 10 CPUs / 16 GiB (limits not re-read). A read-only check on
+  `desktop-linux` found the LiveKit SFU and nine publishers, all ten
+  `Exited (0)`, created about 2026-11-15 19:58:07Z and finished about
+  20:04:30Z. `json-file` log paths are configured, but `docker logs` returned
+  0 bytes for each container; no log content is currently retrievable. The
+  `Exited 101 6 minutes ago` fragment was not reproduced. Root Compose
+  defaults to `backend`; LiveKit is opt-in under `livekit-local`. No
+  container state was changed.
+- **Next:** review the receiver-instrumentation and enforceable Mac-safety
+  proposal in [docs/CAPABILITY_QUEUE.md](docs/CAPABILITY_QUEUE.md). Muse
+  returned partial verification but could not verify implementation bodies;
+  this continuation independently verified the pinned CLI's metric path. No
+  instrumentation implementation or repeat is authorized yet. Define and
+  measure capture-to-render p50/p95/p99 (candidate p95 <=100 ms); defer higher
+  scale until appropriate authorization and infrastructure. No real
+  transaction occurred;
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE**.
 
 ## Previous state — 2026-11-16 — homepage polish on main 4dc09990
 

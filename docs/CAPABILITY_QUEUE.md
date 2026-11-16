@@ -129,7 +129,7 @@ Represent this in the existing six primitives: exporter/buyer/bank/currency/paym
 
 ---
 
-## 2026-11-16 — Local LiveKit ramp: 100 clean; 250 with small packet loss (main 94876910)
+## 2026-11-16 — Local LiveKit ramp: 100 with no CLI drops; 250 with unexplained SampleBuilder drops (main 46ff1894)
 
 - **Existing seam inspected:** root `docker-compose.yml`'s `livekit`,
   `livekit-publisher`, and `livekit-load-test` services; the existing
@@ -148,17 +148,22 @@ Represent this in the existing six primitives: exporter/buyer/bank/currency/paym
   containers sending synthetic demo video to `hami-proving-ground`, and the
   existing CLI load-test service. All runs used the existing `speaker` layout,
   low resolution, 10 joins/second, and `ulimit -n 65535`. The 100- and
-  250-subscriber runs waited 45 seconds after all subscribers connected.
+  250-subscriber runs waited 45 seconds after all subscribers connected. The
+  run code baseline was `193345cc`; commits `94876910` and `46ff1894` are
+  documentation-only and did not change the harness.
 - **Measured results:**
   - 25 subscribers / 30 seconds: 150 video subscriptions, 47.0 Mbps aggregate
-    subscriber bitrate, 0 packet loss, 0 errors.
+    subscriber bitrate, 0 CLI `SampleBuilder` drop-callback events, 0 errors;
+    RTP transport loss was not measured.
   - 100 subscribers / 45 seconds: 600 video subscriptions, 198.0 Mbps, 0
-    packet loss, 0 errors. Peak sum of active-container CPU was 317.95% of the
-    Docker 10-CPU allocation (31.8%); summed Docker `MemPerc` was 7.28%.
+    CLI `SampleBuilder` drop-callback events, 0 errors. Peak sum of
+    active-container CPU was 317.95% of the Docker 10-CPU allocation (31.8%);
+    summed Docker `MemPerc` was 7.28%. RTP transport loss was not measured.
   - 250 subscribers / 45 seconds: 1,500 video subscriptions, 442.8 Mbps
-    (1.8 Mbps average), 212 lost packets (0.005%), 0 errors. Peak summed
-    active-container CPU was 465.31% of the 10-CPU allocation (46.5%); summed
-    Docker `MemPerc` was 14.33%.
+    (1.8 Mbps average), 212 `SampleBuilder` drop-callback events, 0 errors.
+    Peak summed active-container CPU was 465.31% of the 10-CPU allocation
+    (46.5%); summed Docker `MemPerc` was 14.33%. No RTP transport-loss
+    percentage was captured.
 - CPU percentages above are summed Docker container readings, not a whole-Mac
   CPU measurement. The 100 run had a hard stop above 800% aggregate CPU or
   80% aggregate memory; the 250 run used stricter 700% CPU / 50% memory
@@ -173,23 +178,43 @@ Represent this in the existing six primitives: exporter/buyer/bank/currency/paym
   `docker compose ... ps -a` exposed retained exited SFU/publisher containers.
   Verify both running and stopped container state after every run; do not
   equate "no running containers" with full removal.
-- **Loss-triage evidence:** the 250-run CLI summary reports 212 lost packets
-  and zero subscriber errors. The subscriber summary attributes nonzero counts
-  to 38 of 250 subscribers: 34 reported six packets each and four reported
-  two each (212 total); the other subscriber rows reported zero. Retained SFU
-  logs include the local development secret-length warning and data-channel
-  `user initiated abort` warnings; neither is evidence of the media-packet
-  loss cause. No log-to-counter correlation is established, so packet-loss
-  attribution remains open.
+- **Drop-callback evidence:** pinned `livekit-cli` v2.19.4 imports
+  `server-sdk-go/v2/pkg/samplebuilder`. Its `consumeTrack` increments
+  `dropped` only in `WithPacketDroppedHandler`; it increments `packets` only
+  for packets returned by `SampleBuilder.PopPackets()`. The CLI formatter
+  computes `dropped / (packets + dropped)`, mixing callback events with
+  emitted RTP packets. The SDK's `drop()` invokes the callback once, then
+  releases all buffered packets for that incomplete frame. Therefore the
+  displayed value is not a count of missing RTP datagrams or a valid
+  transport-loss percentage. The provider's sequence/timing comment does not
+  add a second counter to this `consumeTrack`/summary path. Sources:
+  [pinned CLI receive loop](https://github.com/livekit/livekit-cli/blob/v2.19.4/pkg/loadtester/loadtester.go#L383-L427),
+  [CLI formula](https://github.com/livekit/livekit-cli/blob/v2.19.4/pkg/loadtester/util.go#L34-L42),
+  [SDK frame drop](https://github.com/livekit/server-sdk-go/blob/v2.19.0/pkg/samplebuilder/samplebuilder.go#L232-L248).
+  The 250-run summary has 212 such events on track SID
+  `TR_VCrEnrdUoxTset`, across 38 of 250 subscribers (34 reported six events
+  and four reported two); all other subscriber rows reported zero. Publisher
+  identity, published source/type, and container mapping are **NOT
+  RECOVERABLE** from retained artifacts. Publisher logs contain subscriber
+  disconnect events at 20:04:26Z and connection-manager closure at 20:04:30Z.
+  These are teardown events and cannot be correlated to drop callbacks,
+  because the callbacks have no timestamps. No cause or repeatability has
+  been established.
+- **250-run resource evidence boundary:** the retained artifact has 18
+  indexed aggregate samples, with peak CPU 465.31% and maximum summed
+  `MemPerc` 14.33%. It has no per-container resource rows, absolute memory
+  bytes, network counters, or wall-clock sample timestamps. The separate
+  25- and 100-subscriber artifacts are different runs and cannot fill those
+  gaps.
 - **Limits:** no 500- or 4,000-subscriber run was attempted. The 250 result is
-  not a clean loss-free capacity point and its loss has not been shown to be
-  repeatable. No capture-to-render latency was measured; the CLI bitrate/loss
-  summary does not establish a 100 ms target. The tests used synthetic media
-  and one local SFU, not real cameras, geographically distributed viewers, or
-  production infrastructure. A repository search found no LiveKit SDK import
-  or application track-render path; the existing harness is CLI-only, so there
-  is no application publisher/renderer callback to instrument for
-  capture-to-render latency yet.
+  not a verified transport-loss-free capacity point; its callback events are
+  unexplained and repeatability is unknown. No capture-to-render latency was
+  measured; the CLI bitrate/drop-callback summary does not establish a 100 ms
+  target. The tests used synthetic media and one local SFU, not real cameras,
+  geographically distributed viewers, or production infrastructure. A
+  repository search found no LiveKit SDK import or application track-render
+  path; the existing harness is CLI-only, so there is no application
+  publisher/renderer callback to instrument for capture-to-render latency yet.
 - **Fresh official evidence:** LiveKit's
   [benchmark guide](https://docs.livekit.io/transport/self-hosting/benchmark.md)
   says each room must fit within one node and that load testing needs ample CPU
@@ -204,35 +229,111 @@ Represent this in the existing six primitives: exporter/buyer/bank/currency/paym
   [frame-metadata guide](https://docs.livekit.io/transport/media/frame-metadata.md)
   describes timestamp/frame-ID support for capture-to-render latency
   measurement; the current CLI test does not report it.
-- **Next removable dependency:** inspect the 250-run loss pattern and repeat
-  that same bounded step once before considering 500; define whether 100 ms
-  means capture-to-render and which percentile must meet it, then instrument a
-  real publisher/render path. A 4,000-viewer test needs an authorized,
-  appropriately provisioned single-node room and separate load generators, or
-  a separately tested topology; it must not be attempted on this Mac.
-- **Improvement delta — evidence quality:** the tested loss-free local point
-  advanced to 100 subscribers, and the 250-subscriber run exposed a small
-  packet-loss signal that narrows the next experiment. No real transaction
-  occurred; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains
-  **NOT MEASURABLE**.
+- **Receiver-instrumentation and Mac-safety proposal (design only):**
+  - Keep the existing `docker-compose.yml::livekit-load-test` and pinned CLI
+    as the single harness; do not add a sidecar or second subscriber
+    implementation. The stock CLI currently exports only its final summary.
+    The pinned Go SDK's `Room` keeps its RTCEngine private, so exact access to
+    each receiver's peer-connection stats must be verified at the existing
+    CLI `consumeTrack`/subscription seam before implementation. Pinned CLI
+    v2.19.4 directly requires Pion WebRTC v4.2.23, which provides
+    `PeerConnection.GetStats`; however, the Room does not expose its peer
+    connection. Do not use reflection or infer stats from SampleBuilder
+    callbacks. Pion's inbound stats types declare `PacketsReceived`,
+    `PacketsLost`, `PacketsRepaired`, `PacketsDuplicated`, `FIRCount`,
+    `PLICount`, `NACKCount`, jitter, jitter-buffer delay/emitted counts, and
+    frame/freeze fields. Outbound stats declare `RetransmittedPacketsSent`.
+    These are declared fields, not proof every field is populated in this
+    CLI path. The exact integration seam remains a blocker. See
+    [Pion PeerConnection.GetStats](https://github.com/pion/webrtc/blob/v4.2.23/peerconnection.go#L2997-L3008),
+    [inbound stats types](https://github.com/pion/webrtc/blob/v4.2.23/stats.go#L304-L620),
+    and [outbound retransmission field](https://github.com/pion/webrtc/blob/v4.2.23/stats.go#L667-L715).
+  - Correlate every record with run ID, UTC timestamp plus monotonic elapsed
+    time, room, subscriber identity/SID, publisher identity/SID, track SID,
+    source/type, and RTP stats ID/SSRC/RID when exposed. Resolve and persist
+    publisher-to-track mapping at subscription time; do not depend on
+    post-run SID recovery.
+  - Sample cumulative receiver inbound-RTP counters once per second and emit
+    interval deltas: packets/bytes received, packets lost/repaired/duplicated,
+    NACK/PLI/FIR counts, and jitter. Include jitter-buffer delay/emitted
+    counts and decoded/rendered/dropped frame and freeze metrics only where
+    the pinned Go path actually populates them. Sample publisher outbound
+    retransmitted-packet counters where available.
+    Preserve counter resets explicitly. Report packet reordering, late fills,
+    and duplicates separately using a bounded sequence-number observer on the
+    existing receive path; do not declare a gap permanently lost before its
+    reorder grace expires. If the pinned API cannot expose a field, report it
+    unavailable rather than synthesizing it.
+  - On each synthetic publisher, sample outbound packet/byte and available
+    retransmission/frame-encode counters at the same one-second cadence.
+    Timestamp each SampleBuilder callback separately with its track mapping
+    and available RTP timestamp/sequence context; retain its name as a
+    callback/frame-drop event, never packet loss.
+  - Sample each exact test container's CPU, memory usage/limit in bytes,
+    network RX/TX counters, restart count, and OOM status every second.
+    Capture host memory-pressure and swap baselines for 60 seconds before
+    startup, then every five seconds through cleanup. Include UTC and monotonic
+    timestamps for all samples.
+  - Preflight against the last recorded allocation (Docker 10 CPUs/16 GiB;
+    Mac 10 CPUs/24 GiB), and re-read it before any future run. Do not start
+    unless baseline host memory pressure is normal and swap is stable. Abort
+    before aggregate test CPU reaches 700%, or aggregate test-container
+    memory reaches 8 GiB measured from bytes. Also abort on host memory
+    pressure leaving normal, swap growth across two consecutive samples,
+    OOM/restart/unexpected exit, any connection error, or participant count
+    other than nine publishers plus the intended 250 subscribers. Missing
+    required telemetry invalidates the run.
+  - Before and after any separately authorized run, record exact container
+    IDs. Stop/remove only IDs created for that test; preserve unrelated Hami
+    services and the existing stopped-container evidence. Never use
+    `down -v` or broad cleanup.
+  - The CLI cannot prove rendered-frame experience or glass-to-glass latency.
+    A real capture/render path must correlate frame IDs and timestamps and
+    report p50/p95/p99; p95 <=100 ms is a candidate target, not a measured
+    result or an approved contract. No such renderer exists in this repo.
+  - This is a proposal only. No instrumentation, Docker, test, or cleanup was
+    run; no repeat is authorized. The next experiment, after implementation,
+    safety review, and separate approval, remains the same nine-publisher /
+    250-subscriber speaker-view workload. No 500 step or Cloud test.
+- **Improvement delta — evidence quality:** corrected the active record from
+  “212 lost packets / 0.005%” to 212 SampleBuilder drop-callback events,
+  identified the affected track and subscriber distribution, marked publisher
+  mapping **NOT RECOVERABLE**, and documented the resource-data gaps. The
+  100-subscriber point remains a zero-callback TEST result, not a transport-
+  loss measurement. No real transaction occurred;
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+- **Independent source review:** Muse verified release/version and public API
+  facts but could not fetch the implementation bodies, so its verification is
+  partial. Its open question about a possible second sequence-gap counter is
+  resolved for the displayed subscriber metric: direct inspection of the
+  pinned `consumeTrack`, `formatLossRate`, and SDK `SampleBuilder.drop()`
+  source confirms that the table uses the callback and popped-packet counters
+  described above. No claim is made that Muse independently verified those
+  function bodies.
 - **Recovery verification:** actual `main` and `origin/main` are both
-  `94876910e233060b970385ad61bcdd17194cd397` (0/0 divergence); the worktree
-  was clean at recovery start. Exact-head ForgeOS CI `43758207538` and secrets
-  scan `43758207546` passed; deploy verification `43758207593` failed because
-  its production-content fetch returned HTTP 402. Read-only health checks
-  found `hami-sigma` degraded (`db=not_configured`) and `haminp` /
-  `forge-os-ebon` disabled (HTTP 402). Mac/Docker capacity is 10/10 CPUs and
-  24/16 GiB RAM, with no running containers; ten stopped LiveKit SFU/publisher
-  containers remain for log inspection. The root Compose LiveKit profile is
-  opt-in. No code, runtime, deployment, or load-test changes were made.
+  `46ff1894e4e1d2a7bd818a69096e729128905f16` (0/0 divergence); this
+  documentation-only commit has parent `94876910`. Five existing
+  continuity/runbook files are modified locally. `gh run list` returned no
+  Actions runs for `46ff1894`; commit statuses show Vercel `hami` completed
+  and `forge-os` failed because the account is blocked. Parent CI
+  `43758207538` and secrets scan `43758207546` passed, while deployment
+  verifier `43758207593` failed HTTP 402; those are not exact-head results.
+  The last recorded health checks found `hami-sigma` degraded
+  (`db=not_configured`) and `haminp` / `forge-os-ebon` disabled (HTTP 402);
+  runtime was not rechecked. Last measured Mac/Docker limits remain 10/10 CPUs
+  and 24/16 GiB RAM (not re-read). A read-only check on `desktop-linux` found
+  ten stopped LiveKit containers, all exit code 0; `json-file` logging is
+  configured, but `docker logs` returned 0 bytes for each. The reported
+  `Exited 101 6 minutes ago` fragment was not reproduced. No container state
+  was changed and no test or load test ran in this continuation.
 - **Current blocker / next safe action:** 4,000-viewer scale still requires
-  authorized, provisioned infrastructure; the 100 ms goal has no defined
+  authorized, provisioned infrastructure; the 100 ms goal has no approved
   measurement contract, and no application render path was found. The
-  retained 250-subscriber summary confirms 212 packet losses (0.005%) and zero
-  subscriber errors, but does not establish whether the loss is repeatable or
-  where it occurred. Inspect retained stopped-container logs and the pinned
-  CLI loss semantics before deciding whether a bounded repeat is justified;
-  require explicit stop conditions before any repeat.
+  historical publisher mapping is **NOT RECOVERABLE**, drop-event cause is
+  unknown. Muse's independent verification was partial; this continuation
+  independently verified the pinned CLI/SDK counter path. Review this
+  instrumentation and Mac-safety proposal before considering implementation;
+  any repeat requires separate approval.
 
 ## 2026-11-16 — Hami homepage first-fold clarity and truthful identity
 
