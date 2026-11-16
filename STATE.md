@@ -1,3 +1,12 @@
+## Validation correction — 2026-11-17 — parent `843b4065b040a3987b9e044c844c35e64dbf58b0`
+
+- The first documentation commit failed two frontend/repository checks because the existing D93 map row changed without regenerating `backend/app/data/unknowns.json` and `src/lib/unknowns.ts`. Backend tests passed 1,363 with 2 skipped; build, lint, typecheck, route smoke, LiveKit smoke, evidence-triage and secret scan passed. Deploy verifier failed HTTP 402 at production-content fetch.
+- D93 is not a new unknown. Restored `docs/UNKNOWN_MAP.md` to the exact parent version; no generated projections were hand-edited. The new evidence remains in CAPABILITY_QUEUE and PUBLIC_SOURCES. Do not use the older D93 row's 302/five-out-of-contact attribution as verified; the official #02 PDF remains unread.
+- Current Vercel deployment for `843b4065` is READY, but independent production verification is not green. Project metadata: `live=false`, SSO enabled except custom domains, three Vercel aliases; `haminp.vercel.app` not listed. Only `HAMI_CHAT_KEY` and `HAMI_CHAT_OLLAMA_HOST` appear in production env metadata; no DB/cron variable. No runtime request verified.
+- Corrective docs-only commit now requires its own exact-head verification.
+
+---
+
 ## Current state snapshot — 2026-11-17 05:06 +0545 — run-start main `43df3419cb16b4098e7485a8eb1786a4557158c0`
 
 - Mission remains settled and open-ended across domains/geographies; no pilot, seller segment, revenue milestone or disaster study gates Hami-wide progress.

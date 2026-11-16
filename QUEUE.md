@@ -1,3 +1,12 @@
+## Validation correction — 2026-11-17 — projection contract
+
+- The previous docs-only commit changed the existing D93 row in `UNKNOWN_MAP.md` without regenerating its two projections; exact-head `repository-guards` and `frontend-tests` failed at `sync-unknowns-json.mjs --check`. Backend tests passed 1,363 with 2 skipped; other CI jobs and secret scan passed. Deploy verifier remains HTTP 402 at production-content fetch.
+- D93 is already an existing UNKNOWN, so the row edit was reverted to the exact parent version. New evidence remains in CAPABILITY_QUEUE and PUBLIC_SOURCES. No new D-number, no hand-edited generated file and no source-write bypass.
+- Future map edits must run the authoritative `node scripts/sync-unknowns-json.mjs` in a proper repository checkout and include both generated projections in the same commit. Until then, update evidence in the existing capability/source registers, not the map.
+- This corrective commit's exact-head checks are pending. Do not write again while they run.
+
+---
+
 ## Current continuation — 2026-11-17 — run-start main `43df3419cb16b4098e7485a8eb1786a4557158c0`
 
 1. **P0 — Verify the Meet Hami owner-access boundary before wider exposure.** `/api/hami/chat` is allowlisted from the global API-key middleware and the route has no application-level caller authentication. The UI sends no API-key header; `HAMI_CHAT_KEY` authenticates only the local Ollama gateway hop. Vercel SSO is the current access boundary and is enabled for all except custom domains. Confirm the exact owner-facing domain mapping (the current project domain list does not include `haminp.vercel.app`) and SSO behavior through the normal owner account. Do not create a share link, disable SSO, attach a custom domain or decrypt secrets in this run.

@@ -1,3 +1,13 @@
+# Validation correction — 2026-11-17 — preserve UNKNOWN_MAP projection contract
+
+- Documentation commit `843b4065b040a3987b9e044c844c35e64dbf58b0` updated D93 evidence in `docs/UNKNOWN_MAP.md` without regenerating its derived projections. Exact-head ForgeOS CI run [43980310860](https://github.com/kn33r0s3/ForgeOS/actions/runs/43980310860) therefore failed `repository-guards` and `frontend-tests` at `node scripts/sync-unknowns-json.mjs --check`: `backend/app/data/unknowns.json` and `src/lib/unknowns.ts` were out of sync. Backend tests passed 1,363 with 2 skipped; build, lint, typecheck, route smoke, LiveKit smoke, evidence-triage and secret scan passed.
+- The D93 item is an existing UNKNOWN, not a new unknown. Its map-row edit was unnecessary. Restored `docs/UNKNOWN_MAP.md` byte-for-byte from parent `43df3419cb16b4098e7485a8eb1786a4557158c0`; no D-number added, no generated projection hand-edit, and no attempt to bypass the blocked planner source write. The new D93 evidence remains recorded in `docs/CAPABILITY_QUEUE.md` and `docs/PUBLIC_SOURCES.md`. Treat the older D93 row's 302/five-out-of-contact wording as unverified secondary attribution until the official #02 PDF is inspected.
+- Independent deploy verifier run [43980310906](https://github.com/kn33r0s3/ForgeOS/actions/runs/43980310906) failed at production-content fetch with HTTP 402. Vercel deployment `dpl_76G2knANGQ8KYtAhtxGaedLfyFbw` is READY for SHA `843b4065b040a3987b9e044c844c35e64dbf58b0`; this does not turn the verifier into a pass. The separate `forge-os` Vercel status remains account-blocked.
+- Latest Vercel project read still reports `live=false`, SSO enabled except custom domains, and aliases `hami-sigma.vercel.app`, `hami-hami24.vercel.app`, `hami-git-main-hami24.vercel.app`. `haminp.vercel.app` remains absent from this project's domain list. Two production environment entries remain masked/encrypted: `HAMI_CHAT_KEY` and `HAMI_CHAT_OLLAMA_HOST`; no `DATABASE_URL` or `CRON_SECRET`. No runtime request or tunnel health was verified.
+- This corrective commit restores the map/projection contract and updates continuity only. Its own exact-head CI, secret scan and deployment verification remain pending; no run-start or parent result transfers.
+
+---
+
 # Current handoff — 2026-11-17 — D93 source-time reconciliation and Meet Hami access boundary
 
 ## Run-start main and recent history

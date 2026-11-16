@@ -1,3 +1,12 @@
+## 2026-11-17 — validation correction
+
+- First docs commit `843b4065` failed `repository-guards` and `frontend-tests` because the D93 map row was changed without syncing `backend/app/data/unknowns.json` and `src/lib/unknowns.ts`. Backend tests passed 1,363 with 2 skipped; other CI jobs and secret scan passed. Independent deploy verifier failed HTTP 402 at production-content fetch.
+- D93 is an existing UNKNOWN, so restored `docs/UNKNOWN_MAP.md` byte-for-byte from parent `43df3419`. No new D-number and no generated projection was hand-edited. The new evidence remains in CAPABILITY_QUEUE and PUBLIC_SOURCES. The map's older 302/five-out-of-contact wording is secondary-only and unverified against #02 PDF.
+- Vercel deployment for `843b4065` is READY, but production verification remains blocked; no runtime request or tunnel health proved.
+- Corrective documentation commit requires exact-head CI, secret scan and deployment verification.
+
+---
+
 ## 2026-11-17 05:06 NPT — D93 report-time reconciliation and Meet Hami access-boundary audit
 
 - Reconciled run-start main `43df3419cb16b4098e7485a8eb1786a4557158c0`, recent Meet Hami commits, AGENTS, HANDOFF, STATE, QUEUE, BRAIN, UNKNOWN_MAP, CAPABILITY_QUEUE, PUBLIC_SOURCES, LOG and discovery-loop. No source code, tests, schema, collector, registry, runtime or environment write.
