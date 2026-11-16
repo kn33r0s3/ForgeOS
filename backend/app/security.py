@@ -25,6 +25,8 @@ from app.config import settings
 PUBLIC_WRITE_PATHS = {
     "/analyze",
     "/api/analyze",
+    "/hami/chat",
+    "/api/hami/chat",
     "/public/booking-requests",
     "/api/public/booking-requests",
     "/public/domain",
