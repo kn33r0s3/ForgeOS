@@ -1,3 +1,37 @@
+# Current handoff — 2026-11-17 — D93 recovery-network and utility service map
+
+## Run-start main and recent history
+
+- Run-start remote `main`: `f363fa54f05c4abfb0763ad431b58d3963c37986`; parent `843b4065b040a3987b9e044c844c35e64dbf58b0`.
+- Recent history: `f363fa54` restores the UNKNOWN_MAP projection contract after the preceding documentation-only `843b4065` edit changed a derived map row without syncing projections; `43df3419` is the preceding Meet Hami chat API-key allowlist commit.
+- This run made no application-source, test, model, table, collector, source-registry, scheduler, environment, runtime or production-configuration changes. The blocked `research_planner.py::summarize_research_portfolio` write was not retried or routed through another tool.
+
+## Exact-head verification on run-start main
+
+- ForgeOS CI run [43981270843](https://github.com/kn33r0s3/ForgeOS/actions/runs/43981270843) passed all 10 jobs: build, route smoke, frontend tests, evidence-triage tests, repository guards, lint, typecheck, secret scan, local LiveKit smoke and backend tests.
+- Separate secrets scan [43981270813](https://github.com/kn33r0s3/ForgeOS/actions/runs/43981270813) passed.
+- Independent deploy verifier [43981270795](https://github.com/kn33r0s3/ForgeOS/actions/runs/43981270795) failed at `Fetch production content`; do not call production verification green. GitHub status `Vercel – hami` is success (“Deployment has completed”); `Vercel – forge-os` reports “Account is blocked.”
+- No Vercel runtime, local Ollama tunnel or user-facing chat request was verified in this run.
+
+## D93 — recovery network, utility structure and source-time mismatch
+
+- UN Nepal Situation Report No.12 cover is dated 30 Oct 2026 and combines the distinct Rasuwa–Bhotekoshi (26 Aug) and Gorkha–Budhi Gandaki (11 Oct) events. Its Gorkha section attributes to NDRRMA #3 654 affected people in four rural municipalities, 204 houses washed away/inundated, five bridges damaged/destroyed and three hydropower projects damaged. These remain attributed report figures, not Hami-verified facts.
+- The UN 14–15 Oct mission included 14 representatives and traversed 52 km of the Gorkha corridor. It reports continuing road/bridge/trail access disruption particularly Gorkha–Dhading, markets functional up to Arughat at mission time, a Bailey bridge installed, and a specific information-sharing gap between municipalities and district authorities that complicated beneficiary verification. This is a documented coordination friction, not a blanket finding of failure or proof of current conditions.
+- UN #12 cites NDRRMA #3 as “12 October”; official NDRRMA #03 page /467 labels it 13 October 2026, 10:00 PM. Preserve as an unresolved citation/version-date mismatch, not a field-data contradiction. Official #02 page metadata still says 12 Oct 22:00 despite its 13 Oct page date; its PDF remains unread. #04 page says 16 Oct 10:00; its PDF remains unread. Official index rechecked 17 Nov still shows #04 as latest Gorkha-specific listing; no #05 result surfaced, absence not proved.
+- NEA Gorkha Distribution Center page /404 was last updated 13 Nov and lists 52 staff, 52,834 consumers, three substations, nine feeders, an “Electrified Municipality” value of 99.25% and “No-light Services”. Arughat Distribution Center /407 was last updated 9 Oct (pre-event) and lists 33 staff, 7,462 consumers, one feeder, 93 transformers, 93.00% and “Machhikhola Nolight”. These are directory fields, not current outage or restoration records. The NEA maintenance page last updated 13 Nov shows no scheduled-shutdown data, not live service status.
+- Gorkha DAO's “path operational” notice is dated 2083-05-24, before the flood; it is not post-flood reopening evidence. The separate Rasuwa–Bhotekoshi body-management notice is a different event. No Gorkha-specific road-restoration notice surfaced in the visible archive slice.
+- WFP's Gre, Rasuwa market-access pilot (140 farmers, 8,110 kg, NPR 251,370 gross sales, ~38% above pre-flood prices) is a distinct Rasuwa event. It is a transferable mechanism candidate only, not evidence of Gorkha producer supply, buyer demand or route feasibility.
+- Consequence: road/bridge/trail access and power/water availability affect settlements, markets, health and livelihoods. The direct beneficiary-verification information-sharing issue and the named NEA distribution centres create a better-grounded path for future source reconciliation. Current passability, active outage, restoration completion and beneficiary-level status remain UNKNOWN.
+
+## Existing code seam, rights and actions
+
+- Existing source-time path is unchanged: collector normalization → runner → ObserverEngine/Signal → Evidence → assessment → synthesis citation. Raw provenance can replace normalized metadata; same-content dedup does not refresh timestamps/provenance; Evidence writer leaves observed_at unset; freshness compares publication with retrieval; citation omits source-effective cutoff. Tests do not cover cutoff round-trip or same-content metadata refresh.
+- NDRRMA, UN report content, NEA and Gorkha DAO remain manual-only / NOT CLEARED for automated collection, body persistence or provider transmission. UN terms restrict ordinary copying to personal/non-commercial use. No source registry entry or collector authorization was added.
+- No #02/#04 PDF body was retrieved, no new D-number or UNKNOWN_MAP edit was made, and no generated projection was hand-edited. No source collection, Signal/Evidence write, source-body persistence, provider transmission, external contact, publishing, spend, money movement, intake/outbound activation, emergency advice, alerting or production action occurred.
+- Next: obtain the official #02 PDF through an ordinary source-linked route and inspect every page; then #04. Retrieve the Chumnubri notice attachment and a dated official road/bridge/power restoration record. If a direct verification requires contact, obtain explicit owner authorization first. LiveKit remains the first active engineering priority; other Hami-wide climbs continue independently.
+
+---
+
 # Validation correction — 2026-11-17 — preserve UNKNOWN_MAP projection contract
 
 - Documentation commit `843b4065b040a3987b9e044c844c35e64dbf58b0` updated D93 evidence in `docs/UNKNOWN_MAP.md` without regenerating its derived projections. Exact-head ForgeOS CI run [43980310860](https://github.com/kn33r0s3/ForgeOS/actions/runs/43980310860) therefore failed `repository-guards` and `frontend-tests` at `node scripts/sync-unknowns-json.mjs --check`: `backend/app/data/unknowns.json` and `src/lib/unknowns.ts` were out of sync. Backend tests passed 1,363 with 2 skipped; build, lint, typecheck, route smoke, LiveKit smoke, evidence-triage and secret scan passed.

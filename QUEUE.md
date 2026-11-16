@@ -1,3 +1,16 @@
+## Current continuation — 2026-11-17 — D93 utility and recovery-network evidence — run-start main `f363fa54f05c4abfb0763ad431b58d3963c37986`
+
+1. **P0 — Verify the Meet Hami owner-access boundary before wider exposure.** The current documented route relies on Vercel SSO rather than application-level caller authentication. Confirm the owner-facing domain and SSO behavior only through the normal owner account; do not create a share link, disable SSO, attach a custom domain or decrypt secrets.
+2. **P1 — LiveKit capacity/reliability remains the first active engineering track.** Resume from the last verified local RTP/capacity state; preserve M0–M9 and the 9,000-publisher / 10,000-viewer objective. Instrument per-track inbound RTP loss and capture-to-render p50/p95/p99 before higher-scale claims. No Cloud test or spend without the existing gates.
+3. **P1 — D93 official source and service-state reconciliation.** NDRRMA #02 PDF remains inaccessible through the visible PDF Preview; inspect it page-by-page only after an ordinary official attachment URL is obtained, then inspect #04. Retrieve the Chumnubri notice attachment and a dated route/bridge/power restoration record. The UN #12 mission report documents historical access disruption and a beneficiary-verification information-sharing gap; NEA's Gorkha/Arughat distribution-centre pages identify official service entities but do not establish current restoration. No contact or traveller advice without the relevant authorization and evidence.
+4. **P1 — Preserve source-time and claim-level grounding in the existing seam.** Keep source-declared cutoff, publication/listing date, retrieval time, registry identity and claim relation distinct. The additive provenance/citation improvement remains NOT IMPLEMENTED until the source-edit safety path is explicitly open. Do not retry or route around the blocked planner helper.
+5. **P1 — Durable runtime and scheduler truth.** Owner-controlled database/auth/scheduler and durable HALT dependencies remain unresolved in the prior handoff. No worker activation or environment change in this run; scheduled automation is not proof of unattended 24/7 execution.
+6. **P1 — Continue Hami-wide discovery in parallel.** D93 recovery, D95 cold-chain/food quality, D85 trade settlement, WASH, energy, LiveKit reliability and the agent workforce remain independent climbs. No single source, pilot or commercial experiment gates Hami's mission.
+
+Run-start exact-head results for `f363fa54f05c4abfb0763ad431b58d3963c37986`: ForgeOS CI 10/10 passed; secrets scan passed; independent deploy verifier failed at `Fetch production content`; GitHub Hami deployment status succeeded while `forge-os` remains account-blocked. The documentation-only commit below requires its own exact-head checks.
+
+---
+
 ## Validation correction — 2026-11-17 — projection contract
 
 - The previous docs-only commit changed the existing D93 row in `UNKNOWN_MAP.md` without regenerating its two projections; exact-head `repository-guards` and `frontend-tests` failed at `sync-unknowns-json.mjs --check`. Backend tests passed 1,363 with 2 skipped; other CI jobs and secret scan passed. Deploy verifier remains HTTP 402 at production-content fetch.
