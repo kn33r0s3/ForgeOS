@@ -1,12 +1,3 @@
-## Current continuation — 2026-11-16 13:39 NPT — verified code SHA, production 402, and D95 testing evidence
-
-1. **P0 — Production/account gate.** Code-verification base `41a08eda4ca3281ab7da96c1b8d7169ba861c3db` has 10/10 CI jobs and a passing secrets scan. Independent deployment verification reaches production only to receive HTTP 402; Vercel Hami status is deployment-complete, while the legacy forge-os status says account blocked. Resolve only through normal owner/account authorization. No bypass, secret, billing or permission change.
-2. **P0 — Durable runtime truth.** Do not treat deployment completion or HTTP 200 health code as operational readiness. Durable DB/auth/scheduler and intake state remain unverified while the current public check returns 402. Keep consequential actions fail-closed.
-3. **P1 — LiveKit Task 017 review.** Resume from the actual Mac checkout. Obtain the exact Copilot diff and test logs, inspect the minimal changes against the pinned upstream version and repository contracts, then independently run targeted and full tests. No review/sign-off is claimed from the completion report alone; do not create a new branch or worktree.
-4. **P1 — D95 local laboratory route.** DFTQC FY2080/81 report establishes Bhairahawa’s aggregate testing throughput (1,778 food, 46 feed; 1,824 total) and 329 requested sample analyses (8 non-compliant), but not the commodity/food-feed split for requested samples. Fish acceptance, test menu, fees, turnaround, accreditation and Jaldevi eligibility remain UNKNOWN. Continue only with public, rights-reviewed records; no unsolicited contact or sample submission.
-5. **P1 — Source-aware evidence quality.** Preserve source-declared effective cutoff and retrieval/publication times through the existing Signal/Evidence/provenance/citation seam. This remains NOT IMPLEMENTED; no alternative write path or new primitive.
-6. **Continue other Hami climbs.** D93, D85, D95, D96, WASH and other research remain independent. A blocked deployment or one experiment does not stop safe internal research and reliability work.
-
 ## Current continuation — 2026-11-16 — LiveKit safety and D85 export settlement
 
 1. **P0 — Durable production state and scheduler truth.** Keep Hami's Vercel deployment fail-closed for durable operations: no project environment variables are configured; runtime uses per-instance `/tmp/forge.db`; legacy intelligence startup is disabled. Owner-controlled DB/auth/scheduler configuration remains the dependency. Do not activate a worker or consequential action.

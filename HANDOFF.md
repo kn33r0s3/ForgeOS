@@ -1,30 +1,3 @@
-# Current handoff — 2026-11-16 — exact-head verification and D95 testing evidence
-
-## Current run — 2026-11-16 13:39 NPT — exact-head CI verified; production remains blocked
-
-**Code-verification base before this documentation-only update:** `41a08eda4ca3281ab7da96c1b8d7169ba861c3db`, on the single active `main` branch. This handoff update itself changes only existing documentation files. The repository was read through GitHub; the user’s Mac-local LiveKit checkout is not mounted in this session, so no claim is made that Copilot Task 017’s local diff has been reviewed.
-
-### Exact-head checks (GitHub Actions, SHA `41a08eda4ca3281ab7da96c1b8d7169ba861c3db`)
-
-- ForgeOS CI `43781771273`: **10/10 jobs succeeded** — build, typecheck, repository guards, lint, backend tests, frontend tests, route smoke, LiveKit local smoke, evidence-triage tests, and secret scan.
-- Secrets scan `43781771146`: **passed**.
-- Independent deployment verifier `43781771110`: **failed at production content fetch**. Its local verifier suite completed **261/261 tests passed**, then the production GET returned HTTP 402. This is an external deployment/account gate, not a local test failure.
-- Commit status: Vercel – Hami reported “Deployment has completed”; Vercel – forge-os reported “Account is blocked.” Neither status proves application readiness. Both public domains were last observed returning HTTP 402 in the handoff freshness check. Runtime DB durability, intake flag and scheduler execution remain UNKNOWN / blocked by the deployment response.
-
-### D95 evidence correction — local testing capability
-
-The official DFTQC annual bulletin identifies its report period as FY 2080/81 (2023/24). It reports 1,778 food and 46 feed analyses at Bhairahawa (1,824 total). Its purpose-wise table records 329 requested sample analyses and 8 non-compliant at Bhairahawa, but does **not** identify food/feed or commodity for those requested samples. This supports the narrow conclusion that the office processed requested samples; it does not establish fish acceptance, frozen-fish scope, current tests/fees/turnaround or local accreditation. Source: https://www.dftqc.gov.np/downloadfiles/DFTQC-Annual-Bulletin-Eng-2082-Book-for-WEB-%281%29-1779272721.pdf
-
-### Safety and next work
-
-- No runtime configuration, credential, permission, database, intake, sender, production or Cloud-test setting was changed.
-- No external contact, sample submission, application, public offer or payment action occurred. DFTQC-related sources remain manual-only / NOT CLEARED for automated collection or provider transmission.
-- Continue independently on Hami-wide research and source-quality work. The D95 next check is the official, public fish-sample submission scope and process; do not imply contact or sample acceptance.
-- Continue LiveKit reliability work from its actual checkout and test evidence. Task 017 still needs its exact implementation diff and independent review; the Mac-local checkout is not accessible from this session. Do not infer approval from Copilot’s completion report.
-- Resolve the Vercel HTTP 402 only through normal owner/account authorization. Do not bypass deployment protection or change billing/permissions.
-
----
-
 # Current handoff — 2026-11-16 — D95 quality pathway and exact-head CI correction
 
 ## Current run — 2026-11-16 05:23 +0545 — D95 quality pathway and exact-head CI correction
