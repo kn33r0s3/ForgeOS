@@ -1,3 +1,17 @@
+## 2026-11-17 05:06 NPT — D93 report-time reconciliation and Meet Hami access-boundary audit
+
+- Reconciled run-start main `43df3419cb16b4098e7485a8eb1786a4557158c0`, recent Meet Hami commits, AGENTS, HANDOFF, STATE, QUEUE, BRAIN, UNKNOWN_MAP, CAPABILITY_QUEUE, PUBLIC_SOURCES, LOG and discovery-loop. No source code, tests, schema, collector, registry, runtime or environment write.
+- Exact run-start checks: ForgeOS CI 10/10 passed; secrets scan passed; independent deploy verifier failed at production-content fetch with HTTP 402 after 261/261 local verifier tests. Hami Vercel deployment READY for exact SHA; forge-os status says account blocked.
+- Vercel project metadata: `live=false`, SSO enabled except custom domains, three Vercel aliases, and two production env entries (`HAMI_CHAT_KEY` masked; `HAMI_CHAT_OLLAMA_HOST` encrypted). No `DATABASE_URL` or `CRON_SECRET`. Last 30m runtime-log query returned no records; 1h/24h queries failed on retention. No chat request or tunnel health verified.
+- Meet Hami route is allowlisted from global API-key middleware and has no application-level caller authentication; it relies on Vercel SSO. HAMI_CHAT_KEY protects only the gateway hop. The chat route has no DB/evidence retrieval and performs no actions. Current domain mapping for `haminp.vercel.app` is not in this project's domain list.
+- D93: NDRRMA #02 page date is 13 Oct while its stated cutoff is 12 Oct 22:00; #01 states 11 Oct 22:00. The #02 PDF link could not be surfaced from the official PDF Preview and direct page open returned no readable lines; PDF remains unread and no counts are verified from its body. Official index still shows #04 as latest Gorkha-specific listing; no #05 result surfaced. SANDRP links #01 /461 but attributes a 12 Oct cutoff, conflicting with official #01 page metadata (11 Oct). This is an attribution/version mismatch, not proof of operational failure.
+- New official municipal metadata: Chumnubri flood-response notice submitted 11 Oct 21:47 with unread PDF; Dharche road-blockage notice submitted 13 Oct 13:52 with route/cause unknown. No current official Gorkha power-restoration notice surfaced. Current road/power state remains UNKNOWN.
+- Existing source-time seam reconfirmed: raw provenance may replace metadata; same-content dedup does not refresh Signal/Evidence times; Evidence.observed_at is unset; assessment compares publication with retrieval; citation omits source-effective cutoff. Five source clearances are expired; NDRRMA/Chumnubri/Dharche/NEA remain NOT CLEARED.
+- No new D-number, model, table, collector, primitive or ledger. No source collection, Signal/Evidence write, body persistence, provider transmission, contact, publishing, spend, payment, intake/outbound activation, emergency advice or alerting.
+- Updated only existing continuity/source-register files. This documentation-only commit requires exact-head CI, secret scan and deployment verification; run-start results do not transfer.
+
+---
+
 ## 2026-11-16 05:23 +0545 — D95 local testing/permit path and CI repair
 
 - Reconciled current main `20b8ff1db9fc3fde595b4256a11c3f6caf090ee9`, recent history, AGENTS/HANDOFF/STATE/QUEUE/BRAIN/UNKNOWN_MAP/CAPABILITY_QUEUE/LOG/PUBLIC_SOURCES/discovery-loop, exact-head workflow jobs, Vercel deployment/runtime, current source-clearance registry, collector/Signal/Evidence/assessment/citation code and relevant tests.

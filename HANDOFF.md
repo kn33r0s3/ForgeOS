@@ -1,3 +1,48 @@
+# Current handoff — 2026-11-17 — D93 source-time reconciliation and Meet Hami access boundary
+
+## Run-start main and recent history
+
+- Run-start remote `main`: `43df3419cb16b4098e7485a8eb1786a4557158c0`.
+- Latest commits: `913cc8f8` added the Meet Hami page, chat endpoint and Ollama gateway; `29d70a8d` registered the route; `43df3419` added the chat paths to the API-key middleware allowlist. These commits do not change the existing Signal/Evidence source-time seam.
+- This run made no application-source, test, model, table, collector, source-registry, scheduler, environment or production-configuration changes. The blocked `research_planner.py::summarize_research_portfolio` helper was not retried or routed through another tool.
+
+## Exact-head verification on run-start main
+
+- ForgeOS CI run [43847807175](https://github.com/kn33r0s3/ForgeOS/actions/runs/43847807175) passed all 10 jobs: build, lint, frontend tests, local LiveKit smoke, secret scan, backend tests, repository guards, evidence-triage tests, typecheck and route smoke.
+- Secrets scan [43847806972](https://github.com/kn33r0s3/ForgeOS/actions/runs/43847806972) passed.
+- Independent deploy verifier [43847807171](https://github.com/kn33r0s3/ForgeOS/actions/runs/43847807171) failed at **Fetch production content** with HTTP 402 after its local verifier tests passed 261/261. All subsequent production checks were skipped. Do not call deployment verification green.
+- Vercel deployment `dpl_9ZoBWKawdCj4Pee2vXnQmg3pSjca` is READY for exact SHA `43df3419cb16b4098e7485a8eb1786a4557158c0`. The Hami status context is success; the separate `forge-os` status says the account is blocked.
+
+## Production metadata and Meet Hami route boundary
+
+- Vercel project `hami` metadata reports `live=false`, SSO protection enabled for all deployment URLs except custom domains, and these listed domains only: `hami-sigma.vercel.app`, `hami-hami24.vercel.app`, `hami-git-main-hami24.vercel.app`. The previously used `haminp.vercel.app` is not in this project's current domain list; its mapping is UNKNOWN.
+- The production environment listing contains two entries: `HAMI_CHAT_KEY` (sensitive, value masked) and `HAMI_CHAT_OLLAMA_HOST` (encrypted, value not decrypted). No hidden production variables were reported. No `DATABASE_URL` or `CRON_SECRET` entry was present. Secret values were not requested or read.
+- `POST /api/hami/chat` is in `PUBLIC_WRITE_PATHS`, so it bypasses the global `FORGE_API_KEY` middleware. The frontend sends no API-key header, and the endpoint itself does not authenticate the caller. It uses `HAMI_CHAT_KEY` only for the server-to-gateway request; that is not user authentication. The current owner-access boundary is therefore Vercel SSO, not application-level identity. The project metadata says SSO is enabled for non-custom domains; any future custom-domain attachment would be outside that protection rule. The current domain list contains no custom domain, but the old `haminp.vercel.app` mapping is unresolved. Do not create a share link, disable SSO or change domain protection.
+- The route forwards to the owner's local Ollama `gpt-oss:20b` through a Cloudflare quick tunnel and guarded loopback gateway. The gateway only exposes POST `/api/chat` and GET `/api/tags` with the shared Hami key and one generation at a time. The endpoint has no Hami database context or evidence retrieval and executes no actions; it is a chat interface, not yet the evidence-grounded Hami workforce.
+- Runtime-log query for the last 30 minutes returned no records. One-hour and 24-hour requests failed because the connected log API would not retain those windows. This is not proof of no traffic or a successful request. A direct browser open of the deployment route was inaccessible; no authentication bypass or share link was attempted.
+
+## D93 — report-time reconciliation and local official notices
+
+- The official NDRRMA index retrieved 17 Nov still lists Gorkha–Budhi Gandaki #04 (effective cutoff 16 Oct 2026 10:00) as the latest Gorkha-specific report. The 3 Nov / 2083-07-17 card is the separate Bhotekoshi–Trishuli update; the 6 Nov / 2083-07-20 card is the national monsoon report. No #05 result surfaced; this is a bounded non-result, not proof of absence.
+- #01 page /461 states an 11 Oct 2026 22:00 cutoff. A separate NDRRMA page at `/en/situation-report/460` displays a Nepali-titled #01 page, so the URL locale prefix is not a reliable language label. #02 /464 is dated 2083-06-27 / 13 Oct but states an effective cutoff of Asoj 26 / 12 Oct 22:00; /465 is the English-path variant. #03 /466–467 states 13 Oct 22:00 and its PDF was inspected page-by-page on 20 Oct. #04 /468 states 16 Oct 10:00; its PDF remains unread.
+- The #02 page exposes only a “PDF Preview” control through the accessible search result. Direct page open returned no readable lines, no official attachment URL surfaced, and no page screenshots could be made. The #02 PDF remains unread. Its later stated cutoff does not prove fresher field facts. A third-party reprint's 302-rescued/five-“out of contact” attribution is not verified against the official PDF and is not treated as a confirmed #02 fact.
+- SANDRP's article dated 13 Oct and updated 15 Oct links to official NDRRMA #01 /461 but says that report was based on information through 12 Oct 22:00. The linked official #01 page metadata says 11 Oct 22:00. This is an unresolved secondary-source attribution/version mismatch, not evidence of an operational coordination failure.
+- Chumnubri Rural Municipality's official page lists a Budhi Gandaki flood rescue/relief/disaster-response notice submitted 11 Oct 2026 21:47 NPT with an attached `बिपद् सूचना.pdf`; the notice body and PDF were not retrieved. This proves the notice listing, not that listed actions were executed.
+- Dharche Rural Municipality's official page lists a road-blockage notice submitted 13 Oct 2026 13:52 NPT. Its route, cause, incident attribution, duration, reopening and current status remain UNKNOWN; it is not established as flood-related. Targeted NEA searches did not surface a new official Gorkha-specific power-restoration notice. Current road and power status remain UNKNOWN.
+- D93 remains UNKNOWN. Existing UN/NRCS/secondary reporting documents historical response and partial repairs, but it does not establish current passability or power service on 17 Nov. No coordination failure is asserted.
+
+## Existing source-time seam and rights
+
+- Current path: `SourceCollector.normalize → collector_runner.execute_task → ObserverEngine.observe/_ensure_evidence → Signal → Evidence → research_evidence_assessment.assess_source_record → research_synthesis_engine._evidence_citation`.
+- `SourceCollector.normalize` uses non-empty raw provenance instead of merging normalized metadata. The runner adds task and registry context but not all metadata. ObserverEngine persists provenance to Signal; on unchanged content fingerprint it returns the prior Signal and existing Evidence without refreshing source times/provenance. The Evidence writer copies publication/retrieval/provenance but leaves `observed_at` unset. Assessment compares publication date with retrieval time, not source-effective cutoff. Citation exposes registry identity and retrieval time but not publication/effective cutoff. Existing tests do not cover source-cutoff round-trip or same-content refresh.
+- The exact source-clearance registry still has five expired entries (GovInfo valid through 25 Sep 2026; Crossref, World Bank, GDELT and OpenAlex through 27 Oct 2026). NDRRMA, Chumnubri, Dharche and NEA have no applicable runtime registration. Their robots/terms/reuse reviews remain UNKNOWN or incomplete; all remain manual-only / NOT CLEARED. No broad government-domain approval.
+- The capability remains a bounded extension of existing provenance and citation, plus content-level claim/evidence review using existing links. No new model, table, collector, primitive, taxonomy or ledger. The source-edit safety block remains; no code write was attempted.
+
+## Actions and next dependencies
+
+- No source collection, Signal/Evidence write, source-body persistence, provider transmission, external contact, publishing, spend, money movement, intake/outbound activation, production change, share-link creation, emergency advice or alerting action occurred.
+- Next: (1) owner-authorized verification of the Meet Hami SSO/domain boundary and tunnel readiness before wider exposure; (2) retrieve official #02 PDF through an ordinary source-linked route and inspect every page, then #04; (3) retrieve the Chumnubri notice attachment and a dated official road/power restoration record; (4) implement source-time handling only through the authorized existing code seam when the source-edit gate permits. LiveKit capacity/reliability remains the first active engineering track; this run did not replace or restart it. Continue other Hami-wide discovery independently.
+- This documentation-only commit must receive its own exact-head CI, secret-scan and deployment-verification results. Run-start results above do not transfer to the new SHA.
 # Current handoff — 2026-11-16 — D95 quality pathway and exact-head CI correction
 
 ## Current run — 2026-11-16 05:23 +0545 — D95 quality pathway and exact-head CI correction

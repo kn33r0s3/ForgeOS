@@ -1,3 +1,34 @@
+## 2026-11-17 — D93 report-time correction and Meet Hami access boundary (manual-only; no source write)
+
+### D93 evidence and consequence
+
+- Official NDRRMA index rechecked 17 Nov: Gorkha–Budhi Gandaki #04 (cutoff 16 Oct 2026 10:00) remains the latest Gorkha-specific listing. The 3 Nov / 2083-07-17 card is the separate Bhotekoshi–Trishuli update; the 6 Nov / 2083-07-20 card is the national monsoon report. No #05 result surfaced; this is not proof that none exists.
+- #01 /461 states 11 Oct 2026 22:00. A separate /en/460 page displays a Nepali-titled #01, so route locale is not a reliable language label. #02 /464 is page-dated 2083-06-27 / 13 Oct and states an effective cutoff of Asoj 26 / 12 Oct 22:00; /465 is the English-path variant. #03 /466–467 states 13 Oct 22:00 and its PDF was inspected page-by-page on 20 Oct. #04 /468 states 16 Oct 10:00; its PDF remains unread.
+- The #02 page shows “PDF Preview”, but direct open returned no readable lines and no official attachment URL surfaced. The PDF was not retrieved or screenshot. Its one-day-later stated cutoff than #01 does not establish fresher field facts. A third-party reprint's 302-rescued/five-“out of contact” attribution is secondary-only and unverified against the PDF.
+- SANDRP's 13 Oct article (updated 15 Oct) links to official #01 /461 but says its information cutoff was 12 Oct 22:00, while the official #01 page states 11 Oct 22:00. This is a secondary attribution/version mismatch, not a demonstrated operational coordination failure.
+- Chumnubri Rural Municipality lists a flood rescue/relief/disaster-response notice submitted 11 Oct 21:47 NPT with an unread `बिपद् सूचना.pdf`. Dharche Rural Municipality lists a road-blockage notice submitted 13 Oct 13:52 NPT, but its route, cause, incident attribution, duration and reopening remain UNKNOWN. Neither listing proves execution or current restoration. No official Gorkha-specific power-restoration notice surfaced in targeted NEA searches.
+- Consequence: road access, bridge condition, electricity service and the ability to reach settlements, markets and essential services are the relevant real-world states. Public reporting shows historical damage and partial repairs, but current route- and service-level status remains UNKNOWN. Do not infer coordination failure, advise travellers, or create alerts from these records.
+
+### Existing Hami capability seam
+
+- Reuse existing ENTITY/RELATION/EVENT/EVIDENCE/CAPABILITY/ACTION and the existing source normalization → Signal/Evidence → assessment → citation path. A useful capability is to reconcile each asset and service state with responsible organization, repair event, geographic scope, metric definition, source version, publication/listing date, source-declared cutoff and retrieval time.
+- Current code trace: non-empty raw provenance replaces normalized metadata; the runner adds selected registry/task context but not every normalized field; same-content dedup returns the previous Signal and Evidence without refreshing source times; Evidence copies published_at/retrieved_at/provenance but leaves observed_at unset; assessment compares publication date with retrieval time; citation omits published_at and source-effective cutoff. Existing tests do not cover source-cutoff round-trip or same-content refresh.
+- Proposed source-time extension inside existing provenance/citation remains NOT IMPLEMENTED. No new model, table, collector, primitive, taxonomy, ledger or D-number. The blocked `research_planner.py::summarize_research_portfolio` write was not retried.
+
+### Meet Hami access boundary
+
+- Production Vercel metadata shows two environment entries only: `HAMI_CHAT_KEY` (sensitive/masked) and `HAMI_CHAT_OLLAMA_HOST` (encrypted/not decrypted); no hidden variables, `DATABASE_URL` or `CRON_SECRET`. Project reports `live=false`, SSO enabled except custom domains, and three Vercel aliases; the old `haminp.vercel.app` mapping is not in the current domain list.
+- The route is allowlisted from the global API-key gate and does not authenticate a user itself. It relies on platform SSO. The HAMI_CHAT_KEY is a server-to-gateway secret, not a caller identity token. The route has no database evidence retrieval and performs no actions. Do not expose it on an unprotected custom domain or alter SSO without owner authorization.
+- Runtime logs returned no records for 30 minutes; longer windows were unavailable under the connected log-retention limit. No successful chat request or local tunnel health was verified.
+
+### Rights, authorization and next evidence
+
+- NDRRMA, Chumnubri, Dharche and NEA remain manual-only / NOT CLEARED. Their robots/terms or content-reuse permissions were not established. Five existing runtime clearances are expired. No source registration, collector run, Signal/Evidence write, source-body persistence or provider transmission occurred.
+- Next lawful evidence: retrieve the official #02 PDF through an ordinary source-linked download route and inspect every page, then #04; retrieve the municipal attachment and a dated official road/power restoration record. Keep current access status UNKNOWN if bodies remain inaccessible. No external contact, emergency advice, alerting or production action.
+- LiveKit capacity/reliability remains the first active engineering track. This D93 and access-boundary increment does not replace it or gate other Hami-wide research.
+
+---
+
 ## 2026-11-16 — D95 local food-quality and licensing pathway (manual-only; NOT CLEARED)
 
 - **Local office:** DFTQC Bhairahawa profile says its jurisdiction includes Rupandehi, Nawalparasi West, Kapilvastu, Arghakhanchi, Palpa and Gulmi, with physical/chemical/microbiological laboratory services, inspection, sampling, training and consultancy. No publication date is shown. Fish-specific matrix, current test list, fees, turnaround, accreditation and Jaldevi eligibility remain UNKNOWN.

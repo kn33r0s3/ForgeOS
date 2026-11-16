@@ -1,3 +1,20 @@
+## Current state snapshot — 2026-11-17 05:06 +0545 — run-start main `43df3419cb16b4098e7485a8eb1786a4557158c0`
+
+- Mission remains settled and open-ended across domains/geographies; no pilot, seller segment, revenue milestone or disaster study gates Hami-wide progress.
+- Recent main history: `913cc8f8` added Meet Hami page/endpoint/Ollama gateway; `29d70a8d` registered the route; `43df3419` added chat paths to the API-key middleware allowlist.
+- Run-start exact-head ForgeOS CI passed 10/10 jobs; secret scan passed. Independent deploy verification failed at production-content fetch with HTTP 402 after 261/261 local verifier tests. Hami Vercel deployment is READY for the exact SHA; the separate forge-os status reports account blocked.
+- Vercel project `hami` reports `live=false`, SSO enabled except custom domains, and three Vercel aliases: `hami-sigma.vercel.app`, `hami-hami24.vercel.app`, `hami-git-main-hami24.vercel.app`. `haminp.vercel.app` is not in the returned domain list; mapping UNKNOWN.
+- Production env metadata now contains `HAMI_CHAT_KEY` (sensitive/masked) and `HAMI_CHAT_OLLAMA_HOST` (encrypted/not decrypted), with no hidden variables. No `DATABASE_URL` or `CRON_SECRET` entry. Values were not decrypted. Runtime logs for 30 minutes returned no records; longer queries failed on retention limits. No live request, durable DB or scheduled intelligence cycle is proved.
+- Meet Hami `POST /api/hami/chat` is allowlisted from the global API-key gate and has no app-level caller authentication. The UI sends no API-key header; HAMI_CHAT_KEY authenticates only the gateway hop. Current owner access depends on Vercel SSO. The chat route forwards to local Ollama via a guarded tunnel, has no database/evidence retrieval and performs no actions. Do not expose it on an unprotected custom domain or change SSO without owner authorization.
+- D93: official NDRRMA #01 cutoff 11 Oct 22:00; #02 page dated 13 Oct with cutoff 12 Oct 22:00; #03 cutoff 13 Oct 22:00 and PDF inspected; #04 cutoff 16 Oct 10:00 and PDF unread. Official index rechecked 17 Nov still shows #04 as latest Gorkha-specific listing; no #05 surfaced, absence not proved. #02 PDF remains unread and its 302/5 counts are secondary-only pending PDF review. SANDRP's #01 cutoff attribution conflicts with the official #01 page metadata (12 Oct vs 11 Oct), unresolved.
+- New local official metadata: Chumnubri flood rescue/relief notice submitted 11 Oct 21:47 with unread PDF; Dharche road-blockage notice submitted 13 Oct 13:52 with route/cause unknown. No current official Gorkha power-restoration notice surfaced. Current road/power status remains UNKNOWN.
+- Existing source-time seam remains NOT IMPLEMENTED: raw provenance can replace metadata; duplicate content does not refresh Signal/Evidence times; Evidence.observed_at is unset; assessment compares publication with retrieval; citation omits source-effective cutoff. No source-code write or new model/table/collector.
+- Five runtime source clearances are expired; NDRRMA, Chumnubri, Dharche and NEA remain unregistered / NOT CLEARED. No automated collection, source-body persistence or provider transmission.
+- LiveKit capacity/reliability remains the first active engineering priority; no LiveKit test or scale claim was made this run. No contact, publishing, spend, payment, money movement, intake/outbound activation, source ingestion or production configuration change occurred.
+- This documentation-only update requires exact-head verification on its resulting SHA.
+ 
+---
+
 ## Previous state snapshot — 2026-11-16 05:23 +0545 — main `20b8ff1db9fc3fde595b4256a11c3f6caf090ee9`
 
 - Mission remains broad across domains/geographies; First Rupee or one pilot is not a Hami-wide gate.
