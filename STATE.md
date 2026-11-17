@@ -1,3 +1,16 @@
+## 2026-11-18 — D93 report #03 PDF and response-flow reconciliation — run-start main a767f1fc7841102ad594c1a5c35419165ff0e0aa
+
+- Exact-head ForgeOS CI for a767f1fc7841102ad594c1a5c35419165ff0e0aa: 10/10 jobs passed; backend 1,363 passed / 2 skipped / 17 warnings. Secret scan passed. Deploy verifier failed at production-content fetch; Hami Vercel status succeeded, forge-os account status remains blocked. No production-health claim.
+- CI's LiveKit local smoke covers 9 publishers and 100 subscribers only. The latest user-supplied M7-H 3,000/3,000 attempt separately timed out with feedback complete for 256/3,000 tracks; not rerun in this automation.
+- D93 report metadata: #01 cutoff 11 Oct 22:00; #02 page date 13 Oct and stated cutoff 12 Oct 22:00; #03 official PDF dated 13 Oct 22:00 and now inspected page-by-page; #04 page-declared cutoff 16 Oct 10:00, PDF unread. #02 body remains unread and no counts from secondary snippets are accepted.
+- NDRRMA #03 reports 508 rescued, 6 missing, 208 sorties and damage categories 2 permanent + 5 suspension + 1 Bailey + 1 cantilever bridge; 3 hydropower facilities and 1 school. Its Gorkha relief table records dispatch totals, not receipt/distribution. It is explicitly based on DAO and District/National EOC information and covers Gorkha and Dhading.
+- NRCS #02's 174-household IRA and NRCS #03/#04's 146-household total are not reconciled by a published method/scope change. NRCS #04 records distribution totals as of 25 Oct and one medical evacuation during relief helicopter operations. NRCS and NDRRMA bridge categories differ but both sum to nine; asset-level mapping remains UNKNOWN.
+- The practical capability gap is dispatch/transfer/receipt/distribution/household-outcome reconciliation with source, geography, date/cutoff, unit, actor and asset identity kept separate. This is not evidence of loss or coordination failure. UN's specific beneficiary-verification information-sharing friction and NRCS's reported regular coordination are both preserved without overgeneralization.
+- Existing source-time/provenance code seam and tests were re-read. No effective-cutoff round-trip or same-content metadata-refresh regression exists; no code change is authorized through the blocked source-edit path. Five source clearances are expired; NDRRMA/NRCS remain manual-only / NOT CLEARED for automated collection or provider transmission.
+- D93 remains an existing UNKNOWN. No UNKNOWN_MAP/generated projection edit, new D-number, model, table, collector, registry entry, Signal/Evidence write, contact, publishing, spend, intake/outbound activation or emergency action.
+
+---
+
 ## 2026-11-17 — Post-validation source-date correction — run-start main `cd233e15637feaab7d6c7151b10905f9383f3a7f`
 
 - Exact-head checks for `cd233e15637feaab7d6c7151b10905f9383f3a7f`: ForgeOS CI passed all 10 jobs; backend suite 1,363 passed / 2 skipped / 17 warnings; separate secrets scan passed. Independent deploy verifier passed 261/261 local tests but failed at production-content fetch with HTTP 402. GitHub `Vercel – hami` status is success (“Deployment has completed”); `Vercel – forge-os` remains account-blocked.

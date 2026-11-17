@@ -4481,3 +4481,41 @@ The Jaldevi fish cooperative evidence extends the existing source-time/provenanc
 Use the existing ENTITY/RELATION/EVENT/EVIDENCE/CAPABILITY/ACTION primitives and Signal/Evidence provenance. The existing collector → Signal → Evidence → assessment → citation seam is sufficient to represent the known facts and their limitations; source-effective time, source identity and claim-level support still need the already documented provenance work. No new model, table, taxonomy, collector or parallel ledger is justified.
 
 **Next evidence:** current asset condition/ownership/commissioning, monthly throughput and revenue, actual buyers/prices/repeat orders, electricity category and bills, product testing/label/permit status, current subsidy form eligibility and beneficiary list, and whether the three-room/5 MT/10 MT/chilling-plant records refer to the same physical asset. Public records first; direct contact/field verification only with explicit owner authorization. No source ingestion until each exact source is cleared.
+
+
+## 2026-11-18 — D93 dispatch-to-distribution and source-time reconciliation
+
+### New source-backed increment
+
+- **NDRRMA #03 official PDF:** https://ndrrma.gov.np/mediafiles/publications/SitRep_EN_03_13102026_-_Gorkha-Budhigandaki_Flash_Flood.pdf . Five pages inspected directly from the NDRRMA host. The report identifies its source inputs as the District Administration Office and District/National Emergency Operation Centers; geography is Gorkha and Dhading; report timestamp is 13 October 2026 / 27 Asoj 2083, 22:00. The official index's #03 listing was observed on 14 October; keep listing date distinct from the PDF's own timestamp.
+- #03 reports 800 security personnel, five Army aircraft, six people missing, 508 rescued (457 Nepali and 51 foreign nationals), and 208 sorties (88 on 11 Oct, 68 on 12 Oct, 52 on 13 Oct). Its damage panel lists 2 permanent, 5 suspension, 1 Bailey and 1 cantilever bridge; 3 hydropower facilities; 1 school; 140–150 livestock swept away. These are source-reported observations as of the report timestamp, not present service status.
+- The Gorkha dispatch table lists 150 tent sets, 150 tarpaulins, 505 mattresses, 440 blankets, 380 sleeping bags, 175 solar lights, 110 kitchen sets, 146 hygiene kits and 690 food baskets. Separate tables cover Dhading dispatch and Philim helicopter supplies. Dispatch is not proof of receipt, distribution or household reach.
+- **NRCS #04:** https://nrcs.org/resources/news-and-events/gorkha-floodresponse-sitrep4/ and https://website-api.nrcs.org/media/news/attachments/Gorkha_Flash_Flood__Bulletin_4.pdf . One-page PDF dated 29 October, with distribution quantities explicitly as of 25 October: 98 tarpaulins, 192 blankets, 37 tents, 64 mattresses, 94 kitchen sets, 36 hygiene kits, 1,425 kg rice and 30 kg lentils across Chumnubri, Aarughat and Dharche. It reports one medical evacuation during relief-helicopter operations; no clinical outcome is stated.
+- **NRCS household counts:** #02 (14 Oct) reports an IRA of 174 households across Chumnubri (35), Dharche (57), Aarughat (24) and Tripurasundari in Dhading (58). #03 (17 Oct) and #04 (29 Oct) report 146 households and six residents out of contact. No published method/scope correction explains the difference. Do not infer recovery of 28 households or equate out of contact with NDRRMA missing.
+- **Bridge categories:** NDRRMA #03 reports 2 permanent + 5 suspension + 1 Bailey + 1 cantilever (9 total); NRCS #03/#04 report 2 permanent + 6 suspension + 1 Bailey (also 9). The one-category difference is unresolved without a shared named-asset register. UN SitRep No.12 cites NDRRMA #3 as 12 October and summarizes five bridges; that citation/date/count relationship remains UNKNOWN.
+- UN's 14–15 October mission reports a specific information-sharing gap affecting beneficiary verification between municipalities and district authorities. NRCS #04 separately reports regular coordination with local representatives and district chapters. Preserve both observations with their actor/time/function scopes; neither proves blanket coordination failure.
+
+### Real-world consequence and reusable capability
+
+The public record exposes two sides of a humanitarian supply chain: district-level dispatch totals and later organization-level distribution totals. There is no shared shipment identifier or public record joining dispatched lot → transfer/receipt → distribution point → household/beneficiary reach → outcome. The quantities are not directly additive: actors, geography, dates, units and item categories differ. This is an observability/reconciliation gap, not evidence that goods were lost, withheld or under-delivered.
+
+Reuse the existing six primitives and existing substrate:
+- ENTITY: NDRRMA, DAO/EOCs, NRCS, district chapters, municipalities, assets, distribution points and recipient groups where legitimately identified.
+- RELATION: responsible-for, dispatched-to, received-by, coordinated-with and served-by.
+- EVENT: report snapshot, dispatch, transfer, receipt, distribution, evacuation and restoration.
+- EVIDENCE: source URL, exact report/page/version, source-declared cutoff, publication/listing date, retrieval time, geography, unit, denominator and epistemic class.
+- CAPABILITY: reconcile state transitions and coexisting observations without collapsing unlike measures.
+- ACTION: no contact, allocation or operational action absent explicit authorization.
+
+### Existing code seam and constraints
+
+- Re-read SourceCollector.normalize, collector_runner.execute_task, ObserverEngine.observe/_ensure_evidence, Signal/Evidence models, research_evidence_assessment.assess_source_record, research_synthesis_engine._evidence_citation, source-clearance registry and relevant tests at run-start main.
+- SourceCollector.normalize sets provenance to raw_item.provenance or metadata; non-empty raw provenance can drop metadata-only source time. Runner merges only selected task/registry context. Observer stores normalized provenance on Signal; _ensure_evidence copies Signal provenance and published/retrieved times. Assessment compares publication age with retrieval time; synthesis citation exposes source registry identity and retrieval time but not report cutoff/version, source scope, dispatch/distribution state or units.
+- Existing assessment tests cover publication/retrieval metadata only; no regression proves effective cutoff survives explicit provenance → Signal → Evidence → citation, or that same-content dedup refreshes metadata. Existing models/provenance can carry bounded source metadata; no new model/table/primitive/collector is justified.
+- All five runtime source-clearance entries are expired as of 18 November (valid through 25 September or 27 October). NDRRMA and NRCS are not registered. Robots/terms/reuse reviews did not establish affirmative automated collection or commercial provider-transmission permission. Manual factual citation only; no source body persisted or sent to a provider.
+- The blocked research_planner.py::summarize_research_portfolio source write remains NOT IMPLEMENTED and was not attempted through another path. No new D-number, ResearchQuestion, UNKNOWN_MAP row or generated projection edit. D93 remains the existing UNKNOWN.
+
+### Next evidence
+
+Obtain NDRRMA #02's official PDF attachment and inspect every page; then #04. Retrieve the Chumnubri notice attachment and dated official road/bridge/power restoration records. Only attempt a dispatch-to-distribution comparison when source actor, geography, time window, units and item categories match. Keep current passability, power, water quality, restoration completion and household-level reach UNKNOWN.
+

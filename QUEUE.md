@@ -1,3 +1,16 @@
+## Current continuation — 2026-11-18 — LiveKit capacity and D93 evidence reconciliation — run-start main a767f1fc7841102ad594c1a5c35419165ff0e0aa
+
+1. **P0 — LiveKit capacity/reliability.** Resume from the actual M7-H attempt-2 raw log: 3,000 publishers and 3,000 viewers in one room; feedback wait timed out after only 256/3,000 tracks completed feedback. Diagnose the feedback lifecycle/queueing and preserve per-track evidence before scaling again. The exact-head CI smoke of 9 publishers/100 subscribers is a regression check, not M7-H proof. Preserve M0–M9 and the 9,000-publisher/10,000-viewer objective; no Cloud spend or production action without its gates.
+2. **P0 — Meet Hami access boundary.** Existing owner-facing route/SSO and domain mapping remain an owner-controlled verification item. Do not create share links, disable SSO, attach domains or decrypt secrets.
+3. **P1 — D93 #02/#04 source recovery.** NDRRMA #03's official five-page PDF is now retrieved and inspected page-by-page. #02 still exposes only a PDF Preview; obtain its official attachment through a source-linked route and inspect it page-by-page. Then retrieve and inspect #04. No later #05 was verified; absence is not proved.
+4. **P1 — D93 restoration and response-chain evidence.** Retrieve the Chumnubri notice PDF and dated official road/bridge/power restoration records. Reconcile NDRRMA dispatch with NRCS/local distribution only when actor, geography, time, unit and recipient scope are compatible. Current passability, active outages, water quality, completed restoration and household reach remain UNKNOWN. No external contact or traveller advice without explicit authorization.
+5. **P1 — Existing source-time/claim grounding seam.** Preserve source-declared cutoff, page/index date, report version, retrieval time, source registry identity, geography, units and claim relation in existing provenance/citation contracts. This remains NOT IMPLEMENTED while source edits are blocked; do not route the blocked planner helper through another tool.
+6. **P1 — Continue Hami-wide discovery independently.** D95 food/cold-chain, D85 trade settlement, WASH, energy, LiveKit reliability and the agent workforce remain independent climbs. No single experiment or disaster report gates Hami's mission.
+
+Run-start exact-head: ForgeOS CI 10/10 passed (backend 1,363 passed / 2 skipped); secret scan passed; deploy verifier failed at production-content fetch; Hami Vercel status succeeded and forge-os account status is blocked. The documentation-only update below requires its own exact-head checks.
+
+---
+
 ## Source-date correction — 2026-11-17 — run-start main `cd233e15637feaab7d6c7151b10905f9383f3a7f`
 
 - NEA directory evidence remains useful for locating the Gorkha and Arughat distribution centers, but the DCS maintenance schedule page is old (21 Aug) and its displayed entries are for other centers. The Gorkha detail page was last updated 13 Nov; the Arughat detail page 9 Oct. Neither proves current power restoration.

@@ -1,3 +1,38 @@
+# Current handoff — 2026-11-18 — D93 official report and relief-flow reconciliation
+
+## Run-start main and exact-head verification
+
+- Run-start main was a767f1fc7841102ad594c1a5c35419165ff0e0aa, parent b9977ed71b04f9e59772fcb316778f7daf9f4a90. The only parent-to-head change is the HANDOFF freshness snapshot; no application source or tests changed.
+- Exact-head ForgeOS CI run https://github.com/kn33r0s3/ForgeOS/actions/runs/43989547502 passed all 10 jobs. Backend: 1,363 passed, 2 skipped, 17 warnings. The LiveKit CI smoke exercised 9 independent publishers and 100 subscribers in one room; it is not a 3,000/3,000 capacity proof.
+- Separate secrets scan https://github.com/kn33r0s3/ForgeOS/actions/runs/43989547476 passed. Independent deploy verifier https://github.com/kn33r0s3/ForgeOS/actions/runs/43989547457 failed at Fetch production content; later production checks were skipped. GitHub Vercel – hami status is success; Vercel – forge-os reports account blocked. Do not claim production health.
+- The last user-supplied M7-H local 3,000-publisher/3,000-viewer attempt reported feedback timeout after only 256/3,000 tracks completed feedback. It was not rerun or independently re-read in this automation. Keep it separate from the much smaller CI smoke.
+
+## D93 — report sequence and response flow
+
+- NDRRMA #01 (/en/situation-report/461) declares 11 October 2026, 22:00 as its report cutoff. NDRRMA #02 Nepali /np/situation-report/464 and English /en/situation-report/465 show page date 2083-06-27 / 13 October and report date/cutoff 12 October 2026, 22:00. The #02 page exposes only PDF Preview through the available route; no attachment URL was recovered and the body remains unread. No #02 body counts are accepted.
+- NDRRMA #03 is directly retrievable at https://ndrrma.gov.np/mediafiles/publications/SitRep_EN_03_13102026_-_Gorkha-Budhigandaki_Flash_Flood.pdf and was inspected page-by-page (all five pages/screenshots). Its own date is 13 October 2026 / 27 Asoj 2083, 22:00. The report says it uses information from the District Administration Office and District/National Emergency Operation Centers and covers Gorkha and Dhading.
+- #03 reports 800 security personnel deployed, five Nepal Army aircraft mobilized, six people still missing, 508 rescued (457 Nepali and 51 foreign nationals), and 208 air sorties across 11–13 October (88, 68, 52). Its damage panel lists 2 permanent, 5 suspension, 1 Bailey and 1 cantilever bridge; 3 hydropower facilities; 1 school; and 140–150 livestock swept away. These are dated NDRRMA report figures, not Hami-verified current conditions.
+- #03's Gorkha dispatch table reports 150 tent sets, 150 tarpaulins, 505 mattresses, 440 blankets, 380 sleeping bags, 175 solar lights, 110 kitchen sets, 146 hygiene kits and 690 food baskets, among other items. It has a separate Dhading dispatch table and a separate Philim helicopter-supply table. Dispatched is not the same state as received, distributed or household-reached.
+- NDRRMA #04 page https://ndrrma.gov.np/np/situation-report/468 declares a 16 October 2026, 10:00 cutoff; its PDF remains unread. No later Gorkha-specific report was verified. A bounded search result with no #05 is not proof that none exists.
+
+## Independent response evidence and reconciliation
+
+- NRCS #02 (14 October) says its initial rapid assessment identified 174 affected households across Chumnubri (35), Dharche (57), Aarughat (24) and Tripurasundari in Dhading (58). NRCS #03 (17 October) and #04 (29 October) each report 146 affected households and six residents out of contact. No method/scope note explains the 174→146 difference; do not infer that 28 households recovered. Out of contact is not interchangeable with NDRRMA missing.
+- NRCS #03/#04 list 2 permanent, 6 suspension and 1 Bailey bridge (9 total). NDRRMA #03 lists 2 permanent, 5 suspension, 1 Bailey and 1 cantilever (also 9). The category split may reflect classification or asset-scope differences; no shared named-asset register resolves it.
+- NRCS #04 reports, as of 25 October, distribution across Chumnubri, Aarughat and Dharche of 98 tarpaulins, 192 blankets, 37 tents, 64 mattresses, 94 kitchen sets, 36 hygiene kits, 1,425 kg rice and 30 kg lentils. It also reports a medical evacuation during NRCS relief-helicopter operations; no clinical outcome is stated.
+- UN Nepal SitRep No.12 (30 October) documents a specific beneficiary-verification difficulty compounded by information-sharing gaps between municipalities and district authorities during its 14–15 October mission. NRCS #04 separately describes regular coordination with local government representatives and district chapters. These can coexist across actors, functions and dates; neither supports a blanket coordination-failure claim.
+- The concrete capability gap is public observability of the chain from dispatch → transfer/receipt → distribution → household reach/outcome. Current reports use different actors, geographies, periods, units and category definitions, with no shared shipment/asset identifiers. This is a reconciliation gap, not evidence of lost supplies, under-delivery or wrongdoing.
+
+## Existing Hami seam, authorization and next evidence
+
+- Reuse ENTITY/RELATION/EVENT/EVIDENCE/CAPABILITY/ACTION and the existing collector → runner → Observer/Signal → Evidence → assessment → citation path. Current normalization can choose raw provenance instead of normalized metadata; runner merges only selected task/registry context; Evidence copies Signal provenance/timestamps; assessment freshness compares publication with retrieval; citation exposes registry identity/retrieval but not source-declared cutoff, report version, dispatch/distribution state or units. No new model/table/primitive/collector is justified.
+- The five runtime source-clearance entries are expired as of 18 November (valid through 25 September or 27 October). NDRRMA and NRCS remain absent from the registry. Their robots/terms/reuse reviews did not establish affirmative automated collection or commercial provider-transmission permission. Manual factual reading/citation only; no body persisted to Hami.
+- Next: obtain NDRRMA #02's official PDF through a source-linked route and inspect every page; then #04. Retrieve the Chumnubri response-notice attachment and dated official road/bridge/power restoration records. Keep current passability, power, water quality and household-level delivery UNKNOWN. No external contact without explicit authorization.
+- No source-code/test/schema/registry/runtime change, collector execution, Signal/Evidence write, provider transmission, contact, publishing, spend, payment, intake/outbound activation, emergency advice or alerting occurred. No new D-number or UNKNOWN_MAP/projection edit. The blocked research_planner.py::summarize_research_portfolio write remains NOT IMPLEMENTED and was not retried through another path.
+- LiveKit capacity/reliability remains the first active engineering priority; other Hami-wide discovery continues independently.
+
+---
+
 # Source-date correction handoff — 2026-11-17 — run-start main `cd233e15637feaab7d6c7151b10905f9383f3a7f`
 
 ## Exact-head validation of the prior documentation commit
