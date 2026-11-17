@@ -2530,6 +2530,33 @@ This file rots if it isn't maintained. Two mechanisms keep it live:
 The "Verified" stamp in Current state is the last live check. If it is more
 than a few days old, re-verify before trusting the details.
 
+## Last verified state snapshot (2026-11-17)
+
+**Update 2026-11-17 (daily freshness check, 06:23 NPT):** HEAD at `b9977ed7`
+(since 2026-11-16: Meet Hami chat page + endpoint + Ollama gateway and
+its API-key gate fix, D93 recovery/utility evidence and source-date
+correction, unknown-map projection contract restore, plus continuity-state
+reconciliation — code + documentation only; no production-config change,
+and production remains 402-disabled so none of it is live).
+`git pull --ff-only` fast-forwarded `5a1ce406..b9977ed7`;
+`main` == `origin/main`. Working tree clean before this edit.
+
+- **Health: NOT OK — both endpoints still return HTTP 402
+  `Payment required` / `DEPLOYMENT_DISABLED` (haminp and
+  forge-os-ebon, confirmed on the check read). Unchanged from
+  2026-10-31. It matches the Vercel account/deployment gate
+  already recorded in the handoff on 2026-10-31; the exact Vercel
+  cause remains pending normal team authorization, and no bypass or
+  permission change was made here.
+- **Intake: UNKNOWN this run —** `/api/forge-bot/config` also returns
+  the same 402 `DEPLOYMENT_DISABLED` response, so `intake_enabled` could
+  not be verified. Last verified value (2026-10-31) was `false`; no
+  change is claimed.
+- **Unknowns:** 108 D-entries in `docs/UNKNOWN_MAP.md` (unchanged from
+  2026-11-16).
+- **Blockers (unchanged):** zero real seller conversations; zero verified
+  transactions. Owner-side gates still hold.
+
 ## Last verified state snapshot (2026-11-16)
 
 **Update 2026-11-16 (daily freshness check, 06:23 NPT):** HEAD at `5a1ce406`
