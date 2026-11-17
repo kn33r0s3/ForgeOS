@@ -368,7 +368,7 @@ describe("Hami public content", () => {
 
   it("does not present placeholder contact details as live destinations", () => {
     assert.equal(SITE.email, "");
-    assert.equal(SITE.url, "https://haminp.vercel.app");
+    assert.equal(SITE.url, "https://hami-sigma.vercel.app");
     const sourceDir = dirname(fileURLToPath(import.meta.url));
     const closedCopy = [
       "../components/layout/site-footer.tsx",
@@ -735,12 +735,12 @@ describe("Hami public root", () => {
     assert.equal(home.includes("parent operations and infrastructure group"), false);
     assert.equal(sitemap.includes("sanipoperations.com.np"), false);
     assert.equal(sitemap.includes("Sanip"), false);
-    assert.match(sitemap, /https:\/\/haminp.vercel.app\/providers/);
-    assert.match(sitemap, /https:\/\/haminp.vercel.app\/feed/);
-    assert.match(sitemap, /https:\/\/haminp.vercel.app\/domain/);
-    assert.match(sitemap, /https:\/\/haminp.vercel.app\/discoveries/);
+    assert.match(sitemap, /https:\/\/hami-sigma.vercel.app\/providers/);
+    assert.match(sitemap, /https:\/\/hami-sigma.vercel.app\/feed/);
+    assert.match(sitemap, /https:\/\/hami-sigma.vercel.app\/domain/);
+    assert.match(sitemap, /https:\/\/hami-sigma.vercel.app\/discoveries/);
     assert.equal(robots.includes("sanipoperations.com.np"), false);
-    assert.match(robots, /Sitemap: https:\/\/haminp.vercel.app\/sitemap\.xml/);
+    assert.match(robots, /Sitemap: https:\/\/hami-sigma.vercel.app\/sitemap\.xml/);
     assert.match(work, /to: "\/domain"/);
   });
 });

@@ -256,6 +256,32 @@ class WorkerTask(Base):
 
 
 
+class IdempotencyRecord(Base):
+    """Durable idempotency record for the step-1 execution boundary.
+
+    One row per (operation, principal, scope, payload) key. The gate
+    computes the key deterministically (see idempotency_store), so a
+    retried operation replays its stored result instead of
+    double-applying. Statuses: started, completed, failed, abandoned.
+    """
+
+    __tablename__ = "idempotency_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String, nullable=False, unique=True, index=True)
+    operation = Column(String, nullable=False)
+    principal = Column(String, nullable=False)
+    scope_hash = Column(String, nullable=False)
+    payload_hash = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="started")  # started, completed, failed, abandoned
+    attempt = Column(Integer, nullable=False, default=1)
+    result = Column(JSON, nullable=True)  # stored ExecutionResult (or failure reason) as JSON
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+    lease_expires_at = Column(DateTime, nullable=True)  # started records older than this are stale
+
+
+
 class Experiment(Base):
     """A real-world test run against an Opportunity, and its outcome.
 

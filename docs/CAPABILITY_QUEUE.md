@@ -65,6 +65,44 @@
 - LiveKit capacity/reliability remains the first active engineering track. This D93 and access-boundary increment does not replace it or gate other Hami-wide research.
 
 ---
+## 2026-11-17 — Hami media measurement: bounded frame-reordering gate
+
+- **Current blocker:** the 10-publisher/50-viewer research rung passes. The
+  1,000-publisher/2,000-viewer M6-H result remains unverified, and neither
+  high-scale capacity nor behavior on impaired real networks is claimed.
+- **Existing seam/history:** `services/hami-media/main.go:videoFrameAssembler.push`
+  is the existing frame-identity seam; `services/hami-media/main_test.go`
+  already tests contiguous frames and true sequence gaps. These media files
+  are untracked at local `main`, so no Git history exists to follow for this
+  seam. The M2 evidence showed one viewer missing an early timestamp despite
+  matching peers' packet count and sequence range; a first within-frame
+  reorder change did not resolve it. A late packet from an older RTP
+  timestamp could perturb the active frame boundary, so the assembler now
+  rejects older timestamps and supports within-frame reordering.
+- **Owner action / action removed:** no external or owner action is needed
+  for this local measurement rung. The change removes manual investigation
+  of false pending captures caused by late/reordered packets; genuine missing
+  sequence numbers still fail the frame and remain visible as pending.
+- **What remains / next dependency:** real packet loss, capture-to-render
+  timing, and M6 scale are not verified. Do not spend large CPU on M6 for
+  this research question; choose a larger rung only if bounded evidence
+  leaves a specific question unresolved.
+- **Measured delta / verification:** after the timestamp guard,
+  `go test -race -count=1 ./...`, `go vet ./...`, and
+  `go build -o /tmp/hami-media-research .` passed. A 66.001 s local M2-H run
+  passed all 10 publishers and 50 viewers: each viewer had 1,082–1,083
+  receive-mode frames and passed p95/p99/duration gates; percentile
+  min/median/max were p50 0.370/0.416/0.441 ms, p95
+  0.631/0.710/0.772 ms, p99 0.820/0.944/1.298 ms. Every viewer received
+  only its authorized track and forwarded NACK, PLI and FIR; pending frames
+  were 0, cleanup passed, and `measurement_pass` was true. All 50 receiver
+  JSONL files and 50 summaries matched their recorded frame counts in
+  `/var/folders/6f/s75p5m_51kx5j4vk6f80k2kr0000gn/T/hami-media-m2h-2156855172`.
+- **Boundary:** local synthetic TEST evidence only; no Cloud, paid
+  infrastructure, production activation, impaired-network result or
+  capacity claim.
+
+---
 
 ## 2026-11-16 — D95 local food-quality and licensing pathway (manual-only; NOT CLEARED)
 

@@ -89,6 +89,17 @@ def db():
         source_manager.seed_default_sources(session)
         from app.services import world_graph
         world_graph.seed_core_types(session)
+        # Step-1 execution boundary baseline: the system under test is
+        # running, not halted. The gate (E4/E7) fails closed when no
+        # OpHamiRuntimeControl row exists, so every existing test that
+        # routes through the gate would report "halted" without this.
+        # Tests that need HALT set establish that state themselves.
+        if session.query(models.OpHamiRuntimeControl).first() is None:
+            session.add(models.OpHamiRuntimeControl(
+                id=1, safe_mode_enabled=False,
+                safe_mode_reason="test_fixture_not_halted",
+            ))
+            session.commit()
         yield session
     finally:
         if session is not None:

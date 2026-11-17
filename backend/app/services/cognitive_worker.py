@@ -360,6 +360,220 @@ def _record_failure(
     # paths raise immediately after, so no other handler writes are affected.
     db.commit()
 
+# --- Execution-gate wiring (autonomy step 1: E5/E7) -------------------------
+#
+# The worker is proposal-only: run_cognitive_task produces validated
+# proposals and never executes anything, and there is no direct execution
+# path in this file (no action_engine import, no Action creation, no
+# adapter call). The gate is the ONLY route from a proposal or a scheduled
+# task to an executed Action:
+# - E5: execute_proposal_as_action is the single sanctioned conversion
+#   from a validated proposal to a gated Action. The caller names the
+#   operation explicitly; the worker never infers an operation from the
+#   proposal's free-text next_step, and a proposal carries no authority
+#   of its own (CognitiveProposal.execution_authorized is Literal[False]
+#   by schema - a proposal that claims True did not come through
+#   validation and is rejected here).
+# - E7: run_pending_cognitive_tasks asks the gate (OP-10) whether HALT
+#   is set before running anything, and routes requeue (OP-08) and
+#   blocker (OP-09) decisions through the gate. The gate's adapter owns
+#   the fields in its contract (OP-08: status + attempts + checkpoint;
+#   OP-09: status + blocker event); the scheduler owns the fields the
+#   adapter does not (next_run_at scheduling; attempts counting on the
+#   OP-09 path, where the adapter leaves the counter alone). When the
+#   gate refuses, the task is marked blocked with the refusal recorded -
+#   it is never silently requeued outside the gate.
+# The envelope is supplied by the caller (the scheduler / owner-authorized
+# context). The worker never constructs its own envelope: that would be
+# Hami granting itself authority, which step 1 forbids. Without an
+# envelope, AUTHORIZED_SCOPE operations are refused by the gate and the
+# task blocks visibly (see the failure handler in run_pending_cognitive_tasks).
+# Deliberate step-1 boundary: the worker's own evidence writes (the
+# cognitive_proposals_generated WorldEvent with its worker_task.id-keyed
+# conflict check, and ResearchTaskEvents) are NOT routed through OP-06.
+# The OP-06 adapter sets no idempotency key, so routing the proposals
+# event through it would weaken the worker's conflict detection (a
+# re-run with a different payload for the same task would write a second
+# event instead of raising). OP-06 remains the gate's operation for other
+# callers; the worker's own evidence keeps its own keyed dedup.
+
+_GATE_PRINCIPAL = "cognitive_worker"
+_GATE_TASK_SCOPE = "worker_tasks"
+_GATE_HALT_SCOPE = "halt_state"
+
+
+def _gate_call(db, operation, scope, payload, *, envelope=None, repo_root=None):
+    """One call through the execution gate. Returns the gate's result
+    (ExecutionResult | Refusal). Imported lazily: execution_engine does
+    not import this module, and the lazy import keeps the worker
+    importable without the gate wired."""
+    from app.services import execution_engine
+    from app.services.execution_boundary import Action as BoundaryAction
+
+    return execution_engine.execute_through_gate(
+        db,
+        BoundaryAction(
+            operation=operation,
+            principal=_GATE_PRINCIPAL,
+            scope=scope,
+            payload=dict(payload or {}),
+        ),
+        envelope=envelope,
+        repo_root=repo_root,
+    )
+
+
+def _gate_ok(result) -> tuple[bool, str]:
+    """True + 'verified' when the gate verified the action; otherwise
+    False + a short reason (refused:<reason> or unverified:<outcome>)."""
+    from app.services.execution_boundary import Outcome, Refusal
+
+    if isinstance(result, Refusal):
+        return False, f"refused:{result.reason.value}:{result.detail}"
+    if getattr(result, "outcome", None) != Outcome.VERIFIED:
+        return False, f"unverified:{getattr(result, 'outcome', None)}"
+    return True, "verified"
+
+
+def _gate_halt_check(db, *, repo_root=None) -> tuple[bool, str]:
+    """Ask the gate whether HALT is set. Returns (halted, reason).
+    Fail closed: any refusal, any unreadable answer, or any error means
+    halted. The payload carries the check time so each HALT check is a
+    distinct gate request - a replayed HALT answer would be a stale
+    safety decision."""
+    from datetime import datetime, timezone
+
+    try:
+        result = _gate_call(
+            db,
+            "read_halt_state",
+            _GATE_HALT_SCOPE,
+            {"checked_at": datetime.now(timezone.utc).isoformat()},
+            repo_root=repo_root,
+        )
+    except Exception as exc:  # the gate is documented not to raise; fail closed anyway
+        return True, f"halt_check_failed: {exc!r}"
+    ok, detail = _gate_ok(result)
+    if not ok:
+        # The gate refuses everything while HALT is set (reason halt_set);
+        # any other refusal is also a closed gate for scheduled work.
+        return True, f"gate_refused_halt_check: {detail}"
+    outcome_result = getattr(result, "result", None) or {}
+    if isinstance(outcome_result, dict) and outcome_result.get("halted") is True:
+        return True, "halt_state_read_true"
+    return False, "not_halted"
+
+
+def _requeue_through_gate(db, worker_task, *, checkpoint_id, envelope=None, repo_root=None):
+    """Route a requeue through the gate (OP-08). Returns (ok, detail).
+    The adapter owns status + attempts + checkpoint; the caller owns
+    scheduling (next_run_at) afterwards. The checkpoint_id names the
+    research task and the attempt, so each failure is a distinct gate
+    request and never replays an earlier requeue."""
+    result = _gate_call(
+        db, "requeue_task", _GATE_TASK_SCOPE,
+        {"task_id": worker_task.id, "checkpoint_id": checkpoint_id},
+        envelope=envelope, repo_root=repo_root,
+    )
+    return _gate_ok(result)
+
+
+def _open_blocker_through_gate(db, worker_task, *, reason, envelope=None, repo_root=None):
+    """Route a blocker through the gate (OP-09). Returns (ok, detail).
+    The adapter owns status + blocker event; the caller owns the
+    attempts count afterwards (the adapter leaves it alone)."""
+    result = _gate_call(
+        db, "open_blocker", _GATE_TASK_SCOPE,
+        {"task_id": worker_task.id, "reason": reason},
+        envelope=envelope, repo_root=repo_root,
+    )
+    return _gate_ok(result)
+
+
+def _record_gate_routing_event(db, worker_task, event_type, details):
+    """Best-effort audit on the research task's own event log, linking
+    the gate routing to the research task. Never raises: a failed audit
+    write must not change the gate outcome or the task marking."""
+    try:
+        inputs = worker_task.inputs if isinstance(worker_task.inputs, dict) else {}
+        research_task_id = inputs.get("research_task_id")
+        if type(research_task_id) is not int:
+            return
+        research_task = db.get(models.ResearchTask, research_task_id)
+        if research_task is None:
+            return
+        _record_research_event(db, research_task, event_type, details)
+        db.commit()
+    except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
+
+def execute_proposal_as_action(
+    db: Session,
+    *,
+    worker_task: models.WorkerTask,
+    proposal: Mapping[str, Any],
+    operation,
+    scope: str,
+    payload: Mapping[str, Any] | None = None,
+    principal: str = _GATE_PRINCIPAL,
+    envelope=None,
+    repo_root=None,
+):
+    """The single sanctioned route from a validated proposal to an executed Action (E5).
+
+    The caller names the operation explicitly and supplies the scope,
+    payload and envelope; the worker never infers an operation from the
+    proposal's free-text next_step, and the proposal itself authorizes
+    nothing (its execution_authorized is False by schema). The gate
+    refuses unknown operations, out-of-scope requests, expired/revoked
+    envelopes, and anything while HALT is set. Returns the gate's result
+    (ExecutionResult | Refusal) unchanged. Raises ValueError for a
+    proposal that did not come through validation.
+    """
+    if not isinstance(proposal, Mapping):
+        raise ValueError("proposal must be a validated proposal mapping")
+    if proposal.get("kind") != "research_follow_up":
+        raise ValueError("proposal kind must be research_follow_up")
+    title = proposal.get("title")
+    if not isinstance(title, str) or not title.strip():
+        raise ValueError("proposal must carry a non-empty title")
+    if proposal.get("execution_authorized") is not False:
+        raise ValueError("proposal execution_authorized must be False (validated proposals never authorize execution)")
+    if proposal.get("status") != "PROPOSED":
+        raise ValueError("proposal status must be PROPOSED")
+    from app.services import execution_engine
+    from app.services.execution_boundary import Action as BoundaryAction
+
+    result = execution_engine.execute_through_gate(
+        db,
+        BoundaryAction(
+            operation=operation,
+            principal=principal,
+            scope=scope,
+            payload=dict(payload or {}),
+        ),
+        envelope=envelope,
+        repo_root=repo_root,
+    )
+    ok, detail = _gate_ok(result)
+    _record_gate_routing_event(
+        db,
+        worker_task,
+        "cognitive_proposal_action_routed",
+        {
+            "worker_task_id": worker_task.id,
+            "proposal_title": title,
+            "operation": str(getattr(operation, "value", operation)),
+            "scope": scope,
+            "gate_outcome": "verified" if ok else detail,
+        },
+    )
+    return result
+
 
 def run_cognitive_task(
     db: Session,
@@ -514,6 +728,8 @@ def run_pending_cognitive_tasks(
     *,
     limit: int = 2,
     candidate_limit: int = 80,
+    envelope=None,
+    repo_root=None,
 ) -> dict[str, Any]:
     """Run a bounded proposal batch using local or owner-approved self-hosted Ollama.
 
@@ -522,7 +738,27 @@ def run_pending_cognitive_tasks(
     approval for internal task-context transfer. The existing owner agent-run
     gate still applies. Outputs remain PROPOSED: no research truth is mutated,
     no Actions are executed, and no contact, spending, or publication occurs.
+
+    Execution-gate wiring (E7): before running anything the batch asks
+    the gate (OP-10) whether HALT is set; while HALT is set nothing runs
+    and the batch reports status 'halted'. Failed tasks are requeued
+    (OP-08) while attempts remain and blocked (OP-09) once the attempt
+    budget is spent, both through the gate with the caller's `envelope`
+    (a standing authorization dict or Action row covering requeue_task /
+    open_blocker for scope 'worker_tasks'). Without an envelope the gate
+    refuses and the task is marked blocked with the refusal recorded -
+    it is never silently requeued outside the gate. Tasks blocked at
+    their attempt budget are not re-run.
     """
+    halted, halt_reason = _gate_halt_check(db, repo_root=repo_root)
+    if halted:
+        return {
+            "status": "halted",
+            "reason": halt_reason,
+            "attempted": 0,
+            "completed": 0,
+            "outcomes": [],
+        }
     if limit <= 0 or candidate_limit <= 0:
         return {
             "status": "skipped",
@@ -689,7 +925,7 @@ def run_pending_cognitive_tasks(
         if worker_task is not None:
             if worker_task.status in {"completed", "running"}:
                 continue
-            if worker_task.status == "failed" and worker_task.attempts >= worker_task.max_attempts:
+            if worker_task.status in {"failed", "blocked"} and worker_task.attempts >= worker_task.max_attempts:
                 continue
             if worker_task.next_run_at is not None and worker_task.next_run_at > now:
                 continue
@@ -835,19 +1071,74 @@ def run_pending_cognitive_tasks(
                 "dispatch_pass": dispatch_pass,
             })
         except Exception as exc:
+            # The provider call (or the claim) failed. Route the retry
+            # decision through the execution gate (E7): requeue (OP-08)
+            # while attempts remain, blocker (OP-09) once the budget is
+            # spent. The gate owns the requeue/blocker action; the
+            # scheduler owns counting this failure and scheduling the
+            # next attempt. When the gate refuses (no envelope supplied),
+            # the task is marked blocked with the refusal recorded - it
+            # is never silently requeued outside the gate. Only the
+            # exception type is recorded, never provider output text.
             db.rollback()
             failed = db.get(models.WorkerTask, worker_task.id) if worker_task is not None else None
+            error_type = type(exc).__name__
+            gate_detail = ""
+            gate_operation = ""
             if failed is not None:
-                failed.attempts += 1
-                failed.error = type(exc).__name__
-                failed.updated_at = models.utcnow()
-                if failed.attempts >= failed.max_attempts:
-                    failed.status = "failed"
-                    failed.next_run_at = None
+                attempts_after = failed.attempts + 1
+                backoff = timedelta(minutes=min(2 ** attempts_after, 60))
+                research_task_id = failed.inputs.get("research_task_id") if isinstance(failed.inputs, dict) else None
+                checkpoint_id = (
+                    f"cognitive-research-task:v1:{research_task_id}:attempt-{attempts_after}"
+                    if type(research_task_id) is int
+                    else f"cognitive-worker-task:{failed.id}:attempt-{attempts_after}"
+                )
+                if attempts_after >= failed.max_attempts:
+                    gate_operation = "open_blocker"
+                    ok, gate_detail = _open_blocker_through_gate(
+                        db, failed,
+                        reason=f"cognitive task failed: {error_type} (attempt {attempts_after}/{failed.max_attempts})",
+                        envelope=envelope, repo_root=repo_root,
+                    )
+                    # The OP-09 adapter leaves the attempts counter alone;
+                    # the scheduler counts this failure so the budget guard
+                    # (blocked + attempts >= max) holds.
+                    failed.attempts = attempts_after
+                    failed.updated_at = models.utcnow()
+                    if not ok:
+                        failed.status = "blocked"
+                        failed.error = f"{error_type} (blocker refused: {gate_detail})"
+                        failed.next_run_at = None
+                    db.commit()
                 else:
-                    failed.status = "queued"
-                    failed.next_run_at = models.utcnow() + timedelta(minutes=min(2 ** failed.attempts, 60))
-                db.commit()
+                    gate_operation = "requeue_task"
+                    ok, gate_detail = _requeue_through_gate(
+                        db, failed, checkpoint_id=checkpoint_id,
+                        envelope=envelope, repo_root=repo_root,
+                    )
+                    if ok:
+                        # The adapter set status queued, attempts+1 and the
+                        # checkpoint; the scheduler only schedules when.
+                        failed.next_run_at = models.utcnow() + backoff
+                        failed.updated_at = models.utcnow()
+                        db.commit()
+                    else:
+                        failed.status = "blocked"
+                        failed.error = f"{error_type} (requeue refused: {gate_detail})"
+                        failed.attempts = attempts_after
+                        failed.next_run_at = models.utcnow() + backoff
+                        failed.updated_at = models.utcnow()
+                        db.commit()
+                _record_gate_routing_event(
+                    db, failed, "cognitive_task_gate_routing",
+                    {
+                        "worker_task_id": failed.id,
+                        "gate_operation": gate_operation,
+                        "gate_outcome": "verified" if ok else gate_detail,
+                        "error_type": error_type,
+                    },
+                )
             outcomes.append({
                 "research_task_id": research_task.id,
                 "worker_task_id": worker_task.id if worker_task is not None else None,

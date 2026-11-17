@@ -59,12 +59,23 @@ inventing new ones.
 """
 
 
+import hashlib
+import json
+import logging
+import time
+from pathlib import Path
+from typing import Optional
+
 from sqlalchemy.orm import Session
 
 from app import evidence_source, models
 from app.models import utcnow
-from app.services import action_engine, money_engine, autonomy_engine
-from typing import Optional
+from app.services import action_engine, autonomy_engine, decision_rights
+from app.services import idempotency_store, money_engine, postcondition
+from app.services.execution_boundary import Action as BoundaryAction
+from app.services.execution_boundary import ExecutionResult, Operation, Outcome, Refusal, RefusalReason
+
+logger = logging.getLogger(__name__)
 
 # Action types the owner listed. Kept to this small set on purpose —
 # "do not create dozens of speculative action types."
@@ -965,3 +976,422 @@ def _strategy_performance_bonus(db: Session, action: models.Experiment) -> float
     if perf["success_rate"] is None:
         return 0.0
     return round((perf["success_rate"] / 100.0) * STRATEGY_PERFORMANCE_BONUS_WEIGHT, 1)
+
+
+# --- Execution gate (autonomy step 1, E4) ----------------------------------
+# The single function through which every boundary Action runs. The order
+# is FIXED and unskippable (plan section 5, step 7):
+#   1. HALT? (fail closed: missing row, unreadable store, safe mode on)
+#   2. operation known? (closed Operation list; anything else is refused)
+#   3. adapter registered? (static registry; no fallback)
+#   4. decision_rights.check_rights (operation -> rights table)
+#   5. envelope re-check (E3; skipped for INTERNAL_READ — no authorization
+#      is needed for those by design)
+#   6. idempotency lookup / replay / stale-abandon / attempts budget
+#   7. adapter with bounded retries (exceptions only; error dicts are final)
+#   8. independent postcondition check (C3; never trusts the adapter)
+#   9. EVENT + EVIDENCE records (a WorldEvent row carrying the outcome,
+#      the evidence reference and the postcondition detail)
+# Nothing else in this codebase may execute a boundary Action. Callers
+# (E5/E7: cognitive_worker, scheduler) route through this function.
+
+# Operations that mutate durable state get the 3-attempt adapter budget;
+# reads and the event/halt reads get 1 attempt (plan section 3c).
+_MUTATING_OPERATIONS = frozenset({
+    Operation.RUN_LOCAL_TESTS,
+    Operation.EDIT_REPO_FILE,
+    Operation.CREATE_REPO_FILE,
+    Operation.REQUEUE_TASK,
+})
+_MAX_GATE_ATTEMPTS = 3
+_MAX_READ_ATTEMPTS = 1
+
+# Process-local circuit breaker (plan section 3c): 5 consecutive adapter
+# failures open it for 10 minutes. Refusals are policy, not faults, and
+# do not count. A durable circuit is a step-2 refinement.
+_CIRCUIT_FAILURES = 0
+_CIRCUIT_OPENED_AT: float | None = None
+_CIRCUIT_THRESHOLD = 5
+_CIRCUIT_OPEN_SECONDS = 600.0
+
+# File operations: the scope is a path. Everything else: a logical name.
+_PATH_OPERATIONS = frozenset({
+    Operation.INSPECT_FILE,
+    Operation.INSPECT_REPO_STATE,
+    Operation.RUN_LOCAL_TESTS,
+    Operation.EDIT_REPO_FILE,
+    Operation.CREATE_REPO_FILE,
+})
+
+
+def _repo_root_default() -> Path:
+    # backend/app/services/execution_engine.py -> parents[3] is the repo root.
+    return Path(__file__).resolve().parents[3]
+
+
+def _resolve_scope(operation: Operation, scope: str, repo_root: Path) -> str:
+    """Resolve a file/test scope to an absolute path inside the repo.
+
+    Logical scopes (OP-06..OP-10) are names, not paths, and pass through
+    unchanged. The rights and envelope checks use the ORIGINAL scope;
+    only the adapter and the snapshot see the resolved one.
+    """
+    if operation not in _PATH_OPERATIONS:
+        return scope
+    candidate = Path(scope)
+    if not candidate.is_absolute():
+        candidate = repo_root / candidate
+    return str(candidate)
+
+
+def _file_hash_and_mtime(path: Path) -> dict:
+    try:
+        data = path.read_bytes()
+        return {
+            "path": str(path),
+            "sha256": hashlib.sha256(data).hexdigest(),
+            "mtime_ns": path.stat().st_mtime_ns,
+        }
+    except OSError:
+        return {"path": str(path), "sha256": None, "mtime_ns": None}
+
+
+def _take_snapshot(db: Session, action: BoundaryAction, repo_root: Path) -> dict:
+    """Capture the pre-execution state the postcondition checker needs.
+
+    Never raises: a snapshot failure degrades to an empty snapshot and
+    the checker then reports UNVERIFIED, which is the safe direction.
+    """
+    try:
+        op = action.operation
+        payload = action.payload or {}
+        if op == Operation.INSPECT_FILE:
+            return _file_hash_and_mtime(Path(action.scope))
+        if op == Operation.INSPECT_REPO_STATE:
+            root = Path(action.scope) if Path(action.scope).is_dir() else repo_root
+            return {"repo_root": str(root), "fingerprint": postcondition.tree_fingerprint(str(root))}
+        if op == Operation.RUN_LOCAL_TESTS:
+            return {
+                "run_record_path": str(repo_root / payload.get("run_record_path", "")),
+                "output_path": str(repo_root / payload.get("output_path", "")),
+            }
+        if op == Operation.EDIT_REPO_FILE:
+            return _file_hash_and_mtime(Path(action.scope))
+        if op == Operation.CREATE_REPO_FILE:
+            path = Path(action.scope)
+            return {"path": str(path), "existed_before": path.exists()}
+        if op == Operation.RECORD_EVENT:
+            return {}
+        if op == Operation.READ_TASK_STATE:
+            task = db.query(models.WorkerTask).filter_by(id=payload.get("task_id")).first()
+            if task is None:
+                return {"task_id": payload.get("task_id"), "status": None, "attempts": None}
+            return {"task_id": task.id, "status": task.status, "attempts": task.attempts}
+        if op == Operation.REQUEUE_TASK:
+            task = db.query(models.WorkerTask).filter_by(id=payload.get("task_id")).first()
+            if task is None:
+                return {"task_id": payload.get("task_id"), "previous_attempt": None, "checkpoint_id": payload.get("checkpoint_id")}
+            return {"task_id": task.id, "previous_attempt": task.attempts, "checkpoint_id": payload.get("checkpoint_id")}
+        if op == Operation.OPEN_BLOCKER:
+            return {"task_id": payload.get("task_id")}
+        if op == Operation.READ_HALT_STATE:
+            row = db.query(models.OpHamiRuntimeControl).first()
+            return {"halted": True if row is None else bool(row.safe_mode_enabled)}
+        return {}
+    except Exception:
+        logger.exception("gate snapshot failed for %s", action.operation)
+        return {}
+
+
+def _write_gate_event(db: Session, event_type: str, key: str, payload: dict) -> None:
+    """Best-effort audit event. A failed write never changes the outcome:
+    the refusal or result stands, and the failure is logged."""
+    try:
+        event = models.WorldEvent(
+            event_type=event_type,
+            source="execution_boundary",
+            payload=json.dumps(payload, sort_keys=True),
+            idempotency_key=key,
+        )
+        db.add(event)
+        db.flush()
+    except Exception:
+        logger.exception("gate audit event %s failed", event_type)
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
+
+def _refusal(operation, principal: str, reason: RefusalReason, detail: str) -> Refusal:
+    return Refusal(operation=operation, principal=principal, reason=reason, detail=detail)
+
+
+def _map_recheck_reason(reason_code: str) -> RefusalReason:
+    """Map an E3 re-check reason code onto a RefusalReason.
+
+    The exact code is preserved in the Refusal's detail string; the
+    reason is the coarse category the plan's RefusalReason list offers.
+    """
+    if reason_code.endswith("authorization_expired"):
+        return RefusalReason.AUTHORIZATION_EXPIRED
+    if reason_code.endswith("authorization_revoked"):
+        return RefusalReason.AUTHORIZATION_REVOKED
+    return RefusalReason.OUT_OF_SCOPE
+
+
+def execute_through_gate(
+    db: Session,
+    action: BoundaryAction,
+    *,
+    envelope=None,
+    repo_root: Path | None = None,
+) -> ExecutionResult | Refusal:
+    """Run one boundary Action through the fixed 9-step gate.
+
+    ``action.operation`` may be an Operation or its string value; an
+    unknown operation is refused, never executed. ``envelope`` is the
+    standing authorization the caller holds (a dict, or a models.Action
+    row with action_type="standing_authorization"); owner principals
+    need none. ``repo_root`` defaults to the ForgeOS checkout this file
+    lives in; tests pass a temp dir.
+
+    The idempotency key is always computed here from (operation,
+    principal, original scope, payload) — a caller-supplied key is
+    ignored, so an action cannot smuggle a different identity.
+    """
+    global _CIRCUIT_FAILURES, _CIRCUIT_OPENED_AT
+    root = Path(repo_root) if repo_root is not None else _repo_root_default()
+    principal = action.principal
+    scope = action.scope
+    payload = action.payload or {}
+
+    def refuse(reason: RefusalReason, detail: str, operation=None) -> Refusal:
+        _write_gate_event(db, "gate_refusal", _safe_key(operation, principal, scope, payload), {
+            "operation": str(operation),
+            "principal": principal,
+            "reason": reason.value,
+            "detail": detail,
+        })
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+        return _refusal(operation if operation is not None else action.operation, principal, reason, detail)
+
+    # 1. HALT — fail closed. A missing row, an unreadable store, or safe
+    #    mode on all mean the same thing: do not execute.
+    try:
+        halt_row = db.query(models.OpHamiRuntimeControl).first()
+        halted = True if halt_row is None else bool(halt_row.safe_mode_enabled)
+    except Exception as exc:
+        return refuse(RefusalReason.HALT_SET, f"halt store unreadable: {exc}")
+    if halted:
+        return refuse(RefusalReason.HALT_SET, "HALT is set (safe mode on, or no HALT record)")
+
+    # 2. Known operation?
+    try:
+        operation = action.operation if isinstance(action.operation, Operation) else Operation(action.operation)
+    except (ValueError, TypeError):
+        return refuse(RefusalReason.UNKNOWN_OPERATION, f"unknown operation: {action.operation}", operation=action.operation)
+
+    # 3. Adapter registered?
+    adapter = action_engine.get_operation_adapter(operation)
+    if adapter is None:
+        return refuse(RefusalReason.NO_ADAPTER, f"no adapter registered for {operation.value}", operation=operation)
+
+    # 4. Rights (operation -> rights table). The original scope is used:
+    #    envelope scopes are written in repo-relative terms.
+    rights = decision_rights.check_rights(principal, operation.value, scope, envelope)
+    if not rights.get("allowed"):
+        reason_code = rights.get("reason_code", "")
+        if reason_code == "unknown_operation":
+            return refuse(RefusalReason.UNKNOWN_OPERATION, f"rights: {rights.get('enforcement_reason', reason_code)}", operation=operation)
+        return refuse(RefusalReason.OUT_OF_SCOPE, f"rights: {rights.get('enforcement_reason', reason_code)}", operation=operation)
+    right = rights.get("right")
+
+    # 5. Envelope re-check at execution time (E3) — expiry, revocation,
+    #    scope depth. Skipped for INTERNAL_READ: no authorization is
+    #    needed for those by design. The owner needs no envelope.
+    if right != "internal_read":
+        recheck = autonomy_engine.recheck_envelope_for_execution(
+            db, operation=operation.value, scope=scope, envelope=envelope, principal=principal,
+        )
+        if not recheck.get("allowed"):
+            reason_code = recheck.get("reason_code", "")
+            reasons = recheck.get("reasons") or [reason_code]
+            return refuse(_map_recheck_reason(reason_code), f"envelope: {'; '.join(reasons)}", operation=operation)
+
+    # 6. Idempotency (C2). A completed record replays its stored result
+    #    without re-executing; a fresh started record refuses as a
+    #    duplicate; a stale started record is abandoned and re-run once.
+    key = idempotency_store.compute_idempotency_key(operation.value, principal, scope, payload)
+    max_attempts = _MAX_GATE_ATTEMPTS if operation in _MUTATING_OPERATIONS else _MAX_READ_ATTEMPTS
+    try:
+        record = idempotency_store.lookup(db, key)
+    except Exception as exc:
+        return refuse(RefusalReason.HALT_SET, f"idempotency store unreadable: {exc}", operation=operation)
+    if record is not None and record.status == "completed":
+        stored = record.result or {}
+        outcome = Outcome(stored.get("outcome", "unverified")) if stored.get("outcome") in ("verified", "unverified", "refused") else Outcome.UNVERIFIED
+        return ExecutionResult(
+            operation=operation, principal=principal, outcome=outcome,
+            result=stored, replayed=True,
+            evidence_ref=stored.get("evidence_ref"), attempt=record.attempt,
+        )
+    if record is not None and record.status == "started" and not idempotency_store.is_stale(record):
+        return refuse(RefusalReason.ALREADY_IN_PROGRESS, f"attempt {record.attempt} already in progress", operation=operation)
+    attempt = 1
+    if record is not None and record.status == "started":
+        idempotency_store.mark_abandoned(db, record)
+        attempt = record.attempt + 1
+    if record is not None and record.status == "failed":
+        if record.attempt >= max_attempts:
+            _open_blocker_once(db, operation, principal, key, payload, f"attempts exhausted: {record.attempt}/{max_attempts}")
+            return refuse(RefusalReason.ATTEMPTS_EXHAUSTED, f"attempts exhausted: {record.attempt}/{max_attempts}", operation=operation)
+        attempt = record.attempt + 1
+    if record is not None and record.status == "abandoned":
+        if record.attempt >= max_attempts:
+            _open_blocker_once(db, operation, principal, key, payload, f"attempts exhausted: {record.attempt}/{max_attempts}")
+            return refuse(RefusalReason.ATTEMPTS_EXHAUSTED, f"attempts exhausted: {record.attempt}/{max_attempts}", operation=operation)
+        attempt = record.attempt + 1
+    lease_seconds = 1800 if operation == Operation.RUN_LOCAL_TESTS else 600
+    if record is None:
+        idempotency_store.record_started(
+            db, key=key, operation=operation.value, principal=principal,
+            scope=scope, payload=payload, attempt=attempt, lease_seconds=lease_seconds,
+        )
+    else:
+        # A failed/abandoned record already exists for this key: re-open
+        # it in place. record_started does a plain INSERT and would crash
+        # on the key's UNIQUE constraint (found by C4 T-10).
+        idempotency_store.record_restarted(
+            db, record, attempt=attempt, lease_seconds=lease_seconds,
+        )
+
+    # Circuit breaker: 5 consecutive adapter failures open it for 10 min.
+    if _CIRCUIT_OPENED_AT is not None:
+        if time.monotonic() - _CIRCUIT_OPENED_AT < _CIRCUIT_OPEN_SECONDS:
+            idempotency_store.record_failed(db, key, "circuit open")
+            return refuse(RefusalReason.CIRCUIT_OPEN, "circuit breaker open after 5 consecutive adapter failures", operation=operation)
+        _CIRCUIT_OPENED_AT = None
+        _CIRCUIT_FAILURES = 0
+
+    # 7. Snapshot, then the adapter with bounded retries. Only exceptions
+    #    are retried (an environment fault the adapter did not complete
+    #    through); an {"error": ...} result is a specified failure and is
+    #    final. After the budget the attempt is recorded as failed.
+    resolved_scope = _resolve_scope(operation, scope, root)
+    exec_action = BoundaryAction(operation=operation, principal=principal, scope=resolved_scope, payload=payload, idempotency_key=key)
+    snapshot = _take_snapshot(db, exec_action, root)
+    run_budget = _MAX_GATE_ATTEMPTS if operation in _MUTATING_OPERATIONS else _MAX_READ_ATTEMPTS
+    result: dict | None = None
+    failure: str | None = None
+    for run_attempt in range(1, run_budget + 1):
+        try:
+            result = adapter(db, exec_action, repo_root=root)
+            break
+        except Exception as exc:
+            failure = f"{type(exc).__name__}: {exc}"
+            logger.exception("gate adapter attempt %d/%d failed for %s", run_attempt, run_budget, operation.value)
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            if run_attempt < run_budget:
+                time.sleep(float(2 ** (run_attempt - 1)))
+    if result is None:
+        _CIRCUIT_FAILURES += 1
+        if _CIRCUIT_FAILURES >= _CIRCUIT_THRESHOLD:
+            _CIRCUIT_OPENED_AT = time.monotonic()
+        idempotency_store.record_failed(db, key, failure or "adapter raised")
+        _write_gate_event(db, "gate_execution", key, {
+            "operation": operation.value, "principal": principal,
+            "outcome": Outcome.UNVERIFIED.value, "evidence_ref": None,
+            "detail": failure or "adapter raised", "attempt": attempt,
+        })
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+        return ExecutionResult(operation=operation, principal=principal, outcome=Outcome.UNVERIFIED, result={"error": failure or "adapter raised"}, attempt=attempt)
+    if isinstance(result, dict) and "error" in result:
+        _CIRCUIT_FAILURES += 1
+        if _CIRCUIT_FAILURES >= _CIRCUIT_THRESHOLD:
+            _CIRCUIT_OPENED_AT = time.monotonic()
+        idempotency_store.record_failed(db, key, str(result["error"]))
+        _write_gate_event(db, "gate_execution", key, {
+            "operation": operation.value, "principal": principal,
+            "outcome": Outcome.UNVERIFIED.value, "evidence_ref": None,
+            "detail": str(result["error"]), "attempt": attempt,
+        })
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+        return ExecutionResult(operation=operation, principal=principal, outcome=Outcome.UNVERIFIED, result=result, attempt=attempt)
+
+    # 8. Independent postcondition check — the adapter's word is never
+    #    taken for the outcome.
+    check = postcondition.check_postcondition(db, exec_action, result, snapshot)
+    outcome = check.get("outcome", Outcome.UNVERIFIED)
+    if not isinstance(outcome, Outcome):
+        outcome = Outcome.UNVERIFIED
+    evidence_ref = check.get("evidence_ref")
+    _CIRCUIT_FAILURES = 0
+
+    # 9. Record the completed attempt and the audit event, then commit
+    #    the adapter's writes, the idempotency record and the event
+    #    together so none of them is durable without the others.
+    stored_result = dict(result)
+    stored_result["outcome"] = outcome.value
+    stored_result["evidence_ref"] = evidence_ref
+    idempotency_store.record_completed(db, key, stored_result)
+    _write_gate_event(db, "gate_execution", key, {
+        "operation": operation.value, "principal": principal,
+        "outcome": outcome.value, "evidence_ref": evidence_ref,
+        "detail": check.get("detail", ""), "attempt": attempt,
+    })
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+    return ExecutionResult(
+        operation=operation, principal=principal, outcome=outcome,
+        result=stored_result, replayed=False, evidence_ref=evidence_ref, attempt=attempt,
+    )
+
+
+def _safe_key(operation, principal: str, scope: str, payload: dict) -> str:
+    """Idempotency key for a refusal event; never raises."""
+    try:
+        op = operation.value if isinstance(operation, Operation) else str(operation)
+        return idempotency_store.compute_idempotency_key(op, principal, scope, payload)
+    except Exception:
+        return "refusal-no-key"
+
+
+def _open_blocker_once(db: Session, operation: Operation, principal: str, key: str, payload: dict, reason: str) -> None:
+    """Open one blocker when the attempt budget is spent (never for the
+    blocker operation itself, which would recurse). Best effort only."""
+    if operation == Operation.OPEN_BLOCKER:
+        return
+    task_id = payload.get("task_id") if isinstance(payload, dict) else None
+    if not isinstance(task_id, int):
+        return
+    try:
+        adapter = action_engine.get_operation_adapter(Operation.OPEN_BLOCKER)
+        if adapter is None:
+            return
+        blocker_action = BoundaryAction(
+            operation=Operation.OPEN_BLOCKER, principal=principal,
+            scope="worker_tasks", payload={"task_id": task_id, "reason": reason},
+        )
+        adapter(db, blocker_action, repo_root=_repo_root_default())
+        db.flush()
+    except Exception:
+        logger.exception("gate could not open blocker for task %s", task_id)
+        try:
+            db.rollback()
+        except Exception:
+            pass

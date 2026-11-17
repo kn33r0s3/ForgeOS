@@ -14,15 +14,21 @@ rather than fabricating success.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
-from typing import Any, Optional
+import os
+import subprocess
+from pathlib import Path
+from typing import Any, Callable, Optional
 
 from sqlalchemy.orm import Session
 
 from app import models
 from app.models import utcnow
 from app.services import autonomy_engine, decision_rights
+from app.services.execution_boundary import Action as BoundaryAction
+from app.services.execution_boundary import Operation
 
 logger = logging.getLogger(__name__)
 
@@ -404,6 +410,361 @@ ADAPTERS: dict[str, ActionAdapter] = {
 
 def get_adapter(action_type: str) -> ActionAdapter:
     return ADAPTERS.get(action_type, UnsupportedActionAdapter())
+
+
+# --- Execution-boundary operation adapters (autonomy step 1, E1) -----------
+# The gate (execution_engine.execute_through_gate) calls ONLY these adapters,
+# and ONLY through get_operation_adapter. An operation with no entry here is
+# REFUSED by the gate: no fallback, no dynamic import, no adapter by name.
+#
+# Adapter contract (what the gate and the postcondition checkers rely on):
+#   adapter(db, action, repo_root=Path) -> dict
+#   - action is a BoundaryAction whose scope the gate has already resolved
+#     to an ABSOLUTE path for file operations (OP-01/02/04/05) and test-suite
+#     paths (OP-03). Adapters still verify the path is inside repo_root.
+#   - A dict containing "error" means the operation could not succeed as
+#     specified (missing file, protected file, task not found, ...). The gate
+#     treats it as a FAILED attempt and does NOT retry it.
+#   - Raising means an unexpected environment fault; the gate retries those
+#     within its bounded budget, then records failure.
+#   - Every adapter result is checked INDEPENDENTLY by postcondition.py
+#     against durable state the gate snapshotted BEFORE the adapter ran.
+#     An adapter that lies about what it did is caught, not trusted.
+#   - No adapter here moves money, contacts anyone, publishes anything,
+#     touches a secret, deploys, or reaches the network. OP-03 runs only
+#     pytest, inside the repo, via subprocess with a fixed argv (no shell).
+
+# Files the gate never lets an adapter edit or create, even if rights said
+# otherwise. This duplicates decision_rights._PROTECTED_PATHS on purpose:
+# the gate is the authority and this is the adapter's own second check, so
+# a directly-called adapter is safe too. C4 asserts the two lists match.
+_OPERATION_PROTECTED_PATHS = frozenset({
+    "HANDOFF.md",
+    "STATE.md",
+    "QUEUE.md",
+    "docs/CAPABILITY_QUEUE.md",
+    "DOCKER_COMMANDS.md",
+})
+
+# Largest file whose content an inspect returns inline; bigger files return
+# only their hash and size (the caller re-reads them if it needs the text).
+_INSPECT_INLINE_LIMIT = 100_000
+
+
+def _adapter_error(reason: str) -> dict:
+    return {"error": reason}
+
+
+def _path_inside_root(repo_root: Path, path: Path) -> bool:
+    try:
+        path.resolve().relative_to(repo_root.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def _file_scope(action: BoundaryAction, repo_root: Path) -> Path | None:
+    """Resolve action.scope to a path inside the repo for file operations.
+
+    Returns None when the scope is not a path inside the repo. The gate
+    already resolved it to an absolute path; this is the adapter's own
+    verification, so a wrong scope can never escape the repo.
+    """
+    candidate = Path(action.scope)
+    if not candidate.is_absolute():
+        candidate = repo_root / candidate
+    if not _path_inside_root(repo_root, candidate):
+        return None
+    return candidate
+
+
+def _is_protected_file(path: Path, repo_root: Path) -> bool:
+    try:
+        rel = path.resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        return True  # outside the repo counts as protected: refuse
+    return rel in _OPERATION_PROTECTED_PATHS
+
+
+def _op_inspect_file(db: Session, action: BoundaryAction, repo_root: Path) -> dict:
+    path = _file_scope(action, repo_root)
+    if path is None:
+        return _adapter_error(f"inspect_file scope outside repo: {action.scope}")
+    if not path.is_file():
+        return _adapter_error(f"inspect_file not a file: {path}")
+    data = path.read_bytes()
+    result: dict = {
+        "path": str(path),
+        "sha256": hashlib.sha256(data).hexdigest(),
+        "size_bytes": len(data),
+    }
+    if len(data) <= _INSPECT_INLINE_LIMIT:
+        result["content"] = data.decode("utf-8", errors="replace")
+    else:
+        result["truncated"] = True
+    return result
+
+
+def _op_inspect_repo_state(db: Session, action: BoundaryAction, repo_root: Path) -> dict:
+    scope = _file_scope(action, repo_root)
+    if scope is None:
+        return _adapter_error(f"inspect_repo_state scope outside repo: {action.scope}")
+    target = scope if scope.is_dir() else repo_root
+    try:
+        status = subprocess.run(
+            ["git", "status", "--porcelain", "--", str(target)],
+            cwd=str(repo_root), capture_output=True, text=True, timeout=30,
+        )
+        diffstat = subprocess.run(
+            ["git", "diff", "--stat", "--", str(target)],
+            cwd=str(repo_root), capture_output=True, text=True, timeout=30,
+        )
+    except subprocess.TimeoutExpired:
+        return _adapter_error("inspect_repo_state git command timed out")
+    if status.returncode != 0:
+        return _adapter_error("inspect_repo_state is not a git repository")
+    lines = [line for line in status.stdout.splitlines() if line.strip()]
+    return {
+        "summary": f"{len(lines)} changed path(s) under {target}",
+        "status_lines": lines,
+        "diff_stat": diffstat.stdout,
+    }
+
+
+def _op_run_local_tests(db: Session, action: BoundaryAction, repo_root: Path) -> dict:
+    payload = action.payload or {}
+    command = payload.get("command")
+    output_rel = payload.get("output_path")
+    record_rel = payload.get("run_record_path")
+    if not isinstance(command, list) or not command:
+        return _adapter_error("run_local_tests payload.command must be a non-empty list")
+    # Only pytest, inside the repo, no shell. Anything else is not a test run
+    # this boundary knows how to verify, so it is refused here, not run.
+    if command[0] == "pytest":
+        argv = ["pytest"] + list(command[1:])
+    elif command[0] in ("python", "python3") and len(command) >= 3 and command[1] == "-m" and command[2] == "pytest":
+        argv = list(command)
+    else:
+        return _adapter_error("run_local_tests runs pytest only")
+    if not isinstance(output_rel, str) or not isinstance(record_rel, str):
+        return _adapter_error("run_local_tests needs output_path and run_record_path")
+    output_path = repo_root / output_rel
+    record_path = repo_root / record_rel
+    if not _path_inside_root(repo_root, output_path) or not _path_inside_root(repo_root, record_path):
+        return _adapter_error("run_local_tests output paths must stay inside the repo")
+    timeout_s = payload.get("timeout_s", 300)
+    if not isinstance(timeout_s, (int, float)) or timeout_s <= 0 or timeout_s > 3600:
+        return _adapter_error("run_local_tests timeout_s must be within 1..3600")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    record_path.parent.mkdir(parents=True, exist_ok=True)
+    import time
+
+    started = time.time()
+    try:
+        proc = subprocess.run(
+            argv, cwd=str(repo_root), timeout=timeout_s,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+        )
+        exit_code = proc.returncode
+        output_text = proc.stdout or ""
+    except subprocess.TimeoutExpired as exc:
+        exit_code = -1
+        output_text = exc.stdout or ""
+        if isinstance(output_text, bytes):
+            output_text = output_text.decode("utf-8", errors="replace")
+        output_text += "\n[run_local_tests: pytest timed out]"
+    output_path.write_text(output_text, encoding="utf-8")
+    record = {
+        "command": argv,
+        "exit_code": exit_code,
+        "output_path": str(output_path),
+        "duration_s": round(time.time() - started, 3),
+    }
+    record_path.write_text(json.dumps(record, indent=2), encoding="utf-8")
+    return {
+        "exit_code": exit_code,
+        "run_record_path": str(record_path),
+        "output_path": str(output_path),
+    }
+
+
+def _op_edit_repo_file(db: Session, action: BoundaryAction, repo_root: Path) -> dict:
+    path = _file_scope(action, repo_root)
+    if path is None:
+        return _adapter_error(f"edit_repo_file scope outside repo: {action.scope}")
+    if _is_protected_file(path, repo_root):
+        return _adapter_error(f"edit_repo_file refused: protected file {path}")
+    payload = action.payload or {}
+    old_text = payload.get("old_text")
+    new_text = payload.get("new_text")
+    if not isinstance(old_text, str) or old_text == "" or not isinstance(new_text, str):
+        return _adapter_error("edit_repo_file needs non-empty old_text and new_text")
+    if not path.is_file():
+        return _adapter_error(f"edit_repo_file not a file: {path}")
+    text = path.read_text(encoding="utf-8")
+    count = text.count(old_text)
+    if count == 0:
+        return _adapter_error("edit_repo_file old_text not found")
+    if count > 1:
+        return _adapter_error(f"edit_repo_file old_text ambiguous: {count} occurrences")
+    updated = text.replace(old_text, new_text, 1)
+    path.write_text(updated, encoding="utf-8")
+    return {
+        "path": str(path),
+        "expected_sha256": hashlib.sha256(updated.encode("utf-8")).hexdigest(),
+    }
+
+
+def _op_create_repo_file(db: Session, action: BoundaryAction, repo_root: Path) -> dict:
+    path = _file_scope(action, repo_root)
+    if path is None:
+        return _adapter_error(f"create_repo_file scope outside repo: {action.scope}")
+    if _is_protected_file(path, repo_root):
+        return _adapter_error(f"create_repo_file refused: protected file {path}")
+    payload = action.payload or {}
+    content = payload.get("content")
+    if not isinstance(content, str):
+        return _adapter_error("create_repo_file needs content")
+    if path.exists():
+        return _adapter_error(f"create_repo_file already exists: {path}")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+    return {
+        "path": str(path),
+        "expected_sha256": hashlib.sha256(content.encode("utf-8")).hexdigest(),
+    }
+
+
+def _op_record_event(db: Session, action: BoundaryAction, repo_root: Path) -> dict:
+    payload = action.payload or {}
+    event_type = payload.get("event_type")
+    source = payload.get("source")
+    if not isinstance(event_type, str) or not event_type:
+        return _adapter_error("record_event needs event_type")
+    if not isinstance(source, str) or not source:
+        return _adapter_error("record_event needs source")
+    event_payload = payload.get("payload") or {}
+    if not isinstance(event_payload, dict):
+        return _adapter_error("record_event payload must be an object")
+    event = models.WorldEvent(
+        event_type=event_type,
+        source=source,
+        payload=json.dumps(event_payload, sort_keys=True),
+    )
+    db.add(event)
+    db.flush()
+    return {
+        "event_id": event.id,
+        "fields": {"event_type": event_type, "source": source},
+    }
+
+
+def _op_read_task_state(db: Session, action: BoundaryAction, repo_root: Path) -> dict:
+    payload = action.payload or {}
+    task_id = payload.get("task_id")
+    if not isinstance(task_id, int):
+        return _adapter_error("read_task_state needs integer task_id")
+    task = db.query(models.WorkerTask).filter_by(id=task_id).first()
+    if task is None:
+        return _adapter_error(f"read_task_state task not found: {task_id}")
+    return {
+        "task_id": task.id,
+        "status": task.status,
+        "attempts": task.attempts,
+        "worker_type": task.worker_type,
+        "task_name": task.task_name,
+    }
+
+
+def _op_requeue_task(db: Session, action: BoundaryAction, repo_root: Path) -> dict:
+    payload = action.payload or {}
+    task_id = payload.get("task_id")
+    checkpoint_id = payload.get("checkpoint_id")
+    if not isinstance(task_id, int):
+        return _adapter_error("requeue_task needs integer task_id")
+    if not isinstance(checkpoint_id, str) or not checkpoint_id:
+        return _adapter_error("requeue_task needs checkpoint_id")
+    task = db.query(models.WorkerTask).filter_by(id=task_id).first()
+    if task is None:
+        return _adapter_error(f"requeue_task task not found: {task_id}")
+    if task.attempts >= task.max_attempts:
+        return _adapter_error(f"requeue_task attempts exhausted: {task.attempts}/{task.max_attempts}")
+    evidence = dict(task.evidence or {})
+    evidence["checkpoint_id"] = checkpoint_id
+    evidence["requeued_at"] = utcnow().isoformat()
+    task.evidence = evidence
+    task.status = "queued"
+    task.attempts = task.attempts + 1
+    db.flush()
+    return {
+        "task_id": task.id,
+        "status": task.status,
+        "attempts": task.attempts,
+        "checkpoint_id": checkpoint_id,
+    }
+
+
+def _op_open_blocker(db: Session, action: BoundaryAction, repo_root: Path) -> dict:
+    payload = action.payload or {}
+    task_id = payload.get("task_id")
+    reason = payload.get("reason")
+    if not isinstance(task_id, int):
+        return _adapter_error("open_blocker needs integer task_id")
+    if not isinstance(reason, str) or not reason:
+        return _adapter_error("open_blocker needs reason")
+    task = db.query(models.WorkerTask).filter_by(id=task_id).first()
+    if task is None:
+        return _adapter_error(f"open_blocker task not found: {task_id}")
+    task.status = "blocked"
+    task.error = reason
+    event = models.WorldEvent(
+        event_type="blocker_opened",
+        source="execution_boundary",
+        payload=json.dumps({"task_id": task.id, "reason": reason}, sort_keys=True),
+    )
+    db.add(event)
+    db.flush()
+    return {"task_id": task.id, "event_id": event.id}
+
+
+def _op_read_halt_state(db: Session, action: BoundaryAction, repo_root: Path) -> dict:
+    row = db.query(models.OpHamiRuntimeControl).first()
+    if row is None:
+        return {"halted": True}  # no HALT record: fail closed, as if halted
+    return {"halted": bool(row.safe_mode_enabled)}
+
+
+# Closed registry: every operation the gate may execute, and nothing else.
+# The gate REFUSES any operation not present here (get_operation_adapter
+# returns None) instead of falling back to any other adapter.
+OPERATION_ADAPTERS: dict[Operation, Callable] = {
+    Operation.INSPECT_FILE: _op_inspect_file,
+    Operation.INSPECT_REPO_STATE: _op_inspect_repo_state,
+    Operation.RUN_LOCAL_TESTS: _op_run_local_tests,
+    Operation.EDIT_REPO_FILE: _op_edit_repo_file,
+    Operation.CREATE_REPO_FILE: _op_create_repo_file,
+    Operation.RECORD_EVENT: _op_record_event,
+    Operation.READ_TASK_STATE: _op_read_task_state,
+    Operation.REQUEUE_TASK: _op_requeue_task,
+    Operation.OPEN_BLOCKER: _op_open_blocker,
+    Operation.READ_HALT_STATE: _op_read_halt_state,
+}
+
+
+def get_operation_adapter(operation) -> Callable | None:
+    """Return the adapter for a boundary operation, or None when unknown.
+
+    Accepts an Operation or its string value. Unknown operations return
+    None — the gate refuses them; there is no fallback adapter.
+    """
+    if isinstance(operation, str):
+        try:
+            operation = Operation(operation)
+        except ValueError:
+            return None
+    if not isinstance(operation, Operation):
+        return None
+    return OPERATION_ADAPTERS.get(operation)
 
 
 # --- Lifecycle --------------------------------------------------------------

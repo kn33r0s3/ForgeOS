@@ -264,6 +264,23 @@ def _health_details() -> dict[str, Any]:
     }
 
 
+def _deployed_commit() -> str | None:
+    """Deployed commit SHA, if the deployment exposes one.
+
+    Vercel sets VERCEL_GIT_COMMIT_SHA at build time; HAMI_COMMIT_SHA and
+    GIT_COMMIT_SHA are accepted as explicit overrides. Locally none are
+    set and the field is null — the absence is itself the signal, so the
+    deployed commit can be checked publicly without the dashboard.
+    A SHA is not a secret, so it is safe to expose on the public /health.
+    """
+    return (
+        os.getenv("VERCEL_GIT_COMMIT_SHA")
+        or os.getenv("HAMI_COMMIT_SHA")
+        or os.getenv("GIT_COMMIT_SHA")
+        or None
+    )
+
+
 @app.get("/health")
 def health():
     details = _health_details()
@@ -296,6 +313,7 @@ def health():
         # for current consumers (e.g. the production health check).
         "ok": details["status"] == "ok",
         "version": settings.APP_VERSION,
+        "commit": _deployed_commit(),
         "time": datetime.now(timezone.utc).isoformat(),
         "db": db_state,
     }

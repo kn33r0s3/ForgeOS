@@ -112,6 +112,39 @@ _RIGHTS: dict[str, dict[str, Any]] = {
     "wire_transfer": {"right": OWNER_ONLY, "minimum_stage": 1, "description": "Money movement"},
 }
 
+# Step-1 execution-boundary operation table (plan section 2).
+# The closed list: an operation not in this table does not exist for
+# Hami, and check_rights refuses it as unknown (which defaults to
+# OWNER_ONLY). Rights values are the plan's names: "internal_read"
+# (read-only inspection of Hami's own state), "authorized_scope"
+# (allowed only inside a named, expiring standing-authorization
+# envelope, re-checked at execution time), "owner_only" (refused
+# unless an explicit owner authorization envelope covers it).
+# OP-06 record_event is internal_read for the read of the store plus
+# the single write the gate itself performs to Hami's own evidence store.
+_OPERATION_RIGHTS: dict[str, dict[str, Any]] = {
+    "inspect_file": {"right": "internal_read", "description": "Read-only inspection of a named repo file"},
+    "inspect_repo_state": {"right": "internal_read", "description": "Read-only repo working-tree / git status"},
+    "run_local_tests": {"right": "authorized_scope", "description": "Run the approved local test suite only, in-repo, no network"},
+    "edit_repo_file": {"right": "authorized_scope", "description": "Apply a specified edit to a named backend service file; never a protected file"},
+    "create_repo_file": {"right": "authorized_scope", "description": "Create a named new file inside the envelope scope only"},
+    "record_event": {"right": "internal_read", "description": "Append one EVENT + EVIDENCE record to Hami's own evidence store"},
+    "read_task_state": {"right": "internal_read", "description": "Read WorkerTask / scheduler state"},
+    "requeue_task": {"right": "authorized_scope", "description": "Requeue a named WorkerTask from its last durable checkpoint, within retry limits"},
+    "open_blocker": {"right": "authorized_scope", "description": "Open a material-blocker record after bounded failures"},
+    "read_halt_state": {"right": "internal_read", "description": "Read whether HALT is set"},
+}
+
+# The five protected files: never editable through the boundary, by anyone.
+_PROTECTED_PATHS = frozenset({
+    "HANDOFF.md",
+    "STATE.md",
+    "QUEUE.md",
+    "docs/CAPABILITY_QUEUE.md",
+    "DOCKER_COMMANDS.md",
+})
+
+
 def entry_for(action_type: str) -> dict[str, Any]:
     normalized = (action_type or "").strip().lower()
     return dict(_RIGHTS.get(normalized, {
@@ -186,3 +219,108 @@ def describe_registry() -> dict[str, Any]:
         "rights_are_mutable_at_runtime": False,
         "registry": registry,
     }
+
+
+def operation_entry_for(operation: str) -> dict[str, Any]:
+    """Step-1 operation table lookup. Unknown operations default to OWNER_ONLY."""
+    normalized = (operation or "").strip().lower()
+    return dict(_OPERATION_RIGHTS.get(normalized, {
+        "right": "owner_only",
+        "description": "Unregistered operations do not exist for Hami.",
+    }), operation=normalized or "unknown")
+
+
+def check_rights(principal: str, operation: str, scope: str, envelope: Any = None) -> dict[str, Any]:
+    """Step-1 single entry point for execution-path rights (plan E2).
+
+    Decides only the RIGHTS question: may this principal run this
+    operation at all, and under what right? It does NOT re-check the
+    envelope's expiry, revocation, or scope depth - that is E3
+    (autonomy_engine), run by the gate (E4) as the next step.
+
+    Rules, in order:
+    1. Unknown operation -> refused (defaults to OWNER_ONLY).
+    2. Empty scope, scope "everything" / "*", or path traversal ("..")
+       -> refused as out of scope. A scope of "everything" is invalid.
+    3. edit/create on a protected file -> refused as out of scope.
+    4. INTERNAL_READ -> allowed for any principal (read-only inspection
+       of Hami's own state, no side effects).
+    5. AUTHORIZED_SCOPE -> allowed only when the principal is "owner"
+       (the owner is the authority) or a non-None envelope is present.
+       Whether that envelope is still valid is E3's job, not this
+       function's. With no envelope and a non-owner principal -> refused.
+    6. OWNER_ONLY -> refused unless the principal is "owner".
+
+    No function in this file raises an autonomy stage, extends an
+    expiry, or widens a scope. There is no self-promotion path here.
+    """
+    entry = operation_entry_for(operation)
+    right = entry["right"]
+    op = entry["operation"]
+    who = (principal or "").strip() or "unknown"
+    clean_scope = (scope or "").strip()
+
+    def _refuse(reason_code: str, reason: str) -> dict[str, Any]:
+        return {
+            "operation": op,
+            "principal": who,
+            "right": right,
+            "allowed": False,
+            "requires_owner_approval": True,
+            "reason_code": reason_code,
+            "enforcement_reason": reason,
+            "scope": clean_scope,
+        }
+
+    def _allow() -> dict[str, Any]:
+        return {
+            "operation": op,
+            "principal": who,
+            "right": right,
+            "allowed": True,
+            "requires_owner_approval": False,
+            "reason_code": None,
+            "enforcement_reason": None,
+            "scope": clean_scope,
+        }
+
+    if op == "unknown" or op not in _OPERATION_RIGHTS:
+        return _refuse(
+            "decision_rights:unknown_operation",
+            f"decision_rights:unknown_operation - {entry['description']}",
+        )
+    if not clean_scope or clean_scope.lower() in {"everything", "*", "all"}:
+        return _refuse(
+            "decision_rights:out_of_scope",
+            "decision_rights:out_of_scope - scope must name explicit resource(s); a scope of 'everything' is invalid.",
+        )
+    if ".." in clean_scope.replace("\\", "/").split("/"):
+        return _refuse(
+            "decision_rights:out_of_scope",
+            "decision_rights:out_of_scope - scope must not contain path traversal.",
+        )
+    if op in {"edit_repo_file", "create_repo_file"}:
+        normalized_path = clean_scope.replace("\\", "/").strip("/")
+        if normalized_path in _PROTECTED_PATHS:
+            return _refuse(
+                "decision_rights:out_of_scope",
+                f"decision_rights:out_of_scope - {normalized_path} is a protected file and is never editable through the boundary.",
+            )
+    if right == "internal_read":
+        return _allow()
+    if right == "authorized_scope":
+        if who == "owner":
+            return _allow()
+        if envelope is not None:
+            return _allow()
+        return _refuse(
+            "decision_rights:authorization_required",
+            "decision_rights:authorization_required - this operation needs an explicit, unexpired owner authorization envelope.",
+        )
+    # OWNER_ONLY and anything else: refused unless the principal is the owner.
+    if who == "owner":
+        return _allow()
+    return _refuse(
+        "decision_rights:owner_only",
+        f"decision_rights:owner_only - {entry['description']}",
+    )

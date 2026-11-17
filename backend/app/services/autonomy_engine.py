@@ -60,7 +60,7 @@ economic outcome.
 """
 
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -812,3 +812,193 @@ def apply_standing_authorization_to_action(db: Session, action: models.Action) -
         params["standing_auth_id"] = result["auth_id"]
         action.parameters_json = _json.dumps(params)
     return action
+
+
+def _envelope_scope_covers(envelope_scope: Any, requested_scope: str) -> bool:
+    """True when the requested scope is equal to or under an envelope scope.
+
+    Envelope scope may be one path string or a list of them. Matching is
+    on path segments, so "backend/app/services2" is NOT covered by
+    "backend/app/services". An exact file path covers only itself.
+    """
+    requested = (requested_scope or "").strip().replace("\\", "/").strip("/")
+    if not requested:
+        return False
+    scopes = envelope_scope if isinstance(envelope_scope, list) else [envelope_scope]
+    for raw in scopes:
+        if not isinstance(raw, str):
+            continue
+        allowed = raw.strip().replace("\\", "/").strip("/")
+        if not allowed:
+            continue
+        if requested == allowed or requested.startswith(allowed + "/"):
+            return True
+    return False
+
+
+def _parse_envelope_expiry(raw: Any) -> Any:
+    """Parse an envelope expires_at value to an aware datetime, or None."""
+    from datetime import datetime, timezone
+
+    if raw is None:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+    except Exception:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def recheck_envelope_for_execution(
+    db: Session,
+    *,
+    operation: str,
+    scope: str,
+    envelope: Any,
+    principal: str | None = None,
+) -> dict:
+    """Step-1 execution-time envelope re-check (plan E3).
+
+    Re-validates an authorization envelope at the moment of execution -
+    not at planning time. Called by the gate (E4) AFTER check_rights
+    (E2) has decided the operation is in a class that CAN run under an
+    envelope. Returns a structured dict, never an exception: the gate
+    turns ``allowed: False`` into a Refusal. Any unexpected problem
+    fails closed (refused).
+
+    Envelope shapes handled (the step-1 envelope is a dict; a standing
+    authorization Action row is the stored form of the same envelope):
+    - dict: must list ``operations`` covering this operation, must carry
+      a parseable, unexpired ``expires_at``, must not be ``status``
+      "REVOKED", and its ``scope`` must cover the requested scope.
+    - models.Action with action_type "standing_authorization": the row
+      must still be ACTIVE after the standard expiry sweep (which marks
+      past-due rows EXPIRED and emits the event), then its envelope dict
+      is checked the same way as a plain dict.
+    - None with principal "owner": allowed - the owner is the authority
+      and needs no envelope. Any other principal with no envelope is
+      refused (E2 normally refuses that case first; this is the belt).
+    - anything else: refused, fail closed.
+
+    Deliberately NOT re-checked here: the envelope's business-action
+    ``action_type`` (a step-1 operation is not a business action, so
+    the business match in matches_standing_envelope does not apply to
+    operations), per-day spend/frequency counting (step-1 operations
+    carry no spend; operation frequency is bounded by the gate's
+    idempotency store and attempt budget, not by the business-action
+    counter). The standing-authorization mechanism itself is reused,
+    not duplicated: row status, expiry sweep, and event emission all
+    go through get_active_standing_authorizations.
+    """
+    from datetime import datetime, timezone
+
+    op = (operation or "").strip().lower()
+    requested_scope = (scope or "").strip()
+
+    def _refuse(reason_code: str, reasons: list[str]) -> dict:
+        return {
+            "allowed": False,
+            "reason_code": reason_code,
+            "reasons": reasons,
+            "auth_id": None,
+        }
+
+    try:
+        if envelope is None:
+            if (principal or "").strip() == "owner":
+                return {
+                    "allowed": True,
+                    "reason_code": None,
+                    "reasons": ["Owner principal; no envelope required."],
+                    "auth_id": None,
+                }
+            return _refuse(
+                "autonomy:authorization_required",
+                ["No authorization envelope present at execution time."],
+            )
+        if not op:
+            return _refuse(
+                "autonomy:operation_not_covered",
+                ["No operation named for the execution-time re-check."],
+            )
+        auth_id: int | None = None
+        envelope_dict: Any = envelope
+        if isinstance(envelope, models.Action):
+            auth_id = envelope.id
+            if envelope.action_type != STANDING_AUTH_ACTION_TYPE:
+                return _refuse(
+                    "autonomy:envelope_unreadable",
+                    [f"Action #{envelope.id} is not a standing authorization."],
+                )
+            # The standard sweep expires past-due rows and emits events.
+            live = get_active_standing_authorizations(db)
+            if all(a.id != envelope.id for a in live):
+                current = db.get(models.Action, envelope.id)
+                status = current.status if current is not None else "UNKNOWN"
+                if status == "REVOKED":
+                    return _refuse(
+                        "autonomy:authorization_revoked",
+                        [f"Standing authorization #{envelope.id} was revoked."],
+                    )
+                return _refuse(
+                    "autonomy:authorization_expired",
+                    [f"Standing authorization #{envelope.id} is {status}, not ACTIVE."],
+                )
+            envelope_dict = envelope.parameters_json
+        if isinstance(envelope_dict, str):
+            import json as _json
+
+            try:
+                envelope_dict = _json.loads(envelope_dict)
+            except Exception:
+                return _refuse(
+                    "autonomy:envelope_unreadable",
+                    ["Standing authorization envelope is unreadable - failed closed."],
+                )
+        if not isinstance(envelope_dict, dict):
+            return _refuse(
+                "autonomy:envelope_unreadable",
+                ["Authorization envelope is malformed - failed closed."],
+            )
+        if str(envelope_dict.get("status") or "").strip().upper() == "REVOKED":
+            return _refuse(
+                "autonomy:authorization_revoked",
+                ["Authorization envelope was revoked."],
+            )
+        operations = envelope_dict.get("operations")
+        if not isinstance(operations, list) or op not in [str(o).strip().lower() for o in operations]:
+            return _refuse(
+                "autonomy:operation_not_covered",
+                [f"Operation {op!r} is not in the authorization envelope's operations."],
+            )
+        expires = _parse_envelope_expiry(envelope_dict.get("expires_at"))
+        if expires is None:
+            return _refuse(
+                "autonomy:authorization_expired",
+                ["Authorization envelope has no parseable expiry - failed closed."],
+            )
+        if expires <= datetime.now(timezone.utc):
+            return _refuse(
+                "autonomy:authorization_expired",
+                [f"Authorization envelope expired at {expires.isoformat()}."],
+            )
+        if not _envelope_scope_covers(envelope_dict.get("scope"), requested_scope):
+            return _refuse(
+                "autonomy:out_of_scope",
+                [f"Requested scope {requested_scope!r} is outside the authorization envelope's scope."],
+            )
+        return {
+            "allowed": True,
+            "reason_code": None,
+            "reasons": [
+                f"Envelope covers operation {op!r} and scope {requested_scope!r} until {expires.isoformat()}."
+            ],
+            "auth_id": auth_id,
+        }
+    except Exception as exc:  # fail closed: an unreadable envelope never authorizes
+        return _refuse(
+            "autonomy:envelope_unreadable",
+            [f"Authorization envelope re-check failed closed: {exc!r}."],
+        )

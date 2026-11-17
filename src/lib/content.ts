@@ -3,8 +3,8 @@ import { cachedRead, type CacheScope } from "./api-cache.ts";
 export const SITE = {
   name: "Hami",
   themeColor: "#0C0B0A",
-  domain: "haminp.vercel.app",
-  url: "https://haminp.vercel.app",
+  domain: "hami-sigma.vercel.app",
+  url: "https://hami-sigma.vercel.app",
   email: "",
   location: "Built in Kathmandu",
   tagline: "Find what matters. Test what helps.",
