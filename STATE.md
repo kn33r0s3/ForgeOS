@@ -1,3 +1,14 @@
+## 2026-11-17 — Post-validation source-date correction — run-start main `cd233e15637feaab7d6c7151b10905f9383f3a7f`
+
+- Exact-head checks for `cd233e15637feaab7d6c7151b10905f9383f3a7f`: ForgeOS CI passed all 10 jobs; backend suite 1,363 passed / 2 skipped / 17 warnings; separate secrets scan passed. Independent deploy verifier passed 261/261 local tests but failed at production-content fetch with HTTP 402. GitHub `Vercel – hami` status is success (“Deployment has completed”); `Vercel – forge-os` remains account-blocked.
+- Corrected the NEA source note: GPO homepage last updated 6 Nov; DCS office list last updated 21 Aug with planned maintenance entries for other centers; Gorkha DC detail last updated 13 Nov; Arughat DC detail last updated 9 Oct. No page establishes Gorkha flood-related outage or restoration. Withdraw the unsupported statement that a 13 Nov maintenance page showed “No data available.”
+- DAO DDMC decisions and relief-distribution pages have stale embedded records despite 2083-07-23 page footer updates: displayed DDMC PDFs are from 2076–2079; relief-distribution page date is 2076-05-14. This is a public archive freshness mismatch, not proof that no newer decisions/distributions occurred. The 2083-05-24 path-open notice predates the flood.
+- Corrected WFP phrasing: the UN report says farmers earned approximately 38% more than at pre-flood prices; no separate price-premium inference.
+- D93 remains UNKNOWN; no new D-number or UNKNOWN_MAP/projection edit. No source-code, test, model, table, collector, registry, runtime or production change. Manual-only source review; no collection, Signal/Evidence write, provider transmission, contact, publishing, spend or emergency advice.
+- The next documentation-only correction commit requires its own exact-head verification.
+
+---
+
 ## Current state snapshot — 2026-11-17 05:34 NPT — run-start main `f363fa54f05c4abfb0763ad431b58d3963c37986`
 
 - Mission remains settled and open-ended across domains/geographies. No pilot, seller segment, revenue milestone or disaster study gates Hami-wide progress.

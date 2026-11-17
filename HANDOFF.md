@@ -1,3 +1,19 @@
+# Source-date correction handoff — 2026-11-17 — run-start main `cd233e15637feaab7d6c7151b10905f9383f3a7f`
+
+## Exact-head validation of the prior documentation commit
+
+- ForgeOS CI [43983340731](https://github.com/kn33r0s3/ForgeOS/actions/runs/43983340731) passed all 10 jobs. Backend tests: 1,363 passed, 2 skipped, 17 warnings. Separate secrets scan [43983340817](https://github.com/kn33r0s3/ForgeOS/actions/runs/43983340817) passed.
+- Independent deploy verifier [43983340650](https://github.com/kn33r0s3/ForgeOS/actions/runs/43983340650) passed 261/261 local checks but production content fetch returned HTTP 402 after the 90-second wait. GitHub `Vercel – hami` status is success; `Vercel – forge-os` reports account blocked.
+
+## Source-date correction
+
+- Withdraw the unsupported NEA claim that a 13 Nov maintenance page showed “No data available”. The GPO homepage is last updated 6 Nov; DCS offices page is last updated 21 Aug and its visible scheduled work is for Syangja/Nuwakot/Ratnapark. Gorkha DC /404 is last updated 13 Nov; Arughat /407 is last updated 9 Oct. These are directory/maintenance records, not flood-restoration evidence.
+- DAO DDMC decision PDFs displayed are from 2076–2079; the relief-distribution page is dated 2076-05-14, although both pages show footer update 2083-07-23. The archive also has a 2083-05-24 path-open notice, before the flood. These are stale archive surfaces, not proof that no later decisions or distributions occurred.
+- WFP's wording is “farmers earned approximately 38% more than at pre-flood prices”; preserve that wording without recasting it as a separate price-premium metric.
+- D93 remains UNKNOWN. No UNKNOWN_MAP or projection edit. No code, tests, model, table, collector, source-registry, runtime or production change. No external contact or ingestion.
+
+---
+
 # Current handoff — 2026-11-17 — D93 recovery-network and utility service map
 
 ## Run-start main and recent history

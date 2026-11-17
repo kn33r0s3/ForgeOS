@@ -1,3 +1,13 @@
+## Source-date correction — 2026-11-17 — run-start main `cd233e15637feaab7d6c7151b10905f9383f3a7f`
+
+- NEA directory evidence remains useful for locating the Gorkha and Arughat distribution centers, but the DCS maintenance schedule page is old (21 Aug) and its displayed entries are for other centers. The Gorkha detail page was last updated 13 Nov; the Arughat detail page 9 Oct. Neither proves current power restoration.
+- DAO's DDMC decision PDFs (2076–2079) and relief-distribution page (2076-05-14) are stale records despite page footer 2083-07-23. Do not infer no newer decisions or relief. The 2083-05-24 path-open notice predates the 11 Oct event.
+- WFP's reported ~38% improvement is worded as farmer earnings relative to pre-flood prices; do not turn it into an independently measured price premium.
+- Run-start `cd233e15637feaab7d6c7151b10905f9383f3a7f` exact-head CI 10/10 passed (backend 1,363 passed, 2 skipped); secrets scan passed; independent deploy verifier failed at production fetch HTTP 402 after 261/261 local checks. Hami Vercel status succeeded; forge-os account remains blocked.
+- Preserve D93 as UNKNOWN. Next: official #02 PDF via a source-linked route; #04 PDF; Chumnubri notice attachment; dated route/bridge/power restoration record. No external contact without authorization. LiveKit remains first active engineering priority; other Hami-wide climbs continue independently.
+
+---
+
 ## Current continuation — 2026-11-17 — D93 utility and recovery-network evidence — run-start main `f363fa54f05c4abfb0763ad431b58d3963c37986`
 
 1. **P0 — Verify the Meet Hami owner-access boundary before wider exposure.** The current documented route relies on Vercel SSO rather than application-level caller authentication. Confirm the owner-facing domain and SSO behavior only through the normal owner account; do not create a share link, disable SSO, attach a custom domain or decrypt secrets.

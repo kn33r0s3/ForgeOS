@@ -1,3 +1,11 @@
+## 2026-11-17 — D93 source-date correction after exact-head validation
+
+- Verified prior documentation commit `cd233e15637feaab7d6c7151b10905f9383f3a7f`: ForgeOS CI 10/10 passed; backend 1,363 passed, 2 skipped, 17 warnings; secrets scan passed. Independent deploy verifier passed 261/261 local checks but production fetch returned HTTP 402 after 90 seconds. Hami Vercel status succeeded; forge-os account status remains blocked.
+- Reopened the NEA sources and corrected an unsupported statement. GPO homepage /en last updated 2026-11-06 15:44:55; DCS offices page last updated 2026-08-21 17:46:26, with visible scheduled work for Syangja, Nuwakot and Ratnapark on 21–22 Aug. Gorkha DC /404 last updated 13 Nov; Arughat DC /407 last updated 9 Oct. No current flood-related restoration status is established.
+- Inspected Gorkha DAO DDMC decisions and relief-distribution pages. The DDMC archive displays decision PDFs from 2076–2079; the relief page is dated 2076-05-14. Both page footers say last updated 2083-07-23. This is a page/document date mismatch and stale public archive, not evidence that no later decisions or distributions occurred. The path-open notice is dated 2083-05-24, before the flood.
+- Corrected WFP phrasing to preserve the UN report's exact comparison: farmers earned approximately 38% more than at pre-flood prices. No separate price-premium measure inferred.
+- Updated existing CAPABILITY_QUEUE, PUBLIC_SOURCES, STATE, QUEUE, HANDOFF and LOG. D93 remains UNKNOWN; no D-number, UNKNOWN_MAP or generated projection changed. No source-code/test/schema/collector/registry change. No collection, Signal/Evidence write, provider transmission, external contact, publishing, spend, payment, emergency advice or alerting.
+
 ## 2026-11-17 05:34 NPT — D93 recovery-network and utility service map
 
 - Reconciled run-start main `f363fa54f05c4abfb0763ad431b58d3963c37986`, recent history, AGENTS, HANDOFF, STATE, QUEUE, BRAIN, UNKNOWN_MAP, CAPABILITY_QUEUE, PUBLIC_SOURCES, LOG and discovery-loop. Re-read current collector normalization, collector_runner, ObserverEngine, Signal/Evidence models, source assessment, synthesis citation, source-clearance registry and relevant tests. No application-source or test write.

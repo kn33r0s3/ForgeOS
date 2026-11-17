@@ -1,3 +1,13 @@
+## 2026-11-17 — D93 NEA/DAO source-date correction (manual-only; no source write)
+
+- **Correction to the preceding NEA note:** the Gandaki Provincial Office homepage is last updated 2026-11-06 15:44:55 and states its remit includes Gorkha and 13 distribution centers across 11 districts. The DCS offices page is last updated 2026-08-21 17:46:26; its visible scheduled-maintenance entries are for Syangja, Nuwakot and Ratnapark on 21–22 August, not Gorkha or Arughat. The Gorkha Distribution Center detail page /404 is last updated 2026-11-13 12:55:53; Arughat /407 is last updated 2026-10-09 16:47:27 (pre-event). The earlier statement that a 13 November maintenance page showed “No data available” was unsupported and is withdrawn. None of these pages establishes a flood-related outage or restoration.
+- **Additional DAO archive check:** the Gorkha DDMC decisions page footer says last updated 2083-07-23, but the displayed decision PDFs are dated 2076–2079. The relief-distribution page is itself dated 2076-05-14 while its footer also says 2083-07-23. These are stale public archive surfaces/page-date mismatches, not proof that no newer meetings, decisions or relief distributions occurred. The “path operational” notice dated 2083-05-24 predates the 11 October flood and is not post-flood reopening evidence.
+- **WFP wording correction:** the UN report says farmers earned approximately 38% more than at pre-flood prices; do not reinterpret that wording as a separately measured 38% price premium.
+- **Banked lesson:** a page footer/update timestamp is not the effective date of an embedded PDF, decision, distribution record or operational fact. Preserve page timestamp, document date, event time, source-declared data cutoff and retrieval time separately.
+- D93 remains the existing UNKNOWN. No new D-number, UNKNOWN_MAP edit, generated-projection edit, source registry entry, model, table, collector, primitive or ledger. No source collection, body persistence, provider transmission or external contact.
+
+---
+
 ## 2026-11-17 — D93 recovery-network and utility-directory evidence (manual-only; no source write)
 
 ### New evidence and real-world consequence
