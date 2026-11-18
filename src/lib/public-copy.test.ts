@@ -199,14 +199,15 @@ describe("homepage contract", () => {
     assert.ok(blob.includes('to: "/domain"'), "the public work board must remain reachable from the shared system map");
   });
 
-  it("8. findings preview loads from the API with honest empty states", () => {
+  it("8. findings preview loads from the API and labels unverified records UNKNOWN", () => {
     const src = read("src/routes/index.tsx").replace(/\\s+/g, " ");
     assert.ok(
       src.includes("loadDiscoveries"),
       "homepage must use the existing observations API loader",
     );
     assert.match(src, /Findings/);
-    assert.match(src, /No findings with recorded consequences yet/);
+    assert.match(src, /The public findings record cannot be verified/);
+    assert.match(src, /label="UNKNOWN"/);
     assert.match(src, /has_consequence/);
     assert.match(src, /FindingCard/);
     // "Supported" is the engine's SUPPORTED-state label, rendered on the

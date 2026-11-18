@@ -599,11 +599,12 @@ describe("Hami public root", () => {
       /: failed \? \(([\s\S]*?)\) : items!\.length/,
     )?.[1];
     assert.ok(failedFindings);
-    assert.match(failedFindings, /kind="unavailable"/);
+    assert.match(failedFindings, /kind="unknown"/);
+    assert.match(failedFindings, /label="UNKNOWN"/);
     assert.doesNotMatch(failedFindings, /kind="empty"|There is nothing here/);
     assert.match(
       home,
-      /This unavailable response is not evidence that the findings record is empty/,
+      /The public findings record cannot be verified; it is not being reported as empty/,
     );
     assert.match(home, /See all findings/);
     assert.match(home, /See all unknowns/);
@@ -636,14 +637,15 @@ describe("Hami public root", () => {
     assert.doesNotMatch(home, /function CurrentPaths/);
     assert.doesNotMatch(home, /to="\/group\/businesses"/);
     assert.match(home, /to="\/discoveries"/);
-    // The homepage maps existing public views without implying they have all run:
-    // each preview links to its page and carries an honest empty state.
-    for (const empty of [
-      "No findings with recorded consequences yet.",
+    // Findings stay UNKNOWN when their source cannot be verified; the other
+    // previews retain their explicit empty states.
+    for (const state of [
+      "The public findings record cannot be verified; it is not being reported as empty.",
+      "No public findings with recorded consequences are available.",
       "No unknowns recorded yet.",
       "No experiments yet.",
     ]) {
-      assert.ok(home.includes(empty), `homepage missing honest empty state: ${empty}`);
+      assert.ok(home.includes(state), `homepage missing expected preview state: ${state}`);
     }
     for (const label of ["See all findings", "See all unknowns", "See all experiments"]) {
       assert.ok(home.includes(label), `homepage missing preview link: ${label}`);
@@ -755,15 +757,19 @@ describe("homepage findings defects (regression)", () => {
     assert.doesNotMatch(home, /loadDiscoveries\(3\)[\s\S]*?\.filter\(\(f\) => f\.has_consequence\)/);
   });
 
-  it("FindingsPreview distinguishes failure from empty dataset", () => {
+  it("FindingsPreview reports UNKNOWN for an unverified or empty public record", () => {
     const home = readFileSync("src/routes/index.tsx", "utf8");
-    // API failure and null loader result must not appear as verified empty.
-    // The component tracks a separate `failed` state.
+    const findings = home.slice(
+      home.indexOf("function FindingsPreview"),
+      home.indexOf("function UnknownsPreview"),
+    );
+    assert.match(findings, /loadEngineHealth/);
     assert.match(home, /const \[failed, setFailed\] = useState\(false\)/);
     assert.match(home, /setFailed\(true\)/);
-    // Failed state shows "Unavailable", not "Empty record"
-    assert.match(home, /label="Unavailable"/);
-    assert.match(home, /label="Empty record"/);
+    assert.match(findings, /db=not_configured/);
+    assert.match(findings, /label="UNKNOWN"/);
+    assert.match(findings, /not being reported as empty/);
+    assert.doesNotMatch(findings, /label="Unavailable"|label="Empty record"/);
   });
 
   it("PublicDiscovery type includes relevance fields", () => {

@@ -7,8 +7,10 @@ import { HamiPathways } from "@/components/layout/hami-pathways";
 import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/layout/eyebrow";
 import {
+  loadEngineHealth,
   loadDiscoveries,
   loadPublicUnknowns,
+  type EngineHealth,
   type PublicDiscovery,
   type PublicUnknown,
 } from "@/lib/content";
@@ -1029,15 +1031,17 @@ function RecordState({
   kind,
   label,
   message,
+  detail,
 }: {
-  kind: "empty" | "unavailable";
+  kind: "empty" | "unavailable" | "unknown";
   label: string;
   message: string;
+  detail?: string;
 }) {
   return (
     <div
       className="card mt-8 p-8 text-center sm:p-10"
-      role={kind === "unavailable" ? "status" : undefined}
+      role={kind === "empty" ? undefined : "status"}
     >
       <span className="tag tag-muted">{label}</span>
       <p className="mx-auto mt-4 max-w-md text-base font-bold leading-7 text-ink">
@@ -1047,6 +1051,8 @@ function RecordState({
         <p className="mt-2 text-sm text-muted">
           This unavailable response is not evidence that the findings record is empty.
         </p>
+      ) : kind === "unknown" ? (
+        <p className="mt-2 text-sm text-muted">{detail}</p>
       ) : (
         <p className="mt-2 text-sm text-muted">
           There is nothing here <em className="not-italic font-bold text-accent">yet</em> —
@@ -1060,26 +1066,39 @@ function RecordState({
 function FindingsPreview() {
   const [items, setItems] = useState<PublicDiscovery[] | null>(null);
   const [failed, setFailed] = useState(false);
+  const [health, setHealth] = useState<EngineHealth | null>(null);
 
   useEffect(() => {
     let live = true;
     // Load enough to find consequential findings; filter AFTER loading,
     // not before. Loading only 3 then filtering can miss relevant findings
     // that fall outside the first three results.
-    loadDiscoveries(20)
-      .then((d) => {
+    loadEngineHealth()
+      .then((runtimeHealth) => {
         if (!live) return;
-        if (d === null) {
-          // Null means the loader couldn't retrieve data (not empty)
+        setHealth(runtimeHealth);
+        const databaseReady =
+          runtimeHealth.reachable &&
+          runtimeHealth.status === "ok" &&
+          runtimeHealth.ready === true &&
+          runtimeHealth.db === "up";
+        if (!databaseReady) {
           setFailed(true);
           setItems([]);
-        } else {
-          setItems(d.filter((f) => f.has_consequence).slice(0, 3));
+          return;
         }
+        return loadDiscoveries(20).then((discoveries) => {
+          if (!live) return;
+          if (discoveries === null) {
+            setFailed(true);
+            setItems([]);
+          } else {
+            setItems(discoveries.filter((f) => f.has_consequence).slice(0, 3));
+          }
+        });
       })
       .catch(() => {
         if (live) {
-          // API failure is distinct from verified empty dataset
           setFailed(true);
           setItems([]);
         }
@@ -1088,6 +1107,18 @@ function FindingsPreview() {
       live = false;
     };
   }, []);
+
+  const unknownMessage =
+    health?.reachable && health.db === "not_configured"
+      ? "Production health reports db=not_configured; the findings loader stops before requesting records."
+      : health?.reachable &&
+          health.status === "ok" &&
+          health.ready === true &&
+          health.db === "up"
+        ? "Production health is ready, but the public discoveries request failed; findings cannot be verified."
+      : health?.reachable
+        ? `Production health reports status=${health.status ?? "unknown"} and db=${health.db ?? "unknown"}; findings cannot be verified.`
+        : "Production health could not be reached; findings cannot be verified.";
 
   return (
     <section className="border-b border-line">
@@ -1103,15 +1134,17 @@ function FindingsPreview() {
             <div className="skeleton h-32 w-full" aria-label="Loading findings" />
           ) : failed ? (
             <RecordState
-              kind="unavailable"
-              label="Unavailable"
-              message="Hami couldn't verify the findings right now. Please try again later."
+              kind="unknown"
+              label="UNKNOWN"
+              message={unknownMessage}
+              detail="The public findings record cannot be verified; it is not being reported as empty."
             />
           ) : items!.length === 0 ? (
             <RecordState
-              kind="empty"
-              label="Empty record"
-              message="No findings with recorded consequences yet. Findings appear here once they change a decision, experiment, or outcome."
+              kind="unknown"
+              label="UNKNOWN"
+              message="No public findings with recorded consequences are available."
+              detail="An empty or unlinked result is not a claim that no findings exist."
             />
           ) : (
             <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
