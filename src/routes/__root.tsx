@@ -195,6 +195,10 @@ function RootDocument() {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: jsonLd }}
         />
+        {/* Hami Systems — one script tag puts the gated Hami pop-up on every
+            page. Same widget as Knee Rose (kn33r0s3.vercel.app/hami-systems.js).
+            It POSTs to the one Hami chat API and never invents a reply. */}
+        <script src="https://kn33r0s3.vercel.app/hami-systems.js"></script>
         <Scripts />
       </body>
     </html>

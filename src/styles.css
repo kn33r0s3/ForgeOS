@@ -86,6 +86,112 @@
 }
 
 /*
+ * Hami public proof ledger tokens.
+ * Amber/black only. The ledger pins the haminp amber (#f2a33a) on the
+ * night black (#0c0b0a) so it cannot drift if the global theme moves.
+ * Claim states are told by type and border, not by new hues: proposed
+ * and running use amber, completed uses wheat, contradicted uses the
+ * existing danger red and is always shown, never hidden.
+ * No gradients, no glow, no soft shadows anywhere on ledger pages.
+ * Wordmark is blackletter only (UnifrakturCook). Headings are
+ * Devanagari-first (Noto Sans Devanagari) with an English gloss.
+ */
+@theme {
+  --color-ledger-amber: #f2a33a;
+  --color-ledger-black: #0c0b0a;
+  --color-ledger-ink: #f4efe6;
+  --color-ledger-muted: #bdb29f;
+  --color-ledger-wheat: #f5deb3;
+  --color-ledger-border: #3a2e1a;
+  --color-ledger-danger: #ff6f6f;
+  --color-ledger-surface: #15130f;
+
+  --font-ledger-wordmark: "UnifrakturCook", "Old English Text MT", Georgia, serif;
+  --font-ledger-heading: "Noto Sans Devanagari", "Source Sans 3", sans-serif;
+}
+
+/*
+ * Hami Linux terminal theme.
+ * Evolved from the night masthead, not a replacement: the page IS a
+ * terminal. The amber stays the accent, the black stays the ground, and
+ * the terminal green is the existing success green (#72d38f) so no new
+ * hue enters the palette. Monospace (Roboto Mono) is the working face;
+ * the blackletter wordmark and Devanagari headings stay — they are
+ * Hami's identity, the terminal is the frame around them.
+ * A terminal window is a bordered box with a title bar (three dots,
+ * red/yellow/green like a Linux window) and a monospace body. A
+ * prompt is `$` in amber followed by the command. A cursor is a solid
+ * block that blinks. No gradients, no glow, no soft shadows.
+ */
+@theme {
+  --color-term-green: #72d38f;
+  --color-term-amber: #f2a33a;
+  --color-term-bg: #0c0b0a;
+  --color-term-surface: #15130f;
+  --color-term-border: #3a2e1a;
+  --color-term-muted: #bdb29f;
+  --color-term-red: #ff6f6f;
+  --color-term-yellow: #f2a33a;
+
+  --font-term: "Roboto Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+@layer components {
+  /* A Linux terminal window: title bar + dots + monospace body. */
+  .term-window {
+    border: 1px solid var(--color-term-border);
+    border-radius: 0.375rem;
+    background: var(--color-term-surface);
+    overflow: hidden;
+  }
+  .term-titlebar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--color-term-border);
+    background: var(--color-term-bg);
+    font-family: var(--font-term);
+    font-size: 0.72rem;
+    color: var(--color-term-muted);
+  }
+  .term-dot {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 9999px;
+    flex: none;
+  }
+  .term-dot--red { background: var(--color-term-red); }
+  .term-dot--yellow { background: var(--color-term-yellow); }
+  .term-dot--green { background: var(--color-term-green); }
+  .term-body {
+    padding: 0.75rem;
+    font-family: var(--font-term);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--color-term-green);
+  }
+  /* `$` prompt in amber, command in ink. */
+  .term-prompt::before {
+    content: "$ ";
+    color: var(--color-term-amber);
+  }
+  /* Blinking block cursor. */
+  .term-cursor {
+    display: inline-block;
+    width: 0.55em;
+    height: 1em;
+    vertical-align: text-bottom;
+    background: var(--color-term-green);
+    animation: term-blink 1.1s steps(1) infinite;
+  }
+  @keyframes term-blink {
+    0%, 55% { opacity: 1; }
+    56%, 100% { opacity: 0; }
+  }
+}
+
+/*
  * ForgeOS visual system v3: "night masthead".
  * Taken from the look of kneerose.vercel.app: ink-navy page, a dark
  * near-black masthead with an orange rule and orange type, blackletter

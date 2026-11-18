@@ -41,6 +41,14 @@ def pytest_configure(config):
         raise RuntimeError("CRITICAL: Pytest execution blocked: DATABASE_URL points to real historical storage/forge.db!")
 
 
+@pytest.fixture(autouse=True)
+def reset_execution_circuit_breaker(monkeypatch):
+    from app.services import execution_engine
+
+    monkeypatch.setattr(execution_engine, "_CIRCUIT_FAILURES", 0)
+    monkeypatch.setattr(execution_engine, "_CIRCUIT_OPENED_AT", None)
+
+
 @pytest.fixture
 def db():
     """Fresh test database per test with all tables.

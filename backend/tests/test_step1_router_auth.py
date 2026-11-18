@@ -39,6 +39,14 @@ def _keyed(monkeypatch, key="step1-owner-key"):
     return {"X-API-Key": key}
 
 
+def test_public_write_paths_have_exactly_one_written_reason():
+    assert set(security.PUBLIC_WRITE_REASONS) == security.PUBLIC_WRITE_PATHS
+    assert all(
+        isinstance(reason, str) and reason.strip() and reason.rstrip().endswith(".")
+        for reason in security.PUBLIC_WRITE_REASONS.values()
+    )
+
+
 # (method, path, json body or None) for one write route per router
 WRITE_ROUTES = [
     ("post", "/signals", {"content": "anonymous raw signal"}),

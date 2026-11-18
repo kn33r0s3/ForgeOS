@@ -1,3 +1,2066 @@
+## 2026-11-18 — A6 full-history candidate triage
+
+- **Evidence reconciliation:** used the later valid audit artifacts, not the
+  stale staged order that described an earlier false-zero Gitleaks invocation
+  and a noisy TruffleHog run. The valid Gitleaks run scanned 2,048 commits
+  containing additions/fragments and about 456.96 MB (exit 1 for findings).
+  Its redacted output is 48,106 bytes; status is 76 bytes. TruffleHog's
+  sanitized output is 27,100 bytes; status is 647 bytes. No new scan or
+  external verification was run.
+- **Gitleaks — 103 `generic-api-key` records, 100 unique fingerprints, 30
+  locations:**
+  - **14 records at two historical paths — needs owner-authorized rotation
+    review.** Eight records at `src/lib/auth/preview.ts:20` and six at
+    `sanipops_clean/river-cinder-bamboo-otter-main/src/lib/auth/preview.ts:20`
+    contain one identical 64-hex literal. The historical source explicitly
+    identifies `PREVIEW_CLIENT_SECRET` as a shared live-preview OAuth client
+    secret matching a broker Vercel environment variable and enabling real
+    sign-in. It is credential material, not a test placeholder. The candidate
+    commit is not an ancestor of current `main`, and current `main` no longer
+    defines the constant; whether the broker credential remains live is
+    **UNKNOWN**. Do not verify it externally or rotate it without owner
+    approval.
+  - **30 records — false positives in vendored SQLAlchemy code:** six
+    `backend/.deps/sqlalchemy` locations (`ext/mypy/decl_class.py:514`;
+    `ext/mypy/plugin.py:157,259,267`; `orm/mapped_collection.py:321`;
+    `orm/unitofwork.py:246`). The matched tokens are API identifiers in
+    third-party source, not credentials.
+  - **18 records — generated Next.js metadata:** ten cache/manifest locations
+    under `frontend/.next` and `frontend/.next-research-verify` (`.previewinfo`,
+    `.rscinfo`, `prerender-manifest.json`, and
+    `server/server-reference-manifest.json`). These are generated build/cache
+    identifiers, not application secrets.
+  - **9 records — test fixtures:** `backend/tests/test_payment_intents.py:48,425`
+    (2), `services/hami-media/main_test.go:18` (1),
+    `src/lib/checkout-attempt-storage.test.ts:21` (1), and
+    `src/lib/features.test.ts:260,315,392` (5). They are synthetic
+    idempotency/media/path fixtures, not service credentials.
+  - **32 records — documentation and historical test evidence:**
+    `LOG.md:996,1384,1420` (5), `STATUS.md:146` (3), and
+    `docs/archive/status-reports/STATUS-history.md:146` (24). These are
+    references and deterministic test-run identifiers, not credentials.
+- **TruffleHog — 129 records across 37 locations:** all 129 are
+  `verified: false`; detector counts are Postgres 55, URI 37, Alchemy 30, and
+  Pastebin 7. No private-key detector fired.
+  - **75 records across 25 locations — vendored third-party dependencies:**
+    60 under `backend/.deps` (SQLAlchemy `RECORD` lines 55,199,211,242,401;
+    `httpx/_urls.py:354`; `pydantic/networks.py:97`;
+    `pydantic_core/_pydantic_core.pyi:457,499`;
+    pytest `RECORD:119`; `sqlalchemy/sql/events.py:75`;
+    `urllib3/util/url.py:236`) and 15 under `backend/venv`
+    (SQLAlchemy `RECORD` lines 55,199,211,242,401; `httpx/_urls.py:354`;
+    `pip/_vendor/urllib3/util/url.py:186`; `pydantic/networks.py:97`;
+    `pydantic_core/_pydantic_core.pyi:457,499`; pytest `RECORD:119`;
+    `sqlalchemy/sql/events.py:75`; `urllib3/util/url.py:236`). The matches are
+    third-party package examples and RECORD digests, not Hami credentials.
+  - **42 records across 11 test locations — fixtures/placeholders:**
+    `backend/tests/test_cognitive_worker.py:347,425` (5);
+    `backend/tests/test_health_readiness.py:66,80,84,114,125,149,168` (27);
+    `src/lib/auth/auth-boundary.test.ts:12,13` (10). The PostgreSQL URLs use
+    test-domain hosts and placeholder passwords; no real service password or
+    live connection was used.
+  - **12 records at `docs/RENOVATION/check_all_phase3.txt:430` — test
+    artifact:** a copied PostgreSQL test URL with a test-domain host and
+    placeholder password, not a real connection string.
+  - The retained run has zero stderr lines, structured scan-error events, or
+    unparsed output lines. The 8,663-line stderr claim in the stale staged
+    order refers to an earlier noisy run, not this retained run.
+- **Corrected verdict: NOT CLEAN; NOT SUPPORTED.** Triage found one underlying
+  historical OAuth client credential duplicated across two paths; current
+  liveness is unknown and owner-authorized rotation/revocation remains open.
+  No key was rotated, no candidate was externally verified, and no history or
+  evidence file was altered. Unreachable Git objects and temporary Git garbage
+  remain outside the audit scan. No real transaction occurred;
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE**. No build,
+  test, commit, push, or deployment was performed.
+
+## 2026-11-18 — A6 full-history private-key header correction (RE-RECORDED)
+
+- **What changed:** the earlier "private-key header 0" claim was unproven — the grep
+  failed twice and private keys were never actually scanned. This entry records the
+  corrected, verified scan. (First recorded 18 Nov ~16:57 by Copilot's queue/001
+  turn; removed from this file 18 Nov ~17:01 during Copilot's queue/002 turn, which
+  rewrote the file. Re-recorded by Muse from the preserved evidence files.)
+- **Method:** reused the existing audit mirror
+  /tmp/forgeos-a6-credential-audit-20261118T1014Z/full.git (no fresh clone).
+  `git cat-file --batch-all-objects` enumerated 14,064 valid blobs (13,302
+  reachable + 762 unreachable; the unreachable set exactly matches the 762
+  `git fsck --unreachable` blob records); 2,457 reachable commits, 2,493 commit
+  objects. The scan streamed 14,064/14,064 blobs, 2,148,503,946 bytes, exit 0.
+  Matcher covered RSA/EC/DSA/OpenSSH/PKCS#8/encrypted PKCS#8/PGP PEM headers,
+  the PuTTY marker, base64 encodings, and the OpenSSH binary container marker.
+- **Result: ZERO matches for those markers.** Verified by Muse from the preserved
+  evidence (mode 0600, no key material written):
+  /tmp/forgeos-a6-credential-audit-20261118T1014Z/evidence/private-key-header-scan-20261118T110954Z-summary.txt
+  (1,458 B; started 11:09:54Z, ended 11:10:02Z; expected bytes == streamed bytes;
+  matching_blob_count=0) and the companion -hits.jsonl (34 B:
+  `{"result": "no matching markers"}`).
+- **Honest scope:** this corrects the earlier unproven "private-key header 0" claim
+  FOR THIS MARKER SET ONLY. No arbitrary DER/JWK parsing was done. 30 unparsed
+  tmp_obj_* garbage files (not valid blobs) were left untouched.
+- **Verdict unchanged: A6 stays TESTED, NOT CLEAN / NOT SUPPORTED.** The remaining
+  work is the queue/002 triage (103 Gitleaks generic-api-key candidates + 129
+  TruffleHog records) and the coverage gaps (unreachable objects beyond the 762
+  blobs covered here, non-header key formats).
+
+## 2026-11-18 — Nepali SFT held-out comparison (20 examples)
+
+- **Scope / provenance:** compared the cached local `mlx-community/Qwen3-4B-4bit`
+  base model with the existing 500-example LoRA adapter on source row IDs
+  500–519 from the 52,005-row parquet. Both generated responses used identical
+  prompts, greedy decoding (`temperature=0`, 256-token limit), and the same
+  local chat template. This was an offline-only run on the Mac; Hugging Face,
+  Transformers, and datasets offline flags were enabled. No Cloud, paid tier,
+  external inference, or full 52,000-example training run was used. The first
+  generation attempt stopped before producing output because this MLX-LM API
+  requires a sampler argument; the completed rerun used `make_sampler(0.0)`.
+- **Scoring method:** the same local base model scored each pair on fluency
+  (F), instruction adherence (I), and factual match to the reference (R), each
+  0–2. Candidate order alternated by row to obscure model identity. This is
+  model-assisted, not independent human evaluation; using the base model as
+  judge may favor the base and limits the strength of the conclusion.
+- **Per-example scores (F/I/R; each dimension 0–2):**
+
+  | Row ID | Base (F/I/R; total /6) | Adapter (F/I/R; total /6) | Pair |
+  |---:|:---:|:---:|:---:|
+  | 500 | 0/0/0; 0 | 0/0/0; 0 | tie |
+  | 501 | 2/2/2; 6 | 2/1/1; 4 | base |
+  | 502 | 1/1/1; 3 | 0/0/0; 0 | base |
+  | 503 | 0/0/0; 0 | 1/1/1; 3 | adapter |
+  | 504 | 2/2/2; 6 | 2/1/0; 3 | base |
+  | 505 | 2/2/2; 6 | 0/0/0; 0 | base |
+  | 506 | 1/1/1; 3 | 0/0/0; 0 | base |
+  | 507 | 0/0/0; 0 | 0/0/0; 0 | tie |
+  | 508 | 2/2/2; 6 | 2/1/2; 5 | base |
+  | 509 | 0/0/0; 0 | 0/0/0; 0 | tie |
+  | 510 | 1/1/1; 3 | 0/0/0; 0 | base |
+  | 511 | 2/2/2; 6 | 2/2/2; 6 | tie |
+  | 512 | 2/2/2; 6 | 2/1/1; 4 | base |
+  | 513 | 2/2/2; 6 | 2/2/2; 6 | tie |
+  | 514 | 1/1/1; 3 | 0/0/0; 0 | base |
+  | 515 | 0/0/0; 0 | 2/2/2; 6 | adapter |
+  | 516 | 1/1/1; 3 | 2/1/0; 3 | tie |
+  | 517 | 2/1/2; 5 | 2/2/2; 6 | adapter |
+  | 518 | 1/2/2; 5 | 2/2/2; 6 | adapter |
+  | 519 | 2/2/2; 6 | 2/2/2; 6 | tie |
+
+- **Verdict / evidence delta:** on this model-assisted rubric the adapter
+  **loses to the base**: base 73/120, adapter 58/120; per-example outcomes
+  were 4 adapter wins, 9 base wins, and 7 ties. This is a limited 20-example
+  result, not a validated general Nepali-capability claim. Prompts, references,
+  and generated responses were not persisted; only the score table and run
+  metadata remain in the access-restricted local directory
+  `/tmp/hami-sft-heldout-eval.ifDVJb` (directory mode 0700, files mode 0600).
+- **Remaining blocker / autonomy:** dataset usage rights remain unresolved;
+  no broader training run is authorized by this result. The owner action still
+  required is to resolve those rights and review any next-step evidence. This
+  comparison replaces guesswork about this adapter's result on these 20 rows,
+  but removes no owner intervention from a real transaction. No real
+  transaction occurred; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is
+  **NOT MEASURABLE**. No commit, push, deployment, publication, or external
+  data transfer occurred.
+
+## 2026-11-18 — A6 full-history secret audit
+
+- **Run identity and coverage:** audited source `main` at
+  `1ea806f801a89866ee970410371b5d4cf8f5e0b8`. Source `git rev-list --all
+  --count` reported 2,457 commits and 332 refs. A fresh remote mirror had
+  1,876 commits / 26 refs and was not sufficient for this local scope. The
+  fresh local mirror initially counted 2,454; two audit-only refs for linked
+  worktree heads were added in `/tmp` (not to the source repository). The
+  resulting audit mirror and source had an exact 2,457-commit set match
+  (zero source-only or mirror-only commits), rechecked after scanning.
+- **Gitleaks 8.30.1:** the first invocation was invalid: Git rejected the
+  bare mirror under `safe.bareRepository=explicit`, and Gitleaks reported
+  zero commits scanned. The final command was run with per-process
+  `safe.bareRepository=all` and `diff.renameLimit=10000`:
+  `GIT_CONFIG_COUNT=5 GIT_CONFIG_KEY_3=safe.bareRepository GIT_CONFIG_VALUE_3=all GIT_CONFIG_KEY_4=diff.renameLimit GIT_CONFIG_VALUE_4=10000 gitleaks git /tmp/forgeos-a6-credential-audit-20261118T1014Z/full.git --redact --verbose --log-opts="--all" --no-color`.
+  Final run: 2026-11-18 10:32:39–10:35:22 UTC, exit 1, 2,048 distinct
+  commits with additions/fragments, about 456.96 MB scanned, and 103
+  `generic-api-key` candidate records (100 unique fingerprints). The
+  2,048 figure is Gitleaks' fragment-bearing-commit counter, not the
+  repository commit count; the v8.30.1 implementation notes it can be lower
+  when commits have no additions
+  ([source](https://raw.githubusercontent.com/gitleaks/gitleaks/v8.30.1/detect/detect.go)).
+  The final run emitted no rename-detection warning. No private-key-specific
+  Gitleaks rule matched. The 87 unique commit/file blobs associated with
+  Gitleaks findings were checked in memory for PEM, PGP, and PuTTY private-key
+  container markers; none were present, so no private-key parser invocation
+  was applicable. Candidate contents were not written or displayed. Output is
+  fully redacted at
+  `/tmp/forgeos-a6-credential-audit-20261118T1014Z/evidence/gitleaks-output-redacted.txt`;
+  timing and exit status are in `gitleaks-status.txt`.
+- **TruffleHog 3.99.9:** final command:
+  `trufflehog git file:///private/tmp/forgeos-a6-credential-audit-20261118T1014Z/full.git --no-update --fail --fail-on-scan-errors --no-verification --json --bare --log-level=-1`.
+  Run: 2026-11-18 10:27:44–10:29:17 UTC, exit 183 (findings). It emitted
+  129 unverified result records: Postgres 55, URI 37, Alchemy 30, Pastebin
+  7; no private-key-named detector matched. Verification was disabled, so
+  these results were not sent to external verification services and are not
+  evidence that a credential is live. The final run had zero stderr lines,
+  structured error events, or unparsed output lines. A prior noisy run was
+  repeated with logging disabled. Only allowlisted metadata is persisted in
+  `/tmp/forgeos-a6-credential-audit-20261118T1014Z/evidence/trufflehog-output-sanitized.ndjson`;
+  its status and command are in `trufflehog-status.json`.
+- **Unreachable-object scope:** source `git fsck --full --unreachable`
+  exited 0 with 1,061 unreachable objects (35 commits, 264 trees, 762 blobs).
+  The audit mirror reported 1,064 (36 commits, 266 trees, 762 blobs).
+  These objects were not scanned and remain an explicit coverage limitation.
+  `git count-objects -v` reported 30 `tmp_obj_*` garbage files (8,481,196
+  bytes) in both source and mirror; their contents were not inspected and
+  nothing was removed.
+- **Verdict at scan time: NOT CLEAN; not supported.** The later triage at the
+  top of this ledger classified the retained candidates: one historical
+  preview OAuth credential requires owner-authorized rotation review; the
+  other records are test, documentation, generated, or vendored false
+  positives. No private-key detector matched, no credential was externally
+  verified, and no key was rotated. The unreachable objects and temporary
+  garbage remain outside scan coverage; there is no clean certificate.
+  No external verification, build, test, database change, commit, push, or
+  deployment was performed.
+
+## 2026-11-18 — Full repo test suite and autonomy-gate check
+
+- **Run identity / preservation:** tested the current `main` worktree at
+  `1ea806f801a89866ee970410371b5d4cf8f5e0b8` (`main` ahead 1 / behind 8).
+  Existing worktree modifications in `docs/CAPABILITY_QUEUE.md`,
+  `docs/UNKNOWN_MAP.md`, `public/robots.txt`, `public/sitemap.xml`, and
+  `services/hami-media/{main.go,main_test.go}` were preserved. Exact-head
+  `gh run list --commit 1ea806f801a89866ee970410371b5d4cf8f5e0b8` returned
+  no runs. HANDOFF/STATE/QUEUE evidence is dated 16 Nov and refers to older
+  SHAs; it is not current-head CI or deployment proof.
+- **Backend:** `env -u DATABASE_URL -u FORGEOS_TEST_DATABASE_URL python3.11
+  -m pytest -q backend/tests --tb=short
+  --junitxml=/tmp/forgeos-backend-junit.xml` — **1,361 passed, 13 failed,
+  2 skipped, 18 warnings** across 118 modules (1,376 tests). The test fixture
+  forces in-memory SQLite; the production database was not used. Per-module
+  counts below are pass/fail/skip:
+
+  ```text
+  test_api_ingress_alias.py 7/0/0
+  test_approval_outcome_bridge.py 7/0/0
+  test_autonomous_network_cycle.py 1/0/0
+  test_backup_retention.py 2/0/0
+  test_belief_canonical.py 10/0/0
+  test_blocker_fixes.py 10/0/0
+  test_bounty_audit.py 6/0/0
+  test_capability_discovery.py 4/0/0
+  test_capability_lifecycle_contract.py 9/0/0
+  test_capability_real_world_verification.py 11/0/0
+  test_capability_substrate_adapter.py 3/0/0
+  test_closed_loop_action_outcome.py 93/0/0
+  test_cognitive_candidate_selection.py 2/0/0
+  test_cognitive_worker.py 33/0/0
+  test_commercial_ops.py 38/0/0
+  test_content_loop.py 3/0/0
+  test_crossref_collector.py 4/0/0
+  test_daily_cycle_rollback.py 7/0/0
+  test_decision_rights_sms.py 9/0/0
+  test_demand_understanding.py 12/0/0
+  test_demand_worker.py 4/0/0
+  test_discovery_engine.py 52/0/0
+  test_discovery_selection.py 24/0/0
+  test_earn_offers.py 6/0/0
+  test_economic_validation.py 8/0/0
+  test_end_to_end_flow.py 7/0/0
+  test_evidence_graph.py 12/0/0
+  test_evidence_relationship_substrate_adapter.py 9/0/0
+  test_evidence_triage_wiring.py 2/0/0
+  test_execution_boundary.py 5/6/0
+  test_experiment_action_loop.py 2/0/0
+  test_experiment_api.py 7/0/0
+  test_experiment_lifecycle.py 2/0/0
+  test_experiment_service.py 2/0/0
+  test_forge_bot_api.py 64/0/0
+  test_forge_bot_owner_notification.py 9/0/0
+  test_forge_bot_privacy.py 4/0/0
+  test_forge_unknowns_api.py 2/0/0
+  test_gdelt_collector.py 11/0/1
+  test_github_bounty.py 8/0/0
+  test_grounded_research_loop.py 12/0/0
+  test_health_readiness.py 10/0/0
+  test_http_canonical_final.py 9/0/0
+  test_import_unknowns.py 4/0/0
+  test_integration_dispatcher.py 7/6/0
+  test_integration_outbox.py 3/0/0
+  test_intelligence_fabric.py 5/0/0
+  test_intelligence_loop_e2e.py 1/0/0
+  test_intelligence_pipeline.py 3/0/0
+  test_intervention_gate.py 4/0/0
+  test_legacy_evidence_substrate_adapter.py 6/0/0
+  test_legacy_intelligence_gate.py 4/0/0
+  test_legacy_record_substrate_adapter.py 4/0/0
+  test_money_dashboard_nullable_fields.py 2/0/0
+  test_monitoring_cache.py 5/0/0
+  test_multi_judge.py 17/0/0
+  test_multi_source_orchestration.py 21/0/0
+  test_nepal_payments.py 7/0/0
+  test_network_substrate_adapter.py 10/0/0
+  test_offer_economics.py 5/0/0
+  test_offer_preparation.py 3/0/0
+  test_openalex_collector.py 23/0/1
+  test_operating_v4.py 102/0/0
+  test_operational_substrate_adapter.py 6/0/0
+  test_opportunity_quality.py 8/0/0
+  test_ops_final.py 3/0/0
+  test_owner_control.py 11/1/0
+  test_payment_intents.py 31/0/0
+  test_payments_api.py 9/0/0
+  test_phase1_provenance_and_identity.py 18/0/0
+  test_prospect_discovery.py 7/0/0
+  test_public_contract.py 2/0/0
+  test_public_epistemics.py 10/0/0
+  test_public_feed.py 11/0/0
+  test_public_network.py 3/0/0
+  test_public_services_substrate_adapter.py 5/0/0
+  test_public_unknowns.py 6/0/0
+  test_public_value_flow.py 71/0/0
+  test_public_write_limits.py 29/0/0
+  test_qwen_worker.py 2/0/0
+  test_rare_signal_engine.py 6/0/0
+  test_recovery_verify.py 6/0/0
+  test_renovation_safety_net.py 6/0/0
+  test_renovation_truth_labels.py 15/0/0
+  test_repair_shop.py 13/0/0
+  test_research_agenda.py 2/0/0
+  test_research_capability_routing.py 4/0/0
+  test_research_evidence_assessment.py 2/0/0
+  test_research_planner.py 9/0/0
+  test_research_question_relation_substrate_adapter.py 8/0/0
+  test_research_task_engine.py 20/0/0
+  test_research_task_event_substrate_adapter.py 6/0/0
+  test_residue.py 8/0/0
+  test_revenue_miner.py 6/0/0
+  test_revenue_source_seed.py 3/0/0
+  test_scenario_engine.py 12/0/0
+  test_scheduled_cycle.py 45/0/0
+  test_scout.py 15/0/0
+  test_signal_request_demand_api.py 13/0/0
+  test_source_clearance_registry.py 8/0/0
+  test_source_intelligence_dedupe.py 2/0/0
+  test_source_reliability.py 2/0/0
+  test_step1_router_auth.py 26/0/0
+  test_step2_scheduled_observation.py 4/0/0
+  test_substrate_api.py 7/0/0
+  test_tool_registry.py 6/0/0
+  test_tool_usefulness.py 11/0/0
+  test_triage_signal_bridge.py 3/0/0
+  test_truth_audit.py 3/0/0
+  test_unknowns_sync.py 8/0/0
+  test_vercel_config_contract.py 10/0/0
+  test_verified_research.py 13/0/0
+  test_wave2_market_signal_domain.py 6/0/0
+  test_web_collector.py 8/0/0
+  test_worker_pipeline.py 3/0/0
+  test_world_bank_collector.py 8/0/0
+  test_world_graph.py 19/0/0
+  test_youtube_intelligence.py 5/0/0
+  ```
+
+- **Backend failures:** `backend/tests/test_execution_boundary.py:87,97,166,
+  178,198,233` (6) — audit events/outcomes are absent because the log reports
+  unregistered `gate_refusal`, `gate_execution`, `blocker_opened`, and
+  `t07_test` event types. `backend/tests/test_integration_dispatcher.py:21,45,
+  78,107,167` (5) — test setup hits a unique `op_hami_runtime_control.id`
+  constraint; line 207 expects `safe_mode_enabled` but receives
+  `owner_inactive`. `backend/tests/test_owner_control.py:79` (1) — SQLite
+  rejects a null `safe_mode_reason`.
+- **Resolution / verified repeat run (18 Nov 2026):** all 13 failures are
+  resolved. The execution-boundary event types are now registered; the
+  idempotency test uses registered `state_changed` instead of synthetic
+  `t07_test`; and gate audit events use event-scoped idempotency keys with
+  savepoint-isolated writes, so a repeated audit key cannot roll back the
+  bounded-retry blocker. Dispatcher tests update the fixture's seeded runtime
+  singleton rather than inserting a duplicate, and the safe-mode test
+  explicitly enables the default-safe state. The owner-control test now uses
+  the valid non-null `initial_default_safe` reason. No authorization or
+  autonomy-gate policy was relaxed.
+  - Focused command:
+    `env -u DATABASE_URL -u FORGEOS_TEST_DATABASE_URL python3.11 -m pytest -q backend/tests/test_execution_boundary.py backend/tests/test_integration_dispatcher.py backend/tests/test_owner_control.py`
+    — **36 passed**.
+  - Full command:
+    `env -u DATABASE_URL -u FORGEOS_TEST_DATABASE_URL python3.11 -m pytest -q backend/tests --junitxml=/tmp/forgeos-backend-junit.xml`
+    — **1,374 passed, 0 failed, 0 errors, 2 skipped** (1,376 total; 18
+    warnings). The JUnit report independently confirms those counts. Tests
+    used in-memory SQLite; no production database was used.
+- **Owner-dependency delta:** the local backend suite is again a usable
+  verification path, and the retry path now preserves its blocker event when
+  audit events repeat. No economic owner action or authorization was removed;
+  no real transaction was observed, so
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+  Exact-head CI had no run at the initial check; no push or deployment was
+  made, so CI verification remains the next dependency.
+- **Frontend:** `npm test` passed its unknown-map and route checks, then ran
+  168 `.mjs` tests (168 passed) and 261 TypeScript tests (260 passed, 1
+  failed): **428/429 passed overall**. Failure:
+  `src/lib/features.test.ts:162` (assertion at line 189) expects every live
+  page to have an entry path; `Service detail (/services/$slug)` was missing.
+  The dedicated content suite
+  `node --experimental-strip-types --test src/lib/content.test.ts` passed
+  **31/31**. `npm run typecheck` passed.
+- **Build:** `env -u DATABASE_URL npm run build` passed client, SSR, and Nitro
+  builds. The deploy-time migrator reported `DATABASE_URL not set — skipping`;
+  no database migration or deployment ran.
+- **Autonomy gate / database:** read-only query of
+  `/Users/nirojpaudyal/Downloads/ForgeOS/storage/forge.db` found the
+  `op_hami_runtime_control` table but **no row**. Under the order's contract,
+  the gate fails closed for this canonical host DB. This does not establish
+  the current remote production row: prior HANDOFF/STATE/QUEUE evidence says
+  Vercel used per-instance `/tmp/forge.db`, and its notes are stale relative
+  to this HEAD. Exact-head CI had no run; the Vercel CLI had no credentials
+  and its interactive login was canceled. Remote production DB identity and
+  row status therefore remain **UNKNOWN / NOT VERIFIED**; do not claim the
+  production gate is ready or create a row.
+- **Safety / delta:** `storage/forge.db` was opened read-only and remained
+  unchanged (same 77,946,880-byte size and 11 Oct 2026 modification time);
+  backend tests used in-memory SQLite and the frontend build skipped
+  migrations. Only this existing ledger was updated; no production data,
+  Vercel variable, key, deployment, commit, or push was changed.
+
+## 2026-11-18 — Nepali SFT 500-example local smoke run
+
+- **Scope / provenance:** on this Apple Silicon Mac (macOS 26.6.2, 24 GiB
+  physical memory), freshly downloaded `Saugatkafley/alpaca-nepali-sft` from
+  Hugging Face and loaded the local parquet: 52,005 rows and columns
+  `instruction`, `input`, `output`, `id`. The dataset card has no explicit
+  license field; rights remain unclear, so this is local research only. No
+  source data was published or redistributed.
+- **Model / toolchain:** `mlx-community/Qwen3-4B-4bit` (Apache-2.0 model card);
+  Python 3.11.16, `mlx-lm` 0.32.2, `mlx` 0.32.4, and `datasets` 5.2.0.
+  Public Hugging Face downloads were followed by offline-only training and
+  generation (`HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`); no cloud compute,
+  paid tier, or external inference service was used.
+- **Data preparation:** preserved the first 500 source rows in MLX-LM chat
+  JSONL; row ID 284 has an empty output and was retained rather than silently
+  dropped. Rows 500–502 were reserved for held-out generation. Their maximum
+  training sequence was 2,058 tokens; `max_seq_length=2,112` avoided
+  truncation.
+- **Training:** one epoch, exactly 250 updates over 500 examples, batch size 2,
+  LoRA rank 8 / scale 20 / dropout 0, 16 layers, Adam at `1e-5`, prompt masking,
+  gradient checkpointing, seed 23. No validation set was supplied; MLX-LM
+  warned and continued without validation. Loss at 25-step reports:
+  `1.265390, 0.915650, 0.835213, 0.916378, 0.864076, 0.887129, 0.767718,
+  0.764512, 0.850125, 0.809512`. Loss fell overall but was non-monotonic.
+- **Time / memory:** the instrumented full run took 405 seconds (the preceding
+  identical, uninstrumented run took 421 seconds). MLX peak allocation was
+  6.589 GB (6.14 GiB); macOS `/usr/bin/time -l` reported a 10,112,076,776-byte
+  peak memory footprint (about 9.42 GiB) and 2,783,068,160-byte maximum
+  resident set. The measured footprint fit within 24 GiB. Adapter:
+  `/Users/nirojpaudyal/Downloads/hami-nepali-sft/adapters/qwen3-4b-nepali-sft-smoke-500`.
+- **Held-out outputs, verbatim** (source rows 500–502; prompts omitted to avoid
+  reproducing dataset content):
+
+  500:
+  ```text
+  रोमियो र जुलिएटले रोमियोको चरित्रलाई रोमेले रोमेले रोमेले रोमेले रोमेले रोमेले रोमेले रोमेले रोमेले रोमेले रोमेले रोमेले रोमेले र
+  ```
+
+  501:
+  ```text
+  अमेरिका विश्वको दोस्रो ठूलो देश हो।
+  ```
+
+  502:
+  ```text
+  - चीनी
+  - तेल
+  - चिप्स
+  - चिप्स
+  - चिप्स
+  ```
+- **Verdict / delta:** the local download → model load → LoRA training → adapter
+  load → generation path works end to end on this Mac, with measured peak
+  footprint below available RAM. This proves execution, not response quality:
+  outputs include repetition and should not be treated as validated Nepali
+  capability. The full 52,000-example run was not started. Routine operator
+  work still required is deciding whether to authorize further training and
+  reviewing its evidence; this smoke run removed the uncertainty about local
+  toolchain and hardware feasibility. A held-out comparison is now recorded at
+  the top of this ledger and did not support the adapter over the base on its
+  20-row model-assisted rubric. Dataset usage rights remain unresolved and
+  must be addressed before any broader run.
+  No real transaction occurred; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is
+  **NOT MEASURABLE**. No commit, push, deployment, or publication was made.
+
+## 2026-11-18 — A6 history scan — triaged verdict
+
+- **Scope / provenance:** ran `zsh /tmp/a6-scan.sh` against `main` at
+  `1ea806f801a8` (2,457 commits reachable across 332 visible refs). The scan
+  was rerun at 2026-11-18T09:25:11Z after the earlier artifacts were absent;
+  it regenerated `/tmp/a6-full-diff.txt` (13,683,312 lines) and
+  `/tmp/a6-scan-results.txt`. Git reported exhaustive rename detection was
+  skipped for the filename inventory; content-pattern scanning traversed the
+  full history.
+- **Scanner-output lesson:** the script says its sample values are masked, but
+  the sample pipeline only truncates matching lines and does not redact them.
+  The regenerated raw diff/results are retained locally per this rerun order
+  and must be treated as sensitive. Redacted sample locations and excerpts
+  are in `/tmp/a6-triage-samples.txt`; future runs must redact before
+  displaying or sharing output.
+- **High-specific credential signatures:** AWS access key 0; GitHub classic
+  token 0; GitHub fine-grained token 0; Slack token 0; private-key header 0;
+  JWT-like token 0; OpenAI-like key 0; Google API key 0. The private-key
+  result is corrected: the scan script's original grep failed because its
+  leading-dash pattern was parsed as an option; rerunning the exact pattern
+  with `grep -E -c -e` against the regenerated diff returned 0. A broader PEM
+  private-key-header pattern also returned 0.
+- **Broad assignment/token heuristics:** password assignment 1,569 matching
+  lines across 614 commit/file pairs; API-key assignment 213 across 132
+  pairs; secret assignment 399 across 249 pairs; Bearer token 24 across 24
+  pairs. First-10 sample triage: password 10/10 false positives (test/error
+  text and browser autocomplete); API-key 10/10 false positives
+  (configuration/API parameter code and tests); secret 10/10 false positives
+  (variable/config handling, descriptive policy text, and tests); Bearer
+  10/10 false positives (test fixtures). The remaining 1,559, 203, 389, and
+  14 matching lines respectively were not individually reviewed. Counts are
+  matching lines in historical diffs, not distinct credentials. No actual
+  credential was confirmed in the samples; this is not an exhaustive
+  clearance of the remaining hits. Redacted sample paths, source line
+  numbers, commit IDs, and excerpts are in `/tmp/a6-triage-samples.txt`. The
+  value-free location index is `/tmp/a6-match-locations.txt` (1,019
+  pattern/commit/file rows).
+- **Email-like PII:** 293 case-sensitive unique email-like strings (289
+  case-insensitive), 146 raw domain-like suffixes, and 501 raw `@gmail.com`
+  hits. First-10 triage: 9 GitHub no-reply author metadata matches and one
+  test/source match; the first 10 Gmail hits repeat one qualification-test
+  fixture across historical commits. Source-only samples include test/example
+  addresses, an internal `.local` contact, and an organization contact
+  (`fao.org`); no personal mailbox ownership was verified. The raw expression
+  also matches code/decorator syntax. After excluding obvious code suffixes
+  using a common public-TLD filter, the 78 suffixes were: `a0--0.ac`,
+  `abou-samra.fr`, `acm.org`, `active-4.com`, `alexcrichton.com`, `aol.com`,
+  `async.com.br`, `b.com`, `baillet.name`, `bar.com`, `bat.com`,
+  `company.com`, `countzero.co`, `covance.com`, `creutzig.de`, `cs.uni-sb.de`,
+  `csail.mit.edu`, `davidhewitt.io`, `debian.org`, `domain.com`, `email.com`,
+  `example.com`, `example.gov.np`, `example.net`, `example.org`, `fao.org`,
+  `fastmail.fm`, `foo.com`, `github.com`, `gmail.com`, `grayvines.com`,
+  `grinchcentral.com`, `gumleaf.org`, `gustaebel.de`, `host.com`, `initd.org`,
+  `ionrock.org`, `jaraco.com`, `kennethreitz.com`, `kennethreitz.org`,
+  `m4x.org`, `mac.com`, `magic.io`, `mail.com`, `merlinux.eu`, `mozilla.com`,
+  `muelcolvin.com`, `nepaltms.com`, `nextday.fi`, `ofek.dev`, `ox.cx`,
+  `palletsprojects.com`, `passcod.name`, `pobox.com`, `pradet.me`,
+  `proton.me`, `pydantic.dev`, `python.org`, `resolvent.net`,
+  `ronnypfannschmidt.de`, `sanipoperations.com.np`, `saurabh-kumar.com`,
+  `shazow.net`, `ski.org`, `sqlite.org`, `stufft.io`, `swagger.io`,
+  `t-online.de`, `timhatch.com`, `tomchristie.com`, `traviswebb.com`,
+  `users.noreply.github.com`, `vctrn.dev`, `www.example.com`,
+  `x-force.example.com`, `yahoo.co.uk`, `zhd.dev`, `zzzcomputing.com`.
+  This includes reserved/example values and third-party author metadata;
+  domain matches do not establish current ownership or identify a person.
+  The first-10 samples contain no confirmed personal mailbox.
+- **Nepal phone-like PII:** 1,851 matching lines, 2,347 occurrences, and
+  155 unique matched strings. Pattern matches alone do not verify that any
+  number belongs to a real person; ownership was not established. The first
+  10 samples were 6 SHA/URL substrings in continuity documents and 4
+  test/example fixtures; none was a phone number.
+- **Sensitive-filename heuristic:** `.env.example`,
+  `backend/.env.example`, `.github/workflows/secrets.yml`,
+  `backend/.deps/certifi/cacert.pem`,
+  `backend/.deps/packaging/__pycache__/_tokenizer.cpython-311.pyc`,
+  `backend/.deps/packaging/_tokenizer.py`,
+  `backend/.deps/pygments/__pycache__/token.cpython-311.pyc`,
+  `backend/.deps/pygments/token.py`,
+  `backend/.deps/yaml/__pycache__/tokens.cpython-311.pyc`,
+  `backend/.deps/yaml/tokens.py`,
+  `backend/venv/lib/python3.11/site-packages/certifi/cacert.pem`,
+  `backend/venv/lib/python3.11/site-packages/packaging/__pycache__/_tokenizer.cpython-311.pyc`,
+  `backend/venv/lib/python3.11/site-packages/packaging/_tokenizer.py`,
+  `backend/venv/lib/python3.11/site-packages/pip/_vendor/certifi/cacert.pem`,
+  `backend/venv/lib/python3.11/site-packages/pip/_vendor/packaging/__pycache__/_tokenizer.cpython-311.pyc`,
+  `backend/venv/lib/python3.11/site-packages/pip/_vendor/packaging/_tokenizer.py`,
+  `backend/venv/lib/python3.11/site-packages/pip/_vendor/pygments/__pycache__/token.cpython-311.pyc`,
+  `backend/venv/lib/python3.11/site-packages/pip/_vendor/pygments/token.py`,
+  `backend/venv/lib/python3.11/site-packages/pygments/__pycache__/token.cpython-311.pyc`,
+  `backend/venv/lib/python3.11/site-packages/pygments/token.py`,
+  `backend/venv/lib/python3.11/site-packages/setuptools/_vendor/packaging/__pycache__/_tokenizer.cpython-311.pyc`,
+  `backend/venv/lib/python3.11/site-packages/setuptools/_vendor/packaging/_tokenizer.py`,
+  `backend/venv/lib/python3.11/site-packages/yaml/__pycache__/tokens.cpython-311.pyc`,
+  `backend/venv/lib/python3.11/site-packages/yaml/tokens.py`. Most matches
+  are vendored dependency/cache names or public CA bundles, not private keys.
+  The only `.env` paths found in history and in the current tree are the two
+  `.env.example` templates; no bare `.env` file was found.
+- **Verdict / delta:** **NOT CLEAN (not certifiable).** The corrected private
+  key count is 0, and all sampled credential/phone hits were false positives;
+  however, broad-pattern residuals remain unreviewed and historical
+  email-like/contact metadata is present. No secret or real phone was
+  confirmed, but the evidence does not justify a clean-history claim. A6
+  moved from unscanned to measured with first-sample triage; complete
+  value-safe review of the remaining matches is still required. No history
+  rewrite, commit, push, deployment, or other repository-file change was made.
+
+## 2026-11-18 — Hami AI permanence blocked on Cloudflare owner access
+
+- **Blocker: YES.** A named Cloudflare Tunnel requires a Cloudflare account.
+  Only Niroj can create or authenticate the required account for this setup.
+  This Mac has no Cloudflare origin certificate (`~/.cloudflared/cert.pem`)
+  or tunnel configuration. The single failed tool call was `cloudflared
+  tunnel list`, which failed because no origin certificate was configured.
+- **Current status:** no named tunnel was created, no persistent tunnel URL
+  exists, and no Hami/cloudflared launchd service was created. The gateway
+  still runs locally at `127.0.0.1:11435`; unauthenticated `/api/tags` returns
+  HTTP 401. A suitable Cloudflare DNS zone/hostname has not been verified.
+- **Stop point:** waiting for Niroj to create/authenticate the Cloudflare
+  account and provide an eligible zone/hostname. No key or Vercel variable
+  was changed, no money was spent, and no commit, push, or deployment occurred.
+
+## 2026-11-18 — M7-H attempt 12: split-process harness-limit probe
+
+- **Change:** kept the M7-H proof path in `services/hami-media/main.go` and
+  started the existing executable as a separate SFU child. Publisher/viewer
+  SDP, readiness, stats, cleanup, and shutdown use an authenticated loopback
+  HTTP listener; the parent remains the load harness. Both processes now label
+  heartbeat/runtime samples by role, while publisher-send and SFU-receive
+  timestamps identify the media direction. Graceful child shutdown treats a
+  listener already closed by `http.Server.Shutdown` as expected. Protected
+  M7-H settings were unchanged.
+- **Validation:** Go 1.27.4 (`darwin/arm64`); `gofmt` clean and
+  `cd services/hami-media && go vet ./...` passed. The flagged build passed:
+  `go build -ldflags "-X main.routerSocketWriteMode=enabled -X main.clientSocketReadMode=enabled -X main.clientSocketReadBufferSize=4194304" -o /tmp/hami-media-m7h-attempt12 .`.
+  The binary passed the required 19/19 marker check; SHA-256:
+  `ca4227f3286655ced001ac4191ac54a526212bdb6ab9f790d8ab890b522f7214`.
+- **Attempt-11 repeat first:** the unchanged binary
+  `/tmp/hami-media-m7h-attempt11` (SHA-256
+  `731ad24f7196fdc7442678658eb59e51c1442ef4964ca5fda9419969b352ab2a`)
+  exited 0, but did not reproduce the prior p95 outcome: median p95/p99 were
+  108.612/895.449 ms, with 1,181/3,000 p95 passes and 0/3,000 p99 passes.
+  Evidence is in `/tmp/hami-media-m7h-attempt11-repeat-run.json` and
+  `/tmp/m7h-attempt11-repeat-latency-analysis.txt`. Treat the prior
+  attempt-11 v2 run as variable, not as a stable baseline.
+- **Split local proof:** `/tmp/hami-media-m7h-attempt12` ran
+  `-mode m7h -duration 65s -video-file /tmp/test-video.h264`; `RUN_EXIT=0`.
+  All 3,000 publishers and viewers connected, each viewer received only its
+  requested track, and all 3,000 tracks received the expected upstream NACK,
+  PLI, and FIR. The measured media duration was 66,020 ms; 971,505 frames were
+  sent and matched (321–324 per publisher), with zero pending/unmatched frames,
+  RTP queue drops, write errors, or forwarding errors. Unauthorized access was
+  denied and cleanup was verified.
+- **Latency gate:** all 3,000 viewers passed p95 <=100 ms (median per-viewer
+  p95 11.201 ms; maximum 30.766 ms) and frame/duration gates. Only 115/3,000
+  passed p99 <=150 ms (median per-viewer p99 294.167 ms); therefore
+  `measurement_pass=false`. The analyzer found 21,790/971,505 frames above
+  100 ms (2.2%); 21,439 occurred in the last capture-time third, and 91.3% of
+  slow frames were in multi-frame runs. Event gaps over 400 ms occurred 8,212
+  times across 2,999 viewers; the maximum per-viewer gap was 1,200 ms.
+- **Process evidence / limits:** role-labelled samples show publisher sends
+  had no >500 ms stale interval and no tick over 1 s. The separate SFU process
+  still logged scheduler max upper bound 939.524 ms and a heartbeat late by
+  262.541 ms; harness maxima were 335.544 ms scheduler and 159.722 ms
+  heartbeat. Both processes ran on the same Mac, so this does not isolate
+  host-wide contention. Runtime `cpuCores` remained implausible at times.
+  `gctrace` was merged across processes and cannot attribute its 76 events
+  (maximum summed stop-the-world phases 0.895 ms) to a role. Do not claim the
+  split fixed the p99 tail or established a single cause.
+- **Evidence:** result JSON
+  `/tmp/hami-media-m7h-attempt12-r3-run.json`, diagnostics
+  `/tmp/hami-media-m7h-attempt12-r3-run.log`, GC trace
+  `/tmp/hami-media-m7h-attempt12-r3-gctrace.log`, parent process samples
+  `/tmp/m7h-attempt12-r3-process-samples.txt`, and Python 3.11 latency report
+  `/tmp/m7h-attempt12-r3-latency-analysis.txt`.
+- **Delta / next action:** the hypothesis that one shared process alone
+  explains the latency tail is not supported as a sufficient explanation:
+  process separation retained the p99 failure, but same-host contention and
+  SFU-side stalls remain unresolved. Attempt 12 is complete; do not run
+  Attempt 13 or claim a 1,000/2,000-viewer ceiling without fresh evidence. No
+  owner action or economic dependency was removed, no real transaction
+  occurred, and `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains
+  **NOT MEASURABLE**.
+
+## 2026-11-18 — M7-H PARK: verified 3,000-pair ceiling
+
+- **Decision:** Attempt 12 is complete. Park M7-H at the measured 3,000
+  publishers + 3,000 viewers, one room, 5 fps, 60 s media-window rung. Do not
+  run Attempt 13.
+- **Confirmed p95 result:** Attempt 12 r3 media duration was 66,020 ms.
+  All 3,000/3,000 viewers passed p95 <=100 ms; median p95 was 11.201 ms and
+  the maximum was 30.766 ms. Independent r2 also passed p95 for 3,000/3,000,
+  with a 22.0 ms median. The split-process implementation fixes the p95 gate
+  across both runs.
+- **Only remaining latency failure:** r3 median p99 was 294.167 ms, with
+  115/3,000 passing p99 <=150 ms. In r2, median p99 was 299.1 ms and 49/3,000
+  passed. The p99 guardrail is not met.
+- **Delivery and health:** all viewers received 321–324 frames; sent and
+  matched were both 971,505, with zero unmatched or pending frames, queue
+  drops, and write errors. NACK/PLI/FIR completed for 3,000/3,000 tracks.
+  All PCs were connected; `neverConnected=0` and `deadWrites=0`.
+- **Kernel UDP / open flag:** r3 host counters: received +6,151,676 =
+  delivered +6,148,688 + no-socket +2,987 + full-buffer +0 +
+  broadcast/multicast undelivered +1 (99.9514% delivered). No-socket drops
+  were about 3,000 on each split run (r1 +3,042; r2 +2,972; r3 +2,987),
+  versus +4/+2 on the non-split v2/repeat runs. This split-specific flag is
+  likely STUN/ICE traffic after socket close; leave it open and do not chase
+  it in M7-H.
+- **Honest ceiling:** at 3,000/3,000, delivery, frames, feedback, and p95
+  pass, while p99 <=150 ms fails (median approximately 294–299 ms). The
+  9-streamer / 4,000-viewer target at 100 ms latency is not proven. This is a
+  TEST-harness ceiling on one laptop, not a REAL-world limit. No owner action
+  or economic dependency was removed; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION`
+  remains **NOT MEASURABLE**.
+
+## 2026-11-18 — M7-H attempt 11 v2: process-pause probe
+
+- **Change:** replaced the superseded publisher-tick/packet-correlation probe
+  with a 10 ms heartbeat, per-second Go scheduler/GC metrics, publisher-side
+  send timestamps, and per-second actual-PID sampling. Existing viewer
+  `ReadRTP`/queue sampling and successful-path whole-run socket aggregates
+  remain. Protected M7-H settings were unchanged.
+- **Validation:** Go 1.27.4 (`darwin/arm64`); `gofmt` clean; `go vet ./...`
+  passed; linker-flagged build passed with the three required values; 19/19
+  binary markers verified. Build output and SHA-256 are in
+  `/tmp/build-m7h-attempt11-v2-script.log`.
+- **Local proof:** `/tmp/hami-media-m7h-attempt11` ran once with
+  `-mode m7h -duration 65s -video-file /tmp/test-video.h264`; wrapper
+  `RUN_EXIT=0`, media duration 69,632 ms, and all 3,000 publishers/viewers
+  connected. All viewers received only their authorized track; 971,174 frames
+  were sent and matched, with zero pending frames, RTP queue drops, or RTP
+  write errors. The measurement gate **failed**: 2,875/3,000 passed p95,
+  336/3,000 passed p99, and 336/3,000 passed overall. Per-viewer p95 median
+  was 38.241 ms; p99 median was 771.723 ms. This is local TEST evidence only.
+- **Decision rule:** the **HARNESS LIMIT** branch fired because publishers also
+  stalled; the measurements show that stall coincided with a process-wide
+  scheduler pause. At +47.660 s,
+  heartbeat lateness was 975.847 ms; the +47.704 s runtime sample reported
+  scheduler p95/max upper bounds of 83.886/939.524 ms, while publisher sends
+  reported 869 publishers stale over 500 ms and 2,770 ticks over 50 ms. At
+  +48.005 s, 643 publisher ticks exceeded 1 s. The same +45 s latency bin
+  contained 14,842 slow frames. GC also ran in this interval, but measured
+  stop-the-world pause was at most 1.573 ms in runtime metrics (1.5 ms in
+  `gctrace`); the logs do not establish GC as the multi-second cause. The
+  separate viewer tail at +60/+65 s remains visible in the analyzer.
+- **Evidence limits:** runtime `cpuCores` deltas were mostly 0.000 with
+  occasional implausible spikes, so they are not a reliable CPU verdict. The
+  one-second `ps` samples did use the actual run PID (89003), but its `%CPU`
+  column is not an interval CPU delta. The sample recorded 222,115 peak Go
+  goroutines; see the full probe output in
+  `/tmp/hami-media-m7h-attempt11-v2-run.log`, separated GC trace in
+  `/tmp/hami-media-m7h-attempt11-v2-gctrace.log`, process samples in
+  `/tmp/m7h-attempt11-v2-process-samples.txt`, and Python 3.11 analysis in
+  `/tmp/m7h-attempt11-v2-latency-analysis.txt`. Host UDP counters changed by
+  +6,270,193 received = +6,270,189 delivered +4 no-socket drops +0 full-buffer
+  drops; these are host-wide, not process-attributed.
+- **Delta / next test:** evidence now localizes a near-one-second scheduler
+  delay that coincides with publisher and viewer stalls, but does not yet
+  distinguish the single-process harness ceiling from the SFU path. Attempt 12
+  should split the harness and SFU into separate local processes; do not run an
+  Attempt 13. No owner action or economic dependency was removed, no real
+  transaction occurred, and `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION`
+  remains **NOT MEASURABLE**.
+
+## 2026-11-18 — M7-H attempt 11: locating the receive stall
+
+- **Result:** measurement-only timing in `services/hami-media/main.go`; `go test ./...`, `go vet ./...`, and the linker-flagged build passed. Local run exited 0 but `measurement_pass=false`: p95/p99 median 2,020/4,065 ms, 1,761/3,000 viewers reached 300 frames, 12,371 queue drops, 9,806 pending; feedback NACK/PLI/FIR forwarded for 3,000/3,000 each (30,953 NACKs and 90,086 retransmits observed). In the delayed 50.553–66.249 s sample, enqueue→read p95/max was 5,260/10,794 ms (55,562 >1 s), RTP queue maxed at 64 with 12 full, and publisher-tick→forwardTrack p95/max was 4,569/14,142 ms (48,257 >1 s); GC max pause was 2.646 ms. Thus delay occurs both before `forwardTrack` and after enqueue, with queue backlog; GC pause is not the 5 s cause, but the delayed 15.696 s sampling interval prevents finer temporal localization. Host UDP reconciled exactly: 7,100,561 received = 7,100,526 delivered +19 no-socket +16 full-buffer drops (99.999507% delivered); output +7,091,790. Evidence: `/tmp/hami-media-m7h-attempt11-run.{json,log}`, `/tmp/m7h-attempt11-latency-analysis.txt`, `/tmp/hami-media-m7h-attempt11-latency-evidence/`; no real transaction or owner action removed, `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
+## 2026-11-18 — Hami agent build and health verification
+
+- **Evidence:** `npm run typecheck` and `npm run build` passed; the build skipped
+  database migrations because `DATABASE_URL` was unset. The frontend content
+  suite passed 31/31 after correcting the static sitemap and robots sitemap
+  URL, which still pointed at the deployment-disabled `haminp.vercel.app`.
+  Backend health tests passed 10/10 with Python 3.11; the repository venv's
+  Python 3.9 cannot evaluate existing `str | None` annotations. A local
+  `/health` smoke check confirmed the additive `commit` field's Vercel > HAMI >
+  GIT precedence and null fallback.
+- **Hami delta:** removes the stale crawler endpoint from the sitemap and
+  robots metadata; no agent or backend behavior beyond the already-present
+  health field was changed. This does not publish or deploy the canonical host.
+- **Remaining owner action / blocker:** deployment remains owner-authorized and
+  was explicitly not performed. No real transaction occurred; the next
+  removable dependency is owner approval of a deployment, if desired.
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+
+## 2026-11-18 — M7-H attempt 10 Phase 2: viewer read/queue telemetry
+
+- **Change:** added M7-H-only timing around viewer `TrackRemote.ReadRTP()` and
+  extended the existing five-second candidate-pair sampler with read-duration
+  buckets plus sampled per-subscription RTP/NACK queue-depth percentiles.
+  Forwarding, queue capacities, pacing, and all protected M7 settings were
+  unchanged. The only code path changed relative to the verified Attempt 9
+  source is `services/hami-media/main.go`.
+- **Validation:** Go 1.27.4 (`darwin/arm64`); `gofmt -d
+  services/hami-media/main.go` was clean; `cd services/hami-media && go vet
+  ./...` passed; the linker-flagged Attempt 10 build exited 0 and produced
+  `/tmp/hami-media-m7h-attempt10`. The initial vet invocation from the repo
+  root was outside the module and failed; rerunning from the module directory
+  passed.
+- **Local proof:** `/tmp/hami-media-m7h-attempt10` ran with
+  `-mode m7h -duration 65s -video-file /tmp/test-video.h264`; wrapper
+  `RUN_EXIT=0`, media duration 66,034 ms, and all 3,000 publishers/viewers
+  connected. All viewers received only their authorized track, all met frame
+  and duration gates, 959,936 frames were sent and matched, and pending frames,
+  unmatched frames, RTP queue drops, and RTP write errors were all zero.
+  Nevertheless `measurement_pass=false`: **0/3,000 viewers passed p95 or p99**.
+  Per-viewer p95 latency had a 1.034 s median (min 580 ms, max 2.079 s); p99
+  median was 1.819 s. This remains a failed TEST proof, not a customer outcome.
+- **Receive evidence:** 166,549/959,936 frames (17.4%) exceeded 100 ms; the
+  slow fraction was 1.9%, 12.2%, and 38.3% across the capture-time thirds.
+  Compared with Attempt 9, the overall slow fraction (31.1% to 17.4%) and
+  last-third slow fraction (86.0% to 38.3%) were lower, but forwarding was
+  unchanged; treat this as run-to-run evidence, not a causal fix.
+  There were 32,082 event gaps over 400 ms; the maximum per-viewer gap was
+  5,464 ms. In the 56.6 s read sample, 71 `ReadRTP` calls took over 5 s and
+  5,086 took 1–5 s; at 60.1 s, 10 took over 5 s and 1,963 took 1–5 s. The
+  maximum sampled read duration was 5,343 ms.
+- **Queue evidence and limit:** at the 56.6 s snapshot, RTP queue depth was
+  p99=9/max=13 across 3,000 subscriptions, with 90 non-empty and none full;
+  other samples were at most 3 deep, and sampled NACK queues stayed empty.
+  These five-second point samples show no sustained/full queue backlog but
+  cannot exclude short-lived spikes between samples. Together with the long
+  `ReadRTP` waits, this supports a late receive-path stall without identifying
+  where packets stop arriving.
+- **Transport reconciliation:** host-wide UDP counters changed by
+  +6,133,797 received = +6,133,744 delivered +53 no-socket drops +0 full-buffer
+  drops; datagram output increased by 6,097,140. The two 30-second intervals
+  were +2,205,152 received = +2,205,116 delivered +36 no-socket, then
+  +2,625,437 = +2,625,422 +15; both had zero full-buffer drops. The remaining
+  interval to the post-run snapshot was +1,303,208 = +1,303,206 +2, also with
+  zero full-buffer drops. These are host-wide counters, not process-attributed.
+  The run did not emit `whole-run socket aggregates`: the existing
+  `logRouterFeedbackDiagnosis` path only emits them on a feedback failure, but
+  feedback completed here. App-side socket counts therefore cannot be joined
+  directly to the kernel deltas in this run.
+- **Operational caveat:** the supplemental `ps` sampler started before its
+  run PID was assigned, so it logged invalid-PID errors and produced no CPU/RSS
+  samples. Do not infer resource measurements from it; a future sampler must
+  start with the actual run PID. The staged offline analyzer also retained an
+  Attempt 9 title when given Attempt 10 inputs; the saved Attempt 10 report
+  header was corrected after verifying its evidence path and totals. Future
+  reports must validate both their input identity and generated label.
+- **Delta / next test:** this measurement-only increment strengthened the
+  receive-stall evidence and showed the sampled queues were shallow, but did
+  not fix the latency gate or establish causality. Next, correlate existing
+  per-subscription enqueue/write counters with `ReadRTP` windows and emit the
+  existing whole-run socket aggregate on the successful result path. The
+  change removes no owner action; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION`
+  remains **NOT MEASURABLE**.
+
+## 2026-11-18 — M7-H attempt 10 Phase 1: offline latency-tail attribution
+
+- **Evidence preserved first:** copied all 6,000 attempt-9 latency files from
+  the original temp directory to
+  `/tmp/hami-media-m7h-attempt9-latency-evidence/`; source and copy each
+  contain 6,000 files (3,000 JSONL samples and 3,000 summaries).
+- **Analyzer compatibility:** the staged script at
+  `/tmp/analyze-m7h-attempt9-latency.py` failed under the Mac's Python 3.9.6:
+  `datetime.fromisoformat` rejects the run's five-digit fractional seconds.
+  Running the same read-only script with the installed Python 3.11 succeeded
+  on all 3,000 JSONL files. Its VM counterpart is recorded by the order as
+  `~/workspace/goals/hami-livekit-capacity-proof/hidden_files/analyze-m7h-attempt9-latency.py`.
+  Full output is saved at `/tmp/m7h-attempt9-latency-analysis.txt` and
+  reproduced verbatim below.
+- **Decision:** rule (a) applies. Slow frames are overwhelmingly in runs
+  (98.7% of slow frames), the last capture-time third has 86.0% slow frames
+  versus 7.1% and 7.6% in the first two thirds, and event-gap stalls occur
+  across all 3,000 subscribers. This supports a late-run receive/forward-path
+  stall; these records have no retransmission marker and do not identify
+  whether `ReadRTP`, subscriber queueing, or router backpressure is causal.
+  The next test should instrument read timing and queue depth over time,
+  rather than change forwarding behavior speculatively.
+- **Kernel UDP delta:** from the attempt-9 before/after snapshots, host-wide
+  received +7,405,250 = delivered +7,398,185 + no-socket drops +6,705 +
+  full-buffer drops +360; output +7,353,050. The four sampled intervals
+  reconcile; these OS counters are not process-attributable.
+- **Hami improvement / owner action:** this offline analysis strengthens the
+  claim from "latency failed" to a measured late-run stall pattern and exposes
+  a 18,076-frame gap between `latency_pending_frames` and sent-minus-matched
+  counts. It is local TEST evidence only; no external action or economic
+  owner dependency was removed. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION`
+  remains **NOT MEASURABLE**.
+
+```text
+M7-H attempt-9 latency-tail analysis (offline, evidence dir: /tmp/hami-media-m7h-attempt9-latency-evidence)
+files: 3000 subscriber JSONL files
+subscribers analysed: 3000 (unreadable/empty: 0)
+total matched frames: 918903
+
+== (1) global latency histogram ==
+  <1ms         553483   60.2%
+  1-10ms        47956    5.2%
+  10-100ms      31784    3.5%
+  100-500ms     35972    3.9%
+  500ms-1s      28280    3.1%
+  1-2s          68898    7.5%
+  2-5s         108328   11.8%
+  >5s           44202    4.8%
+  frames >100ms: 285680 (31.1% of all frames)
+
+== (2) per-subscriber slow fraction (>100ms) ==
+  min 0.114  p10 0.258  median 0.321  p90 0.339  max 0.358
+  subscribers slow-frac >50%: 0; 20-50%: 2966; 5-20%: 34; <5%: 0
+
+== (3) slow-run structure (consecutive slow frames, capture order) ==
+  slow runs total: 18256; isolated singles (len 1): 3749 (20.5% of runs)
+  run-length buckets: 1:3749  2-3:6843  4-8:4165  9-16:484  >16:3015
+  median run length: 2; max run length: 98
+  slow frames inside runs >=2: 281931 / 285680 (98.7%) -- high % means STALLS, low % means isolated retransmits
+
+== (4) slow fraction by capture-time third (startup vs steady vs end) ==
+  first third   slow 22830 / 321865 (7.1%)
+  middle third  slow 24211 / 319428 (7.6%)
+  last third    slow 238639 / 277610 (86.0%)
+
+== (5) receive-loop stalls (consecutive event gaps >400ms; capture spacing is 200ms) ==
+  stall events total: 46279 across 3000 subscribers; stalled time total: 93151892 ms
+  max event gap per subscriber: median 8857 ms, p90 15061 ms, max 32848 ms
+
+== (6) missing frames (frame_id gaps) + pending reconciliation ==
+  frames never recorded (frame_id gaps): 5010
+  run JSON: sent=933697 matched(sum)=918903 pending=32870
+  sent - matched = 14794; pending - (sent-matched) = 18076
+  (pending counts captures never consumed; if the gap is large and uniform,
+   captures are being recorded for frames the viewer never sees -- check whether
+   Capture() is called for frames dropped before send, or after the recorder stops.)
+
+== (7) slow frames by wall-clock 5s bin (clustering check) ==
+  +  0s  3553 slow frames
+  +  5s  4982 slow frames
+  + 10s  336 slow frames
+  + 15s  5110 slow frames
+  + 20s  10312 slow frames
+  + 25s  22 slow frames
+  + 30s  17408 slow frames
+  + 35s  4753 slow frames
+  + 40s  651 slow frames
+  + 45s  4195 slow frames
+  + 50s  57906 slow frames
+  + 55s  68607 slow frames
+  + 60s  72102 slow frames
+  + 65s  35742 slow frames
+  + 70s  1 slow frames
+```
+
+## 2026-11-18 — M7-H attempt 9: 3,000 publishers / 3,000 viewers
+
+- **Result / current blocker:** the local 65-second M7-H run completed its
+  setup, media, feedback, and cleanup paths, but `measurement_pass=false`.
+  The runner, 3,000-publisher cap, 16,384 feedback-event buffer, and Attempt 9
+  injection worker pool were already present in the dirty live source when
+  this run was verified; no duplicate implementation was added. The existing
+  `runLocalM7HProof` in `services/hami-media/main.go` creates 3,000 tracks
+  with one selectively subscribed viewer per track.
+- **Injection result:** all 3,000 viewers received NACK/PLI/FIR injection;
+  all 3,000 viewer feedback records and publisher track records show the
+  corresponding forwarding. The bounded 32-worker pool completed dispatch in
+  15,780 ms, with 383 ms aggregate `WriteRTCP` time, 107 ms maximum single
+  call, three calls over 50 ms, and no skipped failed/disconnected PCs. This
+  resolves the previous serial-injection stall (Attempt 8 accumulated
+  228,036 ms in 3,000 send calls); it did not resolve media quality at this
+  scale.
+- **Full-run viewer evidence (all 3,000 viewers):** 2,300 met the 300-frame
+  minimum, 2,998 met the 60-second minimum, all had zero unmatched samples,
+  and all received only their requested track. 1,010 viewers were
+  `disconnected` at result capture; 37 of 3,000 publishers were disconnected.
+  Latency distribution below is the distribution of each viewer's own summary
+  percentile, not a sampled subset of viewers:
+
+  | Per-viewer measure | Minimum | Median | p95 across viewers | p99 across viewers | Maximum |
+  | --- | ---: | ---: | ---: | ---: | ---: |
+  | Frames | 237 | 311 | 320 | 323 | 327 |
+  | Receive p50 | 0.111 ms | 0.227 ms | 0.611 ms | 0.741 ms | 0.875 ms |
+  | Receive p95 | 665.998 ms | 4,523.912 ms | 13,769.594 ms | 16,624.574 ms | 20,532.406 ms |
+  | Receive p99 | 1,958.168 ms | 7,738.875 ms | 17,291.629 ms | 19,252.547 ms | 22,982.553 ms |
+
+  No viewer passed the 100 ms p95 or 150 ms p99 latency gate; 700 viewers
+  fell below 300 frames. Aggregate unmatched samples were 0, but 32,870
+  latency frames remained pending. The minimum per-viewer p95 was already
+  666 ms, so the latency failure is not confined to an isolated outlier.
+- **RTP and feedback counters:** 933,697 source frames were sent; viewer
+  results recorded 1,855,470 RTP packets. RTP queue drops were 9,151 and RTP
+  write errors were 0. Across viewers, NACK received/retransmitted/duplicates
+  were 18,790 / 41,387 / 326,430; queue-full drops were 0 and stale drops
+  were 496. NACK, PLI, and FIR each forwarded upstream on all 3,000 tracks;
+  PLI and FIR were received on all 3,000 viewers.
+- **Kernel UDP context:** host-wide counters from
+  `/tmp/udp-before-m7h-attempt9.txt` to
+  `/tmp/udp-after-m7h-attempt9.txt` changed by received +7,405,250, delivered
+  +7,398,185, no-socket drops +6,705, full-buffer drops +360, and output
+  +7,353,050. Received equals delivered plus the two drop totals. The four
+  intervals had no-socket deltas 2 / 1 / 0 / 6,702 and full-buffer deltas
+  6 / 0 / 354 / 0. These are host-wide counters, not process-attributable.
+  App attribution reported zero dead writes through the wait-end snapshot;
+  teardown recorded 11,063 dead writes. Do not equate that teardown count to
+  the kernel interval totals.
+- **Resource-measurement gap:** this run's wrapper sampled UDP every 30
+  seconds, but did not sample process CPU, RSS, or Go goroutines. Their peaks
+  are UNKNOWN for this run and cannot be reconstructed from the result JSON.
+  The post-run system memory-pressure snapshot was not a peak measurement.
+- **Verification/artifacts:** `/tmp/build-m7h-attempt9.log` reports
+  `BUILD_EXIT=0`; `/tmp/hami-media-m7h-attempt9` is 16,770,562 bytes and its
+  runtime header confirmed mux, both socket counters, and 4 MiB client/router
+  receive-buffer requests. `/tmp/run-m7h-attempt9.log` reports `RUN_EXIT=0`,
+  while the JSON's explicit proof result is false. The full result JSON and
+  per-viewer latency summaries are in
+  `/tmp/hami-media-m7h-attempt9-run.json` and the adjacent
+  `hami-media-m7h-*` evidence directory; detailed diagnostics and UDP
+  snapshots are in `/tmp/hami-media-m7h-attempt9-run.log` and the
+  `/tmp/udp-*-m7h-attempt9.txt` files.
+- **Code validation:** `cd services/hami-media && go test -count=1 ./... &&
+  go vet ./...` passed. The first test invocation from the repository root
+  failed because the Go module is nested; root-level Go checks are not valid
+  for this service.
+- **Next dependency / owner action:** this local TEST removes no routine owner
+  action from a real economic outcome; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION`
+  remains **NOT MEASURABLE**. Do not rerun unchanged. The next test must
+  investigate the measured RTP queue drops, latency tail, and viewer
+  disconnections, and add CPU/RSS/goroutine sampling before another capacity
+  rung. Keep the existing protected mDNS, NACK, RTCP chunking, RTP queue,
+  negotiation timeout, feedback buffer, and 5-fps settings unchanged until
+  evidence justifies a scoped change. No commit/push; `docs/UNKNOWN_MAP.md`
+  was not edited.
+
+## 2026-11-17 — M6-H attempt 32: mDNS worker-reduction probe
+
+- **Result / current blocker:** disabling mDNS moved the verified local
+  65-second, 5-fps proof beyond the former 500–562 publisher knee. Every rung
+  from 562/1,124 through the harness maximum 1,000/2,000 passed. No capacity
+  failure was observed: a 1,250-publisher attempt was rejected before startup
+  because the existing runner accepts at most 1,000 publishers. The knee is
+  therefore above the current test bound, not yet measured.
+- **Existing seam/history:** all local proof SettingEngines come from
+  `loopbackSettings` in `services/hami-media/main.go`. `git blame` traces that
+  helper to run-start `1ea806f8`. The pinned `webrtc/v4@v4.2.26` method
+  `SetICEMulticastDNSMode` sets the ICE mode; `ice/v4@v4.4.8` documents
+  `MulticastDNSModeDisabled` as discarding remote mDNS candidates, using IPs
+  for local host candidates, and returning before creating an mDNS Conn.
+  The existing loopback interface/IP filters and UDP4 setting make this a
+  bounded local harness probe.
+- **Probe change:** added only `SetICEMulticastDNSMode(ice.MulticastDNSModeDisabled)`
+  to the existing `loopbackSettings`; no second ICE/settings path or new
+  subsystem. Protected mux, socket counters, 60-second pair timeout, RTP/NACK
+  queues, 253-pair RTCP chunking, and 5-fps settings remain unchanged.
+- **Full-proof results:** every row passed `measurement_pass`, peer cleanup,
+  feedback gates, and RTP readiness. RTP is `remoteReceived / sourceRead`
+  summed over viewer paths; feedback is forwarded upstream per kind.
+
+  | Publishers / viewers | RTP delivered / expected | NACK / PLI / FIR forwarded (each / expected) | Viewer retransmits | RTP queue drops / write errors | Peak CPU | Peak goroutines |
+  | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+  | 562 / 1,124 | 729,460 / 730,584 | 1,124 / 1,124 | 1,124 | 0 / 0 | 532.4% | 62,420 |
+  | 625 / 1,250 | 811,234 / 812,484 | 1,250 / 1,250 | 1,250 | 0 / 0 | 420.1% | 69,413 |
+  | 750 / 1,500 | 973,232 / 974,732 | 1,500 / 1,500 | 1,500 | 0 / 0 | 565.6% | 83,288 |
+  | 875 / 1,750 | 1,135,198 / 1,136,948 | 1,750 / 1,750 | 1,750 | 0 / 0 | 603.4% | 97,163 |
+  | 1,000 / 2,000 | 1,296,152 / 1,298,152 | 2,000 / 2,000 | 2,000 | 0 / 0 | 666.5% | 111,078 |
+
+  Each rung reported 66,000–66,001 ms media duration. The viewer retransmit
+  totals are reported separately from the router's `nack_retransmitted_packets`
+  counter, which remained 0; the counter scopes are not interchangeable.
+- **Goroutine evidence:** at 500/1,000, the Attempt 32 SIGQUIT dump has 55,552
+  goroutine headers (55.55 per viewer), versus 70,552 (70.55 per viewer) in
+  Attempt 30: 15,000 fewer, a 21.3% reduction. The Attempt 32 dump has no mDNS
+  creator stacks; the prior dump had 9,000 `mdns.(*Conn).start`, 3,000
+  `startBackgroundLoops`, and 3,000 `NewServer` goroutines. At 1,000/2,000,
+  the max-rung dump has 111,052 headers (55.53 per viewer) and likewise no
+  mDNS creators.
+
+  | Max-rung creator | Goroutines | Per viewer |
+  | --- | ---: | ---: |
+  | DTLS `Conn.handshake` | 12,000 | 6.0 |
+  | SRTP `session.start` | 12,000 | 6.0 |
+  | WebRTC `undeclaredMediaProcessor` | 12,000 | 6.0 |
+  | NACK `GeneratorInterceptor.BindRTCPWriter` | 6,000 | 3.0 |
+  | RTCP `ReceiverInterceptor.BindRTCPWriter` | 6,000 | 3.0 |
+  | RTCP `SenderInterceptor.BindRTCPWriter` | 6,000 | 3.0 |
+  | TWCC `SenderInterceptor.BindRTCPWriter` | 6,000 | 3.0 |
+  | ICE `candidateBase.start` | 6,000 | 3.0 |
+  | `context.cancelCtx.propagateCancel` | 6,000 | 3.0 |
+  | ICE `taskloop.New` | 6,000 | 3.0 |
+
+  On the 1,000/2,000 rung, host-wide UDP deltas were received +3,053,706,
+  delivered +3,053,701, full-buffer drops +0, no-socket drops +5, and output
+  +3,045,993. These OS counters are not process-attributable.
+- **Temporary artifact rationale:** the Attempt 31 executable cannot exercise
+  this changed ICE setting, so a new `/tmp/hami-media-m6h-5fps-attempt32`
+  binary is required to test the probe. The requested
+  `/tmp/main.go-attempt32-snapshot.go` is a review snapshot of the exact
+  modified source for Muse verification; the canonical implementation remains
+  `services/hami-media/main.go`, not a duplicate source path.
+- **Owner action / next dependency:** local proof still requires running and
+  reviewing the harness; this change removes no human action from an economic
+  workflow. It removes 15 mDNS goroutines per viewer-equivalent in this
+  workload. The next test dependency is the existing 1,000-publisher
+  validation in `services/hami-media/main.go`; review its resource bound before
+  any separate increase. This is TEST evidence only, with no Cloud, Docker,
+  spend, external contact, or real transaction.
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+- **Verification:** built `/tmp/hami-media-m6h-5fps-attempt32` with Go
+  `go1.27.4 darwin/arm64`; runtime headers confirmed mux and both socket
+  counters enabled. `go test -count=1 ./...`, `go vet ./...`, and
+  `git diff --check` had passed for the Attempt 32 source before these
+  documentation-only result updates. Rung logs, UDP snapshots, and stack dumps
+  remain in `/tmp` under the `hami-media-m6h-5fps-attempt32` and
+  `m6h-attempt32-goroutines` names. No commit or push; `docs/UNKNOWN_MAP.md`
+  was not edited.
+
+## 2026-11-17 — M6-H attempt 31: trace FIR SSRC and aggregate failures
+
+- **Current result / blocker:** the 625-publisher / 1,250-viewer, 65-second,
+  5-fps run did not reproduce the prior wrong-SSRC FIR on `stream-0253`.
+  It instead timed out waiting for translated NACK/PLI/FIR after five minutes.
+  At failure, 1,057/1,250 subscriptions had PLI and FIR; no router translation
+  errors were recorded. Do not treat the Attempt 29 wrong-SSRC report as
+  confirmed from this rerun.
+- **Existing seam and trace:** `registerTrack` binds the publisher's remote
+  track by `(publisherID, remote.ID())`. `translateFeedback` verifies each
+  viewer FIR target against the sender's downtrack SSRC, then rewrites it to
+  `subscription.source.remote.SSRC()`. `waitForSFUFeedback` checks the
+  publisher-side FIR target against the publisher SSRC established by the
+  first accepted upstream NACK/PLI `MediaSSRC`. The map and validator are
+  existing code (`git blame` at run-start `1ea806f8`); no remapping behavior
+  was changed.
+- **Observed SSRCs:** in the counters-enabled run, viewer 505 carried target
+  `448647651`, matching its expected viewer SSRC; viewer 506 carried
+  `2640506836`, also matching its expected viewer SSRC. Both mapped through
+  publisher `TrackRemote.SSRC()` on `stream-0253` to `3252005060`; the first
+  upstream PLI established the same publisher baseline, `3252005060`. The
+  publisher-side FIR validator did not emit a mismatch. A prior
+  counter-disabled trace run likewise had both viewer targets match and both
+  map to its PLI baseline (`2815789030`). The observed evidence does not name
+  a mapping defect, so no FIR fix was made.
+- **Whole-run aggregates on failure:** failure diagnostics now run before
+  cleanup and report all viewer subscription feedback plus socket totals.
+  Shared router socket counters are pointer-deduplicated so mux-backed sockets
+  are not counted once per viewer. A focused unit test verifies that
+  deduplication.
+
+  | Metric | 625 publishers / 1,250 viewers |
+  | --- | ---: |
+  | Router sockets / writes | 1,250 / 45,775,495 |
+  | Router writes: STUN / non-STUN | 156,502 / 45,618,993 |
+  | Client sockets / reads | 1,250 / 3,942,292 |
+  | Client reads: STUN / non-STUN | 27,863 / 3,914,429 |
+  | NACKs / retransmitted packets | 249,414 / 18,802,540 |
+  | Subscriptions with PLI / FIR | 1,057 / 1,057 of 1,250 |
+  | RTP queue drops / write errors | 0 / 0 |
+
+- **Host UDP context:** `netstat -s -p udp` before/after deltas were received
+  +7,422,223, delivered +7,402,482, dropped for full socket buffers +4,778,
+  dropped for no socket +14,963, and output +79,101,400. The received minus
+  delivered delta (19,741) equals the two reported drop deltas; these are
+  host-wide counters and cannot be attributed to this process.
+- **Instrumentation lesson:** the first exploratory attempt omitted linker
+  overrides, so both socket counters reported `disabled` and its zero socket
+  aggregate was not usable. The authoritative run used
+  `-X main.routerSocketWriteMode=enabled -X main.clientSocketReadMode=enabled`;
+  verify the runtime header says both are enabled before accepting a rung's
+  socket totals. Go tests and vet also require the nested module directory:
+  the initial repository-root invocations failed with "directory prefix . does
+  not contain main module", then passed from `services/hami-media`.
+- **Next dependency:** diagnose the feedback stall (1,057/1,250 PLI/FIR) before
+  retrying the knee. The optional 531/1,062 rung was not run because the 625
+  attempt took several minutes and reached its feedback timeout. Keep the
+  60-second pair timeout, mux, counters, RTP/NACK queues, RTCP chunking, and
+  5-fps setting unchanged.
+- **Owner action / measured delta:** local TEST only; no external service,
+  Cloud, spend, contact, or real transaction. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION`
+  remains **NOT MEASURABLE**.
+- **Verification:** Attempt 31 binary built with socket-counter linker
+  overrides; `strings` confirmed the SSRC trace and whole-run aggregate
+  diagnostics. `cd services/hami-media && go test -count=1 ./...`,
+  `cd services/hami-media && go vet ./...`, and `git diff --check` passed.
+  The counters-enabled run log and UDP snapshots are
+  `/tmp/hami-media-m6h-5fps-attempt31-rung-625x1250.log` and the matching
+  `-udp-before.txt` / `-udp-after.txt` files. No commit/push; `docs/UNKNOWN_MAP.md`
+  was not edited.
+
+## 2026-11-17 — M6-H attempt 30: capture goroutine stacks under load
+
+- **Existing seam inspected / why it was insufficient:** the existing
+  loopback metrics handler in `services/hami-media/main.go` exposes
+  `go_goroutines` and CPU seconds, but not stack profiles. Adding pprof or
+  stack-dump code to the runtime path was unnecessary and would change
+  production code. Used Go's built-in SIGQUIT dump to stderr instead; this
+  captures stacks in-place without a new profiling harness or subsystem.
+- **Dump capture:** rebuilt as `/tmp/hami-media-m6h-5fps-attempt30` with the
+  router mux and both socket counters enabled. The 500/1,000 dump was
+  triggered after the existing endpoint reported 1,000 viewers and 70,538
+  goroutines; the runtime dump contains 70,552 goroutine headers and is
+  132,538,735 bytes. The 562/1,124 dump was triggered at 1,124 viewers and
+  79,280 goroutines; it contains 79,294 goroutine headers and is
+  146,785,613 bytes. Both runs were intentionally ended by SIGQUIT after
+  capture; Attempt 28 already has the completed 500/1,000 pass. Dumps:
+  `/tmp/m6h-attempt30-goroutines-500.txt` and
+  `/tmp/m6h-attempt30-goroutines-562.txt`.
+- **Top goroutine creator groups:** counts are 500/1,000 then 562/1,124.
+  State is the observed Go stack state; several other creators tied the
+  3,000 / 3,372 cutoff.
+
+  | Creating function | Count | State | Source location |
+  | --- | ---: | --- | --- |
+  | Pion mDNS `Conn.start` | 9,000 / 10,116 | IO wait | `github.com/pion/mdns/v2@v2.2.2/conn.go:659` / `:689` |
+  | WebRTC `PeerConnection.undeclaredMediaProcessor` | 6,000 / 6,744 | channel receive | `github.com/pion/webrtc/v4@v4.2.26/peerconnection.go:2256` |
+  | DTLS `Conn.handshake` | 6,000 / 6,744 | select | `github.com/pion/dtls/v3@v3.1.15/conn.go:1353` |
+  | SRTP `session.start` | 6,000 / 6,744 | select | `github.com/pion/srtp/v3@v3.1.3/session.go:140` |
+  | NACK `GeneratorInterceptor.BindRTCPWriter` | 3,000 / 3,372 | select | `github.com/pion/interceptor@v0.1.51/pkg/nack/generator_interceptor.go:92` |
+  | RTCP `ReceiverInterceptor.BindRTCPWriter` | 3,000 / 3,372 | select | `github.com/pion/interceptor@v0.1.51/pkg/report/receiver_interceptor.go:96` |
+  | RTCP `SenderInterceptor.BindRTCPWriter` | 3,000 / 3,372 | select | `github.com/pion/interceptor@v0.1.51/pkg/report/sender_interceptor.go:107` |
+  | TWCC `SenderInterceptor.BindRTCPWriter` | 3,000 / 3,372 | select | `github.com/pion/interceptor@v0.1.51/pkg/twcc/sender_interceptor.go:135` |
+  | `context.cancelCtx.propagateCancel` | 3,000 / 3,372 | select | Go 1.27.4 `src/context/context.go:523` |
+  | ICE `Agent.startConnectivityChecks.func1` | 3,000 / 3,372 | select | `github.com/pion/ice/v4@v4.4.8/agent.go:659` |
+
+- **Per-viewer-equivalent goroutine budget:** both dumps normalize to about
+  70.5 goroutines per viewer (70,552 / 1,000 and 79,294 / 1,124). The load
+  uses three PeerConnections per viewer-equivalent: two subscriber PCs per
+  viewer, plus one publisher-side PC pair shared across two viewers.
+
+  | Owner | Goroutines per viewer-equivalent |
+  | --- | ---: |
+  | Pion mDNS readers and background loops | 15.0 |
+  | WebRTC undeclared-media processor | 6.0 |
+  | DTLS handshake workers | 6.0 |
+  | SRTP session workers | 6.0 |
+  | NACK, receiver-report, sender-report, and TWCC interceptors | 12.0 |
+  | ICE agent, task loop, candidate, mux, and UDP read loops | 16.5 |
+  | RTP repair-stream reader | 1.5 |
+  | Go context-cancellation propagation | 3.0 |
+  | Hami subscription, viewer capture, publisher-track, and send workers | 4.5 |
+  | **Total** | **70.5** |
+
+- **Interpretation:** the large count is spread across ordinary per-PC Pion
+  and Hami workers, not dominated by one leaked goroutine. Pion networking,
+  DTLS/SRTP, mDNS, and interceptor workers account for most of the budget.
+  At 500/1,000 the dump states were 49,501 select, 10,502 channel receive,
+  10,459 IO wait, and 74 runnable. At 562/1,124 they were 55,639 select,
+  11,804 channel receive, 10,730 IO wait, and 1,104 runnable. The largest
+  groups are waiting on select/channel/network operations, not a common mutex;
+  16 and 17 headers, respectively, were outside those four listed buckets.
+- **CPU-profile follow-up:** no `.pprof`, `.prof`, or CPU-profile file was
+  found under `/tmp`; no CPU profile was captured in this attempt. Attempt 29's
+  CPU-profile probe therefore remains unavailable.
+- **Owner action / next dependency:** these are local TEST diagnostics, not
+  real transactions; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains
+  **NOT MEASURABLE**. Next, investigate whether the measured per-PC worker
+  budget can be reduced safely, beginning with mDNS and ICE/mux workers; do
+  not treat the count alone as evidence of a leak.
+- **Measured delta / verification:** `cd services/hami-media && go test
+  -count=1 ./...`, `cd services/hami-media && go vet ./...`, the Attempt 30
+  build, and `git diff --check` passed. No source changes, commit, or push.
+  `docs/UNKNOWN_MAP.md` was not edited.
+
+## 2026-11-17 — M6-H attempt 29: bisect scale and sample CPU/runtime
+
+- **Current blocker:** the 750-publisher / 1,500-viewer default-buffer run
+  reached media readiness and failed viewer 1,133 / `stream-0567` at 2/5.
+  The 625/1,250 and 562/1,124 runs did not establish RTP readiness results:
+  they failed later in RTCP/feedback verification, respectively on a wrong
+  FIR SSRC and a translated NACK/PLI/FIR timeout. Thus 750 is the first
+  observed RTP-loss rung above Attempt 28's passing 500/1,000, but the
+  underlying RTP knee is not precisely isolated because the lower rungs also
+  failed other proof gates.
+- **Existing seam/history:** used the parameterized `sfu-single` path from
+  Attempt 28, with the shared router mux and both socket counters enabled,
+  default client receive buffers, 5 fps, and 65-second media duration. CPU
+  was sampled externally with `ps`; goroutines were sampled from the existing
+  loopback `/metrics` endpoint. No profiling harness or production code was
+  added.
+- **Run results:** socket diagnostics on failed runs are only emitted for the
+  failing track and its sibling viewers; they are not whole-run totals. The
+  existing proof returns before its all-viewer JSON summary on these failures.
+
+  | Publishers / viewers | Result | Available RTP/socket diagnostics | UDP full-buffer / no-socket deltas |
+  | --- | --- | --- | ---: |
+  | 750 / 1,500 | RTP readiness failed: viewer 1,133 / `stream-0567`, `writeSucceeded=242`, `remoteReceived=2` | Failing viewer router `352` (41 STUN / 311 non-STUN), client `23` (10 / 13). Same-track sibling viewer 1,134: `2,831/5`, router `5,751` (43 / 5,708), client `26` (11 / 15). | 4,701 / 13,163 |
+  | 625 / 1,250 | RTCP error: `publisher received FIR for wrong SSRC on stream-0253`; no RTP path summary | Not available; proof exited before its viewer diagnostic. | 0 / 8,977 |
+  | 562 / 1,124 | Feedback verification timed out waiting for translated NACK/PLI/FIR; no RTP path summary | Not available; proof exited before its viewer diagnostic. | 24,899 / 16,729 |
+
+- **CPU / goroutine observations:** the Mac reports 10 logical CPUs.
+  `ps` sampled a maximum of 814.7% at 750/1,500 (last sample before failure:
+  724.4%); 625/1,250 reached 622.7%; and 562/1,124 reached 825.6% (last
+  sample: 810.5%). These are process CPU percentages, not proof of total-host
+  saturation. The highest successfully returned goroutine readings were
+  104,312 at 750/1,500, 78,250 at 625/1,250, and 79,280 at 562/1,124.
+  Metrics scrapes later timed out under load, so the 750 and 562 goroutine
+  readings were not captured at the exact gate failure.
+- **UDP context:** host-wide deltas also included received/delivered
+  `+1,622,499/+1,604,635` at 750/1,500, `+263,632/+254,655` at 625/1,250,
+  and `+8,955,329/+8,913,701` at 562/1,124. The kernel counters are not
+  attributable to this process or any particular viewer.
+- **Owner action / action removed:** these remain explicitly started and
+  reviewed local TEST runs; no production action or real transaction occurred.
+  The scale flags avoid source edits between rungs.
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE**.
+- **What remains / next dependency:** distinguish the 750 media-delivery
+  failure from the RTCP/feedback failures at 562 and 625 before calling the
+  exact RTP knee. The observed process CPU was high but below the nominal
+  1,000% for all 10 logical CPUs; this alone does not establish CPU starvation.
+  A Pion-only transport comparison remains a useful next isolation if it can
+  reach media without inheriting these feedback-gate failures.
+- **Measured delta / verification:** `cd services/hami-media && go test
+  -count=1 ./...`, `cd services/hami-media && go vet ./...`, the Attempt 29
+  default-buffer build, and `git diff --check` passed. Binary:
+  `/tmp/hami-media-m6h-5fps-attempt29`. Logs and UDP snapshots:
+  `/tmp/hami-media-m6h-5fps-attempt29-rung-{750x1500,625x1250,562x1124}*`.
+  Local TEST evidence only; capacity remains unverified. No commit/push.
+
+## 2026-11-17 — M6-H attempt 28: locate the scale knee and test SO_RCVBUF
+
+- **Current blocker:** the 5-fps ladder passed at 10/20, 50/100, 100/200,
+  and 500/1,000. The full 1,000/2,000 proof still failed its RTP readiness
+  gate with a requested and observed 4 MiB client receive buffer. The ladder
+  therefore establishes no failure through 500/1,000, but does not locate an
+  exact baseline-buffer knee; the only 1,000/2,000 run used the larger buffer.
+- **Existing seam/history:** extended the existing `sfu-single` entry point
+  and `runLocalSFUProofWithConfig` path with publisher and viewers-per-
+  publisher arguments. The runs kept the shared router mux enabled, both
+  socket counters enabled, the existing 200 ms / 5 fps source interval, and
+  65-second duration. The existing RTP-path diagnostic now reports per-viewer
+  socket counts. The receive-buffer build sets `SO_RCVBUF` on each client UDP
+  socket and reads back the effective value with `getsockopt`.
+- **Scale ladder results:** each rung passed `measurement_pass`; router writes
+  and client raw socket reads matched exactly. RTP counts below are totals over
+  unique viewers; UDP deltas are host-wide, not attributable to this process.
+
+  | Publishers / viewers | Gate | `writeSucceeded` / `remoteReceived` | Router writes (STUN / non-STUN) | Client reads (STUN / non-STUN) | UDP full-buffer drops / no-socket drops |
+  | --- | --- | ---: | ---: | ---: | ---: |
+  | 10 / 20 | Pass; 967–970 RTP packets/viewer | 38,692 / 38,692 | 44,300 (2,808 / 41,492) | 44,300 (2,808 / 41,492) | 0 / 2 |
+  | 50 / 100 | Pass; 967 packets/viewer | 96,700 / 96,700 | 110,702 (7,002 / 103,700) | 110,702 (7,002 / 103,700) | 0 / 2 |
+  | 100 / 200 | Pass; 967 packets/viewer | 193,400 / 193,400 | 221,602 (14,202 / 207,400) | 221,602 (14,202 / 207,400) | 17 / 4 |
+  | 500 / 1,000 | Pass; 964–967 packets/viewer | 966,970 / 966,970 | 1,109,012 (72,042 / 1,036,970) | 1,109,012 (72,042 / 1,036,970) | 0 / 1 |
+
+- **Full-scale 4 MiB receive-buffer result:** the first attempt was rejected
+  before socket creation by the newly added 500-publisher bound. The bound
+  was corrected to the requested 1,000 and the proof was rebuilt. The retry
+  confirmed mux and both counters enabled, requested `4,194,304` bytes, and
+  read back an effective `4,194,304` bytes on a client socket. It failed at
+  readiness: viewer 1 / `stream-0001` had `writeSucceeded=240`,
+  `remoteReceived=4`; router writes were `450` (`105` STUN, `345` non-STUN),
+  while client reads were `67` (`57` STUN, `10` non-STUN). Sibling viewer 2
+  had `204/3` successful writes/receives; router writes `376` (`105/271`)
+  and client reads `67` (`56/11`). There was no JSON measurement result.
+  Host-wide UDP deltas were `+80` full-buffer drops and `+4,769` no-socket
+  drops (`+1,592,596` received, `+1,587,747` delivered). These counters do
+  not identify a process or socket. The larger buffer did not pass readiness;
+  compared with Attempt 27's single full-scale 3/5 observation, 4/5 is not
+  enough evidence from one run to claim a significant improvement.
+- **Owner action / action removed:** the owner still explicitly starts and
+  reviews each local proof; there is no standing authorization or production
+  execution path. The parameterized existing mode removes source edits and
+  rebuilds between scale rungs. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is
+  **NOT MEASURABLE** because these are local TEST runs, not real transactions.
+- **What remains / next dependency:** investigate the full-scale packet gap
+  between router writes and client raw reads, including the host-wide
+  no-socket increase, without attributing those global counters to a specific
+  viewer. The exact baseline-buffer knee remains unmeasured above 500/1,000.
+- **Measured delta / verification:** `cd services/hami-media && go test
+  -count=1 ./...`, `cd services/hami-media && go vet ./...`, both diagnostic
+  builds, and `git diff --check` passed. Logs and UDP snapshots:
+  `/tmp/hami-media-m6h-5fps-attempt28-rung-{10x20,50x100,100x200,500x1000}*`
+  and `/tmp/hami-media-m6h-5fps-attempt28-full-1000x2000-rcvbuf-*`. The
+  rejected pre-socket attempt is preserved in
+  `/tmp/hami-media-m6h-5fps-attempt28-full-1000x2000-rcvbuf.log`. Local TEST
+  evidence only; M6-H capacity remains unverified. No commit/push.
+
+## 2026-11-17 — M6-H attempt 27: distinguish scale loss from bad addressing
+
+- **Current blocker:** the single-pair SFU path passed, but the full 1,000
+  publisher / 2,000 viewer workload did not. Two runs timed out during
+  negotiation; the third reached media and failed viewer 1 / `stream-0001`
+  at 3/5 packets. The evidence supports a scale-dependent loss, not an
+  address mismatch. The Attempt 26 entry above was checked against its log
+  and already contains the corrected viewer 11, `58/222` STUN/non-STUN split,
+  and `writeSucceeded=160`.
+- **Existing seam/history:** added `sfu-single`, which uses the existing
+  `runLocalSFUProofWithConfig` path with one publisher, one viewer, one track,
+  and the M6-H 200 ms frame interval. Added first successful non-STUN
+  destination logging to the existing socket counter and reported it beside
+  the client socket's local address in both media-gate and setup-timeout
+  diagnostics. The full M6-H mux and both counters remained enabled.
+- **Single-pair full-rate result:** the 65-second run passed (`measurement_pass
+  = true`, 324 frames sent). The SFU path reported `writeSucceeded=967` and
+  `remoteReceived=967`, with zero queue drops and zero RTP write errors.
+  Router socket writes and client raw reads both counted `1,107` datagrams:
+  `70` STUN and `1,037` non-STUN on each side. The router's first non-STUN
+  destination and the client socket's local address both were
+  `127.0.0.1:60034`. Candidate pair stats were connected and nominated.
+- **Full-scale run results:**
+  - Run 1 timed out negotiating viewer 1,866. Client pair sent/received
+    `114/6`, router pair `10/80`; client socket reads were `70` (`64` STUN,
+    `6` non-STUN), router socket writes `86` (`76` STUN, `10` non-STUN).
+    Both pairs were succeeded/nominated; the answerer PeerConnection remained
+    connecting. This binary predated setup-timeout destination logging.
+  - Run 2 timed out negotiating viewer 1,838. Client pair sent/received
+    `104/5`, router pair `11/66`; client reads were `67` (`62` STUN,
+    `5` non-STUN), router writes `89` (`78` STUN, `11` non-STUN). The router
+    destination `127.0.0.1:61708` exactly matched the client socket local
+    address `127.0.0.1:61708`. Both pairs were succeeded/nominated, but the
+    answerer PeerConnection remained connecting.
+  - Run 3 reached the media gate and failed viewer 1 / `stream-0001` at 3/5.
+    `sourceRead=166`, `enqueued=164`, `queueDropped=0`, `writeSucceeded=164`,
+    `remoteReceived=3`. Router writes were `228` total (`68` STUN,
+    `160` non-STUN); client reads were `93` total (`35` STUN,
+    `58` non-STUN). The router destination `127.0.0.1:60270` matched the
+    client socket local address `127.0.0.1:60270`. The retained client pair
+    sent/received `167/58`; router pair `160/83`; both were succeeded and
+    nominated in the snapshot. Run-level queue drops, RTP write errors, and
+    router errors were zero. Non-STUN remains a category, not an RTP-only
+    count.
+- **macOS UDP statistics:** `netstat -s -p udp` is host-wide, so its deltas
+  cannot be attributed to this process or the failing viewer. Each column is
+  the delta for one full run; IPv4/IPv6 packet rows show `datagrams/bytes`.
+
+  | UDP counter | Run 1 | Run 2 | Run 3 |
+  | --- | ---: | ---: | ---: |
+  | Datagrams received | 864,800 | 944,998 | 1,484,891 |
+  | Incomplete header | 0 | 0 | 0 |
+  | Bad data length | 0 | 0 | 0 |
+  | Bad checksum | 0 | 0 | 0 |
+  | No checksum | 0 | 0 | 0 |
+  | Receive checksummed in software | 0 | 0 | 0 |
+  | Receive IPv4 datagrams/bytes | 0/0 | 0/0 | 0/0 |
+  | Receive IPv6 datagrams/bytes | 0/0 | 0/0 | 0/0 |
+  | Dropped due to no socket | 1,985 | 1,433 | 4,219 |
+  | Broadcast/multicast undelivered | 0 | 0 | 0 |
+  | IPv6 multicast undelivered | 0 | 0 | 0 |
+  | Time multicast source-filter matched | 0 | 0 | 0 |
+  | Dropped due to full socket buffers | 4 | 0 | 2,063 |
+  | Not for hashed PCB | 0 | 0 | 0 |
+  | Delivered | 862,811 | 943,565 | 1,478,609 |
+  | Datagrams output | 1,042,802 | 1,183,545 | 17,421,221 |
+  | Output checksummed in software | 221 | 306 | 303 |
+  | Output IPv4 datagrams/bytes | 167/17,762 | 218/11,809 | 194/10,754 |
+  | Output IPv6 datagrams/bytes | 54/24,036 | 88/42,954 | 109/67,487 |
+  | Duplicate ICMP port-unreachable suppressed | 455 | 150 | 1,506 |
+  | ICMP port-unreachable not suppressed | 1,530 | 1,283 | 2,713 |
+
+  Run 3's +2,063 full-socket-buffer drops and +4,219 no-socket drops are
+  significant host-wide changes and make kernel/socket pressure or packets
+  reaching an unbound port plausible at scale. They are not per-socket proof;
+  neither increment can be mapped to the 161-packet gap between this
+  viewer's 164 successful RTP writes and 3 remote receives.
+- **Owner action / action removed:** no owner action is required for these
+  local tests. The single-pair result rules out a fundamental failure in the
+  same SFU forwarding path at minimal scale, and destination checks rule out
+  the observed full-run address mismatch. The tests narrow the next
+  dependency to load-sensitive loopback/socket delivery and kernel drops.
+- **What remains / next dependency:** run a controlled scale ramp (increasing
+  peer counts while collecting per-socket and host UDP counters) to find when
+  buffer/no-socket drops begin. Keep the 60-second timeout, RTP/NACK queues,
+  RTCP chunking, and 5 fps unchanged. Do not treat host-wide `netstat` deltas
+  as proof of which process or socket lost a packet.
+- **Measured delta / verification:** the Attempt 27 binary printed mux
+  enabled and both counters enabled. `cd services/hami-media && go test
+  -count=1 ./...`, `cd services/hami-media && go vet ./...`, the diagnostic
+  build, and `git diff --check` passed. Logs:
+  `/tmp/hami-media-m6h-5fps-attempt27-single-pair.log`,
+  `/tmp/hami-media-m6h-5fps-attempt27-full-run1.log`,
+  `/tmp/hami-media-m6h-5fps-attempt27-full-run2.log`, and
+  `/tmp/hami-media-m6h-5fps-attempt27-full-run3.log`; before/after UDP
+  snapshots are in `/tmp/hami-media-m6h-5fps-attempt27-*-udp-*.txt`.
+  Local TEST evidence only; M6-H and capacity remain unverified. No
+  commit/push.
+
+## 2026-11-17 — M6-H attempt 26: restore mux and reach media
+
+- **Current blocker:** the mux-enabled 1,000-publisher/2,000-viewer run reached
+  the media readiness gate, then failed at viewer 11 / `stream-0006` with
+  3 packets received instead of 5. This is the first media-phase observation
+  since disabling the router mux caused repeated setup timeouts.
+- **Existing seam/history:** the shared router mux is enabled. To keep the
+  existing per-viewer write counters without bypassing that mux, each router
+  viewer uses a counting `UDPMux` proxy over the existing publisher-shard
+  mux; its `GetConn` wraps the peer's logical connection while the shard's
+  shared UDP socket remains in use. The proxy does not own or close the
+  shared mux. The client read counter remains on its per-viewer socket.
+- **Failing-viewer path evidence:** viewer `hami-sfu-viewer-11`, track
+  `stream-0006`: `sourceRead=162`, `enqueued=160`, per-viewer
+  `queueDropped=0`, `writeSucceeded=160`, `remoteReceived=3`.
+  Router socket writes were `280` total (`58` STUN, `222` non-STUN,
+  `119,918` bytes); client socket reads were `34` total (`24` STUN,
+  `10` non-STUN). Both counters reported enabled. The retained nominated
+  pair was client `127.0.0.1:58205` ↔ router `127.0.0.1:64648`;
+  client ICE candidate stats sent/received `119/10`, router
+  `220/45`. The snapshot showed succeeded, nominated pairs; both peers
+  were failed by the time final peer stats were logged. Run-level router
+  errors and RTP write errors were zero; aggregate router RTP-queue drops
+  were 42, but the failing viewer had zero queue drops.
+- **Interpretation and limit:** the router socket recorded 222 successful
+  non-STUN writes while the client raw socket recorded 10 non-STUN reads,
+  and only 3 RTP packets reached `TrackRemote`. This places substantial loss
+  at or before client socket delivery, rather than in that viewer's RTP
+  queue. Non-STUN is not protocol-identified as RTP/DTLS, so the 222 count
+  cannot be treated as 222 RTP datagrams. Setup-specific counts were not
+  snapshotted separately in this run; the reported socket totals are
+  cumulative from socket creation through the readiness failure.
+- **Owner action / action removed:** no owner action is required for this
+  local test. Re-enabling the shared mux restored a run to the media phase
+  while preserving per-viewer socket-write instrumentation. This removes the
+  mux-disabled setup stall as a blocker to measuring media, but does not
+  remove the delivery loss or establish a real transaction.
+- **What remains / next dependency:** isolate loopback delivery for the
+  media packets with the order's suggested single-pair full-rate test or
+  socket-buffer/kernel UDP evidence. Capture an explicit post-negotiation
+  socket-counter baseline on any follow-up so setup counts and media deltas
+  are distinct. Keep the 60-second timeout, RTP/NACK queues, RTCP chunking,
+  and 5 fps unchanged.
+- **Measured delta / verification:** the diagnostic binary printed router
+  mux enabled and both socket counters enabled. `cd services/hami-media &&
+  go test -count=1 ./...`, `cd services/hami-media && go vet ./...`, the
+  Attempt 26 diagnostic build, and `git diff --check` passed. Only one run
+  was needed; it reached the media gate, so no additional runs were started.
+  Log: `/tmp/hami-media-m6h-5fps-attempt26-run1.log`. Local TEST evidence
+  only; M6-H and capacity remain unverified. No commit/push.
+
+## 2026-11-17 — M6-H attempt 25: reach the media gate with split UDP counts
+
+- **Current blocker:** all five allowed mux-disabled attempts timed out during
+  viewer negotiation; none reached media readiness. In every run the nominated
+  candidate pairs were `succeeded` and ICE was `connected`, while the answerer
+  PeerConnection remained `connecting`. Thus the requested media-phase
+  comparison (`writeSucceeded` versus `remoteReceived`) is still unavailable.
+- **Existing seam/history:** extended the existing `packetReadCountingConn`
+  wrapper, not Pion or the transport architecture. Successful socket writes
+  now increment total, STUN, and non-STUN counters; existing `ReadFrom`
+  counters already split client-side reads the same way. Setup-timeout and
+  media-gate diagnostics report both splits alongside nominated-pair and
+  RTP-path counts. Mux remains disabled; router/client counters are enabled
+  only in the diagnostic build.
+- **Per-run setup evidence** (pair packet counts are client sent/received and
+  router sent/received; socket counts are client total/STUN/non-STUN and
+  router total/STUN/non-STUN):
+  - Run 1, viewer 1,989, `127.0.0.1:53551` ↔ `127.0.0.1:58504`: pair
+    `2/2`, `6/0`; socket `55/53/2`, `84/78/6`.
+  - Run 2, viewer 1,799, `127.0.0.1:65177` ↔ `127.0.0.1:62231`: pair
+    `104/6`, `11/64`; socket `63/57/6`, `89/78/11`.
+  - Run 3, viewer 1,876, `127.0.0.1:54422` ↔ `127.0.0.1:53649`: pair
+    `81/7`, `13/49`; socket `59/52/7`, `91/78/13`.
+  - Run 4, viewer 1,908, `127.0.0.1:60067` ↔ `127.0.0.1:52799`: pair
+    `3/3`, `6/0`; socket `56/53/3`, `80/74/6`.
+  - Run 5, viewer 1,872, `127.0.0.1:63755` ↔ `127.0.0.1:59300`: pair
+    `2/2`, `6/0`; socket `61/59/2`, `83/77/6`.
+  Each pair was succeeded and nominated. Client raw socket reads remained
+  below router non-STUN writes. Runs 2 and 3 had 11 and 13 router non-STUN
+  writes but only 6 and 7 client non-STUN reads, and still timed out. The
+  counter distinguishes STUN from non-STUN; it does not independently
+  identify each non-STUN packet as DTLS. This is setup traffic; it cannot
+  establish that these datagrams were RTP or quantify media delivery loss.
+- **Owner action / action removed:** no owner action is required for this
+  local proof. The write-side classification removes the instrumentation gap
+  that prevented separating router STUN from non-STUN socket sends. It does
+  not remove the setup stall or establish a real transaction.
+- **What remains / next dependency:** obtain at least one run through the
+  media gate before comparing router RTP socket writes, client socket reads,
+  `writeSucceeded`, and `remoteReceived`. The new counts suggest fewer
+  non-STUN packets reach the client socket than the router emits, but the
+  exact media loss point remains unmeasured because no run entered the media
+  phase. Preserve the 60-second timeout, RTP/NACK queues, RTCP chunking,
+  mux-disabled diagnostic mode, and 5 fps.
+- **Measured delta / verification:** the binary printed mux disabled and both
+  counters enabled on all five runs. `cd services/hami-media && go test
+  -count=1 ./...`, `cd services/hami-media && go vet ./...`, the Attempt 25
+  diagnostic `go build`, and `git diff --check` passed. A first test run
+  exposed an unread non-STUN datagram in the test setup; the test now drains
+  it before reading the STUN datagram. Run all Go commands from
+  `services/hami-media` (the repository root has no `go.mod`). Logs:
+  `/tmp/hami-media-m6h-5fps-attempt25-run1.log` through
+  `/tmp/hami-media-m6h-5fps-attempt25-run5.log`. Local TEST evidence only;
+  M6-H and capacity remain unverified. No commit/push.
+
+## 2026-11-17 — M6-H attempt 24: count router UDP writes and retain ICE pairs
+
+- **Current blocker:** the 1,000-publisher/2,000-viewer proof still does not
+  reach media readiness. All three allowed Attempt 24 runs timed out while
+  negotiating a viewer pair, despite succeeded, nominated loopback ICE pairs
+  and connected ICE states. The peer connection remained `connecting` on at
+  least one side. No run reached the 65-second media phase, so these results
+  do not locate the earlier RTP-delivery loss.
+- **Existing seam/history:** retained the existing mux-disabled
+  `singlePeerUDPMux` path and its per-peer packet counters. Router-side
+  `WriteTo` counts and client-side `ReadFrom` counts (split into STUN and
+  non-STUN) are enabled only by diagnostic build modes. The existing
+  nominated-candidate-pair sampler snapshots both peers every five seconds
+  during media and retains the last nonempty result; negotiation-timeout
+  diagnostics separately print the selected-pair counters at failure.
+- **Setup evidence:** run 1 timed out at viewer 1,731. Client pair sent/received
+  `3/3`, router pair `6/0`; client socket reads were `65` (`3` non-STUN,
+  `62` STUN), and the router socket recorded `82` writes. Run 2 timed out at
+  viewer 1,911: client pair `8/4`, router pair `8/1`; client reads `59`
+  (`4` non-STUN, `55` STUN), router writes `83`. Run 3 timed out at viewer
+  1,878: client pair `107/6`, router pair `10/70`; client reads `67`
+  (`6` non-STUN, `61` STUN), router writes `84`. Each pair was succeeded and
+  nominated; the failed side(s) remained in `connecting`. These socket counts
+  are setup traffic, not evidence that media packets left or were lost.
+- **Owner action / action removed:** no owner action is required for this
+  local test. Per-peer socket instrumentation now counts successful router
+  UDP writes and raw client reads, removing the uncertainty about whether a
+  socket-write hook is available without forking Pion. It did not remove the
+  peer-connection setup stall.
+- **What remains / next dependency:** isolate why the DTLS/PeerConnection
+  transition stalls after ICE nomination at full endpoint count. Capture
+  per-peer connection-state transitions and DTLS handshake timing for the
+  failing pair; once setup completes, repeat the socket comparison during the
+  media window to locate RTP delivery loss. Do not change the 60-second
+  timeout, RTP/NACK queues, RTCP chunking, mux setting, or 5 fps based on
+  setup-only evidence.
+- **Measured delta / verification:** the diagnostic binary printed
+  `router ICE UDP mux mode: disabled`, router socket write counting enabled,
+  and client socket read counting enabled in all three runs. Existing
+  validation passed after the instrumentation changes:
+  `cd services/hami-media && go test -count=1 ./...`,
+  `cd services/hami-media && go vet ./...`, and `git diff --check`.
+  Results are local TEST evidence only; M6-H and capacity remain unverified.
+  Logs: `/tmp/hami-media-m6h-5fps-attempt24-run1.log`,
+  `/tmp/hami-media-m6h-5fps-attempt24-run2.log`, and
+  `/tmp/hami-media-m6h-5fps-attempt24-run3.log`. No commit or push.
+
+## 2026-11-17 — M6-H attempt 23: isolate the shared router mux
+
+- **Current blocker:** the 1,000-publisher/2,000-viewer M6-H proof remains
+  unverified. The mux-disabled binary was confirmed at runtime by its
+  `router ICE UDP mux mode: disabled` line. Four full attempts did not pass:
+  runs 1 and 4 reached media readiness and failed the 5-packet gate; runs 2
+  and 3 timed out negotiating a viewer pair. Therefore loss persists without
+  the shared router mux, which is not a necessary or sole cause.
+- **Existing seam/history:** the router APIs already flow through
+  `loopbackSettings(withUDPMux)`. Added the linker-only
+  `routerUDPMuxMode` switch, passed it to that existing seam, and skip nil
+  muxes during cleanup. Default mode remains `enabled`; the diagnostic build
+  uses `-X main.routerUDPMuxMode=disabled`. No shared router UDP mux is
+  created in the diagnostic binary. The first run also kept client sockets
+  unchanged. Later socket-count runs give each viewer client its own bound
+  loopback UDP socket and return that socket directly through a one-peer
+  adapter; sockets are not shared or demultiplexed.
+- **No-mux results:** run 1 failed at viewer 35 / stream-0018 with 3 packets
+  for each sibling viewer, despite 189 successful router writes each, zero
+  queue drops, zero RTP write errors, and zero router errors. Both peers were
+  failed and no candidate pair remained in the failure snapshot. Run 4
+  failed at viewer 1 / stream-0001 with zero remote RTP after 166 successful
+  writes; both peers were failed, with no candidate pair in the snapshot.
+  The viewer socket read 93 datagrams: 88 STUN and only 5 non-STUN. This
+  places the missing traffic before the client ICE application receive
+  counter, but does not prove that all 166 local writes were emitted onto
+  the router UDP socket.
+- **Socket measurement:** for runs 2–4, each viewer client used its own
+  loopback socket with counts taken in `PacketConn.ReadFrom`, before Pion's
+  ICE packet classification. Pion's ICE receive path classifies STUN first,
+  validates non-STUN source candidates, then updates candidate-pair receive
+  counts after writing to its packet buffer. Thus raw non-STUN socket reads
+  can distinguish kernel/socket arrival from later ICE handling when a
+  selected pair remains available. Run 4's pair stats were already empty
+  after ICE failed, so sender-side ICE packet counts could not be compared.
+- **Setup-pair evidence:** run 2 timed out at viewer pair 1,960 with both ICE
+  states connected and nominated loopback candidates
+  `127.0.0.1:63455` ↔ `127.0.0.1:62346`, while both PeerConnections remained
+  connecting. Run 3 timed out at pair 1,955 with the nominated pair
+  `127.0.0.1:65331` ↔ `127.0.0.1:62674`; the offerer was connected and the
+  answerer remained connecting, although both ICE states were connected.
+  Candidate application counters were client sent/received `110/6` and
+  router sent/received `10/75`; the client raw socket had read 58 datagrams
+  (this run predated STUN/non-STUN split counters). These setup failures are
+  after ICE nomination and implicate PeerConnection/DTLS completion, not
+  failure to gather or nominate candidates. Run 2's build did not yet log
+  its raw socket count at timeout.
+- **Owner action / action removed:** no owner action is required for this
+  local test. The mode switch removes the shared router mux as a variable;
+  it does not remove a runtime dependency or establish autonomy.
+- **What remains / next dependency:** run 4's raw socket count shows only
+  five non-STUN packets read, but its peer pairs had already disappeared.
+  Capture router-side UDP sends and client-side socket reads while the
+  selected pair is still active, or preserve the last selected-pair stats
+  across ICE failure, to distinguish a router-side send failure from kernel
+  delivery loss and subsequent ICE rejection. macOS BPF devices are
+  root-only here and `sudo -n` reports a password is required, so packet
+  capture is not available in this session. Keep the 60-second timeout,
+  queue limits, RTCP chunking, and 5 fps unchanged.
+- **Measured delta / verification:** `go test -count=1 ./...`, `go vet
+  ./...`, both mux-disabled diagnostic builds, and `git diff --check` passed.
+  The socket counter has a focused UDP-datagram test. Logs:
+  `/tmp/hami-media-m6h-5fps-attempt23-run1.log`,
+  `/tmp/hami-media-m6h-5fps-attempt23-run2-socket-count.log`,
+  `/tmp/hami-media-m6h-5fps-attempt23-run3-socket-count.log`, and
+  `/tmp/hami-media-m6h-5fps-attempt23-run4-socket-count.log`. Attempt 23
+  remains local TEST evidence only; capacity and M6-H acceptance are
+  unverified. No commit/push; `docs/UNKNOWN_MAP.md` was not edited.
+
+## 2026-11-17 — M6-H attempt 22: trace post-write delivery and ICE state
+
+- **Current blocker:** M6-H remains unverified. In all three normal Attempt 22
+  runs, source packets reached the router and successful `WriteRTP` calls
+  substantially exceeded viewer `ReadRTP` deliveries. The failed viewer's
+  per-subscription RTP queue had no drops. Run 1 stopped at viewer 281 /
+  stream-0141 (4 received; sibling got 6); run 2 at viewer 1 / stream-0001
+  (2 received; sibling got 4); run 3 at viewer 1 / stream-0001 (0 received,
+  no remote track bound). These are different from a router queue overflow.
+- **Existing seam/history:** `forwardTrack` reads the publisher track,
+  `enqueueRTP` places each source packet in the existing bounded per-viewer
+  queue, `writeRTP` calls Pion's `TrackLocalStaticRTP.WriteRTP`, and the
+  viewer capture consumes `TrackRemote.ReadRTP`. Added failure-path counters
+  for those stages, plus ICE candidate-pair state/endpoints and request/
+  response counts when negotiation times out. Corrected the queue-drop
+  counter so a consumer that empties the queue between the full check and
+  oldest-packet removal is not falsely counted as a drop.
+- **Measured cause and limits:** two compile-time no-retransmission control
+  runs still failed at 4/5 packets: 200 successful local writes versus only
+  four viewer reads for each sibling on the failing track. The controls had
+  zero and 15 additional OS-wide `dropped due to full socket buffers` events;
+  normal runs had 0, 0, and 173. Thus retransmissions are not necessary for
+  the loss, and macOS full-buffer drops are not supported as its primary
+  cause. The evidence locates the dominant loss after successful local writes,
+  at or before Pion's remote RTP receive path. In no-retransmission run 2,
+  both affected viewer-client PeerConnections were ICE-disconnected while
+  their candidate pairs remained succeeded/nominated. In normal run 2, the
+  router-side PeerConnection for viewer 1 was disconnected while the client
+  side remained connected. This points to ICE/transport liveness under the
+  full-scale endpoint load. In that run the selected pair endpoints matched
+  exactly (`127.0.0.1:58422` ↔ `127.0.0.1:54967`): the router-side candidate
+  reported 227 application packets sent while the viewer-side candidate
+  reported 11 received; the reverse direction reported 163 sent versus 45
+  received. This confirms loss before packets reach the peer ICE application
+  receive path, not inside `TrackRemote.ReadRTP`, though it does not
+  distinguish shared-mux demultiplexing, endpoint scheduling, or another
+  transport cause. OS `netstat` counters are host-wide and cannot attribute
+  the `no socket` deltas to this process.
+- **Setup pair:** the Attempt 21 timeout at viewer pair 1,930 did not recur in
+  the three normal Attempt 22 runs; all completed negotiation and then reached
+  the media-readiness gate. Its earlier
+  states (offerer connected, answerer connecting) place the stall after
+  gathering/signaling, in connection establishment. The closed-pipe message
+  can be emitted by the existing timeout cleanup, which closes both peers,
+  and is not proof of the initiating failure. Attempt 22 now captures ICE
+  and candidate-pair details if a setup timeout recurs. No evidence currently
+  justifies changing the 60-second timeout, 32-way concurrency, mux shards,
+  queue limits, NACK caps, RTCP chunking, or frame rate.
+- **Owner action / action removed:** no owner action is required for this
+  local test; diagnostics remove guesswork from the next failure report but
+  do not remove a runtime dependency or establish autonomy.
+- **What remains / next dependency:** capture actual loopback RTP and ICE
+  packets for one failing viewer's local/remote candidate ports, or add
+  bounded counters at the Pion mux/ICE read boundary, to distinguish a
+  transport demux/read loss from a Pion SRTP/RTP receive-path loss. Retain
+  the per-viewer stage counters and candidate-pair timeout detail. Do not
+  launch another full M6-H run until that evidence identifies a change.
+- **Measured delta / verification:** `go test -count=1 ./...`, `go vet
+  ./...`, `go build -o /tmp/hami-media-m6h-5fps-attempt22 .`, and
+  `git diff --check` passed. Disassembly confirms the 60-second pair limit.
+  Normal run logs:
+  `/tmp/hami-media-m6h-5fps-attempt22-run1.log` (59,289 NACKs,
+  2,123,920 retransmissions, 315,614 duplicates skipped, zero router queue
+  drops/errors); run 2 (49,759 NACKs, 2,233,044 retransmissions, 418,625
+  duplicates skipped, 38 aggregate queue drops but zero for the failed
+  viewer); run 3 (50,756 NACKs, 1,603,738 retransmissions, 244,087
+  duplicates skipped, 15 aggregate queue drops). All three had zero RTP
+  write errors. The no-retransmission controls are in
+  `/tmp/hami-media-m6h-5fps-attempt22-no-nack.log` and
+  `/tmp/hami-media-m6h-5fps-attempt22-no-nack2.log`; they recorded 86,964 and
+  59,489 NACKs respectively, and zero retransmissions. Result JSON files are
+  empty because the readiness gate failed before result generation.
+- **Boundary:** local TEST only. M6-H, feedback completeness, and capacity
+  remain unverified; no customer or revenue claim.
+
+## 2026-11-17 — M6-H attempt 21: extend per-pair setup timeout
+
+- **Current blocker:** the 1,000-publisher/2,000-viewer M6-H proof remains
+  unverified. The per-pair negotiation limit was increased from 30 to 60
+  seconds after Attempt 20 explicitly timed out while pairs remained
+  connecting. In three fresh runs, two reached RTP readiness but failed the
+  five-packet gate (viewer 691 / stream-0346 and viewer 88 / stream-0044,
+  each 4/5); the third still timed out at viewer pair 1,930 after 60 seconds,
+  with its offerer connected and answerer connecting. Both failure classes
+  are real blockers, not evidence that the other is noise.
+- **Existing seam/history:** `services/hami-media/main.go` already bounds
+  each pair through `peerPairNegotiationTimeout` and negotiates at concurrency
+  32 using the existing 32-shard local UDP mux setup. The timeout is now 60
+  seconds. There were no bind/port-exhaustion errors in the observed logs;
+  the third run's closed-pipe write occurred during teardown after the pair
+  timed out. These observations do not identify whether host scheduling,
+  ICE/mux contention, or another cause prevents that answerer from completing.
+  The readiness failures are separate: each had around 48k–52k NACKs and
+  1.8M retransmissions, but zero RTP queue drops, RTP write errors, and router
+  errors. The evidence does not justify changing concurrency, mux topology,
+  or protected media/feedback settings.
+- **Owner action / action removed:** no owner action is required for this
+  local test. Extending the existing timeout removes an early per-pair abort
+  at 30 seconds; it does not eliminate stalled negotiation or prove setup
+  autonomy.
+- **What remains / next dependency:** collect per-pair ICE gathering,
+  signaling, and connection-state timing on an otherwise idle local host;
+  independently instrument source RTP arrival and per-viewer enqueue/write
+  timing for the 4/5 readiness misses. Keep the 32-way concurrency, mux
+  sharding, 64-packet RTP queue, 512/5 s/512 NACK queue, 253-pair RTCP
+  chunking, and 5 fps unchanged until evidence isolates a cause. Feedback
+  completeness, frames/viewer, p95, and the 300-frame gate remain unverified.
+- **Measured delta / verification:** `cd services/hami-media && go test
+  -count=1 ./...`, `go vet ./...`, `go build -o
+  /tmp/hami-media-m6h-5fps-attempt21 .`, and `git diff --check` all passed.
+  Binary disassembly shows the negotiation worker loading 60,000,000,000 ns
+  (60 seconds) before calling `negotiateLoopbackPeersWithTimeout`. Runs:
+  `/tmp/hami-media-m6h-5fps-attempt21-run1.log` failed readiness at viewer
+  691 / stream-0346 after 90.27 s (52,471 NACKs, 1,827,616 retransmissions,
+  231,655 duplicates skipped); run 2 at viewer 88 / stream-0044 after 91.58 s
+  (48,260 NACKs, 1,806,702 retransmissions, 266,801 duplicates skipped);
+  run 3 timed out at pair 1,930 after 86.87 s. All three had zero RTP queue
+  drops, RTP write errors, and router errors; result JSON files are empty
+  because none reached result generation.
+- **Boundary:** local TEST only. M6-H and all capacity claims remain
+  unverified; no customer or revenue claim.
+
+## 2026-11-17 — M6-H attempt 20: release packet-cache lock before cloning
+
+- **Current blocker:** the 1,000-publisher/2,000-viewer M6-H proof remains
+  unverified. The third Attempt 20 run reached readiness but viewer 1 /
+  stream-0001 had only 4/5 packets at the 65 s deadline. Its diagnosis showed
+  50,352 NACKs, 1,710,502 cached retransmissions, zero RTP queue drops, zero
+  RTP write errors, and zero router errors. The two earlier runs timed out in
+  viewer-pair negotiation at pairs 1,899 and 1,937. No result JSON or
+  feedback-verification results were produced.
+- **Existing seam/history:** `services/hami-media/main.go` uses
+  `sfuPublishedTrack.packetMu` both in `forwardTrack`'s `rememberPacket` path
+  and in `cachedPackets` for NACK retransmission. Previously `cachedPackets`
+  cloned each cached RTP packet while holding that shared per-track lock,
+  blocking fresh RTP in `rememberPacket` before it could enter any viewer
+  queue. It now collects immutable cached pointers under the lock, unlocks,
+  then clones them. `rememberPacket` stores cloned snapshots and cache entries
+  are replaced rather than mutated, so returned retransmission packets remain
+  independent copies. A focused test checks copy isolation and missing/
+  duplicate sequence behavior.
+- **Owner action / action removed:** no owner action is needed for this local
+  proof. The change removes packet-payload cloning from the critical section
+  shared by source RTP ingestion and NACK cache reads.
+- **What remains / next dependency:** this change targets a real pre-queue
+  blocking point and preserves the 512/5 s/512 NACK queue, 253-pair RTCP
+  chunking, 64-packet RTP queue, and 5 fps. It did not establish a passing
+  M6-H result: the final media-stage run still missed one packet, and two runs
+  were blocked during negotiation. The same failure is not tied to one stream.
+  Measure per-source writes, `ReadRTP` arrivals, downstream writes, and viewer
+  counts under a host able to sustain the full negotiation/media workload
+  before further code changes. Feedback coverage, frames/viewer, p95, and the
+  300-frame gate remain unverified.
+- **Measured delta / verification:** `go test -count=1 ./...`, `go vet ./...`,
+  and `git diff --check` passed in `services/hami-media`. Fresh binary
+  `/tmp/hami-media-m6h-5fps-attempt20` was built; disassembly verified the
+  packet-cache lookup and clone path. Run logs:
+  `/tmp/hami-media-m6h-5fps-attempt20-run1.log` (negotiation pair 1,899,
+  74.49 s), `/tmp/hami-media-m6h-5fps-attempt20-run2.log` (pair 1,937,
+  37.79 s), and `/tmp/hami-media-m6h-5fps-attempt20-run3.log` (viewer 1,
+  4/5 RTP, 97.29 s). The corresponding JSON files are empty.
+- **Boundary:** local TEST only. M6-H, feedback completeness, p95, and
+  capacity remain unverified; no customer or revenue claim.
+
+## 2026-11-17 — M6-H attempt 19: separate RTP readiness from feedback pacing
+
+- **Current blocker:** the 1,000-publisher/2,000-viewer M6-H proof remains
+  unverified. The readiness check and per-viewer PLI/FIR/NACK writes shared
+  the same 65 s media context and ran serially in one loop; therefore earlier
+  synchronous RTCP writes could consume time available to later readiness
+  checks. The Attempt 19 change separates the phases, so all viewers must
+  receive five RTP packets before feedback injection starts. This did not
+  eliminate the failure: the phase-separated run stopped at viewer 75 /
+  stream-0038 with 2/5 packets. The router had received 50,201 NACKs and
+  retransmitted 1,863,710 cached packets, with zero RTP queue drops, RTP write
+  errors, or router errors. Thus the feedback filter and injected proof
+  feedback are not required for the readiness failure; underlying RTP
+  delivery/scheduling remains unresolved.
+- **Existing seam/history:** `services/hami-media/main.go` retains the
+  existing readiness and feedback loop, but now completes a readiness-only
+  pass before beginning the feedback pass. The publisher-side NACK filter
+  remains unchanged. This separates the test's media-readiness evidence from
+  its control-feedback workload without changing authorization, media rate,
+  RTP/NACK queue limits, retransmission limits, or RTCP chunking.
+- **Owner action / action removed:** no owner action is needed for the local
+  proof. The change removes RTCP feedback injection from the interval in which
+  the readiness gate is being evaluated.
+- **What remains / next dependency:** failures moved among unrelated viewers
+  and stages: initial Attempt 19 stopped at viewer-pair negotiation 1,969
+  after 91.25 s; the phase-separated run failed readiness at viewer 75; a
+  temporary NACK-yield experiment failed at viewer 6 with 4/5 packets and was
+  not retained because it did not demonstrate a fix and would change protected
+  NACK servicing. Host snapshots showed load averages up to 8.78 and heavy
+  concurrent VS Code/Copilot CPU use, making host contention a plausible but
+  unproven contributor. No further full-scale retry is justified under that
+  contention. Repeat when the local host is available, or collect per-viewer
+  RTP enqueue/write timing if the gate still fails. M6-H, feedback coverage,
+  frames/viewer, p95, and the 300-frame gate remain unverified.
+- **Measured delta / verification:** `go test -count=1 ./...`, `go vet ./...`,
+  and `git diff --check` passed in `services/hami-media`. Fresh final binary
+  `/tmp/hami-media-m6h-5fps-attempt19-final` was built; disassembly confirms
+  readiness calls precede feedback writes. Its behavior matches the
+  phase-separated run, which exited 1 after 97.21 s; log:
+  `/tmp/hami-media-m6h-5fps-attempt19-rerun.log`; result JSON is empty.
+  The earlier negotiation failure is in
+  `/tmp/hami-media-m6h-5fps-attempt19.log`. Temporary fairness experiment
+  evidence is in `/tmp/hami-media-m6h-5fps-attempt19-fair.log`.
+- **Boundary:** local TEST only. No capacity, feedback-completeness,
+  impaired-network, customer, or revenue claim is made.
+
+## 2026-11-17 — M6-H attempt 18: filter proof-irrelevant publisher NACKs
+
+- **Current blocker:** the feedback filter has not been validated at scale.
+  Three runs of the rebuilt Attempt 18 binary stopped before upstream
+  feedback verification because one viewer had only 4/5 RTP packets at the
+  65 s readiness deadline: viewer 612 / stream-0306, viewer 64 / stream-0032,
+  and viewer 176 / stream-0088. On the third run the router diagnosis showed
+  29/2,000 subscriptions with PLI and FIR, 64,074 NACKs received, 2,194,534
+  retransmissions, 399,065 duplicate NACK sequences skipped, and zero RTP
+  queue drops, RTP write errors, or router errors. These runs do not establish
+  whether the feedback filter resolves the prior stall.
+- **Existing seam/history:** `services/hami-media/main.go` already has one
+  publisher-feedback reader per source and a shared evidence channel. The
+  reader now forwards a NACK event only when its sequence pairs contain a
+  sequence explicitly registered for this proof; PLI/FIR events remain
+  unfiltered. This prevents unrelated stack-generated loss NACKs from filling
+  the evidence channel ahead of the injected proof feedback. Expected
+  sequences are registered before feedback is sent, and matching handles
+  PID/BLP sequence wraparound. A focused test covers direct, wrapped,
+  unrelated, and empty expectations.
+- **Owner action / action removed:** no owner action is required for this
+  local test. Filtering removes irrelevant NACK evidence events from the
+  shared proof channel; it does not remove any production authorization or
+  runtime dependency.
+- **What remains / next dependency:** first establish a repeatable 5-packet
+  readiness gate on the unchanged RTP path, then run through
+  `waitForSFUFeedback` to measure whether expected NACKs and all PLI/FIR events
+  are observed. The three early exits occurred at different viewers, so
+  shared-host load is only a possible contributor, not a confirmed cause.
+  M6-H, feedback completeness, per-viewer frames, p95, and the 300-frame gate
+  remain unverified. Do not change the protected RTP/NACK queue behavior,
+  RTCP chunking, or 5 fps while isolating the readiness failure.
+- **Measured delta / verification:** `go test -count=1 ./...`, `go vet ./...`,
+  and `git diff --check` passed in `services/hami-media`; the fresh binary
+  `/tmp/hami-media-m6h-5fps-attempt18` was built and inspected before the
+  runs. The third 65 s-configured run exited 1 after 73.26 s at viewer 176;
+  its diagnosis and timing are in
+  `/tmp/hami-media-m6h-5fps-attempt18-rerun2.log`. The earlier run logs are
+  `/tmp/hami-media-m6h-5fps-attempt18.log` and
+  `/tmp/hami-media-m6h-5fps-attempt18-rerun.log`; all three result JSON files
+  are empty because readiness failed before result generation.
+- **Boundary:** local TEST only. No capacity, feedback-completeness,
+  impaired-network, customer, or revenue claim is made.
+
+## 2026-11-17 — M6-H attempt 17: isolate subscriber RTP writes
+
+- **Current blocker:** the prior 65 s run stopped at the first-packet gate
+  because viewer 16 on stream-0008 had only two RTP packets. The router's
+  source-level fan-out wrote synchronously to each same-track viewer in
+  sequence; Pion's `TrackLocalStaticRTP.WriteRTP` synchronously calls the
+  bound writer. A stalled viewer write could therefore hold up subsequent
+  packets for its sibling. The failed run had no per-write timing, so the
+  specific blocked write was not independently observed.
+- **Existing seam/history:** `services/hami-media/main.go` now enqueues
+  packets in a bounded per-subscription RTP queue, with oldest-first eviction,
+  and drains that queue in the subscription's existing worker. This isolates
+  a slow viewer without adding goroutines; queue drops and write errors are
+  separately counted. A focused test verifies the queue remains bounded and
+  retains the newest packets.
+- **Owner action / action removed:** no owner action is needed for this local
+  proof. A slow downstream `WriteRTP` no longer blocks the router's source
+  reader from enqueueing packets for sibling viewers.
+- **What remains / next dependency:** the full 65 s media run passed the RTP
+  readiness gate. Its subsequent five-minute feedback wait completed only
+  90/1,000 tracks, with PLI/FIR forwarded for 668/2,000 subscriptions.
+  NACK handling saw 369,175 NACKs and 22,565,130 retransmissions. RTP queue
+  drops, RTP write errors, and router errors were all zero. The run returned
+  before result JSON generation, so per-viewer frame counts, p95, and the
+  300-frame gate are not verified. Diagnose the remaining feedback coverage
+  separately; do not claim M6-H passed.
+- **Measured delta / verification:** uncached `go test -count=1 ./...`,
+  `go vet ./...`, and `git diff --check` passed in `services/hami-media`.
+  Fresh binary `/tmp/hami-media-m6h-5fps-attempt17` contains
+  `enqueueRTP`, `nackWorker`, and `forwardQueuedRTP` symbols. The full local
+  65 s / 5 fps run exited 1 after 315.34 s. Log:
+  `/tmp/hami-media-m6h-5fps-attempt17.log`; result JSON is empty at
+  `/tmp/hami-media-m6h-5fps-attempt17.json`.
+- **Boundary:** local TEST only. M6-H, 300 frames per viewer, p95, and complete
+  feedback are not verified; no real customer, revenue, or capacity claim.
+
+## 2026-11-17 — M6-H attempt 16: bound NACK reports, proof blocked at RTP readiness
+
+- **Current blocker:** the original 91,118 `rtcp: too many reports` errors
+  came from forwarding an uncached NACK with up to 512 NACK pairs in one
+  packet. Pion `rtcp` v1.2.20 rejects `len(Nacks)+2 > 255` in
+  `transport_layer_nack.go`; the per-report maximum is 253.
+- **Existing seam/history:** `services/hami-media/main.go` now chunks the
+  logical NACK into reports of at most 253 pairs and sends each report in a
+  separate `WriteRTCP` call. Combining all chunks in one call removed the
+  report-limit error but produced compound RTCP datagrams larger than Pion
+  WebRTC's default 1,500-byte mux read buffer, yielding 1,889 short-buffer
+  errors. Individual writes avoid that; a focused test verifies all 512
+  requested sequences survive, each report marshals below 1,500 bytes, and
+  the combined form would exceed that buffer.
+- **Owner action / action removed:** no owner action is needed to exercise
+  this local feedback path. The router no longer passes oversized NACK report
+  lists to Pion or combines the split reports into an oversized datagram.
+- **What remains / next dependency:** the final per-report-write run logged
+  neither `too many reports` nor mux short-buffer errors, but stopped before
+  feedback verification: viewer 16 on stream-0008 received 2 packets instead
+  of 5 before the 65 s media deadline. No result JSON or aggregate router
+  drop diagnosis was produced, so track completion, queue-drop totals, frames,
+  PLI/FIR coverage, and p95 are not verified. Investigate the RTP-readiness
+  failure before repeating the M6 claim.
+- **Measured delta / verification:** `go test ./...`, `go vet ./...`, and
+  `git diff --check` passed. Fresh binary
+  `/tmp/hami-media-m6h-5fps-rtcp-packetized` disassembly showed the NACK
+  chunker call and separate per-chunk write loop. The 65 s / 5 fps run exited
+  1 after 217.68 s. Its log is
+  `/tmp/hami-media-m6h-5fps-rtcp-packetized.log`; result JSON is empty at
+  `/tmp/hami-media-m6h-5fps-rtcp-packetized.json`.
+- **Boundary:** local TEST only. M6-H, 300 frames per viewer, p95, and full
+  RTCP coverage are not verified; no capacity or impaired-network claim.
+
+## 2026-11-17 — M6-H attempt 15: queue fix restored, 5 fps gate blocked
+
+- **Current blocker:** the 1,000-publisher/2,000-viewer run still fails
+  upstream feedback verification. The latest run completed only 64/1,000
+  publisher tracks and forwarded PLI/FIR for 571/2,000 subscriptions.
+- **Existing seam/history:** restored the existing NACK settings in
+  `services/hami-media/main.go` to queue size 512, queue age 5 s, and
+  maximum 512 sequences per NACK. The separate feedback context and 5 fps
+  media interval were left unchanged. The fresh binary's disassembly showed
+  channel capacity 512, a 5,000,000,000 ns age comparison, and a 512-sequence
+  cap.
+- **Owner action / action removed:** no owner action is needed to run this
+  local proof; this restores the requested queue configuration in place.
+- **What remains / next dependency:** router diagnosis reported 367,336 NACKs
+  received, 14,263,675 retransmissions, 3,937,582 duplicates skipped, zero
+  capped sequences, zero queue-full drops, zero stale drops, queue depth 9,
+  and 91,118 router errors (`rtcp: too many reports`). PLI/FIR reached only
+  571 subscriptions. The upstream RTCP reporting bottleneck remains; no
+  frames-per-viewer or p95 result is available because the proof returned
+  before writing JSON.
+- **Measured delta / verification:** `go test ./...` and `go vet ./...`
+  passed in `services/hami-media`; a fresh binary was built at
+  `/tmp/hami-media-m6h-5fps-queue512` and verified by disassembly before
+  execution. The 65 s / 5 fps run exited 1 after 316.35 s. Its log is
+  `/tmp/hami-media-m6h-5fps-queue512.log`; its result file is empty at
+  `/tmp/hami-media-m6h-5fps-queue512.json`.
+- **Boundary:** local TEST only. M6-H, 300 frames per viewer, p95, and
+  complete feedback are not verified; no capacity or impaired-network claim
+  is made.
+
+## 2026-11-17 — M6-H 5 fps feedback pacing: deadline fixed, proof blocked
+
+- **Current blocker:** the 1,000-publisher/2,000-viewer M6-H proof still fails
+  its upstream RTCP gate. The original attempt stopped pacing at viewer 1,893
+  when the 65 s media context expired. Separating that deadline allowed a
+  retry to reach upstream verification, but the router forwarded PLI/FIR for
+  only 400 of 2,000 subscriptions after the full bounded wait.
+- **Existing seam/history:** `services/hami-media/main.go` already separates
+  the media-send context from the sequential RTCP pacing loop. The pacing
+  loop now has a bounded context covering the 65 s media window, 30 s to
+  finish pacing, and the existing 5 min upstream-feedback wait. RTP
+  readiness still uses the media context. No queue or feedback-forwarding
+  behavior was changed.
+- **Owner action / action removed:** no owner action is needed for this local
+  proof. The change removes the accidental requirement that all feedback
+  injection finish before the media deadline, and preserves the existing
+  bounded upstream wait.
+- **What remains / next dependency:** the latest run used the 65 s media
+  configuration but timed out after 5 min with 21/1,000 publisher tracks
+  complete; without a result JSON, completion of the media/frame gates cannot
+  be claimed.
+  The router saw 394,184 NACKs, retransmitted 7,804,712 packets, skipped
+  1,892,934 duplicates, capped 39,076,899 requested sequences, and forwarded
+  PLI/FIR for only 400 subscriptions; it reported 7,012 stale drops, zero
+  queue-full drops, and zero router errors. Isolate why RTCP feedback is not
+  reaching the remaining subscriptions under this NACK load before claiming
+  M6-H. The task order described a 512-entry / 5 s / 512-sequence NACK setup,
+  but the inspected source currently has 64 / 500 ms / 128; these settings
+  were left untouched as directed. The earlier 1 fps probe does not establish
+  the 5 fps behavior.
+- **Measured delta / verification:** `go test ./...` and `go vet ./...`
+  passed in `services/hami-media`. The rebuilt local binary ran with the 65 s
+  media configuration, then failed the RTCP gate; `RUN_EXIT=1`, real time
+  324.20 s. Failure evidence is in `/tmp/hami-media-m6h-5fps.log`; no result
+  JSON was produced. The original Attempt 14 log and first retry artifacts were
+  preserved under `/tmp/hami-media-m6h-5fps-attempt14.*` and
+  `/tmp/hami-media-m6h-5fps-attempt15.*`.
+- **Boundary:** local TEST evidence only. M6-H, 300 frames per viewer,
+  per-viewer latency, and feedback completeness are not verified; no
+  capacity or impaired-network claim is made.
+---
 ## 2026-11-17 — D93 NEA/DAO source-date correction (manual-only; no source write)
 
 - **Correction to the preceding NEA note:** the Gandaki Provincial Office homepage is last updated 2026-11-06 15:44:55 and states its remit includes Gorkha and 13 distribution centers across 11 districts. The DCS offices page is last updated 2026-08-21 17:46:26; its visible scheduled-maintenance entries are for Syangja, Nuwakot and Ratnapark on 21–22 August, not Gorkha or Arughat. The Gorkha Distribution Center detail page /404 is last updated 2026-11-13 12:55:53; Arughat /407 is last updated 2026-10-09 16:47:27 (pre-event). The earlier statement that a 13 November maintenance page showed “No data available” was unsupported and is withdrawn. None of these pages establishes a flood-related outage or restoration.
@@ -4520,6 +6583,38 @@ Use the existing ENTITY/RELATION/EVENT/EVIDENCE/CAPABILITY/ACTION primitives and
 
 **Next evidence:** current asset condition/ownership/commissioning, monthly throughput and revenue, actual buyers/prices/repeat orders, electricity category and bills, product testing/label/permit status, current subsidy form eligibility and beneficiary list, and whether the three-room/5 MT/10 MT/chilling-plant records refer to the same physical asset. Public records first; direct contact/field verification only with explicit owner authorization. No source ingestion until each exact source is cleared.
 
+## 2026-11-18 — ONE FRONT DOOR (task 007)
+
+- Fix 1: the Telegram webhook reply now enqueues an outbox delivery; only the gated dispatcher calls the Telegram transport.
+- Fix 2: ASK creation and resend now use the same outbox path with stable per-ASK idempotency keys and provider message IDs read from the durable receipt.
+- Fix 3: GET `/scheduled/cycle` now requires both the existing `CRON_SECRET` bearer token and `X-API-Key`; its method and path are unchanged.
+- Fix 4: `SEND_EMAIL`, `SEND_SMS`, and `SEND_TELEGRAM` now execute as the scoped dispatcher service through HALT, rights, idempotency, refusal recording, and independent delivery postconditions.
+- Fix 5: `PUBLIC_WRITE_REASONS` provides a sentence for every existing `PUBLIC_WRITE_PATHS` entry; the path set is unchanged.
+- Verification: focused gated-delivery set **30 passed**; `env -u DATABASE_URL -u FORGEOS_TEST_DATABASE_URL python3.11 -m pytest -q backend/tests` **1,380 passed, 2 skipped, 0 failures**; `git diff --check` passed. The test fixture resets only the process-local gate circuit breaker between tests, and the mocked SMTP sender matches the gate's explicit SMTP-acceptance response contract.
+- Owner action still required: callers of `/scheduled/cycle` must supply both credentials; existing provider credentials and closed-by-default feature flags still control whether a real send can occur.
+- Action removed: direct Telegram sends and owner-key-free invocation of the scheduled GET are no longer available; provider transports are reachable only through the gated outbox dispatcher.
+- Remaining blocker/verification: real provider sends were not performed; provider configuration, production authorization, deployment identity, and a real transaction remain unverified. HALT remains absolute, so a resume ASK cannot deliver its code while safe mode is active; a separate authorized owner intervention is still required to clear that condition. No flag default changed. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` is **NOT MEASURABLE**.
+- Next removable dependency: verify authorized production configuration and a gated provider-acceptance receipt only when explicitly authorized; no contact or send is authorized by this code change.
+
+## 2026-11-18 — Gates alert wire (task 008)
+
+- Capability delta: after successful maintenance and legacy-cycle completion, `GET /scheduled/cycle` now invokes the existing gates check with the repository root. Green remains silent; red goes through the existing owner-control outbox and dispatcher. The cycle response includes the outcome and `BLOCKED_BY_MISSING_ACCESS` when the configured channel cannot deliver.
+- Verification: `python3.11 -m py_compile backend/app/services/gates_alert.py backend/app/api/scheduled.py backend/tests/test_scheduled_cycle.py` passed; `env -u DATABASE_URL -u FORGEOS_TEST_DATABASE_URL python3.11 -m pytest -q backend/tests/test_scheduled_cycle.py backend/tests/test_integration_dispatcher.py` passed (**64 passed**); `node --experimental-strip-types --test src/lib/gates.test.ts` passed (**14/14**); `node scripts/gates-report.mjs` reported **GREEN**. The actual `run_gates_alert` check returned `status=green`, `notified=false` (silent). A forced-red TEST invocation returned `status=red`, `notified=false`, `blocked_by=BLOCKED_BY_MISSING_ACCESS`.
+- External evidence: owner-channel readiness was false in the current process. No `backend/.env` values were read. The forced-red attempt returned before enqueueing; no delivery row or Telegram message was created. Owner receipt is **UNVERIFIED**; no alert delivery is claimed.
+- Owner action still required: provide the already-authorized owner channel configuration and confirm receipt after one test alert; ensure the scheduled cycle is actually invoked (its caller remains UNKNOWN). Action removed when enabled: manually running the gates check and routing a real red notification. Remaining blockers: owner-channel access, owner receipt confirmation, and unverified scheduler invocation. `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+- Next removable dependency: once authorized channel access is available, consume the single approved test-alert attempt, verify the outbox row reaches `SUCCEEDED`, and obtain owner confirmation without reading or reproducing credentials.
+
+## 2026-11-18 — M7-H attempt 13: heap captured, tuned proof still blocked
+
+- **Existing seam/history:** `services/hami-media/main.go::sfuPublishedTrack.rememberPacket` previously cloned each `TrackRemote.ReadRTP` packet into the bounded 512-packet cache. Pion's `TrackRemote.ReadRTP` returns a newly allocated packet; the forwarding queue and retransmission path clone before use. The cache now retains the owned packet directly while `cachedPackets` continues returning independent clones. No cache size, queue, RTCP chunking or mDNS setting changed.
+- **Instrumentation:** the existing authenticated loopback SFU control server can now return an opt-in heap profile. The harness and SFU profiles are captured after connection setup and after media, including on feedback timeout, so a failed run still yields live-heap evidence. No external listener was added.
+- **Verification:** `gofmt -w services/hami-media/main.go`, `git diff --check -- services/hami-media/main.go`, `cd services/hami-media && go test ./...`, `cd services/hami-media && go vet ./...`, and the linker-flagged build to `/tmp/hami-media-m7h-attempt13` all passed.
+- **Measured run:** with `GOGC=75 GOMEMLIMIT=8GiB GODEBUG=gctrace=1`, the 3,000-publisher / 3,000-viewer M7-H run exited 1 after the 5-minute feedback wait: only 171/3,000 tracks completed (`nackZero=2753 pliZero=2703 firZero=2712`). All 6,000 peer connections had died; median lifetime was 90,010 ms. The raw JSON result is empty, so p99 is **NOT MEASURED** and this is not an acceptance proof.
+- **Heap / GC evidence:** after forced GC at feedback timeout, the live heap was about 3.87 GB in the harness and 4.44 GB in the SFU. Largest live allocation sites were Pion `PacketFactoryCopy` (1.82 GB harness; 0.99 GB SFU), Pion `packetio.Buffer.grow` (0.54 GB harness; 0.83 GB SFU), and SFU `TrackRemote.ReadRTP` (1.18 GB). These are allocation origins, not proof of exact object ownership; the Go heap profile does not expose a retaining-reference graph. Of 38 complete harness GC records, maximum concurrent mark was 3,353 ms; of 231 complete SFU records, maximum was 5,517 ms. The harness recorded 243 heartbeat-late samples, maximum 2,583.483 ms, with 140 above 100 ms. All exceed the task's verification limits.
+- **Current blocker / next dependency:** source inspection confirms Pion's default NACK responder retains copied packet history (default ring size 1,024); changing that would alter retransmission history, so it remains untouched along with `sfuNACKHistoryPackets=512`, `nackQueueSize=512`, and `nackMaxQueueAge=5s`. The direct-cache change removes one redundant packet copy, but the measured live heap and marks remain far above target. Continue only with a retention fix that preserves those settings and packet ownership, then rerun the exact 3,000/3,000 proof and read the raw JSON and separate GC traces.
+- **Owner dependency / measured delta:** no real transaction or owner action was removed; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**. The verified increment is evidence quality: timeout-path pprof now identifies the dominant live allocation sites instead of leaving the heap hypothesis unmeasured.
+- **Boundary:** no commit, push, deployment, Cloud test or change to the protected NACK/queue/chunking/mDNS settings.
+---
 
 ## 2026-11-18 — D93 dispatch-to-distribution and source-time reconciliation
 
@@ -4556,4 +6651,4 @@ Reuse the existing six primitives and existing substrate:
 ### Next evidence
 
 Obtain NDRRMA #02's official PDF attachment and inspect every page; then #04. Retrieve the Chumnubri notice attachment and dated official road/bridge/power restoration records. Only attempt a dispatch-to-distribution comparison when source actor, geography, time window, units and item categories match. Keep current passability, power, water quality, restoration completion and household-level reach UNKNOWN.
-
+---

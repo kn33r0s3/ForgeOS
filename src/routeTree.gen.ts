@@ -14,6 +14,7 @@ import { Route as SplatRouteImport } from './routes/$'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as ActionsRouteImport } from './routes/actions'
 import { Route as BotQualificationDemoRouteImport } from './routes/bot-qualification-demo'
+import { Route as BuildLogRouteImport } from './routes/build-log'
 import { Route as ClimbRouteImport } from './routes/climb'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DiscoveriesRouteImport } from './routes/discoveries'
@@ -22,6 +23,7 @@ import { Route as ExperimentsRouteImport } from './routes/experiments'
 import { Route as FeedRouteImport } from './routes/feed'
 import { Route as ForgeBotIntakeRouteImport } from './routes/forge-bot-intake'
 import { Route as GroupRouteImport } from './routes/group'
+import { Route as LedgerRouteImport } from './routes/ledger'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MeetHamiRouteImport } from './routes/meet-hami'
 import { Route as NeedsRouteImport } from './routes/needs'
@@ -75,6 +77,11 @@ const BotQualificationDemoRoute = BotQualificationDemoRouteImport.update({
   path: '/bot-qualification-demo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BuildLogRoute = BuildLogRouteImport.update({
+  id: '/build-log',
+  path: '/build-log',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClimbRoute = ClimbRouteImport.update({
   id: '/climb',
   path: '/climb',
@@ -113,6 +120,11 @@ const ForgeBotIntakeRoute = ForgeBotIntakeRouteImport.update({
 const GroupRoute = GroupRouteImport.update({
   id: '/group',
   path: '/group',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LedgerRoute = LedgerRouteImport.update({
+  id: '/ledger',
+  path: '/ledger',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -257,6 +269,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/actions': typeof ActionsRoute
   '/bot-qualification-demo': typeof BotQualificationDemoRoute
+  '/build-log': typeof BuildLogRoute
   '/climb': typeof ClimbRoute
   '/contact': typeof ContactRoute
   '/discoveries': typeof DiscoveriesRoute
@@ -265,6 +278,7 @@ export interface FileRoutesByFullPath {
   '/feed': typeof FeedRoute
   '/forge-bot-intake': typeof ForgeBotIntakeRoute
   '/group': typeof GroupRouteWithChildren
+  '/ledger': typeof LedgerRoute
   '/login': typeof LoginRoute
   '/meet-hami': typeof MeetHamiRoute
   '/needs': typeof NeedsRoute
@@ -299,6 +313,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/actions': typeof ActionsRoute
   '/bot-qualification-demo': typeof BotQualificationDemoRoute
+  '/build-log': typeof BuildLogRoute
   '/climb': typeof ClimbRoute
   '/contact': typeof ContactRoute
   '/discoveries': typeof DiscoveriesRoute
@@ -306,6 +321,7 @@ export interface FileRoutesByTo {
   '/experiments': typeof ExperimentsRoute
   '/feed': typeof FeedRoute
   '/forge-bot-intake': typeof ForgeBotIntakeRoute
+  '/ledger': typeof LedgerRoute
   '/login': typeof LoginRoute
   '/meet-hami': typeof MeetHamiRoute
   '/needs': typeof NeedsRoute
@@ -340,6 +356,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/actions': typeof ActionsRoute
   '/bot-qualification-demo': typeof BotQualificationDemoRoute
+  '/build-log': typeof BuildLogRoute
   '/climb': typeof ClimbRoute
   '/contact': typeof ContactRoute
   '/discoveries': typeof DiscoveriesRoute
@@ -348,6 +365,7 @@ export interface FileRoutesById {
   '/feed': typeof FeedRoute
   '/forge-bot-intake': typeof ForgeBotIntakeRoute
   '/group': typeof GroupRouteWithChildren
+  '/ledger': typeof LedgerRoute
   '/login': typeof LoginRoute
   '/meet-hami': typeof MeetHamiRoute
   '/needs': typeof NeedsRoute
@@ -384,6 +402,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/actions'
     | '/bot-qualification-demo'
+    | '/build-log'
     | '/climb'
     | '/contact'
     | '/discoveries'
@@ -392,6 +411,7 @@ export interface FileRouteTypes {
     | '/feed'
     | '/forge-bot-intake'
     | '/group'
+    | '/ledger'
     | '/login'
     | '/meet-hami'
     | '/needs'
@@ -426,6 +446,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/actions'
     | '/bot-qualification-demo'
+    | '/build-log'
     | '/climb'
     | '/contact'
     | '/discoveries'
@@ -433,6 +454,7 @@ export interface FileRouteTypes {
     | '/experiments'
     | '/feed'
     | '/forge-bot-intake'
+    | '/ledger'
     | '/login'
     | '/meet-hami'
     | '/needs'
@@ -466,6 +488,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/actions'
     | '/bot-qualification-demo'
+    | '/build-log'
     | '/climb'
     | '/contact'
     | '/discoveries'
@@ -474,6 +497,7 @@ export interface FileRouteTypes {
     | '/feed'
     | '/forge-bot-intake'
     | '/group'
+    | '/ledger'
     | '/login'
     | '/meet-hami'
     | '/needs'
@@ -509,6 +533,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   ActionsRoute: typeof ActionsRoute
   BotQualificationDemoRoute: typeof BotQualificationDemoRoute
+  BuildLogRoute: typeof BuildLogRoute
   ClimbRoute: typeof ClimbRoute
   ContactRoute: typeof ContactRoute
   DiscoveriesRoute: typeof DiscoveriesRoute
@@ -517,6 +542,7 @@ export interface RootRouteChildren {
   FeedRoute: typeof FeedRoute
   ForgeBotIntakeRoute: typeof ForgeBotIntakeRoute
   GroupRoute: typeof GroupRouteWithChildren
+  LedgerRoute: typeof LedgerRoute
   LoginRoute: typeof LoginRoute
   MeetHamiRoute: typeof MeetHamiRoute
   NeedsRoute: typeof NeedsRoute
@@ -579,6 +605,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BotQualificationDemoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/build-log': {
+      id: '/build-log'
+      path: '/build-log'
+      fullPath: '/build-log'
+      preLoaderRoute: typeof BuildLogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/climb': {
       id: '/climb'
       path: '/climb'
@@ -633,6 +666,13 @@ declare module '@tanstack/react-router' {
       path: '/group'
       fullPath: '/group'
       preLoaderRoute: typeof GroupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ledger': {
+      id: '/ledger'
+      path: '/ledger'
+      fullPath: '/ledger'
+      preLoaderRoute: typeof LedgerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -859,6 +899,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   ActionsRoute: ActionsRoute,
   BotQualificationDemoRoute: BotQualificationDemoRoute,
+  BuildLogRoute: BuildLogRoute,
   ClimbRoute: ClimbRoute,
   ContactRoute: ContactRoute,
   DiscoveriesRoute: DiscoveriesRoute,
@@ -867,6 +908,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeedRoute: FeedRoute,
   ForgeBotIntakeRoute: ForgeBotIntakeRoute,
   GroupRoute: GroupRouteWithChildren,
+  LedgerRoute: LedgerRoute,
   LoginRoute: LoginRoute,
   MeetHamiRoute: MeetHamiRoute,
   NeedsRoute: NeedsRoute,

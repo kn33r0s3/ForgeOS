@@ -66,6 +66,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import evidence_source, models
@@ -995,13 +996,19 @@ def _strategy_performance_bonus(db: Session, action: models.Experiment) -> float
 # Nothing else in this codebase may execute a boundary Action. Callers
 # (E5/E7: cognitive_worker, scheduler) route through this function.
 
-# Operations that mutate durable state get the 3-attempt adapter budget;
-# reads and the event/halt reads get 1 attempt (plan section 3c).
+# Repo mutations and sends get a 3-attempt idempotency budget. Send adapters
+# run once per gate call so provider exceptions are never retried immediately.
+# Reads and event/halt reads get 1 attempt (plan section 3c).
 _MUTATING_OPERATIONS = frozenset({
     Operation.RUN_LOCAL_TESTS,
     Operation.EDIT_REPO_FILE,
     Operation.CREATE_REPO_FILE,
     Operation.REQUEUE_TASK,
+})
+_SEND_OPERATIONS = frozenset({
+    Operation.SEND_EMAIL,
+    Operation.SEND_SMS,
+    Operation.SEND_TELEGRAM,
 })
 _MAX_GATE_ATTEMPTS = 3
 _MAX_READ_ATTEMPTS = 1
@@ -1097,6 +1104,16 @@ def _take_snapshot(db: Session, action: BoundaryAction, repo_root: Path) -> dict
         if op == Operation.READ_HALT_STATE:
             row = db.query(models.OpHamiRuntimeControl).first()
             return {"halted": True if row is None else bool(row.safe_mode_enabled)}
+        if op in _SEND_OPERATIONS:
+            delivery = db.get(models.IntegrationDelivery, payload.get("delivery_id"))
+            if delivery is None:
+                return {"delivery_id": payload.get("delivery_id")}
+            return {
+                "delivery_id": delivery.id,
+                "integration_name": delivery.integration_name,
+                "operation": delivery.operation,
+                "status": delivery.status,
+            }
         return {}
     except Exception:
         logger.exception("gate snapshot failed for %s", action.operation)
@@ -1106,21 +1123,26 @@ def _take_snapshot(db: Session, action: BoundaryAction, repo_root: Path) -> dict
 def _write_gate_event(db: Session, event_type: str, key: str, payload: dict) -> None:
     """Best-effort audit event. A failed write never changes the outcome:
     the refusal or result stands, and the failure is logged."""
+    event_key = f"execution-boundary:{event_type}:{key}"
     try:
+        if db.query(models.WorldEvent.id).filter_by(idempotency_key=event_key).first() is not None:
+            return
         event = models.WorldEvent(
             event_type=event_type,
             source="execution_boundary",
             payload=json.dumps(payload, sort_keys=True),
-            idempotency_key=key,
+            idempotency_key=event_key,
         )
-        db.add(event)
-        db.flush()
+        try:
+            with db.begin_nested():
+                db.add(event)
+                db.flush()
+        except IntegrityError:
+            if db.query(models.WorldEvent.id).filter_by(idempotency_key=event_key).first() is not None:
+                return
+            raise
     except Exception:
         logger.exception("gate audit event %s failed", event_type)
-        try:
-            db.rollback()
-        except Exception:
-            pass
 
 
 def _refusal(operation, principal: str, reason: RefusalReason, detail: str) -> Refusal:
@@ -1211,9 +1233,10 @@ def execute_through_gate(
     right = rights.get("right")
 
     # 5. Envelope re-check at execution time (E3) — expiry, revocation,
-    #    scope depth. Skipped for INTERNAL_READ: no authorization is
-    #    needed for those by design. The owner needs no envelope.
-    if right != "internal_read":
+    #    scope depth. INTERNAL_READ is read-only; INTERNAL_SERVICE is limited
+    #    to the registered dispatcher and its send scope. Neither uses an
+    #    owner authorization envelope. The owner needs no envelope either.
+    if right not in {"internal_read", "internal_service"}:
         recheck = autonomy_engine.recheck_envelope_for_execution(
             db, operation=operation.value, scope=scope, envelope=envelope, principal=principal,
         )
@@ -1226,7 +1249,11 @@ def execute_through_gate(
     #    without re-executing; a fresh started record refuses as a
     #    duplicate; a stale started record is abandoned and re-run once.
     key = idempotency_store.compute_idempotency_key(operation.value, principal, scope, payload)
-    max_attempts = _MAX_GATE_ATTEMPTS if operation in _MUTATING_OPERATIONS else _MAX_READ_ATTEMPTS
+    max_attempts = (
+        _MAX_GATE_ATTEMPTS
+        if operation in _MUTATING_OPERATIONS or operation in _SEND_OPERATIONS
+        else _MAX_READ_ATTEMPTS
+    )
     try:
         record = idempotency_store.lookup(db, key)
     except Exception as exc:

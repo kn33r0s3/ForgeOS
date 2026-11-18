@@ -135,6 +135,53 @@ jobs:
       - run: node scripts/check-orphaned-routes.mjs
       - run: node --test scripts/startup-contract.test.mjs
 
+  gate-checks:
+    # The gates: every outward action through one front door, no bypass.
+    # Fails on any red gate, a stale generated report, or a commit message
+    # without the [agent][task-id][gates] prefix.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Gates — bypass tests + GATES.md freshness
+        run: npm run gates
+      - name: GATES.md must be committed fresh
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run gates:report
+          if ! git diff --quiet -- docs/GATES.md; then
+            echo "::error::docs/GATES.md is stale — run 'npm run gates:report' and commit it"
+            git diff -- docs/GATES.md | head -50
+            exit 1
+          fi
+      - name: WHO_DID_WHAT.md must be committed fresh
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run who-did-what
+          if ! git diff --quiet -- docs/WHO_DID_WHAT.md; then
+            echo "::error::docs/WHO_DID_WHAT.md is stale — run 'npm run who-did-what' and commit it"
+            git diff -- docs/WHO_DID_WHAT.md | head -50
+            exit 1
+          fi
+      - name: Commit messages must carry [agent][task-id][gates]
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            RANGE="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+          else
+            RANGE="${{ github.event.before }}..${{ github.sha }}"
+          fi
+          node scripts/check-commit-msg.mjs --range "$RANGE"
+
   livekit-local-smoke:
     name: livekit-local-smoke
     runs-on: ubuntu-latest

@@ -1,6 +1,7 @@
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from threading import Event
 
 from fastapi import HTTPException
@@ -13,6 +14,14 @@ from app.main import app
 import inspect
 
 import pytest
+
+
+def _cycle_headers(monkeypatch, secret="test-cron-secret"):
+    monkeypatch.setattr(scheduled.settings, "FORGE_API_KEY", "test-owner-key")
+    return {
+        "Authorization": f"Bearer {secret}",
+        "X-API-Key": "test-owner-key",
+    }
 
 
 @pytest.fixture(autouse=True)
@@ -342,8 +351,33 @@ def test_scheduled_cycle_requires_bearer_secret(monkeypatch):
     assert response.status_code == 401
 
 
+def test_scheduled_cycle_requires_owner_key_in_addition_to_cron_secret(monkeypatch):
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    monkeypatch.setattr(scheduled.settings, "FORGE_API_KEY", "test-owner-key")
+    client = TestClient(app)
+
+    missing = client.get(
+        "/scheduled/cycle",
+        headers={"Authorization": "Bearer test-cron-secret"},
+    )
+    wrong = client.get(
+        "/scheduled/cycle",
+        headers={"Authorization": "Bearer test-cron-secret", "X-API-Key": "wrong"},
+    )
+
+    assert missing.status_code == 401
+    assert wrong.status_code == 401
+
+
 def test_scheduled_cycle_runs_canonical_runner(monkeypatch):
     monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    gate_result = {"status": "green", "notified": False, "reasons": []}
+    gate_calls = []
+
+    def run_gates_alert(db, repo_root):
+        gate_calls.append(repo_root)
+        return gate_result
+
     monkeypatch.setattr(
         scheduled,
         "run_daily_maintenance",
@@ -357,6 +391,7 @@ def test_scheduled_cycle_runs_canonical_runner(monkeypatch):
         "send_daily_owner_summary_notification",
         lambda db: {"status": "ACCEPTED_BY_SMTP", "delivery_id": 1},
     )
+    monkeypatch.setattr(scheduled.gates_alert, "run_gates_alert", run_gates_alert)
     monkeypatch.setattr(
         scheduled._cycle_scheduler,
         "run_single_cycle",
@@ -366,7 +401,7 @@ def test_scheduled_cycle_runs_canonical_runner(monkeypatch):
 
     response = client.get(
         "/scheduled/cycle",
-        headers={"Authorization": "Bearer test-cron-secret"},
+        headers=_cycle_headers(monkeypatch),
     )
 
     assert response.status_code == 200
@@ -379,8 +414,126 @@ def test_scheduled_cycle_runs_canonical_runner(monkeypatch):
         "cycle_id": 27,
         "forge_cycle_failed": False,
         "autonomy_cycle_failed": False,
+        "gates_alert": gate_result,
         "owner_summary_status": "ACCEPTED_BY_SMTP",
     }
+    assert gate_calls == [Path(scheduled.__file__).resolve().parents[3]]
+
+
+def test_scheduled_cycle_reports_blocked_gates_alert(monkeypatch, caplog):
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    monkeypatch.setattr(scheduled, "run_daily_maintenance", lambda db: {})
+    monkeypatch.setattr(
+        scheduled._cycle_scheduler,
+        "run_single_cycle",
+        lambda **kwargs: {"forge_cycle": {"cycle_id": 29}},
+    )
+    monkeypatch.setattr(
+        scheduled,
+        "send_daily_owner_summary_notification",
+        lambda db: None,
+    )
+    monkeypatch.setattr(
+        scheduled.gates_alert,
+        "run_gates_alert",
+        lambda db, repo_root: {
+            "status": "red",
+            "notified": False,
+            "blocked_by": "BLOCKED_BY_MISSING_ACCESS",
+            "reasons": ["forced test condition"],
+        },
+    )
+    client = TestClient(app)
+
+    response = client.get(
+        "/scheduled/cycle",
+        headers=_cycle_headers(monkeypatch),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["gates_alert"]["blocked_by"] == "BLOCKED_BY_MISSING_ACCESS"
+    assert "Scheduled gates alert blocked (BLOCKED_BY_MISSING_ACCESS)" in caplog.text
+
+
+def test_gates_alert_stays_silent_when_gates_are_green(db, monkeypatch, tmp_path):
+    from app import models
+
+    monkeypatch.setattr(
+        scheduled.gates_alert,
+        "_run_gates_check",
+        lambda repo_root: (True, []),
+    )
+    monkeypatch.setattr(
+        scheduled.gates_alert,
+        "_telegram_configured",
+        lambda: pytest.fail("green gates must not inspect or send through Telegram"),
+    )
+
+    result = scheduled.gates_alert.run_gates_alert(db, tmp_path)
+
+    assert result == {"status": "green", "notified": False, "reasons": []}
+    assert db.query(models.IntegrationDelivery).count() == 0
+
+
+def test_gates_alert_reports_missing_access_without_enqueuing(db, monkeypatch, tmp_path):
+    from app import models
+
+    monkeypatch.setattr(
+        scheduled.gates_alert,
+        "_run_gates_check",
+        lambda repo_root: (False, ["forced test condition"]),
+    )
+    monkeypatch.setattr(scheduled.gates_alert, "_telegram_configured", lambda: False)
+
+    result = scheduled.gates_alert.run_gates_alert(db, tmp_path)
+
+    assert result == {
+        "status": "red",
+        "notified": False,
+        "blocked_by": "BLOCKED_BY_MISSING_ACCESS",
+        "reasons": ["forced test condition"],
+    }
+    assert db.query(models.IntegrationDelivery).count() == 0
+
+
+def test_gates_alert_only_reports_notified_after_dispatch_success(db, monkeypatch, tmp_path):
+    import json
+    from app.config import settings
+    from app import models
+    from app.services import integration_dispatcher, owner_control
+
+    monkeypatch.setattr(
+        scheduled.gates_alert,
+        "_run_gates_check",
+        lambda repo_root: (False, ["forced test condition"]),
+    )
+    monkeypatch.setattr(owner_control, "control_ready", lambda: True)
+    monkeypatch.setattr(settings, "HAMI_TELEGRAM_OWNER_CHAT_ID", "123456789")
+    dispatched = []
+
+    def dispatch_delivery(session, delivery_id):
+        delivery = session.get(models.IntegrationDelivery, delivery_id)
+        request = json.loads(delivery.request_json)
+        dispatched.append((delivery_id, request))
+        delivery.status = "SUCCEEDED"
+        delivery.response_json = json.dumps({"message_id": 321})
+        session.commit()
+        return delivery
+
+    monkeypatch.setattr(
+        integration_dispatcher,
+        "dispatch_single_delivery",
+        dispatch_delivery,
+    )
+
+    result = scheduled.gates_alert.run_gates_alert(db, tmp_path)
+
+    assert result["notified"] is True
+    assert result["delivery_status"] == "SUCCEEDED"
+    assert "not handset-delivery proof" in result["delivery_claim"]
+    assert dispatched[0][1]["chat_id"] == "123456789"
+    assert dispatched[0][1]["message_type"] == "alert"
+    assert "Hami gates RED" in dispatched[0][1]["body"]
 
 
 def test_scheduled_cycle_reports_owner_summary_skipped_without_smtp(monkeypatch):
@@ -401,7 +554,7 @@ def test_scheduled_cycle_reports_owner_summary_skipped_without_smtp(monkeypatch)
 
     response = client.get(
         "/scheduled/cycle",
-        headers={"Authorization": f"Bearer {secret}"},
+        headers=_cycle_headers(monkeypatch, secret),
     )
 
     assert response.status_code == 200
@@ -420,7 +573,7 @@ def test_scheduled_cycle_reports_runner_failure(monkeypatch):
 
     response = client.get(
         "/scheduled/cycle",
-        headers={"Authorization": "Bearer test-cron-secret"},
+        headers=_cycle_headers(monkeypatch),
     )
 
     assert response.status_code == 500
@@ -439,7 +592,7 @@ def test_scheduled_cycle_reports_timeout_as_incomplete(monkeypatch):
 
     response = client.get(
         "/scheduled/cycle",
-        headers={"Authorization": "Bearer test-cron-secret"},
+        headers=_cycle_headers(monkeypatch),
     )
 
     assert response.status_code == 504
@@ -462,7 +615,7 @@ def test_scheduled_cycle_holds_its_lock_until_timed_out_worker_finishes(monkeypa
     monkeypatch.setattr(scheduled._cycle_scheduler, "max_run_seconds", 1)
     monkeypatch.setattr(scheduled._cycle_scheduler, "_run_cycle", slow_cycle)
     client = TestClient(app)
-    headers = {"Authorization": "Bearer audit-only-secret"}
+    headers = _cycle_headers(monkeypatch, "audit-only-secret")
 
     try:
         first = client.get("/scheduled/cycle", headers=headers)
@@ -836,7 +989,7 @@ def test_scheduled_intelligence_leaves_cycle_contract_untouched(monkeypatch):
 
     response = client.get(
         "/scheduled/cycle",
-        headers={"Authorization": "Bearer test-cron-secret"},
+        headers=_cycle_headers(monkeypatch),
     )
 
     assert response.status_code == 200

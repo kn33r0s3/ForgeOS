@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://haminp.vercel.app/sitemap.xml
+Sitemap: https://hami-sigma.vercel.app/sitemap.xml

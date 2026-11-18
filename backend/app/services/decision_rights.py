@@ -118,8 +118,9 @@ _RIGHTS: dict[str, dict[str, Any]] = {
 # OWNER_ONLY). Rights values are the plan's names: "internal_read"
 # (read-only inspection of Hami's own state), "authorized_scope"
 # (allowed only inside a named, expiring standing-authorization
-# envelope, re-checked at execution time), "owner_only" (refused
-# unless an explicit owner authorization envelope covers it).
+# envelope, re-checked at execution time), "internal_service"
+# (restricted to the integration dispatcher and registered send scopes),
+# "owner_only" (refused unless the principal is the owner).
 # OP-06 record_event is internal_read for the read of the store plus
 # the single write the gate itself performs to Hami's own evidence store.
 _OPERATION_RIGHTS: dict[str, dict[str, Any]] = {
@@ -133,6 +134,15 @@ _OPERATION_RIGHTS: dict[str, dict[str, Any]] = {
     "requeue_task": {"right": "authorized_scope", "description": "Requeue a named WorkerTask from its last durable checkpoint, within retry limits"},
     "open_blocker": {"right": "authorized_scope", "description": "Open a material-blocker record after bounded failures"},
     "read_halt_state": {"right": "internal_read", "description": "Read whether HALT is set"},
+    "send_email": {"right": "internal_service", "description": "Dispatch one validated SMTP outbox delivery through the decision gate"},
+    "send_sms": {"right": "internal_service", "description": "Dispatch one validated Twilio outbox delivery through the decision gate"},
+    "send_telegram": {"right": "internal_service", "description": "Dispatch one validated owner Telegram outbox delivery through the decision gate"},
+}
+
+_INTERNAL_SERVICE_SCOPES = {
+    "send_email": frozenset({"smtp"}),
+    "send_sms": frozenset({"twilio", "twilio_owner"}),
+    "send_telegram": frozenset({"telegram_owner"}),
 }
 
 # The five protected files: never editable through the boundary, by anyone.
@@ -249,7 +259,8 @@ def check_rights(principal: str, operation: str, scope: str, envelope: Any = Non
        (the owner is the authority) or a non-None envelope is present.
        Whether that envelope is still valid is E3's job, not this
        function's. With no envelope and a non-owner principal -> refused.
-    6. OWNER_ONLY -> refused unless the principal is "owner".
+    6. INTERNAL_SERVICE -> allowed only to the named dispatcher for a registered integration scope.
+    7. OWNER_ONLY -> refused unless the principal is "owner".
 
     No function in this file raises an autonomy stage, extends an
     expiry, or widens a scope. There is no self-promotion path here.
@@ -306,6 +317,13 @@ def check_rights(principal: str, operation: str, scope: str, envelope: Any = Non
                 "decision_rights:out_of_scope",
                 f"decision_rights:out_of_scope - {normalized_path} is a protected file and is never editable through the boundary.",
             )
+    if right == "internal_service":
+        if who == "integration_dispatcher" and clean_scope in _INTERNAL_SERVICE_SCOPES.get(op, ()):
+            return _allow()
+        return _refuse(
+            "decision_rights:internal_service_only",
+            "decision_rights:internal_service_only - this operation is restricted to the integration dispatcher and its registered integration scope.",
+        )
     if right == "internal_read":
         return _allow()
     if right == "authorized_scope":

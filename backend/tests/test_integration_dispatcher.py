@@ -13,7 +13,14 @@ def _allow_customer_sends_in_transport_test(db, monkeypatch):
     monkeypatch.setattr(settings, "FORGE_BOT_LIVE", True)
     monkeypatch.setattr(owner_control, "durable_database", lambda _db: True)
     now = datetime.now(timezone.utc).replace(tzinfo=None)
-    db.add(OpHamiRuntimeControl(id=1, safe_mode_enabled=False, safe_mode_reason="owner_resumed", last_owner_contact_at=now, updated_at=now))
+    state = db.get(OpHamiRuntimeControl, 1)
+    if state is None:
+        state = OpHamiRuntimeControl(id=1)
+        db.add(state)
+    state.safe_mode_enabled = False
+    state.safe_mode_reason = "owner_resumed"
+    state.last_owner_contact_at = now
+    state.updated_at = now
     db.commit()
 
 
@@ -72,6 +79,42 @@ def test_twilio_success_persists_sid(db, monkeypatch):
     
     resp_json = json.loads(delivery.response_json)
     assert resp_json["sid"] == "SM123456"
+
+
+def test_twilio_delivery_is_verified_by_the_decision_gate(db, monkeypatch):
+    from app import models
+
+    _allow_customer_sends_in_transport_test(db, monkeypatch)
+    monkeypatch.setattr(settings, "TWILIO_ACCOUNT_SID", "AC_FAKE")
+    monkeypatch.setattr(settings, "TWILIO_AUTH_TOKEN", "FAKE_TOKEN")
+    monkeypatch.setattr(settings, "TWILIO_FROM_NUMBER", "+19999999999")
+    delivery = integration_outbox.enqueue(
+        db,
+        integration_name="twilio",
+        operation="send_sms",
+        idempotency_key="test_twilio_gated",
+        request={"to": "+1234567890", "body": "TEST only; provider call is mocked"},
+    )
+    sends = []
+    monkeypatch.setattr(
+        integration_dispatcher,
+        "_send_twilio_sms",
+        lambda to, body: sends.append((to, body)) or {"sid": "SM-gated", "status": "queued"},
+    )
+
+    result = integration_dispatcher.dispatch_single_delivery(db, delivery.id)
+
+    assert result.status == "SUCCEEDED"
+    assert sends == [("+1234567890", "TEST only; provider call is mocked")]
+    gate_events = db.query(models.WorldEvent).filter_by(
+        event_type="gate_execution",
+        source="execution_boundary",
+    ).all()
+    assert any(
+        json.loads(event.payload).get("operation") == "send_sms"
+        and json.loads(event.payload).get("outcome") == "verified"
+        for event in gate_events
+    )
 
 
 def test_twilio_http_error(db, monkeypatch):
@@ -194,18 +237,25 @@ def test_twilio_429_rate_limit_retries(db, monkeypatch):
 
 
 def test_customer_sms_is_blocked_by_default_safe_mode(db, monkeypatch):
+    from app import models
+
     # This test targets the safe-mode decision, not the independent durability
     # veto exercised in the dedicated durable-database tests.
     monkeypatch.setattr(owner_control, "durable_database", lambda _db: True)
     monkeypatch.setattr(settings, "FORGE_BOT_LIVE", True)
+    owner_control.set_safe_mode(db, "initial_default_safe")
     delivery = integration_outbox.enqueue(db, integration_name="twilio", operation="send_sms",
         idempotency_key="test-default-safe-mode", request={"to": "+9779812345678", "body": "must not send"})
     with patch("app.services.integration_dispatcher._send_twilio_sms") as send:
         result = integration_dispatcher.dispatch_single_delivery(db, delivery.id)
     assert result.status == "FAILED"
-    assert "customer delivery blocked" in (result.last_error or "")
-    assert "safe_mode_enabled" in (result.last_error or "")
+    assert "Decision service refused send_sms: halt_set" in (result.last_error or "")
     send.assert_not_called()
+    refusal = db.query(models.WorldEvent).filter_by(
+        event_type="gate_refusal",
+        source="execution_boundary",
+    ).one()
+    assert json.loads(refusal.payload)["reason"] == "halt_set"
 
 
 def test_corrupt_request_json_fails_permanent(db, monkeypatch):

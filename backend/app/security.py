@@ -42,6 +42,26 @@ PUBLIC_WRITE_PATHS = {
     "/signals/public-request",
     "/api/signals/public-request",
 }
+PUBLIC_WRITE_REASONS = {
+    "/analyze": "Public visitors may submit a research question for internal analysis.",
+    "/api/analyze": "Public visitors may submit a research question for internal analysis.",
+    "/hami/chat": "The public Meet Hami interface must be able to submit chat messages.",
+    "/api/hami/chat": "The public Meet Hami interface must be able to submit chat messages.",
+    "/public/booking-requests": "Prospective customers may submit a booking request without an owner key.",
+    "/api/public/booking-requests": "Prospective customers may submit a booking request without an owner key.",
+    "/public/domain": "Public visitors may submit a domain for the existing public-domain workflow.",
+    "/api/public/domain": "Public visitors may submit a domain for the existing public-domain workflow.",
+    "/forge-bot/leads": "A person may submit an explicitly enabled lead-intake form.",
+    "/forge-bot/leads/opt-out": "A person must be able to withdraw contact consent without an owner key.",
+    "/forge-bot/leads/delete": "A person must be able to request deletion of their lead data without an owner key.",
+    "/api/forge-bot/leads": "A person may submit an explicitly enabled lead-intake form through the API alias.",
+    "/api/forge-bot/leads/opt-out": "A person must be able to withdraw contact consent through the API alias.",
+    "/api/forge-bot/leads/delete": "A person must be able to request deletion through the API alias.",
+    "/owner-control/telegram/webhook": "Telegram authenticates this webhook with its configured secret token.",
+    "/api/owner-control/telegram/webhook": "Telegram authenticates this webhook with its configured secret token.",
+    "/signals/public-request": "Public visitors may submit a signal or request for internal review.",
+    "/api/signals/public-request": "Public visitors may submit a signal or request through the API alias.",
+}
 PRIVATE_CONTACT_READ_PATH_PREFIXES = (
     "/products/customers",
     "/products/pipeline",

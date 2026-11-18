@@ -79,9 +79,13 @@ async def telegram_webhook(request: Request, db: Session = Depends(get_db)):
             return {"ok": True, "ignored": True, "reason": "duplicate_or_stale_update"}
         reply = owner_control.handle_owner_message(db, update_id=update["update_id"], message=message)
         raw = message.get("text") if isinstance(message.get("text"), str) else ""
-        from app.services import telegram_transport
         kind = "alert" if raw.strip().upper() == "HALT" or raw.strip().lower().startswith("/halt") else "status"
-        telegram_transport.send_owner_message(reply, message_type=kind)
+        owner_control.enqueue_owner_message(
+            db,
+            key=f"hami-owner-telegram-update:{update['update_id']}",
+            body=reply,
+            kind=kind,
+        )
     except owner_control.OwnerControlError as exc:
         raise _error(exc) from None
     except Exception as exc:

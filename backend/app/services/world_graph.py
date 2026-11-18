@@ -271,6 +271,7 @@ def seed_core_types(db: Session) -> int:
             "capability_test_passed", "capability_test_failed", "type_status_changed",
             "entity_identity_changed", "entity_merged", "entity_archived",
             "entity_source_refreshed", "action_attempt_started", "action_attempt_status_changed",
+            "gate_refusal", "gate_execution", "blocker_opened",
             "outcome_recorded", "learning_recorded", "network_relation_projected",
             "network_relation_unresolved", "capability_source_refreshed",
             "market_signal_observed", "market_signal_aggregated", "market_signal_related",

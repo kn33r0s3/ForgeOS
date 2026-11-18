@@ -1205,9 +1205,9 @@ def test_test_lead_flow_is_offline_with_legacy_intelligence_disabled(db, monkeyp
     def reject_socket(*args, **kwargs):
         raise AssertionError("The TEST lead flow attempted an outbound network connection.")
 
-    def mock_email_sender(to_email, subject, body):
+    def mock_email_sender(to_email, subject, body, *, timeout_seconds=None):
         sent.append((to_email, subject, body))
-        return {"status": "ACCEPTED_BY_MOCK", "message_id": "test-message"}
+        return {"status": "ACCEPTED_BY_SMTP", "message_id": "test-message"}
 
     monkeypatch.setattr(socket, "create_connection", reject_socket)
     monkeypatch.setattr(socket.socket, "connect", reject_socket)

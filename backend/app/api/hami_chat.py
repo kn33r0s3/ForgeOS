@@ -19,6 +19,7 @@ Checkpoint limits (honest):
 
 import json
 import os
+import time
 import urllib.error
 import urllib.request
 
@@ -103,17 +104,40 @@ def hami_chat(payload: ChatRequest):
         },
         method="POST",
     )
-    try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
-            raw = response.read(MAX_RESPONSE_BYTES + 1)
-    except urllib.error.HTTPError as exc:
-        raise HTTPException(
-            status_code=502, detail=f"Hami AI answered with HTTP {exc.code}."
-        ) from exc
-    except Exception as exc:
-        raise HTTPException(
-            status_code=502, detail=f"Could not reach Hami AI ({type(exc).__name__})."
-        ) from exc
+    # The quick tunnel flaps (Cloudflare QUIC reconnects) and the gateway
+    # serves one generation at a time, so a single attempt can hit a transient
+    # 502 / connection drop even though the path is healthy. Retry fast
+    # transient failures (up to 3 attempts). Never retry a timeout — it already
+    # spent the full TIMEOUT_SECONDS — and never retry a non-transient HTTP
+    # status (auth / bad request). The 502 observed 18 Nov ~19:10 was a tunnel
+    # flap, not a dead tunnel: the gateway produced the reply but the caller
+    # had already disconnected (BrokenPipeError in the gateway log).
+    raw: bytes | None = None
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
+                raw = response.read(MAX_RESPONSE_BYTES + 1)
+            break
+        except urllib.error.HTTPError as exc:
+            if exc.code in (502, 503, 504) and attempt < 2:
+                time.sleep(1.0 * (attempt + 1))
+                continue
+            raise HTTPException(
+                status_code=502, detail=f"Hami AI answered with HTTP {exc.code}."
+            ) from exc
+        except TimeoutError as exc:
+            raise HTTPException(
+                status_code=502, detail="Could not reach Hami AI (TimeoutError)."
+            ) from exc
+        except Exception as exc:
+            if attempt < 2:
+                time.sleep(1.0 * (attempt + 1))
+                continue
+            raise HTTPException(
+                status_code=502, detail=f"Could not reach Hami AI ({type(exc).__name__})."
+            ) from exc
+    if raw is None:
+        raise HTTPException(status_code=502, detail="Could not reach Hami AI.")
     if len(raw) > MAX_RESPONSE_BYTES:
         raise HTTPException(status_code=502, detail="Hami AI's reply was too large.")
     try:

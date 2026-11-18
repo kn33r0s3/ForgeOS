@@ -1,0 +1,9 @@
+#!/bin/sh
+# Hami commit-msg hook — enforces [agent][task-id][gates touched or none].
+# Installed at .git/hooks/commit-msg. The versioned copy lives at
+# scripts/hooks/commit-msg; install it with:
+#   cp scripts/hooks/commit-msg .git/hooks/commit-msg && chmod +x .git/hooks/commit-msg
+# A bad message is rejected before the commit lands.
+set -e
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+node "$REPO_ROOT/scripts/check-commit-msg.mjs" "$1"

@@ -21,7 +21,10 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "status": "node scripts/status.mjs",
-    "smoke": "node scripts/route-smoke.mjs"
+    "smoke": "node scripts/route-smoke.mjs",
+    "gates": "node scripts/gates.mjs",
+    "gates:report": "node scripts/gates-report.mjs",
+    "who-did-what": "node scripts/who-did-what.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

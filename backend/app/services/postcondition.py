@@ -1,6 +1,7 @@
 """Hami Autonomy - Step 1: independent postcondition checks (C3).
 
-One checker per operation in the step-1 table (plan sections 2 and 3d).
+One checker per operation in the step-1 table (plan sections 2 and 3d),
+including outbox sends.
 Each checker verifies the outcome by reading state the adapter did
 not produce: re-read the file from disk, re-query the store, re-read
 the run record - never trust the adapter's return value.
@@ -41,6 +42,8 @@ these fields; the gate takes the snapshot before running the adapter):
   existing WorkerTask vocabulary - there is no separate blocker
   table) and writes a WorldEvent with event_type "blocker_opened"
   whose payload names the task id. The checker verifies both.
+- SEND_EMAIL/SEND_SMS/SEND_TELEGRAM: the checker re-reads the delivery's
+  integration identity, SENDING state, and minimized provider receipt.
 """
 from __future__ import annotations
 
@@ -286,6 +289,57 @@ def _check_read_halt_state(db: Session, action: Action, result: dict, snapshot: 
     return _verified("halt-state", "read_halt_state: second read agrees.")
 
 
+def _check_send_delivery(db: Session, action: Action, result: dict, snapshot: dict) -> dict[str, Any]:
+    delivery_id = action.payload.get("delivery_id")
+    expected = {
+        Operation.SEND_EMAIL: {("smtp", "send_email")},
+        Operation.SEND_SMS: {
+            ("twilio", "send_sms"),
+            ("twilio_owner", "send_owner_sms"),
+        },
+        Operation.SEND_TELEGRAM: {("telegram_owner", "send_telegram_owner")},
+    }.get(action.operation)
+    if type(delivery_id) is not int or expected is None:
+        return _unverified("send: delivery identity or operation mapping is invalid.")
+    if snapshot.get("delivery_id") != delivery_id:
+        return _unverified("send: pre-execution snapshot does not match the delivery.")
+    stored_identity = (snapshot.get("integration_name"), snapshot.get("operation"))
+    if stored_identity not in expected:
+        return _unverified("send: delivery does not match the registered integration operation.")
+    if snapshot.get("status") != "QUEUED":
+        return _unverified("send: delivery was not queued before execution.")
+    if result.get("delivery_id") != delivery_id:
+        return _unverified("send: adapter returned a different delivery identity.")
+    provider_response = result.get("provider_response")
+    if not isinstance(provider_response, dict):
+        return _unverified("send: adapter returned no provider response.")
+    if action.operation == Operation.SEND_EMAIL:
+        accepted = provider_response.get("status") == "ACCEPTED_BY_SMTP" and bool(provider_response.get("message_id"))
+    elif action.operation == Operation.SEND_SMS:
+        accepted = bool(provider_response.get("sid"))
+    else:
+        accepted = provider_response.get("accepted") is True and type(provider_response.get("message_id")) is int
+    if not accepted:
+        return _unverified("send: provider response does not prove acceptance.")
+    row = (
+        db.query(models.IntegrationDelivery.status, models.IntegrationDelivery.response_json)
+        .filter(models.IntegrationDelivery.id == delivery_id)
+        .one_or_none()
+    )
+    if row is None or row.status != "SENDING":
+        return _unverified("send: durable delivery state is not SENDING after provider acceptance.")
+    try:
+        stored_response = json.loads(row.response_json or "")
+    except (TypeError, ValueError):
+        return _unverified("send: durable provider response is missing or invalid.")
+    if stored_response != provider_response:
+        return _unverified("send: durable provider response differs from the adapter result.")
+    return _verified(
+        f"integration-delivery:{delivery_id}",
+        "send: provider acceptance and matching durable response were independently re-read.",
+    )
+
+
 _CHECKERS = {
     Operation.INSPECT_FILE: _check_inspect_file,
     Operation.INSPECT_REPO_STATE: _check_inspect_repo_state,
@@ -297,6 +351,9 @@ _CHECKERS = {
     Operation.REQUEUE_TASK: _check_requeue_task,
     Operation.OPEN_BLOCKER: _check_open_blocker,
     Operation.READ_HALT_STATE: _check_read_halt_state,
+    Operation.SEND_EMAIL: _check_send_delivery,
+    Operation.SEND_SMS: _check_send_delivery,
+    Operation.SEND_TELEGRAM: _check_send_delivery,
 }
 
 

@@ -238,3 +238,19 @@ adapter runs, not calls) is a step-2 refinement.
 - T-10 budget alignment (record attempt counts adapter runs).
 - The OP-06 evidence-write boundary (worker writes bypass the gate by
   design — revisit if OP-06 ever gains an idempotency key).
+
+## Outbound delivery gate extension (task 007)
+
+The existing operation/adapter/postcondition seams now include `SEND_EMAIL`,
+`SEND_SMS`, and `SEND_TELEGRAM`. Each operation accepts only a delivery ID and
+the matching registered integration scope, under the `integration_dispatcher`
+service principal. The gate checks HALT, computes its own idempotency key,
+records refusals/results, and independently re-reads the outbox row and
+provider-acceptance receipt. The adapter marks a delivery `SENDING` before
+network I/O; provider receipts stored in gate/outbox results omit message
+bodies and recipient data.
+
+Send adapters make one provider call per gate attempt. Known transient
+provider failures may be retried by a later outbox attempt; Telegram remains
+at-most-once after an ambiguous failure. These operations do not change any
+external-send flag default, and tests use mocked providers only.

@@ -6,8 +6,14 @@ from pathlib import Path
 
 from app.api.scheduled import run_scheduled_cycle
 from app.config import settings
+from starlette.requests import Request
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _scheduled_request(api_key=None):
+    headers = [(b"x-api-key", api_key.encode())] if api_key else []
+    return Request({"type": "http", "headers": headers})
 
 
 def test_app_startup_does_not_import_legacy_intelligence_when_disabled():
@@ -55,6 +61,7 @@ def test_scheduled_cycle_runs_maintenance_when_legacy_flag_is_disabled(
 ):
     caplog.set_level("INFO")
     monkeypatch.setattr(settings, "FORGEOS_LEGACY_INTELLIGENCE_ENABLED", False)
+    monkeypatch.setattr(settings, "FORGE_API_KEY", "test-owner-key")
     monkeypatch.setenv("CRON_SECRET", "test-only-cron-secret")
     from app.api import scheduled
 
@@ -64,7 +71,10 @@ def test_scheduled_cycle_runs_maintenance_when_legacy_flag_is_disabled(
     }
     monkeypatch.setattr(scheduled, "run_daily_maintenance", lambda db: maintenance)
 
-    response = run_scheduled_cycle(authorization="Bearer test-only-cron-secret")
+    response = run_scheduled_cycle(
+        request=_scheduled_request("test-owner-key"),
+        authorization="Bearer test-only-cron-secret",
+    )
 
     assert response == {
         "status": "disabled",
@@ -82,7 +92,7 @@ def test_scheduled_cycle_keeps_cron_authentication_when_enabled(monkeypatch):
     import pytest
 
     with pytest.raises(HTTPException) as error:
-        run_scheduled_cycle(authorization=None)
+        run_scheduled_cycle(request=_scheduled_request(), authorization=None)
 
     assert error.value.status_code == 401
 

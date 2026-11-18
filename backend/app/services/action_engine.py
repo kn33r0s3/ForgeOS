@@ -734,6 +734,12 @@ def _op_read_halt_state(db: Session, action: BoundaryAction, repo_root: Path) ->
     return {"halted": bool(row.safe_mode_enabled)}
 
 
+def _op_send_delivery(db: Session, action: BoundaryAction, repo_root: Path) -> dict:
+    from app.services import integration_dispatcher
+
+    return integration_dispatcher.execute_gated_delivery(db, action)
+
+
 # Closed registry: every operation the gate may execute, and nothing else.
 # The gate REFUSES any operation not present here (get_operation_adapter
 # returns None) instead of falling back to any other adapter.
@@ -748,6 +754,9 @@ OPERATION_ADAPTERS: dict[Operation, Callable] = {
     Operation.REQUEUE_TASK: _op_requeue_task,
     Operation.OPEN_BLOCKER: _op_open_blocker,
     Operation.READ_HALT_STATE: _op_read_halt_state,
+    Operation.SEND_EMAIL: _op_send_delivery,
+    Operation.SEND_SMS: _op_send_delivery,
+    Operation.SEND_TELEGRAM: _op_send_delivery,
 }
 
 

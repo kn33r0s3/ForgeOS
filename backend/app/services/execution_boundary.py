@@ -9,7 +9,8 @@ section 2 for the operation table).
 Step 1 does not invent a second permission system: the Rights values
 below are the plan's names for the semantics already in
 ``decision_rights.py`` (unknown defaults to OWNER_ONLY). The E2 edit
-translates between the two where they meet.
+translates between the two where they meet. INTERNAL_SERVICE is limited
+to the registered integration dispatcher and send scopes.
 """
 from __future__ import annotations
 
@@ -37,6 +38,9 @@ class Operation(str, Enum):
     REQUEUE_TASK = "requeue_task"
     OPEN_BLOCKER = "open_blocker"
     READ_HALT_STATE = "read_halt_state"
+    SEND_EMAIL = "send_email"
+    SEND_SMS = "send_sms"
+    SEND_TELEGRAM = "send_telegram"
 
 
 class Rights(str, Enum):
@@ -45,6 +49,7 @@ class Rights(str, Enum):
     OWNER_ONLY = "owner_only"
     AUTHORIZED_SCOPE = "authorized_scope"
     INTERNAL_READ = "internal_read"
+    INTERNAL_SERVICE = "internal_service"
     DENIED = "denied"
 
 

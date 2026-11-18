@@ -5,6 +5,7 @@ import json
 import logging
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 from threading import Lock
 
 from fastapi import APIRouter, Header, HTTPException, Request
@@ -14,6 +15,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from app import database, models
 from app.api.forge_bot_owner_notification import send_daily_owner_summary_notification
 from app.config import settings
+from app.security import require_owner_api_key
+from app.services import gates_alert
 from app.services.forge_bot_privacy import run_daily_maintenance
 
 router = APIRouter(prefix="/scheduled", tags=["scheduled"])
@@ -338,13 +341,14 @@ if settings.FORGEOS_LEGACY_INTELLIGENCE_ENABLED:
 
 
 @router.get("/cycle")
-def run_scheduled_cycle(authorization: str | None = Header(default=None)):
+def run_scheduled_cycle(request: Request, authorization: str | None = Header(default=None)):
     """Run daily privacy maintenance and the legacy cycle only when enabled."""
     secret = os.getenv("CRON_SECRET", "")
     if not secret:
         raise HTTPException(status_code=503, detail="Scheduled cycle is not configured")
     if not authorization or not hmac.compare_digest(authorization, f"Bearer {secret}"):
         raise HTTPException(status_code=401, detail="Unauthorized")
+    require_owner_api_key(request)
     try:
         with database.SessionLocal() as db:
             maintenance = run_daily_maintenance(db)
@@ -420,6 +424,26 @@ def run_scheduled_cycle(authorization: str | None = Header(default=None)):
     cycle = record.get("forge_cycle") or {}
     try:
         with database.SessionLocal() as db:
+            gates_alert_result = gates_alert.run_gates_alert(
+                db,
+                Path(__file__).resolve().parents[3],
+            )
+    except SQLAlchemyError as exc:
+        logger.error("Scheduled gates alert failed with a database error (%s).", type(exc).__name__)
+        raise HTTPException(status_code=500, detail="Scheduled gates alert failed.") from exc
+    if gates_alert_result.get("status") == "red":
+        if gates_alert_result.get("notified"):
+            logger.warning(
+                "Scheduled gates alert accepted by Telegram API (delivery=%s).",
+                gates_alert_result.get("delivery_id"),
+            )
+        elif gates_alert_result.get("blocked_by"):
+            logger.warning(
+                "Scheduled gates alert blocked (%s).",
+                gates_alert_result["blocked_by"],
+            )
+    try:
+        with database.SessionLocal() as db:
             owner_summary = send_daily_owner_summary_notification(db)
     except SQLAlchemyError as exc:
         logger.error(
@@ -449,6 +473,7 @@ def run_scheduled_cycle(authorization: str | None = Header(default=None)):
         "cycle_id": cycle.get("cycle_id") if isinstance(cycle, dict) else None,
         "forge_cycle_failed": bool(forge_error),
         "autonomy_cycle_failed": bool(autonomy_error),
+        "gates_alert": gates_alert_result,
         "owner_summary_status": owner_summary_status,
     }
 

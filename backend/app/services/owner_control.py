@@ -6,7 +6,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app import models
 from app.config import settings
-from app.services import telegram_transport
 
 logger = logging.getLogger(__name__)
 INACTIVITY_DAYS = 7
@@ -178,7 +177,7 @@ def valid_owner_delivery(name: str, operation: str, payload: dict[str, Any]) -> 
         return False
     chat, body, kind = str(payload.get("chat_id") or "").strip(), payload.get("body"), payload.get("message_type")
     return bool(chat == str(settings.HAMI_TELEGRAM_OWNER_CHAT_ID).strip() and _ID.fullmatch(chat)
-                and kind in {"daily_digest", "alert"} and isinstance(body, str) and body.strip()
+                and kind in {"ask", "status", "help", "alert", "daily_digest"} and isinstance(body, str) and body.strip()
                 and len(body) <= 4096 and not _EMAIL.search(body) and not _PHONE.search(body))
 
 
@@ -259,14 +258,19 @@ def create_ask(db: Session, *, decision_ref: str, question: str, options: Any,
     db.add(ask)
     db.commit()
     db.refresh(ask)
-    try:
-        sent = telegram_transport.send_owner_message(_ask_text(ask, code), message_type="ask")
-    except Exception:
+    delivery = enqueue_owner_message(
+        db,
+        key=f"hami-owner-ask:{ask.public_ref}:initial",
+        body=_ask_text(ask, code),
+        kind="ask",
+    )
+    message_id = delivery.get("provider_message_id")
+    if delivery.get("status") != "provider_accepted" or type(message_id) is not int:
         ask.code_hash, ask.status, ask.notification_status = None, "NOTIFIED_FAILED", "FAILED"
         db.commit()
         _event(db, "ask_notification_failed", f"hami-owner-control:{ask.public_ref}:failed", ask_ref=ask.public_ref)
-        raise OwnerControlError("telegram_ask_delivery_failed") from None
-    ask.telegram_message_id, ask.notified_at, ask.notification_status = str(sent["message_id"]), now(), "SENT"
+        raise OwnerControlError("telegram_ask_delivery_failed")
+    ask.telegram_message_id, ask.notified_at, ask.notification_status = str(message_id), now(), "SENT"
     db.commit()
     _event(db, "ask_created", f"hami-owner-control:{ask.public_ref}:created", ask_ref=ask.public_ref)
     return ask
@@ -290,13 +294,18 @@ def resend_ask(db: Session, ask_ref: str) -> models.OpHamiOwnerAsk:
     ask.code_resend_count += 1
     ask.notification_status = "PENDING"
     db.commit()
-    try:
-        sent = telegram_transport.send_owner_message(_ask_text(ask, code), message_type="ask")
-    except Exception:
+    delivery = enqueue_owner_message(
+        db,
+        key=f"hami-owner-ask:{ask.public_ref}:resend:{ask.code_resend_count}",
+        body=_ask_text(ask, code),
+        kind="ask",
+    )
+    message_id = delivery.get("provider_message_id")
+    if delivery.get("status") != "provider_accepted" or type(message_id) is not int:
         ask.code_hash, ask.status, ask.notification_status = None, "NOTIFIED_FAILED", "FAILED"
         db.commit()
-        raise OwnerControlError("telegram_ask_delivery_failed") from None
-    ask.telegram_message_id, ask.notified_at, ask.notification_status = str(sent["message_id"]), now(), "SENT"
+        raise OwnerControlError("telegram_ask_delivery_failed")
+    ask.telegram_message_id, ask.notified_at, ask.notification_status = str(message_id), now(), "SENT"
     db.commit()
     _event(db, "ask_code_resent", f"hami-owner-control:{ask.public_ref}:resent:{ask.code_resend_count}", ask_ref=ask.public_ref)
     return ask
@@ -421,15 +430,55 @@ def enqueue_owner_message(db: Session, *, key: str, body: str, kind: str) -> dic
     if not control_ready():
         return {"status": "skipped", "reason": "telegram_control_not_configured"}
     from app.services import integration_dispatcher, integration_outbox
+
+    def redact_ask_body(delivery_id: int) -> bool:
+        delivery = db.get(models.IntegrationDelivery, delivery_id)
+        if delivery is None:
+            return False
+        try:
+            request_data = json.loads(delivery.request_json)
+        except (TypeError, ValueError):
+            return False
+        if not isinstance(request_data, dict) or request_data.get("message_type") != "ask":
+            return False
+        request_data["body"] = "[redacted after dispatch]"
+        delivery.request_json = json.dumps(request_data, sort_keys=True)
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            logger.exception("Could not redact ASK delivery body; delivery_id=%s", delivery_id)
+            return False
+        return True
+
     row = integration_outbox.enqueue(db, integration_name="telegram_owner", operation="send_telegram_owner",
         idempotency_key=key, request={"chat_id": str(settings.HAMI_TELEGRAM_OWNER_CHAT_ID), "body": body, "message_type": kind})
     if row.status == "SUCCEEDED":
-        return {"status": "provider_accepted", "delivery_id": row.id, "idempotent_replay": True}
+        if kind == "ask":
+            redact_ask_body(row.id)
+        try:
+            response = json.loads(row.response_json or "{}")
+        except (TypeError, ValueError):
+            response = {}
+        message_id = response.get("message_id") if isinstance(response, dict) else None
+        return {"status": "provider_accepted", "delivery_id": row.id, "provider_message_id": message_id, "idempotent_replay": True}
     if row.status != "QUEUED" or row.attempts > 0:
+        if kind == "ask":
+            redact_ask_body(row.id)
         return {"status": "ambiguous_not_retried", "delivery_id": row.id}
     result = integration_dispatcher.dispatch_single_delivery(db, row.id)
-    return {"status": "provider_accepted" if result.status == "SUCCEEDED" else result.status.lower(),
-            "delivery_id": result.id, "delivery_claim": "Telegram API acceptance is not handset-delivery proof."}
+    redacted = redact_ask_body(result.id) if kind == "ask" else True
+    try:
+        response = json.loads(result.response_json or "{}")
+    except (TypeError, ValueError):
+        response = {}
+    message_id = response.get("message_id") if isinstance(response, dict) else None
+    return {
+        "status": "provider_accepted" if result.status == "SUCCEEDED" and redacted else result.status.lower(),
+        "delivery_id": result.id,
+        "provider_message_id": message_id,
+        "delivery_claim": "Telegram API acceptance is not handset-delivery proof.",
+    }
 
 
 def send_daily_owner_digest(db: Session, summary_date: date | None = None) -> dict[str, Any]:

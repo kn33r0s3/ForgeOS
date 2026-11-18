@@ -18,6 +18,7 @@ import {
   ExperimentCard,
   EXPERIMENTS,
 } from "@/components/experiments/experiment-card";
+import { latestStateChange } from "@/lib/ledger";
 import {
   clearStoredCheckoutAttempt,
   createCheckoutAttemptKey,
@@ -429,6 +430,8 @@ function HomePage() {
   return (
     <main className="bg-background text-ink">
       <Hero />
+      <LiveStrip />
+      <ExploreHami />
       <QuickStart />
       <PublicOffers />
       <FindingsPreview />
@@ -440,6 +443,109 @@ function HomePage() {
       <HamiPathways current="home" />
       <HomeFooter />
     </main>
+  );
+}
+
+/**
+ * ExploreHami — every page Hami has built, linked from the home page.
+ * A page that is built but not linked and not deployed is dormant, and
+ * dormant is not allowed. Router routes use the router Link; the static
+ * pages in public/ use a plain <a>. Hami Systems has no link — its
+ * pop-up button is already on every page. Only existing styles.css
+ * tokens (ledger + term), the same as the ledger page. The section
+ * renders on the home page itself, not hidden behind a click.
+ */
+function ExploreHami() {
+  return (
+    <section className="border-b border-line bg-background" aria-label="Explore Hami">
+      <Container className="py-12 sm:py-16">
+        <p className="font-ledger-wordmark text-5xl leading-none text-ledger-amber sm:text-6xl">
+          Hami
+        </p>
+        <h2 className="mt-3 font-ledger-heading text-2xl leading-snug text-ledger-ink sm:text-3xl">
+          हामी अन्वेषण गर्नुहोस्
+        </h2>
+        <p className="mt-1 font-display text-xl font-bold text-ledger-ink">
+          Explore Hami
+        </p>
+        <p className="mt-3 max-w-2xl text-base leading-7 text-ledger-muted">
+          Everything Hami has built, in one place. Nothing dormant, everything
+          reachable.
+        </p>
+        <div className="mt-8 grid gap-5 md:grid-cols-2">
+          <Link
+            to="/ledger"
+            className="group rounded-md border border-ledger-border bg-ledger-surface p-5 shadow-md transition duration-200 hover:-translate-y-1 hover:border-ledger-amber sm:p-6"
+          >
+            <h3 className="font-display text-lg font-bold text-ledger-ink">
+              Proof ledger{" "}
+              <ArrowRight aria-hidden="true" className="inline size-4 transition-transform group-hover:translate-x-1" />
+            </h3>
+            <p className="mt-2 text-base leading-7 text-ledger-muted">
+              Every public claim Hami makes, with its state, its evidence, and
+              its measured value.
+            </p>
+          </Link>
+          <Link
+            to="/build-log"
+            className="group rounded-md border border-ledger-border bg-ledger-surface p-5 shadow-md transition duration-200 hover:-translate-y-1 hover:border-ledger-amber sm:p-6"
+          >
+            <h3 className="font-display text-lg font-bold text-ledger-ink">
+              Build log{" "}
+              <ArrowRight aria-hidden="true" className="inline size-4 transition-transform group-hover:translate-x-1" />
+            </h3>
+            <p className="mt-2 text-base leading-7 text-ledger-muted">
+              The sequence of real builds and progress, in order. Nothing invented.
+            </p>
+          </Link>
+          <a
+            href="/hami-systems-map.html"
+            className="group rounded-md border border-ledger-border bg-ledger-surface p-5 shadow-md transition duration-200 hover:-translate-y-1 hover:border-ledger-amber sm:p-6"
+          >
+            <h3 className="font-display text-lg font-bold text-ledger-ink">
+              Visual map{" "}
+              <ArrowRight aria-hidden="true" className="inline size-4 transition-transform group-hover:translate-x-1" />
+            </h3>
+            <p className="mt-2 text-base leading-7 text-ledger-muted">
+              One Hami, 8 gates, every subgate. The whole of the work, on one map.
+            </p>
+          </a>
+          <a
+            href="/hami-methodology.html"
+            className="group rounded-md border border-ledger-border bg-ledger-surface p-5 shadow-md transition duration-200 hover:-translate-y-1 hover:border-ledger-amber sm:p-6"
+          >
+            <h3 className="font-display text-lg font-bold text-ledger-ink">
+              Methodology{" "}
+              <ArrowRight aria-hidden="true" className="inline size-4 transition-transform group-hover:translate-x-1" />
+            </h3>
+            <p className="mt-2 text-base leading-7 text-ledger-muted">
+              The universal, dimensional, spiritual methodology. Never copied,
+              always networked, always tracked.
+            </p>
+          </a>
+          <Link
+            to="/meet-hami"
+            className="group rounded-md border border-ledger-border bg-ledger-surface p-5 shadow-md transition duration-200 hover:-translate-y-1 hover:border-ledger-amber sm:p-6"
+          >
+            <h3 className="font-display text-lg font-bold text-ledger-ink">
+              Meet Hami{" "}
+              <ArrowRight aria-hidden="true" className="inline size-4 transition-transform group-hover:translate-x-1" />
+            </h3>
+            <p className="mt-2 text-base leading-7 text-ledger-muted">
+              Talk to Hami, live.
+            </p>
+          </Link>
+          <article className="rounded-md border border-ledger-border bg-ledger-surface p-5 shadow-md sm:p-6">
+            <h3 className="font-display text-lg font-bold text-ledger-ink">
+              Hami Systems
+            </h3>
+            <p className="mt-2 text-base leading-7 text-ledger-muted">
+              The pop-up button (bottom right) opens Hami on any page.
+            </p>
+          </article>
+        </div>
+      </Container>
+    </section>
   );
 }
 
@@ -705,6 +811,50 @@ function RealityLoop() {
         );
       })}
     </svg>
+  );
+}
+
+/*
+ * LiveStrip — the home page as a Linux terminal.
+ * Shows the latest verified state change from the proof ledger
+ * (src/lib/ledger.ts) as terminal output, inside a .term-window.
+ * The claim renders only with state + evidence (the ledger gate);
+ * if there is no claim, the window shows the prompt only.
+ */
+function LiveStrip() {
+  const latest = latestStateChange();
+  return (
+    <section className="border-b border-line bg-background" aria-label="Latest verified change">
+      <Container className="py-8 sm:py-10">
+        <div className="term-window">
+          <div className="term-titlebar">
+            <span className="term-dot term-dot--red" aria-hidden="true" />
+            <span className="term-dot term-dot--yellow" aria-hidden="true" />
+            <span className="term-dot term-dot--green" aria-hidden="true" />
+            <span>niroj@hami: ~</span>
+          </div>
+          <div className="term-body">
+            <p className="term-prompt">hami status --latest</p>
+            {latest ? (
+              <>
+                <p>
+                  [{latest.state}] {latest.id} — {latest.title}
+                </p>
+                <p className="text-ink">{latest.valueLabel}</p>
+                <p className="text-muted">
+                  {latest.titleNe} · updated {latest.updatedAt}
+                </p>
+              </>
+            ) : (
+              <p className="text-muted">no verified change yet</p>
+            )}
+            <p>
+              <span className="term-prompt">hami ledger</span> <span className="term-cursor" aria-hidden="true" />
+            </p>
+          </div>
+        </div>
+      </Container>
+    </section>
   );
 }
 

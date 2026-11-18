@@ -104,6 +104,28 @@ def test_t03_expired_envelope_refused(db, repo, halt_off):
         {"old_text": "world", "new_text": "hacked"}, envelope=env,
     )
     assert isinstance(r, Refusal) and r.reason.value == "authorization_expired"
+
+
+def test_send_operation_requires_dispatcher_principal_and_registered_scope(db, repo, halt_off, monkeypatch):
+    calls = []
+
+    def spy(*args, **kwargs):
+        calls.append(True)
+        return {}
+
+    monkeypatch.setitem(ae.OPERATION_ADAPTERS, Operation.SEND_TELEGRAM, spy)
+    wrong_principal = _gate(
+        db, repo, Operation.SEND_TELEGRAM, "agent-x", "telegram_owner",
+        {"delivery_id": 1},
+    )
+    wrong_scope = _gate(
+        db, repo, Operation.SEND_TELEGRAM, "integration_dispatcher", "smtp",
+        {"delivery_id": 1},
+    )
+
+    assert isinstance(wrong_principal, Refusal) and wrong_principal.reason.value == "out_of_scope"
+    assert isinstance(wrong_scope, Refusal) and wrong_scope.reason.value == "out_of_scope"
+    assert calls == []
     assert (repo / "hello.txt").read_text() == "hello world"
 
 
@@ -158,7 +180,7 @@ def test_t06_out_of_scope_refused(db, repo, halt_off):
 
 def test_t07_idempotency_replay(db, repo, halt_off):
     payload = {
-        "event_type": "t07_test",
+        "event_type": "state_changed",
         "source": "test_execution_boundary",
         "payload": {"k": "v"},
     }
@@ -167,7 +189,7 @@ def test_t07_idempotency_replay(db, repo, halt_off):
     r2 = _gate(db, repo, Operation.RECORD_EVENT, "agent-x", "events", payload)
     assert getattr(r2, "replayed", False) is True
     assert getattr(r2, "outcome", None) == Outcome.VERIFIED
-    assert db.query(models.WorldEvent).filter_by(event_type="t07_test").count() == 1
+    assert db.query(models.WorldEvent).filter_by(event_type="state_changed").count() == 1
 
 
 def test_t08_authorized_happy_path_verified(db, repo, halt_off):
