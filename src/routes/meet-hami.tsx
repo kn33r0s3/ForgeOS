@@ -28,7 +28,9 @@ function MeetHamiPage() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [connected, setConnected] = useState<"checking" | "online" | "offline">("checking");
+  const [connected, setConnected] = useState<
+    "unverified" | "checking" | "responded" | "unavailable"
+  >("unverified");
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,6 +45,9 @@ function MeetHamiPage() {
     const nextMessages: ChatMsg[] = [...messages, { role: "user", content: trimmed }];
     setMessages(nextMessages);
     setBusy(true);
+    setConnected("checking");
+    const requestController = new AbortController();
+    const requestTimeout = window.setTimeout(() => requestController.abort(), 95_000);
     try {
       const history = nextMessages
         .filter((m) => m.role !== "assistant" || m !== FIRST_MESSAGE)
@@ -52,6 +57,7 @@ function MeetHamiPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: trimmed, history }),
+        signal: requestController.signal,
       });
       const data = (await response.json().catch(() => null)) as
         | { reply?: string; detail?: string }
@@ -61,15 +67,18 @@ function MeetHamiPage() {
       }
       if (!data?.reply) throw new Error("Hami returned an empty reply.");
       setMessages([...nextMessages, { role: "assistant", content: data.reply }]);
-      setConnected("online");
+      setConnected("responded");
     } catch (err) {
-      setConnected("offline");
+      setConnected("unavailable");
       setError(
-        err instanceof Error
-          ? err.message
-          : "Could not reach Hami AI. The Mac tunnel may be down — try again in a moment.",
+        requestController.signal.aborted
+          ? "Hami did not respond within 95 seconds. Its availability is unknown."
+          : err instanceof Error
+            ? err.message
+            : "Could not reach Hami AI. The Mac tunnel may be down — try again in a moment.",
       );
     } finally {
+      window.clearTimeout(requestTimeout);
       setBusy(false);
     }
   }
@@ -88,18 +97,20 @@ function MeetHamiPage() {
           This chat runs on the owner&apos;s Mac, live.
         </p>
         <p className="mt-2 text-sm text-muted">
-          {connected === "online" ? (
+          {connected === "responded" ? (
             <span className="inline-flex items-center gap-2">
               <span className="size-2 rounded-full bg-success" aria-hidden="true" />
-              Hami AI is online
+              Hami AI replied to your last message
             </span>
-          ) : connected === "offline" ? (
+          ) : connected === "unavailable" ? (
             <span className="inline-flex items-center gap-2">
               <span className="size-2 rounded-full bg-danger" aria-hidden="true" />
-              Hami AI is unreachable right now
+              Hami AI could not be reached just now
             </span>
-          ) : (
+          ) : connected === "checking" ? (
             "Checking Hami AI…"
+          ) : (
+            "Hami AI status is unverified. Send a message to check it."
           )}
         </p>
 
