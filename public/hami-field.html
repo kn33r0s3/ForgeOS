@@ -428,7 +428,7 @@
       <option value="">jump to a region…</option>
     </select>
     <span class="spacer"></span>
-    <span class="hint">drag to move · scroll to zoom · tap a gate to enter it · tap a line to follow it</span>
+    <span class="hint">drag to move · scroll page · Alt/Option+scroll to zoom · tap a gate to enter it · tap a line to follow it</span>
   </div>
 
   <div class="viewbar" role="toolbar" aria-label="Field views">
@@ -448,7 +448,7 @@
     <span class="adv-line" id="advLine"></span>
   </div>
 
-  <div class="viewport" id="viewport" aria-label="The Hami field — the picture of all of Hami. Drag to move, scroll to zoom.">
+  <div class="viewport" id="viewport" aria-label="The Hami field — the picture of all of Hami. Drag to move, Alt/Option+scroll to zoom.">
     <div class="world" id="world">
       <svg class="field-svg" id="fieldSvg" width="2620" height="3092" viewBox="0 0 2620 3092" role="img" aria-label="Diagram of all Hami gates: 12 zones, 59 gate nodes, connected by edges. Every gate runs."></svg>
     </div>
@@ -3055,6 +3055,7 @@
   viewport.addEventListener("pointerup", endPointer);
   viewport.addEventListener("pointercancel", endPointer);
   viewport.addEventListener("wheel", function (e) {
+    if (!e.altKey) { return; }
     e.preventDefault();
     var rect = viewport.getBoundingClientRect();
     zoomAt(e.clientX - rect.left, e.clientY - rect.top, e.deltaY < 0 ? 1.12 : 1 / 1.12);
