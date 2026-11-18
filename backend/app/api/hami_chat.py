@@ -23,7 +23,7 @@ import time
 import urllib.error
 import urllib.request
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/hami", tags=["hami"])
@@ -77,8 +77,31 @@ def _gateway_key() -> str:
     return os.environ.get("HAMI_CHAT_KEY", "").strip()
 
 
+# CORS: the Hami Systems widget is embedded on other sites (Knee Rose, any
+# site worldwide) via one script tag. The browser sends a preflight OPTIONS
+# for the cross-origin JSON POST and blocks the reply unless this endpoint
+# answers with CORS headers. Without them the widget fails fast with
+# "unreachable" on every site except hami-sigma itself (same origin) — which
+# is exactly what the Knee Rose live check showed 18 Nov ~20:22 (fast failure,
+# no real reply, while the same endpoint answered fine same-origin). This is
+# a public chat endpoint: allow any origin to read the reply. The gateway key
+# stays server-side and is never in the browser, so allowing the origin does
+# not expose any secret.
+_CORS_HEADERS = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+}
+
+
+@router.options("/chat")
+def hami_chat_options():
+    return Response(status_code=204, headers=_CORS_HEADERS)
+
+
 @router.post("/chat", response_model=ChatResponse)
-def hami_chat(payload: ChatRequest):
+def hami_chat(payload: ChatRequest, response: Response):
+    response.headers.update(_CORS_HEADERS)
     host = _gateway_url()
     gateway_key = _gateway_key()
     if not host or not gateway_key:
