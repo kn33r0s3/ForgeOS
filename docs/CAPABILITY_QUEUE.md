@@ -6731,3 +6731,30 @@ Obtain NDRRMA #02's official PDF attachment and inspect every page; then #04. Re
   and failed before changing the index. Resolve the exact checkout path first,
   then verify the staged paths before committing.
 ---
+
+## 2026-11-19 — Public route discovery (RUNNING; next deploy pending)
+
+- **Existing seam:** extended `public/sitemap.xml`,
+  `src/lib/hami-system.ts:PUBLIC_SYSTEM_PATHS`, and the existing `features.json`
+  registry; no route or discovery subsystem was added. `/ledger` and
+  `/build-log` were already live registry entries in the worktree.
+- **Change:** registered `/ledger`, `/build-log`, and `/meet-hami` in the
+  sitemap and `PUBLIC_SYSTEM_PATHS`. `/meet-hami` was marked live in the
+  feature registry because its production page already responds with HTTP 200
+  and a route-specific title/canonical URL. The feature test now accepts the
+  current sitemap hostname instead of requiring an obsolete host.
+- **Verification:** `xmllint --noout public/sitemap.xml` passed; the sitemap
+  parses as 26 unique entries and contains each requested path exactly once.
+  `npm test` passed (168 script tests and 295 TypeScript tests, zero failures);
+  `npm run gates` reported GREEN; `env -u DATABASE_URL npm run build` passed.
+  Live GETs for all three routes returned HTTP 200 with matching titles and
+  canonical URLs. The currently deployed sitemap still has 23 entries and
+  omits these additions; no standalone deployment was run.
+- **Owner dependency and next step:** this removes duplicate per-route
+  registration work across the existing system path list and sitemap. Normal
+  deployment authorization remains; verify the deployed sitemap after the
+  next deployment. The route response does not establish that the Meet Hami
+  AI backend is available. No verified real transaction exists, so
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+  Keep this capability **RUNNING** until the deployed sitemap is verified.
+---

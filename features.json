@@ -407,8 +407,30 @@
       "name": "Meet Hami",
       "route": "/meet-hami",
       "selector": "main",
-      "status": "hidden"
+      "status": "live"
+    },
+    {
+      "commit": "238ebbda",
+      "date_added": "2026-11-18",
+      "heading": "Build log",
+      "id": "page-build-log",
+      "intent": "Truth-labeled record of built and verified Hami capabilities, linked from the homepage.",
+      "name": "Build log",
+      "route": "/build-log",
+      "selector": "main",
+      "status": "live"
+    },
+    {
+      "commit": "238ebbda",
+      "date_added": "2026-11-18",
+      "heading": "Proof ledger",
+      "id": "page-ledger",
+      "intent": "Public claims with state, evidence and measured value, linked from the homepage.",
+      "name": "Proof ledger",
+      "route": "/ledger",
+      "selector": "main",
+      "status": "live"
     }
   ],
-  "updated": "2026-11-16"
+  "updated": "2026-11-19"
 }

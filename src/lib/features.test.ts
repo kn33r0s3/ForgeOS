@@ -161,7 +161,7 @@ describe("feature registry", () => {
 
   it("every live page has a deliberate entry path or is an explicit workflow-only route", () => {
     const sitemap = readFileSync(path.join(root, "..", "public", "sitemap.xml"), "utf8");
-    const sitemapPaths = [...sitemap.matchAll(/<loc>https:\/\/haminp\.vercel\.app([^<]*)<\/loc>/g)]
+    const sitemapPaths = [...sitemap.matchAll(/<loc>https?:\/\/[^/]+([^<]*)<\/loc>/g)]
       .map((match) => match[1] || "/");
     const entryPaths = new Set<string>([
       ...NAV.map((item) => item.to),
@@ -198,7 +198,7 @@ describe("feature registry", () => {
 
   it("the public sitemap contains only live Hami routes", () => {
     const sitemap = readFileSync(path.join(root, "..", "public", "sitemap.xml"), "utf8");
-    const paths = [...sitemap.matchAll(/<loc>https:\/\/haminp\.vercel\.app([^<]*)<\/loc>/g)]
+    const paths = [...sitemap.matchAll(/<loc>https?:\/\/[^/]+([^<]*)<\/loc>/g)]
       .map((match) => match[1] || "/");
     assert.equal(new Set(paths).size, paths.length, "sitemap contains duplicate routes");
     const resolveFeature = (route: string) =>
