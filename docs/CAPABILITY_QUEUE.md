@@ -6681,3 +6681,53 @@ Obtain NDRRMA #02's official PDF attachment and inspect every page; then #04. Re
 - **Runtime blocker:** local `/api/hami/chat` returned HTTP 404. On the existing live Hami site, a generic chat test timed out after 95 seconds and the page reported `Could not reach Hami AI (TimeoutError)`; the API logged HTTP 502. The removal did not change the Meet Hami route or chat API. Do not claim chat was verified working; keep this item **RUNNING** until service availability is restored and the next ForgeOS deployment is checked. No standalone deployment was initiated.
 - **Owner dependency:** no real transaction or routine owner action was removed; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
 ---
+
+## 2026-11-19 — Hami Field whole-page fit (RUNNING; next deploy pending)
+
+- **Existing seam:** changed only the desktop layout CSS in the canonical
+  `kn33r0s3/hami-field.html:406` and synced the existing ForgeOS public copy.
+  The existing diagram, `fitView()`/Reset, gate identity data, drawer, and
+  small-screen layout remain in place; no route or subsystem was added.
+- **Measured layout delta:** local browser first-load measurements at 1920×998:
+  document and main field are 1920×998 with matching scroll dimensions; the
+  viewport is `[12,226]–[1271,890]`, transformed diagram `[385,227]–[898,889]`,
+  Seven Dimensions `[1279,226]–[1908,890]`, and footer `[12,894]–[1908,986]`.
+  At 1280×800, document and main field are 1280×800 with matching scroll
+  dimensions; viewport `[12,226]–[844,662]`, diagram `[260,227]–[596,661]`,
+  dimensions `[852,226]–[1268,662]`, and footer `[12,666]–[1268,788]`.
+  The transformed diagram is inside its viewport at both sizes; dimensions
+  scroll/client heights are 662/662 and 434/434; footer content ends at y=985
+  and y=787 respectively. Fit scales are 0.19597 and 0.12848. After two zoom-in
+  clicks the scale was 0.3125; Reset restored the respective first-load fit.
+- **Preserved behavior:** 62 RUNNING gate nodes render; the SVG alt text remains
+  exactly “Diagram of all Hami gates: 12 zones, 62 gate nodes, connected by
+  edges. Every gate runs.” Clicking GATE 007 opened its detail drawer. The
+  time-counter UI remains absent; the existing Pacer gate data was not changed.
+- **Copy and commits:** both files are 144,048 bytes and SHA-256
+  `28d1e02922ed4a9d7170ff0d410048f83c9b5c582cd47635b63ff729457696df`.
+  Knee Rose commit `8f67c42e354e6c01b55b34a8df56de43cdb974a9` and ForgeOS
+  asset-only commit `3061ab4e4d6209ca19d44e7499e5bd0873f6cc37` are pushed to
+  `main`.
+- **Validation:** `npm test` passed (168 script tests and 295 TypeScript tests);
+  `npm run gates` reported GREEN. No Actions run was listed for Knee Rose commit
+  `8f67c42e354e6c01b55b34a8df56de43cdb974a9`. ForgeOS exact-head CI run
+  44404962019 concluded **failure**: typecheck, build, lint, repository guards,
+  route smoke, local LiveKit smoke, evidence-triage tests, and secret scan
+  passed; gate-checks failed because the tests did not run cleanly. Frontend
+  tests were 293/295, failing existing feature-registry assertions for
+  `/build-log`, `/ledger`, and the Service detail entry path. Backend tests
+  were 1,383 passed, 2 skipped, 1 failed: `test_import_unknowns.py` expected
+  108 D records but parsed 113 (129 total). These failures are outside the
+  CSS-only Field change. Independent production verification run 44404962053
+  failed because its production fetch returned HTTP 402; no standalone
+  deployment was initiated.
+- **Owner dependency / next step:** this removes the need to scroll to see the
+  dimensions and footer on the two target desktop viewports; it removes no
+  economic owner action, so `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains
+  **NOT MEASURABLE**. Production visibility still depends on the next authorized
+  ForgeOS deployment; recheck first-load fit, Reset, and gate drawer at both
+  sizes after that deployment. Keep this capability **RUNNING** until then.
+- **Process lesson:** one staging command used a mistyped local checkout path
+  and failed before changing the index. Resolve the exact checkout path first,
+  then verify the staged paths before committing.
+---
