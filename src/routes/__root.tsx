@@ -10,7 +10,6 @@ import { AuthProvider } from "@/lib/auth/provider";
 import { getAuthAvailability } from "@/lib/auth/availability";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
-import { HamiAgent } from "@/components/layout/hami-agent";
 import { SITE } from "@/lib/content";
 import appCss from "../styles.css?url";
 
@@ -189,7 +188,6 @@ function RootDocument() {
             <Outlet />
           </div>
           {!isOwnerConsole ? <SiteFooter /> : null}
-          <HamiAgent />
         </AuthProvider>
         <script
           type="application/ld+json"
