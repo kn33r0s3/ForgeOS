@@ -181,9 +181,17 @@ class Settings(BaseSettings):
     # The frontend runs locally on 127.0.0.1:3002 in this environment, and
     # the dev UI also commonly uses localhost:3000. Keep the default list in
     # sync with the real browser origins and allow overriding via env.
+    # Production origins: the Hami Systems widget (one script tag) is embedded
+    # on the Knee Rose site and on any site worldwide, and it POSTs cross-origin
+    # to /api/hami/chat. The app-level CORSMiddleware answers the preflight
+    # OPTIONS BEFORE any route handler runs, so a route-level CORS header alone
+    # cannot fix it — the origin must be in this list or the preflight returns
+    # 400 and the browser blocks the chat (this is what broke Hami Systems on
+    # Knee Rose on 18 Nov 2026; the live OPTIONS check returned 400). Explicit
+    # origins only; wildcard is rejected by parse_allowed_origins.
     ALLOWED_ORIGINS: str = os.getenv(
         "ALLOWED_ORIGINS",
-        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3002,http://127.0.0.1:3002,http://0.0.0.0:3002,http://localhost:8080,http://127.0.0.1:8080",
+        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3002,http://127.0.0.1:3002,http://0.0.0.0:3002,http://localhost:8080,http://127.0.0.1:8080,https://kn33r0s3.vercel.app,https://hami-sigma.vercel.app",
     )
 
     # --- Security (opt-in) ---
