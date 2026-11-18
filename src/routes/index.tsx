@@ -511,6 +511,18 @@ function ExploreHami() {
             </p>
           </a>
           <a
+            href="/hami-field.html"
+            className="group rounded-md border border-ledger-border bg-ledger-surface p-5 shadow-md transition duration-200 hover:-translate-y-1 hover:border-ledger-amber sm:p-6"
+          >
+            <h3 className="font-display text-lg font-bold text-ledger-ink">
+              Hami Field{" "}
+              <ArrowRight aria-hidden="true" className="inline size-4 transition-transform group-hover:translate-x-1" />
+            </h3>
+            <p className="mt-2 text-base leading-7 text-ledger-muted">
+              Explore Hami&apos;s gates, regions, and connections in an interactive map.
+            </p>
+          </a>
+          <a
             href="/hami-methodology.html"
             className="group rounded-md border border-ledger-border bg-ledger-surface p-5 shadow-md transition duration-200 hover:-translate-y-1 hover:border-ledger-amber sm:p-6"
           >
