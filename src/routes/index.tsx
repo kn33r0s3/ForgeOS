@@ -523,6 +523,19 @@ function ExploreHami() {
               always networked, always tracked.
             </p>
           </a>
+          <a
+            href="/ai-engineering-gates.html"
+            className="group rounded-md border border-ledger-border bg-ledger-surface p-5 shadow-md transition duration-200 hover:-translate-y-1 hover:border-ledger-amber sm:p-6"
+          >
+            <h3 className="font-display text-lg font-bold text-ledger-ink">
+              AI engineering gates{" "}
+              <ArrowRight aria-hidden="true" className="inline size-4 transition-transform group-hover:translate-x-1" />
+            </h3>
+            <p className="mt-2 text-base leading-7 text-ledger-muted">
+              The map of work: gate, subgate, lead, helper gates. Nothing is lost,
+              the water never stops.
+            </p>
+          </a>
           <Link
             to="/meet-hami"
             className="group rounded-md border border-ledger-border bg-ledger-surface p-5 shadow-md transition duration-200 hover:-translate-y-1 hover:border-ledger-amber sm:p-6"
