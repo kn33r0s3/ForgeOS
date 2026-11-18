@@ -1,3 +1,33 @@
+# Current handoff — 2026-11-19 — D95 Rupandehi fish-superzone and AMPIS market-state reconciliation
+
+## Run-start main and recent history
+- Exact run-start remote `main`: `39706d6cb58119b9d0d01f897bfb869a00576861`, commit message “Register public routes and sitemap entries” (2026-11-18 22:12:55Z), parent `8b5ef1665defb18a5adc927ebcc26780523556e5`. The recent history contains 22 commits since the previous D93 reconciliation; this run made documentation-only changes.
+- Read current AGENTS, HANDOFF, STATE, QUEUE, BRAIN, UNKNOWN_MAP, CAPABILITY_QUEUE, LOG, PUBLIC_SOURCES and discovery-loop. The CAPABILITY_QUEUE is over 1 MB and was read through the repository contents endpoint; the ordinary file fetch returned no content because of its size. No UNKNOWN_MAP or generated projection edit.
+- Current main has the Hami Field/public route and sitemap work from the recent commit chain; this does not change the D95 evidence or source-rights boundary.
+
+## D95 — new official programme and market evidence
+- PMAMP PIU Rupandehi homepage identifies the fish superzone across Siyari, Shuddhodhan, Gaidahawa, Mayadevi, Tilottama wards 13–14, Butwal wards 14–16, Siddharthanagar wards 10–11 and Lumbini Sanskritik wards 5–9. It reports 1,516ha and 438 groups/cooperatives/firms.
+- The separate zone/superzone development page says 1,006ha, 132 groups/cooperatives/water-user committees/private enterprises, 1,627 farm families and 44 wards. Neither page gives a source-effective date or denominator definitions. Preserve both snapshots as an unresolved profile mismatch, not a proven programme failure.
+- The FY2082/83 citizen charter lists six fish-superzone support services, including 50% support for post-harvest materials (large nets and thermocol ice boxes), plus commercial tilapia/Pangasius production, broodstock, mechanization, irrigation and pond-bank/silpolin improvement. Application is required; the charter says free and “as required” timing. It is not proof of current eligibility or delivery.
+- The one-page FY2083/84 Pangasius fry notice #09, dated 2083/04/28, sets a minimum accepted price of NPR10.50 for a 5g fry. This is not the subsidy amount, a beneficiary award, purchase volume or delivery.
+- The notice index retrieved 19 Nov lists farmer registration 2083-07-27 as Continuous; sealed price-list 2083-06-23 and beneficiary selections 2083-06-21 / 2083-05-22 as Closed; Pangasius price notice 2083-04-28 as Continuous. No current open fish-specific application or Jaldevi beneficiary match was verified.
+- AMPIS Dharan body and index both show Mangsir 2, 2083: fresh rohu NPR380–420/kg, average396. Birtamod, Kawasoti and Dhalkebar search snippets also say Mangsir2, but their opened bodies remain dated Kartik26, Kartik12 and Kartik17 respectively. Birtamod and Kawasoti body values match their newer snippets; Dhalkebar's opened body has no fish rows. Treat these as index/body date mismatches, not body-verified current observations. Butwal body remains Kartik29 with no fish rows; no Mangsir2 Butwal fish row surfaced in bounded search. These are wholesale observations, not farm-gate/retail/transaction values, and species/categories are not interchangeable.
+- The PIU site lists FY2082/83 annual-progress and cost-benefit reports and an FY2083/84 post-harvest/packaging/labeling/marketing proposal, but their bodies and the beneficiary-selection attachment were not retrieved. D95 remains UNKNOWN: current Jaldevi operation, facility identity/capacity/use, named beneficiary status, species, costs, catchment, buyer/offtake and realized outcomes remain unproved.
+
+## Existing Hami seam, rights and next
+- Current source trace at this SHA: SourceCollector.normalize chooses raw_item.provenance OR normalized metadata; collector_runner merges selected task/registry context but not all normalized metadata; ObserverEngine persists published_at/retrieved_at/provenance; _ensure_evidence copies them; same-content dedup can return prior Signal/Evidence without refreshing metadata; assessment compares publication date with retrieval time; citation exposes source/title/URL/registry ID/retrieved_at but not published_at or source-effective cutoff. Two focused assessment tests do not cover cutoff round-trip, nested metadata, duplicate-content refresh or citation exposure. No source code/test change; proposed extension remains NOT IMPLEMENTED.
+- All five runtime clearances are past valid_through on 19 Nov (25 Sep or 27 Oct). PMAMP PIU and AMPIS are not registered. Their robots/terms routes were inaccessible and no exact content-reuse grant was found. Manual reading/citation only; NOT CLEARED for automation, source-body persistence, collector use or provider transmission.
+- No contact, application, beneficiary private-channel lookup, source ingestion, collector run, Signal/Evidence write, provider transmission, spend, publishing, payment change, intake/outbound activation, emergency advice or alerting occurred. No new D-number, UNKNOWN_MAP edit, generated projection or code change. The blocked planner helper was not retried through another path.
+- Next: retrieve the PIU FY2082/83 annual-progress and cost-benefit PDFs, FY2083/84 post-harvest proposal and Pangasius beneficiary-selection attachment; then recheck body-level Butwal/Bhairahawa prices. Preserve source dates and denominators. LiveKit remains first active engineering priority; D95 and all other Hami-wide work continue independently.
+
+## Run-start exact-head verification
+- ForgeOS CI: 9/11 jobs succeeded; backend failed 1 test (1,383 passed, 2 skipped) because `test_import_unknowns.py` expects D108 while the current map parses D113. Gate-checks failed with `npm run gates` RED (“gates tests: did not run cleanly”). Do not alter production or map content solely to satisfy the stale count.
+- Separate secrets scan passed.
+- Deploy verifier: 295/295 local tests passed; production-content fetch returned HTTP 402. Hami Vercel status succeeded; forge-os status is account-blocked. Production health is not verified.
+- Run links: [CI 44409404325](https://github.com/kn33r0s3/ForgeOS/actions/runs/44409404325), [secrets 44409404250](https://github.com/kn33r0s3/ForgeOS/actions/runs/44409404250), [deploy verifier 44409404366](https://github.com/kn33r0s3/ForgeOS/actions/runs/44409404366).
+
+---
+
 # Current handoff — 2026-11-18 — D93 official report and relief-flow reconciliation
 
 ## Run-start main and exact-head verification
