@@ -1115,7 +1115,52 @@
    "state_note": "UNKNOWN",
    "cheapest_test": "In the five conversations: \"how do you tell a buyer who is comparing prices from one who is ready to buy — and do you answer them differently?\"; ask 3 sellers to sort one week's threads by first-message shape (price-only vs product-detail)",
    "stake": "If parallel inquiry is the triage criterion, the wedge inherits the seller's filter, not the buyer's loss — and \"answer everyone faster\" would spend the rescued hours on shoppers who were never going to buy"
+  },
+  {
+   "id": "D109",
+   "category": "D",
+   "question": "Where do Nepali buyers get cash now that kiranas refuse QR-to-cash — ATMs, wallet agents, or a new informal channel? (round 24: since Shrawan 1, 2026 shopkeepers publicly refuse QR-for-cash; a Butwal traveler was refused at multiple shops; buyers hold digital money but need physical cash for bus fare and cash-only counters)",
+   "state": "UNKNOWN",
+   "state_note": "UNKNOWN",
+   "cheapest_test": "Ask 5 buyers: \"the last time you needed cash and the shop said no — where did you get it?\"; map ATM/agent density outside the Valley",
+   "stake": "If the cash-out door closes with no replacement, the buyer is stranded between digital money and cash-only counters — the QR rail's last-mile gap is a cash-access problem, not a payment problem"
+  },
+  {
+   "id": "D110",
+   "category": "D",
+   "question": "How large is the QR-to-cash flow — what share of a kirana's QR volume was cash-out, and what happens to its QR adoption now that the door is closed? (round 24: buyers scan Rs 500-1000 for Rs 50-100 of goods; NRB: 75.58M QR payments worth Rs 167.93B in one month, Bhadra 2083)",
+   "state": "UNKNOWN",
+   "state_note": "UNKNOWN",
+   "cheapest_test": "Ask 3 shopkeepers for one week's QR inflow vs. goods sold; compare QR volumes before/after their refusal announcement",
+   "stake": "If cash-out was a large share of counter QR volume, refusing it shrinks the QR rail itself — the adoption numbers may partly measure ATM-substitution, not purchases"
+  },
+  {
+   "id": "D111",
+   "category": "D",
+   "question": "Does cash-as-spending-brake segment the buyer base — do deliberate cash users resist QR even when it is free and available, and what would move them? (round 24: Paisa Master and Rabindra Bhattarai videos, thousands of likes, commenters choosing cash for self-control; some report Rs 5-10 QR surcharges at counters)",
+   "state": "UNKNOWN",
+   "state_note": "UNKNOWN",
+   "cheapest_test": "Ask 5 buyers: \"when you pay cash at a shop with a QR sticker — is it trust, self-control, or price?\"; test whether removing surcharges changes their choice",
+   "stake": "If a real segment pays cash by choice, no seller-side QR tool changes the payment — the wedge must serve the cash buyer, not convert them"
+  },
+  {
+   "id": "D112",
+   "category": "D",
+   "question": "Do buyers check the merchant name before confirming a QR payment, and how often does a fake sticker actually divert a payment? (round 24: Nepali Chronicle explainer claims 900 incidents/month, Rs 2.4 crore losses, 70% small shops — creator-claimed, unverified; NRB-citing guide confirms fake stickers and fake screenshots as known tricks; payer-side mirror of D19)",
+   "state": "UNKNOWN",
+   "state_note": "UNKNOWN",
+   "cheapest_test": "Ask 5 buyers: \"before you confirm a scan, what do you check?\"; watch for named fake-sticker cases in press/police reports",
+   "stake": "If buyers don't verify the name, the payer-side trust gap is as open as the seller's fake-confirmation gap — any payment-verification aid must protect both sides of the scan"
+  },
+  {
+   "id": "D113",
+   "category": "D",
+   "question": "Which state counters still require cash, and does that set a floor on cash demand that no wallet can remove? (round 24: transport office still takes cash-only for tax, Jul 2026 clip, 36K likes; bus fare cash-only)",
+   "state": "UNKNOWN",
+   "state_note": "UNKNOWN",
+   "cheapest_test": "Sample 10 government service counters: QR accepted or cash-only; ask buyers which cash-only counter they hit most often",
+   "stake": "If the state's own counters are cash-only, cash demand has a government-set floor — digital adoption stalls at the state's door, not the shop's"
   }
  ],
- "last_loop": "2026-11-11"
+ "last_loop": "2026-11-18"
 }
