@@ -1,3 +1,39 @@
+## 2026-11-19 12:46 NPT — CI failure repaired locally; exact-head run pending
+
+- **Current main / external evidence:** `main` and `origin/main` are at
+  `fddd1495daccea3ac10450436e4a501f6268ca7a`. Exact-head ForgeOS CI run
+  `44467865849` is 9/11, not green. `frontend-tests` passed its 168 script
+  tests but failed one TypeScript assertion (294/295): `features.json`
+  referenced `haminp` while the public schema ID is `hami-sigma`.
+  `gate-checks` passed the gate tests and GATES freshness, then failed the
+  WHO_DID_WHAT check: the committed report had 1,878 entries while the CI
+  generator expected 1,879, including `6dab1d5`.
+- **Root cause and correction:** updated `features.json` to the canonical
+  schema URL and changed the assertion to derive it from `SITE.url`. For the
+  report, CI runs the generator with `--exclude-head`, which starts at
+  `HEAD^`. Therefore, to prepare the report for the next commit, run
+  `npm run who-did-what` without that flag at current HEAD `fddd1495`; it
+  includes the current parent in 1,880 entries. After the fix commit, CI's
+  `--exclude-head` run starts at `fddd1495` and generates the same report.
+  The earlier 1,879-entry report generated with `--exclude-head` at
+  `fddd1495` omitted that parent and would remain stale after the commit.
+- **Local verification:** `npm test` — 168/168 script tests and 295/295
+  TypeScript tests; `npm run gates` — GREEN; `npm run typecheck` — passed;
+  `npm run build` — passed (Nitro build completed; local database migration
+  skipped because `DATABASE_URL` is unset); `node
+  --experimental-strip-types --test src/lib/features.test.ts` — 28/28;
+  `cd services/hami-media && go test ./...` — passed in prior validation;
+  `git diff --check` — passed. `npm run who-did-what` regenerated 1,880
+  entries. The exact-head CI result after the fix commit is still pending.
+- **Deployment / owner dependency:** independent deploy verification
+  `44467865887` failed fetching production content with HTTP 402; no
+  deployment for `fddd1495` is listed, so production is not verified. The
+  local correction removes the stale-host assertion and report-regeneration
+  mismatch; it does not remove any owner action in the economic workflow.
+  `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION` remains **NOT MEASURABLE**.
+  Next: commit and push only these CI corrections on `main`, then verify the
+  resulting exact-head CI. Do not claim green until that run passes.
+
 ## 2026-11-19 — Exact-head CI failure reconciliation (run 44404962019)
 
 - **Reported baseline:** run `44404962019` failed at head

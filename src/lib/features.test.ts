@@ -9,7 +9,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { FOOTER_GROUPS, NAV, PUBLIC_SYSTEM_PATHS, SYSTEM_PATHWAYS } from "./hami-system.ts";
-import { groupAreas } from "./content.ts";
+import { groupAreas, SITE } from "./content.ts";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const registry = JSON.parse(
@@ -489,7 +489,7 @@ describe("feature registry", () => {
     assert.ok(existsSync(schemaPath), "public/features.schema.json is missing");
     const schema = JSON.parse(readFileSync(schemaPath, "utf8"));
     assert.equal(registry.$schema, schema.$id);
-    assert.equal(schema.$id, "https://haminp.vercel.app/features.schema.json");
+    assert.equal(schema.$id, `${SITE.url}/features.schema.json`);
     assert.equal(schema.$defs.feature.properties.status.enum.join(","), "live,hidden,archived,planned");
   });
 

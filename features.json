@@ -1,5 +1,5 @@
 {
-  "$schema": "https://haminp.vercel.app/features.schema.json",
+  "$schema": "https://hami-sigma.vercel.app/features.schema.json",
   "description": "Hami feature registry. Every live feature is listed here with its route/endpoint. Removing or renaming a live feature without updating this registry fails CI. Status: live = publicly reachable and linked; hidden = exists but not linked from public nav; archived = retired, kept for history; planned = not built. date_added and commit preserve the route-introduction provenance; status reflects current availability and visibility.",
   "features": [
     {
