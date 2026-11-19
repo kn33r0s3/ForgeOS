@@ -29,6 +29,18 @@
   `git diff --quiet --ignore-matching-lines='^Generated ' -- docs/GATES.md`
   passes locally; substantive report changes still fail. `docs/GATES.md` was
   left untouched. Exact-head CI after this workflow change is still required.
+- **WHO_DID_WHAT freshness root cause:** exact-head run `44438139459` passed
+  the GATES checks, then reported `docs/WHO_DID_WHAT.md` stale while generating
+  1,877 commits / 3 agents. The generator included the commit being checked,
+  which cannot be present in a report committed by that same commit; refreshing
+  the report alone would create another self-reference. Updated the existing
+  generator to support `--exclude-head` and omit report-only commits, and made
+  CI run `npm run who-did-what -- --exclude-head`. Locally,
+  `npm run who-did-what -- --exclude-head` reported 1,876 commits / 3 agents
+  and omitted current HEAD; `npm run who-did-what` reported 1,877 / 3 and
+  included it, with deterministic output. Regenerate the report from the
+  current head before committing; the exact-head CI after this change is still
+  required.
 - **Local verification:** `npm test` passed (168 script + 295 TypeScript tests);
   `npm run gates` passed; `npm run typecheck` passed; `env -u DATABASE_URL npm
   run build` passed (database migration skipped because the variable was

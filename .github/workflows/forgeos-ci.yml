@@ -165,7 +165,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npm run who-did-what
+          npm run who-did-what -- --exclude-head
           if ! git diff --quiet -- docs/WHO_DID_WHAT.md; then
             echo "::error::docs/WHO_DID_WHAT.md is stale — run 'npm run who-did-what' and commit it"
             git diff -- docs/WHO_DID_WHAT.md | head -50
