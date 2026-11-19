@@ -156,7 +156,7 @@ jobs:
         run: |
           set -euo pipefail
           npm run gates:report
-          if ! git diff --quiet -- docs/GATES.md; then
+          if ! git diff --quiet --ignore-matching-lines='^Generated ' -- docs/GATES.md; then
             echo "::error::docs/GATES.md is stale — run 'npm run gates:report' and commit it"
             git diff -- docs/GATES.md | head -50
             exit 1

@@ -18,8 +18,17 @@
   `# fail 0`, which the old parser could not recognize.
   Updated `scripts/gates.mjs` to use the child error/exit status and print
   captured output only on failure. This removes the reporter-format dependency
-  and preserves diagnostics for genuine failures. Verify the fix with the
-  post-push exact-head CI; local `npm run gates` alone is not CI evidence.
+  and preserves diagnostics for genuine failures.
+- **GATES.md freshness root cause:** exact-head run `44437268479` passed the
+  gate tests, then failed because `git diff --quiet` compared the generated
+  timestamp (`Generated 2026-11-18T14:11:38.732Z`) with the newly rendered
+  timestamp (`Generated 2026-11-19T01:30:24.983Z`); the generated report
+  content was otherwise identical. Updated `.github/workflows/forgeos-ci.yml`
+  to ignore only lines beginning `Generated `, matching `scripts/gates.mjs`.
+  The timestamp-only check
+  `git diff --quiet --ignore-matching-lines='^Generated ' -- docs/GATES.md`
+  passes locally; substantive report changes still fail. `docs/GATES.md` was
+  left untouched. Exact-head CI after this workflow change is still required.
 - **Local verification:** `npm test` passed (168 script + 295 TypeScript tests);
   `npm run gates` passed; `npm run typecheck` passed; `env -u DATABASE_URL npm
   run build` passed (database migration skipped because the variable was
