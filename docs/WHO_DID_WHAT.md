@@ -6,6 +6,7 @@ Grouped by agent, newest first, one plain-English line per change. A commit whos
 
 ## agent
 
+- 2026-11-19 `d55d4e4` [ci-reconcile][gates] Reconcile Hami model and media sync
 - 2026-11-19 `c8493cd` [ci-reconcile][gates] Fix feature registry and report freshness
 - 2026-11-19 `6dab1d5` [ci-reconcile][gates] fix report generator lint and refresh attribution
 - 2026-11-19 `b6bd423` [ci-reconcile][gates] make generated commit report self-consistent
@@ -1895,4 +1896,4 @@ Grouped by agent, newest first, one plain-English line per change. A commit whos
 - 2026-09-24 `41eea98` [-][-] Establish canonical ForgeOS repository (unformatted — no [agent][task-id][gates] prefix)
 - 2026-09-24 `07baf91` [-][-] Add paid triage economic bridge and approval outcome lifecycle (unformatted — no [agent][task-id][gates] prefix)
 
-Total: 1882 commits.
+Total: 1883 commits.
