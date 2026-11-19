@@ -32,7 +32,7 @@ Providers
                     internet at all.
 - HamiModelProvider : Hami's own model (the clean adapter) on the
                     owner's Mac, reached only through the guarded gateway
-                    (scripts/hami_ollama_gateway.py). No borrowed model
+                    (scripts/hami_model_gateway.py). No borrowed model
                     or paid API. The intended
                     "better than mock, still $0" path.
 """
@@ -289,7 +289,8 @@ def _complete_with_fallback(
             completion_observation.update({
                 "provider": provider_name, "mode": "LOCAL",
                 "model": settings.HAMI_MODEL_NAME if provider_name == "hami-model" else None,
-                "status": "AI_UNAVAILABLE", "inference_invoked": False,
+                "status": "AI_UNAVAILABLE", "request_attempted": False,
+                "inference_invoked": False,
                 "failure_type": type(e).__name__,
             })
         raise AIUnavailableError(provider_name, f"provider construction failed: {type(e).__name__}") from e

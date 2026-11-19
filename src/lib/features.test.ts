@@ -255,8 +255,7 @@ describe("feature registry", () => {
     assert.ok(forgeConsole.includes("This checks the endpoint and configured model, not generation quality."));
     assert.ok(forgeConsole.includes("A completed request is not proof that its claims are correct."));
     assert.ok(forgeConsole.includes("Observed model call:"));
-    assert.ok(forgeConsole.includes("only sent to Hami's guarded local gateway after the Hami model gate is active."));
-    assert.ok(forgeConsole.includes("remoteContextSharingBlocked"));
+    assert.ok(forgeConsole.includes("Hami's local model is reachable."));
     assert.ok(forgeConsole.includes("Your question and selected Hami knowledge are sent to the configured model only when the server-side provider and data-sharing gates allow it."));
     assert.ok(forgeConsole.includes("providerObservation"));
     assert.ok(forgeConsole.includes("not independently verified by this telemetry."));

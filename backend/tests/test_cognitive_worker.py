@@ -150,7 +150,7 @@ def test_unavailable_provider_fails_closed_and_records_research_event(db, monkey
     db.refresh(worker_task)
     assert worker_task.status == "queued"
     assert worker_task.attempts == 1
-    assert "GEMINI_API_KEY" in worker_task.error
+    assert "Unsupported cognitive provider 'gemini'" in worker_task.error
     assert db.query(models.WorldEvent).filter_by(source="cognitive_worker").count() == 0
     failed_event = (
         db.query(models.ResearchTaskEvent)
@@ -285,14 +285,14 @@ def test_schema_verifier_feedback_changes_the_next_candidate_attempt(db):
 
 
 
-def test_local_provider_classifies_malformed_json_without_retaining_response():
+def test_hami_model_provider_classifies_malformed_json_without_retaining_response():
     class InvalidJsonModel:
         _model = "test-only-model"
 
         def complete_json(self, prompt, *, system, schema):
             return "secret/raw/rejected-response"
 
-    provider = cognitive_provider.OllamaCognitiveProvider(InvalidJsonModel())
+    provider = cognitive_provider.HamiCognitiveProvider(InvalidJsonModel())
     context = cognitive_provider.CognitiveTaskContext(
         research_task_id=1,
         objective="Check provider output structure.",
@@ -309,7 +309,7 @@ def test_local_provider_classifies_malformed_json_without_retaining_response():
 
 
 
-def test_local_ollama_provider_uses_shared_ai_engine_and_nepal_language_policy(monkeypatch):
+def test_local_hami_model_provider_uses_shared_ai_engine_and_nepal_language_policy(monkeypatch):
     import json
 
     from app.services import ai_engine
@@ -342,8 +342,8 @@ def test_local_ollama_provider_uses_shared_ai_engine_and_nepal_language_policy(m
             })
 
     model = FakeLocalModel()
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "hami-model")
     monkeypatch.setattr(ai_engine, "get_provider", lambda: model)
 
     provider = cognitive_provider.get_cognitive_provider()
@@ -372,10 +372,10 @@ def test_local_ollama_provider_uses_shared_ai_engine_and_nepal_language_policy(m
 
 
 def test_local_cognitive_provider_requires_matching_explicit_ai_configuration(monkeypatch):
-    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "hami-model")
     monkeypatch.setattr(settings, "AI_PROVIDER", "mock")
 
-    with pytest.raises(cognitive_provider.CognitiveProviderUnavailable, match="AI_PROVIDER=ollama"):
+    with pytest.raises(cognitive_provider.CognitiveProviderUnavailable, match="AI_PROVIDER=hami-model"):
         cognitive_provider.get_cognitive_provider()
 
 
@@ -491,12 +491,12 @@ def test_cognitive_context_exposes_only_explicitly_public_real_evidence(db):
     assert replacement.context.available_evidence_ids == (public_evidence.id,)
 
 
-def test_ollama_cognitive_provider_refuses_serverless_loopback(monkeypatch):
+def test_removed_ollama_cognitive_provider_is_rejected(monkeypatch):
     monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
     monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
     monkeypatch.setenv("VERCEL", "1")
 
-    with pytest.raises(cognitive_provider.CognitiveProviderUnavailable, match="unavailable in Vercel"):
+    with pytest.raises(cognitive_provider.CognitiveProviderUnavailable, match="Unsupported cognitive provider 'ollama'"):
         cognitive_provider.get_cognitive_provider()
 
 
@@ -527,8 +527,8 @@ def test_completed_cognitive_tasks_do_not_starve_new_work_before_candidate_limit
     db.commit()
 
     newer = completed_research("New question should receive a cognitive turn")
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "hami-model")
     from app.services import operating_v4
     monkeypatch.setattr(operating_v4, "check_agent_run_allowed", lambda _db: None)
     provider = ReplacementProvider()
@@ -582,8 +582,8 @@ def test_restricted_evidence_does_not_starve_public_cognitive_candidate(db, monk
     eligible.evidence_ids = str(public_evidence.id)
     db.commit()
 
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "hami-model")
     from app.services import operating_v4
     monkeypatch.setattr(operating_v4, "check_agent_run_allowed", lambda _db: None)
     provider = ReplacementProvider()
@@ -615,8 +615,8 @@ def test_bounded_local_cognitive_batch_runs_and_reuses_proposals(db, monkeypatch
     db.flush()
     research_task.evidence_ids = str(evidence.id)
     db.commit()
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "hami-model")
     from app.services import operating_v4
     monkeypatch.setattr(operating_v4, "check_agent_run_allowed", lambda _db: None)
     provider = ReplacementProvider()
@@ -639,28 +639,30 @@ def test_bounded_local_cognitive_batch_runs_and_reuses_proposals(db, monkeypatch
 
 
 
-def test_bounded_local_cognitive_batch_is_gated_and_vetoes_vercel(db, monkeypatch):
+def test_bounded_local_cognitive_batch_requires_hami_model_and_runs_empty_on_vercel(db, monkeypatch):
     monkeypatch.setattr(settings, "AI_PROVIDER", "mock")
     monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "mock")
     disabled = cognitive_worker.run_pending_cognitive_tasks(db, limit=1)
     assert disabled["status"] == "disabled"
     assert db.query(models.WorkerTask).filter_by(worker_type="cognitive").count() == 0
 
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "OLLAMA_HOST", "http://localhost:11434")
-    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "")
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "hami-model")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_HOST", "https://models.example.test")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_KEY", "test-only-gateway-token")
     monkeypatch.setenv("VERCEL", "1")
-    unavailable = cognitive_worker.run_pending_cognitive_tasks(db, limit=1)
-    assert unavailable["status"] == "unavailable"
-    assert unavailable["reason"] == "local_ollama_is_not_available_in_vercel_runtime"
+    from app.services import operating_v4
+    monkeypatch.setattr(operating_v4, "check_agent_run_allowed", lambda _db: None)
+    empty = cognitive_worker.run_pending_cognitive_tasks(db, limit=1)
+    assert empty["status"] == "ok"
+    assert empty["attempted"] == 0
     assert db.query(models.WorkerTask).filter_by(worker_type="cognitive").count() == 0
 
 
 
 def test_bounded_local_cognitive_batch_obeys_owner_gate(db, monkeypatch):
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "hami-model")
     from app.services import operating_v4
     def blocked(_db):
         raise ValueError("blocked by owner safety state")
@@ -674,28 +676,26 @@ def test_bounded_local_cognitive_batch_obeys_owner_gate(db, monkeypatch):
 
 
 
-def test_cognitive_provider_supports_authenticated_self_hosted_mode(monkeypatch):
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "OLLAMA_HOST", "https://models.example.test")
-    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "test-only-gateway-token")
-    monkeypatch.setattr(settings, "HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA", True)
+def test_cognitive_provider_uses_configured_hami_model(monkeypatch):
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "hami-model")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_HOST", "https://models.example.test")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_KEY", "test-only-gateway-token")
     monkeypatch.setenv("VERCEL", "1")
 
     provider = cognitive_provider.get_cognitive_provider()
 
-    assert provider.name == "ollama"
-    assert provider.mode == "SELF_HOSTED"
-    assert provider.version == settings.OLLAMA_MODEL
+    assert provider.name == "hami-model"
+    assert provider.mode == "LOCAL"
+    assert provider.version == settings.HAMI_MODEL_NAME
 
 
 
-def test_ollama_response_body_is_hard_bounded(monkeypatch):
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "OLLAMA_HOST", "http://localhost:11434")
-    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "")
-    monkeypatch.delenv("VERCEL", raising=False)
-    provider = ai_engine.OllamaProvider()
+def test_hami_model_response_body_read_is_hard_bounded(monkeypatch):
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_HOST", "http://127.0.0.1:11435")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_KEY", "test-only-gateway-token")
+    provider = ai_engine.HamiModelProvider()
     observed = {}
 
     class OversizedResponse:
@@ -709,70 +709,59 @@ def test_ollama_response_body_is_hard_bounded(monkeypatch):
             observed["read_limit"] = size
             return b"x" * size
 
-    monkeypatch.setattr(
-        ai_engine.urllib.request,
-        "urlopen",
-        lambda _request, timeout=60: OversizedResponse(),
-    )
+    class FakeOpener:
+        def open(self, _request, timeout=60):
+            return OversizedResponse()
 
-    with pytest.raises(RuntimeError, match="Ollama response exceeded 1048576 bytes"):
+    monkeypatch.setattr(ai_engine.urllib.request, "build_opener", lambda *_args: FakeOpener())
+
+    with pytest.raises(RuntimeError, match="Hami model is unavailable"):
         provider.complete_json(
             '{"task":"test"}',
             schema={"type": "object", "properties": {}, "additionalProperties": False},
         )
 
-    assert observed["read_limit"] == ai_engine.MAX_OLLAMA_RESPONSE_BYTES + 1
+    assert observed["read_limit"] == ai_engine.MAX_HAMI_RESPONSE_BYTES + 1
 
 
 
-def test_cognitive_provider_blocks_self_hosted_mode_without_internal_context_opt_in(monkeypatch):
+def test_cognitive_provider_rejects_removed_ollama_provider(monkeypatch):
     import pytest
     from app.services.cognitive_provider import CognitiveProviderUnavailable
 
     monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
     monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "OLLAMA_HOST", "https://models.example.test")
-    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "test-only-gateway-token")
-    monkeypatch.setattr(settings, "HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA", False)
-    monkeypatch.setenv("VERCEL", "1")
 
-    with pytest.raises(CognitiveProviderUnavailable, match="Remote cognitive execution may receive Hami task context"):
+    with pytest.raises(CognitiveProviderUnavailable, match="Unsupported cognitive provider 'ollama'"):
         cognitive_provider.get_cognitive_provider()
 
 
 
-def test_bounded_cognitive_worker_allows_approved_self_hosted_gateway_in_vercel(db, monkeypatch):
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "OLLAMA_HOST", "https://models.example.test")
-    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "test-only-gateway-token")
-    monkeypatch.setattr(settings, "HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA", True)
+def test_bounded_cognitive_worker_runs_empty_batch_with_hami_model_on_vercel(db, monkeypatch):
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "hami-model")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_HOST", "https://models.example.test")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_KEY", "test-only-gateway-token")
     monkeypatch.setenv("VERCEL", "1")
+    from app.services import operating_v4
+    monkeypatch.setattr(operating_v4, "check_agent_run_allowed", lambda _db: None)
 
     result = cognitive_worker.run_pending_cognitive_tasks(db, limit=1)
 
-    # There is no eligible task in this clean fixture, but the worker must get
-    # past the old blanket-Vercel veto when a remote gateway is configured and
-    # the owner has separately authorized internal-context transfer.
     assert result["status"] == "ok"
-    assert result.get("reason") != "local_ollama_is_not_available_in_vercel_runtime"
     assert result.get("attempted", 0) == 0
     assert result.get("completed", 0) == 0
     assert db.query(models.WorkerTask).filter_by(worker_type="cognitive").count() == 0
 
 
-def test_bounded_cognitive_worker_blocks_self_hosted_gateway_without_data_opt_in(db, monkeypatch):
+def test_bounded_cognitive_worker_disables_removed_ollama_provider(db, monkeypatch):
     monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
     monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "OLLAMA_HOST", "https://models.example.test")
-    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "test-only-gateway-token")
-    monkeypatch.setattr(settings, "HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA", False)
-    monkeypatch.setenv("VERCEL", "1")
 
     result = cognitive_worker.run_pending_cognitive_tasks(db, limit=1)
 
-    assert result["status"] == "blocked"
-    assert result["reason"] == "remote_internal_context_not_authorized"
+    assert result["status"] == "disabled"
+    assert result["reason"] == "explicit_hami_model_selection_required"
     assert db.query(models.WorkerTask).filter_by(worker_type="cognitive").count() == 0
 
 
@@ -1006,7 +995,7 @@ def test_non_proposal_worker_types_stay_behind_legacy_gate(db, monkeypatch):
     assert task.status == "queued"
 
 
-def test_ollama_provider_proposes_a_valid_general_goal_plan():
+def test_hami_model_provider_proposes_a_valid_general_goal_plan():
     plan = {
         "status": "PROPOSED",
         "objective_interpretation": "Interpret a human goal and propose a verifiable route.",
@@ -1049,7 +1038,7 @@ def test_ollama_provider_proposes_a_valid_general_goal_plan():
             return json.dumps({"plan": plan})
 
     model = FakeLocalModel()
-    provider = cognitive_provider.OllamaCognitiveProvider(model)
+    provider = cognitive_provider.HamiCognitiveProvider(model)
     context = cognitive_provider.GoalPlanningContext(
         goal_id=17,
         objective="Build and deploy a multi-streamer live video platform.",

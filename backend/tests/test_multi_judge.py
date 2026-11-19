@@ -191,9 +191,7 @@ def test_unavailable_judge_retries_after_availability_recovers_without_erasing_f
     assert db.query(models.Judgment).count() == 2
 
 
-def test_openai_judge_remains_blocked_even_when_flag_and_key_are_configured(monkeypatch):
-    from app.config import settings
-
+def test_default_judge_never_selects_a_paid_provider(monkeypatch):
     requested = []
 
     class FakeRegistry:
@@ -202,17 +200,11 @@ def test_openai_judge_remains_blocked_even_when_flag_and_key_are_configured(monk
             raise KeyError(name)
 
     monkeypatch.setattr(multi_judge, "default_registry", lambda: FakeRegistry())
-    monkeypatch.setattr(settings, "OPENAI_API_KEY", "configured-for-test")
-    monkeypatch.setattr(settings, "FORGEOS_OPENAI_JUDGE_ENABLED", False)
+    monkeypatch.setenv("AI_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_API_KEY", "configured-for-test")
+    monkeypatch.setenv("FORGEOS_OPENAI_JUDGE_ENABLED", "true")
     assert multi_judge._default_judges() == []
-    assert requested == ["local-qwen3-coder"]
-
-    requested.clear()
-    # The legacy switch is not a spend-control system; it cannot override the
-    # centralized block until real usage metering is connected to the global cap.
-    monkeypatch.setattr(settings, "FORGEOS_OPENAI_JUDGE_ENABLED", True)
-    assert multi_judge._default_judges() == []
-    assert requested == ["local-qwen3-coder"]
+    assert requested == ["hami-model"]
 
 
 def test_no_available_judges_does_not_create_recursive_research_questions(db):
@@ -608,8 +600,7 @@ def test_default_provider_judge_sees_only_explicitly_shareable_public_evidence(d
     db.refresh(public)
     db.refresh(private)
     db.refresh(pending)
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "FORGEOS_OPENAI_JUDGE_ENABLED", False)
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
     monkeypatch.delenv("VERCEL", raising=False)
 
     sent_prompts = []
@@ -629,7 +620,7 @@ def test_default_provider_judge_sees_only_explicitly_shareable_public_evidence(d
 
     class FakeRegistry:
         def get(self, name):
-            assert name == "local-qwen3-coder"
+            assert name == "hami-model"
             return FakeTool()
 
     monkeypatch.setattr(multi_judge, "default_registry", lambda: FakeRegistry())
@@ -677,8 +668,7 @@ def test_default_judgment_records_only_the_evidence_the_provider_received(db, mo
     db.commit()
     db.refresh(public)
     db.refresh(private)
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "FORGEOS_OPENAI_JUDGE_ENABLED", False)
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
     monkeypatch.delenv("VERCEL", raising=False)
 
     class FakeTool:
@@ -734,7 +724,9 @@ def test_default_judge_has_no_available_provider_context_on_vercel(monkeypatch):
     from app.config import settings
     from app.services.tool_registry import default_registry
 
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_HOST", "http://127.0.0.1:11435")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_KEY", "")
     monkeypatch.setenv("VERCEL", "1")
-    tool = default_registry().get("local-qwen3-coder")
+    tool = default_registry().get("hami-model")
     assert tool.is_available() is False

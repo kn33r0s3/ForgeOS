@@ -2356,7 +2356,7 @@ def test_standing_authorization_daily_cap_allows_first_dispatch_and_blocks_secon
 
 
 
-def test_ai_ollama_status_is_unavailable_in_vercel_without_network(monkeypatch):
+def test_removed_ollama_provider_is_unavailable_without_network(monkeypatch):
     from app.services import ai_engine
 
     monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
@@ -2368,12 +2368,12 @@ def test_ai_ollama_status_is_unavailable_in_vercel_without_network(monkeypatch):
     )
     status = ai_engine.get_provider_status()
     assert status["provider"] == "ollama"
-    assert status["mode"] == "UNKNOWN"
+    assert status["mode"] == "NONE"
     assert status["status"] == "AI_UNAVAILABLE"
     assert status["inference_verified"] is False
 
 
-def test_ai_ollama_status_checks_installed_model_but_does_not_claim_inference(monkeypatch):
+def test_hami_model_status_checks_configured_gateway_but_does_not_claim_inference(monkeypatch):
     import json
     from app.services import ai_engine
 
@@ -2385,38 +2385,37 @@ def test_ai_ollama_status_checks_installed_model_but_does_not_claim_inference(mo
             return False
 
         def read(self):
-            return json.dumps({"models": [{"name": "qwen3-coder:latest", "model": "qwen3-coder:latest"}]}).encode("utf-8")
+            return json.dumps({"data": [{"name": "hami-model"}]}).encode("utf-8")
 
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "OLLAMA_HOST", "http://localhost:11434")
-    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "")
-    monkeypatch.setattr(settings, "OLLAMA_MODEL", "qwen3-coder:latest")
-    monkeypatch.delenv("VERCEL", raising=False)
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_HOST", "https://models.example.test")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_KEY", "test-only-gateway-token")
+    monkeypatch.setenv("VERCEL", "1")
     observed = {}
 
-    def fake_urlopen(request, timeout):
-        observed["url"] = request.full_url
-        observed["timeout"] = timeout
-        return Response()
+    class FakeOpener:
+        def open(self, request, timeout):
+            observed["url"] = request.full_url
+            observed["timeout"] = timeout
+            observed["headers"] = {
+                key.lower(): value for key, value in request.header_items()
+            }
+            return Response()
 
-    # Local loopback uses urlopen. Keep explicit regression coverage that the
-    # hardened remote transport refuses to carry bearer credentials cross-origin.
-    handler = ai_engine._RejectOllamaRedirects()
-    assert handler.redirect_request(
-        ai_engine.urllib.request.Request("https://models.example.test/api/tags"),
-        None, 302, "Found", {}, "https://attacker.example/steal",
-    ) is None
-    monkeypatch.setattr(ai_engine.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(
+        ai_engine.urllib.request, "build_opener", lambda *_args: FakeOpener()
+    )
     status = ai_engine.get_provider_status()
-    assert observed["url"] == "http://localhost:11434/api/tags"
-    assert observed["timeout"] == 1.5
+    assert observed["url"] == "https://models.example.test/api/hami-llm/status"
+    assert observed["timeout"] == 3
+    assert observed["headers"]["x-hami-key"] == "test-only-gateway-token"
     assert status["status"] == "MODEL_AVAILABLE"
-    assert status["model"] == "qwen3-coder:latest"
+    assert status["model"] == settings.HAMI_MODEL_NAME
+    assert status["mode"] == "LOCAL"
     assert status["inference_verified"] is False
-    assert "answer quality are not yet verified" in status["note"]
 
 
-def test_ai_ollama_status_distinguishes_missing_model_and_unreachable_endpoint(monkeypatch):
+def test_hami_model_status_distinguishes_missing_model_and_unreachable_gateway(monkeypatch):
     import json
     from app.services import ai_engine
 
@@ -2428,21 +2427,25 @@ def test_ai_ollama_status_distinguishes_missing_model_and_unreachable_endpoint(m
             return False
 
         def read(self):
-            return json.dumps({"models": []}).encode("utf-8")
+            return json.dumps({"data": []}).encode("utf-8")
 
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "OLLAMA_HOST", "http://localhost:11434")
-    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "")
-    monkeypatch.setattr(settings, "OLLAMA_MODEL", "qwen3-coder:latest")
-    monkeypatch.delenv("VERCEL", raising=False)
-    monkeypatch.setattr(ai_engine.urllib.request, "urlopen", lambda *args, **kwargs: Response())
-    assert ai_engine.get_provider_status()["status"] == "MODEL_MISSING"
-
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_HOST", "http://127.0.0.1:11435")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_KEY", "test-only-gateway-token")
     monkeypatch.setattr(
         ai_engine.urllib.request,
-        "urlopen",
-        lambda *args, **kwargs: (_ for _ in ()).throw(ConnectionError("private endpoint detail")),
+        "build_opener",
+        lambda *_args: type("FakeOpener", (), {
+            "open": lambda self, request, timeout: Response()
+        })(),
     )
+    assert ai_engine.get_provider_status()["status"] == "MODEL_MISSING"
+
+    class FailedOpener:
+        def open(self, request, timeout):
+            raise ConnectionError("private endpoint detail")
+
+    monkeypatch.setattr(ai_engine.urllib.request, "build_opener", lambda *_args: FailedOpener())
     status = ai_engine.get_provider_status()
     assert status["status"] == "AI_UNAVAILABLE"
     assert status["failure_type"] == "ConnectionError"
@@ -2458,7 +2461,8 @@ def test_ai_external_provider_status_is_disabled_until_metered(monkeypatch):
     monkeypatch.setattr(settings, "AI_PROVIDER", "openai")
     monkeypatch.setattr(ai_engine, "get_provider", lambda: ExternalProvider())
     status = ai_engine.get_provider_status()
-    assert status["status"] == "PAID_PROVIDER_DISABLED"
+    assert status["mode"] == "NONE"
+    assert status["status"] == "AI_UNAVAILABLE"
     assert status["inference_verified"] is False
 
 
@@ -2607,7 +2611,7 @@ def test_grounded_answer_uses_language_aware_data_envelope(monkeypatch):
     import json
     from app.services import ai_engine, memory_layer
 
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
     monkeypatch.setattr(settings, "AI_FALLBACK_TO_MOCK", True)
     question = "yo kura ke ho? यो कुरा के हो?"
     context = "Forge records one hypothesis (confidence 45%): inspect a public source."
@@ -2621,7 +2625,7 @@ def test_grounded_answer_uses_language_aware_data_envelope(monkeypatch):
         captured["contains_internal_context"] = contains_internal_context
         if completion_observation is not None:
             completion_observation.update({
-                "provider": "ollama", "mode": "LOCAL", "model": "qwen3-coder:latest",
+                "provider": "hami-model", "mode": "LOCAL", "model": "hami-model",
                 "status": "completed", "request_attempted": True, "inference_invoked": True,
                 "prompt_eval_tokens": 10, "completion_eval_tokens": 5, "total_duration_ms": 120.0,
             })
@@ -2653,7 +2657,7 @@ def test_grounded_answer_uses_language_aware_data_envelope(monkeypatch):
     assert result["answer"] == "Hami ko record anusar yo ajhai hypothesis ho."
     assert result["provider_observation"]["inference_invoked"] is True
     assert result["provider_observation"]["request_attempted"] is True
-    assert result["provider_observation"]["model"] == "qwen3-coder:latest"
+    assert result["provider_observation"]["model"] == "hami-model"
     assert result["provider_observation"]["total_duration_ms"] == 120.0
 
 
@@ -2673,11 +2677,10 @@ def test_openai_provider_is_blocked_until_usage_metering_and_global_spend_enforc
     from app.services import ai_engine
 
     monkeypatch.setattr(settings, "AI_PROVIDER", "openai")
-    monkeypatch.setattr(settings, "OPENAI_API_KEY", "configured-but-not-authorized")
     status = ai_engine.get_provider_status()
-    assert status["status"] == "PAID_PROVIDER_DISABLED"
+    assert status["status"] == "AI_UNAVAILABLE"
     assert status["inference_verified"] is False
-    with pytest.raises(ai_engine.AIUnavailableError, match="usage metering"):
+    with pytest.raises(ai_engine.AIUnavailableError, match="No external AI provider is allowed"):
         ai_engine.get_provider()
 
 
@@ -2711,15 +2714,14 @@ def test_forge_ask_api_refuses_mock_provider_without_returning_template(monkeypa
 
 
 
-def test_ollama_authenticated_https_gateway_probes_model_and_generates_with_bearer(monkeypatch):
+def test_hami_model_gateway_uses_authenticated_status_and_completion_requests(monkeypatch):
     import json
     from app.services import ai_engine
 
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "OLLAMA_HOST", "https://models.example.test")
-    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "test-only-gateway-token")
-    monkeypatch.setattr(settings, "HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA", False)
-    monkeypatch.setattr(settings, "OLLAMA_MODEL", "qwen3-coder:latest")
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_HOST", "https://models.example.test")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_KEY", "test-only-gateway-token")
+    monkeypatch.setattr(settings, "HAMI_MODEL_NAME", "test-hami-model")
     monkeypatch.setenv("VERCEL", "1")
     calls = []
 
@@ -2737,32 +2739,28 @@ def test_ollama_authenticated_https_gateway_probes_model_and_generates_with_bear
             response = json.dumps(self.payload).encode("utf-8")
             return response if size is None or size < 0 else response[:size]
 
-    def fake_urlopen(request, timeout):
+    def fake_open(request, timeout):
         headers = {key.lower(): value for key, value in request.header_items()}
         calls.append({
             "url": request.full_url,
-            "authorization": headers.get("authorization"),
+            "hami_key": headers.get("x-hami-key"),
             "timeout": timeout,
+            "body": json.loads(request.data.decode("utf-8")) if request.data else None,
         })
-        if request.full_url.endswith("/api/tags"):
-            return Response({"models": [{"name": "qwen3-coder:latest", "model": "qwen3-coder:latest"}]})
-        if request.full_url.endswith("/api/generate"):
-            return Response({
-                "response": "नमस्ते",
-                "prompt_eval_count": 3,
-                "eval_count": 2,
-                "total_duration": 1_230_000,
-            })
-        raise AssertionError("Unexpected Ollama endpoint")
+        if request.full_url.endswith("/api/hami-llm/status"):
+            return Response({"data": [{"name": "test-hami-model"}]})
+        if request.full_url.endswith("/api/hami-llm/chat"):
+            return Response({"choices": [{"message": {"content": "नमस्ते"}}]})
+        raise AssertionError("Unexpected Hami model gateway endpoint")
 
     class FakeOpener:
         def open(self, request, timeout):
-            return fake_urlopen(request, timeout)
+            return fake_open(request, timeout)
 
     def fake_build_opener(handler):
-        assert isinstance(handler, ai_engine._RejectOllamaRedirects)
+        assert isinstance(handler, ai_engine._RejectGatewayRedirects)
         assert handler.redirect_request(
-            ai_engine.urllib.request.Request("https://models.example.test/api/tags"),
+            ai_engine.urllib.request.Request("https://models.example.test/api/hami-llm/status"),
             None, 302, "Found", {}, "https://attacker.example/steal",
         ) is None
         return FakeOpener()
@@ -2770,39 +2768,44 @@ def test_ollama_authenticated_https_gateway_probes_model_and_generates_with_bear
     monkeypatch.setattr(ai_engine.urllib.request, "build_opener", fake_build_opener)
     status = ai_engine.get_provider_status()
 
-    assert status["provider"] == "ollama"
-    assert status["mode"] == "SELF_HOSTED"
+    assert status["provider"] == "hami-model"
+    assert status["mode"] == "LOCAL"
     assert status["status"] == "MODEL_AVAILABLE"
-    assert status["internal_context_allowed"] is False
     assert status["inference_verified"] is False
     answer = ai_engine.get_provider().complete("नमस्ते")
 
     assert answer == "नमस्ते"
     assert [item["url"] for item in calls] == [
-        "https://models.example.test/api/tags",
-        "https://models.example.test/api/generate",
+        "https://models.example.test/api/hami-llm/status",
+        "https://models.example.test/api/hami-llm/chat",
     ]
-    assert all(item["authorization"] == "Bearer test-only-gateway-token" for item in calls)
+    assert all(item["hami_key"] == "test-only-gateway-token" for item in calls)
+    assert calls[0]["timeout"] == 3
+    assert calls[1]["timeout"] == 90
+    assert calls[1]["body"]["model"] == "test-hami-model"
+    assert calls[1]["body"]["messages"][-1] == {"role": "user", "content": "नमस्ते"}
 
 
-def test_ollama_https_gateway_without_token_fails_closed_before_network(monkeypatch):
+def test_hami_model_gateway_without_key_fails_closed_before_network(monkeypatch):
     from app.services import ai_engine
 
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "OLLAMA_HOST", "https://models.example.test")
-    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "")
-    monkeypatch.setenv("VERCEL", "1")
-    monkeypatch.setattr(
-        ai_engine.urllib.request,
-        "urlopen",
-        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("No unauthenticated remote request is permitted")),
-    )
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_HOST", "https://models.example.test")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_KEY", "")
+    network_calls = []
+
+    def fail_if_opened(*_args, **_kwargs):
+        network_calls.append(True)
+        raise AssertionError("Unconfigured gateway must not be contacted")
+
+    monkeypatch.setattr(ai_engine.urllib.request, "build_opener", fail_if_opened)
 
     status = ai_engine.get_provider_status()
 
     assert status["status"] == "AI_UNAVAILABLE"
-    with pytest.raises(ai_engine.AIUnavailableError, match="token-authenticated HTTPS self-hosted gateway"):
-        ai_engine.get_provider()
+    with pytest.raises(ai_engine.AIUnavailableError, match="provider request failed"):
+        ai_engine._complete_with_fallback("question", allow_mock_fallback=False)
+    assert network_calls == []
 
 
 
@@ -2810,8 +2813,8 @@ def test_completion_observation_records_actual_provider_and_usage(monkeypatch):
     from app.services import ai_engine
 
     class LocalProvider:
-        _transport_mode = "SELF_HOSTED"
-        _model = "qwen3-coder:latest"
+        _transport_mode = "LOCAL"
+        _model = "hami-model"
         last_call_metadata = {
             "prompt_eval_tokens": 100,
             "completion_eval_tokens": 35,
@@ -2823,7 +2826,7 @@ def test_completion_observation_records_actual_provider_and_usage(monkeypatch):
             return "यसको उत्तर प्रमाणमा आधारित हुनुपर्छ।"
 
     provider = LocalProvider()
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
     monkeypatch.setattr(ai_engine, "get_provider", lambda: provider)
     observation = {}
 
@@ -2836,9 +2839,9 @@ def test_completion_observation_records_actual_provider_and_usage(monkeypatch):
 
     assert answer == "यसको उत्तर प्रमाणमा आधारित हुनुपर्छ।"
     assert observation == {
-        "provider": "ollama",
-        "mode": "SELF_HOSTED",
-        "model": "qwen3-coder:latest",
+        "provider": "hami-model",
+        "mode": "LOCAL",
+        "model": "hami-model",
         "status": "completed",
         "request_attempted": True,
         "inference_invoked": True,
@@ -2853,13 +2856,13 @@ def test_empty_provider_response_is_not_reported_as_an_answer(monkeypatch):
 
     class EmptyProvider:
         _transport_mode = "LOCAL"
-        _model = "qwen3-coder:latest"
+        _model = "hami-model"
         last_call_metadata = {}
 
         def complete(self, prompt, system=""):
             return "   "
 
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
     monkeypatch.setattr(ai_engine, "get_provider", lambda: EmptyProvider())
     observation = {}
 
@@ -2884,15 +2887,14 @@ def test_forge_ask_api_returns_observed_model_metadata(monkeypatch, db):
 
     monkeypatch.setattr(settings, "FORGE_API_KEY", "test-owner-key")
     monkeypatch.setattr(ai_engine, "get_provider_status", lambda: {
-        "provider": "ollama", "mode": "SELF_HOSTED", "status": "MODEL_AVAILABLE",
-        "internal_context_allowed": True,
+        "provider": "hami-model", "mode": "LOCAL", "status": "MODEL_AVAILABLE",
         "inference_verified": False,
     })
     monkeypatch.setattr(ai_engine, "answer_question", lambda *args, **kwargs: {
         "answer": "यो अझै परिकल्पना हो।",
         "context_used": "One stored hypothesis.",
         "provider_observation": {
-            "provider": "ollama", "mode": "SELF_HOSTED", "model": "qwen3-coder:latest",
+            "provider": "hami-model", "mode": "LOCAL", "model": "hami-model",
             "status": "completed", "request_attempted": True, "inference_invoked": True,
             "prompt_eval_tokens": 21, "completion_eval_tokens": 12, "total_duration_ms": 420.0,
         },
@@ -2914,8 +2916,8 @@ def test_forge_ask_api_returns_observed_model_metadata(monkeypatch, db):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["provider_observation"]["mode"] == "SELF_HOSTED"
-    assert body["provider_observation"]["model"] == "qwen3-coder:latest"
+    assert body["provider_observation"]["mode"] == "LOCAL"
+    assert body["provider_observation"]["model"] == "hami-model"
     assert body["provider_observation"]["inference_invoked"] is True
     assert body["provider_observation"]["total_duration_ms"] == 420.0
 
@@ -2925,34 +2927,31 @@ def test_forge_ask_api_returns_observed_model_metadata(monkeypatch, db):
     assert len(events) == 1
     event_payload = json.loads(events[0].payload)
     assert event_payload["transition"] == "inference_completed"
-    assert event_payload["model"] == "qwen3-coder:latest"
+    assert event_payload["model"] == "hami-model"
     assert event_payload["total_duration_ms"] == 420.0
     assert "question" not in event_payload and "answer" not in event_payload
 
 
 
-def test_self_hosted_ollama_redirect_handler_refuses_cross_origin_redirect():
-    from app.services.ai_engine import _RejectOllamaRedirects
+def test_hami_model_redirect_handler_refuses_cross_origin_redirect():
+    from app.services.ai_engine import _RejectGatewayRedirects
     from urllib.request import Request
 
-    handler = _RejectOllamaRedirects()
-    request = Request("https://models.example.test/api/generate")
+    handler = _RejectGatewayRedirects()
+    request = Request("https://models.example.test/api/hami-llm/chat")
     assert handler.redirect_request(
         request, None, 302, "Found", {}, "https://attacker.example/steal"
     ) is None
 
 
 
-def test_self_hosted_model_context_requires_separate_owner_opt_in(monkeypatch):
+def test_hami_model_status_is_local_and_does_not_claim_inference(monkeypatch):
     import json
     from app.services import ai_engine
 
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "OLLAMA_HOST", "https://models.example.test")
-    monkeypatch.setattr(settings, "OLLAMA_API_KEY", "test-only-gateway-token")
-    monkeypatch.setattr(settings, "OLLAMA_MODEL", "qwen3-coder:latest")
-    monkeypatch.setattr(settings, "HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA", True)
-    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_HOST", "http://127.0.0.1:11435")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_KEY", "test-only-gateway-token")
 
     class Response:
         def __enter__(self):
@@ -2960,7 +2959,7 @@ def test_self_hosted_model_context_requires_separate_owner_opt_in(monkeypatch):
         def __exit__(self, *args):
             return False
         def read(self):
-            return json.dumps({"models": [{"name": "qwen3-coder:latest"}]}).encode("utf-8")
+            return json.dumps({"data": [{"name": "hami-model"}]}).encode("utf-8")
 
     class FakeOpener:
         def open(self, request, timeout):
@@ -2970,21 +2969,19 @@ def test_self_hosted_model_context_requires_separate_owner_opt_in(monkeypatch):
     status = ai_engine.get_provider_status()
 
     assert status["status"] == "MODEL_AVAILABLE"
-    assert status["mode"] == "SELF_HOSTED"
-    assert status["internal_context_allowed"] is True
+    assert status["mode"] == "LOCAL"
+    assert status["inference_verified"] is False
+    assert "internal_context_allowed" not in status
 
 
-def test_forge_ask_refuses_remote_internal_memory_without_explicit_opt_in(monkeypatch, db):
+def test_forge_ask_rejects_removed_remote_provider_before_context_transfer(monkeypatch, db):
     from fastapi.testclient import TestClient
     from app.database import get_db
     from app.main import app
     from app.services import ai_engine
 
     monkeypatch.setattr(settings, "FORGE_API_KEY", "test-owner-key")
-    monkeypatch.setattr(ai_engine, "get_provider_status", lambda: {
-        "provider": "ollama", "mode": "SELF_HOSTED", "status": "MODEL_AVAILABLE",
-        "internal_context_allowed": False, "inference_verified": False,
-    })
+    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
     monkeypatch.setattr(
         ai_engine, "answer_question",
         lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("internal context must not be sent")),
@@ -3003,27 +3000,17 @@ def test_forge_ask_refuses_remote_internal_memory_without_explicit_opt_in(monkey
         client.close()
         app.dependency_overrides.clear()
 
-    assert response.status_code == 403
-    assert "sharing Hami's internal knowledge" in response.json()["detail"]
+    assert response.status_code == 503
 
 
 
-def test_self_hosted_provider_never_receives_internal_context_without_opt_in(monkeypatch):
+def test_removed_remote_provider_cannot_receive_internal_context(monkeypatch):
     from app.services import ai_engine
 
-    class RemoteProvider:
-        _transport_mode = "SELF_HOSTED"
-        _model = "qwen3-coder:latest"
-
-        def complete(self, prompt, system=""):
-            raise AssertionError("remote inference must not be invoked")
-
     monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA", False)
-    monkeypatch.setattr(ai_engine, "get_provider", lambda: RemoteProvider())
     observation = {}
 
-    with pytest.raises(ai_engine.AIUnavailableError, match="internal Hami context is not authorized"):
+    with pytest.raises(ai_engine.AIUnavailableError, match="provider construction failed"):
         ai_engine._complete_with_fallback(
             '{"retrieved_knowledge":"owner-only records"}',
             allow_mock_fallback=False,
@@ -3031,26 +3018,42 @@ def test_self_hosted_provider_never_receives_internal_context_without_opt_in(mon
             contains_internal_context=True,
         )
 
-    assert observation["status"] == "blocked_internal_context"
+    assert observation["status"] == "AI_UNAVAILABLE"
     assert observation["request_attempted"] is False
     assert observation["inference_invoked"] is False
 
 
-def test_self_hosted_provider_can_receive_internal_context_after_explicit_opt_in(monkeypatch):
+def test_local_hami_model_gateway_receives_internal_context(monkeypatch):
+    import json
     from app.services import ai_engine
 
-    class RemoteProvider:
-        _transport_mode = "SELF_HOSTED"
-        _model = "qwen3-coder:latest"
-        last_call_metadata = {}
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_HOST", "http://127.0.0.1:11435")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_KEY", "test-only-gateway-token")
+    requests = []
 
-        def complete(self, prompt, system=""):
-            assert "owner-only records" in prompt
-            return "bounded answer"
+    class Response:
+        def __enter__(self):
+            return self
 
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "HAMI_ALLOW_INTERNAL_CONTEXT_TO_SELF_HOSTED_OLLAMA", True)
-    monkeypatch.setattr(ai_engine, "get_provider", lambda: RemoteProvider())
+        def __exit__(self, *args):
+            return False
+
+        def read(self, size=-1):
+            return json.dumps({
+                "choices": [{"message": {"content": "bounded answer"}}]
+            }).encode("utf-8")
+
+    class FakeOpener:
+        def open(self, request, timeout):
+            requests.append({
+                "url": request.full_url,
+                "headers": {key.lower(): value for key, value in request.header_items()},
+                "body": json.loads(request.data.decode("utf-8")),
+            })
+            return Response()
+
+    monkeypatch.setattr(ai_engine.urllib.request, "build_opener", lambda *_args: FakeOpener())
     observation = {}
 
     answer = ai_engine._complete_with_fallback(
@@ -3064,6 +3067,9 @@ def test_self_hosted_provider_can_receive_internal_context_after_explicit_opt_in
     assert observation["status"] == "completed"
     assert observation["request_attempted"] is True
     assert observation["inference_invoked"] is True
+    assert requests[0]["url"] == "http://127.0.0.1:11435/api/hami-llm/chat"
+    assert requests[0]["headers"]["x-hami-key"] == "test-only-gateway-token"
+    assert "owner-only records" in requests[0]["body"]["messages"][-1]["content"]
 
 
 def test_prompt_context_exposes_bounded_external_source_metadata_without_source_bodies(db, monkeypatch):

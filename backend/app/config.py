@@ -93,7 +93,7 @@ class Settings(BaseSettings):
     AI_FALLBACK_TO_MOCK: bool = os.getenv("AI_FALLBACK_TO_MOCK", "false").lower() in ("1", "true", "yes")
 
     # hami-model on the owner's Mac: the only model. The gateway
-    # (scripts/hami_ollama_gateway.py) is its only caller; the server
+    # (scripts/hami_model_gateway.py) is its only caller; the server
     # listens on 127.0.0.1:11436 and serves only hami-model.
     HAMI_MODEL_HOST: str = os.getenv("HAMI_MODEL_HOST", "http://127.0.0.1:11436")
     HAMI_MODEL_NAME: str = os.getenv("HAMI_MODEL_NAME", "hami-model")

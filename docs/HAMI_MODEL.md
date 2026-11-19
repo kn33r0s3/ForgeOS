@@ -9,18 +9,18 @@ The mandate (Niroj, 19 Nov 2026 ~17:28–17:29):
 6. If Hami's model is unavailable, report unavailable. Never silently switch to another AI.
 7. Keep developing and evaluating Hami's own model until it becomes capable of carrying the workload.
 
-Nothing — no code, no file, no project — uses gpt-oss, GPT, Ollama, Qwen, or any other model. Only hami-model.
+The standalone `hami-model-server.py` process loads the Hami checkpoint and tokenizer. This does not by itself prove that every repository path or deployment uses that server.
 
 ## What hami-model is today
 
-The from-scratch pilot, built from nothing on Hami's own data:
-- TinyLM, ~14M params (6 layers, d_model 384, 8 heads, ctx 512, tied embeddings).
-- Own byte-level BPE tokenizer, 8,000 vocab, trained on Hami's data only.
-- Trained on v2 real Nepali text + news (10,275,610 tokens, 300 steps, seed 42).
-- Holdout perplexity 43.2. It does NOT speak coherent Nepali yet — it starts a phrase
-  ("नेपालको राजधानी") then degenerates into repeating "र". Beginner level, accepted.
-- The Qwen3-4B + clean adapter (94 vs 96 tie) is OUT of serving under this mandate.
-  Its eval record stays in docs; its training data and config are preserved.
+The existing from-scratch pilot is a TinyLM with 13,916,160 parameters (6 layers,
+`d_model=384`, 8 heads, context 512, tied embeddings). Its currently served
+tokenizer uses `Whitespace` pre-tokenization without a decoder; it is not the
+new tokenizer described below.
+
+The pilot is experimental and not capable enough to claim as a useful Nepali
+assistant. Do not treat its identity prompts, fluency, or factual answers as
+reliable.
 
 ## How it is served
 
@@ -32,19 +32,28 @@ The from-scratch pilot, built from nothing on Hami's own data:
   "Hami is unavailable", never fall back.
 - `scripts/hami-model-server.sh` — launcher (Mac venv python with torch + tokenizers).
 - `scripts/com.hami.model-server.plist` — launchd, RunAtLoad + KeepAlive.
-- The gateway (`scripts/hami_ollama_gateway.py`) is the ONLY caller of the model server.
-  Backend `app/api/hami_chat.py` → gateway `/api/hami-llm/chat` → model server.
-  Meet Hami, Hami chat, the terminal and the widget all go through that one path.
-  Live reaches the gateway through the Cloudflare tunnel; local code reaches it
-  on localhost. Same server, same model, same answers.
+- The intended shared route is backend `app/api/hami_chat.py` →
+  `scripts/hami_model_gateway.py` (`/api/hami-llm/chat`) → model server.
+- This path is not yet verified end-to-end for every app, embedded widget, or
+  public deployment. Do not claim that all Hami projects currently use it.
 
-## Status (19 Nov 2026, evening)
+## Local status
 
-- Server files written. NOT started yet: the model files are still on the VM
-  (checkpoint split into two <50 MB chunks, sha256 b53bc33219fa…; tokenizer,
-  training script and tokens ready) and torch + tokenizers are not yet installed
-  on the Mac. Transfer + install + first start are Order 025's steps, after the
-  v3 media run ends.
-- Next rung (point 7): continue the pilot on the v2 real Nepali text + news + courses
-  + history, more steps, until holdout perplexity beats 43.2 and samples turn coherent.
-  The v2 training order is rewritten to this target (no Qwen LoRA, no Alpaca anchor).
+- The model server at `127.0.0.1:11437` returned HTTP 200 with `loaded=true`.
+- Loaded checkpoint SHA-256:
+  `40970731ffe1f0cc6e0221c69b37ac7ae9059120b9b58b3486d2abcfa4b1c50f`.
+- It reports 3,000 training steps and holdout perplexity `1302.5124`; this
+  result does not pass a quality gate.
+- The new, isolated dataset is at `/Users/nirojpaudyal/Downloads/hami-model/next-run`.
+  It contains 11,436 training records and 585 holdout records from FineWeb-2
+  Nepali text, the Hami origin/system-map/architecture documents, and selected
+  public Hami pages. The tokenizer is trained on training records only and uses
+  byte-level encoding with a decoder; its Nepali/English round-trip test passes.
+- This new corpus and tokenizer have **not** been used to train a checkpoint.
+  The existing server checkpoint and its tokenizer were left unchanged.
+- The documented gateway route at `127.0.0.1:11435/api/hami-llm/status`
+  returned 401 without an `X-Hami-Key`; authentication is active, but this
+  unauthenticated check does not establish upstream or public-project traffic.
+- The previous `43.2` perplexity claim is not comparable to the current
+  checkpoint: it came from a different tokenizer/run and should not be used as
+  a promotion baseline.

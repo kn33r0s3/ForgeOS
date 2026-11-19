@@ -242,6 +242,7 @@ class ToolRegistry:
 def default_registry() -> ToolRegistry:
     """Build the default registry for Hami's local model and deterministic tools."""
     from app.services import ai_engine
+    from app.config import settings
 
     registry = ToolRegistry()
     from app.services.youtube_intelligence import YouTubeIntelligenceTool
@@ -294,6 +295,11 @@ def default_registry() -> ToolRegistry:
                 capabilities=("completion", "summarization", "analysis"),
             ),
             ai_engine.HamiModelProvider,
+            availability_check=lambda: (
+                settings.AI_PROVIDER.strip().lower() == "hami-model"
+                and bool(settings.HAMI_MODEL_GATEWAY_HOST.strip())
+                and bool(settings.HAMI_MODEL_GATEWAY_KEY.strip())
+            ),
         )
     )
     # Do not register a direct model adapter: it would bypass ai_engine's

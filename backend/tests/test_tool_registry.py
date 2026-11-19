@@ -68,14 +68,20 @@ def test_provider_selection_prefers_available_reliable_tool():
     assert selection.tool is better
 
 
-def test_default_registry_keeps_mock_fallback_when_ollama_is_not_active():
+def test_default_registry_keeps_mock_fallback_when_hami_model_is_not_configured(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "AI_PROVIDER", "mock")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_HOST", "http://127.0.0.1:11435")
+    monkeypatch.setattr(settings, "HAMI_MODEL_GATEWAY_KEY", "")
     registry = default_registry()
 
-    assert registry.get("local-qwen3-coder").capability.category == "reasoning"
+    assert registry.get("hami-model").capability.category == "reasoning"
+    assert not registry.get("hami-model").is_available()
     selection = registry.select(
         category="reasoning",
         capability="completion",
-        preferred=("local-qwen3-coder",),
+        preferred=("hami-model",),
         fallback="offline-mock",
     )
 

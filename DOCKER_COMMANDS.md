@@ -238,7 +238,7 @@ docker exec -it forgeos-worker bash
 ### Run Command in Container
 ```bash
 # Python command
-docker exec forgeos-backend python -c "from app.config import settings; print(settings.OLLAMA_HOST)"
+docker exec forgeos-backend python -c "from app.config import settings; print(settings.HAMI_MODEL_HOST)"
 
 # List files
 docker exec forgeos-backend ls -la /app/backend
@@ -296,8 +296,10 @@ curl http://127.0.0.1:3000/ | head -c 100
 # Backend from inside
 docker exec forgeos-backend curl http://localhost:8000/health
 
-# Ollama connectivity
-docker exec forgeos-backend curl http://host.docker.internal:11434/api/tags | jq .
+# Hami-model gateway connectivity (an "unauthorized" reply still
+# proves the gateway answers; add -H "X-Hami-Key: $HAMI_CHAT_KEY"
+# inside the container for the full status)
+docker exec forgeos-backend curl http://host.docker.internal:11435/api/hami-llm/status | jq .
 
 # Frontend from inside
 docker exec forgeos-frontend curl http://forgeos-caddy:3000/ | head -c 100
@@ -394,7 +396,7 @@ docker cp forgeos-backend:/app/backend/app/main.py ./main.py.bak
 
 ### Test Network Connectivity
 ```bash
-# Backend to Ollama
+# Backend to Hami-model gateway
 docker exec forgeos-backend ping host.docker.internal
 
 # Frontend to Backend

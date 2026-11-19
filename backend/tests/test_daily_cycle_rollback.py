@@ -334,8 +334,8 @@ def test_daily_cycle_invokes_local_cognitive_batch_when_explicitly_enabled(db, m
                 "execution_authorized": False,
             }]
 
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "hami-model")
     monkeypatch.setattr(cognitive_provider, "get_cognitive_provider", lambda: Provider())
     monkeypatch.setattr(collector_runner, "run_pending_evaluations", lambda *_args, **_kwargs: [])
     monkeypatch.setattr(operating_v4, "check_agent_run_allowed", lambda _db: None)

@@ -2,7 +2,7 @@
 
 Lets the owner talk to Hami AI on the deployed site. The chat request is
 forwarded to the owner's Mac hami-model server through a Cloudflare
-quick tunnel that points at the guarded gateway (scripts/hami_ollama_gateway.py),
+quick tunnel that points at the guarded gateway (scripts/hami_model_gateway.py),
 never at any other model directly. The gateway only allows
 POST /api/hami-llm/chat and GET /api/hami-llm/status, requires the
 X-Hami-Key header, and runs one generation at a time. Only hami-model is

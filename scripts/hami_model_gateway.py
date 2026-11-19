@@ -20,8 +20,8 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 
-HAMI_MODEL_BASE_URL = "http://127.0.0.1:11436"
-HAMI_MODEL_ID = "/Users/nirojpaudyal/Downloads/New Folder With Items/hami-nepali-sft/hf-cache/hub/models--mlx-community--Qwen3-4B-4bit/snapshots/4dcb3d101c2a062e5c1d4bb173588c54ea6c4d25"
+HAMI_MODEL_BASE_URL = "http://127.0.0.1:11437"
+HAMI_MODEL_ID = "hami-model"
 MAX_BODY_BYTES = 1_048_576
 UPSTREAM_TIMEOUT_SECONDS = 120
 
@@ -111,7 +111,24 @@ def _make_handler(secret: str) -> type[BaseHTTPRequestHandler]:
                 self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
                 return
             if self._is_authorized():
-                self._proxy("GET", "/v1/models")
+                try:
+                    with urllib.request.urlopen(
+                        f"{HAMI_MODEL_BASE_URL}/status",
+                        timeout=UPSTREAM_TIMEOUT_SECONDS,
+                    ) as response:
+                        data = json.loads(response.read().decode("utf-8"))
+                    if response.status == 200 and data.get("model") == "hami-model" and data.get("loaded"):
+                        self._send_json(HTTPStatus.OK, {"data": [{
+                            "id": "hami-model",
+                            "object": "model",
+                            "loaded": True,
+                            "checkpoint_sha256": data.get("checkpoint_sha256"),
+                            "params": data.get("params"),
+                        }]})
+                    else:
+                        self._send_json(HTTPStatus.BAD_GATEWAY, {"error": "model_not_ready"})
+                except (urllib.error.URLError, TimeoutError, ValueError, json.JSONDecodeError):
+                    self._send_json(HTTPStatus.BAD_GATEWAY, {"error": "upstream_unavailable"})
 
         def do_POST(self) -> None:
             if self.path != "/api/hami-llm/chat":
@@ -142,11 +159,30 @@ def _make_handler(secret: str) -> type[BaseHTTPRequestHandler]:
             except (UnicodeDecodeError, ValueError):
                 self._send_json(HTTPStatus.BAD_REQUEST, {"error": "invalid_json"})
                 return
-            if not isinstance(payload, dict) or payload.get("stream") is not False:
-                self._send_json(HTTPStatus.BAD_REQUEST, {"error": "stream_must_be_false"})
+            if not isinstance(payload, dict):
+                self._send_json(HTTPStatus.BAD_REQUEST, {"error": "invalid_payload"})
                 return
-            payload["model"] = HAMI_MODEL_ID
-            body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+            messages = payload.get("messages")
+            if not isinstance(messages, list):
+                self._send_json(HTTPStatus.BAD_REQUEST, {"error": "messages_required"})
+                return
+            user_message = ""
+            for message in reversed(messages):
+                if isinstance(message, dict) and message.get("role") == "user" and isinstance(message.get("content"), str):
+                    user_message = message["content"].strip()
+                    break
+            if not user_message:
+                self._send_json(HTTPStatus.BAD_REQUEST, {"error": "empty_message"})
+                return
+            try:
+                max_tokens = max(1, min(int(payload.get("max_tokens", 128)), 256))
+            except (TypeError, ValueError):
+                max_tokens = 128
+            body = json.dumps(
+                {"message": user_message, "max_tokens": max_tokens},
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ).encode("utf-8")
 
             # The interim adapter has been observed to loop on identity prompts.
             # Never relay a looped or reasoning-only answer to a chat surface.
@@ -155,7 +191,7 @@ def _make_handler(secret: str) -> type[BaseHTTPRequestHandler]:
                 return
             try:
                 request = urllib.request.Request(
-                    f"{HAMI_MODEL_BASE_URL}/v1/chat/completions",
+                    f"{HAMI_MODEL_BASE_URL}/api/chat",
                     data=body,
                     headers={"Content-Type": "application/json"},
                     method="POST",
@@ -175,9 +211,7 @@ def _make_handler(secret: str) -> type[BaseHTTPRequestHandler]:
 
                 try:
                     upstream = json.loads(response_body.decode("utf-8"))
-                    choices = upstream.get("choices") if isinstance(upstream, dict) else None
-                    message = choices[0].get("message") if isinstance(choices, list) and choices and isinstance(choices[0], dict) else None
-                    answer = message.get("content") if isinstance(message, dict) else None
+                    answer = upstream.get("reply") if isinstance(upstream, dict) else None
                     if not isinstance(answer, str) or not answer.strip():
                         self._send_json(HTTPStatus.BAD_GATEWAY, {"error": "upstream_empty"})
                         return
@@ -202,6 +236,19 @@ def _make_handler(secret: str) -> type[BaseHTTPRequestHandler]:
                         if len(stripped) >= size * 3 and stripped.endswith(unit * 3):
                             self._send_json(HTTPStatus.BAD_GATEWAY, {"error": "upstream_loop"})
                             return
+                    translated = {
+                        "id": "hami-model",
+                        "object": "chat.completion",
+                        "model": "hami-model",
+                        "choices": [{
+                            "index": 0,
+                            "finish_reason": "stop",
+                            "message": {"role": "assistant", "content": stripped},
+                        }],
+                    }
+                    response_body = json.dumps(translated, ensure_ascii=False).encode("utf-8")
+                    status = 200
+                    content_type = "application/json"
                 except (UnicodeDecodeError, ValueError, json.JSONDecodeError):
                     pass
 

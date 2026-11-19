@@ -1,3 +1,157 @@
+## 2026-11-19 21:44 +0545 — Protected constants re-verified after the subscriber-map edit; all hold
+
+- **Snapshot:** `services/hami-media/main.go`, 8,542 lines, 287,058 B (was 8,535 / 286,914 at 20:37) — the 21:27 subscriber-slice removal landed (+7 lines, +144 B).
+- **All protected settings hold as at 20:37:** `nackMaxQueueAge = 200ms` (line 61, still the unrecorded 5s→200ms change), `sfuNACKHistoryPackets = 512` (47), `maxSequencesPerNACK = 512` (57), `nackQueueSize = 512` (60), `sfuRTPQueueSize = 64` (62), 60 s `peerPairNegotiationTimeout` (63), RTCP chunking `maxNACKPairsPerRTCPPacket = math.MaxUint8 - 2` = 253 (59), mux `routerUDPMuxMode = "enabled"` (83), socket counters still DISABLED in source (86, 89), 5 fps `videoInterval: 200ms` for M6-H (~6227) and M7-H (~6257; numbers shifted +7 from the edit).
+- **Staged:** `/tmp/next-order-subscriber-map-ab.md` (3,145 B) — A/B the new binary `/tmp/hami-media-subscriber-map-opt` vs a clean control on the 250/500/1,000 M7-H harness. Feed AFTER the still-unfed NACK blame order (`/tmp/next-order-nack-queue-age-blame.md`, staged 20:51). Blocker stands: Docker Desktop not running, live run needs the owner to start it.
+- **Live site 21:44:** `hami-sigma.vercel.app/api/health` still `{"status":"degraded","ready":false,"ok":false,"version":"2.3.0","commit":"c232ea50...","db":"not_configured"}` — endpoint up, production NOT VERIFIED, unchanged.
+
+## 2026-11-19 20:37 +0545 — Protected constants re-verified in latest main.go; nackMaxQueueAge CHANGED 5s → 200ms, unrecorded
+
+- **Snapshot:** `services/hami-media/main.go`, 8,535 lines, 286,914 B, modified 19:18:19 +0545 (was 8,101 lines / 271,742 B at the 18:26 verification).
+- **CHANGED — NACK queue fix is no longer 512/5/512:** `nackMaxQueueAge = 200 * time.Millisecond` (line 61), was `5 * time.Second` at 18:26. The other three hold: `sfuNACKHistoryPackets = 512` (47), `maxSequencesPerNACK = 512` (57), `nackQueueSize = 512` (60). No queue entry records the change (whole-file search: only 5s mentions, at the 18:26 verification and the older retention note). Changed sometime between the 18:24 snapshot and the 19:18 modification — inside Copilot's dissolve/profile edits — reason not stated in the 19:12/19:28 entries.
+- **Effect so far:** none observed at 250/500/1,000 — the 19:28 profile runs report `nack_dropped_stale = 0` at all rungs, NACKs still clean (250/250, 500/500, 1,000/1,000). But the window is 25x tighter: at 3,000 viewers, where feedback dispatch is already the slow path, queued NACKs now go stale after 200 ms instead of 5 s. Directly relevant to the M7-H diagnosis — do not treat the 512/5/512 fix as intact until the change is explained or reverted.
+- **All other protected settings hold:** mux `routerUDPMuxMode = "enabled"` (83); 60 s `peerPairNegotiationTimeout` (63); RTP queue `sfuRTPQueueSize = 64` (62); RTCP chunking `maxNACKPairsPerRTCPPacket = math.MaxUint8 - 2` = 253 (59), used at 5863–5865; 5 fps `videoInterval: 200ms` for M6-H (6214) and M7-H (6250).
+- **Socket counters — no change, still the known stale-list flag:** source defaults still DISABLED (86, 89); the 19:28 profile logs (500, 1,000) both print `router socket write counter mode: disabled` + `client socket read counter mode: disabled`, same as the 18:07/18:21 cost logs. Whole-run socket aggregates stay empty — NOT traffic evidence.
+- **Live site 20:37:** `hami-sigma.vercel.app/api/health` still `{"status":"degraded","ready":false,"ok":false,"version":"2.3.0","commit":"c232ea50...","db":"not_configured"}` — endpoint up, production NOT VERIFIED, unchanged from 20:20.
+- **Next:** find which edit changed nackMaxQueueAge (git blame on main.go) and record the reason; decide keep-200ms vs restore-5s before any 3,000-peer attempt. The watch's protected list needs updating on both points (socket counters, queue age).
+
+## 2026-11-19 20:33 +0545 — Order 025d step 3 DONE BY MUSE: gateway renamed to hami-model
+
+- **Rename:** `scripts/hami_ollama_gateway.py` → `scripts/hami_model_gateway.py` (12,567 B, content unchanged — the file itself never named its old filename; verified by full read, 292 lines). Old filename: zero matches in `scripts/` after the rename; new filename: one match repo-wide.
+- **Stale references updated:** `backend/app/api/hami_chat.py:5`, `backend/app/config.py:96`, `backend/app/services/ai_engine.py:35`, `docs/HAMI_MODEL.md:35` — each now cites `scripts/hami_model_gateway.py`. Verified by read-back and by local grep of the uploaded copies: zero `hami_ollama_gateway`/`ollama` hits, exactly one `hami_model_gateway` hit per file.
+- **Launchers checked:** no launchd/script/run reference to the old filename exists — `com.hami.loop.plist` runs `~/hami/hami-loop.sh` (no gateway reference), `com.hami.model-server.plist` runs `hami-model-server.sh` (model server only), no gateway launcher in `scripts/` or `~/hami`. The running gateway on 11435 was started from the old path; a restart must use the new path.
+- **Order 025d file work is now COMPLETE** (steps 1, 2, 4, 5 by Muse; step 6 by Copilot 19:52; step 3 by Muse 20:33). Remaining: commit+push (owner authorization required — NOT done) and a repo-wide content grep for `hami_ollama_gateway` (no shell available from this job; needs a Mac shell run to prove zero).
+- **Live check this run:** `hami-sigma.vercel.app/api/health` answers HTTP 200 with body `{"status":"degraded","ready":false,"ok":false,"db":"not_configured"}` (crawled 20:20 NPT) — endpoint up, production still NOT VERIFIED, same as 19:52.
+
+## 2026-11-19 21:27 +0545 — remove per-packet subscriber-slice allocation
+
+- **Existing seam and why:** `sfuRouter.forwardTrack` in
+  `services/hami-media/main.go` previously copied every track subscriber
+  map into a new slice for each received RTP packet. This was the only
+  per-packet subscriber-slice allocation in that loop. `subscribe`,
+  `unsubscribe`, and track-unregistration remain the existing mutation seam.
+- **Change:** `forwardTrack` now holds the existing `r.mu.RLock` and iterates
+  `source.subscribers` directly. It enqueues under each subscription's existing
+  lock, aggregates the first write error and one recovery subscription, then
+  releases `r.mu` before requesting the keyframe or recording router errors.
+  This preserves the old lock direction and avoids an inverse `r.mu`/error
+  lock while enqueueing.
+- **Evidence:** local Go validation passed:
+  `cd services/hami-media && go test ./...`,
+  `go vet ./...`, `go build -o /tmp/hami-media-subscriber-map-opt .`, and
+  `go test -race ./...`. The build is local-only at
+  `/tmp/hami-media-subscriber-map-opt`.
+- **Measured delta:** per-RTP subscriber-slice allocation removed in source.
+  A repeatable CPU/heap/viewer-minute A/B is not yet measured; do not claim
+  a throughput or cost improvement from this source change alone.
+- **Next kill rule:** run the existing local 250/500/1,000 M7-H harness with
+  this binary and a clean no-change control, preserving NACK, queue-drop,
+  write-error, recovery, and cleanup contracts. Docker Desktop is currently
+  not running (`unix:///Users/nirojpaudyal/.docker/run/docker.sock` missing),
+  so a live local run is blocked until the owner starts it. No LiveKit Cloud,
+  paid service, commit, push, deploy, or room test was used.
+- **GitHub:** open issues remain `[]`. The exact repository head is
+  `c232ea50a686065fc44fadc03a0fb2c669ee53d7`; this optimization is uncommitted.
+
+## 2026-11-19 19:52 +0545 — backend suite reconciled to Hami-model migration
+
+- **Existing seam and owner action:** traced `backend/app/services/ai_engine.py`
+  and `backend/app/services/tool_registry.py` through the `c232ea5` provider
+  migration (`git log -S'OllamaCognitiveProvider'` and `git blame`). The
+  production contract now supports only `mock` and the local `hami-model`;
+  affected tests still selected removed Ollama/OpenAI/Qwen providers. The
+  owner still must authorize any commit/deploy and verify the live result.
+- **Fix:** registry availability now requires explicit `AI_PROVIDER=hami-model`
+  plus a configured gateway host and key, so an unconfigured adapter cannot
+  outrank the offline mock. Provider-construction telemetry now explicitly
+  records `request_attempted=false`. Rewrote only stale provider tests to
+  exercise the current gateway, fail-closed behavior, local context path, and
+  cognitive batching contract. No paid provider or external model was added.
+- **Measured backend delta:** first complete Python 3.12 run:
+  `1,347 passed, 37 failed, 2 skipped` in 174.00s. After the seam/test fixes:
+  `1,384 passed, 2 skipped, 0 failed` in 127.88s. The failures were stale
+  provider assumptions except the registry's false-positive availability,
+  which was corrected in production code.
+- **Exact local validation:** using `/tmp/forgeos-backend-py312` populated
+  from `backend/requirements.txt`, `cd backend && /tmp/forgeos-backend-py312/bin/python
+  -m pytest tests -q` passed (1,384/2/0). `npm test` passed (168 script tests
+  and 295 frontend tests); `npm run gates` reported GREEN;
+  `npm run typecheck`, `env -u DATABASE_URL npm run build`, and
+  `git diff --check` passed. `npm run lint` passed with one existing
+  `react-refresh/only-export-components` warning in
+  `src/components/experiments/experiment-card.tsx:108`.
+- **Live/CI check:** exact `main` head remains
+  `c232ea50a686065fc44fadc03a0fb2c669ee53d7`; run 44535305472 still fails
+  `lint`, `gate-checks`, `backend-tests`, and `frontend-tests`. Secrets scan
+  passed (44535305329); independent deploy verification failed
+  (44535305195). Open GitHub issues: none. `kn33r0s3.vercel.app/` and
+  `hami-sigma.vercel.app/api/health` returned HTTP 200; `haminp.vercel.app/`
+  returned HTTP 402. Production is **NOT VERIFIED**; local changes are
+  uncommitted and were not pushed/deployed. Owner interventions per real
+  transaction are **NOT MEASURABLE**.
+- **Next:** preserve the single `main` lineage. Exact-head CI cannot reflect
+  local edits until they are explicitly authorized and landed. Separately,
+  continue the M7-H evidence path by measuring allocation cost before
+  reconsidering subscriber-list caching; CPU profiling bounded
+  `forwardTrack` at 3.88% inclusive, so caching is not justified yet.
+
+## 2026-11-19 19:28 +0545 — Go-native M7-H CPU profiling verified at 250/500/1,000
+
+- **Existing seam and owner action:** extended the existing authenticated,
+  local M7-H heap/goroutine diagnostic route in `services/hami-media/main.go`;
+  no new file or profiling subsystem. `git log -S'm7hGoroutineProfilePath'`
+  found no committed implementation, and `git blame` showed that diagnostic
+  seam in the current dirty worktree. The owner still starts and authorizes
+  each local run. The opt-in `-m7h-cpu-profile` flag removes manual PID
+  discovery and paired `sample` invocations; it does not authorize or run
+  anything unattended.
+- **Implementation:** captures the harness and SFU with Go `runtime/pprof`
+  concurrently for a fixed 5 seconds, 30 seconds into streaming. The
+  authenticated loopback SFU endpoint caps requested duration at 10 seconds,
+  only writes profile files under a temporary directory, and creates files
+  with mode `0600`. The feature is opt-in; normal M7-H runs are unchanged.
+- **Validation:** from `services/hami-media`, `go test ./...`, `go build -o
+  /tmp/hami-media-cpu-profile .`, `go vet ./...`, and `go test -race -run
+  'TestM7HRemoteSFUCPUProfile' ./...` all passed. `go tool pprof -top` and
+  `go tool pprof -list` successfully decoded the generated harness and SFU
+  profiles.
+- **Local runtime evidence:** runs used
+  `/tmp/hami-media-cpu-profile -mode=m7h -video-file=/tmp/hami-cost-interframe-20261119.h264
+  -duration=60s -m7h-viewers=N -m7h-cpu-profile=/tmp/hami-cost-profile-N`
+  at N=250, 500, and 1,000; all commands exited 0. The repeated 250, 500,
+  and 1,000 results are `TEST`, local-only, cleanup-verified, and have
+  `measurement_pass=false`. Each is 250/250, 500/500, and 1,000/1,000 NACKs
+  received/retransmitted respectively, with zero RTP queue drops, intentional
+  sheds, or write errors. The 1,000-viewer JSON reports 61,007 ms and all
+  1,000 viewers; the 500 and repeated 250 runs report 61,004 ms and 61,003 ms.
+- **Outlier retained, not averaged:** the first 250-viewer profile run had
+  3,139 NACKs received / 6,375 retransmitted, 1,113 queue drops, and 4,777
+  intentional sheds. A no-profile 250 control and a second 250 profile both
+  returned to clean 250/250 NACKs and zero drops. The outlier cause is
+  unproven; its profiles are excluded from cross-rung analysis.
+- **Profile result (5.10-second windows):** paired harness+SFU CPU samples
+  total 3.46 CPU-seconds at 250, 6.31 at 500, and 12.48 at 1,000. Divided by
+  viewer-minutes in those windows, that is approximately 0.163, 0.148, and
+  0.147 sampled Go CPU-seconds/viewer-minute. This is a single-window local
+  diagnostic, not a cost acceptance result. At 1,000, `sfuRouter.forwardTrack`
+  accounts for 240 ms cumulative (3.88%); the write path dominates more:
+  `sfuSubscription.writeRTP` / Pion `TrackLocalStaticRTP.WriteRTP` about
+  1.48 s (23.95%) and `SessionSRTP.writeRTP` about 1.40 s (22.65%). Pion ICE
+  `candidateBase.writeTo` is 1.97 s cumulative (31.88%), including SRTP,
+  RTCP, and STUN call paths. Cumulative values overlap and must not be added.
+  The flat tops across all sizes are largely syscalls/runtime scheduling;
+  no single Hami forwarding hot loop is established.
+- **Next step and kill rule:** before changing the per-packet subscriber
+  snapshot, inspect allocation evidence and its subscription/unsubscription
+  mutation seam. Its current CPU upper bound is the 3.88% inclusive
+  `forwardTrack` sample; do not add a cache unless a same-input A/B yields a
+  repeatable CPU/viewer-minute reduction with clean NACK, drop, recovery, and
+  cleanup evidence. No optimization is claimed from profiling alone.
+- **Artifacts:** `/tmp/hami-cost-profile-{250-repeat,500,1000}-{harness,sfu}-streaming-30s.pprof`
+  and matching `.log` files; the invalid first 250 profile and its clean
+  no-profile control are retained separately in `/tmp`. No commit, push,
+  deployment, Cloud, or paid service.
+
 ## 2026-11-19 19:12 +0545 — isolated two-second samples preserve clean NACK behavior
 
 - **Existing seam and scope:** repeated the 1,000-viewer local baseline twice

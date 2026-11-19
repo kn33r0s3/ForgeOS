@@ -57,8 +57,8 @@ def _completed_research_with_evidence(db, *, objective, collection_status="colle
 
 
 def _enable_test_provider(monkeypatch):
-    monkeypatch.setattr(settings, "AI_PROVIDER", "ollama")
-    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "ollama")
+    monkeypatch.setattr(settings, "AI_PROVIDER", "hami-model")
+    monkeypatch.setattr(settings, "COGNITIVE_PROVIDER", "hami-model")
     monkeypatch.delenv("VERCEL", raising=False)
     from app.services import operating_v4
 

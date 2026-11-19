@@ -116,8 +116,6 @@ function ForgeKnowledgeChat({ apiKey }: { apiKey: string }) {
   const paidProvider = false;
   const mockProvider = providerName === "mock" &&
     (providerHealth === "READY" || providerHealth === "MOCK");
-  const remoteContextSharingBlocked = providerStatus?.mode === "SELF_HOSTED" &&
-    providerStatus.internal_context_allowed !== true;
   const providerCanAnswer = providerStatus !== null &&
     providerName === "hami-model" && providerHealth === "MODEL_AVAILABLE";
   const canAsk = !providerLoading && !providerError && providerCanAnswer;

@@ -5251,24 +5251,31 @@ func (r *sfuRouter) forwardTrack(source *sfuPublishedTrack) {
 			r.mu.RUnlock()
 			return
 		}
-		subscriptions := make([]*sfuSubscription, 0, len(source.subscribers))
+		var recoverySubscription *sfuSubscription
+		var firstForwardError error
 		for _, subscription := range source.subscribers {
-			subscriptions = append(subscriptions, subscription)
-		}
-		r.mu.RUnlock()
-
-		for _, subscription := range subscriptions {
 			dropped, err := subscription.enqueueRTP(packet)
 			if dropped {
 				r.rtpQueueDropped.Add(1)
 				r.recordRTPIntentionalShed(subscription)
-				r.requestRecoveryKeyframe(subscription)
+				if recoverySubscription == nil {
+					recoverySubscription = subscription
+				}
 			}
 			if err != nil && subscription.isActive() {
 				r.rtpDropped.Add(1)
-				r.recordError(fmt.Errorf("forward track %s to viewer %s: %w",
-					source.key.TrackID, subscription.viewerID, err))
+				if firstForwardError == nil {
+					firstForwardError = fmt.Errorf("forward track %s to viewer %s: %w",
+						source.key.TrackID, subscription.viewerID, err)
+				}
 			}
+		}
+		r.mu.RUnlock()
+		if recoverySubscription != nil {
+			r.requestRecoveryKeyframe(recoverySubscription)
+		}
+		if firstForwardError != nil {
+			r.recordError(firstForwardError)
 		}
 	}
 }
