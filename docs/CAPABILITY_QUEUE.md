@@ -1,3 +1,35 @@
+## 2026-11-19 — Exact-head CI failure reconciliation (run 44404962019)
+
+- **Reported baseline:** run `44404962019` failed at head
+  `3061ab4e4d6209ca19d44e7499e5bd0873f6cc37`. Frontend tests were 293/295:
+  the two registry assertions covered `/build-log`, `/ledger`, and Service
+  detail route discovery against a hard-coded hostname. Audit 8+9 already
+  corrected those seams in `39706d6`; current frontend tests are 295/295.
+- **Backend root cause and source check:** the importer test expected 108 D
+  rows, while the unchanged authoritative `docs/UNKNOWN_MAP.md` contains 113
+  D rows (129 rows total, D1-D113). `node scripts/sync-unknowns-json.mjs
+  --check` independently reports 129 rows / 113 D-unknowns. Corrected only
+  `backend/tests/test_import_unknowns.py` to expect 113 and assert `D113`;
+  the map and production importer were not changed.
+- **Gate-check result:** the failed run only logged `gates tests: did not run
+  cleanly`. `scripts/gates.mjs` suppresses the child test output, and its
+  implementation/tests are unchanged since that failed head, so the historical
+  child-process cause is not recoverable from the CI log. It does not reproduce
+  locally: `npm run gates` is green. Do not infer the old run was green; the
+  post-push exact-head CI result remains the final check.
+- **Local verification:** `npm test` passed (168 script + 295 TypeScript tests);
+  `npm run gates` passed; `npm run typecheck` passed; `env -u DATABASE_URL npm
+  run build` passed (database migration skipped because the variable was
+  unset); `cd backend && pytest -q tests/test_import_unknowns.py` passed (4);
+  and `cd backend && pytest tests -vv -o faulthandler_timeout=120` passed
+  (1,384 passed, 2 skipped). No unknowns-map edits.
+- **Measured delta / next dependency:** evidence quality improved by replacing
+  a stale inventory assertion with the verified source count; the prior route
+  failures are covered by the already-merged Audit 8+9 fix. No owner action or
+  real transaction was removed; `OWNER_INTERVENTIONS_PER_REAL_TRANSACTION`
+  remains **NOT MEASURABLE**. Next dependency: exact-head CI after this fix is
+  pushed.
+
 ## 2026-11-19 — D95 Rupandehi fish-superzone / AMPIS market-state reconciliation (manual-only; NOT CLEARED)
 
 ### New evidence and bounded meaning
