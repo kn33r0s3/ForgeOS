@@ -36,19 +36,19 @@ function gitLog() {
     .split("\x1e")
     .map((rec) => rec.trim())
     .filter(Boolean)
-    .map((rec) => {
+    .flatMap((rec) => {
       const [metadata, ...files] = rec.split(/\r?\n/);
+      if (files.length === 1 && files[0] === "docs/WHO_DID_WHAT.md") return [];
       const [hash, author, date, subject] = metadata.split("\x1f");
-      return {
-        hash: hash.slice(0, 7),
-        author,
-        date,
-        subject: (subject || "").trim(),
-        files: files.filter(Boolean),
-      };
-    })
-    .filter((commit) => !(commit.files.length === 1 && commit.files[0] === "docs/WHO_DID_WHAT.md"))
-    .map(({ files, ...commit }) => commit);
+      return [
+        {
+          hash: hash.slice(0, 7),
+          author,
+          date,
+          subject: (subject || "").trim(),
+        },
+      ];
+    });
 }
 
 const commits = gitLog();

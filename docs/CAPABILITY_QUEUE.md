@@ -41,6 +41,11 @@
   included it, with deterministic output. Regenerate the report from the
   current head before committing; the exact-head CI after this change is still
   required.
+- **Lint follow-up:** exact-head run `44439481695` found that the report
+  parser's `files` destructuring was unused after filtering report-only
+  commits. Reworked that transformation to `flatMap`, retaining the same
+  filtering while returning only report fields. Verify with `npm run lint` and
+  a new exact-head CI run.
 - **Local verification:** `npm test` passed (168 script + 295 TypeScript tests);
   `npm run gates` passed; `npm run typecheck` passed; `env -u DATABASE_URL npm
   run build` passed (database migration skipped because the variable was
