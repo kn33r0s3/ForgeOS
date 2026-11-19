@@ -1,3 +1,42 @@
+## 2026-11-19 23:26 +0545 — bde11fe fix verified in the files; CI still running (loop-break test)
+
+- **Fix commit verified from the files, not just the run page:** local `.git/COMMIT_EDITMSG` reads `[agent][ci-reconcile][gates] Refresh WHO attribution for d34` (Co-authored-by Copilot). Local `docs/WHO_DID_WHAT.md` (252,460 B) now lists `d34a6ac` as the newest agent line — the plain regeneration includes d34, exactly as the 22:43 diagnosis prescribed.
+- **CI still in progress at 23:26:** ForgeOS CI run 44579384187 `in_progress`, Independent deploy verification `in_progress`, Secrets scan `success` (`/tmp/bde-runs.json` rewritten 23:25:53 NPT — poll active). If gate-checks passes on bde, the loop is broken; outcome pending.
+- **Live site:** last crawl 23:09 NPT still serves aeae2a4 (degraded / db not_configured); bde not live yet — expected while deploy verification runs. No new SFT result; no Nyx Gmail reply.
+
+## 2026-11-19 22:43 +0545 — CONFIRMED: why the gate-checks loop fails — d34's own line is the diff
+
+- **Mechanism CONFIRMED (file lists browser-verified 22:42):** d34a6acdb changed 3 files — docs/GATES.md, docs/WHO_DID_WHAT.md, AND scripts/who-did-what.mjs. Because d34 touched the generator script (a non-report file), d34 is NOT report-only under the generator's rule (a commit is dropped only if ALL its files are in {CAPABILITY_QUEUE.md, GATES.md, WHO_DID_WHAT.md}). aeae2a4 changed only docs/CAPABILITY_QUEUE.md — it IS report-only and was correctly excluded.
+- **Why CI fails:** the committed report (generated at d34 time, before d34 was in the log) EXCLUDES d34 — verified by grep: d34a6ac occurs 0 times in docs/WHO_DID_WHAT.md, as do aeae2a4/436bd0e/2dcd3c5/cdcebdc; newest listed agent commit is d55d4e4. CI regenerates with `npm run who-did-what -- --exclude-head` (git log HEAD^) at aeae2a4, which INCLUDES d34. Regenerated file != committed file → `WHO_DID_WHAT.md is stale` → gate-checks fails. The 22:39 entry's "exclusion incomplete" framing is corrected: the exclusion works; the stale diff is d34's own missing line.
+- **Fix (reasoned from the script + workflow, to be proven by a CI run):** run PLAIN `npm run who-did-what` (NO --exclude-head) at HEAD=aeae2a4 so the report includes d34, and commit ONLY docs/WHO_DID_WHAT.md as a report-only commit. CI at that commit regenerates with --exclude-head → same set (d34 in, head out) → should PASS. Prove locally with the exact CI command before pushing. This one plain regeneration is NOT another loop refresh — the loop-causing pattern was refreshes generated with --exclude-head (or at the parent HEAD), which exclude the very code commit they must include.
+- **Durability warning:** this holds only until the commit after the next code commit — after every code commit, a plain refresh must land before the following commit's CI, or the check must stop gating on the report (fix-order option 2). The fix worker must state which durability path it takes.
+- **Fix order updated:** /tmp/next-order-gatechecks-fix.md carries this confirmed mechanism as an addendum (22:43) — its "do not refresh" instruction is superseded for this one plain regeneration. HEAD still aeae2a4; no new commit after it. Docker still not running (22:41). No new SFT result; no Nyx Gmail reply.
+
+## 2026-11-19 22:39 +0545 — No new commit after aeae2a4; d34's mechanism revealed — exclusion incomplete
+
+- **HEAD still aeae2a4** (verified 22:38 from the GitHub commits API, fresh crawl): aeae2a4e62064c23dd3341c47b87b4ce4367bc24, committed 16:41:01Z, parent d34a6acdb. No commit after aeae2a4 in the 12+ min since. Site health fresh fetch 22:38 still serves aeae2a4 (degraded / db not_configured).
+- **NEW — what d34 actually changed:** d34a6acdb's message: "Exclude generated-report-only commits from WHO_DID_WHAT.md so refresh commits cannot create an endless freshness cycle." 436bd0e cites "the existing exclude-head gate contract". So d34 introduced an exclusion — yet aeae2a4 (itself a ledger/report commit, "Update the existing capability ledger") still failed gate-checks with the same stale-WHO_DID_WHAT.md annotation. The exclusion is incomplete: either aeae2a4 doesn't match the exclusion pattern, or the freshness check regenerates and diffs something the exclusion doesn't cover.
+- **Consequence:** the staged gate-checks fix order (/tmp/next-order-gatechecks-fix.md, FIRST) must find WHY aeae2a4 wasn't excluded — not just repeat d34's approach. No new SFT result; no Nyx Gmail reply. Heartbeat fresh 22:38:15 NPT.
+
+## 2026-11-19 22:35 +0545 — aeae2a4 CI FAILED on gate-checks — LOOP NOT BROKEN (same stale WHO_DID_WHAT.md)
+
+- **aeae2a4 CI run #1698 (44568866153): completed FAILURE** (verified 22:35 from the GitHub Actions run page; pushed 22:26, 4m 31s). gate-checks FAILED (54s), the only failing job — other 10 jobs green (backend-tests, evidence-triage-tests, frontend-tests, typecheck, lint, build, route-smoke, secret-scan/gitleaks, repository-guards, livekit-local-smoke).
+- **Same annotation as before:** `docs/WHO_DID_WHAT.md is stale — run 'npm run who-did-what' and commit it`, exit code 1. d34's green did NOT hold on the next commit: aeae2a4 itself recorded d34's 'exact-head green', and its own CI failed on the same freshness check. The loop is confirmed alive — every report commit rewrites WHO_DID_WHAT.md, so the next run fails again.
+- **Consequence:** the staged gate-checks fix order (/tmp/next-order-gatechecks-fix.md, FIRST in queue) is now confirmed necessary — the fix must break the loop (make the freshness check ignore the head commit's own attribution line, or stop committing the report on every push), NOT another refresh commit. It must still read what d34 changed first.
+
+## 2026-11-19 22:33 +0545 — NEW commit aeae2a4 AFTER d34, LIVE on site; its CI is the loop-break test
+
+- **New commit aeae2a4** `[agent][ci-reconcile][gates] Record exact-head green and deploy 402` (full SHA aeae2a4e62064c23dd3341c47b87b4ce4367bc24) — first commit after d34, verified on the GitHub commits page 22:33, sitting directly above d34a6ac on main. The 22:29 entry's 'no new commit after d34' is superseded.
+- **LIVE on the site:** fresh health fetch 22:32 returns `{"status":"degraded","ready":false,"ok":false,"version":"2.3.0","commit":"aeae2a4e62064c23dd3341c47b87b4ce4367bc24","time":"2026-11-19T16:47:38.277069+00:00","db":"not_configured"}` — endpoint up, still degraded / db not_configured.
+- **Loop-break test now running:** aeae2a4's CI outcome decides it — if its gate-checks pass, the loop is broken (d34's fix holds on a later commit). CI status check dispatched 22:33; result pending. The staged gate-checks fix order (/tmp/next-order-gatechecks-fix.md) still stands FIRST in queue but must read d34 first — and if aeae2a4 goes green, the fix may be unnecessary.
+
+## 2026-11-19 22:29 +0545 — d34a6acdb CI GREEN (first green after five red); loop may already be broken — fix order must read d34 first
+
+- **d34a6acdb CI run 44567793790: SUCCESS** (verified 22:26 by Muse from the GitHub API, not the stale Mac poll files — /tmp/d34-runs.json is 0 B): status completed, conclusion success, updated 16:40:11Z. All 11 jobs green INCLUDING gate-checks (evidence-triage-tests, build, frontend-tests, backend-tests, route-smoke, livekit-local-smoke, gate-checks, lint, secret-scan/gitleaks, typecheck, repository-guards). FIRST green CI after five red commits in a row (c232ea50, d55, cdcebdc33, 2dcd3c51, 436bd0e). Head: '[agent][ci-reconcile][gates] Stop report commits becoming attribution noise'.
+- **Loop NOT yet proven broken:** the test is a CI run on a commit AFTER d34 passing gate-checks. The staged fix order (/tmp/next-order-gatechecks-fix.md, 22:24, FIRST in queue) must FIRST read what d34 changed (git show d34a6acdb) before writing a new fix — avoid duplicating or breaking d34's change. Do NOT do another refresh commit.
+- **Site live on d34a6acdb** (verified 22:24, fresh health fetch): still degraded / ready false / db not_configured. Deploy verification for d34 still 'failure' — unreliable, same as 2dcd.
+- **No new commit after d34 verified this run** (GitHub commits page crawl is stale, 22:18, tops at 436bd0e); no new SFT result; no Nyx Gmail reply. Docker Desktop last verified not running 22:23 — subscriber-map A/B still blocked. Three orders staged unfed (gate-checks fix FIRST, NACK blame 20:51, subscriber-map A/B 21:47).
+
 ## 2026-11-19 22:24 +0545 — d34a6acdb CONFIRMED on GitHub AND LIVE on site; deploy-verification failure unreliable again; fix order staged
 
 - **d34a6acdb CONFIRMED:** `/tmp/d34-runs.json` (written 22:23:32 NPT) lists headSha `d34a6acdb5ba81ddbc46769a5f8823eefcc1bddf` — the 22:21 entry's 'not confirmed' is now closed. Its ForgeOS CI run 44567793790 still `in_progress` at 22:23; Secrets scan `success`; Independent deploy verification `failure` (completed).
@@ -8385,3 +8424,23 @@ Obtain NDRRMA #02's official PDF attachment and inspect every page; then #04. Re
   removes the per-RTP subscriber-slice allocation in
   `services/hami-media/main.go` and has passed Go test, vet, race, and build
   validation. No live-room or load test was run.
+## 2026-11-19 23:33 +0545 — gate-checks loop broken by bde11feb report-only commit
+
+- **Fix commit:** `bde11febf4703474b18c6ee8f0c5678756cf03f4`
+  `[agent][ci-reconcile][gates] Refresh WHO attribution for d34` changed only
+  `docs/WHO_DID_WHAT.md`.
+- **Local proof:** the exact CI command
+  `npm run who-did-what -- --exclude-head` then
+  `git diff --quiet -- docs/WHO_DID_WHAT.md` returned PASS. The command
+  regenerates 1,828 commits and 3 agents; `docs/GATES.md` remained unchanged.
+- **GitHub proof:** ForgeOS CI run `44579384187` completed SUCCESS at head
+  `bde11febf4703474b18c6ee8f0c5678756cf03f4`; gate-checks passed. No CI job
+  failed. Secrets scan run `44579384138` passed. Independent deploy verification
+  run `44579384043` failed with the standing production/deployment issue.
+- **Mechanism:** a plain `npm run who-did-what` at `aeae2a4` added d34's missing
+  attribution line. The report-only commit then matched CI's `--exclude-head`
+  regeneration exactly.
+- **Durability:** this is the one confirmed regeneration; it does not claim an
+  architectural elimination of future report staleness. The most durable path
+  is the fallback option: remove this report from the gate freshness commit
+  check or generate it in CI rather than committing it on every code push.
