@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://haminp.vercel.app/features.schema.json",
+  "$id": "https://hami-sigma.vercel.app/features.schema.json",
   "title": "Hami feature registry",
   "type": "object",
   "required": [
