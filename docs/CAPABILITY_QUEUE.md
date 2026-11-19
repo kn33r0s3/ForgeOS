@@ -1,3 +1,11 @@
+## 2026-11-19 21:56 +0545 — New commit d55d4e49 pushed; its deploy verification FAILED, CI still running; site still on c232ea50
+
+- **Commit:** `[agent][ci-reconcile][gates] Reconcile Hami model and media sync` (`d55d4e49fd6a89e9be7cf34118e9ce17863864ed`, verified on GitHub) — touches DOCKER_COMMANDS.md, backend (.env.example, hami_chat.py, config.py, ai_engine.py, tool_registry.py, tests), docs (BRAIN, CAPABILITY_QUEUE, GATES, HAMI_MODEL, WHO_DID_WHAT), scripts/hami_model_gateway.py, services/hami-media/main.go, src forge-console / features.test.ts. This is the Order 025d remainder commit+push that was pending at 20:33 — now landed on GitHub.
+- **CI snapshot** `/tmp/d55-runs.json` (written 21:53:10 NPT): ForgeOS CI `in_progress`, Secrets scan `success`, Independent deploy verification `failure`. Same standing pattern as c232ea50 (its deploy verification also failed) — not a new breakage, but d55 has NOT deployed.
+- **Live site** (health endpoint, cached crawl 21:27 NPT): still `{"status":"degraded","ready":false,"ok":false,"version":"2.3.0","commit":"c232ea50...","db":"not_configured"}` — d55 not live yet.
+- **Open flag — pilot server checkpoint:** `/tmp/hami-status.json` (19:51 NPT) reports the pilot server loaded a 3,000-step checkpoint (13,916,160 params, 4,118,942 train tokens, holdout_ppl 1302.5) — NOT run 2 (300 steps, ppl 43.2). No matching training log in /tmp. Needs: identify which run produced the 3000-step checkpoint and why its holdout ppl is ~30x run 2's before any pilot-serving claim.
+- **Staged orders still unfed:** `/tmp/next-order-nack-queue-age-blame.md` (20:51) then `/tmp/next-order-subscriber-map-ab.md` (21:47). Docker Desktop blocker stands.
+
 ## 2026-11-19 21:44 +0545 — Protected constants re-verified after the subscriber-map edit; all hold
 
 - **Snapshot:** `services/hami-media/main.go`, 8,542 lines, 287,058 B (was 8,535 / 286,914 at 20:37) — the 21:27 subscriber-slice removal landed (+7 lines, +144 B).
